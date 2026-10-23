@@ -52,6 +52,9 @@ The levels Godot's texture importer builds on the CPU for an image whose **Impor
 The texture carries them as its own levels, so the GPU builds no chain over them.
 _Avoid_: "mipmaps" for a chain the GPU generates.
 
+**Noise mip chain** (`resources/textures/noisetexture2d/pixels.ts`):
+The **Imported mip chain** of a NoiseTexture2D whose `generate_mipmaps` is on, built in the worker job beside the pixels. No level is renormalised.
+
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
 _Avoid_: the bare name for the **Screen-space roughness limiter**.
@@ -320,7 +323,7 @@ An item's position in Godot's single pre-order walk of the canvas, the third and
 _Avoid_: "paint index".
 
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
-The render target the root 2D canvas draws into, y-down like Godot's, and copies to the drawing buffer with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0056).
+The render target the root 2D canvas draws into, y-down like Godot's, and copies to the drawing buffer with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
 _Avoid_: "MSAA frame".
 
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):

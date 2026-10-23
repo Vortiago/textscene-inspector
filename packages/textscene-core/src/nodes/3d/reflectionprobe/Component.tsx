@@ -1,12 +1,12 @@
 /**
  * <ReflectionProbe>: puts a reflection probe into the scene at the node's transform, which the
  * scene's probes capture and draw (`r3f/reflectionProbe/sceneProbes.ts`). It draws nothing of its own,
- * but Godot's editor gizmo while it is selected (ADR-0018).
+ * but Godot's editor gizmo while it is selected (`reflection_probe_gizmo_plugin.cpp:152`).
  */
 
 import { extend } from '@react-three/fiber';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { ReflectionProbeObject } from '../../../r3f/reflectionProbe/reflectionProbeObject';
 import { useSceneProbes } from '../../../r3f/reflectionProbe/useSceneProbes';
@@ -20,7 +20,7 @@ const ReflectionProbeElement = extend(ReflectionProbeObject);
 export function ReflectionProbe({ node, children }: NodeComponentProps) {
   useSceneProbes();
   const treeOrder = useTreeOrder();
-  const gizmoVisible = useGizmoVisible();
+  const gizmoVisible = useGizmoDrawn('selected-only');
   const probe = node.properties as ReflectionProbeProperties;
   return (
     <Node3D node={node}>

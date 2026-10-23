@@ -35,7 +35,7 @@ interface PreviewShellProviderOptions {
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode?: ViewportMode;
-  /** The mode, grid, framing, fog and performance overlay persisted last session. */
+  /** The mode, gizmos, grid, framing, fog and performance overlay persisted last session. */
   initialViewport?: PersistedViewport;
   panelId: string;
   rootScenePath: string;
@@ -73,6 +73,7 @@ export function previewShellProviders({
       // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider
         initialMode={initialViewportMode ?? initialViewport.mode}
+        initialShowGizmos={initialViewport.showGizmos}
         initialShowGrid={initialViewport.showGrid}
         initialFrameOnOpen={initialViewport.frameOnOpen}
         initialShowFog={initialViewport.showFog}

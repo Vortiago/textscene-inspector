@@ -1,6 +1,6 @@
 /**
- * <Path3D> draws a selection-gated white polyline gizmo from its Curve3D, and
- * degrades to nothing when the curve is absent.
+ * <Path3D> draws a white polyline gizmo from its Curve3D for every node, faint while unselected
+ * (`path_3d_editor_plugin.cpp:320`), and degrades to nothing when the curve is absent.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -8,9 +8,8 @@ import type { TscnNode, TscnInternalResource } from '../../../parser/types';
 import { Path3D } from './Component';
 import { parsePath3D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 
 // Straight 3-point path: (0,0,0) → (10,0,0) → (10,10,0), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -35,29 +34,49 @@ function pathNode(name = 'MyPath', props: Record<string, string> = {}): TscnNode
 async function renderPath(
   selectedPath: string | null,
   props: Record<string, string>,
-  internalResources: TscnInternalResource[] = [CURVE]
+  internalResources: TscnInternalResource[] = [CURVE],
+  showGizmos = true
 ) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <SceneResourcesProvider internalResources={internalResources} externalResources={[]}>
-        <NodePathProvider path="MyPath">
-          <Path3D node={pathNode('MyPath', props)} />
-        </NodePathProvider>
-      </SceneResourcesProvider>
-    </SelectionProvider>
+    <SceneResourcesProvider internalResources={internalResources} externalResources={[]}>
+      <GizmoScene nodePath="MyPath" selectedPath={selectedPath} showGizmos={showGizmos}>
+        <Path3D node={pathNode('MyPath', props)}>
+          <CurveReader />
+        </Path3D>
+      </GizmoScene>
+    </SceneResourcesProvider>
   );
 }
 
+/** Publishes the curve its Path3D parent provides, as a PathFollow3D child reads it. */
+function CurveReader() {
+  const curve = useParentPath3DCurve();
+  return <group name="CurveReader" userData={{ hasCurve: curve !== null }} />;
+}
+
+function hasCurve(renderer: Awaited<ReturnType<typeof renderPath>>): boolean {
+  const reader = renderer.scene.findByProps({ name: 'CurveReader' }).instance;
+  return reader.userData['hasCurve'] === true;
+}
+
 describe('<Path3D>', () => {
-  it('draws the curve polyline gizmo when selected and a curve is present', async () => {
+  it('draws the curve polyline gizmo in full colour when selected and a curve is present', async () => {
     const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve3D_1")' });
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+    expect(lineOpacities(renderer)).toEqual([1]);
   });
 
-  it('hides the gizmo when not selected', async () => {
-    const renderer = await renderPath(null, { curve: 'SubResource("Curve3D_1")' });
+  it.each([
+    ['nothing is selected', null],
+    ['another node is selected', 'Other'],
+  ])('draws the curve faintly, at 0.3, when %s', async (_label, selectedPath) => {
+    const renderer = await renderPath(selectedPath, { curve: 'SubResource("Curve3D_1")' });
+    expect(lineOpacities(renderer)).toEqual([0.3]);
+  });
+
+  it('draws no curve with the Gizmos toggle off, yet still provides it to a PathFollow3D child', async () => {
+    const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve3D_1")' }, [CURVE], false);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+    expect(hasCurve(renderer)).toBe(true);
   });
 
   it('draws nothing when the curve is missing, even if selected (edge)', async () => {

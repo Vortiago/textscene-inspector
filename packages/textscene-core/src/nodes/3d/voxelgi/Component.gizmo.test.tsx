@@ -1,6 +1,7 @@
 /**
- * <VoxelGI> draws Godot's editor gizmo only while it is selected (ADR-0018): the edges of its box
- * and the grid of its cells (`voxel_gi_gizmo_plugin.cpp:96-164`).
+ * <VoxelGI> draws Godot's editor gizmo only while it is selected and the Gizmos toggle is on
+ * (`voxel_gi_gizmo_plugin.cpp:99`): the edges of its box and the grid of its cells
+ * (`voxel_gi_gizmo_plugin.cpp:96-164`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -8,9 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import './index.r3f';
 import { parseVoxelGI } from './parser';
@@ -30,16 +29,13 @@ function voxelGi(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}) {
+async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Probe">
-        <VoxelGI node={voxelGi(props)}>
-          <group name="Child" />
-        </VoxelGI>
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Probe" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <VoxelGI node={voxelGi(props)}>
+        <group name="Child" />
+      </VoxelGI>
+    </GizmoScene>
   );
 }
 
@@ -65,6 +61,11 @@ describe('<VoxelGI> gizmo gate', () => {
   ])('draws the box and the grid only when %s', async (_label, selectedPath, expected) => {
     const renderer = await render(selectedPath);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+  });
+
+  it('draws nothing with the Gizmos toggle off, selected', async () => {
+    const renderer = await render('Probe', {}, false);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

@@ -1,7 +1,8 @@
 ; A four-wheeled VehicleBody3D for the one variable no other golden moves: the VehicleWheel3D
 ; gizmo. Godot draws it for every wheel (vehicle_body_3d_gizmo_plugin: a radius circle in the YZ
 ; plane, a four-section spring coil, a travel line up to wheel_rest_length, axle ticks and a
-; forward arrow). The previewer gates it on selection (ADR-0018), so only the `select:` golden has it.
+; forward arrow). The previewer draws it for every wheel, faint while unselected (ADR-0056), so only a golden with
+; `gizmos: true` has it.
 [gd_scene load_steps=7 format=3 uid="uid://unitphysicsvehicle"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_chassis"]

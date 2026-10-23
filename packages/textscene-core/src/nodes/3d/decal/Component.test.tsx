@@ -1,8 +1,9 @@
 /**
  * <Decal> component tests. The test-renderer mounts no sibling meshes, so a bare decal bakes
  * nothing, but a receiver child is projected onto (the effect runs `scene.updateMatrixWorld(true)`
- * itself). That makes `cull_mask` observable end to end, beside the selection-gated gizmo
- * (ADR-0018), the absent standalone quad and the Node3D pass-through.
+ * itself). That makes `cull_mask` observable end to end, beside the projector box gizmo (drawn for
+ * every node, faint while unselected, `decal_gizmo_plugin.cpp:128`), the absent standalone quad
+ * and the Node3D pass-through.
  */
 
 import type { ReactNode } from 'react';
@@ -12,6 +13,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { lineOpacities } from '../../../r3f/testing/GizmoScene';
 import {
   AnimatedValueProvider,
   useAnimatedValueRegistry,
@@ -70,6 +72,8 @@ interface RenderOptions {
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
   children?: ReactNode;
   selectedPath?: string;
+  /** The Gizmos toggle. On unless a test turns it off. */
+  showGizmos?: boolean;
 }
 
 /** The mounted tree, separated from `create` so a test can re-render it. */
@@ -79,6 +83,7 @@ function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeReso
       loader={loader}
       scene={{ externalResources: opts.externals ?? [], internalResources: opts.internals ?? [] }}
       selectedPath={opts.selectedPath}
+      showGizmos={opts.showGizmos ?? true}
     >
       <NodePathProvider path={opts.node.name}>
         <Decal node={opts.node}>{opts.children}</Decal>
@@ -123,25 +128,34 @@ function projections(renderer: { scene: { instance: THREE.Object3D } }): THREE.M
 }
 
 describe('<Decal>', () => {
-  it('hides the projection-box gizmo by default (Godot runtime draws none)', async () => {
-    const renderer = await render({ node: makeNode() });
+  it('draws the box gizmo at its colour alpha 0.9 when the node is selected', async () => {
+    const renderer = await render({ node: makeNode(), selectedPath: NODE_NAME });
+    expect(lineOpacities(renderer)).toEqual([0.9]);
+  });
+
+  it.each([
+    ['nothing is selected', undefined],
+    ['a different node is selected', 'SomethingElse'],
+  ])('draws the box gizmo faintly, at 0.9 times 0.3, when %s', async (_label, selectedPath) => {
+    const renderer = await render({ node: makeNode(), selectedPath });
+    expect(lineOpacities(renderer)).toHaveLength(1);
+    expect(lineOpacities(renderer)[0]).toBeCloseTo(0.27, 10);
+  });
+
+  it('draws no box gizmo with the Gizmos toggle off, selected', async () => {
+    const renderer = await render({ node: makeNode(), selectedPath: NODE_NAME, showGizmos: false });
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
-  it('draws the box gizmo, scaled by size, when the node is selected', async () => {
+  it('scales the box gizmo by size', async () => {
     const renderer = await render({
       node: makeNode({ size: 'Vector3(3, 2, 4)' }),
       selectedPath: NODE_NAME,
     });
     const box = renderer.scene.findAllByType('LineSegments');
     expect(box).toHaveLength(1);
-    const scale = (box[0]!.instance as THREE.Object3D).parent!.scale;
+    const scale = sizingGroup(box[0]!.instance as THREE.Object3D).scale;
     expect([scale.x, scale.y, scale.z]).toEqual([3, 2, 4]);
-  });
-
-  it('hides the gizmo when a different node is selected', async () => {
-    const renderer = await render({ node: makeNode(), selectedPath: 'SomethingElse' });
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('never draws a standalone quad — projection needs live scene geometry', async () => {
@@ -486,8 +500,7 @@ describe('<Decal>', () => {
     );
     // The gizmo (visible because 'D' is selected) rides the size-scaled group.
     const sizingScale = () => {
-      const ls = renderer.scene.findByType('LineSegments').instance as THREE.Object3D;
-      const s = ls.parent!.scale;
+      const s = sizingGroup(renderer.scene.findByType('LineSegments').instance as THREE.Object3D).scale;
       return [s.x, s.y, s.z];
     };
     expect(sizingScale()).toEqual([2, 2, 2]); // authored size
@@ -497,6 +510,11 @@ describe('<Decal>', () => {
     expect(sizingScale()).toEqual([2, 2, 2]); // released → authored size
   });
 });
+
+/** The group a decal's box gizmo rides: it holds `size` as its scale, and the gizmo's group is inside it. */
+function sizingGroup(boxLines: THREE.Object3D): THREE.Object3D {
+  return boxLines.parent!.parent!;
+}
 
 /** A camera metres from the origin, past a tight fade's end. */
 function farCamera(): THREE.PerspectiveCamera {

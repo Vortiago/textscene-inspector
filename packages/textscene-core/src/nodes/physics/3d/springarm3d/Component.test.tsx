@@ -1,7 +1,7 @@
 /**
- * <SpringArm3D> draws the editor length line only while the node is selected
- * (ADR-0018), and keeps its children in the Node3D transform space either way.
- * Godot's gizmo is editor/scene/3d/gizmos/physics/spring_arm_3d_gizmo_plugin.cpp.
+ * <SpringArm3D> draws the editor length line for every node, faint while unselected
+ * (`spring_arm_3d_gizmo_plugin.cpp:35-54`), and keeps its children in the Node3D transform space
+ * either way. Godot's gizmo is editor/scene/3d/gizmos/physics/spring_arm_3d_gizmo_plugin.cpp.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -10,9 +10,7 @@ import type { TscnNode } from '../../../../parser/types';
 import { SpringArm3D } from './Component';
 import { parseSpringArm3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
-import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
@@ -26,16 +24,13 @@ function armNode(props: Record<string, string> = {}): TscnNode {
   } as TscnNode;
 }
 
-async function renderArm(selectedPath: string | null, props: Record<string, string> = {}) {
+async function renderArm(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Arm">
-        <SpringArm3D node={armNode(props)}>
-          <group name="Child" />
-        </SpringArm3D>
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Arm" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <SpringArm3D node={armNode(props)}>
+        <group name="Child" />
+      </SpringArm3D>
+    </GizmoScene>
   );
 }
 
@@ -51,14 +46,22 @@ async function gizmoPositions(props: Record<string, string>): Promise<number[]> 
   return Array.from(line.geometry.getAttribute('position').array);
 }
 
-describe('<SpringArm3D> gizmo gate', () => {
+describe('<SpringArm3D> gizmo state', () => {
+  it('draws the length line at the alpha of the collision colour, 0.42, when the node is selected', async () => {
+    expect(lineOpacities(await renderArm('Arm'))).toEqual([DEFAULT_COLLISION_DEBUG_COLOR.a]);
+  });
+
   it.each([
-    ['the node is selected', 'Arm', 1],
-    ['nothing is selected', null, 0],
-    ['another node is selected', 'Other', 0],
-  ])('gates the length line on selection: %s', async (_label, selectedPath, expected) => {
-    const renderer = await renderArm(selectedPath);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+    ['nothing is selected', null],
+    ['another node is selected', 'Other'],
+  ])('draws the length line at 0.3 of that alpha, 0.126, when %s', async (_label, selectedPath) => {
+    const [opacity] = lineOpacities(await renderArm(selectedPath));
+    expect(opacity).toBeCloseTo(DEFAULT_COLLISION_DEBUG_COLOR.a * 0.3, 10);
+  });
+
+  it('draws no length line with the Gizmos toggle off, selected', async () => {
+    const renderer = await renderArm('Arm', {}, false);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the Node3D transform space, selected or not', async () => {

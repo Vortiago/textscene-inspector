@@ -1,7 +1,7 @@
 /**
  * How the centre viewport shows the scene (ADR-0006). `'3D'` mounts the R3F
  * canvas, `'2D'` the Control overlay. The default (3D, collisions off, labels
- * on, grid off, fog on, performance off) needs no provider, and the host layers
+ * on, gizmos on, grid off, fog on, performance off) needs no provider, and the host layers
  * persistence on top.
  */
 
@@ -16,6 +16,7 @@ export type ViewportMode = '2D' | '3D';
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
+export const SHOW_GIZMOS_STORAGE_KEY = 'tsi.showGizmos';
 /**
  * Whether to frame the scene on load. Off by default, as Godot's editor opens
  * at a fixed orbit. A framed scene also puts every object in the frustum, so
@@ -29,15 +30,17 @@ export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
 /** The viewport preferences a session persists, read once to seed the provider. */
 export interface PersistedViewport {
   mode: ViewportMode;
+  showGizmos: boolean;
   showGrid: boolean;
   frameOnOpen: boolean;
   showFog: boolean;
   showPerformance: boolean;
 }
 
-/** The preferences of a session that persisted none: 3D, no grid, Godot's fixed orbit, fog on. */
+/** The preferences of a session that persisted none: 3D, gizmos on, no grid, Godot's fixed orbit, fog on. */
 export const DEFAULT_VIEWPORT: PersistedViewport = {
   mode: '3D',
+  showGizmos: true,
   showGrid: false,
   frameOnOpen: false,
   showFog: true,
@@ -55,6 +58,12 @@ interface ViewportModeValue {
   setShowLabels: (show: boolean) => void;
   showNavigation: boolean;
   setShowNavigation: (show: boolean) => void;
+  /**
+   * Every editor gizmo, 2D helpers included, on by default like Godot's "View Gizmos"
+   * (`node_3d_editor_plugin.cpp:6255,6266`). Collision gizmos follow `showCollisions` alone.
+   */
+  showGizmos: boolean;
+  setShowGizmos: (show: boolean) => void;
   /** A ground-plane grid in 3D, off by default, or it lands in every golden. A user's choice persists. */
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
@@ -86,6 +95,7 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowLabels: () => {},
   showNavigation: true,
   setShowNavigation: () => {},
+  setShowGizmos: () => {},
   setShowGrid: () => {},
   showPreviewSun: true,
   setShowPreviewSun: () => {},
@@ -99,12 +109,20 @@ const DEFAULT_VALUE: ViewportModeValue = {
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
 ViewportModeContext.displayName = 'ViewportModeContext';
 
+/**
+ * The Gizmos toggle on its own. Every node with a gizmo reads it, and a node that read the whole
+ * viewport value would re-render on each grid, fog or label change.
+ */
+const ShowGizmosContext = createContext(DEFAULT_VIEWPORT.showGizmos);
+ShowGizmosContext.displayName = 'ShowGizmosContext';
+
 export interface ViewportModeProviderProps {
   children: ReactNode;
   initialMode?: ViewportMode;
   initialShowCollisions?: boolean;
   initialShowLabels?: boolean;
   initialShowNavigation?: boolean;
+  initialShowGizmos?: boolean;
   initialShowGrid?: boolean;
   initialShowPreviewSun?: boolean;
   initialShowPreviewEnvironment?: boolean;
@@ -119,6 +137,7 @@ export function ViewportModeProvider({
   initialShowCollisions = false,
   initialShowLabels = true,
   initialShowNavigation = true,
+  initialShowGizmos = DEFAULT_VIEWPORT.showGizmos,
   initialShowGrid = DEFAULT_VIEWPORT.showGrid,
   initialShowPreviewSun = true,
   initialShowPreviewEnvironment = true,
@@ -130,6 +149,7 @@ export function ViewportModeProvider({
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
   const [showLabels, setShowLabels] = useState(initialShowLabels);
   const [showNavigation, setShowNavigation] = useState(initialShowNavigation);
+  const [showGizmos, setShowGizmos] = useState(initialShowGizmos);
   const [showGrid, setShowGrid] = useState(initialShowGrid);
   const [showPreviewSun, setShowPreviewSun] = useState(initialShowPreviewSun);
   const [showPreviewEnvironment, setShowPreviewEnvironment] = useState(initialShowPreviewEnvironment);
@@ -146,6 +166,8 @@ export function ViewportModeProvider({
       setShowLabels,
       showNavigation,
       setShowNavigation,
+      showGizmos,
+      setShowGizmos,
       showGrid,
       setShowGrid,
       showPreviewSun,
@@ -164,6 +186,7 @@ export function ViewportModeProvider({
       showCollisions,
       showLabels,
       showNavigation,
+      showGizmos,
       showGrid,
       showPreviewSun,
       showPreviewEnvironment,
@@ -172,10 +195,19 @@ export function ViewportModeProvider({
       showPerformance,
     ]
   );
-  return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;
+  return (
+    <ViewportModeContext.Provider value={value}>
+      <ShowGizmosContext.Provider value={showGizmos}>{children}</ShowGizmosContext.Provider>
+    </ViewportModeContext.Provider>
+  );
 }
 
 /** The viewport mode and the overlay toggles. Safe without a provider. */
 export function useViewportMode(): ViewportModeValue {
   return useContext(ViewportModeContext);
+}
+
+/** Whether the editor gizmos draw. It changes only with the Gizmos toggle. */
+export function useShowGizmos(): boolean {
+  return useContext(ShowGizmosContext);
 }

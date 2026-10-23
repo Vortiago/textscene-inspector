@@ -1,5 +1,5 @@
 /**
- * <FogVolume> draws Godot's editor gizmo only while it is selected (ADR-0018): the 12 edges of its
+ * <FogVolume> draws Godot's editor gizmo for every node, faint while unselected: the 12 edges of its
  * box, for every shape but WORLD (`fog_volume_gizmo_plugin.cpp:92-125`).
  */
 import { describe, expect, it } from 'vitest';
@@ -8,9 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
 import { FogVolume } from './Component';
 import { parseFogVolume } from './parser';
 
@@ -26,16 +24,13 @@ function fogVolume(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}) {
+async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Fog">
-        <FogVolume node={fogVolume(props)}>
-          <group name="Child" />
-        </FogVolume>
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Fog" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <FogVolume node={fogVolume(props)}>
+        <group name="Child" />
+      </FogVolume>
+    </GizmoScene>
   );
 }
 
@@ -51,14 +46,21 @@ async function gizmoLines(props: Record<string, string>) {
   });
 }
 
-describe('<FogVolume> gizmo gate', () => {
+describe('<FogVolume> gizmo state', () => {
+  it('draws the box in full colour when the node is selected', async () => {
+    expect(lineOpacities(await render('Fog'))).toEqual([1]);
+  });
+
   it.each([
-    ['the node is selected', 'Fog', 1],
-    ['nothing is selected', null, 0],
-    ['another node is selected', 'Other', 0],
-  ])('draws the box only when %s', async (_label, selectedPath, expected) => {
-    const renderer = await render(selectedPath);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+    ['nothing is selected', null],
+    ['another node is selected', 'Other'],
+  ])('draws the box faintly, at 0.3, when %s', async (_label, selectedPath) => {
+    expect(lineOpacities(await render(selectedPath))).toEqual([0.3]);
+  });
+
+  it('draws no box with the Gizmos toggle off, selected', async () => {
+    const renderer = await render('Fog', {}, false);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

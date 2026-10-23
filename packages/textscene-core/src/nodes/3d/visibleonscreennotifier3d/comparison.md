@@ -5,16 +5,16 @@ status: limitation
 fixture: unit-visible-on-screen-notifier-3d.tscn
 # image: unit-visible-on-screen-notifier-3d
 visual: false
-renders_as: a selection-gated box gizmo
+renders_as: a box gizmo for every node
 ---
 
 # VisibleOnScreenNotifier3D
 
-Reports whether its `aabb` is on screen through `screen_entered` and `screen_exited` signals. It draws nothing at runtime. Godot's editor draws a gizmo of the box, and the previewer draws it while the node is selected (ADR-0018). Unlike its 2D sibling, this class has no draw call at all.
+Reports whether its `aabb` is on screen through `screen_entered` and `screen_exited` signals. It draws nothing at runtime. Godot's editor draws a gizmo of the box, and the previewer draws it for every node, faint while unselected (ADR-0056). Unlike its 2D sibling, this class has no draw call at all.
 
 ## Gizmo
 
-A selected notifier draws the gizmo of Godot's editor. Godot's source is `visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`.
+A notifier draws the gizmo of Godot's editor, faint while unselected, and adds the fill while selected. Godot's source is `visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`.
 
 - The 12 edges of `aabb`, in the editor's notifier colour.
 - Three segments of length 1 from the centre of the box, along +X, +Y and +Z.
@@ -41,4 +41,4 @@ The lenient parser reads `aabb` for the gizmo. A malformed value keeps Godot's d
 
 ## Known limitations
 
-- **Editor only** Godot's editor also draws the edges and axes of an unselected notifier at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
+- **Editor only** The edges and axes draw at 0.3 alpha while unselected (`node_3d_editor_gizmos.cpp:919-920`) when the Gizmos toggle is on, which a capture keeps off.

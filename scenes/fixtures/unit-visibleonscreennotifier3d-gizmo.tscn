@@ -1,7 +1,8 @@
 ; A VisibleOnScreenNotifier3D with an aabb that is not the default, for the one variable no other golden
 ; moves: its editor gizmo (the box edges, the three unit axes from the box centre and the faint fill).
-; The previewer gates the gizmo on selection (ADR-0018), so only the `select:` golden has it. A small
-; box sits at two opposite corners of the aabb to frame the whole gizmo.
+; The previewer draws the edges and axes faint for every node and the fill for the selected one
+; (ADR-0056), so only a golden with `gizmos: true` has them. A small box sits at two opposite corners
+; of the aabb to frame the whole gizmo.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxMesh" id="Corner_1"]

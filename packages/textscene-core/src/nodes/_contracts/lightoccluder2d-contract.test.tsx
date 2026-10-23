@@ -1,6 +1,6 @@
 /**
- * LightOccluder2D contract: the OccluderPolygon2D outline, a selection-gated LineSegments gizmo
- * (ADR-0018), not shadow casting. The pins assert topology: a closed N-gon has 2N positions and an
+ * LightOccluder2D contract: the OccluderPolygon2D outline, a LineSegments gizmo drawn for every node
+ * (`light_occluder_2d.cpp:183`), not shadow casting. The pins assert topology: a closed N-gon has 2N positions and an
  * open path 2(N-1), so a closed and open fixture pair also pins the `closed` default (true).
  */
 import { describe, it, expect } from 'vitest';
@@ -62,13 +62,20 @@ ${opts.nodeProps ?? ''}
 async function renderOcc(
   tscn: string,
   selectPath?: string,
-  seed?: (fake: ReturnType<typeof createFakeResourceLoader>) => void
+  seed?: (fake: ReturnType<typeof createFakeResourceLoader>) => void,
+  showGizmos?: boolean
 ) {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   seed?.(fake);
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={scene} selectedPath={selectPath}>
+    <SceneStack
+      workspace="2d"
+      loader={fake.loader}
+      scene={scene}
+      selectedPath={selectPath}
+      showGizmos={showGizmos}
+    >
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
@@ -179,9 +186,15 @@ occluder = ExtResource("1_occ")
     expect(counts[0]).toBe(8); // 4 pts, closed default → 4 segments → 8 positions
   });
 
-  it('renders NO occluder outline when the node is NOT selected (gizmo gate)', async () => {
+  it('renders the occluder outline when the node is NOT selected, as Godot draws it for every node', async () => {
     if (!requireComp()) return;
-    expect(lineSegmentCounts(await renderOcc(occScene({}))).length).toBe(0);
+    expect(lineSegmentCounts(await renderOcc(occScene({}))).length).toBe(1);
+  });
+
+  it('renders NO occluder outline when the Gizmos toggle is off, selected', async () => {
+    if (!requireComp()) return;
+    const off = await renderOcc(occScene({}), 'Root/Occ', undefined, false);
+    expect(lineSegmentCounts(off).length).toBe(0);
   });
 
   it('renders no outline when the LightOccluder2D has no occluder resource', async () => {

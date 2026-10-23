@@ -167,9 +167,13 @@ export function hasDroppedMipChain(texture: THREE.Texture): boolean {
 }
 
 /**
- * Writes the sampler state onto a texture the caller owns. A `*_WITH_MIPMAPS`
- * filter creates no mip chain: a procedural texture never calls `generate_mipmaps`
- * (`scene/resources/gradient_texture.cpp`), so Godot samples the base level only.
+ * Writes the sampler state onto a texture the caller owns. A texture that samples no chain
+ * uploads none: three allocates and writes every level of `mipmaps` whatever the filter reads, so
+ * the caller's own array is emptied, and a clone it came from keeps its levels. A compressed
+ * texture is its levels, so it keeps them. A `*_WITH_MIPMAPS`
+ * filter creates no mip chain: GradientTexture2D and the other procedural textures never call
+ * `generate_mipmaps` (`scene/resources/gradient_texture.cpp`), so Godot samples their base level
+ * only. NoiseTexture2D does call it (`noise_texture_2d.cpp:176-178`), and carries its chain.
  */
 export function applyTextureFilterState(texture: THREE.Texture, state: TextureFilterState): void {
   const wanted = effectiveState(texture, state);
@@ -177,4 +181,5 @@ export function applyTextureFilterState(texture: THREE.Texture, state: TextureFi
   texture.minFilter = wanted.minFilter;
   texture.generateMipmaps = wanted.generateMipmaps;
   texture.anisotropy = wanted.anisotropy;
+  if (!samplesMipChain(texture) && !(texture instanceof THREE.CompressedTexture)) texture.mipmaps = [];
 }
