@@ -6,9 +6,8 @@
  * over a cache snapshot, like `liveSceneTree.ts`, and the React hooks supply reactivity.
  */
 
-import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
@@ -22,7 +21,6 @@ import {
   LiveTree,
   holdsInstanceContent,
   liveTreeOf,
-  rootGroups,
   snapshotScenes,
   type LiveChildGroup,
   type LiveTreeContext,
@@ -158,9 +156,9 @@ class OwnerWalk {
   private readonly root: Reached;
 
   constructor(readonly live: PlacedLiveTree) {
-    const { roots, ctx } = live.tree;
+    const { roots, rootGroups } = live.tree;
     const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, live };
-    const candidates = rootGroups(roots, ctx).map((group) => ({ group, owner: outer }));
+    const candidates = rootGroups.map((group) => ({ group, owner: outer }));
     this.root = { owner: outer, into: outer, candidates };
   }
 
@@ -182,12 +180,12 @@ class OwnerWalk {
   private step(from: Reached, livePath: string): Reached | null {
     const { live } = this;
     const link = live.tree.at(livePath);
-    const found = link && from.candidates.find((candidate) => candidate.group.children.includes(link.node));
+    const found = link && from.candidates.find((candidate) => candidate.group === link.group);
     if (!link || !found) return null;
-    const node = link.node;
+    const node = link.raw;
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
-    const subRoots = cachedSubRoots(node, link.scope, live.tree.ctx);
+    const subRoots = cachedSubRoots(link.step.instancePath, live.tree.ctx);
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: livePath, roots: found.rootOf, parent: owner, live }
       : owner;
@@ -286,12 +284,7 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
   return new Map([...ownerUniquePaths(scene.parent), ...own]);
 }
 
-function cachedSubRoots(
-  node: LiveNode,
-  scope: SceneScope,
-  ctx: LiveTreeContext
-): readonly TscnNode[] | undefined {
-  const scenePath = liveInstancePath(node, scope);
+function cachedSubRoots(scenePath: string | null, ctx: LiveTreeContext): readonly TscnNode[] | undefined {
   return scenePath ? snapshotScenes(ctx).getCached(scenePath)?.nodes : undefined;
 }
 

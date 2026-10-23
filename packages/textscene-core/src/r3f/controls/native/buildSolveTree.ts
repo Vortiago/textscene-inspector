@@ -1,6 +1,6 @@
 /**
  * `useBuildSolveTree` turns a Control subtree into the `SolveNode` forest `controlRectSolver.ts`
- * consumes, on `liveSceneTree.ts`'s shared traversal (`foldLiveTree`). A non-Control ancestor
+ * consumes, on `liveSceneTree.ts`'s shared traversal (`LiveTree.fold`). A non-Control ancestor
  * (not in `TWO_D_UI_TYPES`) gets no `SolveNode`, and its children are walked in its place. Where a
  * Control beneath it lands follows Godot's canvas climb, as `buildSolveTree.md` sets out.
  *
@@ -52,16 +52,15 @@ import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
-  foldLiveTree,
   isInjected,
   liveTreeOf,
   type CachedSceneSource,
   type LiveChildGroup,
   type LiveTreeContext,
-  type LiveWalkEntry,
+  type LiveLink,
   type SceneScope,
 } from '../../liveSceneTree';
-import { liveInstancePath, scopeOf } from '../../../resources/liveNode';
+import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
@@ -296,7 +295,10 @@ interface Ancestry {
   childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
 }
 
-/** Where each child draws, by the child, from the allocations that numbered the lists in order. */
+/**
+ * Where each child draws, by the child, from the allocations that numbered the lists in order.
+ * One parent never lists a node object twice: the parser builds an object for each heading.
+ */
 function paintRangesOf(...numbered: readonly (readonly [readonly TscnNode[], readonly PaintRange[]])[]) {
   const ranges = new Map<TscnNode, PaintRange>();
   for (const [children, allocated] of numbered) {
@@ -631,7 +633,7 @@ function buildForest(
 
   /** The Control forest of one tree node: what it adds to the forest and what it hoists to the canvas. */
   function walk(
-    { raw: node, step, path, group }: LiveWalkEntry,
+    { raw: node, step, path, group }: LiveLink,
     ancestry: Ancestry,
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
@@ -652,7 +654,7 @@ function buildForest(
 
     // A grafted node's instance ref names an id in the file that authored it.
     const authored = scopeOf(node, group.scope);
-    const scenePath = liveInstancePath(node, group.scope);
+    const scenePath = step.instancePath;
     if (scenePath && sceneCache.getCached(scenePath) === undefined) {
       // The ExtResource too, since the load checks its type. A raw `res://`
       // instance has none to register, and is still requested.
@@ -822,9 +824,7 @@ function buildForest(
 
   const rootRanges = allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children;
   const walked = joinWalked(
-    foldLiveTree(
-      nodes,
-      ctx,
+    tree.fold(
       {
         themeChain: [],
         paintRanges: paintRangesOf([nodes, rootRanges]),

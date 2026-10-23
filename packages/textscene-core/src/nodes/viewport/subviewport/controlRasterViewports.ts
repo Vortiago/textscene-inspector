@@ -9,7 +9,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
 import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
-import { foldLiveTree, type LiveTreeContext, type SceneScope } from '../../../r3f/liveSceneTree.js';
+import { liveTreeOf, type LiveTreeContext, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 
@@ -58,14 +58,14 @@ export function collectControlRasterViewports(
 
   // The step decides instance-collapse and per-group resource scope, the same decision
   // `useBuildSolveTree`'s walk makes for the on-screen pass.
-  foldLiveTree<boolean | null, void>(roots, ctx, null, ({ step, path }, inheritedRtl, descend) => {
+  const tree = liveTreeOf(roots, ctx);
+  tree.fold<boolean | null, void>(null, ({ step, path }, inheritedRtl, descend) => {
     // Classified on the resolved subtree, as `useViewportContentKind` does: a
     // raw `instance=` child reads as 3D, so both owners of this key would
     // decline and leave the consumer blank.
     if (
       isViewportBoundary(step.node.type) &&
-      viewportContentKind(resolveViewportSubtree(step.node, step.scope.externalResources, sceneCache)) ===
-        'dom'
+      viewportContentKind(resolveViewportSubtree(tree, step.node, step.scope)) === 'dom'
     ) {
       found.push({ path, node: step.node, inheritedRtl, ...step.scope });
     }

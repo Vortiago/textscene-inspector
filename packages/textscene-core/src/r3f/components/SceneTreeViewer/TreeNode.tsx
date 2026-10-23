@@ -4,7 +4,7 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { liveInstancePath, scopeOf } from '../../../resources/liveNode.js';
+import { scopeOf } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -99,13 +99,11 @@ function TreeNodeImpl({
     () => scopeOf(node, { externalResources, internalResources: [], instancedScenePaths }),
     [node, externalResources, instancedScenePaths]
   );
-  const scenePath = liveInstancePath(node, scope);
-  const instanceScenePath = onOpenSubScene ? scenePath : null;
-
   // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the
   // same decision the viewport and inspector make, for the row header. The hook keeps the step
   // stable across selection and hover, so the row reuses one merge.
-  const { node: effective, groups } = useLiveStep(node, scope);
+  const { node: effective, groups, instancePath } = useLiveStep(node, scope);
+  const instanceScenePath = onOpenSubScene ? instancePath : null;
 
   const hasChildren = groups.some((g) => g.children.length > 0);
 

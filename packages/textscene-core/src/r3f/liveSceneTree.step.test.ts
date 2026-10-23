@@ -5,7 +5,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { liveStep, liveTreeOf, rootScope } from './liveSceneTree';
-import { graftedContext, hostScene, subScene, LEAF_PATH, CAPTION_PATH } from './testing/graftedScopeFixture';
+import {
+  graftedContext,
+  hostScene,
+  subScene,
+  LEAF_PATH,
+  CAPTION_PATH,
+  SUB_PATH,
+} from './testing/graftedScopeFixture';
 import './nodes/index';
 
 const tree = liveTreeOf(hostScene.nodes, graftedContext);
@@ -19,6 +26,7 @@ describe('the step of a plain node', () => {
 
   it('shows the node itself', () => {
     expect(step.node).toBe(host);
+    expect(step.isMerged).toBe(false);
   });
 
   it('resolves its refs in the scope of the group it sits in', () => {
@@ -35,6 +43,11 @@ describe('the step of a merged instance root', () => {
 
   it('shows the sub-scene root it collapsed into, under the instance name', () => {
     expect(sub.step.node).toMatchObject({ name: 'Sub', type: 'Control' });
+    expect(sub.step.isMerged).toBe(true);
+  });
+
+  it('names the scene the instance node as authored refers to', () => {
+    expect(sub.step.instancePath).toBe(SUB_PATH);
   });
 
   it('resolves its refs in the sub-scene, not in the host that instanced it', () => {
