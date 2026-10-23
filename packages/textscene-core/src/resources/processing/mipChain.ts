@@ -26,8 +26,15 @@ export function reversedLevel({ data, width, height }: MipLevel): MipLevel {
  * Every level of `base`'s chain, `base` first, down to 1 × 1 (`image.cpp:1885-1945`). With
  * `renormalize`, each generated level's RGB is a unit normal again (`renormalize_uint8`, `:4577-4588`).
  * A `levelCount` stops the chain short of 1 × 1. The caller keeps `base`, which the chain shares.
+ * A level of `reuse` at the same index and size is written over, not allocated: a fresh buffer
+ * costs 60 ms of page faults for a 4096 × 8192 level, on every rebuild of an atlas.
  */
-export function mipChain(base: MipLevel, renormalize: boolean, levelCount = Infinity): MipLevel[] {
+export function mipChain(
+  base: MipLevel,
+  renormalize: boolean,
+  levelCount = Infinity,
+  reuse: readonly MipLevel[] = []
+): MipLevel[] {
   const expectedBytes = base.width * base.height * RGBA_BYTES;
   if (base.data.length !== expectedBytes) {
     throw new Error(
@@ -36,7 +43,7 @@ export function mipChain(base: MipLevel, renormalize: boolean, levelCount = Infi
   }
   const levels = [base];
   for (let level = base; levels.length < levelCount && (level.width > 1 || level.height > 1);) {
-    level = halved(level, renormalize);
+    level = halved(level, renormalize, reuse[levels.length]);
     levels.push(level);
   }
   return levels;
@@ -46,10 +53,13 @@ export function mipChain(base: MipLevel, renormalize: boolean, levelCount = Infi
  * `_generate_po2_mipmap` (`image.cpp:1947-1979`): each texel averages the 2 × 2 block at twice its
  * position, so an odd size drops its last column or row. A size of 1 averages the texel with itself.
  */
-function halved(source: MipLevel, renormalize: boolean): MipLevel {
+function halved(source: MipLevel, renormalize: boolean, spare: MipLevel | undefined): MipLevel {
   const width = Math.max(source.width >> 1, 1);
   const height = Math.max(source.height >> 1, 1);
-  const data = new Uint8Array(width * height * RGBA_BYTES);
+  const data =
+    spare?.width === width && spare.height === height
+      ? spare.data
+      : new Uint8Array(width * height * RGBA_BYTES);
   const rightStep = source.width === 1 ? 0 : RGBA_BYTES;
   const downStep = source.height === 1 ? 0 : source.width * RGBA_BYTES;
   for (let y = 0; y < height; y++) {

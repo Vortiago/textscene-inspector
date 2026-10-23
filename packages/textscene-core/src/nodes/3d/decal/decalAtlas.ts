@@ -11,6 +11,7 @@ import { AtlasHolders } from '../../../r3f/textureAtlas/atlasHolders.js';
 import { AtlasTexture, holdAtlasLevels } from '../../../r3f/textureAtlas/atlasTexture.js';
 import { readableTextures } from '../../../r3f/textureAtlas/godotImage.js';
 import { fitDecalAtlas, packDecalAtlas, type DecalAtlasLayout } from './decalAtlasLayout.js';
+import type { MipLevel } from '../../../resources/processing/mipChain.js';
 import { decalAtlasLevels } from './decalAtlasLevels.js';
 
 /** Where a texture lies in the atlas: left, top, width and height as fractions of it, top row first. */
@@ -89,7 +90,8 @@ export function updateDecalAtlas(maxTextureSize: number): void {
     atlasTexture,
     decalAtlasLevels(
       layout,
-      placed.map(({ image }) => image)
+      placed.map(({ image }) => image),
+      atlasTexture.mipmaps as MipLevel[]
     )
   );
 }

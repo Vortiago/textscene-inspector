@@ -67,4 +67,41 @@ describe('decalAtlasLevels', () => {
     expect(texelAt(level!, 16, 16)).toEqual(RED);
     expect(texelAt(level!, 17, 17)).toEqual(BLUE);
   });
+
+  describe('over the levels of the last build', () => {
+    it('writes the same size over its buffers, and gives the bytes a fresh build gives', () => {
+      const images = [solid(1, RED), solid(1, BLUE)];
+      const layout = packDecalAtlas(images);
+      const last = decalAtlasLevels(layout, images);
+      const buffers = last.map(({ data }) => data);
+
+      const rebuilt = decalAtlasLevels(layout, images, last);
+
+      expect(rebuilt.map(({ data }) => data)).toEqual(buffers);
+      rebuilt.forEach(({ data }, level) => expect(data).toBe(buffers[level]));
+      expect(rebuilt).toEqual(decalAtlasLevels(layout, images));
+    });
+
+    it('leaves nothing of a texture that left (edge case)', () => {
+      const both = [solid(1, RED), solid(1, BLUE)];
+      const last = decalAtlasLevels(packDecalAtlas(both), both);
+      const remaining = [solid(1, RED)];
+
+      const rebuilt = decalAtlasLevels(packDecalAtlas(remaining), remaining, last);
+
+      expect(texelAt(rebuilt[0]!, 48, 16)).toEqual([0, 0, 0, 0]);
+      expect(rebuilt).toEqual(decalAtlasLevels(packDecalAtlas(remaining), remaining));
+    });
+
+    it('allocates new buffers when the atlas changes size (edge case)', () => {
+      const small = [solid(1, RED)];
+      const last = decalAtlasLevels(packDecalAtlas(small), small);
+      const wide = [solid(1, RED), solid(40, BLUE)];
+
+      const rebuilt = decalAtlasLevels(packDecalAtlas(wide), wide, last);
+
+      rebuilt.forEach(({ data }) => expect(last.some((level) => level.data === data)).toBe(false));
+      expect(rebuilt).toEqual(decalAtlasLevels(packDecalAtlas(wide), wide));
+    });
+  });
 });
