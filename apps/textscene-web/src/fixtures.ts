@@ -808,6 +808,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Minimap Connection Origin",
+    "file": "unit-graph-edit-minimap-connection-origin.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Minimap Connection",
     "file": "unit-graph-edit-minimap-connection.tscn",
     "category": "Other"

@@ -25,15 +25,17 @@ interface MinimapConnectionLine {
 }
 
 /**
- * The connections the settled minimap shows. `ref:godot` draws none once a load-time setter ran
- * `_update_scrollbars`, and all of them otherwise (the connection fixture, each key added alone).
- * The engine line that hides them is not traced.
+ * The connections the settled minimap shows. The minimap's first draw reads an empty connection
+ * cache. It draws again with the filled cache only when a child moves after the connections layer
+ * drew, which no load-time `_update_scroll_offset` leaves for it to do, and which a child at
+ * `position_offset` `(0, 0)` never does. `graphEdit.md` gives the trace and the probe.
  */
 export function minimapConnectionsOf(
   connections: readonly ResolvedConnection[],
-  props: Pick<GraphEditProperties, 'updatedScrollbars'>
+  props: Pick<GraphEditProperties, 'queuedScrollOffsetUpdate'>,
+  hasPositionedChild: boolean
 ): readonly ResolvedConnection[] {
-  return props.updatedScrollbars ? [] : connections;
+  return props.queuedScrollOffsetUpdate || !hasPositionedChild ? [] : connections;
 }
 
 function distance(a: Vector2, b: Vector2): number {

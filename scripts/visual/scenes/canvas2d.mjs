@@ -576,6 +576,11 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-graph-edit-minimap-connection.tscn',
     mode: '2d',
   },
+  {
+    name: 'graph-edit-minimap-connection-origin',
+    file: 'unit-graph-edit-minimap-connection-origin.tscn',
+    mode: '2d',
+  },
   // The load-time clamps: `scroll_offset` against a still-zero bound and `zoom`
   // against whichever bound the file had applied by then. Both store a value
   // the scene never wrote, and neither is visible in a scene that omits them.

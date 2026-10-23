@@ -11,6 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { GraphEdit } from './Component';
@@ -65,11 +66,16 @@ function leafControl(name: string, minHeight: number): SolveNode {
   };
 }
 
-function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: SolveNode[]): SolveNode {
+function graphNode(
+  name: string,
+  slots: Map<number, GraphNodeSlot>,
+  children: SolveNode[],
+  positionOffset: Vector2 = { x: 0, y: 0 }
+): SolveNode {
   return {
     ...emptySolveNode(),
     path: name,
-    node: controlNode(name, 'GraphNode', { name, title: '', positionOffset: { x: 0, y: 0 }, slots }),
+    node: controlNode(name, 'GraphNode', { name, title: '', positionOffset, slots }),
     children,
   };
 }
@@ -333,14 +339,19 @@ describe('<GraphEdit> minimap connection polylines', () => {
     ['Sink', { x: 200, y: 0, w: 120, h: 80 }],
   ]);
 
-  function render(properties: Partial<GraphEditProperties>) {
+  function render(properties: Partial<GraphEditProperties>, sinkOffset: Vector2 = { x: 200, y: 0 }) {
     return ReactThreeTestRenderer.create(
       <GraphEdit
         {...painterEnv()}
         childRects={childRects}
         solveNode={graphEdit({ showGrid: false, minimapEnabled: true, connections, ...properties }, [
           graphNode('Source', new Map([[0, fullSlot({ rightEnabled: true })]]), [leafControl('Value', 20)]),
-          graphNode('Sink', new Map([[0, fullSlot({ leftEnabled: true })]]), [leafControl('Result', 20)]),
+          graphNode(
+            'Sink',
+            new Map([[0, fullSlot({ leftEnabled: true })]]),
+            [leafControl('Result', 20)],
+            sinkOffset
+          ),
         ])}
         rect={{ x: 0, y: 0, w: 400, h: 320 }}
         renderOrder={0}
@@ -367,8 +378,12 @@ describe('<GraphEdit> minimap connection polylines', () => {
     expect(polyline(await render({ minimapEnabled: false }))).toBeUndefined();
   });
 
-  it('draws none once the load ran _update_scrollbars, as ref:godot settles the frame', async () => {
-    expect(polyline(await render({ updatedScrollbars: true }))).toBeUndefined();
+  it('draws none once a load-time setter queued _update_scroll_offset (graph_edit.cpp:409,524)', async () => {
+    expect(polyline(await render({ queuedScrollOffsetUpdate: true }))).toBeUndefined();
+  });
+
+  it('draws none while every child sits at position_offset (0, 0), as no child moves to redraw it', async () => {
+    expect(polyline(await render({}, { x: 0, y: 0 }))).toBeUndefined();
   });
 
   it('adds the two feather strips and both end caps only while connection_lines_antialiased is on', async () => {

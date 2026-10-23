@@ -66,8 +66,8 @@ are present in every GraphEdit, whatever the scene file says:
   `draw_polyline_colors` polyline, with each point's colour lerped in minimap space and
   a feather that `connection_lines_antialiased` selects. All of it is letterboxed into
   the bounding box of the graph. Godot draws no connection in the settled minimap when a
-  `scroll_offset` or a `zoom` that moves ran `_update_scrollbars` while the file loaded. The
-  engine line that hides them is not traced, and `ref:godot` shows the effect.
+  `scroll_offset` or a `zoom` that moves ran while the file loaded, or when every child sits at
+  `position_offset` `(0, 0)`: the minimap's only draw reads an empty connection cache (`graphEdit.md`).
 
 ## Linting
 

@@ -294,7 +294,13 @@ export function GraphEdit({
 
   const minimapEnabled = isMinimapEnabled(props);
   const graphEditSize = rectSize;
-  const { bounds, minimapElements } = graphEditElements(solveNode, childRects, zoom, graphEditSize, theme);
+  const { bounds, hasPositionedChild, minimapElements } = graphEditElements(
+    solveNode,
+    childRects,
+    zoom,
+    graphEditSize,
+    theme
+  );
   // The chrome is `INTERNAL_MODE_*` children of `top_layer`, which is `INTERNAL_MODE_BACK`
   // (`graph_edit.cpp:3183`), so it paints after every GraphElement, in `top_layer`
   // child order (`:3210,3229,3329`): scrollbars, toolbar, minimap.
@@ -396,7 +402,7 @@ export function GraphEdit({
             scrollOffset={scrollOffset}
             graphEditSize={graphEditSize}
             opacity={minimapOpacity(props)}
-            connections={minimapConnectionsOf(connections, props)}
+            connections={minimapConnectionsOf(connections, props, hasPositionedChild)}
             curvature={curvature}
             connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
             icons={solveNode.icons}
