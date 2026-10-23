@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  frameSizePx,
-  frameUvWindow,
-  spriteSamplerClone,
-  spriteWrapMode,
-  type SpriteFrameProps,
-} from './spriteFrame';
+import { frameSizePx, frameUvWindow, spriteWrapMode, type SpriteFrameProps } from './spriteFrame';
 
 function makeTexture(width = 100, height = 80): THREE.Texture {
   const texture = new THREE.Texture();
@@ -23,42 +17,6 @@ function baseProps(overrides: Partial<SpriteFrameProps> = {}): SpriteFrameProps 
     ...overrides,
   };
 }
-
-describe('spriteSamplerClone', () => {
-  it('clones the texture (never mutates the shared cache entry)', () => {
-    const source = makeTexture();
-    const result = spriteSamplerClone(source, 'repeat', THREE.SRGBColorSpace);
-    expect(result).not.toBe(source);
-    expect(result.source).toBe(source.source);
-    expect(source.wrapS).toBe(THREE.ClampToEdgeWrapping); // source untouched
-  });
-
-  it('leaves the UV window to the draw site', () => {
-    const result = spriteSamplerClone(makeTexture(), 'clamp', THREE.SRGBColorSpace);
-    expect(result.repeat.toArray()).toEqual([1, 1]);
-    expect(result.offset.toArray()).toEqual([0, 0]);
-  });
-
-  it('retags the clone with the caller-supplied colorSpace, independent of the source', () => {
-    const source = makeTexture();
-    source.colorSpace = THREE.SRGBColorSpace;
-    const result = spriteSamplerClone(source, 'clamp', THREE.NoColorSpace);
-    expect(result.colorSpace).toBe(THREE.NoColorSpace);
-    expect(source.colorSpace).toBe(THREE.SRGBColorSpace); // source untouched
-  });
-
-  it("clamps an overrun on the 2D canvas (Viewport's texture repeat is DISABLED)", () => {
-    const result = spriteSamplerClone(makeTexture(100, 80), 'clamp', THREE.SRGBColorSpace);
-    expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
-    expect(result.wrapT).toBe(THREE.ClampToEdgeWrapping);
-  });
-
-  it('tiles an overrun for a sprite whose derived wrap mode is REPEAT', () => {
-    const result = spriteSamplerClone(makeTexture(100, 80), 'repeat', THREE.SRGBColorSpace);
-    expect(result.wrapS).toBe(THREE.RepeatWrapping);
-    expect(result.wrapT).toBe(THREE.RepeatWrapping);
-  });
-});
 
 describe('frameUvWindow', () => {
   it('is the full image for a plain full-image sprite', () => {

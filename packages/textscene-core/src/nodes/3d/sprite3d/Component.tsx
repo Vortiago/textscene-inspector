@@ -11,7 +11,9 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '../../../r3f/spriteFrame';
+import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
+import { drawnClone } from '../../../r3f/drawnClone';
+import { WRAP } from '../../../r3f/canvasItemTextureSampler';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { flippedUvWindow } from '../../../r3f/uvWindow';
@@ -26,7 +28,6 @@ import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
-import { applyTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
@@ -85,20 +86,24 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     textureFilter: properties.texture_filter,
     anisotropicFilteringLevel,
   });
-  // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
-  // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
-  // `source_color` sampler, so the clone reads as an albedo does, not as the 2D canvas's retag.
-  const samplerClone = useMemo(() => {
-    if (!sourceTexture) return undefined;
-    const cloned = spriteSamplerClone(sourceTexture, wrap, sourceColorSpace(sourceTexture));
-    // Sprite3D's texture is a node property, not a material slot, so the node's
-    // own `texture_filter` (`material.cpp:3055`) lands on this clone.
-    applyTextureFilterState(cloned, textureFilter);
-    return cloned;
-  }, [sourceTexture, wrap, textureFilter]);
+  // The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a `source_color`
+  // sampler, so the clone reads as an albedo does, not as the 2D canvas's retag. Sprite3D's
+  // texture is a node property, not a material slot, so the node's own `texture_filter`
+  // (`material.cpp:3055`) lands on this clone.
+  const samplerClone = useMemo(
+    () =>
+      sourceTexture
+        ? drawnClone(sourceTexture, {
+            colorSpace: sourceColorSpace(sourceTexture),
+            filter: textureFilter,
+            wrap: WRAP[wrap],
+          })
+        : null,
+    [sourceTexture, wrap, textureFilter]
+  );
   // The clone is this component's, never the loader's cached entry: `useUploadedClone`
   // uploads it once and disposes it once it no longer draws. A frame change keeps it.
-  const displayedTexture = useUploadedClone(samplerClone ?? null);
+  const displayedTexture = useUploadedClone(samplerClone);
   // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
   const frameWindow = useMemo(
     () =>

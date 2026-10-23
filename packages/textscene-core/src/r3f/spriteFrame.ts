@@ -4,22 +4,20 @@
  * `region_enabled`, else the full texture) and then subdivides it by the frame
  * grid, so region and frames compose.
  *
- * The sampler clone and the frame's UV window are separate on purpose. three keys a
+ * The frame's UV window is set apart from the sampler clone on purpose. three keys a
  * GPU texture by source and sampler state, never by offset or repeat, so a frame
  * change moves the window on the clone already drawn and uploads nothing.
  */
 
-import * as THREE from 'three';
-import { pinNoColorSpace } from './canvas2DTextureDecode';
+import type * as THREE from 'three';
 import { FULL_UV_WINDOW, regionUvWindow, type UvWindow } from './uvWindow';
 import { frameCoords } from '../godot/scene/spriteFrames';
-import { WRAP } from './canvasItemTextureSampler';
 
 /**
  * What shows where a frame's UVs fall outside the texture, which only a
  * `region_rect` bigger than its texture reaches: Godot does not clip it
  * (`Sprite2D::_get_rects`, and `Texture2D::get_rect_region` passes it through).
- * Required, since a default is the silent hand-syncing this module prevents. `SpriteBase3D` derives
+ * `SpriteBase3D` derives
  * `texture_repeat` from the frame's UV corners (`sprite_3d.cpp:163`), as `spriteWrapMode()` does: a
  * frame inside the texture clamps, so its edge texels stretch past it, and only an overrun tiles.
  */
@@ -49,31 +47,6 @@ export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
   vframes: 1,
   frame: 0,
 });
-
-/**
- * Clone the loaded texture with the sprite's sampler state. `useResource` shares one
- * texture per path, so an in-place edit clobbers other sprites. `colorSpace` is required
- * like `wrap`: Sprite3D passes the colour space its albedo sampler reads the texture in.
- * The frame's UVs are not set here: `useUvWindow` sets them on the clone that draws.
- */
-export function spriteSamplerClone(
-  texture: THREE.Texture,
-  wrap: SpriteWrapMode,
-  colorSpace: THREE.ColorSpace
-): THREE.Texture {
-  const cloned = texture.clone();
-  // A plain assignment loses to R3F's auto sRGB-tagging once the clone reaches a
-  // `map` prop, so NoColorSpace is pinned. SRGBColorSpace is what that tagging forces anyway.
-  if (colorSpace === THREE.NoColorSpace) {
-    pinNoColorSpace(cloned);
-  } else {
-    cloned.colorSpace = colorSpace;
-  }
-  cloned.wrapS = WRAP[wrap];
-  cloned.wrapT = WRAP[wrap];
-  cloned.needsUpdate = true;
-  return cloned;
-}
 
 /**
  * The current frame's UV window over `texture`: the region-then-frame-grid composition, over the

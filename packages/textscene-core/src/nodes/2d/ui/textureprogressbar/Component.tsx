@@ -14,13 +14,13 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import {
-  applyCanvasItemSampler,
+  canvasItemCloneSampler,
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { undecodedClone } from '../../../../r3f/undecodedTexture';
-import { applyUvWindow, regionUvWindow } from '../../../../r3f/uvWindow';
+import { drawnClone } from '../../../../r3f/drawnClone';
+import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
@@ -63,12 +63,10 @@ function useLayerTexture(
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
   // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
   // would upload a whole GPU copy that never draws, under its own sampler settings.
-  const layer = useMemo(() => {
-    if (!raw) return null;
-    const cloned = undecodedClone(raw);
-    applyCanvasItemSampler(cloned, sampler);
-    return cloned;
-  }, [raw, sampler]);
+  const layer = useMemo(
+    () => (raw ? drawnClone(raw, canvasItemCloneSampler(sampler)) : null),
+    [raw, sampler]
+  );
   return useUploadedClone(layer);
 }
 
@@ -82,12 +80,11 @@ function useCroppedTexture(
   // uploads nothing.
   const cropped = useMemo(() => {
     if (!texture || !region || !textureSize) return null;
-    const cloned = texture.clone();
-    cloned.wrapS = THREE.ClampToEdgeWrapping;
-    cloned.wrapT = THREE.ClampToEdgeWrapping;
-    applyUvWindow(cloned, regionUvWindow(region, textureSize));
-    cloned.needsUpdate = true;
-    return cloned;
+    return drawnClone(texture, {
+      colorSpace: THREE.NoColorSpace,
+      wrap: THREE.ClampToEdgeWrapping,
+      window: regionUvWindow(region, textureSize),
+    });
   }, [texture, region, textureSize]);
   return useUploadedClone(cropped);
 }

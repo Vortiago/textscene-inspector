@@ -1,7 +1,7 @@
 /**
  * `<TextureButton>`: the native (WebGL canvas) painter, one `<ControlQuad>` placed by
  * `textureButtonDraw` and textured from the slot `resolveTextureButtonSlot` picks, prepared as
- * `texturerect/rectTexture.ts` prepares TextureRect's. Tint is the walker's `tint` as is, like TextureRect,
+ * TextureRect's, through `rectTextureSampler`. Tint is the walker's `tint` as is, like TextureRect,
  * and `useInheritedTextureSampler` resolves the sampler. The walker owns the transform.
  */
 
@@ -12,7 +12,8 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
-import { rectTexture } from '../texturerect/rectTexture';
+import { rectTextureSampler } from '../texturerect/rectTexture';
+import { drawnClone } from '../../../../r3f/drawnClone';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -62,10 +63,13 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
 
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !draw) return null;
-    return rectTexture(rawTexture, draw, sampler, {
-      flipH: props.flipH === true,
-      flipV: props.flipV === true,
-    });
+    return drawnClone(
+      rawTexture,
+      rectTextureSampler(draw, sampler, {
+        flipH: props.flipH === true,
+        flipV: props.flipV === true,
+      })
+    );
   }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
 
   const drawnTexture = useUploadedClone(preparedTexture);

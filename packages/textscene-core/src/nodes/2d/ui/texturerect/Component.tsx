@@ -13,7 +13,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw } from './nativeSolver';
-import { rectTexture } from './rectTexture';
+import { rectTextureSampler } from './rectTexture';
+import { drawnClone } from '../../../../r3f/drawnClone';
 import type { TextureRectProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
@@ -44,10 +45,13 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
 
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !draw) return null;
-    return rectTexture(rawTexture, draw, sampler, {
-      flipH: props.flipH === true,
-      flipV: props.flipV === true,
-    });
+    return drawnClone(
+      rawTexture,
+      rectTextureSampler(draw, sampler, {
+        flipH: props.flipH === true,
+        flipV: props.flipV === true,
+      })
+    );
   }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
 
   const drawnTexture = useUploadedClone(preparedTexture);

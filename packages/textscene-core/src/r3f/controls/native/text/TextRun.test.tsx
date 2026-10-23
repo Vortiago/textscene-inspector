@@ -282,15 +282,10 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
   );
 
   it(
-    'keeps the SRGBColorSpace tag across a re-render that reuses the SAME material -- the ' +
-      'material is built imperatively (`createCanvasTextMaterial`, a plain ' +
-      '`new THREE.MeshBasicMaterial(...)`), never through a JSX `<meshBasicMaterial map={...}>` ' +
-      "element, so `@react-three/fiber`'s `applyProps` `colorMaps` re-tagging never gets a chance " +
-      'to run on it either way -- proving the KEPT tag survives a second commit the same way a ' +
-      "retag would have (`undecodedTexture.ts`'s own doc: that re-tagging is what forces " +
-      '`useIconTexture` to use `pinNoColorSpace` instead of a plain assignment there). ' +
-      "`renderOrder` is deliberately NOT a `useMemo` dep (`TextRun.tsx`'s own deps list), so " +
-      'changing only it forces a second commit of the SAME material/texture object.',
+    'keeps the SRGBColorSpace tag across a re-render that reuses the same material. ' +
+      '`createCanvasTextMaterial` builds the material imperatively, never through a JSX ' +
+      "`<meshBasicMaterial map={...}>`, so `@react-three/fiber`'s `colorMaps` retag never runs on it. " +
+      '`renderOrder` is not a `useMemo` dep, so changing only it commits the same material again.',
     async () => {
       // The same layout object across both renders: `layout` is a `useMemo` dep,
       // so a fresh `canvasLayoutFor('Hi')` would rebuild the material by identity alone.
