@@ -245,8 +245,9 @@ const NOTHING_WALKED: WalkResult = { nodes: [], hoisted: [] };
 function joinWalked(results: readonly WalkResult[]): WalkResult {
   const joined: WalkResult = { nodes: [], hoisted: [] };
   for (const result of results) {
-    joined.nodes.push(...result.nodes);
-    joined.hoisted.push(...result.hoisted);
+    // Pushed one by one: a spread of a very large array exceeds the engine's argument limit.
+    for (const node of result.nodes) joined.nodes.push(node);
+    for (const node of result.hoisted) joined.hoisted.push(node);
   }
   return joined;
 }
@@ -295,12 +296,14 @@ interface Ancestry {
   childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
 }
 
-/** The ranges of `children`, by the child, from the allocation that numbered them in order. */
-function paintRangesOf(
-  children: readonly TscnNode[],
-  ranges: readonly PaintRange[]
-): Map<TscnNode, PaintRange> {
-  return new Map(children.map((child, index) => [child, ranges[index]!]));
+/** Where each child draws, by the child, from the allocations that numbered the lists in order. */
+function paintRangesOf(...numbered: readonly (readonly [readonly TscnNode[], readonly PaintRange[]])[]) {
+  const ranges = new Map<TscnNode, PaintRange>();
+  for (const [children, allocated] of numbered) {
+    for (const [index, child] of children.entries())
+      ranges.set(child, allocated[index] ?? WHOLE_CANVAS_RANGE);
+  }
+  return ranges;
 }
 
 interface ForestResult {
@@ -744,10 +747,10 @@ function buildForest(
       ? joinWalked(
           descend({
             themeChain: nodeThemeChain,
-            paintRanges: new Map([
-              ...paintRangesOf(inlineChildren, allocated.children),
-              ...paintRangesOf(injectedChildren, injectedRanges),
-            ]),
+            paintRanges: paintRangesOf(
+              [inlineChildren, allocated.children],
+              [injectedChildren, injectedRanges]
+            ),
             skippedAncestors: childSkippedAncestors,
             canvasChainBroken: childCanvasChainBroken,
             ancestorHidden: hidden,
@@ -757,7 +760,7 @@ function buildForest(
             childVisibility: writtenChildVisibility,
           })
         )
-      : NOTHING_WALKED;
+      : { nodes: [], hoisted: [] };
 
     // Not a Control: no SolveNode, and its Control descendants promote up.
     if (!isControl) return { nodes: children, hoisted: childHoisted };
@@ -824,7 +827,7 @@ function buildForest(
       ctx,
       {
         themeChain: [],
-        paintRanges: paintRangesOf(nodes, rootRanges),
+        paintRanges: paintRangesOf([nodes, rootRanges]),
         skippedAncestors: null,
         canvasChainBroken: false,
         ancestorHidden: false,

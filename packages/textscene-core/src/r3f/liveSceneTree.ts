@@ -240,9 +240,9 @@ export interface LiveChildGroup {
 /**
  * What is below a node that does not collapse: one `inline` group for a non-instance,
  * `inline` plus `subscene` for a multi-root instance, and one `glb` group for a
- * GLBSceneRoot. A single-root instance collapses, and {@link mergedGroups} gives its groups. The node that instances a lone GLB is the
- * GLB root, so a loaded GLB's objects are `glb` groups and its own children `inline` groups, in
- * the order `index=` gives. `scope` is
+ * GLBSceneRoot. A single-root instance collapses, and {@link mergedGroups} gives its groups.
+ * The node that instances a lone GLB is the GLB root, so a loaded GLB's objects are `glb`
+ * groups and its own children `inline` groups, in the order `index=` gives. `scope` is
  * the one of the group the node sits in, which the node's own `scope` replaces. A sub-scene's
  * groups read the sub-scene's pools from the cache, and their `instancedScenePaths` gain the
  * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
