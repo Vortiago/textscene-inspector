@@ -14,6 +14,7 @@ import {
   type CachedSceneSource,
   type LiveTreeContext,
 } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 
 const BASE = `[gd_scene format=3]
 
@@ -98,14 +99,6 @@ function sceneRecord(): Record<string, TscnScene> {
     'res://base.tscn': parse(BASE),
     'res://kid.tscn': parse(KID),
     'res://wrap.tscn': parse(WRAP),
-  };
-}
-
-function contextOver(main: TscnScene, scenes: Record<string, TscnScene>): LiveTreeContext {
-  return {
-    externalResources: main.externalResources,
-    internalResources: main.internalResources,
-    sceneCache: { getCached: (path) => scenes[path] },
   };
 }
 

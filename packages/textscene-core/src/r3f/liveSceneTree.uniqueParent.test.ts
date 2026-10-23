@@ -8,13 +8,8 @@ import * as logger from '../logger';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { scopeOf } from '../resources/liveNode';
-import {
-  collapseLiveNode,
-  liveChildGroups,
-  rootScope,
-  singlePathCache,
-  type LiveTreeContext,
-} from './liveSceneTree';
+import { collapseLiveNode, liveChildGroups, rootScope, singlePathCache } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 
 const host = new TscnParser().parse(`[gd_scene format=3]
 
@@ -46,11 +41,7 @@ const unclaimed = new TscnParser().parse(`[gd_scene format=3]
 
 /** The node `host`'s Player collapses into, with each scene path in `scenes` cached. */
 function composedPlayer(host: TscnScene, scenes: Record<string, TscnScene>): TscnNode {
-  const ctx: LiveTreeContext = {
-    externalResources: host.externalResources,
-    internalResources: [],
-    sceneCache: { getCached: (path) => scenes[path] },
-  };
+  const ctx = contextOver(host, scenes);
   const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
   const [group] = liveChildGroups(instance, rootScope(ctx), ctx.sceneCache);
   return group!.mergedNode!;

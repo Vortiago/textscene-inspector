@@ -13,10 +13,10 @@ import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
 import { resourceRef } from '../godot/variant/resourceRef';
 import {
-  LiveTree,
   liveChildGroups,
   liveNodeScope,
   mergedNodeOf,
+  liveTreeOf,
   rootScope,
   type LiveTreeContext,
 } from './liveSceneTree';
@@ -41,7 +41,7 @@ const ctx: LiveTreeContext = {
 
 /** The collapsed live node at `path` and the scope its own refs resolve against. */
 function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
-  const link = new LiveTree(opponent.nodes, ctx).at(path)!;
+  const link = liveTreeOf(opponent.nodes, ctx).at(path)!;
   return {
     node: mergedNodeOf(link.groups) ?? link.node,
     scope: liveNodeScope(link.node, link.scope, link.groups),
