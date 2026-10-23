@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { isBlended, surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
 import {
   DROPS_ALBEDO_ALPHA,
-  FRAGMENT_SHADER_OF_TYPE,
+  PROGRAM_OF_TYPE,
   WRITES_OPAQUE_AFTER_CUT,
   patchedShader,
 } from '../testing/patchedFragment';
@@ -46,7 +46,7 @@ describe('surfaceAlphaProps', () => {
   });
 });
 
-describe.each(Object.entries(FRAGMENT_SHADER_OF_TYPE))('the %s fragment shader', (_type, fragmentShader) => {
+describe.each(Object.entries(PROGRAM_OF_TYPE))('the %s fragment shader', (_type, { fragmentShader }) => {
   it('takes the alpha from the opacity before the cut, where the shader never reads the albedo alpha', () => {
     const { injection } = surfaceAlphaProps(IGNORES_ALBEDO, { transparent: true });
     expect(patchedShader(injection!.onBeforeCompile, fragmentShader)).toContain(

@@ -19,12 +19,7 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import {
-  BOLD_DISTANCE_BIAS,
-  ITALIC_SKEW,
-  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
-  richTextLabelMinimumSize,
-} from './nativeSolver';
+import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -78,11 +73,11 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it("a [b] run's material carries BOLD_DISTANCE_BIAS; a plain run in the same text carries 0", async () => {
+  it("a [b] run's material carries the distance bias of Godot's bold (0.39375); a plain run carries 0", async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
     const materials = meshesOf(renderer).map((m) => m.material as THREE.ShaderMaterial);
     const biases = materials.map((m) => m.uniforms.uDistanceBias!.value as number);
-    expect(biases).toContain(BOLD_DISTANCE_BIAS);
+    expect(biases.some((bias) => Math.abs(bias - 0.39375) < 1e-9)).toBe(true);
     expect(biases).toContain(0);
   });
 
@@ -126,7 +121,6 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     const bottomDx = italicPos.getX(2) - plainPos.getX(2);
     expect(topDx).not.toBe(0);
     expect(topDx).not.toBeCloseTo(bottomDx, 3);
-    expect(ITALIC_SKEW).not.toBe(0);
   });
 
   it('an [u] run draws an extra underline-stroke mesh (a flat PlaneGeometry quad, not glyph geometry); a plain run draws none', async () => {

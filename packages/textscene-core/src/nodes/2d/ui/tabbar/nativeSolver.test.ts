@@ -6,6 +6,8 @@ import {
   layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
+  isTabUnselectable,
+  resolveTabBarCurrentTab,
   tabBarMinimumSize,
   tabBarStyleBoxes,
   tabBarThemeIconSize,
@@ -30,6 +32,57 @@ describe('resolveTabDrawState', () => {
   });
   it('picks unselected for every other tab', () => {
     expect(resolveTabDrawState({ disabled: false }, 0, 1)).toBe('unselected');
+  });
+});
+
+describe('resolveTabBarCurrentTab', () => {
+  const live = { disabled: false };
+  const off = { disabled: true };
+  /** The resolver over a tab list, as the TabBar calls it. */
+  function resolve(
+    authored: number | undefined,
+    deselectEnabled: boolean,
+    tabs: readonly { disabled: boolean; hidden?: boolean }[]
+  ): number {
+    return resolveTabBarCurrentTab(authored, deselectEnabled, tabs.length, (i) =>
+      isTabUnselectable(tabs[i]!)
+    );
+  }
+
+  it('is -1 for a bar with no tabs', () => {
+    expect(resolve(undefined, false, [])).toBe(-1);
+    expect(resolve(2, false, [])).toBe(-1);
+  });
+
+  it('opens on the first tab when no current_tab is authored (set_tab_count fixes -1 up to 0)', () => {
+    expect(resolve(undefined, false, [live, live])).toBe(0);
+  });
+
+  it('keeps an authored index inside the tab range', () => {
+    expect(resolve(1, false, [live, live, live])).toBe(1);
+    expect(resolve(0, true, [live, live])).toBe(0);
+  });
+
+  it('drops an index past the last tab, which set_current_tab refuses, and opens on the default', () => {
+    expect(resolve(3, false, [live, live, live])).toBe(0);
+    expect(resolve(3, true, [live, live, live])).toBe(-1);
+  });
+
+  it('keeps -1 only where the bar can deselect: deselect_enabled, or every tab disabled or hidden', () => {
+    expect(resolve(-1, false, [live, live])).toBe(0);
+    expect(resolve(-1, true, [live, live])).toBe(-1);
+    expect(resolve(undefined, true, [live, live])).toBe(-1);
+    expect(resolve(-1, false, [off, { disabled: false, hidden: true }])).toBe(-1);
+    expect(resolve(-1, false, [off, live])).toBe(0);
+  });
+
+  it('asks about a tab only until one is selectable', () => {
+    const asked: number[] = [];
+    resolveTabBarCurrentTab(undefined, false, 4, (i) => {
+      asked.push(i);
+      return i === 0;
+    });
+    expect(asked).toEqual([0, 1]);
   });
 });
 

@@ -32,6 +32,14 @@ export interface FontMetrics {
   getKerningAdjustmentUnits(a: string, b: string): number;
   /** This font's typical glyph width (such as OS/2 `xAvgCharWidth`), design units: the fallback advance for a character outside its charset. */
   readonly averageAdvanceUnits: number;
+  /** `FontVariation.variation_embolden` of this face. Absent is 0, no embolden. */
+  readonly embolden?: number;
+  /**
+   * The shear of `FontVariation.variation_transform` of this face: its `Transform2D` x basis `y`,
+   * `FT_Matrix.xy` (`text_server_adv.cpp:1318-1320`). A glyph moves right by `skew` per px above
+   * the baseline. Absent is 0, upright.
+   */
+  readonly skew?: number;
 }
 
 /**
@@ -145,6 +153,57 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
   const advance26_6 = Math.floor((advance16_16 + 512) / 1024);
   return advance26_6 / 64;
+}
+
+/**
+ * Written only by `withVariation`, never cleared. One wrapper per face, embolden and skew, so a
+ * layout memoised on `FontMetrics` identity keeps its hits.
+ */
+const variedFaces = new WeakMap<FontMetrics, Map<string, FontMetrics>>();
+
+/**
+ * `metrics` with a `FontVariation`'s `embolden` and `skew` set. The wrapper reads every other field
+ * through the face, so a live getter stays live. With neither, it is the face itself.
+ */
+export function withVariation(
+  metrics: FontMetrics,
+  { embolden = 0, skew = 0 }: { embolden?: number; skew?: number }
+): FontMetrics {
+  if (embolden === 0 && skew === 0) return metrics;
+  let byVariation = variedFaces.get(metrics);
+  if (!byVariation) variedFaces.set(metrics, (byVariation = new Map()));
+  const key = `${embolden}/${skew}`;
+  let wrapped = byVariation.get(key);
+  if (!wrapped)
+    byVariation.set(
+      key,
+      (wrapped = Object.create(metrics, { embolden: { value: embolden }, skew: { value: skew } }))
+    );
+  return wrapped!;
+}
+
+/**
+ * The px an embolden adds to every advance: `embolden * size.x / 4096` with `size.x` in 26.6
+ * (`text_server_adv.cpp:3238-3239`), so `embolden * fontSizePx / 64`.
+ */
+export function getFontExtraAdvancePx(embolden: number, fontSizePx: number): number {
+  return (embolden * fontSizePx) / 64;
+}
+
+/** `getFontGlyphAdvancePx` plus the face's own embolden: the advance `get_char_size` reports for a `FontVariation`. */
+export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
+  return (
+    getFontGlyphAdvancePx(metrics, ch, fontSizePx) + getFontExtraAdvancePx(metrics.embolden ?? 0, fontSizePx)
+  );
+}
+
+/**
+ * The px `FT_Outline_Embolden` grows an outline by: `strength = embolden * size.x / 16` in 26.6
+ * (`text_server_adv.cpp:1313-1314`). The ink keeps its left and bottom edges and gains this much
+ * at the right and top.
+ */
+export function getFontEmboldenGrowthPx(embolden: number, fontSizePx: number): number {
+  return (embolden * fontSizePx) / 16;
 }
 
 /** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */

@@ -4,7 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildGlyphQuadArrays } from './glyphQuads';
+import { withVariation } from './fontMetrics';
 import { shapeText } from './textLayout';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
@@ -118,5 +120,40 @@ describe('buildGlyphQuadArrays', () => {
   it('returns empty buffers for a layout with no visible glyph (edge case)', () => {
     const arrays = buildGlyphQuadArrays(layoutFor('   '), 16, 0);
     expect([arrays.positions.length, arrays.uvs.length, arrays.indices.length]).toEqual([0, 0, 0]);
+  });
+});
+
+// `FT_Outline_Embolden` keeps the left and bottom edges of the ink and grows it right and up by
+// `embolden * size / 16` px (`text_server_adv.cpp:1313-1314`). The MSDF bias grows it on every
+// side, so the quad moves half the growth right and up to land the same ink.
+describe('buildGlyphQuadArrays — embolden', () => {
+  function boldLayoutFor(text: string, embolden: number) {
+    return shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden }),
+    });
+  }
+
+  it('moves an emboldened glyph right and up by half the outline growth', () => {
+    const plain = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
+    const bold = buildGlyphQuadArrays(boldLayoutFor('A', 1.2), 16, 0);
+    const halfGrowthPx = (1.2 * 16) / 16 / 2;
+    expect(bold.positions[0]! - plain.positions[0]!).toBeCloseTo(halfGrowthPx, 6);
+    // Y is negated into three's Y-up, so up is a larger y.
+    expect(bold.positions[1]! - plain.positions[1]!).toBeCloseTo(halfGrowthPx, 6);
+  });
+
+  it("keeps the quad size, since the growth is the material's bias", () => {
+    const plain = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
+    const bold = buildGlyphQuadArrays(boldLayoutFor('A', 1.2), 16, 0);
+    expect(bold.positions[3]! - bold.positions[0]!).toBeCloseTo(plain.positions[3]! - plain.positions[0]!, 4);
+  });
+
+  it('leaves a glyph with no embolden where it was', () => {
+    const arrays = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
+    expect(arrays.positions[0]).toBeCloseTo(OPEN_SANS_ATLAS_GLYPHS.A!.xoffset * SCALE, 6);
   });
 });

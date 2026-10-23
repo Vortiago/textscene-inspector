@@ -9,6 +9,7 @@
 // `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
+import { maxEmboldenGrowthPx, paintEmboldenedFill } from './canvasEmbolden';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -43,7 +44,7 @@ interface CanvasTextCanvasLayout {
 }
 
 /**
- * Sizes the raster canvas for `layout` at a synthesised-italic `skew` (0 is
+ * Sizes the raster canvas for `layout`, at a synthesised-italic `skew` (0 is
  * upright) and outline `strokeWidthPx` (0 is filled). The horizontal pad is
  * split evenly, so the quad stays centred on the content box. Pure: no DOM.
  */
@@ -59,8 +60,10 @@ export function computeCanvasTextCanvasLayout(
   // A centred stroke reaches half its width outside the contour on every side,
   // horizontally too, where an upright fill needs no pad.
   const strokePadPx = strokeWidthPx / 2;
-  const offsetXPx = shearPadPx + strokePadPx;
-  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + strokePadPx;
+  // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
+  const emboldenPadPx = maxEmboldenGrowthPx(layout);
+  const offsetXPx = shearPadPx + strokePadPx + emboldenPadPx;
+  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + strokePadPx + emboldenPadPx;
   return {
     canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx),
     canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
@@ -115,7 +118,7 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
  * `skew` shears each line's ink about its own baseline. The quad stays axis-aligned.
  */
 // Happy-dom has no 2D context, so under vitest the canvas stays blank. The pixels
-// are a golden-image concern, so no unit test reads them.
+// are a golden-image concern, so a unit test reads the calls, not the pixels.
 export function paintSceneFontCanvas(
   layout: TextLayoutResult,
   fontSizePx: number,
@@ -150,6 +153,10 @@ export function paintSceneFontCanvas(
     ctx.lineCap = 'butt';
   } else {
     ctx.fillStyle = opaqueCssColor(tint);
+    // The stroke of an emboldened fill (`paintEmboldenedFill`) is the fill's colour, mitred as
+    // `FT_Outline_Embolden` mitres its corners.
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineJoin = 'miter';
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
@@ -166,8 +173,10 @@ export function paintSceneFontCanvas(
     }
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
-      if (stroked) ctx.strokeText(gp.char, canvasLayout.offsetXPx + gp.x, baselineY);
-      else ctx.fillText(gp.char, canvasLayout.offsetXPx + gp.x, baselineY);
+      const penX = canvasLayout.offsetXPx + gp.x;
+      if (stroked) ctx.strokeText(gp.char, penX, baselineY);
+      else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
+      else ctx.fillText(gp.char, penX, baselineY);
     }
     ctx.restore();
   });
