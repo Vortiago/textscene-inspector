@@ -6935,9 +6935,25 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>A green disc with a three-texel alpha ramp, inside transparent magenta texels, drawn 20 times larger. The default alpha-border pass gives each texel below alpha 20 the RGB of its nearest opaque neighbour, as <code>Image::fix_alpha_edges</code> does (<code>core/io/image.cpp</code>). The previewer runs it on a texture with partial alpha too. It reads the decoded bytes unpremultiplied, so the ramp keeps its colour. With the pass off, the edge of the disc takes a magenta tint in both engines.</p></div>
-      </section><div class="prose"><h3>NoiseTexture2D</h3>
-<p>A field baked from a FastNoiseLite, most often as a normal map. A <code>seamless</code> bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because <code>texture_repeat</code> defaults on (<code>material.cpp:4005</code>) and the sampler hint adds <code>repeat_enable</code> (<code>material.cpp:760-765</code>).</p>
-<h3>Linting</h3>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>NoiseTexture2D</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-noisetexture2d-mipmaps-godot.png" alt="Godot render of NoiseTexture2D">
+          <img class="img-ours" src="images/unit-noisetexture2d-mipmaps-ours.png" alt="Our render of NoiseTexture2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A field baked from a FastNoiseLite, most often as a normal map. A <code>seamless</code> bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because <code>texture_repeat</code> defaults on (<code>material.cpp:4005</code>) and the sampler hint adds <code>repeat_enable</code> (<code>material.cpp:760-765</code>).</p>
+<p>A minified NoiseTexture2D samples the mip chain Godot builds on the CPU when <code>generate_mipmaps</code> is on, the default. Each level averages the bytes of the level above, so the noise fades to a flat tone as the quad shrinks. A 256 × 256 normal map draws unshaded on a 1 × 1 and a 0.4 × 0.4 quad, and both engines sample the same levels. With <code>generate_mipmaps</code> off, a minified texture samples only its base level and aliases, in both engines.</p></div>
+      </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (2 inherited from Resource); <code>Texture2D</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects a texture property. An unreadable value falls back to Godot's default through the shared value decoders. A reference it cannot resolve leaves the slot empty, so the consumer renders untextured.</p>

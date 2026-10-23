@@ -125,9 +125,8 @@ describe('applyTextureFilterState', () => {
 });
 
 describe('a texture with no mipmaps', () => {
-  // Godot's procedural textures never call `generate_mipmaps`
-  // (`scene/resources/gradient_texture.cpp`), so a `*_WITH_MIPMAPS` filter
-  // samples the base level only.
+  // GradientTexture2D never calls `generate_mipmaps` (`scene/resources/gradient_texture.cpp`),
+  // so a `*_WITH_MIPMAPS` filter samples its base level only.
   it('keeps a mipless texture mipless and degrades the min filter', () => {
     const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1);
     texture.magFilter = THREE.LinearFilter;
@@ -179,6 +178,21 @@ describe('a texture with an uploaded mip chain', () => {
     const texture = uploadedChain();
     applyTextureFilterState(texture, godotTextureFilterState(1));
     expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
+  });
+
+  it('uploads no levels under a filter with no mipmaps, and leaves the texture it is cloned from whole', () => {
+    const source = uploadedChain();
+    const clone = source.clone();
+    applyTextureFilterState(clone, godotTextureFilterState(0));
+    expect([clone.mipmaps.length, source.mipmaps.length]).toEqual([0, 2]);
+  });
+
+  it('keeps its levels under every filter that samples them', () => {
+    for (const filter of [2, 3, 4, 5]) {
+      const texture = uploadedChain();
+      applyTextureFilterState(texture, godotTextureFilterState(filter));
+      expect(texture.mipmaps).toHaveLength(2);
+    }
   });
 });
 

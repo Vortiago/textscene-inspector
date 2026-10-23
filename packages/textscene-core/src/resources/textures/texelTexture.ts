@@ -2,8 +2,8 @@
 
 import * as THREE from 'three';
 import { copySampling } from './copySampling';
-import { mipChain, type MipLevel } from '../processing/mipChain';
-import { isBottomUp, reversedRows } from '../../utils/reversedRows';
+import { mipChain, reversedLevel, type MipLevel } from '../processing/mipChain';
+import { isBottomUp } from '../../utils/reversedRows';
 
 /**
  * A `DataTexture` of `levels` that samples, tags and flips as `source`. Several levels are the
@@ -17,10 +17,7 @@ export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.D
     new THREE.DataTexture(base.data, base.width, base.height, THREE.RGBAFormat),
     source
   );
-  if (levels.length > 1) {
-    texture.mipmaps = levels;
-    texture.generateMipmaps = false;
-  }
+  carryMipChain(texture, levels);
   texture.colorSpace = source.colorSpace;
   // The bytes keep the source's row order, so the source's flip decides which way is up.
   texture.flipY = source.flipY;
@@ -29,15 +26,23 @@ export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.D
 }
 
 /**
+ * Hands three the whole chain `levels` holds, so it uploads them as they stand and builds none.
+ * One level is no chain: `texture` keeps its sampler and the GPU's choice. The first level holds
+ * `texture`'s own bytes. Returns whether a chain was attached.
+ */
+export function carryMipChain(texture: THREE.DataTexture, levels: MipLevel[]): boolean {
+  if (levels.length < 2) return false;
+  texture.mipmaps = levels;
+  texture.generateMipmaps = false;
+  return true;
+}
+
+/**
  * `mipChain` of `base`, the bytes of `texture`, in Godot's top-down rows: an odd height drops the
  * bottom row as Godot sees it. Each level comes back in `texture`'s own row order, `base` first.
  */
 export function textureMipChain(texture: THREE.Texture, base: MipLevel, renormalize: boolean): MipLevel[] {
   if (!isBottomUp(texture)) return mipChain(base, renormalize);
-  const [, ...generated] = mipChain(flipped(base), renormalize);
-  return [base, ...generated.map(flipped)];
-}
-
-function flipped({ data, width, height }: MipLevel): MipLevel {
-  return { data: reversedRows(data, width, height), width, height };
+  const [, ...generated] = mipChain(reversedLevel(base), renormalize);
+  return [base, ...generated.map(reversedLevel)];
 }

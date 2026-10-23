@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+; One variable: the mip chain of a NoiseTexture2D, which Godot builds on the CPU when its
+; generate_mipmaps is on (the default). A 256 x 256 normal map of high-frequency noise draws
+; unshaded on a 1 x 1 and a 0.4 x 0.4 QuadMesh, so both sample levels above the base and the
+; sampler blends two levels of the chain. The other NoiseTexture2D goldens draw their texture
+; near its base level, so none of them shows the chain. A flat background keeps the sky's dither
+; out of the measurement.
+
+[sub_resource type="Environment" id="Environment_mip"]
+background_mode = 1
+background_color = Color(0.2, 0.2, 0.2, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_mip"]
+seed = 7
+frequency = 0.2
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_mip"]
+width = 256
+height = 256
+as_normal_map = true
+bump_strength = 8.0
+noise = SubResource("FastNoiseLite_mip")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mip"]
+shading_mode = 0
+albedo_texture = SubResource("NoiseTexture2D_mip")
+
+[sub_resource type="QuadMesh" id="QuadMesh_large"]
+size = Vector2(1, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_small"]
+size = Vector2(0.4, 0.4)
+
+[node name="NoiseMipmaps" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_mip")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 6.0
+
+[node name="Large" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+mesh = SubResource("QuadMesh_large")
+surface_material_override/0 = SubResource("StandardMaterial3D_mip")
+
+[node name="Small" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0)
+mesh = SubResource("QuadMesh_small")
+surface_material_override/0 = SubResource("StandardMaterial3D_mip")

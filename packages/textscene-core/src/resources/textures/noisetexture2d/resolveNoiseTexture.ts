@@ -6,6 +6,7 @@
  * walk, the build and the cache.
  */
 
+import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveNoiseSources } from '../noiseSources';
 import {
@@ -13,7 +14,7 @@ import {
   type ProceduralBuildPlan,
   type ProceduralTextureLookup,
 } from '../proceduralBuilds';
-import { noiseDataTexture, noiseTextureFits } from './build';
+import { baseNoiseTexture, noiseDataTexture, noiseTextureFits } from './build';
 import { decodeNoiseTexture2D } from './decode';
 import type { NoiseTexture2DInput } from './pixels';
 
@@ -38,11 +39,19 @@ function plan(
   if (!sources || !noiseTextureFits(decoded)) return null;
 
   // The input carries the values the refs name, so a renamed id keeps the same content key.
-  const input: NoiseTexture2DInput = { tex: { ...decoded, noise: null, colorRamp: null }, ...sources };
+  const { generateMipmaps, ...tex } = decoded;
+  const input: NoiseTexture2DInput = { tex: { ...tex, noise: null, colorRamp: null }, ...sources };
   return {
     job: 'noise-texture-2d',
     input,
     contentKey: `NoiseTexture2D:${JSON.stringify(input)}`,
-    wrap: ({ pixels }) => noiseDataTexture(pixels, input),
+    wrap: ({ levels }) => noiseDataTexture(levels, input),
+    // The job always builds the chain, so toggling `generate_mipmaps` samples no noise again.
+    derived: generateMipmaps
+      ? undefined
+      : {
+          suffix: ':without-mipmaps',
+          derive: (built) => baseNoiseTexture(built as THREE.DataTexture, input),
+        },
   };
 }

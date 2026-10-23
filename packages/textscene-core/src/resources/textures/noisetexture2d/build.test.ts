@@ -6,13 +6,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { noiseTextureFits, noiseDataTexture } from './build';
+import { baseNoiseTexture, noiseTextureFits, noiseDataTexture } from './build';
 import { bumpMapToNormalMap } from './normalMap';
 import { grayToRgba } from '../../noise/image/gradientModulation';
 import { noiseSampler } from '../../noise/image/noiseSampler';
 import { noiseImage, seamlessNoiseImage, seamlessSource } from '../../noise/image/noiseImage';
 import { decodeNoiseTexture2D } from './decode';
-import { noiseTexture2DPixels } from './pixels';
+import { noiseTexture2DLevels } from './pixels';
+import type { MipLevel } from '../../processing/mipChain';
+import { levelHashes, NOISE_PIXEL_CASES, PINNED_LEVEL_HASHES } from './pixelCases.testkit';
 import type { NoiseTexture2DData } from './types';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
@@ -176,17 +178,17 @@ describe('bumpMapToNormalMap', () => {
   });
 });
 
-describe('noiseTexture2DPixels in a noiseDataTexture', () => {
+describe('noiseTexture2DLevels in a noiseDataTexture', () => {
   const noise = decodeFastNoiseLite({ frequency: '0.05' });
 
-  /** The pixels a worker job computes, wrapped as the main thread wraps them. */
+  /** The levels a worker job computes, wrapped as the main thread wraps them. */
   function rasterized(
     tex: NoiseTexture2DData,
     fastNoise: FastNoiseLiteData,
     colorRamp: Gradient | null
   ): THREE.DataTexture {
     const input = { tex, noise: fastNoise, colorRamp };
-    return noiseDataTexture(noiseTexture2DPixels(input), input);
+    return noiseDataTexture(noiseTexture2DLevels(input), input);
   }
 
   it('produces a DataTexture of the declared size', () => {
@@ -275,6 +277,57 @@ describe('noiseTexture2DPixels in a noiseDataTexture', () => {
     const b = rasterized(tex, decodeFastNoiseLite({ frequency: '0.05', seed: '99' }), null).image
       .data as Uint8Array;
     expect([...a]).not.toEqual([...b]);
+  });
+
+  describe('with a mip chain', () => {
+    const chained = (properties: Record<string, string>) =>
+      rasterized(decodeNoiseTexture2D(properties), noise, null);
+
+    const sizes = (texture: THREE.Texture) =>
+      texture.mipmaps.map(({ width, height }) => `${width}x${height}`);
+
+    it('carries log2(max side) + 1 levels, which three uploads as they stand', () => {
+      const texture = chained({ width: '16', height: '8' });
+      expect(sizes(texture)).toEqual(['16x8', '8x4', '4x2', '2x1', '1x1']);
+      expect(texture.generateMipmaps).toBe(false);
+    });
+
+    it('shares its base bytes between the image and the first level', () => {
+      const texture = chained({ width: '16', height: '8' });
+      expect((texture.mipmaps[0] as MipLevel).data).toBe(texture.image.data);
+    });
+
+    it('minifies between levels, so the default sampler reads them', () => {
+      expect(chained({ width: '16', height: '8' }).minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    });
+
+    it("holds Godot's bottom row out of an odd height, in the bottom-up upload", () => {
+      const odd = NOISE_PIXEL_CASES.find(({ name }) => name === 'five by three')!;
+      const texture = noiseDataTexture(noiseTexture2DLevels(odd), odd);
+      expect(sizes(texture)).toEqual(['5x3', '2x1', '1x1']);
+      expect(levelHashes(texture.mipmaps as MipLevel[])).toEqual(PINNED_LEVEL_HASHES['five by three']);
+    });
+  });
+
+  describe('without its chain', () => {
+    function full(properties: Record<string, string>) {
+      const input = { tex: decodeNoiseTexture2D(properties), noise, colorRamp: null };
+      const texture = noiseDataTexture(noiseTexture2DLevels(input), input);
+      return { texture, base: baseNoiseTexture(texture, input) };
+    }
+
+    it('carries one level over the same bytes, which the default sampler reads alone', () => {
+      const { texture, base } = full({ width: '16', height: '8' });
+      expect(base.mipmaps).toHaveLength(0);
+      expect(base.generateMipmaps).toBe(false);
+      expect(base.minFilter).toBe(THREE.LinearFilter);
+      expect(base.image.data).toBe(texture.image.data);
+    });
+
+    it('keeps the wrapping and colour space of the texture it comes from', () => {
+      const { texture, base } = full({ width: '8', height: '8', seamless: 'true', as_normal_map: 'true' });
+      expect([base.wrapS, base.colorSpace]).toEqual([texture.wrapS, texture.colorSpace]);
+    });
   });
 });
 

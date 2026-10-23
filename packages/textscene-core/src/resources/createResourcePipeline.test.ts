@@ -60,7 +60,7 @@ describe('createResourcePipeline', () => {
     if (!pixelCase) throw new Error('expected a noise pixel case');
     const { loader } = createResourcePipeline(fakeProvider);
 
-    const { pixels } = await loader.jobRunner.run('noise-texture-2d', pixelCase);
-    expect(pixels.length).toBe(pixelCase.tex.width * pixelCase.tex.height * 4);
+    const { levels } = await loader.jobRunner.run('noise-texture-2d', pixelCase);
+    expect(levels[0]?.data.length).toBe(pixelCase.tex.width * pixelCase.tex.height * 4);
   });
 });
