@@ -84,9 +84,35 @@ export function recoverByIdTrail(
   headings: readonly IdHeading[],
   builtCount: number
 ): IdTrailEnd | undefined {
-  // `ids.find` returns the first match, so id `0` names the first heading with no `unique_id=`.
-  const index = headings.findIndex((heading) => heading.uniqueId === trail[0]);
-  return idTrailEndAt(trail, index, headings[index], builtCount);
+  const index = trail[0] === undefined ? undefined : firstIndexWithId(headings, trail[0]);
+  return idTrailEndAt(trail, index ?? -1, headings[index ?? -1], builtCount);
+}
+
+/**
+ * Written only by {@link firstIndexWithId}, keyed by the headings of one scene, which nothing
+ * changes after the scan. An entry clears when nothing holds that array any more.
+ */
+const firstIndexes = new WeakMap<readonly object[], ReadonlyMap<number, number>>();
+
+/**
+ * The index of the first heading carrying `id`, or undefined where none does. `ids.find` returns
+ * the first match, so id `0` names the first heading with no `unique_id=`. The index is built on
+ * the first lookup, so a scene with many trails reads each id once.
+ */
+export function firstIndexWithId(
+  headings: readonly { readonly uniqueId: number }[],
+  id: number
+): number | undefined {
+  let indexes = firstIndexes.get(headings);
+  if (!indexes) {
+    const built = new Map<number, number>();
+    headings.forEach(({ uniqueId }, index) => {
+      if (!built.has(uniqueId)) built.set(uniqueId, index);
+    });
+    indexes = built;
+    firstIndexes.set(headings, indexes);
+  }
+  return indexes.get(id);
 }
 
 /**

@@ -436,6 +436,8 @@ export interface LiveLink {
 export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
+  /** Written only by `groupsOf`: the groups of a node under each scope it was asked in. */
+  private readonly groups = new WeakMap<LiveNode, { scope: SceneScope; groups: LiveChildGroup[] }[]>();
 
   private readonly scenes: CachedSceneSource;
 
@@ -453,15 +455,34 @@ export class LiveTree {
     const slash = path.lastIndexOf('/');
     const parentGroups = slash < 0 ? rootGroups(this.roots, this.ctx) : this.at(path.slice(0, slash))?.groups;
     const found = parentGroups && liveChildNamed(parentGroups, path.slice(slash + 1));
-    const link = found
-      ? {
-          ...found,
-          groups: liveChildGroups(found.node, found.scope, this.scenes, this.ctx.glbCache),
-        }
-      : null;
+    const link = found ? { ...found, groups: this.groupsOf(found.node, found.scope) } : null;
     this.links.set(path, link);
     return link;
   }
+
+  /**
+   * What is below `node` where it sits in `scope`, found once. A node is found by itself and its
+   * scope, never by its path: two siblings may share a name, and a sub-scene's nodes sit at
+   * every instance of it.
+   */
+  groupsOf(node: LiveNode, scope: SceneScope): LiveChildGroup[] {
+    const own = scopeOf(node, scope);
+    const found = this.groups.get(node);
+    const known = found?.find((entry) => sameScope(entry.scope, own));
+    if (known) return known.groups;
+    const groups = liveChildGroups(node, own, this.scenes, this.ctx.glbCache);
+    this.groups.set(node, [...(found ?? []), { scope: own, groups }]);
+    return groups;
+  }
+}
+
+function sameScope(a: SceneScope, b: SceneScope): boolean {
+  return (
+    a === b ||
+    (a.externalResources === b.externalResources &&
+      a.internalResources === b.internalResources &&
+      sameElements(a.instancedScenePaths ?? [], b.instancedScenePaths ?? []))
+  );
 }
 
 /** Written only by {@link liveTreeOf}, keyed by the context. */
@@ -524,11 +545,11 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: LiveNode) => boolean
 ): void {
-  const scenes = snapshotScenes(ctx);
+  const tree = liveTreeOf(roots, ctx);
   const walk = (nodes: readonly LiveNode[], scope: SceneScope, parentPath: string): void => {
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
-      const groups = liveChildGroups(node, scope, scenes, ctx.glbCache);
+      const groups = tree.groupsOf(node, scope);
       const effective = mergedNodeOf(groups) ?? node;
       visit({ node: effective, path });
       // `descend` prunes only the children, so a consumer can count a boundary

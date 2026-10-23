@@ -7,6 +7,7 @@
 import type { NodeOrigin, RawNode } from './types.js';
 import {
   INSTANCE_PLACEHOLDER_TYPE,
+  firstIndexWithId,
   idTrailEndAt,
   type IdHeading,
   type IdTrailEnd,
@@ -39,26 +40,6 @@ export function ownerTrailEnd<N extends RawNode>(
 }
 
 /**
- * Written only by {@link firstWithId}, keyed by the origins of one scan, which nothing changes
- * after the scan. An entry clears when nothing holds that array any more.
- */
-const firstIndexById = new WeakMap<readonly NodeOrigin<RawNode>[], ReadonlyMap<number, number>>();
-
-/** The index of the first heading carrying `id`, which is the one `recoverByIdTrail` names. */
-function firstWithId<N extends RawNode>(origins: readonly NodeOrigin<N>[], id: number): number | undefined {
-  let firstIndexes = firstIndexById.get(origins);
-  if (!firstIndexes) {
-    const built = new Map<number, number>();
-    origins.forEach((origin, index) => {
-      if (!built.has(origin.uniqueId)) built.set(origin.uniqueId, index);
-    });
-    firstIndexes = built;
-    firstIndexById.set(origins, firstIndexes);
-  }
-  return firstIndexes.get(id);
-}
-
-/**
  * Where `trail` lands over the first `builtCount` headings, as instantiate has built them. Only the
  * heading the trail names is read, so the cost does not grow with the other headings.
  */
@@ -68,7 +49,7 @@ function trailEnd<N extends RawNode>(
   isPlaced: (origin: NodeOrigin<N>) => boolean,
   builtCount: number
 ): IdTrailEnd | undefined {
-  const index = trail[0] === undefined ? undefined : firstWithId(origins, trail[0]);
+  const index = trail[0] === undefined ? undefined : firstIndexWithId(origins, trail[0]);
   const named = index === undefined ? undefined : headingOf(origins[index]!, isPlaced);
   return idTrailEndAt(trail, index ?? -1, named, builtCount);
 }
