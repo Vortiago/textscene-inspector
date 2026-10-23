@@ -59,7 +59,13 @@ export function buildRibbonTrailMeshSurface(p: RibbonTrailMeshProperties): Godot
     const y = storedReal(depth * 0.5 - storedReal(depth * v));
     const width = storedReal(p.size * widthScale(v));
     writeRow(writer, p.isCross, y, width, v);
-    if (j > 0) writeQuads(writer, p.isCross, (j - 1) * verticesPerRow, verticesPerRow);
+    if (j === 0) continue;
+    // The triangles back to the row before (`:2966-2994`): the strip in the XY plane, then the
+    // strip across it, two vertices further into each row.
+    const thisrow = j * verticesPerRow;
+    const prevrow = thisrow - verticesPerRow;
+    writer.quadBetweenRows(prevrow, thisrow, 1);
+    if (p.isCross) writer.quadBetweenRows(prevrow + 2, thisrow + 2, 1);
   }
   return writer.surface();
 }
@@ -72,13 +78,4 @@ function writeRow(writer: SurfaceWriter, isCross: boolean, y: number, width: num
   if (!isCross) return;
   writer.vertex([0, y, -half], CROSS_NORMAL, TANGENT, [0, v], [0, 0]);
   writer.vertex([0, y, half], CROSS_NORMAL, TANGENT, [1, v], [0, 0]);
-}
-
-/** The triangles between the row that starts at vertex `base` and the next (`:2966-2994`). */
-function writeQuads(writer: SurfaceWriter, isCross: boolean, base: number, nextRow: number): void {
-  writer.triangle(base, base + 1, base + nextRow);
-  writer.triangle(base + 1, base + nextRow + 1, base + nextRow);
-  if (!isCross) return;
-  writer.triangle(base + 2, base + 3, base + 6);
-  writer.triangle(base + 3, base + 7, base + 6);
 }
