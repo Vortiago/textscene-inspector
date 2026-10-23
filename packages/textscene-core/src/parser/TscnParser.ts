@@ -279,13 +279,14 @@ export class TscnParser {
  */
 function warnOrphanedNodes(origins: readonly NodeOrigin<TscnNode>[], seating: SceneSeating<TscnNode>): void {
   for (const { node } of orphanedNodes(origins, seating)) {
-    const reRooted = seating.seated.get(node);
-    const outcome =
-      reRooted === undefined
-        ? `dropped from the scene tree: "${node.name}"`
-        : `"${node.name}" re-rooted as "${reRooted.name}"`;
     logger.warn(
-      `[Parser] Orphaned node ${outcome} (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
+      `[Parser] Orphaned node ${orphanOutcome(node, seating.seated.get(node))} (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
     );
   }
+}
+
+function orphanOutcome(node: TscnNode, seat: TscnNode | undefined): string {
+  if (seat === undefined) return `dropped from the scene tree: "${node.name}"`;
+  if (seat.landedByIdTrail) return `"${node.name}" seated under the heading its parent_id_path names`;
+  return `"${node.name}" re-rooted as "${seat.name}"`;
 }
