@@ -36,6 +36,7 @@ import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
+import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
 import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
@@ -231,6 +232,12 @@ function compiled(injection: InjectionCase, program: ProgramName): ProgramShader
   return shader;
 }
 
+/** The chunks three ships, before any patch is installed. */
+const THREE_CHUNK_NAMES = new Set(Object.keys(THREE.ShaderChunk));
+
+/** The chunks the patches add. A chunk three later ships under the same name would be overwritten silently. */
+const ADDED_CHUNKS = [GODOT_FOG_PARS_CHUNK];
+
 let restoreGlobals: () => void;
 
 beforeAll(() => {
@@ -265,6 +272,17 @@ describe.each(INJECTIONS)('the $name injection', (injection) => {
       );
     }
   );
+});
+
+describe('the chunks the patches add', () => {
+  it.each(ADDED_CHUNKS)('does not exist in three: %s', (name) => {
+    expect(THREE_CHUNK_NAMES.has(name)).toBe(false);
+  });
+
+  it('are all named in the list', () => {
+    const added = Object.keys(installedShaderChunks()).filter((name) => !THREE_CHUNK_NAMES.has(name));
+    expect(added).toEqual(ADDED_CHUNKS);
+  });
 });
 
 describe('the tone mapping curve', () => {
