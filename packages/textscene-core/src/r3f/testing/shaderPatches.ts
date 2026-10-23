@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { installShaderPatches, SHADER_PATCH_INSTALLS } from '../shaderPatch/installShaderPatches';
+import { installShaderPatches } from '../shaderPatch/installShaderPatches';
 import { warningsOf } from './logWarnings';
 
 export type ShaderChunks = typeof THREE.ShaderChunk;
@@ -81,11 +81,4 @@ export function installedShaderChunks(): ShaderChunks {
   } finally {
     restore();
   }
-}
-
-/** Runs every install a canvas runs before `install`, in the canvas's order. */
-export function installPatchesBefore(install: () => void): void {
-  const at = SHADER_PATCH_INSTALLS.indexOf(install);
-  if (at < 0) throw new Error(`expected an install of installShaderPatches, got ${install.name}`);
-  for (const earlier of SHADER_PATCH_INSTALLS.slice(0, at)) earlier();
 }

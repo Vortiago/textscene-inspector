@@ -59,12 +59,15 @@ function installGodotFog(): void {
 export const THREE_BACKGROUND_TONE_CURVE = '\t#include <tonemapping_fragment>';
 
 /** The sky fog's function, which marks a background chunk that holds the fog. */
-export const SKY_FOG = 'godotSkyFog';
+const SKY_FOG = 'godotSkyFog';
 
 const GODOT_BACKGROUND_FOG = `\tgl_FragColor.rgb = ${SKY_FOG}( gl_FragColor.rgb, vWorldDirection );\n${THREE_BACKGROUND_TONE_CURVE}`;
 
-/** three's cube background, fogged after its intensity, as Godot's sky is after its brightness. */
-function installCubeBackgroundFog(): void {
+/**
+ * three's cube background, fogged after its intensity, as Godot's sky is after its brightness. True
+ * when the background holds the fog after the call.
+ */
+function installCubeBackgroundFog(): boolean {
   const isFogged = installChunkEdits({
     edits: [
       { chunk: 'backgroundCube_frag', three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_BACKGROUND_FOG },
@@ -74,6 +77,7 @@ function installCubeBackgroundFog(): void {
     prepend: { backgroundCube_frag: `#include <${GODOT_FOG_PARS_CHUNK}>\n` },
   });
   if (isFogged) backgroundCube().fragmentShader = THREE.ShaderChunk.backgroundCube_frag;
+  return isFogged;
 }
 
 /** three's flat background vertex, which hands on the world direction of each pixel's view ray. */
@@ -107,16 +111,18 @@ function installPlaneBackgroundFog(): void {
  * Patches three's fog chunks and both backgrounds for every program compiled after the call, and
  * gives them the shared uniforms. three reads `ShaderLib.backgroundCube` when a renderer first
  * draws a cube background. A three release that rewrites a replaced line keeps its own chunks, and
- * `fogComposite.test.ts` fails on that release. A second call changes nothing.
+ * `fogComposite.test.ts` fails on that release. True when the cube background holds the fog after
+ * the call. A second call changes nothing.
  */
-export function installFogComposite(): void {
+export function installFogComposite(): boolean {
   Object.assign(THREE.ShaderChunk, { [GODOT_FOG_PARS_CHUNK]: GODOT_FOG_PARS });
   installGodotFog();
-  installCubeBackgroundFog();
+  const isCubeFogged = installCubeBackgroundFog();
   installPlaneBackgroundFog();
   for (const [name, uniform] of Object.entries(fogUniformRecord())) {
     installMergedUniform(FOG_UNIFORMS_MERGE, name, uniform.value);
     backgroundCube().uniforms[name] = { value: uniform.value };
     backgroundPlane().uniforms[name] = { value: uniform.value };
   }
+  return isCubeFogged;
 }

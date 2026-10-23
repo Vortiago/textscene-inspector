@@ -17,8 +17,8 @@
  */
 
 import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
-import { LIGHT_FUNCTION_MARK, RE_DIRECT } from '../godotLightFunction.js';
-import { LIGHT_ATTENUATION_MARK } from '../godotLightAttenuation.js';
+import { installGodotLightFunction, RE_DIRECT } from '../godotLightFunction.js';
+import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL, LTC_SPECULAR } from './ltcIntegral.js';
 import { installLtcTextures } from './ltcTextures.js';
 import {
@@ -190,21 +190,18 @@ const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
 ];
 
 /**
- * Replaces three's area light, and gives its tables, the area light atlas and the per-light
- * uniforms to every built-in lit material, for every program compiled after the call. It reads the
- * light function's and the attenuation's patches, so it installs after them. A three release that
- * rewrites a replaced text keeps all its own chunks, and `areaLightChunk.test.ts` fails on that
- * release. A second call changes nothing.
+ * Installs the light function and the attenuation it reads, then replaces three's area light, and
+ * gives its tables, the area light atlas and the per-light uniforms to every built-in lit material,
+ * for every program compiled after the call. A three release that rewrites a replaced text keeps
+ * all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call changes
+ * nothing.
  */
 export function installGodotAreaLight(): void {
+  if (!(installGodotLightFunction() && installGodotLightAttenuation())) return;
   const isPatched = installChunkEdits({
     edits: AREA_LIGHT_EDITS,
     mark: 'godotLtcIntegral(',
     patch: 'area light',
-    requires: {
-      lights_physical_pars_fragment: LIGHT_FUNCTION_MARK,
-      lights_pars_begin: LIGHT_ATTENUATION_MARK,
-    },
   });
   if (!isPatched) return;
   installLtcTextures();

@@ -5,9 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotAreaLight } from './areaLightChunk';
-import { installGodotLightAttenuation } from '../godotLightAttenuation';
 import { ltcTables } from '../../godot/rendering/lights/ltc';
-import { installPatchesBefore, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import type { AreaLightChunkName } from './areaLightChunk';
@@ -16,14 +15,8 @@ const threeChunks = { ...THREE.ShaderChunk };
 
 restoreShaderGlobalsAfterEach();
 
-/** The patches before the area light, then the area light, as `installShaderPatches` orders them. */
-function installWithItsPrerequisites(): void {
-  installPatchesBefore(installGodotAreaLight);
-  installGodotAreaLight();
-}
-
 function patchedChunk(name: AreaLightChunkName): string {
-  installWithItsPrerequisites();
+  installGodotAreaLight();
   return THREE.ShaderChunk[name];
 }
 
@@ -199,7 +192,7 @@ describe('installGodotAreaLight', () => {
   });
 
   it("samples Godot's LTC tables in place of three's", () => {
-    installWithItsPrerequisites();
+    installGodotAreaLight();
     const { lut1, lut2 } = ltcTables();
     const uniforms = THREE.UniformsLib as unknown as Record<string, THREE.DataTexture>;
 
@@ -211,17 +204,27 @@ describe('installGodotAreaLight', () => {
   });
 
   it('leaves the chunks alone when one lacks a replaced text, and warns (error case)', () => {
-    installPatchesBefore(installGodotAreaLight);
-    const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;
-    THREE.ShaderChunk.lights_fragment_begin = 'void main() {}';
+    const threeCall = 'RE_Direct_RectArea( rectAreaLight, geometryPosition,';
+    const withoutCall = threeChunks.lights_fragment_begin.replace(
+      threeCall,
+      'RE_Direct_RectArea( rectAreaLight,'
+    );
+    THREE.ShaderChunk.lights_fragment_begin = withoutCall;
 
     expect(warningsOf(installGodotAreaLight)).toHaveLength(1);
-    expect(THREE.ShaderChunk.lights_fragment_begin).toBe('void main() {}');
-    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toBe(lightFunction);
+    expect(THREE.ShaderChunk.lights_pars_begin).not.toContain('rectAreaLightFacings');
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain('godotLtcIntegral(');
   });
 
-  it("leaves three's area light alone before the light function it reads, and warns (error case)", () => {
-    installGodotLightAttenuation();
+  it('installs the light function and the attenuation it reads first', () => {
+    installGodotAreaLight();
+
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain('float godotSchlickFresnel(');
+    expect(THREE.ShaderChunk.lights_pars_begin).toContain('float rim = max( 1e-4,');
+  });
+
+  it("leaves three's area light alone when a patch it reads cannot install, and warns (error case)", () => {
+    THREE.ShaderChunk.normalmap_pars_fragment = 'void main() {}';
 
     expect(warningsOf(installGodotAreaLight)).toHaveLength(1);
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).toBe(threeChunks.lights_physical_pars_fragment);

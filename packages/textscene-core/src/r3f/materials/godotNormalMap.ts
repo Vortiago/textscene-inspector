@@ -88,13 +88,18 @@ const GODOT_NORMAL_MAP_EDITS: readonly ChunkEdit<
   UNIT_TANGENT_FRAME_EDIT,
 ];
 
-/** The text that proves the patch installed, which a patch that reads `godotMapNormal` requires. */
-export const NORMAL_MAP_READ_MARK = 'vec3 godotMapNormal(';
+/** The text that proves the patch installed. */
+const NORMAL_MAP_READ_MARK = 'vec3 godotMapNormal(';
 
 /**
  * Replaces three's tangent-space normal read for every program compiled after the call. A three
  * release that rewrites the lines keeps its own chunks, and `godotNormalMap.test.ts` fails on it.
+ * True when the chunks hold the patch after the call.
  */
-export function installGodotNormalMapRead(): void {
-  installChunkEdits({ edits: GODOT_NORMAL_MAP_EDITS, mark: NORMAL_MAP_READ_MARK, patch: 'normal map read' });
+export function installGodotNormalMapRead(): boolean {
+  return installChunkEdits({
+    edits: GODOT_NORMAL_MAP_EDITS,
+    mark: NORMAL_MAP_READ_MARK,
+    patch: 'normal map read',
+  });
 }

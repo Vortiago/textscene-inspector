@@ -178,15 +178,6 @@ export interface ChunkEditsPatch<Name extends ChunkName> {
    * They install with the chunks or not at all.
    */
   fragmentShaders?: Partial<Record<ProgramName, readonly TextEdit[]>>;
-  /** The text of each patch this one reads, by the chunk that patch writes it into. */
-  requires?: Partial<Record<ChunkName, string | readonly string[]>>;
-}
-
-/** The chunks that lack the text of a patch this one reads. */
-function unmetRequirements(requires: Partial<Record<ChunkName, string | readonly string[]>>): ChunkName[] {
-  return (Object.entries(requires) as [ChunkName, string | readonly string[]][])
-    .filter(([name, texts]) => [texts].flat().some((text) => !THREE.ShaderChunk[name].includes(text)))
-    .map(([name]) => name);
 }
 
 /** A program and its fragment shader with the patch's edits applied. */
@@ -247,20 +238,15 @@ function missingTextWarning<Name extends ChunkName>(patch: ChunkEditsPatch<Name>
 }
 
 /**
- * Patches three's chunks and programs, and is true when they hold the patch after the call. A patch
- * whose required patches are missing, or a three release that lacks a replaced text, keeps all of
- * three's own text, and the call warns and is false. A second call changes nothing.
+ * Patches three's chunks and programs, and is true when they hold the patch after the call. A three
+ * release that lacks a replaced text keeps all of three's own text, and the call warns and is false.
+ * A patch that reads another's text installs that patch first, in its own install function. A
+ * second call changes nothing.
  */
 export function installChunkEdits<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): boolean {
   if (THREE.ShaderChunk[markedChunk(patch)].includes(patch.mark)) return true;
-  const names = patchedChunkNames(patch);
-  const unmet = unmetRequirements(patch.requires ?? {});
-  if (unmet.length > 0) {
-    warn(`[Shading] the patch of ${names.join(', ')} reads a patch missing from ${unmet.join(' and ')}`);
-    return false;
-  }
   const current = Object.fromEntries(
-    names.map((name) => [name, THREE.ShaderChunk[name]])
+    patchedChunkNames(patch).map((name) => [name, THREE.ShaderChunk[name]])
   ) as Chunks<ChunkName>;
   const patched = appliedEdits(current, patch);
   const programs = patchedPrograms(patch.fragmentShaders ?? {});

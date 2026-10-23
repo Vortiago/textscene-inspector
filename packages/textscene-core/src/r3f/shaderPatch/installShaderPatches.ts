@@ -24,8 +24,11 @@ import { installFogComposite } from '../fog/fogComposite.js';
 import { installSkyProjection } from '../sky/skyProjection.js';
 import { installSkyDebanding } from '../sky/skyDebanding.js';
 
-/** Each install in the order a canvas runs them: a patch installs after every patch it reads. */
-export const SHADER_PATCH_INSTALLS: readonly (() => void)[] = [
+/**
+ * Every patch a canvas draws with. Each install installs the patches it reads first. The order only
+ * sets where two patches that insert at one anchor put their lines, so every canvas compiles one text.
+ */
+const SHADER_PATCH_INSTALLS: readonly (() => unknown)[] = [
   installGodotIndirectSpecular,
   installGodotLightSpecular,
   installGodotLightBakeMode,

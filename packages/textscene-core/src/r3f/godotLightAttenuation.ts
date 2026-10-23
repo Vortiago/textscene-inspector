@@ -50,14 +50,11 @@ export function godotConePenumbra(angle: number, angleAttenuation: number): numb
   return 1 - Math.acos(cosine) / angle;
 }
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const LIGHT_ATTENUATION_MARK = SPOT_CONE;
-
 /**
  * Replaces three's attenuation for every program compiled after the call. A three release that
  * rewrites a replaced line keeps its chunk, and `godotLightAttenuation.test.ts` fails on that
- * release. A second call changes nothing.
+ * release. True when the chunk holds the patch after the call. A second call changes nothing.
  */
-export function installGodotLightAttenuation(): void {
-  installChunkEdits({ edits: ATTENUATION_EDITS, mark: LIGHT_ATTENUATION_MARK, patch: 'light attenuation' });
+export function installGodotLightAttenuation(): boolean {
+  return installChunkEdits({ edits: ATTENUATION_EDITS, mark: SPOT_CONE, patch: 'light attenuation' });
 }

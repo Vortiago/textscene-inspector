@@ -141,22 +141,20 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
   },
 ];
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
-
 /**
  * Replaces three's chunks and gives the layer slot and the shown sky to every built-in lit
  * material and to `UniformsLib.lights`, for every program compiled after the call. A three release
  * that rewrites a replaced line keeps all its chunks, and `godotSkyLighting.test.ts` fails on that
- * release. A second call changes nothing.
+ * release. True when the chunks hold the patch after the call. A second call changes nothing.
  */
-export function installGodotSkyLighting(): void {
+export function installGodotSkyLighting(): boolean {
   const isPatched = installChunkEdits({
     edits: SKY_LIGHTING_EDITS,
-    mark: SKY_LIGHTING_MARK,
+    mark: GODOT_IBL_RADIANCE,
     patch: 'sky lighting',
   });
-  if (!isPatched) return;
+  if (!isPatched) return false;
   installLitUniform(layers, skyLayersSlot);
   installLitUniform(shown, shownSky);
+  return true;
 }

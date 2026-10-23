@@ -32,20 +32,18 @@ const LIGHT_SPECULAR_EDITS: readonly ChunkEdit<LightSpecularChunk>[] = [
   })),
 ];
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const LIGHT_SPECULAR_MARK = SPECULAR_DECLARATIONS;
-
 /**
  * Hands each light's specular amount to every program compiled after the call, and gives the
  * array to every built-in lit material. A three release that rewrites a replaced line keeps all
- * its own chunks, and `lightSpecularChunk.test.ts` fails on that release. A second call changes
- * nothing.
+ * its own chunks, and `lightSpecularChunk.test.ts` fails on that release. True when the chunks hold
+ * the patch after the call. A second call changes nothing.
  */
-export function installGodotLightSpecular(): void {
+export function installGodotLightSpecular(): boolean {
   const isPatched = installChunkEdits({
     edits: LIGHT_SPECULAR_EDITS,
-    mark: LIGHT_SPECULAR_MARK,
+    mark: SPECULAR_DECLARATIONS,
     patch: 'light specular',
   });
   if (isPatched) installLightSpecularUniforms();
+  return isPatched;
 }
