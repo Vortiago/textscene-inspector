@@ -225,4 +225,13 @@ describe('a NoiseTexture2D in a 3D texture slot', () => {
     expect(samplesMipChain(texture)).toBe(false);
     expect(texture.minFilter).toBe(godotTextureFilterState(filter).minFilter);
   });
+
+  it.each([0, 1])(
+    'uploads no levels under texture_filter %i, and the shared texture keeps its chain',
+    async (filter) => {
+      const { texture: shared } = await built(ALBEDO);
+      const texture = applyTextureState(shared, { colorSpace: THREE.SRGBColorSpace, filter });
+      expect([texture.mipmaps.length, shared.mipmaps.length]).toEqual([0, 6]);
+    }
+  );
 });
