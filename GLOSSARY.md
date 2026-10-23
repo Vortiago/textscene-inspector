@@ -23,6 +23,11 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
+One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
+It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every consumer asks.
+_Avoid_: a live tree or a context per consumer, per question.
+
 **Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
 The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.

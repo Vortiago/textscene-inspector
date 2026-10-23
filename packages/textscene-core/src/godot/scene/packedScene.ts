@@ -84,13 +84,23 @@ export function recoverByIdTrail(
   headings: readonly IdHeading[],
   builtCount: number
 ): IdTrailEnd | undefined {
-  const [firstId] = trail;
-  // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
-  if (firstId === undefined) return undefined;
   // `ids.find` returns the first match, so id `0` names the first heading with no `unique_id=`.
-  const index = headings.findIndex((heading) => heading.uniqueId === firstId);
-  const named = headings[index];
-  if (named === undefined) return undefined;
+  const index = headings.findIndex((heading) => heading.uniqueId === trail[0]);
+  return idTrailEndAt(trail, index, headings[index], builtCount);
+}
+
+/**
+ * {@link recoverByIdTrail} once the heading the trail's first id names is found: `named`, at
+ * `index`, or undefined where no heading carries the id.
+ */
+export function idTrailEndAt(
+  trail: readonly number[],
+  index: number,
+  named: IdHeading | undefined,
+  builtCount: number
+): IdTrailEnd | undefined {
+  // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
+  if (trail.length === 0 || named === undefined) return undefined;
   if (trail.length === 1) {
     return index < builtCount && named.isPlaced ? { kind: 'lands', heading: index } : undefined;
   }

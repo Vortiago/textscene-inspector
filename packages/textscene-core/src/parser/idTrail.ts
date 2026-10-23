@@ -7,7 +7,7 @@
 import type { NodeOrigin, RawNode } from './types.js';
 import {
   INSTANCE_PLACEHOLDER_TYPE,
-  recoverByIdTrail,
+  idTrailEndAt,
   type IdHeading,
   type IdTrailEnd,
 } from '../godot/scene/packedScene.js';
@@ -38,14 +38,39 @@ export function ownerTrailEnd<N extends RawNode>(
   return trailEnd(trail, origins, isPlaced, index + 1);
 }
 
-/** Where `trail` lands over the first `builtCount` headings, as instantiate has built them. */
+/**
+ * Written only by {@link firstWithId}, keyed by the origins of one scan, which nothing changes
+ * after the scan. An entry clears when nothing holds that array any more.
+ */
+const firstIndexById = new WeakMap<readonly NodeOrigin<RawNode>[], ReadonlyMap<number, number>>();
+
+/** The index of the first heading carrying `id`, which is the one `recoverByIdTrail` names. */
+function firstWithId<N extends RawNode>(origins: readonly NodeOrigin<N>[], id: number): number | undefined {
+  let firstIndexes = firstIndexById.get(origins);
+  if (!firstIndexes) {
+    const built = new Map<number, number>();
+    origins.forEach((origin, index) => {
+      if (!built.has(origin.uniqueId)) built.set(origin.uniqueId, index);
+    });
+    firstIndexes = built;
+    firstIndexById.set(origins, firstIndexes);
+  }
+  return firstIndexes.get(id);
+}
+
+/**
+ * Where `trail` lands over the first `builtCount` headings, as instantiate has built them. Only the
+ * heading the trail names is read, so the cost does not grow with the other headings.
+ */
 function trailEnd<N extends RawNode>(
   trail: readonly number[],
   origins: readonly NodeOrigin<N>[],
   isPlaced: (origin: NodeOrigin<N>) => boolean,
   builtCount: number
 ): IdTrailEnd | undefined {
-  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), builtCount);
+  const index = trail[0] === undefined ? undefined : firstWithId(origins, trail[0]);
+  const named = index === undefined ? undefined : headingOf(origins[index]!, isPlaced);
+  return idTrailEndAt(trail, index ?? -1, named, builtCount);
 }
 
 /** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
@@ -53,11 +78,14 @@ export function idHeadingsOf<N extends RawNode>(
   origins: readonly NodeOrigin<N>[],
   isPlaced: (origin: NodeOrigin<N>) => boolean
 ): IdHeading[] {
-  return origins.map((origin) => ({
-    uniqueId: origin.uniqueId,
-    instance: instanceKind(origin.node),
-    isPlaced: isPlaced(origin),
-  }));
+  return origins.map((origin) => headingOf(origin, isPlaced));
+}
+
+function headingOf<N extends RawNode>(
+  origin: NodeOrigin<N>,
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): IdHeading {
+  return { uniqueId: origin.uniqueId, instance: instanceKind(origin.node), isPlaced: isPlaced(origin) };
 }
 
 function instanceKind(node: RawNode): IdHeading['instance'] {

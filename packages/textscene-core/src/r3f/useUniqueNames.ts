@@ -5,24 +5,8 @@
  */
 
 import { useMemo } from 'react';
-import { useResourceLoader } from '../resources/useResource.js';
-import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
-import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
-
-/**
- * The live tree, or null with no scene. With a path it re-reads on each load tick, since a
- * sub-scene node's owner is known only after the load.
- */
-function useLiveTree(path?: string | null) {
-  const graph = useOptionalHierarchy()?.sceneGraph;
-  const loader = useResourceLoader();
-  const version = useLiveTreeVersion(path ? loader : null);
-  // `version` is the cache-buster for the loader's scene cache, which the
-  // owner walk reads and which is mutated outside React.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => liveTreeContext(graph, loader), [graph, loader, version]);
-}
+import { useSharedLiveTree } from './useLiveSceneTree.js';
 
 /**
  * `paths` under one identity while its entries stay the same, since a sub-scene owner's
@@ -45,7 +29,7 @@ function useStablePaths(
  * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
  */
 export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
-  const live = useLiveTree(path);
+  const live = useSharedLiveTree();
   return useStablePaths(
     useMemo(() => {
       if (!live) return undefined;
@@ -72,7 +56,7 @@ interface LocalScene {
  * owner to walk to, so the outer root, the first segment of `path`, is all there is.
  */
 export function useLocalScene(path: string | null): LocalScene | undefined {
-  const live = useLiveTree(path);
+  const live = useSharedLiveTree();
   const owner = useMemo(
     () => (live && path ? localSceneOf(path, live.roots, live.ctx) : undefined),
     [live, path]

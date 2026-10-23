@@ -7,24 +7,19 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
 import { workspaceForRoot } from '../../workspaceForScene.js';
-import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
-import { collapseLiveNode, rootScope } from '../../liveSceneTree.js';
+import { useSharedLiveTree } from '../../useLiveSceneTree.js';
+import { collapseLiveNode, rootScope, snapshotScenes } from '../../liveSceneTree.js';
 
 export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { setMode } = useViewportMode();
-  const loader = useResourceLoader();
-  const version = useLiveTreeVersion(loader);
+  const lt = useSharedLiveTree();
 
   const claimed = useMemo(() => {
-    const lt = liveTreeContext(sceneGraph, loader);
     const root = lt?.roots[0];
     if (!lt || !root) return null;
-    return workspaceForRoot(collapseLiveNode(root, rootScope(lt.ctx), lt.ctx.sceneCache));
-    // `version` is a cache-buster: it increments when a resource loads.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneGraph, loader, version]);
+    return workspaceForRoot(collapseLiveNode(root, rootScope(lt.ctx), snapshotScenes(lt.ctx)));
+  }, [lt]);
 
   // Once per scene, when the workspace becomes known. A manual toggle then
   // holds until the next scene switch.
