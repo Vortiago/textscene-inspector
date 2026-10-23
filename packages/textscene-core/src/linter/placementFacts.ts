@@ -11,6 +11,7 @@ import {
 } from '../parser/instantiateRefusal.js';
 import { orphanedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import { idTrailEnd } from '../parser/idTrail.js';
+import { perObject } from '../utils/perObject.js';
 
 type PlacementFacts = Pick<
   HeadingFacts,
@@ -23,6 +24,9 @@ type PlacementFacts = Pick<
   | 'nodeOrigins'
 >;
 
+/** The orphans of one scan as a set, built once for each scan and shared with each reader of its facts. */
+export const orphanSetOf = perObject((orphans: readonly NodeOrigin<RawNode>[]) => new Set(orphans));
+
 /**
  * The placement facts of one scan: `origins` is every `[node]` heading in scan order, and `seating`
  * the tree built from them.
@@ -32,7 +36,7 @@ export function placementFacts(
   seating: SceneSeating<RawNode>
 ): PlacementFacts {
   const orphans = orphanedNodes(origins, seating);
-  const isOrphan = new Set(orphans);
+  const isOrphan = orphanSetOf(orphans);
   return {
     orphanedNodes: orphans,
     reRootedNames: reRootedNames(orphans, seating),
