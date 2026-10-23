@@ -197,8 +197,8 @@ const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
  * nothing.
  */
 export function installGodotAreaLight(): void {
-  if (!(installGodotLightFunction() && installGodotLightAttenuation())) return;
   const isPatched = installChunkEdits({
+    requires: [installGodotLightFunction, installGodotLightAttenuation],
     edits: AREA_LIGHT_EDITS,
     mark: 'godotLtcIntegral(',
     patch: 'area light',

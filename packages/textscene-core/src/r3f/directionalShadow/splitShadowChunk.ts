@@ -282,8 +282,8 @@ const SPLIT_SHADOW_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
  * second call changes nothing.
  */
 export function installGodotSplitShadow(): void {
-  if (!installSoftShadowFilter()) return;
   const isPatched = installChunkEdits({
+    requires: [installSoftShadowFilter],
     edits: SPLIT_SHADOW_EDITS,
     mark: SPLIT_LOOKUP,
     patch: 'split shadow',

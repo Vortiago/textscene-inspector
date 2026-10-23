@@ -128,7 +128,9 @@ describe('installGodotClearcoat', () => {
   it('leaves three alone when a patch it calls cannot install, and warns (error case)', () => {
     THREE.ShaderChunk.envmap_physical_pars_fragment = 'void main() {}';
 
-    expect(warningsOf(installGodotClearcoat)).toHaveLength(1);
+    expect(warningsOf(installGodotClearcoat).slice(1)).toEqual([
+      '[Shading] the clearcoat patch is skipped, as a patch it reads did not install',
+    ]);
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain('godotClearcoatBRDF(');
     expect(THREE.ShaderLib.physical.fragmentShader).toBe(threeFragment);
   });

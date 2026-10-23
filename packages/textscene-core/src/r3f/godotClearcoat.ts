@@ -160,8 +160,8 @@ const LAYERING_EDITS: readonly TextEdit[] = [
  * second call changes nothing.
  */
 export function installGodotClearcoat(): void {
-  if (!(installGodotLightFunction() && installGodotSkyLighting())) return;
   installChunkEdits({
+    requires: [installGodotLightFunction, installGodotSkyLighting],
     edits: CLEARCOAT_EDITS,
     mark: CLEARCOAT_BRDF,
     patch: 'clearcoat',

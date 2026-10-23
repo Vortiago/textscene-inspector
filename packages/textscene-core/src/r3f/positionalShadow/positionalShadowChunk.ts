@@ -130,8 +130,8 @@ ${OMNI_LOOKUP}`,
  * `positionalShadowChunk.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotPositionalShadow(): void {
-  if (!installSoftShadowFilter()) return;
   const isPatched = installChunkEdits({
+    requires: [installSoftShadowFilter],
     edits: POSITIONAL_SHADOW_EDITS,
     mark: 'godotOmniShadow(',
     patch: 'positional shadow',

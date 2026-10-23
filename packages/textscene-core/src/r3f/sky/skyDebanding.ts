@@ -39,8 +39,8 @@ ${THREE_BACKGROUND_TONE_CURVE}`;
  * every program compiled after the call. A second call changes nothing.
  */
 export function installSkyDebanding(): void {
-  if (!installFogComposite()) return;
   const isPatched = installChunkEdits({
+    requires: [installFogComposite],
     edits: [{ chunk: 'backgroundCube_frag', three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_DEBANDING }],
     mark: DEBANDING_UNIFORM,
     patch: 'sky debanding',

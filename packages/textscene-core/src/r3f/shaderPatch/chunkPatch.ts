@@ -178,6 +178,8 @@ export interface ChunkEditsPatch<Name extends ChunkName> {
    * They install with the chunks or not at all.
    */
   fragmentShaders?: Partial<Record<ProgramName, readonly TextEdit[]>>;
+  /** The install functions of the patches whose text this one reads. They run first, in order. */
+  requires?: readonly (() => boolean)[];
 }
 
 /** A program and its fragment shader with the patch's edits applied. */
@@ -238,19 +240,41 @@ function missingTextWarning<Name extends ChunkName>(patch: ChunkEditsPatch<Name>
 }
 
 /**
- * Patches three's chunks and programs, and is true when they hold the patch after the call. A three
- * release that lacks a replaced text keeps all of three's own text, and the call warns and is false.
- * A patch that reads another's text installs that patch first, in its own install function. A
- * second call changes nothing.
+ * Written only by `installChunkEdits`: the text each patch last failed on, by patch name. Several
+ * patches install one prerequisite, so it fails once for each of them on one three.
+ */
+const failedOnText = new Map<string, string>();
+
+/** Every chunk and program text the patch edits, as one string to compare. */
+function editedText(patch: ChunkEditsPatch<ChunkName>): string {
+  const programs = Object.keys(patch.fragmentShaders ?? {}) as ProgramName[];
+  return [
+    ...patchedChunkNames(patch).map((name) => THREE.ShaderChunk[name]),
+    ...programs.map((name) => THREE.ShaderLib[name]?.fragmentShader),
+  ].join('\0');
+}
+
+/**
+ * Patches three's chunks and programs, and is true when they hold the patch after the call. It
+ * first installs each patch in `requires`, and one that fails skips this patch. A three release
+ * that lacks a replaced text keeps all of three's own text, and the call warns once and is false.
+ * A second call changes nothing.
  */
 export function installChunkEdits<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): boolean {
   if (THREE.ShaderChunk[markedChunk(patch)].includes(patch.mark)) return true;
+  if (!(patch.requires ?? []).every((install) => install())) {
+    warn(`[Shading] the ${patch.patch} patch is skipped, as a patch it reads did not install`);
+    return false;
+  }
+  const text = editedText(patch);
+  if (failedOnText.get(patch.patch) === text) return false;
   const current = Object.fromEntries(
     patchedChunkNames(patch).map((name) => [name, THREE.ShaderChunk[name]])
   ) as Chunks<ChunkName>;
   const patched = appliedEdits(current, patch);
   const programs = patchedPrograms(patch.fragmentShaders ?? {});
   if (patched === null || programs === null) {
+    failedOnText.set(patch.patch, text);
     warn(missingTextWarning(patch));
     return false;
   }

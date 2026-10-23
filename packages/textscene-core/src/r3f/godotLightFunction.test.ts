@@ -213,10 +213,12 @@ describe('installGodotLightFunction', () => {
     expect(THREE.ShaderChunk.normalmap_pars_fragment).toContain('vec3 godotMapNormal(');
   });
 
-  it("leaves three's chunks alone when a patch it reads cannot install, and warns (error case)", () => {
+  it("leaves three's chunks alone when a patch it reads cannot install, and says it is skipped (error case)", () => {
     THREE.ShaderChunk.normalmap_pars_fragment = 'void main() {}';
 
-    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
+    expect(warningsOf(installGodotLightFunction).slice(1)).toEqual([
+      '[Shading] the light function patch is skipped, as a patch it reads did not install',
+    ]);
     expect(installedChunks()).toEqual(threeChunks);
   });
 

@@ -226,7 +226,10 @@ describe('installGodotAreaLight', () => {
   it("leaves three's area light alone when a patch it reads cannot install, and warns (error case)", () => {
     THREE.ShaderChunk.normalmap_pars_fragment = 'void main() {}';
 
-    expect(warningsOf(installGodotAreaLight)).toHaveLength(1);
+    expect(warningsOf(installGodotAreaLight).slice(1)).toEqual([
+      '[Shading] the light function patch is skipped, as a patch it reads did not install',
+      '[Shading] the area light patch is skipped, as a patch it reads did not install',
+    ]);
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).toBe(threeChunks.lights_physical_pars_fragment);
   });
 

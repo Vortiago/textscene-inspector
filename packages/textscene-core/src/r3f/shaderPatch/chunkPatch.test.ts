@@ -279,6 +279,44 @@ describe('installChunkEdits', () => {
     expect(THREE.ShaderChunk[CHUNK]).toBe('one');
   });
 
+  it('warns once when it fails again on the same three, as each patch that reads it installs it (edge case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[OTHER_CHUNK] = 'missing';
+    const install = () => installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'reread' });
+    expect(warningsOf(() => [install(), install()])).toHaveLength(1);
+    expect(install()).toBe(false);
+  });
+
+  it('skips the patch and names it when a patch it reads does not install (error case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[OTHER_CHUNK] = 'three';
+    let installed = true;
+    const warnings = warningsOf(() => {
+      installed = installChunkEdits({
+        edits: swapEdits,
+        mark: 'two',
+        patch: 'swap',
+        requires: [() => false],
+      });
+    });
+    expect(installed).toBe(false);
+    expect(warnings).toEqual(['[Shading] the swap patch is skipped, as a patch it reads did not install']);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
+  });
+
+  it('installs each patch it reads before its own edits', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[OTHER_CHUNK] = 'zero';
+    const writesThree = () =>
+      installChunkEdits({
+        edits: [{ chunk: OTHER_CHUNK, three: 'zero', godot: 'three' }],
+        mark: 'three',
+        patch: 'w',
+      });
+    installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', requires: [writesThree] });
+    expect([THREE.ShaderChunk[CHUNK], THREE.ShaderChunk[OTHER_CHUNK]]).toEqual(['two', 'four']);
+  });
+
   it('throws for a mark that no edit writes (error case)', () => {
     expect(() => installChunkEdits({ edits: swapEdits, mark: 'absent', patch: 'swap' })).toThrow(
       'expected an edit of the swap patch to write its mark "absent"'

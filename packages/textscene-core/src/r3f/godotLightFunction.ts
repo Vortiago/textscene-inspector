@@ -296,8 +296,8 @@ const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
  * changed since.
  */
 export function installGodotLightFunction(): boolean {
-  if (!(installGodotLightSpecular() && installGodotLightSize() && installGodotNormalMapRead())) return false;
   return installChunkEdits({
+    requires: [installGodotLightSpecular, installGodotLightSize, installGodotNormalMapRead],
     edits: GODOT_LIGHT_FUNCTION_EDITS,
     // One sentinel, as the other patches check: they may edit next to this patch's lines.
     mark: DIFFUSE_NL,
