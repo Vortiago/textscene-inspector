@@ -5,10 +5,7 @@
 
 import { afterEach, beforeEach } from 'vitest';
 import * as THREE from 'three';
-import { installShaderPatches } from '../shaderPatch/installShaderPatches';
-import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk';
-import { installGodotLightSize } from '../lightSize/lightSizeChunk';
-import { installGodotNormalMapRead } from '../materials/godotNormalMap';
+import { installShaderPatches, SHADER_PATCH_INSTALLS } from '../shaderPatch/installShaderPatches';
 import { warningsOf } from './logWarnings';
 
 export type ShaderChunks = typeof THREE.ShaderChunk;
@@ -86,9 +83,9 @@ export function installedShaderChunks(): ShaderChunks {
   }
 }
 
-/** The patches `installGodotLightFunction` requires, in the order a canvas installs them. */
-export function installLightFunctionPrerequisites(): void {
-  installGodotLightSpecular();
-  installGodotLightSize();
-  installGodotNormalMapRead();
+/** Runs every install a canvas runs before `install`, in the canvas's order. */
+export function installPatchesBefore(install: () => void): void {
+  const at = SHADER_PATCH_INSTALLS.indexOf(install);
+  if (at < 0) throw new Error(`expected an install of installShaderPatches, got ${install.name}`);
+  for (const earlier of SHADER_PATCH_INSTALLS.slice(0, at)) earlier();
 }

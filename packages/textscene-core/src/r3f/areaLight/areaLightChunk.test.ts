@@ -2,28 +2,23 @@
  * Godot's area light rides three's rect area light chunks. The tests read the installed three, so a
  * release that rewrites a replaced text fails here, not in a golden.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotAreaLight } from './areaLightChunk';
-import { installGodotLightFunction } from '../godotLightFunction';
 import { installGodotLightAttenuation } from '../godotLightAttenuation';
 import { ltcTables } from '../../godot/rendering/lights/ltc';
-import { installLightFunctionPrerequisites } from '../testing/shaderPatches';
+import { installPatchesBefore, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import type { AreaLightChunkName } from './areaLightChunk';
 
 const threeChunks = { ...THREE.ShaderChunk };
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-});
+restoreShaderGlobalsAfterEach();
 
-/** The patches the area light reads, then the area light, as `installShaderPatches` orders them. */
+/** The patches before the area light, then the area light, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {
-  installLightFunctionPrerequisites();
-  installGodotLightFunction();
-  installGodotLightAttenuation();
+  installPatchesBefore(installGodotAreaLight);
   installGodotAreaLight();
 }
 
@@ -216,9 +211,7 @@ describe('installGodotAreaLight', () => {
   });
 
   it('leaves the chunks alone when one lacks a replaced text, and warns (error case)', () => {
-    installLightFunctionPrerequisites();
-    installGodotLightFunction();
-    installGodotLightAttenuation();
+    installPatchesBefore(installGodotAreaLight);
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;
     THREE.ShaderChunk.lights_fragment_begin = 'void main() {}';
 
