@@ -6,7 +6,7 @@
  */
 
 import type { ProgramInjection } from './materialProgramInputs';
-import { editedChunk, editedShader, type TextEdit } from './shaderPatch/chunkPatch';
+import { editedChunk, editedProgram, type TextEdit } from './shaderPatch/chunkPatch';
 
 /** The per-vertex attribute that holds a tile's bounds, `tileGeometry.ts`'s `uvBounds`. */
 export const TILE_UV_BOUNDS_ATTRIBUTE = 'tileUvBounds';
@@ -30,24 +30,22 @@ function clampedMapFragment(): string {
 export const TILE_TEXTURE_PADDING: ProgramInjection = {
   cacheKey: 'tile-texture-padding',
   onBeforeCompile(shader) {
-    shader.vertexShader = editedShader(
-      shader.vertexShader,
-      [
-        after(
-          '#include <uv_pars_vertex>',
-          `attribute vec4 ${TILE_UV_BOUNDS_ATTRIBUTE};\nvarying vec4 vTileUvBounds;`
-        ),
-        after('#include <uv_vertex>', `vTileUvBounds = ${TILE_UV_BOUNDS_ATTRIBUTE};`),
-      ],
-      'the vertex shader of the tile texture padding'
-    );
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        after('#include <uv_pars_fragment>', 'varying vec4 vTileUvBounds;'),
-        { three: '#include <map_fragment>', godot: clampedMapFragment() },
-      ],
-      'the fragment shader of the tile texture padding'
+    editedProgram(
+      shader,
+      {
+        vertex: [
+          after(
+            '#include <uv_pars_vertex>',
+            `attribute vec4 ${TILE_UV_BOUNDS_ATTRIBUTE};\nvarying vec4 vTileUvBounds;`
+          ),
+          after('#include <uv_vertex>', `vTileUvBounds = ${TILE_UV_BOUNDS_ATTRIBUTE};`),
+        ],
+        fragment: [
+          after('#include <uv_pars_fragment>', 'varying vec4 vTileUvBounds;'),
+          { three: '#include <map_fragment>', godot: clampedMapFragment() },
+        ],
+      },
+      'tile texture padding'
     );
   },
 };

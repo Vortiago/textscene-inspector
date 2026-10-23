@@ -7,7 +7,7 @@
 import type { IUniform, Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { recordedUniform } from './recordedOnMaterial';
-import { editedChunk, editedShader, type TextEdit } from '../shaderPatch/chunkPatch';
+import { editedChunk, editedProgram, type TextEdit } from '../shaderPatch/chunkPatch';
 import {
   DEFAULT_TEXTURE_CHANNEL_MASK,
   type TextureChannelMask,
@@ -57,14 +57,16 @@ export const GODOT_METALLIC_ROUGHNESS_CHANNELS: ProgramInjection = {
   cacheKey: 'godot-metallic-roughness-channels',
   onBeforeCompile(shader) {
     Object.assign(shader.uniforms, channelUniforms(this));
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        { three: ROUGHNESS_PARS_CHUNK, godot: CHANNEL_UNIFORMS },
-        { three: ROUGHNESS_CHUNK, godot: editedChunk('roughnessmap_fragment', ROUGHNESS_READ) },
-        { three: METALNESS_CHUNK, godot: editedChunk('metalnessmap_fragment', METALLIC_READ) },
-      ],
-      'the fragment shader of the metallic and roughness channels'
+    editedProgram(
+      shader,
+      {
+        fragment: [
+          { three: ROUGHNESS_PARS_CHUNK, godot: CHANNEL_UNIFORMS },
+          { three: ROUGHNESS_CHUNK, godot: editedChunk('roughnessmap_fragment', ROUGHNESS_READ) },
+          { three: METALNESS_CHUNK, godot: editedChunk('metalnessmap_fragment', METALLIC_READ) },
+        ],
+      },
+      'metallic and roughness channels'
     );
   },
 };

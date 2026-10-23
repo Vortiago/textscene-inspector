@@ -27,21 +27,32 @@ export interface ChunkEdit<Name extends ChunkName> extends TextEdit {
 
 /**
  * The text with the edit applied, or null when three's text is missing from it or occurs more than
- * once. A replacement function, not a string: a `$` in GLSL stays literal.
+ * once. A replacement by slicing, not a string `replace`: a `$` in GLSL stays literal.
  */
 function applyEdit(text: string, { three, godot }: TextEdit): string | null {
-  if (text.split(three).length !== 2) return null;
-  return text.replace(three, () => godot);
+  const at = text.indexOf(three);
+  if (at < 0 || text.indexOf(three, at + three.length) >= 0) return null;
+  return text.slice(0, at) + godot + text.slice(at + three.length);
+}
+
+/** The text with every edit applied in order, up to the first edit whose text is missing. */
+function applyEditsUntilMissing(
+  text: string,
+  edits: readonly TextEdit[]
+): { text: string; missing: TextEdit | null } {
+  let edited = text;
+  for (const edit of edits) {
+    const next = applyEdit(edited, edit);
+    if (next === null) return { text: edited, missing: edit };
+    edited = next;
+  }
+  return { text: edited, missing: null };
 }
 
 /** The text with every edit applied in order, or null when one is missing, as `applyEdit`. */
 export function applyEdits(text: string, edits: readonly TextEdit[]): string | null {
-  let patched: string | null = text;
-  for (const edit of edits) {
-    patched = applyEdit(patched, edit);
-    if (patched === null) return null;
-  }
-  return patched;
+  const { text: edited, missing } = applyEditsUntilMissing(text, edits);
+  return missing === null ? edited : null;
 }
 
 /**
@@ -50,13 +61,41 @@ export function applyEdits(text: string, edits: readonly TextEdit[]): string | n
  * silently unpatched program. Every splice of a program's text goes through this or `rewrittenShader`.
  */
 export function editedShader(text: string, edits: readonly TextEdit[], shader: string): string {
-  let edited = text;
-  for (const edit of edits) {
-    const next = applyEdit(edited, edit);
-    if (next === null) throw new Error(`expected ${shader} to hold "${edit.three}" once, got:\n${edited}`);
-    edited = next;
-  }
+  const { text: edited, missing } = applyEditsUntilMissing(text, edits);
+  if (missing !== null)
+    throw new Error(`expected ${shader} to hold "${missing.three}" once, got:\n${edited}`);
   return edited;
+}
+
+/** The two stages of a program, as three hands them to `onBeforeCompile`. */
+interface ProgramStages {
+  vertexShader: string;
+  fragmentShader: string;
+}
+
+/**
+ * Applies the edits of each stage to `program`, as `editedShader`, and names the stage and `patch`
+ * in the error. A stage with no list keeps its text.
+ */
+export function editedProgram(
+  program: ProgramStages,
+  edits: { vertex?: readonly TextEdit[]; fragment?: readonly TextEdit[] },
+  patch: string
+): void {
+  if (edits.vertex) {
+    program.vertexShader = editedShader(
+      program.vertexShader,
+      edits.vertex,
+      `the vertex shader of the ${patch}`
+    );
+  }
+  if (edits.fragment) {
+    program.fragmentShader = editedShader(
+      program.fragmentShader,
+      edits.fragment,
+      `the fragment shader of the ${patch}`
+    );
+  }
 }
 
 /**

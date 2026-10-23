@@ -6,7 +6,7 @@
 
 import type { ProgramInjection } from '../materialProgramInputs';
 import { recordedUniform } from './recordedOnMaterial';
-import { editedChunk, editedShader } from '../shaderPatch/chunkPatch';
+import { editedChunk, editedProgram } from '../shaderPatch/chunkPatch';
 
 /** The uniform the patch reads, and the `userData` key a material records its value under. */
 const ADDED_TEXTURE_ENERGY = 'godotEmissionTextureEnergy';
@@ -30,13 +30,18 @@ const EMISSION_TEXTURE_ADD: ProgramInjection = {
   onBeforeCompile(shader) {
     // A material that records no energy adds nothing.
     shader.uniforms[ADDED_TEXTURE_ENERGY] = recordedUniform(this, ADDED_TEXTURE_ENERGY, 0);
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        { three: EMISSIVE_PARS, godot: `${EMISSIVE_PARS}\nuniform float ${ADDED_TEXTURE_ENERGY};` },
-        { three: EMISSIVE_MAP, godot: editedChunk('emissivemap_fragment', { three: MULTIPLY, godot: ADD }) },
-      ],
-      'the fragment shader of the emission texture add'
+    editedProgram(
+      shader,
+      {
+        fragment: [
+          { three: EMISSIVE_PARS, godot: `${EMISSIVE_PARS}\nuniform float ${ADDED_TEXTURE_ENERGY};` },
+          {
+            three: EMISSIVE_MAP,
+            godot: editedChunk('emissivemap_fragment', { three: MULTIPLY, godot: ADD }),
+          },
+        ],
+      },
+      'emission texture add'
     );
   },
 };

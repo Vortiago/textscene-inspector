@@ -6,7 +6,7 @@
 
 import { FrontSide } from 'three';
 import { composeInjections, type ProgramInjection } from '../materialProgramInputs';
-import { editedShader } from '../shaderPatch/chunkPatch';
+import { editedProgram } from '../shaderPatch/chunkPatch';
 import { recordedUniform } from './recordedOnMaterial';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
@@ -53,12 +53,9 @@ function pointSizeInjection(cacheKey: string, uniforms: Readonly<Record<string, 
       for (const [key, initial] of Object.entries(uniforms)) {
         shader.uniforms[key] = recordedUniform(this, key, initial);
       }
-      const sized = editedShader(
-        shader.vertexShader,
-        [{ three: PROJECT_CHUNK, godot: `${PROJECT_CHUNK}\n\tgl_PointSize = ${keys.join(' * ')};` }],
-        'the vertex shader of the point size'
-      );
-      shader.vertexShader = `${declarations}\n${sized}`;
+      const size = `${PROJECT_CHUNK}\n\tgl_PointSize = ${keys.join(' * ')};`;
+      editedProgram(shader, { vertex: [{ three: PROJECT_CHUNK, godot: size }] }, 'point size');
+      shader.vertexShader = `${declarations}\n${shader.vertexShader}`;
     },
   };
 }
@@ -81,15 +78,17 @@ const MAP_PARS_CHUNK = '#include <map_pars_fragment>';
 const GODOT_POINT_COORD_ALBEDO: ProgramInjection = {
   cacheKey: 'godot-point-coord-albedo',
   onBeforeCompile(shader) {
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        {
-          three: MAP_PARS_CHUNK,
-          godot: `${MAP_PARS_CHUNK}\n#define vMapUv vec2( gl_PointCoord.x, 1.0 - gl_PointCoord.y )`,
-        },
-      ],
-      'the fragment shader of the point coordinate albedo'
+    editedProgram(
+      shader,
+      {
+        fragment: [
+          {
+            three: MAP_PARS_CHUNK,
+            godot: `${MAP_PARS_CHUNK}\n#define vMapUv vec2( gl_PointCoord.x, 1.0 - gl_PointCoord.y )`,
+          },
+        ],
+      },
+      'point coordinate albedo'
     );
   },
 };

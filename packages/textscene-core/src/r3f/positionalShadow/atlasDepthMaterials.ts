@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { composeInjections, injectProgram, type ProgramInjection } from '../materialProgramInputs.js';
-import { editedShader } from '../shaderPatch/chunkPatch.js';
+import { editedProgram } from '../shaderPatch/chunkPatch.js';
 
 /**
  * The window depth as the atlas's 16-bit depth stores it, clamped as the depth buffer clamps it,
@@ -24,17 +24,19 @@ vec2 packAtlasDepth( float depth ) {
 const ATLAS_DEPTH: ProgramInjection = {
   cacheKey: 'godot-atlas-depth',
   onBeforeCompile(shader) {
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        { three: 'void main() {', godot: `${PACK_ATLAS_DEPTH}\nvoid main() {` },
-        // The last `#endif` of three's depth packing ends `main`, where the atlas colour is written.
-        {
-          three: '#endif\n}',
-          godot: '#endif\n\tgl_FragColor = vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 );\n}\n',
-        },
-      ],
-      'the fragment shader of the atlas depth'
+    editedProgram(
+      shader,
+      {
+        fragment: [
+          { three: 'void main() {', godot: `${PACK_ATLAS_DEPTH}\nvoid main() {` },
+          // The last `#endif` of three's depth packing ends `main`, where the atlas colour is written.
+          {
+            three: '#endif\n}',
+            godot: '#endif\n\tgl_FragColor = vec4( packAtlasDepth( gl_FragCoord.z ), 0.0, 1.0 );\n}\n',
+          },
+        ],
+      },
+      'atlas depth'
     );
   },
 };
@@ -56,21 +58,19 @@ const PARABOLOID_BEND: ProgramInjection = {
   cacheKey: 'godot-paraboloid-depth',
   onBeforeCompile(shader) {
     const declareSide = { three: 'void main() {', godot: 'varying float paraboloidSide;\nvoid main() {' };
-    shader.vertexShader = editedShader(
-      shader.vertexShader,
-      [declareSide, { three: '#include <project_vertex>', godot: PARABOLOID_VERTEX }],
-      'the vertex shader of the paraboloid depth'
-    );
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        declareSide,
-        {
-          three: '#include <clipping_planes_fragment>',
-          godot: '#include <clipping_planes_fragment>\n\tif ( paraboloidSide > 0.0 ) discard;',
-        },
-      ],
-      'the fragment shader of the paraboloid depth'
+    editedProgram(
+      shader,
+      {
+        vertex: [declareSide, { three: '#include <project_vertex>', godot: PARABOLOID_VERTEX }],
+        fragment: [
+          declareSide,
+          {
+            three: '#include <clipping_planes_fragment>',
+            godot: '#include <clipping_planes_fragment>\n\tif ( paraboloidSide > 0.0 ) discard;',
+          },
+        ],
+      },
+      'paraboloid depth'
     );
   },
 };

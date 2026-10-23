@@ -10,6 +10,7 @@ import {
   editedShader,
   installChunkPatch,
   type ChunkEdit,
+  type TextEdit,
 } from './shaderPatch/chunkPatch.js';
 import { NORMAL_MAP_READ_MARK } from './materials/godotNormalMap.js';
 import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
@@ -228,21 +229,24 @@ const THREE_IBL_RETRO_RADIANCE =
   'vec3 retroIBLRadiance = getIBLAnisotropyRetroRadiance( geometryViewDir, geometryNormal, material.roughness, material.anisotropyB, material.anisotropy );';
 
 /** The reflection line bent about Godot's direction. */
-const onGodotIBLDirection = (line: string) =>
-  editedShader(
-    line,
-    [{ three: 'material.anisotropyB', godot: 'GODOT_IBL_ANISOTROPIC_DIRECTION' }],
-    'three’s anisotropic reflection line'
-  );
+const IBL_DIRECTION_EDIT: TextEdit = {
+  three: 'material.anisotropyB',
+  godot: 'GODOT_IBL_ANISOTROPIC_DIRECTION',
+};
 
 /**
  * The anisotropic reflection also on Godot's roughness, which `godotIBLRadiance`
  * (`godotSkyLighting.ts`) reads as the isotropic one does.
  */
 const GODOT_IBL_RADIANCE = editedShader(
-  onGodotIBLDirection(THREE_IBL_RADIANCE),
-  [{ three: 'material.roughness', godot: 'material.godotRoughness' }],
+  THREE_IBL_RADIANCE,
+  [IBL_DIRECTION_EDIT, { three: 'material.roughness', godot: 'material.godotRoughness' }],
   'three’s anisotropic reflection line'
+);
+const GODOT_IBL_RETRO_RADIANCE = editedShader(
+  THREE_IBL_RETRO_RADIANCE,
+  [IBL_DIRECTION_EDIT],
+  'three’s anisotropic retroreflection line'
 );
 
 type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
@@ -269,7 +273,7 @@ const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   {
     chunk: MAPS_CHUNK,
     three: THREE_IBL_RETRO_RADIANCE,
-    godot: onGodotIBLDirection(THREE_IBL_RETRO_RADIANCE),
+    godot: GODOT_IBL_RETRO_RADIANCE,
   },
   {
     chunk: CHUNK,

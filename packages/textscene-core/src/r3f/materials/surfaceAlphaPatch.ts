@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
-import { editedShader } from '../shaderPatch/chunkPatch';
+import { editedProgram } from '../shaderPatch/chunkPatch';
 
 /** Where a surface's Godot shader takes its final ALPHA from. */
 export interface SurfaceAlphaSource {
@@ -28,11 +28,7 @@ export const ALPHA_TEST_CHUNK = '#include <alphatest_fragment>';
 export const ALPHA_HASH_CHUNK = '#include <alphahash_fragment>';
 
 function rewriteFragment(shader: ProgramShader, chunk: string, replacement: string): void {
-  shader.fragmentShader = editedShader(
-    shader.fragmentShader,
-    [{ three: chunk, godot: replacement }],
-    'the fragment shader of a surface alpha'
-  );
+  editedProgram(shader, { fragment: [{ three: chunk, godot: replacement }] }, 'surface alpha');
 }
 
 /** three multiplies the map and vertex-colour alpha into `diffuseColor.a`. This resets it to `opacity`. */

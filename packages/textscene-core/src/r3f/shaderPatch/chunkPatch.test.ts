@@ -4,6 +4,7 @@ import {
   applyChunkEdits,
   applyEdits,
   editedChunk,
+  editedProgram,
   editedShader,
   installChunkPatch,
   onChunk,
@@ -121,6 +122,32 @@ describe('editedShader', () => {
         'the test program'
       )
     ).toThrow('to hold "a" once, got:\nc');
+  });
+});
+
+describe('editedProgram', () => {
+  const program = () => ({ vertexShader: 'v1', fragmentShader: 'f1', uniforms: {} });
+
+  it('edits the stage each list names, and leaves the other alone', () => {
+    const shader = program();
+    editedProgram(shader, { fragment: [{ three: 'f1', godot: 'f2' }] }, 'test patch');
+    expect([shader.vertexShader, shader.fragmentShader]).toEqual(['v1', 'f2']);
+  });
+
+  it('edits both stages', () => {
+    const shader = program();
+    editedProgram(
+      shader,
+      { vertex: [{ three: 'v1', godot: 'v2' }], fragment: [{ three: 'f1', godot: 'f2' }] },
+      'test patch'
+    );
+    expect([shader.vertexShader, shader.fragmentShader]).toEqual(['v2', 'f2']);
+  });
+
+  it('throws, naming the stage and the patch, for a stage that lacks a text (error case)', () => {
+    expect(() => editedProgram(program(), { vertex: [{ three: 'x', godot: 'y' }] }, 'test patch')).toThrow(
+      'expected the vertex shader of the test patch to hold "x" once, got:\nv1'
+    );
   });
 });
 

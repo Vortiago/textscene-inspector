@@ -37,24 +37,24 @@ function isTable(value: unknown): value is Table {
 export function snapshotShaderGlobals(): () => void {
   const chunks = { ...THREE.ShaderChunk };
   const shaderLib = THREE.ShaderLib as unknown as Table;
-  const library = { ...shaderLib };
+  const shaderLibCopy = { ...shaderLib };
   const programs = Object.values(THREE.ShaderLib).map(
     (program) => [program, program.vertexShader, program.fragmentShader, { ...program.uniforms }] as const
   );
   const uniformsLib = THREE.UniformsLib as unknown as Table;
-  const uniforms = { ...uniformsLib };
-  const groups = Object.values(uniforms)
+  const uniformsLibCopy = { ...uniformsLib };
+  const groups = Object.values(uniformsLibCopy)
     .filter(isTable)
     .map((group) => [group, { ...group }] as const);
   return () => {
     replaceContents(THREE.ShaderChunk as unknown as Table, chunks);
-    replaceContents(shaderLib, library);
+    replaceContents(shaderLib, shaderLibCopy);
     for (const [program, vertexShader, fragmentShader, programUniforms] of programs) {
       program.vertexShader = vertexShader;
       program.fragmentShader = fragmentShader;
       replaceContents(program.uniforms, programUniforms);
     }
-    replaceContents(uniformsLib, uniforms);
+    replaceContents(uniformsLib, uniformsLibCopy);
     for (const [group, groupUniforms] of groups) replaceContents(group, groupUniforms);
   };
 }

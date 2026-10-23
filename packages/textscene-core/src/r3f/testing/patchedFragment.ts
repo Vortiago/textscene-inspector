@@ -7,18 +7,11 @@ import * as THREE from 'three';
 import type { ProgramShader } from '../materialProgramInputs';
 
 /** The program of each three class a Godot surface draws with, by material type. */
-const PROGRAM_OF_TYPE: Readonly<
-  Record<string, Pick<THREE.ShaderLibShader, 'vertexShader' | 'fragmentShader'>>
-> = {
+export const PROGRAM_OF_TYPE: Readonly<Record<string, THREE.ShaderLibShader>> = {
   MeshBasicMaterial: THREE.ShaderLib.basic,
   MeshStandardMaterial: THREE.ShaderLib.standard,
   MeshPhysicalMaterial: THREE.ShaderLib.physical,
 };
-
-/** The fragment shader of each three class a Godot surface draws with, by material type. */
-export const FRAGMENT_SHADER_OF_TYPE: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(PROGRAM_OF_TYPE).map(([type, { fragmentShader }]) => [type, fragmentShader])
-);
 
 /** The shader resets the alpha to `opacity`, dropping the texture and vertex-colour alpha. */
 export const DROPS_ALBEDO_ALPHA = 'diffuseColor.a = opacity;';

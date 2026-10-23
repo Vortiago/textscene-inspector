@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
-import { editedShader } from '../shaderPatch/chunkPatch';
+import { editedProgram } from '../shaderPatch/chunkPatch';
 import { recordedOn } from './recordedOnMaterial';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/standardmaterial3d/types';
@@ -239,18 +239,16 @@ ${PARS_ANCHOR}`;
 const UNSHADED_PARALLAX_INPUTS: ProgramInjection = {
   cacheKey: 'godot-parallax-unshaded',
   onBeforeCompile(shader) {
-    shader.vertexShader = editedShader(
-      shader.vertexShader,
-      [
-        { three: '#include <common>', godot: UNSHADED_VERTEX_PARS },
-        { three: '#include <project_vertex>', godot: UNSHADED_VERTEX },
-      ],
-      'the vertex shader of the unshaded parallax'
-    );
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [{ three: PARS_ANCHOR, godot: UNSHADED_FRAGMENT_PARS }],
-      'the fragment shader of the unshaded parallax'
+    editedProgram(
+      shader,
+      {
+        vertex: [
+          { three: '#include <common>', godot: UNSHADED_VERTEX_PARS },
+          { three: '#include <project_vertex>', godot: UNSHADED_VERTEX },
+        ],
+        fragment: [{ three: PARS_ANCHOR, godot: UNSHADED_FRAGMENT_PARS }],
+      },
+      'unshaded parallax'
     );
   },
 };
@@ -259,21 +257,19 @@ const GODOT_PARALLAX: ProgramInjection = {
   cacheKey: 'godot-parallax',
   onBeforeCompile(shader) {
     Object.assign(shader.uniforms, heightmapUniforms(this));
-    shader.vertexShader = editedShader(
-      shader.vertexShader,
-      [
-        { three: '#include <uv_pars_vertex>', godot: HEIGHTMAP_UV_PARS },
-        { three: '#include <uv_vertex>', godot: HEIGHTMAP_UV },
-      ],
-      'the vertex shader of the parallax'
-    );
-    shader.fragmentShader = editedShader(
-      shader.fragmentShader,
-      [
-        { three: PARS_ANCHOR, godot: PARALLAX_PARS },
-        { three: MAP_ANCHOR, godot: parallaxShift(this) },
-      ],
-      'the fragment shader of the parallax'
+    editedProgram(
+      shader,
+      {
+        vertex: [
+          { three: '#include <uv_pars_vertex>', godot: HEIGHTMAP_UV_PARS },
+          { three: '#include <uv_vertex>', godot: HEIGHTMAP_UV },
+        ],
+        fragment: [
+          { three: PARS_ANCHOR, godot: PARALLAX_PARS },
+          { three: MAP_ANCHOR, godot: parallaxShift(this) },
+        ],
+      },
+      'parallax'
     );
   },
 };
