@@ -106,6 +106,14 @@ The visual baselines carry a ring of about 6 % outside a hard top and left edge,
 compositor (`launchGodotComparisonBrowser`). A line on a golden reads about 103 beside a faint 78,
 and the comparison browser reads 105.
 
+Marker2D and Marker3D draw an axis cross, not one colour: a red x axis, a green y axis and, in 3D,
+a blue z axis, with each negative arm darkened by 0.5 (`marker_2d.cpp:47-59`,
+`marker_3d_gizmo_plugin.cpp:60-79`, `theme_classic.cpp:197-199`). `axisCross` builds both. Over the
+same camera, the 2D cross draws rgb(245, 51, 82), rgb(122, 26, 41), rgb(135, 214, 3) and
+rgb(68, 107, 1) in Godot and here. The 3D cross differs by one level in a channel, for example
+rgb(244, 51, 81) in Godot against rgb(245, 51, 82) here. Godot stores a vertex colour as eight bits
+and truncates (`rendering_server.cpp:712-717`), so 0.96 × 255 = 244.8 reads 244.
+
 The editable sibling of the particles emitter draws rgb(132, 119, 85), the plain unselected
 particles colour. The fill of the selected locked emitter draws rgb(167), two faces at alpha 0.6.
 The goldens `cpuparticles3d-instanced-unselected` and `cpuparticles3d-instanced-selected` show both cases.

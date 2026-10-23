@@ -1,7 +1,7 @@
 /**
  * <Marker2D> positions its children and draws Godot's "+" editor cross at its origin for every
- * node, in full colour (`marker_2d.cpp:85`, ADR-0056). The cross is symmetric, so the Node2D
- * group's diag(1,-1,1) conjugation leaves it unchanged.
+ * node, in full colour (`marker_2d.cpp:47-59,85`, ADR-0056): a red x axis and a green y axis, each
+ * negative half darkened.
  */
 
 import { useMemo } from 'react';
@@ -9,10 +9,10 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
+import { axisCross } from '../../../r3f/gizmo/axisCross';
 import type { Marker2DProperties } from './types';
 
-/** Godot editor marker tint (blue). */
-const MARKER_COLOR = 0x6ca6ff;
+const DEFAULT_EXTENTS = 10;
 
 export function Marker2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Marker2DProperties;
@@ -25,11 +25,13 @@ export function Marker2D({ node, children }: NodeComponentProps) {
   );
 }
 
+/** Godot's y points down the screen and three's up, and the Node2D group leaves a child's points alone. */
+function crossInGroupSpace(extents: number) {
+  const { positions, colors } = axisCross(extents > 0 ? extents : DEFAULT_EXTENTS, ['x', 'y']);
+  return { positions: positions.map((value, index) => (index % 3 === 1 ? -value : value)), colors };
+}
+
 function MarkerCross({ extents }: { extents: number }) {
-  // Two segments: horizontal (−e,0)→(e,0) and vertical (0,−e)→(0,e).
-  const positions = useMemo(() => {
-    const e = extents > 0 ? extents : 10;
-    return new Float32Array([-e, 0, 0, e, 0, 0, 0, -e, 0, 0, e, 0]);
-  }, [extents]);
-  return <GizmoLine positions={positions} color={MARKER_COLOR} />;
+  const { positions, colors } = useMemo(() => crossInGroupSpace(extents), [extents]);
+  return <GizmoLine positions={positions} colors={colors} />;
 }

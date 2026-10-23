@@ -5,11 +5,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import { Marker2D } from './Component';
 import { parseMarker2D } from './parser';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
 import { describeGizmoToggle, type GizmoNodeCase } from '../../../r3f/testing/gizmoContract';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
   return {
@@ -47,6 +49,27 @@ describe('<Marker2D>', () => {
     ['selection points at a different node', 'SomethingElse'],
   ])('draws the cross in full colour when %s', async (_label, selectedPath) => {
     expect(lineOpacities(await renderMarker(selectedPath))).toEqual([1]);
+  });
+
+  // `marker_2d.cpp:47-59`: four segments, each from an arm tip to the origin or back. The positive
+  // arm takes the axis colour and the negative arm the axis colour darkened by 0.5.
+  it('draws a red x axis and a green y axis, each negative half darkened by 0.5', async () => {
+    const renderer = await renderMarker('MyMarker', { gizmo_extents: '20' });
+    const cross = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    const positions = Array.from(cross.geometry.getAttribute('position').array);
+    const colors = Array.from(cross.geometry.getAttribute('color').array);
+    const red = godotColorToLinear({ r: 0.96, g: 0.2, b: 0.32 });
+    const green = godotColorToLinear({ r: 0.53, g: 0.84, b: 0.01 });
+    const darkRed = godotColorToLinear({ r: 0.48, g: 0.1, b: 0.16 });
+    const darkGreen = godotColorToLinear({ r: 0.265, g: 0.42, b: 0.005 });
+    // Godot's +y arm points down the screen, which is three's -y inside the Node2D group.
+    const expectedPositions = [20, 0, 0, 0, 0, 0, 0, 0, 0, -20, 0, 0, 0, -20, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0];
+    expect(positions).toEqual(expectedPositions.map((value) => expect.closeTo(value, 6)));
+    const expectedColors = [red, darkRed, green, darkGreen].flatMap((color) => {
+      const rgb = [color.r, color.g, color.b];
+      return [...rgb, ...rgb];
+    });
+    expect(colors).toEqual(expectedColors.map((value) => expect.closeTo(value, 6)));
   });
 
   it('always renders a positioning group for children, selected or not', async () => {

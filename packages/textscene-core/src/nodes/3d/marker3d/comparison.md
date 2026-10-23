@@ -10,7 +10,7 @@ renders_as: an axis-cross gizmo for every node
 
 # Marker3D
 
-A Node3D anchor that positions its children and shows a three-axis cross at its origin in the editor. The previewer draws that cross for every node, in full colour (ADR-0056). A capture keeps the Gizmos toggle off, so a plain capture shows nothing for it.
+A Node3D anchor that positions its children and shows a three-axis cross at its origin in the editor. The previewer draws that cross for every node, in full colour (ADR-0056): a red x axis, a green y axis and a blue z axis, with each negative half darker, as Godot does. A capture keeps the Gizmos toggle off, so a plain capture shows nothing for it.
 
 ## Linting
 
