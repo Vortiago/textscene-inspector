@@ -53,11 +53,6 @@ export interface SceneSeating<N extends RawNode> extends SeatedPaths<N> {
   readonly seated: ReadonlyMap<N, N>;
   /** The root-relative path of each seated copy with a name, a copy a later sibling of its name replaced included. */
   readonly pathOf: ReadonlyMap<N, string>;
-  /**
-   * The headings a `parent_id_path=` seated under the heading it names, because their `parent=` path
-   * did not walk. Their copy lives there, not at the path the heading declares.
-   */
-  readonly landed: ReadonlySet<N>;
 }
 
 export const MISSING = { status: 'missing' } as const;
@@ -82,7 +77,6 @@ function noScene<N extends RawNode>(): SceneSeating<N> {
     roots: [],
     seated: new Map(),
     pathOf: new Map(),
-    landed: new Set(),
     resolve: () => MISSING,
     ownership: emptyOwnership(),
   };
@@ -126,19 +120,15 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // somewhere this parse cannot name, so it stays out of the tree like every node of a refused file.
     if (!reRootsVanished) continue;
     const recovered = idTrailEnd(origins, index, isPlaced);
-    if (recovered) {
-      if (recovered.kind === 'lands')
-        seatLanded(tables, node, origins[recovered.heading]!.node, resolveOwner);
-      continue;
-    }
-    reRoot(tables, node, resolveOwner);
+    if (recovered === undefined) reRoot(tables, node, resolveOwner);
+    else if (recovered.kind === 'lands')
+      seatLanded(tables, node, origins[recovered.heading]!.node, resolveOwner);
   }
 
   return {
     roots: [tables.root],
     seated: tables.seated,
     pathOf: tables.pathOf,
-    landed: tables.landed,
     resolve: seatedResolver(tables),
     ownership: tables.ownership,
   };
@@ -199,7 +189,7 @@ function seatLanded<N extends SceneNode<N>>(
 ): void {
   const parentPath = tables.pathOf.get(tables.seated.get(landedOn)!);
   if (parentPath === undefined || !seatBelowParent(tables, node, parentPath, resolveOwner)) return;
-  tables.landed.add(node);
+  tables.seated.get(node)!.landedByIdTrail = true;
 }
 
 /**
@@ -266,8 +256,6 @@ interface SeatingTables<N> {
   readonly byPath: Map<string, N>;
   /** The inverse of `byPath`, keeping a node a later sibling replaced there. */
   readonly pathOf: Map<N, string>;
-  /** Written only by `seatLanded`: the headings a `parent_id_path=` seated. */
-  readonly landed: Set<N>;
   /** `%Name` to that path, for the nodes claiming one in the root's table. */
   readonly uniquePaths: Map<string, string>;
   /** Each seated node's place, both spellings from the root's own name ({@link UniqueNameClaim}). */
@@ -298,7 +286,6 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     rootChildNames: new Set(),
     byPath,
     pathOf: new Map([[root, SCENE_ROOT_PATH]]),
-    landed: new Set(),
     uniquePaths,
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
@@ -589,7 +576,7 @@ function findInstanceAnchor<N extends RawNode>(
  */
 export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>(
   all: readonly H[],
-  seating: Pick<SceneSeating<N>, 'seated' | 'landed'>
+  seating: Pick<SceneSeating<N>, 'seated'>
 ): H[] {
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
@@ -603,10 +590,15 @@ export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>
  */
 export function isSeatedAtOwnPath<N extends RawNode>(
   node: N,
-  { seated, landed }: Pick<SceneSeating<N>, 'seated' | 'landed'>
+  { seated }: Pick<SceneSeating<N>, 'seated'>
 ): boolean {
   const seat = seated.get(node);
-  return seat !== undefined && seat.authoredName === undefined && !landed.has(node);
+  return seat !== undefined && !isReRooted(seat) && seat.landedByIdTrail === undefined;
+}
+
+/** Whether the tree node is a copy the builder re-rooted, which keeps the name its heading wrote. */
+export function isReRooted(seat: RawNode): boolean {
+  return seat.authoredName !== undefined;
 }
 
 /**
@@ -620,7 +612,7 @@ export function seatedParents<N extends SceneNode<N>>(roots: readonly N[]): Map<
   const pending = [...roots];
   for (let parent = pending.pop(); parent; parent = pending.pop()) {
     for (const child of parent.children) {
-      if (child.authoredName === undefined && child.instanceSubPath === undefined) parents.set(child, parent);
+      if (!isReRooted(child) && child.instanceSubPath === undefined) parents.set(child, parent);
       pending.push(child);
     }
   }

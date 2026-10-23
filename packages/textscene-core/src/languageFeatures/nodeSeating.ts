@@ -26,10 +26,8 @@ interface DocumentSeating {
   readonly tree: readonly SeatedSection[];
   /** The root-relative path of each seated heading with a name. Built on the first read: the outline never reads it. */
   paths(): ReadonlyMap<DocumentSection, string>;
-  /** The node each `[node]` heading sits under (`seatedParents`). Built on the first read: the outline never reads it. */
-  parents(): ReadonlyMap<RawNode, RawNode>;
-  /** Each `[node]` heading's node. */
-  readonly nodeBySection: ReadonlyMap<DocumentSection, RawNode>;
+  /** The heading each seated heading sits under (`seatedParents`). Built on the first read: the outline never reads it. */
+  parents(): ReadonlyMap<DocumentSection, DocumentSection>;
 }
 
 /** Written only by {@link seatingOf}. An entry lives as long as its document. */
@@ -61,7 +59,7 @@ function seat(document: LanguageDocument): DocumentSeating {
   });
   const unseated = headings.filter(({ node }) => !seating.seated.has(node)).map(({ node }) => node);
   let paths: ReadonlyMap<DocumentSection, string> | undefined;
-  let parents: ReadonlyMap<RawNode, RawNode> | undefined;
+  let parents: ReadonlyMap<DocumentSection, DocumentSection> | undefined;
   return {
     seating,
     resolveConnectionEnd: connectionEndResolver(headings, seating),
@@ -69,8 +67,13 @@ function seat(document: LanguageDocument): DocumentSeating {
     tree: [...seating.roots, ...unseated].map(seated),
     paths: () =>
       (paths ??= new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]))),
-    parents: () => (parents ??= seatedParents(seating.roots)),
-    nodeBySection: new Map(headings.map(({ section, node }) => [section, node])),
+    parents: () =>
+      (parents ??= new Map(
+        [...seatedParents(seating.roots)].map(([child, parent]) => [
+          sectionByNode.get(child)!,
+          sectionByNode.get(parent)!,
+        ])
+      )),
   };
 }
 
@@ -107,11 +110,7 @@ export function nodeSectionOfParent(
   document: LanguageDocument,
   heading: DocumentSection
 ): DocumentSection | undefined {
-  const seating = seatingOf(document);
-  const node = seating.nodeBySection.get(heading);
-  const seat = node && seating.seating.seated.get(node);
-  const parent = seat && seating.parents().get(seat);
-  return parent && seating.sectionByNode.get(parent);
+  return seatingOf(document).parents().get(heading);
 }
 
 /**

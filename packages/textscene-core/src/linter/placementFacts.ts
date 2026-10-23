@@ -9,7 +9,12 @@ import {
   refusesToInstantiate,
   rootDeclaringParent,
 } from '../parser/instantiateRefusal.js';
-import { isSeatedAtOwnPath, orphanedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
+import {
+  isReRooted,
+  isSeatedAtOwnPath,
+  orphanedNodes,
+  type SceneSeating,
+} from '../parser/sceneTreeBuilder.js';
 import { connectionEndResolver } from '../parser/connectionEnd.js';
 import { idTrailEnd } from '../parser/idTrail.js';
 
@@ -72,7 +77,7 @@ function reRootedNames(
   const names = new Map<NodeOrigin<RawNode>, string>();
   for (const origin of orphaned) {
     const seat = seated.get(origin.node);
-    if (seat?.authoredName !== undefined) names.set(origin, seat.name);
+    if (seat && isReRooted(seat)) names.set(origin, seat.name);
   }
   return names;
 }

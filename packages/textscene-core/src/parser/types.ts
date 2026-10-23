@@ -108,6 +108,11 @@ export interface RawNode {
    */
   authoredName?: string;
   /**
+   * True on a tree node the builder seated under the heading its `parent_id_path=` landed on,
+   * because its `parent` path vanished (`packed_scene.cpp:161-163`). The node keeps its name.
+   */
+  landedByIdTrail?: true;
+  /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
    * path. See `isPropertyOverrideHeading`.

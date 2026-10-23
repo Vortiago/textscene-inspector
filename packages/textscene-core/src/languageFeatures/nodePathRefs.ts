@@ -33,15 +33,19 @@ const PATH_ATTRIBUTES: ReadonlyMap<string, readonly PathAttribute[]> = new Map([
 ]);
 
 /** A node path as the heading writes it, and where its value sits. */
-interface NodePathReference {
+type NodePathReference = {
   /** The heading that holds the value. */
   readonly heading: DocumentSection;
   readonly path: string;
   readonly range: Range;
-  readonly kind: PathAttribute['kind'];
-  /** The ids of the uid path a connection end falls back to. Undefined for a `parent=` and for an end with none. */
-  readonly idTrail: readonly number[] | undefined;
-}
+} & (
+  | { readonly kind: 'parent' }
+  | {
+      readonly kind: 'connectionEnd';
+      /** The ids of the uid path the end falls back to, or undefined where the heading writes none. */
+      readonly idTrail: readonly number[] | undefined;
+    }
+);
 
 /** The path references that resolve to each node heading, in line order. */
 type NodeUses = ReadonlyMap<DocumentSection, readonly NodePathReference[]>;
@@ -55,17 +59,15 @@ function referencesOnHeading(section: DocumentSection, lineText: string): NodePa
   return (PATH_ATTRIBUTES.get(section.tag) ?? []).flatMap((pathAttribute) => {
     const attribute = headingAttribute(lineText, pathAttribute.key);
     if (!attribute) return [];
+    const site = { heading: section, path: attribute.value, range: lineRange(line, attribute.span) };
     return [
-      {
-        heading: section,
-        path: attribute.value,
-        range: lineRange(line, attribute.span),
-        kind: pathAttribute.kind,
-        idTrail:
-          pathAttribute.kind === 'connectionEnd'
-            ? parseIdTrail(section.attributes[pathAttribute.idTrailKey])
-            : undefined,
-      },
+      pathAttribute.kind === 'parent'
+        ? { ...site, kind: pathAttribute.kind }
+        : {
+            ...site,
+            kind: pathAttribute.kind,
+            idTrail: parseIdTrail(section.attributes[pathAttribute.idTrailKey]),
+          },
     ];
   });
 }
@@ -73,11 +75,11 @@ function referencesOnHeading(section: DocumentSection, lineText: string): NodePa
 /** The `[node]` heading a reference names, or undefined where this file seats none there. */
 export function nodeOfReference(
   document: LanguageDocument,
-  { heading, path, idTrail, kind }: NodePathReference
+  reference: NodePathReference
 ): DocumentSection | undefined {
-  return kind === 'connectionEnd'
-    ? nodeSectionOfConnectionEnd(document, path, idTrail)
-    : nodeSectionOfParent(document, heading);
+  return reference.kind === 'connectionEnd'
+    ? nodeSectionOfConnectionEnd(document, reference.path, reference.idTrail)
+    : nodeSectionOfParent(document, reference.heading);
 }
 
 function buildNodeUses(document: LanguageDocument): NodeUses {
