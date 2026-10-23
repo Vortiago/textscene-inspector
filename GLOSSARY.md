@@ -25,7 +25,7 @@ _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
 **Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
 One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
-It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every consumer asks.
+It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
 _Avoid_: a live tree or a context per consumer, per question.
 
 **Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):

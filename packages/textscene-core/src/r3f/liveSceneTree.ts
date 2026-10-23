@@ -16,6 +16,7 @@ import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js'
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
+import { sameElements } from '../utils/sameElements.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -61,8 +62,11 @@ export function snapshotScenes(ctx: LiveTreeContext): CachedSceneSource {
     const answers = new Map<string, CacheAnswer>();
     snapshot = {
       getCached: (path) => {
-        if (!answers.has(path)) answers.set(path, ctx.sceneCache.getCached(path));
-        return answers.get(path);
+        const known = answers.get(path);
+        if (known !== undefined || answers.has(path)) return known;
+        const answer = ctx.sceneCache.getCached(path);
+        answers.set(path, answer);
+        return answer;
       },
     };
     snapshots.set(ctx, snapshot);
@@ -146,7 +150,8 @@ const compositions = new WeakMap<CachedScene, Composition[]>();
  * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
  * inherits, or the scene as cached where nothing collapses. A composition is reused while the
  * cache answers the objects it read, so each instance of an inherited scene shares one and its
- * `%Name` table stays one object.
+ * `%Name` table stays one object. The reads are re-checked because a source may be the loader's
+ * live cache, which changes in place.
  */
 function composedSubScene(
   cached: CachedScene,
@@ -157,7 +162,7 @@ function composedSubScene(
   if (cached.nodes.length !== 1 || !root?.instance) return cached;
   const enclosing = content.instancedScenePaths ?? [];
   const stored = compositions.get(cached) ?? [];
-  const known = stored.find((c) => sameStrings(c.instancedScenePaths, enclosing));
+  const known = stored.find((c) => sameElements(c.instancedScenePaths, enclosing));
   if (known && stillAnswered(known.reads, sceneCache)) return known.composed;
 
   const reads = new Map<string, CacheAnswer>();
@@ -184,10 +189,6 @@ function stillAnswered(reads: ReadonlyMap<string, CacheAnswer>, sceneCache: Cach
     if (sceneCache.getCached(path) !== answer) return false;
   }
   return true;
-}
-
-function sameStrings(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i]);
 }
 
 /**
@@ -436,10 +437,14 @@ export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
 
+  private readonly scenes: CachedSceneSource;
+
   constructor(
     readonly roots: readonly TscnNode[],
     readonly ctx: LiveTreeContext
-  ) {}
+  ) {
+    this.scenes = snapshotScenes(ctx);
+  }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */
   at(path: string): LiveLink | null {
@@ -451,7 +456,7 @@ export class LiveTree {
     const link = found
       ? {
           ...found,
-          groups: liveChildGroups(found.node, found.scope, snapshotScenes(this.ctx), this.ctx.glbCache),
+          groups: liveChildGroups(found.node, found.scope, this.scenes, this.ctx.glbCache),
         }
       : null;
     this.links.set(path, link);
