@@ -50,6 +50,9 @@ The Notifier, Enabler and FogVolume rows follow their gizmo plugins
 which have no `is_selected()` gate on the lines. A solid fill stays selected-only, because Godot
 gates it on `is_selected()`.
 
+SpringArm3D and VehicleWheel3D draw in the collision colour at its alpha of 0.42 (`scene_tree.cpp:2028`),
+so their unselected lines draw at 0.126.
+
 The Camera3D frustum stays selected-only until its Godot pyramid lands (#908). The
 PathFollow handle is a previewer addition, since Godot draws no gizmo for a follower.
 

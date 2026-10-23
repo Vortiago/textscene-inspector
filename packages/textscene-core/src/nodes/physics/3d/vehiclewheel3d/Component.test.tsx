@@ -11,6 +11,7 @@ import { VehicleWheel3D } from './Component';
 import { parseVehicleWheel3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
+import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
 function wheelNode(props: Record<string, string> = {}): TscnNode {
   return {
@@ -58,15 +59,16 @@ function containsPoint(positions: Float32Array, [x, y, z]: [number, number, numb
 }
 
 describe('<VehicleWheel3D> gizmo state', () => {
-  it('draws the wheel gizmo in full colour when selected', async () => {
-    expect(lineOpacities(await renderWheel('Wheel1'))).toEqual([1]);
+  it('draws the wheel gizmo at the alpha of the collision colour, 0.42, when selected', async () => {
+    expect(lineOpacities(await renderWheel('Wheel1'))).toEqual([DEFAULT_COLLISION_DEBUG_COLOR.a]);
   });
 
   it.each([
     ['nothing is selected', null],
     ['another node is selected', 'Other'],
-  ])('draws the wheel gizmo faintly, at 0.3, when %s', async (_label, selectedPath) => {
-    expect(lineOpacities(await renderWheel(selectedPath))).toEqual([0.3]);
+  ])('draws the wheel gizmo at 0.3 of that alpha, 0.126, when %s', async (_label, selectedPath) => {
+    const [opacity] = lineOpacities(await renderWheel(selectedPath));
+    expect(opacity).toBeCloseTo(DEFAULT_COLLISION_DEBUG_COLOR.a * 0.3, 10);
   });
 
   it('draws no wheel gizmo with the Gizmos toggle off, selected', async () => {

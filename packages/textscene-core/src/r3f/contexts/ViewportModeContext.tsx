@@ -109,6 +109,13 @@ const DEFAULT_VALUE: ViewportModeValue = {
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
 ViewportModeContext.displayName = 'ViewportModeContext';
 
+/**
+ * The Gizmos toggle on its own. Every node with a gizmo reads it, and a node that read the whole
+ * viewport value would re-render on each grid, fog or label change.
+ */
+const ShowGizmosContext = createContext(DEFAULT_VIEWPORT.showGizmos);
+ShowGizmosContext.displayName = 'ShowGizmosContext';
+
 export interface ViewportModeProviderProps {
   children: ReactNode;
   initialMode?: ViewportMode;
@@ -188,10 +195,19 @@ export function ViewportModeProvider({
       showPerformance,
     ]
   );
-  return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;
+  return (
+    <ViewportModeContext.Provider value={value}>
+      <ShowGizmosContext.Provider value={showGizmos}>{children}</ShowGizmosContext.Provider>
+    </ViewportModeContext.Provider>
+  );
 }
 
 /** The viewport mode and the overlay toggles. Safe without a provider. */
 export function useViewportMode(): ViewportModeValue {
   return useContext(ViewportModeContext);
+}
+
+/** Whether the editor gizmos draw. It changes only with the Gizmos toggle. */
+export function useShowGizmos(): boolean {
+  return useContext(ShowGizmosContext);
 }

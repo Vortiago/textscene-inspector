@@ -30,7 +30,14 @@ interface WheelGizmoProps {
 export function WheelGizmo({ radius, restLength, variant }: WheelGizmoProps) {
   const positions = useMemo(() => buildWheelGizmo(radius, restLength), [radius, restLength]);
   const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
-  return <GizmoLine positions={positions} color={color} variant={variant} />;
+  return (
+    <GizmoLine
+      positions={positions}
+      color={color}
+      opacity={DEFAULT_COLLISION_DEBUG_COLOR.a}
+      variant={variant}
+    />
+  );
 }
 
 function buildWheelGizmo(radius: number, restLength: number): Float32Array {

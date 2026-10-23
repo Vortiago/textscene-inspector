@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import {
   SHOW_GIZMOS_STORAGE_KEY,
   ViewportModeProvider,
+  useShowGizmos,
   useViewportMode,
   type ViewportModeProviderProps,
 } from './ViewportModeContext';
@@ -97,5 +98,27 @@ describe('ViewportModeContext', () => {
     const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
     act(() => result.current.setMode('2D'));
     expect(result.current.mode).toBe('2D');
+  });
+
+  it('re-renders a reader of useShowGizmos for the Gizmos toggle and for no other preference', () => {
+    let gizmoReads = 0;
+    function GizmoReader() {
+      useShowGizmos();
+      gizmoReads += 1;
+      return null;
+    }
+    const { result } = renderHook(() => useViewportMode(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ViewportModeProvider>
+          <GizmoReader />
+          {children}
+        </ViewportModeProvider>
+      ),
+    });
+    const afterMount = gizmoReads;
+    act(() => result.current.setShowGrid(true));
+    expect(gizmoReads).toBe(afterMount);
+    act(() => result.current.setShowGizmos(false));
+    expect(gizmoReads).toBe(afterMount + 1);
   });
 });

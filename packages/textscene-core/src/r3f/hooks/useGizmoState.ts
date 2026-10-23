@@ -7,7 +7,7 @@
 
 import { useNodePath } from '../contexts/NodePathContext';
 import { useOptionalSelection } from '../contexts/SelectionContext';
-import { useViewportMode } from '../contexts/ViewportModeContext';
+import { useShowGizmos } from '../contexts/ViewportModeContext';
 import type { GizmoVariant } from '../gizmo/gizmoVariant';
 
 /** Whether a gizmo plugin draws a part for every node or only for the selected node. */
@@ -16,7 +16,7 @@ export type GizmoDrawnFor = 'every-node' | 'selected-only';
 export type GizmoState = GizmoVariant | 'hidden';
 
 export function useGizmoState(drawnFor: GizmoDrawnFor): GizmoState {
-  const { showGizmos } = useViewportMode();
+  const showGizmos = useShowGizmos();
   const path = useNodePath();
   const selection = useOptionalSelection();
   if (!showGizmos || path === null) return 'hidden';

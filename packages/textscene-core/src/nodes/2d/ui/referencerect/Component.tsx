@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
+import { useShowGizmos } from '../../../../r3f/contexts/ViewportModeContext';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -19,7 +19,7 @@ const DEFAULT_BORDER_COLOR = { r: 1, g: 0, b: 0, a: 1 };
 
 export function ReferenceRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ReferenceRectProperties>(solveNode);
-  const { showGizmos } = useViewportMode();
+  const showGizmos = useShowGizmos();
 
   // One colour, so the tint multiplies in sRGB before the one linear conversion.
   const fill = useMemo(() => colorOr(props.borderColor, DEFAULT_BORDER_COLOR), [props.borderColor]);
