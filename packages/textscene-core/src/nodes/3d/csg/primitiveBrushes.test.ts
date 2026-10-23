@@ -5,7 +5,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { isClosedBrush } from '../../../r3f/csg/brushManifold';
 import type { CsgGeometryBuilder } from '../../../r3f/csg/csgRegistration';
+import { heading } from '../../../parser/testing/parserKit';
+import type { ParsedHeading } from '../../../parser/utils';
 import { csgGeometryContext } from '../../../r3f/csg/testing/csgGeometryContext';
 import { parseCSGBox3D } from './csgbox3d/parser';
 import { csgBox3DGeometry } from './csgbox3d/csgGeometry';
@@ -18,18 +21,18 @@ import { csgSphere3DGeometry } from './csgsphere3d/csgGeometry';
 import { parseCSGTorus3D } from './csgtorus3d/parser';
 import { csgTorus3DGeometry } from './csgtorus3d/csgGeometry';
 
-type Parse = (heading: never, properties: Record<string, string>) => unknown;
+type Parse = (heading: ParsedHeading, properties: Record<string, string>) => unknown;
 
-/** Whether the brush of `type`, written with `properties`, is closed. */
+/** Whether the welded brush of `type`, written with `properties`, is closed. */
 function isClosed(
   type: string,
   parse: Parse,
   build: CsgGeometryBuilder,
   properties: Record<string, string> = {}
 ): boolean {
-  const heading = { type: 'node', attributes: { type, name: 'Shape' } };
-  const parsed = parse(heading as never, properties) as Record<string, unknown>;
-  return build(parsed, csgGeometryContext())!.isClosed;
+  const parsed = parse(heading(type), properties) as Record<string, unknown>;
+  const { geometry } = build(parsed, csgGeometryContext())!;
+  return isClosedBrush(geometry.getAttribute('position').array as Float32Array);
 }
 
 describe('a CSG primitive brush', () => {
@@ -63,6 +66,6 @@ describe('a CSG primitive brush', () => {
       { mode: '1', spin_degrees: '180' },
     ],
   ])('closes for a %s', (_label, type, parse, build, properties) => {
-    expect(isClosed(type, parse as Parse, build, properties)).toBe(true);
+    expect(isClosed(type, parse, build, properties)).toBe(true);
   });
 });

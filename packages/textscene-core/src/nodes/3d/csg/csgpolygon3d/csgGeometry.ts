@@ -1,6 +1,6 @@
 /** CSGPolygon3D's solid, exposed to the boolean evaluator. */
 
-import { primitiveSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
+import { csgSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { tessellateCurve3D } from '../../../../resources/curves/curve3d/index.js';
@@ -24,7 +24,7 @@ function pathPlan(p: CSGPolygon3DProperties): CsgPolygonPathPlan | null {
 
 export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
   const p = properties as unknown as CSGPolygon3DProperties;
-  return primitiveSolid(
+  return csgSolid(
     buildCsgPolygonGeometry({
       polygon: p.polygon,
       mode: p.mode,
@@ -43,7 +43,7 @@ export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
       pathJoined: p.pathJoined,
       path: pathPlan(p),
     }),
-    p
+    [p.materialPath]
   );
 };
 

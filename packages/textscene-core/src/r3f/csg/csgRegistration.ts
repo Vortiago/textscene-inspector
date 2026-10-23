@@ -74,10 +74,14 @@ export interface CsgShapeRegistration {
   meshType?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string | null;
 }
 
-/** A `CSGPrimitive3D`'s solid: one geometry under its one `material`. */
+/**
+ * A `CSGPrimitive3D`'s solid: one geometry under its one `material`. Box, sphere, cylinder and
+ * torus builders emit a closed brush by construction, which `primitiveBrushes.test.ts` pins, so
+ * this skips the weld that `csgSolid` runs.
+ */
 export function primitiveSolid(
   geometry: THREE.BufferGeometry,
   properties: { materialPath?: string }
 ): CsgSolid {
-  return csgSolid(geometry, [properties.materialPath]);
+  return { geometry, materials: [properties.materialPath], isClosed: true };
 }

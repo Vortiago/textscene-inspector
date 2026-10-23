@@ -42,29 +42,21 @@ const QUAD_MESH = `[sub_resource type="QuadMesh" id="Quad"]
 size = Vector2(1.5, 1.5)
 `;
 
-const OPEN_LONE_ROOT_SCENE = `[gd_scene format=3]
+/** An open mesh at `offset` beside a unit box, under a root of `rootType`. */
+const sceneWithOpenMesh = (rootType: string, offset: string) => `[gd_scene format=3]
 
 ${QUAD_MESH}
-[node name="Root" type="Node3D"]
+[node name="Root" type="${rootType}"]
 
 [node name="Box" type="CSGBox3D" parent="."]
 
 [node name="OpenMesh" type="CSGMesh3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${offset})
 mesh = SubResource("Quad")
 `;
 
-const OPEN_CONTRIBUTOR_SCENE = `[gd_scene format=3]
-
-${QUAD_MESH}
-[node name="Root" type="CSGCombiner3D"]
-
-[node name="Box" type="CSGBox3D" parent="."]
-
-[node name="OpenMesh" type="CSGMesh3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)
-mesh = SubResource("Quad")
-`;
+const OPEN_LONE_ROOT_SCENE = sceneWithOpenMesh('Node3D', '0, 4, 0');
+const OPEN_CONTRIBUTOR_SCENE = sceneWithOpenMesh('CSGCombiner3D', '8, 0, 0');
 
 async function render(source: string) {
   const scene = new TscnParser().parse(source);
