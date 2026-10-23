@@ -42,4 +42,4 @@ Godot's positional shadow atlas gives the light one slot for the camera, and the
 
 ## Known limitations
 
-- **Editor only** The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.
+- **Editor only** The wireframe cone gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.

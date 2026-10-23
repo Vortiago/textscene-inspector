@@ -1,7 +1,7 @@
 /**
- * <CPUParticles3D> draws Godot's editor gizmos only while it is selected (ADR-0018): the
- * `visibility_aabb` box with the three unit axes from its centre
- * (`cpu_particles_3d_gizmo_plugin.cpp:62-98`), and its own emission shape
+ * <CPUParticles3D> draws Godot's `visibility_aabb` box with the three unit axes from its centre for
+ * every node, faint while unselected (`cpu_particles_3d_gizmo_plugin.cpp:62-98`). Only the selected
+ * node adds the solid box (`:100-103`) and its emission shape
  * (`particles_3d_emission_shape_gizmo_plugin.cpp:218-337`).
  */
 import { describe, expect, it } from 'vitest';
@@ -10,9 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import { heading } from '../../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import './index.r3f';
 import { parseCPUParticles3D } from './parser';
@@ -33,16 +31,13 @@ function emitter(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}) {
+async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Sparks">
-        <CPUParticles3D node={emitter(props)}>
-          <group name="Child" />
-        </CPUParticles3D>
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Sparks" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <CPUParticles3D node={emitter(props)}>
+        <group name="Child" />
+      </CPUParticles3D>
+    </GizmoScene>
   );
 }
 
@@ -58,14 +53,24 @@ async function gizmoLines(props: Record<string, string>) {
   });
 }
 
-describe('<CPUParticles3D> gizmo gate', () => {
+describe('<CPUParticles3D> gizmo state', () => {
+  it('draws the box and its axes in full colour when the node is selected', async () => {
+    expect(lineOpacities(await render('Sparks'))).toEqual([1, 1]);
+  });
+
   it.each([
-    ['the node is selected', 'Sparks', 2],
-    ['nothing is selected', null, 0],
-    ['another node is selected', 'Other', 0],
-  ])('draws the box and its axes only when %s', async (_label, selectedPath, expected) => {
-    const renderer = await render(selectedPath);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+    ['nothing is selected', null],
+    ['another node is selected', 'Other'],
+  ])('draws the box and its axes faintly, at 0.3, when %s', async (_label, selectedPath) => {
+    expect(lineOpacities(await render(selectedPath))).toEqual([0.3, 0.3]);
+  });
+
+  it.each([
+    ['selected', 'Sparks'],
+    ['unselected', null],
+  ])('draws nothing with the Gizmos toggle off, %s', async (_label, selectedPath) => {
+    const renderer = await render(selectedPath, {}, false);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {
@@ -119,9 +124,19 @@ describe('<CPUParticles3D> solid box', () => {
   it('draws no fill unselected', async () => {
     expect(await solidBoxes(null, { visibility_aabb: 'AABB(-1, 0, -1, 2, 3, 2)' })).toHaveLength(0);
   });
+
+  it('draws no fill with the Gizmos toggle off, selected', async () => {
+    const renderer = await render('Sparks', { visibility_aabb: 'AABB(-1, 0, -1, 2, 3, 2)' }, false);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
 });
 
 describe('<CPUParticles3D> emission shape', () => {
+  it('draws no emission shape while unselected, as Godot adds it only when selected', async () => {
+    const renderer = await render(null, { emission_shape: '3', emission_box_extents: 'Vector3(2, 0.5, 1)' });
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(2);
+  });
+
   it('draws nothing more for the Point shape', async () => {
     expect(await gizmoLines({})).toHaveLength(2);
   });

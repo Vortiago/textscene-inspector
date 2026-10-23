@@ -19,6 +19,7 @@ import {
   PERFORMANCE_TESTIDS,
   SCENE_LOAD_STATUS_TESTID,
   SETTLE_SIM_SECONDS,
+  SHOW_GIZMOS_STORAGE_KEY,
   SHOW_PERFORMANCE_STORAGE_KEY,
   TEXTURE_WORK_STATUS_TESTID,
 } from './preview/appContract.mjs';
@@ -243,6 +244,11 @@ describe('the app ids and keys a harness copies match the app', () => {
   it('match the Performance overlay ids the work budget check reads', async () => {
     const panel = await import('../../packages/textscene-core/src/r3f/frameProfile/performanceTestIds.ts');
     expect(PERFORMANCE_TESTIDS).toEqual(panel.PERFORMANCE_TESTIDS);
+  });
+
+  it('matches the storage key that turns the Gizmos toggle on', async () => {
+    const viewport = await import('../../packages/textscene-core/src/r3f/contexts/ViewportModeContext.tsx');
+    expect(SHOW_GIZMOS_STORAGE_KEY).toBe(viewport.SHOW_GIZMOS_STORAGE_KEY);
   });
 
   it('matches the storage key that turns the Performance overlay on', async () => {

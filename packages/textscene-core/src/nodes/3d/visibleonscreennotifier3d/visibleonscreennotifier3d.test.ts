@@ -1,6 +1,6 @@
 /**
  * VisibleOnScreenNotifier3D registration: it draws nothing at runtime, so it declares no render
- * intent, and its component draws the editor gizmo of its box while selected (ADR-0018).
+ * intent, and its component draws the editor gizmo of its box for every node (ADR-0056).
  */
 
 import { describe, expect, it } from 'vitest';

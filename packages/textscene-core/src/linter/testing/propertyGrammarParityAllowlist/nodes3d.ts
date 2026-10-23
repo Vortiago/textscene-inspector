@@ -60,7 +60,7 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Path3D: {
     renderGap: [
-      // The curve gizmo's colour. This repo draws that gizmo (ADR-0018), the
+      // The curve gizmo's colour. This repo draws that gizmo (ADR-0056), the
       // editor plugin reads this property for it, and Path3D.tsx hardcodes white.
       'debug_custom_color',
     ],
@@ -119,7 +119,7 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Pathfinding and avoidance state handed to NavigationServer3D, run
       // against a live navigation map the previewer does not simulate, and the
-      // `debug_*` set behind DEBUG_ENABLED and the navigation-debug flag (ADR-0018).
+      // `debug_*` set behind DEBUG_ENABLED and the navigation-debug flag (ADR-0056).
       'avoidance_priority',
       'debug_enabled',
       'debug_path_custom_color',

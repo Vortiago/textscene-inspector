@@ -11,7 +11,7 @@ renders_as: a coloured border outline
 
 ReferenceRect draws a plain coloured border around its rect as a design-time aid.
 `editor_only = false` draws it unconditionally, as a running game does. The default
-(`true`) draws it only while the node is selected, where Godot's editor shows it always.
+(`true`) draws it for every node while the Gizmos toggle is on, as Godot's editor does.
 
 ## Linting
 
@@ -40,6 +40,5 @@ literal as an error, and the render-facing parser stores Godot's own floor
 
 ## Known limitations
 
-- **Editor only** Godot's editor draws every ReferenceRect in the open scene at once,
-  where here `editor_only = true` (the default) is selection-gated, as ADR-0018 does for
-  Marker2D/Path2D.
+- **Editor only** Godot's editor draws every ReferenceRect at once, and here `editor_only = true`
+  (the default) draws them when the Gizmos toggle is on, which a capture keeps off.

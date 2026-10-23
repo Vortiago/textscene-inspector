@@ -4,12 +4,12 @@ category: 3D
 status: done
 fixture: unit-camera3d.tscn
 image: unit-camera3d
-renders_as: a selection-gated frustum gizmo
+renders_as: a frustum gizmo for the selected node
 ---
 
 # Camera3D
 
-An authored viewpoint that draws nothing at runtime. The previewer matches that and draws only a frustum gizmo, which is selection-gated (ADR-0018), so with nothing selected the camera is absent from both images.
+An authored viewpoint that draws nothing at runtime. The previewer matches that and draws only a frustum gizmo for the selected node (ADR-0056). With nothing selected, the camera is absent from both images.
 
 ## Linting
 
@@ -47,4 +47,4 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 ## Known limitations
 
-- **Editor only** The frustum gizmo appears only in Godot's editor, but here it is selection-gated.
+- **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.

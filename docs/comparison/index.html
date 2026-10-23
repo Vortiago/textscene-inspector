@@ -564,7 +564,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="AudioStreamPlayer3D" hidden>
       <header class="sheet-head">
         <h2>AudioStreamPlayer3D</h2>
-        <span class="renders">renders as a selection-gated speaker gizmo</span>
+        <span class="renders">renders as a speaker gizmo for the selected node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer3d.html" target="_blank" rel="noopener" title="Godot class reference for AudioStreamPlayer3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/audio_stream_player_3d.h" target="_blank" rel="noopener" title="Godot engine source for AudioStreamPlayer3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-audio-stream-player.tscn" target="_blank" rel="noopener" title="Open unit-audio-stream-player.tscn in the previewer"><code>unit-audio-stream-player.tscn</code> ↗</a>
@@ -585,14 +585,14 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>A positional audio source with no runtime visual. The previewer draws a speaker gizmo with a range circle and emission cone, gated on selection like the camera and light gizmos. Both images show only the ground plane and the preview sky.</p>
+      <div class="prose"><p>A positional audio source with no runtime visual. The previewer draws a speaker gizmo with a range circle and emission cone, for the selected node only, like the camera and light gizmos (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). Both images show only the ground plane and the preview sky.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>AudioStreamPlayer3D</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>area_mask</code></td><td>32-bit layer mask (layers 1-32)</td><td></td></tr><tr><td><code>attenuation_filter_cutoff_hz</code></td><td>float 1-20500</td><td>warning</td></tr><tr><td><code>attenuation_filter_db</code></td><td>float -80-0</td><td>warning</td></tr><tr><td><code>attenuation_model</code></td><td>enum 0-3 (INVERSE_DISTANCE/INVERSE_SQUARE_DISTANCE/LOGARITHMIC/DISABLED)</td><td>error</td></tr><tr><td><code>autoplay</code></td><td>true or false</td><td></td></tr><tr><td><code>bus</code></td><td>quoted string or &amp;&quot;name&quot;</td><td></td></tr><tr><td><code>doppler_tracking</code></td><td>enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP)</td><td>warning</td></tr><tr><td><code>emission_angle_degrees</code></td><td>float 0.1-90</td><td>error below 0, warning below 0.1, error above 90</td></tr><tr><td><code>emission_angle_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>emission_angle_filter_attenuation_db</code></td><td>float -80-0</td><td>warning</td></tr><tr><td><code>max_db</code></td><td>float -24-6</td><td>warning</td></tr><tr><td><code>max_distance</code></td><td>float &gt;= 0</td><td>error below</td></tr><tr><td><code>max_polyphony</code></td><td>integer &gt;= 1</td><td>error below</td></tr><tr><td><code>panning_strength</code></td><td>float &gt;= 0</td><td>error below</td></tr><tr><td><code>pitch_scale</code></td><td>float &gt;= 0.01</td><td>error at or below 0, warning below 0.01</td></tr><tr><td><code>playback_type</code></td><td>enum 0-2 (DEFAULT/STREAM/SAMPLE)</td><td>warning</td></tr><tr><td><code>playing</code></td><td>true or false</td><td></td></tr><tr><td><code>stream</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>stream_paused</code></td><td>true or false</td><td></td></tr><tr><td><code>unit_size</code></td><td>float &gt;= 0.1</td><td>warning below</td></tr><tr><td><code>volume_db</code></td><td>float -80-80</td><td>warning</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-audiostreamplayer3d-properties</code></td><td><code>audiostreamplayer3d-emission-angle-not-enabled</code></td><td>info</td></tr><tr><td></td><td><code>audiostreamplayer3d-emission-filter-not-enabled</code></td><td>info</td></tr></tbody></table></div>
 <p>Every numeric property defaults through <code>floatOr</code> without strict's range checks: <code>unit_size</code> falls back to 10, <code>max_distance</code> to 0, <code>attenuation_filter_cutoff_hz</code> to 5000 and <code>emission_angle_degrees</code> to 45. <code>attenuation_model</code> and <code>doppler_tracking</code> re-check the enum through <code>enumOr</code> and fall back to 0 for any out-of-range value.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The speaker gizmo draws only for the selected node, so a plain capture shows nothing for the three speakers.</li></ul></div>
+<ul><li><strong>Editor only</strong> The speaker gizmo draws for the selected node when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="BackBufferCopy" hidden>
       <header class="sheet-head">
@@ -786,7 +786,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Camera3D" hidden>
       <header class="sheet-head">
         <h2>Camera3D</h2>
-        <span class="renders">renders as a selection-gated frustum gizmo</span>
+        <span class="renders">renders as a frustum gizmo for the selected node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_camera3d.html" target="_blank" rel="noopener" title="Godot class reference for Camera3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/camera_3d.h" target="_blank" rel="noopener" title="Godot engine source for Camera3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-camera3d.tscn" target="_blank" rel="noopener" title="Open unit-camera3d.tscn in the previewer"><code>unit-camera3d.tscn</code> ↗</a>
@@ -807,14 +807,14 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>An authored viewpoint that draws nothing at runtime. The previewer matches that and draws only a frustum gizmo, which is selection-gated (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>), so with nothing selected the camera is absent from both images.</p>
+      <div class="prose"><p>An authored viewpoint that draws nothing at runtime. The previewer matches that and draws only a frustum gizmo for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). With nothing selected, the camera is absent from both images.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Camera3D</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>attributes</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>compositor</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>cull_mask</code></td><td>32-bit layer mask (layers 1-32)</td><td></td></tr><tr><td><code>current</code></td><td>true or false</td><td></td></tr><tr><td><code>doppler_tracking</code></td><td>enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP)</td><td>warning</td></tr><tr><td><code>environment</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>far</code></td><td>float &gt;= 0.01</td><td>warning below</td></tr><tr><td><code>fov</code></td><td>float 1-179</td><td>error</td></tr><tr><td><code>frustum_offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>h_offset</code></td><td>float</td><td></td></tr><tr><td><code>keep_aspect</code></td><td>enum 0-1 (KEEP_WIDTH/KEEP_HEIGHT)</td><td>warning</td></tr><tr><td><code>near</code></td><td>float &gt;= 0.001</td><td>warning below</td></tr><tr><td><code>projection</code></td><td>enum 0-2 (PERSPECTIVE/ORTHOGONAL/FRUSTUM)</td><td>error</td></tr><tr><td><code>size</code></td><td>float &gt;= 0.001</td><td>error at or below 0.00001, warning below 0.001</td></tr><tr><td><code>v_offset</code></td><td>float</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-camera3d-properties</code> (type-family match)</td><td><code>camera3d-multiple-current</code></td><td>info</td></tr><tr><td></td><td><code>camera3d-invalid-clipping-planes</code></td><td>error</td></tr><tr><td></td><td><code>camera3d-zero-depth-range</code></td><td>warning</td></tr></tbody></table></div>
 <p>The numeric keys (<code>fov</code>, <code>size</code>, <code>near</code>, <code>far</code>, <code>h_offset</code>, <code>v_offset</code>, <code>frustum_offset</code>) warn and fall back to Godot's defaults through <code>floatOr</code> and <code>vec2Or</code>, and <code>cull_mask</code> and <code>doppler_tracking</code> to <code>1048575</code> and <code>0</code>. <code>projection</code> and <code>keep_aspect</code> silently treat any unrecognised value as the default. <code>current</code> reads every spelling a BOOL slot converts, so <code>1</code> makes the camera current. Text no BOOL slot reads leaves the camera inactive without a warning.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The frustum gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
+<ul><li><strong>Editor only</strong> The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="CanvasGroup" hidden>
       <header class="sheet-head">
@@ -1572,11 +1572,11 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-geometryinstance3d-visibility-range</code> (type-family match)</td><td><code>geometryinstance3d-visibility-range-end-before-begin</code></td><td>warning</td></tr><tr><td></td><td><code>geometryinstance3d-visibility-range-begin-fade-without-margin</code></td><td>warning</td></tr><tr><td></td><td><code>geometryinstance3d-visibility-range-end-fade-without-margin</code></td><td>warning</td></tr><tr><td><code>valid-cpuparticles3d-properties</code></td><td><code>cpuparticles3d-requires-mesh</code></td><td>warning</td></tr><tr><td></td><td><code>cpuparticles3d-param-min-above-max</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser reads the GeometryInstance3D base, <code>visibility_aabb</code>, whether a <code>mesh</code> is set, and the emission shape keys. The box is what the scene cull measures the emitter by, and the gizmo draws the authored box. The shape keys are <code>emission_shape</code> and the sphere, box and ring keys. It reads no other CPUParticles3D key, so a <code>spread = 400.0</code> is dropped silently, and <code>linter.ts</code> ports the &quot;no mesh assigned&quot; configuration warning.</p>
 <h3>Gizmo</h3>
-<p>A selected emitter draws these in Godot's editor. Godot's source is <code>cpu_particles_3d_gizmo_plugin.cpp:62-107</code> and <code>particles_3d_emission_shape_gizmo_plugin.cpp:82-339</code>.</p>
+<p>An emitter draws these in Godot's editor. Godot draws the box and the axes for every emitter, faint while unselected, and the emission shape and the fill only for the selected one. Godot's source is <code>cpu_particles_3d_gizmo_plugin.cpp:62-107</code> and <code>particles_3d_emission_shape_gizmo_plugin.cpp:82-339</code>.</p>
 <ul><li>The 12 edges of <code>visibility_aabb</code>, in the editor's particle-box colour. Without an authored box the edges have zero length at the origin.</li><li>Three unit axis lines from the centre of the box.</li><li>The lines of the emission shape: three circles for a sphere, the 12 edges of a box, and the tapered cylinder for a ring. A point shape and the point-cloud shapes draw no lines.</li><li>A fill of the box with an opacity of 0.016.</li></ul>
 <p>The previewer draws no billboard icon.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> Godot draws the live particle cloud, but here nothing appears.</li><li><strong>Needs runtime</strong> An emitter with a <code>mesh</code> and no <code>visibility_aabb</code> stays hidden with its visibility dependants, where Godot culls it by its live particles.</li><li><strong>Editor only</strong> Godot's editor draws the box and axes faintly for every emitter, but <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> draws them only for the selected node.</li></ul></div>
+<ul><li><strong>Not drawn</strong> Godot draws the live particle cloud, but here nothing appears.</li><li><strong>Needs runtime</strong> An emitter with a <code>mesh</code> and no <code>visibility_aabb</code> stays hidden with its visibility dependants, where Godot culls it by its live particles.</li><li><strong>Editor only</strong> The box and axes draw at 0.3 alpha while unselected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>) when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="CSGBox3D" hidden>
       <header class="sheet-head">
@@ -2348,7 +2348,7 @@ tr:last-child td{border-bottom:0}
 <p>A <code>FogMaterial</code> <code>density_texture</code> shapes the density by its red channel. It can be a NoiseTexture3D or an ImageTexture3D, inline or saved as its own <code>.tres</code>. It can also be an image its import sidecar imports as a 3D texture. A float ImageTexture3D keeps a density above 1, as Godot does.</p>
 <p>A <code>ShaderMaterial</code> fills the volume with Godot's default fog, as Godot does, when its shader is absent, <code>null</code>, unreadable or of another <code>shader_type</code> than <code>fog</code>. The shader can be inline, a <code>.tres</code> or a <code>.gdshader</code> file.</p>
 <h3>Gizmo</h3>
-<p>A selected volume draws the gizmo of Godot's editor, the 12 edges of its box in the fog colour. Godot's source is <code>fog_volume_gizmo_plugin.cpp:92-125</code>.</p>
+<p>A volume draws the gizmo of Godot's editor, faint while unselected, the 12 edges of its box in the fog colour. Godot's source is <code>fog_volume_gizmo_plugin.cpp:92-125</code>.</p>
 <ul><li>The ellipsoid, cone, cylinder and box shapes all draw the box of <code>size</code>, centred on the node.</li><li>The WORLD shape draws nothing, because it ignores the size.</li></ul>
 <p>The previewer draws no edit handles and no billboard icon.</p>
 <h3>Linting</h3>
@@ -2357,7 +2357,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-fogvolume-size</code></td><td><code>fogvolume-size-ignored-for-world-shape</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser clamps each negative <code>size</code> component to 0, as <code>set_size</code> does. It keeps an out-of-range <code>shape</code>, which then has no surface, and the default size for a malformed one.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor also draws the box of an unselected volume at 0.3 alpha (<code>node_3d_editor_gizmos.cpp:919-920</code>), where <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> draws it only when selected.</li><li><strong>Shader missing</strong> A volume whose material is a fog <code>ShaderMaterial</code> adds no fog, where Godot runs its fog shader.</li><li><strong>Approximated</strong> A fog shader with a compile error adds no fog, where Godot draws its default fog.</li><li><strong>Approximated</strong> A fog shader whose <code>shader_type</code> comes from an <code>#include</code> or a macro draws the default fog, where Godot runs its fog shader.</li><li><strong>Resource gap</strong> An ImageTexture3D saved in a BPTC, ETC, EAC, ASTC or integer format leaves the density even.</li><li><strong>Approximated</strong> An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.</li><li><strong>Approximated</strong> A NoiseTexture3D <code>density_texture</code> leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.</li><li><strong>Approximated</strong> Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.</li></ul></div>
+<ul><li><strong>Editor only</strong> The box draws at 0.3 alpha while unselected (<code>node_3d_editor_gizmos.cpp:919-920</code>) when the Gizmos toggle is on, which a capture keeps off.</li><li><strong>Shader missing</strong> A volume whose material is a fog <code>ShaderMaterial</code> adds no fog, where Godot runs its fog shader.</li><li><strong>Approximated</strong> A fog shader with a compile error adds no fog, where Godot draws its default fog.</li><li><strong>Approximated</strong> A fog shader whose <code>shader_type</code> comes from an <code>#include</code> or a macro draws the default fog, where Godot runs its fog shader.</li><li><strong>Resource gap</strong> An ImageTexture3D saved in a BPTC, ETC, EAC, ASTC or integer format leaves the density even.</li><li><strong>Approximated</strong> An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.</li><li><strong>Approximated</strong> A NoiseTexture3D <code>density_texture</code> leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.</li><li><strong>Approximated</strong> Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.</li></ul></div>
     </article>
     <article class="sheet" data-type="FoldableContainer" hidden>
       <header class="sheet-head">
@@ -3329,14 +3329,14 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="LightOccluder2D" hidden>
       <header class="sheet-head">
         <h2>LightOccluder2D</h2>
-        <span class="renders">renders as a selection-gated outline of its occluder polygon, it occludes 2D light</span>
+        <span class="renders">renders as an outline of its occluder polygon for every node, it occludes 2D light</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_lightoccluder2d.html" target="_blank" rel="noopener" title="Godot class reference for LightOccluder2D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/2d/light_occluder_2d.h" target="_blank" rel="noopener" title="Godot engine source for LightOccluder2D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-lightoccluder2d.tscn" target="_blank" rel="noopener" title="Open unit-lightoccluder2d.tscn in the previewer"><code>unit-lightoccluder2d.tscn</code> ↗</a>
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>LightOccluder2D blocks a shadow-enabled Light2D and is invisible on its own. The previewer draws only a selection-gated outline for it and withholds the light where its shadow falls.</p></div>
+      <div class="prose intro"><p>LightOccluder2D blocks a shadow-enabled Light2D and is invisible on its own. The previewer draws only an editor outline for it, for every node, and withholds the light where its shadow falls.</p></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-lightoccluder2d-godot.png" alt="Godot render of LightOccluder2D">
@@ -3491,7 +3491,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-lightoccluder2d-occluder</code></td><td><code>lightoccluder2d-requires-occluder</code></td><td>warning</td></tr></tbody></table></div>
 <p>Strict rejects a non-numeric <code>light_mask</code> or <code>occluder_light_mask</code>. The lenient parser warns and falls back to <code>1</code> for either, and an unparseable <code>sdf_collision</code> falls back to <code>true</code>. <code>occluder</code> is copied through with no reference check.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> <code>sdf_collision</code> has no effect, since no signed-distance field is built for particle collision or SDF-lit materials.</li><li><strong>Editor only</strong> The occluder outline is selection-gated, so a still render shows none, as Godot's runtime does.</li><li><strong>Approximated</strong> Under a <code>shadow_filter</code> a tap lands in one of 2048 polar bins, so a boundary at a glancing angle can sit one bin from Godot's.</li></ul></div>
+<ul><li><strong>Shader missing</strong> <code>sdf_collision</code> has no effect, since no signed-distance field is built for particle collision or SDF-lit materials.</li><li><strong>Editor only</strong> The occluder outline draws when the Gizmos toggle is on, so a still render shows none, as Godot's runtime does.</li><li><strong>Approximated</strong> Under a <code>shadow_filter</code> a tap lands in one of 2048 polar bins, so a boundary at a glancing angle can sit one bin from Godot's.</li></ul></div>
     </article>
     <article class="sheet" data-type="LimitAngularVelocityModifier3D" hidden>
       <header class="sheet-head">
@@ -3651,7 +3651,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Marker2D" hidden>
       <header class="sheet-head">
         <h2>Marker2D</h2>
-        <span class="renders">renders as a selection-gated cross gizmo</span>
+        <span class="renders">renders as a cross gizmo for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_marker2d.html" target="_blank" rel="noopener" title="Godot class reference for Marker2D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/2d/marker_2d.h" target="_blank" rel="noopener" title="Godot engine source for Marker2D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-marker2d.tscn" target="_blank" rel="noopener" title="Open unit-marker2d.tscn in the previewer"><code>unit-marker2d.tscn</code> ↗</a>
@@ -3660,7 +3660,7 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-done"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>Marker2D is a transform anchor that draws a small cross at its origin in the editor. The previewer selection-gates that cross (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>), so a plain capture shows nothing, as Godot's game render does.</p>
+      <div class="prose"><p>Marker2D is a transform anchor that draws a small cross at its origin in the editor. The previewer draws that cross for every node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). A capture keeps the Gizmos toggle off, so a plain capture shows nothing, as Godot's game render does.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Marker2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>gizmo_extents</code></td><td>float &gt;= 0</td><td>warning below</td></tr></tbody></table></div>
@@ -3670,7 +3670,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Marker3D" hidden>
       <header class="sheet-head">
         <h2>Marker3D</h2>
-        <span class="renders">renders as a selection-gated axis-cross gizmo</span>
+        <span class="renders">renders as an axis-cross gizmo for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_marker3d.html" target="_blank" rel="noopener" title="Godot class reference for Marker3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/marker_3d.h" target="_blank" rel="noopener" title="Godot engine source for Marker3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-marker-3d.tscn" target="_blank" rel="noopener" title="Open unit-marker-3d.tscn in the previewer"><code>unit-marker-3d.tscn</code> ↗</a>
@@ -3679,14 +3679,14 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-done"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>A Node3D anchor that positions its children and shows a three-axis cross at its origin in the editor. The previewer draws that cross only when the node is selected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>), so a plain capture shows nothing for it.</p>
+      <div class="prose"><p>A Node3D anchor that positions its children and shows a three-axis cross at its origin in the editor. The previewer draws that cross for every node, in full colour (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). A capture keeps the Gizmos toggle off, so a plain capture shows nothing for it.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Marker3D</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>gizmo_extents</code></td><td>float &gt;= 0</td><td>warning below</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr></tbody></table></div>
 <p>The lenient parser reads <code>gizmo_extents</code> through <code>floatOr</code>, so a non-numeric value warns and falls back to Godot's default of <code>0.25</code>. An absent key gets the same <code>0.25</code> silently.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The axis cross appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
+<ul><li><strong>Editor only</strong> The axis cross appears only in Godot's editor, and here it draws when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="Material Feature Showcase" hidden>
       <header class="sheet-head">
@@ -4216,7 +4216,7 @@ tr:last-child td{border-bottom:0}
 <p>Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the paraboloid. With a <code>light_size</code> and a <code>shadow_blur</code>, the shadow searches for blockers, as Godot's does. Its penumbra widens with the light's size and with the distance from the caster. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
 <p><code>light_negative</code> makes the light subtract with a negative three intensity, as in Godot. <code>shadow_opacity</code> mixes the shadow towards unshadowed through three's <code>shadow.intensity</code>. With <code>distance_fade_enabled</code>, the light and its shadow fade by Godot's smoothstep over the distance from the rendering camera. Each drops out past its fade end.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> <code>omni_shadow_mode</code> Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.</li><li><strong>Editor only</strong> The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>omni_shadow_mode</code> Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.</li><li><strong>Editor only</strong> The wireframe sphere gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="OpenXRBindingModifierEditor" hidden>
       <header class="sheet-head">
@@ -4582,7 +4582,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Path2D" hidden>
       <header class="sheet-head">
         <h2>Path2D</h2>
-        <span class="renders">renders as nothing at runtime, a selection-gated curve gizmo</span>
+        <span class="renders">renders as nothing at runtime, a curve gizmo for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_path2d.html" target="_blank" rel="noopener" title="Godot class reference for Path2D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/2d/path_2d.h" target="_blank" rel="noopener" title="Godot engine source for Path2D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-path2d.tscn" target="_blank" rel="noopener" title="Open unit-path2d.tscn in the previewer"><code>unit-path2d.tscn</code> ↗</a>
@@ -4591,7 +4591,7 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-done"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>Path2D carries a <code>Curve2D</code> for children to follow. It has no runtime visual. The previewer draws the curve only as a selection-gated white polyline (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>), so a plain capture is empty on both sides.</p>
+      <div class="prose"><p>Path2D carries a <code>Curve2D</code> for children to follow. It has no runtime visual. The previewer draws the curve only as a white polyline for every node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). A capture keeps the Gizmos toggle off, so a plain capture is empty on both sides.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Path2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>curve</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
@@ -4601,7 +4601,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Path3D" hidden>
       <header class="sheet-head">
         <h2>Path3D</h2>
-        <span class="renders">renders as a selection-gated curve gizmo</span>
+        <span class="renders">renders as a curve gizmo for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_path3d.html" target="_blank" rel="noopener" title="Godot class reference for Path3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/path_3d.h" target="_blank" rel="noopener" title="Godot engine source for Path3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-path3d.tscn" target="_blank" rel="noopener" title="Open unit-path3d.tscn in the previewer"><code>unit-path3d.tscn</code> ↗</a>
@@ -4622,19 +4622,19 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Holds a <code>Curve3D</code> that its descendants can ride. Its only visual is the curve polyline, a selection-gated editor gizmo (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>), so a plain capture draws nothing for the path itself. The fixture's marker spheres trace the arch in both frames.</p>
+      <div class="prose"><p>Holds a <code>Curve3D</code> that its descendants can ride. Its only visual is the curve polyline, an editor gizmo drawn for every node, faint while unselected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). A capture keeps the Gizmos toggle off, so a plain capture draws nothing for the path itself. The fixture's marker spheres trace the arch in both frames.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Path3D</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>curve</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>debug_custom_color</code></td><td>Color(r, g, b, a), or the colour string or int it converts</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-path3d</code></td><td><code>path3d-requires-curve</code></td><td>info</td></tr><tr><td></td><td><code>curve3d-loadable</code></td><td>error</td></tr></tbody></table></div>
 <p><code>curve</code> is the only property, and the lenient parser copies the raw resource-reference string through with no format check. Absent, it stays unset with no default and no warning.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The curve polyline draws only for the selected node, and Godot draws no path line while running.</li></ul></div>
+<ul><li><strong>Editor only</strong> The curve polyline draws with the Gizmos toggle on, and Godot draws no path line while running.</li></ul></div>
     </article>
     <article class="sheet" data-type="PathFollow2D" hidden>
       <header class="sheet-head">
         <h2>PathFollow2D</h2>
-        <span class="renders">renders as a transform-only follower with a selection-gated dot</span>
+        <span class="renders">renders as a transform-only follower with a dot for the selected node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_pathfollow2d.html" target="_blank" rel="noopener" title="Godot class reference for PathFollow2D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/2d/path_2d.h" target="_blank" rel="noopener" title="Godot engine source for PathFollow2D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-pathfollow2d.tscn" target="_blank" rel="noopener" title="Open unit-pathfollow2d.tscn in the previewer"><code>unit-pathfollow2d.tscn</code> ↗</a>
@@ -4655,7 +4655,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>PathFollow2D places its children along the parent Path2D's curve and draws nothing itself. Its follow-point dot is selection-gated (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>), and the previewer positions the children from <code>progress</code> alone, as Godot does on load.</p>
+      <div class="prose"><p>PathFollow2D places its children along the parent Path2D's curve and draws nothing itself. Its follow-point dot is a previewer addition for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). The previewer positions the children from <code>progress</code> alone, as Godot does on load.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>PathFollow2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>cubic_interp</code></td><td>true or false</td><td></td></tr><tr><td><code>h_offset</code></td><td>float</td><td></td></tr><tr><td><code>loop</code></td><td>true or false</td><td></td></tr><tr><td><code>progress</code></td><td>float</td><td></td></tr><tr><td><code>progress_ratio</code></td><td>float</td><td></td></tr><tr><td><code>rotates</code></td><td>true or false</td><td></td></tr><tr><td><code>v_offset</code></td><td>float</td><td></td></tr></tbody></table></div>
@@ -4693,7 +4693,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-pathfollow3d</code></td><td><code>pathfollow3d-no-parent</code></td><td>warning</td></tr><tr><td></td><td><code>pathfollow3d-invalid-parent</code></td><td>warning</td></tr><tr><td></td><td><code>pathfollow3d-negative-progress</code></td><td>info</td></tr><tr><td></td><td><code>pathfollow3d-progress-ratio-ignored</code></td><td>error</td></tr><tr><td></td><td><code>pathfollow3d-oriented-mode-requires-up-vector</code></td><td>warning</td></tr></tbody></table></div>
 <p><code>h_offset</code> and <code>v_offset</code> default to 0, and <code>cubic_interp</code>, <code>loop</code> and <code>tilt_enabled</code> default to true, with a warning when present but unparseable. <code>rotation_mode</code> reads through <code>intOr</code>, so <code>99</code> survives and only a non-number falls back to <code>XYZ</code> (3). <code>progress</code> and <code>progress_ratio</code> stay undefined when absent.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The follow-point gizmo draws only for the selected node.</li><li><strong>Approximated</strong> Every <code>rotation_mode</code> except NONE turns the node to face along the curve in the same way, so Y, XY, XYZ and ORIENTED look alike.</li><li><strong>Approximated</strong> The curve's per-point tilt is not applied, so a banked curve turns the node with no roll.</li></ul></div>
+<ul><li><strong>Editor only</strong> The follow-point gizmo is a previewer addition that draws for the selected node when the Gizmos toggle is on.</li><li><strong>Approximated</strong> Every <code>rotation_mode</code> except NONE turns the node to face along the curve in the same way, so Y, XY, XYZ and ORIENTED look alike.</li><li><strong>Approximated</strong> The curve's per-point tilt is not applied, so a banked curve turns the node with no roll.</li></ul></div>
     </article>
     <article class="sheet" data-type="PhysicalBone2D" hidden>
       <header class="sheet-head">
@@ -5226,14 +5226,14 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-unreviewed"></div>
       
       <div class="novisual">Comparison images not captured yet for ReferenceRect.</div>
-      <div class="prose"><p>ReferenceRect draws a plain coloured border around its rect as a design-time aid. <code>editor_only = false</code> draws it unconditionally, as a running game does. The default (<code>true</code>) draws it only while the node is selected, where Godot's editor shows it always.</p>
+      <div class="prose"><p>ReferenceRect draws a plain coloured border around its rect as a design-time aid. <code>editor_only = false</code> draws it unconditionally, as a running game does. The default (<code>true</code>) draws it for every node while the Gizmos toggle is on, as Godot's editor does.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>ReferenceRect</code> properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>border_color</code></td><td>Color(r, g, b, a), or the colour string or int it converts</td><td></td></tr><tr><td><code>border_width</code></td><td>float &gt;= 0</td><td>error below</td></tr><tr><td><code>editor_only</code></td><td>true or false</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-control-properties</code> (type-family match)</td><td><code>control-tooltip-ignored-by-mouse-filter</code></td><td>warning</td></tr><tr><td></td><td><code>control-property-order</code></td><td>warning</td></tr></tbody></table></div>
 <p><code>border_color</code> and <code>editor_only</code> carry no bound, so any format-valid literal passes both parsers. <code>border_width</code> is clamped to <code>0</code> by both. The strict parser flags a negative literal as an error, and the render-facing parser stores Godot's own floor (<code>MAX(0, width)</code>), as the setter does.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor draws every ReferenceRect in the open scene at once, where here <code>editor_only = true</code> (the default) is selection-gated, as <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> does for Marker2D/Path2D.</li></ul></div>
+<ul><li><strong>Editor only</strong> Godot's editor draws every ReferenceRect at once, and here <code>editor_only = true</code> (the default) draws them when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="ReflectionProbe" hidden>
       <header class="sheet-head">
@@ -5976,12 +5976,12 @@ tr:last-child td{border-bottom:0}
 <p>Godot's positional shadow atlas gives the light one slot for the camera, and the shadow takes it. A light that covers less of the view gets a smaller slot and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes a smaller slot, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the atlas. With a <code>light_size</code> and a <code>shadow_blur</code>, the shadow searches for blockers, as Godot's does. Its penumbra widens with the light's size and with the distance from the caster. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
 <p><code>light_negative</code> makes the light subtract with a negative three intensity, as in Godot. <code>shadow_opacity</code> mixes the shadow towards unshadowed through three's <code>shadow.intensity</code>. With <code>distance_fade_enabled</code>, the light and its shadow fade by Godot's smoothstep over the distance from the rendering camera. Each drops out past its fade end.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
+<ul><li><strong>Editor only</strong> The wireframe cone gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="SpringArm3D" hidden>
       <header class="sheet-head">
         <h2>SpringArm3D</h2>
-        <span class="renders">renders as a transform group with a selection-gated length line</span>
+        <span class="renders">renders as a transform group with a length line for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_springarm3d.html" target="_blank" rel="noopener" title="Godot class reference for SpringArm3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/physics/spring_arm_3d.h" target="_blank" rel="noopener" title="Godot engine source for SpringArm3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-spring-arm-3d.tscn" target="_blank" rel="noopener" title="Open unit-spring-arm-3d.tscn in the previewer"><code>unit-spring-arm-3d.tscn</code> ↗</a>
@@ -5997,11 +5997,11 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr></tbody></table></div>
 <p>The lenient parser reads <code>spring_length</code> on top of the Node3D transform. An unauthored or unreadable key stays <code>undefined</code>, not Godot's default, and <code>inf</code> and <code>nan</code> are kept. The gizmo substitutes <code>spring_length = 1</code> where it draws. <code>collision_mask</code>, <code>shape</code> and <code>margin</code> are never read, because they steer the cast that only a running game runs.</p>
 <h3>Gizmo</h3>
-<p>A selected node draws one segment in the collision debug colour. Godot's source is <code>spring_arm_3d_gizmo_plugin.cpp:35-54</code>. The segment runs from the origin to <code>Vector3(0, 0, 1) * spring_length</code>.</p>
+<p>Every node draws one segment in the collision debug colour, faint while unselected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). The colour keeps its alpha of 0.42. Godot's source is <code>spring_arm_3d_gizmo_plugin.cpp:35-54</code>. The segment runs from the origin to <code>Vector3(0, 0, 1) * spring_length</code>.</p>
 <p>Godot guards no length. A length of 0 gives a zero-length segment, and a negative length runs along -Z.</p>
 <p>An <code>inf</code>, <code>inf_neg</code> or <code>nan</code> length gives the end point <code>(nan, nan, ±inf)</code>. A render of Godot 4.6.3 drew no pixel for such a line, so the previewer draws nothing.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor draws the length line for every spring arm, but here it draws only for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>).</li><li><strong>Needs runtime</strong> Only a running game moves each child along the arm, to the hit point minus <code>margin</code>, and here the children hold their authored transforms.</li></ul></div>
+<ul><li><strong>Editor only</strong> The length line draws for every spring arm when the Gizmos toggle is on, which a capture keeps off.</li><li><strong>Needs runtime</strong> Only a running game moves each child along the arm, to the hit point minus <code>margin</code>, and here the children hold their authored transforms.</li></ul></div>
     </article>
     <article class="sheet" data-type="SpringBoneCollision3D" hidden>
       <header class="sheet-head">
@@ -7323,7 +7323,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="VehicleWheel3D" hidden>
       <header class="sheet-head">
         <h2>VehicleWheel3D</h2>
-        <span class="renders">renders as a transform group with a selection-gated wheel gizmo</span>
+        <span class="renders">renders as a transform group with a wheel gizmo for every wheel</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_vehiclewheel3d.html" target="_blank" rel="noopener" title="Godot class reference for VehicleWheel3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/physics/vehicle_body_3d.h" target="_blank" rel="noopener" title="Godot engine source for VehicleWheel3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-physics-vehicle.tscn" target="_blank" rel="noopener" title="Open unit-physics-vehicle.tscn in the previewer"><code>unit-physics-vehicle.tscn</code> ↗</a>
@@ -7351,7 +7351,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-vehiclewheel3d</code></td><td><code>vehiclewheel3d-not-under-vehicle-body</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser reads every strict-validated property, and an unauthored key stays <code>undefined</code> rather than taking Godot's default at parse time. The defaults are substituted where the value is consumed. The gizmo falls back to <code>wheel_radius = 0.5</code> and <code>wheel_rest_length = 0.15</code>. The damping-pair rule compares against <code>damping_compression = 0.83</code> and <code>damping_relaxation = 0.88</code>.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor draws the wheel gizmo for every wheel, but here it draws only for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>).</li></ul></div>
+<ul><li><strong>Editor only</strong> The wheel gizmo draws for every wheel, faint while unselected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>), when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="VFlowContainer" hidden>
       <header class="sheet-head">
@@ -7417,7 +7417,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="VisibleOnScreenEnabler3D" hidden>
       <header class="sheet-head">
         <h2>VisibleOnScreenEnabler3D</h2>
-        <span class="renders">renders as a selection-gated box gizmo</span>
+        <span class="renders">renders as a box gizmo for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_visibleonscreenenabler3d.html" target="_blank" rel="noopener" title="Godot class reference for VisibleOnScreenEnabler3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/visible_on_screen_notifier_3d.h" target="_blank" rel="noopener" title="Godot engine source for VisibleOnScreenEnabler3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-visible-on-screen-enabler-3d.tscn" target="_blank" rel="noopener" title="Open unit-visible-on-screen-enabler-3d.tscn in the previewer"><code>unit-visible-on-screen-enabler-3d.tscn</code> ↗</a>
@@ -7426,16 +7426,16 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-limitation"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>Switches another node's <code>process_mode</code> on and off as this node's box enters and leaves the screen. It draws nothing at runtime. Godot's editor draws the gizmo of its base class, and the previewer draws it while the node is selected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>).</p>
+      <div class="prose"><p>Switches another node's <code>process_mode</code> on and off as this node's box enters and leaves the screen. It draws nothing at runtime. Godot's editor draws the gizmo of its base class, and the previewer draws it for every node, faint while unselected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>).</p>
 <h3>Gizmo</h3>
-<p>A selected enabler draws the gizmo of VisibleOnScreenNotifier3D in Godot's editor, because the gizmo plugin matches the base class (<code>visible_on_screen_notifier_3d_gizmo_plugin.cpp:46-48</code>). The lines are the 12 edges of <code>aabb</code>, three unit axes from its centre and a fill of the box. The notifier sheet describes them.</p>
+<p>An enabler draws the gizmo of VisibleOnScreenNotifier3D in Godot's editor, because the gizmo plugin matches the base class (<code>visible_on_screen_notifier_3d_gizmo_plugin.cpp:46-48</code>). The lines are the 12 edges of <code>aabb</code>, three unit axes from its centre and a fill of the box. The notifier sheet describes them.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>VisibleOnScreenEnabler3D</code> properties, plus 1 inherited from VisibleOnScreenNotifier3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>enable_mode</code></td><td>enum 0-2 (ENABLE_MODE_INHERIT/ENABLE_MODE_ALWAYS/ENABLE_MODE_WHEN_PAUSED)</td><td>warning</td></tr><tr><td><code>enable_node_path</code></td><td>NodePath(&quot;path/to/node&quot;)</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr></tbody></table></div>
 <p>The lenient parser reads <code>aabb</code> as the notifier does, for the gizmo. It keeps every key in <code>rawProperties</code> verbatim, so a malformed <code>enable_mode</code> is neither substituted nor dropped. It survives into the inspector as written while the strict parser reports it.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor also draws the edges and axes of an unselected enabler at 0.3 alpha (<code>node_3d_editor_gizmos.cpp:919-920</code>), where <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> draws it only when selected.</li></ul></div>
+<ul><li><strong>Editor only</strong> The edges and axes draw at 0.3 alpha while unselected (<code>node_3d_editor_gizmos.cpp:919-920</code>) when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="VisibleOnScreenNotifier2D" hidden>
       <header class="sheet-head">
@@ -7461,7 +7461,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="VisibleOnScreenNotifier3D" hidden>
       <header class="sheet-head">
         <h2>VisibleOnScreenNotifier3D</h2>
-        <span class="renders">renders as a selection-gated box gizmo</span>
+        <span class="renders">renders as a box gizmo for every node</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_visibleonscreennotifier3d.html" target="_blank" rel="noopener" title="Godot class reference for VisibleOnScreenNotifier3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/visible_on_screen_notifier_3d.h" target="_blank" rel="noopener" title="Godot engine source for VisibleOnScreenNotifier3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-visible-on-screen-notifier-3d.tscn" target="_blank" rel="noopener" title="Open unit-visible-on-screen-notifier-3d.tscn in the previewer"><code>unit-visible-on-screen-notifier-3d.tscn</code> ↗</a>
@@ -7470,9 +7470,9 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-limitation"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>Reports whether its <code>aabb</code> is on screen through <code>screen_entered</code> and <code>screen_exited</code> signals. It draws nothing at runtime. Godot's editor draws a gizmo of the box, and the previewer draws it while the node is selected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>). Unlike its 2D sibling, this class has no draw call at all.</p>
+      <div class="prose"><p>Reports whether its <code>aabb</code> is on screen through <code>screen_entered</code> and <code>screen_exited</code> signals. It draws nothing at runtime. Godot's editor draws a gizmo of the box, and the previewer draws it for every node, faint while unselected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). Unlike its 2D sibling, this class has no draw call at all.</p>
 <h3>Gizmo</h3>
-<p>A selected notifier draws the gizmo of Godot's editor. Godot's source is <code>visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194</code>.</p>
+<p>A notifier draws the gizmo of Godot's editor, faint while unselected, and adds the fill while selected. Godot's source is <code>visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194</code>.</p>
 <ul><li>The 12 edges of <code>aabb</code>, in the editor's notifier colour.</li><li>Three segments of length 1 from the centre of the box, along +X, +Y and +Z.</li><li>A fill of the box with an opacity of 0.1.</li></ul>
 <p>An unauthored box is Godot's default, an AABB from (-1, -1, -1) of size 2. The previewer draws the lines and the fill in the local space of the node, so they follow its transform. It draws no edit handles and no billboard icon.</p>
 <h3>Linting</h3>
@@ -7481,7 +7481,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr></tbody></table></div>
 <p>The lenient parser reads <code>aabb</code> for the gizmo. A malformed value keeps Godot's default box, and only strict reports it. <code>layers</code> is inherited from VisualInstance3D and is covered on that sheet.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor also draws the edges and axes of an unselected notifier at 0.3 alpha (<code>node_3d_editor_gizmos.cpp:919-920</code>), where <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> draws it only when selected.</li></ul></div>
+<ul><li><strong>Editor only</strong> The edges and axes draw at 0.3 alpha while unselected (<code>node_3d_editor_gizmos.cpp:919-920</code>) when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="VisualInstance3D" hidden>
       <header class="sheet-head">
@@ -7730,7 +7730,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="XRCamera3D" hidden>
       <header class="sheet-head">
         <h2>XRCamera3D</h2>
-        <span class="renders">renders as a selection-gated frustum gizmo, as Camera3D</span>
+        <span class="renders">renders as a frustum gizmo for the selected node, as Camera3D</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_xrcamera3d.html" target="_blank" rel="noopener" title="Godot class reference for XRCamera3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h" target="_blank" rel="noopener" title="Godot engine source for XRCamera3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-xr-camera-3d.tscn" target="_blank" rel="noopener" title="Open unit-xr-camera-3d.tscn in the previewer"><code>unit-xr-camera-3d.tscn</code> ↗</a>
@@ -7739,13 +7739,13 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-unreviewed"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same selection-gated frustum gizmo (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a>) from the same component.</p>
+      <div class="prose"><p>The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same frustum gizmo for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>) from the same component.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 inherited from Node3D, 10 inherited from Node); <code>XRCamera3D</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-camera3d-properties</code> (type-family match)</td><td><code>camera3d-multiple-current</code></td><td>info</td></tr><tr><td></td><td><code>camera3d-invalid-clipping-planes</code></td><td>error</td></tr><tr><td></td><td><code>camera3d-zero-depth-range</code></td><td>warning</td></tr><tr><td><code>valid-xrcamera3d-parent</code></td><td><code>xrcamera3d-parent-not-xrorigin3d</code></td><td>warning</td></tr></tbody></table></div>
 <p>XRCamera3D has no <code>linterParser.ts</code> of its own, so strict parsing validates whatever Node3D and Camera3D declare. A malformed inherited <code>transform</code> is a strict error, while the lenient <code>parseCamera3D</code>, through <code>parseNode3D</code>, keeps rendering with the identity transform.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The frustum gizmo draws only for the selected node, so a plain capture shows nothing for the camera.</li></ul></div>
+<ul><li><strong>Editor only</strong> The frustum gizmo draws for the selected node when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="XRController3D" hidden>
       <header class="sheet-head">

@@ -1,4 +1,4 @@
-/** Marker3D registration: the full slice, with the selection-gated cross (ADR-0018). */
+/** Marker3D registration: the full slice, with the cross for every node (ADR-0056). */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';

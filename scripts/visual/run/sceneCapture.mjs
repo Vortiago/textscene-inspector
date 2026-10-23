@@ -53,8 +53,8 @@ export async function captureScene(pageState, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
-  // A real tree selection makes a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018) render,
-  // through the whole tree-click, SelectionContext, NodeDispatcher and useGizmoVisible path.
+  // A real tree selection makes a selected-only gizmo (PathFollow, light helpers, ADR-0056) render,
+  // through the whole tree-click, SelectionContext, NodeDispatcher and useGizmoState path.
   if (scene.select) {
     // Expand the whole tree so nested nodes are reachable, then click the row.
     await page.locator('[aria-label="Expand all"]').click();
