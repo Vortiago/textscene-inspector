@@ -6,7 +6,7 @@
 
 import { armEmits, type RuleArms } from '../../../linter/ruleArms.js';
 import { resourceRuleRegistry, type ResourceRule } from '../../../linter/ResourceRuleRegistry.js';
-import { paramMinAboveMaxArm, paramMinAboveMaxFindings } from '../../../linter/particleParamRanges.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxFindings } from '../../../linter/paramMinAboveMax.js';
 import { PARTICLE_PROCESS_MATERIAL_PARAMS } from '../../../godot/scene/particles3d.js';
 
 const arms = {

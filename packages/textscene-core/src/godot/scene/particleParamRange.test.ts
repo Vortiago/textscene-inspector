@@ -5,12 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { CPU_PARTICLES_PARAMS } from './cpuParticles.js';
-import {
-  crossedParamRanges,
-  finiteParamBounds,
-  loadedParamRange,
-  nonFiniteParamBounds,
-} from './particleParamRange.js';
+import { crossedParamRanges, loadedParamRange } from './particleParamRange.js';
 import { PARTICLE_PROCESS_MATERIAL_PARAMS } from './particles3d.js';
 
 describe('crossedParamRanges', () => {
@@ -127,33 +122,11 @@ describe('loadedParamRange', () => {
     expect(loadedParamRange({ angle_min: '"fast"', angle_max: '2' }, 'angle', 0)).toEqual({ min: 0, max: 2 });
   });
 
-  it('skips a non-finite value, so the renderer keeps the default (edge)', () => {
-    expect(loadedParamRange({ angle_min: 'inf', angle_max: 'nan' }, 'angle', 0)).toEqual({ min: 0, max: 0 });
+  it('loads an infinite write, which the setter takes as any other (edge)', () => {
+    expect(loadedParamRange({ angle_max: 'inf' }, 'angle', 0)).toEqual({ min: 0, max: Infinity });
   });
 
-  it('skips a value that overflows a single-precision real to inf (edge)', () => {
-    expect(loadedParamRange({ angle_min: '1e39', angle_max: '2' }, 'angle', 0)).toEqual({ min: 0, max: 2 });
-  });
-});
-
-describe('nonFiniteParamBounds', () => {
-  it('names a bound that is non-finite once stored, the ones loadedParamRange skips', () => {
-    expect(
-      nonFiniteParamBounds({ angle_min: 'inf', angle_max: '1e39', spread: 'inf' }, ['angle', 'spread'])
-    ).toEqual(['angle_min', 'angle_max']);
-  });
-
-  it('names nothing for a finite bound, a refused value and an absent key (edge)', () => {
-    expect(nonFiniteParamBounds({ angle_min: '3', angle_max: '"fast"' }, ['angle', 'damping'])).toEqual([]);
-  });
-});
-
-describe('finiteParamBounds', () => {
-  it('drops the non-finite bounds and keeps every other key in file order', () => {
-    const kept = finiteParamBounds({ angle_min: 'inf', amount: '8', angle_max: '2' }, ['angle']);
-    expect(Object.entries(kept)).toEqual([
-      ['amount', '8'],
-      ['angle_max', '2'],
-    ]);
+  it('loads a value that overflows a single-precision real as the inf it stores (edge)', () => {
+    expect(loadedParamRange({ angle_max: '1e39' }, 'angle', 0)).toEqual({ min: 0, max: Infinity });
   });
 });

@@ -9,8 +9,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { CPU_PARTICLES_PARAMS } from '../../../godot/scene/cpuParticles.js';
-import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
-import { finiteParamBounds, nonFiniteParamBounds } from '../../../godot/scene/particleParamRange.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/paramMinAboveMax.js';
+import { finiteParamBounds, nonFiniteParamBounds } from './finiteParamBounds.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
 import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
@@ -60,7 +60,7 @@ function checkPreviewLimits(node: RuleContext['node'], props: Record<string, str
 }
 
 function checkNonFiniteBounds(node: RuleContext['node'], props: Record<string, string>): Diagnostic[] {
-  return nonFiniteParamBounds(props, CPU_PARTICLES_PARAMS).map((key) => {
+  return nonFiniteParamBounds(props).map((key) => {
     const stored = formatReal(storedReal(scalarSlotValue(props[key]!)!));
     return armDiagnostic(
       arms.nonFiniteParamBound,
@@ -78,7 +78,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
     ...checkNonFiniteBounds(node, props),
     ...paramMinAboveMaxDiagnostics(
       node,
-      finiteParamBounds(props, CPU_PARTICLES_PARAMS),
+      finiteParamBounds(props),
       CPU_PARTICLES_PARAMS,
       arms.paramMinAboveMax
     ),
