@@ -33,17 +33,18 @@
  */
 
 import * as THREE from 'three';
-import { applyCsgNormals } from '../smoothNormals';
+import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
+import type { ShadedBrush } from '../../../../r3f/csg/brushManifold';
 import { extrusionCounts } from './extrusionCounts';
-import { emptyGeometry, facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
+import { facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
 import { MIN_POLYGON_VERTICES, type CsgPolygonSpec } from './polygonSweepSpec';
 import { PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
 import { degToRad } from '../../../../godot/math/math.js';
 
-export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeometry {
+export function buildCsgPolygonBrush(spec: CsgPolygonSpec): ShadedBrush {
   const shape = toPoints(spec.polygon);
-  if (shape.length < MIN_POLYGON_VERTICES) return emptyGeometry();
+  if (shape.length < MIN_POLYGON_VERTICES) return emptyBrush();
 
   // Godot normalises to clockwise before triangulating.
   if (signedArea(shape) > 0) shape.reverse();
@@ -57,7 +58,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
       'csgpolygon-triangulate',
       '[CSGPolygon3D] Failed to triangulate polygon — check for self-intersecting edges.'
     );
-    return emptyGeometry();
+    return emptyBrush();
   }
   const shapeFaces = triangles.flat();
   const shapeFaceCount = triangles.length;
@@ -67,11 +68,11 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   const rectSize = new THREE.Vector2().subVectors(rect.max, rect.min);
 
   const { mode, path } = spec;
-  if (mode === PolygonMode.PATH && !path) return emptyGeometry();
+  if (mode === PolygonMode.PATH && !path) return emptyBrush();
 
   const curveLength = path ? path.sampler.length : 1;
   const counts = extrusionCounts(spec, curveLength);
-  if (!counts) return emptyGeometry();
+  if (!counts) return emptyBrush();
   const { extrusions, endCount } = counts;
 
   const extrusionFaceCount = shapeSides * 2;
@@ -233,5 +234,5 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
 
   if (endCount > 1) emitCap(currentXform, true);
 
-  return applyCsgNormals(faces.finish(spec.flipFaces));
+  return shadeCsgFaces(faces.finish(spec.flipFaces));
 }

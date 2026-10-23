@@ -88,8 +88,10 @@ cost. `pnpm ref:diff` is a tool the author runs, like `ref:godot` itself.
   each correct subtraction.
 - Boolean evaluation is synchronous CPU work, memoised by a content cache keyed on the
   plan. Without it, one keystroke in the source pane (ADR-0020) re-runs each boolean.
-- Non-manifold input is not cheaply detectable. `three-bvh-csg` tolerates it silently and
-  does not throw. Godot's `snap` is the first setting to try if artefacts appear.
+- Most non-manifold input is not cheaply detectable. `three-bvh-csg` tolerates it silently and
+  does not throw. An **open brush** is the exception: `isClosedBrush` finds it, and the
+  evaluator treats it as empty, as Godot's manifold does. Godot's `snap` is the first setting
+  to try if other artefacts appear.
 - `unit-csg-transparency` measures 1.067%, over the gate. Only the blue channel is short,
   and only where the glass is over a dark background. That is the sky's specular
   reflection on a glossy transparent surface, not an alpha-blending error.

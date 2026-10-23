@@ -1,11 +1,11 @@
 /** CSGPolygon3D's solid, exposed to the boolean evaluator. */
 
-import { primitiveSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
+import { csgSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { tessellateCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import type { Transform3D } from '../../../../godot/math/transform3d';
-import { buildCsgPolygonGeometry } from './polygonGeometry';
+import { buildCsgPolygonBrush } from './polygonGeometry';
 import { PolygonMode } from '../../../../godot/scene/csg';
 import { type CsgPolygonPathPlan } from './polygonSweepSpec';
 import type { CSGPolygon3DProperties } from './types';
@@ -24,27 +24,25 @@ function pathPlan(p: CSGPolygon3DProperties): CsgPolygonPathPlan | null {
 
 export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
   const p = properties as unknown as CSGPolygon3DProperties;
-  return primitiveSolid(
-    buildCsgPolygonGeometry({
-      polygon: p.polygon,
-      mode: p.mode,
-      depth: p.depth,
-      spinDegrees: p.spinDegrees,
-      spinSides: p.spinSides,
-      smoothFaces: p.smoothFaces,
-      flipFaces: p.flipFaces,
-      pathIntervalType: p.pathIntervalType,
-      pathInterval: p.pathInterval,
-      pathSimplifyAngle: p.pathSimplifyAngle,
-      pathRotation: p.pathRotation,
-      pathRotationAccurate: p.pathRotationAccurate,
-      pathContinuousU: p.pathContinuousU,
-      pathUDistance: p.pathUDistance,
-      pathJoined: p.pathJoined,
-      path: pathPlan(p),
-    }),
-    p
-  );
+  const brush = buildCsgPolygonBrush({
+    polygon: p.polygon,
+    mode: p.mode,
+    depth: p.depth,
+    spinDegrees: p.spinDegrees,
+    spinSides: p.spinSides,
+    smoothFaces: p.smoothFaces,
+    flipFaces: p.flipFaces,
+    pathIntervalType: p.pathIntervalType,
+    pathInterval: p.pathInterval,
+    pathSimplifyAngle: p.pathSimplifyAngle,
+    pathRotation: p.pathRotation,
+    pathRotationAccurate: p.pathRotationAccurate,
+    pathContinuousU: p.pathContinuousU,
+    pathUDistance: p.pathUDistance,
+    pathJoined: p.pathJoined,
+    path: pathPlan(p),
+  });
+  return csgSolid(brush, [p.materialPath]);
 };
 
 /**
