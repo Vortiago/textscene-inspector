@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { noiseTextureFits, noiseDataTexture } from './build';
+import { baseNoiseTexture, noiseTextureFits, noiseDataTexture } from './build';
 import { bumpMapToNormalMap } from './normalMap';
 import { grayToRgba } from '../../noise/image/gradientModulation';
 import { noiseSampler } from '../../noise/image/noiseSampler';
@@ -307,15 +307,26 @@ describe('noiseTexture2DLevels in a noiseDataTexture', () => {
       expect(sizes(texture)).toEqual(['5x3', '2x1', '1x1']);
       expect(levelHashes(texture.mipmaps as MipLevel[])).toEqual(PINNED_LEVEL_HASHES['five by three']);
     });
+  });
 
-    it.each([
-      ['generate_mipmaps off', { width: '16', height: '8', generate_mipmaps: 'false' }],
-      ['a 1 x 1 texture, which has nothing to average', { width: '1', height: '1' }],
-    ])('carries no chain with %s', (_, properties) => {
-      const texture = chained(properties);
-      expect(texture.mipmaps).toHaveLength(0);
-      expect(texture.generateMipmaps).toBe(false);
-      expect(texture.minFilter).toBe(THREE.LinearFilter);
+  describe('without its chain', () => {
+    function full(properties: Record<string, string>) {
+      const input = { tex: decodeNoiseTexture2D(properties), noise, colorRamp: null };
+      const texture = noiseDataTexture(noiseTexture2DLevels(input), input);
+      return { texture, base: baseNoiseTexture(texture, input) };
+    }
+
+    it('carries one level over the same bytes, which the default sampler reads alone', () => {
+      const { texture, base } = full({ width: '16', height: '8' });
+      expect(base.mipmaps).toHaveLength(0);
+      expect(base.generateMipmaps).toBe(false);
+      expect(base.minFilter).toBe(THREE.LinearFilter);
+      expect(base.image.data).toBe(texture.image.data);
+    });
+
+    it('keeps the wrapping and colour space of the texture it comes from', () => {
+      const { texture, base } = full({ width: '8', height: '8', seamless: 'true', as_normal_map: 'true' });
+      expect([base.wrapS, base.colorSpace]).toEqual([texture.wrapS, texture.colorSpace]);
     });
   });
 });

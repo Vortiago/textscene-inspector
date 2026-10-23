@@ -52,6 +52,15 @@ export function noiseDataTexture(levels: MipLevel[], input: NoiseTexture2DInput)
 }
 
 /**
+ * `full` without its chain, over the same bytes, for a NoiseTexture2D whose `generate_mipmaps` is
+ * off. The default sampler then reads its base level alone, as Godot's does.
+ */
+export function baseNoiseTexture(full: THREE.DataTexture, input: NoiseTexture2DInput): THREE.DataTexture {
+  const { width, height } = full.image;
+  return noiseDataTexture([{ data: full.image.data as Uint8Array, width, height }], input);
+}
+
+/**
  * The format of Godot's image: L8 from the noise (`noise.cpp:134`, `:157`), RGBA8 once the colour
  * ramp (`noise_texture_2d.cpp:187`) or the bump pass (`image.cpp:4127`) rewrites it.
  */

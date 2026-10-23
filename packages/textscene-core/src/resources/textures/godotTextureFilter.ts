@@ -181,5 +181,5 @@ export function applyTextureFilterState(texture: THREE.Texture, state: TextureFi
   texture.minFilter = wanted.minFilter;
   texture.generateMipmaps = wanted.generateMipmaps;
   texture.anisotropy = wanted.anisotropy;
-  if (!samplesMipChain(texture) && !texture.isCompressedTexture) texture.mipmaps = [];
+  if (!samplesMipChain(texture) && !(texture instanceof THREE.CompressedTexture)) texture.mipmaps = [];
 }
