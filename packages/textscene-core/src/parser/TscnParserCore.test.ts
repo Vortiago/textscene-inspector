@@ -210,6 +210,29 @@ item/0/mesh = ExtResource("1_tree")
     });
   });
 
+  describe('tables a lookup indexes once', () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://a.png" id="1"]
+
+[sub_resource type="BoxMesh" id="box"]
+
+[node name="Root" type="Node3D"]
+`;
+
+    it.each(['externalResources', 'internalResources'] as const)('refuses a write to %s', (table) => {
+      const { scene } = parser.parse(content, simpleCreator);
+
+      expect(() => (scene[table] as unknown[]).splice(0, 1)).toThrow(TypeError);
+    });
+
+    it('refuses a write to the heading origins', () => {
+      const { origins } = parser.parse(content, simpleCreator);
+
+      expect(() => (origins as unknown[]).splice(0, 1)).toThrow(TypeError);
+    });
+  });
+
   describe('scene tree building', () => {
     it('should build scene tree from flat node list', () => {
       const content = `

@@ -13,7 +13,7 @@ import {
 } from '../godot/project/resourceFormats.js';
 import { resourceSliceRegistry } from './sliceRegistration.js';
 import { fileExtension } from './fileExtension.js';
-import { firstWith, lastWith } from '../utils/indexBy.js';
+import { firstWith, lastWith } from '../utils/keyedLookup.js';
 
 /**
  * The last `[ext_resource]` keeps an id: Godot's loader assigns `ext_resources[id]` per entry
@@ -31,7 +31,11 @@ export function findExtResource(
 ): TscnExternalResource | undefined {
   // An empty table answers nothing, and a caller's `?? []` is a fresh array per call.
   if (externalResources.length === 0) return undefined;
-  return lastExternalWithId(externalResources, id)?.entry;
+  return entryAt(externalResources, lastExternalWithId(externalResources, id));
+}
+
+function entryAt<T>(table: readonly T[], index: number | undefined): T | undefined {
+  return index === undefined ? undefined : table[index];
 }
 
 export function parseResourceReference(
@@ -92,7 +96,7 @@ export function findSubResource(
   id: string
 ): TscnInternalResource | undefined {
   if (internalResources.length === 0) return undefined;
-  return firstInternalWithId(internalResources, id)?.entry;
+  return entryAt(internalResources, firstInternalWithId(internalResources, id));
 }
 
 /**

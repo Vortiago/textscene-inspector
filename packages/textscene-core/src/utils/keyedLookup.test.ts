@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { firstWith, lastWith } from './indexBy.js';
+import { firstWith, lastWith } from './keyedLookup.js';
 
 interface Entry {
   readonly id: string;
@@ -23,9 +23,8 @@ function countedTable(ids: string[]): { table: Entry[]; reads: () => number } {
 describe('firstWith', () => {
   const firstWithId = firstWith((entry: Entry) => entry.id);
 
-  it('finds the first entry carrying a repeated key, and its index', () => {
-    const table = entries('a', 'b', 'a');
-    expect(firstWithId(table, 'a')).toEqual({ index: 0, entry: table[0] });
+  it('finds the index of the first entry carrying a repeated key', () => {
+    expect(firstWithId(entries('a', 'b', 'a'), 'a')).toBe(0);
   });
 
   it('finds nothing for a key no entry carries (edge case)', () => {
@@ -37,26 +36,11 @@ describe('firstWith', () => {
     for (let i = 0; i < 500; i++) firstWithId(table, `id${i}`);
     expect(reads()).toBe(table.length);
   });
-
-  it('extends over entries appended after a lookup', () => {
-    const table = entries('a');
-    firstWithId(table, 'a');
-    table.push({ id: 'b' });
-    expect(firstWithId(table, 'b')?.index).toBe(1);
-  });
-
-  it('starts again after the table is cut short (edge case)', () => {
-    const table = entries('a', 'b');
-    firstWithId(table, 'a');
-    table.length = 0;
-    table.push({ id: 'b' });
-    expect(firstWithId(table, 'b')?.index).toBe(0);
-  });
 });
 
 describe('lastWith', () => {
-  it('finds the last entry carrying a repeated key', () => {
+  it('finds the index of the last entry carrying a repeated key', () => {
     const lastWithId = lastWith((entry: Entry) => entry.id);
-    expect(lastWithId(entries('a', 'b', 'a'), 'a')?.index).toBe(2);
+    expect(lastWithId(entries('a', 'b', 'a'), 'a')).toBe(2);
   });
 });

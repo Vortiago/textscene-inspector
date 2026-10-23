@@ -51,8 +51,8 @@ export interface IdRecovery {
 export interface TscnScene<N extends RawNode = TscnNode> {
   /** Root nodes in the scene tree. */
   nodes: N[];
-  externalResources: TscnExternalResource[];
-  internalResources: TscnInternalResource[];
+  readonly externalResources: readonly TscnExternalResource[];
+  readonly internalResources: readonly TscnInternalResource[];
   /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.

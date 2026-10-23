@@ -320,30 +320,12 @@ describe('findExtResource', () => {
     expect(findExtResource([first, repeated], '1')).toBe(repeated);
   });
 
-  it('answers from its id map: a repeated lookup reads no entry of the table', () => {
+  it('answers from its id map: a repeated lookup reads only the entry it answers with', () => {
     const { table, entryReads } = countedTable(externalResources);
     expect(findExtResource(table, '1_cube')?.path).toBe('res://child_cube.tscn');
     const readsAfterIndexing = entryReads();
     for (let i = 0; i < 100; i += 1) findExtResource(table, i % 2 ? '1_cube' : '2_frame');
-    expect(entryReads()).toBe(readsAfterIndexing);
-  });
-
-  it('extends its map over entries appended after the first lookup (edge case)', () => {
-    const table: TscnExternalResource[] = [{ id: '1', path: 'res://a.png', type: 'Texture2D' }];
-    expect(findExtResource(table, '2')).toBeUndefined();
-    const appended = { id: '2', path: 'res://b.png', type: 'Texture2D' };
-    table.push(appended);
-    expect(findExtResource(table, '2')).toBe(appended);
-  });
-
-  it('forgets entries a truncation removed (edge case)', () => {
-    const table: TscnExternalResource[] = [
-      { id: '1', path: 'res://a.png', type: 'Texture2D' },
-      { id: '2', path: 'res://b.png', type: 'Texture2D' },
-    ];
-    expect(findExtResource(table, '2')).toBe(table[1]);
-    table.length = 1;
-    expect(findExtResource(table, '2')).toBeUndefined();
+    expect(entryReads()).toBe(readsAfterIndexing + 100);
   });
 });
 
@@ -375,20 +357,12 @@ describe('findSubResource', () => {
     expect(findSubResource([box], 'Other_1')).toBeUndefined();
   });
 
-  it('answers from its id map: a repeated lookup reads no entry of the table', () => {
+  it('answers from its id map: a repeated lookup reads only the entry it answers with', () => {
     const { table, entryReads } = countedTable(internalResources);
     expect(findSubResource(table, 'mesh_2')?.type).toBe('ArrayMesh');
     const readsAfterIndexing = entryReads();
     for (let i = 0; i < 100; i += 1) findSubResource(table, i % 2 ? 'Box_1' : 'mesh_2');
-    expect(entryReads()).toBe(readsAfterIndexing);
-  });
-
-  it('extends its map over entries appended after the first lookup (edge case)', () => {
-    const table: TscnInternalResource[] = [{ id: 'Box_1', type: 'BoxMesh', data: {} }];
-    expect(findSubResource(table, 'Sphere_1')).toBeUndefined();
-    const appended = { id: 'Sphere_1', type: 'SphereMesh', data: {} };
-    table.push(appended);
-    expect(findSubResource(table, 'Sphere_1')).toBe(appended);
+    expect(entryReads()).toBe(readsAfterIndexing + 100);
   });
 });
 

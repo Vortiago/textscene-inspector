@@ -313,6 +313,10 @@ export class TscnParserCore {
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
+    // Each lookup by id indexes a table once (`utils/keyedLookup.ts`), so a table never changes after the scan.
+    Object.freeze(origins);
+    Object.freeze(externalResources);
+    Object.freeze(internalResources);
     const seating = seatScene(origins);
 
     logger.debug(

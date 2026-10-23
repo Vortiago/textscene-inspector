@@ -191,7 +191,7 @@ describe('checkResourceExists', () => {
   describe('lookup cost', () => {
     // One rule call per matching node resolves one reference each, so a scan per
     // call would cost O(references x resources) on every lint.
-    it('resolves every reference after the first from the id maps, reading no table entry', () => {
+    it('resolves every reference after the first from the id maps, reading only the entry it names', () => {
       const external = countedTable<TscnExternalResource>([
         { id: 'texture_1', type: 'Texture2D', path: 'res://textures/texture.png' },
       ]);
@@ -216,7 +216,8 @@ describe('checkResourceExists', () => {
         checkResourceExists(scene, 'SubResource("Box_1")');
         checkResourceExists(scene, 'SubResource("Missing_1")');
       }
-      expect(external.entryReads() + internal.entryReads()).toBe(readsAfterIndexing);
+      // Two of the three references name an entry, and the missing one reads none.
+      expect(external.entryReads() + internal.entryReads()).toBe(readsAfterIndexing + 200);
     });
   });
 });

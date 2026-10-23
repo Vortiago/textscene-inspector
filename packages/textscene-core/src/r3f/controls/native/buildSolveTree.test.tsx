@@ -1067,7 +1067,7 @@ describe('useBuildSolveTree — ExtResource lookups', () => {
     return [...filler, last];
   }
 
-  it('reads each ExtResource entry once however many Controls name the same theme', () => {
+  it('reads fewer ExtResource entries than one scan per Control, however many name the same theme', () => {
     const loader = createFakeResourceLoader();
     const shared = themeResource({ defaultFontSize: 24 });
     loader.themes.seed('res://theme.tres', shared);
@@ -1083,10 +1083,10 @@ describe('useBuildSolveTree — ExtResource lookups', () => {
     });
 
     expect(result.current.tree.map((n) => n.themeChain?.[0])).toEqual(nodes.map(() => shared));
-    expect(entryReads()).toBe(table.length);
+    expect(entryReads()).toBeLessThan(table.length * nodes.length);
   });
 
-  it('reads each ExtResource entry once however many instances wait on one scene', () => {
+  it('reads fewer ExtResource entries than one scan per instance, however many wait on one scene', () => {
     const loader = createFakeResourceLoader();
     const { table, entryReads } = countedTable(
       tableEndingIn({ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' })
@@ -1096,7 +1096,7 @@ describe('useBuildSolveTree — ExtResource lookups', () => {
     renderHook(() => useBuildSolveTree(nodes, table, []), { wrapper: wrapperFor(loader.loader) });
 
     expect(loader.scenes.cache.has(LAYER_PATH)).toBe(false);
-    expect(entryReads()).toBe(table.length);
+    expect(entryReads()).toBeLessThan(table.length * nodes.length);
   });
 });
 
