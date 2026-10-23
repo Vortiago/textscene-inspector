@@ -81,10 +81,12 @@ interface ButtonIconProps {
  */
 function ButtonIcon({ item, texture, contentMargin, tint, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
-  const x = item.rect.x + contentMargin;
-  const y = item.rect.y + contentMargin + (item.rect.h - 2 * contentMargin - GRAPH_EDIT_ICON_SIZE) / 2;
+  // `icon_ofs.floor()` (`button.cpp:405`): the icon never straddles a pixel row.
+  const x = item.rect.x + Math.floor(contentMargin);
+  const y =
+    item.rect.y + Math.floor(contentMargin + (item.rect.h - 2 * contentMargin - GRAPH_EDIT_ICON_SIZE) / 2);
   return (
-    <CanvasItemGroup position={[x, -y, 0]}>
+    <CanvasItemGroup position={[x, -y, 0]} renderOrder={renderOrder}>
       <ControlQuad
         width={GRAPH_EDIT_ICON_SIZE}
         height={GRAPH_EDIT_ICON_SIZE}
@@ -95,6 +97,14 @@ function ButtonIcon({ item, texture, contentMargin, tint, renderOrder }: ButtonI
       />
     </CanvasItemGroup>
   );
+}
+
+/** A SpinBox arrow centred in its button with integer division (`spin_box.cpp:488-491`, `Point2i`). */
+function arrowPosition(spinBox: Rect2, button: Rect2): { x: number; y: number } {
+  return {
+    x: spinBox.x + button.x + Math.floor((button.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2),
+    y: spinBox.y + button.y + Math.floor((button.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2),
+  };
 }
 
 interface ToolbarTextProps {
@@ -125,7 +135,7 @@ function ToolbarText({
   const x = centred ? Math.max(0, (rect.w - width) / 2) : inset;
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
+    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]} renderOrder={renderOrder}>
       <TextRun
         layout={layout}
         fontSizePx={fontSizePx}
@@ -170,7 +180,7 @@ export function GraphEditToolbarChrome({
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
   return (
-    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]}>
+    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={renderOrder}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={tint.own}
@@ -222,14 +232,8 @@ export function GraphEditToolbarChrome({
         // the up/down buttons block share the item's rect.
         const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, SPIN_BOX_ARROW_ICON_SIZE.x, rtl);
         const fieldRect = { x: item.rect.x, y: item.rect.y, w: layout.fieldRect.w, h: layout.fieldRect.h };
-        const upPos = {
-          x: item.rect.x + layout.upRect.x + (layout.upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-          y: item.rect.y + layout.upRect.y + (layout.upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
-        };
-        const downPos = {
-          x: item.rect.x + layout.downRect.x + (layout.downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-          y: item.rect.y + layout.downRect.y + (layout.downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
-        };
+        const upPos = arrowPosition(item.rect, layout.upRect);
+        const downPos = arrowPosition(item.rect, layout.downRect);
         return (
           <CanvasItemGroup key={item.id}>
             <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
@@ -250,7 +254,7 @@ export function GraphEditToolbarChrome({
               inset={lineEditInsetX}
             />
             {spinUpTexture && (
-              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]}>
+              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={renderOrder + 0.1}>
                 <ControlQuad
                   width={SPIN_BOX_ARROW_ICON_SIZE.x}
                   height={SPIN_BOX_ARROW_ICON_SIZE.y}
@@ -262,7 +266,7 @@ export function GraphEditToolbarChrome({
               </CanvasItemGroup>
             )}
             {spinDownTexture && (
-              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]}>
+              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]} renderOrder={renderOrder + 0.1}>
                 <ControlQuad
                   width={SPIN_BOX_ARROW_ICON_SIZE.x}
                   height={SPIN_BOX_ARROW_ICON_SIZE.y}

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -285,6 +286,40 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
   });
 });
 
+describe('<GraphEdit> chrome paint order', () => {
+  /** Meshes past `subtreeChromeRenderOrder`: the scrollbars, the toolbar and the minimap. */
+  async function chromeInDrawOrder() {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        solveNode={graphEdit({ showGrid: false, showMenu: true, minimapEnabled: true })}
+        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        renderOrder={0}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+    return renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => m.renderOrder > 9)
+      .sort((a, b) => a.renderOrder - b.renderOrder);
+  }
+
+  it('sorts each chrome mesh behind every mesh its own renderOrder puts after it (three reads the group first)', async () => {
+    // A toolbar glyph under its panel is drawn at the panel's 0.6 alpha: grey where Godot draws white.
+    const meshes = await chromeInDrawOrder();
+    const inversions = meshes.flatMap((early, i) =>
+      meshes
+        .slice(i + 1)
+        .filter(
+          (late) => late.renderOrder > early.renderOrder && nearestGroupOrder(early) > nearestGroupOrder(late)
+        )
+        .map((late) => `${early.renderOrder} drawn after ${late.renderOrder}`)
+    );
+    expect(inversions).toEqual([]);
+  });
+});
+
 /**
  * The constructor calls `set_clip_contents(true)` (`graph_edit.cpp:3342`), so every
  * GraphEdit clips, whatever the scene says. The load-time clamp of `set_scroll_offset`
@@ -446,6 +481,23 @@ describe('<GraphEdit> disabled zoom buttons (graph_edit.cpp:2445-2446)', () => {
       .filter((m) => (m.material as THREE.MeshBasicMaterial).map !== null)
       .filter((m) => Math.abs((m.material as THREE.MeshBasicMaterial).opacity - 0.4) < 1e-9).length;
   }
+
+  it('draws every icon on a whole pixel: Button floors its icon offset, SpinBox centres in integers (button.cpp:405, spin_box.cpp:488-491)', async () => {
+    const renderer = await render({});
+    renderer.scene.instance.updateMatrixWorld(true);
+    const corners = renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter(
+        (m) => m.geometry.type === 'PlaneGeometry' && (m.material as THREE.MeshBasicMaterial).map !== null
+      )
+      .map((m) => {
+        const box = new THREE.Box3().setFromObject(m);
+        return [box.min.x, -box.max.y];
+      });
+    expect(corners.length).toBeGreaterThan(0);
+    expect(corners.filter(([x, y]) => !Number.isInteger(x) || !Number.isInteger(y))).toEqual([]);
+  });
 
   it('draws every icon at full alpha while neither bound has been reached', async () => {
     expect(dimmedIcons(await render({}))).toBe(0);

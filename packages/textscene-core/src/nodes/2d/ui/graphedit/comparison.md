@@ -51,7 +51,8 @@ are present in every GraphEdit, whatever the scene file says:
 - The **toolbar** at `(10, 10)`, a `PanelContainer` at its minimum size around an
   `HBoxContainer`. Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
   buttons, the grid and snapping toggles, the snapping-distance `SpinBox`, the minimap
-  toggle and the arrange button. `show_menu`
+  toggle and the arrange button. Each icon sits on a whole pixel (`button.cpp:405`). The
+  SpinBox is four advances of `W` wide, as one glyph measures it (`line_edit.cpp:2451`). `show_menu`
   hides the panel. `show_zoom_label`, `show_zoom_buttons`, `show_grid_buttons`,
   `show_minimap_button` and `show_arrange_button` hide widgets inside it, which re-flows
   the row and re-sizes the panel. `show_grid`, `snapping_enabled` and `minimap_enabled`

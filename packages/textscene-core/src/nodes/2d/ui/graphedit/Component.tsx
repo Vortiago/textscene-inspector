@@ -292,6 +292,7 @@ export function GraphEdit({
       const l = shape(text);
       return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
     },
+    emSpaceWidthPx: shape('W').widthPx,
     fontHeightPx: getFontLinePitchPx(fontMetrics, theme.fontSize, 0),
   });
   const toolbarText = {
