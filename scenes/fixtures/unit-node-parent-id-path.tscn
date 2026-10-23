@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitnodeparentidpath"]
+
+; One variable: the orange box names a parent="Gone" that does not exist, and its parent_id_path
+; names Moved (unique_id 7). Instantiate looks the id trail up when the path fails and seats the
+; node under Moved (packed_scene.cpp:157-165, :1947-2005), so the box sits at Moved's x = 1 plus
+; its own local x = 0.5, right of the grey reference. Without the trail it re-roots under the scene
+; root at x = 0.5. No other golden carries a parent_id_path.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_reference"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_landed"]
+albedo_color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="Reference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_reference")
+
+[node name="Moved" type="Node3D" parent="." unique_id=7]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+
+[node name="Landed" type="MeshInstance3D" parent="Gone" parent_id_path=PackedInt32Array(7)]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_landed")
