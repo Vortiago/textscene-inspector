@@ -73,12 +73,7 @@ describe('LiveTree.fold', () => {
   it('folds the groups below a node it is given, with the steps the tree already took', () => {
     const slot = tree.at('Host/Sub/Slot')!;
 
-    const names = tree.fold<void, string>(
-      undefined,
-      ({ step }) => step.node.name,
-      slot.step.groups,
-      slot.path
-    );
+    const names = tree.fold<void, string>(undefined, ({ step }) => step.node.name, slot);
 
     expect(names).toEqual(['Leaf', 'Caption', 'Pane']);
     expect(tree.at('Host/Sub/Slot/Caption')!.step).toBe(

@@ -237,6 +237,10 @@ export interface LiveChildGroup {
   scope: SceneScope;
 }
 
+function inlineGroup(children: readonly TscnNode[], scope: SceneScope): LiveChildGroup {
+  return { origin: 'inline', children, scope };
+}
+
 /**
  * What is below a node that does not collapse: one `inline` group for a non-instance,
  * `inline` plus `subscene` for a multi-root instance, and one `glb` group for a
@@ -255,7 +259,7 @@ function liveChildGroups(
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
   const own = scopeOf(node, scope);
-  const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope: own }];
+  const inlineOnly = (): LiveChildGroup[] => [inlineGroup(node.children, own)];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
   const glbPath = glbPathOf(node);
@@ -284,7 +288,7 @@ function liveChildGroups(
   // Inline children are authored in the host scene, so they keep the outer scope.
   const groups: LiveChildGroup[] = [];
   if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, scope: own });
+    groups.push(inlineGroup(node.children, own));
   }
   groups.push({
     origin: 'subscene',
@@ -486,7 +490,7 @@ export class LiveTree {
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
-    this.rootGroups = [{ origin: 'inline', children: roots, scope: rootScope(ctx) }];
+    this.rootGroups = [inlineGroup(roots, rootScope(ctx))];
   }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */
@@ -502,7 +506,7 @@ export class LiveTree {
   }
 
   /** The link for `raw` where it sits in `group` at `path`. */
-  linkTo(raw: LiveNode, group: LiveChildGroup, path: string): LiveLink {
+  private linkTo(raw: LiveNode, group: LiveChildGroup, path: string): LiveLink {
     return { raw, step: this.stepOf(raw, group.scope), path, group };
   }
 
@@ -526,21 +530,19 @@ export class LiveTree {
    * Depth-first fold of the tree. `visit` gets each node with what its parent passed down, and a
    * `descend` that folds the node's children, in group order, with what this node passes down. A
    * visit that never calls `descend` prunes the children. The results come back in order.
-   * It starts at the roots unless given `groups` below the node at `parentPath`, so a fold of
-   * a subtree reads the steps the other walks of this tree took.
+   * It starts at the roots unless given the link of a node, so a fold of its subtree reads the
+   * steps the other walks of this tree took.
    */
   fold<Inherited, Result>(
     inherited: Inherited,
     visit: FoldVisit<Inherited, Result>,
-    groups: readonly LiveChildGroup[] = this.rootGroups,
-    parentPath = ''
+    from?: LiveLink
   ): Result[] {
     const results: Result[] = [];
-    for (const group of groups) {
+    for (const group of from ? from.step.groups : this.rootGroups) {
       for (const raw of group.children) {
-        const link = this.linkTo(raw, group, joinPath(parentPath, raw.name));
-        const descend = (passedDown: Inherited): Result[] =>
-          this.fold(passedDown, visit, link.step.groups, link.path);
+        const link = this.linkTo(raw, group, joinPath(from?.path ?? '', raw.name));
+        const descend = (passedDown: Inherited): Result[] => this.fold(passedDown, visit, link);
         results.push(visit(link, inherited, descend));
       }
     }
@@ -549,7 +551,7 @@ export class LiveTree {
 }
 
 /** What a fold of the live tree does at each node. */
-export type FoldVisit<Inherited, Result> = (
+type FoldVisit<Inherited, Result> = (
   link: LiveLink,
   inherited: Inherited,
   descend: (passedDown: Inherited) => Result[]

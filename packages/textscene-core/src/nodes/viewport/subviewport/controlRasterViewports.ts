@@ -59,13 +59,14 @@ export function collectControlRasterViewports(
   // The step decides instance-collapse and per-group resource scope, the same decision
   // `useBuildSolveTree`'s walk makes for the on-screen pass.
   const tree = liveTreeOf(roots, ctx);
-  tree.fold<boolean | null, void>(null, ({ step, path }, inheritedRtl, descend) => {
+  tree.fold<boolean | null, void>(null, (link, inheritedRtl, descend) => {
+    const { step, path } = link;
     // Classified on the resolved subtree, as `useViewportContentKind` does: a
     // raw `instance=` child reads as 3D, so both owners of this key would
     // decline and leave the consumer blank.
     if (
       isViewportBoundary(step.node.type) &&
-      viewportContentKind(resolveViewportSubtree(tree, step.node, step.scope)) === 'dom'
+      viewportContentKind(resolveViewportSubtree(tree, link)) === 'dom'
     ) {
       found.push({ path, node: step.node, inheritedRtl, ...step.scope });
     }

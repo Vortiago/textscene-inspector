@@ -10,12 +10,10 @@ import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import {
   liveTreeOf,
-  rootScope,
   type CachedSceneSource,
-  type LiveChildGroup,
+  type LiveLink,
   type LiveTree,
   type LiveTreeContext,
-  type SceneScope,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
 
@@ -133,32 +131,33 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
   return sawDom ? 'dom' : 'empty';
 }
 
+/** The children below `from` (the roots without it) with their instances resolved. */
+function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
+  return tree.fold<void, TscnNode>(
+    undefined,
+    ({ raw, step }, _, descend) => {
+      if (raw.type === 'SubViewport') return raw;
+      return { ...step.node, children: descend() };
+    },
+    from
+  );
+}
+
 /**
  * The sub-viewport's subtree with its instances resolved, the input
  * `viewportContentKind` wants: a parsed `instance=` child is a childless `Node`
- * whatever its world. `scope` is the one the sub-viewport's own children resolve their refs
- * against, and `tree` the live tree that gives each instance its step. A nested sub-viewport
- * is returned untouched.
+ * whatever its world. `viewport` is the sub-viewport's link in `tree`, which gives each
+ * instance below it its step. A nested sub-viewport is returned untouched.
  */
-export function resolveViewportSubtree(tree: LiveTree, node: TscnNode, scope: SceneScope): TscnNode {
-  const below: LiveChildGroup = { origin: 'inline', children: node.children, scope };
-  return {
-    ...node,
-    children: tree.fold<void, TscnNode>(
-      undefined,
-      ({ raw, step }, _, descend) => {
-        if (raw.type === 'SubViewport') return raw;
-        return { ...step.node, children: descend() };
-      },
-      [below]
-    ),
-  };
+export function resolveViewportSubtree(tree: LiveTree, viewport: LiveLink): TscnNode {
+  return { ...viewport.step.node, children: resolvedChildren(tree, viewport) };
 }
 
 /**
  * {@link resolveViewportSubtree} for a sub-viewport that no walk of the live tree has visited: it
- * reads its own tree. This resolution reads no SubResource id, so the scope declares an empty pool
- * rather than carry one. `SceneScope` says why the two travel together.
+ * reads its own tree of the children. `node` is already the node as shown, so it takes no step of
+ * its own, and the scope declares an empty SubResource pool because this resolution reads no id.
+ * `SceneScope` says why the two pools travel together.
  */
 export function resolveStandaloneViewportSubtree(
   node: TscnNode,
@@ -166,5 +165,5 @@ export function resolveStandaloneViewportSubtree(
   sceneCache: CachedSceneSource
 ): TscnNode {
   const ctx: LiveTreeContext = { externalResources, internalResources: [], sceneCache };
-  return resolveViewportSubtree(liveTreeOf([node], ctx), node, rootScope(ctx));
+  return { ...node, children: resolvedChildren(liveTreeOf(node.children, ctx)) };
 }
