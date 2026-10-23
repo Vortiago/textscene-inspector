@@ -272,6 +272,15 @@ describe('definitionRangeAt of a node path that Godot seats differently from its
     expect(definitionLine(lines, 'Gone')).toBe(1);
   });
 
+  it('resolves a to= that only its to_uid_path recovers', () => {
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="." to="Gone" method="_on_ready" to_uid_path=PackedInt32Array(7)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(1);
+  });
+
   it('gives nothing for a connection end whose uid path names no heading', () => {
     const lines = [
       '[node name="Root" type="Node3D" unique_id=1]',

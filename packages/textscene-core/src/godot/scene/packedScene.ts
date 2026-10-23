@@ -52,7 +52,7 @@ export function parseUniqueId(literal: string | undefined): number {
   return stored === null ? 0 : storedId(stored);
 }
 
-/** What {@link recoverByIdTrailOver} reads of one `[node]` heading, in file order. */
+/** What {@link recoverByIdTrail} reads of one `[node]` heading, in file order. */
 export interface IdHeading {
   /** The heading's `unique_id=`, or `0` (`UNIQUE_SCENE_ID_UNASSIGNED`, `node.h:140`) where it has none. */
   readonly uniqueId: number;
@@ -80,7 +80,7 @@ export interface IdTrailEnd {
  * path did not walk, or all of them after the build. Only those can the final `get_node_or_null`
  * find (`:2005`). Undefined where the trail resolves nowhere, so Godot re-roots the node.
  */
-export function recoverByIdTrailOver(
+export function recoverByIdTrail(
   trail: readonly number[],
   ids: readonly HasUniqueId[],
   headingAt: (index: number) => IdHeading,

@@ -7,7 +7,7 @@
 import type { NodeOrigin, RawNode } from './types.js';
 import {
   INSTANCE_PLACEHOLDER_TYPE,
-  recoverByIdTrailOver,
+  recoverByIdTrail,
   type IdHeading,
   type IdTrailEnd,
 } from '../godot/scene/packedScene.js';
@@ -60,7 +60,7 @@ function trailEnd<N extends RawNode>(
   isPlaced: (origin: NodeOrigin<N>) => boolean,
   builtCount: number
 ): IdTrailEnd | undefined {
-  return recoverByIdTrailOver(trail, origins, (index) => headingOf(origins[index]!, isPlaced), builtCount);
+  return recoverByIdTrail(trail, origins, (index) => headingOf(origins[index]!, isPlaced), builtCount);
 }
 
 function headingOf<N extends RawNode>(
