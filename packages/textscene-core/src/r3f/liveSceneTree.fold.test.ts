@@ -14,9 +14,9 @@ interface Outline {
 }
 
 const outlineOf = (stopAt?: string): Outline[] =>
-  foldLiveTree<undefined, Outline>(hostScene.nodes, graftedContext, undefined, ({ step }, _, descend) => ({
+  foldLiveTree<void, Outline>(hostScene.nodes, graftedContext, undefined, ({ step }, _, descend) => ({
     name: step.node.name,
-    children: step.node.name === stopAt ? [] : descend(undefined),
+    children: step.node.name === stopAt ? [] : descend(),
   }));
 
 describe('foldLiveTree', () => {
@@ -60,15 +60,14 @@ describe('foldLiveTree', () => {
     expect(slot).toEqual({ name: 'Slot', children: [] });
   });
 
-  it('tells each node its group and its position in it', () => {
+  it('tells each node the group it sits in', () => {
     const entries: LiveWalkEntry[] = [];
-    foldLiveTree<undefined, void>(hostScene.nodes, graftedContext, undefined, (entry, _, descend) => {
+    foldLiveTree<void, void>(hostScene.nodes, graftedContext, undefined, (entry, _, descend) => {
       entries.push(entry);
-      descend(undefined);
+      descend();
     });
 
     const caption = entries.find((entry) => entry.path === 'Host/Sub/Slot/Caption')!;
-    expect(caption.group.children[caption.index]).toBe(caption.raw);
-    expect(caption.index).toBe(1);
+    expect(caption.group.children).toContain(caption.raw);
   });
 });

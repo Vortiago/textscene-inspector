@@ -53,6 +53,7 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
   foldLiveTree,
+  isInjected,
   liveTreeOf,
   type CachedSceneSource,
   type LiveChildGroup,
@@ -242,17 +243,19 @@ const NOTHING_WALKED: WalkResult = { nodes: [], hoisted: [] };
 
 /** The outputs of siblings, in order. */
 function joinWalked(results: readonly WalkResult[]): WalkResult {
-  return {
-    nodes: results.flatMap((result) => result.nodes),
-    hoisted: results.flatMap((result) => result.hoisted),
-  };
+  const joined: WalkResult = { nodes: [], hoisted: [] };
+  for (const result of results) {
+    joined.nodes.push(...result.nodes);
+    joined.hoisted.push(...result.hoisted);
+  }
+  return joined;
 }
 
 /** What a node hands the walk of its children, who each read the part that concerns them. */
 interface Ancestry {
   themeChain: readonly ThemeResource[];
-  /** Where the child at `index` of `group` draws, or `undefined` for a child the allocation did not number. */
-  paintRangeOf: (group: LiveChildGroup, index: number) => PaintRange | undefined;
+  /** Where each child draws, by the child as authored. */
+  paintRanges: ReadonlyMap<TscnNode, PaintRange>;
   /** What every skipped Node2D ancestor since the last real Control or root contributes. */
   skippedAncestors: SkippedAncestors | null;
   /**
@@ -292,31 +295,12 @@ interface Ancestry {
   childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
 }
 
-/** Whether `group` holds sub-scene roots or GLB objects, which draw after the node's authored children. */
-const isInjected = (group: LiveChildGroup): boolean => group.origin === 'subscene' || group.origin === 'glb';
-
-/**
- * Each child's paint range, found by its group and position. Both allocations run over flattened
- * lists, so the slices are handed back out in the order they were taken.
- */
-function paintRangeLookup(
-  groups: readonly LiveChildGroup[],
-  inlineRanges: readonly PaintRange[],
-  injectedRanges: readonly PaintRange[]
-): Ancestry['paintRangeOf'] {
-  const byGroup = new Map<LiveChildGroup, readonly PaintRange[]>();
-  let takenInline = 0;
-  let takenInjected = 0;
-  for (const group of groups) {
-    const count = group.children.length;
-    byGroup.set(
-      group,
-      isInjected(group)
-        ? injectedRanges.slice(takenInjected, (takenInjected += count))
-        : inlineRanges.slice(takenInline, (takenInline += count))
-    );
-  }
-  return (group, index) => byGroup.get(group)?.[index];
+/** The ranges of `children`, by the child, from the allocation that numbered them in order. */
+function paintRangesOf(
+  children: readonly TscnNode[],
+  ranges: readonly PaintRange[]
+): Map<TscnNode, PaintRange> {
+  return new Map(children.map((child, index) => [child, ranges[index]!]));
 }
 
 interface ForestResult {
@@ -644,7 +628,7 @@ function buildForest(
 
   /** The Control forest of one tree node: what it adds to the forest and what it hoists to the canvas. */
   function walk(
-    { raw: node, step, path, group, index }: LiveWalkEntry,
+    { raw: node, step, path, group }: LiveWalkEntry,
     ancestry: Ancestry,
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
@@ -658,7 +642,7 @@ function buildForest(
       inheritedRtl,
       childVisibility,
     } = ancestry;
-    const paintRange = canvasRoots.get(node) ?? ancestry.paintRangeOf(group, index) ?? WHOLE_CANVAS_RANGE;
+    const paintRange = canvasRoots.get(node) ?? ancestry.paintRanges.get(node) ?? WHOLE_CANVAS_RANGE;
     // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
     // drawn by its own viewport surface, never by the enclosing canvas.
     if (isViewportBoundary(node.type)) return NOTHING_WALKED;
@@ -718,10 +702,8 @@ function buildForest(
       sortsChildren: sortsChildren(collapsed),
       frontRoom: internalFrontRoom(collapsed),
     });
-    const injectedRanges = allocatePaintRange(
-      allocated.tail,
-      groups.filter(isInjected).flatMap((g) => g.children)
-    ).children;
+    const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
+    const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
 
     // A real Control's descendants start a fresh accumulation. A skipped node
     // folds its own CanvasItem transform into what they inherit.
@@ -758,19 +740,24 @@ function buildForest(
       ? canvasRootRanges(inlineChildren, allocated.children)
       : canvasRoots;
 
-    const { nodes: children, hoisted: childHoisted } = joinWalked(
-      descend({
-        themeChain: nodeThemeChain,
-        paintRangeOf: paintRangeLookup(groups, allocated.children, injectedRanges),
-        skippedAncestors: childSkippedAncestors,
-        canvasChainBroken: childCanvasChainBroken,
-        ancestorHidden: hidden,
-        parentVisibleInTree: childParentVisible,
-        canvasRoots: childCanvasRoots,
-        inheritedRtl: rtl,
-        childVisibility: writtenChildVisibility,
-      })
-    );
+    const { nodes: children, hoisted: childHoisted } = groups.some((g) => g.children.length > 0)
+      ? joinWalked(
+          descend({
+            themeChain: nodeThemeChain,
+            paintRanges: new Map([
+              ...paintRangesOf(inlineChildren, allocated.children),
+              ...paintRangesOf(injectedChildren, injectedRanges),
+            ]),
+            skippedAncestors: childSkippedAncestors,
+            canvasChainBroken: childCanvasChainBroken,
+            ancestorHidden: hidden,
+            parentVisibleInTree: childParentVisible,
+            canvasRoots: childCanvasRoots,
+            inheritedRtl: rtl,
+            childVisibility: writtenChildVisibility,
+          })
+        )
+      : NOTHING_WALKED;
 
     // Not a Control: no SolveNode, and its Control descendants promote up.
     if (!isControl) return { nodes: children, hoisted: childHoisted };
@@ -837,7 +824,7 @@ function buildForest(
       ctx,
       {
         themeChain: [],
-        paintRangeOf: (_group, index) => rootRanges[index],
+        paintRanges: paintRangesOf(nodes, rootRanges),
         skippedAncestors: null,
         canvasChainBroken: false,
         ancestorHidden: false,

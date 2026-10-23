@@ -21,9 +21,8 @@ export function useLiveStep(node: TscnNode, scope: SceneScope): LiveStep {
     [node, scope, scenePath, subScene]
   );
 
-  // The merge is known from the step, which shows another node than the row's own once the instance
-  // collapses, so the GLB a merged root instances loads without a second merge.
-  const merged = withoutGlb.node === node ? undefined : withoutGlb.node;
+  // The merge is known from the step, so the GLB a merged root instances loads without a second merge.
+  const merged = withoutGlb.isMerged ? withoutGlb.node : undefined;
   const mergedScenePath = merged ? liveInstancePath(merged, withoutGlb.scope) : null;
   const instancedByMerged = useSubSceneChildren(
     merged?.instance,

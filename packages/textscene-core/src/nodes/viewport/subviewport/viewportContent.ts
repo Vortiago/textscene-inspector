@@ -140,13 +140,13 @@ export function resolveViewportSubtree(
     ...node,
     // This resolution reads no SubResource id, so it declares an empty pool
     // rather than carry one. `SceneScope` says why the two travel together.
-    children: foldLiveTree<undefined, TscnNode>(
+    children: foldLiveTree<void, TscnNode>(
       node.children,
       { externalResources, internalResources: [], sceneCache },
       undefined,
       ({ raw, step }, _, descend) => {
         if (raw.type === 'SubViewport') return raw;
-        return { ...step.node, children: descend(undefined) };
+        return { ...step.node, children: descend() };
       }
     ),
   };

@@ -557,17 +557,17 @@ describe('liveStep — origin-tagged child groups with per-group scope', () => {
       internalResources: [],
     };
     const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("1")' });
-    const groups = liveStep(node, scopeOf(outer), cacheOf({ 'res://player.tscn': sub })).groups;
+    const step = liveStep(node, scopeOf(outer), cacheOf({ 'res://player.tscn': sub }));
+    const groups = step.groups;
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('merged');
     // Merged children are the sub-scene root's children (and any host-added).
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['Camera', 'Mesh']);
     // Scope is the sub-scene's own resource table.
     expect(groups[0]!.scope.externalResources).toBe(sub.externalResources);
-    // The merged group carries the collapsed node (keeps the instance name,
-    // adopts the sub-scene root's type) so callers reuse the merge.
-    expect(groups[0]!.mergedNode?.name).toBe('Player');
-    expect(groups[0]!.mergedNode?.type).toBe('CharacterBody3D');
+    // The step shows the collapsed node: it keeps the instance name and adopts the sub-scene root's type.
+    expect(step.node.name).toBe('Player');
+    expect(step.node.type).toBe('CharacterBody3D');
   });
 
   it('fallback multi-root instance → inline group (OUTER scope) + subscene group (sub scope)', () => {
