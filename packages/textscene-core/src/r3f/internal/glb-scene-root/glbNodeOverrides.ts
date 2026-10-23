@@ -87,16 +87,41 @@ export function liftedWithoutOverrides(children: readonly LiveNode[]): LiveNode[
  * path, as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names
  * an existing node. Each caller resolves the path with its own lookup.
  */
-export function glbAttachPath(child: TscnNode): string | null {
+function glbAttachPath(child: TscnNode): string | null {
   return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
 }
 
+/** A typed node of the instancing scene, with the GLB object it is added to. */
+export interface GlbAttachment {
+  node: LiveNode;
+  target: GlbObjectEntry;
+}
+
 /**
- * The instancing scene's typed nodes that {@link glbAttachPath} places on a GLB object, and the
- * rest of `children`. A typed node whose path names none stays among the rest, where the tree has
- * always listed it. A property override is no node: Godot takes the existing node by name and adds
- * none (`packed_scene.cpp:280-283`), so it is in neither list. It looks up through the quiet
- * `findGlbTarget`.
+ * Each of `nodes` that {@link glbAttachPath} places on one of `entries`, with that entry, in
+ * authored order, and the rest of `nodes`. A typed node whose path names none stays among the rest.
+ * Both the scene tree and the viewport resolve through here, so one node never lands on two objects.
+ * It looks up through the quiet `findGlbTarget`, and the caller reports what stays unplaced.
+ */
+export function resolveGlbAttachments(
+  entries: readonly GlbObjectEntry[],
+  nodes: readonly LiveNode[]
+): { attached: GlbAttachment[]; rest: LiveNode[] } {
+  const attached: GlbAttachment[] = [];
+  const rest: LiveNode[] = [];
+  for (const node of nodes) {
+    const path = glbAttachPath(node);
+    const target = path === null ? null : findGlbTarget(entries, path).entry;
+    if (target) attached.push({ node, target });
+    else rest.push(node);
+  }
+  return { attached, rest };
+}
+
+/**
+ * {@link resolveGlbAttachments} for the scene tree, over the instancing node's `children`. A
+ * property override is no node: Godot takes the existing node by name and adds none
+ * (`packed_scene.cpp:280-283`), so it is in neither list.
  *
  * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
  * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
@@ -107,16 +132,11 @@ export function splitAttachedChildren(
 ): { attached: LiveNode[]; rest: LiveNode[] } {
   const nodes = liftedWithoutOverrides(children);
   if (nodes.every(isApplicableGlbOverride)) return { attached: [], rest: nodes };
-  const entries = flattenGlbObjects(root);
-  const attached: LiveNode[] = [];
-  const rest: LiveNode[] = [];
-  for (const child of nodes) {
-    const path = glbAttachPath(child);
-    const entry = path === null ? null : findGlbTarget(entries, path).entry;
-    if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });
-    else rest.push(child);
-  }
-  return { attached, rest };
+  const { attached, rest } = resolveGlbAttachments(flattenGlbObjects(root), nodes);
+  return {
+    attached: attached.map(({ node, target }) => ({ ...node, glbTargetRelPath: target.relPath })),
+    rest,
+  };
 }
 
 /**

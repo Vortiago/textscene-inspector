@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyGlbNodeOverrides, glbAttachPath } from './glbNodeOverrides';
+import { applyGlbNodeOverrides, resolveGlbAttachments } from './glbNodeOverrides';
+import { flattenGlbObjects } from './glbHierarchy';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './glbGraph.testkit';
@@ -176,17 +177,31 @@ describe('applyGlbNodeOverrides', () => {
   });
 });
 
-describe('glbAttachPath', () => {
-  it('names the parent path a typed child is added under', () => {
-    const typed = override('Lamp', {
-      type: 'Node3D',
-      instanceSubPath: 'Skeleton/Skeleton3D/Robot',
-      overridesExistingNode: false,
-    });
-    expect(glbAttachPath(typed)).toBe('Skeleton/Skeleton3D/Robot');
+describe('resolveGlbAttachments', () => {
+  const lamp = (instanceSubPath: string): TscnNode =>
+    override('Lamp', { type: 'Node3D', instanceSubPath, overridesExistingNode: false });
+
+  it('attaches a typed child to the object its parent path names, across the level Godot synthesised', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+
+    const { attached } = resolveGlbAttachments(entries, [lamp('Skeleton/Skeleton3D/Robot')]);
+
+    expect(attached.map(({ node, target }) => [node.name, target.relPath])).toEqual([
+      ['Lamp', 'Skeleton/Robot'],
+    ]);
   });
 
-  it('names none for an override, which names an existing node rather than adding one', () => {
-    expect(glbAttachPath(override('Robot', { instanceSubPath: 'Skeleton' }))).toBeNull();
+  it('attaches no override, which names an existing node rather than adding one', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+    const robot = override('Robot', { instanceSubPath: 'Skeleton' });
+
+    expect(resolveGlbAttachments(entries, [robot])).toEqual({ attached: [], rest: [robot] });
+  });
+
+  it('keeps a typed child whose parent path names no object among the rest', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+    const stray = lamp('Nowhere');
+
+    expect(resolveGlbAttachments(entries, [stray])).toEqual({ attached: [], rest: [stray] });
   });
 });

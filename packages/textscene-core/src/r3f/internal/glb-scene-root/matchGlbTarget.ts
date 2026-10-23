@@ -27,8 +27,9 @@ interface GlbTargetMatch {
 }
 
 /**
- * The GLB object a Godot path names, and how it was found, with no logging. The scene tree asks
- * through this: the viewport already reports a path that matches nothing.
+ * The GLB object a Godot path names, and how it was found, with no logging. `resolveGlbAttachments`
+ * asks through this for both the scene tree and the viewport, and the viewport reports a path that
+ * matches nothing.
  *
  * @param entries the GLB flattened by `flattenGlbObjects`
  * @param godotPath the path relative to the GLB root, such as `Skeleton/Skeleton3D/Robot`
