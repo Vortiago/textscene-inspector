@@ -10,6 +10,7 @@ const STATS: FrameStats = {
   gpuMs: 8.125,
   drawCallsPerFrame: 42.5,
   hasGpuTimer: true,
+  rendersInSoftware: false,
   steps: [
     { step: 'Shadows', cpuMs: 0.5, gpuMs: 4.25, runsPerFrame: 2, drawCallsPerFrame: 12 },
     { step: 'Fog', cpuMs: 0.25, gpuMs: 3, runsPerFrame: 1, drawCallsPerFrame: 0.5 },
@@ -44,6 +45,16 @@ describe('PerformancePanel', () => {
   it('says the GPU time is unavailable when the context has no timer query', () => {
     render(<PerformancePanel stats={{ ...STATS, gpuMs: null, hasGpuTimer: false }} />);
     expect(screen.getByTestId('performance-gpu').textContent).toBe('GPU n/a');
+  });
+
+  it('warns when the browser draws WebGL in software', () => {
+    render(<PerformancePanel stats={{ ...STATS, rendersInSoftware: true }} />);
+    expect(screen.getByTestId('performance-software').textContent).toBe('Software WebGL');
+  });
+
+  it('shows no software warning while a GPU draws', () => {
+    render(<PerformancePanel stats={STATS} />);
+    expect(screen.queryByTestId('performance-software')).toBeNull();
   });
 
   it('shows a dash for a GPU time whose result has not arrived', () => {

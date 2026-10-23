@@ -44,6 +44,8 @@ export interface FrameStats {
   drawCallsPerFrame: number;
   /** False when the context offers no timer query, so every GPU time stays null. */
   hasGpuTimer: boolean;
+  /** True when the browser draws WebGL on the CPU, so every time runs many times its GPU time. */
+  rendersInSoftware: boolean;
   /**
    * The steps that ran in the window or had a GPU result arrive in it, in `RENDER_STEPS` order,
    * then Other.

@@ -6,6 +6,7 @@
 
 import type * as THREE from 'three';
 import { GpuTimer } from './gpuTimer.js';
+import { rendersInSoftware } from './softwareRenderer.js';
 import {
   RENDER_STEPS,
   type FrameStats,
@@ -96,6 +97,7 @@ class Profile implements FrameProfile {
   private segmentStart = 0;
   private segmentDrawCalls = 0;
   private readonly gpu: GpuTimer | null;
+  private readonly rendersInSoftware: boolean;
   private readonly wasAutoReset: boolean;
 
   constructor(
@@ -103,7 +105,9 @@ class Profile implements FrameProfile {
     private readonly publish: (stats: FrameStats) => void,
     private readonly now: () => number
   ) {
-    this.gpu = GpuTimer.create(renderer.getContext() as WebGL2RenderingContext);
+    const gl = renderer.getContext() as WebGL2RenderingContext;
+    this.gpu = GpuTimer.create(gl);
+    this.rendersInSoftware = rendersInSoftware(gl);
     // three zeroes the count at each render's start (`WebGLRenderer.js:1731`), so a frame of several
     // renders keeps only its last one's. The profile zeroes it per frame instead.
     this.wasAutoReset = renderer.info.autoReset;
@@ -215,6 +219,7 @@ class Profile implements FrameProfile {
       gpuMs: gpuMsPerFrame(gpuNs),
       drawCallsPerFrame: drawCalls / frames,
       hasGpuTimer: this.gpu !== null,
+      rendersInSoftware: this.rendersInSoftware,
       steps,
     });
     this.sums = new WindowSums();

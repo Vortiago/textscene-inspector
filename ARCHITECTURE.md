@@ -183,7 +183,7 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
   of a node it names reads the **Lightmap atlas** through UV2 (ADR-0054).
 - **Frame profile.** The Display menu's Performance toggle times each render step on the CPU and
   the GPU and counts its draw calls, and the overlay shows the result (`r3f/frameProfile/`,
-  ADR-0053). `pnpm test:perf` holds the counts of a set of scenes to their work budget.
+  ADR-0053). The overlay warns when the browser draws WebGL in software. `pnpm test:perf` holds the counts of a set of scenes to their work budget.
 
 **Axis conventions.** Convert each axis where Godot data becomes a three.js object, never in a
 parser:

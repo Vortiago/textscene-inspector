@@ -180,6 +180,22 @@ describe('startFrameProfile', () => {
     expect(window(() => {})).toMatchObject({ hasGpuTimer: false, gpuMs: null });
   });
 
+  it('reports a context that draws in software', () => {
+    const renderer = cpuOnlyRenderer('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device), SwiftShader driver)');
+    expect(
+      profiledWindow(
+        renderer,
+        () => 0,
+        () => {}
+      ).rendersInSoftware
+    ).toBe(true);
+  });
+
+  it('reports a context that draws on a GPU as not in software', () => {
+    const { window } = cpuOnly();
+    expect(window(() => {}).rendersInSoftware).toBe(false);
+  });
+
   it('records nothing once stopped (error case)', () => {
     const renderer = cpuOnlyRenderer();
     const published: FrameStats[] = [];
