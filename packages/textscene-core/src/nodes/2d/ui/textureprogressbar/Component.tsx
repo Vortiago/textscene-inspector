@@ -148,7 +148,13 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     fillMode === TextureProgressBarFillMode.COUNTER_CLOCKWISE ||
     fillMode === TextureProgressBarFillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
-  const progressOffset = props.textureProgressOffset ?? ZERO;
+  const progressOffsetX = props.textureProgressOffset?.x ?? 0;
+  const progressOffsetY = props.textureProgressOffset?.y ?? 0;
+  // Memoised on the numbers: a reparse makes a new offset object, which would crop and upload again.
+  const progressOffset: Vector2 = useMemo(
+    () => ({ x: progressOffsetX, y: progressOffsetY }),
+    [progressOffsetX, progressOffsetY]
+  );
 
   const underNinePatch = useMemo(() => {
     if (!underTexture || !underSize || !ninePatchStretch) return null;
