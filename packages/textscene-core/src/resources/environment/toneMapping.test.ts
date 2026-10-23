@@ -3,7 +3,7 @@
  * pass, and a pass that renders the shared world. Godot multiplies by `tonemap_exposure` before
  * every curve, LINEAR included (`tonemap.glsl:868-874`), and each route must draw the same curve.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   installToneMapping,
@@ -129,6 +129,29 @@ describe('installToneMapping on the material route', () => {
     restore();
     expect(installed).toBeGreaterThan(before);
     expect(material.version).toBeGreaterThan(installed);
+  });
+});
+
+describe('the curve in three’s chunk', () => {
+  it('declares the exposure uniform and the hook once each, as GLSL needs', () => {
+    installToneMapping(fakeRenderer(), { mode: FILMIC }, 'material');
+    expect(installedChunk().match(/uniform float toneMappingExposure;/g)).toHaveLength(1);
+    expect(installedChunk().match(/vec3 CustomToneMapping\(/g)).toHaveLength(1);
+  });
+
+  it('warns and keeps the chunk when three holds no CustomToneMapping stub (error case)', async () => {
+    // The module reads three's chunk when it loads, so the chunk is set before a fresh import.
+    vi.resetModules();
+    const three = await import('three');
+    const { warningsOf } = await import('../../r3f/testing/logWarnings');
+    const withoutStub = 'vec3 OtherToneMapping( vec3 color ) { return color; }';
+    three.ShaderChunk.tonemapping_pars_fragment = withoutStub;
+    const { installToneMapping: installFresh } = await import('./toneMapping');
+
+    const warnings = warningsOf(() => installFresh(fakeRenderer(), { mode: FILMIC }, 'material'));
+
+    expect(warnings).toHaveLength(1);
+    expect(three.ShaderChunk.tonemapping_pars_fragment).toBe(withoutStub);
   });
 });
 

@@ -9,7 +9,14 @@ import { resolve } from 'node:path';
 import { repoRoot } from '../../parser/testing/parserKit';
 import { installShaderPatches } from './installShaderPatches';
 import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
-import { isCommentLine, isProductionSource, repoPath, walkSources } from '../testing/sourceScan';
+import {
+  isCommentLine,
+  isProductionSource,
+  RENDERER_ROOT,
+  repoPath,
+  walkSources,
+} from '../testing/sourceScan';
+import { warningsOf } from '../testing/logWarnings';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
 import { GODOT_ALPHA_ANTIALIASING } from '../materials/godotAlphaAntialiasing';
@@ -29,6 +36,8 @@ import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
+import { installToneMapping } from '../../resources/environment/toneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
 
 type ProgramName = 'basic' | 'standard' | 'physical' | 'depth' | 'distance';
@@ -88,22 +97,25 @@ function injected(
 function compiledBy(
   module: string,
   name: string,
-  program: ProgramName,
-  build: () => THREE.Material
+  programs: readonly ProgramName[],
+  build: (program: ProgramName) => THREE.Material
 ): InjectionCase {
   return {
     module,
     name,
-    programs: [program],
-    compile: (_, shader) => {
-      build().onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
+    programs,
+    compile: (program, shader) => {
+      build(program).onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
     },
   };
 }
 
 const LIT: readonly ProgramName[] = ['standard', 'physical'];
 const COLOUR: readonly ProgramName[] = ['basic', 'standard', 'physical'];
-const SURFACE_AND_DEPTH: readonly ProgramName[] = [...COLOUR, 'depth', 'distance'];
+const DEPTH_PROGRAMS: readonly ProgramName[] = ['depth', 'distance'];
+const SURFACE_AND_DEPTH: readonly ProgramName[] = [...COLOUR, ...DEPTH_PROGRAMS];
+
+type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
@@ -187,22 +199,19 @@ const INJECTIONS: readonly InjectionCase[] = [
         { ...TRANSPARENT, blending: THREE.AdditiveBlending }
       ).injection
   ),
-  compiledBy('materials/surfaceDepthMaterial.ts', 'surface depth', 'depth', () =>
-    surfaceDepthMaterial(surfaceWith({}), new THREE.MeshDepthMaterial())
-  ),
-  compiledBy('materials/surfaceDepthMaterial.ts', 'surface distance', 'distance', () =>
-    surfaceDepthMaterial(surfaceWith({}), new THREE.MeshDistanceMaterial())
+  compiledBy('materials/surfaceDepthMaterial.ts', 'surface depth', DEPTH_PROGRAMS, (program) =>
+    surfaceDepthMaterial(surfaceWith({}), MATERIAL_OF_PROGRAM[program]() as DepthBase)
   ),
   compiledBy(
     'positionalShadow/atlasDepthMaterials.ts',
     'atlas depth',
-    'depth',
+    ['depth'],
     () => new AtlasDepthMaterial()
   ),
   compiledBy(
     'positionalShadow/atlasDepthMaterials.ts',
     'paraboloid depth',
-    'depth',
+    ['depth'],
     () => new ParaboloidDepthMaterial()
   ),
   injected(
@@ -258,23 +267,50 @@ describe.each(INJECTIONS)('the $name injection', (injection) => {
   );
 });
 
-describe('the list of injections', () => {
-  const R3F = resolve(repoRoot(), 'packages/textscene-core/src/r3f');
+describe('the tone mapping curve', () => {
+  const EVERY_TONE_MAPPER = Object.values(ToneMapper);
 
+  it.each(EVERY_TONE_MAPPER)('splices into three’s chunk without a warning for mode %s', (mode) => {
+    const before = THREE.ShaderChunk.tonemapping_pars_fragment;
+    const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
+    let restore = (): void => {};
+    const warnings = warningsOf(() => {
+      restore = installToneMapping(gl, { mode }, 'material');
+    });
+    const spliced = THREE.ShaderChunk.tonemapping_pars_fragment;
+    restore();
+    expect(warnings).toEqual([]);
+    expect(spliced).not.toBe(before);
+  });
+});
+
+describe('the list of injections', () => {
   /** A line that defines an `onBeforeCompile`: a method, a property or an assignment, not prose. */
   const DEFINES_INJECTION = /^\s*(?:[\w.]+\.)?onBeforeCompile\s*(?:[(:=]|\s*=)/;
 
   /** `defining` only prepends a `#define`: it holds no anchor to miss. */
   const WITHOUT_ANCHORS = new Set(['materialProgramInputs.ts']);
 
-  const definers = walkSources([R3F], isProductionSource)
-    .filter(({ source }) =>
-      source.split('\n').some((line) => !isCommentLine(line) && DEFINES_INJECTION.test(line))
-    )
-    .map(({ file }) => repoPath(file).replace('packages/textscene-core/src/r3f/', ''))
-    .filter((module) => !WITHOUT_ANCHORS.has(module));
+  /** How many times each module defines an `onBeforeCompile`, by module relative to `r3f/`. */
+  function definitionsPerModule(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const { file, source } of walkSources([resolve(repoRoot(), RENDERER_ROOT)], isProductionSource)) {
+      const module = repoPath(file).slice(RENDERER_ROOT.length);
+      const definitions = source
+        .split('\n')
+        .filter((line) => !isCommentLine(line) && DEFINES_INJECTION.test(line)).length;
+      if (definitions > 0 && !WITHOUT_ANCHORS.has(module)) counts.set(module, definitions);
+    }
+    return counts;
+  }
 
-  it('names the module of every injection that splices a program', () => {
-    expect(new Set(INJECTIONS.map(({ module }) => module))).toEqual(new Set(definers));
+  function casesPerModule(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const { module } of INJECTIONS) counts.set(module, (counts.get(module) ?? 0) + 1);
+    return counts;
+  }
+
+  it('holds one case for each injection a module defines', () => {
+    expect(casesPerModule()).toEqual(definitionsPerModule());
   });
 });

@@ -25,25 +25,20 @@ import {
 } from '../../godot/rendering/environment/toneMapping.js';
 
 /**
- * The GLSL body for `CustomToneMapping`, per mode. three calls this after its
- * own `toneMappingExposure` is in scope but does NOT apply it for the custom
- * hook, so each curve multiplies it in first, which is also where Godot puts
- * `tonemap_exposure`. The white is a constant per environment, so it is baked in
- * rather than a uniform every material would have to declare.
+ * The GLSL function that takes the place of three's `CustomToneMapping` stub, per mode. three
+ * declares `toneMappingExposure` but does NOT apply it for the custom hook, so each curve
+ * multiplies it in first, which is also where Godot puts `tonemap_exposure`. The white is a
+ * constant per environment, so it is baked in rather than a uniform every material would have to declare.
  */
-export function toneMappingShaderChunk(
+export function customToneMappingFunction(
   mode: number,
   white: number,
   agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
 ): string {
-  return /* glsl */ `
-uniform float toneMappingExposure;
-
-vec3 CustomToneMapping(vec3 color) {
+  return /* glsl */ `vec3 CustomToneMapping(vec3 color) {
   color *= toneMappingExposure;
 ${curveGlsl(mode, white, agxContrast)}
-}
-`;
+}`;
 }
 
 /**
