@@ -25,6 +25,7 @@ import {
   textEditWrapIndentPx,
   textEditFirstIndentRow,
 } from './nativeSolver';
+import { withEmbolden } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
 
@@ -211,6 +212,10 @@ describe('textEditTabStopsPx (text_edit.cpp:349-351)', () => {
   });
   it('tab_size <= 0 disables tab alignment entirely (no stops)', () => {
     expect(textEditTabStopsPx(0, OPEN_SANS_FONT_METRICS, 16)).toEqual([]);
+  });
+  it('widens the stop by the face embolden, as get_char_size reports the space of a FontVariation', () => {
+    // 4.15625 + 1.2 * 16 / 64 = 4.45625, times 4.
+    expect(textEditTabStopsPx(4, withEmbolden(OPEN_SANS_FONT_METRICS, 1.2), 16)).toEqual([17.825]);
   });
   it('floors the derived stop at 1px', () => {
     expect(textEditTabStopsPx(1, OPEN_SANS_FONT_METRICS, 1)).toEqual([1]);

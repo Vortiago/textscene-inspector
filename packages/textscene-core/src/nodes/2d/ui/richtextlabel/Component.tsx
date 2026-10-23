@@ -27,6 +27,7 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   RICH_TEXT_LABEL_THEME_FONT_KEY,
   fontSizePxAtFromRuns,
+  emboldenAtFromRuns,
   imageObjectFontMetrics,
   layoutRichTextRuns,
   richTextLabelTextTheme,
@@ -132,6 +133,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
   );
   const plainText = useMemo(() => runs.map((r) => r.text).join(''), [runs]);
   const fontSizePxAt = useMemo(() => fontSizePxAtFromRuns(runs), [runs]);
+  const emboldenAt = useMemo(() => emboldenAtFromRuns(runs), [runs]);
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
 
@@ -147,6 +149,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         autowrapMode,
         lineSpacingPx: 0, // default_theme.cpp:1217: RichTextLabel's line_separation default, not Label's 3.
         fontSizePxAt,
+        emboldenAt,
         // An [img] run's placeholder character shapes at the image's width.
         fontMetrics: imageObjectFontMetrics(fontMetrics),
         tabStopsPx: richTextTabStopsPx(props.tabStopsPx, props.tabSize, fontMetrics, textTheme.fontSizePx),
@@ -158,6 +161,7 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
       rect.w,
       autowrapMode,
       fontSizePxAt,
+      emboldenAt,
       fontMetrics,
       props.tabStopsPx,
       props.tabSize,

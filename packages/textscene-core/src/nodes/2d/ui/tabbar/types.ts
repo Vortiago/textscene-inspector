@@ -19,7 +19,7 @@ export interface TabBarTabProperties {
 export interface TabBarProperties extends ControlProperties {
   /** Dense, one slot per index 0..tab_count-1, built from `tab_<idx>/*`. */
   tabs?: TabBarTabProperties[];
-  /** `tab_bar.h:113`, default -1 (no tab selected). */
+  /** `current_tab` as authored. `tab_bar.h:112` defaults it to -1, and a loaded bar with tabs opens on 0 (`resolveTabBarCurrentTab`). */
   currentTab?: number;
   /** `TabBar::AlignmentMode` (`tab_bar.h:43-47`): 0 LEFT, 1 CENTER, 2 RIGHT. Default 0. */
   tabAlignment?: number;

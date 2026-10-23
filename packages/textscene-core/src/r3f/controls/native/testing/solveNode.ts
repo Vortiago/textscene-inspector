@@ -43,6 +43,7 @@ export function solveNode(): Pick<
   | 'labelSettings'
   | 'themeChain'
   | 'projectTheme'
+  | 'projectDefaultFont'
   | 'colors'
   | 'constants'
   | 'icons'
@@ -65,6 +66,7 @@ export function solveNode(): Pick<
     labelSettings: null,
     themeChain: NO_THEME_CHAIN,
     projectTheme: null,
+    projectDefaultFont: null,
     colors: NO_COLORS,
     constants: NO_CONSTANTS,
     icons: NO_ICONS,

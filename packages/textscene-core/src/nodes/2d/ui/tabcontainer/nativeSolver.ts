@@ -29,6 +29,7 @@ import {
   TAB_BAR_THEME_FONT_KEY,
   TAB_BAR_THEME_FONT_SIZE_KEY,
   reconstructThemeScale,
+  resolveTabBarCurrentTab,
   tabBarMinimumSize,
 } from '../tabbar/nativeSolver';
 import {
@@ -39,25 +40,17 @@ import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
 
 /**
- * `TabContainer::get_current_tab()` for a loaded scene, which is not the `-1` default: the
- * first `add_tab` (through `add_child_notify`, `tab_container.cpp:640-655`) sets `current = 0`
- * unless deselection is enabled (`tab_bar.cpp:1324-1331`). An authored `current_tab` waits in
- * `setup_current_tab` (`tab_container.cpp:743-746`) until `NOTIFICATION_ENTER_TREE` (`:222-225`).
+ * `TabContainer::get_current_tab()` for a loaded scene: the first `add_tab` (through
+ * `add_child_notify`, `tab_container.cpp:640-655`) lands on the bar's own rule,
+ * `resolveTabBarCurrentTab`. An authored `current_tab` waits in `setup_current_tab`
+ * (`tab_container.cpp:743-746`) until `NOTIFICATION_ENTER_TREE` (`:222-225`).
  */
 function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
-  if (tabCount === 0) return -1;
-  const authored = props.currentTab;
-  // `TabBar::set_current_tab` can refuse it and leave 0 standing (`tab_bar.cpp:795-805`). An index
-  // past the last page is queued, and nothing consumes the queue, since `initialized` is still false.
-  if (authored === undefined || authored >= tabCount) return 0;
-  if (authored >= 0) return authored;
-  // -1 fails `ERR_FAIL_COND_MSG(!_can_deselect())` unless `deselect_enabled` is on or every
-  // tab is disabled or hidden (`tab_bar.cpp:1862-1873`).
-  const overrides = props.tabOverrides;
-  const everyTabUnselectable = Array.from({ length: tabCount }, (_unused, i) => overrides?.[i]).every(
-    (o) => o?.disabled === true || o?.hidden === true
-  );
-  return props.deselectEnabled === true || everyTabUnselectable ? -1 : 0;
+  const tabs = Array.from({ length: tabCount }, (_unused, i) => ({
+    disabled: props.tabOverrides?.[i]?.disabled === true,
+    hidden: props.tabOverrides?.[i]?.hidden === true,
+  }));
+  return resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs);
 }
 
 /**

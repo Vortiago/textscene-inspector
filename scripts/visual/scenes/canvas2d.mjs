@@ -226,6 +226,16 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-control-scene-font-magnified.tscn',
     mode: '2d',
   },
+  // The one variable: `gui/theme/custom_font` in the fixture's own project.godot, which every
+  // Control with no theme font then draws, with the RichTextLabel's bold on the same face.
+  {
+    name: 'label-project-default-font',
+    file: 'project-default-font/unit-label-project-default-font.tscn',
+    mode: '2d',
+  },
+  // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
+  // grows the outline and widens each advance, as the bold of a RichTextLabel does.
+  { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
   // RichTextLabel's supported bbcode subset in one pass: bold by embolden,
   // italic by skew, the underline rule and a colour span. The styled runs keep a
   // sub-pixel vertical residual against Godot, a FreeType light-hinting limit

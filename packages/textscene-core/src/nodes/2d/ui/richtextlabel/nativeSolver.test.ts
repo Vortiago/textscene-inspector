@@ -22,6 +22,7 @@ import {
   richTextLabelTextTheme,
   styledTextRuns,
   fontSizePxAtFromRuns,
+  emboldenAtFromRuns,
   layoutRichTextRuns,
   richTextUnderlineMetrics,
   underlineRectPx,
@@ -194,14 +195,14 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
       }),
       ctx()
     );
-    // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. Plain 'A' at
-    // 32px + bold 'A' at the 16px fallback: 1354*32/2048 + 1354*16/2048 =
-    // 21.15625 + 10.578125 = 31.734375 of pen advance, reported as the ceiled
-    // shaped size 32 (`text_server_adv.cpp:7524-7537`).
-    expect(result.x).toBe(Math.ceil(31.734375));
+    // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. Plain 'A' at 32px is 21.15625, which
+    // rounds to 21. Bold 'A' at the 16px fallback is 10.578125 plus the embolden advance
+    // 1.2 * 16 / 64 = 0.3 (below the rounding threshold, so unrounded): 21 + 10.878125 = 31.878125,
+    // reported as the ceiled shaped size 32 (`text_server_adv.cpp:7524-7537`).
+    expect(result.x).toBe(32);
   });
 
-  it('a [b] span whose bold_font_size ALSO matches normal_font_size measures as if uniformly shaped (the positive control this fix closes)', () => {
+  it('a [b] span whose bold_font_size matches normal_font_size shapes at that size, with the bold advance on top', () => {
     const result = richTextLabelMinimumSize(
       node({
         fitContent: true,
@@ -212,11 +213,11 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
       }),
       ctx()
     );
-    // Both 'A's shape at 32px, above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so
-    // each advance rounds to a whole pixel with the remainder carried
-    // (text_server_adv.cpp:7079-7084): 21 + 21 = 42, not 42.3125. Godot's
-    // `ThemeDB.fallback_font.get_string_size("AA", HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x` is 42.
-    expect(result.x).toBe(42);
+    // Both 'A's shape at 32px, above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance rounds to
+    // a whole pixel (text_server_adv.cpp:7079-7084). The plain one is 21.15625 -> 21. The bold one adds
+    // 1.2 * 32 / 64 = 0.6 (text_server_adv.cpp:3238-3239) and starts its own run, so its remainder
+    // restarts: 21.75625 -> 22. Unbold, this is 42 (`fallback_font.get_string_size("AA", ..., 32).x`).
+    expect(result.x).toBe(43);
   });
 
   it("an [img]-only paragraph floors get_minimum_size to the image's OWN box — width the (ceiled) advance, height its own centred ascent+descent", () => {
@@ -874,6 +875,28 @@ describe('fontSizePxAtFromRuns', () => {
   });
 });
 
+describe('emboldenAtFromRuns', () => {
+  const WHITE_RUN = { r: 1, g: 1, b: 1, a: 1 };
+
+  it('is 1.2, the default theme bold embolden (default_theme.cpp:1394), for a [b] character and nothing for a plain one', () => {
+    const runs = [
+      textRun({ text: 'ab', color: WHITE_RUN, fontSizePx: 18 }),
+      textRun({ text: 'CD', bold: true, color: WHITE_RUN, fontSizePx: 16 }),
+    ];
+    const emboldenAt = emboldenAtFromRuns(runs);
+    expect([0, 1, 2, 3].map(emboldenAt)).toEqual([undefined, undefined, 1.2, 1.2]);
+  });
+
+  it("an out-of-range index takes the last run's value, as the size lookup does", () => {
+    const runs = [textRun({ text: 'a', bold: true, color: WHITE_RUN, fontSizePx: 18 })];
+    expect(emboldenAtFromRuns(runs)(1)).toBe(1.2);
+  });
+
+  it('is undefined for an empty run list', () => {
+    expect(emboldenAtFromRuns([])(0)).toBeUndefined();
+  });
+});
+
 describe('BOLD_DISTANCE_BIAS / ITALIC_SKEW', () => {
   it('are non-zero (a zero value would be indistinguishable from the un-styled default)', () => {
     expect(BOLD_DISTANCE_BIAS).not.toBe(0);
@@ -957,6 +980,19 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.bold).toBe(true);
     expect(placements[1]!.color).toEqual(BLACK);
     expect(placements[1]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['B', 'O', 'L', 'D']);
+  });
+
+  it("a run's layout is wide enough for its glyphs, which keep their line-origin x (a canvas painter sizes its raster from it)", () => {
+    const runs = [
+      textRun({ text: 'plain ', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: FONT_SIZE }),
+    ];
+    const placements = layoutRichTextRuns(runs, shape('plain BOLD'));
+
+    for (const { layout } of placements) {
+      const lastGlyph = layout.lines[0]!.glyphs.at(-1)!;
+      expect(layout.widthPx).toBe(lastGlyph.x + lastGlyph.advance);
+    }
   });
 
   it('carries the underline flag through per placement, independent of bold/color', () => {

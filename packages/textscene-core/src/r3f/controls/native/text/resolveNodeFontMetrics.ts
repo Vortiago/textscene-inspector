@@ -30,7 +30,8 @@ function scopeFor(n: ShareNode): ThemeResolutionScope {
     n.node.type,
     controlProps(n).themeTypeVariation,
     n.themeChain,
-    n.projectTheme
+    n.projectTheme,
+    n.projectDefaultFont
   );
   scopeCache.set(n, scope);
   return scope;

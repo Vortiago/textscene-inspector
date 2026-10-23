@@ -32,6 +32,8 @@ export interface FontMetrics {
   getKerningAdjustmentUnits(a: string, b: string): number;
   /** This font's typical glyph width (such as OS/2 `xAvgCharWidth`), design units: the fallback advance for a character outside its charset. */
   readonly averageAdvanceUnits: number;
+  /** `FontVariation.variation_embolden` of this face. Absent is 0, no embolden. */
+  readonly embolden?: number;
 }
 
 /**
@@ -145,6 +147,47 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
   const advance26_6 = Math.floor((advance16_16 + 512) / 1024);
   return advance26_6 / 64;
+}
+
+/** One wrapper per face and embolden, so a layout memoised on `FontMetrics` identity keeps its hits. */
+const emboldenedFaces = new WeakMap<FontMetrics, Map<number, FontMetrics>>();
+
+/**
+ * `metrics` with `embolden` set. The wrapper reads every other field through the face, so a live
+ * getter stays live. An embolden of 0 is the face itself.
+ */
+export function withEmbolden(metrics: FontMetrics, embolden: number): FontMetrics {
+  if (embolden === 0) return metrics;
+  let byEmbolden = emboldenedFaces.get(metrics);
+  if (!byEmbolden) emboldenedFaces.set(metrics, (byEmbolden = new Map()));
+  let wrapped = byEmbolden.get(embolden);
+  if (!wrapped)
+    byEmbolden.set(embolden, (wrapped = Object.create(metrics, { embolden: { value: embolden } })));
+  return wrapped!;
+}
+
+/**
+ * The px an embolden adds to every advance: `embolden * size.x / 4096` with `size.x` in 26.6
+ * (`text_server_adv.cpp:3238-3239`), so `embolden * fontSizePx / 64`.
+ */
+export function getFontExtraAdvancePx(embolden: number, fontSizePx: number): number {
+  return (embolden * fontSizePx) / 64;
+}
+
+/** `getFontGlyphAdvancePx` plus the face's own embolden: the advance `get_char_size` reports for a `FontVariation`. */
+export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
+  return (
+    getFontGlyphAdvancePx(metrics, ch, fontSizePx) + getFontExtraAdvancePx(metrics.embolden ?? 0, fontSizePx)
+  );
+}
+
+/**
+ * The px `FT_Outline_Embolden` grows an outline by: `strength = embolden * size.x / 16` in 26.6
+ * (`text_server_adv.cpp:1313-1314`). The ink keeps its left and bottom edges and gains this much
+ * at the right and top.
+ */
+export function getFontEmboldenGrowthPx(embolden: number, fontSizePx: number): number {
+  return (embolden * fontSizePx) / 16;
 }
 
 /** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */

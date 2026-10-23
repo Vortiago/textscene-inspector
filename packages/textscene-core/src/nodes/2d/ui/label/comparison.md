@@ -11,8 +11,10 @@ renders_as: a shaped text run on the canvas
 
 Label is the 2D UI text node. The previewer shapes the string in the theme's font (or in
 the size, colour and line spacing of `label_settings`, which override the theme outright)
-and draws the glyphs on the canvas. It honours the alignment, case, wrap, line-window and
-partial-reveal settings.
+and draws the glyphs on the canvas. A Label whose themes name no font draws the project's
+`gui/theme/custom_font`, as Godot does (`theme_db.cpp`, `default_theme.cpp:1371-1373`). A path
+that does not load keeps the bundled font, with a warning and a missing-resource row. It
+honours the alignment, case, wrap, line-window and partial-reveal settings.
 
 ## Linting
 

@@ -69,6 +69,10 @@ string against `true`, so an absent property or any other value silently resolve
   plain text.
 - **Approximated** A `[b]` run shows a light box behind some letters, where the
   synthesised bold glyphs overlap.
+- **Approximated** A `[b]` run on the bundled font grows by the tuned `BOLD_DISTANCE_BIAS`, since
+  the MSDF atlas has no formula for FreeType's embolden.
+- **Not drawn** `bold_font`, `italics_font` and `bold_italics_font`, so a `normal_font` override
+  also changes bold, which Godot draws over the default font.
 - **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
   right edge instead of stretching to the box.
 - **Not drawn** `[p dir=]` and the right-to-left arms of `_draw_line`

@@ -73,6 +73,50 @@ describe('peekSceneFontMetrics', () => {
   });
 });
 
+describe('peekSceneFontMetrics — FontVariation embolden', () => {
+  const bytes = new ArrayBuffer(8);
+
+  function variation(baseFont: FontResource | null, properties: Record<string, string>): FontResource {
+    return { kind: 'variation', baseFont, properties };
+  }
+
+  async function settledPeek(font: FontResource) {
+    peekSceneFontMetrics(font, 'Root/Label');
+    await settleLoads();
+    return peekSceneFontMetrics(font, 'Root/Label');
+  }
+
+  it("carries the variation's variation_embolden on the metrics of its base face", async () => {
+    const metrics = await settledPeek(variation(fontFile(bytes), { variation_embolden: '1.2' }));
+    expect(metrics.embolden).toBe(1.2);
+    expect(metrics.getGlyphAdvanceUnits('A')).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits('A'));
+    expect(metrics.kind).toBe(OPEN_SANS_FONT_METRICS.kind);
+  });
+
+  it('returns the same metrics object on every peek, and for two variations of one face with one embolden', async () => {
+    const face = fontFile(bytes);
+    const first = variation(face, { variation_embolden: '1.2' });
+    const settled = await settledPeek(first);
+    expect(peekSceneFontMetrics(first, 'Root/Label')).toBe(settled);
+    expect(peekSceneFontMetrics(variation(face, { variation_embolden: '1.2' }), 'Root/Other')).toBe(settled);
+  });
+
+  it('leaves the base face untouched when the variation has no embolden, or an embolden of 0', async () => {
+    expect(await settledPeek(variation(fontFile(bytes), {}))).toBe(OPEN_SANS_FONT_METRICS);
+    expect(await settledPeek(variation(fontFile(bytes), { variation_embolden: '0.0' }))).toBe(
+      OPEN_SANS_FONT_METRICS
+    );
+  });
+
+  it('draws the bundled face with no embolden while the base face is still loading', () => {
+    const metrics = peekSceneFontMetrics(
+      variation(fontFile(new ArrayBuffer(4)), { variation_embolden: '1.2' }),
+      'Root/L'
+    );
+    expect(metrics.embolden).toBeUndefined();
+  });
+});
+
 describe('onSceneFontMetricsSettled', () => {
   it('(happy) fires once the load a peek starts for a resolvable resource settles', async () => {
     const listener = vi.fn();

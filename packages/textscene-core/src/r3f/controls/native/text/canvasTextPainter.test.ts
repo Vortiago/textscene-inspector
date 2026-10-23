@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
+  paintSceneFontCanvas,
 } from './canvasTextPainter';
 import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
@@ -72,6 +73,73 @@ describe('computeCanvasTextCanvasLayout', () => {
     const skewed = computeCanvasTextCanvasLayout(layout, 0.5);
     expect(straight.canvasHeightPx).toBeGreaterThan(layout.heightPx);
     expect(straight.canvasHeightPx).toBe(skewed.canvasHeightPx);
+  });
+});
+
+function boldLayoutFor(text: string, embolden: number) {
+  return shapeText(text, {
+    fontSizePx: 16,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    fontMetrics: CANVAS_METRICS,
+    lineSpacingPx: 0,
+    emboldenAt: () => embolden,
+  });
+}
+
+// `FT_Outline_Embolden` grows the outline by `embolden * size / 16` px and anchors it at the left
+// and bottom (`text_server_adv.cpp:1313-1314`): half the growth on each side, then a shift of half.
+describe('embolden padding', () => {
+  it('pads the raster by the outline growth on every side, so the grown ink stays inside it', () => {
+    const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
+    const bold = computeCanvasTextCanvasLayout(boldLayoutFor('AB', 1.2), 0);
+    const growthPx = (1.2 * 16) / 16;
+    expect(bold.offsetXPx).toBeCloseTo(plain.offsetXPx + growthPx, 10);
+    expect(bold.offsetYPx).toBeCloseTo(plain.offsetYPx + growthPx, 10);
+  });
+
+  it('pads by the largest growth when two glyphs differ', () => {
+    const layout = layoutFor('AB', 0);
+    layout.lines[0]!.glyphs[1]!.emboldenGrowthPx = 2;
+    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBeCloseTo(2, 10);
+  });
+});
+
+describe('paintSceneFontCanvas — embolden', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Records the fill and stroke calls of one paint, since happy-dom has no 2D context. */
+  function paintRecording(layout: ReturnType<typeof layoutFor>) {
+    const calls: { op: string; args: unknown[]; lineWidth: number }[] = [];
+    const ctx = {
+      lineWidth: 1,
+      save: () => {},
+      restore: () => {},
+      transform: () => {},
+      fillText: (...args: unknown[]) => calls.push({ op: 'fillText', args, lineWidth: ctx.lineWidth }),
+      strokeText: (...args: unknown[]) => calls.push({ op: 'strokeText', args, lineWidth: ctx.lineWidth }),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, 0, canvasLayout);
+    return { calls, canvasLayout };
+  }
+
+  it('draws a plain glyph with one fill and no stroke', () => {
+    const { calls } = paintRecording(layoutFor('A', 0));
+    expect(calls.map((c) => c.op)).toEqual(['fillText']);
+  });
+
+  it('draws a bold glyph filled and stroked by the growth, shifted right and up by half of it', () => {
+    const layout = boldLayoutFor('A', 1.2);
+    const { calls, canvasLayout } = paintRecording(layout);
+    const growthPx = 1.2;
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+    const expectedArgs = ['A', canvasLayout.offsetXPx + growthPx / 2, baselineY - growthPx / 2];
+    expect(calls.map((c) => c.op)).toEqual(['fillText', 'strokeText']);
+    expect(calls[0]!.args).toEqual(expectedArgs);
+    expect(calls[1]!.args).toEqual(expectedArgs);
+    expect(calls[1]!.lineWidth).toBeCloseTo(growthPx, 10);
   });
 });
 

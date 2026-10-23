@@ -36,6 +36,7 @@ import {
   pickTabStyleBox,
   reconstructThemeScale,
   resolveTabDrawState,
+  resolveTabBarCurrentTab,
   shapeTabLabel,
   tabBarFontColor,
   tabBarFontSizePx,
@@ -69,7 +70,7 @@ interface ComputedTab {
 export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
-  const currentTab = props.currentTab ?? -1;
+  const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs);
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
   const clipTabs = props.clipTabs ?? true;
   const maxTabWidth = props.maxTabWidth ?? 0;
@@ -168,7 +169,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const currentItem = drawLayout.items.find((it) => it.index === currentTab) ?? null;
 
   const commonChromeProps = {
-    props,
+    currentTab,
     solveNode,
     overrides,
     defaults,
@@ -224,7 +225,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
 interface TabBarTabChromeProps {
   item: TabLayoutItem;
   entry: ComputedTab;
-  props: TabBarProperties;
+  currentTab: number;
   solveNode: SolveNode;
   overrides: Readonly<Record<string, StyleBoxFlatData>>;
   defaults: ReturnType<typeof tabBarStyleBoxes>;
@@ -246,7 +247,7 @@ interface TabBarTabChromeProps {
 function TabBarTabChrome({
   item,
   entry,
-  props,
+  currentTab,
   solveNode,
   overrides,
   defaults,
@@ -265,7 +266,7 @@ function TabBarTabChrome({
 }: TabBarTabChromeProps) {
   const { tab, state, iconSize, layout } = entry;
   const style = pickTabStyleBox(overrides, defaults, state);
-  const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, props.currentTab ?? -1);
+  const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, currentTab);
 
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: iconSource } = useTexture2D(tab.icon, externalResources, internalResources);

@@ -306,6 +306,104 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
   });
 });
 
+// FontVariation embolden widens every advance by `embolden * size / 64` px: `_get_extra_advance`
+// (`text_server_adv.cpp:3231-3243`) adds it to `x_advance` at `:7077`, before the whole-pixel round.
+describe('shapeText — embolden (extra advance per glyph)', () => {
+  afterEach(() => {
+    delete OPEN_SANS_METRICS.kerning.AB;
+  });
+
+  function shapeBold(text: string, fontSizePx: number, emboldenAt?: (i: number) => number | undefined) {
+    return shapeText(text, {
+      fontSizePx,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      emboldenAt,
+    }).lines[0]!.glyphs;
+  }
+
+  it('adds embolden * size / 64 to a subpixel advance: 1.2 at 16 px is 0.3 px', () => {
+    // 'A' is 677/64 px at 16 px (see `fontSizePxAt` above), so bold is 677/64 + 0.3.
+    const [a0, a1] = shapeBold('AA', 16, () => 1.2);
+    expect(a0!.advance).toBeCloseTo(677 / 64 + 0.3, 10);
+    expect(a1!.x).toBeCloseTo(677 / 64 + 0.3, 10);
+  });
+
+  it('scales with the size: 1.2 at 20 px is 0.375 px, and 2.5 at 16 px is 0.625 px', () => {
+    // The difference of two shapes isolates the extra advance from the quantised base.
+    const at20 = shapeBold('A', 20, () => 1.2)[0]!.advance;
+    const plain20 = shapeBold('A', 20)[0]!.advance;
+    expect(at20 - plain20).toBeCloseTo(0.375, 10);
+    expect(shapeBold('A', 16, () => 2.5)[0]!.advance - shapeBold('A', 16)[0]!.advance).toBeCloseTo(0.625, 10);
+  });
+
+  it('adds nothing for an embolden of 0, or with no emboldenAt', () => {
+    expect(shapeBold('AB', 16, () => 0)).toEqual(shapeBold('AB', 16));
+  });
+
+  it('adds before the whole-pixel round above 20 px, so the remainder carries', () => {
+    // 'A' at 40 px is 1693/64 = 26.453125. Bold adds 1.2 * 40 / 64 = 0.75, so the full advances
+    // 27.203125, 27.40625, 27.609375 and 26.8125 round to 27, 27, 28 and 27 with a carried remainder.
+    const advances = shapeBold('AAAA', 40, () => 1.2).map((g) => g.advance);
+    expect(advances).toEqual([27, 27, 28, 27]);
+  });
+
+  it('restarts the carried remainder where the embolden changes (a new shaped run)', () => {
+    // The first two glyphs round to 27 and 27 (remainder 0.40625). A new run starts at 0, so the
+    // plain 'A' is 26.453125 -> 26 (remainder 0.453125) and the last is 26.90625 -> 27.
+    const advances = shapeBold('AAAA', 40, (i) => (i < 2 ? 1.2 : 0)).map((g) => g.advance);
+    expect(advances).toEqual([27, 27, 26, 27]);
+  });
+
+  it('skips kerning across an embolden boundary, as across a size boundary', () => {
+    OPEN_SANS_METRICS.kerning.AB = -256;
+    const [a] = shapeBold('AB', 16, (i) => (i === 0 ? 0 : 1.2));
+    expect(a!.advance).toBeCloseTo(677 / 64, 10);
+  });
+
+  it("records each glyph's outline growth for the painter, and leaves a plain glyph without one", () => {
+    const [plain, bold] = shapeBold('AB', 16, (i) => (i === 0 ? 0 : 1.2));
+    expect(plain!.emboldenGrowthPx).toBeUndefined();
+    expect(bold!.emboldenGrowthPx).toBeCloseTo(1.2, 10);
+  });
+
+  it("grows each glyph's outline at its own size", () => {
+    const glyphs = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontSizePxAt: (i) => (i === 0 ? 16 : 32),
+      emboldenAt: () => 1.2,
+    }).lines[0]!.glyphs;
+    expect(glyphs.map((g) => g.emboldenGrowthPx)).toEqual([1.2, 2.4]);
+  });
+
+  it("takes a face's own embolden from its FontMetrics when emboldenAt names none", () => {
+    const boldFace: FontMetrics = {
+      kind: 'canvas',
+      unitsPerEm: 1000,
+      ascent: 800,
+      descent: 200,
+      getGlyphAdvanceUnits: () => 500,
+      getKerningAdjustmentUnits: () => 0,
+      averageAdvanceUnits: 500,
+      embolden: 1.2,
+    };
+    const glyphs = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: boldFace,
+    }).lines[0]!.glyphs;
+    // 500 units at 1000 per em, 16 px: 8 px, plus 0.3.
+    expect(glyphs[0]!.advance).toBeCloseTo(8.3, 10);
+    expect(glyphs[0]!.emboldenGrowthPx).toBeCloseTo(1.2, 10);
+  });
+});
+
 // Ascent and descent are FreeType's pixel-quantised values, each ceiled before summing
 // (modules/text_server_adv/text_server_adv.cpp:1515-1516).
 describe('shapeText — line pitch', () => {

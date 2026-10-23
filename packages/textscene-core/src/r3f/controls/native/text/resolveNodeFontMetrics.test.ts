@@ -8,7 +8,7 @@ import type { SolveNode } from '../solveTree';
 import { controlNode, solveNode } from '../testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import { resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
+import { resolveNodeFont, resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 import * as themeLookup from '../../../../resources/styles/theme/lookup';
@@ -99,6 +99,35 @@ describe('resolveNodeFontMetrics', () => {
     // resolves and no warn fires.
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveNodeFont — the project default font as the last rung', () => {
+  const projectFont: FontResource = { kind: 'variation', baseFont: null, properties: { project: '1' } };
+
+  it('is the project default font for a Control that no theme gives a font', () => {
+    expect(resolveNodeFont(labelNode({ projectDefaultFont: projectFont }), 'font')).toBe(projectFont);
+  });
+
+  it('is null with no project default font, so the painter draws the bundled font', () => {
+    expect(resolveNodeFont(labelNode(), 'font')).toBeNull();
+  });
+
+  it("a gui/theme/custom theme's default_font wins over it", () => {
+    const themeFont = systemFont();
+    const project: ThemeResource = { ...emptyTheme(), defaultFont: themeFont };
+    const n = labelNode({ projectTheme: project, projectDefaultFont: projectFont });
+    expect(resolveNodeFont(n, 'font')).toBe(themeFont);
+  });
+
+  it("a node's own override authored to nothing wins over it", () => {
+    const n = labelNode({ fontOverrides: { font: null }, projectDefaultFont: projectFont });
+    expect(resolveNodeFont(n, 'font')).toBeNull();
+  });
+
+  it("answers for RichTextLabel's normal_font key too, which bold and italic synthesise over", () => {
+    const n = labelNode({ projectDefaultFont: projectFont });
+    expect(resolveNodeFont(n, 'normal_font')).toBe(projectFont);
   });
 });
 

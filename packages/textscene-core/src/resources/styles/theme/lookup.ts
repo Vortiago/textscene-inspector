@@ -99,25 +99,29 @@ function fontSizeInTheme(theme: ThemeResource, type: string, name: string): numb
 export interface ThemeResolutionScope {
   readonly typeChain: readonly string[];
   readonly searchOrder: readonly ThemeResource[];
+  /** The font a lookup reaches after every theme: the default theme's `default_font`. Null draws the bundled font. */
+  readonly projectDefaultFont: FontResource | null;
 }
 
 export function themeResolutionScope(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],
-  projectTheme: ThemeResource | null
+  projectTheme: ThemeResource | null,
+  projectDefaultFont: FontResource | null
 ): ThemeResolutionScope {
   return {
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
+    projectDefaultFont,
   };
 }
 
 /**
  * A Control's resolved theme font (`Control::get_theme_font`,
  * `scene/gui/control.cpp:3083-3103`; `ThemeOwner::get_theme_item_in_types`,
- * `scene/theme/theme_owner.cpp:227-254`). Null when nothing defines it: the
- * painter then draws its bundled default face.
+ * `scene/theme/theme_owner.cpp:227-254`). Null when nothing defines it, not even the
+ * project's default font: the painter then draws its bundled default face.
  *
  * @param override The node's own `theme_override_fonts/<name>`, which wins once
  *   declared with no validity check (`control.cpp:3089-3093`). `undefined` means
@@ -143,7 +147,9 @@ export function resolveThemeFontIn(
       if (found !== undefined) return found;
     }
   }
-  return null;
+  // The default theme's `default_font`, which the project font replaces
+  // (`default_theme.cpp:1371-1373`), is the last rung (`theme_owner.cpp:227-254`).
+  return scope.projectDefaultFont;
 }
 
 /**

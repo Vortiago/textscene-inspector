@@ -4,6 +4,7 @@
  * previewer cannot load bytes for OS family names.
  */
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import { parseGodotFloat } from '../../../../godot/variant/number';
 
 interface ResolvedFontBytes {
   /** Raw font bytes, ready for `new FontFace(name, bytes)`. */
@@ -38,4 +39,15 @@ export function resolveFontFileBytes(font: FontResource | null | undefined): Res
       return null;
     }
   }
+}
+
+/**
+ * `FontVariation.variation_embolden` of `font`, 0 for any other font or a value that is not a
+ * number. A variation over a variation takes its own value: `find_variation` links a new face
+ * with this variation's embolden to the base's first face (`font.cpp:3128-3131`).
+ */
+export function fontVariationEmbolden(font: FontResource | null | undefined): number {
+  if (font?.kind !== 'variation') return 0;
+  const text = font.properties['variation_embolden'];
+  return (text === undefined ? null : parseGodotFloat(text)) ?? 0;
 }

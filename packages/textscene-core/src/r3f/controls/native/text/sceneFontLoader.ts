@@ -3,7 +3,7 @@
  * and registers the bundled font through the same door, so registration and the settled channel
  * exist once. It is the one DOM-touching module of the font pipeline, and it never throws.
  */
-import type { FontMetrics } from './fontMetrics';
+import { withEmbolden, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
@@ -13,7 +13,7 @@ import {
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
-import { resolveFontFileBytes } from './sceneFontResolution';
+import { fontVariationEmbolden, resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
@@ -186,7 +186,7 @@ async function resolveSceneFontMetrics(
 
 /**
  * The synchronous entry for a solve pass: the bundled default while a load is in flight or failed,
- * the real metrics once it lands. Never throws. It starts `resolveSceneFontMetrics` once per font,
+ * the real metrics once it lands, with the `FontVariation` embolden on top. Never throws. It starts `resolveSceneFontMetrics` once per font,
  * so calling both never double-loads.
  */
 export function peekSceneFontMetrics(font: FontResource | null | undefined, nodePath: string): FontMetrics {
@@ -199,7 +199,7 @@ export function peekSceneFontMetrics(font: FontResource | null | undefined, node
   }
 
   const existing = metricsCache.get(resolved.leaf);
-  if (existing?.status === 'settled') return existing.metrics;
+  if (existing?.status === 'settled') return withEmbolden(existing.metrics, fontVariationEmbolden(font));
   if (!existing) {
     void resolveSceneFontMetrics(font, nodePath);
   }

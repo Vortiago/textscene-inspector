@@ -37,7 +37,7 @@ import {
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import {
   getFontAscentPx,
-  getFontGlyphAdvancePx,
+  getFontEmboldenedAdvancePx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -253,7 +253,7 @@ export function richTextTabStopsPx(
   if (tabStopsPx && tabStopsPx.length > 0) return tabStopsPx;
   const size = tabSize ?? 4;
   if (size <= 0) return [];
-  return [Math.max(1, size * getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx))];
+  return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
 }
 
 /**
@@ -300,6 +300,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     autowrapMode: wrapWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
     lineSpacingPx: 0,
     fontSizePxAt: fontSizePxAtFromRuns(runs),
+    emboldenAt: emboldenAtFromRuns(runs),
     // An `[img]` placeholder shapes at the image width, as in `Component.tsx`,
     // so measure and paint wrap alike.
     fontMetrics: imageObjectFontMetrics(fontMetrics),
@@ -467,16 +468,32 @@ export function styledTextRuns(
 }
 
 /**
- * The per-character `fontSizePxAt` for `shapeText`, indexed over the
- * concatenated text of `styledRuns`.
+ * One value per character of the concatenated text of `styledRuns`, the shape `shapeText`'s
+ * per-character options take. An index past the end takes the last character's value.
  */
-export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (charIndex: number) => number {
-  const sizes: number[] = [];
+function perCharacter<T>(
+  styledRuns: readonly StyledTextRun[],
+  valueOf: (run: StyledTextRun) => T
+): (charIndex: number) => T | undefined {
+  const values: T[] = [];
   for (const run of styledRuns) {
-    for (let i = 0; i < run.text.length; i++) sizes.push(run.fontSizePx);
+    const value = valueOf(run);
+    for (let i = 0; i < run.text.length; i++) values.push(value);
   }
-  const lastSize = sizes.length > 0 ? sizes[sizes.length - 1]! : 0;
-  return (charIndex: number) => sizes[charIndex] ?? lastSize;
+  return (charIndex) => (charIndex < values.length ? values[charIndex] : values.at(-1));
+}
+
+/** The per-character `fontSizePxAt` for `shapeText`. 0 for no runs. */
+export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (charIndex: number) => number {
+  const sizeAt = perCharacter(styledRuns, (run) => run.fontSizePx);
+  return (charIndex) => sizeAt(charIndex) ?? 0;
+}
+
+/** The per-character `emboldenAt` for `shapeText`: `BOLD_EMBOLDEN` in a `[b]` run, else undefined. */
+export function emboldenAtFromRuns(
+  styledRuns: readonly StyledTextRun[]
+): (charIndex: number) => number | undefined {
+  return perCharacter(styledRuns, (run) => (run.bold ? BOLD_EMBOLDEN : undefined));
 }
 
 /**
@@ -486,6 +503,13 @@ export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (cha
  * renders 3.01px against Godot's 3.04px. `richtextlabel/comparison.md` holds the residuals.
  */
 export const BOLD_DISTANCE_BIAS = 0.35;
+
+/**
+ * `variation_embolden` of the default theme's bold font (`default_theme.cpp:1394`, `:1398`). It
+ * widens each advance by `embolden * size / 64` px (`text_server_adv.cpp:3238-3239`) and, on a
+ * canvas raster, grows the outline by `embolden * size / 16` px.
+ */
+const BOLD_EMBOLDEN = 1.2;
 
 /**
  * `default_theme.cpp:1399`/`:1403`: `Transform2D(1.0, 0.2, 0.0, 1.0, 0.0, 0.0)`, bold+italic
@@ -542,9 +566,10 @@ function soloRunLayout(
   parentLayout: TextLayoutResult,
   lineAscentPx: number
 ): TextLayoutResult {
-  const widthPx = glyphs.length
-    ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x
-    : 0;
+  // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
+  // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
+  const lastGlyph = glyphs.at(-1);
+  const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
   return soloLineLayout({ text, glyphs, widthPx }, parentLayout, lineAscentPx);
 }
 

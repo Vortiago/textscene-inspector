@@ -983,6 +983,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Embolden",
+    "file": "unit-label-font-variation-embolden.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Label Settings Tres",
     "file": "unit-label-label-settings-tres.tscn",
     "category": "Other"
@@ -2231,6 +2236,12 @@ export const fixtures: Fixture[] = [
     "file": "msaa-3d/unit-msaa-3d.tscn",
     "category": "Other",
     "root": "msaa-3d"
+  },
+  {
+    "name": "Label Project Default Font",
+    "file": "project-default-font/unit-label-project-default-font.tscn",
+    "category": "Other",
+    "root": "project-default-font"
   },
   {
     "name": "Subviewport Snap Off",
