@@ -4,13 +4,13 @@ category: 2D
 fixture: unit-lightoccluder2d.tscn
 image: unit-lightoccluder2d
 group: Lighting
-renders_as: a selection-gated outline of its occluder polygon, it occludes 2D light
+renders_as: an outline of its occluder polygon for every node, it occludes 2D light
 ---
 
 # LightOccluder2D
 
 LightOccluder2D blocks a shadow-enabled Light2D and is invisible on its own. The
-previewer draws only a selection-gated outline for it and withholds the light where its
+previewer draws only an editor outline for it, for every node, and withholds the light where its
 shadow falls.
 
 ## A single occluder edge
@@ -72,7 +72,7 @@ warns and falls back to `1` for either, and an unparseable `sdf_collision` falls
 
 - **Shader missing** `sdf_collision` has no effect, since no signed-distance field is
   built for particle collision or SDF-lit materials.
-- **Editor only** The occluder outline is selection-gated, so a still render shows none,
+- **Editor only** The occluder outline draws when the Gizmos toggle is on, so a still render shows none,
   as Godot's runtime does.
 - **Approximated** Under a `shadow_filter` a tap lands in one of 2048 polar bins, so a
   boundary at a glancing angle can sit one bin from Godot's.

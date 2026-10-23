@@ -4,12 +4,12 @@ category: 3D
 status: done
 fixture: unit-path3d.tscn
 image: unit-path3d
-renders_as: a selection-gated curve gizmo
+renders_as: a curve gizmo for every node
 ---
 
 # Path3D
 
-Holds a `Curve3D` that its descendants can ride. Its only visual is the curve polyline, a selection-gated editor gizmo (ADR-0018), so a plain capture draws nothing for the path itself. The fixture's marker spheres trace the arch in both frames.
+Holds a `Curve3D` that its descendants can ride. Its only visual is the curve polyline, an editor gizmo drawn for every node, faint while unselected (ADR-0056). A capture keeps the Gizmos toggle off, so a plain capture draws nothing for the path itself. The fixture's marker spheres trace the arch in both frames.
 
 ## Linting
 
@@ -33,4 +33,4 @@ Strict parsing format-checks these `Path3D` properties, plus 17 inherited from N
 
 ## Known limitations
 
-- **Editor only** The curve polyline draws only for the selected node, and Godot draws no path line while running.
+- **Editor only** The curve polyline draws with the Gizmos toggle on, and Godot draws no path line while running.

@@ -1,0 +1,63 @@
+[gd_scene load_steps=4 format=3]
+
+; The one variable: the font of each style. The first row reads the default theme's bold, italics
+; and bold italics (`FontVariation`s over the default font). The second row sets `bold_font` and
+; `italics_font` on the node, at embolden 0.4 and a skew of 0.5. The third sets bare variations,
+; which draw the default font itself.
+
+[sub_resource type="FontVariation" id="FontVariation_light_bold"]
+variation_embolden = 0.4
+
+[sub_resource type="FontVariation" id="FontVariation_steep_italics"]
+variation_transform = Transform2D(1, 0.5, 0, 1, 0, 0)
+
+[sub_resource type="FontVariation" id="FontVariation_plain"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="DefaultStyles" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 110.0
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+theme_override_font_sizes/italics_font_size = 40
+theme_override_font_sizes/bold_italics_font_size = 40
+bbcode_enabled = true
+text = "Plain [b]Bold[/b] [i]Italic[/i] [b][i]Both[/i][/b]"
+
+[node name="NodeStyles" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 130.0
+offset_right = 1100.0
+offset_bottom = 210.0
+theme_override_fonts/bold_font = SubResource("FontVariation_light_bold")
+theme_override_fonts/italics_font = SubResource("FontVariation_steep_italics")
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+theme_override_font_sizes/italics_font_size = 40
+theme_override_font_sizes/bold_italics_font_size = 40
+bbcode_enabled = true
+text = "Plain [b]Bold 0.4[/b] [i]Italic 0.5[/i] [b][i]Both[/i][/b]"
+
+[node name="PlainStyles" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 230.0
+offset_right = 1100.0
+offset_bottom = 310.0
+theme_override_fonts/bold_font = SubResource("FontVariation_plain")
+theme_override_fonts/italics_font = SubResource("FontVariation_plain")
+theme_override_fonts/bold_italics_font = SubResource("FontVariation_plain")
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+theme_override_font_sizes/italics_font_size = 40
+theme_override_font_sizes/bold_italics_font_size = 40
+bbcode_enabled = true
+text = "Plain [b]Bold[/b] [i]Italic[/i] [b][i]Both[/i][/b]"

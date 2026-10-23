@@ -96,7 +96,7 @@ The 2D frame cannot show what the 3D one cannot either: **editor gizmos**. The
 reference renders the game, so a fixture whose only content is a
 CollisionShape2D outline, a Marker2D cross, a Path2D curve or an
 AudioStreamPlayer2D icon comes back empty from Godot. It comes back empty from
-us too, since those are selection-gated or toggle-gated here, so the pair is two
+us too, since a capture keeps the Gizmos and Collisions toggles off, so the pair is two
 agreeing empty frames. `unit-navigation-region-2d` is the exception: it shows our
 navmesh overlay (toolbar-toggled, on by default) against Godot's empty frame. A
 gizmo comparison needs the editor, not a render, and is out of this tool's reach.

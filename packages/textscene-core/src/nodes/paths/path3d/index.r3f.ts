@@ -1,4 +1,4 @@
-/** Path3D renders a selection-gated Curve3D polyline gizmo over a Node3D group (ADR-0018). */
+/** Path3D renders a Curve3D polyline gizmo for every node over a Node3D group (ADR-0056). */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Path3D } from './Component';

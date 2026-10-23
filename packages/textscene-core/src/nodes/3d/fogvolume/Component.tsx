@@ -2,7 +2,7 @@
  * <FogVolume>: puts a fog volume into the scene at the node's transform, which the volumetric fog
  * finds and draws (`r3f/fog/fogVolumeRows.ts`). It draws nothing of its own, so it draws nothing
  * where the Environment's volumetric fog is off, as in Godot. Godot's editor gizmo of the box draws
- * while the node is selected (ADR-0018).
+ * for every node, faint while unselected (ADR-0056).
  */
 
 import { useEffect, useMemo } from 'react';
@@ -14,7 +14,7 @@ import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
 import {
   DEFAULT_FOG_VOLUME_FILL,
   FogVolumeObject,
@@ -121,12 +121,14 @@ export function FogVolume({ node, children }: NodeComponentProps) {
     () => (animatedSize ? fogVolumeSize(animatedSize) : properties.size),
     [animatedSize, properties.size]
   );
-  const gizmoVisible = useGizmoVisible();
+  const gizmoState = useGizmoState('every-node');
 
   return (
     <Node3D node={node}>
       <FogVolumeElement size={[size.x, size.y, size.z]} shape={properties.shape} fill={fill} />
-      {gizmoVisible && <FogVolumeGizmo size={size} shape={properties.shape} />}
+      {gizmoState !== 'hidden' && (
+        <FogVolumeGizmo size={size} shape={properties.shape} variant={gizmoState} />
+      )}
       {children}
     </Node3D>
   );

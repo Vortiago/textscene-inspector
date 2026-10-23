@@ -27,6 +27,14 @@ export interface ProceduralBuildPlan<Name extends WorkerJobName = WorkerJobName>
   /** Equal for equal pixels, whatever file or id the texture came from. */
   contentKey: string;
   wrap(output: WorkerJobOutput<Name>): THREE.Texture;
+  /**
+   * For a holder that draws more than the built texture: its own texture, over the same bytes. It is
+   * keyed apart (`suffix`), so a holder that wants it re-runs no job when the built texture is cached.
+   */
+  derived?: {
+    suffix: string;
+    derive(built: THREE.Texture): THREE.Texture;
+  };
 }
 
 /** A holder's share of a build. Release it when the texture is no longer wanted. */
@@ -81,11 +89,11 @@ export function resolveProceduralSubResourceAsync(
   const build = plannedBuild(resource, internalResources, plan);
   if (!build) return null;
 
-  const key = build.contentKey;
+  const key = build.contentKey + (build.derived?.suffix ?? '');
   const texture = cachedProceduralTexture(key);
   if (texture) return { status: 'ready', texture, key };
   const label = allocationLabel(typeName, resource.id);
-  return { status: 'pending', key, start: (runner) => joinBuild(key, build, label, runner) };
+  return { status: 'pending', key, start: (runner) => joinDerived(key, build, label, runner) };
 }
 
 /**
@@ -109,6 +117,35 @@ function plannedBuild(
   if (!plans) plansByParse.set(internalResources, (plans = new Map()));
   if (!plans.has(resource)) plans.set(resource, plan(resource.data, internalResources));
   return plans.get(resource) ?? null;
+}
+
+/**
+ * `joinBuild` on the built texture's key, and the derived texture of its result. A plan with none
+ * is the build itself. Holders of a built texture and of its derivations share one run.
+ */
+function joinDerived(
+  key: string,
+  plan: ProceduralBuildPlan,
+  label: string,
+  runner: JobRunner
+): ProceduralBuildHandle {
+  const handle = joinBuild(plan.contentKey, plan, label, runner);
+  const { derived } = plan;
+  if (!derived) return handle;
+  const derivedTexture = (built: THREE.Texture | null) =>
+    built && (cachedProceduralTexture(key) ?? cacheDerived(key, label, derived.derive, built));
+  return { ...handle, settled: handle.settled.then(derivedTexture) };
+}
+
+function cacheDerived(
+  key: string,
+  label: string,
+  derive: (built: THREE.Texture) => THREE.Texture,
+  built: THREE.Texture
+): THREE.Texture | null {
+  const texture = unlessAllocationFails(label, () => derive(built));
+  if (texture) cacheProceduralTexture(key, texture);
+  return texture;
 }
 
 function joinBuild(

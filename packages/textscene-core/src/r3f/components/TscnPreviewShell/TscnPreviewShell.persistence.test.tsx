@@ -69,6 +69,18 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     expect(screen.getByRole('button', { name: '2D' }).getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('persists hidden gizmos across a remount', () => {
+    const { unmount } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    openDisplayMenu();
+    expect((screen.getByRole('checkbox', { name: 'Gizmos' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Gizmos' }));
+    unmount();
+
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    openDisplayMenu();
+    expect((screen.getByRole('checkbox', { name: 'Gizmos' }) as HTMLInputElement).checked).toBe(false);
+  });
+
   it('persists a hidden fog across a remount, so a slow scene stays fast on reload', () => {
     const { unmount } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     openDisplayMenu();

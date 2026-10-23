@@ -1,6 +1,6 @@
 /**
  * <PathFollow3D> places its group at the sampled curve point, falls back to the
- * authored transform when no curve is in scope, and draws a selection-gated handle.
+ * authored transform when no curve is in scope, and draws a previewer-only handle while selected.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -9,10 +9,8 @@ import type { TscnNode } from '../../../parser/types';
 import { PathFollow3D } from './Component';
 import { parsePathFollow3D } from './parser';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { resolveCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 
 // Straight curve along +X, (0,0,0) → (10,0,0), length 10.
 const STRAIGHT: Curve3DSampler = tessellateCurve3D(
@@ -41,17 +39,15 @@ function followNode(name = 'MyFollow', props: Record<string, string> = {}): Tscn
 async function render(
   sampler: Curve3DSampler | null,
   props: Record<string, string>,
-  selectedPath: string | null = null
+  selectedPath: string | null = null,
+  showGizmos = true
 ) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <Path3DCurveProvider value={sampler}>
-        <NodePathProvider path="MyFollow">
-          <PathFollow3D node={followNode('MyFollow', props)} />
-        </NodePathProvider>
-      </Path3DCurveProvider>
-    </SelectionProvider>
+    <Path3DCurveProvider value={sampler}>
+      <GizmoScene nodePath="MyFollow" selectedPath={selectedPath} showGizmos={showGizmos}>
+        <PathFollow3D node={followNode('MyFollow', props)} />
+      </GizmoScene>
+    </Path3DCurveProvider>
   );
 }
 
@@ -117,5 +113,20 @@ describe('<PathFollow3D>', () => {
     expect(hidden.scene.findAllByType('LineSegments')).toHaveLength(0);
     const shown = await render(STRAIGHT, { progress: '5' }, 'MyFollow');
     expect(shown.scene.findAllByType('LineSegments')).toHaveLength(1);
+  });
+
+  it('hides the follow handle with the Gizmos toggle off, selected', async () => {
+    const off = await render(STRAIGHT, { progress: '5' }, 'MyFollow', false);
+    expect(off.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
+
+  it('places its group on the curve the same with the Gizmos toggle on and off', async () => {
+    const on = namedGroup(await render(STRAIGHT, { progress: '5' }, 'MyFollow'))!;
+    const off = namedGroup(await render(STRAIGHT, { progress: '5' }, 'MyFollow', false))!;
+    expect([off.position.toArray(), off.quaternion.toArray()]).toEqual([
+      on.position.toArray(),
+      on.quaternion.toArray(),
+    ]);
+    expect(off.position.x).toBeCloseTo(5, 3);
   });
 });

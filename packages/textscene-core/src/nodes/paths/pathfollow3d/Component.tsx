@@ -2,7 +2,8 @@
  * <PathFollow3D>: positions its children along the nearest ancestor Path3D's curve
  * (Path3DCurveContext), at absolute `progress`, oriented to the tangent and nudged by
  * `h_offset`/`v_offset`. Like Godot, this transform overrides the authored one. With no curve
- * in scope it keeps the authored Node3D transform. A selection-gated cross marks the point (ADR-0018).
+ * in scope it keeps the authored Node3D transform. A cross marks the point while the node is selected: a
+ * previewer addition, since Godot draws no gizmo for a PathFollow3D (ADR-0056).
  */
 
 import { useMemo } from 'react';
@@ -10,7 +11,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/nodeTransform';
 import type { Curve3DSampler } from '../../../resources/curves/curve3d';
@@ -34,7 +35,7 @@ interface FollowTransform {
 export function PathFollow3D({ node, children }: NodeComponentProps) {
   const props = node.properties as PathFollow3DProperties;
   const sampler = useParentPath3DCurve();
-  const gizmoVisible = useGizmoVisible();
+  const gizmoVisible = useGizmoDrawn('selected-only');
 
   const follow = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
   const dot = gizmoVisible ? <FollowCross /> : null;

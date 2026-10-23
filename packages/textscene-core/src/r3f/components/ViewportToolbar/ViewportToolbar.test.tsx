@@ -6,7 +6,11 @@
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { SHOW_PERFORMANCE_STORAGE_KEY, ViewportModeProvider } from '../../contexts/ViewportModeContext';
+import {
+  SHOW_GIZMOS_STORAGE_KEY,
+  SHOW_PERFORMANCE_STORAGE_KEY,
+  ViewportModeProvider,
+} from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { useViewportActions } from '../../testing/ViewportActionsProbe';
@@ -75,6 +79,22 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
+  });
+
+  it('gizmos checkbox is checked by default and persists a click under tsi.showGizmos', () => {
+    renderToolbar('3D');
+    openDisplayMenu();
+    const checkbox = screen.getByRole('checkbox', { name: 'Gizmos' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+    expect(window.localStorage.getItem(SHOW_GIZMOS_STORAGE_KEY)).toBe('false');
+  });
+
+  it('offers the gizmos checkbox in 2D mode, whose helpers the toggle hides too', () => {
+    renderToolbar('2D');
+    openDisplayMenu();
+    expect(screen.getByRole('checkbox', { name: 'Gizmos' })).toBeTruthy();
   });
 
   it('fog checkbox is checked by default and toggles showFog', () => {

@@ -77,11 +77,11 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md): an invisible transform-only group
 - [AreaLight3D](../../packages/textscene-core/src/nodes/3d/lights/arealight3d/comparison.md): a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 - [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md): nothing (a transform-only group)
-- [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md): a selection-gated speaker gizmo
+- [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md): a speaker gizmo for the selected node
 - [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing yet, Godot applies its bone constraints each frame, the previewer does not
 - [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md): nothing yet, Godot disperses one bone's twist up its chain, the previewer does not
-- [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): a selection-gated frustum gizmo
+- [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): a frustum gizmo for the selected node
 - [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md): nothing yet, Godot solves its chain onto the target each frame, the previewer does not
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md): a transform-only Node3D group
 - [CollisionPolygon3D](../../packages/textscene-core/src/nodes/physics/3d/collisionpolygon3d/comparison.md): nothing (a transform-only group)
@@ -120,7 +120,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md): nothing yet, Godot samples it to light dynamic objects, the previewer does not
 - [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md): nothing yet, Godot caps how fast its bones may turn, the previewer does not
 - [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md): nothing yet, Godot rotates a bone to face its target, the previewer does not
-- [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md): a selection-gated axis-cross gizmo
+- [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md): an axis-cross gizmo for every node
 - [MeshInstance3D](../../packages/textscene-core/src/nodes/3d/meshinstance3d/comparison.md): a THREE.Mesh
 - [ModifierBoneTarget3D](../../packages/textscene-core/src/nodes/3d/skeleton/modifierbonetarget3d/comparison.md): nothing yet, Godot mirrors its bone onto its transform, the previewer does not
 - [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md): nothing yet, Godot draws a batch of mesh instances, the previewer does not
@@ -138,7 +138,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [OpenXRRenderModel](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodel/comparison.md): nothing yet, Godot mounts the runtime's glTF model as a child, the previewer does not
 - [OpenXRRenderModelManager](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodelmanager/comparison.md): nothing yet, Godot spawns a render model per tracked device, the previewer does not
 - [OpenXRVisibilityMask](../../packages/textscene-core/src/nodes/3d/xr/openxrvisibilitymask/comparison.md): nothing yet, Godot masks the lens-hidden part of the render, the previewer does not
-- [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md): a selection-gated curve gizmo
+- [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md): a curve gizmo for every node
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md): a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md): nothing (a transform-only group)
 - [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
@@ -157,7 +157,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): a THREE.Mesh
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
-- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform group with a selection-gated length line
+- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform group with a length line for every node
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionCapsule3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisioncapsule3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionPlane3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionplane3d/comparison.md): nothing yet, Godot's spring solver pushes bones off its plane, the previewer does not
@@ -168,15 +168,15 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [SubViewport](../../packages/textscene-core/src/nodes/viewport/subviewport/comparison.md): an offscreen render target, plus a boundary that scopes its canvas subtree
 - [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md): nothing yet, Godot poses its two-bone chain onto the target, the previewer does not
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md): an invisible transform-only group
-- [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md): a transform group with a selection-gated wheel gizmo
-- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): a selection-gated box gizmo
-- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): a selection-gated box gizmo
+- [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md): a transform group with a wheel gizmo for every wheel
+- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): a box gizmo for every node
+- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): a box gizmo for every node
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md): a transform-only group
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): nothing yet, Godot lights the scene from its voxel bake, the previewer does not
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting
 - [XRAnchor3D](../../packages/textscene-core/src/nodes/3d/xr/xranchor3d/comparison.md): nothing (a transform-only group)
 - [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): nothing yet, Godot poses bones from an XR body tracker, the previewer does not
-- [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md): a selection-gated frustum gizmo, as Camera3D
+- [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md): a frustum gizmo for the selected node, as Camera3D
 - [XRController3D](../../packages/textscene-core/src/nodes/3d/xr/xrcontroller3d/comparison.md): nothing (a transform-only group)
 - [XRFaceModifier3D](../../packages/textscene-core/src/nodes/3d/xr/xrfacemodifier3d/comparison.md): nothing yet, Godot writes tracked face poses into blend shapes, the previewer does not
 - [XRHandModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrhandmodifier3d/comparison.md): nothing yet, Godot poses bones from an XR hand tracker, the previewer does not
@@ -232,12 +232,12 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [HSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/hsplitcontainer/comparison.md): two children side by side, split at a computed offset
 - [ItemList](../../packages/textscene-core/src/nodes/2d/ui/itemlist/comparison.md): a panel StyleBox plus a packed grid of icon/label rows
 - [Label](../../packages/textscene-core/src/nodes/2d/ui/label/comparison.md): a shaped text run on the canvas
-- [LightOccluder2D](../../packages/textscene-core/src/nodes/2d/lightoccluder2d/comparison.md): a selection-gated outline of its occluder polygon, it occludes 2D light
+- [LightOccluder2D](../../packages/textscene-core/src/nodes/2d/lightoccluder2d/comparison.md): an outline of its occluder polygon for every node, it occludes 2D light
 - [Line2D](../../packages/textscene-core/src/nodes/2d/line2d/comparison.md): a stroked mesh polyline
 - [LineEdit](../../packages/textscene-core/src/nodes/2d/ui/lineedit/comparison.md): a single-line text box
 - [LinkButton](../../packages/textscene-core/src/nodes/2d/ui/linkbutton/comparison.md): a text run with an optional underline stroke
 - [MarginContainer](../../packages/textscene-core/src/nodes/2d/ui/margincontainer/comparison.md): a child inset by four margin constants
-- [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md): a selection-gated cross gizmo
+- [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md): a cross gizmo for every node
 - [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md): one StyleBox + text run per PopupMenu-child title
 - [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md): a StyleBox quad with a centred text run and optional icon
 - [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md): nothing yet, Godot draws a textured mesh, the previewer does not
@@ -256,8 +256,8 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): nothing yet, Godot repeats and scroll-offsets its children, the previewer does not
 - [ParallaxBackground](../../packages/textscene-core/src/nodes/2d/parallaxbackground/comparison.md): a viewport-anchored group holding its ParallaxLayer children
 - [ParallaxLayer](../../packages/textscene-core/src/nodes/2d/parallaxlayer/comparison.md): a Node2D transform group, repeated once per mirrored axis
-- [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md): nothing at runtime, a selection-gated curve gizmo
-- [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md): a transform-only follower with a selection-gated dot
+- [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md): nothing at runtime, a curve gizmo for every node
+- [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md): a transform-only follower with a dot for the selected node
 - [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md): a transform-only Node2D group
 - [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): nothing (a transform-only group)
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md): the light's cookie multiplied into every CanvasItem beneath it

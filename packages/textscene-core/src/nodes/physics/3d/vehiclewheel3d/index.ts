@@ -1,7 +1,7 @@
 /**
  * VehicleWheel3D parser and inspector formatter. The visible wheel is its child
  * MeshInstance3D, so it renders as a transform group (ADR-0005, ADR-0008) with a
- * selection-gated gizmo (ADR-0018). It parses its own properties: they are all
+ * gizmo for every node (ADR-0056). It parses its own properties: they are all
  * geometric, and the inspector is the only place they are legible.
  */
 

@@ -10,6 +10,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ReferenceRectProperties } from './types';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
+import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ReferenceRect } from './Component';
@@ -47,33 +48,46 @@ describe('<ReferenceRect> (isolated painter contract)', () => {
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
   });
 
-  it('draws nothing when editor_only is true (the default) and this node is not selected', async () => {
+  it.each([
+    ['nothing is selected', null],
+    ['this node is selected', 'MyRect'],
+    ['a different node is selected', 'Other'],
+  ])('draws when editor_only is true (the default) and %s', async (_label, selectedPath) => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
-      </SelectionProvider>
-    );
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
-  });
-
-  it('draws when editor_only is true and this node IS the current selection', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <SelectSeeder path="MyRect" />
-        <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
-      </SelectionProvider>
+      <ViewportModeProvider>
+        <SelectionProvider>
+          {selectedPath !== null && <SelectSeeder path={selectedPath} />}
+          <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
+        </SelectionProvider>
+      </ViewportModeProvider>
     );
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
   });
 
-  it('draws nothing when editor_only is true and a DIFFERENT node is selected', async () => {
+  it('draws nothing when editor_only is true and the Gizmos toggle is off, selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <SelectSeeder path="Other" />
-        <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
-      </SelectionProvider>
+      <ViewportModeProvider initialShowGizmos={false}>
+        <SelectionProvider>
+          <SelectSeeder path="MyRect" />
+          <ReferenceRect {...painterEnv()} solveNode={refRectNode({})} rect={RECT} renderOrder={0} />
+        </SelectionProvider>
+      </ViewportModeProvider>
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws when editor_only is false and the Gizmos toggle is off, as the running game does', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowGizmos={false}>
+        <ReferenceRect
+          {...painterEnv()}
+          solveNode={refRectNode({ editorOnly: false })}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </ViewportModeProvider>
+    );
+    expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
   });
 
   it('composes tint into border_color in sRGB before the single linear conversion', async () => {

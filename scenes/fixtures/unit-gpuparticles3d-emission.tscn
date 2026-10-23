@@ -1,7 +1,7 @@
 ; A GPUParticles3D whose process material emits from a box, with an emission_shape_offset and an
 ; emission_shape_scale, for the one variable no other golden moves: the emission shape lines of its
 ; editor gizmo, which Godot scales and offsets only for a material. The previewer gates the gizmo on
-; selection (ADR-0018), so only the `select:` golden has it. The visibility_aabb is not the default,
+; selection (ADR-0056), so only the `select:` golden has it. The visibility_aabb is not the default,
 ; so its box lines stand apart from the box of the emission shape. A small box sits at two opposite
 ; corners of the visibility_aabb to frame both.
 [gd_scene load_steps=3 format=3]

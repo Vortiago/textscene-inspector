@@ -5,7 +5,7 @@ status: limitation
 fixture: unit-spring-arm-3d.tscn
 # image: unit-spring-arm-3d
 visual: false
-renders_as: a transform group with a selection-gated length line
+renders_as: a transform group with a length line for every node
 ---
 
 # SpringArm3D
@@ -34,7 +34,7 @@ The lenient parser reads `spring_length` on top of the Node3D transform. An unau
 
 ## Gizmo
 
-A selected node draws one segment in the collision debug colour. Godot's source is `spring_arm_3d_gizmo_plugin.cpp:35-54`. The segment runs from the origin to `Vector3(0, 0, 1) * spring_length`.
+Every node draws one segment in the collision debug colour, faint while unselected (ADR-0056). The colour keeps its alpha of 0.42. Godot's source is `spring_arm_3d_gizmo_plugin.cpp:35-54`. The segment runs from the origin to `Vector3(0, 0, 1) * spring_length`.
 
 Godot guards no length. A length of 0 gives a zero-length segment, and a negative length runs along -Z.
 
@@ -42,5 +42,5 @@ An `inf`, `inf_neg` or `nan` length gives the end point `(nan, nan, ±inf)`. A r
 
 ## Known limitations
 
-- **Editor only** Godot's editor draws the length line for every spring arm, but here it draws only for the selected node (ADR-0018).
+- **Editor only** The length line draws for every spring arm when the Gizmos toggle is on, which a capture keeps off.
 - **Needs runtime** Only a running game moves each child along the arm, to the hit point minus `margin`, and here the children hold their authored transforms.
