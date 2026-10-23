@@ -174,6 +174,14 @@ describe('glbSceneRootChildCount', () => {
     root.add(named(new THREE.Mesh(), 'body'));
     expect(glbSceneRootChildCount(root)).toBe(1);
   });
+
+  it('counts the objects the GLB loaded with, not a node mounted below it later', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    expect(glbSceneRootChildCount(root)).toBe(1);
+    root.add(new THREE.Group());
+    expect(glbSceneRootChildCount(root)).toBe(1);
+  });
 });
 
 describe('glbSceneRootChildren per GLB', () => {
