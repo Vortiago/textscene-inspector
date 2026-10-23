@@ -11,7 +11,8 @@ renders_as: a background panel, grid, toolbar, scrollbars and minimap, with Grap
 
 GraphEdit is the scrollable, zoomable canvas for wiring GraphNodes together, with a
 grid, connection lines, a toolbar and a minimap. The previewer draws the background panel
-and the grid (lines or dots, per `grid_pattern`/`snapping_distance`). It draws every
+and the grid (lines or dots, per `grid_pattern`/`snapping_distance`). Each grid line lights the
+pixel on its coordinate (`draw_line`, `graph_edit.cpp:1912`, `:1927`). It draws every
 resolvable `connections` entry as a curved, tinted ribbon
 (`connection_lines_curvature`/`connection_lines_thickness`), coloured by the slot of each
 endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). A port is a
@@ -65,9 +66,10 @@ are present in every GraphEdit, whatever the scene file says:
   connection, and the camera viewport rect. A connection is a 0.5px
   `draw_polyline_colors` polyline, with each point's colour lerped in minimap space and
   a feather that `connection_lines_antialiased` selects. All of it is letterboxed into
-  the bounding box of the graph. Godot draws no connection in the settled minimap when a
-  `scroll_offset` or a `zoom` that moves ran while the file loaded, or when every child sits at
-  `position_offset` `(0, 0)`: the minimap's only draw reads an empty connection cache (`graphEdit.md`).
+  the bounding box of the graph. Godot draws no connection in the settled minimap in two
+  cases. One is a `scroll_offset` or a `zoom` that moves, applied while the file loaded. The
+  other is every child at `position_offset` `(0, 0)`. The minimap's only draw then reads an
+  empty connection cache (`graphEdit.md`).
 
 ## Linting
 

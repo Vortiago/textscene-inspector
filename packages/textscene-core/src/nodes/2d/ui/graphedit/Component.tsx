@@ -102,6 +102,13 @@ const SNAPPING_SPINBOX_STEP = 1;
 
 /** The thickness of a grid line in Godot px: the default width of `draw_line` is one hairline pixel. */
 const LINE_THICKNESS_PX = 1;
+
+/**
+ * `draw_line` without a width is a two-point line, not a quad (`renderer_canvas_cull.cpp:754-763`).
+ * Vulkan lights the pixel within half a pixel of it, and on a tie the one before it. A quad centred
+ * on the line covers the same pixel under the top-left tie rule (ADR-0057).
+ */
+const LINE_CENTRE_OFFSET_PX = LINE_THICKNESS_PX / 2;
 /** `graph_edit.cpp:1945,1957`: `Rect2(x - 1, y - 1, 3, 3)`. */
 const DOT_SIZE_PX = 3;
 
@@ -128,8 +135,8 @@ function GridLineQuad({
   const { color, opacity } = line.major ? majorColor : minorColor;
   const width = line.axis === 'vertical' ? LINE_THICKNESS_PX : rect.w;
   const height = line.axis === 'vertical' ? rect.h : LINE_THICKNESS_PX;
-  const x = line.axis === 'vertical' ? line.at : 0;
-  const y = line.axis === 'vertical' ? 0 : line.at;
+  const x = line.axis === 'vertical' ? line.at - LINE_CENTRE_OFFSET_PX : 0;
+  const y = line.axis === 'vertical' ? 0 : line.at - LINE_CENTRE_OFFSET_PX;
   return (
     <CanvasItemGroup position={[x, -y, 0]}>
       <ControlQuad width={width} height={height} color={color} opacity={opacity} renderOrder={renderOrder} />

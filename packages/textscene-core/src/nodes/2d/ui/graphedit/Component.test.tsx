@@ -118,6 +118,22 @@ describe('<GraphEdit> (isolated painter contract)', () => {
     expect(quadMeshes(renderer.scene)).toHaveLength(12);
   });
 
+  it('centres each grid line on its coordinate, as the pixel under a Vulkan line is (graph_edit.cpp:1912, :1927)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit {...painterEnv()} solveNode={graphEdit()} rect={RECT} renderOrder={0} />
+    );
+
+    const boxes = quadMeshes(renderer.scene).map((mesh) => {
+      mesh.updateWorldMatrix(true, false);
+      return new THREE.Box3().setFromObject(mesh);
+    });
+    const firstVertical = boxes.find((box) => box.max.y - box.min.y === RECT.h)!;
+    const firstHorizontal = boxes.find((box) => box.max.x - box.min.x === RECT.w)!;
+
+    expect(firstVertical.min.x).toBe(-0.5);
+    expect(firstHorizontal.max.y).toBe(0.5);
+  });
+
   it('draws no grid quads when show_grid is false', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphEdit {...painterEnv()} solveNode={graphEdit({ showGrid: false })} rect={RECT} renderOrder={0} />
