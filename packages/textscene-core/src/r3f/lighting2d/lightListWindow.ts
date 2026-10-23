@@ -28,8 +28,13 @@ const EDGE_PIXELS = 1;
 
 const corner = new THREE.Vector3();
 
-/** `window`'s scissor in a `size` buffer that `camera` draws: x, y, width and height, y up. */
-export function windowScissor(window: Rect2, camera: THREE.Camera, size: THREE.Vector2): THREE.Vector4 {
+/** `window`'s scissor in a `size` buffer that `camera` draws, into `scissor`: x, y, width and height, y up. */
+export function windowScissor(
+  window: Rect2,
+  camera: THREE.Camera,
+  size: THREE.Vector2,
+  scissor = new THREE.Vector4()
+): THREE.Vector4 {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -50,5 +55,5 @@ export function windowScissor(window: Rect2, camera: THREE.Camera, size: THREE.V
   const bottom = THREE.MathUtils.clamp(Math.floor(minY) - EDGE_PIXELS, 0, size.y);
   const right = THREE.MathUtils.clamp(Math.ceil(maxX) + EDGE_PIXELS, 0, size.x);
   const top = THREE.MathUtils.clamp(Math.ceil(maxY) + EDGE_PIXELS, 0, size.y);
-  return new THREE.Vector4(left, bottom, right - left, top - bottom);
+  return scissor.set(left, bottom, right - left, top - bottom);
 }
