@@ -10,6 +10,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshReport } from '../../contexts/UndrawnMeshesContext';
+import { EmptyShapesProvider, useEmptyShape } from '../../contexts/EmptyShapesContext';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -39,6 +40,12 @@ const FAKE_TYPE = '___PanelTestType___';
 /** A node's reader of a TextMesh, which no slice builds. */
 function TextMeshHolder() {
   useUndrawnMeshReport('TextMesh');
+  return null;
+}
+
+/** A CSG shape whose brush is empty. */
+function EmptyShapeHolder() {
+  useEmptyShape(true);
   return null;
 }
 
@@ -126,6 +133,46 @@ describe('<NodeDetailsPanel>', () => {
     });
 
     expect(screen.getByText(/Its TextMesh mesh is not yet drawn/)).toBeTruthy();
+  });
+
+  it("shows Godot's empty-shape warning for a shape with an empty brush", async () => {
+    nodeRegistry.register({ typeName: FAKE_TYPE, parser: () => ({}) });
+    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
+
+    render(
+      <EmptyShapesProvider>
+        <NodeDetailsPanel />
+        <Selector path="Wall" />
+        <NodePathProvider path="Wall">
+          <EmptyShapeHolder />
+        </NodePathProvider>
+      </EmptyShapesProvider>,
+      { wrapper: panelWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.getByText('The CSGShape3D has an empty shape.')).toBeTruthy();
+    expect(screen.getByText('Each edge must be a member of exactly two faces.')).toBeTruthy();
+  });
+
+  it('shows no empty-shape warning for a shape that holds a solid', async () => {
+    nodeRegistry.register({ typeName: FAKE_TYPE, parser: () => ({}) });
+    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Wall', FAKE_TYPE)] });
+
+    render(
+      <EmptyShapesProvider>
+        <NodeDetailsPanel />
+        <Selector path="Wall" />
+      </EmptyShapesProvider>,
+      { wrapper: panelWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.queryByText('The CSGShape3D has an empty shape.')).toBeNull();
   });
 
   it('renders propertyFormatter sections from the registry', async () => {

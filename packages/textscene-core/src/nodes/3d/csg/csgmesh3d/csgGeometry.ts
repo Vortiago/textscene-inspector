@@ -18,7 +18,7 @@ import { meshContentKey } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import type { LoadedFile } from '../../../../resources/scopedResource';
-import { applyCsgNormals } from '../smoothNormals';
+import { shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
 
@@ -92,9 +92,9 @@ function buildMeshBrush(
 ): CsgSolid | null {
   const faces = meshFaces(surfaces, nodeMaterial);
   if (faces.smooth.length === 0) return null;
-  const geometry = applyCsgNormals({ ...faces, invert: flipFaces });
+  const { geometry, welds } = shadeCsgFaces({ ...faces, invert: flipFaces });
   if (faces.materials.length > 1) addMaterialGroups(geometry, faces.faceMaterials);
-  return csgSolid(geometry, faces.materials);
+  return csgSolid(geometry, faces.materials, welds);
 }
 
 function meshFaces(surfaces: readonly CsgMeshSurface[], nodeMaterial: CsgMaterialAddress): MeshFaces {

@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { warn } from '../../../../logger';
-import { applyCsgNormals } from '../smoothNormals';
+import { shadeCsgFaces, type ShadedBrush } from '../smoothNormals';
 
 /**
  * The builder runs on every geometry rebuild, so an unconditional `warn` for an
@@ -20,8 +20,8 @@ export function warnOnce(key: string, message: string): void {
   warn(message);
 }
 
-export function emptyGeometry(): THREE.BufferGeometry {
-  return applyCsgNormals({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
+export function emptyBrush(): ShadedBrush {
+  return shadeCsgFaces({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
 }
 
 /**

@@ -83,6 +83,13 @@ function planeNormal(
   return target.crossVectors(a, b).normalize();
 }
 
+/** A shaded brush with the weld of its corners, which the normals and the closed test both read. */
+export interface ShadedBrush {
+  geometry: THREE.BufferGeometry;
+  /** `weldCorners` of the soup's positions, in the soup's corner order. */
+  welds: Int32Array;
+}
+
 /**
  * Turn a face soup into a renderable, boolean-ready `BufferGeometry`.
  *
@@ -91,14 +98,18 @@ function planeNormal(
  * channel trimmed out of the boolean result.
  */
 export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
+  return shadeCsgFaces(soup).geometry;
+}
+
+/** `applyCsgNormals`, with the weld it ran, for a builder that tests the brush for a manifold. */
+export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
   const { positions, uvs, smooth, invert } = soup;
   const triangles = Math.floor(positions.length / 9);
 
   // Pass 1: sum unit plane normals per welded position, smooth faces only. Position, not index,
   // is the key: three gives a cone apex nine radial normals where Godot collapses them to one.
-  // The sum is unweighted, so a small face pulls on a vertex as hard as a large one. A flat face
-  // reads no weld.
-  const keys = weldCorners(positions, (triangle) => smooth[triangle] === true);
+  // The sum is unweighted, so a small face pulls on a vertex as hard as a large one.
+  const keys = weldCorners(positions);
   const accumulated = new Map<number, THREE.Vector3>();
   const plane = new THREE.Vector3();
   const edgeA = new THREE.Vector3();
@@ -164,5 +175,5 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   geometry.setAttribute('position', new THREE.BufferAttribute(outPositions, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(outNormals, 3));
   geometry.setAttribute('uv', new THREE.BufferAttribute(outUvs, 2));
-  return geometry;
+  return { geometry, welds: keys };
 }

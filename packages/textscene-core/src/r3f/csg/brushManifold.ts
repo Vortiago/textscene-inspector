@@ -12,13 +12,13 @@ function cellHash(x: number, y: number, z: number): number {
 }
 
 /**
- * Each corner of the triangles `isWelded` names, as the first corner it welds to. Manifold welds
- * every point within `CSG_MERGE_TOLERANCE` of another. The grid's cells are twice that wide, so a
- * partner lies in the corner's own cell or the neighbour on the side it leans to, on each axis:
- * 8 cells, not 27. A corner of any other triangle reads -1.
+ * Each corner of the triangle soup `positions` (nine floats a triangle), as the first corner it
+ * welds to. Manifold welds every point within `CSG_MERGE_TOLERANCE` of another. The grid's cells
+ * are twice that wide, so a partner lies in the corner's own cell or the neighbour on the side it
+ * leans to, on each axis: 8 cells, not 27.
  */
-export function weldCorners(positions: Float32Array, isWelded: (triangle: number) => boolean): Int32Array {
-  const welds = new Int32Array(Math.floor(positions.length / 9) * 3).fill(-1);
+export function weldCorners(positions: Float32Array): Int32Array {
+  const welds = new Int32Array(Math.floor(positions.length / 9) * 3);
   const cells = new Map<number, number[]>();
   const toleranceSq = CSG_MERGE_TOLERANCE ** 2;
   const cellWidth = 2 * CSG_MERGE_TOLERANCE;
@@ -34,7 +34,6 @@ export function weldCorners(positions: Float32Array, isWelded: (triangle: number
     return -1;
   };
   for (let corner = 0; corner < welds.length; corner++) {
-    if (!isWelded((corner / 3) | 0)) continue;
     const x = positions[corner * 3]!;
     const y = positions[corner * 3 + 1]!;
     const z = positions[corner * 3 + 2]!;
@@ -70,12 +69,11 @@ export function isCollapsed(welds: Int32Array, t: number): boolean {
 }
 
 /**
- * Whether the triangle soup `positions` (nine floats a triangle) is a manifold: after the weld
- * and the collapse, each edge carries as many faces one way as the other. A brush that wound the
- * other way, or has four faces on an edge, stays closed, and an empty brush has no edge to leave open.
+ * Whether the soup behind `welds` (from `weldCorners`) is a manifold: after the collapse, each
+ * edge carries as many faces one way as the other. A brush that wound the other way, or has four
+ * faces on an edge, stays closed, and an empty brush has no edge to leave open.
  */
-export function isClosedBrush(positions: Float32Array): boolean {
-  const welds = weldCorners(positions, () => true);
+export function isClosedBrush(welds: Int32Array): boolean {
   const corners = welds.length;
   /** Faces along each edge's lower-to-higher direction, less those the other way; absent at zero. */
   const unpaired = new Map<number, number>();

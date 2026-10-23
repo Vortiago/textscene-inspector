@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { CSG_MERGE_TOLERANCE } from '../../godot/scene/csg';
-import { isClosedBrush } from './brushManifold';
+import { isClosedBrush, weldCorners } from './brushManifold';
 
 type Point = readonly [number, number, number];
 type Triangle = readonly [Point, Point, Point];
@@ -25,8 +25,8 @@ function tetrahedron(a: Point, b: Point, c: Point, d: Point): Triangle[] {
   ];
 }
 
-function positionsOf(triangles: readonly Triangle[]): Float32Array {
-  return new Float32Array(triangles.flatMap((triangle) => triangle.flat()));
+function weldsOf(triangles: readonly Triangle[]): Int32Array {
+  return weldCorners(new Float32Array(triangles.flatMap((triangle) => triangle.flat())));
 }
 
 /** Move `point` along x, as a vertex that a mesh writes once per face drifts apart. */
@@ -36,48 +36,48 @@ function shifted(point: Point, dx: number): Point {
 
 describe('isClosedBrush', () => {
   it('closes a tetrahedron', () => {
-    expect(isClosedBrush(positionsOf(tetrahedron(ORIGIN, X, Y, Z)))).toBe(true);
+    expect(isClosedBrush(weldsOf(tetrahedron(ORIGIN, X, Y, Z)))).toBe(true);
   });
 
   it('opens a tetrahedron with a face missing', () => {
-    expect(isClosedBrush(positionsOf(tetrahedron(ORIGIN, X, Y, Z).slice(1)))).toBe(false);
+    expect(isClosedBrush(weldsOf(tetrahedron(ORIGIN, X, Y, Z).slice(1)))).toBe(false);
   });
 
   it('closes a brush with no faces, which has no edge to leave open', () => {
-    expect(isClosedBrush(new Float32Array(0))).toBe(true);
+    expect(isClosedBrush(weldsOf([]))).toBe(true);
   });
 
   it('welds two corners within the merge tolerance, which closes a brush split at one vertex', () => {
     const [first, ...rest] = tetrahedron(ORIGIN, X, Y, Z);
     const drifted: Triangle = [first![0], shifted(first![1], CSG_MERGE_TOLERANCE / 2), first![2]];
 
-    expect(isClosedBrush(positionsOf([drifted, ...rest]))).toBe(true);
+    expect(isClosedBrush(weldsOf([drifted, ...rest]))).toBe(true);
   });
 
   it('keeps two corners farther apart than the merge tolerance apart, which leaves the brush open', () => {
     const [first, ...rest] = tetrahedron(ORIGIN, X, Y, Z);
     const apart: Triangle = [first![0], shifted(first![1], CSG_MERGE_TOLERANCE * 4), first![2]];
 
-    expect(isClosedBrush(positionsOf([apart, ...rest]))).toBe(false);
+    expect(isClosedBrush(weldsOf([apart, ...rest]))).toBe(false);
   });
 
   it('closes a brush wound the other way, since every edge still runs both ways', () => {
     const inverted = tetrahedron(ORIGIN, X, Y, Z).map(([a, b, c]): Triangle => [a, c, b]);
 
-    expect(isClosedBrush(positionsOf(inverted))).toBe(true);
+    expect(isClosedBrush(weldsOf(inverted))).toBe(true);
   });
 
   it('closes two solids that share one edge, where four faces meet', () => {
     const above = tetrahedron(ORIGIN, X, Y, Z);
     const below = tetrahedron(ORIGIN, X, [0, -1, 0], [0, 0, -1]);
 
-    expect(isClosedBrush(positionsOf([...above, ...below]))).toBe(true);
+    expect(isClosedBrush(weldsOf([...above, ...below]))).toBe(true);
   });
 
   it('opens a brush whose faces run the same way along one edge', () => {
     const [first, ...rest] = tetrahedron(ORIGIN, X, Y, Z);
     const [p, q, r] = first!;
 
-    expect(isClosedBrush(positionsOf([[p, r, q], ...rest]))).toBe(false);
+    expect(isClosedBrush(weldsOf([[p, r, q], ...rest]))).toBe(false);
   });
 });

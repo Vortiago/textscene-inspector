@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import { EmptyShapesProvider, useIsEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
 import { frameSceneBounds } from '../../../r3f/frameSceneBounds';
 import './csgbox3d/index.r3f';
 import './csgcombiner3d/index.r3f';
@@ -55,6 +56,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${offset})
 mesh = SubResource("Quad")
 `;
 
+const OPEN_ROOT_WITH_CHILD_SCENE = `[gd_scene format=3]
+
+${QUAD_MESH}
+[node name="Root" type="CSGMesh3D"]
+mesh = SubResource("Quad")
+
+[node name="Box" type="CSGBox3D" parent="."]
+`;
+
 const OPEN_LONE_ROOT_SCENE = sceneWithOpenMesh('Node3D', '0, 4, 0');
 const OPEN_CONTRIBUTOR_SCENE = sceneWithOpenMesh('CSGCombiner3D', '8, 0, 0');
 
@@ -66,6 +76,28 @@ async function render(source: string) {
       <NodeTree node={root} path={root.name} />
     </SceneResourcesProvider>
   );
+}
+
+/** Whether the inspector would show Godot's empty-shape warning, for each path asked. */
+async function emptyShapes(source: string, paths: string[]): Promise<Record<string, boolean>> {
+  const seen: Record<string, boolean> = {};
+  function Probe({ path }: { path: string }) {
+    seen[path] = useIsEmptyShape(path);
+    return null;
+  }
+  const scene = new TscnParser().parse(source);
+  const root = scene.nodes[0]!;
+  await ReactThreeTestRenderer.create(
+    <EmptyShapesProvider>
+      <SceneResourcesProvider internalResources={scene.internalResources}>
+        <NodeTree node={root} path={root.name} />
+      </SceneResourcesProvider>
+      {paths.map((path) => (
+        <Probe key={path} path={path} />
+      ))}
+    </EmptyShapesProvider>
+  );
+  return seen;
 }
 
 async function framedTarget(source: string): Promise<THREE.Vector3> {
@@ -108,5 +140,29 @@ describe('a CSG node with an empty brush', () => {
     const renderer = await render(OPEN_LONE_ROOT_SCENE);
 
     expect(drawnMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it('warns on an open contributor and not on its closed sibling', async () => {
+    const seen = await emptyShapes(OPEN_CONTRIBUTOR_SCENE, ['Root/OpenMesh', 'Root/Box']);
+
+    expect(seen).toEqual({ 'Root/OpenMesh': true, 'Root/Box': false });
+  });
+
+  it('warns on an open lone root', async () => {
+    const seen = await emptyShapes(OPEN_LONE_ROOT_SCENE, ['Root/OpenMesh']);
+
+    expect(seen['Root/OpenMesh']).toBe(true);
+  });
+
+  it('warns on a closed child of an open root, as Godot walks up the parent shapes', async () => {
+    const seen = await emptyShapes(OPEN_ROOT_WITH_CHILD_SCENE, ['Root', 'Root/Box']);
+
+    expect(seen).toEqual({ Root: true, 'Root/Box': true });
+  });
+
+  it('does not warn on a closed shape', async () => {
+    const seen = await emptyShapes(CONTRIBUTOR_SCENE, ['Root', 'Root/Box']);
+
+    expect(seen).toEqual({ Root: false, 'Root/Box': false });
   });
 });

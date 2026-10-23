@@ -13,6 +13,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
+import { EmptyShapeBranch, useEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
@@ -81,16 +82,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
-  const ownSolid = useMemo(
-    () => {
-      if (skipped) return null;
-      // An open brush is empty: it draws nothing and bounds to a point, as no solid does.
-      const solid = registration?.geometry?.(builderProps, ctx);
-      return solid?.isClosed ? solid : null;
-    },
+  const builtSolid = useMemo(
+    () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
     [ownKey, properties.materialPath, skipped]
   );
+  // An open brush is empty: it draws nothing and bounds to a point, as no solid does.
+  const ownSolid = builtSolid?.isClosed ? builtSolid : null;
+  const isEmptyShape = useEmptyShape(builtSolid !== null && !builtSolid.isClosed);
   const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG
@@ -137,7 +136,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
           },
     [plan, subtree, ctx]
   );
-  const scope = <CsgSubtreeProvider value={publishedSubtree}>{children}</CsgSubtreeProvider>;
+  const shapeChildren = <EmptyShapeBranch isEmpty={isEmptyShape}>{children}</EmptyShapeBranch>;
+  const scope = <CsgSubtreeProvider value={publishedSubtree}>{shapeChildren}</CsgSubtreeProvider>;
 
   const combining = plan !== null && plan.geometryCount > 1;
   // A root's own: a contributor's solid, and its range and transparency with it, belong to the
@@ -196,7 +196,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
           meshRef={drawnRef}
           fallback={ownMesh}
         >
-          {children}
+          {shapeChildren}
         </CsgRootMesh>
       </group>
     );

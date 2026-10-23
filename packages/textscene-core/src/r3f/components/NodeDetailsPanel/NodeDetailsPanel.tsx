@@ -10,6 +10,7 @@ import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
+import { useIsEmptyShape } from '../../contexts/EmptyShapesContext.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
@@ -70,6 +71,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
       )}
 
       <UndrawnMeshNotice nodePath={path} />
+      <EmptyShapeNotice nodePath={path} />
 
       <div className={styles.section}>
         <div className={styles.row}>
@@ -157,6 +159,29 @@ function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
         Its {meshes} not yet drawn by the previewer. The viewport shows a wireframe box, or nothing, where
         Godot draws it.
       </p>
+    </div>
+  );
+}
+
+/** `CSGShape3D::get_configuration_warnings`, line for line (`csg_shape.cpp:982`). */
+const EMPTY_SHAPE_WARNING = [
+  'The CSGShape3D has an empty shape.',
+  'CSGShape3D empty shapes typically occur because the mesh is not manifold.',
+  'A manifold mesh forms a solid object without gaps, holes, or loose edges.',
+  'Each edge must be a member of exactly two faces.',
+];
+
+/** Godot's warning for a CSG shape whose brush is empty, such as an open one. */
+function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
+  if (!useIsEmptyShape(nodePath)) return null;
+  return (
+    <div className={`${styles.section} ${styles.warningSection}`}>
+      <h4 className={styles.sectionTitle}>Empty Shape</h4>
+      {EMPTY_SHAPE_WARNING.map((line) => (
+        <p key={line} className={styles.warningText}>
+          {line}
+        </p>
+      ))}
     </div>
   );
 }

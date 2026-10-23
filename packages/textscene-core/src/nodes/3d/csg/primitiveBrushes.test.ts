@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isClosedBrush } from '../../../r3f/csg/brushManifold';
+import { isClosedBrush, weldCorners } from '../../../r3f/csg/brushManifold';
 import type { CsgGeometryBuilder } from '../../../r3f/csg/csgRegistration';
 import { heading } from '../../../parser/testing/parserKit';
 import type { ParsedHeading } from '../../../parser/utils';
@@ -32,7 +32,7 @@ function isClosed(
 ): boolean {
   const parsed = parse(heading(type), properties) as Record<string, unknown>;
   const { geometry } = build(parsed, csgGeometryContext())!;
-  return isClosedBrush(geometry.getAttribute('position').array as Float32Array);
+  return isClosedBrush(weldCorners(geometry.getAttribute('position').array as Float32Array));
 }
 
 describe('a CSG primitive brush', () => {
