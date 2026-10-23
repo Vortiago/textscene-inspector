@@ -6,20 +6,22 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
+import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { workspaceForRoot } from '../../workspaceForScene.js';
 import { useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { collapseLiveNode, rootScope, snapshotScenes } from '../../liveSceneTree.js';
 
-export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
+export function WorkspaceAutoSelect() {
+  const { sceneGraph } = useHierarchy();
   const { setMode } = useViewportMode();
-  const lt = useSharedLiveTree();
+  const liveTree = useSharedLiveTree();
 
   const claimed = useMemo(() => {
-    const root = lt?.roots[0];
-    if (!lt || !root) return null;
-    return workspaceForRoot(collapseLiveNode(root, rootScope(lt.ctx), snapshotScenes(lt.ctx)));
-  }, [lt]);
+    const root = liveTree?.roots[0];
+    if (!liveTree || !root) return null;
+    return workspaceForRoot(collapseLiveNode(root, rootScope(liveTree.ctx), snapshotScenes(liveTree.ctx)));
+  }, [liveTree]);
 
   // Once per scene, when the workspace becomes known. A manual toggle then
   // holds until the next scene switch.

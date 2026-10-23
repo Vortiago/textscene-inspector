@@ -38,7 +38,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     setSelectedNodePath,
     toggleExpandedNodePath,
   } = useSelection();
-  const lt = useSharedLiveTree();
+  const liveTree = useSharedLiveTree();
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -61,9 +61,9 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   // means no search. It recomputes on each load tick, which gives a new live tree.
   const matchingPaths = useMemo<ReadonlySet<string> | null>(() => {
     if (!term) return null;
-    if (!lt) return new Set<string>();
+    if (!liveTree) return new Set<string>();
     const found = new Set<string>();
-    walkLiveTree(lt.roots, lt.ctx, ({ node, path }) => {
+    walkLiveTree(liveTree.roots, liveTree.ctx, ({ node, path }) => {
       if (node.name.toLowerCase().includes(term) || node.type.toLowerCase().includes(term)) {
         found.add(path);
         for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
@@ -72,7 +72,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       }
     });
     return found;
-  }, [term, lt]);
+  }, [term, liveTree]);
 
   const matches = useCallback(
     (path: string): boolean => matchingPaths === null || matchingPaths.has(path),
@@ -80,11 +80,11 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   );
 
   const handleExpandAll = useCallback(() => {
-    if (!lt) return;
+    if (!liveTree) return;
     const all = new Set<string>();
-    walkLiveTree(lt.roots, lt.ctx, ({ path }) => all.add(path));
+    walkLiveTree(liveTree.roots, liveTree.ctx, ({ path }) => all.add(path));
     setExpandedNodePaths(all);
-  }, [lt, setExpandedNodePaths]);
+  }, [liveTree, setExpandedNodePaths]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());

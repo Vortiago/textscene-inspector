@@ -110,11 +110,16 @@ export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): n
   return useSyncExternalStore(ticks.subscribe, ticks.getVersion);
 }
 
-/** Written only by {@link useSharedLiveTree}: the tree for a graph and loader, and the version it was built at. */
-const sharedTrees = new WeakMap<
-  SceneGraph,
-  WeakMap<object, { version: number; tree: SharedLiveTree | null }>
->();
+/** A shared tree and the load tick it was built at. */
+interface BuiltTree {
+  version: number;
+  tree: SharedLiveTree | null;
+}
+
+/** Written only by {@link useSharedLiveTree}: the tree for a graph and loader. */
+const sharedTrees = new WeakMap<SceneGraph, WeakMap<object, BuiltTree>>();
+
+/** The key of a reader with no loader, which a WeakMap cannot take as null. */
 const NO_LOADER = {};
 
 /**
@@ -145,10 +150,10 @@ export function useLiveSceneNodes(
   /** Stable, like `predicate`: return false to skip a node's children. */
   descend?: (node: TscnNode) => boolean
 ): LiveTreeEntry[] {
-  const lt = useSharedLiveTree();
+  const liveTree = useSharedLiveTree();
   return useMemo(
-    () => (lt ? collectLiveNodes(lt.roots, lt.ctx, predicate, descend) : []),
-    [lt, predicate, descend]
+    () => (liveTree ? collectLiveNodes(liveTree.roots, liveTree.ctx, predicate, descend) : []),
+    [liveTree, predicate, descend]
   );
 }
 
@@ -167,6 +172,9 @@ export function useHasLiveTree(): boolean {
  * empty path or an unresolvable segment.
  */
 export function useLiveNode(path: string | null | undefined): ResolvedLiveNode | null {
-  const lt = useSharedLiveTree();
-  return useMemo(() => (path && lt ? resolveLiveEntry(path, lt.roots, lt.ctx) : null), [lt, path]);
+  const liveTree = useSharedLiveTree();
+  return useMemo(
+    () => (path && liveTree ? resolveLiveEntry(path, liveTree.roots, liveTree.ctx) : null),
+    [liveTree, path]
+  );
 }

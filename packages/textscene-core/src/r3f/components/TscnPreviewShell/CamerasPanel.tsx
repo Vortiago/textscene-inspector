@@ -21,7 +21,7 @@ const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamer
 export function CamerasPanel() {
   const cam = useOptionalViewportActions();
   const { setMode } = useViewportMode();
-  const lt = useSharedLiveTree();
+  const liveTree = useSharedLiveTree();
   const { viewportSize } = useProjectSettings();
 
   const cameras = useLiveSceneNodes(isCameraNode);
@@ -35,8 +35,8 @@ export function CamerasPanel() {
   function lookThrough2D(path: string, properties: Camera2DProperties) {
     // Over the live tree, a Camera2D inside a sub-scene composes against the
     // instance transform instead of framing at the origin.
-    if (!lt) return;
-    const worldPosition = node2dWorldPosition(lt.roots, lt.ctx, path) ?? { x: 0, y: 0 };
+    if (!liveTree) return;
+    const worldPosition = node2dWorldPosition(liveTree.roots, liveTree.ctx, path) ?? { x: 0, y: 0 };
     // The frame `<Canvas2DStage>` draws, so the camera lands where the stage shows it.
     cam?.requestFrame2D(
       camera2DView(properties, worldPosition, { x: viewportSize.width, y: viewportSize.height })
