@@ -149,21 +149,18 @@ function layoutAtLevel(layout: AtlasTextureLayout, i: number): AtlasTextureLayou
 /** One level's crop, transparent where its region misses the level. */
 function croppedLevel(raw: RawPixels, layout: AtlasTextureLayout): MipLevel {
   const region = clippedRegion(layout, raw);
-  const data = region
-    ? (blit(raw, layout, region) as Uint8Array)
-    : new Uint8Array(layout.width * layout.height * 4);
+  const data = new Uint8Array(layout.width * layout.height * 4);
+  if (region) blit(raw, layout, region, data);
   return { data, width: layout.width, height: layout.height };
 }
 
 /** `raw`'s `region` cut into a texture of `layout`'s size, in the sheet's own texel type and row order. */
 function cropRawPixels(raw: RawPixels, layout: AtlasTextureLayout, region: Region): THREE.DataTexture {
   const isHalfFloat = raw.data instanceof Uint16Array;
-  const texture = new THREE.DataTexture(
-    blit(raw, layout, region),
-    layout.width,
-    layout.height,
-    THREE.RGBAFormat
-  );
+  const texelCount = layout.width * layout.height * 4;
+  const data = isHalfFloat ? new Uint16Array(texelCount) : new Uint8Array(texelCount);
+  blit(raw, layout, region, data);
+  const texture = new THREE.DataTexture(data, layout.width, layout.height, THREE.RGBAFormat);
   // Floats read raw and bytes as sRGB until `copyGodotFormat` records the sheet's format.
   texture.type = isHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = isHalfFloat ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
@@ -173,12 +170,16 @@ function cropRawPixels(raw: RawPixels, layout: AtlasTextureLayout, region: Regio
 }
 
 /**
- * The blit over raw RGBA texels: the destination starts fully transparent (a fresh typed array is
- * zeroed, and a zero half float is 0), so the margin the region does not cover needs no clear.
+ * Copies `region` of `raw` into `out`, a zeroed array of `layout`'s size in `raw`'s texel type. A
+ * fresh typed array is transparent (a zero half float is 0), so the margin the region does not
+ * cover needs no clear.
  */
-function blit(raw: RawPixels, layout: AtlasTextureLayout, region: Region): Uint8Array | Uint16Array {
-  const texelCount = layout.width * layout.height * 4;
-  const out = raw.data instanceof Uint16Array ? new Uint16Array(texelCount) : new Uint8Array(texelCount);
+function blit(
+  raw: RawPixels,
+  layout: AtlasTextureLayout,
+  region: Region,
+  out: Uint8Array | Uint16Array
+): void {
   const destX = layout.dest.x + (region.left - layout.source.x);
   const destY = layout.dest.y + (region.top - layout.source.y);
 
@@ -201,5 +202,4 @@ function blit(raw: RawPixels, layout: AtlasTextureLayout, region: Region): Uint8
       out[to + 3] = raw.data[from + 3]!;
     }
   }
-  return out;
 }
