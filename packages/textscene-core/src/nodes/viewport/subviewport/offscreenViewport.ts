@@ -19,7 +19,7 @@ import type { Vector2 } from '../../../godot/math/vector';
  * too: an sRGB tag would stack a shader encode on the hardware encode.
  */
 export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = createTarget(width, height, name);
+  const target = createTarget(width, height, name, true);
   // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
   // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
   pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);
@@ -35,7 +35,7 @@ export function createSceneTarget(width: number, height: number, name: string): 
  * blends and filters the encoded bytes. An sRGB tag alone would allocate SRGB8_ALPHA8.
  */
 export function createCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = createTarget(width, height, name);
+  const target = createTarget(width, height, name, false);
   storeSrgbBytes(target.texture);
   return target;
 }
@@ -54,8 +54,13 @@ export function storeSrgbBytes(texture: THREE.Texture): void {
  * rule. Not the SubViewport's `canvas_item_default_texture_filter`: Godot passes that to the items
  * drawn into the viewport (`renderer_viewport.cpp:688`), not to sampling its texture.
  */
-function createTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: true, stencilBuffer: false });
+function createTarget(
+  width: number,
+  height: number,
+  name: string,
+  hasDepth: boolean
+): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: hasDepth, stencilBuffer: false });
   target.texture.name = `${name}::target`;
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;

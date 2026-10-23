@@ -8,17 +8,15 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
-import { CanvasFrame } from './canvasFrame.js';
+import { createCanvasFrame } from './canvasFrame.js';
 import { useMultisampledTarget } from '../../multisampledTarget.js';
 
 /** A positive priority stops R3F's own render, and runs after every pass at priority 0 or below. */
 const OWNS_THE_RENDER = 1;
 
-const createFrame = () => new CanvasFrame();
-
 export function CanvasFrameRender() {
   const mode = useProjectSettings().msaaModes.msaa2D;
-  const frame = useMultisampledTarget(mode, createFrame);
+  const frame = useMultisampledTarget(mode, createCanvasFrame);
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { CanvasFrame } from './canvasFrame';
+import { createCanvasFrame } from './canvasFrame';
 import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
 import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
 import type { RenderStep } from '../../frameProfile/frameStats';
@@ -38,13 +38,13 @@ const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera();
 
 /** A frame at `samples`, as `useMultisampledTarget` sets them. */
-function multisampledFrame(samples: number): CanvasFrame {
-  const frame = new CanvasFrame();
+function multisampledFrame(samples: number): ReturnType<typeof createCanvasFrame> {
+  const frame = createCanvasFrame();
   frame.samples = samples;
   return frame;
 }
 
-describe('CanvasFrame', () => {
+describe('createCanvasFrame', () => {
   it('names its copy to the drawing buffer as the Canvas copy step, so the frame profile shows its cost', () => {
     const { gl, draws } = recordingRenderer(64, 64);
     const stepsOfDraws: (RenderStep | null)[] = [];

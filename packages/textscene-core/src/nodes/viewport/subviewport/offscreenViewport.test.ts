@@ -478,6 +478,18 @@ describe('createCanvasTarget', () => {
     target.dispose();
   });
 
+  it('allocates no depth buffer: every canvas material sets depthWrite false (controlQuad.tsx)', () => {
+    const target = createCanvasTarget(64, 64, 'Probe');
+    expect(target.depthBuffer).toBe(false);
+    target.dispose();
+  });
+
+  it('keeps the depth buffer of a 3D scene target', () => {
+    const target = createSceneTarget(64, 64, 'Probe');
+    expect(target.depthBuffer).toBe(true);
+    target.dispose();
+  });
+
   it('samples linearly without mipmaps, as Godot keeps one mip level (edge case)', () => {
     const target = createCanvasTarget(64, 64, 'Probe');
     expect(target.texture.minFilter).toBe(THREE.LinearFilter);

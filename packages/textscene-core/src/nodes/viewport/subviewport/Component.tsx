@@ -40,7 +40,7 @@ import {
   viewportAspect,
   viewportMsaaMode,
 } from './offscreenViewport';
-import { CanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
+import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
@@ -57,8 +57,6 @@ import {
   SHARED_WORLD_TONE_MAPPING,
 } from '../../../resources/environment/toneMapping';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-
-const createFrame = () => new CanvasFrame();
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -139,7 +137,10 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // copies it into the target (ADR-0057). The frame takes the multisampling, so the target it
   // copies into never multisamples.
   const target = useMultisampledTarget(kind === '3d' ? viewportMsaaMode(properties, kind) : 0, createTarget);
-  const frame = useMultisampledTarget(kind === '2d' ? viewportMsaaMode(properties, kind) : 0, createFrame);
+  const frame = useMultisampledTarget(
+    kind === '2d' ? viewportMsaaMode(properties, kind) : 0,
+    createCanvasFrame
+  );
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.

@@ -1,9 +1,8 @@
 /**
  * The frame a 2D canvas draws through, the root's or a sub-viewport's. The camera maps the canvas
- * top to GL row 0 (`world2DCamera.ts`), so the frame holds the canvas upside down and copies itself
- * to the target bound before it, the drawing buffer or a sub-viewport's, with its rows reversed. It is multisampled when the project's `msaa_2d` is on: Godot draws
- * such a viewport into a multisampled buffer at the mode's sample count
- * (`texture_storage.cpp:3604-3613`), and a drawing buffer cannot multisample at a chosen count.
+ * top to GL row 0 (`world2DCamera.ts`), so the frame holds it upside down and copies it, rows
+ * reversed, to the target bound before it. It is multisampled when `msaa_2d` is on: Godot draws
+ * into a buffer at the mode's sample count (`texture_storage.cpp:3604-3613`), which a drawing buffer cannot.
  */
 
 import * as THREE from 'three';
@@ -54,7 +53,7 @@ function copyToTarget(
  * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
  * in linear.
  */
-export class CanvasFrame extends THREE.WebGLRenderTarget {
+class CanvasFrame extends THREE.WebGLRenderTarget {
   private readonly outputSize = new THREE.Vector2();
 
   constructor() {
@@ -91,3 +90,6 @@ export class CanvasFrame extends THREE.WebGLRenderTarget {
     }
   }
 }
+
+/** The factory `useMultisampledTarget` takes for a 2D canvas frame. */
+export const createCanvasFrame = () => new CanvasFrame();

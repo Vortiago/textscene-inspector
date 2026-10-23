@@ -54,6 +54,14 @@ const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
  */
 export const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
 
+/** An arrow's top-left in its button's rect: `Point2i` centring, integer division (`spin_box.cpp:475-476`, `:490-491`). */
+export function spinBoxArrowPosition(button: Rect2, iconSize: Vector2): Vector2 {
+  return {
+    x: button.x + Math.trunc((button.w - iconSize.x) / 2),
+    y: button.y + Math.trunc((button.h - iconSize.y) / 2),
+  };
+}
+
 /** `up`/`down`: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, SpinBox, up_icon, "up")` (and `down`, `spin_box.cpp:690,694`). The hover, pressed and disabled variants and the deprecated `updown` are never drawn, as in `Component.tsx`. */
 type SpinBoxIconName = 'up' | 'down';
 const SPIN_BOX_ICON_NAMES: readonly SpinBoxIconName[] = ['up', 'down'];
