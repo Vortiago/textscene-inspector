@@ -4,8 +4,7 @@
  */
 
 import { writeGodotPointAsThree } from '../node2dTransform';
-
-const FLOATS_PER_VERTEX = 3;
+import { FLOATS_PER_VERTEX } from './axisCross';
 
 /**
  * A flat `PackedVector2Array` `[x0,y0, x1,y1, …]` as flat `[ax,ay,0, bx,by,0, …]`

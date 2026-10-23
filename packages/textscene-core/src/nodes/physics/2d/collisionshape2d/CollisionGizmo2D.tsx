@@ -15,6 +15,13 @@ import { warn } from '../../../../logger';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { capsulePoints, circlePoints, rectanglePoints } from './collisionOutlines';
 
+/** `[x0, y0, x1, y1, …]`, the flat form of `PackedVector2Array`. */
+function flatten(points: Vector2[]): Float32Array {
+  const flat = new Float32Array(points.length * 2);
+  points.forEach(({ x, y }, index) => flat.set([x, y], index * 2));
+  return flat;
+}
+
 export function CollisionGizmo2D({
   shape,
   color,
@@ -39,14 +46,7 @@ export function CollisionGizmo2D({
     }
   }, [shape.type, shape.data]);
 
-  const positions = useMemo(
-    () =>
-      godotPolylineToSegments(
-        points.flatMap(({ x, y }) => [x, y]),
-        true
-      ),
-    [points]
-  );
+  const positions = useMemo(() => godotPolylineToSegments(flatten(points), true), [points]);
 
   // Polyline segments (`GizmoLine`, a `<lineSegments>`), not a `wireframe` mesh, which shows the
   // triangulation diagonals of a circle or capsule.
