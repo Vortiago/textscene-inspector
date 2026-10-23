@@ -102,7 +102,8 @@ function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
 
 /**
  * A counter that moves whenever a scene or GLB loads or fails, so a deleted
- * instance leaves the tree. Every live-tree reader re-derives on it. The scenes and
+ * instance leaves the tree. A reader of the whole tree re-derives on it; {@link useLiveTreeSelection}
+ * re-renders only where its value changed. The scenes and
  * GLBs it reads are `useResource` consumers' keys, which they request again. It is one
  * number per loader, so two readers on one load tick see the same value.
  */
@@ -177,9 +178,9 @@ export function useLiveTreeSelection<T>(
       if (known?.version === version) return known.value;
       const tree = sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null;
       const read = tree ? select(tree) : undefined;
-      const isUnchanged = known !== undefined && sameSelection(known.value, read, isSame);
-      known = { version, value: isUnchanged ? known!.value : read };
-      return known.value;
+      const value = known && sameSelection(known.value, read, isSame) ? known.value : read;
+      known = { version, value };
+      return value;
     };
   }, [ticks, sceneGraph, loader, select, isSame]);
   return useSyncExternalStore(ticks.subscribe, getSnapshot);
