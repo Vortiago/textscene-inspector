@@ -14,6 +14,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useLoadedFiles } from '../../../resources/useLoadedFiles';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
+import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -88,7 +89,8 @@ function ParticleField({
     externalResources,
     internalResources
   );
-  const texture = useCanvas2DTexture(resolvedTexture);
+  const sampler = useNode2DTextureSampler(props);
+  const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
   // A callback ref, not useRef: the emission-transform sample runs once the
   // container is in the tree, since its world matrix does not exist before.

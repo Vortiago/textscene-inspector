@@ -118,6 +118,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d Texture Filter Inherited",
+    "file": "unit-animatedsprite2d-texture-filter-inherited.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d Tres",
     "file": "unit-animatedsprite2d-tres.tscn",
     "category": "Other"
@@ -625,6 +630,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glb Default Material",
     "file": "unit-glb-default-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Lightmap Miss",
+    "file": "unit-glb-lightmap-miss.tscn",
     "category": "Other"
   },
   {
@@ -1593,6 +1603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Ribbon Trail Mesh Texture Uv",
+    "file": "unit-ribbon-trail-mesh-texture-uv.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Rigidbody2d",
     "file": "unit-rigidbody2d.tscn",
     "category": "Other"
@@ -1835,6 +1850,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite3d Shadow",
     "file": "unit-sprite3d-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Texture Filter Anisotropic",
+    "file": "unit-sprite3d-texture-filter-anisotropic.tscn",
     "category": "Other"
   },
   {
@@ -2581,6 +2601,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Polygon2d Texture Repeat",
+    "file": "unit-polygon2d-texture-repeat.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Polygon2d",
     "file": "unit-polygon2d.tscn",
     "category": "Unit - 2D Canvas"
@@ -2623,6 +2648,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Region Oversized",
     "file": "unit-sprite2d-region-oversized.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Texture Filter Inherited",
+    "file": "unit-sprite2d-texture-filter-inherited.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Texture Filter Nearest Anisotropic",
+    "file": "unit-sprite2d-texture-filter-nearest-anisotropic.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -2953,6 +2988,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Checkbox Icon Magnified",
     "file": "unit-checkbox-icon-magnified.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Checkbox Icon Texture Filter Inherited",
+    "file": "unit-checkbox-icon-texture-filter-inherited.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -3631,6 +3671,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Texture Channel",
     "file": "unit-material-texture-channel.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Texture Filter Anisotropic",
+    "file": "unit-material-texture-filter-anisotropic.tscn",
     "category": "Unit - Materials"
   },
   {

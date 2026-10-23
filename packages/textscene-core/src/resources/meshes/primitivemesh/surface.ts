@@ -33,8 +33,10 @@ import { buildTorusMeshSurface } from '../torusmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 import { buildPointMeshSurface } from '../pointmesh/build';
-import { CURVE_PROPERTY, decodeTubeTrailMesh } from '../tubetrailmesh/decode';
+import { decodeTubeTrailMesh } from '../tubetrailmesh/decode';
 import { buildTubeTrailMeshSurface } from '../tubetrailmesh/build';
+import { decodeRibbonTrailMesh } from '../ribbontrailmesh/decode';
+import { buildRibbonTrailMeshSurface } from '../ribbontrailmesh/build';
 
 /** What a type's build reads: its properties, and the resources those properties name. */
 interface BuildInput {
@@ -60,10 +62,28 @@ interface PrimitiveMeshType {
   /**
    * The lightmap size hint of a type whose builder writes no UV2: `PrimitiveMesh::_update` scales
    * its UV by it instead. PlaneMesh and its QuadMesh subclass derive it as they set their
-   * properties (`primitive_meshes.cpp:1416`). A TubeTrailMesh keeps the authored hint, as it
-   * overrides no `_update_lightmap_size`.
+   * properties (`primitive_meshes.cpp:1416`). A trail mesh keeps the authored hint.
    */
   lightmapSizeHint?: LightmapSizeHint;
+}
+
+/** The property of a trail mesh that names the one resource its build reads. */
+const CURVE_PROPERTY = 'curve';
+
+/**
+ * A trail mesh builds from its properties and its Curve, and keeps the authored lightmap size hint,
+ * as neither overrides `_update_lightmap_size`.
+ */
+function curveTrailMeshType(
+  type: string,
+  build: (data: Record<string, string>, curve: TscnInternalResource | null) => GodotSurface
+): PrimitiveMeshType {
+  return {
+    build: ({ data, references }) => build(data, references[CURVE_PROPERTY] ?? null),
+    references: [CURVE_PROPERTY],
+    lightmapSizeHint: (data) =>
+      vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, `${type} lightmap_size_hint`),
+  };
 }
 
 /**
@@ -91,13 +111,12 @@ const TYPES: Record<string, PrimitiveMeshType> = {
   TorusMesh: { build: ({ data, uv2Padding }) => buildTorusMeshSurface(decodeTorusMesh(data), uv2Padding) },
   PrismMesh: { build: ({ data, uv2Padding }) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding) },
   PointMesh: { build: () => buildPointMeshSurface() },
-  TubeTrailMesh: {
-    build: ({ data, references }) =>
-      buildTubeTrailMeshSurface(decodeTubeTrailMesh(data, references[CURVE_PROPERTY] ?? null)),
-    references: [CURVE_PROPERTY],
-    lightmapSizeHint: (data) =>
-      vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, 'TubeTrailMesh lightmap_size_hint'),
-  },
+  TubeTrailMesh: curveTrailMeshType('TubeTrailMesh', (data, curve) =>
+    buildTubeTrailMeshSurface(decodeTubeTrailMesh(data, curve))
+  ),
+  RibbonTrailMesh: curveTrailMeshType('RibbonTrailMesh', (data, curve) =>
+    buildRibbonTrailMeshSurface(decodeRibbonTrailMesh(data, curve))
+  ),
 };
 
 /**

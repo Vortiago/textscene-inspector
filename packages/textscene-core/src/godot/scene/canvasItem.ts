@@ -1,6 +1,7 @@
 /** CanvasItem's own enums, as the engine declares them. */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumMember, enumNamesByValue, type EnumValue } from '../classdb/enumNames.js';
+import { TextureFilter } from '../rendering/materials/textureFilter.js';
 
 /**
  * `CanvasItem::ClipChildrenMode` (`scene/main/canvas_item.h:71-74`), the serialised values of
@@ -45,19 +46,13 @@ export const CanvasItemTextureFilter = {
 export const CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(CanvasItemTextureFilter);
 
 /**
- * The texel a filter, already resolved up the ancestors, samples. Mipmapped and anisotropic variants
- * collapse to their base filter. Anything else, including no filter at all, is linear: the
- * `Viewport::default_canvas_item_texture_filter` default (`scene/main/viewport.h:419`).
+ * The `BaseMaterial3D` filter a filter, already resolved up the ancestors, samples with: the same six
+ * filters one lower, with PARENT_NODE gone. Anything else, including no filter at all, is linear:
+ * the `Viewport::default_canvas_item_texture_filter` default (`scene/main/viewport.h:419`).
  */
-export function canvasItemSamplerFilter(filter: number | undefined): 'nearest' | 'linear' {
-  switch (filter) {
-    case CanvasItemTextureFilter.NEAREST:
-    case CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS:
-    case CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC:
-      return 'nearest';
-    default:
-      return 'linear';
-  }
+export function canvasItemSamplerFilter(filter: number | undefined): EnumValue<typeof TextureFilter> {
+  const sampled = filter === undefined ? null : enumMember(TextureFilter, filter - 1);
+  return sampled ?? TextureFilter.LINEAR;
 }
 
 /**

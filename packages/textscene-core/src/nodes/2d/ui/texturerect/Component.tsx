@@ -12,11 +12,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import {
-  canvasItemThreeFilter,
-  canvasItemThreeWrap,
-  useInheritedTextureSampler,
-} from '../../../../r3f/canvasItemTextureSampler';
+import { applyCanvasItemSampler, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
@@ -58,9 +54,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     // prop, whose `@react-three/fiber` sRGB auto-tagging would overwrite a plain assignment.
     pinNoColorSpace(cloned);
 
-    const filter = canvasItemThreeFilter(sampler.filter);
-    cloned.magFilter = filter;
-    cloned.minFilter = filter;
+    applyCanvasItemSampler(cloned, sampler);
 
     let repeat = { x: 1, y: 1 };
     let offset = { x: 0, y: 0 };
@@ -73,18 +67,15 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
       // would show the texture's bottom rows in the partial top tile. `1 - repeat.y` puts `v = 1`
       // on the image's top row, as the region branch does. `u` is not flipped.
       offset = { x: 0, y: 1 - repeat.y };
-    } else {
-      cloned.wrapS = cloned.wrapT = canvasItemThreeWrap(sampler.repeat);
-      if (draw.region) {
-        // Texture-pixel-space crop (KEEP_ASPECT_COVERED) → normalized UV
-        // repeat/offset. three.js UV-Y is bottom-left and image-Y is top-left,
-        // the flip `r3f/spriteFrame.ts`'s `applyRegionRect` documents.
-        repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
-        offset = {
-          x: draw.region.x / draw.textureSize.x,
-          y: 1 - (draw.region.y + draw.region.h) / draw.textureSize.y,
-        };
-      }
+    } else if (draw.region) {
+      // Texture-pixel-space crop (KEEP_ASPECT_COVERED) → normalized UV
+      // repeat/offset. three.js UV-Y is bottom-left and image-Y is top-left,
+      // the flip `r3f/spriteFrame.ts`'s `applyRegionRect` documents.
+      repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
+      offset = {
+        x: draw.region.x / draw.textureSize.x,
+        y: 1 - (draw.region.y + draw.region.h) / draw.textureSize.y,
+      };
     }
 
     const flipped = applyFlip(repeat, offset, props.flipH === true, props.flipV === true);
@@ -92,7 +83,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     cloned.offset.set(flipped.offset.x, flipped.offset.y);
     cloned.needsUpdate = true;
     return cloned;
-  }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
+  }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
 
   const drawnTexture = useUploadedClone(preparedTexture);
 

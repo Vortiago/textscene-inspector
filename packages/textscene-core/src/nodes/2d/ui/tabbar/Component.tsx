@@ -12,7 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -269,7 +269,7 @@ function TabBarTabChrome({
 
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: iconSource } = useTexture2D(tab.icon, externalResources, internalResources);
-  const iconTexture = useCanvas2DTexture(iconSource);
+  const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const fontColor = tabBarFontColor(solveNode.colors, state);
   // `tint`, `self_modulate` folded onto `modulate`, composes into every colour before its

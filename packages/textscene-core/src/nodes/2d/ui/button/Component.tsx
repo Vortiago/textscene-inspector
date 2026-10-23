@@ -10,7 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -78,7 +78,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
   // bytes (`canvas2DTextureDecode.ts`). `ControlQuad` decodes the
   // already-filtered sample once it sees this tag.
-  const iconTexture = useCanvas2DTexture(iconSource);
+  const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const iconNaturalSize: Vector2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;

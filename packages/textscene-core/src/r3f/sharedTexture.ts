@@ -26,11 +26,11 @@ export function sharedTexture<T extends TextureClass>(Base: T) {
 }
 
 /** The part of three's per-renderer state of a texture that holds its GL handle. */
-interface TextureHandle {
+export interface TextureHandle {
   __webglTexture?: WebGLTexture;
 }
 
-function handleOf(renderer: THREE.WebGLRenderer, texture: THREE.Texture): TextureHandle {
+export function handleOf(renderer: THREE.WebGLRenderer, texture: THREE.Texture): TextureHandle {
   return renderer.properties.get(texture) as TextureHandle;
 }
 

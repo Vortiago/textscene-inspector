@@ -6,34 +6,27 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { isEqualApprox } from '../../../godot/math/math.js';
-import { storedReal } from '../../../godot/math/real.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
-import { floatOr, settableIntOr } from '../../../parser/valueParsers';
-import { decodeCurveResource } from '../../curves/curve/decode';
+import { settableIntOr } from '../../../parser/valueParsers';
+import { approxDefaultFloatOr, decodeTrailMeshBase } from '../primitivemesh/trailDecode';
 import type { TubeTrailMeshProperties } from './types';
 
 const DEFAULT_RADIUS = 0.5;
-
-/** The property that names the one resource the builder reads. */
-export const CURVE_PROPERTY = 'curve';
 
 /** `curve` is the resource the mesh's `curve` property names, or null when it names none. */
 export function decodeTubeTrailMesh(
   properties: Record<string, string>,
   curve: TscnInternalResource | null
 ): TubeTrailMeshProperties {
-  const radius = storedReal(floatOr(properties.radius, DEFAULT_RADIUS, 'TubeTrailMesh radius'));
   return {
-    radius: isEqualApprox(radius, DEFAULT_RADIUS) ? DEFAULT_RADIUS : radius,
+    ...decodeTrailMeshBase(properties, curve, 'TubeTrailMesh'),
+    radius: approxDefaultFloatOr(properties.radius, DEFAULT_RADIUS, 'TubeTrailMesh radius'),
     radialSteps: settableIntOr(
       properties.radial_steps,
       8,
       { min: 3, max: 128 },
       'TubeTrailMesh radial_steps'
     ),
-    sections: settableIntOr(properties.sections, 5, { min: 2, max: 128 }, 'TubeTrailMesh sections'),
-    sectionLength: storedReal(floatOr(properties.section_length, 0.2, 'TubeTrailMesh section_length')),
     sectionRings: settableIntOr(
       properties.section_rings,
       3,
@@ -42,6 +35,5 @@ export function decodeTubeTrailMesh(
     ),
     capTop: boolSlotValue(properties.cap_top) !== false,
     capBottom: boolSlotValue(properties.cap_bottom) !== false,
-    curve: decodeCurveResource(curve),
   };
 }

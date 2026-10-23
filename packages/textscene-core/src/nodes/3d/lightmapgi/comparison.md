@@ -54,4 +54,4 @@ The lenient parser reads `light_data` as written and leaves the bake settings in
 - **Not drawn** An object the bake does not name keeps its ambient light, where Godot lights it from the bake's light probes.
 - **Not drawn** The baked shadowmask is not read, so `shadowmask_mode` changes nothing.
 - **Approximated** The atlas is read at full float precision, where Godot reads its VRAM-compressed import, so a soft shadow edge can differ by a few levels.
-- **Not drawn** A glTF mesh whose UV2 Godot unwraps on import reads no lightmap when the project does not commit the `.unwrap_cache` that holds that UV2.
+- **Approximated** A glTF mesh that Godot unwraps and the project's `.unwrap_cache` lacks draws with real-time light, as the previewer does not run xatlas.
