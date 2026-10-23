@@ -9,7 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 import type * as THREE from 'three';
 import { ShadowmaskMode } from '../../../godot/scene/lightmapGi';
 import { projectUsesLightmapBicubicFilter } from '../../../parser/projectSettingsParser';
-import { combinedAtlas } from '../../../resources/lightmapgidata/build';
+import { atlasWithShadowmask, combinedAtlas } from '../../../resources/lightmapgidata/build';
 import { decodeLightmapGIData } from '../../../resources/lightmapgidata/decode';
 import type { LightmapGIData } from '../../../resources/lightmapgidata/types';
 import { useResource } from '../../../resources/useResource';
@@ -58,8 +58,10 @@ function BakedLightmap({
   const usesBicubicFilter = projectUsesLightmapBicubicFilter(useProjectSettings().settings);
   const lightmapLoads = useLoadedTextures();
   const shadowmaskLoads = useLoadedTextures();
-  const atlas = useAtlas(data.lightmapTextures, lightmapLoads.loaded);
+  const lightmapAtlas = useAtlas(data.lightmapTextures, lightmapLoads.loaded);
   const shadowmaskAtlas = useAtlas(data.shadowmaskTextures, shadowmaskLoads.loaded);
+  const maskedAtlas = useMaskedAtlas(lightmapAtlas, shadowmaskAtlas, data.usesSphericalHarmonics ? 4 : 1);
+  const atlas = maskedAtlas ?? lightmapAtlas;
   const [object, setObject] = useState<THREE.Object3D | null>(null);
   const instance = useMemo(() => object && new LightmapInstance(object), [object]);
 
@@ -69,8 +71,7 @@ function BakedLightmap({
     instance.order = order;
     instance.users = path === null ? new Map() : assignedUsers(path, data.users, uniquePaths);
     instance.atlas = atlas;
-    instance.shadowmaskAtlas = shadowmaskAtlas;
-    instance.shadowmaskMode = shadowmaskAtlas ? shadowmaskMode : ShadowmaskMode.NONE;
+    instance.shadowmaskMode = maskedAtlas ? shadowmaskMode : ShadowmaskMode.NONE;
     instance.usesSphericalHarmonics = data.usesSphericalHarmonics;
     instance.usesBicubicFilter = usesBicubicFilter;
     instance.bounds = data.bounds;
@@ -85,7 +86,7 @@ function BakedLightmap({
     uniquePaths,
     data,
     atlas,
-    shadowmaskAtlas,
+    maskedAtlas,
     shadowmaskMode,
     usesBicubicFilter,
   ]);
@@ -164,4 +165,21 @@ function useAtlas(
     [atlas, textures]
   );
   return atlas;
+}
+
+/**
+ * The lightmap atlas with the shadowmask in its alpha, once both have loaded: the program reads
+ * both through one sampler. Null while either is missing. The copy is this component's own.
+ */
+function useMaskedAtlas(
+  lightmap: THREE.DataArrayTexture | null,
+  shadowmask: THREE.DataArrayTexture | null,
+  layersPerSlice: number
+): THREE.DataArrayTexture | null {
+  const masked = useMemo(
+    () => (lightmap && shadowmask ? atlasWithShadowmask(lightmap, shadowmask, layersPerSlice) : null),
+    [lightmap, shadowmask, layersPerSlice]
+  );
+  useEffect(() => () => masked?.dispose(), [masked]);
+  return masked;
 }

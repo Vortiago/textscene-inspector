@@ -4,6 +4,7 @@ import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
   SUN_RANGE_BEGINS,
+  SUN_DRAWN_FIRST,
   SUN_SHADOW_FADES,
   SUN_SHADOW_ROWS,
   SUN_SOFT_SHADOWS,
@@ -92,6 +93,13 @@ describe('writeSunShadowUniforms', () => {
     expect([...fades.subarray(0, 4)]).toEqual([64, 80, 40, 50]);
   });
 
+  it('writes which sun Godot draws first, in the same order as the rows', () => {
+    const first = new SplitSunLight();
+    first.shadow.isDrawnFirst = true;
+    const drawn = written([new THREE.SpotLight(), first, new SplitSunLight()], SUN_DRAWN_FIRST);
+    expect([...drawn.subarray(0, 2)]).toEqual([1, 0]);
+  });
+
   it('writes no fade for a sun no fit has placed (edge case)', () => {
     written([fadingSun(64, 80)], SUN_SHADOW_FADES);
     const unplaced = new SplitSunLight();
@@ -108,7 +116,7 @@ describe('writeSunShadowUniforms', () => {
 });
 
 describe('installSunShadowUniforms', () => {
-  it.each([SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS, SUN_SHADOW_FADES])(
+  it.each([SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS, SUN_SHADOW_FADES, SUN_DRAWN_FIRST])(
     'gives every lit built-in material %s',
     (name) => {
       installSunShadowUniforms();

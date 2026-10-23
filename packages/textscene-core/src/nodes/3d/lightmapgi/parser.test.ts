@@ -28,7 +28,11 @@ describe('parseLightmapGI', () => {
     expect(lightmap({}).shadowmaskMode).toBe(ShadowmaskMode.NONE);
   });
 
-  it('reads no shadowmask for a mode the inspector does not offer (edge case)', () => {
-    expect(lightmap({ shadowmask_mode: '3' }).shadowmaskMode).toBe(ShadowmaskMode.NONE);
+  it('reads mode Only, which a script stores and the inspector does not offer', () => {
+    expect(lightmap({ shadowmask_mode: '3' }).shadowmaskMode).toBe(ShadowmaskMode.ONLY);
+  });
+
+  it('reads no shadowmask for a mode past the enum (edge case)', () => {
+    expect(lightmap({ shadowmask_mode: '4' }).shadowmaskMode).toBe(ShadowmaskMode.NONE);
   });
 });

@@ -15,7 +15,6 @@ export function parseLightmapGI(
   return {
     ...parseNode3D(heading, properties),
     lightData: properties.light_data,
-    // The inspector offers three modes (`lightmap_gi.cpp:1925`), so Only (3) reads as None.
     shadowmaskMode: enumOr(
       properties.shadowmask_mode,
       ShadowmaskMode.NONE,

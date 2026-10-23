@@ -85,20 +85,25 @@ describe('<LightmapGI>', () => {
     expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.atlas).toBeNull();
   });
 
-  it('shadows from the shadowmask its texture loads', async () => {
-    const shadowmask = dataArrayTexture(new Uint8Array(4), 1, 1, 1);
-    const { lightmaps } = await mount({ atlas: oneLayer(), shadowmask });
-    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskAtlas).toBe(shadowmask);
+  it('holds the shadowmask in the alpha of the atlas, with the light unchanged', async () => {
+    const atlas = dataArrayTexture(new Uint16Array([5, 6, 7, 8]), 1, 1, 1);
+    const shadowmask = dataArrayTexture(new Uint8Array([51]), 1, 1, 1);
+    const { lightmaps } = await mount({ atlas, shadowmask });
+    const drawn = lightmaps.assignmentFor('Root/Floor')!.lightmap.atlas!;
+    expect(drawn).not.toBe(atlas);
+    expect([...(drawn.image.data as Uint16Array)]).toEqual([5, 6, 7, THREE.DataUtils.toHalfFloat(51 / 255)]);
   });
 
-  it('holds no shadowmask for a bake that saved none (edge case)', async () => {
-    const { lightmaps } = await mount({ atlas: oneLayer() });
-    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskAtlas).toBeNull();
+  it('draws from the lightmap texture itself for a bake that saved no shadowmask (edge case)', async () => {
+    const atlas = oneLayer();
+    const { lightmaps } = await mount({ atlas });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.atlas).toBe(atlas);
   });
 
-  it('holds no shadowmask while its texture is missing (error case)', async () => {
-    const { lightmaps } = await mount({ atlas: oneLayer(), shadowmask: null });
-    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskAtlas).toBeNull();
+  it('draws from the lightmap texture itself while the shadowmask texture is missing (error case)', async () => {
+    const atlas = oneLayer();
+    const { lightmaps } = await mount({ atlas, shadowmask: null });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.atlas).toBe(atlas);
   });
 
   it('takes the shadowmask mode from the node, not from the data', async () => {

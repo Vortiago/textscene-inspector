@@ -18,6 +18,7 @@ import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
 import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
+  SUN_DRAWN_FIRST,
   SUN_RANGE_BEGINS,
   SUN_SHADOW_FADES,
   SUN_SHADOW_ROWS,
@@ -269,7 +270,8 @@ ${GODOT_SUN_FADE}
 \t\t}
 
 \t\t#ifdef GODOT_LIGHTMAP
-\t\t\tfloat godotLightmapSunShadow( float shadow, float fadeOut, float opacity );
+\t\t\tuniform float ${SUN_DRAWN_FIRST}[ NUM_SUN_LIGHT_SHADOWS ];
+\t\t\tfloat godotLightmapSunShadow( float shadow, float fadeOut, float opacity, float isDrawnFirst );
 \t\t#endif
 
 \t\tfloat getSunShadow(
@@ -285,7 +287,7 @@ ${GODOT_SUN_FADE}
 \t\t\tfloat fadeOut = godotSunShadowFadeOut( shadowIndex );
 \t\t\tfloat shadow = fadeOut >= 1.0 ? 1.0 : godotSunShadowBeforeFade( shadowMap, sunLightShadow, shadowIndex );
 \t\t\t#ifdef GODOT_LIGHTMAP
-\t\t\t\treturn godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity );
+\t\t\t\treturn godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity, ${SUN_DRAWN_FIRST}[ shadowIndex ] );
 \t\t\t#else
 \t\t\t\treturn godotSunShadowFaded( shadow, fadeOut );
 \t\t\t#endif

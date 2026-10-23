@@ -491,13 +491,14 @@ describe('the sun shadow fade', () => {
     const lookup = functionBody(installedChunk(), 'float getSunShadow');
     expect(lookup).toContain('#ifdef GODOT_LIGHTMAP');
     expect(lookup).toContain(
-      'return godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity );'
+      'return godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity, godotSunDrawnFirst[ shadowIndex ] );'
     );
   });
 
   it('declares the lightmapped sun shadow ahead of the lookup that calls it', () => {
     const chunk = installedChunk();
-    const declaration = 'float godotLightmapSunShadow( float shadow, float fadeOut, float opacity );';
+    const declaration =
+      'float godotLightmapSunShadow( float shadow, float fadeOut, float opacity, float isDrawnFirst );';
     expect(chunk.indexOf(declaration)).toBeGreaterThan(-1);
     expect(chunk.indexOf(declaration)).toBeLessThan(chunk.indexOf('float getSunShadow('));
   });

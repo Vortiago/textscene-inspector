@@ -32,10 +32,14 @@ The previewer reads the bake Godot wrote and samples it as Godot's forward shade
   read the assignment at each upload, so a moved or reloaded LightmapGI needs no recompile.
 - A Static light skips a lightmapped surface in the same program (`GODOT_LIGHTMAP`).
 - A bake saved with a shadowmask mode holds a second atlas, a `_shadow.png`, which the `image2darray`
-  slice reads from the source PNG, as it reads the `.exr`. A texel is its byte over 255. Past its
-  fade, a sun's real-time shadow gives way to the shadowmask in Replace mode, and Overlay multiplies
-  the shadowmask in (`scene_forward_clustered.glsl:2252-2273`, `:2483-2492`). A bake with no
-  shadowmask draws as None.
+  slice reads from the source PNG, as it reads the `.exr`. A texel is its byte over 255. The
+  component copies each byte into the alpha of the first layer of its slice in the lightmap atlas, as
+  a half float within 0.0005 of the byte over 255. The program then reads both through one sampler.
+  A program has 16 sampler units to share, and a physical material with a sky and positional shadows
+  takes 17 of them with the lightmap. Past its fade, a sun's real-time shadow gives way to the shadowmask in Replace mode, and Overlay multiplies
+  the shadowmask in (`scene_forward_clustered.glsl:2252-2273`, `:2483-2492`). Mode Only skips the
+  real-time shadow of every sun: the first drawn directional light takes the shadowmask byte, and
+  every other shadowed sun is fully shadowed (`:2510-2517`). A bake with no shadowmask draws as None.
 - A GridMap the bake names draws its `baked_meshes` in place of its cells, and each takes the user
   whose sub-instance is its index (`grid_map.cpp:688`, `lightmap_gi.cpp:1544-1550`).
 

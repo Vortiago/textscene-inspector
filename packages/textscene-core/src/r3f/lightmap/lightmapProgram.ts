@@ -16,7 +16,7 @@ import { bicubicFilterGlsl } from '../../utils/bicubicFilterGlsl';
 
 /**
  * A light whose shadow opacity is at most this floor skips its shadow block, shadowmask included
- * (`scene_forward_clustered.glsl:2298`).
+ * (`scene_forward_clustered.glsl:2298`). Mode Only has no such skip (`:2510-2517`).
  */
 const SHADOW_OPACITY_FLOOR = '0.001';
 
@@ -39,7 +39,6 @@ uniform bool godotLightmapUsesSH;
 uniform bool godotLightmapUsesBicubic;
 uniform vec2 godotLightmapTextureSize;
 uniform mat3 godotLightmapNormalBasis;
-uniform highp sampler2DArray godotShadowmask;
 uniform int godotShadowmaskMode;
 varying vec2 vGodotLightmapUv;
 
@@ -60,7 +59,7 @@ ${bicubicFilterGlsl({
   uv: 'uvw.xy',
   // Godot sizes the mask with the lightmap's texture size (`scene_forward_clustered.glsl:2268`).
   size: 'godotLightmapTextureSize',
-  fetch: (texelUv) => `vec3( texture( godotShadowmask, vec3( ${texelUv}, uvw.z ) ).r )`,
+  fetch: (texelUv) => `vec3( texture( godotLightmap, vec3( ${texelUv}, uvw.z ) ).a )`,
 })}
 vec3 godotLightmapUvw() {
 	return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, godotLightmapSlice );
@@ -80,7 +79,8 @@ vec3 godotLightmapAmbient( vec3 worldNormal ) {
 
 float godotLightmapShadowmask() {
 	vec3 uvw = godotLightmapUvw();
-	return godotLightmapUsesBicubic ? godotShadowmaskBicubic( uvw ).x : textureLod( godotShadowmask, uvw, 0.0 ).x;
+	if ( godotLightmapUsesSH ) uvw.z *= 4.0;
+	return godotLightmapUsesBicubic ? godotShadowmaskBicubic( uvw ).x : textureLod( godotLightmap, uvw, 0.0 ).a;
 }
 
 float godotShadowmaskReplace( float shadow, float shadowmask, float fadeOut, float opacity ) {
@@ -92,9 +92,15 @@ float godotShadowmaskOverlay( float shadow, float shadowmask, float fadeOut, flo
 	return unshadowed + shadowmask * ( ( 1.0 - fadeOut ) * ( shadow - unshadowed ) + opacity * fadeOut );
 }
 
+float godotShadowmaskOnly( float shadowmask, float isDrawnFirst, float opacity ) {
+	float shadow = isDrawnFirst * trunc( clamp( shadowmask * 255.0, 0.0, 255.0 ) ) / 255.0;
+	return mix( 1.0, shadow, opacity );
+}
+
 #if defined( USE_SHADOWMAP ) && NUM_SUN_LIGHT_SHADOWS > 0
-float godotLightmapSunShadow( float shadow, float fadeOut, float opacity ) {
+float godotLightmapSunShadow( float shadow, float fadeOut, float opacity, float isDrawnFirst ) {
 	if ( ! godotLightmapActive || godotShadowmaskMode == ${ShadowmaskMode.NONE} ) return godotSunShadowFaded( shadow, fadeOut );
+	if ( godotShadowmaskMode == ${ShadowmaskMode.ONLY} ) return godotShadowmaskOnly( godotLightmapShadowmask(), isDrawnFirst, opacity );
 	if ( opacity <= ${SHADOW_OPACITY_FLOOR} ) return 1.0;
 	float shadowmask = godotLightmapShadowmask();
 	return godotShadowmaskMode == ${ShadowmaskMode.REPLACE}
@@ -194,13 +200,8 @@ function lightmapUniforms(material: Material): Record<string, IUniform> {
         return object ? normalBasis.setFromMatrix4(object.matrixWorld).transpose() : normalBasis.identity();
       },
     },
-    // three binds its empty array texture for null.
-    godotShadowmask: {
-      get value() {
-        return bound()?.lightmap.shadowmaskAtlas ?? null;
-      },
-    },
-    // A bake with no shadowmask binds Godot a white array, which mixes as None in both modes.
+    // A bake with no shadowmask binds Godot a white array, which mixes as None in both modes. The
+    // component holds that as mode None.
     godotShadowmaskMode: {
       get value() {
         return bound()?.lightmap.shadowmaskMode ?? ShadowmaskMode.NONE;

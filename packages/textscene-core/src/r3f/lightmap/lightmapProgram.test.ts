@@ -46,11 +46,6 @@ function uniformsBoundTo(bound: LightmapAssignment | null) {
 const fragment = compiled().fragmentShader;
 const weight = (name: string) => scalarGlslFunction(fragment, name);
 
-/** A shadowmask atlas of two byte layers, the size of the lightmap's. */
-function shadowmaskAtlas(): THREE.DataArrayTexture {
-  return new THREE.DataArrayTexture(new Uint8Array(64 * 32 * 4 * 2), 64, 32, 2);
-}
-
 describe('readsLightmap', () => {
   it('reads the lightmap of an opaque lit surface', () => {
     expect(readsLightmap(true, false)).toBe(true);
@@ -146,6 +141,14 @@ describe('the shadowmask mix', () => {
     );
   });
 
+  it('gives mode Only the shadowmask byte to the first drawn light and full shadow to the others', () => {
+    const only = scalarGlslFunction(fragment, 'godotShadowmaskOnly');
+    expect(only(0.6, 1, 1)).toBeCloseTo(Math.trunc(0.6 * 255) / 255, 12);
+    expect(only(0.6, 0, 1)).toBe(0);
+    expect(only(0.6, 0, 0)).toBe(1);
+    expect(only(0.6, 1, 0.5)).toBeCloseTo(mix(1, Math.trunc(0.6 * 255) / 255, 0.5), 12);
+  });
+
   it('gives the shadowmask past the fade, where the real-time shadow is gone', () => {
     expect(replace(1, 0.35, 1, 1)).toBeCloseTo(0.35, 12);
     expect(overlay(1, 0.35, 1, 1)).toBeCloseTo(0.35, 12);
@@ -160,13 +163,16 @@ describe('the shadowmask mix', () => {
 describe('the shadowmask read', () => {
   const read = functionBody(fragment, 'float godotLightmapShadowmask');
 
-  it('keeps the slice of directional data, which holds one shadowmask layer for its four lightmap layers', () => {
-    expect(read).not.toContain('* 4.0');
+  it('reads the first layer of a slice of directional data, as the alpha of the lightmap atlas', () => {
+    expect(read).toContain('if ( godotLightmapUsesSH ) uvw.z *= 4.0;');
+    expect(read).toContain('textureLod( godotLightmap, uvw, 0.0 ).a');
   });
 
-  it('reads the red channel, with the lightmap filter and the lightmap texture size', () => {
+  it('reads the alpha with the lightmap filter and the lightmap texture size', () => {
     expect(read).toContain('godotLightmapUsesBicubic ? godotShadowmaskBicubic( uvw ).x');
-    expect(read).toContain('textureLod( godotShadowmask, uvw, 0.0 ).x');
+    expect(functionBody(fragment, 'vec3 godotShadowmaskBicubic')).toContain(
+      'texture( godotLightmap, vec3( p0, uvw.z ) ).a'
+    );
     expect(functionBody(fragment, 'vec3 godotShadowmaskBicubic')).toContain(
       'vec2 size = godotLightmapTextureSize;'
     );
@@ -255,15 +261,10 @@ describe('LIGHTMAP_PROGRAM uniforms', () => {
     ]);
   });
 
-  it('reads the node’s shadowmask mode and the atlas it was baked into', () => {
+  it('reads the shadowmask mode the lightmap holds', () => {
     const bound = assignment();
-    bound.lightmap.shadowmaskAtlas = shadowmaskAtlas();
     bound.lightmap.shadowmaskMode = ShadowmaskMode.OVERLAY;
-    const uniforms = uniformsBoundTo(bound);
-    expect([uniforms.godotShadowmaskMode!.value, uniforms.godotShadowmask!.value]).toEqual([
-      ShadowmaskMode.OVERLAY,
-      bound.lightmap.shadowmaskAtlas,
-    ]);
+    expect(uniformsBoundTo(bound).godotShadowmaskMode!.value).toBe(ShadowmaskMode.OVERLAY);
   });
 
   it('reads no shadowmask for a material bound to none (edge case)', () => {

@@ -79,7 +79,7 @@ Every layer of a bake's lightmap textures, stacked in order into one texture arr
 _Avoid_: "lightmap texture" for the whole stack: a bake can save several.
 
 **Shadowmask** (`r3f/lightmap/lightmapProgram.ts`):
-The second atlas a bake saves, one byte per texel: how much of a sun's light reaches that texel. A LightmapGI's shadowmask mode sets how it meets the sun's real-time shadow. Replace puts it in the place of the real-time shadow where that fades out, and Overlay multiplies it with the real-time shadow.
+The second atlas a bake saves, one byte per texel: how much of a sun's light reaches that texel. A LightmapGI's shadowmask mode sets how it meets the sun's real-time shadow. Replace puts it in the place of the real-time shadow where that fades out, Overlay multiplies it with the real-time shadow, and Only uses it alone.
 _Avoid_: "shadow map", which is the real-time depth map of a light.
 
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):

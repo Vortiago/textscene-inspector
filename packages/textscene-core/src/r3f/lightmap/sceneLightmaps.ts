@@ -26,10 +26,12 @@ export class LightmapInstance {
   order: TreeOrder = [];
   /** Each user by {@link lightmapUserKey}. */
   users: ReadonlyMap<string, LightmapUser> = new Map();
-  /** The atlas, every layer of every lightmap texture in order. Null until it loads. */
+  /**
+   * The atlas, every layer of every lightmap texture in order. Null until it loads. The alpha of the
+   * first layer of each slice holds that slice's shadowmask, when the bake has one.
+   */
   atlas: THREE.DataArrayTexture | null = null;
-  /** The shadowmask atlas, one byte layer for each slice. Null until it loads, or when the bake has none. */
-  shadowmaskAtlas: THREE.DataArrayTexture | null = null;
+  /** None until the atlas holds the shadowmask, whatever the node says. */
   shadowmaskMode: EnumValue<typeof ShadowmaskMode> = ShadowmaskMode.NONE;
   usesSphericalHarmonics = false;
   usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;

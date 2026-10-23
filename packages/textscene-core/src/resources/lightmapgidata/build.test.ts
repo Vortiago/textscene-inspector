@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { dataArrayTexture } from '../textures/dataArrayTexture';
-import { combinedAtlas } from './build';
+import { atlasWithShadowmask, combinedAtlas } from './build';
 
 /** A `width` x 1 texture of `depth` layers, each texel's red the layer's `first + index`. */
 function layers(
@@ -41,5 +41,44 @@ describe('combinedAtlas', () => {
 
   it('makes no atlas of no textures (edge case)', () => {
     expect(combinedAtlas([])).toBeNull();
+  });
+});
+
+describe('atlasWithShadowmask', () => {
+  /** An RGBA half-float atlas of `depth` layers of `width` x 1, every texel (1, 2, 3, 4). */
+  const atlas = (depth: number, width = 1) =>
+    dataArrayTexture(
+      new Uint16Array(Array.from({ length: width * depth }, () => [1, 2, 3, 4]).flat()),
+      width,
+      1,
+      depth
+    );
+  const mask = (bytes: number[]) => dataArrayTexture(new Uint8Array(bytes), bytes.length, 1, 1);
+  const alphas = (texture: THREE.DataArrayTexture) =>
+    Array.from(texture.image.data as Uint16Array).filter((_, i) => i % 4 === 3);
+  const half = (byte: number) => THREE.DataUtils.toHalfFloat(byte / 255);
+
+  it('writes each shadowmask byte as the half float of its value into the alpha, and leaves the light', () => {
+    const merged = atlasWithShadowmask(atlas(1, 2), mask([0, 255]), 1)!;
+    expect(alphas(merged)).toEqual([half(0), half(255)]);
+    expect(Array.from(merged.image.data as Uint16Array).filter((_, i) => i % 4 !== 3)).toEqual([
+      1, 2, 3, 1, 2, 3,
+    ]);
+  });
+
+  it('writes the alpha of the first layer of each slice of directional light, four layers to the slice', () => {
+    const slices = dataArrayTexture(new Uint8Array([10, 20]), 1, 1, 2);
+    expect(alphas(atlasWithShadowmask(atlas(8), slices, 4)!)).toEqual([half(10), 4, 4, 4, half(20), 4, 4, 4]);
+  });
+
+  it('copies the atlas, so the loader’s texture keeps its alpha', () => {
+    const source = atlas(1);
+    atlasWithShadowmask(source, mask([200]), 1);
+    expect(alphas(source)).toEqual([4]);
+  });
+
+  it('makes no atlas of a shadowmask of another size or slice count, which no bake saves (error case)', () => {
+    expect(atlasWithShadowmask(atlas(1, 2), mask([1]), 1)).toBeNull();
+    expect(atlasWithShadowmask(atlas(3), mask([1]), 4)).toBeNull();
   });
 });

@@ -120,6 +120,8 @@ function fitDeclaredLight(
   // Godot's PCF kernel spans `soft_shadow_scale` atlas texels (`scene_forward_clustered.glsl:2443`).
   light.shadow.radius = declaration.filterRadius;
   fitSplitLight({ light, declaration, lightRect }, camera);
+  const sun = splitSunOf(light);
+  if (sun) sun.shadow.isDrawnFirst = lists.first === light;
 }
 
 /**
