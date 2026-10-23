@@ -12,6 +12,7 @@ import { TscnParser } from '../parser/TscnParser';
 import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
+import { settleLoads } from './testing/settleLoads';
 
 /** The instanced sub-scene: a Node2D root over one findable Polygon2D body. */
 const VASE_TSCN = `[gd_scene format=3]
@@ -55,7 +56,7 @@ async function render(ySort: boolean) {
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 

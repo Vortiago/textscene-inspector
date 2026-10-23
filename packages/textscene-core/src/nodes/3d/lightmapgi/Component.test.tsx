@@ -13,6 +13,7 @@ import './index';
 import './index.r3f';
 import '../../base/node3d/index';
 import '../../base/node3d/index.r3f';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const ATLAS_PATH = 'res://bake.exr';
 
@@ -39,9 +40,7 @@ async function mount(atlas: THREE.DataArrayTexture | null, lightmapLines = '') {
       <NodeTree node={parsed.nodes[0]!} path="Root" />
     </SceneStack>
   );
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
+  await settleLoads();
   const lightmaps = lightmapsOf(renderer.scene.instance as unknown as THREE.Scene);
   return { renderer, lightmaps };
 }

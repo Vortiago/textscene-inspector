@@ -13,6 +13,7 @@ import { SceneStack } from '../testing/SceneStack';
 import { ownerName } from '../lighting2d/testing/lightPassProbe';
 
 import '../nodes/index';
+import { settleLoads } from '../testing/settleLoads';
 
 const TRI = 'PackedVector2Array(0, 0, 16, 0, 16, 16)';
 
@@ -32,7 +33,7 @@ async function materialsByNodeName(tscn: string): Promise<Map<string, THREE.Mesh
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const out = new Map<string, THREE.MeshBasicMaterial>();
   let root: THREE.Object3D | null | undefined = (
     renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> }

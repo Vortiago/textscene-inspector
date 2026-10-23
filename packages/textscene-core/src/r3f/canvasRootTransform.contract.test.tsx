@@ -14,6 +14,7 @@ import { nearestGroupOrder } from './testing/paintOrder';
 import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
+import { settleLoads } from './testing/settleLoads';
 
 async function renderWorld(
   tscn: string,
@@ -29,7 +30,7 @@ async function renderWorld(
       <NodeDispatcher nodes={parsed.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;

@@ -21,6 +21,7 @@ import type { LightmapUser } from '../../../resources/lightmapgidata/types';
 import { drawnMeshes } from '../testing/reactThreeTestInstance';
 import './index.r3f';
 import '../meshinstance3d/index.r3f';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const GridMap = registeredComponent('GridMap');
 
@@ -56,8 +57,8 @@ async function render(node: TscnNode, lightmap?: LightmapInstance) {
   if (lightmap) {
     await ReactThreeTestRenderer.act(async () => {
       lightmapsOf(renderer.scene.instance as THREE.Scene).add(lightmap);
-      await new Promise<void>((resolve) => setTimeout(resolve, 10));
     });
+    await settleLoads();
   }
   await renderScene(renderer, camera);
   return renderer;

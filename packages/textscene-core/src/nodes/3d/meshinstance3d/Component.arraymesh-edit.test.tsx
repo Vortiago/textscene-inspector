@@ -15,6 +15,7 @@ import { loaderServing } from '../../../resources/testing/servingResourceLoader'
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -51,10 +52,6 @@ function albedoMaterial(id: string, albedo: string): TscnInternalResource {
   return { id, type: 'StandardMaterial3D', data: { albedo_color: albedo } };
 }
 
-async function settle(): Promise<void> {
-  await new Promise<void>((r) => setTimeout(r, 10));
-}
-
 describe('<MeshInstance3D> scene ArrayMesh edited while mounted', () => {
   it("follows an edit to a surface material's body that leaves the surface bytes alone", async () => {
     const loader = loaderServing();
@@ -62,10 +59,10 @@ describe('<MeshInstance3D> scene ArrayMesh edited while mounted', () => {
     const renderer = await ReactThreeTestRenderer.create(
       scene(loader, [inlineMesh(surfaces), albedoMaterial('Mat', 'Color(1, 0, 0, 1)')])
     );
-    await settle();
+    await settleLoads();
 
     await renderer.update(scene(loader, [inlineMesh(surfaces), albedoMaterial('Mat', 'Color(0, 0, 1, 1)')]));
-    await settle();
+    await settleLoads();
 
     const material = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(material.color.getHex()).toBe(0x0000ff);
@@ -81,10 +78,10 @@ describe('<MeshInstance3D> scene ArrayMesh edited while mounted', () => {
       { material: 'SubResource("Blue")', name: 'b' }
     );
     const renderer = await ReactThreeTestRenderer.create(scene(loader, [inlineMesh(oneSurface), red, blue]));
-    await settle();
+    await settleLoads();
 
     await renderer.update(scene(loader, [inlineMesh(twoSurfaces), red, blue]));
-    await settle();
+    await settleLoads();
 
     const materials = findMesh(renderer.scene).material as THREE.MeshStandardMaterial[];
     expect(materials.map((m) => m?.color.getHex())).toEqual([0xff0000, 0x0000ff]);
