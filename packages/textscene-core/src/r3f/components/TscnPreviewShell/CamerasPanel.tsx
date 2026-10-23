@@ -4,11 +4,9 @@
  * camera. A Camera2D row frames the 2D stage on the camera's view and opens
  * the 2D workspace.
  */
-import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { useLiveSceneNodes, liveTreeContext } from '../../useLiveSceneTree.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
+import { useLiveSceneNodes, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
@@ -21,10 +19,9 @@ import styles from './TscnPreviewShell.module.css';
 const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamera2DType(n.type);
 
 export function CamerasPanel() {
-  const { sceneGraph } = useHierarchy();
   const cam = useOptionalViewportActions();
   const { setMode } = useViewportMode();
-  const loader = useResourceLoader();
+  const liveTree = useSharedLiveTree();
   const { viewportSize } = useProjectSettings();
 
   const cameras = useLiveSceneNodes(isCameraNode);
@@ -38,9 +35,8 @@ export function CamerasPanel() {
   function lookThrough2D(path: string, properties: Camera2DProperties) {
     // Over the live tree, a Camera2D inside a sub-scene composes against the
     // instance transform instead of framing at the origin.
-    const lt = liveTreeContext(sceneGraph, loader);
-    if (!lt) return;
-    const worldPosition = node2dWorldPosition(lt.roots, lt.ctx, path) ?? { x: 0, y: 0 };
+    if (!liveTree) return;
+    const worldPosition = node2dWorldPosition(liveTree.roots, liveTree.ctx, path) ?? { x: 0, y: 0 };
     // The frame `<Canvas2DStage>` draws, so the camera lands where the stage shows it.
     cam?.requestFrame2D(
       camera2DView(properties, worldPosition, { x: viewportSize.width, y: viewportSize.height })
