@@ -10,7 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -61,7 +61,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // Icon: resolve and load the referenced texture
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
-  const iconTexture = useCanvas2DTexture(iconSource);
+  const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const iconNaturalSize: Vector2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;

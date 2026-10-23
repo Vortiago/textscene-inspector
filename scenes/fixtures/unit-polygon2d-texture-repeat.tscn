@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: `texture_repeat` on a textured Polygon2D. Both polygons map the same 8x8 texture
+; with UVs from 0 to 24 texels, three times its size. The Enabled one tiles it three times.
+; The default one clamps to the edge texels, so only its first texel column varies.
+
+[ext_resource type="Texture2D" path="res://textures/mip-checker.png" id="1_checker"]
+
+[node name="World" type="Node2D"]
+
+; `texture_repeat` 2 is TEXTURE_REPEAT_ENABLED. Nearest keeps every texel a crisp 8 px cell.
+[node name="Enabled" type="Polygon2D" parent="."]
+texture_filter = 1
+texture_repeat = 2
+position = Vector2(192, 192)
+texture = ExtResource("1_checker")
+polygon = PackedVector2Array(0, 0, 192, 0, 192, 192, 0, 192)
+uv = PackedVector2Array(0, 0, 24, 0, 24, 24, 0, 24)
+
+[node name="Default" type="Polygon2D" parent="."]
+texture_filter = 1
+position = Vector2(576, 192)
+texture = ExtResource("1_checker")
+polygon = PackedVector2Array(0, 0, 192, 0, 192, 192, 0, 192)
+uv = PackedVector2Array(0, 0, 24, 0, 24, 24, 0, 24)

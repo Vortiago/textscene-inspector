@@ -1,0 +1,28 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: `texture_filter` on the Node2D parent. Both Sprite2Ds minify the same 128x128
+; texture, whose horizontal stripes are 4 texels tall, by 8 across and 2 down. Nearest with
+; Mipmaps picks one level for both axes, so the stripes blur to one grey. Nearest with Mipmaps and
+; Anisotropic keeps them.
+
+[ext_resource type="Texture2D" path="res://textures/aniso-stripes.png" id="1_stripes"]
+
+[node name="World" type="Node2D"]
+
+; `texture_filter` 3 is TEXTURE_FILTER_NEAREST_WITH_MIPMAPS.
+[node name="MipmapsParent" type="Node2D" parent="."]
+texture_filter = 3
+
+[node name="Mipmaps" type="Sprite2D" parent="MipmapsParent"]
+texture = ExtResource("1_stripes")
+position = Vector2(288, 324)
+scale = Vector2(0.125, 0.5)
+
+; `texture_filter` 5 is TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC.
+[node name="AnisotropicParent" type="Node2D" parent="."]
+texture_filter = 5
+
+[node name="Anisotropic" type="Sprite2D" parent="AnisotropicParent"]
+texture = ExtResource("1_stripes")
+position = Vector2(864, 324)
+scale = Vector2(0.125, 0.5)

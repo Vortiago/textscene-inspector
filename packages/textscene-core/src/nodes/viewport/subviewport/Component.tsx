@@ -26,6 +26,7 @@ import {
 import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
+import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import {
   applyOrthoFrame,
   createCanvasTarget,
@@ -63,7 +64,8 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
  * second mount registers a second Object3D at the same path.
  */
 export function SubViewport({ node, children }: NodeComponentProps) {
-  const { own_world_3d: ownWorld3D } = node.properties as SubViewportProperties;
+  const properties = node.properties as SubViewportProperties;
+  const { own_world_3d: ownWorld3D } = properties;
   const workspace = useCanvasWorkspace();
   const path = useNodePath() ?? node.name;
   // Classified over the resolved subtree: in the parsed graph an `instance=`
@@ -82,7 +84,11 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // dispatcher hands it (subtreeConformance).
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
-  const contents = <World2DLightingBoundary>{children}</World2DLightingBoundary>;
+  const contents = (
+    <World2DLightingBoundary>
+      <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
+    </World2DLightingBoundary>
+  );
 
   return (
     <Node node={node}>

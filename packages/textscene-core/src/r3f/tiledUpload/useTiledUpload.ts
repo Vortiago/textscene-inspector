@@ -8,6 +8,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { beginTextureWork } from '../../resources/textures/textureWork';
+import { useNearestAnisotropy } from '../nearestAnisotropy';
 import { TiledUploadContext } from './TiledUploadContext';
 
 /**
@@ -47,6 +48,8 @@ export function useTiledUpload<T extends THREE.Texture>(
     lastShown.current = shown;
   });
   useRetired([texture, shown], retire);
+  // After the effect above, which allocates a large texture's storage empty.
+  useNearestAnisotropy(texture);
   return shown;
 }
 

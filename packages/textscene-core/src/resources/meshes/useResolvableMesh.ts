@@ -1,5 +1,5 @@
 /**
- * A mesh with the files its build reads, loaded through the resource loader: a TubeTrailMesh whose
+ * A mesh with the files its build reads, loaded through the resource loader: a trail mesh whose
  * `curve` is an ExtResource builds once that file has loaded.
  */
 

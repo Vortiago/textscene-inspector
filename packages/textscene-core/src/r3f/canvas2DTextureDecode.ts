@@ -10,6 +10,11 @@ import { useUploadedClone } from './tiledUpload/useTiledUpload';
 import { pinNoColorSpace, undecodedClone } from './undecodedTexture';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { holdsSrgbBytes } from './srgbByteTextures';
+import {
+  applyCanvasItemSampler,
+  useResolvedTextureSampler,
+  type CanvasItemTextureSampler,
+} from './canvasItemTextureSampler';
 
 // Re-exported for the 2D consumers. It lives in `undecodedTexture.ts`, since 3D
 // material data maps need it too.
@@ -17,27 +22,31 @@ export { pinNoColorSpace };
 
 /**
  * A 2D-only clone of a cached texture, retagged `NoColorSpace`, sharing its
- * `Source`. With `hdr_2d` off (`rendering_server.cpp:3771`), Godot's canvas filters
- * raw sRGB bytes from the plain view (`texture_storage.cpp:754`), where 3D samples
- * the sRGB view (`material_storage.cpp:1067,1073`). Returns `null` with nothing to show.
+ * `Source`, and sampled by the item's `sampler`. With `hdr_2d` off (`rendering_server.cpp:3771`),
+ * Godot's canvas filters raw sRGB bytes from the plain view (`texture_storage.cpp:754`), where 3D
+ * samples the sRGB view (`material_storage.cpp:1067,1073`). Returns `null` with nothing to show.
  */
-export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): THREE.Texture | null {
+export function useCanvas2DTexture(
+  texture: THREE.Texture | null | undefined,
+  sampler: CanvasItemTextureSampler
+): THREE.Texture | null {
   // The cache tags every texture `SRGBColorSpace` (`textureProcessing.ts`), which
   // WebGL uploads as `SRGB8_ALPHA8` (`WebGLTextures.js`), decoding before the filter.
   // A consumer that overrides the sampler, such as a tiled `TextureRect`, clones again.
   const undecoded = useMemo(() => {
     if (!texture) return null;
     const clone = undecodedClone(texture);
-    // A canvas item's `texture_repeat` resolves to the viewport default, disabled
-    // (`scene/main/viewport.h:420`, `scene/main/viewport.cpp:4009`,
-    // `scene/main/canvas_item.cpp:1686-1694`). A file-loaded entry arrives clamped
-    // (ADR-0044), but a producer can hand over Repeat, such as a seamless
-    // `NoiseTexture2D`. So the clamp is stated here, not inherited.
-    clone.wrapS = THREE.ClampToEdgeWrapping;
-    clone.wrapT = THREE.ClampToEdgeWrapping;
+    // The sampler states the wrap too: a file-loaded entry arrives clamped (ADR-0044), but a producer
+    // can hand over Repeat, such as a seamless `NoiseTexture2D`, and Godot's item default is Disabled.
+    applyCanvasItemSampler(clone, sampler);
     return clone;
-  }, [texture]);
+  }, [texture, sampler]);
   return useUploadedClone(undecoded);
+}
+
+/** `useCanvas2DTexture` with the sampler the owning Control's painter inherits. */
+export function useOwnerCanvas2DTexture(texture: THREE.Texture | null | undefined): THREE.Texture | null {
+  return useCanvas2DTexture(texture, useResolvedTextureSampler());
 }
 
 /**

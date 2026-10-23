@@ -102,6 +102,30 @@ describe('AnimatedSprite2D render', () => {
   });
 });
 
+describe('AnimatedSprite2D texture sampler', () => {
+  const FRAMED = {
+    sprite_frames: 'SubResource("sf")',
+    animation: '&"right"',
+    frame: '1',
+  };
+
+  async function drawnMap(raw: Record<string, string>): Promise<THREE.Texture> {
+    const r = await render(makeNode({ ...FRAMED, ...raw }));
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    return (mesh.material as THREE.MeshBasicMaterial).map!;
+  }
+
+  it('samples nearest where texture_filter is Nearest', async () => {
+    const map = await drawnMap({ texture_filter: '1' });
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+
+  it('wraps with RepeatWrapping where texture_repeat is Enabled', async () => {
+    const map = await drawnMap({ texture_repeat: '2' });
+    expect([map.wrapS, map.wrapT]).toEqual([THREE.RepeatWrapping, THREE.RepeatWrapping]);
+  });
+});
+
 describe('AnimatedSprite2D playback (transport-driven)', () => {
   // Two-frame "right" at 5 fps (0.2s/frame, 0.4s loop). Distinct widths per frame.
   const FRAMES_2 =

@@ -19,12 +19,14 @@ import {
 } from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
+import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
+  const sampler = useNode2DTextureSampler(props);
 
   // Godot's TileMap `add_child`s a TileMapLayer CanvasItem per layer and forwards
   // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer takes
@@ -90,6 +92,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
                   lightMask={props.light_mask}
                   zFinal={group.zFinal}
                   name={node.name}
+                  sampler={sampler}
                 />
               </CanvasItemGroup>
             ))

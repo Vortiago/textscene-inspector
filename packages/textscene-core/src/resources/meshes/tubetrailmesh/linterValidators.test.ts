@@ -14,7 +14,7 @@ runResourcePropertyValidation(
     {
       prop: 'radius',
       valid: ['0.5', '0.001', '100', '5000'],
-      // The hint's floor is 0.001; `set_radius` stores any value (primitive_meshes.cpp:2387).
+      // The hint's floor is 0.001; `set_radius` stores any value but an approximately equal one (primitive_meshes.cpp:2388).
       invalid: [{ value: '0', contains: ['radius'], severity: 'warning' }],
     },
     {

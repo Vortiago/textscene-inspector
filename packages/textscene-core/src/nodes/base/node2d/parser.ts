@@ -7,18 +7,28 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
-import { floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
+import { enumOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/variant/number.js';
 import { degToRad } from '../../../godot/math/math.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem.js';
 
 const TRANSFORM2D_RE = slotTupleRegex('Transform2D', 6);
 
+/** The setters refuse a value past `TEXTURE_FILTER_MAX` or `TEXTURE_REPEAT_MAX` (`canvas_item.cpp`), so it keeps PARENT_NODE. */
+const TEXTURE_FILTERS = numericValues(CanvasItemTextureFilter);
+const TEXTURE_REPEATS = numericValues(CanvasItemTextureRepeat);
+
+function numericValues<T extends number>(members: Record<string, string | T>): T[] {
+  return Object.values(members).filter((value): value is T => typeof value === 'number');
+}
+
 export function parseNode2D(heading: ParsedHeading, properties: Record<string, string>): Node2DProperties {
   const name = heading.attributes.name || '';
+  const label = name || 'Node2D';
   const visible = properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false;
 
   // Defaults match Godot.
@@ -35,8 +45,8 @@ export function parseNode2D(heading: ParsedHeading, properties: Record<string, s
     ({ position, rotation, scale } = matrix);
     skew = matrix.skew;
   } else {
-    if (properties.position) position = vec2Or(properties.position, position, name || 'Node2D');
-    if (properties.scale) scale = vec2Or(properties.scale, scale, name || 'Node2D');
+    if (properties.position) position = vec2Or(properties.position, position, label);
+    if (properties.scale) scale = vec2Or(properties.scale, scale, label);
     if (properties.rotation !== undefined) rotation = floatOr(properties.rotation, 0);
     else if (properties.rotation_degrees !== undefined)
       rotation = degToRad(floatOr(properties.rotation_degrees, 0));
@@ -62,7 +72,19 @@ export function parseNode2D(heading: ParsedHeading, properties: Record<string, s
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)
       : { r: 1, g: 1, b: 1, a: 1 },
-    light_mask: intOr(properties.light_mask, 1, `${name || 'Node2D'}.light_mask`),
+    light_mask: intOr(properties.light_mask, 1, `${label}.light_mask`),
+    texture_filter: enumOr(
+      properties.texture_filter,
+      CanvasItemTextureFilter.PARENT_NODE,
+      TEXTURE_FILTERS,
+      `${label}.texture_filter`
+    ),
+    texture_repeat: enumOr(
+      properties.texture_repeat,
+      CanvasItemTextureRepeat.PARENT_NODE,
+      TEXTURE_REPEATS,
+      `${label}.texture_repeat`
+    ),
     y_sort_enabled: boolSlotValue(properties.y_sort_enabled) === true,
     y_sort_origin: properties.y_sort_origin !== undefined ? floatOr(properties.y_sort_origin, 0) : 0,
     ...(properties.material !== undefined ? { materialPath: properties.material } : {}),

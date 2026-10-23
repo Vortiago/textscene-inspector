@@ -38,6 +38,7 @@ export interface SubViewportProperties extends Omit<NodeProperties, 'transform'>
   use_debanding: boolean;
   audio_listener_enable_2d: boolean;
   canvas_item_default_texture_filter: number;
+  canvas_item_default_texture_repeat: number;
   gui_embed_subwindows: boolean;
   /** The mipmap bias of the viewport's 3D material samplers. Absent takes the project setting. */
   texture_mipmap_bias?: number;

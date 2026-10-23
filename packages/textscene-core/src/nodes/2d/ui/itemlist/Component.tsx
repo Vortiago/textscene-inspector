@@ -11,7 +11,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -132,7 +132,7 @@ function ItemListRow({
     resources.externalResources,
     resources.internalResources
   );
-  const iconTexture = useCanvas2DTexture(iconSource);
+  const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
   const iconColorLinear = useGodotLinearColor(iconColorSrgb);

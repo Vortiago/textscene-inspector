@@ -13,7 +13,11 @@ import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import {
+  applyCanvasItemSampler,
+  useInheritedTextureSampler,
+  type CanvasItemTextureSampler,
+} from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
@@ -53,7 +57,7 @@ function useLayerTexture(
   ref: string | undefined,
   externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
   internalResources: NativeControlComponentProps['solveNode']['resources']['internalResources'],
-  filter: THREE.MagnificationTextureFilter
+  sampler: CanvasItemTextureSampler
 ): THREE.Texture | null {
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
   // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
@@ -61,13 +65,9 @@ function useLayerTexture(
   const layer = useMemo(() => {
     if (!raw) return null;
     const cloned = undecodedClone(raw);
-    // The canvas default, as `useCanvas2DTexture` sets it (`scene/main/viewport.h:420`).
-    cloned.wrapS = THREE.ClampToEdgeWrapping;
-    cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.magFilter = filter;
-    cloned.minFilter = filter;
+    applyCanvasItemSampler(cloned, sampler);
     return cloned;
-  }, [raw, filter]);
+  }, [raw, sampler]);
   return useUploadedClone(layer);
 }
 
@@ -118,17 +118,16 @@ function cropWindow(
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureProgressBarProperties>(solveNode);
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
-  const filter = canvasItemThreeFilter(sampler.filter);
 
   const { externalResources, internalResources } = solveNode.resources;
-  const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, filter);
+  const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
   const progressTexture = useLayerTexture(
     props.textureProgress,
     externalResources,
     internalResources,
-    filter
+    sampler
   );
-  const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, filter);
+  const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
 
   const underSize = naturalSize(underTexture);
   const progressSize = naturalSize(progressTexture);

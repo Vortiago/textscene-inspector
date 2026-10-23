@@ -50,6 +50,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/cylindermesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CylinderMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/torusmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TorusMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/tubetrailmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TubeTrailMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/ribbontrailmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`RibbonTrailMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |

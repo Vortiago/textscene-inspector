@@ -10,6 +10,7 @@ import {
   canvasItemSamplerFilter,
   canvasItemSamplerRepeat,
 } from './canvasItem';
+import { TextureFilter } from '../rendering/materials/textureFilter';
 
 describe('CanvasItem texture filter', () => {
   it('prepends PARENT_NODE to the seven filters (canvas_item.h:52-60)', () => {
@@ -24,20 +25,21 @@ describe('CanvasItem texture filter', () => {
     });
   });
 
-  it('samples every nearest variant nearest', () => {
-    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.NEAREST)).toBe('nearest');
-    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS)).toBe('nearest');
-    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC)).toBe('nearest');
+  it('maps each concrete filter to the BaseMaterial3D filter of the same name', () => {
+    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.NEAREST)).toBe(TextureFilter.NEAREST);
+    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.LINEAR)).toBe(TextureFilter.LINEAR);
+    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS)).toBe(
+      TextureFilter.NEAREST_WITH_MIPMAPS
+    );
+    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC)).toBe(
+      TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC
+    );
   });
 
-  it('samples every linear variant, and a resolved PARENT_NODE, linearly', () => {
-    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.LINEAR)).toBe('linear');
-    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC)).toBe('linear');
-    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.PARENT_NODE)).toBe('linear');
-  });
-
-  it('samples linearly where no ancestor sets a filter (edge case)', () => {
-    expect(canvasItemSamplerFilter(undefined)).toBe('linear');
+  it('samples linearly for a resolved PARENT_NODE, an out-of-range value and no filter', () => {
+    expect(canvasItemSamplerFilter(CanvasItemTextureFilter.PARENT_NODE)).toBe(TextureFilter.LINEAR);
+    expect(canvasItemSamplerFilter(7)).toBe(TextureFilter.LINEAR);
+    expect(canvasItemSamplerFilter(undefined)).toBe(TextureFilter.LINEAR);
   });
 });
 

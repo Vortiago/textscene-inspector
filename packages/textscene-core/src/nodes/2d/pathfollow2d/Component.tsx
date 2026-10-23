@@ -15,6 +15,7 @@ import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransfor
 import { useCanvasItemRenderOrder } from '../../../r3f/contexts/PaintOrderContext';
 import { accumulateCanvasItemZ, useEffectiveZ } from '../../../r3f/lighting2d/canvasItemPlacement';
 import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
+import { TextureSampler2DContext, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import type { Curve2DSampler } from '../../../resources/curves/curve2d';
 import type { PathFollow2DProperties } from './types';
 
@@ -37,6 +38,8 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
     [parentModulate, props.modulate]
   );
 
+  const textureSampler = useNode2DTextureSampler(props);
+
   const followTransform = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
 
   const dot = gizmoVisible ? <FollowDot /> : null;
@@ -58,7 +61,9 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
     // nearest enclosing group, and a bare one sinks the dot behind the canvas.
     <group name={node.name} {...followTransform} visible={props.visible !== false} renderOrder={renderOrder}>
       {dot}
-      <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
+      <Modulate2DContext.Provider value={modulate}>
+        <TextureSampler2DContext.Provider value={textureSampler}>{children}</TextureSampler2DContext.Provider>
+      </Modulate2DContext.Provider>
     </group>
   );
 }
