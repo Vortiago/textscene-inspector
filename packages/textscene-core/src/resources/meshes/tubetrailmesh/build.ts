@@ -31,7 +31,7 @@
 
 import { CMP_EPSILON } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
-import { bakedCurveSampler } from '../../curves/curve/bakedSample.js';
+import { curveScaleSampler } from '../primitivemesh/curveScale.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { rimPoint } from '../primitivemesh/rimPoint.js';
 import { SurfaceWriter, type Vec4 } from '../primitivemesh/surfaceWriter.js';
@@ -54,7 +54,7 @@ interface RimColumn {
 export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurface {
   const depth = storedReal(p.sectionLength * p.sections);
   // A curve with no point scales nothing (`:2552`).
-  const radiusScale = p.curve && p.curve.points.length > 0 ? bakedCurveSampler(p.curve) : () => 1;
+  const radiusScale = curveScaleSampler(p.curve);
   // Each ring repeats the columns, so they are computed once.
   const rim = rimColumns(p.radialSteps);
 

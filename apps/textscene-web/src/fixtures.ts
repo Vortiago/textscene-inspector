@@ -1603,6 +1603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Ribbon Trail Mesh Texture Uv",
+    "file": "unit-ribbon-trail-mesh-texture-uv.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Rigidbody2d",
     "file": "unit-rigidbody2d.tscn",
     "category": "Other"
