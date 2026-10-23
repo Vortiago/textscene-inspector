@@ -136,11 +136,9 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // A 2D pass draws into a frame, which holds the canvas upside down for Godot's tie rule and
   // copies it into the target (ADR-0057). The frame takes the multisampling, so the target it
   // copies into never multisamples.
-  const target = useMultisampledTarget(kind === '3d' ? viewportMsaaMode(properties, kind) : 0, createTarget);
-  const frame = useMultisampledTarget(
-    kind === '2d' ? viewportMsaaMode(properties, kind) : 0,
-    createCanvasFrame
-  );
+  const msaaMode = viewportMsaaMode(properties, kind);
+  const target = useMultisampledTarget(kind === '3d' ? msaaMode : 0, createTarget);
+  const frame = useMultisampledTarget(kind === '2d' ? msaaMode : 0, createCanvasFrame);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.
