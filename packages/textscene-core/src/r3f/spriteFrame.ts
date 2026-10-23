@@ -12,23 +12,17 @@
 import * as THREE from 'three';
 import { pinNoColorSpace } from './canvas2DTextureDecode';
 import { regionUvWindow } from './regionUvWindow';
+import { WRAP } from './canvasItemTextureSampler';
 
 /**
  * What shows where a frame's UVs fall outside the texture, which only a
  * `region_rect` bigger than its texture reaches: Godot does not clip it
  * (`Sprite2D::_get_rects`, and `Texture2D::get_rect_region` passes it through).
- * Required, since a default is the silent hand-syncing this module prevents.
+ * Required, since a default is the silent hand-syncing this module prevents. `SpriteBase3D` derives
+ * `texture_repeat` from the frame's UV corners (`sprite_3d.cpp:163`), as `spriteWrapMode()` does: a
+ * frame inside the texture clamps, so its edge texels stretch past it, and only an overrun tiles.
  */
 type SpriteWrapMode = 'clamp' | 'repeat';
-
-const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
-  // A frame inside the texture: `SpriteBase3D` derives `texture_repeat` off
-  // (`sprite_3d.cpp:163`), so the edge texels stretch past the frame.
-  clamp: THREE.ClampToEdgeWrapping,
-  // Sprite3D: `SpriteBase3D` derives `texture_repeat` from the frame's UV corners
-  // (`sprite_3d.cpp:163`), so only an overrun tiles. `spriteWrapMode()` derives it.
-  repeat: THREE.RepeatWrapping,
-};
 
 /**
  * Flip and world size stay per slice: Sprite2D mirrors by mesh scale at 1 px per

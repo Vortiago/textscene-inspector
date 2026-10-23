@@ -17,7 +17,8 @@ import { projectCanvasTextureDefaults } from '../parser/projectSettingsParser';
 import { godotTextureFilterState, applyTextureFilterState } from '../resources/textures/godotTextureFilter';
 import { useProjectSettings } from './contexts/ProjectSettingsContext';
 
-const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
+/** three's wrapping for each of Godot's repeat modes. */
+export const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
   clamp: THREE.ClampToEdgeWrapping,
   repeat: THREE.RepeatWrapping,
   mirror: THREE.MirroredRepeatWrapping,
