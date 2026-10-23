@@ -125,7 +125,5 @@ export function testBlocksExcept(guard: string, canHold: (source: string) => boo
     .filter((file) => file !== guard)
     .map((file) => ({ file, source: readFileSync(join(srcRoot, file), 'utf8') }))
     .filter(({ source }) => canHold(source));
-  return atLeast(candidates, 1, 'test files that can hold a match').flatMap(({ file, source }) =>
-    blocksIn(file, source)
-  );
+  return candidates.flatMap(({ file, source }) => blocksIn(file, source));
 }

@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { TRIVIA } from '@textscene/dev-kit';
 import { isProductionSource, walkSources } from '../r3f/testing/sourceScan';
 
 const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,8 +28,6 @@ function sourceFiles(): string[] {
  */
 const parsedBySource = new Map<string, ts.SourceFile>();
 
-/** Whitespace and comments, which may sit between two tokens. */
-const TRIVIA = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*\n)*`;
 /** `export {`, `export *` or `export type {`: the start of every re-export. */
 const MAY_RE_EXPORT = new RegExp(String.raw`\bexport${TRIVIA}(?:type\b${TRIVIA})?[{*]`);
 /** `= {`: the start of every declaration whose initializer is an object literal. */
