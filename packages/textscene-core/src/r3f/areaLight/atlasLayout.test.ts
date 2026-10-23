@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildAreaLightAtlas, type AreaTextureImage } from './atlasLayout';
-import { mipSize } from './atlasMipmaps';
+import { mipSize } from '../../resources/processing/mipChain';
 
 /** A `width × height` image whose texel at `x`, `y` is `rgbaAt(x, y)`, in sRGB bytes. */
 function image(

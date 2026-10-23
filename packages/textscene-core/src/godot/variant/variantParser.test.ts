@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   NODE_PATH_LITERAL_RE,
+  dictBoolField,
   dictCallField,
   dictKey,
   dictStringField,
@@ -272,5 +273,24 @@ describe('dictKey', () => {
 
   it('finds a key with blanks before its colon, as the tokenizer skips them (edge case)', () => {
     expect(dictKey('sh').test('{ "sh" \t: PackedColorArray() }')).toBe(true);
+  });
+});
+
+describe('dictBoolField', () => {
+  it.each([
+    ['true', '{\n"loop": true,\n"speed": 5.0\n}'],
+    ['false', '{ "loop": false }'],
+  ])('reads %s', (value, dictionary) => {
+    expect(dictBoolField('loop').exec(dictionary)?.[1]).toBe(value);
+  });
+
+  it('reads a value after blanks around the colon, as the tokenizer skips them (edge case)', () => {
+    expect(dictBoolField('mipmaps').exec('{ "mipmaps" \t:\ttrue }')?.[1]).toBe('true');
+  });
+
+  it('reads no other value, nor another key (error case)', () => {
+    expect(dictBoolField('loop').exec('{ "loop": 1 }')).toBeNull();
+    expect(dictBoolField('loop').exec('{ "looped": true }')).toBeNull();
+    expect(dictBoolField('loop').exec('{ "loop": trueish }')).toBeNull();
   });
 });

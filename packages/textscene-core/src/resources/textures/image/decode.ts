@@ -9,9 +9,15 @@ import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { literalText } from '../../../godot/string/string.js';
 import { parseGodotInt } from '../../../godot/variant/intReader.js';
 import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
-import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
+import {
+  dictBoolField,
+  dictCallField,
+  dictNumberField,
+  dictStringField,
+} from '../../../godot/variant/variantParser.js';
 import { warn } from '../../../logger';
-import { BLOCK_FORMATS, decodeBlocks } from './blocks/decodeBlocks';
+import { lowerLevelSizes } from '../../processing/mipChain';
+import { BLOCK_FORMATS, blockBytes, decodeBlocks } from './blocks/decodeBlocks';
 
 /** A channel no source byte fills: 0, or 255 for alpha. */
 const ZERO = -1;
@@ -72,18 +78,28 @@ const FLOAT_LAYOUTS: Readonly<Record<string, FloatLayout>> = {
 };
 
 /**
- * The pixels and the format they were saved in. The 8-bit and block formats decode to RGBA8. The
- * rest decode to the raw RGBA floats Godot samples, which can pass 1.
+ * The pixels of one level. The 8-bit and block formats decode to RGBA8. The rest decode to the
+ * raw RGBA floats Godot samples, which can pass 1.
  */
-export interface DecodedImage extends ImageSize {
+export interface DecodedLevel extends ImageSize {
   data: Uint8Array | Float32Array;
+}
+
+/** The top level, the format it was saved in, and the levels the file stores below it. */
+export interface DecodedImage extends DecodedLevel {
   /** The name `Image::format_names` gives the saved format. */
   format: string;
+  /**
+   * Largest first, down to 1 × 1, as saved: Godot never rebuilds them. Empty for an image saved
+   * without mipmaps, and for one whose bytes end before its last level.
+   */
+  levels: DecodedLevel[];
 }
 
 const readWidth = dictNumberField('width');
 const readHeight = dictNumberField('height');
 const readFormat = dictStringField('format');
+const readMipmaps = dictBoolField('mipmaps');
 const readData = dictCallField('data', 'PackedByteArray');
 
 /** The `Image` sub-resource `ref` names, decoded. Null for a reference to anything else. */
@@ -107,6 +123,8 @@ export function imageRefSize(
 
 interface ImageHeader extends ImageSize {
   format: string;
+  /** Whether the bytes hold every level below the top one. */
+  hasMipmaps: boolean;
   /** The text between the data's `PackedByteArray(…)` parentheses. */
   body: string;
 }
@@ -119,38 +137,81 @@ function readHeader(data: Record<string, string>): ImageHeader | null {
   const format = readFormat.exec(dictionary)?.[1];
   const body = readData(dictionary);
   if (!width || !height || width < 1 || height < 1 || !format || body === null) return null;
-  return { width, height, format: literalText(format), body };
+  const hasMipmaps = readMipmaps.exec(dictionary)?.[1] === 'true';
+  return { width, height, format: literalText(format), hasMipmaps, body };
 }
 
 /**
- * The image's top level, or null for an image Godot refuses (`initialize_data` fails without
- * enough bytes) or one in a format this does not decode: the integer formats, which a float
- * sampler cannot read, and the block formats no decoder handles.
+ * The image's top level and the levels it stores, or null for an image Godot refuses
+ * (`initialize_data` fails without enough bytes) or one in a format this does not decode: the
+ * integer formats, which a float sampler cannot read, and the block formats no decoder handles.
+ * Unlike `initialize_data`, it accepts bytes short of the levels, and keeps the top level alone.
  */
 function decodeImage(data: Record<string, string>): DecodedImage | null {
   const header = readHeader(data);
   if (!header) return null;
-  const { width, height, format, body } = header;
-  const decode = pixelDecoder(format);
-  if (!decode) {
+  const { width, height, format, hasMipmaps, body } = header;
+  const reader = formatReader(format);
+  if (!reader) {
     warn(`[Image] the ${format} format is not decoded, so its image draws nothing`);
     return null;
   }
   const bytes = parsePackedByteArrayBody(body);
-  const pixels = bytes && decode(bytes, { width, height });
-  return pixels ? { data: pixels, width, height, format } : null;
+  const pixels = bytes && reader.decode(bytes, { width, height });
+  if (!bytes || !pixels) return null;
+  const levels = hasMipmaps ? decodeLevels(bytes, { width, height }, reader) : [];
+  return { data: pixels, width, height, format, levels };
 }
 
-/** Decodes an image's top level, or gives null for data shorter than it. */
+/**
+ * The levels below the top one. Each follows the level above in the bytes and takes whole blocks
+ * of the format (`_get_mipmap_offset_and_size`, `image.cpp:336-362`). All or none: a texture
+ * with a level missing is incomplete, so bytes that end early leave the top level alone.
+ */
+function decodeLevels(bytes: Uint8Array, top: ImageSize, reader: FormatReader): DecodedLevel[] {
+  const levels: DecodedLevel[] = [];
+  let offset = reader.byteLength(top);
+  for (const size of lowerLevelSizes(top)) {
+    const end = offset + reader.byteLength(size);
+    const data = reader.decode(bytes.subarray(offset, end), size);
+    if (!data) return [];
+    levels.push({ data, ...size });
+    offset = end;
+  }
+  return levels;
+}
+
+/** Decodes a level, or gives null for data shorter than it. */
 type PixelDecoder = (bytes: Uint8Array, size: ImageSize) => Uint8Array | Float32Array | null;
 
-function pixelDecoder(format: string): PixelDecoder | null {
+interface FormatReader {
+  /** The bytes one level of this size takes (`_get_dst_image_size`, `image.cpp:1885-1945`). */
+  byteLength: (size: ImageSize) => number;
+  decode: PixelDecoder;
+}
+
+function formatReader(format: string): FormatReader | null {
   const byteLayout = BYTE_LAYOUTS[format];
-  if (byteLayout) return (bytes, size) => expandBytes(bytes, size, byteLayout);
+  if (byteLayout) {
+    return {
+      byteLength: ({ width, height }) => width * height * byteLayout.size,
+      decode: (bytes, size) => expandBytes(bytes, size, byteLayout),
+    };
+  }
   const floatLayout = FLOAT_LAYOUTS[format];
-  if (floatLayout) return (bytes, size) => unpackFloats(bytes, size, floatLayout);
+  if (floatLayout) {
+    return {
+      byteLength: ({ width, height }) => width * height * floatLayout.size,
+      decode: (bytes, size) => unpackFloats(bytes, size, floatLayout),
+    };
+  }
   const blockFormat = BLOCK_FORMATS[format];
-  if (blockFormat) return (bytes, size) => decodeBlocks(bytes, size, blockFormat);
+  if (blockFormat) {
+    return {
+      byteLength: (size) => blockBytes(size, blockFormat),
+      decode: (bytes, size) => decodeBlocks(bytes, size, blockFormat),
+    };
+  }
   return null;
 }
 

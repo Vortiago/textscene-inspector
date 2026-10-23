@@ -4,6 +4,7 @@
  * the level above in their own space, so an sRGB image averages its encoded values.
  */
 
+import type { ImageSize } from '../formats/image/imagePixels';
 import { normalizedVector3 } from '../../godot/math/vector';
 import { channelToByte } from '../../utils/colorSpace';
 import { reversedRows } from '../../utils/reversedRows';
@@ -16,6 +17,20 @@ export interface MipLevel {
 }
 
 export const RGBA_BYTES = 4;
+
+/** A mip's side: `size` halved `level` times, at least 1 (`image.cpp:1885-1945`). */
+export function mipSize(size: number, level: number): number {
+  return Math.max(size >> level, 1);
+}
+
+/** The sizes of the levels below `top`, largest first, down to 1 × 1: none for a 1 × 1 `top` (`image.cpp:1885-1945`). */
+export function lowerLevelSizes({ width, height }: ImageSize): ImageSize[] {
+  const sizes: ImageSize[] = [];
+  for (let level = 1; mipSize(Math.max(width, height), level - 1) > 1; level++) {
+    sizes.push({ width: mipSize(width, level), height: mipSize(height, level) });
+  }
+  return sizes;
+}
 
 /** `level` with its rows in reverse order: top-down as Godot holds it, or bottom-up as a `DataTexture` uploads it. */
 export function reversedLevel({ data, width, height }: MipLevel): MipLevel {
@@ -47,8 +62,8 @@ export function mipChain(base: MipLevel, renormalize: boolean): MipLevel[] {
  * position, so an odd size drops its last column or row. A size of 1 averages the texel with itself.
  */
 function halved(source: MipLevel, renormalize: boolean): MipLevel {
-  const width = Math.max(source.width >> 1, 1);
-  const height = Math.max(source.height >> 1, 1);
+  const width = mipSize(source.width, 1);
+  const height = mipSize(source.height, 1);
   const data = new Uint8Array(width * height * RGBA_BYTES);
   const rightStep = source.width === 1 ? 0 : RGBA_BYTES;
   const downStep = source.height === 1 ? 0 : source.width * RGBA_BYTES;

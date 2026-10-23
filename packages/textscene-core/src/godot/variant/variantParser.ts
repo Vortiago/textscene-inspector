@@ -144,6 +144,14 @@ export function dictNumberField(key: string, global = false): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`, global ? 'g' : '');
 }
 
+/**
+ * A field of a serialised Dictionary whose value is `true` or `false`, `[1]` the word. The writer emits no other spelling
+ * of a bool. The value runs to its `,`/`}`, as in {@link dictNumberField}.
+ */
+export function dictBoolField(key: string): RegExp {
+  return new RegExp(`"${key}"${WS}:${WS}(true|false)${WS}(?=[,}])`);
+}
+
 /** A serialised Dictionary's `"key":`, to test that the key is present whatever its value. */
 export function dictKey(key: string): RegExp {
   return new RegExp(`"${key}"${WS}:`);

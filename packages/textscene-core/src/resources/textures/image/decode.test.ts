@@ -7,14 +7,33 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { decodeImageRef, imageRefSize } from './decode';
 
-function image(format: string, width: number, height: number, bytes: string): TscnInternalResource {
+function savedImage(
+  format: string,
+  width: number,
+  height: number,
+  bytes: string,
+  mipmaps: boolean
+): TscnInternalResource {
   return {
     id: 'Image_a',
     type: 'Image',
     data: {
-      data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": false,\n"width": ${width}\n}`,
+      data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": ${mipmaps},\n"width": ${width}\n}`,
     },
   };
+}
+
+function image(format: string, width: number, height: number, bytes: string): TscnInternalResource {
+  return savedImage(format, width, height, bytes, false);
+}
+
+function mipmappedImage(format: string, width: number, height: number, bytes: string): TscnInternalResource {
+  return savedImage(format, width, height, bytes, true);
+}
+
+/** `count` bytes counting up from `first`, as the text a `PackedByteArray` holds. */
+function counting(first: number, count: number): string {
+  return Array.from({ length: count }, (_, i) => first + i).join(', ');
 }
 
 afterEach(() => {
@@ -32,6 +51,7 @@ describe('decodeImageRef', () => {
       width: 2,
       height: 1,
       format: 'Lum8',
+      levels: [],
     });
   });
 
@@ -90,6 +110,64 @@ describe('decodeImageRef', () => {
   });
 });
 
+describe('decodeImageRef on an image with mipmaps', () => {
+  it('decodes each stored level of an RGBA8 image, down to 1 x 1', () => {
+    // 4 x 2 over 2 x 1 over 1 x 1: 32, 8 and 4 bytes, one after the other.
+    const decoded = decodeImage(mipmappedImage('RGBA8', 4, 2, counting(0, 44)))!;
+    expect(decoded.data).toEqual(Uint8Array.from({ length: 32 }, (_, i) => i));
+    expect(decoded.levels).toEqual([
+      { data: Uint8Array.from({ length: 8 }, (_, i) => 32 + i), width: 2, height: 1 },
+      { data: Uint8Array.from({ length: 4 }, (_, i) => 40 + i), width: 1, height: 1 },
+    ]);
+  });
+
+  it('halves a side that is not a power of two down, and a side at 1 stays 1 (edge case)', () => {
+    // 6 x 3 over 3 x 1 over 1 x 1 of Red8: 18, 3 and 1 bytes.
+    const { levels } = decodeImage(mipmappedImage('Red8', 6, 3, counting(0, 22)))!;
+    expect(levels.map(({ width, height }) => [width, height])).toEqual([
+      [3, 1],
+      [1, 1],
+    ]);
+    expect([...levels[0]!.data]).toEqual([18, 0, 0, 255, 19, 0, 0, 255, 20, 0, 0, 255]);
+    expect([...levels[1]!.data]).toEqual([21, 0, 0, 255]);
+  });
+
+  it('reads a block format level from its own padded blocks (edge case)', () => {
+    // 6 x 3 DXT1: two blocks, then one block each for 3 x 1 and 1 x 1. Each is one solid colour.
+    const red = '0, 248, 0, 248, 0, 0, 0, 0';
+    const green = '224, 7, 224, 7, 0, 0, 0, 0';
+    const blue = '31, 0, 31, 0, 0, 0, 0, 0';
+    const decoded = decodeImage(mipmappedImage('DXT1 RGB8', 6, 3, [red, red, green, blue].join(', ')))!;
+    expect(decoded.levels.map(({ width, height }) => [width, height])).toEqual([
+      [3, 1],
+      [1, 1],
+    ]);
+    expect([...decoded.levels[0]!.data]).toEqual([0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255]);
+    expect([...decoded.levels[1]!.data]).toEqual([0, 0, 255, 255]);
+  });
+
+  it('decodes the levels of a float format to raw floats (edge case)', () => {
+    // RGHalf 2 x 1 over 1 x 1: 1.0 and 2.0 in red, then 0.5 and 0.25.
+    const bytes = '0, 60, 0, 0, 0, 64, 0, 0, 0, 56, 0, 52';
+    const { levels } = decodeImage(mipmappedImage('RGHalf', 2, 1, bytes))!;
+    expect(levels).toEqual([{ data: new Float32Array([0.5, 0.25, 0, 1]), width: 1, height: 1 }]);
+  });
+
+  it('gives a 1 x 1 image no lower level (edge case)', () => {
+    expect(decodeImage(mipmappedImage('Red8', 1, 1, '7'))!.levels).toEqual([]);
+  });
+
+  it('keeps the top level of an image short of its levels, which this does not refuse (error path)', () => {
+    const decoded = decodeImage(mipmappedImage('RGBA8', 2, 1, counting(0, 8)))!;
+    expect([...decoded.data]).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(decoded.levels).toEqual([]);
+  });
+
+  it('reads no level with the flag off, whatever bytes follow (edge case)', () => {
+    expect(decodeImage(image('RGBA8', 2, 1, counting(0, 12)))!.levels).toEqual([]);
+  });
+});
+
 /** An ImageTexture `save_block_images.gd` wrote, its `Image` decoded. */
 function decodeGodotSaved(name: string) {
   const saved = parseTresFile(readFileSync(join(import.meta.dirname, 'godotSaved', `${name}.tres`), 'utf8'));
@@ -116,9 +194,16 @@ describe('decodeImageRef on a block-compressed image', () => {
       'DXT5SixValueAlpha',
     ],
     ['an image whose size is not a multiple of the block, cropped', 'DXT5Cropped'],
-    ['an image with mipmaps, at its top level', 'DXT5Mipmapped'],
   ])('decodes %s (edge case)', (_case, name) => {
     expect(decodeGodotSaved(name)!.data).toEqual(decodeGodotSaved(`${name}.rgba8`)!.data);
+  });
+
+  it('decodes every level of an image with mipmaps to the RGBA8 Godot samples (edge case)', () => {
+    const decoded = decodeGodotSaved('DXT5Mipmapped')!;
+    const rgba8 = decodeGodotSaved('DXT5Mipmapped.rgba8')!;
+    expect(decoded.data).toEqual(rgba8.data);
+    expect(decoded.levels.map(({ width }) => width)).toEqual([4, 2, 1]);
+    expect(decoded.levels).toEqual(rgba8.levels);
   });
 });
 
