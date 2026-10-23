@@ -31,6 +31,7 @@ const EXT: TscnExternalResource[] = [
   { id: '3', type: 'PackedScene', path: 'res://rock.glb' },
   { id: '4', type: 'Curve', path: GROWING_CURVE_PATH },
   { id: '5', type: 'TubeTrailMesh', path: FILE_TUBE_PATH },
+  { id: '6', type: 'ArrayMesh', path: 'res://rock.obj' },
 ];
 
 /** A `.tres` Curve that runs from 1 at the top to 3 at the bottom, as {@link curveEndingAt} does. */
@@ -110,6 +111,11 @@ const CTX = csgGeometryContext({
   externalResources: EXT,
   files: FILES,
 });
+
+/** The vertex count of `solid`'s geometry, so a brush with no face reads 0. */
+function positionCount(solid: CsgSolid | null): number {
+  return solid!.geometry.getAttribute('position').count;
+}
 
 function build(mesh: string, overrides: Record<string, unknown> = {}, ctx = CTX): CsgSolid | null {
   return csgMesh3DGeometry({ mesh, flipFaces: false, ...overrides }, ctx);
@@ -213,21 +219,32 @@ describe('csgMesh3DGeometry: mesh sources', () => {
   });
 
   // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1148-1150`).
-  it('builds nothing for a PointMesh, whose surface is points', () => {
-    expect(build('SubResource("Point")')).toBeNull();
+  it('builds an empty brush for a PointMesh, whose surface is points', () => {
+    expect(positionCount(build('SubResource("Point")'))).toBe(0);
     expect(
       meshSurfaces({ resource: INLINE_POINT, resources: CTX, loadedFile: CTX.loadedFile, file: null })
     ).toEqual([]);
   });
 
-  it('builds nothing for an ArrayMesh whose surface is points', () => {
-    expect(build('SubResource("Points")')).toBeNull();
+  it('builds an empty brush for an ArrayMesh whose surface is points', () => {
+    expect(positionCount(build('SubResource("Points")'))).toBe(0);
   });
 
-  it('builds nothing for a mesh no slice here reads, nor for no mesh', () => {
-    expect(build('ExtResource("3")')).toBeNull();
-    expect(build('SubResource("Missing")')).toBeNull();
-    expect(csgMesh3DGeometry({ flipFaces: false }, CTX)).toBeNull();
+  // A shape with no brush warns in Godot (`csg_shape.cpp:981`), so these differ from a mesh not built.
+  it('builds an empty brush for a reference that names no mesh, and for no mesh', () => {
+    expect(positionCount(build('ExtResource("3")'))).toBe(0);
+    expect(positionCount(build('SubResource("Missing")'))).toBe(0);
+    expect(positionCount(csgMesh3DGeometry({ flipFaces: false }, CTX))).toBe(0);
+  });
+
+  it('builds no brush for a mesh in a file type no slice reads, which Godot would draw', () => {
+    expect(build('ExtResource("6")')).toBeNull();
+  });
+
+  it('builds no brush for a mesh type no slice builds, whose faces Godot would draw', () => {
+    const ctx = csgGeometryContext({ internalResources: [{ id: 'Text', type: 'TextMesh', data: {} }] });
+
+    expect(build('SubResource("Text")', {}, ctx)).toBeNull();
   });
 });
 
@@ -378,5 +395,42 @@ describe('csgMesh3DReadsFiles', () => {
       FILE_TUBE_PATH,
       GROWING_CURVE_PATH,
     ]);
+  });
+});
+
+describe('csgMesh3DGeometry: a manifold brush', () => {
+  /** Whether the brush of a CSGMesh3D over one inline mesh of `type` is closed, as Godot's manifold needs. */
+  function isClosed(type: string, data: Record<string, string> = {}): boolean {
+    const ctx = csgGeometryContext({ internalResources: [{ id: 'Mesh', type, data }] });
+    return build('SubResource("Mesh")', {}, ctx)!.isClosed;
+  }
+
+  it.each([
+    ['BoxMesh', 'BoxMesh', {}],
+    ['CylinderMesh', 'CylinderMesh', {}],
+    ['CylinderMesh with one apex', 'CylinderMesh', { top_radius: '0.0' }],
+    ['CapsuleMesh', 'CapsuleMesh', {}],
+    ['SphereMesh', 'SphereMesh', {}],
+    ['TorusMesh', 'TorusMesh', {}],
+    ['PrismMesh', 'PrismMesh', {}],
+    ['TubeTrailMesh', 'TubeTrailMesh', {}],
+  ])('closes the brush of a %s, whose seams weld', (_label, type, data) => {
+    expect(isClosed(type, data)).toBe(true);
+  });
+
+  it.each([
+    ['PlaneMesh', 'PlaneMesh', {}],
+    ['QuadMesh', 'QuadMesh', {}],
+    ['RibbonTrailMesh', 'RibbonTrailMesh', {}],
+    ['CylinderMesh with cap_top off', 'CylinderMesh', { cap_top: 'false' }],
+    ['CylinderMesh with cap_bottom off', 'CylinderMesh', { cap_bottom: 'false' }],
+  ])('opens the brush of a %s', (_label, type, data) => {
+    expect(isClosed(type, data)).toBe(false);
+  });
+
+  it('closes a brush that the node flips, since the faces run both ways along each edge still', () => {
+    const ctx = csgGeometryContext({ internalResources: [INLINE_BOX] });
+
+    expect(build('SubResource("Box")', { flipFaces: true }, ctx)!.isClosed).toBe(true);
   });
 });

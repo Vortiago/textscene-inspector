@@ -181,9 +181,14 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
   (`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
 - **Baked lightmaps.** Each LightmapGI registers its bake with `r3f/lightmap/`, and a lit surface
   of a node it names reads the **Lightmap atlas** through UV2 (ADR-0054).
+- **Shader patches.** Godot's GLSL is spliced into three's chunks and programs at string anchors.
+  `r3f/shaderPatch/chunkPatch.ts` applies every splice and throws on a missed anchor. ADR-0055 holds
+  the triggers for a port.
 - **Frame profile.** The Display menu's Performance toggle times each render step on the CPU and
   the GPU and counts its draw calls, and the overlay shows the result (`r3f/frameProfile/`,
   ADR-0053). `pnpm test:perf` holds the counts of a set of scenes to their work budget.
+- **Software WebGL.** Each canvas reads its renderer's name, and the top bar shows "Software WebGL"
+  while the browser draws WebGL on the CPU (`r3f/softwareRendering/`).
 
 **Axis conventions.** Convert each axis where Godot data becomes a three.js object, never in a
 parser:

@@ -6,11 +6,11 @@
 import * as THREE from 'three';
 import type { ProgramShader } from '../materialProgramInputs';
 
-/** The fragment shader of each three class a Godot surface draws with, by material type. */
-export const FRAGMENT_SHADER_OF_TYPE: Readonly<Record<string, string>> = {
-  MeshBasicMaterial: THREE.ShaderLib.basic.fragmentShader,
-  MeshStandardMaterial: THREE.ShaderLib.standard.fragmentShader,
-  MeshPhysicalMaterial: THREE.ShaderLib.physical.fragmentShader,
+/** The program of each three class a Godot surface draws with, by material type. */
+export const PROGRAM_OF_TYPE: Readonly<Record<string, THREE.ShaderLibShader>> = {
+  MeshBasicMaterial: THREE.ShaderLib.basic,
+  MeshStandardMaterial: THREE.ShaderLib.standard,
+  MeshPhysicalMaterial: THREE.ShaderLib.physical,
 };
 
 /** The shader resets the alpha to `opacity`, dropping the texture and vertex-colour alpha. */
@@ -58,24 +58,18 @@ export function patchedUniforms(material: THREE.Material): ProgramShader['unifor
 }
 
 function patchedProgram(material: THREE.Material): ProgramShader {
-  const fragmentShader = FRAGMENT_SHADER_OF_TYPE[material.type];
-  if (fragmentShader === undefined) {
+  const program = PROGRAM_OF_TYPE[material.type];
+  if (program === undefined) {
     throw new Error(`expected a mesh basic, standard or physical material, got ${material.type}`);
   }
-  const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
+  const shader: ProgramShader = { ...program, uniforms: {} };
   material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
   return shader;
 }
 
 /** The texture `material`'s parallax samples, or null when it compiles no parallax. */
 export function heightmapSampledBy(material: THREE.Material): THREE.Texture | null {
-  const shader = {
-    vertexShader: '',
-    fragmentShader: FRAGMENT_SHADER_OF_TYPE[material.type] ?? '',
-    uniforms: {},
-  } as THREE.WebGLProgramParametersWithUniforms;
-  material.onBeforeCompile(shader, undefined as never);
-  return (shader.uniforms.godotHeightmap?.value as THREE.Texture | undefined) ?? null;
+  return (patchedProgram(material).uniforms.godotHeightmap?.value as THREE.Texture | undefined) ?? null;
 }
 
 /** The texture `material` samples as `map`: one of three's map fields, or `heightmap`. */

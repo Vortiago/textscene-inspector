@@ -16,6 +16,7 @@ import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js'
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
+import { sameElements } from '../utils/sameElements.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -27,11 +28,18 @@ export interface CachedSceneSource {
   getCached: (path: string) => (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined;
 }
 
+type CacheAnswer = ReturnType<CachedSceneSource['getCached']>;
+type CachedScene = NonNullable<CacheAnswer>;
+
 /** Read surface for the loader's GLB cache, so the walk can descend into a GLB's internals. */
 export interface CachedGlbSource {
   getCached: (path: string) => THREE.Object3D | null | undefined;
 }
 
+/**
+ * One context is one snapshot of the loader's caches: the walks over it read each scene path from
+ * `sceneCache` once ({@link snapshotScenes}). A caller whose cache changes builds a new context.
+ */
 export interface LiveTreeContext {
   /** The root scene's ExtResources, which its top-level instance refs resolve against. */
   externalResources: readonly TscnExternalResource[];
@@ -39,6 +47,31 @@ export interface LiveTreeContext {
   internalResources: readonly TscnInternalResource[];
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
+}
+
+/**
+ * Written only by {@link snapshotScenes}, keyed by the context. An entry clears when nothing holds
+ * that context any more.
+ */
+const snapshots = new WeakMap<LiveTreeContext, CachedSceneSource>();
+
+/** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */
+export function snapshotScenes(ctx: LiveTreeContext): CachedSceneSource {
+  let snapshot = snapshots.get(ctx);
+  if (!snapshot) {
+    const answers = new Map<string, CacheAnswer>();
+    snapshot = {
+      getCached: (path) => {
+        const known = answers.get(path);
+        if (known !== undefined || answers.has(path)) return known;
+        const answer = ctx.sceneCache.getCached(path);
+        answers.set(path, answer);
+        return answer;
+      },
+    };
+    snapshots.set(ctx, snapshot);
+  }
+  return snapshot;
 }
 
 /** A node in the live tree: its effective (collapsed) identity and its full path. */
@@ -75,11 +108,21 @@ export function singlePathCache<T>(
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
   const scenePath = liveInstancePath(node, scope);
   const outer = scopeOf(node, scope);
-  const enclosingScenePaths = outer.instancedScenePaths ?? [];
-  if (!scenePath || enclosingScenePaths.includes(scenePath)) return node;
+  if (!scenePath || (outer.instancedScenePaths ?? []).includes(scenePath)) return node;
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return node;
-  const content = contentScopeOf(cached, [...enclosingScenePaths, scenePath]);
+  return collapseOver(node, outer, scenePath, cached, sceneCache);
+}
+
+/** The collapse of `node` over `cached`, the scene at `scenePath` that the caller read once. */
+function collapseOver(
+  node: LiveNode,
+  outer: SceneScope,
+  scenePath: string,
+  cached: CachedScene,
+  sceneCache: CachedSceneSource
+): LiveNode {
+  const content = contentScopeOf(cached, [...(outer.instancedScenePaths ?? []), scenePath]);
   const subScene = composedSubScene(cached, content, sceneCache);
   // A composed root's nodes resolve in its base's scope, which its own `scope` carries.
   const rootContent = subScene.nodes.length === 1 ? scopeOf(subScene.nodes[0]!, content) : content;
@@ -87,18 +130,79 @@ export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: 
 }
 
 /**
+ * One composition of an inherited sub-scene over its bases: the scenes it enclosed and read, and
+ * what the cache answered for each read.
+ */
+interface Composition {
+  readonly instancedScenePaths: readonly string[];
+  readonly reads: ReadonlyMap<string, CacheAnswer>;
+  readonly composed: { nodes: readonly LiveNode[] };
+}
+
+/**
+ * The sources that ask about one scene in one chain at once: the loader's cache, and the
+ * single-path source of a tree row. Two keep each from replacing the other's composition.
+ */
+const COMPOSITIONS_PER_CHAIN = 2;
+
+/**
+ * Written only by {@link composedSubScene}, keyed by the cached scene object. The entries clear
+ * when nothing holds that object any more. A scene composes once for each chain of scenes that
+ * encloses it, since the cyclic-instancing check reads that chain.
+ */
+const compositions = new WeakMap<CachedScene, Composition[]>();
+
+/**
  * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
- * inherits, or the scene as cached where nothing collapses.
+ * inherits, or the scene as cached where nothing collapses. A composition is reused while the
+ * cache still answers what it read, so every instance shares one `%Name` table. The source may be
+ * the loader's live cache, which changes in place.
  */
 function composedSubScene(
-  cached: { nodes: readonly TscnNode[] },
+  cached: CachedScene,
   content: SceneScope,
   sceneCache: CachedSceneSource
 ): { nodes: readonly LiveNode[] } {
-  if (cached.nodes.length !== 1) return cached;
-  const root = cached.nodes[0]!;
-  const composed = collapseLiveNode(root, content, sceneCache);
-  return composed === root ? cached : { nodes: [composed] };
+  const root = cached.nodes[0];
+  if (cached.nodes.length !== 1 || !root?.instance) return cached;
+  const enclosing = content.instancedScenePaths ?? [];
+  const stored = compositions.get(cached) ?? [];
+  const sameChain = stored.filter((c) => sameElements(c.instancedScenePaths, enclosing));
+  const known = sameChain.find((c) => stillAnswered(c.reads, sceneCache));
+  if (known) return known.composed;
+
+  const composition = composeRecording(cached, root, content, sceneCache);
+  const otherChains = stored.filter((c) => !sameChain.includes(c));
+  compositions.set(cached, [...otherChains, ...sameChain.slice(1 - COMPOSITIONS_PER_CHAIN), composition]);
+  return composition.composed;
+}
+
+/** The composition of `root` over its bases, with every answer the cache gave while it composed. */
+function composeRecording(
+  cached: CachedScene,
+  root: LiveNode,
+  content: SceneScope,
+  sceneCache: CachedSceneSource
+): Composition {
+  const reads = new Map<string, CacheAnswer>();
+  // The recorder also sees the reads of a base's own composition, so a change of any base ends this entry.
+  const recorder: CachedSceneSource = {
+    getCached: (path) => {
+      const answer = sceneCache.getCached(path);
+      reads.set(path, answer);
+      return answer;
+    },
+  };
+  const collapsed = collapseLiveNode(root, content, recorder);
+  const composed = collapsed === root ? cached : { nodes: [collapsed] };
+  return { instancedScenePaths: content.instancedScenePaths ?? [], reads, composed };
+}
+
+function stillAnswered(reads: ReadonlyMap<string, CacheAnswer>, sceneCache: CachedSceneSource): boolean {
+  for (const [path, answer] of reads) {
+    if (sceneCache.getCached(path) !== answer) return false;
+  }
+  return true;
 }
 
 /**
@@ -174,7 +278,7 @@ export function liveChildGroups(
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  const merged = collapseLiveNode(node, own, sceneCache);
+  const merged = collapseOver(node, own, scenePath, cached, sceneCache);
   if (merged !== node) return mergedGroups(merged, own, sceneCache, glbCache);
 
   // A lone GLB is the instancing node's own content: its objects sit directly below that node, as
@@ -314,7 +418,7 @@ function liveChainLinks(
   const segments = nodePathNames(path);
   if (segments.length === 0) return null;
 
-  const tree = new LiveTree(roots, ctx);
+  const tree = liveTreeOf(roots, ctx);
   const links: LiveChainLink[] = [];
   let livePath = '';
   for (const segment of segments) {
@@ -341,16 +445,25 @@ export interface LiveLink {
 
 /**
  * The live tree over one cache snapshot, each node's child groups walked once however many paths
- * pass through it. A caller makes one per question, since the snapshot changes on each load.
+ * pass through it. Every question over one context gets the tree {@link liveTreeOf} returns.
  */
 export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
+  /**
+   * Written only by `groupsOf`: the groups of a node under each scope it was asked in. It holds one
+   * entry per visited node for as long as the tree lives, which is as long as its context.
+   */
+  private readonly groupsByNode = new Map<LiveNode, { scope: SceneScope; groups: LiveChildGroup[] }[]>();
+
+  private readonly scenes: CachedSceneSource;
 
   constructor(
     readonly roots: readonly TscnNode[],
     readonly ctx: LiveTreeContext
-  ) {}
+  ) {
+    this.scenes = snapshotScenes(ctx);
+  }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */
   at(path: string): LiveLink | null {
@@ -359,12 +472,49 @@ export class LiveTree {
     const slash = path.lastIndexOf('/');
     const parentGroups = slash < 0 ? rootGroups(this.roots, this.ctx) : this.at(path.slice(0, slash))?.groups;
     const found = parentGroups && liveChildNamed(parentGroups, path.slice(slash + 1));
-    const link = found
-      ? { ...found, groups: liveChildGroups(found.node, found.scope, this.ctx.sceneCache, this.ctx.glbCache) }
-      : null;
+    const link = found ? { ...found, groups: this.groupsOf(found.node, found.scope) } : null;
     this.links.set(path, link);
     return link;
   }
+
+  /**
+   * What is below `node` where it sits in `scope`, found once. A node is found by itself and its
+   * scope, never by its path: two siblings may share a name, and a sub-scene's nodes sit at
+   * every instance of it.
+   */
+  groupsOf(node: LiveNode, scope: SceneScope): LiveChildGroup[] {
+    const own = scopeOf(node, scope);
+    const entries = this.groupsByNode.get(node) ?? [];
+    const known = entries.find((entry) => sameScope(entry.scope, own));
+    if (known) return known.groups;
+    const groups = liveChildGroups(node, own, this.scenes, this.ctx.glbCache);
+    entries.push({ scope: own, groups });
+    this.groupsByNode.set(node, entries);
+    return groups;
+  }
+}
+
+const NO_PATHS: readonly string[] = [];
+
+function sameScope(a: SceneScope, b: SceneScope): boolean {
+  return (
+    a === b ||
+    (a.externalResources === b.externalResources &&
+      a.internalResources === b.internalResources &&
+      sameElements(a.instancedScenePaths ?? NO_PATHS, b.instancedScenePaths ?? NO_PATHS))
+  );
+}
+
+/** Written only by {@link liveTreeOf}, keyed by the context. */
+const liveTrees = new WeakMap<LiveTreeContext, LiveTree>();
+
+/** The live tree every question over `ctx` shares, so a node collapses once for all of them. */
+export function liveTreeOf(roots: readonly TscnNode[], ctx: LiveTreeContext): LiveTree {
+  const known = liveTrees.get(ctx);
+  if (known?.roots === roots) return known;
+  const tree = new LiveTree(roots, ctx);
+  liveTrees.set(ctx, tree);
+  return tree;
 }
 
 /**
@@ -415,10 +565,11 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: LiveNode) => boolean
 ): void {
+  const tree = liveTreeOf(roots, ctx);
   const walk = (nodes: readonly LiveNode[], scope: SceneScope, parentPath: string): void => {
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
-      const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
+      const groups = tree.groupsOf(node, scope);
       const effective = mergedNodeOf(groups) ?? node;
       visit({ node: effective, path });
       // `descend` prunes only the children, so a consumer can count a boundary

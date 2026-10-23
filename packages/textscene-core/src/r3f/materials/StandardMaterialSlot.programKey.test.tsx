@@ -160,7 +160,8 @@ describe('<StandardMaterialSlot> keeps ao_light_affect a uniform', () => {
     const renderer = await ReactThreeTestRenderer.create(slot(lightAffect('0'), { ao_texture: aoTexture }));
     const material = (renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh)
       .material as THREE.Material;
-    const shader = { vertexShader: '', fragmentShader: '', uniforms: {} as Record<string, THREE.IUniform> };
+    const { vertexShader, fragmentShader } = THREE.ShaderLib.standard;
+    const shader = { vertexShader, fragmentShader, uniforms: {} as Record<string, THREE.IUniform> };
     material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
     await renderer.update(slot(lightAffect('1'), { ao_texture: aoTexture }));
     expect(shader.uniforms.godotAoLightAffect!.value).toBe(1);

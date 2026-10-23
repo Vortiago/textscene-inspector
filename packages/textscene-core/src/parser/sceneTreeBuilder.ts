@@ -5,7 +5,7 @@
  */
 
 import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
-import { SCENE_ROOT_PATH, joinPath, pathBetween, spelledNodePath } from '../utils/nodePath.js';
+import { SCENE_ROOT_PATH, joinPath, parentPathOf, pathBetween, spelledNodePath } from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
@@ -103,10 +103,12 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // A second parentless node is orphaned here. `orphanedNodes` finds it absent from
     // `seated`, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
-    const owner = node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
+    // Only a heading that gets a seat resolves its `owner=`.
+    const resolveOwner = () =>
+      node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
     const end = walkFromRoot(node.parent, tables.tree);
     const parentPath = walkedPath(end);
-    if (parentPath !== null && seatBelowParent(tables, node, parentPath, owner)) {
+    if (parentPath !== null && seatBelowParent(tables, node, parentPath, resolveOwner)) {
       seatedByPath.add(node);
       continue;
     }
@@ -118,7 +120,7 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // of a refused file, stays out of the tree for `orphanedNodes`.
     if (!reRootsVanished) continue;
     if (idTrailEnd(origins, index, isPlaced)) continue;
-    reRoot(tables, node, owner);
+    reRoot(tables, node, resolveOwner);
   }
 
   return {
@@ -150,11 +152,11 @@ function seatBelowParent<N extends SceneNode<N>>(
   tables: SeatingTables<N>,
   node: N,
   parentPath: string,
-  owner: string | undefined
+  resolveOwner: () => string | undefined
 ): boolean {
   const parentNode = tables.byPath.get(parentPath);
   if (parentNode) {
-    const seat = seatCopy(tables, node, owner);
+    const seat = seatCopy(tables, node, resolveOwner);
     // An instance's own nodes are not in this list, so an `index=` below one is no place in it.
     if (parentNode.instance) parentNode.children.push(seat);
     else insertAtIndex(parentNode.children, seat);
@@ -165,7 +167,7 @@ function seatBelowParent<N extends SceneNode<N>>(
   // nearest enclosing instance anchors it and the content matches the rest.
   const anchor = findInstanceAnchor(parentPath, tables);
   if (!anchor) return false;
-  const seat = seatCopy(tables, node, owner);
+  const seat = seatCopy(tables, node, resolveOwner);
   seat.instanceSubPath = anchor.subPath;
   anchor.node.children.push(seat);
   register(tables, anchor.foldedParentPath, seat, anchor.node);
@@ -177,8 +179,12 @@ function seatBelowParent<N extends SceneNode<N>>(
  * `<path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`), numbered past a root child that
  * holds the name (`set_name`, `node.cpp:1450`, `:1593-1640`). The authored name stays on `authoredName`.
  */
-function reRoot<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner: string | undefined): void {
-  const seat = seatCopy(tables, node, owner);
+function reRoot<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  node: N,
+  resolveOwner: () => string | undefined
+): void {
+  const seat = seatCopy(tables, node, resolveOwner);
   seat.authoredName = node.name;
   seat.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
   insertAtIndex(tables.root.children, seat);
@@ -189,7 +195,12 @@ function reRoot<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner
  * The tree's own copy of a heading's node, childless and with its `owner=` as `seatedOwner` resolved
  * it, so the seating never writes to the heading.
  */
-function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner: string | undefined): N {
+function seatCopy<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  node: N,
+  resolveOwner: () => string | undefined
+): N {
+  const owner = resolveOwner();
   const seat = { ...node, children: [], ...(owner === undefined ? {} : { owner }) } as N;
   tables.seated.set(node, seat);
   return seat;
@@ -288,8 +299,7 @@ function canNameNode(
   isOpaque: (path: string) => boolean
 ): boolean {
   if (pathMap.has(path)) return true;
-  const cut = path.lastIndexOf('/');
-  return isOpaque(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
+  return isOpaque(parentPathOf(path) ?? SCENE_ROOT_PATH);
 }
 
 /**

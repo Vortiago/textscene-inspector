@@ -7,7 +7,7 @@
 import type { NodeOrigin, RawNode } from './types.js';
 import {
   INSTANCE_PLACEHOLDER_TYPE,
-  recoverByIdTrail,
+  recoverByIdTrailOver,
   type IdHeading,
   type IdTrailEnd,
 } from '../godot/scene/packedScene.js';
@@ -38,14 +38,17 @@ export function ownerTrailEnd<N extends RawNode>(
   return trailEnd(trail, origins, isPlaced, index + 1);
 }
 
-/** Where `trail` lands over the first `builtCount` headings, as instantiate has built them. */
+/**
+ * Where `trail` lands over the first `builtCount` headings, as instantiate has built them. Only the
+ * heading the trail names is read, so the cost does not grow with the other headings.
+ */
 function trailEnd<N extends RawNode>(
   trail: readonly number[],
   origins: readonly NodeOrigin<N>[],
   isPlaced: (origin: NodeOrigin<N>) => boolean,
   builtCount: number
 ): IdTrailEnd | undefined {
-  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), builtCount);
+  return recoverByIdTrailOver(trail, origins, (index) => headingOf(origins[index]!, isPlaced), builtCount);
 }
 
 /** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
@@ -53,11 +56,14 @@ export function idHeadingsOf<N extends RawNode>(
   origins: readonly NodeOrigin<N>[],
   isPlaced: (origin: NodeOrigin<N>) => boolean
 ): IdHeading[] {
-  return origins.map((origin) => ({
-    uniqueId: origin.uniqueId,
-    instance: instanceKind(origin.node),
-    isPlaced: isPlaced(origin),
-  }));
+  return origins.map((origin) => headingOf(origin, isPlaced));
+}
+
+function headingOf<N extends RawNode>(
+  origin: NodeOrigin<N>,
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): IdHeading {
+  return { uniqueId: origin.uniqueId, instance: instanceKind(origin.node), isPlaced: isPlaced(origin) };
 }
 
 function instanceKind(node: RawNode): IdHeading['instance'] {

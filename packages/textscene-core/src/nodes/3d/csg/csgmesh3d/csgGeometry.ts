@@ -6,21 +6,41 @@
 
 import type * as THREE from 'three';
 import { isEqualApprox } from '../../../../godot/math/math';
-import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../../r3f/csg/csgRegistration';
+import {
+  csgSolid,
+  type CsgGeometryBuilder,
+  type CsgGeometryContext,
+  type CsgSolid,
+} from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { meshContentKey } from '../../../../resources/meshes/meshSource';
+import { meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
+import { findExtResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
 import type { LoadedFile } from '../../../../resources/scopedResource';
-import { applyCsgNormals } from '../smoothNormals';
+import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
+
+/**
+ * Whether an unresolved `meshRef` names no mesh at all, which Godot builds as an empty brush. A
+ * file still loading, or declared as a mesh type the previewer cannot read (a `.obj`), is not built.
+ */
+function namesNoMesh(meshRef: string | undefined, ctx: CsgGeometryContext): boolean {
+  if (referencedFilePath(meshRef, ctx) !== null) return false;
+  const reference = meshRef ? parseResourceReference(meshRef) : null;
+  if (reference?.type !== 'ExtResource') return true;
+  const declared = findExtResource(ctx.externalResources, reference.id);
+  return declared === undefined || meshKind(declared.type) === null;
+}
 
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
   const mesh = resolveMesh(p.mesh, ctx);
-  return mesh ? buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces) : null;
+  if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
+  if (meshKind(mesh.resource.type) === null) return null;
+  return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
 
 export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: CsgGeometryContext): string {
@@ -79,17 +99,22 @@ interface MeshFaces {
   materials: CsgMaterialAddress[];
 }
 
-/** Null for a mesh with no faces, which Godot builds as an empty brush (`csg_shape.cpp:1265-1267`). */
+/** Godot's empty brush: a closed solid with no face. */
+function emptySolid(): CsgSolid {
+  return csgSolid(emptyBrush(), []);
+}
+
+/** The empty solid for a mesh with no faces (`csg_shape.cpp:1265-1267`). */
 function buildMeshBrush(
   surfaces: readonly CsgMeshSurface[],
   nodeMaterial: CsgMaterialAddress,
   flipFaces: boolean
-): CsgSolid | null {
+): CsgSolid {
   const faces = meshFaces(surfaces, nodeMaterial);
-  if (faces.smooth.length === 0) return null;
-  const geometry = applyCsgNormals({ ...faces, invert: flipFaces });
-  if (faces.materials.length > 1) addMaterialGroups(geometry, faces.faceMaterials);
-  return { geometry, materials: faces.materials };
+  if (faces.smooth.length === 0) return emptySolid();
+  const brush = shadeCsgFaces({ ...faces, invert: flipFaces });
+  if (faces.materials.length > 1) addMaterialGroups(brush.geometry, faces.faceMaterials);
+  return csgSolid(brush, faces.materials);
 }
 
 function meshFaces(surfaces: readonly CsgMeshSurface[], nodeMaterial: CsgMaterialAddress): MeshFaces {

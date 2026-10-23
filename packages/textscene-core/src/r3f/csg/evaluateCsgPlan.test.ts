@@ -86,7 +86,12 @@ describe('evaluateCsgPlan', () => {
     let i = 0;
     return () => solids[i++] ?? null;
   };
-  const unlit = (geometry: THREE.BufferGeometry): CsgSolid => ({ geometry, materials: [undefined] });
+  const closedSolid = (geometry: THREE.BufferGeometry, materials: CsgSolid['materials']): CsgSolid => ({
+    geometry,
+    materials,
+    isClosed: true,
+  });
+  const unlit = (geometry: THREE.BufferGeometry): CsgSolid => closedSolid(geometry, [undefined]);
 
   it('unions two half-overlapping boxes into 1.5x the volume', () => {
     const result = evaluateCsgPlan(
@@ -153,8 +158,8 @@ describe('evaluateCsgPlan', () => {
         union(),
         csg,
         resolveSolids([
-          { geometry: unitBox(), materials: ['SubResource("A")'] },
-          { geometry: halfOverlapBox(), materials: ['SubResource("B")'] },
+          closedSolid(unitBox(), ['SubResource("A")']),
+          closedSolid(halfOverlapBox(), ['SubResource("B")']),
         ])
       )!;
       // Both materials survive a union where each contributes visible faces.
@@ -167,8 +172,8 @@ describe('evaluateCsgPlan', () => {
         union(),
         csg,
         resolveSolids([
-          { geometry: unitBox(), materials: ['SubResource("A")'] },
-          { geometry: halfOverlapBox(), materials: ['SubResource("A")'] },
+          closedSolid(unitBox(), ['SubResource("A")']),
+          closedSolid(halfOverlapBox(), ['SubResource("A")']),
         ])
       )!;
       expect(result.materials).toEqual(['SubResource("A")']);
@@ -180,7 +185,7 @@ describe('evaluateCsgPlan', () => {
       const result = evaluateCsgPlan(
         plan([contribution('a', CsgOperation.UNION)]),
         csg,
-        resolveSolids([{ geometry: twoMaterials, materials: ['res://x.tres', 'res://y.tres'] }])
+        resolveSolids([closedSolid(twoMaterials, ['res://x.tres', 'res://y.tres'])])
       )!;
       expect(result.materials).toEqual(['res://x.tres', 'res://y.tres']);
     });
@@ -189,7 +194,7 @@ describe('evaluateCsgPlan', () => {
       const result = evaluateCsgPlan(
         union(),
         csg,
-        resolveSolids([unlit(unitBox()), { geometry: halfOverlapBox(), materials: ['SubResource("A")'] }])
+        resolveSolids([unlit(unitBox()), closedSolid(halfOverlapBox(), ['SubResource("A")'])])
       )!;
       expect(result.materials).toContain(undefined);
       expect(result.materials).toContain('SubResource("A")');
@@ -234,6 +239,81 @@ describe('evaluateCsgPlan', () => {
         resolveBoxes([unitBox()])
       )!;
       expect(volumeOf(result.geometry)).toBeCloseTo(1, 5);
+    });
+  });
+
+  describe('an empty brush', () => {
+    const unit = () => unlit(unitBox());
+    const open = (): CsgSolid => ({ ...unlit(unitBox()), isClosed: false });
+    const separateBox = () => new THREE.BoxGeometry(1, 1, 1).translate(5, 0, 0).toNonIndexed();
+    const separate = () => unlit(separateBox());
+    const openSeparate = (): CsgSolid => ({ ...unlit(separateBox()), isClosed: false });
+
+    /** The contribution `operation` names, with the `children` folded into it first. */
+    const node = (operation: number, children: CsgContribution[] = [], hasGeometry = true) => ({
+      ...contribution('n', operation),
+      hasGeometry,
+      children,
+    });
+    const planOf = (root: CsgContribution): CsgPlan => ({ ...plan([]), root, geometryCount: 2 });
+    const volumeAfter = (root: CsgContribution, solids: CsgSolid[]): number =>
+      volumeOf(evaluateCsgPlan(planOf(root), csg, resolveSolids(solids))!.geometry);
+
+    it('draws nothing for an open root', () => {
+      expect(volumeAfter(node(CsgOperation.UNION), [open()])).toBe(0);
+    });
+
+    it('empties an open node whatever its closed children', () => {
+      const root = node(CsgOperation.UNION, [node(CsgOperation.UNION)]);
+
+      expect(volumeAfter(root, [open(), unit()])).toBe(0);
+    });
+
+    it('adds nothing to a union when an open child joins a closed root', () => {
+      const root = node(CsgOperation.UNION, [node(CsgOperation.UNION)]);
+
+      expect(volumeAfter(root, [unit(), openSeparate()])).toBeCloseTo(1, 5);
+    });
+
+    it('removes nothing from a subtraction when an open child subtracts from a closed root', () => {
+      const root = node(CsgOperation.UNION, [node(CsgOperation.SUBTRACTION)]);
+
+      expect(volumeAfter(root, [unit(), open()])).toBeCloseTo(1, 5);
+    });
+
+    it('empties an intersection when an open child intersects a closed root', () => {
+      const root = node(CsgOperation.UNION, [node(CsgOperation.INTERSECTION)]);
+
+      expect(volumeAfter(root, [unit(), open()])).toBe(0);
+    });
+
+    it('keeps the closed children of an open child out of its parent', () => {
+      const openChild = node(CsgOperation.UNION, [node(CsgOperation.UNION)]);
+      const root = node(CsgOperation.UNION, [openChild]);
+
+      expect(volumeAfter(root, [unit(), open(), separate()])).toBeCloseTo(1, 5);
+    });
+
+    it('empties an intersection when a child builds no solid', () => {
+      const root = node(CsgOperation.UNION, [node(CsgOperation.INTERSECTION)]);
+
+      expect(volumeAfter(root, [unit()])).toBe(0);
+    });
+
+    it('folds on from nothing after an intersection that leaves no faces', () => {
+      const root = node(CsgOperation.UNION, [node(CsgOperation.INTERSECTION), node(CsgOperation.UNION)]);
+
+      expect(volumeAfter(root, [unit(), separate(), unit()])).toBeCloseTo(1, 5);
+    });
+
+    it('starts a combiner empty, so a first subtraction leaves nothing to remove from', () => {
+      const combiner = node(
+        CsgOperation.UNION,
+        [node(CsgOperation.SUBTRACTION), node(CsgOperation.UNION)],
+        false
+      );
+
+      expect(volumeAfter(combiner, [unit(), separate()])).toBeCloseTo(1, 5);
     });
   });
 

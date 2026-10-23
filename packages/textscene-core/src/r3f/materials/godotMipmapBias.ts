@@ -8,6 +8,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { rewrittenShader } from '../shaderPatch/chunkPatch';
 import { samplesMipChain } from '../../resources/textures/godotTextureFilter';
 
 const BIAS_UNIFORM = 'godotMipmapBias';
@@ -84,7 +85,7 @@ vec4 ${SAMPLE_HELPER}( sampler2D sampler, vec2 uv ) {
 
 /** `source` with every biased slot's sample routed through the helper. */
 function biasedSamples(source: string): string {
-  return source.replace(BIASED_SAMPLES, (_, slot: string) => `${SAMPLE_HELPER}( ${slot},`);
+  return rewrittenShader(source, BIASED_SAMPLES, (_, slot) => `${SAMPLE_HELPER}( ${slot},`);
 }
 
 /**
@@ -92,7 +93,7 @@ function biasedSamples(source: string): string {
  * the `#include`. A chunk without such a sample stays an include, which a later patch matches.
  */
 function inlineBiasedChunks(source: string): string {
-  return source.replace(INCLUDE, (include, name: string) => {
+  return rewrittenShader(source, INCLUDE, (include, name) => {
     const chunk = THREE.ShaderChunk[name as keyof typeof THREE.ShaderChunk];
     if (chunk === undefined) return include;
     const biased = biasedSamples(chunk);

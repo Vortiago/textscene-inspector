@@ -7,7 +7,7 @@ import { parseCSGTorus3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
 import type { CSGTorus3DProperties } from './types';
-import { findMesh } from '../../testing/reactThreeTestInstance';
+import { drawnMeshes, findMesh } from '../../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
 
@@ -89,8 +89,7 @@ describe('<CSGTorus3D>', () => {
   it('renders nothing but does not throw when the radii are equal', async () => {
     // Godot returns an empty brush rather than clamping (csg_shape.cpp:1930).
     const renderer = await render(makeNode({ inner_radius: '0.5', outer_radius: '0.5' }));
-    const geom = findMesh(renderer.scene).geometry;
-    expect(geom.getAttribute('position').count).toBe(0);
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('exposes the parsed properties the builder reads', () => {

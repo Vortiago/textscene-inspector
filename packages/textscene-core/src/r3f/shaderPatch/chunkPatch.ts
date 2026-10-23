@@ -1,7 +1,7 @@
 /**
- * How this repository patches three's shader chunks: a pure function of the chunks' text, and one
+ * How this repository patches three's shader text: a pure function of the chunks' text, one
  * installer that writes its result into `THREE.ShaderChunk` once, for every program compiled after
- * the call.
+ * the call, and the helper that splices a program's own text at compile.
  */
 
 import * as THREE from 'three';
@@ -27,34 +27,95 @@ export interface ChunkEdit<Name extends ChunkName> extends TextEdit {
 
 /**
  * The text with the edit applied, or null when three's text is missing from it or occurs more than
- * once. A replacement function, not a string: a `$` in GLSL stays literal.
+ * once. A replacement by slicing, not a string `replace`: a `$` in GLSL stays literal.
  */
 function applyEdit(text: string, { three, godot }: TextEdit): string | null {
-  if (text.split(three).length !== 2) return null;
-  return text.replace(three, () => godot);
+  const at = text.indexOf(three);
+  if (at < 0 || text.indexOf(three, at + three.length) >= 0) return null;
+  return text.slice(0, at) + godot + text.slice(at + three.length);
+}
+
+/** The text with every edit applied in order, up to the first edit whose text is missing. */
+function applyEditsUntilMissing(
+  text: string,
+  edits: readonly TextEdit[]
+): { text: string; missing: TextEdit | null } {
+  let edited = text;
+  for (const edit of edits) {
+    const next = applyEdit(edited, edit);
+    if (next === null) return { text: edited, missing: edit };
+    edited = next;
+  }
+  return { text: edited, missing: null };
 }
 
 /** The text with every edit applied in order, or null when one is missing, as `applyEdit`. */
 export function applyEdits(text: string, edits: readonly TextEdit[]): string | null {
-  let patched: string | null = text;
-  for (const edit of edits) {
-    patched = applyEdit(patched, edit);
-    if (patched === null) return null;
-  }
-  return patched;
+  const { text: edited, missing } = applyEditsUntilMissing(text, edits);
+  return missing === null ? edited : null;
 }
 
 /**
- * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied.
- * It throws when three's text is missing or occurs more than once, so a three that lost the text
- * fails loudly, not with a silently unpatched read.
+ * `text` of the shader named `shader` with every edit applied in order. It throws when an edit's
+ * text is missing or occurs more than once, so a three that moved the text fails loudly, not with a
+ * silently unpatched program. Every splice of a program's text goes through this, `editedProgram` or `rewrittenShader`.
+ */
+export function editedShader(text: string, edits: readonly TextEdit[], shader: string): string {
+  const { text: edited, missing } = applyEditsUntilMissing(text, edits);
+  if (missing !== null)
+    throw new Error(`expected ${shader} to hold "${missing.three}" once, got:\n${edited}`);
+  return edited;
+}
+
+/** The two stages of a program, as three hands them to `onBeforeCompile`. */
+interface ProgramStages {
+  vertexShader: string;
+  fragmentShader: string;
+}
+
+/**
+ * Applies the edits of each stage to `program`, as `editedShader`, and names the stage and `patch`
+ * in the error. A stage with no list keeps its text.
+ */
+export function editedProgram(
+  program: ProgramStages,
+  edits: { vertex?: readonly TextEdit[]; fragment?: readonly TextEdit[] },
+  patch: string
+): void {
+  if (edits.vertex) {
+    program.vertexShader = editedShader(
+      program.vertexShader,
+      edits.vertex,
+      `the vertex shader of the ${patch}`
+    );
+  }
+  if (edits.fragment) {
+    program.fragmentShader = editedShader(
+      program.fragmentShader,
+      edits.fragment,
+      `the fragment shader of the ${patch}`
+    );
+  }
+}
+
+/**
+ * `text` with every match of `pattern` rewritten, and with no match left as it is. It serves a rule
+ * about a family of lines, not an anchor three must hold once, so a program without a match is no error.
+ */
+export function rewrittenShader(
+  text: string,
+  pattern: RegExp,
+  rewrite: (match: string, group: string) => string
+): string {
+  return text.replace(pattern, rewrite);
+}
+
+/**
+ * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied,
+ * as `editedShader`.
  */
 export function editedChunk(name: ChunkName, edit: TextEdit): string {
-  const chunk = THREE.ShaderChunk[name];
-  const edited = applyEdit(chunk, edit);
-  if (edited === null)
-    throw new Error(`expected three's ${name} to hold "${edit.three}" once, got:\n${chunk}`);
-  return edited;
+  return editedShader(THREE.ShaderChunk[name], [edit], `three's ${name}`);
 }
 
 /** The chunks with every edit applied in order, or null when one is missing, as `applyEdit`. */

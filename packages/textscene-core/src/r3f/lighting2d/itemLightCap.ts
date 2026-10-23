@@ -16,6 +16,7 @@ import {
 } from './itemLightList.js';
 import type { PassMesh } from './lightAccumulationPass.js';
 import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/math/rect2.js';
+import { sameElements } from '../../utils/sameElements.js';
 
 /** A lit item as the cap sees it. */
 export interface CappedItem {
@@ -121,7 +122,7 @@ function lightRects(passMeshes: ReadonlySet<PassMesh>, viewport: Rect2): Map<num
 
 function sameLights(a: readonly number[] | null, b: readonly number[] | null): boolean {
   if (a === null || b === null) return a === b;
-  return a.length === b.length && a.every((ordinal, index) => ordinal === b[index]);
+  return sameElements(a, b);
 }
 
 /** Hands each item its positional light list this frame, where it changed, and records its window. */
