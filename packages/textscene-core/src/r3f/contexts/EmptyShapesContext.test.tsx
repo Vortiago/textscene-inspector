@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { NodePathProvider } from './NodePathContext';
-import { EmptyShapeBranch, EmptyShapesProvider, useEmptyShape, useIsEmptyShape } from './EmptyShapesContext';
+import {
+  EmptyShapeBranch,
+  EmptyShapesProvider,
+  useReportEmptyShape,
+  useIsEmptyShape,
+} from './EmptyShapesContext';
 
 /** A CSG shape at `path` that holds `children`, with a brush that is `hasOwnEmptyBrush`. */
 function Shape({
@@ -22,7 +27,7 @@ function Shape({
 }
 
 function ShapeBody({ hasOwnEmptyBrush, children }: { hasOwnEmptyBrush: boolean; children?: ReactNode }) {
-  const isEmpty = useEmptyShape(hasOwnEmptyBrush);
+  const isEmpty = useReportEmptyShape(hasOwnEmptyBrush);
   return <EmptyShapeBranch isEmpty={isEmpty}>{children}</EmptyShapeBranch>;
 }
 

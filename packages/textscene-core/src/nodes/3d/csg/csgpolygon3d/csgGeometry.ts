@@ -24,7 +24,7 @@ function pathPlan(p: CSGPolygon3DProperties): CsgPolygonPathPlan | null {
 
 export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
   const p = properties as unknown as CSGPolygon3DProperties;
-  const { geometry, welds } = buildCsgPolygonBrush({
+  const brush = buildCsgPolygonBrush({
     polygon: p.polygon,
     mode: p.mode,
     depth: p.depth,
@@ -42,7 +42,7 @@ export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
     pathJoined: p.pathJoined,
     path: pathPlan(p),
   });
-  return csgSolid(geometry, [p.materialPath], welds);
+  return csgSolid(brush, [p.materialPath]);
 };
 
 /**

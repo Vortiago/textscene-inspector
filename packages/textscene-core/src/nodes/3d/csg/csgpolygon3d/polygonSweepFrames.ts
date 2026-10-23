@@ -6,7 +6,6 @@
 
 import * as THREE from 'three';
 import { warn } from '../../../../logger';
-import { shadeCsgFaces, type ShadedBrush } from '../smoothNormals';
 
 /**
  * The builder runs on every geometry rebuild, so an unconditional `warn` for an
@@ -18,10 +17,6 @@ export function warnOnce(key: string, message: string): void {
   if (warned.has(key)) return;
   warned.add(key);
   warn(message);
-}
-
-export function emptyBrush(): ShadedBrush {
-  return shadeCsgFaces({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
 }
 
 /**

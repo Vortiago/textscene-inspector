@@ -3,6 +3,7 @@
  * `useLiveNode` over the live scene tree, so it shows the same identity as
  * the outliner and the viewport.
  */
+import type { ReactNode } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
@@ -61,13 +62,12 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         validated properties. The Type row below states the type.
       */}
       {isNotRendered && (
-        <div className={`${styles.section} ${styles.warningSection}`}>
-          <h4 className={styles.sectionTitle}>Not Implemented</h4>
+        <WarningSection title="Not Implemented">
           <p className={styles.warningText}>
             This node type is not yet drawn by the previewer. It is preserved in the tree and its properties
             are parsed, but nothing appears in the viewport.
           </p>
-        </div>
+        </WarningSection>
       )}
 
       <UndrawnMeshNotice nodePath={path} />
@@ -147,19 +147,27 @@ function authoredSections(
   }));
 }
 
+function WarningSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className={`${styles.section} ${styles.warningSection}`}>
+      <h4 className={styles.sectionTitle}>{title}</h4>
+      {children}
+    </div>
+  );
+}
+
 /** Names each mesh type the node holds that the previewer does not draw. */
 function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
   const types = useUndrawnMeshTypes(nodePath);
   if (types.length === 0) return null;
   const meshes = types.length === 1 ? `${types[0]} mesh is` : `${types.join(', ')} meshes are`;
   return (
-    <div className={`${styles.section} ${styles.warningSection}`}>
-      <h4 className={styles.sectionTitle}>Mesh Not Drawn</h4>
+    <WarningSection title="Mesh Not Drawn">
       <p className={styles.warningText}>
         Its {meshes} not yet drawn by the previewer. The viewport shows a wireframe box, or nothing, where
         Godot draws it.
       </p>
-    </div>
+    </WarningSection>
   );
 }
 
@@ -175,13 +183,12 @@ const EMPTY_SHAPE_WARNING = [
 function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
   if (!useIsEmptyShape(nodePath)) return null;
   return (
-    <div className={`${styles.section} ${styles.warningSection}`}>
-      <h4 className={styles.sectionTitle}>Empty Shape</h4>
+    <WarningSection title="Empty Shape">
       {EMPTY_SHAPE_WARNING.map((line) => (
         <p key={line} className={styles.warningText}>
           {line}
         </p>
       ))}
-    </div>
+    </WarningSection>
   );
 }

@@ -7,7 +7,7 @@
 import type * as THREE from 'three';
 import type { LoadedFile } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
-import { isClosedBrush } from './brushManifold';
+import { isClosedBrush, type ShadedBrush } from './brushManifold';
 import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {
@@ -33,11 +33,10 @@ export interface CsgSolid {
   isClosed: boolean;
 }
 
-/** A solid over `geometry`, whose corners `welds` (from `weldCorners`) joins. */
+/** The solid of a shaded brush, closed when its welded edges all run both ways. */
 export function csgSolid(
-  geometry: THREE.BufferGeometry,
-  materials: readonly CsgMaterialAddress[],
-  welds: Int32Array
+  { geometry, welds }: ShadedBrush,
+  materials: readonly CsgMaterialAddress[]
 ): CsgSolid {
   return { geometry, materials, isClosed: isClosedBrush(welds) };
 }

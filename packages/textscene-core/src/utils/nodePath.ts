@@ -8,6 +8,12 @@ export function joinPath(parentPath: string, childName: string): string {
   return parentPath ? `${parentPath}/${childName}` : childName;
 }
 
+/** The path of the node that holds the one at `path`, or null where `path` names a single segment. */
+export function parentPathOf(path: string): string | null {
+  const cut = path.lastIndexOf('/');
+  return cut === -1 ? null : path.slice(0, cut);
+}
+
 /**
  * A root-relative path placed below the node at `parentPath`. The root, at {@link SCENE_ROOT_PATH},
  * lands on `parentPath` itself.

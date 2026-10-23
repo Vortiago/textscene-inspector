@@ -4,6 +4,7 @@
  * faces run both ways along each edge. An empty brush adds nothing to the solid.
  */
 
+import type * as THREE from 'three';
 import { CSG_MERGE_TOLERANCE } from '../../godot/scene/csg';
 
 /** A hash of a weld-grid cell. Two cells can share one, which only adds a candidate to check. */
@@ -11,14 +12,25 @@ function cellHash(x: number, y: number, z: number): number {
   return Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
 }
 
+/** A geometry with the weld of its corners, which the normals and the closed test both read. */
+export interface ShadedBrush {
+  geometry: THREE.BufferGeometry;
+  /** `weldCorners` of the soup behind `geometry`, in the soup's corner order. */
+  welds: Int32Array;
+}
+
 /**
- * Each corner of the triangle soup `positions` (nine floats a triangle), as the first corner it
- * welds to. Manifold welds every point within `CSG_MERGE_TOLERANCE` of another. The grid's cells
- * are twice that wide, so a partner lies in the corner's own cell or the neighbour on the side it
- * leans to, on each axis: 8 cells, not 27.
+ * Each corner of the triangles `isWelded` names (all by default) in the soup `positions`, nine
+ * floats a triangle, as the first corner it welds to. Manifold welds every point within
+ * `CSG_MERGE_TOLERANCE` of another. The grid's cells are twice that wide, so a partner lies in
+ * the corner's own cell or the neighbour on the side it leans to, on each axis: 8 cells, not 27.
+ * A corner of any other triangle reads -1.
  */
-export function weldCorners(positions: Float32Array): Int32Array {
-  const welds = new Int32Array(Math.floor(positions.length / 9) * 3);
+export function weldCorners(
+  positions: Float32Array,
+  isWelded: (triangle: number) => boolean = () => true
+): Int32Array {
+  const welds = new Int32Array(Math.floor(positions.length / 9) * 3).fill(-1);
   const cells = new Map<number, number[]>();
   const toleranceSq = CSG_MERGE_TOLERANCE ** 2;
   const cellWidth = 2 * CSG_MERGE_TOLERANCE;
@@ -34,6 +46,7 @@ export function weldCorners(positions: Float32Array): Int32Array {
     return -1;
   };
   for (let corner = 0; corner < welds.length; corner++) {
+    if (!isWelded((corner / 3) | 0)) continue;
     const x = positions[corner * 3]!;
     const y = positions[corner * 3 + 1]!;
     const z = positions[corner * 3 + 2]!;

@@ -1,10 +1,11 @@
 /**
  * The CSG shapes with an empty shape, for the node's details. Godot warns on a shape whose brush
  * is empty and on each shape below it (`csg_shape.cpp:977-988`). A shape reports through
- * `useEmptyShape`, and with no provider a report does nothing.
+ * `useReportEmptyShape`, and with no provider a report does nothing.
  */
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useCountedReports } from '../hooks/useCountedReports.js';
+import { parentPathOf } from '../../utils/nodePath.js';
 import { useNodePath } from './NodePathContext.js';
 
 interface EmptyShapeReports {
@@ -29,12 +30,6 @@ interface ParentShape {
 const ParentShapeContext = createContext<ParentShape | null>(null);
 ParentShapeContext.displayName = 'ParentShapeContext';
 
-/** Null for the scene root, whose path holds no slash. */
-function parentPathOf(path: string): string | null {
-  const cut = path.lastIndexOf('/');
-  return cut === -1 ? null : path.slice(0, cut);
-}
-
 export function EmptyShapesProvider({ children }: { children: ReactNode }) {
   const { reported: emptyPaths, report, clear } = useCountedReports();
   const reports = useMemo(() => ({ report, clear }), [report, clear]);
@@ -50,7 +45,7 @@ export function EmptyShapesProvider({ children }: { children: ReactNode }) {
  * when its own brush is, or when its direct CSG parent's shape is: `CSGBox3D > Node3D > CSGSphere3D`
  * is two roots, so only the parent's own path counts.
  */
-export function useEmptyShape(hasOwnEmptyBrush: boolean): boolean {
+export function useReportEmptyShape(hasOwnEmptyBrush: boolean): boolean {
   const path = useNodePath();
   const parent = useContext(ParentShapeContext);
   const { report, clear } = useContext(EmptyShapeReportsContext);

@@ -34,7 +34,7 @@
  */
 
 import * as THREE from 'three';
-import { isCollapsed, weldCorners } from '../../../r3f/csg/brushManifold';
+import { isCollapsed, weldCorners, type ShadedBrush } from '../../../r3f/csg/brushManifold';
 import { bottomUpV } from '../../../godot/math/uv';
 
 /**
@@ -83,13 +83,6 @@ function planeNormal(
   return target.crossVectors(a, b).normalize();
 }
 
-/** A shaded brush with the weld of its corners, which the normals and the closed test both read. */
-export interface ShadedBrush {
-  geometry: THREE.BufferGeometry;
-  /** `weldCorners` of the soup's positions, in the soup's corner order. */
-  welds: Int32Array;
-}
-
 /**
  * Turn a face soup into a renderable, boolean-ready `BufferGeometry`.
  *
@@ -98,18 +91,31 @@ export interface ShadedBrush {
  * channel trimmed out of the boolean result.
  */
 export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
-  return shadeCsgFaces(soup).geometry;
+  // A flat face reads no weld, which a brush closed by construction never tests.
+  return shade(
+    soup,
+    weldCorners(soup.positions, (triangle) => soup.smooth[triangle] === true)
+  );
 }
 
-/** `applyCsgNormals`, with the weld it ran, for a builder that tests the brush for a manifold. */
+/** `applyCsgNormals` over a weld of every corner, which a builder shares with its manifold test. */
 export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
+  const welds = weldCorners(soup.positions);
+  return { geometry: shade(soup, welds), welds };
+}
+
+/** The brush of a shape that builds nothing. */
+export function emptyBrush(): ShadedBrush {
+  return shadeCsgFaces({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
+}
+
+function shade(soup: CsgFaceSoup, welds: Int32Array): THREE.BufferGeometry {
   const { positions, uvs, smooth, invert } = soup;
   const triangles = Math.floor(positions.length / 9);
 
   // Pass 1: sum unit plane normals per welded position, smooth faces only. Position, not index,
   // is the key: three gives a cone apex nine radial normals where Godot collapses them to one.
   // The sum is unweighted, so a small face pulls on a vertex as hard as a large one.
-  const keys = weldCorners(positions);
   const accumulated = new Map<number, THREE.Vector3>();
   const plane = new THREE.Vector3();
   const edgeA = new THREE.Vector3();
@@ -117,10 +123,10 @@ export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
 
   for (let t = 0; t < triangles; t++) {
     if (!smooth[t]) continue;
-    if (isCollapsed(keys, t)) continue;
+    if (isCollapsed(welds, t)) continue;
     planeNormal(positions, t * 9, plane, edgeA, edgeB);
     for (let j = 0; j < 3; j++) {
-      const key = keys[t * 3 + j]!;
+      const key = welds[t * 3 + j]!;
       const existing = accumulated.get(key);
       if (existing) existing.add(plane);
       else accumulated.set(key, plane.clone());
@@ -148,7 +154,7 @@ export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
     for (let j = 0; j < 3; j++) {
       normal.copy(plane);
       if (smooth[t]) {
-        const sum = accumulated.get(keys[t * 3 + j]!);
+        const sum = accumulated.get(welds[t * 3 + j]!);
         // Godot normalizes the accumulated sum in place. A sum of exactly zero (two
         // faces cancelling on a zero-thickness sheet) would leave a black (0,0,0)
         // normal there; we keep the face's own plane normal instead, which is the
@@ -175,5 +181,5 @@ export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
   geometry.setAttribute('position', new THREE.BufferAttribute(outPositions, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(outNormals, 3));
   geometry.setAttribute('uv', new THREE.BufferAttribute(outUvs, 2));
-  return { geometry, welds: keys };
+  return geometry;
 }

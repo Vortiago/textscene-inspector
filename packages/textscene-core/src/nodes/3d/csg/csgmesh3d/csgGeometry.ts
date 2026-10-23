@@ -92,9 +92,9 @@ function buildMeshBrush(
 ): CsgSolid | null {
   const faces = meshFaces(surfaces, nodeMaterial);
   if (faces.smooth.length === 0) return null;
-  const { geometry, welds } = shadeCsgFaces({ ...faces, invert: flipFaces });
-  if (faces.materials.length > 1) addMaterialGroups(geometry, faces.faceMaterials);
-  return csgSolid(geometry, faces.materials, welds);
+  const brush = shadeCsgFaces({ ...faces, invert: flipFaces });
+  if (faces.materials.length > 1) addMaterialGroups(brush.geometry, faces.faceMaterials);
+  return csgSolid(brush, faces.materials);
 }
 
 function meshFaces(surfaces: readonly CsgMeshSurface[], nodeMaterial: CsgMaterialAddress): MeshFaces {

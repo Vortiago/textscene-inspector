@@ -33,9 +33,10 @@
  */
 
 import * as THREE from 'three';
-import { shadeCsgFaces, type ShadedBrush } from '../smoothNormals';
+import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
+import type { ShadedBrush } from '../../../../r3f/csg/brushManifold';
 import { extrusionCounts } from './extrusionCounts';
-import { emptyBrush, facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
+import { facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
 import { MIN_POLYGON_VERTICES, type CsgPolygonSpec } from './polygonSweepSpec';
 import { PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 import { sweepFaceBuffer } from './sweepFaceBuffer';

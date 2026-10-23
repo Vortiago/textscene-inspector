@@ -10,7 +10,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshReport } from '../../contexts/UndrawnMeshesContext';
-import { EmptyShapesProvider, useEmptyShape } from '../../contexts/EmptyShapesContext';
+import { EmptyShapesProvider, useReportEmptyShape } from '../../contexts/EmptyShapesContext';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -45,7 +45,7 @@ function TextMeshHolder() {
 
 /** A CSG shape whose brush is empty. */
 function EmptyShapeHolder() {
-  useEmptyShape(true);
+  useReportEmptyShape(true);
   return null;
 }
 

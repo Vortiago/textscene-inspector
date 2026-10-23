@@ -13,7 +13,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
-import { EmptyShapeBranch, useEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
+import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
@@ -82,14 +82,17 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
-  const builtSolid = useMemo(
-    () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
+  const { ownSolid, isOpen } = useMemo(
+    () => {
+      const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
+      // An open brush is empty: it draws nothing and bounds to a point, as no solid does. Only
+      // that fact is kept, so its geometry is not held for the life of the node.
+      return { ownSolid: built?.isClosed ? built : null, isOpen: built !== null && !built.isClosed };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
     [ownKey, properties.materialPath, skipped]
   );
-  // An open brush is empty: it draws nothing and bounds to a point, as no solid does.
-  const ownSolid = builtSolid?.isClosed ? builtSolid : null;
-  const isEmptyShape = useEmptyShape(builtSolid !== null && !builtSolid.isClosed);
+  const isEmptyShape = useReportEmptyShape(isOpen);
   const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG
