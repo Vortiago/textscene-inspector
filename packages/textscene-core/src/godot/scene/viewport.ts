@@ -200,7 +200,7 @@ export function viewportPositionalShadowAtlas(
  * NEAREST_WITH_MIPMAPS is 3, the opposite of the order the two names suggest. 4.7.2 adds PARENT_NODE
  * (`viewport.h:197`), which 4.6.3 refuses.
  */
-export const DefaultCanvasItemTextureFilter = {
+const DefaultCanvasItemTextureFilter = {
   NEAREST: 0,
   LINEAR: 1,
   LINEAR_WITH_MIPMAPS: 2,
@@ -213,7 +213,7 @@ export const DefaultCanvasItemTextureFilter = {
  * stores for `canvas_item_default_texture_repeat`. 4.7.2 adds PARENT_NODE (`viewport.h:205`), which
  * 4.6.3 refuses.
  */
-export const DefaultCanvasItemTextureRepeat = {
+const DefaultCanvasItemTextureRepeat = {
   DISABLED: 0,
   ENABLED: 1,
   MIRROR: 2,
@@ -224,23 +224,17 @@ export const DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(Default
 
 export const DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(DefaultCanvasItemTextureFilter);
 
-/** The filters 4.6.3's setter accepts (`viewport.cpp:3968`): every value but 4.7's PARENT_NODE. */
-export const VIEWPORT_TEXTURE_FILTERS = [
-  DefaultCanvasItemTextureFilter.NEAREST,
-  DefaultCanvasItemTextureFilter.LINEAR,
-  DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
-  DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
-] as const;
+/** A filter 4.6.3's setter accepts (`viewport.cpp:3968`): every value but 4.7's PARENT_NODE. */
+export type ViewportTextureFilter = Exclude<
+  EnumValue<typeof DefaultCanvasItemTextureFilter>,
+  typeof DefaultCanvasItemTextureFilter.PARENT_NODE
+>;
 
-/** The repeats 4.6.3's setter accepts (`viewport.cpp:3999`): every value but 4.7's PARENT_NODE. */
-export const VIEWPORT_TEXTURE_REPEATS = [
-  DefaultCanvasItemTextureRepeat.DISABLED,
-  DefaultCanvasItemTextureRepeat.ENABLED,
-  DefaultCanvasItemTextureRepeat.MIRROR,
-] as const;
-
-type ViewportTextureFilter = (typeof VIEWPORT_TEXTURE_FILTERS)[number];
-type ViewportTextureRepeat = (typeof VIEWPORT_TEXTURE_REPEATS)[number];
+/** A repeat 4.6.3's setter accepts (`viewport.cpp:3999`): every value but 4.7's PARENT_NODE. */
+export type ViewportTextureRepeat = Exclude<
+  EnumValue<typeof DefaultCanvasItemTextureRepeat>,
+  typeof DefaultCanvasItemTextureRepeat.PARENT_NODE
+>;
 
 /** A Viewport's default filter for a CanvasItem that defers to its ancestors (`viewport.h:419`). */
 export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER = DefaultCanvasItemTextureFilter.LINEAR;
@@ -273,31 +267,26 @@ const CANVAS_ITEM_REPEAT_OF_DEFAULT: Record<
   [DefaultCanvasItemTextureRepeat.MIRROR]: CanvasItemTextureRepeat.MIRROR,
 };
 
-/** `value` when `accepted` holds it, else `initial`, as a setter that refuses the value keeps it. */
-function acceptedOr<T extends number>(accepted: readonly T[], value: number | undefined, initial: T): T {
-  return accepted.find((candidate) => candidate === value) ?? initial;
-}
+/** Every filter a viewport's setter accepts, for a parser to check a stored value against. */
+export const VIEWPORT_TEXTURE_FILTERS = Object.keys(CANVAS_ITEM_FILTER_OF_DEFAULT).map(
+  Number
+) as readonly ViewportTextureFilter[];
+
+/** Every repeat a viewport's setter accepts, for a parser to check a stored value against. */
+export const VIEWPORT_TEXTURE_REPEATS = Object.keys(CANVAS_ITEM_REPEAT_OF_DEFAULT).map(
+  Number
+) as readonly ViewportTextureRepeat[];
 
 /**
  * The canvas item filter and repeat that a viewport's `default_canvas_item_texture_filter` and
  * `_repeat` set (`viewport.cpp:3974-3987`, `:4007-4017`), which differ in numbering from
- * `CanvasItem`'s. An absent or out-of-range value keeps the initialiser, Linear and Disabled
- * (`viewport.h:419-420`), since the setter refuses it (`viewport.cpp:3968`, `:3999`).
+ * `CanvasItem`'s. The parser keeps the initialiser for a value the setter refuses.
  */
 export function viewportCanvasItemTextureDefaults(
-  filter: number | undefined,
-  repeat: number | undefined
+  filter: ViewportTextureFilter,
+  repeat: ViewportTextureRepeat
 ): CanvasItemTextureDefaults {
-  return {
-    filter:
-      CANVAS_ITEM_FILTER_OF_DEFAULT[
-        acceptedOr(VIEWPORT_TEXTURE_FILTERS, filter, VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER)
-      ],
-    repeat:
-      CANVAS_ITEM_REPEAT_OF_DEFAULT[
-        acceptedOr(VIEWPORT_TEXTURE_REPEATS, repeat, VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT)
-      ],
-  };
+  return { filter: CANVAS_ITEM_FILTER_OF_DEFAULT[filter], repeat: CANVAS_ITEM_REPEAT_OF_DEFAULT[repeat] };
 }
 
 /** `SubViewport::UpdateMode` (`viewport.h:877-883`): when the target is re-rendered. */
