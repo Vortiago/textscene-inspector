@@ -181,10 +181,9 @@ describe('startFrameProfile', () => {
   });
 
   it('reports a context that draws in software', () => {
-    const renderer = cpuOnlyRenderer('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device), SwiftShader driver)');
     expect(
       profiledWindow(
-        renderer,
+        cpuOnlyRenderer('SwiftShader'),
         () => 0,
         () => {}
       ).rendersInSoftware
