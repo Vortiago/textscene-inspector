@@ -14,29 +14,27 @@ Plays a frame-by-frame animation from a `SpriteFrames` resource on a quad in 3D 
 ## Linting
 
 <!-- lint:begin AnimatedSprite3D -->
-
 Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `AnimatedSprite3D` also REFUSES `playing` outright.
 
-| Property         | Accepts                                                        | Out of range |
-| ---------------- | -------------------------------------------------------------- | ------------ |
-| `animation`      | quoted string or &"name"                                       |              |
-| `autoplay`       | quoted string or &"name"                                       |              |
-| `frame`          | integer >= 0                                                   | error below  |
-| `frame_progress` | float                                                          |              |
-| `speed_scale`    | float                                                          |              |
-| `sprite_frames`  | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
-| `playing`        | **not available on this type**                                 |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `animation` | quoted string or &"name" |  |
+| `autoplay` | quoted string or &"name" |  |
+| `frame` | integer >= 0 | error below |
+| `frame_progress` | float |  |
+| `speed_scale` | float |  |
+| `sprite_frames` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `playing` | **not available on this type** |  |
 
-| Rule                                                            | Reports                                                         | Severity |
-| --------------------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)                         | `binary-resource-reference`                                     | info     |
-| `valid-node3d-visibility` (type-family match)                   | `valid-node3d-visibility`                                       | error    |
-| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin`          | warning  |
-|                                                                 | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning  |
-|                                                                 | `geometryinstance3d-visibility-range-end-fade-without-margin`   | warning  |
-| `valid-animatedsprite3d-properties`                             | `animatedsprite3d-requires-spriteframes`                        | warning  |
-|                                                                 | `animatedsprite3d-animation-no-spriteframes`                    | error    |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
+| `valid-animatedsprite3d-properties` | `animatedsprite3d-requires-spriteframes` | warning |
+|  | `animatedsprite3d-animation-no-spriteframes` | error |
 <!-- lint:end -->
 
 The lenient parser reads the GeometryInstance3D base. It also reads what places the quad: `pixel_size`, `axis`, `billboard`, `offset` and `centered`. The scene cull measures the node by the quad of the frame that `sprite_frames`, `animation` and `frame` select. So its visibility range still decides its visibility dependants. `autoplay`, `frame_progress` and `speed_scale` are never read.

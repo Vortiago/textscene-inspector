@@ -14,21 +14,19 @@ Applies the scene's Environment resource to the whole view and draws no geometry
 ## Linting
 
 <!-- lint:begin WorldEnvironment -->
-
 Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property            | Accepts                                                        | Out of range |
-| ------------------- | -------------------------------------------------------------- | ------------ |
-| `camera_attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
-| `compositor`        | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
-| `environment`       | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `camera_attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `compositor` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `environment` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
-| Rule                                    | Reports                                 | Severity |
-| --------------------------------------- | --------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference`             | info     |
-| `valid-worldenvironment`                | `worldenvironment-requires-environment` | warning  |
-|                                         | `single-worldenvironment`               | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-worldenvironment` | `worldenvironment-requires-environment` | warning |
+|  | `single-worldenvironment` | warning |
 <!-- lint:end -->
 
 Both properties are assigned straight from the raw string with no format or resource-existence check. An absent `environment` falls back to `''` rather than raising strict's missing-environment warning, and an absent `camera_attributes` stays `undefined`.

@@ -14,14 +14,12 @@ A hand-placed probe position that LightmapGI samples to light dynamic objects. I
 ## Linting
 
 <!-- lint:begin LightmapProbe -->
-
 Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inherited from Node); `LightmapProbe` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule                                          | Reports                     | Severity |
-| --------------------------------------------- | --------------------------- | -------- |
-| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 LightmapProbe declares no validator of its own. The lenient parser reuses `parseNode3D`, so a malformed `transform` warns and substitutes the identity rather than dropping the node.

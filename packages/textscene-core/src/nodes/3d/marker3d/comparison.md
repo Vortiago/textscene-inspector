@@ -15,18 +15,16 @@ A Node3D anchor that positions its children and shows a three-axis cross at its 
 ## Linting
 
 <!-- lint:begin Marker3D -->
-
 Strict parsing format-checks these `Marker3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property        | Accepts    | Out of range  |
-| --------------- | ---------- | ------------- |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
 | `gizmo_extents` | float >= 0 | warning below |
 
-| Rule                                          | Reports                     | Severity |
-| --------------------------------------------- | --------------------------- | -------- |
-| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 The lenient parser reads `gizmo_extents` through `floatOr`, so a non-numeric value warns and falls back to Godot's default of `0.25`. An absent key gets the same `0.25` silently.

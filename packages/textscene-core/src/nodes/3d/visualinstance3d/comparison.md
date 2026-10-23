@@ -15,18 +15,16 @@ The base class every mesh-like 3D leaf inherits from. It gives them render layer
 ## Linting
 
 <!-- lint:begin VisualInstance3D -->
-
 Strict parsing format-checks these `VisualInstance3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts                         | Out of range |
-| -------- | ------------------------------- | ------------ |
-| `layers` | 32-bit layer mask (layers 1-32) |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `layers` | 32-bit layer mask (layers 1-32) |  |
 
-| Rule                                          | Reports                     | Severity |
-| --------------------------------------------- | --------------------------- | -------- |
-| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
 A non-numeric or negative `layers` fails strict validation. The lenient parser reads `layers` on top of the Node3D fields. A malformed value keeps Godot's default, layer 1, with no warning. A Decal's `cull_mask` and a ReflectionProbe's `cull_mask` and `reflection_mask` test it.

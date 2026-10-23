@@ -14,24 +14,22 @@ Godot's cone-shaped light, emitting from a point along its local -Z axis and fad
 ## Linting
 
 <!-- lint:begin SpotLight3D -->
-
 Strict parsing format-checks these `SpotLight3D` properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property                 | Accepts     | Out of range  |
-| ------------------------ | ----------- | ------------- |
-| `spot_angle`             | float 0-180 | warning       |
-| `spot_angle_attenuation` | float       |               |
-| `spot_attenuation`       | float       |               |
-| `spot_range`             | float >= 0  | warning below |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `spot_angle` | float 0-180 | warning |
+| `spot_angle_attenuation` | float |  |
+| `spot_attenuation` | float |  |
+| `spot_range` | float >= 0 | warning below |
 
-| Rule                                          | Reports                                | Severity |
-| --------------------------------------------- | -------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)       | `binary-resource-reference`            | info     |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`              | error    |
-| `valid-spotlight3d-properties`                | `spotlight3d-shadow-angle-too-wide`    | warning  |
-|                                               | `spotlight3d-projector-without-shadow` | warning  |
-| `valid-light3d-scale` (type-family match)     | `light3d-non-unit-scale`               | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-spotlight3d-properties` | `spotlight3d-shadow-angle-too-wide` | warning |
+|  | `spotlight3d-projector-without-shadow` | warning |
+| `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
 The linter warns (`resource-type-excluded-by-hint`) when `light_projector` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`light_3d.cpp:204-213`).

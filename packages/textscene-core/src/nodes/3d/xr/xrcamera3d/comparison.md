@@ -15,18 +15,16 @@ The headset's eye, which XRServer drives from tracking data at runtime. It is a 
 ## Linting
 
 <!-- lint:begin XRCamera3D -->
-
 Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 inherited from Node3D, 10 inherited from Node); `XRCamera3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule                                            | Reports                            | Severity |
-| ----------------------------------------------- | ---------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)         | `binary-resource-reference`        | info     |
-| `valid-node3d-visibility` (type-family match)   | `valid-node3d-visibility`          | error    |
-| `valid-camera3d-properties` (type-family match) | `camera3d-multiple-current`        | info     |
-|                                                 | `camera3d-invalid-clipping-planes` | error    |
-|                                                 | `camera3d-zero-depth-range`        | warning  |
-| `valid-xrcamera3d-parent`                       | `xrcamera3d-parent-not-xrorigin3d` | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-camera3d-properties` (type-family match) | `camera3d-multiple-current` | info |
+|  | `camera3d-invalid-clipping-planes` | error |
+|  | `camera3d-zero-depth-range` | warning |
+| `valid-xrcamera3d-parent` | `xrcamera3d-parent-not-xrorigin3d` | warning |
 <!-- lint:end -->
 
 XRCamera3D has no `linterParser.ts` of its own, so strict parsing validates whatever Node3D and Camera3D declare. A malformed inherited `transform` is a strict error, while the lenient `parseCamera3D`, through `parseNode3D`, keeps rendering with the identity transform.
