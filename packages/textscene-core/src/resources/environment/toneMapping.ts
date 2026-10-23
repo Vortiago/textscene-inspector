@@ -113,7 +113,7 @@ function chunkPatchTo(chunk: string | null): ChunkPatch<typeof TONEMAP_CHUNK> {
     names: [TONEMAP_CHUNK],
     isApplied: (chunks) => chunks[TONEMAP_CHUNK] === chunk,
     apply: onChunk(TONEMAP_CHUNK, () => chunk),
-    missing: `${TONEMAP_CHUNK} lacks the stub ${CUSTOM_TONE_MAPPING_STUB}`,
+    missing: `${TONEMAP_CHUNK} does not hold the stub ${CUSTOM_TONE_MAPPING_STUB} once`,
   };
 }
 

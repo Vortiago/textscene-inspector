@@ -26,9 +26,9 @@ import {
 
 /**
  * The GLSL function that takes the place of three's `CustomToneMapping` stub, per mode. three
- * declares `toneMappingExposure` but does NOT apply it for the custom hook, so each curve
- * multiplies it in first, which is also where Godot puts `tonemap_exposure`. The white is a
- * constant per environment, so it is baked in rather than a uniform every material would have to declare.
+ * does NOT apply `toneMappingExposure` for the custom hook, so each curve multiplies it in first,
+ * as Godot does with `tonemap_exposure`. The white is a per-environment constant, baked in so no
+ * material declares a uniform for it.
  */
 export function customToneMappingFunction(
   mode: number,

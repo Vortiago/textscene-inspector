@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { toneMappingEffectGlsl, customToneMappingFunction } from './godotToneMapping';
+import { customToneMappingFunction, toneMappingEffectGlsl } from './godotToneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 
 describe('customToneMappingFunction — the per-material CustomToneMapping hook', () => {
@@ -22,9 +22,9 @@ describe('customToneMappingFunction — the per-material CustomToneMapping hook'
   });
 
   it('multiplies exposure in first — three does not apply it for the custom hook', () => {
-    const chunk = customToneMappingFunction(ToneMapper.ACES, 1);
-    expect(chunk.indexOf('color *= toneMappingExposure;')).toBeGreaterThan(
-      chunk.indexOf('vec3 CustomToneMapping(vec3 color)')
+    const curve = customToneMappingFunction(ToneMapper.ACES, 1);
+    expect(curve.indexOf('color *= toneMappingExposure;')).toBeGreaterThan(
+      curve.indexOf('vec3 CustomToneMapping(vec3 color)')
     );
   });
 
@@ -41,10 +41,10 @@ describe('customToneMappingFunction — the per-material CustomToneMapping hook'
   });
 
   it('carries the AgX matrices rather than three’s different approximation', () => {
-    const chunk = customToneMappingFunction(ToneMapper.AGX, 1);
-    expect(chunk).toContain('rec709_to_rec2020_agx_inset');
-    expect(chunk).toContain('agx_outset_rec2020_to_rec709');
-    expect(chunk).toContain('awp_contrast = 1.25');
+    const curve = customToneMappingFunction(ToneMapper.AGX, 1);
+    expect(curve).toContain('rec709_to_rec2020_agx_inset');
+    expect(curve).toContain('agx_outset_rec2020_to_rec709');
+    expect(curve).toContain('awp_contrast = 1.25');
   });
 });
 
@@ -74,7 +74,7 @@ describe('toneMappingEffectGlsl — the same curves for the glow composer', () =
     expect(glsl).toContain('const float godotToneMapWhite = 0.0;');
   });
 
-  it('agrees with the per-material chunk about which curve a mode gets', () => {
+  it('agrees with the per-material curve about which curve a mode gets', () => {
     // The two paths must draw the same scene identically. The composer moves where
     // the curve runs, never which one.
     for (const mode of [0, 1, 2, 3, 4]) {
@@ -94,7 +94,7 @@ describe('AgX contrast — Godot’s tonemap_agx_contrast reaches the curve', ()
     expect(toneMappingEffectGlsl(ToneMapper.AGX, 16.29)).toContain('awp_contrast = 1.25;');
   });
 
-  it('bakes an authored contrast into the in-material chunk', () => {
+  it('bakes an authored contrast into the in-material curve', () => {
     expect(customToneMappingFunction(ToneMapper.AGX, 1, 1.8)).toContain('awp_contrast = 1.8;');
   });
 
@@ -112,9 +112,9 @@ describe('AgX contrast — Godot’s tonemap_agx_contrast reaches the curve', ()
   it('never bakes an uncompilable literal for a malformed contrast (error path)', () => {
     // Matched as an assignment, not as a bare substring: the AgX body's own
     // comments mention NaN, and GLSL has no such token to bake anyway.
-    const chunk = customToneMappingFunction(ToneMapper.AGX, 1, Number.NaN);
-    expect(chunk).not.toMatch(/=\s*(NaN|Infinity)/);
-    expect(chunk).toContain('awp_contrast = 0.0;');
+    const curve = customToneMappingFunction(ToneMapper.AGX, 1, Number.NaN);
+    expect(curve).not.toMatch(/=\s*(NaN|Infinity)/);
+    expect(curve).toContain('awp_contrast = 0.0;');
   });
 
   it('is ignored by every curve that is not AgX', () => {

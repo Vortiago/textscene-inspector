@@ -37,7 +37,7 @@ const SHADER_SOURCES = SOURCES.filter(
 const STRING_REPLACE = /\.(replace|replaceAll)\(/;
 
 /** An assignment to a named chunk, as `ShaderChunk[name] = text` or `ShaderChunk.name = text`. */
-const CHUNK_ASSIGNMENT = /ShaderChunk(\[[^\]]*\]|\.\w+)\s*=[^=]/;
+const CHUNK_ASSIGNMENT = /ShaderChunk(\[.*\]|\.\w+)\s*[-+*/|&?]*=[^=]/;
 
 describe('shader text splices', () => {
   it('scans the renderer’s shader patches', () => {

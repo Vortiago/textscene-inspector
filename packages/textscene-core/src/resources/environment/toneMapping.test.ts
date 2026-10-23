@@ -141,6 +141,8 @@ describe('the curve in three’s chunk', () => {
 
   it('warns and keeps the chunk when three holds no CustomToneMapping stub (error case)', async () => {
     // The module reads three's chunk when it loads, so the chunk is set before a fresh import.
+    // The fresh install chains its key onto the prototype's, so the test puts the key back.
+    const programKey = THREE.Material.prototype.customProgramCacheKey;
     vi.resetModules();
     const three = await import('three');
     const { warningsOf } = await import('../../r3f/testing/logWarnings');
@@ -149,6 +151,7 @@ describe('the curve in three’s chunk', () => {
     const { installToneMapping: installFresh } = await import('./toneMapping');
 
     const warnings = warningsOf(() => installFresh(fakeRenderer(), { mode: FILMIC }, 'material'));
+    THREE.Material.prototype.customProgramCacheKey = programKey;
 
     expect(warnings).toHaveLength(1);
     expect(three.ShaderChunk.tonemapping_pars_fragment).toBe(withoutStub);
