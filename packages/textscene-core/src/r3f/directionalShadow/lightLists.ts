@@ -71,6 +71,8 @@ function isDirectionalLight(light: THREE.Light): light is THREE.DirectionalLight
 /** Godot's lists for a scene: the lights it draws, and each shadowed light's share of the atlas. */
 export interface DirectionalLightLists {
   drawn: ReadonlySet<THREE.DirectionalLight>;
+  /** The first drawn light, null for a scene that draws none. */
+  first: THREE.DirectionalLight | null;
   shares: ReadonlyMap<THREE.DirectionalLight, DirectionalShadowAtlasRect>;
 }
 
@@ -89,5 +91,5 @@ export function directionalLightLists(declared: readonly DeclaredDirectionalLigh
   shadowed.forEach(({ light }, index) => {
     shares.set(light, directionalShadowLightRect(DIRECTIONAL_SHADOW_SIZE_DEFAULT, shadowed.length, index));
   });
-  return { drawn: new Set(drawn.map(({ light }) => light)), shares };
+  return { drawn: new Set(drawn.map(({ light }) => light)), first: drawn[0]?.light ?? null, shares };
 }

@@ -1,6 +1,6 @@
 /** An image cut into layers, as Godot's layered importer cuts it. */
 import { describe, expect, it } from 'vitest';
-import { sliceImage } from './layeredTexels';
+import { redOnly, sliceImage } from './layeredTexels';
 
 /** An image `width` by `height` whose every pixel's red is its index, so each texel names its source. */
 function indexedImage(width: number, height: number) {
@@ -49,5 +49,12 @@ describe('sliceImage', () => {
 
   it('cuts nothing from an image narrower than its slice count (edge case)', () => {
     expect(sliceImage(indexedImage(3, 3), { horizontal: 4, vertical: 1 })).toBeNull();
+  });
+});
+
+describe('redOnly', () => {
+  it('keeps the red of each texel, layer after layer, and the size of the layers', () => {
+    const layers = sliceImage(indexedImage(2, 2), { horizontal: 1, vertical: 2 })!;
+    expect(redOnly(layers)).toEqual({ texels: new Uint8Array([0, 1, 2, 3]), width: 2, height: 1, depth: 2 });
   });
 });

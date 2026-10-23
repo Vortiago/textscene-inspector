@@ -1,6 +1,6 @@
 /**
  * `useBuildSolveTree` turns a Control subtree into the `SolveNode` forest `controlRectSolver.ts`
- * consumes, on `liveSceneTree.ts`'s shared traversal (`liveChildGroups`). A non-Control ancestor
+ * consumes, on `liveSceneTree.ts`'s shared traversal (`LiveTree.fold`). A non-Control ancestor
  * (not in `TWO_D_UI_TYPES`) gets no `SolveNode`, and its children are walked in its place. Where a
  * Control beneath it lands follows Godot's canvas climb, as `buildSolveTree.md` sets out.
  *
@@ -18,7 +18,6 @@ import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { projectLayoutDirectionEnv, type ProjectSettings } from '../../../parser/projectSettingsParser';
-import { joinPath } from '../../../utils/nodePath';
 import {
   findExtResource,
   findSubResource,
@@ -54,13 +53,15 @@ import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
-  liveChildGroups,
-  liveNodeScope,
-  mergedNodeOf,
+  isInjected,
+  liveTreeOf,
   type CachedSceneSource,
+  type LiveChildGroup,
+  type LiveTreeContext,
+  type LiveLink,
   type SceneScope,
 } from '../../liveSceneTree';
-import { liveInstancePath, scopeOf } from '../../../resources/liveNode';
+import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
@@ -233,7 +234,7 @@ interface PendingScene {
 }
 
 /**
- * One `walk` level's output. `hoisted` holds Controls whose `CanvasItem` chain
+ * One node's output in the forest walk. `hoisted` holds Controls whose `CanvasItem` chain
  * broke below (`control.cpp:3874-3890`), which Godot parents at the enclosing
  * canvas (`canvas_item.cpp:234-285`). They pass every Control above until a canvas
  * boundary or the forest root adopts them.
@@ -241,6 +242,76 @@ interface PendingScene {
 interface WalkResult {
   nodes: SolveNode[];
   hoisted: SolveNode[];
+}
+
+const NOTHING_WALKED: WalkResult = { nodes: [], hoisted: [] };
+
+/** The outputs of siblings, in order. */
+function joinWalked(results: readonly WalkResult[]): WalkResult {
+  const joined: WalkResult = { nodes: [], hoisted: [] };
+  for (const result of results) {
+    // Pushed one by one: a spread of a very large array exceeds the engine's argument limit.
+    for (const node of result.nodes) joined.nodes.push(node);
+    for (const node of result.hoisted) joined.hoisted.push(node);
+  }
+  return joined;
+}
+
+/** What a node hands the walk of its children, who each read the part that concerns them. */
+interface Ancestry {
+  themeChain: readonly ThemeResource[];
+  /** Where each child draws, by the child as authored. */
+  paintRanges: ReadonlyMap<TscnNode, PaintRange>;
+  /** What every skipped Node2D ancestor since the last real Control or root contributes. */
+  skippedAncestors: SkippedAncestors | null;
+  /**
+   * Whether a non-`CanvasItem` link sits between here and the nearest Control,
+   * so the climb ends with `has_parent_control == false` (`control.cpp:3874-3890`).
+   * A Control under one is a canvas root, and hoists.
+   */
+  canvasChainBroken: boolean;
+  /**
+   * The eye toggle of every ancestor, by outliner subtree, so it never resets.
+   * A skipped ancestor has no group to hide, and a hoisted Control leaves its
+   * ancestor's group, so both would escape the toggle.
+   */
+  ancestorHidden: boolean;
+  /**
+   * `CanvasItem::parent_visible_in_tree` for the children. Unlike `ancestorHidden`, it
+   * resets at a `CanvasLayer` and at every non-CanvasItem parent.
+   */
+  parentVisibleInTree: boolean;
+  /**
+   * Where each root of the enclosing canvas draws: its pre-order rank among the
+   * roots, not its nesting slot (`canvasRootRanges`). A node in the map takes
+   * that run instead of its parent's.
+   */
+  canvasRoots: ReadonlyMap<TscnNode, PaintRange>;
+  /**
+   * The nearest ancestor Control's `is_layout_rtl()`, or `null` off the top of
+   * the tree (`scene/gui/control.cpp:3584-3608`). Other types pass it through: the
+   * climb steps over them. No `Window`, the one other stop, is drawn here.
+   */
+  inheritedRtl: boolean | null;
+  /**
+   * The parent's `resolveChildVisibility` map, `undefined` where the container
+   * writes none. Applied as a property write, as Godot's is, so every reader of
+   * `visible` honours it.
+   */
+  childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
+}
+
+/**
+ * Where each child draws, by the child, from the allocations that numbered the lists in order.
+ * One parent never lists a node object twice: the parser builds an object for each heading.
+ */
+function paintRangesOf(...numbered: readonly (readonly [readonly TscnNode[], readonly PaintRange[]])[]) {
+  const ranges = new Map<TscnNode, PaintRange>();
+  for (const [children, allocated] of numbered) {
+    for (const [index, child] of children.entries())
+      ranges.set(child, allocated[index] ?? WHOLE_CANVAS_RANGE);
+  }
+  return ranges;
 }
 
 interface ForestResult {
@@ -357,6 +428,8 @@ function buildForest(
   const sceneCache: CachedSceneSource = loader
     ? { getCached: reading((p) => loader.scenes.getCached(p)) }
     : EMPTY_SCENE_CACHE;
+  const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
+  const tree = liveTreeOf(nodes, ctx);
   const textureCache = loader
     ? { getCached: reading((p) => loader.textures.getCached(p)) }
     : NO_TEXTURE_CACHE;
@@ -546,17 +619,17 @@ function buildForest(
   /**
    * The `visible` a registered container writes onto each direct sortable child,
    * keyed by the raw child. The container numbers them in one `get_child(i)` loop
-   * (`tab_container.cpp:469-481`), so the count spans every `liveChildGroups` group.
+   * (`tab_container.cpp:469-481`), so the count spans every group below the container.
    */
   function resolveChildVisibility(
     fn: ChildVisibilityFn,
     container: TscnNode,
-    groups: ReturnType<typeof liveChildGroups>
+    groups: readonly LiveChildGroup[]
   ): ReadonlyMap<TscnNode, boolean> {
     const sortable: { raw: TscnNode; live: TscnNode }[] = [];
     for (const group of groups) {
       for (const child of group.children) {
-        const live = mergedNodeOf(liveChildGroups(child, group.scope, sceneCache)) ?? child;
+        const live = tree.stepOf(child, group.scope).node;
         if (isSortableChild(live)) sortable.push({ raw: child, live });
       }
     }
@@ -568,270 +641,215 @@ function buildForest(
     return out;
   }
 
+  /** The Control forest of one tree node: what it adds to the forest and what it hoists to the canvas. */
   function walk(
-    list: readonly TscnNode[],
-    parentPath: string,
-    scope: SceneScope,
-    themeChain: readonly ThemeResource[],
-    ranges: readonly PaintRange[],
-    /** What every skipped Node2D ancestor since the last real Control or root contributes. */
-    skippedAncestors: SkippedAncestors | null,
-    /**
-     * Whether a non-`CanvasItem` link sits between here and the nearest Control,
-     * so the climb ends with `has_parent_control == false` (`control.cpp:3874-3890`).
-     * A Control under one is a canvas root, and hoists.
-     */
-    canvasChainBroken: boolean,
-    /**
-     * The eye toggle of every ancestor, by outliner subtree, so it never resets.
-     * A skipped ancestor has no group to hide, and a hoisted Control leaves its
-     * ancestor's group, so both would escape the toggle.
-     */
-    ancestorHidden: boolean,
-    /**
-     * `CanvasItem::parent_visible_in_tree` for `list`. Unlike `ancestorHidden`, it
-     * resets at a `CanvasLayer` and at every non-CanvasItem parent.
-     */
-    parentVisibleInTree: boolean,
-    /**
-     * Where each root of the enclosing canvas draws: its pre-order rank among the
-     * roots, not its nesting slot (`canvasRootRanges`). A node in the map takes
-     * that run instead of its parent's.
-     */
-    canvasRoots: ReadonlyMap<TscnNode, PaintRange>,
-    /**
-     * The nearest ancestor Control's `is_layout_rtl()`, or `null` off the top of
-     * the tree (`scene/gui/control.cpp:3584-3608`). Other types pass it through: the
-     * climb steps over them. No `Window`, the one other stop, is drawn here.
-     */
-    inheritedRtl: boolean | null,
-    /**
-     * The parent's `resolveChildVisibility` map, `undefined` where the container
-     * writes none. Applied as a property write, as Godot's is, so every reader of
-     * `visible` honours it.
-     */
-    childVisibility: ReadonlyMap<TscnNode, boolean> | undefined
+    { raw: node, step, path, group }: LiveLink,
+    ancestry: Ancestry,
+    descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
-    const out: SolveNode[] = [];
-    const hoisted: SolveNode[] = [];
-    for (const [index, node] of list.entries()) {
-      const paintRange = canvasRoots.get(node) ?? ranges[index] ?? WHOLE_CANVAS_RANGE;
-      // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
-      // drawn by its own viewport surface, never by the enclosing canvas.
-      if (isViewportBoundary(node.type)) continue;
+    const {
+      themeChain,
+      skippedAncestors,
+      canvasChainBroken,
+      ancestorHidden,
+      parentVisibleInTree,
+      canvasRoots,
+      inheritedRtl,
+      childVisibility,
+    } = ancestry;
+    const paintRange = canvasRoots.get(node) ?? ancestry.paintRanges.get(node) ?? WHOLE_CANVAS_RANGE;
+    // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
+    // drawn by its own viewport surface, never by the enclosing canvas.
+    if (isViewportBoundary(node.type)) return NOTHING_WALKED;
 
-      const path = joinPath(parentPath, node.name);
-
-      // A grafted node's instance ref names an id in the file that authored it.
-      const authored = scopeOf(node, scope);
-      const scenePath = liveInstancePath(node, scope);
-      if (scenePath && sceneCache.getCached(scenePath) === undefined) {
-        // The ExtResource too, since the load checks its type. A raw `res://`
-        // instance has none to register, and is still requested.
-        const parsed = node.instance ? parseResourceReference(node.instance) : null;
-        const entry =
-          parsed?.type === 'ExtResource' ? findExtResource(authored.externalResources, parsed.id) : undefined;
-        // One path can be reached both ways in a single walk; an ExtResource already
-        // recorded for it is never overwritten by a raw-path node's absent one.
-        if (!pendingScenes.get(scenePath)?.ext) {
-          pendingScenes.set(scenePath, { path: scenePath, ext: entry ?? null });
-        }
-      }
-
-      const groups = liveChildGroups(node, scope, sceneCache);
-      const collapsed = mergedNodeOf(groups) ?? node;
-
-      const ownScope = liveNodeScope(node, scope, groups);
-
-      const isControl = TWO_D_UI_TYPES.has(collapsed.type);
-
-      // A CanvasLayer counts as `isControl` here without being a Control at
-      // all, so it never states a direction and simply passes one through.
-      const rtl = isControl
-        ? resolveLayoutRtl(
-            (collapsed.properties as ControlProperties).layoutDirection,
-            inheritedRtl,
-            layoutDirectionEnv
-          )
-        : inheritedRtl;
-
-      // Theme inheritance breaks at a non-Control, non-Window ancestor
-      // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`),
-      // though layout passes through it.
-      const ownTheme = isControl
-        ? resolveOwnTheme(
-            (collapsed.properties as ControlProperties).theme,
-            ownScope.externalResources,
-            ownScope.internalResources
-          )
-        : null;
-      const nodeThemeChain: readonly ThemeResource[] = !isControl
-        ? []
-        : ownTheme
-          ? [ownTheme, ...themeChain]
-          : themeChain;
-
-      // The world walk's allocation, from the same function, so the two walks'
-      // sequences compare. `NodeDispatcher` numbers authored children from the
-      // node's run and injected sub-scene roots from `allocated.tail`, and this
-      // walk makes the same split.
-      const injected = (origin: string) => origin === 'subscene' || origin === 'glb';
-      const inlineChildren = groups.filter((g) => !injected(g.origin)).flatMap((g) => g.children);
-      const allocated = allocatePaintRange(paintRange, inlineChildren, {
-        sortsChildren: sortsChildren(collapsed),
-        frontRoom: internalFrontRoom(collapsed),
-      });
-      const injectedRanges = allocatePaintRange(
-        allocated.tail,
-        groups.filter((g) => injected(g.origin)).flatMap((g) => g.children)
-      ).children;
-
-      // A real Control's descendants start a fresh accumulation. A skipped node
-      // folds its own CanvasItem transform into what they inherit.
-      const childSkippedAncestors = isControl ? null : nextSkippedAncestors(collapsed, skippedAncestors);
-      // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
-      // so the flag ends it on the Control itself or on any CanvasItem above.
-      const topLevel = isTopLevelItem(collapsed);
-      // A real Control ends the climb (`control.cpp:3883-3886`); a CanvasItem
-      // continues it unchanged; anything else is the break itself.
-      const childCanvasChainBroken = isControl
-        ? false
-        : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
-      const hidden = ancestorHidden || hiddenNodePaths.has(path);
-      // Already filtered by `isSortableChild` when the parent built the map.
-      const writtenVisible = childVisibility?.get(node);
-      const live =
-        writtenVisible === undefined
-          ? collapsed
-          : { ...collapsed, properties: { ...collapsed.properties, visible: writtenVisible } };
-      // From `live`, not `collapsed`: a container wrote its child's `visible`
-      // before anything read it, so the page's subtree inherits the written value.
-      const childParentVisible = childParentVisibleInTree(
-        collapsed,
-        (live.properties as ControlProperties).visible !== false,
-        parentVisibleInTree
-      );
-      const childVisibilityFn = isControl ? controlSolverRegistry.childVisibility(collapsed.type) : undefined;
-      const writtenChildVisibility = childVisibilityFn
-        ? resolveChildVisibility(childVisibilityFn, collapsed, groups)
-        : undefined;
-      // A CanvasLayer is a canvas of its own, so its roots are indexed by its
-      // own counter (`canvas_layer.cpp:261-267`) over its own children.
-      const childCanvasRoots = isCanvasLayerType(collapsed.type)
-        ? canvasRootRanges(inlineChildren, allocated.children)
-        : canvasRoots;
-
-      // Each group walks with the slice of ranges belonging to ITS children.
-      // Both allocations are over flattened lists, so the slices are handed
-      // back out in the order they were taken.
-      const children: SolveNode[] = [];
-      const childHoisted: SolveNode[] = [];
-      let takenInline = 0;
-      let takenInjected = 0;
-      for (const group of groups) {
-        const count = group.children.length;
-        const groupRanges = injected(group.origin)
-          ? injectedRanges.slice(takenInjected, (takenInjected += count))
-          : allocated.children.slice(takenInline, (takenInline += count));
-        const walked = walk(
-          group.children,
-          path,
-          group.scope,
-          nodeThemeChain,
-          groupRanges,
-          childSkippedAncestors,
-          childCanvasChainBroken,
-          hidden,
-          childParentVisible,
-          childCanvasRoots,
-          rtl,
-          writtenChildVisibility
-        );
-        children.push(...walked.nodes);
-        childHoisted.push(...walked.hoisted);
-      }
-
-      if (isControl) {
-        const themeScope = themeResolutionScope(
-          collapsed.type,
-          (collapsed.properties as ControlProperties).themeTypeVariation,
-          nodeThemeChain,
-          projectTheme,
-          projectDefaultFont
-        );
-        const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
-        const texture = resolveTextureSize(
-          collapsed,
-          ownScope.externalResources,
-          ownScope.internalResources,
-          themedIcons
-        );
-        // A canvas boundary IS the canvas every chain broken below it parents
-        // to, so it adopts those; every other Control passes them further up.
-        const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
-        const solved: SolveNode = {
-          path,
-          node: live,
-          children: isBoundary ? [...children, ...childHoisted] : children,
-          paintRange,
-          paintSequence: allocated.self,
-          // A CanvasLayer draws on its own canvas (`canvas_item.cpp:263-267`), and a
-          // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
-          // so no skipped ancestor composes onto either. A merely hoisted Control's
-          // item still hangs under the CanvasItem above it.
-          skippedAncestors: isBoundary || topLevel ? null : skippedAncestors,
-          // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
-          // a broken chain both reset the canvas facets and neither resets
-          // this one (`SolveNode.parentVisibleInTree`).
-          parentVisibleInTree,
-          rtl: rtl ?? layoutDirectionEnv.rootRtl,
-          hidden,
-          styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
-          textureSize: texture.size,
-          textureSlots: texture.slots,
-          fontOverrides: resolveFontOverrides(
-            collapsed,
-            ownScope.externalResources,
-            ownScope.internalResources
-          ),
-          labelSettings: resolveOwnLabelSettings(
-            collapsed,
-            ownScope.externalResources,
-            ownScope.internalResources
-          ),
-          colors: resolveThemedColors(collapsed, themeScope),
-          constants: resolveThemedConstants(collapsed, themeScope),
-          icons: themedIcons,
-          resources: ownScope,
-          themeChain: nodeThemeChain,
-          projectTheme,
-          projectDefaultFont,
-        };
-        (canvasChainBroken || topLevel ? hoisted : out).push(solved);
-        if (!isBoundary) hoisted.push(...childHoisted);
-      } else {
-        // Not a Control: no SolveNode, and its Control descendants promote up.
-        out.push(...children);
-        hoisted.push(...childHoisted);
+    // A grafted node's instance ref names an id in the file that authored it.
+    const authored = scopeOf(node, group.scope);
+    const scenePath = step.instancePath;
+    if (scenePath && sceneCache.getCached(scenePath) === undefined) {
+      // The ExtResource too, since the load checks its type. A raw `res://`
+      // instance has none to register, and is still requested.
+      const parsed = node.instance ? parseResourceReference(node.instance) : null;
+      const entry =
+        parsed?.type === 'ExtResource' ? findExtResource(authored.externalResources, parsed.id) : undefined;
+      // One path can be reached both ways in a single walk; an ExtResource already
+      // recorded for it is never overwritten by a raw-path node's absent one.
+      if (!pendingScenes.get(scenePath)?.ext) {
+        pendingScenes.set(scenePath, { path: scenePath, ext: entry ?? null });
       }
     }
-    return { nodes: out, hoisted };
+
+    const { node: collapsed, scope: ownScope, groups } = step;
+
+    const isControl = TWO_D_UI_TYPES.has(collapsed.type);
+
+    // A CanvasLayer counts as `isControl` here without being a Control at
+    // all, so it never states a direction and simply passes one through.
+    const rtl = isControl
+      ? resolveLayoutRtl(
+          (collapsed.properties as ControlProperties).layoutDirection,
+          inheritedRtl,
+          layoutDirectionEnv
+        )
+      : inheritedRtl;
+
+    // Theme inheritance breaks at a non-Control, non-Window ancestor
+    // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`),
+    // though layout passes through it.
+    const ownTheme = isControl
+      ? resolveOwnTheme(
+          (collapsed.properties as ControlProperties).theme,
+          ownScope.externalResources,
+          ownScope.internalResources
+        )
+      : null;
+    const nodeThemeChain: readonly ThemeResource[] = !isControl
+      ? []
+      : ownTheme
+        ? [ownTheme, ...themeChain]
+        : themeChain;
+
+    // The world walk's allocation, from the same function, so the two walks'
+    // sequences compare. `NodeDispatcher` numbers authored children from the
+    // node's run and injected sub-scene roots from `allocated.tail`, and this
+    // walk makes the same split.
+    const inlineChildren = groups.filter((g) => !isInjected(g)).flatMap((g) => g.children);
+    const allocated = allocatePaintRange(paintRange, inlineChildren, {
+      sortsChildren: sortsChildren(collapsed),
+      frontRoom: internalFrontRoom(collapsed),
+    });
+    const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
+    const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
+
+    // A real Control's descendants start a fresh accumulation. A skipped node
+    // folds its own CanvasItem transform into what they inherit.
+    const childSkippedAncestors = isControl ? null : nextSkippedAncestors(collapsed, skippedAncestors);
+    // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
+    // so the flag ends it on the Control itself or on any CanvasItem above.
+    const topLevel = isTopLevelItem(collapsed);
+    // A real Control ends the climb (`control.cpp:3883-3886`); a CanvasItem
+    // continues it unchanged; anything else is the break itself.
+    const childCanvasChainBroken = isControl
+      ? false
+      : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
+    const hidden = ancestorHidden || hiddenNodePaths.has(path);
+    // Already filtered by `isSortableChild` when the parent built the map.
+    const writtenVisible = childVisibility?.get(node);
+    const live =
+      writtenVisible === undefined
+        ? collapsed
+        : { ...collapsed, properties: { ...collapsed.properties, visible: writtenVisible } };
+    // From `live`, not `collapsed`: a container wrote its child's `visible`
+    // before anything read it, so the page's subtree inherits the written value.
+    const childParentVisible = childParentVisibleInTree(
+      collapsed,
+      (live.properties as ControlProperties).visible !== false,
+      parentVisibleInTree
+    );
+    const childVisibilityFn = isControl ? controlSolverRegistry.childVisibility(collapsed.type) : undefined;
+    const writtenChildVisibility = childVisibilityFn
+      ? resolveChildVisibility(childVisibilityFn, collapsed, groups)
+      : undefined;
+    // A CanvasLayer is a canvas of its own, so its roots are indexed by its
+    // own counter (`canvas_layer.cpp:261-267`) over its own children.
+    const childCanvasRoots = isCanvasLayerType(collapsed.type)
+      ? canvasRootRanges(inlineChildren, allocated.children)
+      : canvasRoots;
+
+    const { nodes: children, hoisted: childHoisted } = groups.some((g) => g.children.length > 0)
+      ? joinWalked(
+          descend({
+            themeChain: nodeThemeChain,
+            paintRanges: paintRangesOf(
+              [inlineChildren, allocated.children],
+              [injectedChildren, injectedRanges]
+            ),
+            skippedAncestors: childSkippedAncestors,
+            canvasChainBroken: childCanvasChainBroken,
+            ancestorHidden: hidden,
+            parentVisibleInTree: childParentVisible,
+            canvasRoots: childCanvasRoots,
+            inheritedRtl: rtl,
+            childVisibility: writtenChildVisibility,
+          })
+        )
+      : { nodes: [], hoisted: [] };
+
+    // Not a Control: no SolveNode, and its Control descendants promote up.
+    if (!isControl) return { nodes: children, hoisted: childHoisted };
+
+    const themeScope = themeResolutionScope(
+      collapsed.type,
+      (collapsed.properties as ControlProperties).themeTypeVariation,
+      nodeThemeChain,
+      projectTheme,
+      projectDefaultFont
+    );
+    const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
+    const texture = resolveTextureSize(
+      collapsed,
+      ownScope.externalResources,
+      ownScope.internalResources,
+      themedIcons
+    );
+    // A canvas boundary IS the canvas every chain broken below it parents
+    // to, so it adopts those; every other Control passes them further up.
+    const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
+    const solved: SolveNode = {
+      path,
+      node: live,
+      children: isBoundary ? [...children, ...childHoisted] : children,
+      paintRange,
+      paintSequence: allocated.self,
+      // A CanvasLayer draws on its own canvas (`canvas_item.cpp:263-267`), and a
+      // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
+      // so no skipped ancestor composes onto either. A merely hoisted Control's
+      // item still hangs under the CanvasItem above it.
+      skippedAncestors: isBoundary || topLevel ? null : skippedAncestors,
+      // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
+      // a broken chain both reset the canvas facets and neither resets
+      // this one (`SolveNode.parentVisibleInTree`).
+      parentVisibleInTree,
+      rtl: rtl ?? layoutDirectionEnv.rootRtl,
+      hidden,
+      styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
+      textureSize: texture.size,
+      textureSlots: texture.slots,
+      fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
+      labelSettings: resolveOwnLabelSettings(
+        collapsed,
+        ownScope.externalResources,
+        ownScope.internalResources
+      ),
+      colors: resolveThemedColors(collapsed, themeScope),
+      constants: resolveThemedConstants(collapsed, themeScope),
+      icons: themedIcons,
+      resources: ownScope,
+      themeChain: nodeThemeChain,
+      projectTheme,
+      projectDefaultFont,
+    };
+    const hoistedBelow = isBoundary ? [] : childHoisted;
+    return canvasChainBroken || topLevel
+      ? { nodes: [], hoisted: [solved, ...hoistedBelow] }
+      : { nodes: [solved], hoisted: hoistedBelow };
   }
 
   const rootRanges = allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children;
-  const walked = walk(
-    nodes,
-    '',
-    { externalResources, internalResources },
-    [],
-    rootRanges,
-    null,
-    false,
-    false,
-    true,
-    canvasRootRanges(nodes, rootRanges),
-    inheritedRtl,
-    undefined
+  const walked = joinWalked(
+    tree.fold(
+      {
+        themeChain: [],
+        paintRanges: paintRangesOf([nodes, rootRanges]),
+        skippedAncestors: null,
+        canvasChainBroken: false,
+        ancestorHidden: false,
+        parentVisibleInTree: true,
+        canvasRoots: canvasRootRanges(nodes, rootRanges),
+        inheritedRtl,
+        childVisibility: undefined,
+      },
+      walk
+    )
   );
   // The viewport's canvas is the last adopter: `_enter_canvas` finds no
   // CanvasLayer above and parents at `find_world_2d()->get_canvas()`

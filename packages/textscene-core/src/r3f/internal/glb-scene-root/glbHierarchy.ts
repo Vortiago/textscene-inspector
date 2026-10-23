@@ -209,7 +209,7 @@ function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly Live
 /**
  * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren`
  * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
- * clips. `liveChildGroups` and the instancing node's `index=` count call it, so the tree's rows,
+ * clips. `liveStep` and the instancing node's `index=` count call it, so the tree's rows,
  * `resolveLiveEntry` and the viewport see the same children.
  */
 export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {

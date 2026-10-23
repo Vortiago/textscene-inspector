@@ -28,7 +28,9 @@ Keep the splices, and make a missed anchor fail loudly.
 Port the lit surface when the first of these holds:
 
 1. One three.js upgrade breaks 5 or more anchors, or rebasing the patches takes more than a day.
-2. The edits to the light and shadow chunks pass 60. They were about 45 on 22 October.
+2. The edits to the light and shadow chunks pass 80. They were 62 on 23 October, counted as every
+   anchor that `applyEdit` matches in a `lights_*`, `shadowmap_*`, `shadowmask_*` or
+   `envmap_physical_pars_fragment` chunk while `programInjections.test.ts` runs.
 3. A feature must change the structure of the light loop, not lines inside it. Examples are
    Godot's per-mesh light limits and light cull masks.
 

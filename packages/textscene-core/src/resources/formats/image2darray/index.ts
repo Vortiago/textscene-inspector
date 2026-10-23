@@ -1,7 +1,8 @@
 /**
  * Image2DArray resource slice, foreign-format kind (ADR-0031): the OpenEXR atlas a lightmap bake
  * saves, which Godot's layered importer cuts into the layers of a texture array, as its **Import
- * sidecar** says. The `texture2darray` bus slot caches a `THREE.DataArrayTexture`.
+ * sidecar** says. It claims `.exr` only: the shadowmask's PNG atlas takes the image slice's claim.
+ * The `texture2darray` bus slot caches a `THREE.DataArrayTexture`.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

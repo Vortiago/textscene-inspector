@@ -235,33 +235,31 @@ export interface LiveChildGroup {
   children: readonly LiveNode[];
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
-  /**
-   * Every group of a collapsed instance (`merged`, or `glb` and `inline` for a merged GLB): the
-   * node the instance became, so a caller skips a second `mergeInstanceRoot` pass. Without it the
-   * raw node is the effective node.
-   */
-  mergedNode?: LiveNode;
+}
+
+function inlineGroup(children: readonly TscnNode[], scope: SceneScope): LiveChildGroup {
+  return { origin: 'inline', children, scope };
 }
 
 /**
- * What is below a node: one `inline` group for a non-instance, one `merged`
- * group for a single-root instance, `inline` plus `subscene` for a multi-root
- * instance, and one `glb` group for a GLBSceneRoot. The node that instances a lone GLB is the
- * GLB root, so a loaded GLB's objects are `glb` groups and its own children `inline` groups, in
- * the order `index=` gives. `scope` is
+ * What is below a node that does not collapse: one `inline` group for a non-instance,
+ * `inline` plus `subscene` for a multi-root instance, and one `glb` group for a
+ * GLBSceneRoot. A single-root instance collapses, and {@link mergedGroups} gives its groups.
+ * The node that instances a lone GLB is the GLB root, so a loaded GLB's objects are `glb`
+ * groups and its own children `inline` groups, in the order `index=` gives. `scope` is
  * the one of the group the node sits in, which the node's own `scope` replaces. A sub-scene's
  * groups read the sub-scene's pools from the cache, and their `instancedScenePaths` gain the
  * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
  * gets one `inline` group.
  */
-export function liveChildGroups(
+function liveChildGroups(
   node: LiveNode,
   scope: SceneScope,
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
   const own = scopeOf(node, scope);
-  const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope: own }];
+  const inlineOnly = (): LiveChildGroup[] => [inlineGroup(node.children, own)];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
   const glbPath = glbPathOf(node);
@@ -278,9 +276,6 @@ export function liveChildGroups(
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  const merged = collapseOver(node, own, scenePath, cached, sceneCache);
-  if (merged !== node) return mergedGroups(merged, own, sceneCache, glbCache);
-
   // A lone GLB is the instancing node's own content: its objects sit directly below that node, as
   // the GLB root's children do in Godot (packed_scene.cpp:261-264). Until the GLB loads, the
   // node's children stay inline.
@@ -293,7 +288,7 @@ export function liveChildGroups(
   // Inline children are authored in the host scene, so they keep the outer scope.
   const groups: LiveChildGroup[] = [];
   if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, scope: own });
+    groups.push(inlineGroup(node.children, own));
   }
   groups.push({
     origin: 'subscene',
@@ -305,7 +300,7 @@ export function liveChildGroups(
 
 /**
  * The groups of a collapsed instance. A sub-scene root that instances a loaded lone GLB leaves
- * the merged node the GLB root, so its objects sit directly below it, under its `mergedNode`.
+ * the merged node the GLB root, so its objects sit directly below it.
  */
 function mergedGroups(
   merged: LiveNode,
@@ -315,8 +310,8 @@ function mergedGroups(
 ): LiveChildGroup[] {
   const scope = scopeOf(merged, outer);
   const object = instancedGlbObject(merged, scope, sceneCache, glbCache);
-  if (!object) return [{ origin: 'merged', children: merged.children, scope, mergedNode: merged }];
-  return glbInstanceGroups(object, merged.children, scope).map((group) => ({ ...group, mergedNode: merged }));
+  if (!object) return [{ origin: 'merged', children: merged.children, scope }];
+  return glbInstanceGroups(object, merged.children, scope);
 }
 
 /** The loaded GLB `node` instances as the only root of its sub-scene, or undefined. */
@@ -360,35 +355,68 @@ function glbInstanceGroups(
   return runs.map((run) => ({ ...run, scope: hostScope }));
 }
 
-/** The collapsed node a group of a merged instance carries (the first group answers), so a walker merges each instance once. */
-export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
-  return groups[0]?.mergedNode;
+/**
+ * One step of the live tree. A reader takes all three parts from here: the raw node and the
+ * scope of the group it sits in are the wrong ones for an instance root and for a grafted node.
+ */
+export interface LiveStep {
+  /** The node as the tree and viewport show it: collapsed into its sub-scene root where it instances one. */
+  readonly node: LiveNode;
+  /** Whether `node` is the sub-scene root the instance collapsed into, rather than the node as authored. */
+  readonly isMerged: boolean;
+  /**
+   * The `res://` path of the scene the node as authored instances, resolved in its authored scope, or
+   * null. It is neither `instanceSubPath`, a node path inside the instance, nor
+   * `SceneScope.instancedScenePaths`, the chain of scenes that enclose the node.
+   */
+  readonly instancePath: string | null;
+  /**
+   * The scope the refs of `node` and of its children resolve against: the sub-scene's for a collapsed
+   * instance, else the node's own scope ({@link scopeOf}), else the one of the group it sits in.
+   */
+  readonly scope: SceneScope;
+  /** What is below the node, in the order the tree shows it. */
+  readonly groups: readonly LiveChildGroup[];
 }
 
 /**
- * The scope the refs of `node` as the tree shows it resolve against, given its
- * `groups` from {@link liveChildGroups}: the merged instance's, else the node's own,
- * else the one of the group it sits in (`groupScope`).
+ * The step for `node` where it sits in a group of scope `groupScope`. An instance merges once
+ * here, so no reader merges a second time.
  */
-export function liveNodeScope(
+export function liveStep(
   node: LiveNode,
   groupScope: SceneScope,
-  groups: readonly LiveChildGroup[]
-): SceneScope {
-  return mergedNodeOf(groups) ? groups[0]!.scope : scopeOf(node, groupScope);
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
+): LiveStep {
+  const instancePath = liveInstancePath(node, groupScope);
+  const merged = collapseLiveNode(node, groupScope, sceneCache);
+  if (merged === node) {
+    const groups = liveChildGroups(node, groupScope, sceneCache, glbCache);
+    return { node, isMerged: false, instancePath, scope: scopeOf(node, groupScope), groups };
+  }
+  const groups = mergedGroups(merged, scopeOf(node, groupScope), sceneCache, glbCache);
+  return { node: merged, isMerged: true, instancePath, scope: groups[0]!.scope, groups };
 }
 
-/**
- * The first node called `name` across `groups`, as a path walk descends: with the scope its own
- * refs and children resolve against.
- */
+/** Whether `group` holds sub-scene roots or GLB objects, which draw after the node's authored children. */
+export function isInjected(group: LiveChildGroup): boolean {
+  return group.origin === 'subscene' || group.origin === 'glb';
+}
+
+/** Whether `group` is what the node instances, which the instance node owns as the root of it. */
+export function holdsInstanceContent(group: LiveChildGroup): boolean {
+  return group.origin === 'merged' || group.origin === 'glb';
+}
+
+/** The first child called `name` across `groups`, as a path walk descends, with the group it sits in. */
 function liveChildNamed(
   groups: readonly LiveChildGroup[],
   name: string
-): { node: LiveNode; scope: SceneScope } | undefined {
+): { raw: LiveNode; group: LiveChildGroup } | undefined {
   for (const group of groups) {
-    const node = group.children.find((n) => n.name === name);
-    if (node) return { node, scope: scopeOf(node, group.scope) };
+    const raw = group.children.find((n) => n.name === name);
+    if (raw) return { raw, group };
   }
   return undefined;
 }
@@ -425,36 +453,35 @@ function liveChainLinks(
     livePath = joinPath(livePath, segment);
     const link = tree.at(livePath);
     if (!link) return null;
-    links.push({ raw: link.node, collapsed: mergedNodeOf(link.groups) ?? link.node });
+    links.push({ raw: link.raw, collapsed: link.step.node });
   }
 
   return links;
 }
 
-/** The groups a walk of the live tree starts from: the outer roots, in the root scene's scope. */
-export function rootGroups(roots: readonly TscnNode[], ctx: LiveTreeContext): readonly LiveChildGroup[] {
-  return [{ origin: 'inline', children: roots, scope: rootScope(ctx) }];
-}
-
-/** A node of the live tree, before its collapse, with its child groups. */
+/** A node of the live tree as authored, with its step, its full path and the group it sits in. */
 export interface LiveLink {
-  readonly node: LiveNode;
-  readonly scope: SceneScope;
-  readonly groups: readonly LiveChildGroup[];
+  readonly raw: LiveNode;
+  readonly step: LiveStep;
+  readonly path: string;
+  /** The group `raw` sits in, whose scope `raw`'s own refs fall back to. */
+  readonly group: LiveChildGroup;
 }
 
 /**
- * The live tree over one cache snapshot, each node's child groups walked once however many paths
- * pass through it. Every question over one context gets the tree {@link liveTreeOf} returns.
+ * The live tree over one cache snapshot, each node's step taken once however many paths pass
+ * through it. Every question over one context gets the tree {@link liveTreeOf} returns.
  */
 export class LiveTree {
+  /** The groups a walk starts from: the outer roots, in the root scene's scope. */
+  readonly rootGroups: readonly LiveChildGroup[];
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
   /**
-   * Written only by `groupsOf`: the groups of a node under each scope it was asked in. It holds one
+   * Written only by `stepOf`: the step of a node under each scope it was asked in. It holds one
    * entry per visited node for as long as the tree lives, which is as long as its context.
    */
-  private readonly groupsByNode = new Map<LiveNode, { scope: SceneScope; groups: LiveChildGroup[] }[]>();
+  private readonly stepsByNode = new Map<LiveNode, { scope: SceneScope; step: LiveStep }[]>();
 
   private readonly scenes: CachedSceneSource;
 
@@ -463,6 +490,7 @@ export class LiveTree {
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
+    this.rootGroups = [inlineGroup(roots, rootScope(ctx))];
   }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */
@@ -470,29 +498,64 @@ export class LiveTree {
     const cached = this.links.get(path);
     if (cached !== undefined) return cached;
     const slash = path.lastIndexOf('/');
-    const parentGroups = slash < 0 ? rootGroups(this.roots, this.ctx) : this.at(path.slice(0, slash))?.groups;
+    const parentGroups = slash < 0 ? this.rootGroups : this.at(path.slice(0, slash))?.step.groups;
     const found = parentGroups && liveChildNamed(parentGroups, path.slice(slash + 1));
-    const link = found ? { ...found, groups: this.groupsOf(found.node, found.scope) } : null;
+    const link = found ? this.linkTo(found.raw, found.group, path) : null;
     this.links.set(path, link);
     return link;
   }
 
+  /** The link for `raw` where it sits in `group` at `path`. */
+  private linkTo(raw: LiveNode, group: LiveChildGroup, path: string): LiveLink {
+    return { raw, step: this.stepOf(raw, group.scope), path, group };
+  }
+
   /**
-   * What is below `node` where it sits in `scope`, found once. A node is found by itself and its
+   * The step for `node` where it sits in `scope`, taken once. A node is found by itself and its
    * scope, never by its path: two siblings may share a name, and a sub-scene's nodes sit at
    * every instance of it.
    */
-  groupsOf(node: LiveNode, scope: SceneScope): LiveChildGroup[] {
+  stepOf(node: LiveNode, scope: SceneScope): LiveStep {
     const own = scopeOf(node, scope);
-    const entries = this.groupsByNode.get(node) ?? [];
+    const entries = this.stepsByNode.get(node) ?? [];
     const known = entries.find((entry) => sameScope(entry.scope, own));
-    if (known) return known.groups;
-    const groups = liveChildGroups(node, own, this.scenes, this.ctx.glbCache);
-    entries.push({ scope: own, groups });
-    this.groupsByNode.set(node, entries);
-    return groups;
+    if (known) return known.step;
+    const step = liveStep(node, scope, this.scenes, this.ctx.glbCache);
+    entries.push({ scope: own, step });
+    this.stepsByNode.set(node, entries);
+    return step;
+  }
+
+  /**
+   * Depth-first fold of the tree. `visit` gets each node with what its parent passed down, and a
+   * `descend` that folds the node's children, in group order, with what this node passes down. A
+   * visit that never calls `descend` prunes the children. The results come back in order.
+   * It starts at the roots unless given the link of a node, so a fold of its subtree reads the
+   * steps the other walks of this tree took.
+   */
+  fold<Inherited, Result>(
+    inherited: Inherited,
+    visit: FoldVisit<Inherited, Result>,
+    from?: LiveLink
+  ): Result[] {
+    const results: Result[] = [];
+    for (const group of from ? from.step.groups : this.rootGroups) {
+      for (const raw of group.children) {
+        const link = this.linkTo(raw, group, joinPath(from?.path ?? '', raw.name));
+        const descend = (passedDown: Inherited): Result[] => this.fold(passedDown, visit, link);
+        results.push(visit(link, inherited, descend));
+      }
+    }
+    return results;
   }
 }
+
+/** What a fold of the live tree does at each node. */
+type FoldVisit<Inherited, Result> = (
+  link: LiveLink,
+  inherited: Inherited,
+  descend: (passedDown: Inherited) => Result[]
+) => Result;
 
 const NO_PATHS: readonly string[] = [];
 
@@ -565,22 +628,12 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: LiveNode) => boolean
 ): void {
-  const tree = liveTreeOf(roots, ctx);
-  const walk = (nodes: readonly LiveNode[], scope: SceneScope, parentPath: string): void => {
-    for (const node of nodes) {
-      const path = joinPath(parentPath, node.name);
-      const groups = tree.groupsOf(node, scope);
-      const effective = mergedNodeOf(groups) ?? node;
-      visit({ node: effective, path });
-      // `descend` prunes only the children, so a consumer can count a boundary
-      // without counting what is behind it.
-      if (descend && !descend(effective)) continue;
-      for (const group of groups) {
-        walk(group.children, group.scope, path);
-      }
-    }
-  };
-  walk(roots, rootScope(ctx), '');
+  liveTreeOf(roots, ctx).fold<void, void>(undefined, ({ step, path }, _, descendInto) => {
+    visit({ node: step.node, path });
+    // `descend` prunes only the children, so a consumer can count a boundary
+    // without counting what is behind it.
+    if (!descend || descend(step.node)) descendInto();
+  });
 }
 
 /**

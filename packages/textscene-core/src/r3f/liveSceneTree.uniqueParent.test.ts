@@ -10,7 +10,7 @@ import type { TscnNode, TscnScene } from '../parser/types';
 import { scopeOf } from '../resources/liveNode';
 import {
   collapseLiveNode,
-  liveChildGroups,
+  liveStep,
   rootScope,
   singlePathCache,
   type LiveTreeContext,
@@ -52,8 +52,7 @@ function composedPlayer(host: TscnScene, scenes: Record<string, TscnScene>): Tsc
     sceneCache: { getCached: (path) => scenes[path] },
   };
   const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
-  const [group] = liveChildGroups(instance, rootScope(ctx), ctx.sceneCache);
-  return group!.mergedNode!;
+  return liveStep(instance, rootScope(ctx), ctx.sceneCache).node;
 }
 
 function childNames(node: TscnNode, name: string): string[] {
