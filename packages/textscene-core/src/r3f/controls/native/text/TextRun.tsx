@@ -15,6 +15,7 @@ import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
 import { createMsdfMaterial } from './msdfMaterial';
+import { msdfDistanceBias } from './msdfEmbolden';
 import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
@@ -78,10 +79,6 @@ export interface TextRunProps {
   fontSizePx: number;
   /** Godot colour, sRGB. `.a` is opacity, and `.r/.g/.b` are converted to linear for the shader. */
   tint: Rgba;
-  /** Synthesised-italic shear. The default 0 draws upright. */
-  skew?: number;
-  /** Synthesised-bold embolden, forwarded to the material. The default 0 is the baked weight. */
-  distanceBias?: number;
   /**
    * Godot colour, sRGB, for `createMsdfMaterial`'s outline pass. `.a` is the
    * outline's opacity, apart from `tint.a`. Omitted, no outline. Atlas runs
@@ -161,16 +158,14 @@ interface TextRunLook {
 }
 
 /**
- * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches.
- * `strokeWidthPx` is canvas-only and `distanceBias` atlas-only. Each branch
- * ignores the other's.
+ * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
+ * shear (`FontMetrics.skew`). `strokeWidthPx` is canvas-only, and the embolden's distance bias
+ * (`msdfDistanceBias`) atlas-only. Each branch ignores the other's.
  */
 function buildTextRun(
   layout: TextLayoutResult,
   fontSizePx: number,
   look: TextRunLook,
-  skew: number,
-  distanceBias: number,
   strokeWidthPx: number,
   textureFilter: TextureFilterState,
   mipmapped: boolean,
@@ -178,6 +173,7 @@ function buildTextRun(
   outlineWidthPx: number
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side } = look;
+  const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
     const { positions, uvs, indices } = buildCanvasTextQuadArrays(canvasLayout);
@@ -230,7 +226,7 @@ function buildTextRun(
     color: { r, g, b },
     opacity: tint.a,
     pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
-    distanceBias,
+    distanceBias: msdfDistanceBias(layout),
     clippingPlanes,
     depthTest,
     side,
@@ -244,8 +240,6 @@ export function TextRun({
   layout,
   fontSizePx,
   tint,
-  skew = 0,
-  distanceBias = 0,
   clippingPlanes,
   renderOrder = 0,
   depthTest,
@@ -270,8 +264,6 @@ export function TextRun({
         layout,
         fontSizePx,
         { tint, clippingPlanes, depthTest, side },
-        skew,
-        distanceBias,
         strokeWidthPx,
         textureFilter,
         mipmapped,
@@ -288,8 +280,6 @@ export function TextRun({
       tint.g,
       tint.b,
       tint.a,
-      skew,
-      distanceBias,
       clippingPlanes,
       depthTest,
       side,

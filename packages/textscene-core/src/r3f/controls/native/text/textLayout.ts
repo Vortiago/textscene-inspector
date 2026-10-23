@@ -16,6 +16,8 @@ import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
+  getFontEmboldenGrowthPx,
+  getFontExtraAdvancePx,
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
@@ -72,6 +74,14 @@ export interface ShapeTextOptions {
    * Kerning is skipped between characters of different sizes, as HarfBuzz shapes each Item apart.
    */
   fontSizePxAt?: (charIndex: number) => number;
+  /**
+   * Per-character face, keyed like `fontSizePxAt`: RichTextLabel `[b]`/`[i]` spans shape in their own
+   * `bold_font`/`italics_font` (`rich_text_label.cpp:3226-3296`). A character takes its advance, its
+   * kerning, its atlas bitmap and its embolden (`FontMetrics.embolden`) from its face. Each face is
+   * its own shaped run, so kerning and the rounding remainder stop at a change. Undefined shapes every
+   * character in `fontMetrics`, which also sets the line pitch and the baseline.
+   */
+  fontMetricsAt?: (charIndex: number) => FontMetrics;
   /** The `FontMetrics` to shape against, by default `OPEN_SANS_FONT_METRICS`. Only an `'atlas'` font gets `GlyphPlacement.glyph`. */
   fontMetrics?: FontMetrics;
   /**
@@ -119,6 +129,10 @@ export interface GlyphPlacement {
   glyph: OpenSansGlyph | null;
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
+  /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
+  emboldenGrowthPx?: number;
+  /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
+  fontMetrics?: FontMetrics;
 }
 
 export interface TextLineLayout {
@@ -167,12 +181,14 @@ export interface TextLayoutResult {
 /**
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
- * Override `baselineOffsetPx` for a RichTextLabel `[b]`/`[i]` run shaped at its own size.
+ * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
+ * size, in its own face.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
-  baselineOffsetPx: number = parent.baselineOffsetPx
+  baselineOffsetPx: number = parent.baselineOffsetPx,
+  fontMetrics: FontMetrics = parent.fontMetrics
 ): TextLayoutResult {
   return {
     lines: [line],
@@ -180,7 +196,7 @@ export function soloLineLayout(
     widthPx: line.widthPx,
     heightPx: parent.linePitchPx,
     baselineOffsetPx,
-    fontMetrics: parent.fontMetrics,
+    fontMetrics,
   };
 }
 
@@ -260,6 +276,22 @@ interface BreakGlyph {
   isTab: boolean;
   /** The codepoint this glyph draws as a hex-code box, set only when `preserveControl` kept a control character. */
   controlCodepoint?: number;
+  /** The outline growth of the embolden that widened `advance`, px. 0 for none. */
+  emboldenGrowthPx: number;
+}
+
+/**
+ * What starts a new shaped run: Godot shapes each font and size as its own run, with its own
+ * kerning and rounding remainder (`_shape_run`, `text_server_adv.cpp:7011`).
+ */
+interface RunStyle {
+  sizes: readonly number[];
+  faces: readonly FontMetrics[];
+}
+
+/** Whether character `i` starts a run: its size or face differs from the character before it. */
+function startsNewRun(style: RunStyle, i: number): boolean {
+  return i > 0 && (style.sizes[i] !== style.sizes[i - 1] || style.faces[i] !== style.faces[i - 1]);
 }
 
 /**
@@ -296,16 +328,10 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
 
 /**
  * One glyph per character, plus the zero-advance whitespace terminator Label appends
- * (`label.cpp:164`). `fontSizePxAt`, when given, sets the size of each character.
+ * (`label.cpp:164`). `style` sets the size and face of each character.
  */
-function toBreakGlyphs(
-  text: string,
-  fontSizePx: number,
-  metrics: FontMetrics,
-  fontSizePxAt?: (charIndex: number) => number,
-  preserveControl = false
-): BreakGlyph[] {
-  const sizeAt = (i: number): number => fontSizePxAt?.(i) ?? fontSizePx;
+function toBreakGlyphs(text: string, style: RunStyle, preserveControl = false): BreakGlyph[] {
+  const { sizes, faces } = style;
   const glyphs: BreakGlyph[] = [];
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
@@ -315,6 +341,7 @@ function toBreakGlyphs(
     // case (`text_server_adv.cpp:6842-6907`).
     const isControl = !hardBreak && !isTabChar(ch) && isControlChar(cp);
     let advance: number;
+    let emboldenGrowthPx = 0;
     let controlCodepoint: number | undefined;
     if (hardBreak || cp === 0x200b) {
       // A break grapheme and U+200B carry no advance in Godot; the baked
@@ -324,7 +351,7 @@ function toBreakGlyphs(
       advance = 0;
     } else if (isControl) {
       if (preserveControl) {
-        advance = hexCodeBoxAdvanceSize(sizeAt(i), cp).x;
+        advance = hexCodeBoxAdvanceSize(sizes[i]!, cp).x;
         controlCodepoint = cp;
       } else {
         // Without `preserve_invalid` or `preserve_control`, no `Glyph` is pushed
@@ -332,7 +359,9 @@ function toBreakGlyphs(
         advance = 0;
       }
     } else {
-      advance = glyphAdvancePx(ch, sizeAt(i), metrics);
+      const embolden = faces[i]!.embolden ?? 0;
+      advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
+      emboldenGrowthPx = getFontEmboldenGrowthPx(embolden, sizes[i]!);
     }
     glyphs.push({
       start: i,
@@ -342,17 +371,17 @@ function toBreakGlyphs(
       isHardBreak: hardBreak,
       isTab: isTabChar(ch),
       controlCodepoint,
+      emboldenGrowthPx,
     });
   }
   // Kerning folds into the leading advance, skipped across a size boundary, before the whole-pixel
   // round: a GPOS pair is already inside HarfBuzz's `x_advance` when `text_server_adv.cpp:7077`
   // reads it. Where HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
   for (let i = 0; i + 1 < text.length; i++) {
-    const sizeI = sizeAt(i);
-    if (sizeI !== sizeAt(i + 1)) continue;
-    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizeI, metrics);
+    if (startsNewRun(style, i + 1)) continue;
+    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizes[i]!, faces[i]!);
   }
-  roundAdvancesToWholePixels(glyphs, text, sizeAt);
+  roundAdvancesToWholePixels(glyphs, text, style);
   glyphs.push({
     start: text.length,
     end: text.length + 1,
@@ -360,6 +389,7 @@ function toBreakGlyphs(
     isSpace: true,
     isHardBreak: false,
     isTab: false,
+    emboldenGrowthPx: 0,
   });
   return glyphs;
 }
@@ -369,16 +399,12 @@ function toBreakGlyphs(
  * (`text_server_adv.cpp:7079-7084`; `keep_rounding_remainders` defaults to true,
  * `text_server_adv.h:344,618`), so each prefix sum stays within half a pixel. Mutates `glyphs`.
  */
-function roundAdvancesToWholePixels(
-  glyphs: BreakGlyph[],
-  text: string,
-  sizeAt: (charIndex: number) => number
-): void {
+function roundAdvancesToWholePixels(glyphs: BreakGlyph[], text: string, style: RunStyle): void {
   let advanceRemainder = 0;
   for (let i = 0; i < text.length; i++) {
-    const sizePx = sizeAt(i);
-    // `adv_rem` is local to `_shape_run` (`:7011`), so a size change starts a new run at zero.
-    if (i > 0 && sizePx !== sizeAt(i - 1)) advanceRemainder = 0;
+    const sizePx = style.sizes[i]!;
+    // `adv_rem` is local to `_shape_run` (`:7011`), so a new run starts it at zero.
+    if (startsNewRun(style, i)) advanceRemainder = 0;
     if (fontUsesSubpixelPositioning(sizePx)) continue;
     const cp = text[i]!.codePointAt(0)!;
     // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
@@ -568,6 +594,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     uppercase = false,
     lineSpacingPx,
     fontSizePxAt,
+    fontMetricsAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
     paragraphSeparator,
     tabStopsPx,
@@ -590,18 +617,21 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
 
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
-  // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
-  const isAtlasFont = fontMetrics.kind === 'atlas';
-
   const lines: TextLineLayout[] = [];
   for (const para of splitParagraphs(transformed, paragraphSeparator)) {
-    // The terminator is in the shaped text but not the source, so `fontSizePxAt`, keyed into the
-    // whole text, is offset back, and the index past the paragraph's end takes its last size.
-    const sizeAt = fontSizePxAt
-      ? (i: number): number => fontSizePxAt(para.offset + Math.max(0, Math.min(i, para.text.length - 1)))
-      : undefined;
+    // The terminator is in the shaped text but not the source, so the per-character closures, keyed
+    // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
+    const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
-    const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt, preserveControl);
+    const runStyle: RunStyle = {
+      sizes: Array.from({ length: paraText.length }, (_v, i) =>
+        fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
+      ),
+      faces: Array.from({ length: paraText.length }, (_v, i) =>
+        fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
+      ),
+    };
+    const breakGlyphs = toBreakGlyphs(paraText, runStyle, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       const paragraphEntries = Array.from(paraText, (char, i) => ({
@@ -638,8 +668,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           char: ch,
           x: penX,
           advance,
-          glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
+          // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
+          glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
           controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
+          emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+          fontMetrics: runStyle.faces[idx]!,
         });
         penX += advance;
       }

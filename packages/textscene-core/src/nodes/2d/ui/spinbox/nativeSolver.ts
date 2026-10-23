@@ -241,8 +241,16 @@ export function spinBoxIconColor(
  * variation falls through to the native chain (`buildThemeTypeChain`). `n`'s `"SpinBox"` scope
  * would miss `"LineEdit"`'s defaults and any project `"SpinBoxInnerLineEdit"` entry.
  */
-function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectTheme'>): ThemeResolutionScope {
-  return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectTheme);
+function spinBoxFieldThemeScope(
+  n: Pick<SolveNode, 'themeChain' | 'projectTheme' | 'projectDefaultFont'>
+): ThemeResolutionScope {
+  return themeResolutionScope(
+    'LineEdit',
+    'SpinBoxInnerLineEdit',
+    n.themeChain,
+    n.projectTheme,
+    n.projectDefaultFont
+  );
 }
 
 interface SpinBoxFieldTextTheme {
@@ -254,7 +262,7 @@ interface SpinBoxFieldTextTheme {
 
 /** The field's font (face + size, ancestor-walked) and colour (override-less default), for `editable` state. */
 export function spinBoxFieldTextTheme(
-  n: Pick<SolveNode, 'themeChain' | 'projectTheme' | 'path'>,
+  n: Pick<SolveNode, 'themeChain' | 'projectTheme' | 'projectDefaultFont' | 'path'>,
   ctx: Pick<SolveContext, 'theme'>,
   editable: boolean
 ): SpinBoxFieldTextTheme {

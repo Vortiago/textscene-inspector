@@ -17,25 +17,20 @@ import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useUvWindow } from '../../../../r3f/useUvWindow';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  BOLD_DISTANCE_BIAS,
-  ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
-  RICH_TEXT_LABEL_THEME_FONT_KEY,
-  fontSizePxAtFromRuns,
-  imageObjectFontMetrics,
   layoutRichTextRuns,
   richTextLabelTextTheme,
-  richTextTabStopsPx,
   richTextUnderlineMetrics,
+  shapeRichText,
   styledTextRuns,
   underlineRectPx,
   type RichTextImagePlacement,
 } from './nativeSolver';
+import { resolveRichTextFaces } from './styleFaces';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -123,42 +118,39 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
 
   const clippingPlanes = useControlClipPlanes();
 
-  // Bold and italic are synthesised over the one base font, as `default_theme.cpp`
-  // builds `FontVariation`s (`BOLD_DISTANCE_BIAS`, `ITALIC_SKEW`). A styled
-  // run reads its own theme font-size key, never `normal_font_size`.
+  // A styled run reads its own theme font-size key, never `normal_font_size`.
   const runs = useMemo(
     () => styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, rect.w),
     [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, rect.w]
   );
-  const plainText = useMemo(() => runs.map((r) => r.text).join(''), [runs]);
-  const fontSizePxAt = useMemo(() => fontSizePxAtFromRuns(runs), [runs]);
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
 
   // Read in the render body, not in the `useMemo` below: see Label's Component.tsx.
-  const fontMetrics = resolveNodeFontMetrics(solveNode, RICH_TEXT_LABEL_THEME_FONT_KEY);
-  // One shaping pass over the whole text, so line breaks see the paragraph
-  // width. `fontSizePxAt` sizes each character by its run.
+  const { normal, bold, italic, boldItalic } = resolveRichTextFaces(solveNode, runs);
   const layout = useMemo(
     () =>
-      shapeText(plainText, {
-        fontSizePx: textTheme.fontSizePx,
-        boxWidthPx: rect.w,
-        autowrapMode,
-        lineSpacingPx: 0, // default_theme.cpp:1217: RichTextLabel's line_separation default, not Label's 3.
-        fontSizePxAt,
-        // An [img] run's placeholder character shapes at the image's width.
-        fontMetrics: imageObjectFontMetrics(fontMetrics),
-        tabStopsPx: richTextTabStopsPx(props.tabStopsPx, props.tabSize, fontMetrics, textTheme.fontSizePx),
-        autowrapTrimFlags: props.autowrapTrimFlags,
-      }),
+      shapeRichText(
+        runs,
+        { normal, bold, italic, boldItalic },
+        {
+          fontSizePx: textTheme.fontSizePx,
+          boxWidthPx: rect.w,
+          autowrapMode,
+          tabStopsPx: props.tabStopsPx,
+          tabSize: props.tabSize,
+          autowrapTrimFlags: props.autowrapTrimFlags,
+        }
+      ),
     [
-      plainText,
+      runs,
+      normal,
+      bold,
+      italic,
+      boldItalic,
       textTheme.fontSizePx,
       rect.w,
       autowrapMode,
-      fontSizePxAt,
-      fontMetrics,
       props.tabStopsPx,
       props.tabSize,
       props.autowrapTrimFlags,
@@ -217,8 +209,6 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
               layout={placement.layout}
               fontSizePx={placement.fontSizePx}
               tint={runTint}
-              distanceBias={placement.bold ? BOLD_DISTANCE_BIAS : 0}
-              skew={placement.italic ? ITALIC_SKEW : 0}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />

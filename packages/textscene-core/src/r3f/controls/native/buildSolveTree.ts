@@ -17,7 +17,7 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
+import { projectLayoutDirectionEnv, type ProjectSettings } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {
   findExtResource,
@@ -35,6 +35,7 @@ import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resource
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
+import { resolveProjectDefaultFont } from '../../../resources/fonts/font/projectDefaultFont';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -95,7 +96,12 @@ const NO_THEME_CACHE = { getCached: (): ThemeResource | null | undefined => unde
 const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | undefined => undefined };
 
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
-const NO_THEME_SCOPE: ThemeResolutionScope = { typeChain: [], searchOrder: [] };
+const NO_THEME_SCOPE: ThemeResolutionScope = {
+  typeChain: [],
+  searchOrder: [],
+  projectDefaultFont: null,
+  variationBaseFont: null,
+};
 
 /**
  * A theme's `styles` refs, resolved against that theme's own sub-resource pool,
@@ -330,7 +336,7 @@ function buildForest(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   loader: ResourceLoader | null,
-  projectThemeRef: string | undefined,
+  projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
   inheritedRtl: boolean | null
@@ -439,6 +445,7 @@ function buildForest(
 
   /** The project's default theme (`gui/theme/custom`), resolved once for every node. */
   const projectTheme: ThemeResource | null = (() => {
+    const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim();
     if (!projectThemeRef) return null;
     const cached = themeCache.getCached(projectThemeRef);
     if (cached === undefined) {
@@ -447,6 +454,9 @@ function buildForest(
     }
     return cached;
   })();
+
+  /** The project's default font (`gui/theme/custom_font`), resolved once for every node. */
+  const projectDefaultFont = resolveProjectDefaultFont(projectSettings, fontCache, pendingFonts);
 
   /**
    * A Texture2D ref's pixel size, or null until known. `textureSize` and every
@@ -746,7 +756,8 @@ function buildForest(
           collapsed.type,
           (collapsed.properties as ControlProperties).themeTypeVariation,
           nodeThemeChain,
-          projectTheme
+          projectTheme,
+          projectDefaultFont
         );
         const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
         const texture = resolveTextureSize(
@@ -794,6 +805,7 @@ function buildForest(
           resources: ownScope,
           themeChain: nodeThemeChain,
           projectTheme,
+          projectDefaultFont,
         };
         (canvasChainBroken || topLevel ? hoisted : out).push(solved);
         if (!isBoundary) hoisted.push(...childHoisted);
@@ -849,10 +861,9 @@ export function useBuildSolveTree(
   const loader = useResourceLoader();
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   const [fontMetricsVersion, setFontMetricsVersion] = useState(0);
-  // `gui/theme/custom`, the last rung before the built-in default. `undefined`
+  // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
-  const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim() || undefined;
   // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
   const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
 
@@ -871,7 +882,7 @@ export function useBuildSolveTree(
         externalResources,
         internalResources,
         loader,
-        projectThemeRef,
+        projectSettings,
         hiddenNodePaths,
         layoutDirectionEnv,
         inheritedRtl
@@ -884,7 +895,7 @@ export function useBuildSolveTree(
       externalResources,
       internalResources,
       loader,
-      projectThemeRef,
+      projectSettings,
       hiddenNodePaths,
       layoutDirectionEnv,
       inheritedRtl,

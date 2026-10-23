@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://unitlblprojfont"]
+
+; The one variable: `gui/theme/custom_font = "res://fonts/montserrat-extra-bold.otf"` in this
+; directory's project.godot, the font every Control with no theme font draws. No other scene shows a
+; regression in it: only this directory has a project.godot that sets it, and a loose fixture
+; resolves against the bundled Open Sans. The RichTextLabel's bold is synthesised over the same face.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 640.0
+offset_bottom = 110.0
+theme_override_font_sizes/font_size = 48
+text = "Hog 123 Wave"
+
+[node name="RichText" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 150.0
+offset_right = 640.0
+offset_bottom = 300.0
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
+bbcode_enabled = true
+text = "Plain [b]Bold[/b] text"
