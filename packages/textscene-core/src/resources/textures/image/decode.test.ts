@@ -12,7 +12,7 @@ function savedImage(
   width: number,
   height: number,
   bytes: string,
-  mipmaps: boolean
+  mipmaps: boolean | number
 ): TscnInternalResource {
   return {
     id: 'Image_a',
@@ -151,6 +151,11 @@ describe('decodeImageRef on an image with mipmaps', () => {
     const bytes = '0, 60, 0, 0, 0, 64, 0, 0, 0, 56, 0, 52';
     const { levels } = decodeImage(mipmappedImage('RGHalf', 2, 1, bytes))!;
     expect(levels).toEqual([{ data: new Float32Array([0.5, 0.25, 0, 1]), width: 1, height: 1 }]);
+  });
+
+  it('reads a flag saved as an int, as the Dictionary converts it to a bool (edge case)', () => {
+    const decoded = decodeImage(savedImage('Red8', 2, 1, counting(0, 3), 1));
+    expect(decoded!.levels).toHaveLength(1);
   });
 
   it('gives a 1 x 1 image no lower level (edge case)', () => {

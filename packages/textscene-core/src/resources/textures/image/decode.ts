@@ -8,6 +8,7 @@ import type { ImageSize } from '../../formats/image/imagePixels';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { literalText } from '../../../godot/string/string.js';
 import { parseGodotInt } from '../../../godot/variant/intReader.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
 import {
   dictBoolField,
@@ -137,7 +138,7 @@ function readHeader(data: Record<string, string>): ImageHeader | null {
   const format = readFormat.exec(dictionary)?.[1];
   const body = readData(dictionary);
   if (!width || !height || width < 1 || height < 1 || !format || body === null) return null;
-  const hasMipmaps = readMipmaps.exec(dictionary)?.[1] === 'true';
+  const hasMipmaps = boolSlotValue(readMipmaps.exec(dictionary)?.[1]) === true;
   return { width, height, format: literalText(format), hasMipmaps, body };
 }
 

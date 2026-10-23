@@ -67,13 +67,13 @@ function parseSpriteFramesAnimations(animationsValue: string): Map<string, Sprit
     // spelling either takes (`"texture": null`, a bare ref).
     const frames = readFrames(block);
     const speedMatch = SPEED_RE.exec(block);
-    const loopMatch = LOOP_RE.exec(block);
+    const loop = boolSlotValue(LOOP_RE.exec(block)?.[1]);
     result.set(name, {
       name,
       frames: frames.map((f) => f.texture),
       durations: frames.map((f) => f.duration),
       fps: finiteFps(speedMatch),
-      loop: loopMatch ? boolSlotValue(loopMatch[1]) === true : true,
+      loop: loop ?? true,
     });
   }
   return result;

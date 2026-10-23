@@ -280,8 +280,10 @@ describe('dictBoolField', () => {
   it.each([
     ['true', '{\n"loop": true,\n"speed": 5.0\n}'],
     ['false', '{ "loop": false }'],
-  ])('reads %s', (value, dictionary) => {
-    expect(dictBoolField('loop').exec(dictionary)?.[1]).toBe(value);
+    ['1', '{ "loop": 1 }'],
+    ['0.0', '{ "loop": 0.0 }'],
+  ])('reads %s', (spelling, dictionary) => {
+    expect(dictBoolField('loop').exec(dictionary)?.[1]).toBe(spelling);
   });
 
   it('reads a value after blanks around the colon, as the tokenizer skips them (edge case)', () => {
@@ -289,8 +291,8 @@ describe('dictBoolField', () => {
   });
 
   it('reads no other value, nor another key (error case)', () => {
-    expect(dictBoolField('loop').exec('{ "loop": 1 }')).toBeNull();
     expect(dictBoolField('loop').exec('{ "looped": true }')).toBeNull();
     expect(dictBoolField('loop').exec('{ "loop": trueish }')).toBeNull();
+    expect(dictBoolField('loop').exec('{ "loop": "yes" }')).toBeNull();
   });
 });

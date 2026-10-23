@@ -38,7 +38,7 @@ export interface TextureLevel {
  * One level is no chain: `texture` keeps its sampler and the GPU's choice. The first level holds
  * `texture`'s own bytes. Returns whether a chain was attached.
  */
-export function carryMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): boolean {
+function carryMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): boolean {
   if (levels.length < 2) return false;
   texture.mipmaps = levels;
   texture.generateMipmaps = false;
