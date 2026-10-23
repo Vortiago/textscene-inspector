@@ -6987,12 +6987,24 @@ tr:last-child td{border-bottom:0}
         <span class="renders">renders as three composited texture layers, the middle one ratio-windowed</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_textureprogressbar.html" target="_blank" rel="noopener" title="Godot class reference for TextureProgressBar">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/gui/texture_progress_bar.h" target="_blank" rel="noopener" title="Godot engine source for TextureProgressBar">source ↗</a>
-        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-texture-progress-bar.tscn" target="_blank" rel="noopener" title="Open unit-texture-progress-bar.tscn in the previewer"><code>unit-texture-progress-bar.tscn</code> ↗</a>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-texture-progress-bar-partial.tscn" target="_blank" rel="noopener" title="Open unit-texture-progress-bar-partial.tscn in the previewer"><code>unit-texture-progress-bar-partial.tscn</code> ↗</a>
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       <div class="status-note st-unreviewed"></div>
       
-      <div class="novisual">Comparison images not captured yet for TextureProgressBar.</div>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-texture-progress-bar-partial-godot.png" alt="Godot render of TextureProgressBar">
+          <img class="img-ours" src="images/unit-texture-progress-bar-partial-ours.png" alt="Our render of TextureProgressBar">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <div class="prose"><p>TextureProgressBar draws <code>texture_under</code>, <code>texture_progress</code> and <code>texture_over</code> in that order. <code>texture_progress</code> windows to the current ratio. It is a crop for a linear <code>fill_mode</code>, a triangle fan for a radial one, or a 9-patch grid once <code>nine_patch_stretch</code> is set (which also windows <code>texture_under</code>/<code>texture_over</code> at full size). Each layer multiplies its own <code>tint_*</code> onto the node's tint.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>TextureProgressBar</code> properties, plus 9 inherited from Range, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>

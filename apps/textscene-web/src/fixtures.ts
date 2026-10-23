@@ -1968,6 +1968,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Texture Progress Bar Partial",
+    "file": "unit-texture-progress-bar-partial.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Texture Progress Bar",
     "file": "unit-texture-progress-bar.tscn",
     "category": "Other"
