@@ -14,7 +14,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
 import { applyCanvasItemSampler, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
-import { applyFlip } from '../texturerect/nativeSolver';
+import { textureRectUvWindow } from '../texturerect/nativeSolver';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -74,30 +74,12 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
 
     applyCanvasItemSampler(cloned, sampler);
 
-    let repeat = { x: 1, y: 1 };
-    let offset = { x: 0, y: 0 };
-    if (draw.tile) {
-      // STRETCH_TILE forces repeat wrapping for this draw whatever the node's
-      // texture_repeat: `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
-      cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
-      repeat = { x: draw.size.x / draw.textureSize.x, y: draw.size.y / draw.textureSize.y };
-      // Godot tiles from the rect's top-left, and three's `v` runs bottom-up, so a
-      // zero offset would anchor the pattern at the bottom. `1 - repeat.y` puts
-      // `v = 1` (the quad's top edge) on the image's top row.
-      offset = { x: 0, y: 1 - repeat.y };
-    } else if (draw.region) {
-      // Texture-pixel-space crop (KEEP_ASPECT_COVERED) -> normalized UV
-      // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left.
-      repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
-      offset = {
-        x: draw.region.x / draw.textureSize.x,
-        y: 1 - (draw.region.y + draw.region.h) / draw.textureSize.y,
-      };
-    }
-
-    const flipped = applyFlip(repeat, offset, props.flipH === true, props.flipV === true);
-    cloned.repeat.set(flipped.repeat.x, flipped.repeat.y);
-    cloned.offset.set(flipped.offset.x, flipped.offset.y);
+    // STRETCH_TILE forces repeat wrapping for this draw whatever the node's
+    // texture_repeat: `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
+    if (draw.tile) cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
+    const { repeat, offset } = textureRectUvWindow(draw, props.flipH === true, props.flipV === true);
+    cloned.repeat.set(repeat.x, repeat.y);
+    cloned.offset.set(offset.x, offset.y);
     cloned.needsUpdate = true;
     return cloned;
   }, [rawTexture, draw, sampler, props.flipH, props.flipV]);

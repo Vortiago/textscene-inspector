@@ -20,6 +20,7 @@ import {
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
+import { regionUvWindow } from '../../../../r3f/regionUvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
@@ -79,8 +80,10 @@ function useCroppedTexture(
 ): THREE.Texture | null {
   // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
   // render, and a clone per render would upload the texture again each time.
-  const crop = region && textureSize ? cropWindow(region, textureSize) : null;
-  const [repeatX, repeatY, offsetX, offsetY] = crop ?? [];
+  const crop = region && textureSize ? regionUvWindow(region, textureSize) : null;
+  const [repeatX, repeatY, offsetX, offsetY] = crop
+    ? [crop.repeat.x, crop.repeat.y, crop.offset.x, crop.offset.y]
+    : [];
   const cropped = useMemo(() => {
     if (
       !texture ||
@@ -100,19 +103,6 @@ function useCroppedTexture(
     return cloned;
   }, [texture, repeatX, repeatY, offsetX, offsetY]);
   return useUploadedClone(cropped);
-}
-
-/** `region`'s UV window in `textureSize`, as repeat x, repeat y, offset x, offset y. */
-function cropWindow(
-  region: { x: number; y: number; w: number; h: number },
-  textureSize: Vector2
-): [number, number, number, number] {
-  return [
-    region.w / textureSize.x,
-    region.h / textureSize.y,
-    region.x / textureSize.x,
-    1 - (region.y + region.h) / textureSize.y,
-  ];
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {

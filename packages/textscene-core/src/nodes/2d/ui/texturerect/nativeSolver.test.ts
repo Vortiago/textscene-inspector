@@ -15,7 +15,7 @@ import { createSolveContext, solveControlTree } from '../../../../r3f/controls/n
 // below runs the real second pass.
 import '../../../../r3f/controls/index';
 import type { TextureRectProperties } from './types';
-import { textureRectMinimumSize, textureRectDraw, applyFlip } from './nativeSolver';
+import { textureRectMinimumSize, textureRectDraw, textureRectUvWindow } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const TEXTURE = { x: 320, y: 160 };
@@ -290,56 +290,69 @@ describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
   });
 });
 
-describe('applyFlip (texture_rect.cpp:92-93, `size.width *= hflip ? -1 : 1`, expressed as a UV mirror)', () => {
-  it('is a no-op with neither flag set', () => {
-    expect(applyFlip({ x: 1, y: 1 }, { x: 0, y: 0 }, false, false)).toEqual({
+describe('textureRectUvWindow (texture_rect.cpp:92-93, `size.width *= hflip ? -1 : 1`, expressed as a UV mirror)', () => {
+  const whole = { offset: { x: 0, y: 0 }, size: TEXTURE, tile: false, textureSize: TEXTURE };
+  const covered = { ...whole, region: { x: 80, y: 0, w: 160, h: 160 } };
+
+  it('is the identity window for the whole texture with neither flag set', () => {
+    expect(textureRectUvWindow(whole, false, false)).toEqual({
       repeat: { x: 1, y: 1 },
       offset: { x: 0, y: 0 },
     });
   });
 
   it('mirrors U in place for flip_h: a full [0,1] texture maps u=0 to the right edge', () => {
-    const { repeat, offset } = applyFlip({ x: 1, y: 1 }, { x: 0, y: 0 }, true, false);
-    expect(repeat).toEqual({ x: -1, y: 1 });
-    expect(offset).toEqual({ x: 1, y: 0 });
-    // u=0 -> offset.x + repeat.x*0 = 1 (right edge); u=1 -> 1-1=0 (left edge).
+    expect(textureRectUvWindow(whole, true, false)).toEqual({
+      repeat: { x: -1, y: 1 },
+      offset: { x: 1, y: 0 },
+    });
   });
 
   it('mirrors V in place for flip_v', () => {
-    const { repeat, offset } = applyFlip({ x: 1, y: 1 }, { x: 0, y: 0 }, false, true);
-    expect(repeat).toEqual({ x: 1, y: -1 });
-    expect(offset).toEqual({ x: 0, y: 1 });
+    expect(textureRectUvWindow(whole, false, true)).toEqual({
+      repeat: { x: 1, y: -1 },
+      offset: { x: 0, y: 1 },
+    });
   });
 
-  it('composes with an existing crop region (KEEP_ASPECT_COVERED + flip_h) rather than resetting it', () => {
-    // A region window repeat=0.5, offset=0.25 (covers UV [0.25, 0.75]) flips to
-    // traverse the SAME window in reverse: newOffset = offset+repeat = 0.75, newRepeat = -0.5.
-    const { repeat, offset } = applyFlip({ x: 0.5, y: 1 }, { x: 0.25, y: 0 }, true, false);
-    expect(repeat.x).toBeCloseTo(-0.5);
-    expect(offset.x).toBeCloseTo(0.75);
+  it('flips both axes independently with both flags', () => {
+    expect(textureRectUvWindow(whole, true, true)).toEqual({
+      repeat: { x: -1, y: -1 },
+      offset: { x: 1, y: 1 },
+    });
   });
 
-  it('both flags flip both axes independently', () => {
-    const { repeat, offset } = applyFlip({ x: 1, y: 1 }, { x: 0, y: 0 }, true, true);
-    expect(repeat).toEqual({ x: -1, y: -1 });
-    expect(offset).toEqual({ x: 1, y: 1 });
+  it('samples the KEEP_ASPECT_COVERED crop region', () => {
+    expect(textureRectUvWindow(covered, false, false)).toEqual({
+      repeat: { x: 0.5, y: 1 },
+      offset: { x: 0.25, y: 0 },
+    });
+  });
+
+  it('traverses the same crop window in reverse for flip_h, not the whole texture', () => {
+    expect(textureRectUvWindow(covered, true, false)).toEqual({
+      repeat: { x: -0.5, y: 1 },
+      offset: { x: 0.75, y: 0 },
+    });
+  });
+
+  it("repeats the texture over the drawn size for STRETCH_TILE, from the rect's top-left", () => {
+    const draw = { ...textureRectDraw({ x: 300, y: 100 }, TEXTURE, 1), textureSize: TEXTURE };
+    const { repeat, offset } = textureRectUvWindow(draw, false, false);
+    expect(repeat).toEqual({ x: 0.9375, y: 0.625 });
+    expect(offset).toEqual({ x: 0, y: 0.375 });
   });
 
   it(
-    'composed with STRETCH_TILE (repeat count > 1, RepeatWrapping): mirrors the WHOLE tiled ' +
-      "pattern, not a single tile — matches Godot's own `size.width *= -1` (flips the destination " +
-      'quad, not the source), because RepeatWrapping samples the fractional part of a negative ' +
-      'coordinate the same way GLSL `fract()` does',
+    'composed with STRETCH_TILE, mirrors the WHOLE tiled pattern, not a single tile, as Godot flips ' +
+      'the destination quad: RepeatWrapping samples a negative coordinate as GLSL `fract()` does',
     () => {
-      // rect 300x100 over a 320x160 texture in TILE mode: repeat = (300/320, 100/160) = (0.9375, 0.625).
-      const draw = textureRectDraw({ x: 300, y: 100 }, TEXTURE, 1);
-      const tileRepeat = { x: draw.size.x / TEXTURE.x, y: draw.size.y / TEXTURE.y };
-      const { repeat, offset } = applyFlip(tileRepeat, { x: 0, y: 0 }, true, false);
+      const draw = { ...textureRectDraw({ x: 300, y: 100 }, TEXTURE, 1), textureSize: TEXTURE };
+      const { repeat, offset } = textureRectUvWindow(draw, true, false);
       expect(repeat.x).toBeCloseTo(-0.9375);
       expect(offset.x).toBeCloseTo(0.9375);
-      // At the destination's right edge (u=1): unflipped samples texture column
-      // (rectW mod texW) = 300 mod 320 = 300; flipped must sample column
-      // (rectW - rectW) mod texW = 0, that is v(1) = offset + repeat*1 ≈ 0.
+      // At the right edge (u=1), unflipped samples column 300 mod 320 = 300, and flipped samples
+      // column (300 - 300) mod 320 = 0, that is offset + repeat * 1 = 0.
       expect(offset.x + repeat.x * 1).toBeCloseTo(0);
     }
   );

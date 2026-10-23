@@ -11,6 +11,7 @@
 
 import * as THREE from 'three';
 import { pinNoColorSpace } from './canvas2DTextureDecode';
+import { regionUvWindow } from './regionUvWindow';
 
 /**
  * What shows where a frame's UVs fall outside the texture, which only a
@@ -183,6 +184,10 @@ function applyRegionRect(
   // Without dimensions there is no sub-rectangle, so the sprite renders the full
   // texture (the linter warns on region misuse).
   if (!image?.width || !image.height) return;
-  texture.repeat.set(rect.width / image.width, rect.height / image.height);
-  texture.offset.set(rect.x / image.width, 1 - (rect.y + rect.height) / image.height);
+  const { repeat, offset } = regionUvWindow(
+    { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
+    { x: image.width, y: image.height }
+  );
+  texture.repeat.set(repeat.x, repeat.y);
+  texture.offset.set(offset.x, offset.y);
 }
