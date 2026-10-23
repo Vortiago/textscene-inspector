@@ -58,9 +58,11 @@ describe('GODOT_ALPHA_HASH.onBeforeCompile', () => {
     expect(objectFromModel(material)).toBe(objectFromModel(material));
   });
 
-  it('leaves a fragment shader without three’s hash as it is (error case)', () => {
-    const program = { vertexShader: 'void main() {}', fragmentShader: 'void main() {}' };
-    expect(compiled(new THREE.MeshBasicMaterial(), program).fragmentShader).toBe('void main() {}');
+  it('throws, naming the shader, for a fragment shader without three’s hash (error case)', () => {
+    const program = { vertexShader: THREE.ShaderLib.basic.vertexShader, fragmentShader: 'void main() {}' };
+    expect(() => compiled(new THREE.MeshBasicMaterial(), program)).toThrow(
+      'expected the fragment shader of the alpha hash to hold "#include <alphahash_pars_fragment>" once'
+    );
   });
 });
 

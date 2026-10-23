@@ -6,6 +6,7 @@
 
 import { FrontSide } from 'three';
 import { composeInjections, type ProgramInjection } from '../materialProgramInputs';
+import { editedProgram } from '../shaderPatch/chunkPatch';
 import { recordedUniform } from './recordedOnMaterial';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
@@ -52,10 +53,9 @@ function pointSizeInjection(cacheKey: string, uniforms: Readonly<Record<string, 
       for (const [key, initial] of Object.entries(uniforms)) {
         shader.uniforms[key] = recordedUniform(this, key, initial);
       }
-      shader.vertexShader = `${declarations}\n${shader.vertexShader.replace(
-        PROJECT_CHUNK,
-        `${PROJECT_CHUNK}\n\tgl_PointSize = ${keys.join(' * ')};`
-      )}`;
+      const size = `${PROJECT_CHUNK}\n\tgl_PointSize = ${keys.join(' * ')};`;
+      editedProgram(shader, { vertex: [{ three: PROJECT_CHUNK, godot: size }] }, 'point size');
+      shader.vertexShader = `${declarations}\n${shader.vertexShader}`;
     },
   };
 }
@@ -78,9 +78,17 @@ const MAP_PARS_CHUNK = '#include <map_pars_fragment>';
 const GODOT_POINT_COORD_ALBEDO: ProgramInjection = {
   cacheKey: 'godot-point-coord-albedo',
   onBeforeCompile(shader) {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      MAP_PARS_CHUNK,
-      `${MAP_PARS_CHUNK}\n#define vMapUv vec2( gl_PointCoord.x, 1.0 - gl_PointCoord.y )`
+    editedProgram(
+      shader,
+      {
+        fragment: [
+          {
+            three: MAP_PARS_CHUNK,
+            godot: `${MAP_PARS_CHUNK}\n#define vMapUv vec2( gl_PointCoord.x, 1.0 - gl_PointCoord.y )`,
+          },
+        ],
+      },
+      'point coordinate albedo'
     );
   },
 };

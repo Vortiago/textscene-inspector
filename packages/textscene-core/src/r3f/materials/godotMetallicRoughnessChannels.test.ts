@@ -9,6 +9,7 @@ import { TextureChannel, textureChannelMask } from '../../godot/rendering/materi
 
 const RED = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
 const ALPHA = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_ALPHA);
+const STANDARD_FRAGMENT = THREE.ShaderLib.standard.fragmentShader;
 
 /** The shader `GODOT_METALLIC_ROUGHNESS_CHANNELS` leaves for `material`. */
 function patchedFor(material: THREE.Material, fragmentShader: string): ProgramShader {
@@ -37,7 +38,7 @@ describe.each([
 describe('the metallic and roughness channel uniforms', () => {
   it("read the masks from the material's userData", () => {
     const userData = metallicRoughnessChannelsUserData(ALPHA, RED);
-    const { uniforms } = patchedFor(new THREE.MeshStandardMaterial({ userData }), '');
+    const { uniforms } = patchedFor(new THREE.MeshStandardMaterial({ userData }), STANDARD_FRAGMENT);
     expect([
       uniforms.godotRoughnessTextureChannel!.value,
       uniforms.godotMetallicTextureChannel!.value,
@@ -48,14 +49,14 @@ describe('the metallic and roughness channel uniforms', () => {
     const material = new THREE.MeshStandardMaterial({
       userData: metallicRoughnessChannelsUserData(RED, RED),
     });
-    const { uniforms } = patchedFor(material, '');
+    const { uniforms } = patchedFor(material, STANDARD_FRAGMENT);
     material.userData = metallicRoughnessChannelsUserData(ALPHA, RED);
     expect(uniforms.godotRoughnessTextureChannel!.value).toEqual(ALPHA);
   });
 
   it("are Godot's red default on a material that records neither (edge case)", () => {
     // `material.cpp:3985-3986`.
-    const { uniforms } = patchedFor(new THREE.MeshStandardMaterial(), '');
+    const { uniforms } = patchedFor(new THREE.MeshStandardMaterial(), STANDARD_FRAGMENT);
     expect([
       uniforms.godotRoughnessTextureChannel!.value,
       uniforms.godotMetallicTextureChannel!.value,
