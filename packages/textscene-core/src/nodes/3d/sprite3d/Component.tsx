@@ -14,6 +14,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
+import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -98,20 +99,16 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The clone is this component's, never the loader's cached entry: `useUploadedClone`
   // uploads it once and disposes it once it no longer draws. A frame change keeps it.
   const displayedTexture = useUploadedClone(samplerClone ?? null);
-  // Flip mirrors through UV negation, where 2D mirrors through mesh scale: negate the
-  // repeat and shift the offset to the opposite edge.
-  const frameWindow = useMemo(() => {
-    const uv = frameUvWindow(sourceTexture ?? undefined, properties);
-    if (properties.flip_h) {
-      uv.offset.x += uv.repeat.x;
-      uv.repeat.x = -uv.repeat.x;
-    }
-    if (properties.flip_v) {
-      uv.offset.y += uv.repeat.y;
-      uv.repeat.y = -uv.repeat.y;
-    }
-    return uv;
-  }, [sourceTexture, properties]);
+  // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
+  const frameWindow = useMemo(
+    () =>
+      flippedUvWindow(
+        frameUvWindow(sourceTexture ?? undefined, properties),
+        properties.flip_h === true,
+        properties.flip_v === true
+      ),
+    [sourceTexture, properties]
+  );
   useUvWindow(displayedTexture, frameWindow);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback

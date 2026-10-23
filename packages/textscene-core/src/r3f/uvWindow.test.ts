@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { regionUvWindow } from './regionUvWindow';
+import { flippedUvWindow, regionUvWindow } from './uvWindow';
 
 const SIZE = { x: 64, y: 32 };
 
@@ -26,6 +26,28 @@ describe('regionUvWindow', () => {
     expect(regionUvWindow({ x: -32, y: -16, w: 128, h: 64 }, SIZE)).toEqual({
       repeat: { x: 2, y: 2 },
       offset: { x: -0.5, y: -0.5 },
+    });
+  });
+});
+
+describe('flippedUvWindow', () => {
+  const crop = { repeat: { x: 0.5, y: 0.25 }, offset: { x: 0.25, y: 0.5 } };
+
+  it('keeps the window with neither flag set', () => {
+    expect(flippedUvWindow(crop, false, false)).toEqual(crop);
+  });
+
+  it('sweeps the same window from its far edge on each flipped axis', () => {
+    expect(flippedUvWindow(crop, true, true)).toEqual({
+      repeat: { x: -0.5, y: -0.25 },
+      offset: { x: 0.75, y: 0.75 },
+    });
+  });
+
+  it('flips one axis alone (edge case)', () => {
+    expect(flippedUvWindow(crop, false, true)).toEqual({
+      repeat: { x: 0.5, y: -0.25 },
+      offset: { x: 0.25, y: 0.75 },
     });
   });
 });

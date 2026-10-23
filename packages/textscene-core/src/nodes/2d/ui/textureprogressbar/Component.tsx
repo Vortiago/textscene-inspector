@@ -20,7 +20,7 @@ import {
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
-import { regionUvWindow } from '../../../../r3f/regionUvWindow';
+import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';

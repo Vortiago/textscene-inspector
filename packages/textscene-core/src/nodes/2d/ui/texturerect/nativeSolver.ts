@@ -16,7 +16,7 @@ import type { TextureRectProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
 import { TextureRectExpandMode } from '../../../../godot/scene/gui';
-import { regionUvWindow } from '../../../../r3f/regionUvWindow';
+import { flippedUvWindow, regionUvWindow, type UvWindow } from '../../../../r3f/uvWindow';
 
 /**
  * `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`): `Size2()` (`:132`) until a texture
@@ -70,7 +70,7 @@ export interface TextureRectDraw {
 
 /**
  * The `NOTIFICATION_DRAW` switch on `stretch_mode` (`texture_rect.cpp:45-90`), short of the draw
- * (`:95-99`) and the flip (`:92-93`, `applyFlip`), which changes only how the sampler reads.
+ * (`:95-99`) and the flip (`:92-93`, `textureRectUvWindow`), which changes only how the sampler reads.
  * `rectSize` is `get_size()`, known here because painting follows the rect pass.
  */
 export function textureRectDraw(
@@ -158,25 +158,6 @@ export function textureRectDraw(
   }
 }
 
-/**
- * `size *= flip ? -1 : 1` (`texture_rect.cpp:92-93`) mirrors the destination quad, crop and all.
- * three.js has no negative-size quad, so this reverses the UV sweep over the same window (`offset +
- * repeat`, `-repeat`), composed onto the caller's repeat and offset, so it runs last. Under
- * `RepeatWrapping`, GLSL's floor-mod `fract()` lands on Godot's `(rectSize - x) mod textureSize`.
- */
-function applyFlip({ repeat, offset }: UvWindow, flipH: boolean, flipV: boolean): UvWindow {
-  return {
-    repeat: { x: flipH ? -repeat.x : repeat.x, y: flipV ? -repeat.y : repeat.y },
-    offset: { x: flipH ? offset.x + repeat.x : offset.x, y: flipV ? offset.y + repeat.y : offset.y },
-  };
-}
-
-/** A UV window as plain numbers: the repeat and offset three's sampler reads. */
-export interface UvWindow {
-  repeat: Vector2;
-  offset: Vector2;
-}
-
 /** A draw and the size of the texture it samples. */
 export interface SampledDraw extends TextureRectDraw {
   textureSize: Vector2;
@@ -196,7 +177,10 @@ function unflippedUvWindow({ tile, size, textureSize, region }: SampledDraw): Uv
   return { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
 }
 
-/** The UV window `draw` samples, with the flips applied last, as `applyFlip` needs. */
+/**
+ * The UV window `draw` samples. `size *= flip ? -1 : 1` (`texture_rect.cpp:92-93`) mirrors the
+ * destination quad, crop and all, so the flip reverses the whole window and runs last.
+ */
 export function textureRectUvWindow(draw: SampledDraw, flipH: boolean, flipV: boolean): UvWindow {
-  return applyFlip(unflippedUvWindow(draw), flipH, flipV);
+  return flippedUvWindow(unflippedUvWindow(draw), flipH, flipV);
 }

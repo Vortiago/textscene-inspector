@@ -11,7 +11,7 @@
 
 import * as THREE from 'three';
 import { pinNoColorSpace } from './canvas2DTextureDecode';
-import { regionUvWindow } from './regionUvWindow';
+import { regionUvWindow } from './uvWindow';
 import { WRAP } from './canvasItemTextureSampler';
 
 /**
@@ -75,13 +75,13 @@ export function spriteSamplerClone(
 }
 
 /** A frame's UV window: the texture region a sprite quad samples. */
-export interface UvWindow {
+export interface FrameUvWindow {
   offset: THREE.Vector2;
   repeat: THREE.Vector2;
 }
 
 /** The current frame's UV window over `texture`, from the full-image window. */
-export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow {
+export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): FrameUvWindow {
   const uv: FrameWindow = {
     offset: new THREE.Vector2(0, 0),
     repeat: new THREE.Vector2(1, 1),
@@ -114,7 +114,7 @@ export function frameSizePx(
 }
 
 /** The window the frame math writes, and the image whose dimensions it reads. */
-interface FrameWindow extends UvWindow {
+interface FrameWindow extends FrameUvWindow {
   /** `unknown`, as three types it, narrowed where the dimensions are read. */
   image: unknown;
 }

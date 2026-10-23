@@ -5,7 +5,7 @@
  */
 import { useLayoutEffect } from 'react';
 import type * as THREE from 'three';
-import type { UvWindow } from './spriteFrame';
+import type { UvWindow } from './uvWindow';
 
 /**
  * `texture` is the consumer's own clone, and may be the previous one while a new
