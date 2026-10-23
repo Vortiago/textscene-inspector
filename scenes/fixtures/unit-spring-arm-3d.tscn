@@ -1,7 +1,7 @@
 ; A SpringArm3D with spring_length = 4 for the one variable no other golden moves: its length
 ; gizmo, one line from the origin to (0, 0, spring_length) in the collision debug colour. The
-; previewer gates it on selection (ADR-0018), so only the `select:` golden has it. A box sits at
-; each end of the arm to frame the whole line.
+; previewer draws it for every node, faint while unselected (ADR-0056), so only a golden with
+; `gizmos: true` has it. A box sits at each end of the arm to frame the whole line.
 [gd_scene load_steps=3 format=3 uid="uid://unitspringarm3d"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_1"]

@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { Aabb } from '../../godot/math/aabb';
+import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { godotColorToLinear } from '../godotColor';
 import { AabbGizmo } from './AabbGizmo';
 
 const COLOR = { r: 0.8, g: 0.7, b: 0.4 };
 
-async function line(aabb: Aabb) {
-  const renderer = await ReactThreeTestRenderer.create(<AabbGizmo aabb={aabb} color={COLOR} />);
+async function line(aabb: Aabb, variant?: GizmoVariant) {
+  const renderer = await ReactThreeTestRenderer.create(
+    <AabbGizmo aabb={aabb} color={COLOR} variant={variant} />
+  );
   return renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
 }
 
@@ -26,5 +29,15 @@ describe('<AabbGizmo>', () => {
     expect((drawn.material as THREE.LineBasicMaterial).color.toArray()).toEqual(
       godotColorToLinear(COLOR).toArray()
     );
+  });
+
+  it('draws the unselected variant at 0.3 of the colour alpha', async () => {
+    const drawn = await line({ position: { x: 0, y: 0, z: 0 }, size: { x: 1, y: 1, z: 1 } }, 'unselected');
+    expect((drawn.material as THREE.LineBasicMaterial).opacity).toBe(0.3);
+  });
+
+  it('draws the selected variant at the full colour alpha', async () => {
+    const drawn = await line({ position: { x: 0, y: 0, z: 0 }, size: { x: 1, y: 1, z: 1 } }, 'selected');
+    expect((drawn.material as THREE.LineBasicMaterial).opacity).toBe(1);
   });
 });

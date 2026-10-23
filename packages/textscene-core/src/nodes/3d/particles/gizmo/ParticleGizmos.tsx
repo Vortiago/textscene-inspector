@@ -1,6 +1,7 @@
 /**
  * The editor gizmos that GPUParticles3D and CPUParticles3D share: the box around the emitter, and
- * the lines of its emission shape. `undrawnGeometryInstanceWithGizmos` gates them on selection.
+ * the lines of its emission shape. `undrawnGeometryInstanceWithGizmos` gates them on the Gizmos
+ * toggle and the selection.
  */
 
 import { useMemo } from 'react';
@@ -8,6 +9,7 @@ import type { Aabb } from '../../../../godot/math/aabb';
 import { AabbAxesGizmo } from '../../../../r3f/components/AabbAxesGizmo';
 import { AabbGizmo } from '../../../../r3f/components/AabbGizmo';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
+import type { GizmoVariant } from '../../../../r3f/gizmo/gizmoVariant';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 import { emissionShapeLines } from './emissionShapeLines';
@@ -30,11 +32,11 @@ export function ParticlesBoxGizmo({ box }: { box: Aabb }) {
 }
 
 /**
- * The 12 edges of the box, the three unit axes from its centre (`cpu_particles_3d_gizmo_plugin.cpp:67-98`)
+ * The 12 edges of the box and the three unit axes from its centre (`cpu_particles_3d_gizmo_plugin.cpp:67-98`),
  * and the faint fill of a selected box (`:100-103`).
  */
-export function CPUParticlesBoxGizmo({ box }: { box: Aabb }) {
-  return <AabbAxesGizmo aabb={box} color={BOX_COLOR} solidAlpha={SOLID_BOX_ALPHA} />;
+export function CPUParticlesBoxGizmo({ box, variant }: { box: Aabb; variant: GizmoVariant }) {
+  return <AabbAxesGizmo aabb={box} color={BOX_COLOR} solidAlpha={SOLID_BOX_ALPHA} variant={variant} />;
 }
 
 export function EmissionShapeGizmo({ emission }: { emission: ParticleEmission }) {

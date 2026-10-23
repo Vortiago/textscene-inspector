@@ -1,14 +1,14 @@
 /**
  * Draws a Path2D: it tessellates its Curve2D, always provides it to descendants
- * so a PathFollow2D child follows it, and draws it as a selection-gated white
- * polyline gizmo (ADR-0018), as Godot's 2D editor does.
+ * so a PathFollow2D child follows it, and draws it as a white polyline gizmo for every node, in full
+ * colour (`path_2d.cpp:148`, ADR-0056), as Godot's 2D editor does.
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
@@ -20,7 +20,7 @@ const PATH_COLOR = 0xffffff;
 export function Path2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path2DProperties;
   const { internalResources } = useSceneResources();
-  const gizmoVisible = useGizmoVisible();
+  const drawsCurve = useGizmoState('every-node') !== 'hidden';
 
   const sampler = useMemo<Curve2DSampler | null>(() => {
     // Only an embedded SubResource Curve2D resolves synchronously. Any other
@@ -33,7 +33,7 @@ export function Path2D({ node, children }: NodeComponentProps) {
 
   return (
     <Node2D node={node}>
-      {gizmoVisible && sampler && <PathCurveGizmo sampler={sampler} />}
+      {drawsCurve && sampler && <PathCurveGizmo sampler={sampler} />}
       <Path2DCurveProvider value={sampler}>{children}</Path2DCurveProvider>
     </Node2D>
   );

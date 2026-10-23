@@ -1,13 +1,15 @@
 /**
- * A selection-gated line gizmo: a BufferGeometry from flat `positions` and optional `colors`,
- * drawn as an unlit transparent `<lineSegments>` over the scene. R3F does not dispose an attached
- * geometry, so the gizmo disposes it on rebuild.
+ * A line gizmo: a BufferGeometry from flat `positions` and optional `colors`, drawn as an unlit
+ * transparent `<lineSegments>` over the scene. The caller gates it with `useGizmoState` and passes
+ * the state it got as `variant`. R3F does not dispose an attached geometry, so the gizmo disposes
+ * it on rebuild.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { gizmoAlpha, type GizmoVariant } from '../gizmo/gizmoVariant';
 import { GIZMO_RENDER_ORDER, GizmoGroup } from './GizmoGroup';
 
 interface GizmoLineProps {
@@ -19,6 +21,8 @@ interface GizmoLineProps {
   color?: THREE.ColorRepresentation;
   /** The opacity of the lines, from 0 to 1: the alpha of the colour a Godot gizmo material has. */
   opacity?: number;
+  /** The look of the material: the faint one of a node that is not selected. Defaults to selected. */
+  variant?: GizmoVariant;
 }
 
 const FLOATS_PER_SEGMENT = 6;
@@ -59,6 +63,7 @@ export function GizmoLine({
   colors: allColors,
   color,
   opacity = 1,
+  variant = 'selected',
 }: GizmoLineProps) {
   const { positions, colors } = useMemo(
     () => finiteSegments(allPositions, allColors),
@@ -79,7 +84,7 @@ export function GizmoLine({
   const program = materialProgramInputs({
     props: {
       color: color ?? 0xffffff,
-      opacity,
+      opacity: gizmoAlpha(variant, opacity),
       vertexColors: !!colors,
       depthWrite: false,
       transparent: true,

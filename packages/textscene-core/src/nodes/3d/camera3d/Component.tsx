@@ -13,7 +13,7 @@ import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectio
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useGizmoVisible } from '../lights/shared/lightHelpers';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../r3f/hooks/useTHREEHelper';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
 
@@ -156,7 +156,7 @@ interface CameraGizmoProps {
 
 function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
   // The gizmo shows only while this Camera3D's tree row is selected, as the light gizmos do.
-  const visible = useGizmoVisible();
+  const visible = useGizmoState('selected-only') === 'selected';
   // `THREE.CameraHelper` aliases `this.matrix = camera.matrixWorld` with `matrixAutoUpdate = false`,
   // as the light helpers do. Mounted as a `<primitive>` sibling inside the node's transform group,
   // not at the scene root, it would double-transform the frustum under a transformed ancestor

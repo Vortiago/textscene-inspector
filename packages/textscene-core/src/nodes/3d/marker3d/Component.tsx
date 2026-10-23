@@ -1,14 +1,14 @@
 /**
- * <Marker3D>: a Node3D anchor for its children that draws Godot's 3-axis cross
- * at its origin. Godot draws it at all times. Here `useGizmoVisible()` shows it
- * only while selected, to keep a busy scene clean (ADR-0018).
+ * <Marker3D>: a Node3D anchor for its children that draws Godot's 3-axis cross at its origin. Godot
+ * draws it for every node, in one material with no selected or unselected variant
+ * (`marker_3d_gizmo_plugin.cpp:80-92,115`), so the cross stays full colour (ADR-0056).
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
 import type { Marker3DProperties } from './types';
 
 // Per-vertex axis colours, X red, Y green, Z blue, whatever the size.
@@ -16,10 +16,10 @@ const AXIS_COLORS = new Float32Array([1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 
 
 export function Marker3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Marker3DProperties;
-  const gizmoVisible = useGizmoVisible();
+  const drawsCross = useGizmoState('every-node') !== 'hidden';
   return (
     <Node3D node={node}>
-      {gizmoVisible && <AxisCross extents={props.gizmo_extents} />}
+      {drawsCross && <AxisCross extents={props.gizmo_extents} />}
       {children}
     </Node3D>
   );

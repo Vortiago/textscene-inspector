@@ -1,6 +1,6 @@
 /**
  * The editor gizmo of a VoxelGI: the 12 edges of its box, and the grid of its cells at a low opacity
- * (`voxel_gi_gizmo_plugin.cpp:96-164`). The component gates it with `useGizmoVisible`.
+ * (`voxel_gi_gizmo_plugin.cpp:96-164`). The component gates it with `useGizmoState`.
  */
 
 import { useMemo } from 'react';

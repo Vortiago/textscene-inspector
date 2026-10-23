@@ -11,6 +11,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
+import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import type { TscnNode } from '../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from './types';
 
@@ -94,6 +95,16 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
       return ud.isAudioRangeSphere === true;
     });
     expect(sphere).toBeUndefined();
+  });
+
+  it('renders no gizmo with the Gizmos toggle off, selected', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowGizmos={false}>
+        {withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)}
+      </ViewportModeProvider>
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('renders the range circle scaled by the attenuation model when selected (WI-UX-14)', async () => {

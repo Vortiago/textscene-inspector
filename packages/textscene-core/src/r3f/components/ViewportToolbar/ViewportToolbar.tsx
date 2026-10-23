@@ -9,6 +9,7 @@ import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_FOG_STORAGE_KEY,
+  SHOW_GIZMOS_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
@@ -31,6 +32,8 @@ const MODES: ViewportMode[] = ['3D', '2D'];
 /** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
 interface DisplayToggleState {
   mode: ViewportMode;
+  showGizmos: boolean;
+  setShowGizmos: (show: boolean) => void;
   showCollisions: boolean;
   setShowCollisions: (show: boolean) => void;
   showLabels: boolean;
@@ -59,6 +62,12 @@ interface DisplayToggleState {
  */
 function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
   return [
+    {
+      label: 'Gizmos',
+      title: "Show the editor gizmos, faint on a node that is not selected, as Godot's View Gizmos does",
+      checked: state.showGizmos,
+      onChange: state.setShowGizmos,
+    },
     {
       label: 'Collisions',
       title: 'Show CollisionShape3D wireframes',
@@ -151,6 +160,8 @@ export function ViewportToolbar() {
   const {
     mode,
     setMode,
+    showGizmos,
+    setShowGizmos,
     showCollisions,
     setShowCollisions,
     showLabels,
@@ -189,6 +200,7 @@ export function ViewportToolbar() {
   // Only the user's click persists: a programmatic writer, such as
   // WorkspaceAutoSelect, must not overwrite the stored preference.
   const handleModeClick = persisting(setMode, VIEWPORT_MODE_STORAGE_KEY);
+  const handleGizmosChange = persisting(setShowGizmos, SHOW_GIZMOS_STORAGE_KEY);
   const handleGridChange = persisting(setShowGrid, SHOW_GRID_STORAGE_KEY);
   const handleFrameOnOpenChange = persisting(setFrameOnOpen, FRAME_ON_OPEN_STORAGE_KEY);
   const handleFogChange = persisting(setShowFog, SHOW_FOG_STORAGE_KEY);
@@ -196,6 +208,8 @@ export function ViewportToolbar() {
 
   const displayToggles = buildDisplayToggles({
     mode,
+    showGizmos,
+    setShowGizmos: handleGizmosChange,
     showCollisions,
     setShowCollisions,
     showLabels,

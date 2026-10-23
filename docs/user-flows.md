@@ -116,9 +116,9 @@ Screenshot: WEB-08-a, the chip on `GPUParticles2D` in `example-dodge-player.tscn
 ### WEB-09: Lights and cameras have gizmos
 
 1. Open `integration-lights-all-types.tscn`.
-2. Look at each light's position.
+2. Select each light in the scene tree and look at its position.
 3. Open `unit-camera-basic.tscn`.
-4. Look at the camera's position.
+4. Select the camera in the scene tree and look at its position.
 
 Expected:
 - SpotLight3D: a cone. OmniLight3D: a sphere at its range. DirectionalLight3D: an octahedron.
@@ -277,11 +277,11 @@ Screenshots: BOTH-02-a to -e.
 
 ### BOTH-03: Lights have gizmos and light meshes
 
-1. Open `integration-lights-all-types.tscn`. It has three lights and no meshes.
+1. Open `integration-lights-all-types.tscn`. It has three lights and no meshes. Select each light in the scene tree.
 2. Open `integration-mixed-nodes.tscn`.
 
 Expected:
-- Step 1: a gizmo at each light.
+- Step 1: a gizmo at each selected light.
 - Step 2: the top faces of the cubes are brighter than their sides.
 
 Screenshots: BOTH-03-a lights, BOTH-03-b meshes.

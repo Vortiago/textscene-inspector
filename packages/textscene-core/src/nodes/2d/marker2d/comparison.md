@@ -5,14 +5,14 @@ status: done
 fixture: unit-marker2d.tscn
 image: unit-marker2d
 visual: false
-renders_as: a selection-gated cross gizmo
+renders_as: a cross gizmo for every node
 ---
 
 # Marker2D
 
-Marker2D is a transform anchor that draws a small cross at its origin in the editor. The
-previewer selection-gates that cross (ADR-0018), so a plain capture shows nothing, as
-Godot's game render does.
+Marker2D is a transform anchor that draws a small cross at its origin in the editor.
+The previewer draws that cross for every node (ADR-0056). A capture keeps the Gizmos
+toggle off, so a plain capture shows nothing, as Godot's game render does.
 
 ## Linting
 

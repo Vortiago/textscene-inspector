@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { ViewportModeProvider, useViewportMode, type ViewportModeProviderProps } from './ViewportModeContext';
+import {
+  SHOW_GIZMOS_STORAGE_KEY,
+  ViewportModeProvider,
+  useViewportMode,
+  type ViewportModeProviderProps,
+} from './ViewportModeContext';
 
 function wrapper(props: Omit<ViewportModeProviderProps, 'children'> = {}) {
   return ({ children }: { children: ReactNode }) => (
@@ -63,6 +68,29 @@ describe('ViewportModeContext', () => {
     expect(result.current.showFog).toBe(false);
     act(() => result.current.setShowFog(true));
     expect(result.current.showFog).toBe(true);
+  });
+
+  it('shows the gizmos by default, as the Godot editor does (View Gizmos)', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    expect(result.current.showGizmos).toBe(true);
+  });
+
+  it('shows the gizmos with no provider mounted', () => {
+    const { result } = renderHook(() => useViewportMode());
+    expect(result.current.showGizmos).toBe(true);
+  });
+
+  it('hides and shows the gizmos', () => {
+    const { result } = renderHook(() => useViewportMode(), {
+      wrapper: wrapper({ initialShowGizmos: false }),
+    });
+    expect(result.current.showGizmos).toBe(false);
+    act(() => result.current.setShowGizmos(true));
+    expect(result.current.showGizmos).toBe(true);
+  });
+
+  it('persists the gizmos under tsi.showGizmos', () => {
+    expect(SHOW_GIZMOS_STORAGE_KEY).toBe('tsi.showGizmos');
   });
 
   it('switches mode', () => {

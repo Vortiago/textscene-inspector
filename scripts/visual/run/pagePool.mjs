@@ -1,7 +1,8 @@
 /**
  * The browser pages a run captures on, one per distinct kind of scene: the framed 3D view, the 2D
  * parity frame, and a 3D view per `canvas` size. A page opens before the first scene and closes
- * after the last scene that needs it, so a small-frame context does not outlive its scenes.
+ * after the last scene that needs it, so a small-frame context does not outlive its scenes. A scene
+ * that sets `gizmos: true` gets a page of its own kind, since the toggle is set when the context opens.
  */
 
 import {
@@ -13,6 +14,13 @@ import {
 
 function canvasKey({ width, height }) {
   return `${width}x${height}`;
+}
+
+/** The page key and options a scene's `gizmos: true` adds: the Gizmos toggle on, on a page of its own. */
+function gizmosSpec(scene, key) {
+  return scene.gizmos === true
+    ? { key: `${key}+gizmos`, options: { showGizmos: true } }
+    : { key, options: {} };
 }
 
 /**
@@ -28,12 +36,14 @@ export function pageSpecFor(scene) {
           `with mode "2d", got ${canvasKey(scene.canvas)}`
       );
     }
-    return { key: '2d', options: { frameOnOpen: false, canvas2D: true } };
+    const gizmos = gizmosSpec(scene, '2d');
+    return { key: gizmos.key, options: { frameOnOpen: false, canvas2D: true, ...gizmos.options } };
   }
   const canvas = scene.canvas ?? CANVAS_CAPTURE;
+  const gizmos = gizmosSpec(scene, canvasKey(canvas));
   return {
-    key: canvasKey(canvas),
-    options: { frameOnOpen: true, viewport: windowForCanvas(canvas) },
+    key: gizmos.key,
+    options: { frameOnOpen: true, viewport: windowForCanvas(canvas), ...gizmos.options },
   };
 }
 
