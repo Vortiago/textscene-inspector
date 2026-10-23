@@ -30,6 +30,7 @@ import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
 import { SceneLoadStatus } from './SceneLoadStatus.js';
 import { TextureWorkStatus } from './TextureWorkStatus.js';
+import { SoftwareRenderingStatus } from '../../softwareRendering/SoftwareRenderingStatus.js';
 import {
   CollapsedDock,
   isNarrowPane,
@@ -136,6 +137,7 @@ export function TscnPreviewShell({
           <div className={styles.topSpacer} />
           <SceneLoadStatus viewportError={viewportError} />
           <TextureWorkStatus />
+          <SoftwareRenderingStatus />
           <SceneStats />
           <HelpLink />
         </header>

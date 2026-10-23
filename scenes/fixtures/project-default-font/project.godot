@@ -1,0 +1,15 @@
+; A res:// root of its own, because `gui/theme/custom_font` is a PROJECT setting and no .tscn can
+; carry one. Kept in a subdirectory rather than at scenes/fixtures: a project.godot there would
+; silently apply to every other fixture in the flat bag.
+
+config_version=5
+
+[application]
+
+config/name="Project default font"
+run/main_scene="res://unit-label-project-default-font.tscn"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+theme/custom_font="res://fonts/montserrat-extra-bold.otf"

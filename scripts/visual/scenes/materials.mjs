@@ -44,6 +44,9 @@ export const MATERIAL_SCENES = [
   // and the NoColorSpace tagging show only when a lit material perturbs its
   // normals with the result.
   { name: 'noisetexture2d-normal', file: 'unit-noisetexture2d-normal.tscn' },
+  // The one variable: a NoiseTexture2D's CPU mip chain, which a minified quad samples. The other
+  // NoiseTexture2D goldens draw their texture near its base level.
+  { name: 'noisetexture2d-mipmaps', file: 'unit-noisetexture2d-mipmaps.tscn' },
   // The FastNoiseLite domain warp, which no other noise scene turns on.
   { name: 'noisetexture2d-domain-warp', file: 'unit-noisetexture2d-domain-warp.tscn', mode: '2d' },
 

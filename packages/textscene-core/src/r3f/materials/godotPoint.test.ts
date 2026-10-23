@@ -14,7 +14,10 @@ const BOUND_MAP: StandardMaterialBag = { ...BAG, props: { map: new THREE.Texture
 function compiled(
   bag: StandardMaterialBag,
   draw: PointDraw,
-  { vertexShader = '', fragmentShader = '' } = {}
+  {
+    vertexShader = THREE.ShaderLib.basic.vertexShader,
+    fragmentShader = THREE.ShaderLib.basic.fragmentShader,
+  } = {}
 ) {
   const sized = withPointDraw(bag, draw);
   const material = new THREE.MeshStandardMaterial({ userData: sized.props.userData });

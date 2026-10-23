@@ -8,15 +8,13 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { enumOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
-import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/variant/number.js';
+import { TRANSFORM2D_SLOT_RE, matchedFloat, allFinite } from '../../../godot/variant/number.js';
 import { degToRad } from '../../../godot/math/math.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem.js';
-
-const TRANSFORM2D_RE = slotTupleRegex('Transform2D', 6);
 
 /** The setters refuse a value past `TEXTURE_FILTER_MAX` or `TEXTURE_REPEAT_MAX` (`canvas_item.cpp`), so it keeps PARENT_NODE. */
 const TEXTURE_FILTERS = numericValues(CanvasItemTextureFilter);
@@ -97,7 +95,7 @@ export function decomposeTransform2D(
   value: string,
   nodeName = ''
 ): { position: Vector2; rotation: number; scale: Vector2; skew: number } | null {
-  const m = TRANSFORM2D_RE.exec(value.trim());
+  const m = TRANSFORM2D_SLOT_RE.exec(value.trim());
   if (!m) {
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
     return null;

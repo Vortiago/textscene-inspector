@@ -4,8 +4,11 @@ import {
   applyChunkEdits,
   applyEdits,
   editedChunk,
+  editedProgram,
+  editedShader,
   installChunkPatch,
   onChunk,
+  rewrittenShader,
   type ChunkPatch,
 } from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
@@ -76,6 +79,85 @@ describe('applyEdits', () => {
 
   it('is the text itself for no edits (edge case)', () => {
     expect(applyEdits('a', [])).toBe('a');
+  });
+});
+
+describe('editedShader', () => {
+  it('replaces each edit’s text, in order', () => {
+    const edited = editedShader(
+      'a b',
+      [
+        { three: 'a', godot: 'c' },
+        { three: 'c b', godot: 'd' },
+      ],
+      'test program'
+    );
+    expect(edited).toBe('d');
+  });
+
+  it('keeps a `$` in the replacement literal (edge case)', () => {
+    expect(editedShader('a', [{ three: 'a', godot: "$&$'" }], 'test program')).toBe("$&$'");
+  });
+
+  it('throws, naming the program, the text and the shader, for a text the shader lacks (error case)', () => {
+    expect(() => editedShader('a b', [{ three: 'x', godot: 'c' }], 'the test program')).toThrow(
+      'expected the test program to hold "x" once, got:\na b'
+    );
+  });
+
+  it('throws for a text that occurs twice (edge case)', () => {
+    expect(() => editedShader('a a', [{ three: 'a', godot: 'c' }], 'the test program')).toThrow(
+      'expected the test program to hold "a" once'
+    );
+  });
+
+  it('throws for a text that an earlier edit removed (error case)', () => {
+    expect(() =>
+      editedShader(
+        'a',
+        [
+          { three: 'a', godot: 'c' },
+          { three: 'a', godot: 'd' },
+        ],
+        'the test program'
+      )
+    ).toThrow('to hold "a" once, got:\nc');
+  });
+});
+
+describe('editedProgram', () => {
+  const program = () => ({ vertexShader: 'v1', fragmentShader: 'f1', uniforms: {} });
+
+  it('edits the stage each list names, and leaves the other alone', () => {
+    const shader = program();
+    editedProgram(shader, { fragment: [{ three: 'f1', godot: 'f2' }] }, 'test patch');
+    expect([shader.vertexShader, shader.fragmentShader]).toEqual(['v1', 'f2']);
+  });
+
+  it('edits both stages', () => {
+    const shader = program();
+    editedProgram(
+      shader,
+      { vertex: [{ three: 'v1', godot: 'v2' }], fragment: [{ three: 'f1', godot: 'f2' }] },
+      'test patch'
+    );
+    expect([shader.vertexShader, shader.fragmentShader]).toEqual(['v2', 'f2']);
+  });
+
+  it('throws, naming the stage and the patch, for a stage that lacks a text (error case)', () => {
+    expect(() => editedProgram(program(), { vertex: [{ three: 'x', godot: 'y' }] }, 'test patch')).toThrow(
+      'expected the vertex shader of the test patch to hold "x" once, got:\nv1'
+    );
+  });
+});
+
+describe('rewrittenShader', () => {
+  it('rewrites every match of the pattern', () => {
+    expect(rewrittenShader('a1 b a2', /a(\d)/g, (_, digit) => `x${digit}`)).toBe('x1 b x2');
+  });
+
+  it('is the text itself for no match, which is no error (edge case)', () => {
+    expect(rewrittenShader('b', /a/g, () => 'x')).toBe('b');
   });
 });
 

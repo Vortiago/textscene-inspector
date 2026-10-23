@@ -23,8 +23,10 @@ import {
   shapedTextSizeWidthPx,
   soloLineLayout,
   type GlyphPlacement,
+  type ShapeTextOptions,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -37,14 +39,11 @@ import {
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import {
   getFontAscentPx,
-  getFontGlyphAdvancePx,
+  getFontEmboldenedAdvancePx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
-import {
-  resolveNodeFontMetrics,
-  resolveNodeFontSizePx,
-} from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
   IMAGE_OBJECT_CHAR,
@@ -65,14 +64,6 @@ const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
   sizeKey: 'normal_font_size',
   colorKey: 'default_color',
 };
-
-/**
- * The plain-paragraph font key, `scene/theme/default_theme.cpp:1194`:
- * `theme->set_font("normal_font", "RichTextLabel", Ref<Font>());`. `_find_font`
- * (`rich_text_label.cpp:3226-3296`) reads other keys per style, but bold and
- * italic are synthesised over this one face, so only it resolves.
- */
-export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 
 /** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
 const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
@@ -223,20 +214,38 @@ interface ResolvedImageRun {
  * At `unitsPerEm` units the advance chain returns that size rounded to 1/64px,
  * exact for whole and half pixels and within 1/128px otherwise.
  */
-export function imageObjectFontMetrics(base: FontMetrics): FontMetrics {
+function imageObjectFontMetrics(base: FontMetrics): FontMetrics {
+  let face = imageFaces.get(base);
+  if (!face) imageFaces.set(base, (face = wrapForImageObject(base)));
+  return face;
+}
+
+/**
+ * Written only by `imageObjectFontMetrics`, never cleared. One wrapper per face, so `shapeText`
+ * sees the same face on every call and a layout memoised on it keeps its hits.
+ */
+const imageFaces = new WeakMap<FontMetrics, FontMetrics>();
+
+function wrapForImageObject(base: FontMetrics): FontMetrics {
   // A fractional width skips the whole-pixel round, and the size change at each
   // edge resets the remainder and kerning, as a separate shaped run would.
-  return {
-    ...base,
-    getGlyphAdvanceUnits(ch: string): number | null {
-      if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;
-      return base.getGlyphAdvanceUnits(ch);
+  // `Object.create` keeps the rest of the face live. An image has no outline, so no embolden or skew.
+  return Object.create(base, {
+    embolden: { value: 0 },
+    skew: { value: 0 },
+    getGlyphAdvanceUnits: {
+      value(ch: string): number | null {
+        if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;
+        return base.getGlyphAdvanceUnits(ch);
+      },
     },
-    getKerningAdjustmentUnits(a: string, b: string): number {
-      if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
-      return base.getKerningAdjustmentUnits(a, b);
+    getKerningAdjustmentUnits: {
+      value(a: string, b: string): number {
+        if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
+        return base.getKerningAdjustmentUnits(a, b);
+      },
     },
-  };
+  });
 }
 
 /**
@@ -244,7 +253,7 @@ export function imageObjectFontMetrics(base: FontMetrics): FontMetrics {
  * (`_find_tab_stops`, `rich_text_label.cpp:479-482`). `SPACING_SPACE` is 0 for
  * every loaded font. `tab_size <= 0` disables tab alignment (`:479`).
  */
-export function richTextTabStopsPx(
+function richTextTabStopsPx(
   tabStopsPx: number[] | undefined,
   tabSize: number | undefined,
   fontMetrics: FontMetrics,
@@ -253,7 +262,7 @@ export function richTextTabStopsPx(
   if (tabStopsPx && tabStopsPx.length > 0) return tabStopsPx;
   const size = tabSize ?? 4;
   if (size <= 0) return [];
-  return [Math.max(1, size * getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx))];
+  return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
 }
 
 /**
@@ -276,34 +285,27 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const availableWidthPx = ctx.tentativeRect?.(n)?.w;
   const { fontSizePx, color } = richTextLabelTextTheme(n, props, ctx);
   const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize, availableWidthPx);
-  const text = runs.map((r) => r.text).join('');
+  const text = plainTextOf(runs);
 
   if (text.length === 0) {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
   }
 
-  // No text engine, no measurement. This calls `shapeText` directly, since
-  // per-character sizes do not fit `TextMeasurer`.
+  // No text engine, no measurement. `shapeRichText` shapes directly, since per-character sizes
+  // and faces do not fit `TextMeasurer`.
   if (!ctx.measureText) return { x: 0, y: 0 };
 
-  const fontMetrics = resolveNodeFontMetrics(n, RICH_TEXT_LABEL_THEME_FONT_KEY);
   // Wrapped at the control's width: `_validate_line_caches` resizes the lines, then
   // `update_minimum_size()` runs under `fit_content` (`rich_text_label.cpp:3873,3880`).
   // `tentativeRect` is `undefined` on the first pass, as in Godot's pre-resize state.
   // The empty `normal` StyleBox (`default_theme.cpp:1186`) makes the text rect the control's.
   const wrapWidthPx = wraps ? availableWidthPx : undefined;
-  // `line_separation` and `paragraph_separation` are 0 (`default_theme.cpp:1217-1218`),
-  // not Label's 3.
-  const layout = shapeText(text, {
+  const layout = shapeRichText(runs, resolveRichTextFaces(n, runs), {
     fontSizePx,
     boxWidthPx: wrapWidthPx ?? 0,
     autowrapMode: wrapWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
-    lineSpacingPx: 0,
-    fontSizePxAt: fontSizePxAtFromRuns(runs),
-    // An `[img]` placeholder shapes at the image width, as in `Component.tsx`,
-    // so measure and paint wrap alike.
-    fontMetrics: imageObjectFontMetrics(fontMetrics),
-    tabStopsPx: richTextTabStopsPx(props.tabStopsPx, props.tabSize, fontMetrics, fontSizePx),
+    tabStopsPx: props.tabStopsPx,
+    tabSize: props.tabSize,
     autowrapTrimFlags: props.autowrapTrimFlags,
   });
   // `get_content_height` sums each line's own ascent+descent, never a count
@@ -466,33 +468,78 @@ export function styledTextRuns(
   return styled;
 }
 
-/**
- * The per-character `fontSizePxAt` for `shapeText`, indexed over the
- * concatenated text of `styledRuns`.
- */
-export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (charIndex: number) => number {
-  const sizes: number[] = [];
-  for (const run of styledRuns) {
-    for (let i = 0; i < run.text.length; i++) sizes.push(run.fontSizePx);
-  }
-  const lastSize = sizes.length > 0 ? sizes[sizes.length - 1]! : 0;
-  return (charIndex: number) => sizes[charIndex] ?? lastSize;
+/** The text the runs draw, without their tags. */
+function plainTextOf(styledRuns: readonly StyledTextRun[]): string {
+  return styledRuns.map((run) => run.text).join('');
 }
 
 /**
- * `scene/theme/default_theme.cpp:1392-1403` builds bold as embolden 1.2 (`:1394`, `:1398`),
- * a FreeType stroke (`text_server_adv.cpp:1313-1314`: `FT_Pos strength = embolden * p_size.x / 16`)
- * with no formula to MSDF `distanceBias`. 0.35 is tuned: the 18px 'l' stem of `[b]Bold[/b]`
- * renders 3.01px against Godot's 3.04px. `richtextlabel/comparison.md` holds the residuals.
+ * One value per character of the concatenated text of `styledRuns`, the shape `shapeText`'s
+ * per-character options take. An index past the end takes the last character's value.
  */
-export const BOLD_DISTANCE_BIAS = 0.35;
+function perCharacter<T>(
+  styledRuns: readonly StyledTextRun[],
+  valueOf: (run: StyledTextRun) => T
+): (charIndex: number) => T | undefined {
+  const values: T[] = [];
+  for (const run of styledRuns) {
+    const value = valueOf(run);
+    for (let i = 0; i < run.text.length; i++) values.push(value);
+  }
+  return (charIndex) => (charIndex < values.length ? values[charIndex] : values.at(-1));
+}
+
+/** The per-character `fontSizePxAt` for `shapeText`. 0 for no runs. */
+function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (charIndex: number) => number {
+  const sizeAt = perCharacter(styledRuns, (run) => run.fontSizePx);
+  return (charIndex) => sizeAt(charIndex) ?? 0;
+}
 
 /**
- * `default_theme.cpp:1399`/`:1403`: `Transform2D(1.0, 0.2, 0.0, 1.0, 0.0, 0.0)`, bold+italic
- * combining both. Its x-basis `(1, 0.2)` is exactly `TextRun`'s `skew`
- * (`dx = -skew * (yPx - lineTopPx)`).
+ * The per-character `fontMetricsAt` for `shapeText`: each character takes the face of its run
+ * (`faceOfStyle`), and an `[img]` placeholder the normal face with the image's advance
+ * (`imageObjectFontMetrics`). Past the end, and for no runs, it is the last run's face and the
+ * normal one.
  */
-export const ITALIC_SKEW = 0.2;
+function fontMetricsAtFromRuns(
+  styledRuns: readonly StyledTextRun[],
+  faces: RichTextFaces
+): (charIndex: number) => FontMetrics {
+  const faceAt = perCharacter(styledRuns, (run) =>
+    run.image ? imageObjectFontMetrics(faces.normal) : faceOfStyle(faces, run)
+  );
+  return (charIndex) => faceAt(charIndex) ?? faces.normal;
+}
+
+/** What `shapeRichText` takes from the control: the paragraph's box, and the three properties that shape it. */
+interface RichTextShapeOptions
+  extends
+    Pick<ShapeTextOptions, 'fontSizePx' | 'boxWidthPx' | 'autowrapMode'>,
+    Pick<RichTextLabelProperties, 'tabStopsPx' | 'tabSize' | 'autowrapTrimFlags'> {}
+
+/**
+ * Shapes the whole paragraph once, each character at the size and in the face of its run, so line
+ * breaks see the full width. The solve and the painter both call it, so measure and paint wrap alike.
+ */
+export function shapeRichText(
+  styledRuns: readonly StyledTextRun[],
+  faces: RichTextFaces,
+  options: RichTextShapeOptions
+): TextLayoutResult {
+  const { fontSizePx, boxWidthPx, autowrapMode, tabStopsPx, tabSize, autowrapTrimFlags } = options;
+  return shapeText(plainTextOf(styledRuns), {
+    fontSizePx,
+    boxWidthPx,
+    autowrapMode,
+    // `line_separation` and `paragraph_separation` are 0 (`default_theme.cpp:1217-1218`), not Label's 3.
+    lineSpacingPx: 0,
+    fontSizePxAt: fontSizePxAtFromRuns(styledRuns),
+    fontMetricsAt: fontMetricsAtFromRuns(styledRuns, faces),
+    fontMetrics: faces.normal,
+    tabStopsPx: richTextTabStopsPx(tabStopsPx, tabSize, faces.normal, fontSizePx),
+    autowrapTrimFlags,
+  });
+}
 
 /**
  * `default_theme.cpp:1231`: `theme->set_constant("underline_alpha", "RichTextLabel", 50)`.
@@ -519,8 +566,6 @@ interface RichTextRunPlacement {
   lineTopPx: number;
   /** The line's left offset, per line since each aligns by its own width (`richTextHorizontalOffsetPx`). */
   lineOffsetXPx: number;
-  bold: boolean;
-  italic: boolean;
   underline: boolean;
   color: Rgba;
   /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
@@ -531,21 +576,22 @@ interface RichTextRunPlacement {
 }
 
 /**
- * Keeps the parent's `fontMetrics` and `linePitchPx` (`soloLineLayout`), since
- * `TextRun` picks atlas or canvas painting from `layout.fontMetrics.kind`.
- * `baselineOffsetPx` is the line's ascent, applied once per line
- * (`rich_text_label.cpp:1055`'s `off.y += l_ascent`), so mixed sizes share it.
+ * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the run's own face, since `TextRun`
+ * picks atlas or canvas painting, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
+ * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
+ * so mixed sizes share it.
  */
 function soloRunLayout(
-  text: string,
-  glyphs: GlyphPlacement[],
+  segment: RunLineSegment,
   parentLayout: TextLayoutResult,
   lineAscentPx: number
 ): TextLayoutResult {
-  const widthPx = glyphs.length
-    ? glyphs[glyphs.length - 1]!.x + glyphs[glyphs.length - 1]!.advance - glyphs[0]!.x
-    : 0;
-  return soloLineLayout({ text, glyphs, widthPx }, parentLayout, lineAscentPx);
+  const { text, glyphs, fontMetrics } = segment;
+  // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
+  // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
+  const lastGlyph = glyphs.at(-1);
+  const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
+  return soloLineLayout({ text, glyphs, widthPx }, parentLayout, lineAscentPx, fontMetrics);
 }
 
 /**
@@ -601,8 +647,8 @@ function lineMetricsOf(
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
       if (run.image) continue;
-      ascentPx = Math.max(ascentPx, getFontAscentPx(layout.fontMetrics, run.fontSizePx));
-      descentPx = Math.max(descentPx, fontDescentPx(layout.fontMetrics, run.fontSizePx));
+      ascentPx = Math.max(ascentPx, getFontAscentPx(segment.fontMetrics, run.fontSizePx));
+      descentPx = Math.max(descentPx, fontDescentPx(segment.fontMetrics, run.fontSizePx));
     }
     // A blank line shapes its break in the paragraph font, so it keeps that height.
     if (segments.length === 0) {
@@ -666,6 +712,8 @@ interface RunLineSegment {
   text: string;
   /** This run's glyphs from that line, `x` already line-relative. */
   glyphs: GlyphPlacement[];
+  /** The face the glyphs were shaped in: the run's. */
+  fontMetrics: FontMetrics;
 }
 
 /**
@@ -677,7 +725,7 @@ function attributeRunsToLines(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RunLineSegment[][] {
-  const plainText = styledRuns.map((r) => r.text).join('');
+  const plainText = plainTextOf(styledRuns);
   const charRunIndex: number[] = [];
   styledRuns.forEach((run, runIdx) => {
     for (let i = 0; i < run.text.length; i++) charRunIndex.push(runIdx);
@@ -713,6 +761,7 @@ function attributeRunsToLines(
         runIndex: runIdx,
         text: plainText.slice(textStart, cursor),
         glyphs: line.glyphs.slice(start, i),
+        fontMetrics: line.glyphs[start]!.fontMetrics ?? layout.fontMetrics,
       });
     }
     return segments;
@@ -874,12 +923,10 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        bold: run.bold,
-        italic: run.italic,
         underline: run.underline,
         color: run.color,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment.text, segment.glyphs, layout, ascentPx),
+        layout: soloRunLayout(segment, layout, ascentPx),
         image: run.image
           ? {
               spec: run.image.spec,

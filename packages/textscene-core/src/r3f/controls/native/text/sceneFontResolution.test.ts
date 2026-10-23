@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveFontFileBytes } from './sceneFontResolution';
+import { fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
@@ -72,5 +72,29 @@ describe('resolveFontFileBytes', () => {
     const result = resolveFontFileBytes(variation);
     expect(result!.bytes).toBe(bytes);
     expect(result!.leaf).toBe(realFace);
+  });
+});
+
+describe('fontVariationSkew', () => {
+  const variation = (properties: Record<string, string>): FontResource => ({
+    kind: 'variation',
+    baseFont: null,
+    properties,
+  });
+
+  it('reads the second number of variation_transform: FT_Matrix.xy, the x basis y (text_server_adv.cpp:1318-1320)', () => {
+    expect(fontVariationSkew(variation({ variation_transform: 'Transform2D(1, 0.2, 0, 1, 0, 0)' }))).toBe(
+      0.2
+    );
+    expect(fontVariationSkew(variation({ variation_transform: 'Transform2D(1, -0.5, 0.3, 1, 0, 0)' }))).toBe(
+      -0.5
+    );
+  });
+
+  it('is 0 for no transform, a malformed one and a font that is not a variation', () => {
+    expect(fontVariationSkew(variation({}))).toBe(0);
+    expect(fontVariationSkew(variation({ variation_transform: 'Transform2D(1, 0.2)' }))).toBe(0);
+    expect(fontVariationSkew(fontFile(undefined))).toBe(0);
+    expect(fontVariationSkew(null)).toBe(0);
   });
 });

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { tessellateCurve3D, type Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
-import { buildCsgPolygonGeometry } from './polygonGeometry';
+import { buildCsgPolygonBrush } from './polygonGeometry';
 import { type CsgPolygonSpec } from './polygonSweepSpec';
 import { PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 
@@ -32,7 +32,7 @@ const BASE: CsgPolygonSpec = {
 };
 
 function build(overrides: Partial<CsgPolygonSpec> = {}) {
-  return buildCsgPolygonGeometry({ ...BASE, ...overrides });
+  return buildCsgPolygonBrush({ ...BASE, ...overrides }).geometry;
 }
 
 function box(geometry: THREE.BufferGeometry): THREE.Box3 {
@@ -58,7 +58,7 @@ function straightCurve(length: number): Curve3DControlPoint[] {
   ];
 }
 
-describe('buildCsgPolygonGeometry', () => {
+describe('buildCsgPolygonBrush', () => {
   describe('MODE_DEPTH', () => {
     it('extrudes toward -Z over [-depth, 0], NOT +Z and NOT centred', () => {
       // csg_shape.cpp:2352 translate_local(0, 0, -depth) from identity. ExtrudeGeometry

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isBottomUp, reversedRows } from './reversedRows';
+import { isBottomUp, reverseRowsInPlace, reversedRows } from './reversedRows';
 
 describe('reversedRows', () => {
   it('puts the last row first', () => {
@@ -52,5 +52,32 @@ describe('isBottomUp', () => {
 
   it('is false for a decoded image, which has no typed array (edge case)', () => {
     expect(isBottomUp({ flipY: false, image: { width: 1, height: 1 } })).toBe(false);
+  });
+});
+
+describe('reverseRowsInPlace', () => {
+  it('gives the rows reversedRows gives, in the same array (odd row count)', () => {
+    const rgba = Uint8Array.of(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
+    const expected = reversedRows(rgba, 1, 3);
+
+    reverseRowsInPlace(rgba, 1, 3);
+
+    expect(rgba).toEqual(expected);
+  });
+
+  it('swaps the rows of an even count whole, keeping each row in order', () => {
+    const rgba = Uint8Array.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+
+    reverseRowsInPlace(rgba, 2, 2);
+
+    expect([...rgba]).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  it('leaves a single row alone', () => {
+    const rgba = Uint8Array.of(1, 2, 3, 4);
+
+    reverseRowsInPlace(rgba, 1, 1);
+
+    expect([...rgba]).toEqual([1, 2, 3, 4]);
   });
 });

@@ -9,7 +9,7 @@
  * reads.
  */
 
-import { installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
@@ -266,12 +266,13 @@ ${GODOT_SUN_FADE}
 /** The chunk with Godot's split lookup, or null when three's chunk no longer has the parts it replaces. */
 function godotSplitShadowChunk(chunk: string): string | null {
   const start = chunk.indexOf(THREE_LOOKUP_START);
-  if (start < 0 || !chunk.includes(THREE_SLOT_COUNT) || !chunk.includes(THREE_SLOT_MATRICES)) return null;
+  if (start < 0) return null;
   const end = chunk.indexOf(LOOKUP_BLOCK_END, start);
   if (end < 0) return null;
-  return (chunk.slice(0, start) + GODOT_LOOKUP + chunk.slice(end))
-    .replace(THREE_SLOT_COUNT, `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}`)
-    .replace(THREE_SLOT_MATRICES, GODOT_SLOT_ROWS);
+  return applyEdits(chunk.slice(0, start) + GODOT_LOOKUP + chunk.slice(end), [
+    { three: THREE_SLOT_COUNT, godot: `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}` },
+    { three: THREE_SLOT_MATRICES, godot: GODOT_SLOT_ROWS },
+  ]);
 }
 
 /**
