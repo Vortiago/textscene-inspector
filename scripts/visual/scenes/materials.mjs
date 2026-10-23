@@ -111,6 +111,9 @@ export const MATERIAL_SCENES = [
   // The project's `texture_mipmap_bias` of -0.5 on a mipmapped checker floor seen at a grazing angle:
   // Godot samples a sharper level, so the far squares stay crisp. An unbiased floor blurs to grey sooner.
   { name: 'material-mipmap-bias', file: 'mipmap-bias/unit-material-mipmap-bias.tscn' },
+  // The same bias on a normal map's reads: Godot samples a sharper level, so the far stripes keep
+  // their light and dark bands. A normal read left unbiased fades them to an even grey sooner.
+  { name: 'material-mipmap-bias-normal', file: 'mipmap-bias/unit-material-mipmap-bias-normal.tscn' },
   // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
   // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
   { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },

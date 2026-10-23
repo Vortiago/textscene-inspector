@@ -3689,6 +3689,12 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Mipmap Bias Normal",
+    "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
+  },
+  {
     "name": "Material Mipmap Bias",
     "file": "mipmap-bias/unit-material-mipmap-bias.tscn",
     "category": "Unit - Materials",
