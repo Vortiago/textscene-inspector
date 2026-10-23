@@ -44,6 +44,25 @@ describe('repackAnisotropyFlowmap', () => {
     expect(Array.from((out.mipmaps[1] as MipLevel).data)).toEqual([69, 74, 115, 115]);
   });
 
+  it('repacks the top level of a half-float flowmap, whose stored chain holds no bytes (edge case)', () => {
+    const half = (value: number) => THREE.DataUtils.toHalfFloat(value);
+    const top = new Uint16Array([half(0.5), half(0.5), 0, half(1), 0, 0, 0, half(0.5)]);
+    const source = new THREE.DataTexture(top, 2, 1, THREE.RGBAFormat);
+    source.type = THREE.HalfFloatType;
+    source.mipmaps = [
+      { data: top, width: 2, height: 1 },
+      { data: new Uint16Array(4), width: 1, height: 1 },
+    ] as unknown as THREE.Texture['mipmaps'];
+    source.generateMipmaps = false;
+    source.needsUpdate = true;
+
+    const blues = Array.from((repackAnisotropyFlowmap(source)!.image as { data: Uint8Array }).data).filter(
+      (_, i) => i % 4 === 2
+    );
+
+    expect(blues).toEqual([255, 128]);
+  });
+
   it('asks the GPU for no chain over a repacked chain', () => {
     const source = dataTexture();
     source.mipmaps = mipChain(source.image as MipLevel, false) as unknown as THREE.Texture['mipmaps'];

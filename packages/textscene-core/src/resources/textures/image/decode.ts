@@ -134,8 +134,8 @@ export function imageRefSize(
   ref: string | undefined,
   resources: readonly TscnInternalResource[]
 ): ImageSize | null {
-  const image = resolveSubResourceRef(ref, resources);
-  const header = image?.type === 'Image' ? readHeader(image.data.data ?? '') : null;
+  const dictionary = imageDictionary(ref, resources);
+  const header = dictionary === null ? null : readHeader(dictionary);
   return header && { width: header.width, height: header.height };
 }
 
@@ -155,6 +155,12 @@ function readHeader(dictionary: string): ImageHeader | null {
   return { width, height, format: literalText(format), body };
 }
 
+/** The serialised `data` Dictionary of the `Image` sub-resource `ref` names, or null for a reference to anything else. */
+function imageDictionary(ref: string | undefined, resources: readonly TscnInternalResource[]): string | null {
+  const resource = resolveSubResourceRef(ref, resources);
+  return resource?.type === 'Image' ? (resource.data.data ?? '') : null;
+}
+
 /** An `Image` whose top level is decoded, with what a read of its lower levels needs. */
 interface OpenImage {
   image: DecodedImage;
@@ -169,8 +175,7 @@ interface OpenImage {
  * which a float sampler cannot read, and the block formats no decoder handles.
  */
 function openImageRef(ref: string | undefined, resources: readonly TscnInternalResource[]): OpenImage | null {
-  const resource = resolveSubResourceRef(ref, resources);
-  const dictionary = resource?.type === 'Image' ? (resource.data.data ?? '') : null;
+  const dictionary = imageDictionary(ref, resources);
   const header = dictionary === null ? null : readHeader(dictionary);
   if (dictionary === null || !header) return null;
   const { width, height, format, body } = header;

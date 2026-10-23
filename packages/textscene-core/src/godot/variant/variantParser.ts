@@ -145,8 +145,8 @@ export function dictNumberField(key: string, global = false): RegExp {
 }
 
 /**
- * A field of a serialised Dictionary whose value is a bool, `[1]` its spelling for `boolSlotValue` to read: `true`, `false`
- * or a number, which a bool slot converts (`variant.cpp:550-558`). The value runs to its `,`/`}`, as in {@link dictNumberField}.
+ * A field of a serialised Dictionary whose value is a bool. `[1]` is the raw spelling for `boolSlotValue` to convert: `true`,
+ * `false` or a number, which a bool slot converts (`variant.cpp:550-558`). The value runs to its `,`/`}`, as in {@link dictNumberField}.
  */
 export function dictBoolField(key: string): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}(true|false|${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`);
