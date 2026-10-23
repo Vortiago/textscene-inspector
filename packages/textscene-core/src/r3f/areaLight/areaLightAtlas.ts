@@ -6,43 +6,31 @@
  */
 
 import * as THREE from 'three';
-import { releasedOnUnmount, sharedTexture } from '../sharedTexture.js';
+import { releasedOnUnmount } from '../sharedTexture.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
-import {
-  buildAreaLightAtlas,
-  type AreaLightAtlas,
-  type AreaTextureImage,
-  type AreaTexturePlacement,
-} from './atlasLayout.js';
+import { buildAreaLightAtlas, type AreaLightAtlas, type AreaTexturePlacement } from './atlasLayout.js';
 import { mipSize } from './atlasMipmaps.js';
-import { readImagePixels } from '../../resources/formats/image/imagePixels.js';
+import { AtlasHolders } from '../textureAtlas/atlasHolders.js';
+import { AtlasTexture } from '../textureAtlas/atlasTexture.js';
+import { godotImage } from '../textureAtlas/godotImage.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';
-import { isBottomUp, reversedRows } from '../../utils/reversedRows.js';
 
 /** The atlas every lit material and the fog pass sample, refilled in place. */
-class AreaLightAtlasTexture extends sharedTexture(THREE.DataTexture) {
+class AreaLightAtlasTexture extends AtlasTexture {
   constructor() {
-    super(null, 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType);
-    this.name = 'AreaLightAtlas';
-    this.generateMipmaps = false;
-    this.minFilter = THREE.LinearMipmapLinearFilter;
-    this.magFilter = THREE.LinearFilter;
+    super('AreaLightAtlas', THREE.NoColorSpace);
   }
 
-  /**
-   * Holds `atlas`'s mips. A texture's GPU storage keeps its first size, so the old storage goes
-   * before the new mips upload.
-   */
-  hold(atlas: AreaLightAtlas): void {
-    this.dispose();
-    this.mipmaps = atlas.mipmaps.map((data, level) => ({
-      data,
-      width: mipSize(atlas.width, level),
-      height: mipSize(atlas.height, level),
-    }));
-    this.image = this.mipmaps[0] as unknown as typeof this.image;
-    this.needsUpdate = true;
+  /** Holds `atlas`'s mips. */
+  holdAtlas(atlas: AreaLightAtlas): void {
+    this.hold(
+      atlas.mipmaps.map((data, level) => ({
+        data,
+        width: mipSize(atlas.width, level),
+        height: mipSize(atlas.height, level),
+      }))
+    );
   }
 }
 
@@ -55,17 +43,8 @@ const atlasTexture = releasedOnUnmount(
     new AreaLightAtlasTexture()
 );
 
-/** A held texture: its holders, and the pixel version the atlas last read. */
-interface Held {
-  users: number;
-  version: number;
-}
-
-/**
- * Each held texture, in the order it joined, as Godot's map keeps it. Written only by
- * `holdAreaTexture`, `releaseAreaTexture` and `updateAreaLightAtlas`.
- */
-const heldTextures = new Map<THREE.Texture, Held>();
+/** Each held texture, as Godot's map keeps them. */
+const holders = new AtlasHolders();
 
 /**
  * Where the last build placed each held texture it could read. Written by `updateAreaLightAtlas`,
@@ -73,15 +52,9 @@ const heldTextures = new Map<THREE.Texture, Held>();
  */
 let placements = new Map<THREE.Texture, AreaTexturePlacement>();
 
-/**
- * Whether a texture joined or changed its pixels since the last build. Godot leaves the pixels of
- * a texture that leaves in place until then.
- */
-let isDirty = true;
-
 /** The one atlas, an empty one until a texture joins it. Its identity never changes. */
 export function areaLightAtlasTexture(): THREE.Texture {
-  if (atlasTexture.mipmaps.length === 0) atlasTexture.hold(buildAreaLightAtlas([]));
+  if (atlasTexture.mipmaps.length === 0) atlasTexture.holdAtlas(buildAreaLightAtlas([]));
   return atlasTexture;
 }
 
@@ -92,23 +65,12 @@ export function installAreaLightAtlas(): void {
 
 /** Puts `texture` in the atlas for one more holder (`texture_add_to_area_light_atlas`). */
 export function holdAreaTexture(texture: THREE.Texture): void {
-  const held = heldTextures.get(texture);
-  if (held) {
-    held.users++;
-    return;
-  }
-  heldTextures.set(texture, { users: 1, version: texture.version });
-  isDirty = true;
+  holders.hold(texture);
 }
 
 /** Lets go of `texture` for one holder. A stranger changes nothing. */
 export function releaseAreaTexture(texture: THREE.Texture): void {
-  const held = heldTextures.get(texture);
-  if (!held) return;
-  held.users--;
-  if (held.users > 0) return;
-  heldTextures.delete(texture);
-  placements.delete(texture);
+  if (holders.release(texture)) placements.delete(texture);
 }
 
 const textureDeclaration = userDataDeclaration<THREE.Texture>(
@@ -133,37 +95,15 @@ export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacemen
   return (texture && placements.get(texture)) ?? NO_AREA_TEXTURE;
 }
 
-/** A texture's sRGB bytes with the top row first, as Godot's image holds it. */
-function godotImage(texture: THREE.Texture): AreaTextureImage | undefined {
-  const pixels = readImagePixels(texture.image);
-  if (!pixels) return undefined;
-  if (!isBottomUp(texture)) return pixels;
-  return {
-    width: pixels.width,
-    height: pixels.height,
-    data: reversedRows(pixels.data, pixels.width, pixels.height),
-  };
-}
-
-/** Marks the atlas dirty when a held texture uploaded new pixels (`area_light_atlas_mark_dirty_on_texture`). */
-function noteChangedPixels(): void {
-  for (const [texture, held] of heldTextures) {
-    if (held.version === texture.version) continue;
-    held.version = texture.version;
-    isDirty = true;
-  }
-}
-
 /** Rebuilds the atlas when a texture joined or changed its pixels since the last build (`update_area_light_atlas`). */
 export function updateAreaLightAtlas(): void {
-  noteChangedPixels();
-  if (!isDirty) return;
-  isDirty = false;
-  const readable = [...heldTextures.keys()].flatMap((texture) => {
+  const changed = holders.takeChanged();
+  if (!changed) return;
+  const readable = changed.flatMap((texture) => {
     const image = godotImage(texture);
     return image ? [{ texture, image }] : [];
   });
   const atlas = buildAreaLightAtlas(readable.map(({ image }) => image));
   placements = new Map(readable.map(({ texture }, index) => [texture, atlas.placements[index]!]));
-  atlasTexture.hold(atlas);
+  atlasTexture.holdAtlas(atlas);
 }

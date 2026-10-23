@@ -25,9 +25,9 @@ export function reversedLevel({ data, width, height }: MipLevel): MipLevel {
 /**
  * Every level of `base`'s chain, `base` first, down to 1 × 1 (`image.cpp:1885-1945`). With
  * `renormalize`, each generated level's RGB is a unit normal again (`renormalize_uint8`, `:4577-4588`).
- * The caller keeps `base`, which the chain shares.
+ * A `levelCount` stops the chain short of 1 × 1. The caller keeps `base`, which the chain shares.
  */
-export function mipChain(base: MipLevel, renormalize: boolean): MipLevel[] {
+export function mipChain(base: MipLevel, renormalize: boolean, levelCount = Infinity): MipLevel[] {
   const expectedBytes = base.width * base.height * RGBA_BYTES;
   if (base.data.length !== expectedBytes) {
     throw new Error(
@@ -35,7 +35,7 @@ export function mipChain(base: MipLevel, renormalize: boolean): MipLevel[] {
     );
   }
   const levels = [base];
-  for (let level = base; level.width > 1 || level.height > 1;) {
+  for (let level = base; levels.length < levelCount && (level.width > 1 || level.height > 1);) {
     level = halved(level, renormalize);
     levels.push(level);
   }

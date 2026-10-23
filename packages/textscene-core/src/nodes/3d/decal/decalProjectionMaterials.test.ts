@@ -25,6 +25,13 @@ function receiver(material: THREE.Material): THREE.Mesh {
   return new THREE.Mesh(new THREE.BufferGeometry(), material);
 }
 
+/** What `buildDecalProjectionGeometry` bakes: UVs over the projected texture, top row at v = 0. */
+function projectedGeometry(): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
+  return geometry;
+}
+
 function lambertReceiver(): THREE.Mesh {
   return receiver(
     new THREE.MeshStandardMaterial({
@@ -38,7 +45,7 @@ function lambertReceiver(): THREE.Mesh {
 
 /** The material a projection onto `onto` draws with. */
 function projectionMaterial(decal: DecalProjectionMaterials, onto: THREE.Mesh): THREE.MeshPhysicalMaterial {
-  return decal.project(new THREE.BufferGeometry(), onto).material as THREE.MeshPhysicalMaterial;
+  return decal.project(projectedGeometry(), onto).material as THREE.MeshPhysicalMaterial;
 }
 
 function decalOf(map: THREE.Texture): DecalProjectionMaterials {
@@ -129,7 +136,7 @@ describe('DecalProjectionMaterials', () => {
   it("re-shades a projection once its receiver's terms move", () => {
     const decal = materials();
     const onto = receiver(new THREE.MeshStandardMaterial());
-    const mesh = decal.project(new THREE.BufferGeometry(), onto);
+    const mesh = decal.project(projectedGeometry(), onto);
     onto.material = new THREE.MeshStandardMaterial({ roughness: 0.2 });
     expect([decal.followReceivers(), (mesh.material as THREE.MeshPhysicalMaterial).roughness]).toEqual([
       true,
@@ -140,14 +147,14 @@ describe('DecalProjectionMaterials', () => {
   it("re-shades a projection once its receiver's specular occlusion turns off", () => {
     const decal = materials();
     const onto = receiver(new THREE.MeshStandardMaterial());
-    decal.project(new THREE.BufferGeometry(), onto);
+    decal.project(projectedGeometry(), onto);
     onto.material = new THREE.MeshStandardMaterial({ userData: specularOcclusionUserData(true) });
     expect(decal.followReceivers()).toBe(true);
   });
 
   it('leaves a projection whose receiver is unchanged, and reports nothing', () => {
     const decal = materials();
-    decal.project(new THREE.BufferGeometry(), lambertReceiver());
+    decal.project(projectedGeometry(), lambertReceiver());
     expect(decal.followReceivers()).toBe(false);
   });
 
@@ -161,6 +168,67 @@ describe('DecalProjectionMaterials', () => {
       0.5,
       0.5,
     ]);
+  });
+
+  describe('the decal atlas rectangle', () => {
+    const rect = { x: 0.25, y: 0.5, width: 0.125, height: 0.25 };
+
+    function uvOf(mesh: THREE.Mesh): number[] {
+      return [...(mesh.geometry.getAttribute('uv').array as Float32Array)];
+    }
+
+    it('hides a projection until its texture has a rectangle', () => {
+      const mesh = materials().project(projectedGeometry(), lambertReceiver());
+      expect(mesh.visible).toBe(false);
+    });
+
+    it('maps the texture UVs into the rectangle, and shows the projection', () => {
+      const decal = materials();
+      const mesh = decal.project(projectedGeometry(), lambertReceiver());
+
+      expect(decal.placeInAtlas(rect)).toBe(true);
+
+      // uv * size + position: (0, 0) -> (0.25, 0.5), (1, 0) -> (0.375, 0.5), (0.5, 1) -> (0.3125, 0.75).
+      expect(uvOf(mesh)).toEqual([0.25, 0.5, 0.375, 0.5, 0.3125, 0.75]);
+      expect(mesh.visible).toBe(true);
+    });
+
+    it('reports no change for a rectangle it already holds', () => {
+      const decal = materials();
+      decal.project(projectedGeometry(), lambertReceiver());
+      decal.placeInAtlas(rect);
+
+      expect(decal.placeInAtlas({ ...rect })).toBe(false);
+    });
+
+    it('moves a projection to a new rectangle from the texture UVs, not from the last rectangle', () => {
+      const decal = materials();
+      const mesh = decal.project(projectedGeometry(), lambertReceiver());
+      decal.placeInAtlas(rect);
+
+      decal.placeInAtlas({ x: 0, y: 0, width: 0.5, height: 0.5 });
+
+      expect(uvOf(mesh)).toEqual([0, 0, 0.5, 0, 0.25, 0.5]);
+    });
+
+    it('places a projection built after the rectangle was known', () => {
+      const decal = materials();
+      decal.placeInAtlas(rect);
+
+      const mesh = decal.project(projectedGeometry(), lambertReceiver());
+
+      expect(uvOf(mesh).slice(0, 2)).toEqual([0.25, 0.5]);
+      expect(mesh.visible).toBe(true);
+    });
+
+    it('hides the projections again when its texture leaves the atlas (edge case)', () => {
+      const decal = materials();
+      const mesh = decal.project(projectedGeometry(), lambertReceiver());
+      decal.placeInAtlas(rect);
+
+      expect(decal.placeInAtlas(undefined)).toBe(true);
+      expect(mesh.visible).toBe(false);
+    });
   });
 
   it('builds the next material afresh after a dispose', () => {

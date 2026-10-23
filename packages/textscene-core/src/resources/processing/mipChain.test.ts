@@ -32,6 +32,13 @@ describe('mipChain', () => {
     expect(sizes).toEqual(['8x2', '4x1', '2x1', '1x1']);
   });
 
+  it('stops at the level count, short of 1 × 1', () => {
+    const sizes = mipChain({ data: new Uint8Array(8 * 2 * 4), width: 8, height: 2 }, false, 2).map(
+      ({ width, height }) => `${width}x${height}`
+    );
+    expect(sizes).toEqual(['8x2', '4x1']);
+  });
+
   it('averages a one-texel-wide column down its rows only (edge case)', () => {
     const base = [0, 0, 0, 0, 255, 255, 255, 255, 1, 2, 3, 4, 9, 9, 9, 9];
     expect(levelBytes(base, 1, 4).slice(1)).toEqual([

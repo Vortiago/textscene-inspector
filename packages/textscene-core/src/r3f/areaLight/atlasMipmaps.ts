@@ -16,7 +16,7 @@
  */
 
 import { channelToByte, sRGBChannelToLinear } from '../../utils/colorSpace.js';
-import type { AreaTextureImage } from './atlasLayout.js';
+import type { GodotImage } from '../textureAtlas/godotImage.js';
 import {
   AREA_LIGHT_ATLAS_BLUR_GROUP_SIDE,
   AREA_LIGHT_ATLAS_BLUR_KERNEL,
@@ -25,7 +25,7 @@ import {
 
 /** A texture where the atlas holds it, in mip 0's texels. */
 export interface PlacedTexture {
-  image: AreaTextureImage;
+  image: GodotImage;
   x: number;
   y: number;
   width: number;
@@ -58,7 +58,7 @@ function rgbDecoded(pixels: Pixels): Pixels {
 }
 
 /** A plain loop, not `Float32Array.from` with a map: a callback per byte costs more than the blur. */
-function pixelsOf(image: AreaTextureImage): Pixels {
+function pixelsOf(image: GodotImage): Pixels {
   const data = new Float32Array(image.data.length);
   for (let i = 0; i < data.length; i++) data[i] = image.data[i]! / 255;
   return { width: image.width, height: image.height, data };
