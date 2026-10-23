@@ -14,7 +14,9 @@ export function SoftwareRenderingProbe(): null {
   const store = useSoftwareRenderingStore();
 
   useEffect(() => {
-    const publish = () => store.set(rendersInSoftware(gl.getContext() as WebGL2RenderingContext));
+    const publish = () => {
+      if (rendersInSoftware(gl.getContext() as WebGL2RenderingContext)) store.set(true);
+    };
     publish();
     // A browser whose GPU process fails restores the context on its software rasteriser.
     gl.domElement.addEventListener('webglcontextrestored', publish);

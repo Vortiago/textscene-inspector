@@ -173,7 +173,10 @@ describe("the scissor around a light's volumes", () => {
   }
 
   /** A 200x100 target whose own scissor is `x, y, width, height`, tested when `isTested`. */
-  function scissoredTarget(scissor = [0, 0, 200, 100] as const, isTested = true): THREE.WebGLRenderTarget {
+  function scissoredTarget(
+    scissor: readonly [number, number, number, number] = [0, 0, 200, 100],
+    isTested = true
+  ): THREE.WebGLRenderTarget {
     const target = new THREE.WebGLRenderTarget(200, 100);
     target.scissor.fromArray(scissor);
     target.scissorTest = isTested;
@@ -187,11 +190,20 @@ describe("the scissor around a light's volumes", () => {
     vi.spyOn(renderer, 'getRenderTarget').mockReturnValue(target);
     const scissor = vi.spyOn(renderer.state, 'scissor');
     const scissorTest = vi.spyOn(renderer.state, 'setScissorTest');
-    const draw = [renderer, new THREE.Scene(), viewCamera(), mesh.geometry, mesh.material, null] as const;
+    const draw = [
+      renderer,
+      new THREE.Scene(),
+      viewCamera(),
+      mesh.geometry,
+      mesh.material as THREE.Material,
+      new THREE.Group(),
+    ] as const;
     mesh.onBeforeRender(...draw);
     const during = { scissor: scissor.mock.lastCall![0].clone(), test: scissorTest.mock.lastCall![0] };
     mesh.onAfterRender(...draw);
     const after = { scissor: scissor.mock.lastCall![0].clone(), test: scissorTest.mock.lastCall![0] };
+    renderer.dispose();
+    target.dispose();
     return { during, after };
   }
 

@@ -78,7 +78,10 @@ export function shadowColorQuadStencilProps(ordinal: number) {
   } as const;
 }
 
-/** Reused by every volume's draw, so a frame of lights allocates no scissor. */
+/**
+ * Written only by `scissorToRect`'s `onBeforeRender`, and read within that call, so every volume's
+ * draw reuses them and a frame of lights allocates no scissor.
+ */
 const volumeScissor = new THREE.Vector4();
 const targetSize = new THREE.Vector2();
 
