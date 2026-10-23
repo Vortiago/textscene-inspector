@@ -396,6 +396,7 @@ describe('csgMesh3DGeometry: a manifold brush', () => {
     ['SphereMesh', 'SphereMesh', {}],
     ['TorusMesh', 'TorusMesh', {}],
     ['PrismMesh', 'PrismMesh', {}],
+    ['TubeTrailMesh', 'TubeTrailMesh', {}],
   ])('closes the brush of a %s, whose seams weld', (_label, type, data) => {
     expect(isClosed(type, data)).toBe(true);
   });
@@ -403,6 +404,7 @@ describe('csgMesh3DGeometry: a manifold brush', () => {
   it.each([
     ['PlaneMesh', 'PlaneMesh', {}],
     ['QuadMesh', 'QuadMesh', {}],
+    ['RibbonTrailMesh', 'RibbonTrailMesh', {}],
     ['CylinderMesh with cap_top off', 'CylinderMesh', { cap_top: 'false' }],
     ['CylinderMesh with cap_bottom off', 'CylinderMesh', { cap_bottom: 'false' }],
   ])('opens the brush of a %s', (_label, type, data) => {
