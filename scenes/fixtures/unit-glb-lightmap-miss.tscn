@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+; One variable: a GLB mesh whose lightmap unwrap the project commits no `.unwrap_cache` for.
+; `meshes/light_baking=2` makes Godot unwrap the box with xatlas on import, which the previewer
+; does not run, so the box reads no lightmap and draws with ambient light alone, where the bake
+; of `unit-lightmap-gi-baked.lmbake` names it. The Static sun lights neither mesh in real time.
+; The ground still reads its lightmap. No other scene has a lightmap-named mesh without a
+; rebuilt unwrap, so none shows this mesh read a lightmap through a UV2 that is not Godot's.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-lightmap-miss.glb" id="1_glb"]
+[ext_resource type="LightmapGIData" uid="uid://cq6e4ueye16gs" path="res://unit-lightmap-gi-baked.lmbake" id="2_bake"]
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="PlaneMesh" id="ground"]
+lightmap_size_hint = Vector2i(42, 42)
+material = SubResource("ground_mat")
+add_uv2 = true
+size = Vector2(8, 8)
+
+[node name="Root" instance=ExtResource("1_glb")]
+
+[node name="Box" parent="." index="0"]
+transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0, 0.75, 0)
+
+[node name="Ground" type="MeshInstance3D" parent="." index="1"]
+mesh = SubResource("ground")
+
+[node name="Sun" type="DirectionalLight3D" parent="." index="2"]
+transform = Transform3D(-0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, 0.5, -0.5, 0, 4, 0)
+light_bake_mode = 1
+shadow_enabled = true
+
+[node name="LightmapGI" type="LightmapGI" parent="." index="3"]
+quality = 0
+environment_mode = 0
+light_data = ExtResource("2_bake")
