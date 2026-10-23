@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseIdTrail,
   parseUniqueId,
-  recoverByIdTrail,
+  recoverByIdTrailOver,
   reparentedName,
   type IdHeading,
 } from './packedScene.js';
@@ -65,7 +65,9 @@ describe('parseUniqueId', () => {
   });
 });
 
-describe('recoverByIdTrail', () => {
+describe('recoverByIdTrailOver', () => {
+  const recoverByIdTrail = (trail: number[], headings: IdHeading[], builtCount: number) =>
+    recoverByIdTrailOver(trail, headings, (index) => headings[index]!, builtCount);
   const plain = (uniqueId: number): IdHeading => ({ uniqueId, instance: undefined, isPlaced: true });
   const orphan = plain(0);
 

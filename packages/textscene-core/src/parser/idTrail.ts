@@ -39,6 +39,18 @@ export function ownerTrailEnd<N extends RawNode>(
 }
 
 /**
+ * Where `trail` lands once every heading is built, as a `[connection]` end looks it up: instantiate
+ * makes the connections after the build (`packed_scene.cpp:647-660`).
+ */
+export function builtSceneTrailEnd<N extends RawNode>(
+  trail: readonly number[],
+  origins: readonly NodeOrigin<N>[],
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): IdTrailEnd | undefined {
+  return trailEnd(trail, origins, isPlaced, origins.length);
+}
+
+/**
  * Where `trail` lands over the first `builtCount` headings, as instantiate has built them. Only the
  * heading the trail names is read, so the cost does not grow with the other headings.
  */
@@ -49,14 +61,6 @@ function trailEnd<N extends RawNode>(
   builtCount: number
 ): IdTrailEnd | undefined {
   return recoverByIdTrailOver(trail, origins, (index) => headingOf(origins[index]!, isPlaced), builtCount);
-}
-
-/** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
-export function idHeadingsOf<N extends RawNode>(
-  origins: readonly NodeOrigin<N>[],
-  isPlaced: (origin: NodeOrigin<N>) => boolean
-): IdHeading[] {
-  return origins.map((origin) => headingOf(origin, isPlaced));
 }
 
 function headingOf<N extends RawNode>(

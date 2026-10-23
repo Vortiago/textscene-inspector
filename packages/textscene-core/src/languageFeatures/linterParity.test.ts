@@ -1,7 +1,6 @@
 /** The language features and the linter name the same `[node]` heading for every connection end. */
 
 import { describe, expect, it } from 'vitest';
-import { connectionDiagnostics } from '../linter/connectionDiagnostics';
 import { StrictTscnParser } from '../linter/StrictTscnParser';
 import { LanguageDocument } from './document';
 import { nodeSectionOfConnectionEnd } from './nodeSeating';
@@ -29,14 +28,8 @@ const SCENES = {
   ),
 };
 
-interface EndHeadings {
-  path: string;
-  linter?: number;
-  languageFeatures?: number;
-}
-
 /** Each connection end's path, with the one-based heading line each side resolves it to. */
-function headingLinesOfEnds(text: string): EndHeadings[] {
+function headingLinesOfEnds(text: string): { path: string; linter?: number; languageFeatures?: number }[] {
   const { scene, lines } = new StrictTscnParser().parse(text);
   const document = new LanguageDocument(text);
   const ends = scene!.connections.flatMap(({ from, to, fromIdTrail, toIdTrail }) => [
@@ -65,12 +58,11 @@ describe('a connection end in the linter and the language features', () => {
     expect(resolved.map(({ path }) => path)).toEqual(['Inst/Sub/X/Y', '.', 'Inst/Sub/X']);
   });
 
-  it('resolves an end that only its uid path recovers, which the linter does not report', () => {
+  it('resolves an end that only its uid path recovers, and an end with none stays unresolved', () => {
     const text = SCENES['a connection end that only its uid path recovers'];
-    const { scene } = new StrictTscnParser().parse(text);
-    expect(connectionDiagnostics(scene!)).toEqual([
-      expect.objectContaining({ message: expect.stringContaining('to="Gone"') }),
+    expect(headingLinesOfEnds(text)).toEqual([
+      { path: 'Gone', linter: 5, languageFeatures: 5 },
+      { path: 'Gone', linter: undefined, languageFeatures: undefined },
     ]);
-    expect(headingLinesOfEnds(text).map(({ languageFeatures }) => languageFeatures)).toEqual([5, undefined]);
   });
 });

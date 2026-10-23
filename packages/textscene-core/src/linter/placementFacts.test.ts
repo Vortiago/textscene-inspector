@@ -35,14 +35,15 @@ const names = (origins: readonly NodeOrigin<RawNode>[]) => origins.map((o) => o.
 
 describe('placementFacts', () => {
   it('reports nothing for a well-formed scene', () => {
-    expect(factsOf(['Root'], ['Child', '.'])).toEqual({
+    const { resolveConnectionEnd, ...facts } = factsOf(['Root'], ['Child', '.']);
+    expect(resolveConnectionEnd).toBeTypeOf('function');
+    expect(facts).toEqual({
       orphanedNodes: [],
       reRootedNames: new Map(),
       rootWithParent: undefined,
       emptyParentHeadings: [],
       refusesToInstantiate: false,
       idRecoveries: new Map(),
-      resolveConnectionEnd: expect.any(Function),
     });
   });
 

@@ -558,12 +558,21 @@ function findInstanceAnchor<N extends RawNode>(
  */
 export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>(
   all: readonly H[],
-  { seated }: Pick<SceneSeating<N>, 'seated'>
+  seating: Pick<SceneSeating<N>, 'seated'>
 ): H[] {
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
-  return all.filter(({ node }) => {
-    const seat = seated.get(node);
-    return seat === undefined || seat.authoredName !== undefined;
-  });
+  return all.filter(({ node }) => !isSeatedAtOwnPath(node, seating));
+}
+
+/**
+ * Whether the heading's node sits at the path its `parent=` names. A re-rooted copy keeps its
+ * `authoredName`, and a node the seating left out has no copy.
+ */
+export function isSeatedAtOwnPath<N extends RawNode>(
+  node: N,
+  { seated }: Pick<SceneSeating<N>, 'seated'>
+): boolean {
+  const seat = seated.get(node);
+  return seat !== undefined && seat.authoredName === undefined;
 }

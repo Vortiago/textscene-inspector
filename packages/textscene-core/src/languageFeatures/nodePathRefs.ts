@@ -11,20 +11,22 @@ import { nodeSectionOfConnectionEnd, nodeSectionOfPath } from './nodeSeating.js'
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
 import type { Position, Range } from './types.js';
 
-/** A node path attribute of a heading, with the attribute that holds the id trail its end falls back to. */
-interface PathAttribute {
-  readonly key: string;
-  readonly idTrailKey?: string;
-}
+/**
+ * A node path attribute of a heading. A `parent=` is stored as written. A connection end is
+ * simplified, and falls back to the uid path that `idTrailKey` names.
+ */
+type PathAttribute =
+  | { readonly key: string; readonly kind: 'parent' }
+  | { readonly key: string; readonly kind: 'connectionEnd'; readonly idTrailKey: string };
 
 /** The attributes of each heading tag that hold a node path. A Map, since a tag is free text: `constructor` must miss. */
 const PATH_ATTRIBUTES: ReadonlyMap<string, readonly PathAttribute[]> = new Map([
-  ['node', [{ key: 'parent' }]],
+  ['node', [{ key: 'parent', kind: 'parent' }]],
   [
     'connection',
     [
-      { key: 'from', idTrailKey: 'from_uid_path' },
-      { key: 'to', idTrailKey: 'to_uid_path' },
+      { key: 'from', kind: 'connectionEnd', idTrailKey: 'from_uid_path' },
+      { key: 'to', kind: 'connectionEnd', idTrailKey: 'to_uid_path' },
     ],
   ],
 ]);
@@ -33,9 +35,9 @@ const PATH_ATTRIBUTES: ReadonlyMap<string, readonly PathAttribute[]> = new Map([
 interface NodePathReference {
   readonly path: string;
   readonly range: Range;
+  readonly kind: PathAttribute['kind'];
   /** The ids of the uid path a connection end falls back to. Undefined for a `parent=` and for an end with none. */
   readonly idTrail: readonly number[] | undefined;
-  readonly isConnectionEnd: boolean;
 }
 
 /** The path references that resolve to each node heading, in line order. */
@@ -47,15 +49,18 @@ const nodeUsesByDocument = new WeakMap<LanguageDocument, NodeUses>();
 /** The node paths a heading line spells. */
 function referencesOnHeading(section: DocumentSection, lineText: string): NodePathReference[] {
   const line = section.headingLine - 1;
-  return (PATH_ATTRIBUTES.get(section.tag) ?? []).flatMap(({ key, idTrailKey }) => {
-    const attribute = headingAttribute(lineText, key);
+  return (PATH_ATTRIBUTES.get(section.tag) ?? []).flatMap((pathAttribute) => {
+    const attribute = headingAttribute(lineText, pathAttribute.key);
     if (!attribute) return [];
     return [
       {
         path: attribute.value,
         range: lineRange(line, attribute.span),
-        idTrail: idTrailKey === undefined ? undefined : parseIdTrail(section.attributes[idTrailKey]),
-        isConnectionEnd: idTrailKey !== undefined,
+        kind: pathAttribute.kind,
+        idTrail:
+          pathAttribute.kind === 'connectionEnd'
+            ? parseIdTrail(section.attributes[pathAttribute.idTrailKey])
+            : undefined,
       },
     ];
   });
@@ -64,9 +69,9 @@ function referencesOnHeading(section: DocumentSection, lineText: string): NodePa
 /** The `[node]` heading a reference names, or undefined where this file seats none there. */
 export function nodeOfReference(
   document: LanguageDocument,
-  { path, idTrail, isConnectionEnd }: NodePathReference
+  { path, idTrail, kind }: NodePathReference
 ): DocumentSection | undefined {
-  return isConnectionEnd
+  return kind === 'connectionEnd'
     ? nodeSectionOfConnectionEnd(document, path, idTrail)
     : nodeSectionOfPath(document, path);
 }

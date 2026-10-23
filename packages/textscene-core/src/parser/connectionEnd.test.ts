@@ -49,20 +49,20 @@ describe('connectionEndResolver', () => {
     expect(endOf('Gone', [7])).toEqual({ status: 'found', node: buttonSeat });
   });
 
-  it('answers unknowable where the trail continues into an instanced scene', () => {
-    expect(endOf('Gone', [9, 4]).status).toBe('unknowable');
+  it.each([
+    ['continues into an instanced scene', [9, 4], 'unknowable'],
+    ['names no heading', [99], 'missing'],
+    ['is absent', undefined, 'missing'],
+    ['names a heading Godot re-rooted, which is not at its own path', [5], 'missing'],
+  ] as const)('answers by status where the path misses and the trail %s', (_case, trail, status) => {
+    expect(endOf('Gone', trail && [...trail]).status).toBe(status);
   });
 
-  it('finds nothing where the path misses and the trail names no heading', () => {
-    expect(endOf('Gone', [99]).status).toBe('missing');
-  });
-
-  it('finds nothing where the path misses and there is no trail', () => {
-    expect(endOf('Gone', undefined).status).toBe('missing');
-  });
-
-  it('finds nothing where the trail names a heading Godot re-rooted, which is not at its own path', () => {
-    expect(seating.seated.get(lost)?.authoredName).toBe('Lost');
-    expect(endOf('Gone', [5]).status).toBe('missing');
+  it('finds nothing for a trail that names a heading of a scene Godot refuses to instantiate', () => {
+    // A later heading with no parent= refuses the scene, so Godot re-roots nothing and `Lost` stays unplaced.
+    const refusing = [node('Root'), node('Lost', 'Gone'), node('Stray')];
+    const refusingOrigins = originsOf(refusing, { Lost: 7 });
+    const refused = connectionEndResolver(refusingOrigins, seatScene(refusingOrigins));
+    expect(refused('Gone', [7]).status).toBe('missing');
   });
 });

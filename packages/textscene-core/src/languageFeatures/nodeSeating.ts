@@ -7,7 +7,7 @@
 import { connectionEndResolver, type ConnectionEndResolver } from '../parser/connectionEnd.js';
 import { createRawNode, nodeOrigin } from '../parser/rawNode.js';
 import { seatScene, type SceneSeating } from '../parser/sceneTreeBuilder.js';
-import type { RawNode } from '../parser/types.js';
+import type { NodePathResolution, RawNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 
@@ -88,9 +88,8 @@ export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<Documen
 
 /** The `[node]` heading a root-relative node path names, or undefined where no heading is seated there. */
 export function nodeSectionOfPath(document: LanguageDocument, path: string): DocumentSection | undefined {
-  const { seating, sectionByNode } = seatingOf(document);
-  const resolution = seating.resolve(path);
-  return resolution.status === 'found' ? sectionByNode.get(resolution.node) : undefined;
+  const seating = seatingOf(document);
+  return sectionOf(seating, seating.seating.resolve(path));
 }
 
 /**
@@ -102,7 +101,14 @@ export function nodeSectionOfConnectionEnd(
   path: string,
   idTrail: readonly number[] | undefined
 ): DocumentSection | undefined {
-  const { resolveConnectionEnd, sectionByNode } = seatingOf(document);
-  const resolution = resolveConnectionEnd(path, idTrail);
+  const seating = seatingOf(document);
+  return sectionOf(seating, seating.resolveConnectionEnd(path, idTrail));
+}
+
+/** The `[node]` heading a resolution found, or undefined. */
+function sectionOf(
+  { sectionByNode }: DocumentSeating,
+  resolution: NodePathResolution<RawNode>
+): DocumentSection | undefined {
   return resolution.status === 'found' ? sectionByNode.get(resolution.node) : undefined;
 }

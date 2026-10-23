@@ -9,7 +9,7 @@ import {
   refusesToInstantiate,
   rootDeclaringParent,
 } from '../parser/instantiateRefusal.js';
-import { orphanedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
+import { isSeatedAtOwnPath, orphanedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import { connectionEndResolver } from '../parser/connectionEnd.js';
 import { idTrailEnd } from '../parser/idTrail.js';
 
@@ -33,14 +33,13 @@ export function placementFacts(
   seating: SceneSeating<RawNode>
 ): PlacementFacts {
   const orphans = orphanedNodes(origins, seating);
-  const isOrphan = new Set(orphans);
   return {
     orphanedNodes: orphans,
     reRootedNames: reRootedNames(orphans, seating),
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),
-    idRecoveries: idRecoveries(origins, isOrphan, seating),
+    idRecoveries: idRecoveries(origins, seating),
     resolveConnectionEnd: connectionEndResolver(origins, seating),
   };
 }
@@ -51,13 +50,14 @@ export function placementFacts(
  */
 function idRecoveries(
   origins: readonly NodeOrigin<RawNode>[],
-  isOrphan: ReadonlySet<NodeOrigin<RawNode>>,
-  { seated, pathOf }: SceneSeating<RawNode>
+  seating: SceneSeating<RawNode>
 ): Map<NodeOrigin<RawNode>, IdRecovery> {
+  const { seated, pathOf } = seating;
+  const isPlaced = ({ node }: NodeOrigin<RawNode>) => isSeatedAtOwnPath(node, seating);
   const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
   origins.forEach((origin, index) => {
-    if (!isOrphan.has(origin)) return;
-    const end = idTrailEnd(origins, index, (heading) => !isOrphan.has(heading));
+    if (isPlaced(origin)) return;
+    const end = idTrailEnd(origins, index, isPlaced);
     if (!end) return;
     const via = origins[end.heading]!;
     recoveries.set(origin, { kind: end.kind, via, viaPath: pathOf.get(seated.get(via.node)!) });
