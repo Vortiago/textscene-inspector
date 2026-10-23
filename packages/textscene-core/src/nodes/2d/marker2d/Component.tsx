@@ -9,9 +9,12 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import { axisCross } from '../../../r3f/gizmo/axisCross';
 import type { Marker2DProperties } from './types';
 
+const { X, Y } = Vector3Axis;
+const FLOATS_PER_VERTEX = 3;
 const DEFAULT_EXTENTS = 10;
 
 export function Marker2D({ node, children }: NodeComponentProps) {
@@ -25,10 +28,12 @@ export function Marker2D({ node, children }: NodeComponentProps) {
   );
 }
 
-/** Godot's y points down the screen and three's up, and the Node2D group leaves a child's points alone. */
+/** Godot's y points down the screen and three's up. The Node2D group leaves a child's points alone. */
 function crossInGroupSpace(extents: number) {
-  const { positions, colors } = axisCross(extents > 0 ? extents : DEFAULT_EXTENTS, ['x', 'y']);
-  return { positions: positions.map((value, index) => (index % 3 === 1 ? -value : value)), colors };
+  const cross = axisCross(extents > 0 ? extents : DEFAULT_EXTENTS, [X, Y]);
+  for (let i = Y; i < cross.positions.length; i += FLOATS_PER_VERTEX)
+    cross.positions[i] = 0 - cross.positions[i]!;
+  return cross;
 }
 
 function MarkerCross({ extents }: { extents: number }) {

@@ -51,19 +51,18 @@ describe('<Marker3D>', () => {
   });
 
   // `marker_3d_gizmo_plugin.cpp:60-79`: the theme's axis colours, each negative arm darkened by 0.5.
-  it('colours the positive arm of each axis and darkens the negative arm', async () => {
+  // `axisCross.test.ts` holds every colour, so this one checks the first and last vertex.
+  it('draws the x arm in red and the negative z arm in dark blue', async () => {
     const renderer = await renderMarker('MyMarker');
     const cross = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
     const colors = Array.from(cross.geometry.getAttribute('color').array);
-    const expected = [
-      godotColorToLinear({ r: 0.96, g: 0.2, b: 0.32 }),
-      godotColorToLinear({ r: 0.48, g: 0.1, b: 0.16 }),
-      godotColorToLinear({ r: 0.53, g: 0.84, b: 0.01 }),
-      godotColorToLinear({ r: 0.265, g: 0.42, b: 0.005 }),
-      godotColorToLinear({ r: 0.16, g: 0.55, b: 0.96 }),
-      godotColorToLinear({ r: 0.08, g: 0.275, b: 0.48 }),
-    ].flatMap(({ r, g, b }) => [r, g, b, r, g, b]);
-    expect(colors).toEqual(expected.map((value) => expect.closeTo(value, 6)));
+    const red = godotColorToLinear({ r: 0.96, g: 0.2, b: 0.32 });
+    const darkBlue = godotColorToLinear({ r: 0.08, g: 0.275, b: 0.48 });
+    expect(colors).toHaveLength(36);
+    expect(colors.slice(0, 3)).toEqual([red.r, red.g, red.b].map((value) => expect.closeTo(value, 6)));
+    expect(colors.slice(-3)).toEqual(
+      [darkBlue.r, darkBlue.g, darkBlue.b].map((value) => expect.closeTo(value, 6))
+    );
   });
 
   it('positions its children with the Gizmos toggle off', async () => {
