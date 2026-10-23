@@ -40,6 +40,7 @@ describe('placementFacts', () => {
     expect(facts).toEqual({
       orphanedNodes: [],
       reRootedNames: new Map(),
+      seatedOrphans: new Set(),
       rootWithParent: undefined,
       emptyParentHeadings: [],
       refusesToInstantiate: false,

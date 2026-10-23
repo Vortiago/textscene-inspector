@@ -1,9 +1,8 @@
 /**
  * The node paths a heading spells in `parent=`, `from=` and `to=`, and the `[node]` heading each
- * one names. A `parent=` names the node the heading sits under in the seating, which walked the
- * path while the headings above were built (`packed_scene.cpp:157-165`) and fell back to the
- * `parent_id_path=`. A connection end walks the finished scene, simplified (`resource_format_text.cpp:370-371`),
- * and falls back to its uid path.
+ * one names. A `parent=` names the heading's seat in the tree, walked while the headings above were
+ * built (`packed_scene.cpp:157-165`). A connection end walks the finished scene, simplified
+ * (`resource_format_text.cpp:370-371`). Both fall back to their id trail.
  */
 
 import { parseIdTrail } from '../godot/scene/packedScene.js';

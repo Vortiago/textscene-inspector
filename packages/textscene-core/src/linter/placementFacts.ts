@@ -22,6 +22,7 @@ type PlacementFacts = Pick<
   HeadingFacts,
   | 'orphanedNodes'
   | 'reRootedNames'
+  | 'seatedOrphans'
   | 'rootWithParent'
   | 'emptyParentHeadings'
   | 'refusesToInstantiate'
@@ -41,6 +42,7 @@ export function placementFacts(
   return {
     orphanedNodes: orphans,
     reRootedNames: reRootedNames(orphans, seating),
+    seatedOrphans: new Set(orphans.filter(({ node }) => seating.seated.has(node))),
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),

@@ -184,13 +184,15 @@ export interface ConnectionHeading {
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
-   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which
-   * `reRootedNames` holds, and those it left out of `nodes`, for a file or a trail Godot does not
-   * re-root, or a later heading with no `parent=`.
+   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which `reRootedNames`
+   * holds, those it landed under a `parent_id_path=` heading, and those it left out of `nodes`, for
+   * a file or a trail Godot does not re-root, or a later heading with no `parent=`.
    */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
   /** The name the builder gave each re-rooted heading's node, which the heading's own node keeps unrenamed. */
   reRootedNames: ReadonlyMap<NodeOrigin<RawNode>, string>;
+  /** The orphans the builder gave a seat in the tree, re-rooted or landed, so Phase 2 ran their rules. */
+  seatedOrphans: ReadonlySet<NodeOrigin<RawNode>>;
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`), or undefined.
