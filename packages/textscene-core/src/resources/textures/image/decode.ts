@@ -90,8 +90,8 @@ export interface DecodedImage extends DecodedLevel {
   /** The name `Image::format_names` gives the saved format. */
   format: string;
   /**
-   * Largest first, down to 1 × 1, as saved: Godot never rebuilds them. Empty for an image saved
-   * without mipmaps, and for one whose bytes end before its last level.
+   * The Stored mip chain, largest first, down to 1 × 1, as saved: Godot never rebuilds it. Empty
+   * for an image saved without mipmaps, and for one whose bytes end before its last level.
    */
   levels: DecodedLevel[];
 }

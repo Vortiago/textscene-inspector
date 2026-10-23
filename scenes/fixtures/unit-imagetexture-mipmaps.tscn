@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+; One variable: the stored mip levels of a saved Image. An 8 x 8 RGBA8 checker Image saves
+; "mipmaps": true, and its levels below the top are solid red (4 x 4), green (2 x 2) and blue
+; (1 x 1), so the colour of a texel shows which level Godot samples. The Image tiles 64 by 16 on
+; an unshaded 4 x 1 QuadMesh that lies flat, so the framing camera sees it recede and the sample
+; runs from the top level to the smaller ones. No other golden saves an Image with mipmaps: the
+; other ImageTextures save "mipmaps": false, so a regression in the levels shows nowhere else.
+
+[sub_resource type="Image" id="Image_mip"]
+data = {
+"data": PackedByteArray("AAAA//////8AAAD//////wAAAP//////AAAA////////////AAAA//////8AAAD//////wAAAP//////AAAA/wAAAP//////AAAA//////8AAAD//////wAAAP///////////wAAAP//////AAAA//////8AAAD//////wAAAP8AAAD//////wAAAP//////AAAA//////8AAAD///////////8AAAD//////wAAAP//////AAAA//////8AAAD/AAAA//////8AAAD//////wAAAP//////AAAA////////////AAAA//////8AAAD//////wAAAP//////AAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP8A/wD/AP8A/wD/AP8A/wD/AAD//w=="),
+"format": "RGBA8",
+"height": 8,
+"mipmaps": true,
+"width": 8
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_mip"]
+image = SubResource("Image_mip")
+
+[sub_resource type="Environment" id="Environment_mip"]
+background_mode = 1
+background_color = Color(0.2, 0.2, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mip"]
+shading_mode = 0
+albedo_texture = SubResource("ImageTexture_mip")
+uv1_scale = Vector3(64, 16, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_mip"]
+size = Vector2(4, 1)
+
+[node name="ImageTextureMipmaps" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_mip")
+
+[node name="Strip" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0)
+mesh = SubResource("QuadMesh_mip")
+surface_material_override/0 = SubResource("StandardMaterial3D_mip")
