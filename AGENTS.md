@@ -230,9 +230,13 @@ copy beside it. Paths are under `packages/textscene-core/src/`.
   `nodes/2d/cpuparticles2d/drawableParamBounds.ts`.
 - A shader chunk patch: the helpers in `r3f/shaderPatch/chunkPatch.ts`. Install text edits on
   three's chunks with `installChunkEdits`.
-- A UV window on a texture: `regionUvWindow` and `flippedUvWindow` in `r3f/uvWindow.ts`.
-- A TextureRect texture clone: `rectTexture` in `nodes/2d/ui/texturerect/rectTexture.ts`.
+- A UV window on a texture: `regionUvWindow`, `flippedUvWindow` and `applyUvWindow` in
+  `r3f/uvWindow.ts`.
+- A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
+  through it, before the upload.
 - A React context that holds a store: `createStoreContext` in `r3f/hooks/createStoreContext.tsx`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
+- In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in
+  `r3f/testing/shaderPatches.ts`.
 - In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
