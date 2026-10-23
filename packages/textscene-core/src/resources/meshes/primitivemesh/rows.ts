@@ -22,19 +22,14 @@ export function rowAt(j: number, rowCount: number, height: number): Row {
 }
 
 /**
- * Calls `writeRing` for each of the `rowCount + 1` rows, then joins the ring it wrote to the ring
+ * Calls `writeRing` for each row `j` of the `rowCount + 1`, then joins the ring it wrote to the ring
  * above with `quadBetweenRows`. Every ring writes the same number of vertices.
  */
-export function writeRings(
-  writer: SurfaceWriter,
-  rowCount: number,
-  height: number,
-  writeRing: (row: Row) => void
-): void {
+export function writeRings(writer: SurfaceWriter, rowCount: number, writeRing: (j: number) => void): void {
   let prevrow = writer.vertexCount;
   for (let j = 0; j <= rowCount; j++) {
     const thisrow = writer.vertexCount;
-    writeRing(rowAt(j, rowCount, height));
+    writeRing(j);
     if (j > 0) {
       const columns = writer.vertexCount - thisrow;
       for (let i = 1; i < columns; i++) writer.quadBetweenRows(prevrow, thisrow, i);

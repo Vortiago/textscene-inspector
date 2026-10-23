@@ -35,7 +35,7 @@ import { BOTTOM_CAP, TOP_CAP, writeCapFan } from '../primitivemesh/capFan.js';
 import { curveScaleSampler } from '../primitivemesh/curveScale.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { rimColumns, type RimColumn } from '../primitivemesh/rimPoint.js';
-import { writeRings } from '../primitivemesh/rows.js';
+import { rowAt, writeRings } from '../primitivemesh/rows.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { TubeTrailMeshProperties } from './types.js';
 
@@ -69,7 +69,9 @@ function writeBody(
   depth: number,
   radiusScale: RadiusScale
 ): void {
-  writeRings(writer, p.sectionRings * p.sections, depth, ({ v, y }) => {
+  const rowCount = p.sectionRings * p.sections;
+  writeRings(writer, rowCount, (j) => {
+    const { v, y } = rowAt(j, rowCount, depth);
     const rowRadius = storedReal(p.radius * radiusScale(v));
     for (const { x, z, u } of rim) {
       writer.vertex([x * rowRadius, y, z * rowRadius], [x, 0, z], [z, 0, -x, 1], [u, v * 0.5], [0, 0]);

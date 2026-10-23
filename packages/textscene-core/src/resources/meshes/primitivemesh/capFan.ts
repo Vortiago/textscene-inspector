@@ -6,10 +6,10 @@
 
 import { storedReal } from '../../../godot/math/real.js';
 import type { RimColumn } from './rimPoint.js';
-import type { SurfaceWriter, Vec4 } from './surfaceWriter.js';
+import type { SurfaceWriter, Vec2, Vec4 } from './surfaceWriter.js';
 
 /** A UV or UV2 at a point on the unit disc the cap fills. */
-type DiscUv = (x: number, z: number) => [number, number];
+type DiscUv = (x: number, z: number) => Vec2;
 
 /** The tangent of every cap vertex (`:1175`, `:2609`). */
 const CAP_TANGENT: Vec4 = [1, 0, 0, 1];
@@ -36,8 +36,9 @@ export const BOTTOM_CAP: CapFace = {
   isFlipped: true,
 };
 
-/** No UV2: a writer without `add_uv2` drops it. */
-const NO_UV2: DiscUv = () => [0, 0];
+/** No UV2: a writer without `add_uv2` drops it, so every cap vertex shares one frozen tuple. */
+const ZERO_UV2: Vec2 = Object.freeze([0, 0] as const);
+const NO_UV2: DiscUv = () => ZERO_UV2;
 
 /** The centre at `y`, then each column of `rim` at `radius`. */
 export function writeCapFan(

@@ -18,26 +18,26 @@ describe('rowAt', () => {
 });
 
 describe('writeRings', () => {
-  /** A ring of three vertices at each row's Y. */
+  /** A ring of three vertices at the given Y. */
   function writeTriangleRing(writer: SurfaceWriter, y: number): void {
     for (let i = 0; i < 3; i++) writer.vertex([i, y, 0], [0, 0, 1], [1, 0, 0, 1], [0, 0], [0, 0]);
   }
 
-  it('writes rowCount + 1 rings from the top down', () => {
+  it('writes rowCount + 1 rings, numbered from the top down', () => {
     const writer = new SurfaceWriter(false);
-    const ys: number[] = [];
-    writeRings(writer, 2, 2, ({ y }) => {
-      ys.push(y);
-      writeTriangleRing(writer, y);
+    const rows: number[] = [];
+    writeRings(writer, 2, (j) => {
+      rows.push(j);
+      writeTriangleRing(writer, j);
     });
 
-    expect(ys).toEqual([1, 0, -1]);
+    expect(rows).toEqual([0, 1, 2]);
     expect(writer.vertexCount).toBe(9);
   });
 
   it('joins each ring to the one above with quadBetweenRows, column by column', () => {
     const writer = new SurfaceWriter(false);
-    writeRings(writer, 1, 2, ({ y }) => writeTriangleRing(writer, y));
+    writeRings(writer, 1, (j) => writeTriangleRing(writer, j));
 
     expect(Array.from(writer.surface().indices)).toEqual([0, 1, 3, 1, 4, 3, 1, 2, 4, 2, 5, 4]);
   });
@@ -45,7 +45,7 @@ describe('writeRings', () => {
   it('numbers the rings from the vertex the writer is at (edge case)', () => {
     const writer = new SurfaceWriter(false);
     writeTriangleRing(writer, 5);
-    writeRings(writer, 1, 2, ({ y }) => writeTriangleRing(writer, y));
+    writeRings(writer, 1, (j) => writeTriangleRing(writer, j));
 
     expect(Array.from(writer.surface().indices).slice(0, 3)).toEqual([3, 4, 6]);
   });

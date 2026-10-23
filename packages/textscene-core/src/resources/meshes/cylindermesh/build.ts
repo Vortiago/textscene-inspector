@@ -34,7 +34,7 @@ import { normalizedVector3 } from '../../../godot/math/vector.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { BOTTOM_CAP, TOP_CAP, writeCapFan } from '../primitivemesh/capFan.js';
 import { rimColumns, type RimColumn } from '../primitivemesh/rimPoint.js';
-import { writeRings } from '../primitivemesh/rows.js';
+import { rowAt, writeRings } from '../primitivemesh/rows.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { CylinderMeshProperties } from './types.js';
 
@@ -112,7 +112,9 @@ function writeSide(
   const radiusStep = storedReal(bottomRadius - topRadius);
   const radiusHStep = storedReal(layout.sideBottomH - layout.sideTopH);
   const sideNormalY = storedReal(radiusStep / height);
-  writeRings(writer, p.rings + 1, height, ({ v, y }) => {
+  const rowCount = p.rings + 1;
+  writeRings(writer, rowCount, (j) => {
+    const { v, y } = rowAt(j, rowCount, height);
     const radius = storedReal(topRadius + storedReal(radiusStep * v));
     const radiusH = storedReal(layout.sideTopH + storedReal(radiusHStep * v));
     for (const { x, z, u } of rim) {

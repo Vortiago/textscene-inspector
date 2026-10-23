@@ -33,6 +33,7 @@ import { storedReal } from '../../../godot/math/real.js';
 import { normalizedVector3 } from '../../../godot/math/vector.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { rimPoint } from '../primitivemesh/rimPoint.js';
+import { writeRings } from '../primitivemesh/rows.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { SphereMeshProperties } from './types.js';
 
@@ -50,11 +51,10 @@ export function buildSphereMeshSurface(p: SphereMeshProperties, uv2Padding: numb
   const heightV = storedReal((scale * Math.PI) / (scale * Math.PI + storedReal(padding / radius)));
 
   const writer = new SurfaceWriter(uv2Padding !== null);
-  let thisrow = 0;
-  let prevrow = 0;
-  for (let j = 0; j <= rings + 1; j++) {
-    const v = storedReal(j / (rings + 1));
-    const lastRow = j === rings + 1;
+  const rowCount = rings + 1;
+  writeRings(writer, rowCount, (j) => {
+    const v = storedReal(j / rowCount);
+    const lastRow = j === rowCount;
     const w = lastRow ? 0 : storedReal(Math.sin(Math.PI * v));
     const y = lastRow ? -1 : storedReal(Math.cos(Math.PI * v));
 
@@ -73,12 +73,7 @@ export function buildSphereMeshSurface(p: SphereMeshProperties, uv2Padding: numb
         : normalizedVector3(storedReal(xw * scale), y, storedReal(zw * scale));
       const wH = storedReal(w * 2 * centerH);
       writer.vertex(position, normal, [z, 0, -x, 1], [u, v], [centerH + (u - 0.5) * wH, v * heightV]);
-
-      if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
     }
-
-    prevrow = thisrow;
-    thisrow = writer.vertexCount;
-  }
+  });
   return writer.surface();
 }
