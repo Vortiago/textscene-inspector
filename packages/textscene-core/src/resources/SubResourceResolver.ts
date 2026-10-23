@@ -13,55 +13,16 @@ import {
 } from '../godot/project/resourceFormats.js';
 import { resourceSliceRegistry } from './sliceRegistration.js';
 import { fileExtension } from './fileExtension.js';
-
-/** One resource table's ids, and how many of its leading entries they cover. */
-interface IdIndex<T> {
-  byId: Map<string, T>;
-  indexed: number;
-}
-
-/**
- * Keyed by table identity, written only by {@link indexedIds}. A parsed table is never
- * edited in place, only appended to while its file is scanned, so an index extends over
- * the new tail and restarts after a truncation. A caller that replaced an entry in place
- * would read the old one.
- */
-const externalIdIndexes = new WeakMap<readonly TscnExternalResource[], IdIndex<TscnExternalResource>>();
-const internalIdIndexes = new WeakMap<readonly TscnInternalResource[], IdIndex<TscnInternalResource>>();
-
-/**
- * The id map over `table`, built once per table: every reference in a scene resolves
- * in O(1), where a scan per reference costs O(references x resources) on each lint and
- * each render.
- */
-function indexedIds<T>(
-  table: readonly T[],
-  indexes: WeakMap<readonly T[], IdIndex<T>>,
-  claimIds: (byId: Map<string, T>, entry: T) => void
-): Map<string, T> {
-  let index = indexes.get(table);
-  if (!index || index.indexed > table.length) {
-    index = { byId: new Map(), indexed: 0 };
-    indexes.set(table, index);
-  }
-  for (; index.indexed < table.length; index.indexed += 1) {
-    claimIds(index.byId, table[index.indexed]!);
-  }
-  return index.byId;
-}
+import { firstWith, lastWith } from '../utils/indexBy.js';
 
 /**
  * The last `[ext_resource]` keeps an id: Godot's loader assigns `ext_resources[id]` per entry
  * (`resource_format_text.cpp:517-519`), and every reference follows the whole table.
  */
-function claimExternalIds(byId: Map<string, TscnExternalResource>, resource: TscnExternalResource): void {
-  byId.set(resource.id, resource);
-}
+const lastExternalWithId = lastWith((resource: TscnExternalResource) => resource.id);
 
 /** The first entry in declaration order keeps an id, so a repeated id resolves to its first declaration. */
-function claimInternalIds(byId: Map<string, TscnInternalResource>, resource: TscnInternalResource): void {
-  if (!byId.has(resource.id)) byId.set(resource.id, resource);
-}
+const firstInternalWithId = firstWith((resource: TscnInternalResource) => resource.id);
 
 /** The `[ext_resource]` declaring `id`, the last one when a file repeats an id. */
 export function findExtResource(
@@ -70,7 +31,7 @@ export function findExtResource(
 ): TscnExternalResource | undefined {
   // An empty table answers nothing, and a caller's `?? []` is a fresh array per call.
   if (externalResources.length === 0) return undefined;
-  return indexedIds(externalResources, externalIdIndexes, claimExternalIds).get(id);
+  return lastExternalWithId(externalResources, id)?.entry;
 }
 
 export function parseResourceReference(
@@ -131,7 +92,7 @@ export function findSubResource(
   id: string
 ): TscnInternalResource | undefined {
   if (internalResources.length === 0) return undefined;
-  return indexedIds(internalResources, internalIdIndexes, claimInternalIds).get(id);
+  return firstInternalWithId(internalResources, id)?.entry;
 }
 
 /**
