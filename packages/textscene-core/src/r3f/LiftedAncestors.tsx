@@ -5,7 +5,7 @@
  * to be rebuilt around it.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useContext, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
@@ -15,6 +15,11 @@ import {
   useParentModulate,
   WHITE_MODULATE,
 } from './canvasItemModulate.js';
+import {
+  TextureSampler2DContext,
+  inheritTextureSampler,
+  type AmbientTextureSampler,
+} from './canvasItemTextureSampler.js';
 import {
   EffectiveZProvider,
   accumulateCanvasItemZ,
@@ -41,6 +46,7 @@ export function LiftedAncestors({
   // in Godot, so a hidden or tinted y-sorted container keeps hiding or tinting the
   // descendants lifted out of it, as its own body does through CanvasItem2D.
   const parentModulate = useParentModulate();
+  const parentSampler = useContext(TextureSampler2DContext);
   // The same goes for the z the lights are culled against: `z_index` accumulates
   // down the tree, so an item lifted out of two nested containers has to be told
   // what those containers contributed before it adds its own.
@@ -112,11 +118,23 @@ export function LiftedAncestors({
     [liftedPast, parentModulate]
   );
 
+  // The filter and repeat inherit too, innermost ancestor last so that it wins, as in the tree.
+  const inheritedSampler = useMemo(
+    () =>
+      liftedPast.reduce<AmbientTextureSampler>((acc, a) => {
+        const props = a.properties as Partial<Node2DProperties>;
+        return inheritTextureSampler({ filter: props.texture_filter, repeat: props.texture_repeat }, acc);
+      }, parentSampler),
+    [liftedPast, parentSampler]
+  );
+
   return (
     <Modulate2DContext.Provider value={inherited}>
-      <EffectiveZProvider value={liftedZ}>
-        <CanvasSpaceProvider value={liftedSpace}>{wrapped}</CanvasSpaceProvider>
-      </EffectiveZProvider>
+      <TextureSampler2DContext.Provider value={inheritedSampler}>
+        <EffectiveZProvider value={liftedZ}>
+          <CanvasSpaceProvider value={liftedSpace}>{wrapped}</CanvasSpaceProvider>
+        </EffectiveZProvider>
+      </TextureSampler2DContext.Provider>
     </Modulate2DContext.Provider>
   );
 }

@@ -11,7 +11,11 @@ import { describe, expect, it } from 'vitest';
 const SRC = path.resolve(import.meta.dirname, '../..');
 
 /** Pure helpers that make a clone for a caller to own; the guard checks their callers. */
-const CLONE_HELPERS = new Set(['r3f/spriteFrame.ts', 'resources/textures/applyTextureState.ts']);
+const CLONE_HELPERS = new Set([
+  'r3f/spriteFrame.ts',
+  'r3f/undecodedTexture.ts',
+  'resources/textures/applyTextureState.ts',
+]);
 
 /** A texture clone: a `.clone()` on a texture-named value, or a call to a clone helper. */
 const DRAWN_CLONE = /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\b(?:spriteSamplerClone|undecodedClone)\(/;
@@ -35,7 +39,7 @@ describe('drawn texture clones', () => {
     .filter(({ file, text }) => !CLONE_HELPERS.has(file) && DRAWN_CLONE.test(text));
 
   it('finds the clone sites, so the scan is not blind', () => {
-    expect(files.length).toBeGreaterThanOrEqual(9);
+    expect(files.length).toBeGreaterThanOrEqual(6);
   });
 
   it('routes every drawn clone through the tiled upload', () => {

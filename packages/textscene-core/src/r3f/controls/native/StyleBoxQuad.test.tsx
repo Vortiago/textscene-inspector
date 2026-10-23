@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StyleBoxQuad } from './StyleBoxQuad';
+import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
+import { CanvasItemTextureFilter } from '../../../godot/scene/canvasItem';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { StyleBoxLineBox, StyleBoxTextureBox } from './parseStyleBox';
 import { sRGBChannelToLinear } from '../../../utils/colorSpace';
@@ -314,6 +316,23 @@ describe('<StyleBoxQuad>', () => {
       const mat = mesh.material as THREE.MeshBasicMaterial;
       expect(mat.map).toBeTruthy();
       expect(mesh.geometry.attributes.uv).toBeTruthy();
+    });
+
+    it("samples with the owner's inherited texture_filter (canvas_item_add_nine_patch)", async () => {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(TEX, fakeTexture());
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <TextureSampler2DContext.Provider
+            value={{ filter: CanvasItemTextureFilter.NEAREST, repeat: undefined }}
+          >
+            <StyleBoxQuad styleBox={textureBox()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+          </TextureSampler2DContext.Provider>
+        </ResourceLoaderProvider>
+      );
+      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+      const map = (mesh.material as THREE.MeshBasicMaterial).map!;
+      expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
     });
 
     it('grows the drawn rect by expand_margin (StyleBoxTexture::draw)', async () => {

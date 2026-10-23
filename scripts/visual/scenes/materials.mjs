@@ -50,6 +50,10 @@ export const MATERIAL_SCENES = [
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // The one variable: `texture_filter` per Sprite3D, over stripes at a grazing angle. Only the
+  // anisotropic filters keep them, and Nearest with Mipmaps and Anisotropic needs the draw-site write
+  // (`nearestAnisotropy.ts`), which three skips under a nearest magnification.
+  { name: 'sprite3d-texture-filter-anisotropic', file: 'unit-sprite3d-texture-filter-anisotropic.tscn' },
   // The one scene with a Sprite3D that has no texture. Godot's draw drops the mesh for both an unset
   // and a null texture (sprite_3d.cpp:798), so neither shows a placeholder between the anchors.
   { name: 'sprite3d-untextured', file: 'unit-sprite3d-untextured.tscn' },

@@ -178,6 +178,26 @@ describe('<Polygon2D> textured fill', () => {
     expect(mat.map!.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
+  it('repeats the texture where texture_repeat is Enabled, for UVs that leave 0 to 1', async () => {
+    const { renderer } = await render({
+      polygon: SQUARE,
+      texture: 'ExtResource("1")',
+      texture_repeat: '2',
+    });
+    const map = (mesh(renderer).material as THREE.MeshBasicMaterial).map!;
+    expect([map.wrapS, map.wrapT]).toEqual([THREE.RepeatWrapping, THREE.RepeatWrapping]);
+  });
+
+  it('samples nearest where texture_filter is Nearest', async () => {
+    const { renderer } = await render({
+      polygon: SQUARE,
+      texture: 'ExtResource("1")',
+      texture_filter: '1',
+    });
+    const map = (mesh(renderer).material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+
   it('hands the fill a material three has not yet compiled, when the texture arrives after the mesh', async () => {
     // Every real load shows the mesh with `map = null` first, and the texture
     // lands one render later. `USE_MAP` is baked at the first compile, so an

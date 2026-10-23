@@ -52,6 +52,17 @@ describe('parseNode2D', () => {
     expect(parseNode2D(heading('Node2D', { name: 'N' }), {}).top_level).toBe(false);
   });
 
+  it('parses texture_filter and texture_repeat, which default to PARENT_NODE', () => {
+    // `CanvasItem::texture_filter` and `texture_repeat` start at PARENT_NODE (`canvas_item.h:123-124`),
+    // 0 in both enums, so an unset node defers to its ancestors.
+    const unset = parseNode2D(heading('Node2D', { name: 'N' }), {});
+    expect(unset.texture_filter).toBe(0);
+    expect(unset.texture_repeat).toBe(0);
+    const set = parseNode2D(heading('Node2D', { name: 'N' }), { texture_filter: '1', texture_repeat: '2' });
+    expect(set.texture_filter).toBe(1);
+    expect(set.texture_repeat).toBe(2);
+  });
+
   it('parses light_mask, the CanvasItem side of Godot 2D light culling', () => {
     // 512 shares no bit with a light's default range_item_cull_mask of 1.
     expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '512' }).light_mask).toBe(512);

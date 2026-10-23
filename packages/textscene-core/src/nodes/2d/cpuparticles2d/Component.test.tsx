@@ -282,3 +282,11 @@ describe('<CPUParticles2D>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });
+
+describe('CPUParticles2D texture sampler', () => {
+  it('samples the texture nearest where texture_filter is Nearest', async () => {
+    const r = await render(node({ texture_filter: '1' }));
+    const map = (particleMesh(r)!.material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+});
