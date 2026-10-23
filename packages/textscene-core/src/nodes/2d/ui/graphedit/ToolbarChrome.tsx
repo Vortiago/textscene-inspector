@@ -87,7 +87,7 @@ interface ButtonIconProps {
  */
 function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
-  const icon = layoutButtonContent({
+  const layout = layoutButtonContent({
     rectSize: { x: item.rect.w, y: item.rect.h },
     styleMargin: { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
     hSeparation: 0,
@@ -100,7 +100,9 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
     hasText: false,
     textNaturalSize: { x: 0, y: 0 },
     rtl,
-  }).icon!.rect;
+  });
+  if (!layout.icon) return null;
+  const icon = layout.icon.rect;
   return (
     <CanvasItemGroup position={[item.rect.x + icon.x, -(item.rect.y + icon.y), 0]} renderOrder={renderOrder}>
       <ControlQuad
