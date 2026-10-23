@@ -156,6 +156,20 @@ describe('CanvasFrame', () => {
     frame.dispose();
   });
 
+  it('draws at the size of the target bound before it, as a sub-viewport pass binds its own', () => {
+    const { gl, draws } = recordingRenderer(640, 360);
+    const subViewportTarget = new THREE.WebGLRenderTarget(200, 100);
+    gl.setRenderTarget(subViewportTarget);
+    const frame = multisampledFrame(0);
+
+    frame.render(gl, scene, camera);
+
+    expect(frame).toMatchObject({ width: 200, height: 100 });
+    expect(draws[1]!.target).toBe(subViewportTarget);
+    subViewportTarget.dispose();
+    frame.dispose();
+  });
+
   it('follows the drawing buffer when the canvas resizes (edge case)', () => {
     const frame = multisampledFrame(4);
     frame.render(recordingRenderer(64, 64).gl, scene, camera);

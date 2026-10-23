@@ -31,15 +31,18 @@ The 2D canvas always draws through a `CanvasFrame`, whatever `msaa_2d` says.
 - Passes that read `gl_FragCoord` or project through the camera, such as the window scissor and the
   canvas item lighting, run on the same flipped target. They need no change.
 
-A SubViewport's canvas pass, the 3D canvas and picking (ADR-0006) keep their own frames. Godot's
-SubViewport canvas also puts the canvas top on row 0, so a quad on a pixel centre inside a
-SubViewport still draws one row off. Issue #852 puts that pass out of scope, and it needs its own
-change.
+A 2D SubViewport pass draws the same way: its camera is a `World2DCamera`, and it draws into its own
+`CanvasFrame`, which copies, rows reversed, into the published target. The frame is as large as the
+target and takes the viewport's `msaa_2d` count, so the target itself is single-sampled. Consumers
+sample the target as before. A Polygon2D edge on a pixel centre inside a SubViewport drew one row
+off Godot before (rows 301 to 360 against 300 to 359) and matches it now (1/255). The 3D canvas and
+picking (ADR-0006) keep their own frames.
 
 ## Consequences
 
-Each 2D frame costs one extra full-screen draw call when `msaa_2d` is off. `scripts/perf/budgets.json`
-holds it as one Canvas copy run and one draw call per 2D budget scene.
+Each 2D frame, and each 2D SubViewport pass, costs one extra full-screen draw call when `msaa_2d`
+is off. `scripts/perf/budgets.json` holds it as one Canvas copy run and one draw call per 2D budget
+scene.
 
 The 2D goldens whose edges sit on pixel centres moved. The visual suite and `pnpm ref:diff` show
 each move, and none is further from Godot than before except where the reference driver differs.

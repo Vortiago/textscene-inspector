@@ -323,7 +323,7 @@ An item's position in Godot's single pre-order walk of the canvas, the third and
 _Avoid_: "paint index".
 
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
-The render target the root 2D canvas draws into, y-down like Godot's, and copies to the drawing buffer with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
+The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
 _Avoid_: "MSAA frame".
 
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):

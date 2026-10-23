@@ -1,7 +1,7 @@
 /**
- * The frame the 2D canvas draws through. The world's camera maps the canvas top to GL row 0
- * (`world2DCamera.ts`), so the frame holds the canvas upside down and copies itself to the drawing
- * buffer with its rows reversed. It is multisampled when the project's `msaa_2d` is on: Godot draws
+ * The frame a 2D canvas draws through, the root's or a sub-viewport's. The camera maps the canvas
+ * top to GL row 0 (`world2DCamera.ts`), so the frame holds the canvas upside down and copies itself
+ * to the target bound before it, the drawing buffer or a sub-viewport's, with its rows reversed. It is multisampled when the project's `msaa_2d` is on: Godot draws
  * such a viewport into a multisampled buffer at the mode's sample count
  * (`texture_storage.cpp:3604-3613`), and a drawing buffer cannot multisample at a chosen count.
  */
@@ -55,7 +55,7 @@ function copyToTarget(
  * in linear.
  */
 export class CanvasFrame extends THREE.WebGLRenderTarget {
-  private readonly drawingBuffer = new THREE.Vector2();
+  private readonly outputSize = new THREE.Vector2();
 
   constructor() {
     super(1, 1, { depthBuffer: true, stencilBuffer: false });
@@ -70,11 +70,8 @@ export class CanvasFrame extends THREE.WebGLRenderTarget {
 
   /** Draws `scene` into the frame and copies the result, rows reversed, to the target bound before. */
   render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
-    gl.getDrawingBufferSize(this.drawingBuffer);
-    if (this.width !== this.drawingBuffer.x || this.height !== this.drawingBuffer.y) {
-      this.setSize(this.drawingBuffer.x, this.drawingBuffer.y);
-    }
     const previous = gl.getRenderTarget();
+    this.sizeLike(gl, previous);
     try {
       gl.setRenderTarget(this);
       gl.render(scene, camera);
@@ -83,5 +80,14 @@ export class CanvasFrame extends THREE.WebGLRenderTarget {
       throw error;
     }
     copyToTarget(gl, this, previous);
+  }
+
+  /** The copy neither scales nor filters, so the frame is as large as the output it copies to. */
+  private sizeLike(gl: THREE.WebGLRenderer, output: THREE.WebGLRenderTarget | null): void {
+    if (output) this.outputSize.set(output.width, output.height);
+    else gl.getDrawingBufferSize(this.outputSize);
+    if (this.width !== this.outputSize.x || this.height !== this.outputSize.y) {
+      this.setSize(this.outputSize.x, this.outputSize.y);
+    }
   }
 }

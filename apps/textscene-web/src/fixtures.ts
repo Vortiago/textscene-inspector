@@ -1913,6 +1913,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Subviewport Edge On Pixel Centre",
+    "file": "unit-subviewport-edge-on-pixel-centre.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
     "category": "Other"
