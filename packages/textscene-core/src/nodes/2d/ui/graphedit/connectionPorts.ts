@@ -71,12 +71,14 @@ export function graphNodePorts(
   const outputs: GraphNodePort[] = [];
   const inputs: GraphNodePort[] = [];
   for (const row of rows) {
-    const y = row.slotY;
     if (row.slot.leftEnabled) {
-      inputs.push({ pos: { x: portHOffset, y }, color: row.slot.leftColor });
+      inputs.push({ pos: { x: portHOffset, y: row.slotY }, color: row.slot.leftColor });
     }
     if (row.slot.rightEnabled) {
-      outputs.push({ pos: { x: rightPortX(outerSize.x, portHOffset), y }, color: row.slot.rightColor });
+      outputs.push({
+        pos: { x: rightPortX(outerSize.x, portHOffset), y: row.slotY },
+        color: row.slot.rightColor,
+      });
     }
   }
   return { outputs, inputs };

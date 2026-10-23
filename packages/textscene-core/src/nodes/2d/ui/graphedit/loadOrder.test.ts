@@ -168,7 +168,7 @@ describe('resolveGraphEditLoadState — zoom', () => {
   });
 });
 
-describe('resolveGraphEditLoadState — updatedScrollbars', () => {
+describe('resolveGraphEditLoadState: updatedScrollbars', () => {
   it('is false when no key reaches _update_scrollbars', () => {
     expect(resolveGraphEditLoadState(SIZED_400_320).updatedScrollbars).toBe(false);
   });
