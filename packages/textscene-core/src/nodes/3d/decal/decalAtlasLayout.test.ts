@@ -94,4 +94,19 @@ describe('fitDecalAtlas', () => {
     const { layout } = fitDecalAtlas(later, 256);
     expect(layout.rects).toEqual([{ x: 16, y: 16, width: 64, height: 64 }]);
   });
+
+  it('keeps as many textures as dropping one at a time would (edge case)', () => {
+    const many = Array.from({ length: 60 }, (_, index) => ({
+      width: 96 + (index % 5) * 64,
+      height: 64 + (index % 7) * 32,
+    }));
+    const keptByDropping = Array.from({ length: many.length + 1 }, (_, kept) => many.length - kept).find(
+      (kept) => {
+        const { width, height } = packDecalAtlas(many.slice(0, kept));
+        return width <= 1024 && height <= 1024;
+      }
+    );
+
+    expect(fitDecalAtlas(many, 1024).layout.rects).toHaveLength(keptByDropping!);
+  });
 });

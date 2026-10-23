@@ -13,16 +13,18 @@ export class AtlasTexture extends sharedTexture(THREE.DataTexture) {
     this.minFilter = THREE.LinearMipmapLinearFilter;
     this.magFilter = THREE.LinearFilter;
   }
+}
 
-  /**
-   * Holds `levels`, the largest first. A texture's GPU storage keeps its first size, so a new size
-   * drops the old storage before the levels upload. The same size uploads into it.
-   */
-  hold(levels: readonly MipLevel[]): void {
-    const [base] = levels;
-    if (base && (base.width !== this.image.width || base.height !== this.image.height)) this.dispose();
-    this.mipmaps = [...levels];
-    this.image = base as unknown as typeof this.image;
-    this.needsUpdate = true;
-  }
+/**
+ * Fills `atlas` with `levels`, the largest first. A function, not a method: a dev server reload
+ * hands an `AtlasTexture` an earlier evaluation built, and this reads only its public fields.
+ * A texture's GPU storage keeps its first size, so a new size drops the old storage before the
+ * levels upload. The same size uploads into it.
+ */
+export function holdAtlasLevels(atlas: THREE.DataTexture, levels: readonly MipLevel[]): void {
+  const [base] = levels;
+  if (base && (base.width !== atlas.image.width || base.height !== atlas.image.height)) atlas.dispose();
+  atlas.mipmaps = [...levels];
+  atlas.image = base as unknown as typeof atlas.image;
+  atlas.needsUpdate = true;
 }

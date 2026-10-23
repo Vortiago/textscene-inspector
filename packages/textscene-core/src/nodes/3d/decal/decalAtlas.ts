@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { releasedOnUnmount } from '../../../r3f/sharedTexture.js';
 import { AtlasHolders } from '../../../r3f/textureAtlas/atlasHolders.js';
-import { AtlasTexture } from '../../../r3f/textureAtlas/atlasTexture.js';
+import { AtlasTexture, holdAtlasLevels } from '../../../r3f/textureAtlas/atlasTexture.js';
 import { readableTextures } from '../../../r3f/textureAtlas/godotImage.js';
 import { fitDecalAtlas, packDecalAtlas, type DecalAtlasLayout } from './decalAtlasLayout.js';
 import { decalAtlasLevels } from './decalAtlasLevels.js';
@@ -33,9 +33,13 @@ const holders = new AtlasHolders();
  */
 let rects = new Map<THREE.Texture, DecalAtlasRect>();
 
+/** Whether the last build left a readable texture out for the GPU's size. Written only by `updateDecalAtlas`. */
+let leftTexturesOut = false;
+
 /** The one atlas, an empty one until a texture joins it. Its identity never changes. */
 export function decalAtlasTexture(): THREE.Texture {
-  if (atlasTexture.mipmaps.length === 0) atlasTexture.hold(decalAtlasLevels(packDecalAtlas([]), []));
+  if (atlasTexture.mipmaps.length === 0)
+    holdAtlasLevels(atlasTexture, decalAtlasLevels(packDecalAtlas([]), []));
   return atlasTexture;
 }
 
@@ -44,9 +48,14 @@ export function holdDecalTexture(texture: THREE.Texture): void {
   holders.hold(texture);
 }
 
-/** Lets go of `texture` for one holder, and removes it with the last (`texture_remove_from_decal_atlas`). */
+/**
+ * Lets go of `texture` for one holder, and removes it with the last (`texture_remove_from_decal_atlas`).
+ * A texture left out for size gets another build then, as the room it held may fit one.
+ */
 export function releaseDecalTexture(texture: THREE.Texture): void {
-  if (holders.release(texture)) rects.delete(texture);
+  if (!holders.release(texture)) return;
+  rects.delete(texture);
+  if (leftTexturesOut) holders.markChanged();
 }
 
 /** Where `texture` lies in the atlas, or undefined for a texture the atlas does not hold. */
@@ -67,6 +76,7 @@ export function updateDecalAtlas(maxTextureSize: number): void {
     readable.map(({ image }) => image),
     maxTextureSize
   );
+  leftTexturesOut = wanted !== undefined;
   if (wanted) {
     console.warn(
       `The decal atlas needs ${wanted.width}x${wanted.height} but the GPU allows ${maxTextureSize}: ` +
@@ -75,7 +85,8 @@ export function updateDecalAtlas(maxTextureSize: number): void {
   }
   const placed = readable.slice(0, layout.rects.length);
   rects = new Map(placed.map(({ texture }, index) => [texture, fractionsOf(layout, index)]));
-  atlasTexture.hold(
+  holdAtlasLevels(
+    atlasTexture,
     decalAtlasLevels(
       layout,
       placed.map(({ image }) => image)

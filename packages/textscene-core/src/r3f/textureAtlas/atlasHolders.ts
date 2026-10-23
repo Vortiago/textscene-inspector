@@ -39,6 +39,11 @@ export class AtlasHolders {
     return true;
   }
 
+  /** Asks the next `takeChanged` for a rebuild, as when a texture left that held others out. */
+  markChanged(): void {
+    this.isDirty = true;
+  }
+
   /**
    * The held textures in join order when one joined or changed its pixels since the last call, and
    * else undefined. A texture that left keeps its pixels in the atlas until then.

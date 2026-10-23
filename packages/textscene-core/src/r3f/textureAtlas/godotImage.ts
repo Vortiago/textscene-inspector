@@ -1,6 +1,6 @@
 /** A held texture's pixels as Godot's image holds them: RGBA8 sRGB bytes, the top row first. */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { readImagePixels } from '../../resources/formats/image/imagePixels.js';
 import { isBottomUp, reversedRows } from '../../utils/reversedRows.js';
 
@@ -18,7 +18,7 @@ export interface GodotImage {
 const reads = new WeakMap<THREE.Texture, { version: number; image: GodotImage | undefined }>();
 
 /** Undefined when `texture`'s pixels cannot be read, as before its image decodes. */
-export function godotImage(texture: THREE.Texture): GodotImage | undefined {
+function godotImage(texture: THREE.Texture): GodotImage | undefined {
   const read = reads.get(texture);
   if (read?.version === texture.version) return read.image;
   const image = readGodotImage(texture);
@@ -27,6 +27,7 @@ export function godotImage(texture: THREE.Texture): GodotImage | undefined {
 }
 
 function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
+  if (!readsAsBytes(texture)) return undefined;
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;
   if (!isBottomUp(texture)) return pixels;
@@ -35,6 +36,14 @@ function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
     height: pixels.height,
     data: reversedRows(pixels.data, pixels.width, pixels.height),
   };
+}
+
+/**
+ * Whether `readImagePixels` gives `texture` as RGBA8 bytes: its own bytes, or half floats it clamps
+ * to bytes. A float or a one- or two-channel array would copy into the atlas with the wrong stride.
+ */
+function readsAsBytes({ format, type }: THREE.Texture): boolean {
+  return format === THREE.RGBAFormat && (type === THREE.UnsignedByteType || type === THREE.HalfFloatType);
 }
 
 /** The textures of `textures` whose pixels can be read, each with its image, in the order given. */

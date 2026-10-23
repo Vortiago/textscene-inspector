@@ -11,7 +11,7 @@ import { userDataDeclaration } from '../userDataDeclaration.js';
 import { buildAreaLightAtlas, type AreaLightAtlas, type AreaTexturePlacement } from './atlasLayout.js';
 import { mipSize } from './atlasMipmaps.js';
 import { AtlasHolders } from '../textureAtlas/atlasHolders.js';
-import { AtlasTexture } from '../textureAtlas/atlasTexture.js';
+import { AtlasTexture, holdAtlasLevels } from '../textureAtlas/atlasTexture.js';
 import { readableTextures } from '../textureAtlas/godotImage.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';
@@ -27,7 +27,8 @@ const atlasTexture = releasedOnUnmount(
 );
 
 function holdAtlas(atlas: AreaLightAtlas): void {
-  atlasTexture.hold(
+  holdAtlasLevels(
+    atlasTexture,
     atlas.mipmaps.map((data, level) => ({
       data,
       width: mipSize(atlas.width, level),
