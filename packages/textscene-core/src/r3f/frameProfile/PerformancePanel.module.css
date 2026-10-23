@@ -28,13 +28,6 @@
   white-space: nowrap;
 }
 
-/* A warning, not a number, so it takes the warning colour. It takes pointer events, unlike the
-   panel, so its title shows on hover: a drag that starts on these few characters orbits nothing. */
-.software {
-  color: var(--tsi-warning);
-  pointer-events: auto;
-}
-
 .steps {
   margin-top: var(--tsi-space-1);
   border-collapse: collapse;

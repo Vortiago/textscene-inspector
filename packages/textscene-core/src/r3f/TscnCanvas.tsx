@@ -29,6 +29,7 @@ import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { CameraFit } from './CameraFit.js';
 import { SharedTextureRelease } from './sharedTexture.js';
 import { FrameProfiler } from './frameProfile/FrameProfiler.js';
+import { SoftwareRenderingProbe } from './softwareRendering/SoftwareRenderingProbe.js';
 import styles from './TscnCanvas.module.css';
 
 /**
@@ -138,6 +139,7 @@ export function TscnCanvas() {
       >
         <SharedTextureRelease />
         <FrameProfiler />
+        <SoftwareRenderingProbe />
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />

@@ -31,7 +31,6 @@ function timerContext() {
   const state = { isDisjoint: false, isLost: false, overlaps: 0, staleBegins: 0, contextsMade: 1 };
   const isStale = (query: FakeQuery) => query.context !== state.contextsMade;
   const context = {
-    RENDERER: 0x1f01,
     QUERY_RESULT: 0x8866,
     QUERY_RESULT_AVAILABLE: 0x8867,
     getExtension: (name: string) => (name === 'EXT_disjoint_timer_query_webgl2' ? ext : null),
@@ -59,10 +58,7 @@ function timerContext() {
       if (state.isLost || isStale(query)) return null;
       return pname === context.QUERY_RESULT_AVAILABLE ? query.isAvailable : query.elapsedNs;
     },
-    getParameter: (pname: number) => {
-      if (pname === ext.GPU_DISJOINT_EXT) return state.isDisjoint;
-      return pname === context.RENDERER ? 'Test GPU' : null;
-    },
+    getParameter: (pname: number) => (pname === ext.GPU_DISJOINT_EXT ? state.isDisjoint : null),
   };
   return {
     renderer: { ...profiledRendererMembers(), getContext: () => context } as unknown as THREE.WebGLRenderer,
@@ -182,40 +178,6 @@ describe('startFrameProfile', () => {
   it('reports no GPU time when the context offers no timer query', () => {
     const { window } = cpuOnly();
     expect(window(() => {})).toMatchObject({ hasGpuTimer: false, gpuMs: null });
-  });
-
-  it('reports a context that draws in software', () => {
-    expect(
-      profiledWindow(
-        cpuOnlyRenderer('SwiftShader'),
-        () => 0,
-        () => {}
-      ).rendersInSoftware
-    ).toBe(true);
-  });
-
-  it('reports a context that draws on a GPU as not in software', () => {
-    const { window } = cpuOnly();
-    expect(window(() => {}).rendersInSoftware).toBe(false);
-  });
-
-  it('reports software from the next window once a restored context falls back to it', () => {
-    const context = { RENDERER: 0x1f01, getExtension: () => null, getParameter: () => 'Test GPU' };
-    const renderer = { ...profiledRendererMembers(), getContext: () => context };
-    const published: FrameStats[] = [];
-    const profile = startFrameProfile(renderer as unknown as THREE.WebGLRenderer, (stats) =>
-      published.push(stats)
-    );
-    const runWindow = (first: number) => {
-      for (let index = first; index < first + FRAMES_PER_WINDOW; index++) {
-        profile.beginFrame(index * FRAME_INTERVAL_MS);
-        profile.endFrame();
-      }
-    };
-    runWindow(0);
-    context.getParameter = () => 'SwiftShader';
-    runWindow(FRAMES_PER_WINDOW);
-    expect(published.map((stats) => stats.rendersInSoftware)).toEqual([false, true]);
   });
 
   it('records nothing once stopped (error case)', () => {

@@ -16,7 +16,6 @@ const STATS: FrameStats = {
   gpuMs: null,
   drawCallsPerFrame: 0,
   hasGpuTimer: false,
-  rendersInSoftware: false,
   steps: [],
 };
 

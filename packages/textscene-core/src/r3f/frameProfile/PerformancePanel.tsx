@@ -46,15 +46,6 @@ function WindowStats({ stats }: { stats: FrameStats }) {
         <span data-testid="performance-cpu">CPU {formatMs(stats.cpuMs)} ms</span>
         <span data-testid="performance-gpu">{gpuTotalText(stats)}</span>
         <span data-testid={PERFORMANCE_TESTIDS.drawCalls}>{formatCount(stats.drawCallsPerFrame)} draws</span>
-        {stats.rendersInSoftware && (
-          <span
-            className={styles.software}
-            data-testid="performance-software"
-            title="The browser draws WebGL on the CPU, not on a GPU. Turn on graphics acceleration in its settings."
-          >
-            Software WebGL
-          </span>
-        )}
       </div>
       <table className={styles.steps}>
         <thead>

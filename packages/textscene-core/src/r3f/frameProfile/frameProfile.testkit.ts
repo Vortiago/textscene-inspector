@@ -15,23 +15,21 @@ export function manualClock(): { now: () => number; advance: (ms: number) => voi
 }
 
 /**
- * The members of a renderer a profile reads: a context named `rendererName` with no timer query, and
- * a draw-call counter a test moves by adding to `info.render.calls`. A fake renderer spreads them
- * beside its own.
+ * The members of a renderer a profile reads: a context with no timer query, and a draw-call counter
+ * a test moves by adding to `info.render.calls`. A fake renderer spreads them beside its own.
  */
-export function profiledRendererMembers(rendererName = 'Test GPU') {
+export function profiledRendererMembers() {
   const info = {
     autoReset: true,
     render: { calls: 0 },
     reset: () => (info.render.calls = 0),
   };
-  const context = { RENDERER: 0x1f01, getExtension: () => null, getParameter: () => rendererName };
-  return { getContext: () => context, info };
+  return { getContext: () => ({ getExtension: () => null }), info };
 }
 
-/** A renderer with only the members a profile reads, on a context named `rendererName`. */
-export function cpuOnlyRenderer(rendererName?: string): THREE.WebGLRenderer {
-  return profiledRendererMembers(rendererName) as unknown as THREE.WebGLRenderer;
+/** A renderer with only the members a profile reads. */
+export function cpuOnlyRenderer(): THREE.WebGLRenderer {
+  return profiledRendererMembers() as unknown as THREE.WebGLRenderer;
 }
 
 /**

@@ -9,6 +9,7 @@ import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js'
 import { SharedTextureRelease } from '../../sharedTexture.js';
 import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 import { FrameProfiler } from '../../frameProfile/FrameProfiler.js';
+import { SoftwareRenderingProbe } from '../../softwareRendering/SoftwareRenderingProbe.js';
 
 export function World2DCanvas(props: World2DCanvasProps) {
   return (
@@ -32,6 +33,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
     >
       <SharedTextureRelease />
       <FrameProfiler />
+      <SoftwareRenderingProbe />
       <World2DContents {...props} />
     </Canvas>
   );

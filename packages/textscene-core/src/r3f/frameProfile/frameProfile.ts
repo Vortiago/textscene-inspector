@@ -6,7 +6,6 @@
 
 import type * as THREE from 'three';
 import { GpuTimer } from './gpuTimer.js';
-import { rendersInSoftware } from './softwareRenderer.js';
 import {
   RENDER_STEPS,
   type FrameStats,
@@ -216,8 +215,6 @@ class Profile implements FrameProfile {
       gpuMs: gpuMsPerFrame(gpuNs),
       drawCallsPerFrame: drawCalls / frames,
       hasGpuTimer: this.gpu !== null,
-      // Read each window: a lost context can come back on SwiftShader.
-      rendersInSoftware: rendersInSoftware(this.renderer.getContext() as WebGL2RenderingContext),
       steps,
     });
     this.sums = new WindowSums();
