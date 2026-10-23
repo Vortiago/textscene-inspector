@@ -16,7 +16,7 @@ import {
   type ReactNode,
 } from 'react';
 import { resourceFilePath } from '../../resources/subResourcePath.js';
-import { createCountedReportsContext } from './countedReportsContext.js';
+import { useCountedReports } from '../hooks/useCountedReports.js';
 import { withKey, withoutKey } from '../../utils/keySet.js';
 import type { ResourceStatus } from '../../resources/useResource.js';
 
@@ -46,9 +46,6 @@ const NOOP: MissingResourcesContextValue = {
 const MissingResourcesContext = createContext<MissingResourcesContextValue>(NOOP);
 MissingResourcesContext.displayName = 'MissingResourcesContext';
 
-/** Several slots can consume one path, so it stays missing while any of them reports it. */
-const missing = createCountedReportsContext('MissingPaths');
-
 export interface MissingResourcesProviderProps {
   children: ReactNode;
   /**
@@ -59,18 +56,10 @@ export interface MissingResourcesProviderProps {
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
 }
 
-export function MissingResourcesProvider(props: MissingResourcesProviderProps) {
-  return (
-    <missing.Provider>
-      <MissingResourcesState {...props} />
-    </missing.Provider>
-  );
-}
-
-function MissingResourcesState({ children, onMissingPathsChange }: MissingResourcesProviderProps) {
-  // An effect on the whole context object loops, so a consumer takes the actions by name.
-  const missingPaths = missing.useReported();
-  const { report, clear, clearAll } = missing.useActions();
+export function MissingResourcesProvider({ children, onMissingPathsChange }: MissingResourcesProviderProps) {
+  // Several slots can consume one path, so it stays missing while any of them reports it. An effect
+  // on the whole context object loops, so a consumer takes the actions by name.
+  const { reported: missingPaths, report, clear, clearAll } = useCountedReports();
   const [uploadedPaths, setUploadedPaths] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   const markUploaded = useCallback(

@@ -8,7 +8,6 @@ import type * as THREE from 'three';
 import { isEqualApprox } from '../../../../godot/math/math';
 import {
   csgSolid,
-  emptySolid,
   type CsgGeometryBuilder,
   type CsgGeometryContext,
   type CsgSolid,
@@ -19,20 +18,17 @@ import { meshContentKey, meshKind } from '../../../../resources/meshes/meshSourc
 import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import type { LoadedFile } from '../../../../resources/scopedResource';
-import { shadeCsgFaces } from '../smoothNormals';
+import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
 
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
   const mesh = resolveMesh(p.mesh, ctx);
-  if (mesh) {
-    return meshKind(mesh.resource.type) === null
-      ? null
-      : buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
-  }
   // A file that has not loaded yet is not built. A reference that names no mesh has an empty brush.
-  return referencedFilePath(p.mesh, ctx) === null ? emptySolid() : null;
+  if (!mesh) return referencedFilePath(p.mesh, ctx) === null ? emptySolid() : null;
+  if (meshKind(mesh.resource.type) === null) return null;
+  return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
 
 export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: CsgGeometryContext): string {
@@ -89,6 +85,11 @@ interface MeshFaces {
   smooth: boolean[];
   faceMaterials: number[];
   materials: CsgMaterialAddress[];
+}
+
+/** Godot's empty brush: a closed solid with no face. */
+function emptySolid(): CsgSolid {
+  return csgSolid(emptyBrush(), []);
 }
 
 /** The empty solid for a mesh with no faces, which Godot builds as an empty brush (`csg_shape.cpp:1265-1267`). */

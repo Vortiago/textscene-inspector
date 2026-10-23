@@ -4,7 +4,7 @@
  * separate registry would let a slice register a component without a builder, which vanishes in a boolean.
  */
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { LoadedFile } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
 import { isClosedBrush, type ShadedBrush } from './brushManifold';
@@ -41,15 +41,13 @@ export function csgSolid(
   return { geometry, materials, isClosed: isClosedBrush(welds) };
 }
 
-/** Godot's empty brush: a closed solid with no face, which a shape that builds nothing has. */
-export function emptySolid(): CsgSolid {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
-  return { geometry, materials: [], isClosed: true };
+/** Whether `solid` holds a face. A closed solid with none is Godot's empty brush. */
+export function hasFaces(solid: CsgSolid): boolean {
+  return (solid.geometry.getAttribute('position')?.count ?? 0) > 0;
 }
 
 /**
- * A shape's solid, an {@link emptySolid} for a shape that builds no face, or `null` for one not
+ * A shape's solid, a closed solid with no face (Godot's empty brush) for a shape that builds none, or `null` for one not
  * built yet: a mesh still loading, or of a type no slice builds. Either adds nothing to a union,
  * removes nothing in a subtraction and empties an intersection, as Godot's empty manifold does.
  * Only the empty solid warns (`csg_shape.cpp:981`), since Godot draws a brush for the other.

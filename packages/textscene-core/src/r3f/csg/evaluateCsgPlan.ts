@@ -9,7 +9,7 @@ import { warn } from '../../logger';
 import { type CsgContribution, type CsgPlan } from './csgPlan';
 import { CsgOperation } from '../../godot/scene/csg';
 import type { CsgModule } from './csgModule';
-import type { CsgSolid } from './csgRegistration';
+import { hasFaces, type CsgSolid } from './csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgEvaluation {
@@ -118,7 +118,7 @@ export function evaluateCsgPlan(
       if (own && !own.isClosed) return null;
 
       let accumulator: THREE.Mesh | null = null;
-      if (own && (own.geometry.getAttribute('position')?.count ?? 0) > 0) {
+      if (own && hasFaces(own)) {
         // Bake the root-local matrix in so every brush sits at identity: the library
         // copies brush A's world transform onto the result, so mixing baked and
         // transformed brushes would leave the output in whichever space A was in.

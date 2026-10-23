@@ -1,15 +1,15 @@
 /**
  * A set of keys that components report while they hold them. The set and the actions live in two
  * contexts, so a change to the set re-renders its readers and not each reporter. The undrawn-mesh
- * list, the empty-shape list and the missing-resources panel each make one. With no provider a
+ * list and the empty-shape list each make one. With no provider a
  * report does nothing and the set is empty.
  */
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useCountedReports, type CountedReports } from '../hooks/useCountedReports.js';
 
-type CountedReportsActions = Pick<CountedReports, 'report' | 'clear' | 'clearAll'>;
+type CountedReportsActions = Pick<CountedReports, 'report' | 'clear'>;
 
-const NO_ACTIONS: CountedReportsActions = { report: () => {}, clear: () => {}, clearAll: () => {} };
+const NO_ACTIONS: CountedReportsActions = { report: () => {}, clear: () => {} };
 const NO_KEYS: ReadonlySet<string> = new Set();
 
 export function createCountedReportsContext(displayName: string) {
@@ -19,8 +19,8 @@ export function createCountedReportsContext(displayName: string) {
   ReportedContext.displayName = displayName;
 
   function Provider({ children }: { children: ReactNode }) {
-    const { reported, report, clear, clearAll } = useCountedReports();
-    const actions = useMemo(() => ({ report, clear, clearAll }), [report, clear, clearAll]);
+    const { reported, report, clear } = useCountedReports();
+    const actions = useMemo(() => ({ report, clear }), [report, clear]);
     return (
       <ActionsContext.Provider value={actions}>
         <ReportedContext.Provider value={reported}>{children}</ReportedContext.Provider>
@@ -43,7 +43,5 @@ export function createCountedReportsContext(displayName: string) {
     useReportWhile,
     /** Each key with at least one open report. */
     useReported: () => useContext(ReportedContext),
-    /** The actions keep one identity for the provider's life. */
-    useActions: () => useContext(ActionsContext),
   };
 }

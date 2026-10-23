@@ -18,6 +18,7 @@ import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
+import { hasFaces } from '../../../r3f/csg/csgRegistration';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
@@ -87,8 +88,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
       // An open brush, or one with no face, is empty (`csg_shape.cpp:981`): it draws nothing and
       // bounds to a point. Only that fact is kept, not an open geometry. Null is no brush yet.
-      const isEmpty =
-        built !== null && (!built.isClosed || built.geometry.getAttribute('position').count === 0);
+      const isEmpty = built !== null && (!built.isClosed || !hasFaces(built));
       return { ownSolid: built && !isEmpty ? built : null, hasEmptyBrush: isEmpty };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
