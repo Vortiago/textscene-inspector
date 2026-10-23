@@ -18,7 +18,7 @@ import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/nativ
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { useUndecodedTexture } from '../../../../r3f/undecodedTexture';
+import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON, LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
@@ -141,14 +141,14 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
   // Both hooks run in a fixed order and each shows nothing on an absent input (`useNodeIcon`).
   // `right_icon` loads in its own scope and is retagged `NoColorSpace` for the 2D canvas
-  // (`useUndecodedTexture`). `useNodeIcon` prefers a themed `"clear"` and applies the same tag.
+  // (`useOwnerCanvas2DTexture`). `useNodeIcon` prefers a themed `"clear"` and applies the same tag.
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: rightIconRawTexture } = useTexture2D(
     props.rightIcon,
     externalResources,
     internalResources
   );
-  const rightIconTexture = useUndecodedTexture(rightIconRawTexture);
+  const rightIconTexture = useOwnerCanvas2DTexture(rightIconRawTexture);
   const clearIconTexture = useNodeIcon(solveNode.icons['clear'], LINE_EDIT_CLEAR_ICON);
   const activeIconTexture =
     activeIcon === 'clear' ? clearIconTexture : activeIcon === 'right' ? rightIconTexture : null;

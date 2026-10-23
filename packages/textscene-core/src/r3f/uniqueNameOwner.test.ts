@@ -160,8 +160,8 @@ describe('localSceneOf', () => {
 });
 
 /**
- * A `.glb` instance is one node in Godot, its own local scene, whose imported nodes it owns. This
- * tree renders the GLB root one segment below the instance node.
+ * A `.glb` instance is one node in Godot, its own local scene, whose imported nodes it owns. The
+ * instance node is the GLB root, so the GLB's objects sit directly below it.
  */
 describe('localSceneOf a GLB instance', () => {
   const host = new TscnParser().parse(`[gd_scene format=3]
@@ -187,11 +187,11 @@ describe('localSceneOf a GLB instance', () => {
   const localRoot = (path: string) => localSceneOf(path, host.nodes, glbCtx).path;
 
   it('is the instance node for the GLB root', () => {
-    expect(localRoot('Root/Model/model')).toBe('Root/Model');
+    expect(localRoot('Root/Model')).toBe('Root/Model');
   });
 
   it('is the instance node for a node inside the GLB', () => {
-    expect(localRoot('Root/Model/model/body')).toBe('Root/Model');
+    expect(localRoot('Root/Model/body')).toBe('Root/Model');
   });
 
   it('is the outer root for a node the outer file adds under the GLB instance (edge case)', () => {
@@ -199,11 +199,11 @@ describe('localSceneOf a GLB instance', () => {
   });
 
   it('reads an empty claim table for a node inside the GLB', () => {
-    expect(localSceneUniquePaths(localSceneOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
+    expect(localSceneUniquePaths(localSceneOf('Root/Model/body', host.nodes, glbCtx)).size).toBe(0);
   });
 
   it('reads an empty claim table for the owner of a node inside the GLB', () => {
-    expect(ownerUniquePaths(claimOwnerOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
+    expect(ownerUniquePaths(claimOwnerOf('Root/Model/body', host.nodes, glbCtx)).size).toBe(0);
   });
 });
 

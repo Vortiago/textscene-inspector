@@ -13,6 +13,8 @@ A Viewport that renders its subtree into an offscreen target for a `ViewportText
 
 A target that holds canvas content, 2D-world items or Controls, stores 8-bit sRGB bytes, as Godot's non-HDR `R8G8B8A8_UNORM` target does (`texture_storage.cpp:3568-3569`). Translucent content blends in those stored numbers, as on the main canvas (`renderer_canvas_render_rd.cpp:671,729`). Each target offers Godot's two views of its storage. A canvas consumer filters the plain view's bytes and multiplies them in sRGB (`texture_storage.cpp:754`). A `source_color` material slot samples the sRGB view, which decodes each texel before the filter (`material_storage.cpp:1067,1073`). A 3D-content target stores its tonemapped render as sRGB bytes too (`renderer_scene_render_rd.cpp:744`). A canvas consumer filters those bytes, and a translucent 3D surface keeps its linear blend.
 
+The target's canvas content samples with the sub-viewport's own `canvas_item_default_texture_filter` and `canvas_item_default_texture_repeat` where no ancestor sets a value, and not with the project settings (`viewport.cpp:3974-4017`).
+
 ## Linting
 
 <!-- lint:begin SubViewport -->
@@ -31,13 +33,13 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
+Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1, `canvas_item_default_texture_repeat` 0), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
 
 ## Known limitations
 
 - **Approximated** A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.
 - **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
-- **Approximated** `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
+- **Approximated** `use_debanding` does not affect the target.
 - **Approximated** A shared-world target takes the environment's tone curve and exposure but not its glow or `adjustment_*`, which Godot also runs inside the target.
 - **Approximated** An `own_world_3d` target's own Environment neither tonemaps nor glows it, where Godot tonemaps each viewport with its own world's Environment.
 - **Approximated** A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (`render_forward_clustered.cpp:2402`, `:2514`).

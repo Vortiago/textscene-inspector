@@ -4,12 +4,13 @@
  * flowmap included.
  */
 import { describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { FAKE_GL, MAX_ANISOTROPY_PARAMETER, fakeCanvasRenderer } from '../testing/fakeCanvasRenderer';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
@@ -24,12 +25,20 @@ const PAINT_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resourc
 const FLOWMAP_PATH = 'res://flow.png';
 const EXTERNAL: TscnExternalResource[] = [{ id: '1_flow', type: 'Texture2D', path: FLOWMAP_PATH }];
 
-function renderSurface(source: MaterialSource | undefined, withUploads = false) {
+function renderSurface(
+  source: MaterialSource | undefined,
+  withUploads = false,
+  Outer: (props: { children: ReactNode }) => ReactNode = Fragment
+) {
   const fake = createFakeResourceLoader();
   const uploads = fakeTiledUploads();
   const hook = renderHook(() => useSurfaceMaterial(source), {
     wrapper: ({ children }: { children: ReactNode }) => {
-      const tree = <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>;
+      const tree = (
+        <Outer>
+          <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+        </Outer>
+      );
       return withUploads ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
     },
   });
@@ -140,5 +149,28 @@ describe('useSurfaceMaterial with an anisotropy flowmap', () => {
     const { result } = renderSurface(inlineMaterial({ ...ANISOTROPIC, anisotropy: '0' }, [], EXTERNAL));
 
     expect(unfadedProps(result.current).anisotropyMap).toBeUndefined();
+  });
+});
+
+describe('useSurfaceMaterial with Nearest with Mipmaps and Anisotropic', () => {
+  const ALBEDO_PATH = 'res://albedo.png';
+  const ALBEDO = [{ id: '1_albedo', type: 'Texture2D', path: ALBEDO_PATH }];
+  // `BaseMaterial3D::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC`.
+  const NEAREST_WITH_MIPMAPS_ANISOTROPIC = '4';
+
+  it('writes the anisotropy onto the albedo texture, which three skips under a nearest magnification', () => {
+    const canvas = fakeCanvasRenderer({ isAllocated: true });
+    const { fake } = renderSurface(
+      inlineMaterial(
+        { albedo_texture: 'ExtResource("1_albedo")', texture_filter: NEAREST_WITH_MIPMAPS_ANISOTROPIC },
+        [],
+        ALBEDO
+      ),
+      false,
+      canvas.wrapper
+    );
+    act(() => fake.textures._resolve(ALBEDO_PATH, new THREE.Texture()));
+
+    expect(canvas.gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 4);
   });
 });

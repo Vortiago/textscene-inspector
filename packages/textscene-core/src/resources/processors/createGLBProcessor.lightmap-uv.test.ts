@@ -16,6 +16,7 @@ import { triangleGlb } from '../formats/glb/testing/triangleGlb';
 import { LIT_UV2, litCache, litGlb, type LitGlb } from '../formats/glb/lightmapUv/testing/litGlb';
 import * as logger from '../../logger';
 import { UV2_ATTRIBUTE } from '../meshes/uv2';
+import { readsNoLightmap } from '../formats/glb/meshInstances';
 
 const CUBE_PATH = 'res://cube.glb';
 const CUBE_MESH_ID = 'cube_Cube_001';
@@ -52,6 +53,12 @@ async function load(
 
 function loadCube(files: Record<string, string | ArrayBuffer>): Promise<THREE.BufferGeometry> {
   return load(CUBE_PATH, { [CUBE_PATH]: demoBytes('cube.glb'), ...files });
+}
+
+/** Whether the cube loaded with `files` reads no lightmap. */
+async function cubeReadsNoLightmap(files: Record<string, string | ArrayBuffer>): Promise<boolean> {
+  const surfaces = await loadSurfaces(CUBE_PATH, { [CUBE_PATH]: demoBytes('cube.glb'), ...files });
+  return surfaces.every(readsNoLightmap);
 }
 
 describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
@@ -118,6 +125,64 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
 
     expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('entry 0 needs 324 bytes'));
+  });
+
+  it('reads no lightmap for a mesh whose project commits no cache', async () => {
+    expect(await cubeReadsNoLightmap({ [`${CUBE_PATH}.import`]: STATIC_LIGHTMAPS })).toBe(true);
+  });
+
+  it('reads no lightmap for a mesh whose cache has no matching hash', async () => {
+    const mismatched = sidecar('meshes/light_baking=2\nmeshes/lightmap_texel_size=0.5');
+
+    expect(
+      await cubeReadsNoLightmap({
+        [`${CUBE_PATH}.import`]: mismatched,
+        [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache'),
+      })
+    ).toBe(true);
+  });
+
+  it('reads no lightmap for a mesh whose cache it cannot read', async () => {
+    expect(
+      await cubeReadsNoLightmap({
+        [`${CUBE_PATH}.import`]: STATIC_LIGHTMAPS,
+        [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache').slice(0, 100),
+      })
+    ).toBe(true);
+  });
+
+  it('reads its lightmap for a mesh whose cache rebuilds', async () => {
+    expect(
+      await cubeReadsNoLightmap({
+        [`${CUBE_PATH}.import`]: STATIC_LIGHTMAPS,
+        [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache'),
+      })
+    ).toBe(false);
+  });
+
+  it('leaves a mesh Godot does not unwrap alone, with or without a cache', async () => {
+    expect(await cubeReadsNoLightmap({ [`${CUBE_PATH}.import`]: sidecar('meshes/light_baking=1') })).toBe(
+      false
+    );
+  });
+
+  it('leaves a mesh with no normals alone, as Godot has no unwrap input for it (edge case)', async () => {
+    const path = 'res://bare.glb';
+
+    const surfaces = await loadSurfaces(path, {
+      [path]: triangleGlb(),
+      [`${path}.import`]: STATIC_LIGHTMAPS,
+    });
+
+    expect(surfaces.map(readsNoLightmap)).toEqual([false]);
+  });
+
+  it('says that a mesh with no cache entry reads no lightmap', async () => {
+    const info = vi.spyOn(logger, 'info');
+
+    await loadCube({ [`${CUBE_PATH}.import`]: STATIC_LIGHTMAPS });
+
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('reads no lightmap'));
   });
 
   it("leaves a single-root file's root mesh alone, as Godot 4.6.3 unwraps none there", async () => {

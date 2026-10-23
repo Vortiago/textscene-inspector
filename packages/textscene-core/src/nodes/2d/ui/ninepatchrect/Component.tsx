@@ -10,7 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { pinNoColorSpace, useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
-import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { applyCanvasItemFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -97,9 +97,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     if (!rawTexture || !geometry) return null;
     const cloned = rawTexture.clone();
     pinNoColorSpace(cloned);
-    const filter = canvasItemThreeFilter(sampler.filter);
-    cloned.magFilter = filter;
-    cloned.minFilter = filter;
+    applyCanvasItemFilter(cloned, sampler.filter);
     // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping
     // sampler, so a clamp is right whatever the item's `texture_repeat`.
     cloned.wrapS = cloned.wrapT = THREE.ClampToEdgeWrapping;

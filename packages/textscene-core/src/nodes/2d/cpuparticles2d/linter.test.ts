@@ -298,3 +298,31 @@ describe('CPUParticles2D min above max', () => {
     expectNoDiagnostic(particles({ scale_amount_min: 5 }), { ruleName: RULE });
   });
 });
+
+describe('CPUParticles2D non-finite bound', () => {
+  const RULE = 'cpuparticles2d-non-finite-param-bound';
+  const particles = (props: Record<string, number | string>) => sceneOf(node('CPUParticles2D', props));
+
+  it('reports at info that the previewer uses the default for an infinite bound', () => {
+    expectDiagnostic(particles({ angle_min: 'inf' }), {
+      ruleName: RULE,
+      severity: 'info',
+      nodeType: 'CPUParticles2D',
+      contains: ["'angle_min' is inf", 'cannot draw a non-finite range', 'uses the default'],
+    });
+  });
+
+  it('reports a bound that overflows a single-precision real by its stored value (edge)', () => {
+    expectDiagnostic(particles({ angle_max: '1e39' }), { ruleName: RULE, contains: ["'angle_max' is inf"] });
+  });
+
+  it('leaves the crossed-range warning to the bounds the previewer draws', () => {
+    expectNoDiagnostic(particles({ angle_min: 'inf', angle_max: 2 }), {
+      ruleName: 'cpuparticles2d-param-min-above-max',
+    });
+  });
+
+  it('says nothing about finite bounds', () => {
+    expectNoDiagnostic(particles({ angle_min: -30, angle_max: 30 }), { ruleName: RULE });
+  });
+});

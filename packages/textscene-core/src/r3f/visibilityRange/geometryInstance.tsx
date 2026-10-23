@@ -9,13 +9,13 @@ import { useThree } from '@react-three/fiber';
 import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { hasGeometryBase } from '../../godot/scene/geometryBase';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
+import { useNodePath } from '../contexts/NodePathContext';
 import { useTreeOrder } from '../contexts/TreeOrderContext';
 import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry';
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
 import { FadedSurfacesContext } from '../materials/swappedMaterials';
 import { registerVisibilityInstance } from './visibilityScene';
-import { useCullPath } from './CullPathContext';
 import { useVisibilityParent } from './VisibilityParentContext';
 import { UNPLACED, type InstancePlacement } from './placements';
 import { CulledInstance } from './culledInstance';
@@ -37,7 +37,7 @@ GeometryInstanceContext.displayName = 'GeometryInstanceContext';
 export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
   function GeometryInstanceComponent({ node, children }: NodeComponentProps) {
     const scene = useThree((state) => state.scene);
-    const path = useCullPath();
+    const path = useNodePath();
     const parentPath = useVisibilityParent();
     const order = useTreeOrder();
     const parentType = useParentType();

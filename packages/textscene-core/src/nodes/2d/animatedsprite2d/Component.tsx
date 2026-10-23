@@ -7,12 +7,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { frameSizePx, spriteSamplerClone, WHOLE_FRAME } from '../../../r3f/spriteFrame';
-import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
-import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
+import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
+import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useCanvas2DTexture, useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -150,15 +149,10 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     resolved?.subResources ?? NO_INTERNAL_RESOURCES
   );
 
-  // One clone per frame texture, as sampler state is per consumer, and
-  // `useUploadedClone` disposes each clone once it no longer draws, so playback leaks no
-  // GPU texture. NoColorSpace: the 2D canvas's filter blends undecoded sRGB bytes
-  // (`canvas2DTextureDecode.ts`), and `useCanvasSrgbDefines` multiplies the sample in sRGB.
-  const composedTexture = useMemo(
-    () => (frameTexture ? spriteSamplerClone(frameTexture, 'clamp', THREE.NoColorSpace) : undefined),
-    [frameTexture]
-  );
-  const displayedTexture = useUploadedClone(composedTexture ?? null);
+  // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
+  // once it no longer draws, so playback leaks no GPU texture.
+  const sampler = useNode2DTextureSampler(props);
+  const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
   const srgbDefines = useCanvasSrgbDefines(displayedTexture);
   const { width, height } = useMemo(
     () => frameSizePx(frameTexture ?? undefined, WHOLE_FRAME),

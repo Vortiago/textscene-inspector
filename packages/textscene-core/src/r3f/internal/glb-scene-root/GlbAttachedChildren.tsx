@@ -9,7 +9,6 @@ import type { LiveNode } from '../../../resources/liveNode';
 import { joinPath } from '../../../utils/nodePath';
 import { DispatchedNode } from '../../NodeDispatcher';
 import { AttachedToObject, ParentTypeProvider } from '../../parentSpaceScope';
-import { CullPathProvider } from '../../visibilityRange/CullPathContext';
 import { VisibilityParentProvider } from '../../visibilityRange/VisibilityParentContext';
 import {
   childOrders,
@@ -43,32 +42,22 @@ interface GlbAttachedChildrenProps {
    */
   links: readonly GlbNodeLink[];
   root: GlbRoot;
-  /** The GLB scene root's own node path, which each GLB object's `relPath` continues. */
-  nodePath: string | null;
 }
 
-export function GlbAttachedChildren({ links, root, nodePath }: GlbAttachedChildrenProps): ReactNode {
+export function GlbAttachedChildren({ links, root }: GlbAttachedChildrenProps): ReactNode {
   const rootOrder = useTreeOrder();
-  const attached = useMemo(
-    () => attachedChildren(links, root, nodePath, rootOrder),
-    [links, root, nodePath, rootOrder]
-  );
-  if (attached.length === 0 || nodePath === null || root.path === null) return null;
-  return (
-    <CullPathProvider selection={nodePath} godot={root.path}>
-      {attached.map(({ node, path, target, order, visibilityParent }) => (
-        <AttachedToObject key={path} target={target}>
-          <ParentTypeProvider value={GLB_OBJECT_TYPE}>
-            <VisibilityParentProvider value={visibilityParent}>
-              <TreeOrderProvider order={order}>
-                <DispatchedNode node={node} path={path} />
-              </TreeOrderProvider>
-            </VisibilityParentProvider>
-          </ParentTypeProvider>
-        </AttachedToObject>
-      ))}
-    </CullPathProvider>
-  );
+  const attached = useMemo(() => attachedChildren(links, root, rootOrder), [links, root, rootOrder]);
+  return attached.map(({ node, path, target, order, visibilityParent }) => (
+    <AttachedToObject key={path} target={target}>
+      <ParentTypeProvider value={GLB_OBJECT_TYPE}>
+        <VisibilityParentProvider value={visibilityParent}>
+          <TreeOrderProvider order={order}>
+            <DispatchedNode node={node} path={path} />
+          </TreeOrderProvider>
+        </VisibilityParentProvider>
+      </ParentTypeProvider>
+    </AttachedToObject>
+  ));
 }
 
 /**
@@ -78,12 +67,11 @@ export function GlbAttachedChildren({ links, root, nodePath }: GlbAttachedChildr
 function attachedChildren(
   links: readonly GlbNodeLink[],
   root: GlbRoot,
-  nodePath: string | null,
   rootOrder: TreeOrder
 ): AttachedChild[] {
   // The common GLB has none, so nothing below runs for it. A GLB opened as the scene has no
   // instancing node to address into it.
-  if (nodePath === null || root.path === null || root.overrides.every(isApplicableGlbOverride)) return [];
+  if (root.path === null || root.overrides.every(isApplicableGlbOverride)) return [];
   const entries = links.map((link) => link.entry);
   const orders = childOrders(rootOrder, entries.length);
   const attachedBelow = new Map<number, number>();
@@ -100,7 +88,7 @@ function attachedChildren(
     attachedBelow.set(afterSubtree, siblings + 1);
     attached.push({
       node,
-      path: joinPath(joinPath(nodePath, target.relPath), node.name),
+      path: joinPath(joinPath(root.path, target.relPath), node.name),
       target: target.object,
       order: [...orders[afterSubtree]!, siblings],
       visibilityParent: links[targetIndex]!.place.parentPath,

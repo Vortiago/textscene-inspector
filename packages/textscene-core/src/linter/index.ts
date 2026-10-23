@@ -168,6 +168,7 @@ import '../resources/meshes/primitivemesh/linterValidators.js';
 import '../resources/meshes/multimesh/linterValidators.js';
 import '../resources/materials/material/linterValidators.js';
 import '../resources/materials/fogmaterial/linterValidators.js';
+import '../resources/materials/particleprocessmaterial/index.linter.js';
 import '../resources/textures/noisetexture3d/linterValidators.js';
 import '../resources/formats/image3d/linterValidators.js';
 import '../resources/formats/image2darray/linterValidators.js';

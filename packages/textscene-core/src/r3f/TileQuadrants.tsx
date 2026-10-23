@@ -18,6 +18,7 @@ import { useGodotLinearColor } from './godotColor';
 import { canvasKeyAtZ } from './canvasPaintOrder';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
 import { TileSourceMesh } from './TileSourceMesh';
+import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
 
 interface TileLayerItem {
@@ -33,6 +34,8 @@ interface TileLayerItem {
   zFinal: number;
   /** Group name for a source's missing-texture placeholder. */
   name: string;
+  /** The layer's effective filter and repeat, which its atlas textures sample with. */
+  sampler: CanvasItemTextureSampler;
 }
 
 interface TileQuadrantsProps extends TileLayerItem {
@@ -83,6 +86,7 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
               opacity={own.a}
               name={layer.name}
               pixelMaterial={pixelMaterial}
+              sampler={layer.sampler}
             />
           ))
         }

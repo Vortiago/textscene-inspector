@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: a type-less override of a node inside an instanced `.glb`. Godot takes the node
+; already at that path and sets the properties the heading writes, and adds no node. `Rig` is a
+; top-level node of the GLB, so its override is written `parent="Body"`. `Torso` is deeper, so its
+; override is written `parent="Body/Rig"`. The Rig override moves the whole model to the right. The
+; Torso override halves its scale, which replaces the transform the GLB baked for it.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-rig.glb" id="1_glb"]
+
+[node name="GlbPropertyOverride" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_glb")]
+
+[node name="Rig" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="Torso" parent="Body/Rig"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 3, 0)

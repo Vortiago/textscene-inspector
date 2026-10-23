@@ -15,6 +15,7 @@ import {
   SDF_OVERSIZE_NAMES,
   SDF_SCALE_NAMES,
   viewportPositionalShadowAtlas,
+  viewportCanvasItemTextureDefaults,
   VRS_MODE_NAMES,
   VRS_UPDATE_MODE_NAMES,
 } from './viewport';
@@ -151,5 +152,42 @@ describe('SubViewport enum label tables (viewport.h:871-883)', () => {
 
   it('names the clear modes', () => {
     expect(SUB_VIEWPORT_CLEAR_MODE_NAMES).toEqual({ 0: 'ALWAYS', 1: 'NEVER', 2: 'ONCE' });
+  });
+});
+
+describe('viewportCanvasItemTextureDefaults', () => {
+  // Expected ordinals are `CanvasItem::TextureFilter` and `TextureRepeat` (`canvas_item.h:52-69`), which
+  // a PARENT_NODE item resolves to, not the viewport's own enums (`viewport.h:188-200`).
+  const NEAREST = 1;
+  const LINEAR = 2;
+  const NEAREST_WITH_MIPMAPS = 3;
+  const LINEAR_WITH_MIPMAPS = 4;
+  const DISABLED = 1;
+  const ENABLED = 2;
+  const MIRROR = 3;
+
+  it('maps each viewport filter to the canvas item filter it sets (viewport.cpp:3974-3987)', () => {
+    const filterFor = (filter: number) => viewportCanvasItemTextureDefaults(filter, undefined).filter;
+    expect(filterFor(0)).toBe(NEAREST);
+    expect(filterFor(1)).toBe(LINEAR);
+    expect(filterFor(2)).toBe(LINEAR_WITH_MIPMAPS);
+    expect(filterFor(3)).toBe(NEAREST_WITH_MIPMAPS);
+  });
+
+  it('maps each viewport repeat to the canvas item repeat it sets (viewport.cpp:4007-4017)', () => {
+    const repeatFor = (repeat: number) => viewportCanvasItemTextureDefaults(undefined, repeat).repeat;
+    expect(repeatFor(0)).toBe(DISABLED);
+    expect(repeatFor(1)).toBe(ENABLED);
+    expect(repeatFor(2)).toBe(MIRROR);
+  });
+
+  it('keeps Linear and Disabled where a value is absent or out of range, which the setters refuse (edge case)', () => {
+    // `ERR_FAIL_INDEX` against `_MAX` (`viewport.cpp:3968`, `:3999`), so the initialiser stays.
+    expect(viewportCanvasItemTextureDefaults(undefined, undefined)).toEqual({
+      filter: LINEAR,
+      repeat: DISABLED,
+    });
+    expect(viewportCanvasItemTextureDefaults(4, 3)).toEqual({ filter: LINEAR, repeat: DISABLED });
+    expect(viewportCanvasItemTextureDefaults(-1, -1)).toEqual({ filter: LINEAR, repeat: DISABLED });
   });
 });

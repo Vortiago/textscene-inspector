@@ -45,6 +45,44 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
 }
 
 /**
+ * `children` with each node written below a property override lifted to the instance, as the
+ * node its parent path names, which is how Godot adds it. The scene tree builder nests such a node
+ * below the override heading that its parent path passes through, where only the instance
+ * itself can reach the GLB. Every reader of a GLB instance's children asks through here.
+ */
+export function liftOverrideChildren(children: readonly LiveNode[]): readonly LiveNode[] {
+  if (!children.some((child) => child.overridesExistingNode)) return children;
+  let lifted = liftedByChildren.get(children);
+  if (!lifted) {
+    lifted = liftBelow(children, undefined);
+    liftedByChildren.set(children, lifted);
+  }
+  return lifted;
+}
+
+/** Written only by `liftOverrideChildren`, so each reader asking about one list gets one answer. */
+const liftedByChildren = new WeakMap<readonly LiveNode[], LiveNode[]>();
+
+/**
+ * `anchor` is the sub-path of the override the children are written below, undefined at the top.
+ * A node below an override has no sub-path of its own, and an empty one means the same.
+ */
+function liftBelow(children: readonly LiveNode[], anchor: string | undefined): LiveNode[] {
+  return children.flatMap((child) => {
+    const placed =
+      anchor === undefined || child.instanceSubPath ? child : { ...child, instanceSubPath: anchor };
+    if (!placed.overridesExistingNode || placed.children.length === 0) return [placed];
+    const below = liftBelow(placed.children, joinPath(placed.instanceSubPath ?? '', placed.name));
+    return [{ ...placed, children: [] }, ...below];
+  });
+}
+
+/** {@link liftOverrideChildren}, with the override nodes themselves dropped: Godot adds none. */
+export function liftedWithoutOverrides(children: readonly LiveNode[]): LiveNode[] {
+  return liftOverrideChildren(children).filter((child) => !child.overridesExistingNode);
+}
+
+/**
  * The Godot path of the GLB object a typed node of the instancing scene is added to: its parent
  * path, as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names
  * an existing node. Each caller resolves the path with its own lookup.
@@ -56,7 +94,9 @@ export function glbAttachPath(child: TscnNode): string | null {
 /**
  * The instancing scene's typed nodes that {@link glbAttachPath} places on a GLB object, and the
  * rest of `children`. A typed node whose path names none stays among the rest, where the tree has
- * always listed it. It looks up through the quiet `findGlbTarget`.
+ * always listed it. A property override is no node: Godot takes the existing node by name and adds
+ * none (`packed_scene.cpp:280-283`), so it is in neither list. It looks up through the quiet
+ * `findGlbTarget`.
  *
  * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
  * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
@@ -65,11 +105,12 @@ export function splitAttachedChildren(
   root: THREE.Object3D,
   children: readonly LiveNode[]
 ): { attached: LiveNode[]; rest: LiveNode[] } {
-  if (children.every(isApplicableGlbOverride)) return { attached: [], rest: [...children] };
+  const nodes = liftedWithoutOverrides(children);
+  if (nodes.every(isApplicableGlbOverride)) return { attached: [], rest: nodes };
   const entries = flattenGlbObjects(root);
   const attached: LiveNode[] = [];
   const rest: LiveNode[] = [];
-  for (const child of children) {
+  for (const child of nodes) {
     const path = glbAttachPath(child);
     const entry = path === null ? null : findGlbTarget(entries, path).entry;
     if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });

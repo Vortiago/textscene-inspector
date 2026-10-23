@@ -8,12 +8,14 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import { PathFollow2D } from './Component';
+import { samplerProbe } from '../../../r3f/testing/samplerProbe';
 import { parsePathFollow2D } from './parser';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { type CanvasItemTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
 const STRAIGHT: Curve2DSampler = tessellateCurve2D(
@@ -110,5 +112,39 @@ describe('<PathFollow2D>', () => {
     expect(hidden.scene.findAllByType('LineSegments')).toHaveLength(0);
     const shown = await render(STRAIGHT, { progress: '50' }, 'MyFollow');
     expect(shown.scene.findAllByType('LineSegments')).toHaveLength(1);
+  });
+});
+
+describe('<PathFollow2D> texture sampler', () => {
+  const NEAREST = 1;
+  const REPEAT_ENABLED = 2;
+
+  /** The sampler a child Sprite2D would inherit from the follower. */
+  async function inheritedSampler(
+    sampler: Curve2DSampler | null,
+    props: Record<string, string>
+  ): Promise<CanvasItemTextureSampler> {
+    const { Probe, resolved } = samplerProbe();
+    await ReactThreeTestRenderer.create(
+      <Path2DCurveProvider value={sampler}>
+        <PathFollow2D node={followNode('MyFollow', props)}>
+          <Probe />
+        </PathFollow2D>
+      </Path2DCurveProvider>
+    );
+    return resolved();
+  }
+
+  it('hands its texture_filter and texture_repeat to its children when it follows a curve', async () => {
+    const inherited = await inheritedSampler(STRAIGHT, {
+      texture_filter: String(NEAREST),
+      texture_repeat: String(REPEAT_ENABLED),
+    });
+    expect(inherited).toEqual({ filter: NEAREST, repeat: REPEAT_ENABLED });
+  });
+
+  it('hands them over with no curve in scope too', async () => {
+    const inherited = await inheritedSampler(null, { texture_filter: String(NEAREST) });
+    expect(inherited.filter).toBe(NEAREST);
   });
 });

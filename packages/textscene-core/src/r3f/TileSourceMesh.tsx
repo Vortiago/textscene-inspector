@@ -12,6 +12,7 @@ import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
+import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { materialProgramInputs } from './materialProgramInputs';
@@ -30,6 +31,8 @@ interface TileSourceMeshProps {
   name?: string;
   /** The tile canvas item's facing, blend state and light list. */
   pixelMaterial: CanvasItemPixelMaterial;
+  /** The layer's effective filter and repeat, which every source of the layer samples with. */
+  sampler: CanvasItemTextureSampler;
 }
 
 export function TileSourceMesh({
@@ -41,9 +44,10 @@ export function TileSourceMesh({
   opacity,
   name,
   pixelMaterial,
+  sampler,
 }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
-  const tex = useCanvas2DTexture(texResult.value);
+  const tex = useCanvas2DTexture(texResult.value, sampler);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;

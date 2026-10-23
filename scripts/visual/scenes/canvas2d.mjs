@@ -108,6 +108,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', mode: '2d' },
   { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', mode: '2d' },
   { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d' },
+  // A crossed `_min`/`_max` pair and a lone `_min` load as Godot's paired setters leave them:
+  // 100 and 100 for the velocity, 6 and 6 for the scale.
+  { name: 'cpuparticles2d-crossed-range', file: 'unit-cpuparticles2d-crossed-range.tscn', mode: '2d' },
   { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', mode: '2d' },
   // A scaled emitter whose particles must not scale with it: Godot's default
   // `local_coords = false` emits into world space.
@@ -144,6 +147,37 @@ export const CANVAS_2D_SCENES = [
   // Godot's 64px ramp across a black/white edge is linear in the encoded bytes:
   // rgb(129) at the midpoint, against 189 for decode-before-filter.
   { name: 'sprite2d-magnified', file: 'unit-sprite2d-magnified.tscn', mode: '2d' },
+  // The one variable: `texture_filter` on the Node2D parent. A Nearest parent keeps a magnified
+  // Sprite2D's edge a hard step, and the project's Linear default blends it over one texel.
+  {
+    name: 'sprite2d-texture-filter-inherited',
+    file: 'unit-sprite2d-texture-filter-inherited.tscn',
+    mode: '2d',
+  },
+  // The one variable: `texture_filter` 3 against 5 on the Node2D parent, over a texture minified
+  // more across than down. Only the anisotropic filter keeps the stripes, as in Godot.
+  {
+    name: 'sprite2d-texture-filter-nearest-anisotropic',
+    file: 'unit-sprite2d-texture-filter-nearest-anisotropic.tscn',
+    mode: '2d',
+  },
+  // The one variable: `texture_repeat` on a Polygon2D with UVs three times the texture's size.
+  // Enabled tiles it, and the default clamps to the edge texels.
+  { name: 'polygon2d-texture-repeat', file: 'unit-polygon2d-texture-repeat.tscn', mode: '2d' },
+  // The one variable: `texture_filter` on the Node2D parent, read through AnimatedSprite2D's own
+  // frame-texture path, which Sprite2D's golden above does not exercise.
+  {
+    name: 'animatedsprite2d-texture-filter-inherited',
+    file: 'unit-animatedsprite2d-texture-filter-inherited.tscn',
+    mode: '2d',
+  },
+  // The one variable: `texture_filter` on the Node2D ancestor of a Control, read through the
+  // vendored theme icon loader, which no other golden magnifies under an ancestor's filter.
+  {
+    name: 'checkbox-icon-texture-filter-inherited',
+    file: 'unit-checkbox-icon-texture-filter-inherited.tscn',
+    mode: '2d',
+  },
   // A Sprite2D whose `texture` is an inline GradientTexture2D, rasterised out of
   // the scene. Every other sprite scene points at an image, so only this one
   // loses its quad to a placeholder when the procedural branch breaks.

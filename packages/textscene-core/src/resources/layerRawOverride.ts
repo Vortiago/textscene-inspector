@@ -48,7 +48,7 @@ function layerRaw(
 
 /** The heading `seat` was written under, typed as `type`. */
 function headingOf(seat: TscnNode, type: string): ParsedHeading {
-  const index = (seat.properties as { index?: number }).index;
+  const { index } = seat;
   return {
     type: 'node',
     attributes: {

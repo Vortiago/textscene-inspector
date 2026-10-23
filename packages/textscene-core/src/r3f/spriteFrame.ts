@@ -21,9 +21,8 @@ import { pinNoColorSpace } from './canvas2DTextureDecode';
 type SpriteWrapMode = 'clamp' | 'repeat';
 
 const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
-  // The 2D canvas: `default_canvas_item_texture_repeat` defaults to DISABLED
-  // (scene/main/viewport.h), which maps to `SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE`
-  // (renderer_rd/storage_rd/material_storage.cpp): the edge texel column stretches.
+  // A frame inside the texture: `SpriteBase3D` derives `texture_repeat` off
+  // (`sprite_3d.cpp:163`), so the edge texels stretch past the frame.
   clamp: THREE.ClampToEdgeWrapping,
   // Sprite3D: `SpriteBase3D` derives `texture_repeat` from the frame's UV corners
   // (`sprite_3d.cpp:163`), so only an overrun tiles. `spriteWrapMode()` derives it.
@@ -58,9 +57,8 @@ export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
 /**
  * Clone the loaded texture with the sprite's sampler state. `useResource` shares one
  * texture per path, so an in-place edit clobbers other sprites. `colorSpace` is required
- * like `wrap`: Sprite2D passes NoColorSpace (`r3f/canvas2DTextureDecode.ts`), and Sprite3D
- * the colour space its albedo sampler reads the texture in. The frame's UVs are not set
- * here: `useUvWindow` sets them on the clone that draws.
+ * like `wrap`: Sprite3D passes the colour space its albedo sampler reads the texture in.
+ * The frame's UVs are not set here: `useUvWindow` sets them on the clone that draws.
  */
 export function spriteSamplerClone(
   texture: THREE.Texture,
@@ -69,8 +67,7 @@ export function spriteSamplerClone(
 ): THREE.Texture {
   const cloned = texture.clone();
   // A plain assignment loses to R3F's auto sRGB-tagging once the clone reaches a
-  // `map` prop, so NoColorSpace is pinned, and Sprite2D pairs it with
-  // `useCanvasSrgbDefines`. SRGBColorSpace is what that tagging forces anyway.
+  // `map` prop, so NoColorSpace is pinned. SRGBColorSpace is what that tagging forces anyway.
   if (colorSpace === THREE.NoColorSpace) {
     pinNoColorSpace(cloned);
   } else {

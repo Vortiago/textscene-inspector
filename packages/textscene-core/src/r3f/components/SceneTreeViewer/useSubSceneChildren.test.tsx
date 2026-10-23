@@ -44,9 +44,12 @@ function wrapper(fake: FakeResourceLoader) {
 describe('useSubSceneChildren', () => {
   it('returns the sub-scene nodes once the load resolves', () => {
     const fake = createFakeResourceLoader();
-    const { result } = renderHook(() => useSubSceneChildren(INSTANCE_ROW, EXTERNAL_RESOURCES, SCENE_PATH), {
-      wrapper: wrapper(fake),
-    });
+    const { result } = renderHook(
+      () => useSubSceneChildren(INSTANCE_ROW.instance, EXTERNAL_RESOURCES, SCENE_PATH),
+      {
+        wrapper: wrapper(fake),
+      }
+    );
 
     act(() => fake.scenes._resolve(SCENE_PATH, SUB_SCENE));
 
@@ -58,7 +61,7 @@ describe('useSubSceneChildren', () => {
     const rendered: (SubSceneChildren | null)[] = [];
     const { rerender } = renderHook(
       ({ node, scenePath }: { node: TscnNode; scenePath: string | null }) => {
-        const children = useSubSceneChildren(node, EXTERNAL_RESOURCES, scenePath);
+        const children = useSubSceneChildren(node.instance, EXTERNAL_RESOURCES, scenePath);
         rendered.push(children);
         return children;
       },

@@ -11,6 +11,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
+import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -29,7 +30,8 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   // Either an image file or an inline procedural texture; `useTexture2D` hides
   // which, and owns the lifetime of the procedural one it rasterises.
   const { texture: resolvedTexture } = useTexture2D(props.texture, externalResources, internalResources);
-  const texture = useCanvas2DTexture(resolvedTexture);
+  const sampler = useNode2DTextureSampler(props);
+  const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
   const rings = useMemo(
     () =>

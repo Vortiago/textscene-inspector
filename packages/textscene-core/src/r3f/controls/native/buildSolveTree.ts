@@ -64,6 +64,7 @@ import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewport
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
 import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
 import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
 import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
@@ -289,6 +290,11 @@ function nextSkippedAncestors(
     // `z_relative == false` item restarts (`renderer_canvas_cull.cpp:430-434`), so
     // only the walker, which knows the ambient z, can fold it.
     z: [...(previous?.z ?? []), { zIndex: props.z_index ?? 0, zAsRelative: props.z_as_relative !== false }],
+    // Own over previous, each property on its own: a PARENT_NODE link takes its parent's cache.
+    sampler: inheritTextureSampler(
+      { filter: props.texture_filter, repeat: props.texture_repeat },
+      previous?.sampler ?? ROOT_TEXTURE_SAMPLER
+    ),
   };
 }
 
@@ -540,8 +546,7 @@ function buildForest(
     const sortable: { raw: TscnNode; live: TscnNode }[] = [];
     for (const group of groups) {
       for (const child of group.children) {
-        const merged = liveChildGroups(child, group.scope, sceneCache).find((g) => g.origin === 'merged');
-        const live = merged?.mergedNode ?? child;
+        const live = mergedNodeOf(liveChildGroups(child, group.scope, sceneCache)) ?? child;
         if (isSortableChild(live)) sortable.push({ raw: child, live });
       }
     }
