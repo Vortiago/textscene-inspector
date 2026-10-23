@@ -20,8 +20,10 @@ import { perTree } from '../utils/perTree.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
+  liveTreeOf,
   mergedNodeOf,
   rootGroups,
+  snapshotScenes,
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
@@ -212,9 +214,18 @@ function holdsInstanceContent(group: LiveChildGroup): boolean {
   return group.origin === 'merged' || group.origin === 'glb';
 }
 
-/** The owner walk one question takes, so every walk it makes shares each step. */
+/** Written only by {@link ownerWalkOf}, keyed by the live tree it steps over. */
+const ownerWalks = new WeakMap<LiveTree, OwnerWalk>();
+
+/** The owner walk every question over `ctx` takes, so each walk shares each step. */
 function ownerWalkOf(roots: readonly TscnNode[], ctx: LiveTreeContext): OwnerWalk {
-  return new OwnerWalk(new PlacedLiveTree(new LiveTree(roots, ctx)));
+  const tree = liveTreeOf(roots, ctx);
+  let walk = ownerWalks.get(tree);
+  if (!walk) {
+    walk = new OwnerWalk(new PlacedLiveTree(tree));
+    ownerWalks.set(tree, walk);
+  }
+  return walk;
 }
 
 /**
@@ -286,7 +297,7 @@ function cachedSubRoots(
   ctx: LiveTreeContext
 ): readonly TscnNode[] | undefined {
   const scenePath = liveInstancePath(node, scope);
-  return scenePath ? ctx.sceneCache.getCached(scenePath)?.nodes : undefined;
+  return scenePath ? snapshotScenes(ctx).getCached(scenePath)?.nodes : undefined;
 }
 
 /** `paths` with each live path placed, the same object where none passes through a `%Name`. */

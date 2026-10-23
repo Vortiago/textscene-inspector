@@ -35,6 +35,7 @@ import { clamp } from '../../../godot/math/math';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector3 } from '../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { sameElements } from '../../../utils/sameElements';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
@@ -217,7 +218,7 @@ export function Decal({ node, children }: NodeComponentProps) {
       const { size: boxSize, cullMask } = boxInputsRef.current;
       const boxAABB = computeDecalBoxWorldAABB(group.matrixWorld, boxSize);
       const receivers = collectDecalReceivers(scene, boxAABB, cullMask);
-      if (!isSameReceivers(receivers, baked.receivers)) setLateReceiverBakes((bakes) => bakes + 1);
+      if (!sameElements(receivers, baked.receivers)) setLateReceiverBakes((bakes) => bakes + 1);
     });
     return () => {
       stop();
@@ -292,8 +293,4 @@ function showFaded(
 /** A mesh a decal can receive on: its own and every decal's projection meshes are not receivers. */
 function isSceneMesh(object: THREE.Object3D): object is THREE.Mesh {
   return (object as THREE.Mesh).isMesh === true && object.userData.isDecalProjection !== true;
-}
-
-function isSameReceivers(a: readonly THREE.Mesh[], b: readonly THREE.Mesh[]): boolean {
-  return a.length === b.length && a.every((mesh, i) => mesh === b[i]);
 }

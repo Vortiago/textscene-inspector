@@ -25,6 +25,7 @@ import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.j
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { composeProviders } from '../../composeProviders.js';
 import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
+import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
 
 export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
@@ -82,6 +83,8 @@ export function previewShellProviders({
     ),
     // The frame profile in the canvas publishes here, and the overlay beside the canvas reads it.
     (children) => <FrameStatsProvider>{children}</FrameStatsProvider>,
+    // Each canvas's probe publishes here, and the top bar reads it.
+    (children) => <SoftwareRenderingProvider>{children}</SoftwareRenderingProvider>,
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
     // A `<SubViewport>` publishes its target here and a `ViewportTexture` resolves
