@@ -171,6 +171,19 @@ function composedSubScene(
   const known = sameChain.find((c) => stillAnswered(c.reads, sceneCache));
   if (known) return known.composed;
 
+  const composition = composeRecording(cached, root, content, sceneCache);
+  const otherChains = stored.filter((c) => !sameChain.includes(c));
+  compositions.set(cached, [...otherChains, ...sameChain.slice(1 - COMPOSITIONS_PER_CHAIN), composition]);
+  return composition.composed;
+}
+
+/** The composition of `root` over its bases, with every answer the cache gave while it composed. */
+function composeRecording(
+  cached: CachedScene,
+  root: LiveNode,
+  content: SceneScope,
+  sceneCache: CachedSceneSource
+): Composition {
   const reads = new Map<string, CacheAnswer>();
   // The recorder also sees the reads of a base's own composition, so a change of any base ends this entry.
   const recorder: CachedSceneSource = {
@@ -182,10 +195,7 @@ function composedSubScene(
   };
   const collapsed = collapseLiveNode(root, content, recorder);
   const composed = collapsed === root ? cached : { nodes: [collapsed] };
-  const composition: Composition = { instancedScenePaths: enclosing, reads, composed };
-  const otherChains = stored.filter((c) => !sameChain.includes(c));
-  compositions.set(cached, [...otherChains, ...sameChain.slice(1 - COMPOSITIONS_PER_CHAIN), composition]);
-  return composed;
+  return { instancedScenePaths: content.instancedScenePaths ?? [], reads, composed };
 }
 
 function stillAnswered(reads: ReadonlyMap<string, CacheAnswer>, sceneCache: CachedSceneSource): boolean {
