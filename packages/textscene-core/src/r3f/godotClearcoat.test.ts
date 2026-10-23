@@ -3,22 +3,19 @@
  * tests read the installed three, so a release that rewrites a replaced line fails here, not in a
  * golden.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotClearcoat } from './godotClearcoat';
 import { installGodotLightFunction } from './godotLightFunction';
 import { installGodotSkyLighting } from './godotSkyLighting';
-import { installLightFunctionPrerequisites } from './testing/shaderPatches';
+import { installLightFunctionPrerequisites, restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
 
 const threeChunks = { ...THREE.ShaderChunk };
 const threeFragment = THREE.ShaderLib.physical.fragmentShader;
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-  THREE.ShaderLib.physical.fragmentShader = threeFragment;
-});
+restoreShaderGlobalsAfterEach();
 
 /** The patches the clearcoat calls, then the clearcoat, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {

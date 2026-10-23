@@ -7,6 +7,7 @@ import { TextureChannel, textureChannelMask } from '../../godot/rendering/materi
 const AO_INCLUDE = '#include <aomap_fragment>';
 const TOTALS = 'vec3 totalDiffuse';
 const RED = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
+const STANDARD_FRAGMENT = THREE.ShaderLib.standard.fragmentShader;
 
 /** The shader `GODOT_AMBIENT_OCCLUSION` leaves for `material`. */
 function patchedFor(material: THREE.Material, fragmentShader: string): ProgramShader {
@@ -77,25 +78,27 @@ describe('GODOT_AMBIENT_OCCLUSION on the MeshPhysicalMaterial fragment shader', 
 
 describe('the AO uniforms', () => {
   it("read the light affect from the material's userData", () => {
-    expect(patched('', 0.5).uniforms.godotAoLightAffect!.value).toBe(0.5);
+    expect(patched(STANDARD_FRAGMENT, 0.5).uniforms.godotAoLightAffect!.value).toBe(0.5);
   });
 
   it("read the channel mask from the material's userData", () => {
     const green = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_GREEN);
     const material = new THREE.MeshStandardMaterial({ userData: ambientOcclusionUserData(0, green) });
-    expect(patchedFor(material, '').uniforms.godotAoTextureChannel!.value).toEqual([0, 1, 0, 0]);
+    expect(patchedFor(material, STANDARD_FRAGMENT).uniforms.godotAoTextureChannel!.value).toEqual([
+      0, 1, 0, 0,
+    ]);
   });
 
   it('follow a later change to the userData, so a new value needs no recompile', () => {
     const material = new THREE.MeshStandardMaterial({ userData: ambientOcclusionUserData(0, RED) });
-    const { uniforms } = patchedFor(material, '');
+    const { uniforms } = patchedFor(material, STANDARD_FRAGMENT);
     material.userData = ambientOcclusionUserData(0.75, RED);
     expect(uniforms.godotAoLightAffect!.value).toBe(0.75);
   });
 
   it("are Godot's defaults on a material that records neither (edge case)", () => {
     // `material.cpp:3983,3987`: light affect 0, red channel.
-    const { uniforms } = patchedFor(new THREE.MeshStandardMaterial(), '');
+    const { uniforms } = patchedFor(new THREE.MeshStandardMaterial(), STANDARD_FRAGMENT);
     expect([uniforms.godotAoLightAffect!.value, uniforms.godotAoTextureChannel!.value]).toEqual([
       0,
       [1, 0, 0, 0],

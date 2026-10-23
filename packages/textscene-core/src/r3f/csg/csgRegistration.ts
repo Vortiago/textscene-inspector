@@ -7,6 +7,7 @@
 import type * as THREE from 'three';
 import type { LoadedFile } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
+import { isClosedBrush, type ShadedBrush } from './brushManifold';
 import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {
@@ -25,12 +26,31 @@ export interface CsgGeometryContext extends SceneResources {
 export interface CsgSolid {
   geometry: THREE.BufferGeometry;
   materials: readonly CsgMaterialAddress[];
+  /**
+   * Whether Godot's manifold keeps the brush. An open brush is empty: it draws nothing, bounds to
+   * a point and empties the whole fold of its node (`csg_shape.cpp:431,977-988`).
+   */
+  isClosed: boolean;
+}
+
+/** The solid of a shaded brush, closed when its welded edges all run both ways. */
+export function csgSolid(
+  { geometry, welds }: ShadedBrush,
+  materials: readonly CsgMaterialAddress[]
+): CsgSolid {
+  return { geometry, materials, isClosed: isClosedBrush(welds) };
+}
+
+/** Whether `solid` holds a face. A closed solid with none is Godot's empty brush. */
+export function hasFaces(solid: CsgSolid): boolean {
+  return (solid.geometry.getAttribute('position')?.count ?? 0) > 0;
 }
 
 /**
- * `null` contributes nothing (an unresolved mesh, a degenerate polygon, equal torus radii). The
- * plan drops it rather than treat it as an empty solid, since intersecting with an empty solid
- * differs from intersecting with nothing.
+ * A shape's solid: a closed solid with no face (Godot's empty brush) for a shape that builds none,
+ * or `null` for one not built yet, such as a mesh still loading or of a type no slice builds.
+ * Either adds nothing to a union and empties an intersection, as Godot's empty manifold does.
+ * Only the empty solid warns (`csg_shape.cpp:981`), since Godot draws a brush for the other.
  */
 export type CsgGeometryBuilder = (
   properties: Record<string, unknown>,
@@ -62,10 +82,14 @@ export interface CsgShapeRegistration {
   meshType?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string | null;
 }
 
-/** A `CSGPrimitive3D`'s solid: one geometry under its one `material`. */
+/**
+ * A `CSGPrimitive3D`'s solid: one geometry under its one `material`. Box, sphere, cylinder and
+ * torus builders emit a closed brush by construction, which `primitiveBrushes.test.ts` pins, so
+ * this skips the weld that `csgSolid` runs.
+ */
 export function primitiveSolid(
   geometry: THREE.BufferGeometry,
   properties: { materialPath?: string }
 ): CsgSolid {
-  return { geometry, materials: [properties.materialPath] };
+  return { geometry, materials: [properties.materialPath], isClosed: true };
 }

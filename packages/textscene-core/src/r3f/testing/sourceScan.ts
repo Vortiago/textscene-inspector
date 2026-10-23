@@ -23,6 +23,9 @@ const SKIPPED_DIRECTORIES = new Set<string>(skippedDirectories);
 
 const REPO_ROOT = repoRoot();
 
+/** The renderer's folder, repo-relative. */
+export const RENDERER_ROOT = 'packages/textscene-core/src/r3f/';
+
 /** Repo-relative, so an offender reads the way it would be typed into an editor. */
 export const repoPath = (file: string): string => relative(REPO_ROOT, file);
 

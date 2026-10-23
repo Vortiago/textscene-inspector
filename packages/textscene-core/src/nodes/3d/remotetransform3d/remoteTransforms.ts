@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
-import { joinPath } from '../../../utils/nodePath.js';
+import { joinPath, parentPathOf } from '../../../utils/nodePath.js';
 import { uniqueNamePaths } from '../../../utils/uniqueNames.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
@@ -80,11 +80,6 @@ function readFlags(props: RelayProps): RemoteFlags {
     updateScale: props.update_scale !== false,
     useGlobal: props.use_global_coordinates !== false,
   };
-}
-
-function parentPathOf(path: string): string | null {
-  const idx = path.lastIndexOf('/');
-  return idx === -1 ? null : path.slice(0, idx);
 }
 
 function applyRelay3D(

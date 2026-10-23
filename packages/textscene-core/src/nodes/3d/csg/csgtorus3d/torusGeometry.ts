@@ -33,7 +33,7 @@
  */
 
 import type * as THREE from 'three';
-import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
+import { applyCsgNormals, emptyBrush, type CsgFaceSoup } from '../smoothNormals';
 import { TAU } from '../../../../godot/math/math.js';
 
 interface CsgTorusSpec {
@@ -49,10 +49,6 @@ interface CsgTorusSpec {
 
 const MIN_SEGMENTS = 3;
 
-function emptyGeometry(): THREE.BufferGeometry {
-  return applyCsgNormals({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
-}
-
 export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry {
   const { sides, ringSides, smoothFaces, flipFaces } = spec;
 
@@ -60,7 +56,7 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
   let maxRadius = spec.outerRadius;
 
   // Godot bails outright rather than clamping: equal radii is a zero-thickness ring.
-  if (minRadius === maxRadius) return emptyGeometry();
+  if (minRadius === maxRadius) return emptyBrush().geometry;
   // Inverted radii swap rather than clamp, so a torus authored the wrong way round still
   // renders the ring the user meant.
   if (minRadius > maxRadius) [minRadius, maxRadius] = [maxRadius, minRadius];
@@ -71,7 +67,7 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
     sides < MIN_SEGMENTS ||
     ringSides < MIN_SEGMENTS
   ) {
-    return emptyGeometry();
+    return emptyBrush().geometry;
   }
 
   const tube = (maxRadius - minRadius) * 0.5;

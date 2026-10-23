@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { editedProgram } from '../shaderPatch/chunkPatch';
 import { SHADER_ALPHA_HASH_SCALE_DEFAULT } from '../../godot/rendering/materials/defaultMaterial';
 import { recordedOn } from './recordedOnMaterial';
 
@@ -99,11 +100,16 @@ export const GODOT_ALPHA_HASH: ProgramInjection = {
   cacheKey: 'godot-alpha-hash',
   onBeforeCompile(shader) {
     Object.assign(shader.uniforms, hashUniformsOf(this));
-    shader.vertexShader = `uniform mat4 godotObjectFromModel;\n${shader.vertexShader.replace(
-      PROJECT_VERTEX_CHUNK,
-      `${PROJECT_VERTEX_CHUNK}\n${GODOT_OBJECT_POSITION}`
-    )}`;
-    shader.fragmentShader = shader.fragmentShader.replace(HASH_PARS_CHUNK, GODOT_HASH_THRESHOLD);
+    const position = `${PROJECT_VERTEX_CHUNK}\n${GODOT_OBJECT_POSITION}`;
+    editedProgram(
+      shader,
+      {
+        vertex: [{ three: PROJECT_VERTEX_CHUNK, godot: position }],
+        fragment: [{ three: HASH_PARS_CHUNK, godot: GODOT_HASH_THRESHOLD }],
+      },
+      'alpha hash'
+    );
+    shader.vertexShader = `uniform mat4 godotObjectFromModel;\n${shader.vertexShader}`;
   },
 };
 

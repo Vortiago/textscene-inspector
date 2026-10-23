@@ -33,7 +33,7 @@
  */
 
 import type * as THREE from 'three';
-import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
+import { applyCsgNormals, emptyBrush, type CsgFaceSoup } from '../smoothNormals';
 import { TAU } from '../../../../godot/math/math.js';
 
 interface CsgSphereSpec {
@@ -56,7 +56,7 @@ export function buildCsgSphereGeometry(spec: CsgSphereSpec): THREE.BufferGeometr
     radialSegments < MIN_RADIAL_SEGMENTS ||
     rings < MIN_RINGS
   ) {
-    return applyCsgNormals({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
+    return emptyBrush().geometry;
   }
 
   // csg_shape.cpp:1329. Each ring contributes two triangles per segment except the two

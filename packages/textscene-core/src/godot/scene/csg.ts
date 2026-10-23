@@ -1,6 +1,7 @@
 /**
  * The CSG brush facts every CSG shape shares. Godot packs each brush into a manifold mesh, which
- * welds vertices and collapses edges within a tolerance before the brush gets its normals.
+ * welds vertices and collapses edges within a tolerance before the brush gets its normals, and
+ * which is empty unless the brush is closed.
  */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
@@ -8,7 +9,7 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
 /** `FLT_EPSILON`, the gap between 1 and the next single-precision float. */
 const FLT_EPSILON = 2 ** -23;
 
-/** `mesh.tolerance = 2 * FLT_EPSILON` (`csg_shape.cpp:427`), an absolute distance. */
+/** `mesh.tolerance = 2 * FLT_EPSILON` (`csg_shape.cpp:425`), an absolute distance. */
 export const CSG_MERGE_TOLERANCE = 2 * FLT_EPSILON;
 
 /** `CSGShape3D::Operation` (`modules/csg/csg_shape.h:51-55`). */

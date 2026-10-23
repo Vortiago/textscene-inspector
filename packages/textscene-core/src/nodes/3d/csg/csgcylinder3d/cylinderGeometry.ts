@@ -33,7 +33,7 @@
  */
 
 import type * as THREE from 'three';
-import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
+import { applyCsgNormals, emptyBrush, type CsgFaceSoup } from '../smoothNormals';
 import { TAU } from '../../../../godot/math/math.js';
 
 interface CsgCylinderSpec {
@@ -52,7 +52,7 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
   const { radius, height, sides, cone, smoothFaces, flipFaces } = spec;
 
   if (!Number.isFinite(sides) || sides < MIN_SIDES) {
-    return applyCsgNormals({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
+    return emptyBrush().geometry;
   }
 
   // csg_shape.cpp:1698. Cone drops the second wall triangle and the whole top cap.
