@@ -117,11 +117,26 @@ interface BuiltTree {
   tree: SharedLiveTree | null;
 }
 
-/** Written only by {@link useSharedLiveTree}: the tree for a graph and loader. */
+/** Written only by {@link sharedTreeAt}: the tree for a graph and loader. */
 const sharedTrees = new WeakMap<SceneGraph, WeakMap<object, BuiltTree>>();
 
 /** The key of a reader with no loader, which a WeakMap cannot take as null. */
 const NO_LOADER = {};
+
+/** The one tree every reader of `sceneGraph` over `loader` shares for the load tick `version`. */
+function sharedTreeAt(
+  sceneGraph: SceneGraph,
+  loader: ResourceLoader | null | undefined,
+  version: number
+): SharedLiveTree | null {
+  const byLoader = sharedTrees.get(sceneGraph) ?? new WeakMap();
+  sharedTrees.set(sceneGraph, byLoader);
+  const known = byLoader.get(loader ?? NO_LOADER);
+  if (known?.version === version) return known.tree;
+  const tree = liveTreeContext(sceneGraph, loader);
+  byLoader.set(loader ?? NO_LOADER, { version, tree });
+  return tree;
+}
 
 /**
  * The live tree of the scene graph in context, or null with no root scene. Every reader asks for
@@ -133,16 +148,41 @@ export function useSharedLiveTree(): SharedLiveTree | null {
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);
-  return useMemo(() => {
-    if (!sceneGraph) return null;
-    const byLoader = sharedTrees.get(sceneGraph) ?? new WeakMap();
-    sharedTrees.set(sceneGraph, byLoader);
-    const known = byLoader.get(loader ?? NO_LOADER);
-    if (known?.version === version) return known.tree;
-    const tree = liveTreeContext(sceneGraph, loader);
-    byLoader.set(loader ?? NO_LOADER, { version, tree });
-    return tree;
-  }, [sceneGraph, loader, version]);
+  return useMemo(
+    () => (sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null),
+    [sceneGraph, loader, version]
+  );
+}
+
+function sameSelection<T>(a: T | undefined, b: T | undefined, isSame: (a: T, b: T) => boolean): boolean {
+  return a === undefined || b === undefined ? a === b : isSame(a, b);
+}
+
+/**
+ * A value read from the shared live tree, undefined with no tree. A load tick re-reads it, and the
+ * reader re-renders only where `isSame` says the value changed, so a reader whose answer a load
+ * leaves alone costs no render. `select` and `isSame` must be stable.
+ */
+export function useLiveTreeSelection<T>(
+  select: (tree: SharedLiveTree) => T | undefined,
+  isSame: (a: T, b: T) => boolean
+): T | undefined {
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const loader = useResourceLoader();
+  const ticks = loadTicksOf(loader);
+  const getSnapshot = useMemo(() => {
+    let known: { version: number; value: T | undefined } | undefined;
+    return () => {
+      const version = ticks.getVersion();
+      if (known?.version === version) return known.value;
+      const tree = sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null;
+      const read = tree ? select(tree) : undefined;
+      const isUnchanged = known !== undefined && sameSelection(known.value, read, isSame);
+      known = { version, value: isUnchanged ? known!.value : read };
+      return known.value;
+    };
+  }, [ticks, sceneGraph, loader, select, isSame]);
+  return useSyncExternalStore(ticks.subscribe, getSnapshot);
 }
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */
