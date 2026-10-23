@@ -20,6 +20,14 @@ const TIER_NARROWING_RE = new RegExp(
   'g'
 );
 
+/** `TIER_NARROWING_RE` without `g`, whose `lastIndex` would carry from one `test` to the next. */
+const TIER_NARROWING_TEST_RE = new RegExp(TIER_NARROWING_RE.source);
+
+/** Whether `source` narrows to a tier anywhere, so it can hold a negative `tierNarrowedNegatives` finds. */
+export function canHoldTierNarrowedNegative(source: string): boolean {
+  return TIER_NARROWING_TEST_RE.test(source);
+}
+
 /** A predicate narrowing to one diagnostic: by its message or its rule name. */
 const IDENTITY_RE = /\.message\.includes\(|\.ruleName\s*===/;
 
