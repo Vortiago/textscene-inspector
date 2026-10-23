@@ -6,6 +6,7 @@ import {
   node2dGroupSpread,
   threeMatrixFromTransform2D,
   transform2DFromThreeMatrix,
+  writeGodotPointAsThree,
 } from './node2dTransform';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/math/transform2d.js';
 
@@ -204,5 +205,19 @@ describe('transform2DFromThreeMatrix', () => {
   it('inverts threeMatrixFromTransform2D exactly', () => {
     const t = transform2DFromParts(0.7, { x: 2, y: -0.5 }, 0.3, { x: 5, y: -6 });
     expect(transform2DFromThreeMatrix(threeMatrixFromTransform2D(t, 0.4))).toEqual(t);
+  });
+});
+
+describe('writeGodotPointAsThree', () => {
+  it('writes a Godot canvas point at the offset as three (x, -y, 0)', () => {
+    const out = new Float32Array(6);
+    writeGodotPointAsThree(out, 3, 7, 10);
+    expect(Array.from(out)).toEqual([0, 0, 0, 7, -10, 0]);
+  });
+
+  it('keeps a zero y at +0, never -0 (edge case)', () => {
+    const out = new Float32Array(3);
+    writeGodotPointAsThree(out, 0, 5, 0);
+    expect(Object.is(out[1], 0)).toBe(true);
   });
 });
