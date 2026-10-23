@@ -21,15 +21,24 @@ function sourceFiles(): string[] {
 }
 
 /**
- * Memoised by text. Each sweep also tests a file's text first and parses only a file that can hold
- * its pattern: a parse of all 3,100 files takes about 5 s, the whole limit of one test.
+ * Memoised by text, and parsed without parent links, which a sweep never reads. Each sweep first
+ * tests the text for the tokens its syntax needs, so it parses only a file that can hold a match:
+ * a parse of all 3,100 files takes about 2.5 s, half the limit of one test.
  */
 const parsedBySource = new Map<string, ts.SourceFile>();
+
+/** Whitespace and comments, which may sit between two tokens. */
+const TRIVIA = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*\n)*`;
+/** `export {`, `export *` or `export type {`: the start of every re-export. */
+const MAY_RE_EXPORT = new RegExp(String.raw`\bexport${TRIVIA}(?:type\b${TRIVIA})?[{*]`);
+/** `= {`: the start of every declaration whose initializer is an object literal. */
+const MAY_DECLARE_OBJECT = new RegExp(String.raw`=${TRIVIA}\{`);
+const MAY_DECLARE_ENUM = /\benum\b/;
 
 function parse(source: string): ts.SourceFile {
   let file = parsedBySource.get(source);
   if (!file) {
-    file = ts.createSourceFile('file.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    file = ts.createSourceFile('file.ts', source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
     parsedBySource.set(source, file);
   }
   return file;
@@ -59,7 +68,7 @@ function importedNames(file: ts.SourceFile): Map<string, string> {
  * name. A constant that names an imported fact for its own use (`export const A = B`) is not one.
  */
 function reExportedModules(source: string): string[] {
-  if (!/\bexport\s*(?:type\s*)?[*{]/.test(source)) return [];
+  if (!MAY_RE_EXPORT.test(source)) return [];
   const file = parse(source);
   const imported = importedNames(file);
   const reached: string[] = [];
@@ -107,11 +116,14 @@ function integerOf(node: ts.Expression): number | undefined {
  * An object literal whose every member is an integer, which is how `as const` enums are written.
  * Members that are all one letter make it a vector or a colour (`{ x: 1, y: 0 }`), not an enum.
  */
-function objectLiteralMembers(literal: ts.ObjectLiteralExpression): ReadonlyMap<string, number> | undefined {
+function objectLiteralMembers(
+  literal: ts.ObjectLiteralExpression,
+  file: ts.SourceFile
+): ReadonlyMap<string, number> | undefined {
   const members = new Map<string, number>();
   for (const property of literal.properties) {
     const value = ts.isPropertyAssignment(property) ? integerOf(property.initializer) : undefined;
-    const name = property.name?.getText().replace(/^['"]|['"]$/g, '');
+    const name = property.name?.getText(file).replace(/^['"]|['"]$/g, '');
     if (value === undefined || !name) return undefined;
     members.set(name, value);
   }
@@ -121,14 +133,16 @@ function objectLiteralMembers(literal: ts.ObjectLiteralExpression): ReadonlyMap<
 
 /** The integer-valued `as const` objects a file declares at its top level. */
 function objectEnumsIn(source: string): EnumMembers[] {
-  if (!/^(?:export\s+)?(?:const|let|var)\s+\w+[^=\n]*=\s*\(?\s*\{/m.test(source)) return [];
+  if (!MAY_DECLARE_OBJECT.test(source)) return [];
   const objects: EnumMembers[] = [];
-  for (const statement of parse(source).statements) {
+  const file = parse(source);
+  for (const statement of file.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const { name, initializer } of statement.declarationList.declarations) {
       let value = initializer;
       while (value && (ts.isAsExpression(value) || ts.isSatisfiesExpression(value))) value = value.expression;
-      const members = value && ts.isObjectLiteralExpression(value) ? objectLiteralMembers(value) : undefined;
+      const members =
+        value && ts.isObjectLiteralExpression(value) ? objectLiteralMembers(value, file) : undefined;
       if (members && ts.isIdentifier(name)) objects.push({ name: name.text, members });
     }
   }
@@ -137,7 +151,7 @@ function objectEnumsIn(source: string): EnumMembers[] {
 
 /** The name of each TypeScript `enum` a file declares at its top level, `const enum` included. */
 function tsEnumNames(source: string): string[] {
-  if (!/\benum\s+\w/.test(source)) return [];
+  if (!MAY_DECLARE_ENUM.test(source)) return [];
   return parse(source)
     .statements.filter(ts.isEnumDeclaration)
     .map((declaration) => declaration.name.text);
@@ -166,6 +180,11 @@ describe('detecting a re-export', () => {
     expect(reExportedModules("import { a as b } from './x.js';\nexport { b };")).toEqual(['./x.js']);
   });
 
+  it('sees a re-export with a comment before its brace or star (edge case)', () => {
+    expect(reExportedModules("export /* the enum */ { a } from './x.js';")).toEqual(['./x.js']);
+    expect(reExportedModules("export\n// all of it\n* from './x.js';")).toEqual(['./x.js']);
+  });
+
   it('passes a name the file declares itself', () => {
     expect(reExportedModules("import { a } from './x.js';\nconst b = a;\nexport { b };")).toEqual([]);
     expect(reExportedModules("import { a } from './x.js';\nexport const b = a;")).toEqual([]);
@@ -190,6 +209,13 @@ describe('detecting an engine enum', () => {
         ['SECOND', 4],
       ])
     );
+  });
+
+  it('reads an object declared after another name, or with its brace on the next line (edge case)', () => {
+    const objects = objectEnumsIn(
+      'const A = 1,\n  E = {\n  FIRST: 0, SECOND: 1 };\nconst F =\n{ FIRST: 0, SECOND: 1 };'
+    );
+    expect(objects.map(({ name }) => name)).toEqual(['E', 'F']);
   });
 
   it('counts a spelling that differs by case and underscores as the same member', () => {
