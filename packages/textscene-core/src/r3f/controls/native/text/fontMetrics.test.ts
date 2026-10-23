@@ -13,6 +13,7 @@ import {
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  withVariation,
   type FontMetrics,
 } from './fontMetrics';
 
@@ -102,5 +103,28 @@ describe('getFontKerningAdjustmentPx', () => {
 
   it('short-circuits to 0 for a pair the font has no entry for', () => {
     expect(getFontKerningAdjustmentPx(METRICS, 'A', 'A', 16)).toBe(0);
+  });
+});
+
+describe('withVariation', () => {
+  it('is the face itself with no embolden and no skew', () => {
+    expect(withVariation(METRICS, {})).toBe(METRICS);
+    expect(withVariation(METRICS, { embolden: 0, skew: 0 })).toBe(METRICS);
+  });
+
+  it('sets the embolden and the skew, and reads everything else through the face', () => {
+    const varied = withVariation(METRICS, { embolden: 1.2, skew: 0.2 });
+    expect([varied.embolden, varied.skew]).toEqual([1.2, 0.2]);
+    expect(varied.getGlyphAdvanceUnits('A')).toBe(METRICS.getGlyphAdvanceUnits('A'));
+    expect(varied.unitsPerEm).toBe(METRICS.unitsPerEm);
+  });
+
+  it('keeps an embolden and a skew apart: a skew alone leaves the embolden at 0', () => {
+    expect(withVariation(METRICS, { skew: 0.2 }).embolden).toBe(0);
+  });
+
+  it('returns one object per face, embolden and skew, so a layout memoised on it keeps its hits', () => {
+    expect(withVariation(METRICS, { embolden: 1.2 })).toBe(withVariation(METRICS, { embolden: 1.2 }));
+    expect(withVariation(METRICS, { embolden: 1.2 })).not.toBe(withVariation(METRICS, { skew: 1.2 }));
   });
 });

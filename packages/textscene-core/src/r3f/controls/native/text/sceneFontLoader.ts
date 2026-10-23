@@ -3,7 +3,7 @@
  * and registers the bundled font through the same door, so registration and the settled channel
  * exist once. It is the one DOM-touching module of the font pipeline, and it never throws.
  */
-import type { FontMetrics } from './fontMetrics';
+import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
@@ -13,7 +13,8 @@ import {
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
-import { resolveFontFileBytes } from './sceneFontResolution';
+import { fontVariationEmbolden, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
+import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
@@ -184,22 +185,30 @@ async function resolveSceneFontMetrics(
   return metrics;
 }
 
+/** `metrics` with the embolden and skew of `font`, when it is a `FontVariation`. */
+function withFontVariation(metrics: FontMetrics, font: FontResource): FontMetrics {
+  return withVariation(metrics, { embolden: fontVariationEmbolden(font), skew: fontVariationSkew(font) });
+}
+
 /**
  * The synchronous entry for a solve pass: the bundled default while a load is in flight or failed,
- * the real metrics once it lands. Never throws. It starts `resolveSceneFontMetrics` once per font,
- * so calling both never double-loads.
+ * the real metrics once it lands, with the `FontVariation` embolden and skew on top. A variation
+ * with no `base_font` is the bundled default at once. Never throws. It starts
+ * `resolveSceneFontMetrics` once per font, so calling both never double-loads.
  */
 export function peekSceneFontMetrics(font: FontResource | null | undefined, nodePath: string): FontMetrics {
   if (!font) return OPEN_SANS_FONT_METRICS;
 
   const resolved = resolveFontFileBytes(font);
   if (!resolved) {
+    // A variation with no `base_font` over the bundled default font: no failure, so no warning.
+    if (endsWithoutBase(font)) return withFontVariation(OPEN_SANS_FONT_METRICS, font);
     warnUnresolvable(font, nodePath);
     return OPEN_SANS_FONT_METRICS;
   }
 
   const existing = metricsCache.get(resolved.leaf);
-  if (existing?.status === 'settled') return existing.metrics;
+  if (existing?.status === 'settled') return withFontVariation(existing.metrics, font);
   if (!existing) {
     void resolveSceneFontMetrics(font, nodePath);
   }

@@ -1345,6 +1345,103 @@ describe('useBuildSolveTree — theme resolution', () => {
 
     expect(result.current.tree[0]?.projectTheme?.defaultFontSize).toBe(30);
   });
+
+  describe("the project's default font (gui/theme/custom_font)", () => {
+    const projectGodot = (fontPath: string) =>
+      ['config_version=5', '', '[gui]', '', `theme/custom_font="${fontPath}"`, ''].join('\n');
+
+    /** Renders one themeless Label under a project whose files are `files`. */
+    function renderPlainLabel(files: Record<string, string>) {
+      const loader = loaderServing(files);
+      const rendered = renderHook(() => useBuildSolveTree([label('Plain')], [], []), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <ResourceLoaderProvider loader={loader}>
+            <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+          </ResourceLoaderProvider>
+        ),
+      });
+      return { loader, ...rendered };
+    }
+
+    async function settle() {
+      await act(async () => {
+        for (let pass = 0; pass < 4; pass++) await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+
+    it('loads the font the setting names and gives it to every Control', async () => {
+      const { result } = renderPlainLabel({
+        'res://project.godot': projectGodot('res://body_font.tres'),
+        'res://body_font.tres':
+          '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 3\n',
+      });
+
+      await settle();
+
+      expect(result.current.tree[0]?.projectDefaultFont).toEqual({
+        kind: 'variation',
+        baseFont: null,
+        properties: { spacing_glyph: '3' },
+      });
+    });
+
+    it('is null for a project that sets no custom_font', async () => {
+      const { result } = renderPlainLabel({
+        'res://project.godot': 'config_version=5\n\n[gui]\n\ntheme/default_theme_scale=1.0\n',
+      });
+
+      await settle();
+
+      expect(result.current.tree[0]?.projectDefaultFont).toBeNull();
+    });
+
+    it('is null for a path that does not load, so the Control draws the bundled font', async () => {
+      const { result } = renderPlainLabel({ 'res://project.godot': projectGodot('res://gone_font.tres') });
+
+      await settle();
+
+      expect(result.current.tree[0]?.projectDefaultFont).toBeNull();
+    });
+
+    it('follows the font file when it changes', async () => {
+      const files: Record<string, string> = {
+        'res://project.godot': projectGodot('res://body_font.tres'),
+        'res://body_font.tres':
+          '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 1\n',
+      };
+      const { loader, result } = renderPlainLabel(files);
+      await settle();
+
+      files['res://body_font.tres'] =
+        '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 2\n';
+      loader.provideFile('res://body_font.tres');
+      await settle();
+
+      expect(result.current.tree[0]?.projectDefaultFont).toMatchObject({
+        properties: { spacing_glyph: '2' },
+      });
+    });
+
+    it('follows project.godot when it names another font', async () => {
+      const files: Record<string, string> = {
+        'res://project.godot': projectGodot('res://first_font.tres'),
+        'res://first_font.tres':
+          '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 1\n',
+        'res://second_font.tres':
+          '[gd_resource type="FontVariation" format=3]\n\n[resource]\nspacing_glyph = 2\n',
+      };
+      const { loader, result } = renderPlainLabel(files);
+      await settle();
+
+      files['res://project.godot'] = projectGodot('res://second_font.tres');
+      loader.fileEventBus!.invalidate('res://project.godot');
+      await settle();
+
+      expect(result.current.tree[0]?.projectDefaultFont).toMatchObject({
+        properties: { spacing_glyph: '2' },
+      });
+    });
+  });
 });
 
 describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () => {

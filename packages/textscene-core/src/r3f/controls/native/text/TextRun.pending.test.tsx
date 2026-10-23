@@ -52,7 +52,10 @@ async function freshTextModules() {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('<TextRun> pending load', () => {
+// Each test imports the text modules cold (1.8 s alone). Beside a tree-scanning test, the 5 s default fails them.
+const FRESH_IMPORT_TIMEOUT_MS = 20_000;
+
+describe('<TextRun> pending load', { timeout: FRESH_IMPORT_TIMEOUT_MS }, () => {
   it('counts an atlas run as pending until the atlas decodes', async () => {
     const { loader, mountAtlasRun, decode } = await freshTextModules();
     await mountAtlasRun();

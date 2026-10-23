@@ -43,6 +43,9 @@ export function slotTupleRegex(typeName: string, arity: number): RegExp {
   return tupleRegex(typeName, arity, true);
 }
 
+/** A `Transform2D` in a property slot: `Node2D.transform` and `FontVariation.variation_transform`. */
+export const TRANSFORM2D_SLOT_RE = slotTupleRegex('Transform2D', 6);
+
 /**
  * The grammar for a composite in a Variant position, stored as the type the file spells.
  * An animation keyframe keeps the Variant, so the slot grammar would truncate a `Vector3`

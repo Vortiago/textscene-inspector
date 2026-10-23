@@ -60,7 +60,10 @@ void main() {
   // done per-fragment so it tracks the actual on-screen scale, not a
   // px-range/bake-size ratio computed once in JS.
   float signedDistancePx = spr * (m - 0.5 + uDistanceBias);
-  float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0);
+  // The field clamps to 0 beyond half its range. A bias reads that flat 0 as a point inside the edge
+  // and fills the whole glyph quad, so the fill fades out where the field is empty.
+  float inRange = smoothstep(0.0, 0.04, m);
+  float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0) * inRange;
   vec3 rgb = uColor;
   float alpha = fillCoverage * uOpacity;
   if (uOutlineWidthPx > 0.0) {
