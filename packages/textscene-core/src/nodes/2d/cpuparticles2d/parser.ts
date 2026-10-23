@@ -11,7 +11,7 @@ import { colorOr } from '../../../utils/colorParser';
 import { type CPUParticles2DProperties, type ParticleParam, PARAM_SLOTS } from './types';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
 import { loadedParamRange } from '../../../godot/scene/particleParamRange';
-import { finiteParamBounds } from './finiteParamBounds';
+import { drawableParamBounds } from './drawableParamBounds';
 
 /** Godot's inspector range for `amount` is `1,1000000,1,exp` (`cpu_particles_2d.cpp:1492`). */
 const MAX_PARTICLE_AMOUNT = 1_000_000;
@@ -22,7 +22,7 @@ export function parseCPUParticles2D(
 ): CPUParticles2DProperties {
   const base = parseNode2D(heading, properties);
   const context = base.name || 'CPUParticles2D';
-  const drawableBounds = finiteParamBounds(properties);
+  const drawableBounds = drawableParamBounds(properties).drawable;
 
   const result: CPUParticles2DProperties = {
     ...base,

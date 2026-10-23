@@ -17,7 +17,6 @@ export interface CrossedParamRange {
   readonly max: number;
   /** The key the file lists first. It loads as the other key's value. */
   readonly movedKey: string;
-  readonly loadedValue: number;
 }
 
 /**
@@ -71,9 +70,15 @@ export function crossedParamRanges(
     const max = storedReal(writtenMax);
     if (!(min > max)) continue;
 
-    // A crossed pair settles on one value: the bound the file lists last.
-    const loadedValue = loadedParamRange(properties, stem, min).min;
-    crossed.push({ minKey, maxKey, min, max, movedKey: loadedValue === min ? maxKey : minKey, loadedValue });
+    // The record lists its keys in file order. Only a crossed pair pays for the key list.
+    const keys = Object.keys(properties);
+    crossed.push({
+      minKey,
+      maxKey,
+      min,
+      max,
+      movedKey: keys.indexOf(minKey) < keys.indexOf(maxKey) ? minKey : maxKey,
+    });
   }
   return crossed;
 }

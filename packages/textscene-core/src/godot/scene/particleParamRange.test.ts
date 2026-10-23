@@ -19,7 +19,6 @@ describe('crossedParamRanges', () => {
         min: 5,
         max: 2,
         movedKey: 'initial_velocity_min',
-        loadedValue: 2,
       },
     ]);
   });
@@ -27,7 +26,7 @@ describe('crossedParamRanges', () => {
   it('moves a max listed first onto the min', () => {
     expect(
       crossedParamRanges({ initial_velocity_max: '2.0', initial_velocity_min: '5.0' }, CPU_PARTICLES_PARAMS)
-    ).toEqual([expect.objectContaining({ movedKey: 'initial_velocity_max', loadedValue: 5 })]);
+    ).toEqual([expect.objectContaining({ movedKey: 'initial_velocity_max' })]);
   });
 
   it('finds every crossed pair, in enum order', () => {
@@ -88,7 +87,7 @@ describe('crossedParamRanges over the ParticleProcessMaterial pairs', () => {
 describe('crossedParamRanges with an infinite bound', () => {
   it('names the bound that Godot moves onto inf, which the setters accept', () => {
     expect(crossedParamRanges({ angle_min: 'inf', angle_max: '2' }, ['angle'])).toEqual([
-      expect.objectContaining({ movedKey: 'angle_min', loadedValue: 2 }),
+      expect.objectContaining({ movedKey: 'angle_min' }),
     ]);
   });
 });

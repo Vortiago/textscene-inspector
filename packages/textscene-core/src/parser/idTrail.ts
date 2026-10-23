@@ -54,7 +54,11 @@ export function builtSceneTrailEnd<N extends RawNode>(
   return trailEnd(trail, origins, isPlaced, origins.length);
 }
 
-/** Where `trail` lands over the first `builtCount` headings, as instantiate has built them. */
+/**
+ * Where `trail` lands over the first `builtCount` headings, as instantiate has built them: the
+ * headings before a node whose path did not walk, or all of them after the build. Only the heading
+ * the trail names is built into an `IdHeading`, so the cost does not grow with the other headings.
+ */
 function trailEnd<N extends RawNode>(
   trail: readonly number[],
   origins: readonly NodeOrigin<N>[],

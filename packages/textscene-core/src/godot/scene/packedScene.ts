@@ -73,14 +73,10 @@ export interface IdTrailEnd {
 }
 
 /**
- * Follows `trail` through the headings of a scene that has no base scene, so the first
- * lookup is local (`packed_scene.cpp:1960-1979`). `firstIndexWithId` names the first heading
- * carrying an id, as `ids.find` does, so id `0` names the first heading with no `unique_id=`.
- * `headingAt` builds only the heading the trail names, so the cost does not grow with the other
- * headings. `builtCount` is the number of headings built before the lookup: the headings before a
- * node whose path did not walk, or all of them after the build. Only those can the final
- * `get_node_or_null` find (`:2005`). Undefined where the trail resolves nowhere, so Godot re-roots
- * the node.
+ * Follows `trail` through a scene with no base scene, so the first lookup is local
+ * (`packed_scene.cpp:1960-1979`). `firstIndexWithId` finds as `ids.find` does: id `0` names the first
+ * heading with no `unique_id=`. The final `get_node_or_null` finds only the first `builtCount`
+ * headings (`:2005`). Undefined where the trail resolves nowhere, so Godot re-roots the node.
  */
 export function recoverByIdTrail(
   trail: readonly number[],
