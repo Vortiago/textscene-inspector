@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rendersInSoftware } from './softwareRenderer';
+import { isSoftwareRendererName, rendersInSoftware } from './softwareRenderer';
 
 const UNMASKED_RENDERER_WEBGL = 0x9246;
 const RENDERER = 0x1f01;
@@ -15,19 +15,14 @@ function namingContext(renderer: string, { unmasked }: { unmasked: boolean }): W
   } as unknown as WebGL2RenderingContext;
 }
 
-/** Whether a context with the unmasked renderer `name` draws in software. */
-function namedInSoftware(name: string): boolean {
-  return rendersInSoftware(namingContext(name, { unmasked: true }));
-}
-
-describe('rendersInSoftware by renderer name', () => {
+describe('isSoftwareRendererName', () => {
   it.each([
     'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)',
     'llvmpipe (LLVM 15.0.7, 256 bits)',
     'ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)',
     'Apple Software Renderer',
   ])('names %s a software renderer', (name) => {
-    expect(namedInSoftware(name)).toBe(true);
+    expect(isSoftwareRendererName(name)).toBe(true);
   });
 
   it.each([
@@ -35,11 +30,11 @@ describe('rendersInSoftware by renderer name', () => {
     'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)',
     'Mesa Intel(R) Iris(R) Xe Graphics (TGL GT2)',
   ])('names %s a GPU', (name) => {
-    expect(namedInSoftware(name)).toBe(false);
+    expect(isSoftwareRendererName(name)).toBe(false);
   });
 
   it('names an empty string a GPU, since nothing says otherwise (edge case)', () => {
-    expect(namedInSoftware('')).toBe(false);
+    expect(isSoftwareRendererName('')).toBe(false);
   });
 });
 
