@@ -13,7 +13,7 @@ import {
   type ShadowCasterEdges,
   type ShadowLight,
 } from './shadowVolumes';
-import { windowScissor } from './lightListWindow';
+import { intersectScissor, windowScissor } from './lightListWindow';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { usePassMeshRef } from './lightPassDeclarations';
@@ -82,15 +82,6 @@ export function shadowColorQuadStencilProps(ordinal: number) {
 const volumeScissor = new THREE.Vector4();
 const targetSize = new THREE.Vector2();
 
-/** Narrows `scissor` to its overlap with `bound`, which is empty where they miss. */
-function intersectScissor(scissor: THREE.Vector4, bound: THREE.Vector4): void {
-  const left = Math.max(scissor.x, bound.x);
-  const bottom = Math.max(scissor.y, bound.y);
-  const right = Math.min(scissor.x + scissor.z, bound.x + bound.z);
-  const top = Math.min(scissor.y + scissor.w, bound.y + bound.w);
-  scissor.set(left, bottom, Math.max(0, right - left), Math.max(0, top - bottom));
-}
-
 /**
  * Draw hooks that scissor a light's volumes to its rect, within the target's own scissor. Only the
  * light's quads read the stencil, and they lie inside the rect, so the rest is fill a software
@@ -98,12 +89,12 @@ function intersectScissor(scissor: THREE.Vector4, bound: THREE.Vector4): void {
  * and they move the shadow's edge pixels.
  */
 function scissorToRect({ minX, minY, maxX, maxY }: LightRect) {
-  const window = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  const rect = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
   return {
     onBeforeRender(renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera) {
       const target = renderer.getRenderTarget();
       if (!target) return;
-      windowScissor(window, camera, targetSize.set(target.width, target.height), volumeScissor);
+      windowScissor(rect, camera, targetSize.set(target.width, target.height), volumeScissor);
       if (target.scissorTest) intersectScissor(volumeScissor, target.scissor);
       renderer.state.scissor(volumeScissor);
       renderer.state.setScissorTest(true);

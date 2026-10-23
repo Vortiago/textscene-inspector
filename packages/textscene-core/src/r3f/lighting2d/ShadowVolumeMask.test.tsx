@@ -172,8 +172,16 @@ describe("the scissor around a light's volumes", () => {
     return view;
   }
 
-  /** The scissors the mask sets while it draws into a 200x100 `target`, and after it draws. */
-  async function scissorsAround(target = new THREE.WebGLRenderTarget(200, 100)) {
+  /** A 200x100 target whose own scissor is `x, y, width, height`, tested when `isTested`. */
+  function scissoredTarget(scissor = [0, 0, 200, 100] as const, isTested = true): THREE.WebGLRenderTarget {
+    const target = new THREE.WebGLRenderTarget(200, 100);
+    target.scissor.fromArray(scissor);
+    target.scissorTest = isTested;
+    return target;
+  }
+
+  /** The scissors the mask sets while it draws into `target`, and after it draws. */
+  async function scissorsAround(target = scissoredTarget(undefined, false)) {
     const mesh = maskMesh(await renderMask({ light: SMALL_LIGHT, casters: [INSIDE] }))!;
     const renderer = new THREE.WebGLRenderer();
     vi.spyOn(renderer, 'getRenderTarget').mockReturnValue(target);
@@ -197,32 +205,24 @@ describe("the scissor around a light's volumes", () => {
       [y, 18, 19],
       [x + width, 61, 62],
       [y + height, 31, 32],
-    ]) {
-      expect(edge).toBeGreaterThanOrEqual(from!);
-      expect(edge).toBeLessThanOrEqual(to!);
+    ] as const) {
+      expect(edge).toBeGreaterThanOrEqual(from);
+      expect(edge).toBeLessThanOrEqual(to);
     }
   });
 
   it("stays inside the target's own scissor", async () => {
-    const target = new THREE.WebGLRenderTarget(200, 100);
-    target.scissor.set(0, 0, 40, 100);
-    target.scissorTest = true;
-    const { during } = await scissorsAround(target);
+    const { during } = await scissorsAround(scissoredTarget([0, 0, 40, 100]));
     expect(during.scissor.x + during.scissor.z).toBe(40);
   });
 
   it("is empty when the light's rect misses the target's scissor (edge case)", async () => {
-    const target = new THREE.WebGLRenderTarget(200, 100);
-    target.scissor.set(100, 0, 50, 100);
-    target.scissorTest = true;
-    const { during } = await scissorsAround(target);
+    const { during } = await scissorsAround(scissoredTarget([100, 0, 50, 100]));
     expect(during.scissor.z * during.scissor.w).toBe(0);
   });
 
   it('gives the target its own scissor back once the volumes have drawn', async () => {
-    const target = new THREE.WebGLRenderTarget(200, 100);
-    target.scissor.set(5, 6, 70, 80);
-    const { after } = await scissorsAround(target);
+    const { after } = await scissorsAround(scissoredTarget([5, 6, 70, 80], false));
     expect(after.scissor.toArray()).toEqual([5, 6, 70, 80]);
     expect(after.test).toBe(false);
   });
