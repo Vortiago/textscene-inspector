@@ -367,6 +367,10 @@ describe('<GraphEdit> minimap connection polylines', () => {
     expect(polyline(await render({ minimapEnabled: false }))).toBeUndefined();
   });
 
+  it('draws none once the load ran _update_scrollbars, as ref:godot settles the frame', async () => {
+    expect(polyline(await render({ updatedScrollbars: true }))).toBeUndefined();
+  });
+
   it('adds the two feather strips and both end caps only while connection_lines_antialiased is on', async () => {
     const aliased = polyline(await render({ connectionLinesAntialiased: false }))!;
     const antialiased = polyline(await render({ connectionLinesAntialiased: true }))!;

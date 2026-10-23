@@ -42,6 +42,8 @@ interface GraphEditLoadState {
   zoomMinusDisabled: boolean;
   /** `zoom_plus_button->is_disabled()`. */
   zoomPlusDisabled: boolean;
+  /** Whether a setter ran `_update_scrollbars` while the file applied, before any child existed. */
+  updatedScrollbars: boolean;
 }
 
 interface ReplayState {
@@ -56,6 +58,7 @@ interface ReplayState {
   scrollMin: Vector2;
   scrollMax: Vector2;
   scrollOffset: Vector2 | undefined;
+  updatedScrollbars: boolean;
 }
 
 /**
@@ -76,6 +79,7 @@ function sizeOf(state: ReplayState): Vector2 {
  * grown by one size in every direction.
  */
 function installScrollBounds(state: ReplayState): void {
+  state.updatedScrollbars = true;
   const size = sizeOf(state);
   state.scrollMin = { x: -size.x, y: -size.y };
   state.scrollMax = { x: size.x, y: size.y };
@@ -119,6 +123,7 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     scrollMin: ZERO_SCROLL_BOUNDS,
     scrollMax: ZERO_SCROLL_BOUNDS,
     scrollOffset: undefined,
+    updatedScrollbars: false,
   };
 
   for (const key of Object.keys(properties)) {
@@ -144,6 +149,9 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
           x: clamp(value.x, state.scrollMin.x, state.scrollMax.x - size.x),
           y: clamp(value.y, state.scrollMin.y, state.scrollMax.y - size.y),
         };
+        // `set_scroll_offset` reruns `_update_scrollbars` after the clamp (`:414`), which the
+        // file's own bounds never see.
+        state.updatedScrollbars = true;
         break;
       }
       case 'zoom': {
@@ -177,5 +185,6 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     zoom: state.zoomTouched ? state.zoom : undefined,
     zoomMinusDisabled: state.minusDisabled,
     zoomPlusDisabled: state.plusDisabled,
+    updatedScrollbars: state.updatedScrollbars,
   };
 }

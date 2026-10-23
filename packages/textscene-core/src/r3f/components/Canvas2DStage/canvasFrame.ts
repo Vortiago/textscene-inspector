@@ -1,20 +1,26 @@
 /**
- * The 2D canvas's multisampled frame. Godot draws a root viewport whose `msaa_2d` is on into a
- * multisampled buffer at the mode's sample count (`texture_storage.cpp:3604-3613`). A drawing buffer
- * cannot multisample at a chosen count, so the world draws into the frame, a multisampled target
- * that three resolves, and the frame copies itself to the drawing buffer unchanged.
+ * The frame the 2D canvas draws through. The world's camera maps the canvas top to GL row 0
+ * (`world2DCamera.ts`), so the frame holds the canvas upside down and copies itself to the drawing
+ * buffer with its rows reversed. It is multisampled when the project's `msaa_2d` is on: Godot draws
+ * such a viewport into a multisampled buffer at the mode's sample count
+ * (`texture_storage.cpp:3604-3613`), and a drawing buffer cannot multisample at a chosen count.
  */
 
 import * as THREE from 'three';
 import { drawFullScreen, fullScreenPass } from '../../fullScreenPass';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { perRenderer } from '../../perRenderer';
+import { beginStep, endStep } from '../../frameProfile/frameProfile';
 
-/** Each texel to the pixel under it, so the copy neither filters nor converts. */
+/**
+ * Each texel to the pixel under it, from the frame's row `height - 1 - y`, so the copy neither
+ * filters nor converts and the drawing buffer's row 0 is the canvas bottom again.
+ */
 const COPY_FRAGMENT = /* glsl */ `
 uniform sampler2D frame;
 void main() {
-  gl_FragColor = texelFetch(frame, ivec2(gl_FragCoord.xy), 0);
+  ivec2 pixel = ivec2(gl_FragCoord.xy);
+  gl_FragColor = texelFetch(frame, ivec2(pixel.x, textureSize(frame, 0).y - 1 - pixel.y), 0);
 }`;
 
 /**
@@ -22,21 +28,23 @@ void main() {
  * recompile on each resize.
  */
 const copyPassFor = perRenderer(() =>
-  fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: null } })
+  fullScreenPass('Canvas2D::frameCopy', COPY_FRAGMENT, { frame: { value: null } })
 );
 
 /** Copies `frame` through `gl`'s pass, which holds no frame once the draw ends. */
 function copyToTarget(
   gl: THREE.WebGLRenderer,
-  frame: CanvasMsaaFrame,
+  frame: CanvasFrame,
   target: THREE.WebGLRenderTarget | null
 ): void {
   const pass = copyPassFor(gl);
   pass.uniforms.frame!.value = frame.texture;
+  beginStep(gl, 'Canvas copy');
   try {
     drawFullScreen(gl, pass, target);
   } finally {
     pass.uniforms.frame!.value = null;
+    endStep(gl, 'Canvas copy');
   }
 }
 
@@ -46,7 +54,7 @@ function copyToTarget(
  * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
  * in linear.
  */
-export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
+export class CanvasFrame extends THREE.WebGLRenderTarget {
   private readonly drawingBuffer = new THREE.Vector2();
 
   constructor() {
@@ -56,11 +64,11 @@ export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
     this.texture.minFilter = THREE.NearestFilter;
     this.texture.magFilter = THREE.NearestFilter;
     this.texture.generateMipmaps = false;
-    this.texture.name = 'Canvas2D::msaaFrame';
+    this.texture.name = 'Canvas2D::frame';
     takeOutputLikeDrawingBuffer(this);
   }
 
-  /** Draws `scene` into the frame and copies the result to the target bound before. */
+  /** Draws `scene` into the frame and copies the result, rows reversed, to the target bound before. */
   render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
     gl.getDrawingBufferSize(this.drawingBuffer);
     if (this.width !== this.drawingBuffer.x || this.height !== this.drawingBuffer.y) {

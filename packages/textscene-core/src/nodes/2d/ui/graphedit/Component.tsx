@@ -48,6 +48,7 @@ import {
   minimapTransform,
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
+import { minimapConnectionsOf } from './minimapConnections';
 import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
 import {
   snappedControlOrigin,
@@ -395,7 +396,7 @@ export function GraphEdit({
             scrollOffset={scrollOffset}
             graphEditSize={graphEditSize}
             opacity={minimapOpacity(props)}
-            connections={connections}
+            connections={minimapConnectionsOf(connections, props)}
             curvature={curvature}
             connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
             icons={solveNode.icons}

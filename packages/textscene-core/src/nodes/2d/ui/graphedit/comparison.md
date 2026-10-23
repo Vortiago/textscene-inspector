@@ -14,7 +14,8 @@ grid, connection lines, a toolbar and a minimap. The previewer draws the backgro
 and the grid (lines or dots, per `grid_pattern`/`snapping_distance`). It draws every
 resolvable `connections` entry as a curved, tinted ribbon
 (`connection_lines_curvature`/`connection_lines_thickness`), coloured by the slot of each
-endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). It
+endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). A port is a
+`Point2i`, so a connection ends on a whole pixel. It
 places every GraphElement child (`GraphNode`/`GraphFrame`) at
 `position_offset * zoom - scroll_offset`, as `GraphEdit::_update_scroll_offset` does.
 The constructor's `set_clip_contents(true)` (`:3342`) clips all of it to the widget's
@@ -64,7 +65,9 @@ are present in every GraphEdit, whatever the scene file says:
   connection, and the camera viewport rect. A connection is a 0.5px
   `draw_polyline_colors` polyline, with each point's colour lerped in minimap space and
   a feather that `connection_lines_antialiased` selects. All of it is letterboxed into
-  the bounding box of the graph.
+  the bounding box of the graph. Godot draws no connection in the settled minimap when a
+  `scroll_offset` or a `zoom` that moves ran `_update_scrollbars` while the file loaded. The
+  engine line that hides them is not traced, and `ref:godot` shows the effect.
 
 ## Linting
 

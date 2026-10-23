@@ -167,3 +167,26 @@ describe('resolveGraphEditLoadState — zoom', () => {
     expect(state.zoomPlusDisabled).toBe(false);
   });
 });
+
+describe('resolveGraphEditLoadState — updatedScrollbars', () => {
+  it('is false when no key reaches _update_scrollbars', () => {
+    expect(resolveGraphEditLoadState(SIZED_400_320).updatedScrollbars).toBe(false);
+  });
+
+  it('is true once scroll_offset runs the setter (graph_edit.cpp:414)', () => {
+    const state = resolveGraphEditLoadState({ ...SIZED_400_320, scroll_offset: 'Vector2(0, 0)' });
+    expect(state.updatedScrollbars).toBe(true);
+  });
+
+  it('is true once a zoom write moves the value (graph_edit.cpp:2448)', () => {
+    expect(resolveGraphEditLoadState({ zoom: '1.5' }).updatedScrollbars).toBe(true);
+  });
+
+  it('stays false for a zoom write that moves nothing (graph_edit.cpp:2435-2437)', () => {
+    expect(resolveGraphEditLoadState({ zoom: '1.0' }).updatedScrollbars).toBe(false);
+  });
+
+  it('is true when a new zoom_min drags zoom with it', () => {
+    expect(resolveGraphEditLoadState({ zoom_min: '2.0' }).updatedScrollbars).toBe(true);
+  });
+});

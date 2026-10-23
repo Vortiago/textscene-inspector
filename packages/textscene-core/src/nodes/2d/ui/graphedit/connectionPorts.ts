@@ -65,15 +65,19 @@ export function graphNodePorts(
     (a, b) => a.rawIndex - b.rawIndex
   );
 
-  const portHOffset = child.constants.port_h_offset ?? 0;
+  // Godot stores a port as a `Point2i` from an `int port_y` and an `int edgeofs` (`:1011`, `:1041`,
+  // `:1050`), so a connection ends on a whole pixel. The painter's port icons keep the float row
+  // centre (`slot_y_cache`).
+  const portHOffset = Math.trunc(child.constants.port_h_offset ?? 0);
   const outputs: GraphNodePort[] = [];
   const inputs: GraphNodePort[] = [];
   for (const row of rows) {
+    const y = Math.trunc(row.slotY);
     if (row.slot.leftEnabled) {
-      inputs.push({ pos: { x: portHOffset, y: row.slotY }, color: row.slot.leftColor });
+      inputs.push({ pos: { x: portHOffset, y }, color: row.slot.leftColor });
     }
     if (row.slot.rightEnabled) {
-      outputs.push({ pos: { x: outerSize.x - portHOffset, y: row.slotY }, color: row.slot.rightColor });
+      outputs.push({ pos: { x: Math.trunc(outerSize.x - portHOffset), y }, color: row.slot.rightColor });
     }
   }
   return { outputs, inputs };

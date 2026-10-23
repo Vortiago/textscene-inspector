@@ -44,7 +44,7 @@ export function createCanvasTarget(width: number, height: number, name: string):
 export function storeSrgbBytes(texture: THREE.Texture): void {
   pinColorSpace(texture, THREE.SRGBColorSpace);
   texture.internalFormat = 'RGBA8';
-  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasMsaaFrame has that shape too.
+  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasFrame has that shape too.
   markSrgbBytes(texture);
 }
 

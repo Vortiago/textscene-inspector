@@ -13,6 +13,7 @@
 import { lerpColor } from '../../../../godot/math/math';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import type { ResolvedConnection } from './connectionEndpoints';
+import type { GraphEditProperties } from './types';
 import { minimapConvertFromGraph, type GraphScrollBounds, type MinimapTransform } from './minimap';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -21,6 +22,18 @@ import type { Rgba } from '../../../../godot/math/math';
 interface MinimapConnectionLine {
   points: Vector2[];
   colors: Rgba[];
+}
+
+/**
+ * The connections the settled minimap shows. `ref:godot` draws none once a load-time setter ran
+ * `_update_scrollbars`, and all of them otherwise (the connection fixture, each key added alone).
+ * The engine line that hides them is not traced.
+ */
+export function minimapConnectionsOf(
+  connections: readonly ResolvedConnection[],
+  props: Pick<GraphEditProperties, 'updatedScrollbars'>
+): readonly ResolvedConnection[] {
+  return props.updatedScrollbars ? [] : connections;
 }
 
 function distance(a: Vector2, b: Vector2): number {

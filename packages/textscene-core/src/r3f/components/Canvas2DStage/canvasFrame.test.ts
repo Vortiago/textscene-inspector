@@ -4,7 +4,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { CanvasMsaaFrame } from './canvasMsaaFrame';
+import { CanvasFrame } from './canvasFrame';
+import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
+import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
+import type { RenderStep } from '../../frameProfile/frameStats';
 
 type Target = THREE.WebGLRenderTarget | null;
 
@@ -35,13 +38,39 @@ const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera();
 
 /** A frame at `samples`, as `useMultisampledTarget` sets them. */
-function multisampledFrame(samples: number): CanvasMsaaFrame {
-  const frame = new CanvasMsaaFrame();
+function multisampledFrame(samples: number): CanvasFrame {
+  const frame = new CanvasFrame();
   frame.samples = samples;
   return frame;
 }
 
-describe('CanvasMsaaFrame', () => {
+describe('CanvasFrame', () => {
+  it('names its copy to the drawing buffer as the Canvas copy step, so the frame profile shows its cost', () => {
+    const { gl, draws } = recordingRenderer(64, 64);
+    const stepsOfDraws: (RenderStep | null)[] = [];
+    const render = gl.render.bind(gl);
+    const profiled = Object.assign(gl, profiledRendererMembers(), {
+      render: (drawn: THREE.Object3D, drawnCamera: THREE.Camera) => {
+        stepsOfDraws.push(innermostStep(gl));
+        render(drawn, drawnCamera);
+      },
+    });
+    const profile = startFrameProfile(
+      profiled,
+      () => undefined,
+      () => 0
+    );
+    profile.beginFrame(0);
+    const frame = multisampledFrame(0);
+
+    frame.render(gl, scene, camera);
+
+    expect(draws).toHaveLength(2);
+    expect(stepsOfDraws).toEqual([null, 'Canvas copy']);
+    profile.stop();
+    frame.dispose();
+  });
+
   it('draws the world into itself at the drawing buffer size', () => {
     const { gl, draws } = recordingRenderer(640, 360);
     const frame = multisampledFrame(4);
