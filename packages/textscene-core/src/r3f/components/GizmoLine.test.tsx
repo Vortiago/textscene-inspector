@@ -5,14 +5,16 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { GizmoLine } from './GizmoLine';
 
-async function render(positions: number[], colors?: number[], opacity?: number) {
+async function render(positions: number[], colors?: number[], opacity?: number, variant?: GizmoVariant) {
   return ReactThreeTestRenderer.create(
     <GizmoLine
       positions={new Float32Array(positions)}
       colors={colors && new Float32Array(colors)}
       opacity={opacity}
+      variant={variant}
     />
   );
 }
@@ -68,5 +70,23 @@ describe('<GizmoLine>', () => {
     const line = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
     const material = line.material as THREE.LineBasicMaterial;
     expect([material.opacity, material.transparent]).toEqual([0.02, true]);
+  });
+
+  it('draws the unselected variant at 0.3 of the opacity given', async () => {
+    const renderer = await render([0, 0, 0, 0, 0, 4], undefined, 0.5, 'unselected');
+    const line = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect((line.material as THREE.LineBasicMaterial).opacity).toBeCloseTo(0.15, 10);
+  });
+
+  it('draws the unselected variant of an opaque colour at 0.3', async () => {
+    const renderer = await render([0, 0, 0, 0, 0, 4], undefined, undefined, 'unselected');
+    const line = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect((line.material as THREE.LineBasicMaterial).opacity).toBe(0.3);
+  });
+
+  it('draws the selected variant at the opacity given', async () => {
+    const renderer = await render([0, 0, 0, 0, 0, 4], undefined, 0.5, 'selected');
+    const line = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect((line.material as THREE.LineBasicMaterial).opacity).toBe(0.5);
   });
 });

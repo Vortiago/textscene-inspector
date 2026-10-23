@@ -334,7 +334,7 @@ describe('comparison sheets', () => {
 
   /**
    * A sheet's status against the r3f registration, which is what the viewport
-   * does. `visual:` is not tied to it: a gizmo node (ADR-0018) draws but has no
+   * does. `visual:` is not tied to it: a gizmo node (ADR-0056) draws but has no
    * useful pair, and a RigidBody3D draws nothing but its capture shows its mesh.
    */
   describe('status agrees with the render registration', () => {

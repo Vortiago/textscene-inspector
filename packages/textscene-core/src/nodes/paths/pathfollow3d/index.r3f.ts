@@ -1,4 +1,4 @@
-/** PathFollow3D follows the parent Path3D's curve, drawing a selection-gated handle (ADR-0018). */
+/** PathFollow3D follows the parent Path3D's curve, drawing a handle while selected (ADR-0056). */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { PathFollow3D } from './Component';

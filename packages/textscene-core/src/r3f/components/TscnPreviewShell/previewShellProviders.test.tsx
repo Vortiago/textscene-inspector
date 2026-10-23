@@ -22,6 +22,7 @@ function withShellProviders() {
     initialViewportMode: undefined,
     initialViewport: {
       mode: '2D',
+      showGizmos: true,
       showGrid: false,
       frameOnOpen: false,
       showFog: true,

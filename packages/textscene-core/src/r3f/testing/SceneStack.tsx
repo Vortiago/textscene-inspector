@@ -1,6 +1,7 @@
 /**
  * The providers a component test mounts a parsed scene inside, outermost first: the canvas
- * workspace when one is given, the resource loader, the scene's own resources and the selection.
+ * workspace when one is given, the Gizmos toggle when one is given, the resource loader, the scene's
+ * own resources and the selection.
  * One stack, so a provider every such test needs is added here once. Test-only: the `testing/`
  * directories under `src` are excluded from the build.
  */
@@ -9,6 +10,7 @@ import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
+import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider, type SceneResourcesProviderProps } from '../SceneResourcesContext';
 import { SelectSeeder } from './SelectSeeder';
 
@@ -24,10 +26,19 @@ export interface SceneStackProps {
   workspace?: CanvasWorkspace;
   /** The node path selected once mounted. Defaults to none. */
   selectedPath?: string | null;
+  /** The Gizmos toggle. Omitted, no viewport provider mounts: the toggle is on. */
+  showGizmos?: boolean;
   children: ReactNode;
 }
 
-export function SceneStack({ scene, loader, workspace, selectedPath = null, children }: SceneStackProps) {
+export function SceneStack({
+  scene,
+  loader,
+  workspace,
+  selectedPath = null,
+  showGizmos,
+  children,
+}: SceneStackProps) {
   const stack = (
     <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider
@@ -41,6 +52,12 @@ export function SceneStack({ scene, loader, workspace, selectedPath = null, chil
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  if (workspace === undefined) return stack;
-  return <CanvasWorkspaceProvider workspace={workspace}>{stack}</CanvasWorkspaceProvider>;
+  const toggled =
+    showGizmos === undefined ? (
+      stack
+    ) : (
+      <ViewportModeProvider initialShowGizmos={showGizmos}>{stack}</ViewportModeProvider>
+    );
+  if (workspace === undefined) return toggled;
+  return <CanvasWorkspaceProvider workspace={workspace}>{toggled}</CanvasWorkspaceProvider>;
 }

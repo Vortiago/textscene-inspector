@@ -1,6 +1,6 @@
 /**
- * A selection-gated gizmo that fills a box: an AABB as a translucent unlit mesh, the way Godot's
- * `add_solid_box` draws it. The caller gates it with `useGizmoVisible`.
+ * A gizmo that fills a box: an AABB as a translucent unlit mesh, the way Godot's `add_solid_box`
+ * draws it. Godot adds it only to a selected gizmo, so the caller draws it for the selected state alone.
  */
 
 import { useMemo } from 'react';

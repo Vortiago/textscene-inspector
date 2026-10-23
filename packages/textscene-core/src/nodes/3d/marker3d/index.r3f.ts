@@ -1,4 +1,4 @@
-/** Marker3D renders a selection-gated 3-axis cross gizmo over a Node3D group (ADR-0018). */
+/** Marker3D renders a 3-axis cross gizmo for every node over a Node3D group (ADR-0056). */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Marker3D } from './Component';

@@ -1,6 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { CANVAS_2D_TESTIDS, PERFORMANCE_TESTIDS } from './appContract.mjs';
-import { paintedOutChromeCss } from './captureContext.mjs';
+import { CANVAS_2D_TESTIDS, PERFORMANCE_TESTIDS, SHOW_GIZMOS_STORAGE_KEY } from './appContract.mjs';
+import { createCaptureContext, paintedOutChromeCss } from './captureContext.mjs';
+
+/** A browser that records the localStorage entries a context seeds, as `[key, value]` pairs. */
+function recordingBrowser() {
+  const seeded = new Map();
+  const context = {
+    addInitScript: async (_script, argument) => {
+      if (Array.isArray(argument)) seeded.set(argument[0], argument[1]);
+    },
+  };
+  return { browser: { newContext: async () => context }, seeded };
+}
+
+describe('createCaptureContext', () => {
+  it('seeds the Gizmos toggle off, so no golden or comparison capture shows a gizmo', async () => {
+    const { browser, seeded } = recordingBrowser();
+    await createCaptureContext(browser, { frameOnOpen: true });
+    expect(seeded.get(SHOW_GIZMOS_STORAGE_KEY)).toBe('false');
+  });
+
+  it('seeds the Gizmos toggle on for a scene that asks for gizmos', async () => {
+    const { browser, seeded } = recordingBrowser();
+    await createCaptureContext(browser, { frameOnOpen: true, showGizmos: true });
+    expect(seeded.get(SHOW_GIZMOS_STORAGE_KEY)).toBe('true');
+  });
+});
 
 describe('paintedOutChromeCss', () => {
   it('hides the chrome that floats over the canvas in both modes', () => {

@@ -1,7 +1,7 @@
 ; A ReflectionProbe with a blend_distance and an origin_offset, for the one variable no other golden
 ; moves: its editor gizmo (the blend box, the lines to the outer box and the origin cross). The
-; previewer gates the gizmo on selection (ADR-0018), so only the `select:` golden has it. A small box
-; sits at two opposite corners of the outer box to frame the whole gizmo.
+; previewer draws the gizmo for the selected probe only (ADR-0056), so only the `select:` golden has it.
+; A small box sits at two opposite corners of the outer box to frame the whole gizmo.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxMesh" id="Corner_1"]

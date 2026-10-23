@@ -1,7 +1,7 @@
 /**
  * <PathFollow2D> places its group at the sampled curve point (conjugated to
  * three space), falls back to the authored transform when no curve is in scope,
- * and draws a selection-gated follow dot.
+ * and draws a previewer-only follow dot while selected.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -11,10 +11,8 @@ import { PathFollow2D } from './Component';
 import { samplerProbe } from '../../../r3f/testing/samplerProbe';
 import { parsePathFollow2D } from './parser';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import { type CanvasItemTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
@@ -41,17 +39,15 @@ function followNode(name = 'MyFollow', props: Record<string, string> = {}): Tscn
 async function render(
   sampler: Curve2DSampler | null,
   props: Record<string, string>,
-  selectedPath: string | null = null
+  selectedPath: string | null = null,
+  showGizmos = true
 ) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <Path2DCurveProvider value={sampler}>
-        <NodePathProvider path="MyFollow">
-          <PathFollow2D node={followNode('MyFollow', props)} />
-        </NodePathProvider>
-      </Path2DCurveProvider>
-    </SelectionProvider>
+    <Path2DCurveProvider value={sampler}>
+      <GizmoScene nodePath="MyFollow" selectedPath={selectedPath} showGizmos={showGizmos}>
+        <PathFollow2D node={followNode('MyFollow', props)} />
+      </GizmoScene>
+    </Path2DCurveProvider>
   );
 }
 
@@ -112,6 +108,21 @@ describe('<PathFollow2D>', () => {
     expect(hidden.scene.findAllByType('LineSegments')).toHaveLength(0);
     const shown = await render(STRAIGHT, { progress: '50' }, 'MyFollow');
     expect(shown.scene.findAllByType('LineSegments')).toHaveLength(1);
+  });
+
+  it('hides the follow dot with the Gizmos toggle off, selected', async () => {
+    const off = await render(STRAIGHT, { progress: '50' }, 'MyFollow', false);
+    expect(off.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
+
+  it('places its group on the curve the same with the Gizmos toggle on and off', async () => {
+    const on = namedGroup(await render(STRAIGHT, { progress: '50' }, 'MyFollow'))!;
+    const off = namedGroup(await render(STRAIGHT, { progress: '50' }, 'MyFollow', false))!;
+    expect([off.position.toArray(), off.rotation.toArray()]).toEqual([
+      on.position.toArray(),
+      on.rotation.toArray(),
+    ]);
+    expect(off.position.x).toBeCloseTo(50, 3);
   });
 });
 

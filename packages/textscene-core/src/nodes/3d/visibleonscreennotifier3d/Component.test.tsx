@@ -1,7 +1,7 @@
 /**
- * <VisibleOnScreenNotifier3D> and <VisibleOnScreenEnabler3D> draw Godot's editor gizmo only while
- * selected (ADR-0018): the 12 edges of `aabb`, three unit axes from its centre and a faint fill
- * (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`).
+ * <VisibleOnScreenNotifier3D> and <VisibleOnScreenEnabler3D> draw Godot's editor gizmo: the 12 edges
+ * of `aabb` and three unit axes from its centre for every node, faint while unselected, and a faint
+ * fill for the selected node only (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -9,9 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import './index.r3f';
 import '../visibleonscreenenabler3d/index.r3f';
@@ -32,18 +30,16 @@ function notifier(type: string, props: Record<string, string>): TscnNode {
 async function render(
   selectedPath: string | null,
   props: Record<string, string> = {},
-  type = 'VisibleOnScreenNotifier3D'
+  type = 'VisibleOnScreenNotifier3D',
+  showGizmos = true
 ) {
   const Component = nodeComponentRegistry.get(type)!;
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Notifier">
-        <Component node={notifier(type, props)}>
-          <group name="Child" />
-        </Component>
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Notifier" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <Component node={notifier(type, props)}>
+        <group name="Child" />
+      </Component>
+    </GizmoScene>
   );
 }
 
@@ -59,14 +55,32 @@ async function gizmoLines(props: Record<string, string>, type?: string) {
   });
 }
 
-describe.each(['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D'])('<%s> gizmo gate', (type) => {
+describe.each(['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D'])('<%s> gizmo state', (type) => {
+  it('draws the edges, the axes and the fill in full colour when the node is selected', async () => {
+    const renderer = await render('Notifier', {}, type);
+    expect([lineOpacities(renderer), renderer.scene.findAllByType('Mesh')]).toEqual([
+      [1, 1],
+      [expect.anything()],
+    ]);
+  });
+
   it.each([
-    ['the node is selected', 'Notifier', 2],
-    ['nothing is selected', null, 0],
-    ['another node is selected', 'Other', 0],
-  ])('draws the edges and the axes only when %s', async (_label, selectedPath, expected) => {
+    ['nothing is selected', null],
+    ['another node is selected', 'Other'],
+  ])('draws the edges and the axes faintly, at 0.3, and no fill when %s', async (_label, selectedPath) => {
     const renderer = await render(selectedPath, {}, type);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+    expect([lineOpacities(renderer), renderer.scene.findAllByType('Mesh')]).toEqual([[0.3, 0.3], []]);
+  });
+
+  it.each([
+    ['selected', 'Notifier'],
+    ['unselected', null],
+  ])('draws nothing with the Gizmos toggle off, %s', async (_label, selectedPath) => {
+    const renderer = await render(selectedPath, {}, type, false);
+    expect([renderer.scene.findAllByType('LineSegments'), renderer.scene.findAllByType('Mesh')]).toEqual([
+      [],
+      [],
+    ]);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

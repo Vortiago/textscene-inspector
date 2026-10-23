@@ -1,7 +1,8 @@
 /**
  * Places a PathFollow2D's children on the parent Path2D's curve, overriding the
  * authored position as Godot does. With no curve in scope it keeps its authored
- * Node2D transform (ADR-0008). A selection-gated dot marks the point (ADR-0018).
+ * Node2D transform (ADR-0008). A dot marks the point while the node is selected: a previewer
+ * addition, since Godot draws no gizmo for a PathFollow2D (ADR-0056).
  */
 
 import { useMemo } from 'react';
@@ -9,7 +10,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
 import { useCanvasItemRenderOrder } from '../../../r3f/contexts/PaintOrderContext';
@@ -30,7 +31,7 @@ const FOLLOW_DOT_POSITIONS = new Float32Array([
 export function PathFollow2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PathFollow2DProperties;
   const sampler = useParentPath2DCurve();
-  const gizmoVisible = useGizmoVisible();
+  const gizmoVisible = useGizmoDrawn('selected-only');
 
   const parentModulate = useParentModulate();
   const modulate = useMemo(
