@@ -3,23 +3,15 @@
  * is empty and on each shape below it (`csg_shape.cpp:977-988`). A shape reports through
  * `useReportEmptyShape`, and with no provider a report does nothing.
  */
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { useCountedReports } from '../hooks/useCountedReports.js';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { parentPathOf } from '../../utils/nodePath.js';
+import { createCountedReportsContext } from './countedReportsContext.js';
 import { useNodePath } from './NodePathContext.js';
 
-interface EmptyShapeReports {
-  report: (path: string) => void;
-  clear: (path: string) => void;
-}
-
-/** Apart from the reports, so a change to the set re-renders only its readers, not each reporter. */
-const EmptyShapeReportsContext = createContext<EmptyShapeReports>({ report: () => {}, clear: () => {} });
-EmptyShapeReportsContext.displayName = 'EmptyShapeReportsContext';
-
 /** The path of each node with an empty shape. */
-const EmptyShapesContext = createContext<ReadonlySet<string>>(new Set());
-EmptyShapesContext.displayName = 'EmptyShapesContext';
+const emptyShapes = createCountedReportsContext('EmptyShapes');
+
+export const EmptyShapesProvider = emptyShapes.Provider;
 
 /** The nearest enclosing CSG shape, which a child checks against its own parent path. */
 interface ParentShape {
@@ -30,16 +22,6 @@ interface ParentShape {
 const ParentShapeContext = createContext<ParentShape | null>(null);
 ParentShapeContext.displayName = 'ParentShapeContext';
 
-export function EmptyShapesProvider({ children }: { children: ReactNode }) {
-  const { reported: emptyPaths, report, clear } = useCountedReports();
-  const reports = useMemo(() => ({ report, clear }), [report, clear]);
-  return (
-    <EmptyShapeReportsContext.Provider value={reports}>
-      <EmptyShapesContext.Provider value={emptyPaths}>{children}</EmptyShapesContext.Provider>
-    </EmptyShapeReportsContext.Provider>
-  );
-}
-
 /**
  * Reports the enclosing node while its shape is empty, and returns whether it is. A shape is empty
  * when its own brush is, or when its direct CSG parent's shape is: `CSGBox3D > Node3D > CSGSphere3D`
@@ -48,15 +30,10 @@ export function EmptyShapesProvider({ children }: { children: ReactNode }) {
 export function useReportEmptyShape(hasOwnEmptyBrush: boolean): boolean {
   const path = useNodePath();
   const parent = useContext(ParentShapeContext);
-  const { report, clear } = useContext(EmptyShapeReportsContext);
   const isParentEmpty =
     parent !== null && path !== null && parent.isEmpty && parent.path === parentPathOf(path);
   const isEmpty = hasOwnEmptyBrush || isParentEmpty;
-  useEffect(() => {
-    if (path === null || !isEmpty) return undefined;
-    report(path);
-    return () => clear(path);
-  }, [path, isEmpty, report, clear]);
+  emptyShapes.useReportWhile(isEmpty ? path : null);
   return isEmpty;
 }
 
@@ -69,5 +46,5 @@ export function EmptyShapeBranch({ isEmpty, children }: { isEmpty: boolean; chil
 
 /** Whether the node at `nodePath` has an empty shape. */
 export function useIsEmptyShape(nodePath: string): boolean {
-  return useContext(EmptyShapesContext).has(nodePath);
+  return emptyShapes.useReported().has(nodePath);
 }
