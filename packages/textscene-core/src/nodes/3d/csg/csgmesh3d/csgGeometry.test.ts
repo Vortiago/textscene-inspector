@@ -31,6 +31,7 @@ const EXT: TscnExternalResource[] = [
   { id: '3', type: 'PackedScene', path: 'res://rock.glb' },
   { id: '4', type: 'Curve', path: GROWING_CURVE_PATH },
   { id: '5', type: 'TubeTrailMesh', path: FILE_TUBE_PATH },
+  { id: '6', type: 'ArrayMesh', path: 'res://rock.obj' },
 ];
 
 /** A `.tres` Curve that runs from 1 at the top to 3 at the bottom, as {@link curveEndingAt} does. */
@@ -234,6 +235,10 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     expect(positionCount(build('ExtResource("3")'))).toBe(0);
     expect(positionCount(build('SubResource("Missing")'))).toBe(0);
     expect(positionCount(csgMesh3DGeometry({ flipFaces: false }, CTX))).toBe(0);
+  });
+
+  it('builds no brush for a mesh in a file type no slice reads, which Godot would draw', () => {
+    expect(build('ExtResource("6")')).toBeNull();
   });
 
   it('builds no brush for a mesh type no slice builds, whose faces Godot would draw', () => {

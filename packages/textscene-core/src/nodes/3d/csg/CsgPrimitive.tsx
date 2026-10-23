@@ -83,18 +83,22 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
-  const { ownSolid, hasEmptyBrush } = useMemo(
+  const { ownSolid, isOpen, hasNoFaces } = useMemo(
     () => {
       const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
-      // An open brush, or one with no face, is empty (`csg_shape.cpp:981`): it draws nothing and
-      // bounds to a point. Only that fact is kept, not an open geometry. Null is no brush yet.
-      const isEmpty = built !== null && (!built.isClosed || !hasFaces(built));
-      return { ownSolid: built && !isEmpty ? built : null, hasEmptyBrush: isEmpty };
+      // An open brush, or one with no face, is empty: it draws nothing and bounds to a point.
+      // Only that fact is kept, not an open geometry. Null is no brush yet.
+      const isOpen = built !== null && !built.isClosed;
+      const hasNoFaces = built !== null && !isOpen && !hasFaces(built);
+      return { ownSolid: built && !isOpen && !hasNoFaces ? built : null, isOpen, hasNoFaces };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
     [ownKey, properties.materialPath, skipped]
   );
-  const isEmptyShape = useReportEmptyShape(hasEmptyBrush);
+  // Godot warns on a shape whose folded brush has no face (`csg_shape.cpp:981`). An open brush
+  // empties its whole fold, but a node with no face of its own is filled by its CSG children.
+  const hasCsgChildren = node.children.some((child) => nodeComponentRegistry.getCsgShape(child.type));
+  const isEmptyShape = useReportEmptyShape(isOpen || (hasNoFaces && !hasCsgChildren));
   const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG

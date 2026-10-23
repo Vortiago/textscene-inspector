@@ -52,7 +52,12 @@ describe('createCountedReportsContext', () => {
   });
 
   it('does nothing without a provider', () => {
-    render(<Reporter reportKey="a" />);
-    expect(() => render(<Reported />)).not.toThrow();
+    render(
+      <>
+        <Reporter reportKey="a" />
+        <Reported />
+      </>
+    );
+    expect(reported()).toBe('');
   });
 });

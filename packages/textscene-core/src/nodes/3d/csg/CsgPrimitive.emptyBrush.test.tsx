@@ -79,6 +79,13 @@ const DEGENERATE_SPHERE_SCENE = `[gd_scene format=3]
 radial_segments = 2
 `;
 
+const NO_MESH_ROOT_WITH_CHILD_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="CSGMesh3D"]
+
+[node name="Box" type="CSGBox3D" parent="."]
+`;
+
 const OPEN_ROOT_WITH_CHILD_SCENE = `[gd_scene format=3]
 
 ${QUAD_MESH}
@@ -175,6 +182,12 @@ describe('a CSG node with an empty brush', () => {
     const seen = await emptyShapes(CONTRIBUTOR_SCENE, ['Root/NoMesh']);
 
     expect(seen['Root/NoMesh']).toBe(true);
+  });
+
+  it('does not warn on a node with no solid whose children fill its brush', async () => {
+    const seen = await emptyShapes(NO_MESH_ROOT_WITH_CHILD_SCENE, ['Root', 'Root/Box']);
+
+    expect(seen).toEqual({ Root: false, 'Root/Box': false });
   });
 
   it('warns on a sphere too coarse to build a face', async () => {

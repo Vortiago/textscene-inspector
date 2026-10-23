@@ -17,16 +17,28 @@ import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
 import { meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
+import { findExtResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
 import type { LoadedFile } from '../../../../resources/scopedResource';
 import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
 
+/**
+ * Whether an unresolved `meshRef` names no mesh at all, which Godot builds as an empty brush. A
+ * file still loading, or declared as a mesh type the previewer cannot read (a `.obj`), is not built.
+ */
+function namesNoMesh(meshRef: string | undefined, ctx: CsgGeometryContext): boolean {
+  if (referencedFilePath(meshRef, ctx) !== null) return false;
+  const reference = meshRef ? parseResourceReference(meshRef) : null;
+  if (reference?.type !== 'ExtResource') return true;
+  const declared = findExtResource(ctx.externalResources, reference.id);
+  return declared === undefined || meshKind(declared.type) === null;
+}
+
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
   const mesh = resolveMesh(p.mesh, ctx);
-  // A file that has not loaded yet is not built. A reference that names no mesh has an empty brush.
-  if (!mesh) return referencedFilePath(p.mesh, ctx) === null ? emptySolid() : null;
+  if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
   if (meshKind(mesh.resource.type) === null) return null;
   return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
@@ -92,7 +104,7 @@ function emptySolid(): CsgSolid {
   return csgSolid(emptyBrush(), []);
 }
 
-/** The empty solid for a mesh with no faces, which Godot builds as an empty brush (`csg_shape.cpp:1265-1267`). */
+/** The empty solid for a mesh with no faces (`csg_shape.cpp:1265-1267`). */
 function buildMeshBrush(
   surfaces: readonly CsgMeshSurface[],
   nodeMaterial: CsgMaterialAddress,

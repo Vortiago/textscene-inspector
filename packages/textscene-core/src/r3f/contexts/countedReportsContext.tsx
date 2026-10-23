@@ -1,8 +1,8 @@
 /**
  * A set of keys that components report while they hold them. The set and the actions live in two
  * contexts, so a change to the set re-renders its readers and not each reporter. The undrawn-mesh
- * list and the empty-shape list each make one. With no provider a
- * report does nothing and the set is empty.
+ * list and the empty-shape list each make one. With no provider, a report does nothing and the set
+ * is empty.
  */
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useCountedReports, type CountedReports } from '../hooks/useCountedReports.js';

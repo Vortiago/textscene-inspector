@@ -47,9 +47,9 @@ export function hasFaces(solid: CsgSolid): boolean {
 }
 
 /**
- * A shape's solid, a closed solid with no face (Godot's empty brush) for a shape that builds none, or `null` for one not
- * built yet: a mesh still loading, or of a type no slice builds. Either adds nothing to a union,
- * removes nothing in a subtraction and empties an intersection, as Godot's empty manifold does.
+ * A shape's solid: a closed solid with no face (Godot's empty brush) for a shape that builds none,
+ * or `null` for one not built yet, such as a mesh still loading or of a type no slice builds.
+ * Either adds nothing to a union and empties an intersection, as Godot's empty manifold does.
  * Only the empty solid warns (`csg_shape.cpp:981`), since Godot draws a brush for the other.
  */
 export type CsgGeometryBuilder = (
