@@ -33,6 +33,7 @@ import { storedReal } from '../../../godot/math/real.js';
 import { curveScaleSampler } from '../primitivemesh/curveScale.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { SurfaceWriter, type Vec3, type Vec4 } from '../primitivemesh/surfaceWriter.js';
+import { rowAt } from '../primitivemesh/rows.js';
 import type { RibbonTrailMeshProperties } from './types.js';
 
 /** The tangent of every vertex (`:2946-2952`). */
@@ -55,8 +56,7 @@ export function buildRibbonTrailMeshSurface(p: RibbonTrailMeshProperties): Godot
 
   const writer = new SurfaceWriter(false);
   for (let j = 0; j <= totalSegments; j++) {
-    const v = storedReal(j / totalSegments);
-    const y = storedReal(depth * 0.5 - storedReal(depth * v));
+    const { v, y } = rowAt(j, totalSegments, depth);
     const width = storedReal(p.size * widthScale(v));
     writeRow(writer, p.isCross, y, width, v);
     if (j === 0) continue;
