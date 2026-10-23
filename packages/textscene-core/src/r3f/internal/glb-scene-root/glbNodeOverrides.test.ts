@@ -186,7 +186,7 @@ describe('resolveGlbAttachments', () => {
 
     const { attached } = resolveGlbAttachments(entries, [lamp('Skeleton/Skeleton3D/Robot')]);
 
-    expect(attached.map(({ node, target }) => [node.name, target.relPath])).toEqual([
+    expect(attached.map(({ node, target }) => [node.name, entries[target]!.relPath])).toEqual([
       ['Lamp', 'Skeleton/Robot'],
     ]);
   });

@@ -25,17 +25,6 @@ describe('addAtIndex', () => {
     expect(namesOf(addAtIndex(siblings, named('N', -1)))).toEqual(['A', 'B', 'C', 'N']);
   });
 
-  it('adds several nodes in turn, each among the ones before it', () => {
-    expect(namesOf(addAtIndex(siblings, named('N', 1), named('M', 0), named('L')))).toEqual([
-      'M',
-      'A',
-      'N',
-      'B',
-      'C',
-      'L',
-    ]);
-  });
-
   it('leaves the siblings it was given as they were', () => {
     addAtIndex(siblings, named('N', 0));
     expect(namesOf(siblings)).toEqual(['A', 'B', 'C']);
@@ -58,6 +47,11 @@ describe('orderAmongPlaced', () => {
 
   it('puts a node that states index=0 before the node written above it', () => {
     expect(namesOf(orderAmongPlaced([named('A'), named('B', 0)], 2))).toEqual(['B', 'A']);
+  });
+
+  it('adds several nodes in turn, each among the ones before it', () => {
+    // Among three placed siblings P: M P N P P L.
+    expect(namesOf(orderAmongPlaced([named('N', 1), named('M', 0), named('L')], 3))).toEqual(['M', 'N', 'L']);
   });
 
   it('counts the placed siblings, so an index past them keeps the written order', () => {

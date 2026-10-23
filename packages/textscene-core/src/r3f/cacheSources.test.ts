@@ -18,16 +18,11 @@ describe('firstCached', () => {
 });
 
 describe('recordingReads', () => {
-  it('passes each answer through and reports each path it read with that answer', () => {
-    const reads: [string, string | null | undefined][] = [];
-    const cache = recordingReads(answering({ 'res://a.tscn': 'a' }), (path, answer) =>
-      reads.push([path, answer])
-    );
+  it('passes each answer through and reports each path it read', () => {
+    const reads: string[] = [];
+    const cache = recordingReads(answering({ 'res://a.tscn': 'a' }), (path) => reads.push(path));
     expect(cache.getCached('res://a.tscn')).toBe('a');
-    cache.getCached('res://gone.tscn');
-    expect(reads).toEqual([
-      ['res://a.tscn', 'a'],
-      ['res://gone.tscn', undefined],
-    ]);
+    expect(cache.getCached('res://gone.tscn')).toBeUndefined();
+    expect(reads).toEqual(['res://a.tscn', 'res://gone.tscn']);
   });
 });

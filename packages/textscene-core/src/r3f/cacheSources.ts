@@ -20,16 +20,12 @@ export function firstCached<T>(...sources: readonly CacheSource<T>[]): CacheSour
   };
 }
 
-/** `source`, with each path it is asked for and its answer handed to `onRead`. */
-export function recordingReads<T>(
-  source: CacheSource<T>,
-  onRead: (path: string, answer: T | null | undefined) => void
-): CacheSource<T> {
+/** `source`, with each path it is asked for handed to `onRead`. */
+export function recordingReads<T>(source: CacheSource<T>, onRead: (path: string) => void): CacheSource<T> {
   return {
     getCached: (path) => {
-      const answer = source.getCached(path);
-      onRead(path, answer);
-      return answer;
+      onRead(path);
+      return source.getCached(path);
     },
   };
 }

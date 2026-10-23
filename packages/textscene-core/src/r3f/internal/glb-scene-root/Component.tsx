@@ -40,6 +40,9 @@ import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
+/** One empty list for a GLB still loading, so each hook keyed on `entries` keeps its memo. */
+const NO_ENTRIES: readonly GlbObjectEntry[] = [];
+
 interface GLBSceneRootProperties {
   /** The ExtResource's `res://` path to the .glb or .gltf file, verbatim. */
   glbPath: string;
@@ -61,7 +64,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   const object = result.value;
 
   // One flattening of the clone, shared by selection, visibility, overrides and material slots.
-  const entries = useMemo(() => (object ? flattenGlbObjects(object) : []), [object]);
+  const entries = object ? flattenGlbObjects(object) : NO_ENTRIES;
 
   // The clone is per consumer and stable, so re-applying on a change of its inputs is enough.
   useMemo(() => {

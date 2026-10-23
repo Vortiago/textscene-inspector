@@ -86,14 +86,14 @@ function glbAttachPath(child: TscnNode): string | null {
   return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
 }
 
-/** A typed node of the instancing scene, with the GLB object it is added to. */
-export interface GlbAttachment {
+/** A typed node of the instancing scene, with the index of the entry of the GLB object it is added to. */
+interface GlbAttachment {
   node: LiveNode;
-  target: GlbObjectEntry;
+  target: number;
 }
 
 /**
- * Each of `nodes` that {@link glbAttachPath} places on one of `entries`, with that entry, in
+ * Each of `nodes` that {@link glbAttachPath} places on one of `entries`, with that entry's index, in
  * authored order, and the rest of `nodes`. A typed node whose path names none stays among the rest.
  * Both the scene tree and the viewport resolve through here, so one node never lands on two objects.
  * It looks up through the quiet `findGlbTarget`, and the caller reports what stays unplaced.
@@ -107,7 +107,8 @@ export function resolveGlbAttachments(
   for (const node of nodes) {
     const path = glbAttachPath(node);
     const target = path === null ? null : findGlbTarget(entries, path).entry;
-    if (target) attached.push({ node, target });
+    // `indexOf` costs one more pass of the scan `findGlbTarget` has made, for a node that attaches.
+    if (target) attached.push({ node, target: entries.indexOf(target) });
     else rest.push(node);
   }
   return { attached, rest };
@@ -127,9 +128,10 @@ export function splitAttachedChildren(
 ): { attached: LiveNode[]; rest: LiveNode[] } {
   const nodes = liftedWithoutOverrides(children);
   if (nodes.every(isApplicableGlbOverride)) return { attached: [], rest: nodes };
-  const { attached, rest } = resolveGlbAttachments(flattenGlbObjects(root), nodes);
+  const entries = flattenGlbObjects(root);
+  const { attached, rest } = resolveGlbAttachments(entries, nodes);
   return {
-    attached: attached.map(({ node, target }) => ({ ...node, glbTargetRelPath: target.relPath })),
+    attached: attached.map(({ node, target }) => ({ ...node, glbTargetRelPath: entries[target]!.relPath })),
     rest,
   };
 }

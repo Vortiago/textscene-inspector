@@ -76,10 +76,8 @@ function attachedChildren(
   if (root.path === null || root.overrides.every(isApplicableGlbOverride)) return [];
   const rootPath = root.path;
   const entries = links.map((link) => link.entry);
-  const { attached, rest } = resolveGlbAttachments(entries, root.overrides);
+  const { attached: placed, rest } = resolveGlbAttachments(entries, root.overrides);
   warnUnattached(rest);
-  const entryIndex = new Map(entries.map((entry, index) => [entry, index]));
-  const placed = attached.map(({ node, target }) => ({ node, target: entryIndex.get(target)! }));
   const orders = attachedOrders(entries, childOrders(rootOrder, entries.length), placed);
   return placed.map(({ node, target }) => ({
     node,
@@ -110,7 +108,7 @@ interface PlacedNode {
  * A GLB object's child, as the index of its entry, or a node attached to that object. An object
  * states no `index=`, as it is in place before any node is added.
  */
-type Sibling = { entry: number; index?: undefined } | LiveNode;
+type Sibling = { entry: number } | LiveNode;
 
 /**
  * The tree order of each placed node, among its target's children as `insertAtIndex` leaves them.

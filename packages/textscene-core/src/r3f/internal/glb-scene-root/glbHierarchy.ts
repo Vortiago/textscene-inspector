@@ -67,8 +67,9 @@ function childGodotSegments(parent: GlbObjectEntry | null, name: string, role: G
 
 /**
  * Every object of the GLB below `root`, each before everything below it, so the viewport's objects
- * line up with the tree rows. Built once for each root: a GLB object read here is a loader copy no
- * consumer changes the structure of. The answer is shared, so a write to it throws.
+ * line up with the tree rows. Built once for each root, whose structure nothing changes once loaded.
+ * The live tree and the GLB processor ask with the loader's template, so they share one walk. A
+ * mounted GLB asks with its own clone, so its walk serves only that consumer. A write to it throws.
  */
 export const flattenGlbObjects = perObject((root: THREE.Object3D): readonly GlbObjectEntry[] => {
   const out: GlbObjectEntry[] = [];
@@ -104,10 +105,10 @@ function glbInternalNodeType(displayType: string): string {
 }
 
 /**
- * Synthetic `TscnNode`s for the scene tree, one per entry of `root`. Each name is the disambiguated
- * relPath segment, so `joinPath(parent, name)` reproduces `relPath` exactly.
+ * Synthetic `TscnNode`s for the scene tree, one per entry of `root`, and each node by its relPath.
+ * Each name is the disambiguated relPath segment, so `joinPath(parent, name)` reproduces `relPath`.
  */
-function glbTreeNodes(root: THREE.Object3D): TscnNode[] {
+function glbTreeNodes(root: THREE.Object3D): { topLevel: TscnNode[]; nodeAt: ReadonlyMap<string, TscnNode> } {
   const topLevel: TscnNode[] = [];
   // Each entry comes after its parent's, so the parent's node is built by the time a child needs it.
   const nodeAt = new Map<string, TscnNode>();
@@ -126,7 +127,7 @@ function glbTreeNodes(root: THREE.Object3D): TscnNode[] {
     const parent = nodeAt.get(relPath.slice(0, -name.length - 1));
     (parent?.children ?? topLevel).push(node);
   }
-  return topLevel;
+  return { topLevel, nodeAt };
 }
 
 /**
@@ -140,26 +141,17 @@ const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
  * Adds each of `attached` below the synthetic node whose `relPath` is its `glbTargetRelPath`, which
  * `splitAttachedChildren` sets.
  */
-function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly LiveNode[]): void {
-  if (attached.length === 0) return;
-  const byRelPath = new Map<string, TscnNode>();
-  const index = (list: readonly TscnNode[]): void => {
-    for (const node of list) {
-      byRelPath.set((node.properties as Record<string, unknown>).glbRelPath as string, node);
-      index(node.children);
-    }
-  };
-  index(nodes);
+function addAttachedChildren(nodeAt: ReadonlyMap<string, TscnNode>, attached: readonly LiveNode[]): void {
   for (const child of attached) {
-    const target = byRelPath.get(child.glbTargetRelPath!);
+    const target = nodeAt.get(child.glbTargetRelPath!);
     if (target) insertAtIndex(target.children, child);
   }
 }
 
 /**
- * The children of a GLB with nothing attached, built once per GLB object. A GLB object read here
- * is a loader copy no consumer changes the structure of, so its hierarchy does not change, and a
- * tree walk asks again for each path it resolves. Entries leave with their object.
+ * The children of a GLB with nothing attached, built once per GLB object. The live tree asks with
+ * the loader's template, which every consumer shares, and asks again for each path it resolves.
+ * Entries leave with their object.
  */
 const plainChildren = perObject((root: THREE.Object3D) => freezeNodes(buildGlbSceneRootChildren(root, [])));
 
@@ -173,8 +165,8 @@ function freezeNodes(nodes: TscnNode[]): TscnNode[] {
 }
 
 function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
-  const nodes = glbTreeNodes(root);
-  addAttachedChildren(nodes, attached);
+  const { topLevel: nodes, nodeAt } = glbTreeNodes(root);
+  addAttachedChildren(nodeAt, attached);
   const clips = root.animations;
   if (clips.length > 0) {
     nodes.push({
