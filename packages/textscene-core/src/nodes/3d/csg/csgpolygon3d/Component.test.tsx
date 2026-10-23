@@ -7,7 +7,7 @@ import { parseCSGPolygon3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
 import type { CSGPolygon3DProperties, CSGPolygon3DResolvedPath } from './types';
-import { findMesh } from '../../testing/reactThreeTestInstance';
+import { drawnMeshes, findMesh } from '../../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
 
@@ -73,8 +73,8 @@ describe('<CSGPolygon3D>', () => {
   it('renders nothing in PATH mode until the path pass has resolved path_node', async () => {
     // The component cannot reach a sibling itself, so an unresolved path is a normal
     // intermediate state rather than an error.
-    const geom = geometryOf(await render(makeNode({ mode: '2', path_node: 'NodePath("../Path3D")' })));
-    expect(geom.getAttribute('position').count).toBe(0);
+    const renderer = await render(makeNode({ mode: '2', path_node: 'NodePath("../Path3D")' }));
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('sweeps along the curve once the path pass has supplied it', async () => {
@@ -131,8 +131,8 @@ describe('<CSGPolygon3D>', () => {
     expect(renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child')).toBeTruthy();
   });
 
-  it('renders empty geometry without throwing on a malformed polygon', async () => {
-    const geom = geometryOf(await render(makeNode({ polygon: 'PackedVector2Array(broken' })));
-    expect(geom.getAttribute('position').count).toBe(0);
+  it('renders nothing without throwing on a malformed polygon', async () => {
+    const renderer = await render(makeNode({ polygon: 'PackedVector2Array(broken' }));
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
   });
 });

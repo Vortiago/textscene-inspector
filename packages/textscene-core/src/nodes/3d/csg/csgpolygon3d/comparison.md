@@ -9,16 +9,19 @@ renders_as: a 2D profile swept into a solid
 A 2D profile swept into a 3D solid: extruded straight back (DEPTH), revolved about +Y (SPIN) or carried along a Path3D (PATH), chosen by `mode`. The previewer implements all three as a port of Godot's `_build_brush` and evaluates the boolean `operation` (ADR-0027).
 
 ## Extrusion (mode = DEPTH)
+
 <!-- compare: image=unit-csg-polygon-depth status=done fixture=unit-csg-polygon-depth.tscn -->
 
 The default mode. The profile sits at `z = 0` and extrudes toward -Z, so the solid spans `[-depth, 0]`. A wedge, a concave staircase, a smooth-walled blob and a default unit square all match.
 
 ## Revolution (mode = SPIN)
+
 <!-- compare: image=unit-csg-polygon-spin status=done fixture=unit-csg-polygon-spin.tscn -->
 
 The profile revolves about +Y. A quarter turn keeps both end caps, and a full 360 degrees closes the surface on itself with no caps at all, as in Godot.
 
 ## Path sweep (mode = PATH)
+
 <!-- compare: image=unit-csg-polygon-path status=limitation fixture=unit-csg-polygon-path.tscn -->
 
 The profile is carried along the `Path3D` named by `path_node`, resolved as a sibling or a child. The road and the rail follow their curves in both images.

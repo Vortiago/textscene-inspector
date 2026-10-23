@@ -5,7 +5,7 @@
  */
 
 import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
-import { SCENE_ROOT_PATH, joinPath, pathBetween, spelledNodePath } from '../utils/nodePath.js';
+import { SCENE_ROOT_PATH, joinPath, parentPathOf, pathBetween, spelledNodePath } from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
@@ -299,8 +299,7 @@ function canNameNode(
   isOpaque: (path: string) => boolean
 ): boolean {
   if (pathMap.has(path)) return true;
-  const cut = path.lastIndexOf('/');
-  return isOpaque(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
+  return isOpaque(parentPathOf(path) ?? SCENE_ROOT_PATH);
 }
 
 /**

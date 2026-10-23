@@ -1,6 +1,7 @@
 /**
  * A set of keys that several reporters can hold at once: a key stays in the set while any of its
- * reports is open. The missing-resources panel and the undrawn-mesh list both keep one.
+ * reports is open. The missing-resources panel keeps one, and `createCountedReportsContext` makes
+ * the others.
  */
 import { useCallback, useRef, useState } from 'react';
 import { withKey, withoutKey } from '../../utils/keySet.js';
