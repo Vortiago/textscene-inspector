@@ -6,7 +6,7 @@
 import { StatusChip } from '../components/TscnPreviewShell/StatusChip.js';
 import { useRendersInSoftware } from './SoftwareRenderingContext.js';
 
-export const SOFTWARE_RENDERING_STATUS_TESTID = 'software-rendering-status';
+const SOFTWARE_RENDERING_STATUS_TESTID = 'software-rendering-status';
 
 const ADVICE =
   'The browser draws WebGL on the CPU, not on a GPU, so scenes run slowly. Turn on graphics ' +

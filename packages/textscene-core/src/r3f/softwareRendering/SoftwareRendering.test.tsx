@@ -10,7 +10,10 @@ import {
   type SoftwareRenderingStore,
 } from './SoftwareRenderingContext';
 import { SoftwareRenderingProbe } from './SoftwareRenderingProbe';
-import { SOFTWARE_RENDERING_STATUS_TESTID, SoftwareRenderingStatus } from './SoftwareRenderingStatus';
+import { SoftwareRenderingStatus } from './SoftwareRenderingStatus';
+
+/** The status chip's `data-testid`. */
+const STATUS_TESTID = 'software-rendering-status';
 
 const renderer = vi.hoisted(() => ({ inSoftware: false }));
 vi.mock('./softwareRenderer', () => ({ rendersInSoftware: () => renderer.inSoftware }));
@@ -79,7 +82,7 @@ describe('SoftwareRenderingStatus', () => {
 
   it('shows a polite status, with what to do in its title, while the browser draws in software', () => {
     statusWith(true);
-    const status = screen.getByTestId(SOFTWARE_RENDERING_STATUS_TESTID);
+    const status = screen.getByTestId(STATUS_TESTID);
     expect(status.textContent).toBe('Software WebGL');
     expect(status.getAttribute('role')).toBe('status');
     expect(status.getAttribute('title')).toMatch(/graphics acceleration/);
@@ -87,11 +90,11 @@ describe('SoftwareRenderingStatus', () => {
 
   it('is absent while a GPU draws', () => {
     statusWith(false);
-    expect(screen.queryByTestId(SOFTWARE_RENDERING_STATUS_TESTID)).toBeNull();
+    expect(screen.queryByTestId(STATUS_TESTID)).toBeNull();
   });
 
   it('is absent without a provider, since no canvas can publish (edge case)', () => {
     render(<SoftwareRenderingStatus />);
-    expect(screen.queryByTestId(SOFTWARE_RENDERING_STATUS_TESTID)).toBeNull();
+    expect(screen.queryByTestId(STATUS_TESTID)).toBeNull();
   });
 });
