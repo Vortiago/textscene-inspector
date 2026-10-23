@@ -10,6 +10,7 @@ import {
   applyCanvasItemSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
+import { applyUvWindow } from '../../../../r3f/uvWindow';
 import { textureRectUvWindow, type SampledDraw } from './nativeSolver';
 
 /** The flip properties TextureRect and TextureButton share. */
@@ -33,8 +34,6 @@ export function rectTexture(
   // STRETCH_TILE forces repeat wrapping for this draw whatever the item's texture_repeat:
   // `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
   if (draw.tile) cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
-  const { repeat, offset } = textureRectUvWindow(draw, flipH, flipV);
-  cloned.repeat.set(repeat.x, repeat.y);
-  cloned.offset.set(offset.x, offset.y);
+  applyUvWindow(cloned, textureRectUvWindow(draw, flipH, flipV));
   return cloned;
 }

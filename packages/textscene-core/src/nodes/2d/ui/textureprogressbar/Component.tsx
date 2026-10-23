@@ -20,7 +20,7 @@ import {
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
-import { regionUvWindow } from '../../../../r3f/uvWindow';
+import { applyUvWindow, regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
@@ -78,30 +78,17 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vector2 | null
 ): THREE.Texture | null {
-  // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
-  // render, and a clone per render would upload the texture again each time.
-  const crop = region && textureSize ? regionUvWindow(region, textureSize) : null;
-  const [repeatX, repeatY, offsetX, offsetY] = crop
-    ? [crop.repeat.x, crop.repeat.y, crop.offset.x, crop.offset.y]
-    : [];
+  // The caller memoises `region` and `textureSize`, so a render that keeps them clones and
+  // uploads nothing.
   const cropped = useMemo(() => {
-    if (
-      !texture ||
-      repeatX === undefined ||
-      repeatY === undefined ||
-      offsetX === undefined ||
-      offsetY === undefined
-    ) {
-      return null;
-    }
+    if (!texture || !region || !textureSize) return null;
     const cloned = texture.clone();
     cloned.wrapS = THREE.ClampToEdgeWrapping;
     cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.repeat.set(repeatX, repeatY);
-    cloned.offset.set(offsetX, offsetY);
+    applyUvWindow(cloned, regionUvWindow(region, textureSize));
     cloned.needsUpdate = true;
     return cloned;
-  }, [texture, repeatX, repeatY, offsetX, offsetY]);
+  }, [texture, region, textureSize]);
   return useUploadedClone(cropped);
 }
 
@@ -119,9 +106,10 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   );
   const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
 
-  const underSize = naturalSize(underTexture);
-  const progressSize = naturalSize(progressTexture);
-  const overSize = naturalSize(overTexture);
+  // Memoised, so the geometry and crop memos that read a size rebuild only when its texture changes.
+  const underSize = useMemo(() => naturalSize(underTexture), [underTexture]);
+  const progressSize = useMemo(() => naturalSize(progressTexture), [progressTexture]);
+  const overSize = useMemo(() => naturalSize(overTexture), [overTexture]);
 
   const ninePatchStretch = props.ninePatchStretch === true;
   const stretchMarginLeft = props.stretchMarginLeft ?? 0;

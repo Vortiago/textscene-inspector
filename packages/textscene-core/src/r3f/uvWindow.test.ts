@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { flippedUvWindow, regionUvWindow } from './uvWindow';
+import * as THREE from 'three';
+import { applyUvWindow, flippedUvWindow, regionUvRect, regionUvWindow } from './uvWindow';
 
 const SIZE = { x: 64, y: 32 };
 
@@ -48,6 +49,37 @@ describe('flippedUvWindow', () => {
     expect(flippedUvWindow(crop, false, true)).toEqual({
       repeat: { x: 0.5, y: -0.25 },
       offset: { x: 0.25, y: 0.75 },
+    });
+  });
+});
+
+describe('applyUvWindow', () => {
+  it("writes the window into the texture's repeat and offset", () => {
+    const texture = new THREE.Texture();
+    applyUvWindow(texture, { repeat: { x: -0.5, y: 0.25 }, offset: { x: 0.75, y: 0.5 } });
+    expect([texture.repeat.toArray(), texture.offset.toArray()]).toEqual([
+      [-0.5, 0.25],
+      [0.75, 0.5],
+    ]);
+  });
+});
+
+describe('regionUvRect', () => {
+  it("is the region's edges as UVs, with three's v running bottom-up", () => {
+    expect(regionUvRect({ x: 16, y: 8, w: 16, h: 8 }, SIZE)).toEqual({
+      u0: 0.25,
+      u1: 0.5,
+      vTop: 0.75,
+      vBottom: 0.5,
+    });
+  });
+
+  it('reaches past the texture for a region that overruns it (edge case)', () => {
+    expect(regionUvRect({ x: -32, y: 0, w: 128, h: 64 }, SIZE)).toEqual({
+      u0: -0.5,
+      u1: 1.5,
+      vTop: 1,
+      vBottom: -1,
     });
   });
 });

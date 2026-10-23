@@ -5,7 +5,7 @@
  */
 import { useLayoutEffect } from 'react';
 import type * as THREE from 'three';
-import type { UvWindow } from './uvWindow';
+import { applyUvWindow, type UvWindow } from './uvWindow';
 
 /**
  * `texture` is the consumer's own clone, and may be the previous one while a new
@@ -14,8 +14,6 @@ import type { UvWindow } from './uvWindow';
  */
 export function useUvWindow(texture: THREE.Texture | null, uvWindow: UvWindow): void {
   useLayoutEffect(() => {
-    if (!texture) return;
-    texture.offset.copy(uvWindow.offset);
-    texture.repeat.copy(uvWindow.repeat);
+    if (texture) applyUvWindow(texture, uvWindow);
   }, [texture, uvWindow]);
 }

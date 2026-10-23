@@ -63,14 +63,14 @@ describe('spriteSamplerClone', () => {
 describe('frameUvWindow', () => {
   it('is the full image for a plain full-image sprite', () => {
     const window = frameUvWindow(makeTexture(), baseProps());
-    expect(window.repeat.toArray()).toEqual([1, 1]);
-    expect(window.offset.toArray()).toEqual([0, 0]);
+    expect(window.repeat).toEqual({ x: 1, y: 1 });
+    expect(window.offset).toEqual({ x: 0, y: 0 });
   });
 
   it('is the full image before the texture loads', () => {
     const region = { x: 10, y: 20, width: 50, height: 40 };
     const window = frameUvWindow(undefined, baseProps({ region_enabled: true, region_rect: region }));
-    expect(window.repeat.toArray()).toEqual([1, 1]);
+    expect(window.repeat).toEqual({ x: 1, y: 1 });
   });
 
   it('never mutates the texture it reads', () => {
