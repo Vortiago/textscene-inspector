@@ -28,6 +28,7 @@ import { reparentedName } from '../godot/scene/packedScene.js';
 import { idTrailEnd, ownerTrailEnd } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
+import { insertAtIndex } from '../godot/scene/siblingIndex.js';
 
 /**
  * The one walk over a seated scene. Paths are relative to the root: "." is the root, "Foo/Bar" is
@@ -154,7 +155,9 @@ function seatBelowParent<N extends SceneNode<N>>(
   const parentNode = tables.byPath.get(parentPath);
   if (parentNode) {
     const seat = seatCopy(tables, node, owner);
-    parentNode.children.push(seat);
+    // An instance's own nodes are not in this list, so an `index=` below one is no place in it.
+    if (parentNode.instance) parentNode.children.push(seat);
+    else insertAtIndex(parentNode.children, seat);
     register(tables, parentPath, seat, parentNode);
     return true;
   }
@@ -178,7 +181,7 @@ function reRoot<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner
   const seat = seatCopy(tables, node, owner);
   seat.authoredName = node.name;
   seat.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
-  tables.root.children.push(seat);
+  insertAtIndex(tables.root.children, seat);
   register(tables, SCENE_ROOT_PATH, seat, tables.root);
 }
 

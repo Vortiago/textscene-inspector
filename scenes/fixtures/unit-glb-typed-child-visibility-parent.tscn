@@ -1,0 +1,50 @@
+[gd_scene load_steps=5 format=3]
+
+; One variable: the `visibility_parent` of a node that declares a `type=` under a path inside an
+; instanced `.glb`, written as a `%Name`. Godot gives such a node the path `Body/Rig/Torso/<name>`
+; and the instancing scene's owner, so `%ProxyDrawn` and `%ProxyHidden` resolve in this file's
+; table. The red box names the proxy the camera is past the begin of, which draws, so the box hides.
+; The green box names the proxy short of its begin, which hides, so the box draws. Resolved nowhere,
+; both boxes draw.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-rig.glb" id="1_glb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
+albedo_color = Color(0.85, 0.12, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_green"]
+albedo_color = Color(0.1, 0.7, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[node name="GlbTypedChildVisibilityParent" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_glb")]
+
+[node name="ProxyDrawn" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 1.5, 0)
+mesh = SubResource("BoxMesh_marker")
+visibility_range_begin = 0.5
+
+[node name="ProxyHidden" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, -1.5, 0)
+mesh = SubResource("BoxMesh_marker")
+visibility_range_begin = 200.0
+
+[node name="Hides" type="MeshInstance3D" parent="Body/Rig/Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1.5, 0)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_red")
+visibility_parent = NodePath("%ProxyDrawn")
+
+[node name="Shows" type="MeshInstance3D" parent="Body/Rig/Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -1.5, 0)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_green")
+visibility_parent = NodePath("%ProxyHidden")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 3, 0)

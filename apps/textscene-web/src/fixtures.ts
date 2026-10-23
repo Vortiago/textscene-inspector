@@ -633,8 +633,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Property Override",
+    "file": "unit-glb-property-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Surface Material Override",
     "file": "unit-glb-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Typed Child Visibility Parent",
+    "file": "unit-glb-typed-child-visibility-parent.tscn",
     "category": "Other"
   },
   {

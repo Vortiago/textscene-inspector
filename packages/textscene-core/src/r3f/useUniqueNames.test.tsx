@@ -4,12 +4,14 @@
  * scene a ViewportTexture measures from comes from the same live tree.
  */
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
 import { TscnParser } from '../parser/TscnParser.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
+import { seedGlbInstance } from '../resources/testing/seedGlbInstance.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
@@ -118,5 +120,43 @@ describe('useLocalScene', () => {
       ),
     });
     expect(result.current?.path).toBe('Root/Monitor');
+  });
+});
+
+describe('useUniqueNamePaths for a node attached into an instanced GLB', () => {
+  it("reads the host file's table at the path Godot gives the node", () => {
+    const host = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://rig.glb" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Rig" parent="." instance=ExtResource("1")]
+
+[node name="Marker" type="Node3D" parent="Rig/Skeleton"]
+unique_name_in_owner = true
+`);
+    const fake = createFakeResourceLoader();
+    const { loader } = fake;
+    const named = (name: string) => Object.assign(new THREE.Group(), { name });
+    const rig = named('Scene');
+    rig.add(named('Skeleton'));
+    seedGlbInstance(fake, 'res://rig.glb', rig);
+    const sceneGraph = createSceneGraphFromTscnScene(host);
+
+    const { result } = renderHook(() => useUniqueNamePaths('Root/Rig/Skeleton/Marker'), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+          <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
+        </HierarchyProvider>
+      ),
+    });
+
+    expect([result.current?.get('%Target'), result.current?.get('%Marker')]).toEqual([
+      'Root/Target',
+      'Root/Rig/Skeleton/Marker',
+    ]);
   });
 });

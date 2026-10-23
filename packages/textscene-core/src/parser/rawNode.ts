@@ -5,7 +5,14 @@
 
 import type { NodeOrigin, RawNode } from './types.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from './utils.js';
+import { parseHeadingIndex } from './valueParsers.js';
 import { INSTANCE_PLACEHOLDER_TYPE, parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
+
+/** The `index` field a heading's `index=` gives its node, or none. */
+export function headingIndexField(heading: ParsedHeading): { index?: number } {
+  const index = parseHeadingIndex(heading.attributes.index);
+  return index === undefined ? {} : { index };
+}
 
 /**
  * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the
@@ -34,6 +41,7 @@ export function createRawNode(heading: ParsedHeading, rawProperties: Record<stri
     node.overridesExistingNode = true;
   }
   if (heading.attributes.owner) node.owner = heading.attributes.owner;
+  Object.assign(node, headingIndexField(heading));
 
   // The instance reference goes on the dedicated `instance` field, not a `__instance` key in the property schema.
   if (heading.attributes.instance) {
