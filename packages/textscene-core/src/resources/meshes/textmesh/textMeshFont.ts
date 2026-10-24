@@ -5,6 +5,7 @@
 
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { identityKey } from '../../../utils/identityKey';
+import { perObject } from '../../../utils/perObject';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
 import type { LoadedFont, ResolvableResource, ScopedResource } from '../../scopedResource';
 import type { TextMeshFace } from './build';
@@ -18,20 +19,13 @@ const UNREADABLE: TextMeshFont = { status: 'unreadable' };
 const AWAITING_METRICS: TextMeshFont = { status: 'awaitingMetrics' };
 
 /**
- * Written only by `textMeshFont`, and only for a font that is final. A mesh object holds its
+ * The font of `mesh`, as its `loadedFont` and the settled metrics answer now. A mesh object holds its
  * `loadedFont` for good, so a font it found unreadable or ready stays so. A font that awaits its
  * metrics is read again: they settle later.
  */
-const finalFontByMesh = new WeakMap<ResolvableResource, TextMeshFont>();
-
-/** The font of `mesh`, as its `loadedFont` and the settled metrics answer now. */
-export function textMeshFont(mesh: ResolvableResource): TextMeshFont {
-  const cached = finalFontByMesh.get(mesh);
-  if (cached) return cached;
-  const font = readTextMeshFont(mesh);
-  if (font.status !== 'awaitingMetrics') finalFontByMesh.set(mesh, font);
-  return font;
-}
+export const textMeshFont = perObject(readTextMeshFont, {
+  keeps: (font) => font.status !== 'awaitingMetrics',
+});
 
 function readTextMeshFont({ resource, resources, loadedFont }: ResolvableResource): TextMeshFont {
   const { font } = resolveFontReference(resource.data['font'], resources, loadedFont);

@@ -209,11 +209,9 @@ export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
  * A mesh object holds its resources and its lookups for good, so a key is read once per object. A
  * mesh whose font awaits metrics is read each time: its key moves when they settle.
  */
-export function referencesKey(mesh: ResolvableResource): string {
-  return isAwaitingFontMetrics(mesh) ? readReferencesKey(mesh) : finalReferencesKey(mesh);
-}
-
-const finalReferencesKey = perObject(readReferencesKey);
+export const referencesKey = perObject(readReferencesKey, {
+  keeps: (_key, mesh) => !isAwaitingFontMetrics(mesh),
+});
 
 function readReferencesKey(mesh: ResolvableResource): string {
   const { resource, resources, loadedFile } = mesh;
