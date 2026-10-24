@@ -92,7 +92,8 @@ export function collectDecalReceivers(
  * Project one receiver into the decal's local frame and return the baked decal geometry, or
  * `null` when the receiver's triangles clip to nothing inside the box. Decal-local space, not the
  * world space `DecalGeometry` emits, lets the mesh hang under the decal's transform group without
- * a compensating inverse transform.
+ * a compensating inverse transform. Its `uv` runs over the whole texture with v = 0 at the top row,
+ * as Godot's decal reads it (`scene_forward_clustered.glsl:1604`).
  */
 export function buildDecalProjectionGeometry(
   receiver: THREE.Mesh,
@@ -114,15 +115,6 @@ export function buildDecalProjectionGeometry(
     geometry.dispose();
     return null;
   }
-
-  // Flip V. Textures load with `flipY = true` (three's default, which
-  // arrayMeshGeometry/tileGeometry also assume), so V = 0 samples the image bottom, but Godot's
-  // decal V-origin is the image top. Without this a projected texture is mirrored vertically.
-  const uv = geometry.getAttribute('uv');
-  for (let i = 0; i < uv.count; i++) {
-    uv.setY(i, 1 - uv.getY(i));
-  }
-  uv.needsUpdate = true;
 
   // Godot's depth and normal fades, baked per vertex from the attributes just emitted, which are
   // already in the decal's frame. decalFade.ts says why that makes the bake exact, and where not.

@@ -28,27 +28,22 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import { parseDecal } from './parser';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
-import { dropMipChain } from '../../../resources/textures/godotTextureFilter';
+import { reportsMaxTextureSize } from '../../../r3f/testing/reportsMaxTextureSize';
+import { decalAtlasRect, decalAtlasTexture, holdDecalTexture, releaseDecalTexture } from './decalAtlas';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
 
+/** The context a decal's atlas fits: the GPU limit the test canvas reports. */
+const GPU_TEXTURE_SIZE = 4096;
+
+function create(tree: ReactNode) {
+  return ReactThreeTestRenderer.create(tree, { beforeReturn: reportsMaxTextureSize(GPU_TEXTURE_SIZE) });
+}
+
 function makeTexture(width = 64, height = 64): THREE.Texture {
   const t = new THREE.Texture();
   (t as unknown as { image: { width: number; height: number } }).image = { width, height };
-  return t;
-}
-
-/**
- * A file-texture-shaped entry as the loader hands it over: sRGB-tagged, wrapping
- * set by the caller. Godot samples a decal's albedo as sRGB, so a shared entry
- * the binding can reuse must already carry that space.
- */
-function makeSrgbTexture(wrap: THREE.Wrapping, width = 64, height = 64): THREE.Texture {
-  const t = makeTexture(width, height);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = wrap;
-  t.wrapT = wrap;
   return t;
 }
 
@@ -109,7 +104,7 @@ function seededLoader(cached: RenderOptions['cached']) {
 }
 
 async function render(opts: RenderOptions) {
-  return ReactThreeTestRenderer.create(decalTree(opts, seededLoader(opts.cached)));
+  return create(decalTree(opts, seededLoader(opts.cached)));
 }
 
 /**
@@ -180,114 +175,128 @@ describe('<Decal>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('binds a Repeat-wrapped producer texture clamped (Godot samples the clamped atlas)', async () => {
-    // The projection borrows the shared cache entry, so a producer that tiles would
-    // tile the decal too. Godot blits the atlas with REPEAT_DISABLED
-    // (copy_effects.cpp:592) and discards fragments outside the box
-    // (scene_forward_clustered.glsl:1585-1587), so the consumer states clamp.
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: makeSrgbTexture(THREE.RepeatWrapping) }],
-      children: <Receiver />,
-    });
-    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
-    expect(map.wrapS).toBe(THREE.ClampToEdgeWrapping);
-    expect(map.wrapT).toBe(THREE.ClampToEdgeWrapping);
-  });
+  describe('the decal atlas', () => {
+    /** A producer whose bytes the atlas can read: a Repeat-wrapped, untagged, unmipped RGBA8 texture. */
+    function readableProducer(size = 64, rgba: readonly number[] = [255, 0, 0, 255]): THREE.DataTexture {
+      const data = new Uint8Array(size * size * 4);
+      for (let texel = 0; texel < size * size; texel++) data.set(rgba, texel * 4);
+      const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.needsUpdate = true;
+      return texture;
+    }
 
-  it('shares an already clamped entry, not a clone', async () => {
-    // The clamp declaration must not force a clone when the entry already clamps:
-    // textures are shared by identity, and a needless copy would be disposed with
-    // the material while the cache still hands the entry to other consumers.
-    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: entry }],
-      children: <Receiver />,
-    });
-    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
-    expect(map).toBe(entry);
-  });
+    /** Mounts a decal with `producer` over a receiver and fires the render that places it in the atlas. */
+    async function draw(producer: THREE.Texture, props: Record<string, string> = {}) {
+      const renderer = await render({
+        node: makeNode({ texture_albedo: 'ExtResource("1_tex")', ...props }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+        cached: [{ path: TEXTURE_PATH, texture: producer }],
+        children: <Receiver />,
+      });
+      const scene = renderer.scene.instance as THREE.Scene;
+      scene.updateMatrixWorld();
+      await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
+      return renderer;
+    }
 
-  it('mipmaps an import without a mip chain, as the decal atlas builds its own', async () => {
-    const producer = makeSrgbTexture(THREE.ClampToEdgeWrapping);
-    dropMipChain(producer);
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: producer }],
-      children: <Receiver />,
-    });
-    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
-    expect(map.generateMipmaps).toBe(true);
-    expect(map.minFilter).toBe(THREE.LinearMipmapLinearFilter);
-    expect(producer.generateMipmaps).toBe(false);
-  });
+    it('samples the shared atlas, clamped, in sRGB, over a mip chain, whatever the producer is', async () => {
+      // Godot blits the albedo into an RGBA8 atlas (`texture_storage.cpp:3163`) that the shader
+      // reads through its sRGB view (`render_forward_clustered.cpp:3213`), clamped and mipmapped
+      // (`copy_effects.cpp:592`, `rendering_server.cpp:3804`).
+      const producer = readableProducer();
+      const renderer = await draw(producer);
 
-  it('samples a raw-tagged producer as sRGB, as Godot samples the albedo', async () => {
-    // `texture_albedo` is a `source_color`, so the projection samples it as sRGB
-    // whatever the producer tagged (a NoiseTexture2D baked `as_normal_map` arrives
-    // NoColorSpace). The retag lands on the clone; the shared entry keeps its own tag.
-    const producer = makeTexture();
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: producer }],
-      children: <Receiver />,
+      const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+      expect(map).toBe(decalAtlasTexture());
+      expect(map.colorSpace).toBe(THREE.SRGBColorSpace);
+      expect(map.wrapS).toBe(THREE.ClampToEdgeWrapping);
+      expect(map.mipmaps).toHaveLength(5);
+      expect(producer.wrapS).toBe(THREE.RepeatWrapping);
+      expect(producer.colorSpace).toBe(THREE.NoColorSpace);
     });
-    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
-    expect(map.colorSpace).toBe(THREE.SRGBColorSpace);
-    expect(producer.colorSpace).toBe(THREE.NoColorSpace);
-  });
 
-  it("projects an AtlasTexture's whole sheet, which its RID names", async () => {
-    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'SubResource("AtlasTexture_cell")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      internals: [
-        wrapper('AtlasTexture_cell', 'AtlasTexture', {
-          atlas: 'ExtResource("1_tex")',
-          region: 'Rect2(0, 0, 8, 8)',
-        }),
-      ],
-      cached: [{ path: TEXTURE_PATH, texture: entry }],
-      children: <Receiver />,
-    });
-    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
-    expect(map).toBe(entry);
-  });
+    it("keeps a projection's UV inside its texture's rectangle", async () => {
+      const producer = readableProducer();
+      const renderer = await draw(producer);
 
-  it('projects nothing for a CanvasTexture, whose RID the decal refuses (edge case)', async () => {
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'SubResource("CanvasTexture_a")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      internals: [wrapper('CanvasTexture_a', 'CanvasTexture', { diffuse_texture: 'ExtResource("1_tex")' })],
-      cached: [{ path: TEXTURE_PATH, texture: makeSrgbTexture(THREE.ClampToEdgeWrapping) }],
-      children: <Receiver />,
+      const rect = decalAtlasRect(producer)!;
+      const uv = projections(renderer)[0]!.geometry.getAttribute('uv');
+      const [us, vs] = [0, 1].map((axis) =>
+        Array.from({ length: uv.count }, (_, i) => (axis ? uv.getY(i) : uv.getX(i)))
+      );
+      // The 2 x 2 x 2 box over a 4 x 4 receiver projects the whole texture.
+      expect(Math.min(...us!)).toBeCloseTo(rect.x, 5);
+      expect(Math.max(...us!)).toBeCloseTo(rect.x + rect.width, 5);
+      expect(Math.min(...vs!)).toBeCloseTo(rect.y, 5);
+      expect(Math.max(...vs!)).toBeCloseTo(rect.y + rect.height, 5);
     });
-    expect(projections(renderer)).toHaveLength(0);
-  });
 
-  it('never disposes the shared cache entry when the projection unmounts', async () => {
-    // The projection borrows the entry, so its cleanup may free only a bind-time
-    // clone. An unconditional dispose of the map would free the cache entry every
-    // other consumer is still sampling.
-    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
-    let disposed = false;
-    entry.addEventListener('dispose', () => {
-      disposed = true;
+    it("follows its rectangle when another decal's texture moves it", async () => {
+      const producer = readableProducer();
+      const renderer = await draw(producer);
+      const before = decalAtlasRect(producer)!;
+
+      const wide = readableProducer(300);
+      holdDecalTexture(wide);
+      const scene = renderer.scene.instance as THREE.Scene;
+      await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
+
+      const after = decalAtlasRect(producer)!;
+      expect(after.width).not.toBe(before.width);
+      const uv = projections(renderer)[0]!.geometry.getAttribute('uv');
+      expect(Math.max(...Array.from({ length: uv.count }, (_, i) => uv.getX(i)))).toBeCloseTo(
+        after.x + after.width,
+        5
+      );
+      releaseDecalTexture(wide);
     });
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: entry }],
-      children: <Receiver />,
+
+    it("projects an AtlasTexture's whole sheet, which its RID names", async () => {
+      const sheet = readableProducer();
+      const renderer = await render({
+        node: makeNode({ texture_albedo: 'SubResource("AtlasTexture_cell")' }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+        internals: [
+          wrapper('AtlasTexture_cell', 'AtlasTexture', {
+            atlas: 'ExtResource("1_tex")',
+            region: 'Rect2(0, 0, 8, 8)',
+          }),
+        ],
+        cached: [{ path: TEXTURE_PATH, texture: sheet }],
+        children: <Receiver />,
+      });
+      const scene = renderer.scene.instance as THREE.Scene;
+      scene.updateMatrixWorld();
+      await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
+
+      expect(decalAtlasRect(sheet)).toBeDefined();
     });
-    await renderer.unmount();
-    expect(disposed).toBe(false);
+
+    it('draws nothing while its texture cannot be read (edge case)', async () => {
+      const renderer = await draw(makeTexture());
+
+      const [projection] = projections(renderer);
+      expect(projection!.visible).toBe(false);
+    });
+
+    it('leaves the atlas when it unmounts, and never disposes the shared cache entry', async () => {
+      // The projection borrows the entry, so its cleanup may free only what the decal made. A
+      // dispose of the entry would free it for every other consumer still sampling it.
+      const producer = readableProducer();
+      let disposed = false;
+      producer.addEventListener('dispose', () => {
+        disposed = true;
+      });
+      const renderer = await draw(producer);
+      expect(decalAtlasRect(producer)).toBeDefined();
+
+      await renderer.unmount();
+
+      expect(decalAtlasRect(producer)).toBeUndefined();
+      expect(disposed).toBe(false);
+    });
   });
 
   it('projects onto a receiver whose render layers the cull_mask admits', async () => {
@@ -321,7 +330,7 @@ describe('<Decal>', () => {
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
     };
-    const renderer = await ReactThreeTestRenderer.create(decalTree(options, loader));
+    const renderer = await create(decalTree(options, loader));
     expect(projections(renderer)).toEqual([]);
 
     await renderer.update(decalTree({ ...options, children: <Receiver /> }, loader));
@@ -340,7 +349,7 @@ describe('<Decal>', () => {
 
     async function editAndRender(before: React.ReactElement, after: React.ReactElement) {
       const sharedLoader = loader();
-      const renderer = await ReactThreeTestRenderer.create(
+      const renderer = await create(
         decalTree({ node: parsedDecal(), externals, children: before }, sharedLoader)
       );
       await renderer.update(decalTree({ node: parsedDecal(), externals, children: after }, sharedLoader));
@@ -441,9 +450,7 @@ describe('<Decal>', () => {
       distance_fade_length: '0.01',
     };
 
-    const renderer = await ReactThreeTestRenderer.create(
-      decalTree({ ...options, node: makeNode(faded) }, loader)
-    );
+    const renderer = await create(decalTree({ ...options, node: makeNode(faded) }, loader));
     const scene = renderer.scene.instance as THREE.Scene;
     scene.updateMatrixWorld();
     fireSceneRender(scene, farCamera());
@@ -496,7 +503,7 @@ describe('<Decal>', () => {
       registry = useAnimatedValueRegistry();
       return null;
     }
-    const renderer = await ReactThreeTestRenderer.create(
+    const renderer = await create(
       <SceneStack
         loader={createFakeResourceLoader().loader}
         scene={{ externalResources: [] }}

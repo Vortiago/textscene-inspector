@@ -530,6 +530,11 @@ The one texture that holds the `area_texture` of every AreaLight3D, each in a ce
 A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
+**Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
+The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
+A Decal reads its rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+_Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
+
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.

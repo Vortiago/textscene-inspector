@@ -19,6 +19,7 @@ import { parseSprite2D } from '../nodes/2d/sprite2d/parser';
 import { parseSprite3D } from '../nodes/3d/sprite3d/parser';
 import { Decal } from '../nodes/3d/decal/Component';
 import { parseDecal } from '../nodes/3d/decal/parser';
+import { decalAtlasTexture, updateDecalAtlas } from '../nodes/3d/decal/decalAtlas';
 import { TextureRect } from '../nodes/2d/ui/texturerect/Component';
 import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Button } from '../nodes/2d/ui/button/Component';
@@ -75,6 +76,9 @@ function provide(children: ReactNode, workspace?: '2d') {
  * A decoded texture's pixel dimensions. three types `THREE.Texture.image` as `unknown`, and every
  * texture here is a rasterised gradient with a width and a height.
  */
+/** A GPU limit the decal atlas fits. */
+const MAX_TEXTURE_SIZE = 4096;
+
 function imageSize(texture: THREE.Texture): { width: number; height: number } {
   return texture.image as { width: number; height: number };
 }
@@ -232,13 +236,15 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
     // The projection meshes are added imperatively to the decal's own group
     // (see that component's doc for why), so they live in the THREE scene
     // rather than in the test renderer's React view of it.
-    const projected: THREE.Texture[] = [];
+    const projected: THREE.Mesh[] = [];
     (renderer.scene.instance as THREE.Object3D).traverse((obj) => {
-      if (obj.userData.isDecalProjection !== true) return;
-      const map = ((obj as THREE.Mesh).material as THREE.MeshStandardMaterial).map;
-      if (map) projected.push(map);
+      if (obj.userData.isDecalProjection === true) projected.push(obj as THREE.Mesh);
     });
     expect(projected).toHaveLength(1);
-    expect(imageSize(projected[0]!).width).toBe(256);
+
+    // The projection samples the decal atlas, which holds the 256 x 256 gradient: 256 / 32 + 1 = 9
+    // cells, so 16 cells of 32 texels wide, and nearest_power_of_2(9 * 32) = 512 tall.
+    updateDecalAtlas(MAX_TEXTURE_SIZE);
+    expect(decalAtlasTexture().image).toMatchObject({ width: 512, height: 512 });
   });
 });

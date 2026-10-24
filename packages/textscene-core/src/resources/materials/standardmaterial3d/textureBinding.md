@@ -81,10 +81,10 @@ read from the normal map's source file. The previewer reads the same file and ru
 (`processing/roughnessLimit.ts`). The editor sets these options when it sees a roughness map paired
 with a normal map in 3D, and the previewer does not predict that re-import.
 
-A Decal reads its copy in the decal atlas, which builds its own mip chain
-(`texture_storage.cpp:3162-3226`), so a decal mipmaps whatever the import says. The atlas halves
-each level in its RGBA8 bytes too. So a decal shares an imported chain, and over an import with no
-chain the previewer builds one with the same byte average.
+A Decal reads its copy in the decal atlas, which halves the whole atlas level by level
+(`texture_storage.cpp:3162-3226`), so a decal mipmaps whatever the import says. The previewer
+builds that atlas on the CPU from each texture's RGBA8 bytes (`nodes/3d/decal/decalAtlas.ts`) and
+never reads the imported chain.
 
 `compress/mode` then gives the import format (`godot/import/textureImport.ts`):
 
