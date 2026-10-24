@@ -126,6 +126,16 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
   },
+  'unit-lightmap-gi-shadowmask-only.tscn': {
+    rules: ['format:shadowmask_mode'],
+    reason:
+      'mode Only (3) is declared by the enum but absent from the inspector hint, so a script stores it: the fixture pins what Godot draws for it',
+  },
+  'unit-node-parent-id-path.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the node hangs off a path that names nothing on purpose: the warning is the point, and the golden pins where its parent_id_path seats it',
+  },
   'unit-orphan-reroot.tscn': {
     rules: ['unresolved-parent-path'],
     reason:

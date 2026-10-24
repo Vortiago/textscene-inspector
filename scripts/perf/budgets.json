@@ -100,13 +100,17 @@
     }
   },
   "pointlight2d": {
-    "drawCalls": 5,
+    "drawCalls": 6,
     "steps": {
       "2D lights": {
         "drawCalls": 4,
         "runs": 1
       },
       "Scene draw": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Canvas copy": {
         "drawCalls": 1,
         "runs": 1
       },
@@ -146,7 +150,7 @@
     }
   },
   "demo-2d-lights-and-shadows": {
-    "drawCalls": 35,
+    "drawCalls": 36,
     "steps": {
       "2D lights": {
         "drawCalls": 4,
@@ -154,6 +158,10 @@
       },
       "Scene draw": {
         "drawCalls": 31,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
         "runs": 1
       },
       "Other": {

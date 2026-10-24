@@ -120,10 +120,12 @@ function MinimapConnections({
   });
 
   return (
-    <mesh renderOrder={renderOrder}>
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial key={program.key} {...program.props} />
-    </mesh>
+    <CanvasItemGroup renderOrder={renderOrder}>
+      <mesh renderOrder={renderOrder}>
+        <primitive object={geometry} attach="geometry" />
+        <meshBasicMaterial key={program.key} {...program.props} />
+      </mesh>
+    </CanvasItemGroup>
   );
 }
 
@@ -198,10 +200,11 @@ export function GraphEditMinimapChrome({
   );
   const resizerOpacity = modulated.a * RESIZER_COLOR.a;
 
+  const resizerRenderOrder = renderOrder + 0.06;
   const cameraRect = minimapCameraRect(transform, bounds, scrollOffset, graphEditSize);
 
   return (
-    <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
+    <CanvasItemGroup position={[rect.x, -rect.y, 0]} renderOrder={renderOrder}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={modulated}
@@ -244,14 +247,16 @@ export function GraphEditMinimapChrome({
       </CanvasItemGroup>
 
       {resizerTexture && (
-        <ControlQuad
-          width={GRAPH_EDIT_ICON_SIZE}
-          height={GRAPH_EDIT_ICON_SIZE}
-          color={resizerColor}
-          opacity={resizerOpacity}
-          map={resizerTexture}
-          renderOrder={renderOrder + 0.06}
-        />
+        <CanvasItemGroup renderOrder={resizerRenderOrder}>
+          <ControlQuad
+            width={GRAPH_EDIT_ICON_SIZE}
+            height={GRAPH_EDIT_ICON_SIZE}
+            color={resizerColor}
+            opacity={resizerOpacity}
+            map={resizerTexture}
+            renderOrder={resizerRenderOrder}
+          />
+        </CanvasItemGroup>
       )}
     </CanvasItemGroup>
   );

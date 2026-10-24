@@ -7,9 +7,15 @@
 
 import * as THREE from 'three';
 import { EMPTY_AABB, hasSurface, type Aabb } from '../../godot/math/aabb';
-import { LIGHTMAP_BICUBIC_FILTER_DEFAULT, LIGHTMAP_NODE_ITSELF } from '../../godot/scene/lightmapGi';
+import type { EnumValue } from '../../godot/classdb/enumNames';
+import {
+  LIGHTMAP_BICUBIC_FILTER_DEFAULT,
+  LIGHTMAP_NODE_ITSELF,
+  ShadowmaskMode,
+} from '../../godot/scene/lightmapGi';
 import { resolveRelativePath } from '../../godot/string/nodePath';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
+import { perObject } from '../../utils/perObject';
 import { cameraFrustum } from '../cameraFrustum';
 import { compareReadyOrder, type TreeOrder } from '../contexts/TreeOrderContext';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -21,8 +27,13 @@ export class LightmapInstance {
   order: TreeOrder = [];
   /** Each user by {@link lightmapUserKey}. */
   users: ReadonlyMap<string, LightmapUser> = new Map();
-  /** The atlas, every layer of every lightmap texture in order. Null until it loads. */
+  /**
+   * The atlas, every layer of every lightmap texture in order. Null until it loads. The alpha of the
+   * first layer of each slice holds that slice's shadowmask, when the bake has one.
+   */
   atlas: THREE.DataArrayTexture | null = null;
+  /** None until the atlas holds the shadowmask, whatever the node says. */
+  shadowmaskMode: EnumValue<typeof ShadowmaskMode> = ShadowmaskMode.NONE;
   usesSphericalHarmonics = false;
   usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;
   /** The bake's capture bounds, in the LightmapGI's space (`lightmap_gi.cpp:229`). */
@@ -142,15 +153,5 @@ function isCulledIn({ atlas, bounds, object }: LightmapInstance): boolean {
   return frustum.intersectsBox(worldBounds);
 }
 
-/** Written only by `lightmapsOf`, and collected with its scene. */
-const lightmapsByScene = new WeakMap<THREE.Scene, SceneLightmaps>();
-
-/** The LightmapGIs of `scene`. */
-export function lightmapsOf(scene: THREE.Scene): SceneLightmaps {
-  let lightmaps = lightmapsByScene.get(scene);
-  if (!lightmaps) {
-    lightmaps = new SceneLightmaps(scene);
-    lightmapsByScene.set(scene, lightmaps);
-  }
-  return lightmaps;
-}
+/** The LightmapGIs of `scene`, collected with its scene. */
+export const lightmapsOf = perObject((scene: THREE.Scene) => new SceneLightmaps(scene));

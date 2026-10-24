@@ -4,30 +4,24 @@
  * `region_enabled`, else the full texture) and then subdivides it by the frame
  * grid, so region and frames compose.
  *
- * The sampler clone and the frame's UV window are separate on purpose. three keys a
+ * The frame's UV window is set apart from the sampler clone on purpose. three keys a
  * GPU texture by source and sampler state, never by offset or repeat, so a frame
  * change moves the window on the clone already drawn and uploads nothing.
  */
 
-import * as THREE from 'three';
-import { pinNoColorSpace } from './canvas2DTextureDecode';
+import type * as THREE from 'three';
+import { FULL_UV_WINDOW, regionUvWindow, type UvWindow } from './uvWindow';
+import { frameCoords } from '../godot/scene/spriteFrames';
 
 /**
  * What shows where a frame's UVs fall outside the texture, which only a
  * `region_rect` bigger than its texture reaches: Godot does not clip it
  * (`Sprite2D::_get_rects`, and `Texture2D::get_rect_region` passes it through).
- * Required, since a default is the silent hand-syncing this module prevents.
+ * `SpriteBase3D` derives
+ * `texture_repeat` from the frame's UV corners (`sprite_3d.cpp:163`), as `spriteWrapMode()` does: a
+ * frame inside the texture clamps, so its edge texels stretch past it, and only an overrun tiles.
  */
 type SpriteWrapMode = 'clamp' | 'repeat';
-
-const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
-  // A frame inside the texture: `SpriteBase3D` derives `texture_repeat` off
-  // (`sprite_3d.cpp:163`), so the edge texels stretch past the frame.
-  clamp: THREE.ClampToEdgeWrapping,
-  // Sprite3D: `SpriteBase3D` derives `texture_repeat` from the frame's UV corners
-  // (`sprite_3d.cpp:163`), so only an overrun tiles. `spriteWrapMode()` derives it.
-  repeat: THREE.RepeatWrapping,
-};
 
 /**
  * Flip and world size stay per slice: Sprite2D mirrors by mesh scale at 1 px per
@@ -55,45 +49,12 @@ export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
 });
 
 /**
- * Clone the loaded texture with the sprite's sampler state. `useResource` shares one
- * texture per path, so an in-place edit clobbers other sprites. `colorSpace` is required
- * like `wrap`: Sprite3D passes the colour space its albedo sampler reads the texture in.
- * The frame's UVs are not set here: `useUvWindow` sets them on the clone that draws.
+ * The current frame's UV window over `texture`: the region-then-frame-grid composition, over the
+ * full-image window.
  */
-export function spriteSamplerClone(
-  texture: THREE.Texture,
-  wrap: SpriteWrapMode,
-  colorSpace: THREE.ColorSpace
-): THREE.Texture {
-  const cloned = texture.clone();
-  // A plain assignment loses to R3F's auto sRGB-tagging once the clone reaches a
-  // `map` prop, so NoColorSpace is pinned. SRGBColorSpace is what that tagging forces anyway.
-  if (colorSpace === THREE.NoColorSpace) {
-    pinNoColorSpace(cloned);
-  } else {
-    cloned.colorSpace = colorSpace;
-  }
-  cloned.wrapS = WRAP[wrap];
-  cloned.wrapT = WRAP[wrap];
-  cloned.needsUpdate = true;
-  return cloned;
-}
-
-/** A frame's UV window: the texture region a sprite quad samples. */
-export interface UvWindow {
-  offset: THREE.Vector2;
-  repeat: THREE.Vector2;
-}
-
-/** The current frame's UV window over `texture`, from the full-image window. */
 export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow {
-  const uv: FrameWindow = {
-    offset: new THREE.Vector2(0, 0),
-    repeat: new THREE.Vector2(1, 1),
-    image: texture?.image,
-  };
-  windowFrameUv(uv, props);
-  return { offset: uv.offset, repeat: uv.repeat };
+  const base = regionWindow(texture, props) ?? FULL_UV_WINDOW;
+  return props.hframes > 1 || props.vframes > 1 ? cellWindow(base, props) : base;
 }
 
 /**
@@ -118,12 +79,6 @@ export function frameSizePx(
   return { width: pxW / H, height: pxH / V };
 }
 
-/** The window the frame math writes, and the image whose dimensions it reads. */
-interface FrameWindow extends UvWindow {
-  /** `unknown`, as three types it, narrowed where the dimensions are read. */
-  image: unknown;
-}
-
 /**
  * Godot's `texture_repeat` (`sprite_3d.cpp:163`): repeat only where the frame's UV
  * window leaves `[0, 1]`, on strict tests. Flips only swap the box's diagonal,
@@ -136,53 +91,30 @@ export function spriteWrapMode(texture: THREE.Texture | undefined, props: Sprite
   return outside(uv.offset.x, uv.repeat.x) || outside(uv.offset.y, uv.repeat.y) ? 'repeat' : 'clamp';
 }
 
-/** The region-then-frame-grid composition, over an identity window. */
-function windowFrameUv(target: FrameWindow, props: SpriteFrameProps): void {
-  if (props.region_enabled && props.region_rect) {
-    applyRegionRect(target, props.region_rect);
-  }
-  if (props.hframes > 1 || props.vframes > 1) {
-    applySpritesheetUV(target, props);
-  }
-}
-
-function applySpritesheetUV(texture: FrameWindow, props: SpriteFrameProps): void {
-  const H = Math.max(1, props.hframes);
-  const V = Math.max(1, props.vframes);
-
-  let col: number;
-  let row: number;
-  if (props.frame_coords) {
-    col = props.frame_coords.x;
-    row = props.frame_coords.y;
-  } else {
-    col = props.frame % H;
-    row = Math.floor(props.frame / H);
-  }
-
-  // Compose over the base window: identity (full image) or
-  // the region rect applied above. Multiplying keeps region + frames additive.
-  const baseRepeatX = texture.repeat.x;
-  const baseRepeatY = texture.repeat.y;
-  const baseOffsetX = texture.offset.x;
-  const baseOffsetY = texture.offset.y;
-  texture.repeat.set(baseRepeatX / H, baseRepeatY / V);
-  // UV-Y origin is bottom-left in three.js; image-Y origin is top-left.
-  // Flip Y so row 0 sits at the top of the (region's) window.
-  texture.offset.set(
-    baseOffsetX + col * (baseRepeatX / H),
-    baseOffsetY + baseRepeatY - (row + 1) * (baseRepeatY / V)
+/**
+ * The region's window, or null for no region. Without the image's dimensions there is no
+ * sub-rectangle, so the sprite renders the full texture (the linter warns on region misuse).
+ */
+function regionWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow | null {
+  const rect = props.region_enabled ? props.region_rect : undefined;
+  const image = texture?.image as { width?: number; height?: number } | undefined;
+  if (!rect || !image?.width || !image.height) return null;
+  return regionUvWindow(
+    { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
+    { x: image.width, y: image.height }
   );
 }
 
-function applyRegionRect(
-  texture: FrameWindow,
-  rect: { x: number; y: number; width: number; height: number }
-): void {
-  const image = texture.image as { width?: number; height?: number } | undefined;
-  // Without dimensions there is no sub-rectangle, so the sprite renders the full
-  // texture (the linter warns on region misuse).
-  if (!image?.width || !image.height) return;
-  texture.repeat.set(rect.width / image.width, rect.height / image.height);
-  texture.offset.set(rect.x / image.width, 1 - (rect.y + rect.height) / image.height);
+/**
+ * The frame's cell of the grid over `base`, the full image or the region's window. three's `v` runs
+ * bottom-up and Godot's image `y` top-down, so row 0 sits at the top of `base`.
+ */
+function cellWindow({ repeat, offset }: UvWindow, props: SpriteFrameProps): UvWindow {
+  const H = Math.max(1, props.hframes);
+  const V = Math.max(1, props.vframes);
+  const { x: col, y: row } = props.frame_coords ?? frameCoords({ frame: props.frame, hframes: H });
+  return {
+    repeat: { x: repeat.x / H, y: repeat.y / V },
+    offset: { x: offset.x + col * (repeat.x / H), y: offset.y + repeat.y - (row + 1) * (repeat.y / V) },
+  };
 }

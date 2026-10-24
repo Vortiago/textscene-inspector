@@ -13,6 +13,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { SelectionProvider, useSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import type { TscnNode } from '../../../parser/types';
+import { settleLoads } from '../../testing/settleLoads';
 
 /** body (Mesh), Armature (Group → hand Mesh). */
 function makeFakeGlb(): THREE.Object3D {
@@ -53,7 +54,7 @@ async function mount(loader: ResourceLoader) {
       </ResourceLoaderProvider>
     </SelectionProvider>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 

@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseNode3D } from '../../../base/node3d/parser';
-import { parseOptionalGodotFloat } from '../../../../parser/valueParsers';
+import { writtenScalarSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { SpringArm3DProperties } from './types';
 
 export function parseSpringArm3D(
@@ -11,6 +11,6 @@ export function parseSpringArm3D(
 ): SpringArm3DProperties {
   return {
     ...parseNode3D(heading, properties),
-    spring_length: parseOptionalGodotFloat(properties.spring_length),
+    spring_length: writtenScalarSlotValue(properties.spring_length),
   };
 }

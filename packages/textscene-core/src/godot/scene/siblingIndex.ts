@@ -3,14 +3,17 @@
  * its `index=` unless that is the last place or none (`packed_scene.cpp:541-544`).
  */
 
-/** Adds `node` to `siblings` in place, so the caller owns the array. */
-export function insertAtIndex<T extends { index?: number }>(siblings: T[], node: T): void {
+/** Adds `node` to `siblings` in place, so the caller owns the array. A sibling may state no index. */
+export function insertAtIndex<T>(siblings: T[], node: T & { index?: number }): void {
   const { index } = node;
   if (index === undefined || index < 0 || index >= siblings.length) siblings.push(node);
   else siblings.splice(index, 0, node);
 }
 
-/** `siblings` with `node` added, as a new array: the siblings may be a shared cache entry. */
+/**
+ * `siblings` with `node` added, as a new array: the siblings may be a shared cache entry, such as
+ * the frozen objects of a GLB.
+ */
 export function addAtIndex<T extends { index?: number }>(siblings: readonly T[], node: T): T[] {
   const placed = [...siblings];
   insertAtIndex(placed, node);
@@ -26,7 +29,7 @@ export function orderAmongPlaced<T extends { index?: number }>(
   placedCount: number
 ): T[] {
   const placeholder = {};
-  const siblings: { index?: number }[] = Array.from({ length: placedCount }, () => placeholder);
-  for (const node of nodes) insertAtIndex(siblings, node);
-  return siblings.filter((sibling): sibling is T => sibling !== placeholder);
+  const placed: (T | typeof placeholder)[] = Array.from({ length: placedCount }, () => placeholder);
+  for (const node of nodes) insertAtIndex(placed, node);
+  return placed.filter((sibling): sibling is T => sibling !== placeholder);
 }

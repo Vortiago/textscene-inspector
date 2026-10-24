@@ -88,6 +88,9 @@ export const SCENE_COMPOSITION_SCENES = [
   { name: 'node3d-plain-node-transform', file: 'unit-node3d-plain-node-transform.tscn' },
   { name: 'node3d-plain-node-visibility', file: 'unit-node3d-plain-node-visibility.tscn' },
   { name: 'node3d-top-level', file: 'unit-node3d-top-level.tscn' },
+  // A `parent="Gone"` that does not walk, and a `parent_id_path` naming `Moved`: the orange box sits
+  // under Moved at x = 1.5, right of the grey reference, not under the root at x = 0.5.
+  { name: 'node-parent-id-path', file: 'unit-node-parent-id-path.tscn' },
   // A hidden AudioListener3D over an orange box: a type that draws nothing of
   // its own still hides its subtree, so only the grey reference draws.
   { name: 'transform-only-3d-hidden', file: 'unit-transform-only-3d-hidden.tscn' },

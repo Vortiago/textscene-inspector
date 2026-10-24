@@ -16,6 +16,7 @@ import { TscnParser } from '../parser/TscnParser';
 import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
+import { settleLoads } from './testing/settleLoads';
 
 /** A Polygon2D `.tscn` node body (small triangle) at the given Godot Y, plus extra props. */
 function poly(name: string, parent: string, godotY: number, extra = ''): string {
@@ -39,7 +40,7 @@ async function renderTscnRoot(tscn: string): Promise<THREE.Object3D | null> {
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;

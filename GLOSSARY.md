@@ -91,6 +91,10 @@ _Avoid_: "lightmap cache", which suggests the baked lightmap.
 Every layer of a bake's lightmap textures, stacked in order into one texture array. A surface reads its own slice of it through UV2.
 _Avoid_: "lightmap texture" for the whole stack: a bake can save several.
 
+**Shadowmask** (`r3f/lightmap/lightmapProgram.ts`):
+The second atlas a bake saves, one byte per texel: how much of a sun's light reaches that texel. A LightmapGI's shadowmask mode sets how it meets the sun's real-time shadow. Replace puts it in the place of the real-time shadow where that fades out, Overlay multiplies it with the real-time shadow, and Only uses it alone.
+_Avoid_: "shadow map", which is the real-time depth map of a light.
+
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
 The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
 
@@ -149,8 +153,13 @@ _Avoid_: "callback API", "strict mode flag".
 
 **Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
 The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, every owner's `%Name` claims and releases in file order, and the one walk that resolves a root-relative node path over it.
-Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=`, `from=` and `to=` through its walk, and every `%Name` reader, the instance graft included, reads its claims.
+Both parsers seat through it, the linter and the **Language-feature engine** read the node each heading sits under (`seatedParents`) for `parent=` and resolve every **Connection end** through its walk, and every `%Name` reader, the instance graft included, reads its claims.
 _Avoid_: a second path table or `%Name` claim table over the headings.
+
+**Connection end** (`connectionEndResolver` in `parser/connectionEnd.ts`):
+The `from=` or `to=` of a `[connection]` heading, and the node it names: the node its simplified path walks to in the **Seating**, else the heading its `from_uid_path=` or `to_uid_path=` lands on.
+The linter and the **Language-feature engine** both resolve an end through the one resolver.
+_Avoid_: resolving an end by path alone in one reader and with the id trail in another.
 
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives (`intOr`, `floatOr`, `parseOptionalFloat` and the others) that read a raw property string into a typed scalar or vector.
@@ -187,7 +196,7 @@ A node or scene with `rawProperties` and no `properties`, which is what a **Lint
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
 
 **Heading facts** (`HeadingFacts` in `parser/types.ts`):
-What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading and instances outside a node body.
+What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading, the **Connection end** resolver over them and instances outside a node body.
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
@@ -195,6 +204,11 @@ _Avoid_: putting a linter-only field on `TscnScene`.
 A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`.
 A node below it re-roots on its own, since the old path no longer exists. Godot does not re-root in a scene it refuses to instantiate, nor where a `parent_id_path=` lands the node.
 _Avoid_: "dropped node", which names a node left out of the tree.
+
+**Landed node** (`seatLanded` in `parser/sceneTreeBuilder.ts`):
+A node whose `parent=` path names nothing and whose `parent_id_path=` finds a heading of this file. Godot seats it under that heading and keeps its name (`packed_scene.cpp:161-163`).
+The **Seating** does the same, and still counts the node among the orphans, since it is not at the path it declares.
+_Avoid_: "re-rooted node" for a node that keeps its name.
 
 **Rule arm** (`linter/ruleArms.ts`):
 One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
@@ -331,6 +345,10 @@ _Avoid_: "z order", "z offset".
 **Draw sequence**:
 An item's position in Godot's single pre-order walk of the canvas, the third and weakest term of **canvas paint order**.
 _Avoid_: "paint index".
+
+**Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
+The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
+_Avoid_: "MSAA frame".
 
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):
 The cells of a tile layer that Godot draws together: a `rendering_quadrant_size` square of cells, or one tile row on a y-sorted layer (`tile_map_layer.cpp:546-554`).

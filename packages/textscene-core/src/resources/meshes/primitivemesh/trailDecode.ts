@@ -5,8 +5,7 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { isEqualApprox } from '../../../godot/math/math.js';
-import { storedReal } from '../../../godot/math/real.js';
-import { floatOr, settableIntOr } from '../../../parser/valueParsers';
+import { realOr, settableIntOr } from '../../../parser/valueParsers';
 import { decodeCurveResource } from '../../curves/curve/decode';
 import type { Curve } from '../../curves/curve/types';
 
@@ -23,7 +22,7 @@ export interface TrailMeshBase {
  * mesh holds the default until a setter stores another (`set_radius`, `set_size`).
  */
 export function approxDefaultFloatOr(raw: string | undefined, fallback: number, context: string): number {
-  const value = storedReal(floatOr(raw, fallback, context));
+  const value = realOr(raw, fallback, context);
   return isEqualApprox(value, fallback) ? fallback : value;
 }
 
@@ -38,7 +37,7 @@ export function decodeTrailMeshBase(
 ): TrailMeshBase {
   return {
     sections: settableIntOr(properties.sections, 5, { min: 2, max: 128 }, `${label} sections`),
-    sectionLength: storedReal(floatOr(properties.section_length, 0.2, `${label} section_length`)),
+    sectionLength: realOr(properties.section_length, 0.2, `${label} section_length`),
     curve: decodeCurveResource(curve),
   };
 }

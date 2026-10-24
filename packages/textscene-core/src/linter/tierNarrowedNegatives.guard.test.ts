@@ -5,8 +5,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { blocksIn, everyTestBlockExcept, type Block } from './testing/testBlocks.js';
-import { tierNarrowedNegatives } from './testing/tierNarrowedNegatives.js';
+import { blocksIn, testBlocksExcept, type Block } from './testing/testBlocks.js';
+import { atLeast } from './testing/ruleNameScrape.js';
+import { canHoldTierNarrowedNegative, tierNarrowedNegatives } from './testing/tierNarrowedNegatives.js';
+
+/**
+ * About 1,460 blocks sit in the files that narrow to a tier. A prefilter that breaks and matches
+ * almost nothing falls far below this, and the guard fails instead of passing on nothing.
+ */
+const MIN_NARROWING_BLOCKS = 1000;
 
 /** This file, excluded by path: its pins spell the refused shapes as data. */
 const SELF = 'linter/tierNarrowedNegatives.guard.test.ts';
@@ -20,7 +27,8 @@ function offendersIn(blocks: Block[]): string[] {
 
 describe('negatives narrowed to a tier go through the test kit', () => {
   it('finds none spelled by hand', () => {
-    expect(offendersIn(everyTestBlockExcept(SELF))).toEqual([]);
+    const blocks = testBlocksExcept(SELF, canHoldTierNarrowedNegative);
+    expect(offendersIn(atLeast(blocks, MIN_NARROWING_BLOCKS, 'blocks that narrow to a tier'))).toEqual([]);
   });
 
   it('reads the three shapes a hand-written one takes', () => {
@@ -33,6 +41,24 @@ describe('negatives narrowed to a tier go through the test kit', () => {
     expect(blocksIn('synthetic.test.ts', src).map((b) => tierNarrowedNegatives(b.body).length)).toEqual([
       1, 1, 1,
     ]);
+  });
+
+  it('reads only the files that narrow to a tier', () => {
+    const narrowed = ["d.severity === 'warning'", 'errorsOf(all)', "d.severity  ===  'info'"];
+    const unnarrowed = ["d.severity === 'fatal'", 'd.severity', 'Errors(all)'];
+
+    expect(narrowed.map(canHoldTierNarrowedNegative)).toEqual([true, true, true]);
+    expect(unnarrowed.map(canHoldTierNarrowedNegative)).toEqual([false, false, false]);
+  });
+
+  it('reads a narrowing with a comment inside it, as the block scan blanks comments (edge case)', () => {
+    const commented = [
+      "d.severity /* tier */ === 'warning'",
+      "d.severity ===\n// the tier\n'info'",
+      'errorsOf /* all */ (all)',
+    ];
+
+    expect(commented.map(canHoldTierNarrowedNegative)).toEqual([true, true, true]);
   });
 
   it('reads a tier list helper as the tier narrowing', () => {

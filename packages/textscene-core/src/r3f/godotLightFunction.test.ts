@@ -4,14 +4,12 @@
  * read as installed on the installed three, so a release that rewrites the lines fails here, not in
  * a golden.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
-import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
-import { installGodotLightSize } from './lightSize/lightSizeChunk';
 import { warningsOf } from './testing/logWarnings';
 import { preprocessorBranch } from './testing/glslSource';
-import { installLightFunctionPrerequisites, installedShaderChunks } from './testing/shaderPatches';
+import { installedShaderChunks, restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
@@ -28,19 +26,11 @@ function installedChunks(): Record<LightChunk, string> {
 }
 
 const threeChunks = installedChunks();
-const threeLightChunks = {
-  normalmap_pars_fragment: THREE.ShaderChunk.normalmap_pars_fragment,
-  normal_fragment_maps: THREE.ShaderChunk.normal_fragment_maps,
-  lights_pars_begin: THREE.ShaderChunk.lights_pars_begin,
-  lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
-};
 
 /** The three chunks a canvas compiles with. */
 const godotChunks = installedShaderChunks;
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks, threeLightChunks);
-});
+restoreShaderGlobalsAfterEach();
 
 describe('the installed light function', () => {
   it("scales each specular mode by the light's specular amount", () => {
@@ -181,10 +171,6 @@ describe('the installed light function', () => {
 });
 
 describe('installGodotLightFunction', () => {
-  beforeEach(() => {
-    installLightFunctionPrerequisites();
-  });
-
   it('writes Godot’s roughness and light function into all three chunks', () => {
     installGodotLightFunction();
 
@@ -204,10 +190,11 @@ describe('installGodotLightFunction', () => {
 
   it('leaves every chunk alone when the setup chunk lacks its roughness clamp (error case)', () => {
     THREE.ShaderChunk[SETUP_CHUNK] = 'void main() {}';
+    const before = installedChunks();
 
     expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
 
-    expect(installedChunks()).toEqual({ ...threeChunks, [SETUP_CHUNK]: 'void main() {}' });
+    expect(installedChunks()).toEqual(before);
   });
 
   it('changes nothing and warns nothing on a second call (edge case)', () => {
@@ -218,27 +205,20 @@ describe('installGodotLightFunction', () => {
     expect(installedChunks()).toEqual(once);
   });
 
-  it("leaves three's chunks alone before the light specular it reads, and warns (error case)", () => {
-    Object.assign(THREE.ShaderChunk, threeLightChunks);
+  it('installs the light specular, the light size and the normal map read it reads first', () => {
+    installGodotLightFunction();
 
-    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
-    expect(installedChunks()).toEqual(threeChunks);
+    expect(THREE.ShaderChunk.lights_pars_begin).toContain('float godotSpecularAmount = 1.0;');
+    expect(THREE.ShaderChunk.lights_pars_begin).toContain('float godotSizeOffset = 0.0;');
+    expect(THREE.ShaderChunk.normalmap_pars_fragment).toContain('vec3 godotMapNormal(');
   });
 
-  it("leaves three's chunks alone before the light size it reads, and warns (error case)", () => {
-    Object.assign(THREE.ShaderChunk, threeLightChunks);
-    installGodotLightSpecular();
+  it("leaves three's chunks alone when a patch it reads cannot install, and says it is skipped (error case)", () => {
+    THREE.ShaderChunk.normalmap_pars_fragment = 'void main() {}';
 
-    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
-    expect(installedChunks()).toEqual(threeChunks);
-  });
-
-  it("leaves three's chunks alone before the normal map read it calls, and warns (error case)", () => {
-    Object.assign(THREE.ShaderChunk, threeLightChunks);
-    installGodotLightSpecular();
-    installGodotLightSize();
-
-    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
+    expect(warningsOf(installGodotLightFunction).slice(1)).toEqual([
+      '[Shading] the light function patch is skipped, as a patch it reads did not install',
+    ]);
     expect(installedChunks()).toEqual(threeChunks);
   });
 

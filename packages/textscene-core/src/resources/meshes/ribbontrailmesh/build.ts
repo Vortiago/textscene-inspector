@@ -33,6 +33,7 @@ import { storedReal } from '../../../godot/math/real.js';
 import { curveScaleSampler } from '../primitivemesh/curveScale.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { SurfaceWriter, type Vec3, type Vec4 } from '../primitivemesh/surfaceWriter.js';
+import { rowAt } from '../primitivemesh/rows.js';
 import type { RibbonTrailMeshProperties } from './types.js';
 
 /** The tangent of every vertex (`:2946-2952`). */
@@ -55,11 +56,16 @@ export function buildRibbonTrailMeshSurface(p: RibbonTrailMeshProperties): Godot
 
   const writer = new SurfaceWriter(false);
   for (let j = 0; j <= totalSegments; j++) {
-    const v = storedReal(j / totalSegments);
-    const y = storedReal(depth * 0.5 - storedReal(depth * v));
+    const { v, y } = rowAt(j, totalSegments, depth);
     const width = storedReal(p.size * widthScale(v));
     writeRow(writer, p.isCross, y, width, v);
-    if (j > 0) writeQuads(writer, p.isCross, (j - 1) * verticesPerRow, verticesPerRow);
+    if (j === 0) continue;
+    // The triangles back to the row before (`:2966-2994`): the strip in the XY plane, then the
+    // strip across it, two vertices further into each row.
+    const thisrow = j * verticesPerRow;
+    const prevrow = thisrow - verticesPerRow;
+    writer.quadBetweenRows(prevrow, thisrow, 1);
+    if (p.isCross) writer.quadBetweenRows(prevrow + 2, thisrow + 2, 1);
   }
   return writer.surface();
 }
@@ -72,13 +78,4 @@ function writeRow(writer: SurfaceWriter, isCross: boolean, y: number, width: num
   if (!isCross) return;
   writer.vertex([0, y, -half], CROSS_NORMAL, TANGENT, [0, v], [0, 0]);
   writer.vertex([0, y, half], CROSS_NORMAL, TANGENT, [1, v], [0, 0]);
-}
-
-/** The triangles between the row that starts at vertex `base` and the next (`:2966-2994`). */
-function writeQuads(writer: SurfaceWriter, isCross: boolean, base: number, nextRow: number): void {
-  writer.triangle(base, base + 1, base + nextRow);
-  writer.triangle(base + 1, base + nextRow + 1, base + nextRow);
-  if (!isCross) return;
-  writer.triangle(base + 2, base + 3, base + 6);
-  writer.triangle(base + 3, base + 7, base + 6);
 }

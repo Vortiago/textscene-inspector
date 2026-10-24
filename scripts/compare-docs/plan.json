@@ -354,6 +354,11 @@
    "type": "Timer",
    "slice": "timers/timer",
    "fixture": "unit-timer.tscn"
+  },
+  {
+   "type": "TextureProgressBar",
+   "slice": "2d/ui/textureprogressbar",
+   "fixture": "unit-texture-progress-bar-partial.tscn"
   }
  ],
  "distinct": [
@@ -428,6 +433,7 @@
   "edge-area3d-inactive.tscn",
   "unit-characterbody3d.tscn",
   "unit-rigidbody3d.tscn",
-  "unit-timer.tscn"
+  "unit-timer.tscn",
+  "unit-texture-progress-bar-partial.tscn"
  ]
 }

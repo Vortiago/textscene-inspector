@@ -5,16 +5,10 @@
  * `scene_forward_clustered.glsl:2165`), where three r186 weights it by what the specular reflects.
  */
 
-import {
-  applyChunkEdits,
-  editedShader,
-  installChunkPatch,
-  type ChunkEdit,
-  type TextEdit,
-} from './shaderPatch/chunkPatch.js';
-import { NORMAL_MAP_READ_MARK } from './materials/godotNormalMap.js';
-import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
-import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
+import { editedShader, installChunkEdits, type ChunkEdit, type TextEdit } from './shaderPatch/chunkPatch.js';
+import { installGodotNormalMapRead } from './materials/godotNormalMap.js';
+import { installGodotLightSize } from './lightSize/lightSizeChunk.js';
+import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/rendering/roughnessLimiter.js';
 import { glslFloat } from '../utils/glslLiterals.js';
 
@@ -294,25 +288,20 @@ const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   },
 ];
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const LIGHT_FUNCTION_MARK = DIFFUSE_NL;
-
 /**
- * Replaces three's chunks for every program compiled after the call. A three release that
- * rewrites the lines keeps its own chunk, and `godotLightFunction.test.ts` fails on that release. A
- * second call changes nothing, whatever other patches have changed since.
+ * Installs the light specular, light size and normal map read patches it reads, then replaces
+ * three's chunks, for every program compiled after the call. A three release that rewrites the
+ * lines keeps its own chunk, and `godotLightFunction.test.ts` fails on that release. True when the
+ * chunks hold the patch after the call. A second call changes nothing, whatever other patches have
+ * changed since.
  */
-export function installGodotLightFunction(): void {
-  installChunkPatch({
-    names: [CHUNK, SETUP_CHUNK, MAPS_CHUNK],
+export function installGodotLightFunction(): boolean {
+  return installChunkEdits({
+    requires: [installGodotLightSpecular, installGodotLightSize, installGodotNormalMapRead],
+    edits: GODOT_LIGHT_FUNCTION_EDITS,
     // One sentinel, as the other patches check: they may edit next to this patch's lines.
-    isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
-    missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
-    requires: {
-      lights_pars_begin: [LIGHT_SPECULAR_MARK, LIGHT_SIZE_MARK],
-      normalmap_pars_fragment: NORMAL_MAP_READ_MARK,
-    },
+    mark: DIFFUSE_NL,
+    patch: 'light function',
   });
 }
 

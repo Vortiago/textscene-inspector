@@ -1,8 +1,8 @@
 /**
  * `<AlphaCheckerboardQuad>`: the tiled `mini_checkerboard.svg` backdrop under a translucent
  * ColorPicker swatch (`draw_texture_rect(theme_cache.background_icon, r, true)`, `p_tile` true), drawn
- * at local (0, 0). It tiles as `texturerect/Component.tsx`'s `STRETCH_TILE` does, with a `1 - repeat.y`
- * V offset: three's V axis runs bottom-up, and Godot tiles from the top-left.
+ * at local (0, 0). It tiles as `texturerect/Component.tsx`'s `STRETCH_TILE` does: the quad is a region
+ * of the tile's size from the top-left, as `regionUvWindow` windows it.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
@@ -10,6 +10,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import type { ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { MINI_CHECKERBOARD_ICON, MINI_CHECKERBOARD_SIZE } from '../../../../r3f/controls/native/themeIcons';
+import { applyUvWindow, regionUvWindow } from '../../../../r3f/uvWindow';
 
 interface AlphaCheckerboardQuadProps {
   width: number;
@@ -46,9 +47,7 @@ export function AlphaCheckerboardQuad({
       x: (texture.image as { width?: number } | undefined)?.width || MINI_CHECKERBOARD_SIZE,
       y: (texture.image as { height?: number } | undefined)?.height || MINI_CHECKERBOARD_SIZE,
     };
-    const repeat = { x: width / tileSize.x, y: height / tileSize.y };
-    texture.repeat.set(repeat.x, repeat.y);
-    texture.offset.set(0, 1 - repeat.y);
+    applyUvWindow(texture, regionUvWindow({ x: 0, y: 0, w: width, h: height }, tileSize));
     texture.needsUpdate = true;
     return texture;
   }, [texture, width, height]);

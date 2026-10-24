@@ -132,8 +132,8 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
         );
       }
       const outcome = orphanOutcome(scene, origin, emptyParents.length > 0);
-      // A re-rooted node is in the tree, so Phase 2 ran its rules.
-      const rulesSkipped = scene.reRootedNames.has(origin)
+      // A re-rooted or landed node is in the tree, so Phase 2 ran its rules.
+      const rulesSkipped = scene.seatedOrphans.has(origin)
         ? ''
         : ' No semantic rule ran on it or on anything parented below it.';
       return armDiagnostic(

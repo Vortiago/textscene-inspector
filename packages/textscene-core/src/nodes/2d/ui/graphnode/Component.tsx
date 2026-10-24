@@ -42,6 +42,8 @@ import {
   graphNodeDrawRows,
   graphNodeStyles,
   graphNodeTitleTextMin,
+  portHOffsetOf,
+  rightPortX,
 } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
@@ -95,11 +97,6 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
       />
     </CanvasItemGroup>
   );
-}
-
-/** `theme_override_constants/port_h_offset`, else `0` (`default_theme.cpp`'s own literal, not scaled). */
-function portHOffsetOf(constants: SolveNode['constants']): number {
-  return constants.port_h_offset ?? 0;
 }
 
 export function GraphNode({
@@ -255,7 +252,7 @@ export function GraphNode({
               iconRef={row.slot.rightIcon}
               slotColor={row.slot.rightColor}
               tintOwn={tint.own}
-              x={rect.w - portHOffset}
+              x={rightPortX(rect.w, portHOffset)}
               y={row.slotY}
               renderOrder={renderOrder}
             />

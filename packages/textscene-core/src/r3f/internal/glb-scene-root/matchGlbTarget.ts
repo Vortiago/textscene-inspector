@@ -19,7 +19,7 @@ interface MatchGlbTargetOptions {
 }
 
 /** How `findGlbTarget` reached its entry. `none` carries no entry. */
-type GlbTargetMatchKind = 'exact' | 'subsequence' | 'ancestor' | 'none';
+export type GlbTargetMatchKind = 'exact' | 'subsequence' | 'ancestor' | 'none';
 
 interface GlbTargetMatch {
   entry: GlbObjectEntry | null;
@@ -27,8 +27,9 @@ interface GlbTargetMatch {
 }
 
 /**
- * The GLB object a Godot path names, and how it was found, with no logging. The scene tree asks
- * through this: the viewport already reports a path that matches nothing.
+ * The GLB object a Godot path names, and how it was found, with no logging. `resolveGlbAttachments`
+ * asks through this for both the scene tree and the viewport, and the viewport reports each match
+ * through `reportIndirectMatch` and each path that matches nothing.
  *
  * @param entries the GLB flattened by `flattenGlbObjects`
  * @param godotPath the path relative to the GLB root, such as `Skeleton/Skeleton3D/Robot`
@@ -64,20 +65,28 @@ export function matchGlbTarget(
   options: MatchGlbTargetOptions = {}
 ): GlbObjectEntry | null {
   const { entry, kind } = findGlbTarget(entries, godotPath, options);
-  if (kind === 'subsequence') {
-    info(
-      `[matchGlbTarget] "${godotPath}" → "${entry!.relPath}" (levels Godot's importer added are not in the glTF)`
-    );
-  } else if (kind === 'ancestor') {
-    info(
-      `[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${entry!.relPath}"`
-    );
-  } else if (kind === 'none') {
+  if (entry) reportIndirectMatch(godotPath, entry, kind);
+  if (kind === 'none') {
     warn(
       `[matchGlbTarget] "${godotPath}" matches nothing in the loaded GLB — the override or node it carries is dropped`
     );
   }
   return entry;
+}
+
+/** Logs a match that `findGlbTarget` made across levels Godot's importer added, or to an ancestor. */
+export function reportIndirectMatch(
+  godotPath: string,
+  entry: GlbObjectEntry,
+  kind: GlbTargetMatchKind
+): void {
+  if (kind === 'subsequence') {
+    info(
+      `[matchGlbTarget] "${godotPath}" → "${entry.relPath}" (levels Godot's importer added are not in the glTF)`
+    );
+  } else if (kind === 'ancestor') {
+    info(`[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${entry.relPath}"`);
+  }
 }
 
 /**

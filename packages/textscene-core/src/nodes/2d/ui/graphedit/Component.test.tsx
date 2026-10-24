@@ -8,9 +8,11 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { GraphEdit } from './Component';
@@ -65,11 +67,16 @@ function leafControl(name: string, minHeight: number): SolveNode {
   };
 }
 
-function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: SolveNode[]): SolveNode {
+function graphNode(
+  name: string,
+  slots: Map<number, GraphNodeSlot>,
+  children: SolveNode[],
+  positionOffset: Vector2 = { x: 0, y: 0 }
+): SolveNode {
   return {
     ...emptySolveNode(),
     path: name,
-    node: controlNode(name, 'GraphNode', { name, title: '', positionOffset: { x: 0, y: 0 }, slots }),
+    node: controlNode(name, 'GraphNode', { name, title: '', positionOffset, slots }),
     children,
   };
 }
@@ -110,6 +117,22 @@ describe('<GraphEdit> (isolated painter contract)', () => {
     );
     // snapping_distance defaults 20 over a 100px rect: 6 vertical + 6 horizontal lines.
     expect(quadMeshes(renderer.scene)).toHaveLength(12);
+  });
+
+  it('centres each grid line on its coordinate, as the pixel under a Vulkan line is (graph_edit.cpp:1912, :1927)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit {...painterEnv()} solveNode={graphEdit()} rect={RECT} renderOrder={0} />
+    );
+
+    const boxes = quadMeshes(renderer.scene).map((mesh) => {
+      mesh.updateWorldMatrix(true, false);
+      return new THREE.Box3().setFromObject(mesh);
+    });
+    const firstVertical = boxes.find((box) => box.max.y - box.min.y === RECT.h)!;
+    const firstHorizontal = boxes.find((box) => box.max.x - box.min.x === RECT.w)!;
+
+    expect(firstVertical.min.x).toBe(-0.5);
+    expect(firstHorizontal.max.y).toBe(0.5);
   });
 
   it('draws no grid quads when show_grid is false', async () => {
@@ -263,6 +286,40 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
   });
 });
 
+describe('<GraphEdit> chrome paint order', () => {
+  /** Meshes past `subtreeChromeRenderOrder`: the scrollbars, the toolbar and the minimap. */
+  async function chromeInDrawOrder() {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        solveNode={graphEdit({ showGrid: false, showMenu: true, minimapEnabled: true })}
+        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        renderOrder={0}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+    return renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => m.renderOrder > 9)
+      .sort((a, b) => a.renderOrder - b.renderOrder);
+  }
+
+  it('sorts each chrome mesh behind every mesh its own renderOrder puts after it (three reads the group first)', async () => {
+    // A toolbar glyph under its panel is drawn at the panel's 0.6 alpha: grey where Godot draws white.
+    const meshes = await chromeInDrawOrder();
+    const inversions = meshes.flatMap((early, i) =>
+      meshes
+        .slice(i + 1)
+        .filter(
+          (late) => late.renderOrder > early.renderOrder && nearestGroupOrder(early) > nearestGroupOrder(late)
+        )
+        .map((late) => `${early.renderOrder} drawn after ${late.renderOrder}`)
+    );
+    expect(inversions).toEqual([]);
+  });
+});
+
 /**
  * The constructor calls `set_clip_contents(true)` (`graph_edit.cpp:3342`), so every
  * GraphEdit clips, whatever the scene says. The load-time clamp of `set_scroll_offset`
@@ -333,14 +390,19 @@ describe('<GraphEdit> minimap connection polylines', () => {
     ['Sink', { x: 200, y: 0, w: 120, h: 80 }],
   ]);
 
-  function render(properties: Partial<GraphEditProperties>) {
+  function render(properties: Partial<GraphEditProperties>, sinkOffset: Vector2 = { x: 200, y: 0 }) {
     return ReactThreeTestRenderer.create(
       <GraphEdit
         {...painterEnv()}
         childRects={childRects}
         solveNode={graphEdit({ showGrid: false, minimapEnabled: true, connections, ...properties }, [
           graphNode('Source', new Map([[0, fullSlot({ rightEnabled: true })]]), [leafControl('Value', 20)]),
-          graphNode('Sink', new Map([[0, fullSlot({ leftEnabled: true })]]), [leafControl('Result', 20)]),
+          graphNode(
+            'Sink',
+            new Map([[0, fullSlot({ leftEnabled: true })]]),
+            [leafControl('Result', 20)],
+            sinkOffset
+          ),
         ])}
         rect={{ x: 0, y: 0, w: 400, h: 320 }}
         renderOrder={0}
@@ -365,6 +427,14 @@ describe('<GraphEdit> minimap connection polylines', () => {
 
   it('draws none when the minimap is off (graph_edit.cpp:1808-1810)', async () => {
     expect(polyline(await render({ minimapEnabled: false }))).toBeUndefined();
+  });
+
+  it('draws none once a load-time setter queued _update_scroll_offset (graph_edit.cpp:409,524)', async () => {
+    expect(polyline(await render({ queuedScrollOffsetUpdate: true }))).toBeUndefined();
+  });
+
+  it('draws none while every child sits at position_offset (0, 0), as no child moves to redraw it', async () => {
+    expect(polyline(await render({}, { x: 0, y: 0 }))).toBeUndefined();
   });
 
   it('adds the two feather strips and both end caps only while connection_lines_antialiased is on', async () => {
@@ -411,6 +481,23 @@ describe('<GraphEdit> disabled zoom buttons (graph_edit.cpp:2445-2446)', () => {
       .filter((m) => (m.material as THREE.MeshBasicMaterial).map !== null)
       .filter((m) => Math.abs((m.material as THREE.MeshBasicMaterial).opacity - 0.4) < 1e-9).length;
   }
+
+  it('draws every icon on a whole pixel: Button floors its icon offset, SpinBox centres in integers (button.cpp:405, spin_box.cpp:488-491)', async () => {
+    const renderer = await render({});
+    renderer.scene.instance.updateMatrixWorld(true);
+    const corners = renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter(
+        (m) => m.geometry.type === 'PlaneGeometry' && (m.material as THREE.MeshBasicMaterial).map !== null
+      )
+      .map((m) => {
+        const box = new THREE.Box3().setFromObject(m);
+        return [box.min.x, -box.max.y];
+      });
+    expect(corners.length).toBeGreaterThan(0);
+    expect(corners.filter(([x, y]) => !Number.isInteger(x) || !Number.isInteger(y))).toEqual([]);
+  });
 
   it('draws every icon at full alpha while neither bound has been reached', async () => {
     expect(dimmedIcons(await render({}))).toBe(0);

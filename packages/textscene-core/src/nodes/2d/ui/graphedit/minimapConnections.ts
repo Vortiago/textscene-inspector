@@ -13,6 +13,7 @@
 import { lerpColor } from '../../../../godot/math/math';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import type { ResolvedConnection } from './connectionEndpoints';
+import type { GraphEditProperties } from './types';
 import { minimapConvertFromGraph, type GraphScrollBounds, type MinimapTransform } from './minimap';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -21,6 +22,20 @@ import type { Rgba } from '../../../../godot/math/math';
 interface MinimapConnectionLine {
   points: Vector2[];
   colors: Rgba[];
+}
+
+/**
+ * The connections the settled minimap shows. The minimap's first draw reads an empty connection
+ * cache. It draws again with the filled cache only when a child moves after the connections layer
+ * drew, which no load-time `_update_scroll_offset` leaves for it to do, and which a child at
+ * `position_offset` `(0, 0)` never does. `graphEdit.md` gives the trace and the probe.
+ */
+export function minimapConnectionsOf(
+  connections: readonly ResolvedConnection[],
+  props: Pick<GraphEditProperties, 'queuedScrollOffsetUpdate'>,
+  hasPositionedChild: boolean
+): readonly ResolvedConnection[] {
+  return props.queuedScrollOffsetUpdate || !hasPositionedChild ? [] : connections;
 }
 
 function distance(a: Vector2, b: Vector2): number {

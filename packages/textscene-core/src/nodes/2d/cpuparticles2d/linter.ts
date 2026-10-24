@@ -9,10 +9,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { CPU_PARTICLES_PARAMS } from '../../../godot/scene/cpuParticles.js';
-import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
-import { finiteParamBounds, nonFiniteParamBounds } from '../../../godot/scene/particleParamRange.js';
-import { formatReal, storedReal } from '../../../godot/math/real.js';
-import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/paramMinAboveMax.js';
+import { drawableParamBounds, type NonFiniteBound } from './drawableParamBounds.js';
+import { formatReal } from '../../../godot/math/real.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES } from '../../../godot/scene/particles2d.js';
 
@@ -59,29 +58,24 @@ function checkPreviewLimits(node: RuleContext['node'], props: Record<string, str
   return diagnostics;
 }
 
-function checkNonFiniteBounds(node: RuleContext['node'], props: Record<string, string>): Diagnostic[] {
-  return nonFiniteParamBounds(props, CPU_PARTICLES_PARAMS).map((key) => {
-    const stored = formatReal(storedReal(scalarSlotValue(props[key]!)!));
-    return armDiagnostic(
+function checkNonFiniteBounds(node: RuleContext['node'], nonFinite: readonly NonFiniteBound[]): Diagnostic[] {
+  return nonFinite.map(({ key, stored }) =>
+    armDiagnostic(
       arms.nonFiniteParamBound,
       node,
-      `CPUParticles2D '${key}' is ${stored}. The previewer cannot draw a non-finite range, so it uses the default for '${key}'.`
-    );
-  });
+      `CPUParticles2D '${key}' is ${formatReal(stored)}. The previewer cannot draw a non-finite range, so it uses the default for '${key}'.`
+    )
+  );
 }
 
 function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const props = node.rawProperties;
+  const { drawable, nonFinite } = drawableParamBounds(props);
   return [
     ...checkPreviewLimits(node, props),
-    ...checkNonFiniteBounds(node, props),
-    ...paramMinAboveMaxDiagnostics(
-      node,
-      finiteParamBounds(props, CPU_PARTICLES_PARAMS),
-      CPU_PARTICLES_PARAMS,
-      arms.paramMinAboveMax
-    ),
+    ...checkNonFiniteBounds(node, nonFinite),
+    ...paramMinAboveMaxDiagnostics(node, drawable, CPU_PARTICLES_PARAMS, arms.paramMinAboveMax),
   ];
 }
 

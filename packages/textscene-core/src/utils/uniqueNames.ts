@@ -8,7 +8,7 @@ import type { RawNode } from '../parser/types.js';
 import type { UniqueNameOwnership } from '../parser/nodeOwner.js';
 import { sceneSeating } from '../parser/sceneTreeBuilder.js';
 import { belowRoot } from './nodePath.js';
-import { perTree } from './perTree.js';
+import { perObject } from './perObject.js';
 
 /** The root's `%Name` claims in `roots`, keyed with the prefix on. One object per tree. */
 export function cachedUniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
@@ -26,8 +26,8 @@ export function uniqueNamePaths(roots: readonly RawNode[]): Map<string, string> 
 }
 
 /** The same reduction onto `livePath`, for the composed render tree. One object per tree. */
-export const cachedUniqueNameLivePaths = perTree(
-  (roots): ReadonlyMap<string, string> =>
+export const cachedUniqueNameLivePaths = perObject(
+  (roots: readonly RawNode[]): ReadonlyMap<string, string> =>
     new Map([...cachedUniqueNameOwnership(roots).claims].map(([key, claim]) => [key, claim.livePath]))
 );
 
@@ -35,7 +35,7 @@ export const cachedUniqueNameLivePaths = perTree(
  * The live paths again, spelt below the root, as an instance of the scene holds them. The root
  * claims nothing (it has no owner), so each path continues below it. One object per tree.
  */
-export const cachedUniqueNamesBelowRoot = perTree(
-  (roots): ReadonlyMap<string, string> =>
+export const cachedUniqueNamesBelowRoot = perObject(
+  (roots: readonly RawNode[]): ReadonlyMap<string, string> =>
     new Map([...cachedUniqueNameLivePaths(roots)].map(([key, path]) => [key, belowRoot(path)]))
 );

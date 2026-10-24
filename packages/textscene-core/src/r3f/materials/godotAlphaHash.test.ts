@@ -2,19 +2,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { alignAlphaHash, alphaHashScaleUserData, GODOT_ALPHA_HASH } from './godotAlphaHash';
 import type { ProgramShader } from '../materialProgramInputs';
-
-/** Every three program a hashed Godot surface or its shadow compiles. */
-const HASHED_PROGRAMS: Readonly<Record<string, { vertexShader: string; fragmentShader: string }>> = {
-  basic: THREE.ShaderLib.basic,
-  standard: THREE.ShaderLib.standard,
-  physical: THREE.ShaderLib.physical,
-  depth: THREE.ShaderLib.depth,
-  distance: THREE.ShaderLib.distance,
-};
+import { programShader, SURFACE_AND_DEPTH_PROGRAMS } from '../testing/patchedFragment';
 
 function compiled(
   material: THREE.Material,
-  program: { vertexShader: string; fragmentShader: string } = THREE.ShaderLib.basic
+  program: { vertexShader: string; fragmentShader: string } = programShader('basic')
 ): ProgramShader {
   const shader: ProgramShader = { ...program, uniforms: {} };
   GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
@@ -29,7 +21,9 @@ function objectFromModel(material: THREE.Material): THREE.Matrix4 {
   return compiled(material).uniforms.godotObjectFromModel!.value as THREE.Matrix4;
 }
 
-describe.each(Object.entries(HASHED_PROGRAMS))('GODOT_ALPHA_HASH on the %s program', (_name, program) => {
+describe.each(SURFACE_AND_DEPTH_PROGRAMS)('GODOT_ALPHA_HASH on the %s program', (name) => {
+  const program = programShader(name);
+
   it("hashes at the material's scale and Godot's clamp", () => {
     const { fragmentShader } = compiled(new THREE.MeshBasicMaterial(), program);
     expect(fragmentShader).toContain('1.0 / ( godotAlphaHashScale * deltaMax )');

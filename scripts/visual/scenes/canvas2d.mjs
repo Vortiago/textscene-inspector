@@ -463,6 +463,11 @@ export const CANVAS_2D_SCENES = [
   // The one variable: a CanvasLayer's own offset, rotation and scale, which move both walks'
   // children. Godot 4.6.3 `--mode 2d`: rgb(51,153,255) at (430,170) and (500,250).
   { name: 'canvas-layer-transform', file: 'unit-canvas-layer-transform.tscn', mode: '2d' },
+  // A Sprite2D, a Polygon2D and a ColorRect with their top and bottom edges on pixel centres in y,
+  // beside a Sprite2D on whole pixels. Godot 4.6.3 draws rows 100-195 for the sprite at y = 100.5
+  // (`pnpm ref:diff`: 1/255). A frame whose row 0 is the canvas bottom draws rows 101-196.
+  { name: 'canvas-edge-on-pixel-centre', file: 'unit-canvas-edge-on-pixel-centre.tscn', mode: '2d' },
+  { name: 'subviewport-edge-on-pixel-centre', file: 'unit-subviewport-edge-on-pixel-centre.tscn', mode: '2d' },
   // The one variable: a Control promoted past a non-Control ancestor, one facet
   // per scene. The walk resets the whole chain at a broken CanvasItem link, so
   // a fix to one facet can move another. Godot 4.6.3 `--mode 2d`: mean 0.001,
@@ -572,6 +577,11 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-graph-edit-minimap-connection.tscn',
     mode: '2d',
   },
+  {
+    name: 'graph-edit-minimap-connection-origin',
+    file: 'unit-graph-edit-minimap-connection-origin.tscn',
+    mode: '2d',
+  },
   // The load-time clamps: `scroll_offset` against a still-zero bound and `zoom`
   // against whichever bound the file had applied by then. Both store a value
   // the scene never wrote, and neither is visible in a scene that omits them.
@@ -645,6 +655,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'tree-rtl', file: 'unit-tree-rtl.tscn', mode: '2d' },
   { name: 'hslider-rtl', file: 'unit-hslider-rtl.tscn', mode: '2d' },
   { name: 'progress-bar-rtl', file: 'unit-progress-bar-rtl.tscn', mode: '2d' },
+  // A TextureProgressBar part-filled, so it crops its progress texture. The crop samples the
+  // undecoded bytes as the other layers do, and a second sRGB decode would darken it.
+  { name: 'texture-progress-bar-partial', file: 'unit-texture-progress-bar-partial.tscn', mode: '2d' },
   { name: 'color-picker-rtl', file: 'unit-color-picker-rtl.tscn', mode: '2d' },
   // Two LTR alignment scenes. The fractional-box one needs a non-integer box
   // width: at a whole width the ceiled and raw line extents give one offset.

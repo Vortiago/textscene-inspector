@@ -6,8 +6,8 @@ import { buildSceneGraph, type SceneGraph } from './SceneGraph';
 export function createSceneGraphFromTscnScene(
   tscnScene: {
     nodes: TscnNode[];
-    externalResources?: ExtResource[];
-    internalResources?: SubResource[];
+    externalResources?: readonly ExtResource[];
+    internalResources?: readonly SubResource[];
   },
   scenePath: string = 'res://test.tscn'
 ): SceneGraph {

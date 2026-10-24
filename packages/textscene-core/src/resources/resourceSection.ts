@@ -6,6 +6,7 @@
 
 import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnInternalResource } from '../parser/types.js';
+import { perObject } from '../utils/perObject.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
 import type { ScopedResource } from './scopedResource.js';
@@ -42,15 +43,14 @@ export function findSectionResource(file: ParsedResource, path: string): TscnInt
  * Written only by `scopedSection`: the scoped sections of each parsed file by path. A parse drops
  * its entries when it goes, and a reload parses a new object, so an entry never outlives its file.
  */
-const scopedSections = new WeakMap<ParsedResource, Map<string, ScopedResource | undefined>>();
+const scopedSections = perObject<ParsedResource, Map<string, ScopedResource | undefined>>(() => new Map());
 
 /**
  * {@link findSectionResource}, scoped to the tables of `file` that its references resolve in. One
  * parse answers a path with one object, so a content key over the section is read once.
  */
 export function scopedSection(file: ParsedResource, path: string): ScopedResource | undefined {
-  let byPath = scopedSections.get(file);
-  if (!byPath) scopedSections.set(file, (byPath = new Map()));
+  const byPath = scopedSections(file);
   if (!byPath.has(path)) byPath.set(path, buildScopedSection(file, path));
   return byPath.get(path);
 }

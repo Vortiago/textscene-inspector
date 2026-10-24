@@ -7,27 +7,20 @@
  */
 
 import type * as THREE from 'three';
-import {
-  applyChunkEdits,
-  editedChunk,
-  editedProgram,
-  installChunkPatch,
-  type ChunkEdit,
-  type TextEdit,
-} from '../shaderPatch/chunkPatch';
-import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch';
+import { defining, type ProgramInjection } from '../materialProgramInputs';
 
 const PARS_CHUNK = 'normalmap_pars_fragment';
 const MAPS_CHUNK = 'normal_fragment_maps';
 const BEGIN_CHUNK = 'normal_fragment_begin';
-const PARS_INCLUDE = `#include <${PARS_CHUNK}>`;
 
 /**
  * three's frame scales both axes by the longer one, so a quad with a UV density that differs per
  * axis squashes the shorter. Godot normalises the tangent and the binormal each
  * (`scene_forward_clustered.glsl:1437-1442`).
  */
-const UNIT_TANGENT_FRAME_EDIT: TextEdit = {
+const UNIT_TANGENT_FRAME_EDIT: ChunkEdit<typeof PARS_CHUNK> = {
+  chunk: PARS_CHUNK,
   three: `float det = max( dot( T, T ), dot( B, B ) );
 \t\tfloat scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );
 \t\treturn mat3( T * scale, B * scale, N );`,
@@ -36,22 +29,7 @@ const UNIT_TANGENT_FRAME_EDIT: TextEdit = {
 \t\treturn mat3( lengthT == 0.0 ? vec3( 0.0 ) : T / lengthT, lengthB == 0.0 ? vec3( 0.0 ) : B / lengthB, N );`,
 };
 
-/**
- * The frame every program that builds one from the screen derivatives compiles with: a normal map
- * reads it, and so does anisotropy, whose lobe turns with the tangent.
- */
-export const GODOT_UNIT_TANGENT_FRAME: ProgramInjection = {
-  cacheKey: 'unit-tangent-frame',
-  onBeforeCompile(shader) {
-    const godot = editedChunk(PARS_CHUNK, UNIT_TANGENT_FRAME_EDIT);
-    editedProgram(shader, { fragment: [{ three: PARS_INCLUDE, godot }] }, 'unit tangent frame');
-  },
-};
-
-export const GODOT_NORMAL_MAP_READ = composeInjections([
-  defining('USE_PACKED_NORMALMAP'),
-  GODOT_UNIT_TANGENT_FRAME,
-]) as ProgramInjection;
+export const GODOT_NORMAL_MAP_READ = defining('USE_PACKED_NORMALMAP');
 
 /**
  * The read a glTF material needs, which Godot imports as a StandardMaterial3D
@@ -105,20 +83,23 @@ const GODOT_NORMAL_MAP_EDITS: readonly ChunkEdit<
   { chunk: PARS_CHUNK, three: THREE_NORMAL_SCALE, godot: GODOT_MAP_NORMAL },
   { chunk: BEGIN_CHUNK, three: THREE_NON_PERTURBED_NORMAL, godot: GODOT_UV_GRADIENTS },
   { chunk: MAPS_CHUNK, three: THREE_TANGENT_READ, godot: GODOT_TANGENT_READ },
+  // Every program that builds the frame from the screen derivatives: a normal map reads it, and so
+  // does anisotropy, whose lobe turns with the tangent.
+  UNIT_TANGENT_FRAME_EDIT,
 ];
 
-/** The text that proves the patch installed, which a patch that reads `godotMapNormal` requires. */
-export const NORMAL_MAP_READ_MARK = 'vec3 godotMapNormal(';
+/** The text that proves the patch installed. */
+const NORMAL_MAP_READ_MARK = 'vec3 godotMapNormal(';
 
 /**
  * Replaces three's tangent-space normal read for every program compiled after the call. A three
  * release that rewrites the lines keeps its own chunks, and `godotNormalMap.test.ts` fails on it.
+ * True when the chunks hold the patch after the call.
  */
-export function installGodotNormalMapRead(): void {
-  installChunkPatch({
-    names: [PARS_CHUNK, BEGIN_CHUNK, MAPS_CHUNK],
-    isApplied: (chunks) => chunks[PARS_CHUNK].includes(NORMAL_MAP_READ_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, GODOT_NORMAL_MAP_EDITS),
-    missing: `${PARS_CHUNK}, ${BEGIN_CHUNK} or ${MAPS_CHUNK} lacks a line the normal map read patch replaces`,
+export function installGodotNormalMapRead(): boolean {
+  return installChunkEdits({
+    edits: GODOT_NORMAL_MAP_EDITS,
+    mark: NORMAL_MAP_READ_MARK,
+    patch: 'normal map read',
   });
 }

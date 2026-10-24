@@ -25,7 +25,13 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
-import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { layoutButtonContent } from '../../../../r3f/controls/native/buttonBase';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  VERTICAL_ALIGNMENT_CENTER,
+} from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
@@ -71,23 +77,37 @@ interface ButtonIconProps {
   texture: THREE.Texture | null;
   contentMargin: number;
   tint: NativeControlComponentProps['tint'];
+  rtl: boolean;
   renderOrder: number;
 }
 
 /**
- * One button icon, `Button::_notification(NOTIFICATION_DRAW)` (`button.cpp:349-400`) at the
- * default LEFT and CENTER icon alignment (`button.h:55-56`): at the stylebox's left margin,
- * centred vertically between the margins.
+ * One button icon, laid out by the Button painter's own placement (`button.cpp:349-405`): at the
+ * stylebox's left margin, centred vertically, floored to a whole pixel.
  */
-function ButtonIcon({ item, texture, contentMargin, tint, renderOrder }: ButtonIconProps) {
+function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
-  const x = item.rect.x + contentMargin;
-  const y = item.rect.y + contentMargin + (item.rect.h - 2 * contentMargin - GRAPH_EDIT_ICON_SIZE) / 2;
+  const layout = layoutButtonContent({
+    rectSize: { x: item.rect.w, y: item.rect.h },
+    styleMargin: { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
+    hSeparation: 0,
+    iconMaxWidth: 0,
+    textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+    iconAlignment: HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: false,
+    iconNaturalSize: { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
+    hasText: false,
+    textNaturalSize: { x: 0, y: 0 },
+    rtl,
+  });
+  if (!layout.icon) return null;
+  const icon = layout.icon.rect;
   return (
-    <CanvasItemGroup position={[x, -y, 0]}>
+    <CanvasItemGroup position={[item.rect.x + icon.x, -(item.rect.y + icon.y), 0]} renderOrder={renderOrder}>
       <ControlQuad
-        width={GRAPH_EDIT_ICON_SIZE}
-        height={GRAPH_EDIT_ICON_SIZE}
+        width={icon.w}
+        height={icon.h}
         color={tint.color}
         opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
         map={texture}
@@ -95,6 +115,12 @@ function ButtonIcon({ item, texture, contentMargin, tint, renderOrder }: ButtonI
       />
     </CanvasItemGroup>
   );
+}
+
+/** A SpinBox arrow in the toolbar's coordinates. */
+function arrowPosition(spinBox: Rect2, button: Rect2): { x: number; y: number } {
+  const local = spinBoxArrowPosition(button, SPIN_BOX_ARROW_ICON_SIZE);
+  return { x: spinBox.x + local.x, y: spinBox.y + local.y };
 }
 
 interface ToolbarTextProps {
@@ -125,7 +151,7 @@ function ToolbarText({
   const x = centred ? Math.max(0, (rect.w - width) / 2) : inset;
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
+    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]} renderOrder={renderOrder}>
       <TextRun
         layout={layout}
         fontSizePx={fontSizePx}
@@ -170,7 +196,7 @@ export function GraphEditToolbarChrome({
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
   return (
-    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]}>
+    <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={renderOrder}>
       <StyleBoxQuad
         styleBox={panelStyle}
         color={tint.own}
@@ -212,6 +238,7 @@ export function GraphEditToolbarChrome({
                 texture={iconTextures[item.id] ?? null}
                 contentMargin={theme.contentMargin}
                 tint={tint}
+                rtl={rtl}
                 renderOrder={renderOrder + 0.1}
               />
             </CanvasItemGroup>
@@ -222,14 +249,8 @@ export function GraphEditToolbarChrome({
         // the up/down buttons block share the item's rect.
         const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, SPIN_BOX_ARROW_ICON_SIZE.x, rtl);
         const fieldRect = { x: item.rect.x, y: item.rect.y, w: layout.fieldRect.w, h: layout.fieldRect.h };
-        const upPos = {
-          x: item.rect.x + layout.upRect.x + (layout.upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-          y: item.rect.y + layout.upRect.y + (layout.upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
-        };
-        const downPos = {
-          x: item.rect.x + layout.downRect.x + (layout.downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-          y: item.rect.y + layout.downRect.y + (layout.downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
-        };
+        const upPos = arrowPosition(item.rect, layout.upRect);
+        const downPos = arrowPosition(item.rect, layout.downRect);
         return (
           <CanvasItemGroup key={item.id}>
             <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
@@ -250,7 +271,7 @@ export function GraphEditToolbarChrome({
               inset={lineEditInsetX}
             />
             {spinUpTexture && (
-              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]}>
+              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={renderOrder + 0.1}>
                 <ControlQuad
                   width={SPIN_BOX_ARROW_ICON_SIZE.x}
                   height={SPIN_BOX_ARROW_ICON_SIZE.y}
@@ -262,7 +283,7 @@ export function GraphEditToolbarChrome({
               </CanvasItemGroup>
             )}
             {spinDownTexture && (
-              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]}>
+              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]} renderOrder={renderOrder + 0.1}>
                 <ControlQuad
                   width={SPIN_BOX_ARROW_ICON_SIZE.x}
                   height={SPIN_BOX_ARROW_ICON_SIZE.y}

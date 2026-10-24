@@ -17,6 +17,7 @@ import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -64,7 +65,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     ];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
@@ -84,7 +85,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     ];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
@@ -107,7 +108,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     ];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     expect(drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')).toHaveLength(
       0
@@ -144,7 +145,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const external: TscnExternalResource[] = [{ id: '2', path, type: 'Texture2D' }];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, external, loader));
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(tree(makeNode('mat'), internal, external, loader));
 
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
@@ -222,7 +223,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const external: TscnExternalResource[] = [{ id: '2', path, type: 'Texture2D' }];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, external, loader));
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(tree(makeNode('mat'), internal, external, loader));
 
     const material = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')[0]!;

@@ -23,6 +23,7 @@ import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
+import { settleLoads } from './testing/settleLoads';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const isoRoot = resolve(here, '../../../../scenes/isometric');
@@ -68,7 +69,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
 
   const tileZ: number[] = [];
   let decorZ: number | undefined;

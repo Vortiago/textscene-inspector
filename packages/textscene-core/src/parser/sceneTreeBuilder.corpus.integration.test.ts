@@ -18,6 +18,7 @@ const SCENES = scenesDir();
 /** The fixtures whose whole purpose is an unresolvable parent path. */
 const INTENTIONAL_ORPHANS = new Set([
   'fixtures/edge-missing-parent.tscn',
+  'fixtures/unit-node-parent-id-path.tscn',
   'fixtures/unit-orphan-reroot.tscn',
 ]);
 

@@ -20,6 +20,7 @@ import { resetProceduralTextures, type JobRunner } from './textures/proceduralBu
 import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';
+import { settleLoads } from '../r3f/testing/settleLoads';
 
 /** A PointLight2D whose cookie is an inline radial GradientTexture2D. */
 const LIGHT_WITH_GRADIENT_COOKIE = `[gd_scene format=3]
@@ -61,7 +62,7 @@ async function render(tscn: string) {
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 
@@ -148,7 +149,7 @@ texture = ExtResource("1")
         <NodeDispatcher nodes={scene.nodes} />
       </SceneStack>
     );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     expect(cookieOf(renderer.scene.findAllByType('Mesh')[0]!.instance)).toBe(tex);
   });
 });

@@ -5,14 +5,13 @@
  * or refuses them at surface build (:2232-2241), so that lives in `build.ts`.
  */
 
-import { storedReal } from '../../../godot/math/real.js';
-import { floatOr, settableIntOr } from '../../../parser/valueParsers';
+import { realOr, settableIntOr } from '../../../parser/valueParsers';
 import type { TorusMeshProperties } from './types';
 
 export function decodeTorusMesh(properties: Record<string, string>): TorusMeshProperties {
   return {
-    innerRadius: storedReal(floatOr(properties.inner_radius, 0.5, 'TorusMesh inner_radius')),
-    outerRadius: storedReal(floatOr(properties.outer_radius, 1.0, 'TorusMesh outer_radius')),
+    innerRadius: realOr(properties.inner_radius, 0.5, 'TorusMesh inner_radius'),
+    outerRadius: realOr(properties.outer_radius, 1.0, 'TorusMesh outer_radius'),
     rings: settableIntOr(properties.rings, 64, { min: 3 }, 'TorusMesh rings'),
     ringSegments: settableIntOr(properties.ring_segments, 32, { min: 3 }, 'TorusMesh ring_segments'),
   };

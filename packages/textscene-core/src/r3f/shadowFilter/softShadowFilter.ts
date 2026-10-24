@@ -11,13 +11,7 @@ import {
 } from '../../godot/rendering/lights/softShadowKernel.js';
 import { GODOT_QUICK_HASH_GLSL } from '../../godot/rendering/quickHash.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
-import {
-  applyChunkEdits,
-  installChunkPatch,
-  onChunk,
-  type ChunkEdit,
-  type ChunkPatch,
-} from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { clampedBilinearDepthGlsl } from './clampedBilinearDepth.js';
 import { FRAMEBUFFER_HEIGHT_UNIFORM, installFramebufferHeightUniform } from './framebufferRows.js';
 
@@ -83,25 +77,18 @@ const FILTER_EDIT: ChunkEdit<typeof CHUNK> = {
   godot: SOFT_SHADOW_FILTER + SUN_BLOCK_START,
 };
 
-/** The shadow chunk with the filter in, or null when it lacks the sun block the filter precedes. */
-function softShadowFilterChunk(chunk: string): string | null {
-  return applyChunkEdits({ [CHUNK]: chunk }, [FILTER_EDIT])?.[CHUNK] ?? null;
-}
-
-const SOFT_SHADOW_FILTER_PATCH: ChunkPatch<typeof CHUNK> = {
-  names: [CHUNK],
-  isApplied: (chunks) => chunks[CHUNK].includes('float godotPcf('),
-  apply: onChunk(CHUNK, softShadowFilterChunk),
-  missing: `${CHUNK} has no sun shadow block for the soft shadow filter to precede`,
-};
-
 /**
  * Puts the filter in three's shadow chunk, and gives every lit material the framebuffer height it
  * reads, for every program compiled after the call. True when the chunk holds the filter after the
  * call, so the caller's lookups may call it. A second call changes nothing.
  */
 export function installSoftShadowFilter(): boolean {
-  if (!installChunkPatch(SOFT_SHADOW_FILTER_PATCH)) return false;
+  const isPatched = installChunkEdits({
+    edits: [FILTER_EDIT],
+    mark: 'float godotPcf(',
+    patch: 'soft shadow filter',
+  });
+  if (!isPatched) return false;
   installFramebufferHeightUniform();
   return true;
 }

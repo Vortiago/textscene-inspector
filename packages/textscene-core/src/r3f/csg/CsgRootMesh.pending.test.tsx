@@ -9,9 +9,10 @@ import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { TscnParser } from '../../parser/TscnParser';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
-import type { CsgModule } from './csgModule';
+import { loadCsgModule, type CsgModule } from './csgModule';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
+import { settleLoads } from '../testing/settleLoads';
 
 /** The library load, held open until a test lets it land. */
 const libraryLoad = vi.hoisted(() => {
@@ -63,12 +64,13 @@ describe('<CsgRootMesh> and the loader', () => {
     await mountSubtraction(loader);
     expect(loader.pendingResourceCount).toBe(1);
 
+    // Awaits the import itself, not a count of timer ticks: vitest resolves the dynamic import
+    // through its module server, which a full run keeps busy for longer than ten ticks.
     await ReactThreeTestRenderer.act(async () => {
       libraryLoad.land();
-      for (let tick = 0; tick < 10 && loader.pendingResourceCount > 0; tick++) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
+      await loadCsgModule();
     });
+    await settleLoads();
     expect(loader.pendingResourceCount).toBe(0);
   });
 });

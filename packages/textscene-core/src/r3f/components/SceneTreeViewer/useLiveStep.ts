@@ -9,7 +9,8 @@ import { useMemo } from 'react';
 import type { SceneScope, TscnNode } from '../../../parser/types.js';
 import { glbPathOf, loneGlbRootPath } from '../../../resources/glbSceneRoot.js';
 import { liveInstancePath } from '../../../resources/liveNode.js';
-import { liveStep, singlePathCache, type CachedSceneSource, type LiveStep } from '../../liveSceneTree.js';
+import { liveStep, singlePathCache, type LiveStep } from '../../liveSceneTree.js';
+import { firstCached } from '../../cacheSources.js';
 import { useGlbCache } from './useGlbCache.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 
@@ -37,12 +38,10 @@ export function useLiveStep(node: TscnNode, scope: SceneScope): LiveStep {
 
   return useMemo(() => {
     if (!glbCache) return withoutGlb;
-    const sceneCache: CachedSceneSource = {
-      getCached: (path) => {
-        if (path === scenePath) return subScene ?? undefined;
-        return path === mergedScenePath ? (instancedByMerged ?? undefined) : undefined;
-      },
-    };
+    const sceneCache = firstCached(
+      singlePathCache(scenePath, subScene),
+      singlePathCache(mergedScenePath, instancedByMerged)
+    );
     return liveStep(node, scope, sceneCache, glbCache);
   }, [glbCache, withoutGlb, node, scope, scenePath, subScene, mergedScenePath, instancedByMerged]);
 }

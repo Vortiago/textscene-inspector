@@ -22,6 +22,7 @@ import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { EMPTY_AABB } from '../../../godot/math/aabb';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -113,7 +114,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     preloadResource(loader, 'arraymesh', WALL_PATH, resource);
 
     const renderer = await render(loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
@@ -144,7 +145,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     preloadResource(loader, 'arraymesh', WALL_PATH, resource);
 
     const renderer = await render(loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
@@ -182,7 +183,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const geo = firstMeshGeometry(renderer);
     expect(geo!.getAttribute('position').count).toBe(4);
@@ -223,7 +224,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const materials = renderer.scene
       .findAllByType('MeshStandardMaterial')
@@ -253,7 +254,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const wireframes = renderer.scene
       .findAllByType('MeshBasicMaterial')
@@ -266,7 +267,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     // No preload: the loader serves no file, so the status turns unavailable.
 
     const renderer = await render(loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
@@ -315,7 +316,7 @@ describe('<MeshInstance3D> ArrayMesh with its own surface materials', () => {
     // Two chained loads (mesh bytes → decode → material bytes → build), each
     // several microtask hops plus the material builder's dynamic imports.
     for (let i = 0; i < 10; i++) {
-      await new Promise<void>((r) => setTimeout(r, 20));
+      await settleLoads();
       await renderer.update(
         <ResourceLoaderProvider loader={loader}>
           <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
@@ -353,7 +354,7 @@ describe('<MeshInstance3D> external PrimitiveMesh', () => {
     const loader = loaderServing(files);
     const renderer = await render(loader);
     for (let i = 0; i < 10; i++) {
-      await new Promise<void>((r) => setTimeout(r, 20));
+      await settleLoads();
       await renderer.update(
         <ResourceLoaderProvider loader={loader}>
           <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
