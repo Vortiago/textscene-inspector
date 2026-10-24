@@ -29,4 +29,21 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 |  | `single-worldenvironment` | warning |
 <!-- lint:end -->
 
-Both properties are assigned straight from the raw string with no format or resource-existence check. An absent `environment` falls back to `''` rather than raising strict's missing-environment warning, and an absent `camera_attributes` stays `undefined`.
+`environment` is assigned straight from the raw string with no format or resource-existence check. An absent `environment` falls back to `''` rather than raising strict's missing-environment warning, and an absent `camera_attributes` stays `undefined`.
+
+## Exposure
+
+The `camera_attributes` of the first WorldEnvironment that holds a CameraAttributesPractical or CameraAttributesPhysical apply to the world. They are chosen apart from the Environment, so a node with no Environment can set the exposure. The `exposure_multiplier` is the exposure factor. It scales:
+
+- the energy of each Light3D, and each emission, by the factor.
+- a colour background and a sky background by the factor, before the linear conversion for a colour.
+- the ambient light and the reflection of a sky by the factor squared.
+- a baked lightmap by the factor over the exposure the bake ran at, and only while the attributes exist.
+
+A flat ambient light does not scale. With no Environment, the clear colour does not scale. A ReflectionProbe holds the factor once, through its capture. The `camera-attributes-exposure`, `camera-attributes-exposure-sky` and `lightmap-gi-exposure` goldens pin these.
+
+## Known limitations
+
+- **Not drawn** Auto exposure, depth of field and the physical light units of a CameraAttributesPhysical (`exposure_aperture`, `exposure_shutter_speed`, `exposure_sensitivity`) have no effect. Only `exposure_multiplier` applies.
+- **Not drawn** The `Camera3D.attributes` of a camera does not apply: the editor camera holds no attributes.
+- **Not drawn** The lights of a GLB file do not scale by the exposure. The previewer reads no Godot import conversion for them.
