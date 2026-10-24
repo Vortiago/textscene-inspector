@@ -11,6 +11,11 @@ vi.mock('../../controls/index.js', () => ({
   ControlCanvasLayer: () => <mesh name="native-controls-stub" />,
 }));
 
+// The test renderer's context binds no framebuffer, which the real frame render draws into.
+vi.mock('./CanvasFrameRender.js', () => ({
+  CanvasFrameRender: () => <mesh name="canvas-frame-render-stub" />,
+}));
+
 import { World2DContents } from './World2DContents';
 import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 
@@ -30,6 +35,17 @@ describe('World2DContents native-controls mount seam', () => {
       </SelectionProvider>
     );
     expect(rendered.scene.findAllByProps({ name: 'native-controls-stub' })).toHaveLength(1);
+  });
+});
+
+describe('World2DContents canvas frame', () => {
+  it("mounts the canvas frame render, which copies the y-down camera's rows upright", async () => {
+    const rendered = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <World2DContents {...baseProps} />
+      </SelectionProvider>
+    );
+    expect(rendered.scene.findAllByProps({ name: 'canvas-frame-render-stub' })).toHaveLength(1);
   });
 });
 

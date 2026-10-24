@@ -8,6 +8,7 @@ import {
   observeSceneCull,
   observeSceneRenderEnd,
 } from './sceneRenderCamera';
+import { applyOrthoFrame, orthoFrameForSize } from '../nodes/viewport/subviewport/offscreenViewport';
 import { fireSceneRender, fireSceneRenderEnd } from './testing/fireSceneRender';
 
 describe('observeSceneCamera', () => {
@@ -128,6 +129,19 @@ describe('observeSceneRenderEnd', () => {
     disposeEnd();
     expect(scene.onBeforeRender).toBe(onBeforeRender);
     expect(scene.onAfterRender).toBe(onAfterRender);
+  });
+});
+
+describe('createViewportCanvasCamera', () => {
+  it("maps the canvas top to NDC y = -1, as the root canvas's camera does", () => {
+    const camera = createViewportCanvasCamera();
+    applyOrthoFrame(camera, orthoFrameForSize({ x: 100, y: 50 }));
+    camera.updateMatrixWorld(true);
+
+    const canvasTop = new THREE.Vector3(50, 0, 0).project(camera);
+    const canvasBottom = new THREE.Vector3(50, -50, 0).project(camera);
+
+    expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
   });
 });
 

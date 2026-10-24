@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { Canvas, type CanvasProps } from '@react-three/fiber';
 import { World2DCanvas } from './World2DCanvas';
+import { World2DCamera } from './world2DCamera';
 
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
@@ -23,6 +24,21 @@ function canvasProps(): CanvasProps {
 }
 
 describe('World2DCanvas', () => {
+  it('draws with the y-down camera, so GL row 0 of its target is the canvas top', () => {
+    expect(canvasProps().camera).toBeInstanceOf(World2DCamera);
+  });
+
+  it('hands R3F one camera across renders: a new one would replace the store camera (edge case)', () => {
+    const { rerender } = render(
+      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+    );
+    const first = vi.mocked(Canvas).mock.calls.at(-1)![0].camera;
+    rerender(
+      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 5, y: 0 }} zoom={2} />
+    );
+    expect(vi.mocked(Canvas).mock.calls.at(-1)![0].camera).toBe(first);
+  });
+
   it('passes `flat`, so R3F selects NoToneMapping: Godot tone-maps only the 3D pass', () => {
     expect(canvasProps().flat).toBe(true);
   });

@@ -39,7 +39,7 @@ import {
   SLIDER_GRABBER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
 import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../shared/sliderSolver';
-import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -798,14 +798,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   w: spinLayout.downRect.w,
                   h: spinLayout.downRect.h,
                 };
-                const upIconPos = {
-                  x: upRect.x + (upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-                  y: upRect.y + (upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
-                };
-                const downIconPos = {
-                  x: downRect.x + (downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-                  y: downRect.y + (downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
-                };
+                const upIconPos = spinBoxArrowPosition(upRect, SPIN_BOX_ARROW_ICON_SIZE);
+                const downIconPos = spinBoxArrowPosition(downRect, SPIN_BOX_ARROW_ICON_SIZE);
                 return (
                   <>
                     <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>

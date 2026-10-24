@@ -55,6 +55,27 @@ describe('graphNodePorts (graph_node.cpp:1027-1059 _port_pos_update, via a re-so
     expect(ports!.inputs).toEqual([]);
   });
 
+  it('truncates a half-pixel row centre to the whole pixel, as `int port_y` does (`:1041`)', () => {
+    // A 21 px child solves to y 43, so its centre is 53.5. `Point2i(edgeofs, port_y)` keeps 53.
+    const node = graphNode('Source', new Map([[0, slot({ rightEnabled: true, rightColor: RED })]]), [
+      leaf('Value', 21),
+    ]);
+
+    const ports = graphNodePorts(node, { x: 120, y: 80 }, nativeTheme(1), null);
+
+    expect(ports!.outputs).toEqual([{ pos: { x: 120, y: 53 }, color: RED }]);
+  });
+
+  it('truncates the right port x of a fractional node width, as `Point2i` does (`:1050`, edge case)', () => {
+    const node = graphNode('Source', new Map([[0, slot({ rightEnabled: true, rightColor: RED })]]), [
+      leaf('Value', 20),
+    ]);
+
+    const ports = graphNodePorts(node, { x: 120.75, y: 80 }, nativeTheme(1), null);
+
+    expect(ports!.outputs[0]!.pos.x).toBe(120);
+  });
+
   it('a left port sits at x = port_h_offset (theme_override_constants/port_h_offset)', () => {
     const node: SolveNode = {
       ...graphNode('Sink', new Map([[0, slot({ leftEnabled: true, leftColor: BLUE })]]), [

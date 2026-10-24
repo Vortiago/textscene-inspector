@@ -19,7 +19,7 @@ import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js';
 import type { Rect2 } from '../../../../godot/math/rect2.js';
-import { graphNodeDrawRows, graphNodeStyles } from '../graphnode/nativeSolver.js';
+import { graphNodeDrawRows, graphNodeStyles, portHOffsetOf, rightPortX } from '../graphnode/nativeSolver.js';
 import type { GraphNodeProperties } from '../graphnode/types.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 import type { Rgba } from '../../../../godot/math/math.js';
@@ -65,7 +65,9 @@ export function graphNodePorts(
     (a, b) => a.rawIndex - b.rawIndex
   );
 
-  const portHOffset = child.constants.port_h_offset ?? 0;
+  // Godot stores a port as a `Point2i` from an `int port_y` and an `int edgeofs` (`:1011`, `:1041`,
+  // `:1050`), so a connection ends on a whole pixel, where the painter draws its port icon.
+  const portHOffset = portHOffsetOf(child.constants);
   const outputs: GraphNodePort[] = [];
   const inputs: GraphNodePort[] = [];
   for (const row of rows) {
@@ -73,7 +75,10 @@ export function graphNodePorts(
       inputs.push({ pos: { x: portHOffset, y: row.slotY }, color: row.slot.leftColor });
     }
     if (row.slot.rightEnabled) {
-      outputs.push({ pos: { x: outerSize.x - portHOffset, y: row.slotY }, color: row.slot.rightColor });
+      outputs.push({
+        pos: { x: rightPortX(outerSize.x, portHOffset), y: row.slotY },
+        color: row.slot.rightColor,
+      });
     }
   }
   return { outputs, inputs };

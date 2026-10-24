@@ -42,6 +42,8 @@ interface GraphEditLoadState {
   zoomMinusDisabled: boolean;
   /** `zoom_plus_button->is_disabled()`. */
   zoomPlusDisabled: boolean;
+  /** Whether a setter queued `_update_scroll_offset` while the file applied (`:409`, `:524`). */
+  queuedScrollOffsetUpdate: boolean;
 }
 
 interface ReplayState {
@@ -56,6 +58,7 @@ interface ReplayState {
   scrollMin: Vector2;
   scrollMax: Vector2;
   scrollOffset: Vector2 | undefined;
+  queuedScrollOffsetUpdate: boolean;
 }
 
 /**
@@ -73,9 +76,10 @@ function sizeOf(state: ReplayState): Vector2 {
 /**
  * `GraphEdit::_update_scrollbars` (`graph_edit.cpp:488-493`) over the empty
  * child list a load presents it with: the merged rect is a point at the origin,
- * grown by one size in every direction.
+ * grown by one size in every direction. It queues `_update_scroll_offset` (`:524`).
  */
 function installScrollBounds(state: ReplayState): void {
+  state.queuedScrollOffsetUpdate = true;
   const size = sizeOf(state);
   state.scrollMin = { x: -size.x, y: -size.y };
   state.scrollMax = { x: size.x, y: size.y };
@@ -119,6 +123,7 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     scrollMin: ZERO_SCROLL_BOUNDS,
     scrollMax: ZERO_SCROLL_BOUNDS,
     scrollOffset: undefined,
+    queuedScrollOffsetUpdate: false,
   };
 
   for (const key of Object.keys(properties)) {
@@ -144,6 +149,9 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
           x: clamp(value.x, state.scrollMin.x, state.scrollMax.x - size.x),
           y: clamp(value.y, state.scrollMin.y, state.scrollMax.y - size.y),
         };
+        // `set_scroll_offset` queues `_update_scroll_offset` (`:409`). Its rerun of
+        // `_update_scrollbars` after the clamp (`:414`) writes bounds that no later key reads.
+        state.queuedScrollOffsetUpdate = true;
         break;
       }
       case 'zoom': {
@@ -177,5 +185,6 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     zoom: state.zoomTouched ? state.zoom : undefined,
     zoomMinusDisabled: state.minusDisabled,
     zoomPlusDisabled: state.plusDisabled,
+    queuedScrollOffsetUpdate: state.queuedScrollOffsetUpdate,
   };
 }
