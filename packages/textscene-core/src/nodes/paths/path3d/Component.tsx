@@ -9,8 +9,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
-import type { GizmoVariant } from '../../../r3f/gizmo/gizmoVariant';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
@@ -22,7 +21,6 @@ const PATH_COLOR = 0xffffff;
 export function Path3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path3DProperties;
   const { internalResources } = useSceneResources();
-  const gizmoState = useGizmoState('every-node');
 
   // Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
   // unlike the 2D twin. A missing, ExtResource or unfound curve gives a null sampler:
@@ -35,15 +33,19 @@ export function Path3D({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      {gizmoState !== 'hidden' && sampler && <PathCurveGizmo sampler={sampler} variant={gizmoState} />}
+      {sampler && (
+        <PluginGizmo drawnFor="every-node">
+          <PathCurveGizmo sampler={sampler} />
+        </PluginGizmo>
+      )}
       <Path3DCurveProvider value={sampler}>{children}</Path3DCurveProvider>
     </Node3D>
   );
 }
 
-function PathCurveGizmo({ sampler, variant }: { sampler: Curve3DSampler; variant: GizmoVariant }) {
+function PathCurveGizmo({ sampler }: { sampler: Curve3DSampler }) {
   const positions = useMemo(() => buildPolylineSegments(sampler.points), [sampler]);
-  return <GizmoLine positions={positions} color={PATH_COLOR} variant={variant} />;
+  return <GizmoLine positions={positions} color={PATH_COLOR} />;
 }
 
 /** Turn the flat polyline `[x0,y0,z0,…]` into LineSegments vertex position pairs. */

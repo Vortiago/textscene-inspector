@@ -14,7 +14,7 @@ import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import {
   DEFAULT_FOG_VOLUME_FILL,
   FogVolumeObject,
@@ -121,14 +121,13 @@ export function FogVolume({ node, children }: NodeComponentProps) {
     () => (animatedSize ? fogVolumeSize(animatedSize) : properties.size),
     [animatedSize, properties.size]
   );
-  const gizmoState = useGizmoState('every-node');
 
   return (
     <Node3D node={node}>
       <FogVolumeElement size={[size.x, size.y, size.z]} shape={properties.shape} fill={fill} />
-      {gizmoState !== 'hidden' && (
-        <FogVolumeGizmo size={size} shape={properties.shape} variant={gizmoState} />
-      )}
+      <PluginGizmo drawnFor="every-node">
+        <FogVolumeGizmo size={size} shape={properties.shape} />
+      </PluginGizmo>
       {children}
     </Node3D>
   );

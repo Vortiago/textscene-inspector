@@ -6,16 +6,20 @@ import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { GizmoVariant } from '../gizmo/gizmoVariant';
+import { GizmoPartScene } from '../testing/GizmoScene';
 import { GizmoLine } from './GizmoLine';
 
+/** Without a `variant` the line is no plugin material, so it draws outside every `PluginGizmo`. */
 async function render(positions: number[], colors?: number[], opacity?: number, variant?: GizmoVariant) {
-  return ReactThreeTestRenderer.create(
+  const line = (
     <GizmoLine
       positions={new Float32Array(positions)}
       colors={colors && new Float32Array(colors)}
       opacity={opacity}
-      variant={variant}
     />
+  );
+  return ReactThreeTestRenderer.create(
+    variant === undefined ? line : <GizmoPartScene variant={variant}>{line}</GizmoPartScene>
   );
 }
 

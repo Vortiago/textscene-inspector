@@ -9,6 +9,11 @@ import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import { FogVolume } from './Component';
 import { parseFogVolume } from './parser';
 
@@ -24,9 +29,19 @@ function fogVolume(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
+async function render(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true,
+  instantiated = false
+) {
   return ReactThreeTestRenderer.create(
-    <GizmoScene nodePath="Fog" selectedPath={selectedPath} showGizmos={showGizmos}>
+    <GizmoScene
+      nodePath="Fog"
+      selectedPath={selectedPath}
+      showGizmos={showGizmos}
+      instantiated={instantiated}
+    >
       <FogVolume node={fogVolume(props)}>
         <group name="Child" />
       </FogVolume>
@@ -46,6 +61,14 @@ async function gizmoLines(props: Record<string, string>) {
   });
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Fog',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos, instantiated }) => render(selectedPath, {}, showGizmos, instantiated),
+};
+describeGizmoToggle('<FogVolume>', GIZMO_CASE);
+describeInstantiatedGizmo('<FogVolume>', GIZMO_CASE);
+
 describe('<FogVolume> gizmo state', () => {
   it('draws the box in full colour when the node is selected', async () => {
     expect(lineOpacities(await render('Fog'))).toEqual([1]);
@@ -56,11 +79,6 @@ describe('<FogVolume> gizmo state', () => {
     ['another node is selected', 'Other'],
   ])('draws the box faintly, at 0.3, when %s', async (_label, selectedPath) => {
     expect(lineOpacities(await render(selectedPath))).toEqual([0.3]);
-  });
-
-  it('draws no box with the Gizmos toggle off, selected', async () => {
-    const renderer = await render('Fog', {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

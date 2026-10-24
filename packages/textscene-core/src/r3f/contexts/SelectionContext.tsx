@@ -3,7 +3,16 @@
  * and the path to Object3D map. Each shell owns its own. Paths are slash-joined
  * node names without a leading `./` (R3F-contracts.md).
  */
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import type * as THREE from 'three';
 import {
   createExternalStore,
@@ -50,14 +59,24 @@ export interface SelectionContextValue {
 const SelectionContext = createContext<SelectionContextValue | null>(null);
 SelectionContext.displayName = 'SelectionContext';
 
+/**
+ * The selected path, in a store like the hover store. A node that asks only whether it is selected
+ * re-renders when its answer flips, not on each selection, expand or hide. `SelectionProvider` owns
+ * it, and its `selectedNodePath` reads from it.
+ */
+const SelectedNodePathStoreContext = createContext<ExternalStore<string | null> | null>(null);
+SelectedNodePathStoreContext.displayName = 'SelectedNodePathStoreContext';
+
 export interface SelectionProviderProps {
   children: ReactNode;
 }
 
 export function SelectionProvider({ children }: SelectionProviderProps) {
-  const [selectedNodePath, setSelectedNodePath] = useState<string | null>(null);
-  // Never-set state, so the factory runs once per provider.
+  // Never-set state, so each factory runs once per provider.
   const [hoverStore] = useState(() => createExternalStore<string | null>(null));
+  const [selectedStore] = useState(() => createExternalStore<string | null>(null));
+  const selectedNodePath = useExternalStoreValue(selectedStore);
+  const setSelectedNodePath = selectedStore.set;
   const [expandedNodePaths, setExpandedNodePathsState] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
@@ -116,7 +135,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
   }, []);
 
   const clearAll = useCallback(() => {
-    setSelectedNodePath(null);
+    selectedStore.set(null);
     hoverStore.set(null);
     setExpandedNodePathsState(new Set());
     setHiddenNodePathsState(new Set());
@@ -124,7 +143,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     // Not objectPathMapRef: a WeakMap keyed by the Object3D itself, so the old
     // scene's entries become unreachable and are collected. A path key could
     // match the new scene, an object key cannot.
-  }, [hoverStore]);
+  }, [hoverStore, selectedStore]);
 
   const value = useMemo<SelectionContextValue>(
     () => ({
@@ -148,6 +167,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       hoverStore,
       expandedNodePaths,
       hiddenNodePaths,
+      setSelectedNodePath,
       toggleExpandedNodePath,
       setExpandedNodePaths,
       toggleHidden,
@@ -158,7 +178,13 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     ]
   );
 
-  return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
+  return (
+    <SelectionContext.Provider value={value}>
+      <SelectedNodePathStoreContext.Provider value={selectedStore}>
+        {children}
+      </SelectedNodePathStoreContext.Provider>
+    </SelectionContext.Provider>
+  );
 }
 
 export function useSelection(): SelectionContextValue {
@@ -170,6 +196,16 @@ export function useSelection(): SelectionContextValue {
     );
   }
   return value;
+}
+
+/**
+ * Whether `path` is the selected node, false with no provider. The component re-renders when this
+ * answer flips, so a selection change re-renders the old and the new node alone.
+ */
+export function useIsSelectedPath(path: string | null): boolean {
+  const store = useContext(SelectedNodePathStoreContext) ?? NO_PROVIDER_SELECTED_STORE;
+  const isSelected = useCallback(() => path !== null && store.get() === path, [store, path]);
+  return useSyncExternalStore(store.subscribe, isSelected, isSelected);
 }
 
 /**
@@ -185,6 +221,7 @@ export function useOptionalSelection(): SelectionContextValue | null {
  * shell always has its own `hoverStore` and never writes here.
  */
 const NO_PROVIDER_HOVER_STORE = createExternalStore<string | null>(null);
+const NO_PROVIDER_SELECTED_STORE = createExternalStore<string | null>(null);
 
 /**
  * The hovered node path. Only this component subscribes to hover changes, and

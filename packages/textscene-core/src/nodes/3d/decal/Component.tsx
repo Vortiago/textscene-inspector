@@ -13,7 +13,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
@@ -46,9 +46,6 @@ const UNIT_BOX_EDGES = new Float32Array(aabbEdges(centredAabb({ x: 1, y: 1, z: 1
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources, internalResources } = useSceneResources();
-  // Godot's editor outlines the projector box for every decal, faint while it is not selected
-  // (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none.
-  const gizmoState = useGizmoState('every-node');
 
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -249,11 +246,13 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      {gizmoState !== 'hidden' && (
+      {/* Godot's editor outlines the projector box for every decal, faint while it is not selected
+          (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
+      <PluginGizmo drawnFor="every-node">
         <group scale={[size.x, size.y, size.z]}>
-          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} variant={gizmoState} />
+          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} />
         </group>
-      )}
+      </PluginGizmo>
       {/* Projection meshes attach here imperatively, to an unscaled group, so
           they inherit only the decal's world transform, not `size`. */}
       <group ref={projectionRef} />

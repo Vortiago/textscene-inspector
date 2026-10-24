@@ -5,10 +5,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import { Marker2D } from './Component';
 import { parseMarker2D } from './parser';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { describeGizmoToggle, type GizmoNodeCase } from '../../../r3f/testing/gizmoContract';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
   return {
@@ -32,6 +34,13 @@ async function renderMarker(
   );
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'MyMarker',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos }) => renderMarker(selectedPath, {}, showGizmos),
+};
+describeGizmoToggle('<Marker2D>', GIZMO_CASE);
+
 describe('<Marker2D>', () => {
   it.each([
     ['the node is selected', 'MyMarker'],
@@ -41,12 +50,24 @@ describe('<Marker2D>', () => {
     expect(lineOpacities(await renderMarker(selectedPath))).toEqual([1]);
   });
 
-  it.each([
-    ['selected', 'MyMarker'],
-    ['unselected', null],
-  ])('draws no cross with the Gizmos toggle off, %s', async (_label, selectedPath) => {
-    const renderer = await renderMarker(selectedPath, {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  // `marker_2d.cpp:47-59`: the x axis and then the y axis, each as a positive and a negative arm.
+  // `axisCross.test.ts` holds the colours.
+  it('draws the x and y axes, with the +y arm pointing down the screen', async () => {
+    const renderer = await renderMarker('MyMarker', { gizmo_extents: '20' });
+    const cross = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    const positions = Array.from(cross.geometry.getAttribute('position').array);
+    // Godot's +y is three's -y inside the Node2D group.
+    const expected = [20, 0, 0, 0, 0, 0, 0, 0, 0, -20, 0, 0, 0, -20, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0];
+    expect(positions).toEqual(expected.map((value) => expect.closeTo(value, 6)));
+  });
+
+  // `marker_2d.cpp:32-43` guards no `gizmo_extents`: 0 draws a cross of zero length.
+  it('draws a cross of zero length for gizmo_extents 0', async () => {
+    const renderer = await renderMarker('MyMarker', { gizmo_extents: '0' });
+    const cross = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect(Array.from(cross.geometry.getAttribute('position').array).every((value) => value === 0)).toBe(
+      true
+    );
   });
 
   it('always renders a positioning group for children, selected or not', async () => {

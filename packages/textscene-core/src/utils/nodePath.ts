@@ -69,3 +69,9 @@ export function spelledNodePath(rootRelativePath: string): string {
 export function spelledLiveNodePath(livePath: string): string {
   return spelledNodePath(belowRoot(livePath));
 }
+
+/** `path` below `base`, `''` for `base` itself, or undefined where `path` is not at or below it. */
+export function relativeTo(base: string, path: string): string | undefined {
+  if (path === base) return '';
+  return path.startsWith(base + '/') ? path.slice(base.length + 1) : undefined;
+}

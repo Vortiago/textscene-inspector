@@ -8,34 +8,25 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
-import { useGizmoState } from '../../../../r3f/hooks/useGizmoState';
-import type { GizmoVariant } from '../../../../r3f/gizmo/gizmoVariant';
+import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 import { DEFAULT_SPRING_LENGTH } from './types';
 import type { SpringArm3DProperties } from './types';
 
-function LengthGizmo({ length, variant }: { length: number; variant: GizmoVariant }) {
+function LengthGizmo({ length }: { length: number }) {
   const positions = useMemo(() => new Float32Array([0, 0, 0, 0, 0, length]), [length]);
   const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
-  return (
-    <GizmoLine
-      positions={positions}
-      color={color}
-      opacity={DEFAULT_COLLISION_DEBUG_COLOR.a}
-      variant={variant}
-    />
-  );
+  return <GizmoLine positions={positions} color={color} opacity={DEFAULT_COLLISION_DEBUG_COLOR.a} />;
 }
 
 export function SpringArm3D({ node, children }: NodeComponentProps) {
   const props = node.properties as SpringArm3DProperties;
-  const gizmoState = useGizmoState('every-node');
   return (
     <Node3D node={node}>
-      {gizmoState !== 'hidden' && (
-        <LengthGizmo length={props.spring_length ?? DEFAULT_SPRING_LENGTH} variant={gizmoState} />
-      )}
+      <PluginGizmo drawnFor="every-node">
+        <LengthGizmo length={props.spring_length ?? DEFAULT_SPRING_LENGTH} />
+      </PluginGizmo>
       {children}
     </Node3D>
   );

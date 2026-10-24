@@ -10,6 +10,11 @@ import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import './index.r3f';
 import '../visibleonscreenenabler3d/index.r3f';
@@ -31,11 +36,17 @@ async function render(
   selectedPath: string | null,
   props: Record<string, string> = {},
   type = 'VisibleOnScreenNotifier3D',
-  showGizmos = true
+  showGizmos = true,
+  instantiated = false
 ) {
   const Component = nodeComponentRegistry.get(type)!;
   return ReactThreeTestRenderer.create(
-    <GizmoScene nodePath="Notifier" selectedPath={selectedPath} showGizmos={showGizmos}>
+    <GizmoScene
+      nodePath="Notifier"
+      selectedPath={selectedPath}
+      showGizmos={showGizmos}
+      instantiated={instantiated}
+    >
       <Component node={notifier(type, props)}>
         <group name="Child" />
       </Component>
@@ -53,6 +64,17 @@ async function gizmoLines(props: Record<string, string>, type?: string) {
       color: (object.material as THREE.LineBasicMaterial).color,
     };
   });
+}
+
+for (const type of ['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D']) {
+  const gizmoCase: GizmoNodeCase = {
+    nodePath: 'Notifier',
+    drawnFor: 'every-node',
+    mount: ({ selectedPath, showGizmos, instantiated }) =>
+      render(selectedPath, {}, type, showGizmos, instantiated),
+  };
+  describeGizmoToggle(`<${type}>`, gizmoCase);
+  describeInstantiatedGizmo(`<${type}>`, gizmoCase);
 }
 
 describe.each(['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D'])('<%s> gizmo state', (type) => {
@@ -75,12 +97,9 @@ describe.each(['VisibleOnScreenNotifier3D', 'VisibleOnScreenEnabler3D'])('<%s> g
   it.each([
     ['selected', 'Notifier'],
     ['unselected', null],
-  ])('draws nothing with the Gizmos toggle off, %s', async (_label, selectedPath) => {
+  ])('draws no fill with the Gizmos toggle off, %s', async (_label, selectedPath) => {
     const renderer = await render(selectedPath, {}, type, false);
-    expect([renderer.scene.findAllByType('LineSegments'), renderer.scene.findAllByType('Mesh')]).toEqual([
-      [],
-      [],
-    ]);
+    expect(renderer.scene.findAllByType('Mesh')).toEqual([]);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

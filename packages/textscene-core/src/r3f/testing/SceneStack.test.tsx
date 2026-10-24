@@ -6,13 +6,15 @@ import type { TscnScene } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
+import { EditedRootProvider } from '../contexts/InstanceOwnersContext';
 import { SelectionProvider, useSelection } from '../contexts/SelectionContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { SceneStack } from './SceneStack';
 
-const SCENE: Pick<TscnScene, 'internalResources' | 'externalResources'> = {
+const SCENE: Pick<TscnScene, 'internalResources' | 'externalResources' | 'editableInstances'> = {
   internalResources: [{ id: 'Gradient_1', type: 'Gradient', data: {} }],
   externalResources: [{ id: '1', type: 'Texture2D', path: 'res://icon.png' }],
+  editableInstances: ['Instance'],
 };
 
 type Props = Record<string, unknown> & { children?: ReactNode };
@@ -51,7 +53,7 @@ function SelectionProbe() {
 describe('SceneStack', () => {
   const loader = createFakeResourceLoader().loader;
 
-  it('mounts the workspace, loader, scene resources and selection, outermost first', () => {
+  it('mounts the workspace, loader, scene resources, edited root and selection, outermost first', () => {
     const element = SceneStack({ scene: SCENE, loader, workspace: '2d', children: null });
     expect(providerChain(element)).toEqual([
       { type: CanvasWorkspaceProvider, props: { workspace: '2d' } },
@@ -63,6 +65,7 @@ describe('SceneStack', () => {
           externalResources: SCENE.externalResources,
         },
       },
+      { type: EditedRootProvider, props: { editableInstances: SCENE.editableInstances } },
       { type: SelectionProvider, props: {} },
     ]);
   });
@@ -72,6 +75,7 @@ describe('SceneStack', () => {
     expect(providerChain(element).map(({ type }) => type)).toEqual([
       ResourceLoaderProvider,
       SceneResourcesProvider,
+      EditedRootProvider,
       SelectionProvider,
     ]);
   });

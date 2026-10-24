@@ -30,12 +30,18 @@ Collisions toggle.
 
 A Godot gizmo material has a selected and an unselected variant. The unselected variant multiplies
 the colour alpha by 0.3 (`node_3d_editor_gizmos.cpp:919-920`). `gizmoAlpha` in
-`r3f/gizmo/gizmoVariant.ts` is the one place that holds the factor. `GizmoLine` and the box
-gizmos take a `variant`, and no node computes the factor.
+`r3f/gizmo/gizmoVariant.ts` is the one place that holds the factor, and no node computes it.
 
 `useGizmoState(drawnFor)` gives each gizmo part one of three states: hidden, unselected or selected.
 A part declares whether Godot draws it for every node (`'every-node'`) or only for the selected node
 (`'selected-only'`).
+
+`<PluginGizmo drawnFor>` is the one gate of a Godot gizmo-plugin gizmo. It is the only caller of
+`useGizmoState` for such a gizmo. It mounts its children for a visible state and hands them the
+look of their node through a context, so `GizmoLine` and `GizmoMesh` take no `variant` prop. A part
+that is no plugin material, such as the 2D helpers, the follower handles and Marker3D, draws outside
+every gate and keeps its own colour. A part that Godot draws for the selected node only, inside a
+gizmo that is drawn for every node, sits in `<SelectedOnly>`.
 
 ### The split
 
@@ -55,6 +61,66 @@ so their unselected lines draw at 0.126.
 
 The Camera3D frustum stays selected-only until its Godot pyramid lands (#908). The
 PathFollow handle is a previewer addition, since Godot draws no gizmo for a follower.
+
+### The instantiated look
+
+Godot gives a gizmo material four variants: selected or not, editable or not
+(`node_3d_editor_gizmos.cpp:43-60`). A node is editable when the edited scene owns it. A node that
+comes from an instanced sub-scene is not editable, unless an `[editable path="..."]` line of the
+scene file lists it. The non-editable variants replace the plugin colour and alpha with
+rgba(0.7, 0.7, 0.7, 0.6) (`node_3d_editor_gizmos.cpp:907-917`, `editor_settings.cpp:879`). The
+unselected variant then multiplies the alpha by 0.3 as before.
+
+The parser reads each `[editable]` heading into `TscnScene.editableInstances`
+(`resource_format_text.cpp:400`). The file stores the paths in the simplified form. Any scene file
+along an instantiation chain can set the flag, with paths relative to its own root
+(`packed_scene.cpp:691-695`). `r3f/instanceOwners.ts` keeps this as a stack of owners, and
+`InstanceOwnerProvider` pushes one for each instance. `useIsInstantiated` answers for the node in
+scope. `PluginGizmo` reads it once for its node, and `useGizmoLook` turns that and the variant into
+the colour and opacity of a part.
+
+A part inside a gate wears the grey. A part outside every gate keeps its own colour, because its
+Godot material is not a plugin material: the 2D helpers, PathFollow2D and PathFollow3D, and Marker3D
+(`marker_3d_gizmo_plugin.cpp:80-92`) never turn grey.
+
+A node that the edited scene authors under an instanced GLB takes the level of the scene that
+instances the GLB, not the GLB's, so its gizmo keeps its colour. `GlbInstanceProvider` holds that
+level for `GlbAttachedChildren`. The GLB code draws no gizmo of its own.
+
+Value check, over a flat 0.3 clear, on the same camera. A Godot scene replicates each gizmo with the
+gizmo material: unshaded, alpha blend, no culling, albedo rgb(0.7, 0.7, 0.7). `ref:godot` renders it,
+and the previewer renders the locked node through the Godot comparison browser, with the selection
+highlight off. Both are neutral grey, so the three channels are equal.
+
+- The locked SpringArm3D length line, unselected (alpha 0.18): 189 pixels read rgb(105) in both.
+- The same line, selected (alpha 0.6): 189 pixels read rgb(148) and 11 read rgb(145) in both.
+- The fill of the selected locked CPUParticles3D, two faces at alpha 0.6: 310 125 interior pixels
+  read rgb(167) in both. The previewer's own box edges, at alpha 0.6 over the fill, read rgb(174).
+
+The clear is rgb(76) in Godot and rgb(77) here. Godot truncates 0.3 × 255 = 76.5, and this previewer
+rounds it. The blend gives 148.36 over 76 and 148.53 over 77, so the line reads 148 in both.
+
+Godot draws 61 more pixels along the line than the previewer, where the line steps to the next row.
+The other 189 pixels match in position and value, so the line differs in coverage, not in colour.
+The visual baselines carry a ring of about 6 % outside a hard top and left edge, from the software
+compositor (`launchGodotComparisonBrowser`). A line on a golden reads about 103 beside a faint 78,
+and the comparison browser reads 105.
+
+Marker2D and Marker3D draw an axis cross, not one colour: a red x axis, a green y axis and, in 3D,
+a blue z axis, with each negative arm darkened by 0.5 (`marker_2d.cpp:47-59`,
+`marker_3d_gizmo_plugin.cpp:60-79`, `theme_classic.cpp:197-199`). `axisCross` builds both. Over the
+same camera, the 2D cross draws rgb(245, 51, 82), rgb(122, 26, 41), rgb(135, 214, 3) and
+rgb(68, 107, 1) in Godot and here. The 3D cross differs by one level in a channel, for example
+rgb(244, 51, 81) in Godot against rgb(245, 51, 82) here. Godot stores a vertex colour as eight bits
+and truncates (`rendering_server.cpp:712-717`), so 0.96 × 255 = 244.8 reads 244.
+
+The editable sibling of the particles emitter draws rgb(132, 119, 85), the plain unselected
+particles colour. The fill of the selected locked emitter draws rgb(167), two faces at alpha 0.6.
+The goldens `cpuparticles3d-instanced-unselected` and `cpuparticles3d-instanced-selected` show both cases.
+
+The Light helpers and the Camera3D helper are three.js helpers, not Godot gizmo materials, and #908
+rebuilds them through `GizmoLine`. They keep their colour until then. The audio speaker silhouette
+is a previewer shape, and it takes the look of the node's gizmo.
 
 ### What the toggle and the selection do not change
 
@@ -78,8 +144,6 @@ The green channel differs by one level, where 0.7 × 255 = 178.5 rounds the othe
 
 Open divergences:
 
-- Godot colours the gizmos of a node inside an instanced sub-scene grey. The parser does not read
-  `[editable]`, so the previewer cannot tell which nodes it is.
 - Godot draws edit handles for the selected, editable node (`node_3d_editor_gizmos.cpp:405`). The
   previewer edits nothing and draws none.
 - 3D follow orientation of a PathFollow3D is an approximation: ADR-0018 aligned the model-front
