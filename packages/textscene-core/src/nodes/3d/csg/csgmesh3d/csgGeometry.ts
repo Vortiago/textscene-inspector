@@ -14,7 +14,12 @@ import {
 } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { isDrawableMesh, meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
+import {
+  isDrawableMesh,
+  meshContentKey,
+  meshKind,
+  undrawnMeshType,
+} from '../../../../resources/meshes/meshSource';
 import {
   primitiveMeshFiles,
   isAwaitingFontMetrics,
@@ -66,7 +71,7 @@ export function csgMesh3DUndrawnMeshType(
   ctx: CsgGeometryContext
 ): string | null {
   const mesh = meshOf(properties, ctx);
-  return mesh && !isDrawableMesh(mesh) ? mesh.resource.type : null;
+  return mesh && undrawnMeshType(mesh, mesh);
 }
 
 export function csgMesh3DReadsFonts(properties: Record<string, unknown>, ctx: CsgGeometryContext): string[] {

@@ -12,8 +12,12 @@ import { warn } from '../../logger';
 import { projectPrimitiveMeshTexelSize } from '../../parser/projectSettingsParser';
 import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
 import { godotSurfaceParts } from '../../resources/meshes/godotSurface';
-import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../resources/meshes/meshSource';
-import { isDrawablePrimitiveMesh } from '../../resources/meshes/primitivemesh/surface';
+import {
+  meshKind,
+  primitiveMaterialAddress,
+  undrawnMeshType,
+  type MeshSource,
+} from '../../resources/meshes/meshSource';
 import { useResolvableMesh } from '../../resources/meshes/useResolvableMesh';
 import type { ScopedResource } from '../../resources/scopedResource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
@@ -92,11 +96,7 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
   const { mesh: resolvable, isLoading: isLoadingReferences } = useResolvableMesh(
     kind === 'primitive' ? scoped : null
   );
-  // Not while a file or the font loads: the mesh is unknown, not undrawn.
-  const undrawnType =
-    scoped && (kind === null || (resolvable && !isDrawablePrimitiveMesh(resolvable)))
-      ? scoped.resource.type
-      : null;
+  const undrawnType = scoped ? undrawnMeshType(scoped, resolvable) : null;
   useUndrawnMeshReport(undrawnType);
   const primitiveSurfaced = usePrimitiveMesh(
     useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath])

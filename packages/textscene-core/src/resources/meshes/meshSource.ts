@@ -40,6 +40,17 @@ export function isDrawableMesh(mesh: ResolvableResource): boolean {
 }
 
 /**
+ * The type of `scoped` to report as undrawn, or null for a mesh this previewer draws. `resolved` is
+ * the mesh once the files and the font its build reads have loaded, and null while they load: the
+ * mesh is unknown then, not undrawn.
+ */
+export function undrawnMeshType(scoped: ScopedResource, resolved: ResolvableResource | null): string | null {
+  const { type } = scoped.resource;
+  if (meshKind(type) === null) return type;
+  return resolved && !isDrawableMesh(resolved) ? type : null;
+}
+
+/**
  * A key over everything `mesh` builds from, for memoising what is built from it: a fresh parse of
  * equal content gives an equal key. A PrimitiveMesh follows the resources its builder reads.
  */
