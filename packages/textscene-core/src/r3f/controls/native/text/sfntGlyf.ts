@@ -29,7 +29,7 @@ export interface GlyphContours {
 }
 
 /** The contours of a glyph at `fontSizePx`, or null for a glyph with no outline. */
-export type GlyphContourReader = (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
+type GlyphContourReader = (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
 
 /** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
 interface ScaledOutline {

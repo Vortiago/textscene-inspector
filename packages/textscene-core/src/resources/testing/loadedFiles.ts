@@ -1,10 +1,11 @@
-/** `LoadedFile` lookups for a test: a scene whose files none has loaded, and one with a record of them. */
-import type { ParsedResource } from '../../parser/parsedResource';
-import type { LoadedFile } from '../scopedResource';
+/** `LoadedFile` and `LoadedFont` lookups for a test: a scene whose files none has loaded, and one with a record of them. */
+import type { LoadedFile, LoadedFont } from '../scopedResource';
 
 export const NO_FILES: LoadedFile = () => undefined;
 
+export const NO_FONTS: LoadedFont = () => undefined;
+
 export const loadedFilesOf =
-  (files: Readonly<Record<string, ParsedResource>>): LoadedFile =>
-  (path) =>
+  <T extends object>(files: Readonly<Record<string, T>>) =>
+  (path: string): T | undefined =>
     files[path];

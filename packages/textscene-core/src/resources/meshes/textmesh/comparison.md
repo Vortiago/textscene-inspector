@@ -9,7 +9,7 @@ renders_as: one THREE.BufferGeometry of the glyph outlines, with front, back and
 
 # TextMesh
 
-A PrimitiveMesh that builds a flat or deep surface from the outlines of a font's glyphs. The previewer reads the outlines from a TrueType scene font and tessellates them as Godot does. The 2D text controls and this mesh lay out lines with one shaper. A MeshInstance3D or a GridMap cell shows its loading state until the font file arrives, then draws the text.
+A PrimitiveMesh that builds a flat or deep surface from the outlines of a font's glyphs. The previewer reads the outlines from a TrueType scene font and tessellates them as Godot does. The 2D text controls and this mesh lay out lines with one shaper. A MeshInstance3D, a GridMap cell and a CSGMesh3D show their loading state until the font file and its metrics arrive, then draw the text.
 
 ## Linting
 

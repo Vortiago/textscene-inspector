@@ -82,11 +82,27 @@ export function tableFits(dv: DataView, table: TableRecord, minLength: number): 
 }
 
 /**
+ * Written only by `openSfnt`: the table directory of each buffer, null for one that is no plain
+ * SFNT. A `WeakMap` frees the entry of a font file that is evicted.
+ */
+const openedFiles = new WeakMap<ArrayBuffer, SfntFile | null>();
+
+/**
  * Opens raw SFNT bytes: a plain container (TrueType, OpenType-CFF, or the first face of a `'ttcf'`
  * collection) with a table directory that fits. Returns `null`, never throws, for a compressed
- * container, an unknown `sfntVersion` or a directory past the buffer.
+ * container, an unknown `sfntVersion` or a directory past the buffer. A font file opens once,
+ * whether its scalars or its outlines ask first.
  */
 export function openSfnt(bytes: ArrayBuffer): SfntFile | null {
+  let file = openedFiles.get(bytes);
+  if (file === undefined) {
+    file = readSfnt(bytes);
+    openedFiles.set(bytes, file);
+  }
+  return file;
+}
+
+function readSfnt(bytes: ArrayBuffer): SfntFile | null {
   if (bytes.byteLength < 4) return null;
   const dv = new DataView(bytes);
 

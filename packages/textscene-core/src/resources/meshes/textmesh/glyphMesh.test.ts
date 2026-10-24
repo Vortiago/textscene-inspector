@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
-import {
-  parseSfntOutlines,
-  type ContourPoint,
-  type GlyphContours,
-} from '../../../r3f/controls/native/text/sfntOutlines';
+import { parseSfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { buildGlyphMeshData, type GlyphMeshData } from './glyphMesh';
 

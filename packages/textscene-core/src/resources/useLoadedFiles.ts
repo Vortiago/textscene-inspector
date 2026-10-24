@@ -6,6 +6,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
+import type { FontResource } from './fonts/font/types';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceProcessor } from './createResourceProcessor';
 import type { ResourceType } from './ResourceEventBus';
@@ -43,7 +44,11 @@ const PARSED_RESOURCES: FileKind<ParsedResource> = {
   cacheOf: (loader) => loader.resources,
 };
 
+/** A font file loads on the font bus. */
+export const FONT_FILES: FileKind<FontResource> = { busTypes: ['font'], cacheOf: (loader) => loader.fonts };
+
 const NO_PATHS: ReadonlySet<string> = new Set();
+const NO_BUS_TYPES: readonly ResourceType[] = [];
 
 /**
  * The files a plan names, as the resource loader's cache holds them: a hook cannot run once per
@@ -57,19 +62,24 @@ export function useLoadedFiles(plan: (loadedFile: LoadedFile) => readonly string
   return useCachedFiles(PARSED_RESOURCES, plan);
 }
 
-/** {@link useLoadedFiles} for the files of `kind`. */
+/**
+ * {@link useLoadedFiles} for the files of `kind`. A null `kind` reads none, and its hook listens to
+ * no bus: a caller that needs a kind only for some inputs passes null for the rest.
+ */
 export function useCachedFiles<T extends object>(
-  kind: FileKind<T>,
+  kind: FileKind<T> | null,
   plan: (loadedFile: CachedFileReader<T>) => readonly string[]
 ): CachedFiles<T> {
-  const loader = useResourceLoader();
+  const ambientLoader = useResourceLoader();
+  const loader = kind && ambientLoader;
+  const cache = kind && loader ? kind.cacheOf(loader) : null;
   const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
-  const version = useCacheVersion(loader, kind.busTypes, readPaths, { onlyReadKeys: true });
+  const version = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, { onlyReadKeys: true });
   const planned = useMemo(
-    () => [...new Set(plan((path) => cachedFile(kind, loader, path) ?? undefined))],
+    () => (kind ? [...new Set(plan((path) => cache?.getCached(path) ?? undefined))] : []),
     // `version` is a cache-buster: the cache changes outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [plan, kind, loader, version]
+    [plan, kind, cache, version]
   );
   const paths = useStableList(planned);
   // A layout effect, not `useEffect`: a load that lands between the render and a later passive
@@ -77,12 +87,12 @@ export function useCachedFiles<T extends object>(
   useLayoutEffect(() => {
     readPaths.current = new Set(paths);
   }, [paths]);
-  useRequestedFiles(kind, loader, paths);
+  useRequestedFiles(cache, paths);
 
   const read = useMemo(
-    () => new Map(paths.map((path) => [path, cachedFile(kind, loader, path)] as const)),
+    () => new Map(paths.map((path) => [path, cache?.getCached(path)] as const)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kind, loader, paths, version]
+    [cache, paths, version]
   );
   const files = useStableEntries(read);
   useMissingFiles(files);
@@ -96,14 +106,6 @@ export function useCachedFiles<T extends object>(
 function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>): boolean {
   for (const file of files.values()) if (file === undefined) return true;
   return false;
-}
-
-function cachedFile<T extends object>(
-  kind: FileKind<T>,
-  loader: ResourceLoader | null,
-  path: string
-): CachedFile<T> {
-  return loader ? kind.cacheOf(loader).getCached(path) : undefined;
 }
 
 /**
@@ -123,19 +125,17 @@ function useStableEntries<T extends object>(
 
 /** Requests each file not yet cached, and pins each so LRU eviction spares it while mounted. */
 function useRequestedFiles<T extends object>(
-  kind: FileKind<T>,
-  loader: ResourceLoader | null,
+  cache: ResourceProcessor<T> | null,
   paths: readonly string[]
 ): void {
   useEffect(() => {
-    if (!loader) return undefined;
-    const cache = kind.cacheOf(loader);
+    if (!cache) return undefined;
     for (const path of paths) {
       cache.pin(path);
       if (cache.getCached(path) === undefined) cache.request(path);
     }
     return () => paths.forEach((path) => cache.unpin(path));
-  }, [kind, loader, paths]);
+  }, [cache, paths]);
 }
 
 /**

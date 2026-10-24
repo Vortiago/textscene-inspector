@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../parser/types';
 import { NO_RESOURCES } from '../r3f/SceneResourcesContext';
 import type { ResolvableResource } from './scopedResource';
-import { NO_FILES } from './testing/loadedFiles';
+import { NO_FILES, NO_FONTS } from './testing/loadedFiles';
 import { meshContentKey } from './meshes/meshSource';
 import { useContentMemo } from './useContentMemo';
 
@@ -11,6 +11,7 @@ const box = (size: string): ResolvableResource => ({
   resource: { id: 'b', type: 'BoxMesh', data: { size } },
   resources: NO_RESOURCES,
   loadedFile: NO_FILES,
+  loadedFont: NO_FONTS,
 });
 
 function renderMemo(initial: ResolvableResource | null) {
@@ -41,6 +42,7 @@ describe('useContentMemo', () => {
       resource: { id: 't', type: 'TubeTrailMesh', data: { curve: 'SubResource("c")' } },
       resources: { ...NO_RESOURCES, internalResources: [curve] },
       loadedFile: NO_FILES,
+      loadedFont: NO_FONTS,
     });
     const curve = (bakeResolution: string): TscnInternalResource => ({
       id: 'c',

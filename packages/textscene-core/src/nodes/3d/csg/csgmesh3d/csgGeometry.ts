@@ -14,8 +14,13 @@ import {
 } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
-import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
+import { isDrawableMesh, meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
+import {
+  primitiveMeshFiles,
+  isAwaitingFontMetrics,
+  primitiveMeshFontFiles,
+  referencesKey,
+} from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import { findExtResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
 import type { LoadedFile } from '../../../../resources/scopedResource';
@@ -38,23 +43,43 @@ function namesNoMesh(meshRef: string | undefined, ctx: CsgGeometryContext): bool
 
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
-  const mesh = resolveMesh(p.mesh, ctx);
+  const mesh = meshOf(properties, ctx);
   if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
-  if (meshKind(mesh.resource.type) === null) return null;
+  // Not built while the metrics of its font settle, and the context changes when they have.
+  if (!isDrawableMesh(mesh) || isAwaitingFontMetrics(mesh)) return null;
   return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
 
 export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: CsgGeometryContext): string {
   const p = properties as unknown as CSGMesh3DProperties;
-  const mesh = resolveMesh(p.mesh, ctx);
+  const mesh = meshOf(properties, ctx);
   return `mesh:${p.flipFaces}:${mesh ? meshKey(mesh) : `unresolved:${p.mesh}`}`;
 }
 
-export function csgMesh3DMeshType(
+/** The mesh the node's `mesh` property names in `ctx`, or null as `resolveMesh` has it. */
+function meshOf(properties: Record<string, unknown>, ctx: CsgGeometryContext): CsgMesh | null {
+  return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx);
+}
+
+export function csgMesh3DUndrawnMeshType(
   properties: Record<string, unknown>,
   ctx: CsgGeometryContext
 ): string | null {
-  return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx)?.resource.type ?? null;
+  const mesh = meshOf(properties, ctx);
+  return mesh && !isDrawableMesh(mesh) ? mesh.resource.type : null;
+}
+
+export function csgMesh3DReadsFonts(properties: Record<string, unknown>, ctx: CsgGeometryContext): string[] {
+  const mesh = meshOf(properties, ctx);
+  return mesh ? primitiveMeshFontFiles(mesh, ctx.loadedFont) : [];
+}
+
+export function csgMesh3DAwaitsFontMetrics(
+  properties: Record<string, unknown>,
+  ctx: CsgGeometryContext
+): boolean {
+  const mesh = meshOf(properties, ctx);
+  return mesh !== null && isAwaitingFontMetrics(mesh);
 }
 
 export function csgMesh3DReadsFiles(
