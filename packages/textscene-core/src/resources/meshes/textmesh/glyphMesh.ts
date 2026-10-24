@@ -12,7 +12,7 @@
 
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import type { Vector2 } from '../../../godot/math/vector';
-import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/sfntOutlines';
+import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
 import { doubledSignedArea, triangulateContours, type TriangulatedContour } from './triangulate';
 
 /** A polygon vertex. A point on the curve is sharp, and a point stepped along an arc is smooth. */

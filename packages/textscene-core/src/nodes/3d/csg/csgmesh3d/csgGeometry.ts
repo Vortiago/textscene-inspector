@@ -19,6 +19,7 @@ import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import { findExtResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
 import type { LoadedFile } from '../../../../resources/scopedResource';
+import { identityKey } from '../../../../utils/identityKey';
 import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
@@ -68,26 +69,13 @@ export function csgMesh3DReadsFiles(
   return [...(path ? [path] : []), ...(scoped ? primitiveMeshFiles(scoped) : [])];
 }
 
-/** Written only by `fileKey`. A reload parses a new object, so it takes a new key. */
-const fileKeys = new WeakMap<object, number>();
-let nextFileKey = 0;
-
-function fileKey(file: object): number {
-  let key = fileKeys.get(file);
-  if (key === undefined) {
-    key = nextFileKey++;
-    fileKeys.set(file, key);
-  }
-  return key;
-}
-
 /**
  * A scene mesh keys on its content, and on the resources it builds from, since the parser allocates a
  * fresh one per reparse. A mesh in a file keys on that parse and on the files its build reads.
  */
 function meshKey(mesh: CsgMesh): string {
   if (!mesh.file) return meshContentKey(mesh);
-  return `${mesh.file.path}#${fileKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
+  return `${mesh.file.path}#${identityKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */

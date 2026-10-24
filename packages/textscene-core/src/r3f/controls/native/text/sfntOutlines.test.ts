@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import { parseSfntOutlines, type GlyphContours } from './sfntOutlines';
+import type { GlyphContours } from './sfntGlyf';
+import { parseSfntOutlines } from './sfntOutlines';
 import { buildTestFont, fixtureFontBytes, type TestGlyph, type TestPoint } from './sfntOutlines.testkit';
 
 /** Open Sans SemiBold, 2048 units per em, subset to ASCII letters, digits and `é`. */

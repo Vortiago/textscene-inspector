@@ -56,7 +56,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/textmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/textmesh/glyphMesh.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`) |
 | `packages/textscene-core/src/resources/meshes/textmesh/textMeshLines.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s line breaking and `HORIZONTAL_ALIGNMENT_FILL` justification) |
-| `packages/textscene-core/src/r3f/controls/native/text/sfntOutlines.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntOutlines.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/lightmapSizeHint.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_update_lightmap_size` and the setters that call it) |
