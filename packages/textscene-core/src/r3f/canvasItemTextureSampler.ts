@@ -14,32 +14,52 @@ import {
 import type { CanvasItemTextureDefaults } from '../godot/scene/viewport';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
 import { projectCanvasTextureDefaults } from '../parser/projectSettingsParser';
-import { godotTextureFilterState, applyTextureFilterState } from '../resources/textures/godotTextureFilter';
+import {
+  godotTextureFilterState,
+  applyTextureFilterState,
+  type TextureFilterState,
+} from '../resources/textures/godotTextureFilter';
 import { useProjectSettings } from './contexts/ProjectSettingsContext';
+import type { CloneSampler } from './drawnClone';
 
-const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
+/** three's wrapping for each of Godot's repeat modes. */
+export const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
   clamp: THREE.ClampToEdgeWrapping,
   repeat: THREE.RepeatWrapping,
   mirror: THREE.MirroredRepeatWrapping,
 };
 
 /**
- * Writes a filter onto a texture the caller owns. The mipmap filters read the chain the texture has,
- * and a texture imported without one samples its base level under them, as the NEAREST and LINEAR
- * samplers do (`max_lod = 0`, `material_storage.cpp:2467-2476`). An anisotropic filter reads 4 taps whatever
- * the project or viewport level: the canvas binds the default samplers (`renderer_canvas_render_rd.cpp:460`),
+ * The sampler state of a CanvasItem filter. The mipmap filters read the chain the texture has, and a
+ * texture imported without one samples its base level under them, as the NEAREST and LINEAR samplers
+ * do (`max_lod = 0`, `material_storage.cpp:2467-2476`). An anisotropic filter reads 4 taps whatever the
+ * project or viewport level: the canvas binds the default samplers (`renderer_canvas_render_rd.cpp:460`),
  * which are allocated with the 4x default argument (`material_storage.cpp:1291`, `material_storage.h:370`).
  */
-export function applyCanvasItemFilter(texture: THREE.Texture, filter: number): void {
-  applyTextureFilterState(texture, godotTextureFilterState(canvasItemSamplerFilter(filter)));
+export function canvasItemFilterState(filter: number): TextureFilterState {
+  return godotTextureFilterState(canvasItemSamplerFilter(filter));
+}
+
+function canvasItemWrap(repeat: number): THREE.Wrapping {
+  return WRAP[canvasItemSamplerRepeat(repeat)];
 }
 
 /** Writes a resolved sampler's filter and wrap onto a texture the caller owns, before it first uploads. */
 export function applyCanvasItemSampler(texture: THREE.Texture, sampler: CanvasItemTextureSampler): void {
-  applyCanvasItemFilter(texture, sampler.filter);
-  const wrap = WRAP[canvasItemSamplerRepeat(sampler.repeat)];
-  texture.wrapS = wrap;
-  texture.wrapT = wrap;
+  applyTextureFilterState(texture, canvasItemFilterState(sampler.filter));
+  texture.wrapS = texture.wrapT = canvasItemWrap(sampler.repeat);
+}
+
+/**
+ * A 2D clone sampled by `sampler`. NoColorSpace: with `hdr_2d` off (`rendering_server.cpp:3771`), the
+ * canvas filters raw sRGB bytes (`texture_storage.cpp:754`), and `ControlQuad` decodes the sample.
+ */
+export function canvasItemCloneSampler(sampler: CanvasItemTextureSampler): CloneSampler {
+  return {
+    colorSpace: THREE.NoColorSpace,
+    filter: canvasItemFilterState(sampler.filter),
+    wrap: canvasItemWrap(sampler.repeat),
+  };
 }
 
 /** What the ancestors name, `undefined` where none does. */

@@ -5,7 +5,7 @@
  * `:2746`). A dark light shades nothing, as the skipped one does.
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { LIGHT_SLOT_LOOPS, LIGHTS_PARS_ANCHOR, slotArrayDeclaration } from '../lightSlots.js';
 import { AREA_LIGHT_STATICS, installLightBakeModeUniforms, LIGHT_STATICS } from './lightBakeMode.js';
 
@@ -52,11 +52,10 @@ const LIGHT_BAKE_MODE_EDITS: readonly ChunkEdit<LightBakeModeChunk>[] = [
  * chunks, and `lightBakeModeChunk.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotLightBakeMode(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_pars_begin', 'lights_fragment_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(STATIC_DECLARATIONS),
-    apply: (chunks) => applyChunkEdits(chunks, LIGHT_BAKE_MODE_EDITS),
-    missing: 'lights_pars_begin or lights_fragment_begin lacks a line the light bake mode patch replaces',
+  const isPatched = installChunkEdits({
+    edits: LIGHT_BAKE_MODE_EDITS,
+    mark: STATIC_DECLARATIONS,
+    patch: 'light bake mode',
   });
   if (isPatched) installLightBakeModeUniforms();
 }

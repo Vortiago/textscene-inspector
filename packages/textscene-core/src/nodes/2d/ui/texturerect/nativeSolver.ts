@@ -1,8 +1,8 @@
 /**
  * TextureRect's native (WebGL canvas) rect solver: `expand_mode`'s minimum size
  * (`texture_rect.cpp:107-133`), the `stretch_mode` draw rect (`NOTIFICATION_DRAW`, `:33-100`), the
- * sampler mapping (`scene/main/canvas_item.h`) and the flip UV mirror. Pure per-node math, no THREE
- * or React: `Component.tsx` paints.
+ * sampler mapping (`scene/main/canvas_item.h`) and the draw's UV window with its flip mirror. Pure
+ * per-node math, no THREE or React: `Component.tsx` paints.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -16,6 +16,7 @@ import type { TextureRectProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
 import { TextureRectExpandMode } from '../../../../godot/scene/gui';
+import { FULL_UV_WINDOW, flippedUvWindow, regionUvWindow, type UvWindow } from '../../../../r3f/uvWindow';
 
 /**
  * `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`): `Size2()` (`:132`) until a texture
@@ -69,7 +70,7 @@ export interface TextureRectDraw {
 
 /**
  * The `NOTIFICATION_DRAW` switch on `stretch_mode` (`texture_rect.cpp:45-90`), short of the draw
- * (`:95-99`) and the flip (`:92-93`, `applyFlip`), which changes only how the sampler reads.
+ * (`:95-99`) and the flip (`:92-93`, `textureRectUvWindow`), which changes only how the sampler reads.
  * `rectSize` is `get_size()`, known here because painting follows the rect pass.
  */
 export function textureRectDraw(
@@ -157,20 +158,26 @@ export function textureRectDraw(
   }
 }
 
+/** A draw and the size of the texture it samples. */
+export interface SampledDraw extends TextureRectDraw {
+  textureSize: Vector2;
+}
+
 /**
- * `size *= flip ? -1 : 1` (`texture_rect.cpp:92-93`) mirrors the destination quad, crop and all.
- * three.js has no negative-size quad, so this reverses the UV sweep over the same window (`offset +
- * repeat`, `-repeat`), composed onto the caller's repeat and offset, so it runs last. Under
- * `RepeatWrapping`, GLSL's floor-mod `fract()` lands on Godot's `(rectSize - x) mod textureSize`.
+ * The window over the texture before the flip. STRETCH_TILE repeats the texture over the drawn size
+ * from the rect's top-left, a region of that size under `RepeatWrapping`. KEEP_ASPECT_COVERED
+ * samples its crop region.
  */
-export function applyFlip(
-  repeat: Vector2,
-  offset: Vector2,
-  flipH: boolean,
-  flipV: boolean
-): { repeat: Vector2; offset: Vector2 } {
-  return {
-    repeat: { x: flipH ? -repeat.x : repeat.x, y: flipV ? -repeat.y : repeat.y },
-    offset: { x: flipH ? offset.x + repeat.x : offset.x, y: flipV ? offset.y + repeat.y : offset.y },
-  };
+function unflippedUvWindow({ tile, size, textureSize, region }: SampledDraw): UvWindow {
+  if (tile) return regionUvWindow({ x: 0, y: 0, w: size.x, h: size.y }, textureSize);
+  if (region) return regionUvWindow(region, textureSize);
+  return FULL_UV_WINDOW;
+}
+
+/**
+ * The UV window `draw` samples. `size *= flip ? -1 : 1` (`texture_rect.cpp:92-93`) mirrors the
+ * destination quad, crop and all, so the flip reverses the whole window and runs last.
+ */
+export function textureRectUvWindow(draw: SampledDraw, flipH: boolean, flipV: boolean): UvWindow {
+  return flippedUvWindow(unflippedUvWindow(draw), flipH, flipV);
 }

@@ -143,6 +143,14 @@ describe('directionalLightLists', () => {
     expect(shares.get(nested)).toEqual({ x: 2048, y: 0, width: 2048, height: 4096 });
   });
 
+  it('names the first drawn light, and none for a scene without a declared light', () => {
+    const scene = new THREE.Scene();
+    expect(listsOf(scene).first).toBeNull();
+    const first = addDeclaredLight(scene);
+    addDeclaredLight(scene);
+    expect(listsOf(scene).first).toBe(first);
+  });
+
   it('draws the first eight visible lights, shadowed or not', () => {
     const scene = new THREE.Scene();
     const lights = Array.from({ length: 9 }, (_, index) =>

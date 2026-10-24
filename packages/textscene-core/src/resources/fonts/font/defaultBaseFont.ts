@@ -4,13 +4,15 @@
  * default as an argument, since the Control theme lookup owns the project's font.
  */
 import type { FontResource } from './types';
+import { perObject } from '../../../utils/perObject';
 
 /**
- * Written only by `withDefaultBaseFont`, and never cleared. Keyed by default font, then by
- * variation, so a variation answers one object per default and a metrics cache keyed on it keeps
- * its hits. A `WeakMap` frees an entry with its font.
+ * Keyed by default font, then by variation, so a variation answers one object per default and a
+ * metrics cache keyed on it keeps its hits.
  */
-const resolvedByDefault = new WeakMap<FontResource, WeakMap<FontResource, FontResource>>();
+const resolvedOver = perObject((defaultFont: FontResource) =>
+  perObject((font: FontResource) => replaceMissingBase(font, defaultFont))
+);
 
 /** Whether a variation chain from `font` down ends with a variation that names no `base_font`. */
 export function endsWithoutBase(font: FontResource | null): boolean {
@@ -42,9 +44,5 @@ export function withDefaultBaseFont(
 ): FontResource | null {
   if (!font || !defaultFont || !endsWithoutBase(font)) return font;
 
-  let byFont = resolvedByDefault.get(defaultFont);
-  if (!byFont) resolvedByDefault.set(defaultFont, (byFont = new WeakMap()));
-  let resolved = byFont.get(font);
-  if (!resolved) byFont.set(font, (resolved = replaceMissingBase(font, defaultFont)));
-  return resolved;
+  return resolvedOver(defaultFont)(font);
 }

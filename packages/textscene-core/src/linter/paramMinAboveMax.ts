@@ -23,9 +23,9 @@ export function paramMinAboveMaxFindings(
   properties: Record<string, string>,
   stems: readonly string[]
 ): { property: string; message: string }[] {
-  return crossedParamRanges(properties, stems).map(({ minKey, maxKey, min, max, movedKey, loadedValue }) => ({
+  return crossedParamRanges(properties, stems).map(({ minKey, maxKey, min, max, movedKey }) => ({
     property: movedKey,
-    message: `'${minKey}' ${formatReal(min)} is above '${maxKey}' ${formatReal(max)}. Godot applies them in the order the file lists them, so '${movedKey}' loads as ${formatReal(loadedValue)}.`,
+    message: `'${minKey}' ${formatReal(min)} is above '${maxKey}' ${formatReal(max)}. Godot applies them in the order the file lists them, so '${movedKey}' loads as ${formatReal(movedKey === minKey ? max : min)}.`,
   }));
 }
 

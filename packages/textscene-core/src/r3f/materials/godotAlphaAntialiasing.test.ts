@@ -9,6 +9,7 @@ import {
 } from './godotAlphaAntialiasing';
 import { functionBody } from '../testing/glslSource';
 import type { ProgramShader } from '../materialProgramInputs';
+import { programShader, SURFACE_AND_DEPTH_PROGRAMS } from '../testing/patchedFragment';
 import {
   AlphaAntiAliasing,
   hashAntialiasing,
@@ -16,15 +17,6 @@ import {
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
-
-/** Every three program an antialiased Godot surface, its depth prepass or its shadow compiles. */
-const ANTIALIASED_PROGRAMS: Readonly<Record<string, { vertexShader: string; fragmentShader: string }>> = {
-  basic: THREE.ShaderLib.basic,
-  standard: THREE.ShaderLib.standard,
-  physical: THREE.ShaderLib.physical,
-  depth: THREE.ShaderLib.depth,
-  distance: THREE.ShaderLib.distance,
-};
 
 const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3)!;
 
@@ -41,7 +33,7 @@ const MULTISAMPLED_TARGET = new THREE.WebGLRenderTarget(4, 4, { samples: 2 });
 
 function compiled(
   material: THREE.Material,
-  program: { vertexShader: string; fragmentShader: string } = THREE.ShaderLib.basic
+  program: { vertexShader: string; fragmentShader: string } = programShader('basic')
 ): ProgramShader {
   const shader: ProgramShader = { ...program, uniforms: {} };
   GODOT_ALPHA_ANTIALIASING.onBeforeCompile.call(material, shader);
@@ -56,30 +48,29 @@ function antialiased(cut = SCISSOR_CUT, map: THREE.Texture | null = null): THREE
   });
 }
 
-describe.each(Object.entries(ANTIALIASED_PROGRAMS))(
-  'GODOT_ALPHA_ANTIALIASING on the %s program',
-  (_n, program) => {
-    it('cuts at the scissor, hashes, ramps the edge, covers one sample, then runs three’s cut', () => {
-      const main = functionBody(compiled(antialiased(), program).fragmentShader, 'main');
-      const order = [
-        'diffuseColor.a < godotAlphaScissorThreshold',
-        '#include <alphahash_fragment>',
-        'godotEdgeCoverage(',
-        'godotSingleSampleCoverage > 0',
-        '#include <alphatest_fragment>',
-      ].map((statement) => main.indexOf(statement));
-      expect(order.every((index) => index >= 0)).toBe(true);
-      expect(order).toEqual([...order].sort((a, b) => a - b));
-    });
+describe.each(SURFACE_AND_DEPTH_PROGRAMS)('GODOT_ALPHA_ANTIALIASING on the %s program', (name) => {
+  const program = programShader(name);
 
-    it('declares its uniforms and functions once, before main', () => {
-      const { fragmentShader } = compiled(antialiased(), program);
-      const declarations = fragmentShader.slice(0, fragmentShader.indexOf('void main()'));
-      expect(declarations).toContain('uniform float godotAlphaAntialiasingEdge;');
-      expect(declarations.match(/float godotEdgeCoverage\(/g)).toHaveLength(1);
-    });
-  }
-);
+  it('cuts at the scissor, hashes, ramps the edge, covers one sample, then runs three’s cut', () => {
+    const main = functionBody(compiled(antialiased(), program).fragmentShader, 'main');
+    const order = [
+      'diffuseColor.a < godotAlphaScissorThreshold',
+      '#include <alphahash_fragment>',
+      'godotEdgeCoverage(',
+      'godotSingleSampleCoverage > 0',
+      '#include <alphatest_fragment>',
+    ].map((statement) => main.indexOf(statement));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it('declares its uniforms and functions once, before main', () => {
+    const { fragmentShader } = compiled(antialiased(), program);
+    const declarations = fragmentShader.slice(0, fragmentShader.indexOf('void main()'));
+    expect(declarations).toContain('uniform float godotAlphaAntialiasingEdge;');
+    expect(declarations.match(/float godotEdgeCoverage\(/g)).toHaveLength(1);
+  });
+});
 
 describe('GODOT_ALPHA_ANTIALIASING.onBeforeCompile', () => {
   it("reads the edge and the scissor from the material's userData", () => {

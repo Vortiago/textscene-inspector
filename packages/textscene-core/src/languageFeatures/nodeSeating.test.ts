@@ -23,6 +23,17 @@ describe('nodeSectionOfPath', () => {
 });
 
 describe('seatedNodeTree', () => {
+  it('seats a heading whose parent_id_path lands under the heading the trail names', () => {
+    const source = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Door" type="Node3D" parent="." unique_id=7]',
+      '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]',
+    ].join('\n');
+    const [root] = seatedNodeTree(new LanguageDocument(source));
+    const [door] = root!.children;
+    expect(door?.children.map(({ section }) => section.attributes.name)).toEqual(['Orphan']);
+  });
+
   it('seats each heading under its parent, the scene root first', () => {
     const [root] = seatedNodeTree(NESTED);
     expect(root?.section.attributes.name).toBe('Root');

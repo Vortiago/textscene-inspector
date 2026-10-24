@@ -19,6 +19,7 @@ import { NodeDispatcher } from '../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneStack } from '../../r3f/testing/SceneStack';
 import { errorsOf } from '../../linter/testing/tierLists';
+import { settleLoads } from '../../r3f/testing/settleLoads';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -79,7 +80,7 @@ async function renderOcc(
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 

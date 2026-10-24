@@ -13,8 +13,8 @@ export interface ParsedResource {
   resourceType: string;
   /** The [resource] section's properties, raw value strings. */
   properties: Record<string, string>;
-  extResources: TscnExternalResource[];
-  subResources: TscnInternalResource[];
+  readonly extResources: readonly TscnExternalResource[];
+  readonly subResources: readonly TscnInternalResource[];
 }
 
 /** Throws when the content has no [gd_resource] header (not a .tres file). */

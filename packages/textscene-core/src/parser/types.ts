@@ -4,7 +4,7 @@
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { InstanceNameSetting } from './nodeOwner';
-import type { IdHeading } from '../godot/scene/packedScene.js';
+import type { ConnectionEndResolver } from './connectionEnd.js';
 
 /**
  * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
@@ -52,8 +52,8 @@ export interface IdRecovery {
 export interface TscnScene<N extends RawNode = TscnNode> {
   /** Root nodes in the scene tree. */
   nodes: N[];
-  externalResources: TscnExternalResource[];
-  internalResources: TscnInternalResource[];
+  readonly externalResources: readonly TscnExternalResource[];
+  readonly internalResources: readonly TscnInternalResource[];
   /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
@@ -112,6 +112,11 @@ export interface RawNode {
    * is then Godot's rename for the vanished `parent` (`packed_scene.cpp:561-563`).
    */
   authoredName?: string;
+  /**
+   * True on a tree node the builder seated under the heading its `parent_id_path=` landed on,
+   * because its `parent` path vanished (`packed_scene.cpp:161-163`). The node keeps its name.
+   */
+  landedByIdTrail?: true;
   /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
@@ -184,13 +189,15 @@ export interface ConnectionHeading {
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
-   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which
-   * `reRootedNames` holds, and those it left out of `nodes`, for a file or a trail Godot does not
-   * re-root, or a later heading with no `parent=`.
+   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which `reRootedNames`
+   * holds, those it landed under a `parent_id_path=` heading, and those it left out of `nodes`, for
+   * a file or a trail Godot does not re-root, or a later heading with no `parent=`.
    */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
   /** The name the builder gave each re-rooted heading's node, which the heading's own node keeps unrenamed. */
   reRootedNames: ReadonlyMap<NodeOrigin<RawNode>, string>;
+  /** The orphans the builder gave a seat in the tree, re-rooted or landed, so Phase 2 ran their rules. */
+  seatedOrphans: ReadonlySet<NodeOrigin<RawNode>>;
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`), or undefined.
@@ -213,8 +220,8 @@ export interface HeadingFacts {
    * An orphan absent here is re-rooted, or has no trail.
    */
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
-  /** Every `[node]` heading in file order, as an id trail reads it (`packed_scene.cpp:1947-2005`). */
-  idHeadings: readonly IdHeading[];
+  /** The node a `[connection]` end names, by its path and then its id trail. */
+  resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
   /**

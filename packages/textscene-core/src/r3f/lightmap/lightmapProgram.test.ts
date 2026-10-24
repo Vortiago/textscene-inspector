@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { ProgramShader } from '../materialProgramInputs';
 import { functionBody } from '../testing/glslSource';
-import { scalarGlslFunction } from '../testing/glslScalar';
+import { GLSL_BUILT_INS, scalarGlslFunction } from '../testing/glslScalar';
+import { ShadowmaskMode } from '../../godot/scene/lightmapGi';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from './lightmapProgram';
 import { LightmapInstance, type LightmapAssignment } from './sceneLightmaps';
 
@@ -76,16 +77,111 @@ describe('LIGHTMAP_PROGRAM shaders', () => {
   });
 
   it('places the UV2 in the atlas by the user rect and slice', () => {
-    expect(functionBody(fragment, 'vec3 godotLightmapAmbient')).toContain(
-      'vec3 uvw = vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, godotLightmapSlice );'
+    expect(functionBody(fragment, 'vec3 godotLightmapUvw')).toContain(
+      'return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, layer );'
+    );
+    expect(functionBody(fragment, 'vec3 godotLightmapUvw')).toContain(
+      'float layer = godotLightmapSlice * ( godotLightmapUsesSH ? 4.0 : 1.0 );'
+    );
+  });
+
+  it('reads the lightmap and the shadowmask at that one place', () => {
+    expect(functionBody(fragment, 'vec3 godotLightmapAmbient')).toContain('vec3 uvw = godotLightmapUvw();');
+    expect(functionBody(fragment, 'float godotLightmapShadowmask')).toContain(
+      'vec3 uvw = godotLightmapUvw();'
     );
   });
 
   it('reads four layers per slice of directional data, and lights the L1 bands along the normal', () => {
     const ambient = functionBody(fragment, 'vec3 godotLightmapAmbient');
-    expect(ambient).toContain('uvw.z *= 4.0;');
     expect(ambient).toContain(
       'return l0 + l1n1 * n.y * ( l0 * 4.0 ) + l1z * n.z * ( l0 * 4.0 ) + l1p1 * n.x * ( l0 * 4.0 );'
+    );
+  });
+});
+
+const { mix } = GLSL_BUILT_INS;
+
+/**
+ * The shadow of a sun that Godot hands the light. `shadow` is the lookup, `fadeOut` the sun's
+ * fade, `opacity` the light's `shadow_opacity`, which Godot applies once after the fade
+ * (`scene_forward_clustered.glsl:2483-2492`, `:2597`).
+ */
+const godotReplace = (shadow: number, mask: number, fadeOut: number, opacity: number) =>
+  mix(1, mix(shadow, mask, fadeOut), opacity);
+const godotOverlay = (shadow: number, mask: number, fadeOut: number, opacity: number) =>
+  mix(1, mask * mix(shadow, 1, fadeOut), opacity);
+
+describe('the shadowmask mix', () => {
+  const replace = scalarGlslFunction(fragment, 'godotShadowmaskReplace');
+  const overlay = scalarGlslFunction(fragment, 'godotShadowmaskOverlay');
+
+  /** The lookup as `getSunShadow` hands it on: its opacity already applied. */
+  const opacityApplied = (shadow: number, opacity: number) => mix(1, shadow, opacity);
+
+  it.each([
+    { shadow: 0.2, mask: 0.6, fadeOut: 0.3, opacity: 1 },
+    { shadow: 0.2, mask: 0.6, fadeOut: 0.3, opacity: 0.7 },
+    { shadow: 1, mask: 0.1, fadeOut: 0, opacity: 0.4 },
+    { shadow: 0.9, mask: 0, fadeOut: 0.8, opacity: 0.25 },
+  ])('gives Replace as Godot mixes it, for %j', ({ shadow, mask, fadeOut, opacity }) => {
+    expect(replace(opacityApplied(shadow, opacity), mask, fadeOut, opacity)).toBeCloseTo(
+      godotReplace(shadow, mask, fadeOut, opacity),
+      12
+    );
+  });
+
+  it.each([
+    { shadow: 0.2, mask: 0.6, fadeOut: 0.3, opacity: 1 },
+    { shadow: 0.2, mask: 0.6, fadeOut: 0.3, opacity: 0.7 },
+    { shadow: 1, mask: 0.1, fadeOut: 0, opacity: 0.4 },
+    { shadow: 0.9, mask: 0, fadeOut: 0.8, opacity: 0.25 },
+  ])('gives Overlay as Godot multiplies it, for %j', ({ shadow, mask, fadeOut, opacity }) => {
+    expect(overlay(opacityApplied(shadow, opacity), mask, fadeOut, opacity)).toBeCloseTo(
+      godotOverlay(shadow, mask, fadeOut, opacity),
+      12
+    );
+  });
+
+  it('gives mode Only the shadowmask byte to the first drawn light and full shadow to the others', () => {
+    const only = scalarGlslFunction(fragment, 'godotShadowmaskOnly');
+    expect(only(0.6, 1, 1)).toBeCloseTo(Math.trunc(0.6 * 255) / 255, 12);
+    expect(only(0.6, 0, 1)).toBe(0);
+    expect(only(0.6, 0, 0)).toBe(1);
+    expect(only(0.6, 1, 0.5)).toBeCloseTo(mix(1, Math.trunc(0.6 * 255) / 255, 0.5), 12);
+  });
+
+  it('gives the shadowmask past the fade, where the real-time shadow is gone', () => {
+    expect(replace(1, 0.35, 1, 1)).toBeCloseTo(0.35, 12);
+    expect(overlay(1, 0.35, 1, 1)).toBeCloseTo(0.35, 12);
+  });
+
+  it('reads a lit shadowmask as no shadow in both modes (edge case)', () => {
+    expect(replace(opacityApplied(0.5, 0.8), 1, 0.2, 0.8)).toBeCloseTo(godotReplace(0.5, 1, 0.2, 0.8), 12);
+    expect(overlay(1, 1, 0.5, 1)).toBeCloseTo(1, 12);
+  });
+});
+
+describe('the shadowmask read', () => {
+  const read = functionBody(fragment, 'float godotLightmapShadowmask');
+
+  it('reads the alpha of the lightmap atlas, at the first layer of a slice of directional data', () => {
+    expect(read).toContain('textureLod( godotLightmap, uvw, 0.0 ).a');
+  });
+
+  it('reads the alpha with the lightmap filter and the lightmap texture size', () => {
+    expect(read).toContain('godotLightmapUsesBicubic ? godotShadowmaskBicubic( uvw ).x');
+    expect(functionBody(fragment, 'vec3 godotShadowmaskBicubic')).toContain(
+      'texture( godotLightmap, vec3( p0, uvw.z ) ).a'
+    );
+    expect(functionBody(fragment, 'vec3 godotShadowmaskBicubic')).toContain(
+      'vec2 size = godotLightmapTextureSize;'
+    );
+  });
+
+  it('is a sun shadow that replaces the fade only where the lightmap draws', () => {
+    expect(functionBody(fragment, 'float godotLightmapSunShadow')).toContain(
+      'if ( ! godotLightmapActive || godotShadowmaskMode == 0 ) return godotSunShadowFaded( shadow, fadeOut );'
     );
   });
 });
@@ -164,6 +260,16 @@ describe('LIGHTMAP_PROGRAM uniforms', () => {
       true,
       false,
     ]);
+  });
+
+  it('reads the shadowmask mode the lightmap holds', () => {
+    const bound = assignment();
+    bound.lightmap.shadowmaskMode = ShadowmaskMode.OVERLAY;
+    expect(uniformsBoundTo(bound).godotShadowmaskMode!.value).toBe(ShadowmaskMode.OVERLAY);
+  });
+
+  it('reads no shadowmask for a material bound to none (edge case)', () => {
+    expect(uniformsBoundTo(null).godotShadowmaskMode!.value).toBe(ShadowmaskMode.NONE);
   });
 
   it('follows a rebind without a recompile', () => {

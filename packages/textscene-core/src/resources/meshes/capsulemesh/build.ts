@@ -31,6 +31,7 @@
 import { storedReal } from '../../../godot/math/real.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { rimPoint } from '../primitivemesh/rimPoint.js';
+import { writeRings } from '../primitivemesh/rows.js';
 import { ONE_THIRD, SurfaceWriter, TWO_THIRDS } from '../primitivemesh/surfaceWriter.js';
 import type { CapsuleMeshProperties } from './types.js';
 
@@ -66,23 +67,18 @@ export function buildCapsuleMeshSurface(p: CapsuleMeshProperties, uv2Padding: nu
   const heightV = storedReal((height - 2 * radius) / verticalLength);
 
   const writer = new SurfaceWriter(uv2Padding !== null);
-  const section = (vertexAt: SectionVertex): void => {
-    let thisrow = writer.vertexCount;
-    let prevrow = 0;
-    for (let j = 0; j <= rings + 1; j++) {
-      const v = storedReal(j / (rings + 1));
+  const rowCount = rings + 1;
+  const section = (vertexAt: SectionVertex): void =>
+    writeRings(writer, rowCount, (j) => {
+      const v = storedReal(j / rowCount);
       for (let i = 0; i <= radialSegments; i++) {
         const u = storedReal(i / radialSegments);
         const [sine, z] = rimPoint(i, radialSegments);
         const x = -sine;
-        const { position, normal, uvV, uv2V } = vertexAt(v, j === rings + 1, x, z);
+        const { position, normal, uvV, uv2V } = vertexAt(v, j === rowCount, x, z);
         writer.vertex(position, normal, [-z, 0, -x, 1], [u, uvV], [u * radialH, uv2V]);
-        if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
       }
-      prevrow = thisrow;
-      thisrow = writer.vertexCount;
-    }
-  };
+    });
 
   // The top hemisphere (`:451`).
   section((v, lastRow, x, z) => {

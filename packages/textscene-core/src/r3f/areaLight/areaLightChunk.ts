@@ -16,15 +16,9 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import {
-  applyChunkEdits,
-  applyEdits,
-  installChunkPatch,
-  type ChunkEdit,
-  type Chunks,
-} from '../shaderPatch/chunkPatch.js';
-import { LIGHT_FUNCTION_MARK, RE_DIRECT } from '../godotLightFunction.js';
-import { LIGHT_ATTENUATION_MARK } from '../godotLightAttenuation.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installGodotLightFunction, RE_DIRECT } from '../godotLightFunction.js';
+import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL, LTC_SPECULAR } from './ltcIntegral.js';
 import { installLtcTextures } from './ltcTextures.js';
 import {
@@ -140,27 +134,8 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 
 /** three's area light block, from the `#if` that opens it to the `#endif` that closes it. */
 const THREE_AREA_LIGHT_IF = '#if NUM_RECT_AREA_LIGHTS > 0';
-const THREE_AREA_LIGHT_START = '\tvoid RE_Direct_RectArea_Physical(';
+const THREE_AREA_LIGHT_START = `${THREE_AREA_LIGHT_IF}\n\tvoid RE_Direct_RectArea_Physical(`;
 const THREE_AREA_LIGHT_END = '\n#endif\n';
-
-/**
- * The chunk without three's area light block, and Godot's before the light function's own
- * `RE_Direct_Physical`: Godot's calls the light function's diffuse and toon terms, which the light
- * function patch declares just before it.
- */
-function withGodotAreaLight(chunk: string): string | null {
-  const start = chunk.indexOf(THREE_AREA_LIGHT_START);
-  const blockStart = chunk.lastIndexOf(THREE_AREA_LIGHT_IF, start);
-  const end = chunk.indexOf(THREE_AREA_LIGHT_END, start);
-  if (start < 0 || blockStart < 0 || end < 0 || chunk.split(THREE_AREA_LIGHT_START).length !== 2) return null;
-  const withoutThree = `${chunk.slice(0, blockStart)}${chunk.slice(end + THREE_AREA_LIGHT_END.length)}`;
-  return applyEdits(withoutThree, [
-    {
-      three: RE_DIRECT,
-      godot: `${THREE_AREA_LIGHT_IF}\n${LTC_INTEGRAL}${LTC_SPECULAR}${AREA_LIGHT}#endif\n${RE_DIRECT}`,
-    },
-  ]);
-}
 
 const THREE_AREA_UNIFORM = 'uniform RectAreaLight rectAreaLights[ NUM_RECT_AREA_LIGHTS ];';
 const THREE_AREA_CALL = 'RE_Direct_RectArea( rectAreaLight, geometryPosition,';
@@ -176,7 +151,23 @@ const UNSHADOWED_AREA_LIGHT = `#ifndef GODOT_AREA_SHADOW
 #endif
 `;
 
-const UNIFORM_AND_CALL_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
+/**
+ * three's area light block out, and Godot's in before the light function's own `RE_Direct_Physical`:
+ * Godot's calls the light function's diffuse and toon terms, which the light function patch declares
+ * just before it. Then the per-light uniforms, and the call that hands them on.
+ */
+const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
+  {
+    chunk: 'lights_physical_pars_fragment',
+    three: THREE_AREA_LIGHT_START,
+    until: THREE_AREA_LIGHT_END,
+    godot: '',
+  },
+  {
+    chunk: 'lights_physical_pars_fragment',
+    three: RE_DIRECT,
+    godot: `${THREE_AREA_LIGHT_IF}\n${LTC_INTEGRAL}${LTC_SPECULAR}${AREA_LIGHT}#endif\n${RE_DIRECT}`,
+  },
   {
     chunk: 'lights_pars_begin',
     three: THREE_AREA_UNIFORM,
@@ -198,29 +189,19 @@ const UNIFORM_AND_CALL_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   },
 ];
 
-function areaLightChunks(chunks: Chunks<AreaLightChunkName>): Chunks<AreaLightChunkName> | null {
-  const lightFunction = withGodotAreaLight(chunks.lights_physical_pars_fragment);
-  if (lightFunction === null) return null;
-  return applyChunkEdits({ ...chunks, lights_physical_pars_fragment: lightFunction }, UNIFORM_AND_CALL_EDITS);
-}
-
 /**
- * Replaces three's area light, and gives its tables, the area light atlas and the per-light
- * uniforms to every built-in lit material, for every program compiled after the call. It reads the
- * light function's and the attenuation's patches, so it installs after them. A three release that
- * rewrites a replaced text keeps all its own chunks, and `areaLightChunk.test.ts` fails on that
- * release. A second call changes nothing.
+ * Installs the light function and the attenuation it reads, then replaces three's area light, and
+ * gives its tables, the area light atlas and the per-light uniforms to every built-in lit material,
+ * for every program compiled after the call. A three release that rewrites a replaced text keeps
+ * all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call changes
+ * nothing.
  */
 export function installGodotAreaLight(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_pars_begin', 'lights_physical_pars_fragment', 'lights_fragment_begin'],
-    isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes('godotLtcIntegral('),
-    apply: areaLightChunks,
-    missing: 'rect area light lacks a text the Godot area light replaces',
-    requires: {
-      lights_physical_pars_fragment: LIGHT_FUNCTION_MARK,
-      lights_pars_begin: LIGHT_ATTENUATION_MARK,
-    },
+  const isPatched = installChunkEdits({
+    requires: [installGodotLightFunction, installGodotLightAttenuation],
+    edits: AREA_LIGHT_EDITS,
+    mark: 'godotLtcIntegral(',
+    patch: 'area light',
   });
   if (!isPatched) return;
   installLtcTextures();

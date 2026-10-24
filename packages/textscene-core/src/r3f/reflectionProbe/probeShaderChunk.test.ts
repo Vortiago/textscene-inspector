@@ -2,20 +2,16 @@
  * The probes ride three's indirect light lines. A three release that rewrites one fails here, not
  * silently in a capture.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotReflectionProbes } from './probeShaderChunk';
 import { atlasSlot, instanceLayers, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import { warningsOf } from '../testing/logWarnings';
-import { installedShaderChunks } from '../testing/shaderPatches';
+import { installedShaderChunks, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
-const threeChunks = { ...THREE.ShaderChunk };
-
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-});
+restoreShaderGlobalsAfterEach();
 
 function patchedEnd(): string {
   installGodotReflectionProbes();

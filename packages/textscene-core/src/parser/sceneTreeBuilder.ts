@@ -122,12 +122,14 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // An unlisted end passed content another file lists, where Godot may still find the
     // parent, so nothing here says the path vanished and it never re-roots.
     if (end !== null && typeof end !== 'string') continue;
-    // The path has vanished. A `parent_id_path=` is tried first (`:161-163`) and, where it
-    // lands, seats the node somewhere this parse cannot name, so that node, like every node
-    // of a refused file, stays out of the tree for `orphanedNodes`.
+    // The path has vanished. A `parent_id_path=` is tried first (`:161-163`). Where it lands in
+    // this file, the node sits under that heading. Where it enters an instance, the node sits
+    // somewhere this parse cannot name, so it stays out of the tree like every node of a refused file.
     if (!reRootsVanished) continue;
-    if (idTrailEnd(origins, index, isPlaced)) continue;
-    reRoot(tables, node, resolveOwner);
+    const recovered = idTrailEnd(origins, index, isPlaced);
+    if (recovered === undefined) reRoot(tables, node, resolveOwner);
+    else if (recovered.kind === 'lands')
+      seatLanded(tables, node, origins[recovered.heading]!.node, resolveOwner);
   }
 
   return {
@@ -179,6 +181,22 @@ function seatBelowParent<N extends SceneNode<N>>(
   anchor.node.children.push(seat);
   register(tables, anchor.foldedParentPath, seat, anchor.node);
   return true;
+}
+
+/**
+ * Seats a heading under the heading its `parent_id_path=` landed on, at the path that heading's
+ * node has in the tree (`packed_scene.cpp:161-163`, `:1985-2005`). A heading with no name has no
+ * path to continue from, and this parse leaves the node out.
+ */
+function seatLanded<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  node: N,
+  landedOn: N,
+  resolveOwner: () => string | undefined
+): void {
+  const parentPath = tables.pathOf.get(tables.seated.get(landedOn)!);
+  if (parentPath === undefined || !seatBelowParent(tables, node, parentPath, resolveOwner)) return;
+  tables.seated.get(node)!.landedByIdTrail = true;
 }
 
 /**
@@ -559,12 +577,45 @@ function findInstanceAnchor<N extends RawNode>(
  */
 export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>(
   all: readonly H[],
-  { seated }: Pick<SceneSeating<N>, 'seated'>
+  seating: Pick<SceneSeating<N>, 'seated'>
 ): H[] {
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
-  return all.filter(({ node }) => {
-    const seat = seated.get(node);
-    return seat === undefined || seat.authoredName !== undefined;
-  });
+  return all.filter(({ node }) => !isSeatedAtOwnPath(node, seating));
+}
+
+/**
+ * Whether the heading's node sits at the path its `parent=` names. A re-rooted copy keeps its
+ * `authoredName`, a landed one lives under the heading its trail named, and a node the seating left
+ * out has no copy.
+ */
+export function isSeatedAtOwnPath<N extends RawNode>(
+  node: N,
+  { seated }: Pick<SceneSeating<N>, 'seated'>
+): boolean {
+  const seat = seated.get(node);
+  return seat !== undefined && !isReRooted(seat) && seat.landedByIdTrail === undefined;
+}
+
+/** Whether the tree node is a copy the builder re-rooted, which keeps the name its heading wrote. */
+export function isReRooted(seat: RawNode): boolean {
+  return seat.authoredName !== undefined;
+}
+
+/**
+ * The seated node each seated copy sits under because its `parent=` names it, or its
+ * `parent_id_path=` landed it there. A re-rooted copy has none, since its path vanished, and a copy
+ * seated below an instance for a path into that instance has none, since no heading of this file is
+ * the node the path names.
+ */
+export function seatedParents<N extends SceneNode<N>>(roots: readonly N[]): Map<N, N> {
+  const parents = new Map<N, N>();
+  const pending = [...roots];
+  for (let parent = pending.pop(); parent; parent = pending.pop()) {
+    for (const child of parent.children) {
+      if (!isReRooted(child) && child.instanceSubPath === undefined) parents.set(child, parent);
+      pending.push(child);
+    }
+  }
+  return parents;
 }

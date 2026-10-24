@@ -2,8 +2,10 @@
  * Godot's `texture_mipmap_bias` in three's programs. Godot builds the samplers of every 3D material
  * in a viewport with the bias as their mip level offset, on the four mipmapped filters only
  * (`material_storage.cpp:2454-2502`). WebGL2 has no per-sampler bias, so a program samples each such
- * slot with `texture(sampler, uv, bias)` from one shared uniform. A pass writes it as it renders.
- * A pass that draws 3D materials and skips `renderWithMipmapBias` samples at the last value written.
+ * slot with `texture(sampler, uv, bias)` from one shared uniform, and a `textureGrad` read with its
+ * gradients scaled by `2^bias`, which shifts the mip level by the same amount. A pass writes the
+ * uniform as it renders. A pass that draws 3D materials and skips `renderWithMipmapBias` samples at
+ * the last value written.
  */
 
 import * as THREE from 'three';
@@ -13,6 +15,7 @@ import { samplesMipChain } from '../../resources/textures/godotTextureFilter';
 
 const BIAS_UNIFORM = 'godotMipmapBias';
 const SAMPLE_HELPER = 'godotMipmapBiased';
+const GRADIENT_SAMPLE_HELPER = 'godotMipmapBiasedGrad';
 
 /**
  * The slots Godot's materials read through the viewport's samplers, under three's names: a
@@ -41,7 +44,10 @@ const BIASED_SLOTS = [
   'iridescenceThicknessMap',
 ] as const;
 
-const BIASED_SAMPLES = new RegExp(String.raw`texture2D\(\s*(${BIASED_SLOTS.join('|')})\s*,`, 'g');
+const BIASED_SAMPLES = new RegExp(
+  String.raw`(?:texture2D|textureGrad)\(\s*(${BIASED_SLOTS.join('|')})\s*,`,
+  'g'
+);
 /** three's own pattern for a chunk include (`WebGLProgram.js`). */
 const INCLUDE = /^[ \t]*#include +<([\w./]+)>/gm;
 
@@ -81,11 +87,18 @@ uniform float ${BIAS_UNIFORM};
 vec4 ${SAMPLE_HELPER}( sampler2D sampler, vec2 uv ) {
 	return texture2D( sampler, uv, ${BIAS_UNIFORM} );
 }
+vec4 ${GRADIENT_SAMPLE_HELPER}( sampler2D sampler, vec2 uv, vec2 uvDx, vec2 uvDy ) {
+	float scale = exp2( ${BIAS_UNIFORM} );
+	return textureGrad( sampler, uv, uvDx * scale, uvDy * scale );
+}
 `;
 
 /** `source` with every biased slot's sample routed through the helper. */
 function biasedSamples(source: string): string {
-  return rewrittenShader(source, BIASED_SAMPLES, (_, slot) => `${SAMPLE_HELPER}( ${slot},`);
+  return rewrittenShader(source, BIASED_SAMPLES, (read, slot) => {
+    const helper = read.startsWith('textureGrad') ? GRADIENT_SAMPLE_HELPER : SAMPLE_HELPER;
+    return `${helper}( ${slot},`;
+  });
 }
 
 /**

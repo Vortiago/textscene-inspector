@@ -6,12 +6,7 @@
  * chunk calls (`areaLightChunk.ts`).
  */
 
-import {
-  applyChunkEdits,
-  installChunkPatch,
-  type ChunkEdit,
-  type Chunks,
-} from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { installAreaLightShadowUniforms } from '../areaLight/areaLightShadowUniforms.js';
@@ -127,16 +122,6 @@ ${OMNI_LOOKUP}`,
   },
 ];
 
-type PositionalShadowChunks = Chunks<PositionalChunkName>;
-
-/**
- * The chunks with every edit applied, or null when an edit's text is missing from its chunk or
- * occurs more than once.
- */
-function positionalShadowChunks(chunks: PositionalShadowChunks): PositionalShadowChunks | null {
-  return applyChunkEdits(chunks, POSITIONAL_SHADOW_EDITS);
-}
-
 /**
  * Installs the soft shadow filter, then replaces three's chunks and gives the atlas, its colour and
  * the area lights' shadow terms to every built-in lit material and to `UniformsLib.lights`, for every
@@ -145,17 +130,11 @@ function positionalShadowChunks(chunks: PositionalShadowChunks): PositionalShado
  * `positionalShadowChunk.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotPositionalShadow(): void {
-  if (!installSoftShadowFilter()) return;
-  const isPatched = installChunkPatch({
-    names: [
-      'shadowmap_vertex',
-      'shadowmap_pars_fragment',
-      'lights_fragment_begin',
-      'shadowmask_pars_fragment',
-    ],
-    isApplied: (chunks) => chunks.lights_fragment_begin.includes('godotOmniShadow('),
-    apply: positionalShadowChunks,
-    missing: 'omni and spot shadow lookups lack a line the Godot lookups replace',
+  const isPatched = installChunkEdits({
+    requires: [installSoftShadowFilter],
+    edits: POSITIONAL_SHADOW_EDITS,
+    mark: 'godotOmniShadow(',
+    patch: 'positional shadow',
   });
   if (!isPatched) return;
   installLitUniform(POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth());

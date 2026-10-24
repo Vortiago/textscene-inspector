@@ -11,6 +11,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { Node2D } from '../../base/node2d/Component';
 import { parallaxMirrorOffsets } from '../parallaxbackground/parallaxScroll';
 import { useParallaxScrollRegistry } from '../parallaxbackground/scrollContext';
+import { parentPathOf } from '../../../utils/nodePath';
 import type { ParallaxLayerProperties } from './types';
 
 export function ParallaxLayer({ node, children }: NodeComponentProps) {
@@ -34,7 +35,7 @@ export function ParallaxLayer({ node, children }: NodeComponentProps) {
     if (!group || !registry) return;
     // `_update_scroll` poses `get_child(i)`, so only a direct child qualifies.
     // React context alone would also reach a layer nested under a Node2D.
-    const parentPath = path.slice(0, Math.max(0, path.lastIndexOf('/')));
+    const parentPath = parentPathOf(path) ?? '';
     if (parentPath !== registry.parentPath) return;
     return registry.register(path, { group, motion, origin });
   }, [registry, path, motion, origin]);

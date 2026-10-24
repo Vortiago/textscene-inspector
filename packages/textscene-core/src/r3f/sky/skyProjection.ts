@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits } from '../shaderPatch/chunkPatch.js';
 import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
 
 /** GLSL: the view-space ray of a clip-space `xy`, as `sky.glsl:218-220` builds it. */
@@ -31,21 +31,16 @@ const GODOT_CUBE_PROJECTION = /* glsl */ `if ( isOrthographic ) {
 	}
 	${THREE_CUBE_FAR_PLANE}`;
 
-const projectCube = onChunk('backgroundCube_vert', (shader) =>
-  applyEdits(shader, [{ three: THREE_CUBE_FAR_PLANE, godot: GODOT_CUBE_PROJECTION }])
-);
-
 /**
  * Patches three's cube background for every program compiled after the call. three reads
  * `ShaderLib.backgroundCube` when a renderer first draws a cube background. A second call
  * changes nothing.
  */
 export function installSkyProjection(): void {
-  const isPatched = installChunkPatch({
-    names: ['backgroundCube_vert'],
-    isApplied: (chunks) => chunks.backgroundCube_vert.includes('isOrthographic'),
-    apply: projectCube,
-    missing: `backgroundCube_vert has no ${THREE_CUBE_FAR_PLANE}`,
+  const isPatched = installChunkEdits({
+    edits: [{ chunk: 'backgroundCube_vert', three: THREE_CUBE_FAR_PLANE, godot: GODOT_CUBE_PROJECTION }],
+    mark: 'isOrthographic',
+    patch: 'sky projection',
   });
   if (isPatched) backgroundCube().vertexShader = THREE.ShaderChunk.backgroundCube_vert;
 }

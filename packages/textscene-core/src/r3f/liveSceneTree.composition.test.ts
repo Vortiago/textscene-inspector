@@ -8,12 +8,13 @@ import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
 import {
   collectLiveNodes,
-  liveChildGroups,
+  liveStep,
   rootScope,
   walkLiveTree,
   type CachedSceneSource,
   type LiveTreeContext,
 } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 
 const BASE = `[gd_scene format=3]
 
@@ -98,14 +99,6 @@ function sceneRecord(): Record<string, TscnScene> {
     'res://base.tscn': parse(BASE),
     'res://kid.tscn': parse(KID),
     'res://wrap.tscn': parse(WRAP),
-  };
-}
-
-function contextOver(main: TscnScene, scenes: Record<string, TscnScene>): LiveTreeContext {
-  return {
-    externalResources: main.externalResources,
-    internalResources: main.internalResources,
-    sceneCache: { getCached: (path) => scenes[path] },
   };
 }
 
@@ -214,7 +207,7 @@ describe('the composition of an inherited sub-scene', () => {
     const ctx = { ...contextOver(main, scenes), sceneCache };
     const instance = main.nodes[0]!.children.find((n) => n.name === 'K0')!;
 
-    liveChildGroups(instance, rootScope(ctx), sceneCache);
+    liveStep(instance, rootScope(ctx), sceneCache);
 
     expect(reads.filter((path) => path === 'res://kid.tscn')).toHaveLength(1);
   });

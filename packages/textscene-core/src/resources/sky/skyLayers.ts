@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { drawFullScreen } from '../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
-import { perRenderer } from '../../r3f/perRenderer.js';
+import { perObject } from '../../utils/perObject.js';
 import {
   REAL_TIME_ROUGHNESS_LAYERS,
   SKY_ROUGHNESS_LAYERS_DEFAULT,
@@ -46,10 +46,10 @@ export type SkyLayers = OctmapArray<SkyRadianceLayout>;
 export type ReflectionAtlas = OctmapArray<SkyOctmapLayout>;
 
 /** Made once per renderer, as each bake would otherwise compile them again. */
-const radianceOctmapPassFor = perRenderer(() =>
+const radianceOctmapPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
   skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize', 'debanding'])
 );
-const downsamplePassFor = perRenderer(() =>
+const downsamplePassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
   skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize'])
 );
 

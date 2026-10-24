@@ -16,6 +16,7 @@ import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
+import { settleLoads } from './testing/settleLoads';
 
 /** A square TileSet of the given pitch, with the one tile every cell draws. */
 const squareTileSet = (size: number) => `[gd_resource type="TileSet" format=3]
@@ -75,7 +76,7 @@ y_sort_enabled = true
       <NodeDispatcher nodes={scene.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
 
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;

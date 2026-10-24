@@ -2,20 +2,16 @@
  * The light specular rides three's light loops. The tests read the installed three, so a release
  * that rewrites a replaced line fails here, not in a golden.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotLightSpecular } from './lightSpecularChunk';
 import { LIGHT_SPECULARS } from './lightSpecular';
 import { warningsOf } from '../testing/logWarnings';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
-const threeChunks = {
-  lights_pars_begin: THREE.ShaderChunk.lights_pars_begin,
-  lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
-};
+const threeChunks = { ...THREE.ShaderChunk };
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-});
+restoreShaderGlobalsAfterEach();
 
 function patchedLoops(): string {
   installGodotLightSpecular();

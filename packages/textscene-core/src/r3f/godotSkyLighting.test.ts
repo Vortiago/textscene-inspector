@@ -2,19 +2,17 @@
  * The sky's light rides three's own IBL lines. A three release that rewrites one
  * fails here, not silently in a capture.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
+import { restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 import { functionBody } from './testing/glslSource';
 import { SKY_UNIFORMS, shownSky, skyLayersSlot } from './sky/skyLayerArray';
 
-const CHUNKS = ['lights_fragment_maps', 'envmap_physical_pars_fragment'] as const;
-const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));
+const threeChunks = { ...THREE.ShaderChunk };
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-});
+restoreShaderGlobalsAfterEach();
 
 function patchedChunks() {
   installGodotSkyLighting();

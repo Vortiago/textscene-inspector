@@ -1,16 +1,20 @@
 /**
  * The id-trail recovery over the headings of one scan: the `parent_id_path=` for a heading whose
  * `parent=` path does not walk, and the `owner_uid_path=` for one whose `owner=` path does not.
- * The tree builder and the linter both ask it here.
+ * The tree builder, the placement facts and the connection-end resolver ask it here.
  */
 
 import type { NodeOrigin, RawNode } from './types.js';
 import {
   INSTANCE_PLACEHOLDER_TYPE,
-  recoverByIdTrailOver,
+  recoverByIdTrail,
   type IdHeading,
   type IdTrailEnd,
 } from '../godot/scene/packedScene.js';
+import { firstIndexWith } from '../utils/keyedLookup.js';
+
+/** The first heading of a scan carrying an id, the one index the builder and the linter share. */
+const firstOriginWithId = firstIndexWith((origin: NodeOrigin<RawNode>) => origin.uniqueId);
 
 /** Where the trail of `origins[index]` seats it, or undefined where it resolves nowhere or has no trail. */
 export function idTrailEnd<N extends RawNode>(
@@ -39,6 +43,18 @@ export function ownerTrailEnd<N extends RawNode>(
 }
 
 /**
+ * Where `trail` lands once every heading is built, as a `[connection]` end looks it up: instantiate
+ * makes the connections after the build (`packed_scene.cpp:647-660`).
+ */
+export function builtSceneTrailEnd<N extends RawNode>(
+  trail: readonly number[],
+  origins: readonly NodeOrigin<N>[],
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): IdTrailEnd | undefined {
+  return trailEnd(trail, origins, isPlaced, origins.length);
+}
+
+/**
  * Where `trail` lands over the first `builtCount` headings, as instantiate has built them. Only the
  * heading the trail names is read, so the cost does not grow with the other headings.
  */
@@ -48,15 +64,12 @@ function trailEnd<N extends RawNode>(
   isPlaced: (origin: NodeOrigin<N>) => boolean,
   builtCount: number
 ): IdTrailEnd | undefined {
-  return recoverByIdTrailOver(trail, origins, (index) => headingOf(origins[index]!, isPlaced), builtCount);
-}
-
-/** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
-export function idHeadingsOf<N extends RawNode>(
-  origins: readonly NodeOrigin<N>[],
-  isPlaced: (origin: NodeOrigin<N>) => boolean
-): IdHeading[] {
-  return origins.map((origin) => headingOf(origin, isPlaced));
+  return recoverByIdTrail(
+    trail,
+    (id) => firstOriginWithId(origins, id),
+    (index) => headingOf(origins[index]!, isPlaced),
+    builtCount
+  );
 }
 
 function headingOf<N extends RawNode>(

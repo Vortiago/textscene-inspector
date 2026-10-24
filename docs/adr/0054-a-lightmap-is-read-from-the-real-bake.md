@@ -31,6 +31,15 @@ The previewer reads the bake Godot wrote and samples it as Godot's forward shade
   spherical-harmonics form (`scene_forward_clustered.glsl:921-978`, `:1835-1876`). Its uniforms
   read the assignment at each upload, so a moved or reloaded LightmapGI needs no recompile.
 - A Static light skips a lightmapped surface in the same program (`GODOT_LIGHTMAP`).
+- A bake saved with a shadowmask mode holds a second atlas, a `_shadow.png`, which the `image2darray`
+  slice reads from the source PNG, as it reads the `.exr`. A texel is its byte over 255. The
+  component copies each byte into the alpha of the first layer of its slice in the lightmap atlas, as
+  a half float within 0.0005 of the byte over 255. The program then reads both through one sampler.
+  A program has 16 sampler units to share, and a physical material with a sky and positional shadows
+  takes 17 of them with the lightmap. Past its fade, a sun's real-time shadow gives way to the shadowmask in Replace mode, and Overlay multiplies
+  the shadowmask in (`scene_forward_clustered.glsl:2252-2273`, `:2483-2492`). Mode Only skips the
+  real-time shadow of every sun: the first drawn directional light takes the shadowmask byte, and
+  every other shadowed sun is fully shadowed (`:2510-2517`). A bake with no shadowmask draws as None.
 - A GridMap the bake names draws its `baked_meshes` in place of its cells, and each takes the user
   whose sub-instance is its index (`grid_map.cpp:688`, `lightmap_gi.cpp:1544-1550`).
 
@@ -40,8 +49,8 @@ A scene without a committed bake draws as before: its LightmapGI applies nothing
 draws its baked light, shadow and bounce, and the goldens `lightmap-gi-baked` and
 `lightmap-gi-directional` hold both forms against a real bake.
 
-The atlas is read at full float precision, so a soft shadow edge can differ from Godot's compressed
-read by a few levels.
+The atlas and the shadowmask are read from their source files, so a soft shadow edge can differ
+from Godot's compressed read by a few levels.
 
-The bake's light probes, which light the dynamic objects, and its shadowmask are separate reads on
-the same data. Neither is in this decision.
+The bake's light probes, which light the dynamic objects, are a separate read on the same data. They
+are not in this decision.

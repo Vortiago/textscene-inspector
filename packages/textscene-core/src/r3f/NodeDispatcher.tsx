@@ -58,9 +58,9 @@ import {
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { liftedWithoutOverrides } from './internal/glb-scene-root/glbNodeOverrides.js';
-import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
+import { glbSceneRootChildCount } from './internal/glb-scene-root/glbHierarchy.js';
 import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
-import { useResource } from '../resources/useResource.js';
+import { useGlb } from '../resources/useGlb.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
@@ -409,14 +409,13 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
   // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
   // move to their `index=` among them (`packed_scene.cpp:541-544`). The root takes this load.
-  const glb = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
+  const glb = useGlb(glbPath);
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a stripped node is a new
   // object. The objects are counted only for a child that states an `index=`.
   const shallow = useMemo(() => {
     const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
     if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
-    const objectCount = glbSceneRootChildren(glb.value, []).length;
-    return { ...stripped, children: orderAmongPlaced(stripped.children, objectCount) };
+    return { ...stripped, children: orderAmongPlaced(stripped.children, glbSceneRootChildCount(glb.value)) };
   }, [node, glbPath, glb.value]);
   // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);

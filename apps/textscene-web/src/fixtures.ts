@@ -1113,6 +1113,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightmap Gi Shadowmask Only",
+    "file": "unit-lightmap-gi-shadowmask-only.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Shadowmask Overlay",
+    "file": "unit-lightmap-gi-shadowmask-overlay.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Shadowmask Replace",
+    "file": "unit-lightmap-gi-shadowmask-replace.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightmap Gi",
     "file": "unit-lightmap-gi.tscn",
     "category": "Other"
@@ -1975,6 +1990,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Button",
     "file": "unit-texture-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Texture Progress Bar Partial",
+    "file": "unit-texture-progress-bar-partial.tscn",
     "category": "Other"
   },
   {
@@ -3391,6 +3411,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Node Parent Id Path",
+    "file": "unit-node-parent-id-path.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Node2d Detached Transform",
     "file": "unit-node2d-detached-transform.tscn",
     "category": "Unit - Basic Nodes"
@@ -3729,6 +3754,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias Normal",
+    "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Material Mipmap Bias",

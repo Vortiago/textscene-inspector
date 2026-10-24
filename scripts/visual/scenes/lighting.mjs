@@ -133,6 +133,14 @@ export const LIGHTING_SCENES = [
   { name: 'lightmap-gi-directional', file: 'unit-lightmap-gi-directional.tscn' },
   // A baked GridMap: its baked meshes draw in place of the cells, each lit by its sub-instance.
   { name: 'lightmap-gi-gridmap', file: 'unit-lightmap-gi-gridmap.tscn' },
+  // A LightmapGI bake with a shadowmask in Replace mode: the baked shadow takes the place of the
+  // sun's real-time shadow where it fades out, 3 m from the camera. The header states why no other
+  // golden shows it.
+  { name: 'lightmap-gi-shadowmask-replace', file: 'unit-lightmap-gi-shadowmask-replace.tscn', camera: 'Root/Camera3D' },
+  // The same bake in Overlay mode: the baked shadow multiplies the real-time shadow.
+  { name: 'lightmap-gi-shadowmask-overlay', file: 'unit-lightmap-gi-shadowmask-overlay.tscn', camera: 'Root/Camera3D' },
+  // The same bake in Only mode: the real-time shadow is skipped and the baked shadow stands alone.
+  { name: 'lightmap-gi-shadowmask-only', file: 'unit-lightmap-gi-shadowmask-only.tscn', camera: 'Root/Camera3D' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,

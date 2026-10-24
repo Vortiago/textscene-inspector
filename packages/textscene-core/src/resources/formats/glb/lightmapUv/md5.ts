@@ -51,27 +51,30 @@ function padding(length: number, filled: number): Uint8Array {
   return tail;
 }
 
+/** The message word each step reads, by round: `i`, `5i + 1`, `3i + 5` and `7i`, modulo 16. */
+const STEP_WORD = Int32Array.from({ length: 64 }, (_, i) => [i, 5 * i + 1, 3 * i + 5, 7 * i][i >> 4]! % 16);
+
+/** The left rotation of each step. */
+const STEP_SHIFT = Int32Array.from({ length: 64 }, (_, i) => SHIFTS[(i >> 4) * 4 + (i % 4)]!);
+
+/** The block's sixteen little-endian words, read once per block. */
+const blockWords = new Int32Array(16);
+
 function compress(state: Int32Array, words: DataView): void {
-  let [a, b, c, d] = state as unknown as [number, number, number, number];
+  for (let word = 0; word < 16; word++) blockWords[word] = words.getInt32(word * 4, true);
+  let a = state[0]!;
+  let b = state[1]!;
+  let c = state[2]!;
+  let d = state[3]!;
   for (let i = 0; i < 64; i++) {
     const round = i >> 4;
     let mixed: number;
-    let word: number;
-    if (round === 0) {
-      mixed = (b & c) | (~b & d);
-      word = i;
-    } else if (round === 1) {
-      mixed = (d & b) | (~d & c);
-      word = (5 * i + 1) % 16;
-    } else if (round === 2) {
-      mixed = b ^ c ^ d;
-      word = (3 * i + 5) % 16;
-    } else {
-      mixed = c ^ (b | ~d);
-      word = (7 * i) % 16;
-    }
-    const sum = (a + mixed + SINE_TABLE[i]! + words.getInt32(word * 4, true)) | 0;
-    const shift = SHIFTS[round * 4 + (i % 4)]!;
+    if (round === 0) mixed = (b & c) | (~b & d);
+    else if (round === 1) mixed = (d & b) | (~d & c);
+    else if (round === 2) mixed = b ^ c ^ d;
+    else mixed = c ^ (b | ~d);
+    const sum = (a + mixed + SINE_TABLE[i]! + blockWords[STEP_WORD[i]!]!) | 0;
+    const shift = STEP_SHIFT[i]!;
     a = d;
     d = c;
     c = b;

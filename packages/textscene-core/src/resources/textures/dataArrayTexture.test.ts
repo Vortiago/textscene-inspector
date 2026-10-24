@@ -19,6 +19,20 @@ describe('dataArrayTexture', () => {
     ]);
   });
 
+  it('reads bytes as unsigned normalised reds, with no colour conversion or premultiplied alpha', () => {
+    const texture = dataArrayTexture(new Uint8Array(1), 1, 1, 1);
+    expect([texture.format, texture.type, texture.colorSpace, texture.premultiplyAlpha]).toEqual([
+      THREE.RedFormat,
+      THREE.UnsignedByteType,
+      THREE.NoColorSpace,
+      false,
+    ]);
+  });
+
+  it('reads half floats as RGBA', () => {
+    expect(dataArrayTexture(new Uint16Array(4), 1, 1, 1).format).toBe(THREE.RGBAFormat);
+  });
+
   it('clamps a read past the edge of a layer (edge case)', () => {
     const texture = dataArrayTexture(new Uint16Array(4), 1, 1, 1);
     expect([texture.wrapS, texture.wrapT]).toEqual([THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping]);

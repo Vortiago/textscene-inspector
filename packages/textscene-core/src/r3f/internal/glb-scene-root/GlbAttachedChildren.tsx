@@ -1,8 +1,9 @@
 /**
  * Renders the typed nodes an instancing scene adds inside a GLB, each under the GLB object its
- * parent path names. Godot adds such a node to the node that path resolves to
- * (`packed_scene.cpp:157-165`, `:541`), so it takes that object's transform and visibility. The
- * instancing node's scene authored it, so it sits at that scene's level, not the GLB's.
+ * parent path names. Godot adds such a node to the node that path resolves to, then moves it to its
+ * `index=` among that node's children (`packed_scene.cpp:157-165`, `:540-545`), so it takes that
+ * object's transform and visibility, and that place in tree order. The instancing node's scene
+ * authored it, so it sits at that scene's level, not the GLB's.
  */
 import { useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
@@ -21,8 +22,10 @@ import {
 import type { GlbRoot } from './GlbInstanceContext';
 import type { GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
-import { glbAttachPath, isApplicableGlbOverride } from './glbNodeOverrides';
-import { matchGlbTarget } from './matchGlbTarget';
+import { isApplicableGlbOverride, resolveGlbAttachments, type GlbAttachment } from './glbNodeOverrides';
+import { reportIndirectMatch } from './matchGlbTarget';
+import { insertAtIndex } from '../../../godot/scene/siblingIndex';
+import { warn } from '../../../logger';
 
 /** A GLB object is a Node3D in Godot, so a child of another family escapes it as it escapes a Node3D. */
 const GLB_OBJECT_TYPE = 'Node3D';
@@ -66,7 +69,7 @@ export function GlbAttachedChildren({ links, root }: GlbAttachedChildrenProps): 
 
 /**
  * Each typed node of `overrides` with the GLB object its parent path resolves to, in authored
- * order. A path that names no object drops its node, and `matchGlbTarget` warns once for it.
+ * order. A path that names no object drops its node, with a warning.
  */
 function attachedChildren(
   links: readonly GlbNodeLink[],
@@ -76,29 +79,81 @@ function attachedChildren(
   // The common GLB has none, so nothing below runs for it. A GLB opened as the scene has no
   // instancing node to address into it.
   if (root.path === null || root.overrides.every(isApplicableGlbOverride)) return [];
+  const rootPath = root.path;
   const entries = links.map((link) => link.entry);
-  const orders = childOrders(rootOrder, entries.length);
-  const attachedBelow = new Map<number, number>();
-  const attached: AttachedChild[] = [];
-  for (const node of root.overrides) {
-    const path = glbAttachPath(node);
-    const target = path === null ? null : matchGlbTarget(entries, path);
-    if (!target) continue;
-    // After the target's whole subtree, in the flat order its entries hold, and after the nodes
-    // already attached there.
-    const targetIndex = entries.indexOf(target);
-    const afterSubtree = lastDescendantIndex(entries, targetIndex);
-    const siblings = attachedBelow.get(afterSubtree) ?? 0;
-    attachedBelow.set(afterSubtree, siblings + 1);
-    attached.push({
-      node,
-      path: joinPath(joinPath(root.path, target.relPath), node.name),
-      target: target.object,
-      order: [...orders[afterSubtree]!, siblings],
-      visibilityParent: links[targetIndex]!.place.parentPath,
-    });
+  const { attached: placed, rest } = resolveGlbAttachments(entries, root.overrides);
+  warnUnattached(rest);
+  for (const { node, target, match } of placed)
+    reportIndirectMatch(node.instanceSubPath!, entries[target]!, match);
+  const orders = attachedOrders(entries, childOrders(rootOrder, entries.length), placed);
+  return placed.map(({ node, target }) => ({
+    node,
+    path: joinPath(joinPath(rootPath, entries[target]!.relPath), node.name),
+    target: entries[target]!.object,
+    order: orders.get(node)!,
+    visibilityParent: links[target]!.place.parentPath,
+  }));
+}
+
+/** Warns for each typed node of `unattached`, whose parent path names no GLB object. */
+function warnUnattached(unattached: readonly LiveNode[]): void {
+  for (const node of unattached) {
+    if (isApplicableGlbOverride(node)) continue;
+    warn(
+      `[GlbAttachedChildren] "${node.instanceSubPath}" matches nothing in the loaded GLB, so "${node.name}" is dropped`
+    );
   }
-  return attached;
+}
+
+/**
+ * A GLB object's child, as the index of its entry, or a node attached to that object. An object
+ * states no `index=`, as it is in place before any node is added.
+ */
+type Sibling = { entry: number } | LiveNode;
+
+/**
+ * The tree order of each placed node, among its target's children as `insertAtIndex` leaves them.
+ * `entryOrders` gives each GLB object its place by its pre-order index, so a node takes a place
+ * just after the subtree of the sibling object before it, or just after the target when it is first.
+ */
+function attachedOrders(
+  entries: readonly GlbObjectEntry[],
+  entryOrders: readonly TreeOrder[],
+  placed: readonly GlbAttachment[]
+): Map<LiveNode, TreeOrder> {
+  const siblingsOf = new Map<number, Sibling[]>();
+  for (const { node, target } of placed) {
+    let siblings = siblingsOf.get(target);
+    if (!siblings) {
+      siblings = childEntryIndices(entries, target).map((entry) => ({ entry }));
+      siblingsOf.set(target, siblings);
+    }
+    insertAtIndex(siblings, node);
+  }
+  const orders = new Map<LiveNode, TreeOrder>();
+  for (const [target, siblings] of siblingsOf) {
+    let after = target;
+    let sinceObject = 0;
+    for (const sibling of siblings) {
+      if ('entry' in sibling) {
+        after = lastDescendantIndex(entries, sibling.entry);
+        sinceObject = 0;
+      } else {
+        orders.set(sibling, [...entryOrders[after]!, sinceObject++]);
+      }
+    }
+  }
+  return orders;
+}
+
+/** The indices of the entries directly below the one at `index`, which `flattenGlbObjects` lists in pre-order. */
+function childEntryIndices(entries: readonly GlbObjectEntry[], index: number): number[] {
+  const prefix = `${entries[index]!.relPath}/`;
+  const children: number[] = [];
+  for (let k = index + 1; entries[k]?.relPath.startsWith(prefix); k++) {
+    if (!entries[k]!.relPath.includes('/', prefix.length)) children.push(k);
+  }
+  return children;
 }
 
 /** The index of the last entry at or below the one at `index`, which `flattenGlbObjects` lists in pre-order. */

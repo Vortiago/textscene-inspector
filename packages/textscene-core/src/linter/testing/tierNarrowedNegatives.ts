@@ -3,6 +3,7 @@
  * tier and one identity exists, read from its body. A statement runs to its `;`.
  */
 
+import { TRIVIA } from '@textscene/dev-kit';
 import { SEVERITY_ORDER, type Severity } from '../types.js';
 
 /**
@@ -19,6 +20,19 @@ const TIER_NARROWING_RE = new RegExp(
   `severity\\s*===\\s*'(?:${TIER_NAMES})'|\\b(?:${TIER_NAMES})sOf\\(`,
   'g'
 );
+
+/**
+ * `TIER_NARROWING_RE` on raw text, so comments may sit between its tokens: the block scan blanks
+ * them first. No `g`, whose `lastIndex` would carry from one `test` to the next.
+ */
+const MAY_NARROW_TO_TIER_RE = new RegExp(
+  `severity${TRIVIA}===${TRIVIA}'(?:${TIER_NAMES})'|\\b(?:${TIER_NAMES})sOf${TRIVIA}\\(`
+);
+
+/** Whether `source` narrows to a tier anywhere, so it can hold a negative `tierNarrowedNegatives` finds. */
+export function canHoldTierNarrowedNegative(source: string): boolean {
+  return MAY_NARROW_TO_TIER_RE.test(source);
+}
 
 /** A predicate narrowing to one diagnostic: by its message or its rule name. */
 const IDENTITY_RE = /\.message\.includes\(|\.ruleName\s*===/;

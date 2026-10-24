@@ -52,8 +52,8 @@ export interface SceneNode {
 export function tscnSceneToParsedScene(
   path: string,
   nodes: TscnNode[],
-  externalResources: ExtResource[],
-  internalResources: SubResource[],
+  externalResources: readonly ExtResource[],
+  internalResources: readonly SubResource[],
   editableInstances?: readonly string[]
 ): ParsedScene {
   return {

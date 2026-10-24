@@ -2,8 +2,8 @@
 type: TextureProgressBar
 category: 2D
 status: unreviewed
-fixture: unit-texture-progress-bar.tscn
-# image: unit-texture-progress-bar
+fixture: unit-texture-progress-bar-partial.tscn
+image: unit-texture-progress-bar-partial
 renders_as: three composited texture layers, the middle one ratio-windowed
 ---
 

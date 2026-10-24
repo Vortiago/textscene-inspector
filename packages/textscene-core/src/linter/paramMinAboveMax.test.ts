@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import type { RawNode } from '../parser/types.js';
 import { CPU_PARTICLES_PARAMS } from '../godot/scene/cpuParticles.js';
-import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from './particleParamRanges.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from './paramMinAboveMax.js';
 
 const node: RawNode = { name: 'Fx', type: 'CPUParticles2D', rawProperties: {}, children: [] };
 const arm = paramMinAboveMaxArm('cpuparticles2d', 'cpu_particles_2d.cpp:352-376');
