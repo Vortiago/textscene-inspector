@@ -6,6 +6,7 @@ import {
   reparentedName,
   type IdHeading,
 } from './packedScene.js';
+import { firstIndexWith } from '../../utils/keyedLookup.js';
 
 describe('parseIdTrail', () => {
   it('reads the ids of a PackedInt32Array', () => {
@@ -66,67 +67,81 @@ describe('parseUniqueId', () => {
 });
 
 describe('recoverByIdTrail', () => {
-  const recoverOver = (trail: readonly number[], headings: readonly IdHeading[], builtCount: number) =>
+  const firstIndexWithId = firstIndexWith((heading: IdHeading) => heading.uniqueId);
+  const recoverIn = (trail: readonly number[], headings: readonly IdHeading[], builtCount: number) =>
     recoverByIdTrail(
       trail,
-      (id) => {
-        const index = headings.findIndex((heading) => heading.uniqueId === id);
-        return index === -1 ? undefined : index;
-      },
+      (id) => firstIndexWithId(headings, id),
       (index) => headings[index]!,
       builtCount
     );
   const plain = (uniqueId: number): IdHeading => ({ uniqueId, instance: undefined, isPlaced: true });
   const orphan = plain(0);
 
+  it('reads each heading id a bounded number of times however many trails it follows', () => {
+    let reads = 0;
+    const counted = (uniqueId: number): IdHeading =>
+      Object.defineProperty({ instance: undefined, isPlaced: true } as IdHeading, 'uniqueId', {
+        get: () => {
+          reads++;
+          return uniqueId;
+        },
+      });
+    const headings = Array.from({ length: 500 }, (_, i) => counted(i + 1));
+
+    for (let i = 0; i < 500; i++) recoverIn([i + 1], headings, headings.length);
+
+    expect(reads).toBeLessThanOrEqual(2 * headings.length);
+  });
+
   it('lands under the heading a one-id trail names, when it comes first and is placed', () => {
     const headings = [plain(10), plain(20), orphan];
-    expect(recoverOver([20], headings, 2)).toEqual({ kind: 'lands', heading: 1 });
+    expect(recoverIn([20], headings, 2)).toEqual({ kind: 'lands', heading: 1 });
   });
 
   it('fails when no heading carries the first id', () => {
-    expect(recoverOver([99], [plain(10), orphan], 1)).toBeUndefined();
+    expect(recoverIn([99], [plain(10), orphan], 1)).toBeUndefined();
   });
 
   it('fails when the named heading comes after the orphan', () => {
-    expect(recoverOver([20], [plain(10), orphan, plain(20)], 1)).toBeUndefined();
+    expect(recoverIn([20], [plain(10), orphan, plain(20)], 1)).toBeUndefined();
   });
 
   it('fails when the named heading is itself unplaced', () => {
     const unplaced: IdHeading = { uniqueId: 20, instance: undefined, isPlaced: false };
-    expect(recoverOver([20], [plain(10), unplaced, orphan], 2)).toBeUndefined();
+    expect(recoverIn([20], [plain(10), unplaced, orphan], 2)).toBeUndefined();
   });
 
   it('fails for an empty trail', () => {
-    expect(recoverOver([], [plain(10), orphan], 1)).toBeUndefined();
+    expect(recoverIn([], [plain(10), orphan], 1)).toBeUndefined();
   });
 
   it('matches id 0 to the first heading without a unique_id', () => {
-    expect(recoverOver([0], [plain(10), plain(0), orphan], 2)).toEqual({ kind: 'lands', heading: 1 });
+    expect(recoverIn([0], [plain(10), plain(0), orphan], 2)).toEqual({ kind: 'lands', heading: 1 });
   });
 
   it('fails when a middle hop is not an instance', () => {
-    expect(recoverOver([10, 5], [plain(10), orphan], 1)).toBeUndefined();
+    expect(recoverIn([10, 5], [plain(10), orphan], 1)).toBeUndefined();
   });
 
   it('fails when a middle hop is a placeholder', () => {
     const placeholder: IdHeading = { uniqueId: 10, instance: 'placeholder', isPlaced: true };
-    expect(recoverOver([10, 5], [placeholder, orphan], 1)).toBeUndefined();
+    expect(recoverIn([10, 5], [placeholder, orphan], 1)).toBeUndefined();
   });
 
   it('fails when the instance a middle hop names comes after the orphan', () => {
     const instance: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: true };
-    expect(recoverOver([10, 5], [orphan, instance], 0)).toBeUndefined();
+    expect(recoverIn([10, 5], [orphan, instance], 0)).toBeUndefined();
   });
 
   it('fails when the instance a middle hop names is itself unplaced', () => {
     const instance: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: false };
-    expect(recoverOver([10, 5], [instance, orphan], 1)).toBeUndefined();
+    expect(recoverIn([10, 5], [instance, orphan], 1)).toBeUndefined();
   });
 
   it('reports the instance a middle hop names, as the rest lives in its scene', () => {
     const instance: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: true };
-    expect(recoverOver([10, 5], [instance, orphan], 1)).toEqual({ kind: 'inBase', heading: 0 });
+    expect(recoverIn([10, 5], [instance, orphan], 1)).toEqual({ kind: 'inBase', heading: 0 });
   });
 });
 

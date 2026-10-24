@@ -3401,6 +3401,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Node Parent Id Path",
+    "file": "unit-node-parent-id-path.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Node2d Detached Transform",
     "file": "unit-node2d-detached-transform.tscn",
     "category": "Unit - Basic Nodes"

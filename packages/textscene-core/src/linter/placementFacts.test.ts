@@ -35,16 +35,17 @@ const names = (origins: readonly NodeOrigin<RawNode>[]) => origins.map((o) => o.
 
 describe('placementFacts', () => {
   it('reports nothing for a well-formed scene', () => {
-    const { nodeOrigins, ...facts } = factsOf(['Root'], ['Child', '.']);
+    const { resolveConnectionEnd, ...facts } = factsOf(['Root'], ['Child', '.']);
+    expect(resolveConnectionEnd).toBeTypeOf('function');
     expect(facts).toEqual({
       orphanedNodes: [],
       reRootedNames: new Map(),
+      seatedOrphans: new Set(),
       rootWithParent: undefined,
       emptyParentHeadings: [],
       refusesToInstantiate: false,
       idRecoveries: new Map(),
     });
-    expect(names(nodeOrigins)).toEqual(['Root', 'Child']);
   });
 
   it('follows no id trail to a re-rooted heading, as a trail looks it up by its authored path', () => {

@@ -4,14 +4,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { seatScene } from './sceneTreeBuilder';
+import { node } from './testing/seatingKit';
 import type { NodeOrigin, TscnNode } from './types';
 
 const HEADINGS = 1000;
-
-function node(name: string, parent?: string, extras: Partial<TscnNode> = {}): TscnNode {
-  const root: TscnNode = { rawProperties: {}, type: 'Node3D', name, properties: {}, children: [], ...extras };
-  return parent === undefined ? root : { ...root, parent };
-}
 
 function origin(heading: TscnNode, parts: Partial<NodeOrigin<TscnNode>> = {}): NodeOrigin<TscnNode> {
   return { node: heading, line: 1, declaredParent: heading.parent, uniqueId: 0, ...parts };
@@ -78,7 +74,8 @@ describe('seatScene id-trail lookups', () => {
 });
 
 describe('seatScene owner resolution', () => {
-  it('does not resolve the owner of a heading the id trail seats out of this tree', () => {
+  /** A scene whose `Recovered` heading is seated by the id trail `idTrail` on `Landing`, counting the reads of its `owner=`. */
+  function ownerReadsFor(landing: TscnNode, idTrail: number[]): number {
     let ownerReads = 0;
     const recovered = node('Recovered', 'Nowhere/Here');
     Object.defineProperty(recovered, 'owner', {
@@ -89,12 +86,18 @@ describe('seatScene owner resolution', () => {
       enumerable: true,
     });
 
-    seatScene([
-      origin(node('Root')),
-      origin(node('Landing', '.'), { uniqueId: 7 }),
-      origin(recovered, { idTrail: [7] }),
-    ]);
+    seatScene([origin(node('Root')), origin(landing, { uniqueId: 7 }), origin(recovered, { idTrail })]);
 
-    expect(ownerReads).toBe(0);
+    return ownerReads;
+  }
+
+  it('does not resolve the owner of a heading the id trail seats out of this tree', () => {
+    const instance = node('Landing', '.', { instance: 'ExtResource("1")' });
+
+    expect(ownerReadsFor(instance, [7, 5])).toBe(0);
+  });
+
+  it('resolves the owner of a heading the id trail lands in this tree', () => {
+    expect(ownerReadsFor(node('Landing', '.'), [7])).toBeGreaterThan(0);
   });
 });
