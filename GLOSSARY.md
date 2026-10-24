@@ -341,6 +341,10 @@ _Avoid_: "z order", "z offset".
 An item's position in Godot's single pre-order walk of the canvas, the third and weakest term of **canvas paint order**.
 _Avoid_: "paint index".
 
+**Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
+The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
+_Avoid_: "MSAA frame".
+
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):
 The cells of a tile layer that Godot draws together: a `rendering_quadrant_size` square of cells, or one tile row on a y-sorted layer (`tile_map_layer.cpp:546-554`).
 _Avoid_: "chunk", "tile batch".

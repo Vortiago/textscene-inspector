@@ -13,7 +13,7 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { graphNodeDrawRows } from './nativeSolver';
+import { graphNodeDrawRows, rightPortX } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -228,6 +228,24 @@ describe('graphNodeDrawRows — slot indices over `get_child(i)`', () => {
     expect(withPort.map((r) => r.rawIndex)).toEqual([1]);
     // `B`'s own centre, not `A`'s: index 1 must name `B`.
     expect(withPort[0]!.slotY).toBe(25);
+  });
+});
+
+describe('graphNodeDrawRows slot_y_cache', () => {
+  it('truncates a half-pixel row centre, as `Vector<int> slot_y_cache` does (graph_node.h:88)', () => {
+    const slots = new Map([[0, { ...defaultGraphNodeSlot(), rightEnabled: true }]]);
+    const n = graphNode('G', { slots }, [leaf('A')]);
+    const childRects = new Map<string, Rect2>([['A', { x: 0, y: 43, w: 40, h: 21 }]]);
+
+    const [row] = graphNodeDrawRows(n, n.node.properties as GraphNodeProperties, childRects, 0, 40);
+
+    expect(row!.slotY).toBe(53);
+  });
+});
+
+describe('rightPortX', () => {
+  it('truncates a fractional width, as `Point2i(get_size().x - port_h_offset, ..)` does (graph_node.cpp:666)', () => {
+    expect(rightPortX(120.75, 2)).toBe(118);
   });
 });
 

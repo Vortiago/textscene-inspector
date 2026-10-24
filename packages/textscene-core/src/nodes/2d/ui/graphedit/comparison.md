@@ -11,10 +11,12 @@ renders_as: a background panel, grid, toolbar, scrollbars and minimap, with Grap
 
 GraphEdit is the scrollable, zoomable canvas for wiring GraphNodes together, with a
 grid, connection lines, a toolbar and a minimap. The previewer draws the background panel
-and the grid (lines or dots, per `grid_pattern`/`snapping_distance`). It draws every
+and the grid (lines or dots, per `grid_pattern`/`snapping_distance`). Each grid line lights the
+pixel on its coordinate (`draw_line`, `graph_edit.cpp:1912`, `:1927`). It draws every
 resolvable `connections` entry as a curved, tinted ribbon
 (`connection_lines_curvature`/`connection_lines_thickness`), coloured by the slot of each
-endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). It
+endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). A port is a
+`Point2i`, so a connection ends on a whole pixel. It
 places every GraphElement child (`GraphNode`/`GraphFrame`) at
 `position_offset * zoom - scroll_offset`, as `GraphEdit::_update_scroll_offset` does.
 The constructor's `set_clip_contents(true)` (`:3342`) clips all of it to the widget's
@@ -49,7 +51,8 @@ are present in every GraphEdit, whatever the scene file says:
 - The **toolbar** at `(10, 10)`, a `PanelContainer` at its minimum size around an
   `HBoxContainer`. Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
   buttons, the grid and snapping toggles, the snapping-distance `SpinBox`, the minimap
-  toggle and the arrange button. `show_menu`
+  toggle and the arrange button. Each icon sits on a whole pixel (`button.cpp:405`). The
+  SpinBox is four advances of `W` wide, as one glyph measures it (`line_edit.cpp:2451`). `show_menu`
   hides the panel. `show_zoom_label`, `show_zoom_buttons`, `show_grid_buttons`,
   `show_minimap_button` and `show_arrange_button` hide widgets inside it, which re-flows
   the row and re-sizes the panel. `show_grid`, `snapping_enabled` and `minimap_enabled`
@@ -64,7 +67,10 @@ are present in every GraphEdit, whatever the scene file says:
   connection, and the camera viewport rect. A connection is a 0.5px
   `draw_polyline_colors` polyline, with each point's colour lerped in minimap space and
   a feather that `connection_lines_antialiased` selects. All of it is letterboxed into
-  the bounding box of the graph.
+  the bounding box of the graph. Godot draws no connection in the settled minimap in two
+  cases. One is a `scroll_offset` or a `zoom` that moves, applied while the file loaded. The
+  other is every child at `position_offset` `(0, 0)`. The minimap's only draw then reads an
+  empty connection cache (`graphEdit.md`).
 
 ## Linting
 

@@ -463,6 +463,11 @@ export const CANVAS_2D_SCENES = [
   // The one variable: a CanvasLayer's own offset, rotation and scale, which move both walks'
   // children. Godot 4.6.3 `--mode 2d`: rgb(51,153,255) at (430,170) and (500,250).
   { name: 'canvas-layer-transform', file: 'unit-canvas-layer-transform.tscn', mode: '2d' },
+  // A Sprite2D, a Polygon2D and a ColorRect with their top and bottom edges on pixel centres in y,
+  // beside a Sprite2D on whole pixels. Godot 4.6.3 draws rows 100-195 for the sprite at y = 100.5
+  // (`pnpm ref:diff`: 1/255). A frame whose row 0 is the canvas bottom draws rows 101-196.
+  { name: 'canvas-edge-on-pixel-centre', file: 'unit-canvas-edge-on-pixel-centre.tscn', mode: '2d' },
+  { name: 'subviewport-edge-on-pixel-centre', file: 'unit-subviewport-edge-on-pixel-centre.tscn', mode: '2d' },
   // The one variable: a Control promoted past a non-Control ancestor, one facet
   // per scene. The walk resets the whole chain at a broken CanvasItem link, so
   // a fix to one facet can move another. Godot 4.6.3 `--mode 2d`: mean 0.001,
@@ -570,6 +575,11 @@ export const CANVAS_2D_SCENES = [
   {
     name: 'graph-edit-minimap-connection',
     file: 'unit-graph-edit-minimap-connection.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'graph-edit-minimap-connection-origin',
+    file: 'unit-graph-edit-minimap-connection-origin.tscn',
     mode: '2d',
   },
   // The load-time clamps: `scroll_offset` against a still-zero bound and `zoom`

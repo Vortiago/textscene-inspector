@@ -10,6 +10,7 @@ export const RENDER_STEPS = [
   'Shadows',
   'Fog',
   'Compositor',
+  'Canvas copy',
 ] as const;
 
 export type RenderStep = (typeof RENDER_STEPS)[number];

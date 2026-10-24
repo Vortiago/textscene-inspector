@@ -215,6 +215,8 @@ const GRAPH_FRAME_DEFAULT_TINT: Rgba = { r: 0.3, g: 0.3, b: 0.3, a: 0.75 };
 
 interface GraphEditElementView {
   bounds: GraphScrollBounds;
+  /** Whether any GraphElement child, hidden or not, has a `position_offset` other than `(0, 0)`. */
+  hasPositionedChild: boolean;
   /** Frames first, then nodes, each from the last child backwards: `_minimap_draw`'s own two loops (`:1821,1844`), so a frame never covers a node. */
   minimapElements: MinimapElement[];
 }
@@ -277,6 +279,7 @@ export function graphEditElements(
       zoom,
       graphEditSize
     ),
+    hasPositionedChild: boxes.some(({ box }) => box.positionOffset.x !== 0 || box.positionOffset.y !== 0),
     minimapElements,
   };
 }

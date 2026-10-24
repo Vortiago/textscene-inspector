@@ -20,6 +20,7 @@ import type { Vector2 } from '../../../godot/math/vector';
  */
 export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   const target = createTarget(width, height, name);
+  target.depthBuffer = true;
   // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
   // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
   pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);
@@ -32,7 +33,8 @@ export function createSceneTarget(width: number, height: number, name: string): 
  * draws after the tonemap pass (`RendererViewport::_draw_viewport`) and writes its sRGB numbers
  * straight into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`,
  * `texture_storage.cpp:3568-3569`). So three encodes into RGBA8, as into the drawing buffer, and
- * blends and filters the encoded bytes. An sRGB tag alone would allocate SRGB8_ALPHA8.
+ * blends and filters the encoded bytes. An sRGB tag alone would allocate SRGB8_ALPHA8. It holds no
+ * depth: a 2D pass draws into a `CanvasFrame`, which does.
  */
 export function createCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   const target = createTarget(width, height, name);
@@ -44,7 +46,7 @@ export function createCanvasTarget(width: number, height: number, name: string):
 export function storeSrgbBytes(texture: THREE.Texture): void {
   pinColorSpace(texture, THREE.SRGBColorSpace);
   texture.internalFormat = 'RGBA8';
-  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasMsaaFrame has that shape too.
+  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasFrame has that shape too.
   markSrgbBytes(texture);
 }
 
@@ -55,7 +57,7 @@ export function storeSrgbBytes(texture: THREE.Texture): void {
  * drawn into the viewport (`renderer_viewport.cpp:688`), not to sampling its texture.
  */
 function createTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: true, stencilBuffer: false });
+  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, stencilBuffer: false });
   target.texture.name = `${name}::target`;
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
