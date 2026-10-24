@@ -113,18 +113,17 @@ export function blocksIn(file: string, source: string): Block[] {
 const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
 
 /**
- * The blocks of every test file under this package's `src` except `guard`, the
- * caller, whose pins spell blocks as data. A renamed guard would drop silently
- * out of an exclusion by path, so a `guard` the walk does not find throws.
+ * The blocks of each test file under this package's `src` whose text `canHold` accepts, except
+ * `guard`, the caller, whose pins spell blocks as data. A renamed guard would drop silently out of
+ * an exclusion by path, so a `guard` the walk does not find throws. `canHold` reads the raw text
+ * first: stripping the comments of all 2,300 test files takes about 0.6 s, most of a guard's limit.
  */
-export function everyTestBlockExcept(guard: string): Block[] {
+export function testBlocksExcept(guard: string, canHold: (source: string) => boolean): Block[] {
   const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(srcLabel);
   if (!files.includes(guard)) throw new Error(`expected ${guard} among the test files`);
-  return atLeast(
-    files
-      .filter((file) => file !== guard)
-      .flatMap((file) => blocksIn(file, readFileSync(join(srcRoot, file), 'utf8'))),
-    5000,
-    'test blocks'
-  );
+  const candidates = files
+    .filter((file) => file !== guard)
+    .map((file) => ({ file, source: readFileSync(join(srcRoot, file), 'utf8') }))
+    .filter(({ source }) => canHold(source));
+  return candidates.flatMap(({ file, source }) => blocksIn(file, source));
 }

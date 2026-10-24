@@ -5,7 +5,7 @@
  * `:234`, `:263`).
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { LIGHT_SLOT_LOOPS, LIGHTS_PARS_ANCHOR, slotArrayDeclaration } from '../lightSlots.js';
 import { installLightSpecularUniforms, LIGHT_SPECULARS } from './lightSpecular.js';
 
@@ -32,21 +32,18 @@ const LIGHT_SPECULAR_EDITS: readonly ChunkEdit<LightSpecularChunk>[] = [
   })),
 ];
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const LIGHT_SPECULAR_MARK = SPECULAR_DECLARATIONS;
-
 /**
  * Hands each light's specular amount to every program compiled after the call, and gives the
  * array to every built-in lit material. A three release that rewrites a replaced line keeps all
- * its own chunks, and `lightSpecularChunk.test.ts` fails on that release. A second call changes
- * nothing.
+ * its own chunks, and `lightSpecularChunk.test.ts` fails on that release. True when the chunks hold
+ * the patch after the call. A second call changes nothing.
  */
-export function installGodotLightSpecular(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_pars_begin', 'lights_fragment_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(LIGHT_SPECULAR_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, LIGHT_SPECULAR_EDITS),
-    missing: 'lights_pars_begin or lights_fragment_begin lacks a line the light specular patch replaces',
+export function installGodotLightSpecular(): boolean {
+  const isPatched = installChunkEdits({
+    edits: LIGHT_SPECULAR_EDITS,
+    mark: SPECULAR_DECLARATIONS,
+    patch: 'light specular',
   });
   if (isPatched) installLightSpecularUniforms();
+  return isPatched;
 }

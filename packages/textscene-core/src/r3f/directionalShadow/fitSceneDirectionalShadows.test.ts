@@ -80,6 +80,12 @@ describe('fitSceneDirectionalShadows', () => {
     expect(shadow._cascadeData[0]!.y).toBeCloseTo((DECLARATION.depthBias * godotDepth) / threeDepth, 12);
   });
 
+  it('marks the first drawn light as the one a shadowmask in mode Only fills', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true });
+    fitRender(scene, viewingCamera());
+    expect(splitSunOf(light)!.shadow.isDrawnFirst).toBe(true);
+  });
+
   it('filters with the declared kernel radius', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true });
     light.userData = directionalShadowUserData({ ...DECLARATION, splitCount: 1, filterRadius: 3.5 });

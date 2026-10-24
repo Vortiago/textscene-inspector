@@ -15,6 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { SceneStack } from '../../testing/SceneStack';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import { settleLoads } from '../../testing/settleLoads';
 
 const GLB_PATH = 'res://x.glb';
 const OWN_COLOR = 0x123456;
@@ -68,7 +69,7 @@ async function bodyMaterial(ref: string): Promise<THREE.MeshStandardMaterial> {
       </GlbInstanceProvider>
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const body = renderer.scene
     .findAllByType('Mesh')
     .map((m) => m.instance as unknown as THREE.Mesh)

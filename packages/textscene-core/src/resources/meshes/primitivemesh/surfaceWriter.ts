@@ -6,7 +6,7 @@
 import { storedReal } from '../../../godot/math/real.js';
 import type { GodotSurface } from '../godotSurface.js';
 
-type Vec2 = readonly [number, number];
+export type Vec2 = readonly [number, number];
 export type Vec3 = readonly [number, number, number];
 export type Vec4 = readonly [number, number, number, number];
 

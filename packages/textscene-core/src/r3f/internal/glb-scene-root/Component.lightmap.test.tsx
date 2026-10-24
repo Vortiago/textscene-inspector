@@ -97,8 +97,8 @@ async function singleMaterial(named: string, glb = lampGlb()): Promise<THREE.Mat
   const scene = renderer.scene.instance as THREE.Scene;
   await ReactThreeTestRenderer.act(async () => {
     lightmapsOf(scene).add(lightmapNaming(named));
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
   });
+  await settleLoads();
   await renderScene(renderer, camera);
   return (scene.getObjectByName('Single') as THREE.Mesh).material as THREE.Material;
 }

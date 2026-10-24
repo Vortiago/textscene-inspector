@@ -585,6 +585,15 @@ describe('projectCanvasTextureDefaults', () => {
       repeat: 1,
     });
   });
+
+  it("keeps the defaults for 4.7's PARENT_NODE and a negative value, which 4.6.3's setters refuse (edge case)", () => {
+    // `ERR_FAIL_INDEX` against `_MAX` (`viewport.cpp:3968`, `:3999`), so the initialiser stays.
+    expect(projectCanvasTextureDefaults({ [FILTER]: '4', [REPEAT]: '3' })).toEqual({ filter: 2, repeat: 1 });
+    expect(projectCanvasTextureDefaults({ [FILTER]: '-1', [REPEAT]: '-1' })).toEqual({
+      filter: 2,
+      repeat: 1,
+    });
+  });
 });
 
 describe('projectAnisotropicFilteringLevel', () => {

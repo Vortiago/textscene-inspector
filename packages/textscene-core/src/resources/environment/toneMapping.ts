@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { applyEdits, installChunkPatch, onChunk, type ChunkPatch } from '../../r3f/shaderPatch/chunkPatch';
+import { applyEdits, swappedChunk } from '../../r3f/shaderPatch/chunkPatch';
 import { customToneMappingFunction } from './godotToneMapping';
 
 /** The subset of `THREE.WebGLRenderer` this module touches. */
@@ -107,20 +107,10 @@ function curveChunk(curve: string): string | null {
   return applyEdits(THREE_TONEMAP_CHUNK, [{ three: CUSTOM_TONE_MAPPING_STUB, godot: curve }]);
 }
 
-/** The patch that makes three's chunk `chunk`, or warns and keeps it for null. */
-function chunkPatchTo(chunk: string | null): ChunkPatch<typeof TONEMAP_CHUNK> {
-  return {
-    names: [TONEMAP_CHUNK],
-    isApplied: (chunks) => chunks[TONEMAP_CHUNK] === chunk,
-    apply: onChunk(TONEMAP_CHUNK, () => chunk),
-    missing: `${TONEMAP_CHUNK} does not hold the stub ${CUSTOM_TONE_MAPPING_STUB} once`,
-  };
-}
-
 /** An exposure-only change reinstalls the same text, which no program needs to recompile for. */
 function setCurveChunk(chunk: string | null): void {
-  if (THREE.ShaderChunk[TONEMAP_CHUNK] === chunk) return;
-  if (installChunkPatch(chunkPatchTo(chunk))) curveRevision += 1;
+  const missing = `${TONEMAP_CHUNK} does not hold the stub ${CUSTOM_TONE_MAPPING_STUB} once`;
+  if (swappedChunk(TONEMAP_CHUNK, chunk, missing)) curveRevision += 1;
 }
 
 /** Points the renderer's own mapping at the installed curve. Returns the undo. */

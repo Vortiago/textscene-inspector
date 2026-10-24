@@ -7,7 +7,7 @@
 import type * as THREE from 'three';
 import type { LoadedFile } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
-import { isClosedBrush, type ShadedBrush } from './brushManifold';
+import { isClosedBrush, type ShadedBrush } from '../../nodes/3d/csg/brushManifold';
 import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {

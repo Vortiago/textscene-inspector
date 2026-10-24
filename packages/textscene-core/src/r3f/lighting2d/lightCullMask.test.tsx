@@ -15,6 +15,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { itemUniforms, lightsIn, recordLightPass } from './testing/lightPassProbe';
 import { SceneStack } from '../testing/SceneStack';
+import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -64,7 +65,7 @@ async function render(tscn: string) {
       </CanvasLighting2DProvider>
     </SceneStack>
   );
-  await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  await settleLoads();
   return renderer;
 }
 

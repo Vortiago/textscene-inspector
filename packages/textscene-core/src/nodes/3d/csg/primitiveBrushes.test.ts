@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isClosedBrush, weldCorners } from '../../../r3f/csg/brushManifold';
+import { isClosedBrush, weldCorners } from './brushManifold';
 import type { CsgGeometryBuilder } from '../../../r3f/csg/csgRegistration';
 import { heading } from '../../../parser/testing/parserKit';
 import type { ParsedHeading } from '../../../parser/utils';

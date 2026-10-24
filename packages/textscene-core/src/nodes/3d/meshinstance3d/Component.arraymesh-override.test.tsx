@@ -20,6 +20,7 @@ import {
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { MAGENTA } from './testing/magenta';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
@@ -80,7 +81,7 @@ async function renderSettled(
   const tree = meshInstanceTree({ loader, node, internalResources, externalResources: MESH_EXT });
   const renderer = await ReactThreeTestRenderer.create(tree);
   for (let i = 0; i < 10; i++) {
-    await new Promise<void>((r) => setTimeout(r, 20));
+    await settleLoads();
     await renderer.update(tree);
   }
   return surfaceMaterials(renderer);

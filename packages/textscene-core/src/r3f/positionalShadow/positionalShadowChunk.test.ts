@@ -18,7 +18,12 @@ import { warningsOf } from '../testing/logWarnings';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
 import { LIT_SHADERS } from '../testing/litShaders';
-import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
+import {
+  installedShaderChunks,
+  FILTER_PCF,
+  restoreShaderGlobalsAfterEach,
+  snapshotShaderGlobals,
+} from '../testing/shaderPatches';
 
 const PATCHED_CHUNKS = [
   'shadowmap_vertex',
@@ -136,10 +141,11 @@ describe('installGodotPositionalShadow', () => {
   });
 
   it('declares the filter once beside the directional patches, in either install order', () => {
+    const restore = snapshotShaderGlobals();
     installGodotPositionalShadow();
     installGodotSplitShadow();
     const positionalFirst = THREE.ShaderChunk.shadowmap_pars_fragment;
-    Object.assign(THREE.ShaderChunk, threeChunks);
+    restore();
     installGodotSplitShadow();
     installGodotPositionalShadow();
     expect(THREE.ShaderChunk.shadowmap_pars_fragment).toBe(positionalFirst);

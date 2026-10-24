@@ -17,6 +17,7 @@ import { texelTexture, textureMipChain } from '../texelTexture';
 import type { MipLevel } from '../../processing/mipChain';
 import { copyGodotFormat } from '../sourceColorSpace';
 import { isBottomUp } from '../../../utils/reversedRows';
+import { perObject } from '../../../utils/perObject';
 import type { AtlasTextureLayout } from './types';
 
 /**
@@ -33,20 +34,10 @@ interface RawPixels {
 }
 
 /**
- * Written only by `decodedPixels`. One readback serves every AtlasTexture cut from a decoded
- * sheet, and an entry goes with its image.
+ * A decoded image's bytes, top row first, read once per image. Null when they cannot be read.
+ * One readback serves every AtlasTexture cut from a decoded sheet.
  */
-const decodedSheetPixels = new WeakMap<object, ImagePixels | null>();
-
-/** A decoded image's bytes, top row first, read once per image. Null when they cannot be read. */
-function decodedPixels(image: object): ImagePixels | null {
-  let pixels = decodedSheetPixels.get(image);
-  if (pixels === undefined) {
-    pixels = readImagePixels(image) ?? null;
-    decodedSheetPixels.set(image, pixels);
-  }
-  return pixels;
-}
+const decodedPixels = perObject((image: object): ImagePixels | null => readImagePixels(image) ?? null);
 
 /** `sheet`'s texels, or null when they cannot be read or are not 4 channels per texel. */
 function rawPixels(sheet: THREE.Texture, atlas: { width: number; height: number }): RawPixels | null {

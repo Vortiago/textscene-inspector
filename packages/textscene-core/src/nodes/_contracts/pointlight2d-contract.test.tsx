@@ -23,6 +23,7 @@ import { CanvasLighting2DProvider } from '../../r3f/lighting2d/CanvasLighting2D'
 import { LIGHT_PASS_LAYER } from '../../r3f/lighting2d/lightPassLayers';
 import { SceneStack } from '../../r3f/testing/SceneStack';
 import { errorsOf } from '../../linter/testing/tierLists';
+import { settleLoads } from '../../r3f/testing/settleLoads';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -61,7 +62,7 @@ async function renderScene(tscn: string) {
       </CanvasLighting2DProvider>
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 

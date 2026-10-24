@@ -25,6 +25,7 @@ import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { SceneStack } from '../testing/SceneStack';
+import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -47,7 +48,7 @@ ${body}`;
       </HierarchyProvider>
     </SceneStack>
   );
-  await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  await settleLoads();
   return renderer;
 }
 

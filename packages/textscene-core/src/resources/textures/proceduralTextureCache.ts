@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types.js';
+import { perObject } from '../../utils/perObject.js';
 import { LRUCache } from '../LRUCache.js';
 
 /**
@@ -21,17 +22,9 @@ const cache = new LRUCache<THREE.Texture>(MAX_ENTRIES, (_key, texture) => textur
  * Per-parse identity for a scene's internal resources, minted on first use. A
  * re-parse makes a new array and so new keys, and the old entries age out.
  */
-const sceneTokens = new WeakMap<readonly TscnInternalResource[], string>();
+const sceneToken = perObject<readonly TscnInternalResource[], string>(() => String(nextToken++));
+/** Written only by `sceneToken`, once per new scene. It never resets. */
 let nextToken = 0;
-
-function sceneToken(internalResources: readonly TscnInternalResource[]): string {
-  let token = sceneTokens.get(internalResources);
-  if (token === undefined) {
-    token = String(nextToken++);
-    sceneTokens.set(internalResources, token);
-  }
-  return token;
-}
 
 /**
  * The shared texture for `subResourceId` in this scene, rasterised on first

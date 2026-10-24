@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { emissionTextureAddInjection, emissionTextureAddUserData } from './emissionTextureAdd';
 import type { ProgramShader } from '../materialProgramInputs';
+import { programShader } from '../testing/patchedFragment';
 
 function recording(energy: number): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ userData: emissionTextureAddUserData(energy) });
@@ -9,11 +10,7 @@ function recording(energy: number): THREE.MeshStandardMaterial {
 
 /** The shader the ADD patch leaves, from three's standard program. */
 function patched(material: THREE.Material): ProgramShader {
-  const shader: ProgramShader = {
-    vertexShader: THREE.ShaderLib.standard.vertexShader,
-    fragmentShader: THREE.ShaderLib.standard.fragmentShader,
-    uniforms: {},
-  };
+  const shader = programShader('standard');
   emissionTextureAddInjection(0)!.onBeforeCompile.call(material, shader);
   return shader;
 }

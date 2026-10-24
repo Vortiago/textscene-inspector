@@ -1,9 +1,9 @@
 /**
  * The terms of every sun shadow that the patched lookup reads beyond three's own (`splitShadowChunk.ts`),
  * in three's order of its sun shadows. Per sun: three rows of each slot's world-to-atlas matrix, the
- * direction towards the light with the soft shadow angle, each slot's range start, and the fade. The
- * fourth row of a slot matrix is always (0, 0, 0, 1), so three rows hold it in three vectors where
- * `mat4` takes four.
+ * direction towards the light with the soft shadow angle, each slot's range start, the fade, and
+ * whether Godot draws the sun first. The fourth row of a slot matrix is always (0, 0, 0, 1), so
+ * three rows hold it in three vectors where `mat4` takes four.
  */
 
 import * as THREE from 'three';
@@ -16,6 +16,7 @@ export const SUN_SHADOW_ROWS = 'godotSunShadowRows';
 export const SUN_SOFT_SHADOWS = 'godotSunSoftShadows';
 export const SUN_RANGE_BEGINS = 'godotSunRangeBegins';
 export const SUN_SHADOW_FADES = 'godotSunShadowFades';
+export const SUN_DRAWN_FIRST = 'godotSunDrawnFirst';
 
 /** The rows of one slot matrix that the lookup reads. */
 export const SLOT_MATRIX_ROWS = 3;
@@ -31,12 +32,16 @@ const SOFT_SHADOW_FLOATS = 4;
 /** One vec2: the camera depths the fade runs between. */
 const FADE_FLOATS = 2;
 
+/** One float: 1 for the sun Godot draws first, else 0. */
+const DRAWN_FIRST_FLOATS = 1;
+
 /** Each array's floats per sun shadow. Written only by `writeSunShadowUniforms`. */
 const arrays = new LightUniformArrays({
   [SUN_SHADOW_ROWS]: SUN_ROW_FLOATS,
   [SUN_SOFT_SHADOWS]: SOFT_SHADOW_FLOATS,
   [SUN_RANGE_BEGINS]: SPLIT_SLOTS,
   [SUN_SHADOW_FADES]: FADE_FLOATS,
+  [SUN_DRAWN_FIRST]: DRAWN_FIRST_FLOATS,
 });
 
 /** Scratch for the writer, which runs on every shadow pass. */
@@ -63,6 +68,7 @@ export function writeSunShadowUniforms(lights: readonly THREE.Light[]): void {
       writeSoftShadow(light, set[SUN_SOFT_SHADOWS], index);
       light.shadow.rangeBegins.toArray(set[SUN_RANGE_BEGINS], index * SPLIT_SLOTS);
       writeFade(light, set[SUN_SHADOW_FADES], index);
+      set[SUN_DRAWN_FIRST][index] = light.shadow.isDrawnFirst ? 1 : 0;
       index++;
     }
   });

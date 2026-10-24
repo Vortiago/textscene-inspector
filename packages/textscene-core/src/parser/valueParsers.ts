@@ -16,6 +16,7 @@ import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { stringToInt } from '../godot/string/string.js';
 import { boolSlotValue, scalarSlotValue } from '../godot/variant/variantBool.js';
 import type { Vector2, Vector3 } from '../godot/math/vector.js';
+import { storedReal, storedVector2, storedVector3 } from '../godot/math/real.js';
 
 /**
  * A finite scalar in the tokenizer's grammar, or `null`.
@@ -99,6 +100,14 @@ export function floatOr(value: string | undefined, fallback: number, context = '
     return fallback;
   }
   return parsed;
+}
+
+/**
+ * {@link floatOr} as a `real_t` field holds it. The double is tested for finite before it is
+ * stored, so `1e39` reads as the inf a `real_t` stores.
+ */
+export function realOr(value: string | undefined, fallback: number, context = 'value'): number {
+  return storedReal(floatOr(value, fallback, context));
 }
 
 /**
@@ -253,6 +262,16 @@ export function vec3Or(value: string | undefined, fallback: Vector3, context = '
   }
 }
 
+/** {@link vec2Or} as a `Vector2` field holds it, each component at single precision. */
+export function realVec2Or(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
+  return storedVector2(vec2Or(value, fallback, context));
+}
+
+/** {@link vec3Or} as a `Vector3` field holds it, each component at single precision. */
+export function realVec3Or(value: string | undefined, fallback: Vector3, context = 'value'): Vector3 {
+  return storedVector3(vec3Or(value, fallback, context));
+}
+
 /** The integer sibling of {@link vec2Or}: {@link parseOptionalVector2i}, or `fallback`. */
 export function vec2iOr(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
   return parseOptionalVector2i(value, context) ?? fallback;
@@ -299,19 +318,13 @@ export function parseOptionalBool(value: string | undefined): boolean | undefine
   return boolSlotValue(value) === true;
 }
 
-/** `parseOptionalInt` for floats. */
+/**
+ * `parseOptionalInt` for floats. Finite means finite as a double, so `1e39` passes, though a
+ * `real_t` stores it as inf. `writtenScalarSlotValue` keeps the non-finite literals.
+ */
 export function parseOptionalFloat(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   return finiteScalar(value) ?? undefined;
-}
-
-/**
- * `parseOptionalFloat` that keeps `inf`, `inf_neg` and `nan`, for a property whose consumer
- * draws what Godot draws for them.
- */
-export function parseOptionalGodotFloat(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  return scalarSlotValue(value) ?? undefined;
 }
 
 /**

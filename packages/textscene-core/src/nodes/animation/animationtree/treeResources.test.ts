@@ -96,7 +96,7 @@ describe('resolveTreeRoot — state machine', () => {
  * (ustring.cpp:5061-5062). The key and the `&"…"` token that names the node must read the same.
  */
 describe('resolveTreeRoot — node names that hold a quote', () => {
-  function subResources(body: string): TscnInternalResource[] {
+  function subResources(body: string): readonly TscnInternalResource[] {
     return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`).internalResources;
   }
 

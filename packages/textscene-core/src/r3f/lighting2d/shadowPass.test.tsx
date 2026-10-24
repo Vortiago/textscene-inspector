@@ -18,6 +18,7 @@ import { litQuadRenderOrder, litQuadStencilProps } from './ShadowVolumeMask';
 import { SceneStack } from '../testing/SceneStack';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
+import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -89,7 +90,7 @@ async function render(tscn: string) {
   );
   // No frame is advanced: the world matrices are sampled in a layout effect
   // as well, so a still tree settles inside React's own commit loop.
-  await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  await settleLoads();
   return renderer;
 }
 

@@ -10,7 +10,7 @@ import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawFullScreen, fullScreenPass } from '../../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
-import { perRenderer } from '../../../r3f/perRenderer.js';
+import { perObject } from '../../../utils/perObject.js';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
@@ -84,7 +84,9 @@ void main() {
 
 /** The pass a renderer fills every copy of one kind with. `fill` binds the source before each draw. */
 const copyPassFor = (name: string, fragment: string) =>
-  perRenderer(() => fullScreenPass(name, fragment, { source: { value: null } }));
+  perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
+    fullScreenPass(name, fragment, { source: { value: null } })
+  );
 type CopyPassFor = ReturnType<typeof copyPassFor>;
 const decodePassFor = copyPassFor('DecodingViewCopy', DECODE_FRAGMENT);
 const encodePassFor = copyPassFor('PlainViewCopy', ENCODE_FRAGMENT);

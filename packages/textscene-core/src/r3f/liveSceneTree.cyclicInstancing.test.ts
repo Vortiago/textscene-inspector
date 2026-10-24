@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collapseLiveNode,
   collectLiveNodes,
-  liveChildGroups,
+  liveStep,
   type CachedSceneSource,
   type LiveTreeContext,
   type SceneScope,
@@ -115,7 +115,7 @@ describe('walkLiveTree over cyclic instancing', () => {
   });
 });
 
-describe('liveChildGroups and instancedScenePaths', () => {
+describe('liveStep and instancedScenePaths', () => {
   const instance = makeNode('A', 'Node3D', { instance: 'ExtResource("1")' });
 
   it('records the instanced scene on the merged group, after the scenes above it', () => {
@@ -124,7 +124,7 @@ describe('liveChildGroups and instancedScenePaths', () => {
       internalResources: [],
       instancedScenePaths: ['res://x.tscn'],
     };
-    const [merged] = liveChildGroups(instance, scope, SELF_CTX.sceneCache);
+    const [merged] = liveStep(instance, scope, SELF_CTX.sceneCache).groups;
     expect(merged?.origin).toBe('merged');
     expect(merged?.scope.instancedScenePaths).toEqual(['res://x.tscn', 'res://a.tscn']);
   });
@@ -135,7 +135,7 @@ describe('liveChildGroups and instancedScenePaths', () => {
       internalResources: [],
       instancedScenePaths: ['res://a.tscn'],
     };
-    expect(liveChildGroups(instance, scope, SELF_CTX.sceneCache)).toEqual([
+    expect(liveStep(instance, scope, SELF_CTX.sceneCache).groups).toEqual([
       { origin: 'inline', children: [], scope },
     ]);
   });
@@ -147,7 +147,7 @@ describe('liveChildGroups and instancedScenePaths', () => {
       internalResources: [],
     };
     const scope: SceneScope = { externalResources: [ext('1', 'res://multi.tscn')], internalResources: [] };
-    const groups = liveChildGroups(instance, scope, cacheOf({ 'res://multi.tscn': multi }));
+    const groups = liveStep(instance, scope, cacheOf({ 'res://multi.tscn': multi })).groups;
     expect(groups.map((g) => [g.origin, g.scope.instancedScenePaths])).toEqual([
       ['subscene', ['res://multi.tscn']],
     ]);
@@ -168,7 +168,7 @@ describe('liveChildGroups and instancedScenePaths', () => {
     const scope: SceneScope = { externalResources: [ext('1', 'res://outer.tscn')], internalResources: [] };
     const cache = cacheOf({ 'res://outer.tscn': outer, 'res://inner.tscn': inner });
 
-    const [merged] = liveChildGroups(instance, scope, cache);
+    const [merged] = liveStep(instance, scope, cache).groups;
     expect(merged?.scope.externalResources).toBe(innerExt);
     expect(merged?.scope.instancedScenePaths).toEqual(['res://outer.tscn', 'res://inner.tscn']);
   });

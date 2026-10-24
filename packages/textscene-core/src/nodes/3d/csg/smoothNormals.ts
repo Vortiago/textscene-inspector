@@ -34,7 +34,7 @@
  */
 
 import * as THREE from 'three';
-import { isCollapsed, weldCorners, type ShadedBrush } from '../../../r3f/csg/brushManifold';
+import { isCollapsed, weldCorners, type ShadedBrush } from './brushManifold';
 import { bottomUpV } from '../../../godot/math/uv';
 
 /**

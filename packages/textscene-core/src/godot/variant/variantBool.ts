@@ -41,3 +41,12 @@ export function boolLiteralAsNumber(text: string): 1 | 0 | undefined {
 export function scalarSlotValue(text: string): number | null {
   return boolLiteralAsNumber(text) ?? parseGodotFloat(text);
 }
+
+/**
+ * {@link scalarSlotValue} of a property as the file writes it: undefined for an absent key and for
+ * a value the slot refuses. `inf` and `nan` stay, for a consumer that draws what Godot draws.
+ */
+export function writtenScalarSlotValue(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  return scalarSlotValue(value) ?? undefined;
+}

@@ -12,6 +12,7 @@ import {
   type LiveTreeContext,
   type LiveTreeEntry,
 } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 
 const KID = `[gd_scene format=3]
 
@@ -33,13 +34,9 @@ const MAIN = `[gd_scene format=3]
 
 const parse = (text: string): TscnScene => new TscnParser().parse(text);
 
-function contextOver(main: TscnScene): LiveTreeContext {
-  const scenes: Record<string, TscnScene> = { 'res://kid.tscn': parse(KID) };
-  return {
-    externalResources: main.externalResources,
-    internalResources: main.internalResources,
-    sceneCache: { getCached: (path) => scenes[path] },
-  };
+/** The context of `main`, with the kid scene cached. */
+function contextWithKid(main: TscnScene): LiveTreeContext {
+  return contextOver(main, { 'res://kid.tscn': parse(KID) });
 }
 
 function walk(main: TscnScene, ctx: LiveTreeContext): LiveTreeEntry[] {
@@ -49,7 +46,7 @@ function walk(main: TscnScene, ctx: LiveTreeContext): LiveTreeEntry[] {
 describe('the child groups of a context', () => {
   it('give a second walk the nodes of the first', () => {
     const main = parse(MAIN);
-    const ctx = contextOver(main);
+    const ctx = contextWithKid(main);
     const first = walk(main, ctx);
 
     const second = walk(main, ctx);
@@ -59,7 +56,7 @@ describe('the child groups of a context', () => {
 
   it('give a path question the node a walk gave', () => {
     const main = parse(MAIN);
-    const ctx = contextOver(main);
+    const ctx = contextWithKid(main);
     const walked = walk(main, ctx).find((entry) => entry.path === 'Main/K0')!;
 
     expect(resolveLiveEntry('Main/K0', main.nodes, ctx)!.node).toBe(walked.node);
@@ -67,7 +64,7 @@ describe('the child groups of a context', () => {
 
   it('keep two siblings of one name apart', () => {
     const main = parse(MAIN);
-    const entries = walk(main, contextOver(main)).filter((entry) => entry.path === 'Main/K0');
+    const entries = walk(main, contextWithKid(main)).filter((entry) => entry.path === 'Main/K0');
 
     expect(entries).toHaveLength(2);
     expect(entries[0]!.node).not.toBe(entries[1]!.node);

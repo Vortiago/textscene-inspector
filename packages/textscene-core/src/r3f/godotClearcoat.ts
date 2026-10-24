@@ -7,14 +7,9 @@
  * reflection, so three's own term for it stays empty.
  */
 
-import {
-  applyChunkEdits,
-  installChunkPatch,
-  type ChunkEdit,
-  type TextEdit,
-} from './shaderPatch/chunkPatch.js';
-import { LIGHT_FUNCTION_MARK, RE_DIRECT } from './godotLightFunction.js';
-import { SKY_LIGHTING_MARK, THREE_IBL_RADIANCE_FUNCTION } from './godotSkyLighting.js';
+import { installChunkEdits, type ChunkEdit, type TextEdit } from './shaderPatch/chunkPatch.js';
+import { installGodotLightFunction, RE_DIRECT } from './godotLightFunction.js';
+import { installGodotSkyLighting, THREE_IBL_RADIANCE_FUNCTION } from './godotSkyLighting.js';
 
 type ClearcoatChunk =
   | 'lights_physical_fragment'
@@ -159,27 +154,17 @@ const LAYERING_EDITS: readonly TextEdit[] = [
 ];
 
 /**
- * Replaces three's clearcoat for every program compiled after the call. It calls the light
- * function's and the sky lighting's functions, so it installs after them. A three release that
- * rewrites a replaced line keeps all its own text and warns, and `godotClearcoat.test.ts` fails on
- * that release. A second call changes nothing.
+ * Installs the light function and the sky lighting whose functions it calls, then replaces three's
+ * clearcoat, for every program compiled after the call. A three release that rewrites a replaced
+ * line keeps all its own text and warns, and `godotClearcoat.test.ts` fails on that release. A
+ * second call changes nothing.
  */
 export function installGodotClearcoat(): void {
-  installChunkPatch({
-    names: [
-      'lights_physical_fragment',
-      'lights_physical_pars_fragment',
-      'lights_fragment_maps',
-      'lights_fragment_end',
-      'envmap_physical_pars_fragment',
-    ],
-    isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes(CLEARCOAT_BRDF),
-    apply: (chunks) => applyChunkEdits(chunks, CLEARCOAT_EDITS),
+  installChunkEdits({
+    requires: [installGodotLightFunction, installGodotSkyLighting],
+    edits: CLEARCOAT_EDITS,
+    mark: CLEARCOAT_BRDF,
+    patch: 'clearcoat',
     fragmentShaders: { physical: LAYERING_EDITS },
-    missing: 'lighting chunks or physical fragment shader lack a line the clearcoat patch replaces',
-    requires: {
-      lights_physical_pars_fragment: LIGHT_FUNCTION_MARK,
-      envmap_physical_pars_fragment: SKY_LIGHTING_MARK,
-    },
   });
 }

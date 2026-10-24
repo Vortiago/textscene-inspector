@@ -9,6 +9,7 @@ import { mapToLocalPx } from './tilePlacement';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
 import type { Rgba } from '../../godot/math/math';
+import { regionUvRect, type UvRect } from '../../r3f/uvWindow';
 
 interface TileGeometryArrays {
   positions: Float32Array;
@@ -22,27 +23,6 @@ interface TileGeometryArrays {
    * Godot's padded atlas does (`tile_set.cpp:5622-5671`).
    */
   uvBounds: Float32Array | null;
-}
-
-interface UvRect {
-  u0: number;
-  u1: number;
-  vTop: number;
-  vBottom: number;
-}
-
-/** Pixel rect (image-Y top-left) → UV rect under the flipY=true convention. */
-function pxRectToUv(
-  rect: { x: number; y: number; width: number; height: number },
-  texW: number,
-  texH: number
-): UvRect {
-  return {
-    u0: rect.x / texW,
-    u1: (rect.x + rect.width) / texW,
-    vTop: 1 - rect.y / texH,
-    vBottom: 1 - (rect.y + rect.height) / texH,
-  };
 }
 
 export function buildTileGeometryArrays(
@@ -63,9 +43,10 @@ export function buildTileGeometryArrays(
     const info = tileDrawInfo(source, cell);
     const { flipH, flipV, transpose } = info.orientation;
     // Transposed tiles draw with swapped dimensions (Godot swaps the dest rect).
-    const w = transpose ? info.regionPx.height : info.regionPx.width;
-    const h = transpose ? info.regionPx.width : info.regionPx.height;
-    const uv = pxRectToUv(info.regionPx, texW, texH);
+    const { x, y, width, height } = info.regionPx;
+    const w = transpose ? height : width;
+    const h = transpose ? width : height;
+    const uv = regionUvRect({ x, y, w: width, h: height }, { x: texW, y: texH });
 
     // Corner UV grid [[TL,TR],[BL,BR]]; transpose reflects across the main
     // diagonal, then flips swap columns/rows (Godot composes in that order).

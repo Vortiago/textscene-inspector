@@ -655,6 +655,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'tree-rtl', file: 'unit-tree-rtl.tscn', mode: '2d' },
   { name: 'hslider-rtl', file: 'unit-hslider-rtl.tscn', mode: '2d' },
   { name: 'progress-bar-rtl', file: 'unit-progress-bar-rtl.tscn', mode: '2d' },
+  // A TextureProgressBar part-filled, so it crops its progress texture. The crop samples the
+  // undecoded bytes as the other layers do, and a second sRGB decode would darken it.
+  { name: 'texture-progress-bar-partial', file: 'unit-texture-progress-bar-partial.tscn', mode: '2d' },
   { name: 'color-picker-rtl', file: 'unit-color-picker-rtl.tscn', mode: '2d' },
   // Two LTR alignment scenes. The fractional-box one needs a non-integer box
   // width: at a whole width the ceiled and raw line extents give one offset.

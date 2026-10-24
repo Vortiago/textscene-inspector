@@ -4,10 +4,11 @@ import { layerSamples, type SkyOctmapLayout } from '../../godot/rendering/enviro
 import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { IMPORTANCE_SAMPLE_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { skyPass } from './skyPass.js';
-import { perRenderer } from '../../r3f/perRenderer.js';
+import type * as THREE from 'three';
+import { perObject } from '../../utils/perObject.js';
 
 /** One pass per renderer for every layout, as each filter would otherwise compile it again. */
-const importanceSamplePassFor = perRenderer(() =>
+const importanceSamplePassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
   skyPass(IMPORTANCE_SAMPLE_FRAGMENT_SHADER, [...LAYER_FILTER_UNIFORMS, 'samples', 'sampleCount'])
 );
 

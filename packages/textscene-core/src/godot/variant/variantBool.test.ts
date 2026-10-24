@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
+import { boolSlotValue, boolLiteralAsNumber, writtenScalarSlotValue } from './variantBool.js';
 
 describe('boolSlotValue', () => {
   it('reads the two boolean literals', () => {
@@ -51,5 +51,23 @@ describe('boolLiteralAsNumber', () => {
   it('leaves every other spelling to the number grammar', () => {
     expect(boolLiteralAsNumber('1')).toBeUndefined();
     expect(boolLiteralAsNumber('"true"')).toBeUndefined();
+  });
+});
+
+describe('writtenScalarSlotValue', () => {
+  it('keeps the non-finite literals', () => {
+    expect(writtenScalarSlotValue('1.5')).toBe(1.5);
+    expect(writtenScalarSlotValue('inf')).toBe(Infinity);
+    expect(writtenScalarSlotValue('inf_neg')).toBe(-Infinity);
+    expect(writtenScalarSlotValue('nan')).toBeNaN();
+  });
+
+  it('reads an absent key as undefined (edge case)', () => {
+    expect(writtenScalarSlotValue(undefined)).toBeUndefined();
+  });
+
+  it('reads a value the slot refuses as undefined (error case)', () => {
+    expect(writtenScalarSlotValue('nope')).toBeUndefined();
+    expect(writtenScalarSlotValue('')).toBeUndefined();
   });
 });

@@ -17,6 +17,7 @@ import {
 } from '../../../resources/testing/createFakeResourceLoader';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const TEX = 'res://shadow_gradient.png';
 /** Deliberately non-square, so an x/y swap in the divide cannot pass. */
@@ -66,7 +67,7 @@ async function render(rawProps: Record<string, string>) {
   const tex = loadedTexture();
   fake.textures.seed(TEX, tex);
   const renderer = await mount(rawProps, fake);
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return { renderer, tex };
 }
 

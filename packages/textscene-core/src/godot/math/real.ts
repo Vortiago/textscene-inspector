@@ -5,9 +5,13 @@
 
 import type { Vector2, Vector3 } from './vector.js';
 
+// Bound once, not read from `Math` per call: the core tests run in a vmThreads VM context, where
+// each global lookup costs about 160 ns, 30 times the call, and an unwrap makes millions of calls.
+const { fround } = Math;
+
 /** The value a `real_t` field holds after `value` is assigned to it. */
 export function storedReal(value: number): number {
-  return Math.fround(value);
+  return fround(value);
 }
 
 /** The vector a `Vector2` field holds after `value` is assigned to it. */

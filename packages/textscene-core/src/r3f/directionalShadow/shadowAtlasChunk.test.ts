@@ -15,7 +15,11 @@ import { installGodotSplitShadow } from './splitShadowChunk';
 import { occurrences } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
 import { LIT_SHADERS } from '../testing/litShaders';
-import { installedShaderChunks, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
+import {
+  installedShaderChunks,
+  restoreShaderGlobalsAfterEach,
+  snapshotShaderGlobals,
+} from '../testing/shaderPatches';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
@@ -98,8 +102,9 @@ describe('installDirectionalShadowAtlas', () => {
   });
 
   it('composes with the split lookup in either install order', () => {
+    const restore = snapshotShaderGlobals();
     const atlasFirst = installedInOrder('atlas first');
-    Object.assign(THREE.ShaderChunk, threeChunks);
+    restore();
     expect(installedInOrder('atlas last')).toEqual(atlasFirst);
   });
 

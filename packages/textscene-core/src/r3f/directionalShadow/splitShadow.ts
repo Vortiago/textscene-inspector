@@ -79,6 +79,12 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    */
   softShadowAngle = 0;
 
+  /**
+   * Whether Godot draws this light first among its directional lights, the one whose shadow slot a
+   * shadowmask in mode Only fills (`scene_forward_clustered.glsl:2510-2517`). The fitter writes it.
+   */
+  isDrawnFirst = false;
+
   /** One camera per slot. The fitter places each drawn one before every render. */
   private readonly splitCameras: THREE.OrthographicCamera[] = [];
   private readonly splitMatrices: THREE.Matrix4[] = [];

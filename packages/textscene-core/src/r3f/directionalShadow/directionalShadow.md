@@ -277,6 +277,12 @@ atlas (`../positionalShadow/positionalShadow.md`). A program compiled with the s
 adds one unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than
 eight suns without it.
 
+A lightmapped program adds one unit, the lightmap atlas. The shadowmask rides in the alpha of that
+atlas, so it adds none (`../../resources/lightmapgidata/build.ts`). Measured the same way, an opaque
+`MeshPhysicalMaterial` with five maps, clearcoat, a sky, fog, a soft sun and an omni and a spot
+shadow with search takes 18 units with the lightmap and 17 without. A GPU with only 16 units fails
+to link that program.
+
 A sampler per sun would take 13 units with eight suns and the plain material, 20 with the physical
 one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the physical
 one, and the scene draws nothing lit.

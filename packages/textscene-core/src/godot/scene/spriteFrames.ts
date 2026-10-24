@@ -39,7 +39,7 @@ interface SpriteFrameState {
 }
 
 /** `get_frame_coords()`: the stored frame as (column, row) on the stored grid (sprite_2d.cpp:319). */
-export function frameCoords(state: SpriteFrameState): { x: number; y: number } {
+export function frameCoords(state: Pick<SpriteFrameState, 'frame' | 'hframes'>): { x: number; y: number } {
   return { x: state.frame % state.hframes, y: Math.trunc(state.frame / state.hframes) };
 }
 

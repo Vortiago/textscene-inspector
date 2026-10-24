@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { CSG_MERGE_TOLERANCE } from '../../godot/scene/csg';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/scene/csg';
 
 /** A hash of a weld-grid cell. Two cells can share one, which only adds a candidate to check. */
 function cellHash(x: number, y: number, z: number): number {

@@ -3,19 +3,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { orphanedNodes, sceneSeating, seatScene } from './sceneTreeBuilder';
+import { orphanedNodes, sceneSeating, seatedParents, seatScene } from './sceneTreeBuilder';
+import { node, originsOf, withOrigin } from './testing/seatingKit';
 import type { NodeOrigin, TscnNode } from './types';
-
-/** A childless `Node3D`, a root when `parent` is absent. */
-function node(name: string, parent?: string): TscnNode {
-  const root: TscnNode = { rawProperties: {}, type: 'Node3D', name, properties: {}, children: [] };
-  return parent === undefined ? root : { ...root, parent };
-}
-
-/** One origin per node, in order, each declaring the `parent=` its node carries. */
-function originsOf(nodes: TscnNode[]): NodeOrigin<TscnNode>[] {
-  return nodes.map((node, i) => ({ node, line: i + 1, declaredParent: node.parent, uniqueId: 0 }));
-}
 
 function build(nodes: TscnNode[]): TscnNode[] {
   return seatScene(originsOf(nodes)).roots;
@@ -25,15 +15,6 @@ function build(nodes: TscnNode[]): TscnNode[] {
 function orphansOf(nodes: TscnNode[]): NodeOrigin<TscnNode>[] {
   const origins = originsOf(nodes);
   return orphanedNodes(origins, seatScene(origins));
-}
-
-/** `origins` with `patch` applied to the one at `index`. */
-function withOrigin(
-  origins: NodeOrigin<TscnNode>[],
-  index: number,
-  patch: Partial<NodeOrigin<TscnNode>>
-): NodeOrigin<TscnNode>[] {
-  return origins.map((origin, i) => (i === index ? { ...origin, ...patch } : origin));
 }
 
 describe('seatScene', () => {
@@ -502,7 +483,7 @@ describe('seatScene', () => {
 
       it('does not re-root a heading whose parent_id_path Godot follows to a node (edge case)', () => {
         const nodes = [node('Root'), node('Mid', '.'), node('Orphan', 'Gone')];
-        const origins = withOrigin(withOrigin(originsOf(nodes), 1, { uniqueId: 7 }), 2, { idTrail: [7] });
+        const origins = withOrigin(originsOf(nodes, { Mid: 7 }), 2, { idTrail: [7] });
 
         expect(rootChildNames(origins)).toEqual(['Mid']);
       });
@@ -517,7 +498,7 @@ describe('seatScene', () => {
       it('re-roots a heading whose trail names a heading that was itself re-rooted (edge case)', () => {
         // The named node does not exist at its authored path, so the trail finds nothing.
         const nodes = [node('Root'), node('Lost', 'Gone'), node('Orphan', 'Gone2')];
-        const origins = withOrigin(withOrigin(originsOf(nodes), 1, { uniqueId: 7 }), 2, { idTrail: [7] });
+        const origins = withOrigin(originsOf(nodes, { Lost: 7 }), 2, { idTrail: [7] });
 
         expect(rootChildNames(origins)).toEqual(['Gone#Lost', 'Gone2#Orphan']);
       });
@@ -750,6 +731,92 @@ describe('seatScene resolve', () => {
 
     expect(statusOf(nodes, '%Part')).toBe('missing');
     expect(part.children).toEqual([]);
+  });
+});
+
+describe('seatScene headings landed by a parent_id_path', () => {
+  /** A root, `Mid` (id 7), `Orphan` whose `parent=` vanishes and whose trail lands on `Mid`, and `Child` below `Orphan`. */
+  const nodes = [node('Root'), node('Mid', '.'), node('Orphan', 'Gone'), node('Child', 'Mid/Orphan')];
+  const landing = () => withOrigin(originsOf(nodes, { Mid: 7 }), 2, { idTrail: [7] });
+  const names = (parent: TscnNode | undefined) => parent?.children.map((child) => child.name);
+
+  it('seats the heading under the heading its trail names, keeping its name', () => {
+    const { seated } = seatScene(landing());
+
+    expect(names(seated.get(nodes[1]!))).toEqual(['Orphan']);
+  });
+
+  it('addresses the landed heading at the path it lives at, so a child below it seats', () => {
+    const { seated, resolve } = seatScene(landing());
+
+    expect(names(seated.get(nodes[2]!))).toEqual(['Child']);
+    expect(resolve('Mid/Orphan')).toEqual({ status: 'found', node: seated.get(nodes[2]!) });
+  });
+
+  it('counts the landed heading as an orphan, since it is not at the path it declares', () => {
+    const origins = landing();
+
+    expect(orphanedNodes(origins, seatScene(origins)).map(({ node: heading }) => heading.name)).toEqual([
+      'Orphan',
+    ]);
+  });
+
+  it('re-roots a heading whose trail names a landed heading, which is not at its own path', () => {
+    const chained = [...nodes.slice(0, 3), node('Second', 'Gone2')];
+    const origins = withOrigin(originsOf(chained, { Mid: 7, Orphan: 8 }), 2, { idTrail: [7] });
+    const { roots } = seatScene(withOrigin(origins, 3, { idTrail: [8] }));
+
+    expect(names(roots[0])).toEqual(['Mid', 'Gone2#Second']);
+  });
+
+  it('seats nothing where the scene is refused, since Godot instantiates none of it', () => {
+    const refused = [...nodes.slice(0, 3), node('Stray')];
+    const origins = withOrigin(withOrigin(originsOf(refused), 1, { uniqueId: 7 }), 2, { idTrail: [7] });
+
+    expect(seatScene(origins).seated.has(refused[2]!)).toBe(false);
+  });
+});
+
+describe('seatedParents', () => {
+  const parentNames = (nodes: TscnNode[], origins = originsOf(nodes)) => {
+    const { roots, seated } = seatScene(origins);
+    const parents = seatedParents(roots);
+    return nodes.map((heading) => parents.get(seated.get(heading)!)?.name);
+  };
+
+  it('names the node each heading sits under', () => {
+    const nodes = [node('Root'), node('A', '.'), node('B', 'A')];
+
+    expect(parentNames(nodes)).toEqual([undefined, 'Root', 'A']);
+  });
+
+  it('names no parent for a re-rooted heading, whose parent= vanished', () => {
+    const nodes = [node('Root'), node('Lost', 'Gone')];
+
+    expect(parentNames(nodes)).toEqual([undefined, undefined]);
+  });
+
+  it('names no parent for a heading whose parent= names a later heading', () => {
+    const nodes = [node('Root'), node('Early', 'Later'), node('Later', '.')];
+
+    expect(parentNames(nodes)).toEqual([undefined, undefined, 'Root']);
+  });
+
+  it('names no heading for a path into an instance, which names content this file does not list', () => {
+    const nodes = [
+      node('Root'),
+      { ...node('Inst', '.'), instance: 'ExtResource("1")' },
+      node('X', 'Inst/Sub'),
+    ];
+
+    expect(parentNames(nodes)).toEqual([undefined, 'Root', undefined]);
+  });
+
+  it('names the heading a trail landed the node on', () => {
+    const nodes = [node('Root'), node('Mid', '.'), node('Orphan', 'Gone')];
+    const origins = withOrigin(originsOf(nodes, { Mid: 7 }), 2, { idTrail: [7] });
+
+    expect(parentNames(nodes, origins)).toEqual([undefined, 'Root', 'Mid']);
   });
 });
 

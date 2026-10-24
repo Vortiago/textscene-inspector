@@ -34,7 +34,7 @@
 
 import * as THREE from 'three';
 import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
-import type { ShadedBrush } from '../../../../r3f/csg/brushManifold';
+import type { ShadedBrush } from '../brushManifold';
 import { extrusionCounts } from './extrusionCounts';
 import { facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
 import { MIN_POLYGON_VERTICES, type CsgPolygonSpec } from './polygonSweepSpec';
