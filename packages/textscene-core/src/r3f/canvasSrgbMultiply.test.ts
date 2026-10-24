@@ -67,6 +67,6 @@ describe('installCanvasSrgbMultiply', () => {
     THREE.ShaderChunk.color_fragment = '';
     const warnings = warningsOf(installCanvasSrgbMultiply);
     expect(THREE.ShaderChunk.map_fragment).toBe('');
-    expect(warnings).toEqual([expect.stringContaining('no linear multiply to replace')]);
+    expect(warnings).toEqual([expect.stringContaining('lacks a line the sRGB multiply patch replaces')]);
   });
 });

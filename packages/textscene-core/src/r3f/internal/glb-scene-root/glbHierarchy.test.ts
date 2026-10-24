@@ -7,6 +7,7 @@ import type { TscnNode } from '../../../parser/types';
 import {
   flattenGlbObjects,
   glbObjectName,
+  glbSceneRootChildCount,
   glbSceneRootChildren,
   GLB_ANIMATION_PLAYER_NAME,
 } from './glbHierarchy';
@@ -160,6 +161,29 @@ describe('glbSceneRootChildren animation player', () => {
   });
 });
 
+describe('glbSceneRootChildCount', () => {
+  it('counts the top-level objects and the AnimationPlayer the clips add', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Group(), 'arm'));
+    root.animations = [new THREE.AnimationClip('idle', 1, [])];
+    expect(glbSceneRootChildCount(root)).toBe(3);
+  });
+
+  it('counts no AnimationPlayer for a GLB with no clips (edge case)', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    expect(glbSceneRootChildCount(root)).toBe(1);
+  });
+
+  it('counts the objects the GLB loaded with, not a node mounted below it later', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    expect(glbSceneRootChildCount(root)).toBe(1);
+    root.add(new THREE.Group());
+    expect(glbSceneRootChildCount(root)).toBe(1);
+  });
+});
+
 describe('glbSceneRootChildren per GLB', () => {
   function rootWithBody(): THREE.Group {
     const root = new THREE.Group();
@@ -200,5 +224,45 @@ describe('flattenGlbObjects', () => {
     root.add(first, named(new THREE.Group(), 'second'));
 
     expect(flattenGlbObjects(root).map((entry) => entry.relPath)).toEqual(['first', 'first/inner', 'second']);
+  });
+});
+
+describe('one walk per GLB', () => {
+  /** A GLB whose root counts each read of its children, which every walk of it starts with. */
+  function countedRoot(): { root: THREE.Group; walks: () => number } {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    const children = root.children;
+    let reads = 0;
+    Object.defineProperty(root, 'children', {
+      get: () => {
+        reads++;
+        return children;
+      },
+    });
+    return { root, walks: () => reads };
+  }
+
+  it('walks a GLB once for its objects and for each build of its children', () => {
+    const { root, walks } = countedRoot();
+    flattenGlbObjects(root);
+    const readsOfOneWalk = walks();
+    const marker = { ...makeNode('Marker', 'Node'), glbTargetRelPath: 'body' };
+
+    flattenGlbObjects(root);
+    glbSceneRootChildren(root, [marker]);
+    glbSceneRootChildren(root, [marker]);
+    glbSceneRootChildren(root, []);
+
+    expect(walks()).toBe(readsOfOneWalk);
+  });
+
+  it('walks each of two GLBs once (edge case)', () => {
+    const first = countedRoot();
+    const second = countedRoot();
+    flattenGlbObjects(first.root);
+    flattenGlbObjects(second.root);
+    expect(first.walks()).toBeGreaterThan(0);
+    expect(second.walks()).toBe(first.walks());
   });
 });

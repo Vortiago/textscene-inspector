@@ -16,6 +16,7 @@ import { loaderServing } from '../../../resources/testing/servingResourceLoader'
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -58,7 +59,7 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internal, loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
@@ -83,7 +84,7 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internal, loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     expect(drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')).toHaveLength(
       0

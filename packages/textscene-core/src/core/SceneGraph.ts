@@ -66,8 +66,8 @@ interface ExternalSceneRef {
 export function tscnSceneToParsedScene(
   path: string,
   nodes: TscnNode[],
-  externalResources: ExtResource[],
-  internalResources: SubResource[],
+  externalResources: readonly ExtResource[],
+  internalResources: readonly SubResource[],
   externalScenes: ExternalSceneRef[] = []
 ): ParsedScene {
   return {

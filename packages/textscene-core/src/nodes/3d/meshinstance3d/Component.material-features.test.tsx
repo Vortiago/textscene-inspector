@@ -17,6 +17,7 @@ import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -81,7 +82,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const renderer = await renderWith(makeNode('mat'), internalResources, externalResources, loader);
     // Wait one tick for the synchronous loaded-event subscription to
     // hydrate the hook's state and re-render.
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
@@ -129,7 +130,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, externalResources, loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
@@ -166,7 +167,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const material = findMaterial(renderer);
     expect(material).toBeDefined();
@@ -189,7 +190,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const material = findMaterial(renderer);
     expect(material).toBeDefined();
@@ -233,7 +234,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
@@ -275,7 +276,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     // A coat upgrades the slot to three.js's MeshPhysicalMaterial (the only
     // material with native clearcoat), carrying the parsed strength + roughness.
@@ -300,7 +301,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     expect(drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')).toHaveLength(
       0
@@ -326,7 +327,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     // Rim upgrades the slot to MeshPhysicalMaterial and maps the rim strength
     // onto three.js's Fresnel sheen term (the closest native analog).
@@ -351,7 +352,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const material = findMaterial(renderer);
     expect(material!.userData.godotHeightmap).toMatchObject({ scale: 3 });
@@ -370,7 +371,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     ];
 
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await settleLoads();
 
     const material = findMaterial(renderer);
     expect(material!.userData).not.toHaveProperty('godotHeightmap');

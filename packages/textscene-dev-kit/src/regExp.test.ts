@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeRegExp } from './regExp';
+import { escapeRegExp, TRIVIA } from './regExp';
 
 describe('escapeRegExp', () => {
   it('matches a literal holding every RegExp metacharacter, and nothing else', () => {
@@ -15,5 +15,19 @@ describe('escapeRegExp', () => {
 
   it('escapes the empty string to itself', () => {
     expect(escapeRegExp('')).toBe('');
+  });
+});
+
+describe('TRIVIA', () => {
+  const tokens = new RegExp(`^a${TRIVIA}b$`);
+
+  it('matches whitespace, a block comment and a line comment between two tokens', () => {
+    expect(
+      ['ab', 'a \n b', 'a/* c */b', 'a // c\nb', 'a /* c */ // d\n b'].map((s) => tokens.test(s))
+    ).toEqual([true, true, true, true, true]);
+  });
+
+  it('refuses other text between the tokens (error case)', () => {
+    expect(['a x b', 'a / b', 'a // c b'].map((s) => tokens.test(s))).toEqual([false, false, false]);
   });
 });

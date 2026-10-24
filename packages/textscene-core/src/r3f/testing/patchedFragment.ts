@@ -6,12 +6,30 @@
 import * as THREE from 'three';
 import type { ProgramShader } from '../materialProgramInputs';
 
+/** A three program a Godot surface, its depth prepass or its shadow compiles. */
+export type ProgramName = 'basic' | 'standard' | 'physical' | 'depth' | 'distance';
+
+/** Every program a Godot surface, its depth prepass or its shadow compiles. */
+export const SURFACE_AND_DEPTH_PROGRAMS: readonly ProgramName[] = [
+  'basic',
+  'standard',
+  'physical',
+  'depth',
+  'distance',
+];
+
 /** The program of each three class a Godot surface draws with, by material type. */
-export const PROGRAM_OF_TYPE: Readonly<Record<string, THREE.ShaderLibShader>> = {
-  MeshBasicMaterial: THREE.ShaderLib.basic,
-  MeshStandardMaterial: THREE.ShaderLib.standard,
-  MeshPhysicalMaterial: THREE.ShaderLib.physical,
+export const PROGRAM_OF_TYPE: Readonly<Record<string, ProgramName>> = {
+  MeshBasicMaterial: 'basic',
+  MeshStandardMaterial: 'standard',
+  MeshPhysicalMaterial: 'physical',
 };
+
+/** `program`'s own text, as three hands it to `onBeforeCompile`. */
+export function programShader(program: ProgramName): ProgramShader {
+  const { vertexShader, fragmentShader } = THREE.ShaderLib[program];
+  return { vertexShader, fragmentShader, uniforms: {} };
+}
 
 /** The shader resets the alpha to `opacity`, dropping the texture and vertex-colour alpha. */
 export const DROPS_ALBEDO_ALPHA = 'diffuseColor.a = opacity;';
@@ -62,7 +80,7 @@ function patchedProgram(material: THREE.Material): ProgramShader {
   if (program === undefined) {
     throw new Error(`expected a mesh basic, standard or physical material, got ${material.type}`);
   }
-  const shader: ProgramShader = { ...program, uniforms: {} };
+  const shader = programShader(program);
   material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
   return shader;
 }

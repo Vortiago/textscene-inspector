@@ -16,6 +16,7 @@ import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext'
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const NAVPOLY_TRES: ParsedResource = {
   resourceType: 'NavigationPolygon',
@@ -61,7 +62,7 @@ async function render(showNavigation: boolean, tres: ParsedResource = NAVPOLY_TR
       </ResourceLoaderProvider>
     </ViewportModeProvider>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 

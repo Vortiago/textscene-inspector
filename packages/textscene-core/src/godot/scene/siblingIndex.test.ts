@@ -49,6 +49,11 @@ describe('orderAmongPlaced', () => {
     expect(namesOf(orderAmongPlaced([named('A'), named('B', 0)], 2))).toEqual(['B', 'A']);
   });
 
+  it('adds several nodes in turn, each among the ones before it', () => {
+    // Among three placed siblings P: M P N P P L.
+    expect(namesOf(orderAmongPlaced([named('N', 1), named('M', 0), named('L')], 3))).toEqual(['M', 'N', 'L']);
+  });
+
   it('counts the placed siblings, so an index past them keeps the written order', () => {
     expect(namesOf(orderAmongPlaced([named('A'), named('B', 2)], 1))).toEqual(['A', 'B']);
     expect(namesOf(orderAmongPlaced([named('A'), named('B', 1)], 1))).toEqual(['B', 'A']);

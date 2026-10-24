@@ -48,6 +48,17 @@ describe('placementFacts', () => {
     });
   });
 
+  it('follows no id trail to a re-rooted heading, as a trail looks it up by its authored path', () => {
+    // `_recover_node_path_index` rebuilds the path the heading declares (`packed_scene.cpp:1985-2005`),
+    // and the re-rooted node lives at `Missing#Mid`, not there.
+    const facts = factsOf(
+      ['Root'],
+      ['Mid', 'Missing', { uniqueId: 20 }],
+      ['Orphan', 'Gone', { idTrail: [20] }]
+    );
+    expect(facts.idRecoveries.size).toBe(0);
+  });
+
   it("follows an orphan's id trail to the heading it names", () => {
     const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 20 }], ['Orphan', 'Gone', { idTrail: [20] }]);
     const [orphan, recovery] = [...facts.idRecoveries][0]!;

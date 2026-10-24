@@ -17,6 +17,7 @@ import {
   walkSources,
 } from '../testing/sourceScan';
 import { warningsOf } from '../testing/logWarnings';
+import { programShader, type ProgramName } from '../testing/patchedFragment';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
 import { GODOT_ALPHA_ANTIALIASING } from '../materials/godotAlphaAntialiasing';
@@ -24,7 +25,6 @@ import { GODOT_ALPHA_HASH } from '../materials/godotAlphaHash';
 import { GODOT_AMBIENT_OCCLUSION } from '../materials/godotAmbientOcclusion';
 import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRoughnessChannels';
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
-import { GODOT_UNIT_TANGENT_FRAME } from '../materials/godotNormalMap';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw } from '../materials/godotPoint';
 import { renderTargetMapInjection, renderTargetMapUserData } from '../materials/renderTargetMap';
@@ -41,8 +41,6 @@ import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
 
-type ProgramName = 'basic' | 'standard' | 'physical' | 'depth' | 'distance';
-
 /** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
 const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
   basic: () => new THREE.MeshBasicMaterial(),
@@ -51,12 +49,6 @@ const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
   depth: () => new THREE.MeshDepthMaterial(),
   distance: () => new THREE.MeshDistanceMaterial(),
 };
-
-/** What an injection compiles into: the material's own text, as three hands it to `onBeforeCompile`. */
-function programShader(program: ProgramName): ProgramShader {
-  const { vertexShader, fragmentShader } = THREE.ShaderLib[program];
-  return { vertexShader, fragmentShader, uniforms: {} };
-}
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 
@@ -161,7 +153,6 @@ const INJECTIONS: readonly InjectionCase[] = [
     LIT,
     () => GODOT_METALLIC_ROUGHNESS_CHANNELS
   ),
-  injected('materials/godotNormalMap.ts', 'unit tangent frame', LIT, () => GODOT_UNIT_TANGENT_FRAME),
   injected(
     'materials/godotMipmapBias.ts',
     'mipmap bias',

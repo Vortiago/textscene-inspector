@@ -15,11 +15,7 @@ import { dropMipChain } from '../../textures/godotTextureFilter';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
 import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
 import { NO_SIDECAR } from './testing/noSidecar';
-import {
-  REBUILDS_NORMAL_MAP_BLUE,
-  UNIT_TANGENT_FRAME,
-  patchedFragment,
-} from '../../../r3f/testing/patchedFragment';
+import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { nodesGlb } from './testing/nodesGlb';
 import {
   DRAWN_OPAQUE_PREPASS,
@@ -286,14 +282,6 @@ describe('cloneWithMaterials', () => {
     (meshSingle.material as THREE.MeshStandardMaterial).normalMap = new THREE.Texture();
     const cloned = findMesh(cloneWithMaterials(root), 'single');
     expect(patchedFragment(cloned.material as THREE.Material)).toContain(REBUILDS_NORMAL_MAP_BLUE);
-  });
-
-  it('gives the tangent and the binormal of a glTF normal map unit length, whatever the UV density', () => {
-    const { root, meshSingle } = makeSource();
-    (meshSingle.material as THREE.MeshStandardMaterial).normalMap = new THREE.Texture();
-    const fragment = patchedFragment(findMesh(cloneWithMaterials(root), 'single').material as THREE.Material);
-    expect(fragment).not.toContain('#include <normalmap_pars_fragment>');
-    expect(fragment).toContain(UNIT_TANGENT_FRAME);
   });
 
   it('biases the mip levels of a glTF material texture, as Godot imports it into its viewport samplers', () => {

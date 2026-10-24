@@ -4,8 +4,12 @@ import {
   DEBUG_DRAW_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
-  DefaultCanvasItemTextureFilter,
   VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT,
+  VIEWPORT_TEXTURE_FILTERS,
+  VIEWPORT_TEXTURE_REPEATS,
+  type ViewportTextureFilter,
+  type ViewportTextureRepeat,
   POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
   SCALING_3D_MODE_NAMES,
   SCREEN_SPACE_AA_NAMES,
@@ -64,7 +68,9 @@ describe('Viewport.DefaultCanvasItemTextureFilter', () => {
   });
 
   it('defaults to LINEAR (viewport.h:419)', () => {
-    expect(VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER).toBe(DefaultCanvasItemTextureFilter.LINEAR);
+    expect(DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES[VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER]).toBe(
+      'LINEAR'
+    );
   });
 });
 
@@ -167,7 +173,8 @@ describe('viewportCanvasItemTextureDefaults', () => {
   const MIRROR = 3;
 
   it('maps each viewport filter to the canvas item filter it sets (viewport.cpp:3974-3987)', () => {
-    const filterFor = (filter: number) => viewportCanvasItemTextureDefaults(filter, undefined).filter;
+    const filterFor = (filter: ViewportTextureFilter) =>
+      viewportCanvasItemTextureDefaults(filter, VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT).filter;
     expect(filterFor(0)).toBe(NEAREST);
     expect(filterFor(1)).toBe(LINEAR);
     expect(filterFor(2)).toBe(LINEAR_WITH_MIPMAPS);
@@ -175,19 +182,20 @@ describe('viewportCanvasItemTextureDefaults', () => {
   });
 
   it('maps each viewport repeat to the canvas item repeat it sets (viewport.cpp:4007-4017)', () => {
-    const repeatFor = (repeat: number) => viewportCanvasItemTextureDefaults(undefined, repeat).repeat;
+    const repeatFor = (repeat: ViewportTextureRepeat) =>
+      viewportCanvasItemTextureDefaults(VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER, repeat).repeat;
     expect(repeatFor(0)).toBe(DISABLED);
     expect(repeatFor(1)).toBe(ENABLED);
     expect(repeatFor(2)).toBe(MIRROR);
   });
+});
 
-  it('keeps Linear and Disabled where a value is absent or out of range, which the setters refuse (edge case)', () => {
-    // `ERR_FAIL_INDEX` against `_MAX` (`viewport.cpp:3968`, `:3999`), so the initialiser stays.
-    expect(viewportCanvasItemTextureDefaults(undefined, undefined)).toEqual({
-      filter: LINEAR,
-      repeat: DISABLED,
-    });
-    expect(viewportCanvasItemTextureDefaults(4, 3)).toEqual({ filter: LINEAR, repeat: DISABLED });
-    expect(viewportCanvasItemTextureDefaults(-1, -1)).toEqual({ filter: LINEAR, repeat: DISABLED });
+describe('the values a viewport texture setter accepts', () => {
+  it("lists every filter but 4.7's PARENT_NODE (viewport.cpp:3968)", () => {
+    expect(VIEWPORT_TEXTURE_FILTERS).toEqual([0, 1, 2, 3]);
+  });
+
+  it("lists every repeat but 4.7's PARENT_NODE (viewport.cpp:3999)", () => {
+    expect(VIEWPORT_TEXTURE_REPEATS).toEqual([0, 1, 2]);
   });
 });

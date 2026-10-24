@@ -4,12 +4,7 @@
  * texture unit, per sun shadow. `directionalShadow.md` beside this file has the design.
  */
 
-import {
-  applyChunkEdits,
-  installChunkPatch,
-  type ChunkEdit,
-  type Chunks,
-} from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
 import {
   DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
@@ -20,8 +15,6 @@ import {
 
 /** The chunks that declare and sample a sun shadow: the lit materials' and `ShadowMaterial`'s. */
 type AtlasChunkName = 'shadowmap_pars_fragment' | 'lights_fragment_begin' | 'shadowmask_pars_fragment';
-
-type ShadowAtlasChunks = Chunks<AtlasChunkName>;
 
 /**
  * three's per-shadow sampler, of the type a shadow map type takes (`shadowmap_pars_fragment.glsl.js:24-28`),
@@ -53,23 +46,17 @@ const SHADOW_ATLAS_EDITS: readonly ChunkEdit<AtlasChunkName>[] = [
   atlasSample('shadowmask_pars_fragment'),
 ];
 
-/** The chunks with one atlas sampler, or null when any lacks a line the patch replaces. */
-function shadowAtlasChunks(chunks: ShadowAtlasChunks): ShadowAtlasChunks | null {
-  return applyChunkEdits(chunks, SHADOW_ATLAS_EDITS);
-}
-
 /**
  * Patches three's chunks and gives the atlas and its colour to every built-in lit material and to
  * `UniformsLib.lights`, for every program compiled after the call. A three release that rewrites a
  * replaced line keeps its own chunks, and `shadowAtlasChunk.test.ts` fails on that release.
  */
 export function installDirectionalShadowAtlas(): void {
-  const isPatched = installChunkPatch({
-    names: ['shadowmap_pars_fragment', 'lights_fragment_begin', 'shadowmask_pars_fragment'],
+  const isPatched = installChunkEdits({
+    edits: SHADOW_ATLAS_EDITS,
     // The call, not the uniform's name: the split lookup's soft shadow names the atlas colour.
-    isApplied: (chunks) => chunks.lights_fragment_begin.includes(ATLAS_ARGUMENT),
-    apply: shadowAtlasChunks,
-    missing: 'sun shadow chunks have no per-shadow sampler to replace',
+    mark: ATLAS_ARGUMENT,
+    patch: 'sun shadow atlas',
   });
   if (!isPatched) return;
   installLitUniform(DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth());

@@ -16,6 +16,7 @@ import {
 } from './itemLightList.js';
 import type { PassMesh } from './lightAccumulationPass.js';
 import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/math/rect2.js';
+import { perObject } from '../../utils/perObject.js';
 import { sameElements } from '../../utils/sameElements.js';
 
 /** A lit item as the cap sees it. */
@@ -53,18 +54,11 @@ interface Crowding {
   readonly candidates: Map<string, readonly number[] | null>;
 }
 
-/** Written only by `crowdingOf`. An entry clears when its `lights` state is collected. */
-const crowdingByLights = new WeakMap<ReadonlyMap<number, CanvasLightDeclaration>, Crowding>();
-
-function crowdingOf(lights: ReadonlyMap<number, CanvasLightDeclaration>): Crowding {
-  let crowding = crowdingByLights.get(lights);
-  if (!crowding) {
-    const positional = [...lights.values()].filter((light) => light.sequence !== null).length;
-    crowding = { canCrowd: positional > MAX_POSITIONAL_LIGHTS_PER_ITEM, candidates: new Map() };
-    crowdingByLights.set(lights, crowding);
-  }
-  return crowding;
-}
+/** An entry clears when its `lights` state is collected. */
+const crowdingOf = perObject((lights: ReadonlyMap<number, CanvasLightDeclaration>): Crowding => {
+  const positional = [...lights.values()].filter((light) => light.sequence !== null).length;
+  return { canCrowd: positional > MAX_POSITIONAL_LIGHTS_PER_ITEM, candidates: new Map() };
+});
 
 /** The candidates at `placement` while they crowd it, else null. */
 function crowdedCandidates(

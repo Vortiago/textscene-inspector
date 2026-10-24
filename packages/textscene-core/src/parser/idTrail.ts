@@ -11,6 +11,10 @@ import {
   type IdHeading,
   type IdTrailEnd,
 } from '../godot/scene/packedScene.js';
+import { firstIndexWith } from '../utils/keyedLookup.js';
+
+/** The first heading of a scan carrying an id, the one index the builder and the linter share. */
+const firstOriginWithId = firstIndexWith((origin: NodeOrigin<RawNode>) => origin.uniqueId);
 
 /** Where the trail of `origins[index]` seats it, or undefined where it resolves nowhere or has no trail. */
 export function idTrailEnd<N extends RawNode>(
@@ -60,7 +64,12 @@ function trailEnd<N extends RawNode>(
   isPlaced: (origin: NodeOrigin<N>) => boolean,
   builtCount: number
 ): IdTrailEnd | undefined {
-  return recoverByIdTrail(trail, origins, (index) => headingOf(origins[index]!, isPlaced), builtCount);
+  return recoverByIdTrail(
+    trail,
+    (id) => firstOriginWithId(origins, id),
+    (index) => headingOf(origins[index]!, isPlaced),
+    builtCount
+  );
 }
 
 function headingOf<N extends RawNode>(

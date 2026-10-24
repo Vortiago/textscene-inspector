@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { perRenderer } from './perRenderer.js';
+import { perObject } from '../utils/perObject.js';
 
 /**
  * Maps the unit plane onto NDC, and hands the fragment shader the target's uv, 0 to 1, as `vUv`.
@@ -20,8 +20,12 @@ void main() {
 
 const quadCamera = new THREE.Camera();
 
-/** The quad a renderer draws every pass with. */
-const quadFor = perRenderer(() => {
+/**
+ * The quad a renderer draws every pass with, one per renderer like each pass. Three leaves a
+ * dispose listener that closes over the renderer on each geometry and material it draws, so one
+ * quad or pass shared by every renderer would keep each renderer that drew it alive.
+ */
+const quadFor = perObject<THREE.WebGLRenderer, THREE.Mesh>(() => {
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
   // The quad ignores every matrix, so its bounds say nothing about where it lands.
   quad.frustumCulled = false;

@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape3D } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CollisionShape3DProperties } from './types';
+import { settleLoads } from '../../../../r3f/testing/settleLoads';
 
 const boxShape: TscnInternalResource = {
   id: 'BoxShape3D_1',
@@ -51,6 +52,12 @@ async function render(
   );
 }
 
+/**
+ * The gizmo `import()`s three's ConvexGeometry lazily, which reads a file the first time. Loading it
+ * here first leaves the gizmo's import a cache hit, which lands within `settleLoads`'s one tick.
+ */
+beforeAll(() => import('three/addons/geometries/ConvexGeometry.js'));
+
 describe('<CollisionShape3D> gizmo', () => {
   it('renders NO geometry when showCollisions is off (default)', async () => {
     const renderer = await render(false);
@@ -82,12 +89,9 @@ describe('<CollisionShape3D> gizmo', () => {
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
 
-    // ConvexHullWire lazy-`import()`s three's ConvexGeometry inside a useEffect. Wait (inside
-    // `act`) for the import and setState to settle, then re-flush so the test renderer's fiber
-    // snapshot picks up the commit, as in Component.missing-texture.test.tsx.
-    await act(async () => {
-      await new Promise<void>((r) => setTimeout(r, 100));
-    });
+    // Lets the hull's setState land, then re-flushes so the test renderer's fiber snapshot picks
+    // up the commit.
+    await settleLoads();
     await renderer.update(tree);
 
     const meshes = renderer.scene.findAll((n) => n.type === 'Mesh');

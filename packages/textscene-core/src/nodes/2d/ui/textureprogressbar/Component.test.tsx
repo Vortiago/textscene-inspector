@@ -157,6 +157,16 @@ describe('<TextureProgressBar>', () => {
     expect(mapOf()).toBe(before);
   });
 
+  it('draws the cropped progress layer undecoded, as the layer it crops', async () => {
+    const renderer = await render({ textureProgress: 'ExtResource("2")', fillMode: 0, value: 50 });
+    const map = (
+      (renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+    ).map!;
+
+    expect(map.repeat.x).toBe(0.5);
+    expect(map.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
   it('draws the under layer as one undecoded, clamped clone of the loaded texture', async () => {
     const fake = createFakeResourceLoader();
     const shared = fakeTexture(64, 16);

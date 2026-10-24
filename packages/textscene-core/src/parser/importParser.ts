@@ -13,6 +13,7 @@ import {
   type ValueScanState,
 } from './utils';
 import * as logger from '../logger';
+import { perObject } from '../utils/perObject.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/import/gltfImportNames.js';
 import { parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
@@ -335,7 +336,16 @@ function meshLightmapOverrides(parsed: ParsedImportFile): ReadonlyMap<string, nu
  * The decoded `_subresources` dictionary, memoised per parse: both typed readers ask for
  * a category of the same blob, and a sidecar's animation slices can run to hundreds of KB.
  */
-const decodedSubResources = new WeakMap<ParsedImportFile, Record<string, unknown> | null>();
+const decodeSubResources = perObject((parsed: ParsedImportFile): Record<string, unknown> | null => {
+  const raw = parsed.params['_subresources'];
+  if (raw === undefined) return null;
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    logger.warn('[ImportSidecar] _subresources is not readable as JSON; every override in it is ignored');
+    return null;
+  }
+});
 
 /**
  * One category of `_subresources`. Godot writes it as one Variant, JSON for these scalar
@@ -349,21 +359,4 @@ function subResourceCategory(
   if (!parsed) return null;
   const found = decodeSubResources(parsed)?.[category];
   return typeof found === 'object' && found !== null ? (found as Record<string, unknown>) : null;
-}
-
-function decodeSubResources(parsed: ParsedImportFile): Record<string, unknown> | null {
-  const memo = decodedSubResources.get(parsed);
-  if (memo !== undefined) return memo;
-
-  const raw = parsed.params['_subresources'];
-  let decoded: Record<string, unknown> | null = null;
-  if (raw !== undefined) {
-    try {
-      decoded = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      logger.warn('[ImportSidecar] _subresources is not readable as JSON; every override in it is ignored');
-    }
-  }
-  decodedSubResources.set(parsed, decoded);
-  return decoded;
 }

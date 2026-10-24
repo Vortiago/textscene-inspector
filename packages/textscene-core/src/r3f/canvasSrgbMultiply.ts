@@ -6,7 +6,7 @@
  * the product once.
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 
 /**
  * The define a 2D canvas material sets when its `map` samples sRGB bytes, a `NoColorSpace` retag
@@ -76,10 +76,9 @@ const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<Chunk>[] = [
  * call changes nothing.
  */
 export function installCanvasSrgbMultiply(): void {
-  installChunkPatch({
-    names: ['map_fragment', 'color_fragment'],
-    isApplied: (chunks) => chunks.map_fragment.includes(CANVAS_SRGB_MULTIPLY),
-    apply: (chunks) => applyChunkEdits(chunks, CANVAS_SRGB_MULTIPLY_EDITS),
-    missing: 'map_fragment or color_fragment has no linear multiply to replace',
+  installChunkEdits({
+    edits: CANVAS_SRGB_MULTIPLY_EDITS,
+    mark: CANVAS_SRGB_MULTIPLY,
+    patch: 'sRGB multiply',
   });
 }

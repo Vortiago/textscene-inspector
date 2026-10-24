@@ -9,49 +9,48 @@ import { md5Hex } from '../md5';
 import { UV2_ATTRIBUTE } from '../../../../meshes/uv2';
 
 const CORNER_BYTES = 20;
+const TRIANGLE_BYTES = 3 * CORNER_BYTES;
 
-/** The corners of every triangle, in index order and Godot's winding. */
-function godotTriangles(surfaces: readonly THREE.BufferGeometry[]): Uint8Array[][] {
-  const triangles: Uint8Array[][] = [];
+/**
+ * The corners of every triangle, in index order and Godot's winding, in one buffer. One buffer,
+ * not an array per corner: zdm2 has 176k corners, and the core tests' VM context makes each
+ * `DataView` built and each global read slow enough to time the digest out.
+ */
+function godotCorners(surfaces: readonly THREE.BufferGeometry[]): Uint8Array {
+  const cornerCount = surfaces.reduce((count, geometry) => count + geometry.index!.count, 0);
+  const view = new DataView(new ArrayBuffer(cornerCount * CORNER_BYTES));
+  let offset = 0;
   for (const geometry of surfaces) {
     const index = geometry.index!.array;
     for (let i = 0; i < index.length; i += 3) {
-      triangles.push(
-        [index[i]!, index[i + 2]!, index[i + 1]!].map((vertex) => cornerBytes(geometry, vertex))
-      );
+      for (const vertex of [index[i]!, index[i + 2]!, index[i + 1]!]) {
+        writeCorner(view, offset, geometry, vertex);
+        offset += CORNER_BYTES;
+      }
     }
   }
-  return triangles;
-}
-
-function cornerBytes(geometry: THREE.BufferGeometry, vertex: number): Uint8Array {
-  const position = geometry.getAttribute('position');
-  const uv2 = geometry.getAttribute(UV2_ATTRIBUTE);
-  const view = new DataView(new ArrayBuffer(CORNER_BYTES));
-  [
-    position.getX(vertex),
-    position.getY(vertex),
-    position.getZ(vertex),
-    uv2.getX(vertex),
-    uv2.getY(vertex),
-  ].forEach((value, i) => view.setFloat32(i * 4, value, true));
   return new Uint8Array(view.buffer);
 }
 
-function compareBytes(a: Uint8Array, b: Uint8Array): number {
-  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i]! - b[i]!;
-  return a.length - b.length;
+function writeCorner(view: DataView, offset: number, geometry: THREE.BufferGeometry, vertex: number): void {
+  const position = geometry.getAttribute('position');
+  const uv2 = geometry.getAttribute(UV2_ATTRIBUTE);
+  view.setFloat32(offset, position.getX(vertex), true);
+  view.setFloat32(offset + 4, position.getY(vertex), true);
+  view.setFloat32(offset + 8, position.getZ(vertex), true);
+  view.setFloat32(offset + 12, uv2.getX(vertex), true);
+  view.setFloat32(offset + 16, uv2.getY(vertex), true);
 }
 
-function concat(parts: readonly Uint8Array[]): Uint8Array {
-  const joined = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
-  parts.reduce((offset, part) => (joined.set(part, offset), offset + part.length), 0);
-  return joined;
+/** The byte order of the `length` bytes at `a` and at `b`. */
+function compareBytesAt(bytes: Uint8Array, a: number, b: number, length: number): number {
+  for (let i = 0; i < length; i++) if (bytes[a + i] !== bytes[b + i]) return bytes[a + i]! - bytes[b + i]!;
+  return 0;
 }
 
 /** The digest of every corner in order. */
 export function orderedCornerDigest(surfaces: readonly THREE.BufferGeometry[]): string {
-  return md5Hex(godotTriangles(surfaces).flat());
+  return md5Hex([godotCorners(surfaces)]);
 }
 
 /**
@@ -59,9 +58,36 @@ export function orderedCornerDigest(surfaces: readonly THREE.BufferGeometry[]): 
  * and the triangles sort by their bytes.
  */
 export function triangleSetDigest(surfaces: readonly THREE.BufferGeometry[]): string {
-  const canonical = godotTriangles(surfaces).map((corners) => {
-    const first = corners.reduce((min, corner, i) => (compareBytes(corner, corners[min]!) < 0 ? i : min), 0);
-    return concat([...corners.slice(first), ...corners.slice(0, first)]);
+  const canonical = canonicalTriangles(godotCorners(surfaces));
+  const order = Array.from({ length: canonical.length / TRIANGLE_BYTES }, (_, triangle) => triangle).sort(
+    (a, b) => compareBytesAt(canonical, a * TRIANGLE_BYTES, b * TRIANGLE_BYTES, TRIANGLE_BYTES)
+  );
+  const sorted = new Uint8Array(canonical.length);
+  order.forEach((triangle, i) => {
+    const start = triangle * TRIANGLE_BYTES;
+    sorted.set(canonical.subarray(start, start + TRIANGLE_BYTES), i * TRIANGLE_BYTES);
   });
-  return md5Hex(canonical.sort(compareBytes));
+  return md5Hex([sorted]);
+}
+
+/** Each triangle rotated to start at its smallest corner. */
+function canonicalTriangles(corners: Uint8Array): Uint8Array {
+  const canonical = new Uint8Array(corners.length);
+  for (let start = 0; start < corners.length; start += TRIANGLE_BYTES) {
+    let first = 0;
+    for (let corner = 1; corner < 3; corner++) {
+      const order = compareBytesAt(
+        corners,
+        start + corner * CORNER_BYTES,
+        start + first * CORNER_BYTES,
+        CORNER_BYTES
+      );
+      if (order < 0) first = corner;
+    }
+    for (let corner = 0; corner < 3; corner++) {
+      const from = start + ((first + corner) % 3) * CORNER_BYTES;
+      canonical.set(corners.subarray(from, from + CORNER_BYTES), start + corner * CORNER_BYTES);
+    }
+  }
+  return canonical;
 }

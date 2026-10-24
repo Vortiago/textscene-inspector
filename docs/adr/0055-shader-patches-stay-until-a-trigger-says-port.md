@@ -18,7 +18,7 @@ the same as a port later, so the calendar does not decide when to port.
 Keep the splices, and make a missed anchor fail loudly.
 
 - Every edit of a program's text goes through `r3f/shaderPatch/chunkPatch.ts`. `editedShader`
-  throws when an anchor does not occur exactly once. `installChunkPatch` warns, and the tests
+  throws when an anchor does not occur exactly once. `installChunkEdits` warns, and the tests
   throw on that warning. `shaderTextSpliceConformance.test.ts` rejects a raw `.replace` on shader
   text.
 - `programInjections.test.ts` installs every global patch, and applies every program injection to

@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: a TextureProgressBar at 60 percent, so it crops its progress texture. The marker
+; texture has distinct mid-tone channels, so a colour space applied twice darkens a probe. The
+; offset moves the crop off the control's origin.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyTextureProgressBar" type="TextureProgressBar" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 128.0
+offset_bottom = 128.0
+value = 60.0
+texture_progress = ExtResource("1_marker")
+texture_progress_offset = Vector2(8, 8)

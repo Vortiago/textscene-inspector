@@ -4,7 +4,7 @@
  * later turns only the meshes that depend on it `'loaded'`.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { act, render } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -105,15 +105,10 @@ describe('useResource late-arrival integration', () => {
       </ResourceLoaderProvider>
     );
 
-    // `request()` routes through the async FileEventBus.loadAsync, so a 50 ms wait lets the
-    // failures settle before the missing state is read.
-    await act(async () => {
-      await new Promise<void>((r) => setTimeout(r, 50));
-    });
-
-    expect(getByTestId('mesh-Mesh1').dataset.status).toBe('unavailable');
-    expect(getByTestId('mesh-Mesh2').dataset.status).toBe('unavailable');
-    expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');
+    // `request()` routes through the async FileEventBus.loadAsync, so the failures settle later.
+    const statuses = () =>
+      ['Mesh1', 'Mesh2', 'Mesh3'].map((mesh) => getByTestId(`mesh-${mesh}`).dataset.status);
+    await waitFor(() => expect(statuses()).toEqual(['unavailable', 'unavailable', 'unavailable']));
 
     // happy-dom has no image decoder, so this does what provideFile and a real decode do: clear
     // the failed cache, then emit `texture:loaded` with a fake texture. Under test is the bus
@@ -121,15 +116,12 @@ describe('useResource late-arrival integration', () => {
     provider.setFile(sharedPath, RED_PIXEL_PNG);
     const fakeTexture = new THREE.Texture();
     fakeTexture.name = 'fake-shared';
-    await act(async () => {
+    act(() => {
       loader.textures.clearCache(sharedPath);
       loader.eventBus.emit('texture', 'loaded', sharedPath, fakeTexture);
-      await new Promise<void>((r) => setTimeout(r, 20));
     });
 
     // Mesh3 depends on `different.png`, which the host has not provided.
-    expect(getByTestId('mesh-Mesh1').dataset.status).toBe('loaded');
-    expect(getByTestId('mesh-Mesh2').dataset.status).toBe('loaded');
-    expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');
+    await waitFor(() => expect(statuses()).toEqual(['loaded', 'loaded', 'unavailable']));
   });
 });

@@ -130,6 +130,15 @@ describe('parseSubViewport', () => {
       expect(result.size_2d_override_stretch).toBe(true);
     });
 
+    it("keeps the texture defaults for 4.7's PARENT_NODE, which 4.6.3's setters refuse (edge case)", () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        canvas_item_default_texture_filter: '4',
+        canvas_item_default_texture_repeat: '3',
+      });
+      expect(result.canvas_item_default_texture_filter).toBe(1);
+      expect(result.canvas_item_default_texture_repeat).toBe(0);
+    });
+
     it('applies Godot defaults when every one is absent (edge case)', () => {
       const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {});
       expect(result.handle_input_locally).toBe(true);

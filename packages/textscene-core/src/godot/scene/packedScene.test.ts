@@ -6,6 +6,7 @@ import {
   reparentedName,
   type IdHeading,
 } from './packedScene.js';
+import { firstIndexWith } from '../../utils/keyedLookup.js';
 
 describe('parseIdTrail', () => {
   it('reads the ids of a PackedInt32Array', () => {
@@ -66,8 +67,14 @@ describe('parseUniqueId', () => {
 });
 
 describe('recoverByIdTrail', () => {
-  const recoverIn = (trail: number[], headings: IdHeading[], builtCount: number) =>
-    recoverByIdTrail(trail, headings, (index) => headings[index]!, builtCount);
+  const firstIndexWithId = firstIndexWith((heading: IdHeading) => heading.uniqueId);
+  const recoverIn = (trail: readonly number[], headings: readonly IdHeading[], builtCount: number) =>
+    recoverByIdTrail(
+      trail,
+      (id) => firstIndexWithId(headings, id),
+      (index) => headings[index]!,
+      builtCount
+    );
   const plain = (uniqueId: number): IdHeading => ({ uniqueId, instance: undefined, isPlaced: true });
   const orphan = plain(0);
 

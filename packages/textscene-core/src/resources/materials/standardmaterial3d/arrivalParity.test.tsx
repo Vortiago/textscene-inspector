@@ -24,11 +24,11 @@ import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialCl
 import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf, GODOT_ALPHA_ANTIALIASING } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { mipmapBiasInjection } from '../../../r3f/materials/godotMipmapBias';
-import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
+import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { parseStandardMaterial3DScalars } from './scalars';
-import { mapSampledBy } from '../../../r3f/testing/patchedFragment';
+import { mapSampledBy, programShader } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
 
 interface ParityCase {
@@ -589,7 +589,7 @@ function patchedProgram(...hooks: (CompileHook | undefined)[]): string[] | null 
   const patches = hooks.filter((hook) => hook !== undefined);
   if (patches.length === 0) return null;
   const material = new THREE.MeshStandardMaterial();
-  const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
+  const shader = programShader('standard');
   for (const patch of patches) patch.call(material, shader);
   return [shader.vertexShader, shader.fragmentShader];
 }

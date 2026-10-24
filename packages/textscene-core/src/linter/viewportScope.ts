@@ -5,7 +5,7 @@
 
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { searchAncestors, type SceneRoots } from './parentType.js';
-import { perTree } from '../utils/perTree.js';
+import { perObject } from '../utils/perObject.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
 /**
@@ -35,7 +35,7 @@ export function viewportScopeOf(scene: SceneRoots, node: RawNode): RawNode | nul
 export function viewportScopeCounter(
   claimants: (roots: readonly RawNode[]) => Iterable<RawNode>
 ): (scene: RawScene, scope: RawNode | null) => number {
-  const tallyOf = perTree((roots) => tallyScopes(roots, claimants(roots)));
+  const tallyOf = perObject((roots: readonly RawNode[]) => tallyScopes(roots, claimants(roots)));
   return (scene, scope) => tallyOf(scene.nodes).get(scope) ?? 0;
 }
 

@@ -4,13 +4,14 @@
  */
 
 import { PARTICLE_EMISSION_DEFAULTS as DEFAULTS } from '../../../godot/scene/particles3d';
-import { readParticleEmission, vector } from './emission';
+import { realVec3Or } from '../../../parser/valueParsers';
+import { readParticleEmission } from './emission';
 import type { ParticleEmission } from './types';
 
 export function decodeParticleProcessMaterial(properties: Record<string, string>): ParticleEmission {
   return {
     ...readParticleEmission(properties),
-    shapeOffset: vector(properties.emission_shape_offset, DEFAULTS.shapeOffset, 'emission_shape_offset'),
-    shapeScale: vector(properties.emission_shape_scale, DEFAULTS.shapeScale, 'emission_shape_scale'),
+    shapeOffset: realVec3Or(properties.emission_shape_offset, DEFAULTS.shapeOffset, 'emission_shape_offset'),
+    shapeScale: realVec3Or(properties.emission_shape_scale, DEFAULTS.shapeScale, 'emission_shape_scale'),
   };
 }

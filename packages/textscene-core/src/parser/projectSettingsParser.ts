@@ -17,7 +17,8 @@ import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
-import { parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
+import { perObject } from '../utils/perObject.js';
+import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE, primitiveMeshTexelSize } from '../godot/scene/primitiveMesh.js';
 import {
   VOLUMETRIC_FOG_DEFAULTS,
@@ -28,10 +29,14 @@ import type { Rgba } from '../godot/math/math.js';
 import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
 import {
+  DEFAULT_ANISOTROPIC_FILTERING_LEVEL,
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT,
+  VIEWPORT_TEXTURE_FILTERS,
+  VIEWPORT_TEXTURE_REPEATS,
   viewportCanvasItemTextureDefaults,
   type CanvasItemTextureDefaults,
 } from '../godot/scene/viewport.js';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../godot/scene/viewport.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -147,16 +152,43 @@ export function projectClearColor(settings: ProjectSettings | null): Rgba {
   return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
 }
 
+const CANVAS_TEXTURE_FILTER_SETTING = 'rendering/textures/canvas_textures/default_texture_filter';
+const CANVAS_TEXTURE_REPEAT_SETTING = 'rendering/textures/canvas_textures/default_texture_repeat';
+
+/** The viewport's own defaults, Linear and Disabled, for a project with no settings file. */
+const VIEWPORT_CANVAS_TEXTURE_DEFAULTS = viewportCanvasItemTextureDefaults(
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT
+);
+
+/**
+ * Read once for each settings object: every CanvasItem asks, and a value the setter refuses warns
+ * once, not once for each item.
+ */
+const canvasTextureDefaultsOf = perObject((settings: ProjectSettings): CanvasItemTextureDefaults =>
+  viewportCanvasItemTextureDefaults(
+    enumOr(
+      settings[CANVAS_TEXTURE_FILTER_SETTING],
+      VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
+      VIEWPORT_TEXTURE_FILTERS,
+      CANVAS_TEXTURE_FILTER_SETTING
+    ),
+    enumOr(
+      settings[CANVAS_TEXTURE_REPEAT_SETTING],
+      VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT,
+      VIEWPORT_TEXTURE_REPEATS,
+      CANVAS_TEXTURE_REPEAT_SETTING
+    )
+  )
+);
+
 /**
  * `rendering/textures/canvas_textures/default_texture_filter` and `_repeat`, which the editor's scene root
  * takes as its viewport defaults (`editor_node.cpp:451-460`). Every CanvasItem at PARENT_NODE with no
- * ancestor to defer to resolves to them.
+ * ancestor to defer to resolves to them. A value the viewport setter refuses keeps Linear and Disabled.
  */
 export function projectCanvasTextureDefaults(settings: ProjectSettings | null): CanvasItemTextureDefaults {
-  return viewportCanvasItemTextureDefaults(
-    parseOptionalInt(settings?.['rendering/textures/canvas_textures/default_texture_filter']),
-    parseOptionalInt(settings?.['rendering/textures/canvas_textures/default_texture_repeat'])
-  );
+  return settings ? canvasTextureDefaultsOf(settings) : VIEWPORT_CANVAS_TEXTURE_DEFAULTS;
 }
 
 /** `rendering/lightmapping/primitive_meshes/texel_size`, the world size of a texel in a PrimitiveMesh's UV2. */
