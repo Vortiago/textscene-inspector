@@ -143,3 +143,23 @@ describe('preview sun shadow', () => {
     );
   });
 });
+
+describe('preview sun under an exposure', () => {
+  const EXPOSED_WORLD = `
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_1"]
+exposure_multiplier = 2.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+camera_attributes = SubResource("CameraAttributesPractical_1")
+`;
+
+  const sunIntensity = async (sceneText: string) => {
+    const renderer = await render(sceneText);
+    return (renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight).intensity;
+  };
+
+  it('scales with the exposure of the world, as every light in the render does', async () => {
+    const plain = await sunIntensity(scene(MESH));
+    expect(await sunIntensity(scene(`${MESH}${EXPOSED_WORLD}`))).toBeCloseTo(plain * 2, 10);
+  });
+});

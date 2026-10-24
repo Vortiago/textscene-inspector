@@ -1,9 +1,11 @@
 /**
  * A light's three intensity, shadow intensity, specular amount and fog energy, from its Godot
- * energy, sign, shadow opacity, `light_specular` and `light_volumetric_fog_energy`.
+ * energy, sign, shadow opacity, `light_specular` and `light_volumetric_fog_energy`, and the exposure
+ * of its world.
  */
 
 import { DIRECTIONAL_LIGHT_3D_DEFAULTS, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
+import { useExposureFactor } from '../../../../r3f/environment/worldExposure';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import type { BaseLightProperties } from './types';
 
@@ -14,11 +16,14 @@ export function signedLightEnergy(
   return properties.light_negative === true ? -properties.light_energy : properties.light_energy;
 }
 
-/** three's intensity: a negative light subtracts, in three as in Godot. */
-export function lightIntensity(
+/**
+ * three's intensity: a negative light subtracts, in three as in Godot. The world's exposure scales
+ * every light's energy as it fills the light buffer (`light_storage.cpp:656-658`, `:884-886`).
+ */
+export function useLightIntensity(
   properties: Pick<BaseLightProperties, 'light_energy' | 'light_negative'>
 ): number {
-  return signedLightEnergy(properties) * LIGHT_INTENSITY_SCALE;
+  return signedLightEnergy(properties) * LIGHT_INTENSITY_SCALE * useExposureFactor();
 }
 
 /** three's `shadow.intensity` mixes towards unshadowed as Godot's `shadow_opacity` does (`scene_forward_lights_inc.glsl:577`). */

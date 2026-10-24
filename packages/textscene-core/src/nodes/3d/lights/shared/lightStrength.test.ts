@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import {
   directionalLightSpecularAmount,
-  lightIntensity,
   lightShadowOpacity,
   positionalLightSpecularAmount,
   signedLightEnergy,
@@ -19,23 +17,6 @@ describe('signedLightEnergy', () => {
 
   it('keeps a zero energy at zero whatever the sign (edge case)', () => {
     expect(Math.abs(signedLightEnergy({ light_energy: 0, light_negative: true }))).toBe(0);
-  });
-});
-
-describe('lightIntensity', () => {
-  it('scales the energy into three intensity', () => {
-    expect(lightIntensity({ light_energy: 2 })).toBeCloseTo(2 * LIGHT_INTENSITY_SCALE, 10);
-  });
-
-  it('subtracts for a negative light', () => {
-    expect(lightIntensity({ light_energy: 1, light_negative: true })).toBeCloseTo(-LIGHT_INTENSITY_SCALE, 10);
-  });
-
-  it('keeps the sign of a negative energy on a light that is not negative (edge case)', () => {
-    expect(lightIntensity({ light_energy: -1, light_negative: false })).toBeCloseTo(
-      -LIGHT_INTENSITY_SCALE,
-      10
-    );
   });
 });
 

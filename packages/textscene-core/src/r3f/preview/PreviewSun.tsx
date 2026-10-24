@@ -5,6 +5,7 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useExposureFactor } from '../environment/worldExposure';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { DirectionalShadowMode } from '../../godot/rendering/lights/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
@@ -38,9 +39,11 @@ const PREVIEW_SUN_SHADOW = directionalShadowUserData(
 /**
  * Godot's preview sun: a white, energy-1.0 DirectionalLight3D with shadows on.
  * It declares its shadow as an authored `<DirectionalLight3D>` does, and the same fitter fits it.
- * So a scene does not visibly change character the moment it gains its own sun.
+ * So a scene does not visibly change character the moment it gains its own sun. The world's exposure
+ * scales it as it scales every light of the render.
  */
 export function PreviewSun() {
+  const exposure = useExposureFactor();
   const target = useMemo(() => new THREE.Object3D(), []);
   // A tuple, not a Vector3: R3F assigns an object-valued `position` straight
   // onto the instance, and `Object3D.position` has no setter.
@@ -56,7 +59,7 @@ export function PreviewSun() {
         position={position}
         target={target}
         color={PREVIEW_SUN_COLOR}
-        intensity={PREVIEW_SUN_ENERGY * LIGHT_INTENSITY_SCALE}
+        intensity={PREVIEW_SUN_ENERGY * LIGHT_INTENSITY_SCALE * exposure}
         castShadow
         userData={PREVIEW_SUN_SHADOW}
       />

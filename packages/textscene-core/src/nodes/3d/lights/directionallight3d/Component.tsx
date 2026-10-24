@@ -24,9 +24,9 @@ import { DirectionalLightGizmo } from '../shared/lightHelpers';
 import {
   directionalLightSpecularAmount,
   lightFogEnergy,
-  lightIntensity,
   lightShadowOpacity,
   signedLightEnergy,
+  useLightIntensity,
 } from '../shared/lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
 import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMode';
@@ -45,7 +45,8 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.skyMode;
   // A Sky Only light lights no surface. It keeps its energy for the sky, which reads it from `userData`.
-  const intensity = directionalLightLightsSurfaces(skyMode) ? lightIntensity(properties) : 0;
+  const exposedIntensity = useLightIntensity(properties);
+  const intensity = directionalLightLightsSurfaces(skyMode) ? exposedIntensity : 0;
   const skyEnergy = signedLightEnergy(properties);
   const shadow = useMemo(() => directionalShadowDeclaration(properties), [properties]);
   const fogEnergy = lightFogEnergy(properties);
