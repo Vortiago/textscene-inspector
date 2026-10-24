@@ -1,8 +1,8 @@
 /**
- * Reads `head.unitsPerEm` and `hhea` ascender and descender from a scene font, the scalars the
- * runtime bundle cannot get from `fontkit`, a bake-time-only devDependency that `pnpm check:bundle-size`
- * keeps out. It reads the table directory and those two tables only: advances and kerning come
- * from canvas `measureText`.
+ * Reads a scene font's table directory and its `head.unitsPerEm` and `hhea` ascender and descender,
+ * the scalars the runtime bundle cannot get from `fontkit`, a bake-time-only devDependency that
+ * `pnpm check:bundle-size` keeps out. Advances and kerning come from canvas `measureText`, and the
+ * glyph outlines from `sfntOutlines.ts`, which opens the font through this module.
  */
 
 /** `head.unitsPerEm` and the magnitudes of `hhea.ascender` and `hhea.descender`, in design units. */
@@ -40,9 +40,15 @@ const HHEA_ASCENDER_OFFSET = 4; // hhea table: majorVersion(2) minorVersion(2) a
 const HHEA_DESCENDER_OFFSET = 6;
 const HHEA_TABLE_MIN_LENGTH = 8;
 
-interface TableRecord {
+export interface TableRecord {
   offset: number;
   length: number;
+}
+
+/** A plain SFNT container: its bytes and its tables by tag. */
+export interface SfntFile {
+  readonly dv: DataView;
+  readonly tables: ReadonlyMap<string, TableRecord>;
 }
 
 /** Reads the table directory after the 12-byte sfnt header at `sfntStart`, or `null` if it does not fit in `dv`. */
@@ -71,16 +77,16 @@ function readTableDirectory(dv: DataView, sfntStart: number): Map<string, TableR
 }
 
 /** Guards each fixed-offset field read in `table`: `table.offset + minLength` must fit inside `dv`. */
-function tableFits(dv: DataView, table: TableRecord, minLength: number): boolean {
+export function tableFits(dv: DataView, table: TableRecord, minLength: number): boolean {
   return table.offset + minLength <= dv.byteLength && table.length >= minLength;
 }
 
 /**
- * Reads the scalars from raw SFNT bytes. Returns `null`, never throws, for a compressed container,
- * an unknown `sfntVersion`, a missing `head` or `hhea`, or an offset past the buffer, so a broken
- * font falls back to the bundled default.
+ * Opens raw SFNT bytes: a plain container (TrueType, OpenType-CFF, or the first face of a `'ttcf'`
+ * collection) with a table directory that fits. Returns `null`, never throws, for a compressed
+ * container, an unknown `sfntVersion` or a directory past the buffer.
  */
-export function parseSfntScalars(bytes: ArrayBuffer): SfntScalars | null {
+export function openSfnt(bytes: ArrayBuffer): SfntFile | null {
   if (bytes.byteLength < 4) return null;
   const dv = new DataView(bytes);
 
@@ -99,14 +105,30 @@ export function parseSfntScalars(bytes: ArrayBuffer): SfntScalars | null {
   if (!VALID_SFNT_VERSIONS.has(sfntVersion)) return null;
 
   const tables = readTableDirectory(dv, sfntStart);
-  if (!tables) return null;
+  return tables && { dv, tables };
+}
+
+/** `head.unitsPerEm`; the caller has checked that `head` fits. */
+export function readUnitsPerEm(dv: DataView, head: TableRecord): number {
+  return dv.getUint16(head.offset + HEAD_UNITS_PER_EM_OFFSET, false);
+}
+
+/**
+ * Reads the scalars from raw SFNT bytes. Returns `null`, never throws, for a compressed container,
+ * an unknown `sfntVersion`, a missing `head` or `hhea`, or an offset past the buffer, so a broken
+ * font falls back to the bundled default.
+ */
+export function parseSfntScalars(bytes: ArrayBuffer): SfntScalars | null {
+  const sfnt = openSfnt(bytes);
+  if (!sfnt) return null;
+  const { dv, tables } = sfnt;
 
   const head = tables.get('head');
   const hhea = tables.get('hhea');
   if (!head || !hhea) return null;
   if (!tableFits(dv, head, HEAD_TABLE_MIN_LENGTH) || !tableFits(dv, hhea, HHEA_TABLE_MIN_LENGTH)) return null;
 
-  const unitsPerEm = dv.getUint16(head.offset + HEAD_UNITS_PER_EM_OFFSET, false);
+  const unitsPerEm = readUnitsPerEm(dv, head);
   const ascender = dv.getInt16(hhea.offset + HHEA_ASCENDER_OFFSET, false);
   const descender = dv.getInt16(hhea.offset + HHEA_DESCENDER_OFFSET, false);
   if (unitsPerEm === 0) return null; // degenerate; every downstream scale divides by this

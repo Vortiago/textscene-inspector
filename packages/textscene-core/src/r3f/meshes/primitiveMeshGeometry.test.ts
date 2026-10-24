@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
-import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
+import { primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
+import {
+  primitiveMeshGeometry,
+  primitiveMeshAabb,
+  surfaceGeometry,
+  surfaceMeshAabb,
+} from './primitiveMeshGeometry';
 import { COARSE_TUBE, curveEndingAt, scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import { subResource } from '../../testing/subResource';
 
@@ -156,5 +162,43 @@ describe('primitiveMeshAabb', () => {
 
   it('is unknown for a type with no slice here', () => {
     expect(primitiveMeshAabb(scopedMesh({ id: 'text', type: 'TextMesh', data: {} }))).toBeNull();
+  });
+});
+
+describe('surfaceGeometry', () => {
+  const surfaceOf = (radius: string) => primitiveMeshSurface(scopedMesh(sphere({ radius })), TEXEL_SIZE)!;
+
+  it('gives every holder of one surface one geometry', () => {
+    const surface = surfaceOf('0.5');
+    expect(surfaceGeometry(surface)).toBe(surfaceGeometry(surface));
+  });
+
+  it('gives two surfaces two geometries', () => {
+    expect(surfaceGeometry(surfaceOf('0.25'))).not.toBe(surfaceGeometry(surfaceOf('0.75')));
+  });
+
+  it('builds again once the shared geometry is disposed', () => {
+    const surface = surfaceOf('0.625');
+    const first = surfaceGeometry(surface);
+    first.dispose();
+
+    expect(surfaceGeometry(surface)).not.toBe(first);
+  });
+});
+
+describe('surfaceMeshAabb', () => {
+  const box = { id: 'box', type: 'BoxMesh', data: { size: 'Vector3(2, 4, 6)' } };
+  const surface = primitiveMeshSurface(scopedMesh(box), TEXEL_SIZE)!;
+
+  it('bounds the vertices of the surface', () => {
+    expect(surfaceMeshAabb(undefined, surface).size).toEqual({ x: 2, y: 4, z: 6 });
+  });
+
+  it('takes a custom box over the vertices', () => {
+    expect(surfaceMeshAabb('AABB(0, 0, 0, 9, 9, 9)', surface).size).toEqual({ x: 9, y: 9, z: 9 });
+  });
+
+  it('is AABB() for no surface', () => {
+    expect(surfaceMeshAabb(undefined, null)).toBe(EMPTY_AABB);
   });
 });

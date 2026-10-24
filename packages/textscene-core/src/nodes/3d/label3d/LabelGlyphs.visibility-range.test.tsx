@@ -32,8 +32,10 @@ import {
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
-vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
+vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => loader.metrics,
+}));
+vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
   onSceneFontMetricsSettled: () => () => {},
 }));
 

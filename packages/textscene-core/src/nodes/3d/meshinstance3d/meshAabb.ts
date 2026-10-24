@@ -1,17 +1,22 @@
 /** The box the rendering server holds for the mesh a `mesh` reference names, as a hook. */
 
+import { useMemo } from 'react';
+
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { parseOptionalAabb } from '../../../parser/valueParsers';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import { projectPrimitiveMeshTexelSize } from '../../../parser/projectSettingsParser';
+import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { arrayMeshAabb } from '../../../resources/meshes/arraymesh/meshAabb';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useResource } from '../../../resources/useResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
-import { primitiveMeshAabb } from '../../../r3f/meshes/primitiveMeshGeometry';
+import { primitiveMeshAabb, surfaceMeshAabb } from '../../../r3f/meshes/primitiveMeshGeometry';
 import { arrayMeshPath } from '../../../r3f/meshes/meshContent';
 import { meshContentKey, meshKind } from '../../../resources/meshes/meshSource';
+import { TEXT_MESH_TYPE, useTextMeshSurface } from '../../../resources/meshes/textmesh/useTextMeshSurface';
 import { useResolvableMesh } from '../../../resources/meshes/useResolvableMesh';
-import type { ResolvableResource } from '../../../resources/scopedResource';
+import type { ResolvableResource, ScopedResource } from '../../../resources/scopedResource';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 
 /**
@@ -26,7 +31,17 @@ export function useMeshAabb(meshRef: string | undefined, resources: SceneResourc
   const file = useResource<ArrayMeshResource>(path ?? '', 'arraymesh');
   const { mesh } = useResolvableMesh(path ? null : resolution.scoped);
   const own = useContentMemo(mesh, meshContentKey, meshAabb);
-  return path ? (file.value?.aabb ?? null) : own;
+  const text = useTextMeshAabb(resolution.scoped);
+  return path ? (file.value?.aabb ?? null) : (text ?? own);
+}
+
+/** The box of a TextMesh once its font has loaded. Null for any other mesh, and while its font is unknown. */
+function useTextMeshAabb(scoped: ScopedResource | null): Aabb | null {
+  const isTextMesh = scoped?.resource.type === TEXT_MESH_TYPE;
+  const texelSize = projectPrimitiveMeshTexelSize(useProjectSettings().settings);
+  const { surface } = useTextMeshSurface(isTextMesh ? scoped : null, texelSize);
+  const customAabb = scoped?.resource.data['custom_aabb'];
+  return useMemo(() => (surface ? surfaceMeshAabb(customAabb, surface) : null), [surface, customAabb]);
 }
 
 function meshAabb(mesh: ResolvableResource): Aabb | null {

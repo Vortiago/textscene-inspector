@@ -1,0 +1,46 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittextmesh"]
+
+; The one variable: the surface a TextMesh builds from the outlines of a TrueType scene font. The left
+; text has depth, so its sides catch the light and its front takes the top of the texture. The right
+; text has none, so one face shows the whole texture. The gradient runs red, green, blue along the
+; U + V diagonal and the material is unshaded, so each band shows where the UVs land. The glyphs 8, a
+; and A hold the holes and the curves that the tessellation must keep.
+
+[ext_resource type="FontFile" path="res://fonts/open-sans-semibold-subset.ttf" id="1_font"]
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_deep"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font = ExtResource("1_font")
+font_size = 64
+depth = 0.2
+
+[sub_resource type="TextMesh" id="TextMesh_flat"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font = ExtResource("1_font")
+font_size = 64
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Deep" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_deep")
+
+[node name="Flat" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_flat")

@@ -71,6 +71,14 @@ interface PrimitiveMeshType {
 const CURVE_PROPERTY = 'curve';
 
 /**
+ * The lightmap size hint of a type that does not override `_update_lightmap_size`: the authored
+ * one, which `set_lightmap_size_hint` stores as it is.
+ */
+export function authoredLightmapSizeHint(type: string): LightmapSizeHint {
+  return (data) => vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, `${type} lightmap_size_hint`);
+}
+
+/**
  * A trail mesh builds from its properties and its Curve, and keeps the authored lightmap size hint,
  * as neither overrides `_update_lightmap_size`.
  */
@@ -81,8 +89,7 @@ function curveTrailMeshType(
   return {
     build: ({ data, references }) => build(data, references[CURVE_PROPERTY] ?? null),
     references: [CURVE_PROPERTY],
-    lightmapSizeHint: (data) =>
-      vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, `${type} lightmap_size_hint`),
+    lightmapSizeHint: authoredLightmapSizeHint(type),
   };
 }
 
@@ -215,10 +222,24 @@ function buildSurface(mesh: ResolvableResource, texelSize: number): GodotSurface
     ])
   );
   const built = type.build({ data: resource.data, uv2Padding, references });
-  if (!built) return null;
+  return built && finishPrimitiveSurface(built, resource.data, texelSize, type.lightmapSizeHint);
+}
+
+/**
+ * What `PrimitiveMesh::_update` does to the surface a type builds (`primitive_meshes.cpp:76-118`):
+ * the UV2 of a builder that writes none, then `flip_faces`. `lightmapSizeHint` is the type's, absent
+ * for a builder that writes its own UV2.
+ */
+export function finishPrimitiveSurface(
+  built: GodotSurface,
+  data: Record<string, string>,
+  texelSize: number,
+  lightmapSizeHint?: LightmapSizeHint
+): GodotSurface {
+  const base = decodePrimitiveMesh(data);
   const surface =
-    base.addUv2 && type.lightmapSizeHint
-      ? withFallbackUv2(built, base.uv2Padding, type.lightmapSizeHint(resource.data, texelSize))
+    base.addUv2 && lightmapSizeHint
+      ? withFallbackUv2(built, base.uv2Padding, lightmapSizeHint(data, texelSize))
       : built;
   return base.flipFaces ? flipFaces(surface) : surface;
 }

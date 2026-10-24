@@ -11,6 +11,7 @@ import {
   radToDeg,
   lerpColor,
   lerpf,
+  remapf,
   CMP_EPSILON,
   bezierInterpolatef,
   isZeroApprox,
@@ -181,6 +182,21 @@ describe('lerpf', () => {
   it('gives the end points at weights 0 and 1 (edge case)', () => {
     expect(lerpf(f(0.2), f(0.7), 0)).toBe(f(0.2));
     expect(lerpf(f(0.2), f(0.7), 1)).toBe(f(0.7));
+  });
+});
+
+describe('remapf', () => {
+  it('maps the ends of the input range to the ends of the output range', () => {
+    expect(remapf(2, 2, 6, 0.4, 0)).toBe(f(0.4));
+    expect(remapf(6, 2, 6, 0.4, 0)).toBe(0);
+  });
+
+  it('maps a point in between linearly, with the output range running down', () => {
+    expect(remapf(0.5, 0, 1, 0.4, 0)).toBeCloseTo(0.2, 7);
+  });
+
+  it('answers NaN for an empty input range, as Godot does for a mesh with no glyph box (edge case)', () => {
+    expect(remapf(1, Infinity, -Infinity, 0, 1)).toBeNaN();
   });
 });
 

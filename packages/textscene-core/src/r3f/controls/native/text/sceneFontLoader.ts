@@ -1,12 +1,10 @@
 /**
- * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails,
- * and registers the bundled font through the same door, so registration and the settled channel
- * exist once. It is the one DOM-touching module of the font pipeline, and it never throws.
+ * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
+ * It owns the `FontFace` door and the settled channel, which `bundledFontLoader.ts` shares. It is the
+ * one DOM-touching module of the font pipeline, and it never throws.
  */
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
-import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
 import { parseSfntScalars, type SfntScalars } from './sfntTables';
 import {
   createRuntimeFontMetrics,
@@ -17,7 +15,6 @@ import { fontVariationEmbolden, fontVariationSkew, resolveFontFileBytes } from '
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
 // bundled default before any DOM font API. The skip is deliberate, so it does not warn.
@@ -42,6 +39,17 @@ export type SceneFontMetricsListener = () => void;
 
 const settledListeners = new Set<SceneFontMetricsListener>();
 
+/** Written only by `notifySceneFontMetricsSettled`, and never reset. */
+let settleCount = 0;
+
+/**
+ * How many loads have settled. A hook reads it as the snapshot of `useSyncExternalStore`, so a
+ * load that settles between its render and its subscription still re-renders it.
+ */
+export function sceneFontSettleCount(): number {
+  return settleCount;
+}
+
 /**
  * Subscribes to a font metrics load settling, and returns an unsubscribe function. `useBuildSolveTree.ts`
  * calls the same generation `bump` from it as for a resource arrival. It fires once per resource on
@@ -54,7 +62,9 @@ export function onSceneFontMetricsSettled(listener: SceneFontMetricsListener): (
   };
 }
 
-function notifySceneFontMetricsSettled(): void {
+/** Fires every settled listener, for a scene font load and for the bundled font registration. */
+export function notifySceneFontMetricsSettled(): void {
+  settleCount += 1;
   for (const listener of settledListeners) listener();
 }
 
@@ -85,7 +95,10 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
  * eval or WASM. Resolves to `undefined` with no `FontFace`, and rejects only on bytes that are not
  * a font, so `bytes` is a thunk that does not decode where there is no door.
  */
-async function registerFontFace(family: string, bytes: () => ArrayBuffer): Promise<Document | undefined> {
+export async function registerFontFace(
+  family: string,
+  bytes: () => ArrayBuffer
+): Promise<Document | undefined> {
   // Read lazily: a non-DOM environment answers `undefined`, and a late `document.fonts` is still seen.
   const { FontFace: FontFaceCtor, document: doc } = globalThis as {
     FontFace?: typeof FontFace;
@@ -191,12 +204,16 @@ function withFontVariation(metrics: FontMetrics, font: FontResource): FontMetric
 }
 
 /**
- * The synchronous entry for a solve pass: the bundled default while a load is in flight or failed,
- * the real metrics once it lands, with the `FontVariation` embolden and skew on top. A variation
- * with no `base_font` is the bundled default at once. Never throws. It starts
- * `resolveSceneFontMetrics` once per font, so calling both never double-loads.
+ * The metrics of `font` once its load has settled, with the `FontVariation` embolden and skew on
+ * top, and null while a load is in flight. A font that cannot load, or has no bytes to load,
+ * settles at once on the bundled default. It starts `resolveSceneFontMetrics` once per font, so
+ * calling both peeks never double-loads. A consumer that must not draw against the default while
+ * the real font loads reads this one.
  */
-export function peekSceneFontMetrics(font: FontResource | null | undefined, nodePath: string): FontMetrics {
+export function peekSettledSceneFontMetrics(
+  font: FontResource | null | undefined,
+  nodePath: string
+): FontMetrics | null {
   if (!font) return OPEN_SANS_FONT_METRICS;
 
   const resolved = resolveFontFileBytes(font);
@@ -212,50 +229,13 @@ export function peekSceneFontMetrics(font: FontResource | null | undefined, node
   if (!existing) {
     void resolveSceneFontMetrics(font, nodePath);
   }
-  return OPEN_SANS_FONT_METRICS;
+  return null;
 }
 
-/** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */
-const BUNDLED_FAMILY = 'tscn-bundled-open-sans-semibold';
-
-let bundledRegistration: Promise<CanvasFontMetrics | undefined> | undefined;
-/** Undefined until `document.fonts.add` resolves: `fillText` with an unregistered family paints a system font without failing. */
-let bundledMetrics: CanvasFontMetrics | undefined;
-
-function decodeBundledWoff2(): ArrayBuffer {
-  return decodeBase64Bytes(OPEN_SANS_WOFF2_BASE64).buffer;
-}
-
-async function registerBundledFont(): Promise<CanvasFontMetrics | undefined> {
-  try {
-    const doc = await registerFontFace(BUNDLED_FAMILY, decodeBundledWoff2);
-    if (!doc) {
-      logger.warn(
-        '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
-      );
-      return undefined;
-    }
-    bundledMetrics = createOpenSansCanvasFontMetrics(BUNDLED_FAMILY);
-    return bundledMetrics;
-  } catch (err: unknown) {
-    logger.warn(
-      `[BundledFont] Failed to register the bundled font (${err instanceof Error ? err.message : String(err)}).`
-    );
-    return undefined;
-  } finally {
-    // Notifies on any settle, as the scene arm does, so a consumer that peeked re-renders once.
-    notifySceneFontMetricsSettled();
-  }
-}
-
-/** Registers the bundled font once, resolving to its canvas metrics, or `undefined` if the environment or the bytes cannot. Never throws. */
-function resolveBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
-  bundledRegistration ??= registerBundledFont();
-  return bundledRegistration;
-}
-
-/** Synchronous answer for a solve/paint pass: the canvas metrics once registration resolved, `undefined` before that. Kicks the registration off on first call. */
-export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | undefined {
-  if (!bundledMetrics) void resolveBundledCanvasFontMetrics();
-  return bundledMetrics;
+/**
+ * The synchronous entry for a solve pass: the bundled default while a load is in flight or failed,
+ * the real metrics once it lands. Never throws.
+ */
+export function peekSceneFontMetrics(font: FontResource | null | undefined, nodePath: string): FontMetrics {
+  return peekSettledSceneFontMetrics(font, nodePath) ?? OPEN_SANS_FONT_METRICS;
 }

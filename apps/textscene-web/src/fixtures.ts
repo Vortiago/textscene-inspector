@@ -2938,6 +2938,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh",
+    "file": "unit-text-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Torus Mesh Texture Uv",
     "file": "unit-torus-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"

@@ -12,13 +12,7 @@
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
 
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  type HorizontalAlignment,
-} from '../../../godot/math/alignment';
+import { lineStartOffset, type HorizontalAlignment } from '../../../godot/math/alignment';
 
 interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
@@ -39,23 +33,6 @@ function verticalOffsetPx(layout: TextLayoutResult, lineSpacingPx: number): numb
   return -contentHeightPx / 2;
 }
 
-/**
- * `label_3d.cpp:588-599`. `FILL` shares `CENTER`'s branch: justification lives
- * in the `width`-driven `shaped_text_fit_to_width` block, and `width` is unparsed.
- */
-function horizontalOffsetPx(lineWidthPx: number, alignment: HorizontalAlignment): number {
-  switch (alignment) {
-    case HORIZONTAL_ALIGNMENT_CENTER:
-    case HORIZONTAL_ALIGNMENT_FILL:
-      return -lineWidthPx / 2;
-    case HORIZONTAL_ALIGNMENT_RIGHT:
-      return -lineWidthPx;
-    case HORIZONTAL_ALIGNMENT_LEFT:
-    default:
-      return 0;
-  }
-}
-
 /** Per-line placements for an already-shaped `layout`. */
 export function layoutLabel3DLines(
   layout: TextLayoutResult,
@@ -64,7 +41,7 @@ export function layoutLabel3DLines(
 ): Label3DLinePlacement[] {
   const vbeginPx = verticalOffsetPx(layout, lineSpacingPx);
   return layout.lines.map((line, lineIndex) => ({
-    x: horizontalOffsetPx(line.widthPx, horizontalAlignment),
+    x: lineStartOffset(line.widthPx, horizontalAlignment),
     y: vbeginPx + lineIndex * layout.linePitchPx,
     line,
   }));
