@@ -7,6 +7,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { CameraAttributes } from '../../resources/cameraattributes/types';
+import { useSceneExposure } from '../exposure/sceneExposure';
 import { createWorldGroup } from './worldGroup';
 
 /** What a WorldEnvironment's `camera_attributes` resolves to. */
@@ -35,6 +36,7 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
 function ExposureProvider({ children }: { children: ReactNode }) {
   const chosen = cameraAttributes.useChosen();
   const normalization = chosen?.status === 'resolved' ? chosen.attributes.exposureMultiplier : null;
+  useSceneExposure(normalization ?? 1);
   return <ExposureContext.Provider value={normalization}>{children}</ExposureContext.Provider>;
 }
 

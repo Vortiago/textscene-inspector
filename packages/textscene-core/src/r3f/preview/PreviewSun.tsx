@@ -9,6 +9,7 @@ import { useExposureFactor } from '../environment/worldExposure';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { DirectionalShadowMode } from '../../godot/rendering/lights/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
+import { skyLightUserData } from '../sky/skyLight';
 import { directionalShadowDeclaration } from '../../nodes/3d/lights/directionallight3d/shadowDeclaration';
 import {
   PREVIEW_SUN_COLOR,
@@ -36,6 +37,12 @@ const PREVIEW_SUN_SHADOW = directionalShadowUserData(
   })
 );
 
+/** The sun draws a point disc in the sky at its own energy, as a DirectionalLight3D of energy 1 does. */
+const PREVIEW_SUN_USER_DATA = {
+  ...PREVIEW_SUN_SHADOW,
+  ...skyLightUserData({ drawsInSky: true, energy: PREVIEW_SUN_ENERGY, size: 0 }),
+};
+
 /**
  * Godot's preview sun: a white, energy-1.0 DirectionalLight3D with shadows on.
  * It declares its shadow as an authored `<DirectionalLight3D>` does, and the same fitter fits it.
@@ -61,7 +68,7 @@ export function PreviewSun() {
         color={PREVIEW_SUN_COLOR}
         intensity={PREVIEW_SUN_ENERGY * LIGHT_INTENSITY_SCALE * exposure}
         castShadow
-        userData={PREVIEW_SUN_SHADOW}
+        userData={PREVIEW_SUN_USER_DATA}
       />
     </>
   );

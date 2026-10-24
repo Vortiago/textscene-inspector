@@ -15,6 +15,8 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { TscnParser } from '../../parser/TscnParser';
 import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/rendering/lights/softShadowScale';
+import { skyLightEnergy } from '../sky/skyLight';
+import { PREVIEW_SUN_ENERGY } from './godotPreviewLighting';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 
@@ -161,5 +163,11 @@ camera_attributes = SubResource("CameraAttributesPractical_1")
   it('scales with the exposure of the world, as every light in the render does', async () => {
     const plain = await sunIntensity(scene(MESH));
     expect(await sunIntensity(scene(`${MESH}${EXPOSED_WORLD}`))).toBeCloseTo(plain * 2, 10);
+  });
+
+  it('declares its own energy to the sky, which scales every disc by the exposure itself', async () => {
+    const renderer = await render(scene(`${MESH}${EXPOSED_WORLD}`));
+    const sun = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
+    expect(skyLightEnergy(sun)).toBe(PREVIEW_SUN_ENERGY);
   });
 });

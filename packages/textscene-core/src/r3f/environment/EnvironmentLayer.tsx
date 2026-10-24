@@ -20,6 +20,8 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
+import { useExposureFactor } from './worldExposure';
+import { scaledRgb } from '../../utils/colorParser';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -87,12 +89,15 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
 /**
  * Draws a colour background, or a placeholder for a sky that does not resolve. `hasSky` is true when
  * a sky resolves, so `<SkyLayer>` owns the background. `hasFog` is true when a fog draws, which fogs it.
+ * The world's exposure scales the colour in sRGB, before the conversion to linear, and under fog the
+ * brightness that draws it again (`render_forward_clustered.cpp:1988-2014`, `:2045`).
  */
 function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
   const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
   const { mode: curveMode, white: curveWhite, agxContrast: curveAgxContrast } = settings.toneMapping;
   const showsColor = showsBackgroundColor(mode);
+  const exposure = useExposureFactor();
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
   // A colour draws as a texture, not a clear, since three's clear skips the curve Godot applies to it.
@@ -100,9 +105,10 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
   // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
   useEffect(() => {
     if (showsColor) {
+      const exposedColor = scaledRgb(backgroundColor, exposure);
       return hasFog
-        ? showBackground(scene, foggedClearColorTexture(backgroundColor), backgroundEnergy)
-        : showBackground(scene, clearColorTexture(backgroundColor), 1);
+        ? showBackground(scene, foggedClearColorTexture(exposedColor), backgroundEnergy * exposure)
+        : showBackground(scene, clearColorTexture(exposedColor), 1);
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as
@@ -116,6 +122,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
     mode,
     backgroundColor,
     backgroundEnergy,
+    exposure,
     hasSky,
     hasFog,
     curveMode,

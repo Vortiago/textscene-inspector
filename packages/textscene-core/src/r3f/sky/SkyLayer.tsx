@@ -3,7 +3,10 @@
  * its share of the ambient to every lit material before each render of the scene
  * (`skyLayerArray.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
  * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
- * instanced or GLB light has its real world transform.
+ * instanced or GLB light has its real world transform. The world's exposure scales the sky as Godot
+ * does: the background and each disc once, and the ambient and the reflection twice, since Godot
+ * bakes the radiance at the exposure and a surface reads it at the exposure again
+ * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:241-246`, `sky.cpp:1086`).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -18,6 +21,7 @@ import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { SkyLayerArray } from './skyLayerArray';
 import { observeSceneCamera } from '../sceneRenderCamera';
+import { useExposureFactor } from '../environment/worldExposure';
 import { debandSky } from './skyDebanding';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -66,6 +70,7 @@ export function SkyLayer({
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
+  const exposure = useExposureFactor();
 
   // `useTexture2D`, not the path-only resolver: a PanoramaSkyMaterial's
   // equirectangular texture may be an inline procedural one (a
@@ -92,10 +97,10 @@ export function SkyLayer({
 
     const built = buildSkyEnvironment(gl, {
       sky,
-      lights: directionalLights(scene),
+      lights: directionalLights(scene).map((light) => ({ ...light, energy: light.energy * exposure })),
       panorama,
       asBackground,
-      energy: intensity,
+      energy: intensity * exposure,
     });
     if (!built) return undefined;
 
@@ -108,14 +113,14 @@ export function SkyLayer({
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
 
     scene.environment = built.environment;
-    scene.environmentIntensity = intensity;
+    scene.environmentIntensity = intensity * exposure ** 2;
     scene.environmentRotation.copy(skyRotation);
     const layerArray = new SkyLayerArray(gl, built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
     const stopShowingLayers = observeSceneCamera(scene, () => layerArray.show(contributionRef.current));
     if (asBackground) {
       scene.background = built.background;
-      scene.backgroundIntensity = backgroundIntensity;
+      scene.backgroundIntensity = backgroundIntensity * exposure;
       scene.backgroundRotation.copy(skyRotation);
     }
     const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
@@ -139,6 +144,7 @@ export function SkyLayer({
     scene,
     sky,
     intensity,
+    exposure,
     panorama,
     asBackground,
     backgroundIntensity,
