@@ -8,7 +8,8 @@ import { FAST_FILTER_CHAIN_SIZES } from '../../godot/rendering/environment/skyRe
 import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { FAST_FILTER_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { skyPass } from './skyPass.js';
-import { perRenderer } from '../../r3f/perRenderer.js';
+import type * as THREE from 'three';
+import { perObject } from '../../utils/perObject.js';
 
 /** Each level of Godot's table, its parts flattened as the shader's `vec4` arrays of the same names read them. */
 const tapsByLevel = FAST_FILTER_COEFFICIENTS.map(
@@ -18,7 +19,7 @@ const tapsByLevel = FAST_FILTER_COEFFICIENTS.map(
     ) as Record<keyof FastFilterCoefficients, Float32Array>
 );
 
-const fastFilterPassFor = perRenderer(() =>
+const fastFilterPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
   skyPass(FAST_FILTER_FRAGMENT_SHADER, [
     ...LAYER_FILTER_UNIFORMS,
     'frameX',

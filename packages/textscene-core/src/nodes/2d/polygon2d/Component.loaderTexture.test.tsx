@@ -22,6 +22,7 @@ import { buildMaterial } from '../../../resources/materials/standardmaterial3d/b
 import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 vi.mock('three', async (importOriginal) => {
   const actual = await importOriginal<typeof import('three')>();
@@ -62,7 +63,7 @@ async function canvasMap(entry: THREE.Texture): Promise<THREE.Texture> {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   return (mesh.material as THREE.MeshBasicMaterial).map!;
 }

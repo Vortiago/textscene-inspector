@@ -9,7 +9,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { CPU_PARTICLES_PARAMS } from '../../../../godot/scene/cpuParticles.js';
-import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
+import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../../linter/paramMinAboveMax.js';
 
 const arms = {
   requiresMesh: groundedArm('cpuparticles3d-requires-mesh', { kind: 'configuration-warning' }),

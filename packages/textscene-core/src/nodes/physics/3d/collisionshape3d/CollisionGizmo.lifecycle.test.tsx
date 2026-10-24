@@ -5,16 +5,21 @@
  * leaves a GPU buffer behind.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactElement } from 'react';
 import { CollisionGizmo } from './CollisionGizmo';
 import type { TscnInternalResource } from '../../../../parser/types';
-
-const { act } = ReactThreeTestRenderer;
+import { settleLoads } from '../../../../r3f/testing/settleLoads';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/**
+ * The gizmo `import()`s three's ConvexGeometry lazily, which reads a file the first time. Loading it
+ * here first leaves the gizmo's import a cache hit, which lands within `settleLoads`'s one tick.
+ */
+beforeAll(() => import('three/addons/geometries/ConvexGeometry.js'));
 
 /** Written only by `mount`, emptied after each test. */
 const mounted: Renderer[] = [];
@@ -48,14 +53,9 @@ async function mount(element: ReactElement): Promise<Renderer> {
   return renderer;
 }
 
-/**
- * Lets the lazy `ConvexGeometry` import and its state update land, then re-flushes so the test
- * renderer's snapshot sees the commit, as `Component.test.tsx` does.
- */
+/** Lets the gizmo's state update land, then re-flushes so the test renderer's snapshot sees the commit. */
 async function settle(renderer: Renderer, element: ReactElement): Promise<void> {
-  await act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 100));
-  });
+  await settleLoads();
   await renderer.update(element);
 }
 

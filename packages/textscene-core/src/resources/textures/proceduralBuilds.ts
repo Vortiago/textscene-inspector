@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
+import { perObject } from '../../utils/perObject';
 import type { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import type { WorkerJobInput, WorkerJobName, WorkerJobOutput } from '../../workers/jobs';
 import { unlessAllocationFails } from './pixelAllocation';
@@ -100,10 +101,10 @@ export function resolveProceduralSubResourceAsync(
  * Written by `plannedBuild`, once per parse and sub-resource. Each consumer of a texture
  * looks it up on every parse, and a plan decodes the resource and serialises its input.
  */
-const plansByParse = new WeakMap<
+const plansByParse = perObject<
   readonly TscnInternalResource[],
   Map<TscnInternalResource, ProceduralBuildPlan | null>
->();
+>(() => new Map());
 
 function plannedBuild(
   resource: TscnInternalResource,
@@ -113,8 +114,7 @@ function plannedBuild(
     resources: readonly TscnInternalResource[]
   ) => ProceduralBuildPlan | null
 ): ProceduralBuildPlan | null {
-  let plans = plansByParse.get(internalResources);
-  if (!plans) plansByParse.set(internalResources, (plans = new Map()));
+  const plans = plansByParse(internalResources);
   if (!plans.has(resource)) plans.set(resource, plan(resource.data, internalResources));
   return plans.get(resource) ?? null;
 }

@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasLighting2DProvider, useRegisterCanvasLight2D } from './CanvasLighting2D';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
+import { settleLoads } from '../testing/settleLoads';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -24,13 +25,9 @@ function provider(children: ReactNode) {
   return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
 }
 
-async function settle(): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 10));
-}
-
 async function mount(children: ReactNode) {
   const renderer = await ReactThreeTestRenderer.create(provider(children));
-  await settle();
+  await settleLoads();
   return renderer;
 }
 
@@ -83,7 +80,7 @@ describe('useRegisterCanvasLight2D', () => {
         </>
       )
     );
-    await settle();
+    await settleLoads();
     expect(late.at(-1)).toBe(1);
   });
 

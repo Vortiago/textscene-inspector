@@ -18,6 +18,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { applyUvWindow, flippedUvWindow, FULL_UV_WINDOW } from '../../../../r3f/uvWindow';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   scrollContainerScrollBars,
@@ -68,8 +69,7 @@ function ScrollHintChrome({
   // material changes, so a flip applied after mount never reaches the GPU.
   const texture = useMemo(() => {
     if (!loaded) return null;
-    loaded.repeat.set(flipH ? -1 : 1, flipV ? -1 : 1);
-    loaded.offset.set(flipH ? 1 : 0, flipV ? 1 : 0);
+    applyUvWindow(loaded, flippedUvWindow(FULL_UV_WINDOW, flipH, flipV));
     return loaded;
   }, [loaded, flipH, flipV]);
 

@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
-import type { UvWindow } from './spriteFrame';
+import type { UvWindow } from './uvWindow';
 import { useUvWindow } from './useUvWindow';
 
 function uvWindow(offsetX: number, repeatX: number): UvWindow {

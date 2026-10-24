@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GODOT_NORMAL_MAP_READ, importedNormalMapRead } from './godotNormalMap';
 import { installedShaderChunks } from '../testing/shaderPatches';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
+import { UNIT_TANGENT_FRAME } from '../testing/patchedFragment';
 
 const normalMapped = () => new THREE.MeshStandardMaterial({ normalMap: new THREE.Texture() });
 
@@ -41,6 +42,12 @@ describe('the installed normal map read', () => {
     const begin = installedShaderChunks().normal_fragment_begin;
     expect(begin).toContain('vec2 godotUvDx = dFdx( vNormalMapUv );');
     expect(begin).toContain('vec2 godotUvDy = dFdy( vNormalMapUv );');
+  });
+
+  it('scales the tangent and the binormal of the derivative frame to unit length each', () => {
+    const frame = functionBody(installedShaderChunks().normalmap_pars_fragment, 'getTangentFrame');
+    expect(frame).toContain(UNIT_TANGENT_FRAME);
+    expect(frame).not.toContain('inversesqrt( det )');
   });
 
   it('declares the tangent frame the roughness limiter reads, before the setup chunk (edge case)', () => {

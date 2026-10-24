@@ -5,7 +5,8 @@
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { pinNoColorSpace, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
+import { pinNoColorSpace } from '../../../resources/textures/applyTextureState';
 import { applyCanvasItemSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { useNearestAnisotropy } from '../../nearestAnisotropy';
 import { useTexture2D } from '../../../resources/useTexture2D';

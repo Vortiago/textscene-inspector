@@ -6,6 +6,7 @@
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene } from '../../parser/types';
 import type { LiveTreeContext } from '../liveSceneTree';
+import { contextOver } from '../liveSceneTree.testkit';
 import '../../nodes/node/index';
 
 const parse = (source: string): TscnScene => new TscnParser().parse(source);
@@ -63,8 +64,4 @@ export const scenesByPath: Readonly<Record<string, TscnScene>> = {
   [SUB_LEAF_PATH]: subLeafScene,
 };
 
-export const graftedContext: LiveTreeContext = {
-  externalResources: hostScene.externalResources,
-  internalResources: hostScene.internalResources,
-  sceneCache: { getCached: (path) => scenesByPath[path] },
-};
+export const graftedContext: LiveTreeContext = contextOver(hostScene, scenesByPath);

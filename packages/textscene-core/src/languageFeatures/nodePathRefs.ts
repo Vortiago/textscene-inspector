@@ -6,6 +6,7 @@
  */
 
 import { parseIdTrail } from '../godot/scene/packedScene.js';
+import { perObject } from '../utils/perObject.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { nodeSectionOfConnectionEnd, nodeSectionOfParent } from './nodeSeating.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
@@ -48,9 +49,6 @@ type NodePathReference = {
 
 /** The path references that resolve to each node heading, in line order. */
 type NodeUses = ReadonlyMap<DocumentSection, readonly NodePathReference[]>;
-
-/** Written only by {@link nodeUsesOf}. An entry lives as long as its document. */
-const nodeUsesByDocument = new WeakMap<LanguageDocument, NodeUses>();
 
 /** The node paths a heading line spells. */
 function referencesOnHeading(section: DocumentSection, lineText: string): NodePathReference[] {
@@ -95,14 +93,8 @@ function buildNodeUses(document: LanguageDocument): NodeUses {
   return usesByNode;
 }
 
-function nodeUsesOf(document: LanguageDocument): NodeUses {
-  let uses = nodeUsesByDocument.get(document);
-  if (!uses) {
-    uses = buildNodeUses(document);
-    nodeUsesByDocument.set(document, uses);
-  }
-  return uses;
-}
+/** An entry lives as long as its document. */
+const nodeUsesOf = perObject(buildNodeUses);
 
 /** Every `parent=`, `from=` and `to=` value that resolves to `node`, in line order. */
 export function nodeUses(document: LanguageDocument, node: DocumentSection): readonly NodePathReference[] {

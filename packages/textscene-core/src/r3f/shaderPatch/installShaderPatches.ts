@@ -24,23 +24,31 @@ import { installFogComposite } from '../fog/fogComposite.js';
 import { installSkyProjection } from '../sky/skyProjection.js';
 import { installSkyDebanding } from '../sky/skyDebanding.js';
 
+/**
+ * Every patch a canvas draws with. Each install installs the patches it reads first. The order only
+ * sets where two patches that insert at one anchor put their lines, so every canvas compiles one text.
+ */
+const SHADER_PATCH_INSTALLS: readonly (() => unknown)[] = [
+  installGodotIndirectSpecular,
+  installGodotLightSpecular,
+  installGodotLightBakeMode,
+  installGodotLightSize,
+  installGodotNormalMapRead,
+  installGodotLightFunction,
+  installGodotLightAttenuation,
+  installGodotSkyLighting,
+  installGodotAreaLight,
+  installGodotClearcoat,
+  installGodotReflectionProbes,
+  installGodotSplitShadow,
+  installDirectionalShadowAtlas,
+  installGodotPositionalShadow,
+  installCanvasSrgbMultiply,
+  installFogComposite,
+  installSkyProjection,
+  installSkyDebanding,
+];
+
 export function installShaderPatches(): void {
-  installGodotIndirectSpecular();
-  installGodotLightSpecular();
-  installGodotLightBakeMode();
-  installGodotLightSize();
-  installGodotNormalMapRead();
-  installGodotLightFunction();
-  installGodotLightAttenuation();
-  installGodotSkyLighting();
-  installGodotAreaLight();
-  installGodotClearcoat();
-  installGodotReflectionProbes();
-  installGodotSplitShadow();
-  installDirectionalShadowAtlas();
-  installGodotPositionalShadow();
-  installCanvasSrgbMultiply();
-  installFogComposite();
-  installSkyProjection();
-  installSkyDebanding();
+  for (const install of SHADER_PATCH_INSTALLS) install();
 }

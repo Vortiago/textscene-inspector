@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
+import { regionUvRect } from '../../../uvWindow';
 import type { TextLayoutResult } from './textLayout';
 
 /** The vertex, UV and index buffers of one merged glyph quad set. */
@@ -22,16 +23,8 @@ export interface GlyphQuadArrays {
   indices: Uint32Array;
 }
 
-/** Atlas pixel rect (image-Y top-left, bake-size px) -> UV rect, flipY=true convention. */
-function atlasUv(x: number, y: number, width: number, height: number) {
-  const { scaleW, scaleH } = OPEN_SANS_ATLAS_INFO;
-  return {
-    u0: x / scaleW,
-    u1: (x + width) / scaleW,
-    vTop: 1 - y / scaleH,
-    vBottom: 1 - (y + height) / scaleH,
-  };
-}
+/** The atlas's size in bake pixels, which its glyph rects are measured in. */
+const ATLAS_SIZE = { x: OPEN_SANS_ATLAS_INFO.scaleW, y: OPEN_SANS_ATLAS_INFO.scaleH };
 
 /**
  * Builds one merged quad set for `layout`, skipping a placement with no atlas
@@ -90,7 +83,7 @@ export function buildGlyphQuadArrays(
       const v = quad * 4;
       positions.set([tl[0], -tl[1], 0, tr[0], -tr[1], 0, bl[0], -bl[1], 0, br[0], -br[1], 0], v * 3);
 
-      const uv = atlasUv(glyph.x, glyph.y, glyph.width, glyph.height);
+      const uv = regionUvRect({ x: glyph.x, y: glyph.y, w: glyph.width, h: glyph.height }, ATLAS_SIZE);
       uvs.set([uv.u0, uv.vTop, uv.u1, uv.vTop, uv.u0, uv.vBottom, uv.u1, uv.vBottom], v * 2);
 
       indices.set([v + 2, v + 3, v, v + 3, v + 1, v], quad * 6);

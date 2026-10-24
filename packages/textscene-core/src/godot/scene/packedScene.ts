@@ -73,51 +73,22 @@ export interface IdTrailEnd {
 }
 
 /**
- * Follows `trail` through the headings of a scene that has no base scene, so the first
- * lookup is local (`packed_scene.cpp:1960-1979`). `ids` are the headings' unique ids, and `headingAt`
- * builds only the heading the trail names, so the cost does not grow with the other headings.
- * `builtCount` is the number of headings built before the lookup: the headings before a node whose
- * path did not walk, or all of them after the build. Only those can the final `get_node_or_null`
- * find (`:2005`). Undefined where the trail resolves nowhere, so Godot re-roots the node.
+ * Follows `trail` through a scene with no base scene, so the first lookup is local
+ * (`packed_scene.cpp:1960-1979`). `firstIndexWithId` finds as `ids.find` does: id `0` names the first
+ * heading with no `unique_id=`. The final `get_node_or_null` finds only the first `builtCount`
+ * headings (`:2005`). Undefined where the trail resolves nowhere, so Godot re-roots the node.
  */
 export function recoverByIdTrail(
   trail: readonly number[],
-  ids: readonly HasUniqueId[],
+  firstIndexWithId: (id: number) => number | undefined,
   headingAt: (index: number) => IdHeading,
   builtCount: number
 ): IdTrailEnd | undefined {
   // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
   if (trail.length === 0) return undefined;
-  const index = firstIndexWithId(ids, trail[0]!);
+  const index = firstIndexWithId(trail[0]!);
   if (index === undefined) return undefined;
   return idTrailEndAt(trail, index, headingAt(index), builtCount);
-}
-
-type HasUniqueId = Pick<IdHeading, 'uniqueId'>;
-
-/**
- * Written only by {@link firstIndexWithId}, keyed by the headings of one scene, which nothing
- * changes after the scan. An entry clears when nothing holds that array any more.
- */
-const firstIndexes = new WeakMap<readonly HasUniqueId[], ReadonlyMap<number, number>>();
-
-/**
- * The index of the first heading carrying `id`, or undefined where none does. `ids.find` returns
- * the first match, so id `0` names the first heading with no `unique_id=`. The index is built on
- * the first lookup, so a scene with many trails reads each id once.
- */
-function firstIndexWithId(headings: readonly HasUniqueId[], id: number): number | undefined {
-  let indexes = firstIndexes.get(headings);
-  if (!indexes) {
-    const built = new Map<number, number>();
-    for (let index = 0; index < headings.length; index++) {
-      const { uniqueId } = headings[index]!;
-      if (!built.has(uniqueId)) built.set(uniqueId, index);
-    }
-    indexes = built;
-    firstIndexes.set(headings, indexes);
-  }
-  return indexes.get(id);
 }
 
 function idTrailEndAt(

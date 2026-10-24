@@ -6,6 +6,7 @@
 
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+import { perObject } from '../../utils/perObject';
 
 interface ParsedResourceTexture {
   /** A `SubResource` ref to the file's `[resource]`. */
@@ -19,25 +20,18 @@ interface ParsedResourceTexture {
 const MAIN_RESOURCE_ID = '[resource]';
 
 /**
- * Written by `parsedResourceTexture`, once per parsed file. The procedural caches key their plans on
- * the table's identity, so a file read twice must give the same table.
+ * Built once per parsed file. The procedural caches key their plans on the table's identity, so a
+ * file read twice must give the same table.
  */
-const textures = new WeakMap<ParsedResource, ParsedResourceTexture>();
-
-export function parsedResourceTexture(parsed: ParsedResource): ParsedResourceTexture {
-  let texture = textures.get(parsed);
-  if (!texture) {
-    const main: TscnInternalResource = {
-      id: MAIN_RESOURCE_ID,
-      type: parsed.resourceType,
-      data: parsed.properties,
-    };
-    texture = {
-      ref: `SubResource("${MAIN_RESOURCE_ID}")`,
-      internalResources: [...parsed.subResources, main],
-      externalResources: parsed.extResources,
-    };
-    textures.set(parsed, texture);
-  }
-  return texture;
-}
+export const parsedResourceTexture = perObject((parsed: ParsedResource): ParsedResourceTexture => {
+  const main: TscnInternalResource = {
+    id: MAIN_RESOURCE_ID,
+    type: parsed.resourceType,
+    data: parsed.properties,
+  };
+  return {
+    ref: `SubResource("${MAIN_RESOURCE_ID}")`,
+    internalResources: [...parsed.subResources, main],
+    externalResources: parsed.extResources,
+  };
+});

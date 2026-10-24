@@ -4,7 +4,7 @@
  * mip the screen derivatives of the direction pick (`scene_forward_clustered.glsl:1704-1756`).
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { MAX_ROUGHNESS_LOD } from '../godot/rendering/environment/skyReflection.js';
 import { OCTMAP_GLSL } from '../resources/sky/skyLayerShaders.js';
@@ -141,24 +141,20 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
   },
 ];
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
-
 /**
  * Replaces three's chunks and gives the layer slot and the shown sky to every built-in lit
  * material and to `UniformsLib.lights`, for every program compiled after the call. A three release
  * that rewrites a replaced line keeps all its chunks, and `godotSkyLighting.test.ts` fails on that
- * release. A second call changes nothing.
+ * release. True when the chunks hold the patch after the call. A second call changes nothing.
  */
-export function installGodotSkyLighting(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_fragment_maps', 'envmap_physical_pars_fragment'],
-    isApplied: (chunks) => chunks.envmap_physical_pars_fragment.includes(SKY_LIGHTING_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, SKY_LIGHTING_EDITS),
-    missing:
-      'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',
+export function installGodotSkyLighting(): boolean {
+  const isPatched = installChunkEdits({
+    edits: SKY_LIGHTING_EDITS,
+    mark: GODOT_IBL_RADIANCE,
+    patch: 'sky lighting',
   });
-  if (!isPatched) return;
+  if (!isPatched) return false;
   installLitUniform(layers, skyLayersSlot);
   installLitUniform(shown, shownSky);
+  return true;
 }

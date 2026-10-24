@@ -114,6 +114,18 @@ describe('parseCPUParticles2D', () => {
     expect(maxFirst.params[CPUParticlesParameter.ANGLE]).toEqual({ min: 5, max: 5 });
   });
 
+  it('skips a non-finite bound, which the previewer cannot draw, so the default stays (edge case)', () => {
+    const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
+      angle_min: 'inf',
+      angle_max: '2',
+      scale_amount_min: '1e39',
+      scale_amount_max: 'nan',
+    });
+
+    expect(result.params[CPUParticlesParameter.ANGLE]).toEqual({ min: 0, max: 2 });
+    expect(result.params[CPUParticlesParameter.SCALE]).toEqual({ min: 1, max: 1 });
+  });
+
   it('moves the default of a range with one key authored (measured: scale_amount_min = 3 loads max 3)', () => {
     const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), { scale_amount_min: '3.0' });
 

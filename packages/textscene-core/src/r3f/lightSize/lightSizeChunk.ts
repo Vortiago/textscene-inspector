@@ -6,7 +6,7 @@
  * (`scene_forward_clustered.glsl:2617`).
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import {
   isPositionalKind,
   LIGHT_SLOT_LOOPS,
@@ -47,20 +47,18 @@ const LIGHT_SIZE_EDITS: readonly ChunkEdit<LightSizeChunk>[] = [
   })),
 ];
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const LIGHT_SIZE_MARK = SIZE_DECLARATIONS;
-
 /**
  * Hands each light's size to every program compiled after the call, and gives the array to every
  * built-in lit material. A three release that rewrites a replaced line keeps all its own chunks,
- * and `lightSizeChunk.test.ts` fails on that release. A second call changes nothing.
+ * and `lightSizeChunk.test.ts` fails on that release. True when the chunks hold the patch after the
+ * call. A second call changes nothing.
  */
-export function installGodotLightSize(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_pars_begin', 'lights_fragment_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(LIGHT_SIZE_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, LIGHT_SIZE_EDITS),
-    missing: 'lights_pars_begin or lights_fragment_begin lacks a line the light size patch replaces',
+export function installGodotLightSize(): boolean {
+  const isPatched = installChunkEdits({
+    edits: LIGHT_SIZE_EDITS,
+    mark: SIZE_DECLARATIONS,
+    patch: 'light size',
   });
   if (isPatched) installLightSizeUniforms();
+  return isPatched;
 }

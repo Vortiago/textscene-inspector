@@ -14,6 +14,7 @@ import './index';
 import './index.r3f';
 import '../../base/node3d/index';
 import '../../base/node3d/index.r3f';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const ATLAS_PATH = 'res://bake.exr';
 const SHADOWMASK_PATH = 'res://bake_shadow.png';
@@ -55,9 +56,7 @@ async function mount({ atlas, shadowmask, lightmapLines = '' }: Bake) {
       <NodeTree node={parsed.nodes[0]!} path="Root" />
     </SceneStack>
   );
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
+  await settleLoads();
   const lightmaps = lightmapsOf(renderer.scene.instance as unknown as THREE.Scene);
   return { renderer, lightmaps };
 }

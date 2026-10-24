@@ -32,12 +32,11 @@ import { TAU } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
 import { normalizedVector3 } from '../../../godot/math/vector.js';
 import type { GodotSurface } from '../godotSurface.js';
-import { rimPoint } from '../primitivemesh/rimPoint.js';
+import { BOTTOM_CAP, TOP_CAP, writeCapFan } from '../primitivemesh/capFan.js';
+import { rimColumns, type RimColumn } from '../primitivemesh/rimPoint.js';
+import { rowAt, writeRings } from '../primitivemesh/rows.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { CylinderMeshProperties } from './types.js';
-
-/** The tangent of every cap vertex (`:1175`). */
-const CAP_TANGENT = [1, 0, 0, 1] as const;
 
 /** Where the side and the two caps lie in UV2: the unrolled side above the two caps side by side. */
 interface Uv2Layout {
@@ -56,10 +55,11 @@ interface Uv2Layout {
 /** `uv2Padding` is in world units, or null for a mesh with no UV2 (`add_uv2` off). */
 export function buildCylinderMeshSurface(p: CylinderMeshProperties, uv2Padding: number | null): GodotSurface {
   const layout = uv2Layout(p, uv2Padding ?? 0);
+  const rim = rimColumns(p.radialSegments);
   const writer = new SurfaceWriter(uv2Padding !== null);
-  writeSide(writer, p, layout);
-  if (p.capTop && p.topRadius > 0) writeTopCap(writer, p, layout);
-  if (p.capBottom && p.bottomRadius > 0) writeBottomCap(writer, p, layout);
+  writeSide(writer, p, rim, layout);
+  if (p.capTop && p.topRadius > 0) writeTopCap(writer, p, rim, layout);
+  if (p.capBottom && p.bottomRadius > 0) writeBottomCap(writer, p, rim, layout);
   return writer.surface();
 }
 
@@ -101,23 +101,23 @@ function uv2Layout(p: CylinderMeshProperties, padding: number): Uv2Layout {
   };
 }
 
-/** The side as rows from the top edge down, U from +Z towards +X and V in the top half (`:1114`). */
-function writeSide(writer: SurfaceWriter, p: CylinderMeshProperties, layout: Uv2Layout): void {
-  const { topRadius, bottomRadius, height, radialSegments, rings } = p;
-  const sideNormalY = storedReal(storedReal(bottomRadius - topRadius) / height);
-  let thisrow = 0;
-  let prevrow = 0;
-  for (let j = 0; j <= rings + 1; j++) {
-    const v = storedReal(j / (rings + 1));
-    const radius = storedReal(topRadius + storedReal(storedReal(bottomRadius - topRadius) * v));
-    const radiusH = storedReal(
-      layout.sideTopH + storedReal(storedReal(layout.sideBottomH - layout.sideTopH) * v)
-    );
-    const y = storedReal(height * 0.5 - storedReal(height * v));
-
-    for (let i = 0; i <= radialSegments; i++) {
-      const u = storedReal(i / radialSegments);
-      const [x, z] = rimPoint(i, radialSegments);
+/** The side as rings from the top edge down, U from +Z towards +X and V in the top half (`:1112-1160`). */
+function writeSide(
+  writer: SurfaceWriter,
+  p: CylinderMeshProperties,
+  rim: readonly RimColumn[],
+  layout: Uv2Layout
+): void {
+  const { topRadius, bottomRadius, height } = p;
+  const radiusStep = storedReal(bottomRadius - topRadius);
+  const radiusHStep = storedReal(layout.sideBottomH - layout.sideTopH);
+  const sideNormalY = storedReal(radiusStep / height);
+  const rowCount = p.rings + 1;
+  writeRings(writer, rowCount, (j) => {
+    const { v, y } = rowAt(j, rowCount, height);
+    const radius = storedReal(topRadius + storedReal(radiusStep * v));
+    const radiusH = storedReal(layout.sideTopH + storedReal(radiusHStep * v));
+    for (const { x, z, u } of rim) {
       writer.vertex(
         [x * radius, y, z * radius],
         normalizedVector3(x, sideNormalY, z),
@@ -125,52 +125,32 @@ function writeSide(writer: SurfaceWriter, p: CylinderMeshProperties, layout: Uv2
         [u, v * 0.5],
         [layout.sideCentreH + (u - 0.5) * radiusH, v * layout.heightV]
       );
-      if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
     }
-
-    prevrow = thisrow;
-    thisrow = writer.vertexCount;
-  }
+  });
 }
 
-/** A fan facing up, centred on (0.25, 0.75) in UV (`:1169`). */
-function writeTopCap(writer: SurfaceWriter, p: CylinderMeshProperties, layout: Uv2Layout): void {
-  const { topRadius, radialSegments } = p;
-  const { topH, topV, capCentreV } = layout;
-  const y = p.height * 0.5;
-  const centre = writer.vertexCount;
-  writer.vertex([0, y, 0], [0, 1, 0], CAP_TANGENT, [0.25, 0.75], [topH, capCentreV]);
-  for (let i = 0; i <= radialSegments; i++) {
-    const [x, z] = rimPoint(i, radialSegments);
-    writer.vertex(
-      [x * topRadius, y, z * topRadius],
-      [0, 1, 0],
-      CAP_TANGENT,
-      [storedReal((x + 1) * 0.25), storedReal(0.5 + (z + 1) * 0.25)],
-      [topH + storedReal(x * topH), capCentreV + storedReal(z * topV)]
-    );
-    const point = writer.vertexCount;
-    if (i > 0) writer.triangle(centre, point - 1, point - 2);
-  }
+/** The top cap, its UV2 on the left of the row below the side (`:1168-1213`). */
+function writeTopCap(
+  writer: SurfaceWriter,
+  p: CylinderMeshProperties,
+  rim: readonly RimColumn[],
+  { topH, topV, capCentreV }: Uv2Layout
+): void {
+  writeCapFan(writer, rim, TOP_CAP, p.height * 0.5, p.topRadius, (x, z) => [
+    topH + storedReal(x * topH),
+    capCentreV + storedReal(z * topV),
+  ]);
 }
 
-/** A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:1216`). */
-function writeBottomCap(writer: SurfaceWriter, p: CylinderMeshProperties, layout: Uv2Layout): void {
-  const { bottomRadius, radialSegments } = p;
-  const { bottomCentreH, bottomH, bottomV, capCentreV } = layout;
-  const y = p.height * -0.5;
-  const centre = writer.vertexCount;
-  writer.vertex([0, y, 0], [0, -1, 0], CAP_TANGENT, [0.75, 0.75], [bottomCentreH, capCentreV]);
-  for (let i = 0; i <= radialSegments; i++) {
-    const [x, z] = rimPoint(i, radialSegments);
-    writer.vertex(
-      [x * bottomRadius, y, z * bottomRadius],
-      [0, -1, 0],
-      CAP_TANGENT,
-      [storedReal(0.5 + (x + 1) * 0.25), storedReal(1 - (z + 1) * 0.25)],
-      [bottomCentreH + storedReal(x * bottomH), capCentreV - storedReal(z * bottomV)]
-    );
-    const point = writer.vertexCount;
-    if (i > 0) writer.triangle(centre, point - 2, point - 1);
-  }
+/** The bottom cap, its UV2 right of the top cap's with V mirrored (`:1216-1260`). */
+function writeBottomCap(
+  writer: SurfaceWriter,
+  p: CylinderMeshProperties,
+  rim: readonly RimColumn[],
+  { bottomCentreH, bottomH, bottomV, capCentreV }: Uv2Layout
+): void {
+  writeCapFan(writer, rim, BOTTOM_CAP, p.height * -0.5, p.bottomRadius, (x, z) => [
+    bottomCentreH + storedReal(x * bottomH),
+    capCentreV - storedReal(z * bottomV),
+  ]);
 }

@@ -17,12 +17,8 @@ import type { Vector2 } from '../../../godot/math/vector.js';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem.js';
 
 /** The setters refuse a value past `TEXTURE_FILTER_MAX` or `TEXTURE_REPEAT_MAX` (`canvas_item.cpp`), so it keeps PARENT_NODE. */
-const TEXTURE_FILTERS = numericValues(CanvasItemTextureFilter);
-const TEXTURE_REPEATS = numericValues(CanvasItemTextureRepeat);
-
-function numericValues<T extends number>(members: Record<string, string | T>): T[] {
-  return Object.values(members).filter((value): value is T => typeof value === 'number');
-}
+const TEXTURE_FILTERS = Object.values(CanvasItemTextureFilter);
+const TEXTURE_REPEATS = Object.values(CanvasItemTextureRepeat);
 
 export function parseNode2D(heading: ParsedHeading, properties: Record<string, string>): Node2DProperties {
   const name = heading.attributes.name || '';

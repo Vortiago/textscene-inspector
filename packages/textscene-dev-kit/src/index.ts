@@ -8,7 +8,7 @@ export {
 export type { ImportClosure, WalkImportClosureOptions } from './importClosure';
 export { commentSpans, stripComments } from './commentSpans';
 export { declaredExports } from './declaredExports';
-export { escapeRegExp } from './regExp';
+export { escapeRegExp, TRIVIA } from './regExp';
 export {
   answersFixtureDir,
   cursorIn,

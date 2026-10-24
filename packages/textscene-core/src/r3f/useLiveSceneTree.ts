@@ -17,6 +17,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
+import { perObject } from '../utils/perObject.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -52,14 +53,11 @@ const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
 
 /** What {@link useLiveTreeVersion} reads of one loader. */
 interface LoadTicks {
-  /** Written only by the bus handler and by the last unsubscribe. */
+  /** Written only by the bus handler, the first subscribe and the last unsubscribe. */
   version: number;
   readonly subscribe: (onChange: () => void) => () => void;
   readonly getVersion: () => number;
 }
-
-/** Written only by {@link loadTicksOf}, keyed by the loader. */
-const loadTicks = new WeakMap<ResourceLoader, LoadTicks>();
 
 const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: () => () => {}, getVersion: () => 0 };
 
@@ -68,36 +66,34 @@ const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: () => () => {}, getVer
  * the loader's bus only while a reader is mounted, so loads go unseen before the first subscribe
  * and after the last unsubscribe. The version moves at both, so no reader trusts a tree built then.
  */
-function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
-  if (!loader) return NO_LOAD_TICKS;
-  let ticks = loadTicks.get(loader);
-  if (!ticks) {
-    const listeners = new Set<() => void>();
-    let stopListening: (() => void) | undefined;
-    const created: LoadTicks = {
-      version: 0,
-      getVersion: () => created.version,
-      subscribe: (onChange) => {
-        if (listeners.size === 0) created.version++;
-        listeners.add(onChange);
-        stopListening ??= loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
-          if (event === 'invalidated') return;
-          created.version++;
-          for (const listener of listeners) listener();
-        });
-        return () => {
-          listeners.delete(onChange);
-          if (listeners.size > 0) return;
-          stopListening?.();
-          stopListening = undefined;
-          created.version++;
-        };
-      },
-    };
-    loadTicks.set(loader, created);
-    ticks = created;
-  }
+const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
+  const listeners = new Set<() => void>();
+  let stopListening: (() => void) | undefined;
+  const ticks: LoadTicks = {
+    version: 0,
+    getVersion: () => ticks.version,
+    subscribe: (onChange) => {
+      if (listeners.size === 0) ticks.version++;
+      listeners.add(onChange);
+      stopListening ??= loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
+        if (event === 'invalidated') return;
+        ticks.version++;
+        for (const listener of listeners) listener();
+      });
+      return () => {
+        listeners.delete(onChange);
+        if (listeners.size > 0) return;
+        stopListening?.();
+        stopListening = undefined;
+        ticks.version++;
+      };
+    },
+  };
   return ticks;
+});
+
+function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
+  return loader ? loadTicksOfLoader(loader) : NO_LOAD_TICKS;
 }
 
 /**

@@ -27,6 +27,7 @@ import '../../2d/lightoccluder2d/index';
 import '../../2d/lightoccluder2d/index.r3f';
 import '../../../linter/index';
 import { errorsOf } from '../../../linter/testing/tierLists';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 describe('polygonToSegments', () => {
   it('returns null for fewer than 2 points', () => {
@@ -130,7 +131,7 @@ async function renderIntoRegistry(tscn: string) {
       </SceneResourcesProvider>
     </CanvasWorkspaceProvider>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return registry;
 }
 

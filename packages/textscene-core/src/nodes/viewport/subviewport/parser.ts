@@ -11,8 +11,9 @@ import { parseNode } from '../../node/parser';
 import { MSAA_DISABLED, MSAA_MODES } from '../../../godot/rendering/msaa';
 import {
   VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
-  DefaultCanvasItemTextureFilter,
-  DefaultCanvasItemTextureRepeat,
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT,
+  VIEWPORT_TEXTURE_FILTERS,
+  VIEWPORT_TEXTURE_REPEATS,
   SubViewportClearMode,
   SubViewportUpdateMode,
 } from '../../../godot/scene/viewport';
@@ -20,21 +21,6 @@ import type { SubViewportProperties } from './types';
 
 const UPDATE_MODES = Object.values(SubViewportUpdateMode);
 const CLEAR_MODES = Object.values(SubViewportClearMode);
-
-/** `Viewport.DefaultCanvasItemTextureFilter`: NEAREST, LINEAR and the mipmap variants. */
-const TEXTURE_FILTERS = [
-  DefaultCanvasItemTextureFilter.NEAREST,
-  DefaultCanvasItemTextureFilter.LINEAR,
-  DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
-  DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
-] as const;
-
-/** `Viewport.DefaultCanvasItemTextureRepeat`: the three modes 4.6.3 accepts, without 4.7's PARENT_NODE. */
-const TEXTURE_REPEATS = [
-  DefaultCanvasItemTextureRepeat.DISABLED,
-  DefaultCanvasItemTextureRepeat.ENABLED,
-  DefaultCanvasItemTextureRepeat.MIRROR,
-] as const;
 
 export function parseSubViewport(
   heading: ParsedHeading,
@@ -74,13 +60,13 @@ export function parseSubViewport(
     canvas_item_default_texture_filter: enumOr(
       properties.canvas_item_default_texture_filter,
       VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
-      TEXTURE_FILTERS,
+      VIEWPORT_TEXTURE_FILTERS,
       context
     ),
     canvas_item_default_texture_repeat: enumOr(
       properties.canvas_item_default_texture_repeat,
-      DefaultCanvasItemTextureRepeat.DISABLED,
-      TEXTURE_REPEATS,
+      VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT,
+      VIEWPORT_TEXTURE_REPEATS,
       context
     ),
     gui_embed_subwindows: boolOr(properties.gui_embed_subwindows, false, context),

@@ -8,6 +8,7 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
+import { perObject } from '../../../utils/perObject';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
 import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
@@ -143,31 +144,18 @@ export function primitiveMeshFiles({ resource, resources }: ScopedResource): str
 }
 
 /**
- * Written only by `referencesKey`: the key of each mesh object, which holds its resources and its
- * file lookup for good. One build reads it once.
- */
-const keyByMesh = new WeakMap<ResolvableResource, string>();
-
-/**
  * A key over the content of each resource the mesh's build reads, empty for a type that reads
- * none. A resource that is not there, or not loaded, is part of the key as missing.
+ * none. A resource that is not there, or not loaded, is part of the key as missing. A mesh object
+ * holds its resources and its file lookup for good, so the key is read once per mesh object.
  */
-export function referencesKey(mesh: ResolvableResource): string {
-  const cached = keyByMesh.get(mesh);
-  if (cached !== undefined) return cached;
-  const key = readReferencesKey(mesh);
-  keyByMesh.set(mesh, key);
-  return key;
-}
-
-function readReferencesKey({ resource, resources, loadedFile }: ResolvableResource): string {
-  return referencesOf(resource.type)
+export const referencesKey = perObject(({ resource, resources, loadedFile }: ResolvableResource): string =>
+  referencesOf(resource.type)
     .map((property) => {
       const named = resolveReference(resource.data[property], resources, loadedFile);
       return named ? resourceContentKey(named.resource) : 'missing';
     })
-    .join('|');
-}
+    .join('|')
+);
 
 /** A surface and the content of the references it was built from. */
 interface BuiltSurface {
@@ -180,7 +168,7 @@ interface BuiltSurface {
  * resources the build reads change. A resource's entries go when the parsed resource does, so the
  * geometry and the AABB of one mesh share one build.
  */
-const builtSurfaces = new WeakMap<TscnInternalResource, Map<number, BuiltSurface>>();
+const builtSurfaces = perObject<TscnInternalResource, Map<number, BuiltSurface>>(() => new Map());
 
 /**
  * The surface `_update` hands the rendering server (`primitive_meshes.cpp:45-123`), in Godot's
@@ -192,8 +180,7 @@ const builtSurfaces = new WeakMap<TscnInternalResource, Map<number, BuiltSurface
 export function primitiveMeshSurface(mesh: ResolvableResource, texelSize: number): GodotSurface | null {
   const { resource } = mesh;
   if (!isPrimitiveMeshType(resource.type)) return null;
-  let byTexelSize = builtSurfaces.get(resource);
-  if (!byTexelSize) builtSurfaces.set(resource, (byTexelSize = new Map()));
+  const byTexelSize = builtSurfaces(resource);
   const key = referencesKey(mesh);
   const built = byTexelSize.get(texelSize);
   if (built?.referencesKey === key) return built.surface;

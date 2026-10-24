@@ -17,6 +17,7 @@ import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const NAVMESH_TRES: ParsedResource = {
   resourceType: 'NavigationMesh',
@@ -60,7 +61,7 @@ async function render(showNavigation: boolean) {
       </ResourceLoaderProvider>
     </ViewportModeProvider>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return renderer;
 }
 

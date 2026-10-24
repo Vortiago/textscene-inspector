@@ -12,7 +12,8 @@ import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
 import { resourceRef } from '../godot/variant/resourceRef';
-import { LiveTree, liveStep, rootScope, type LiveTreeContext } from './liveSceneTree';
+import { LiveTree, liveStep, rootScope } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 import type { SceneScope } from '../parser/types';
 import type { LiveNode } from '../resources/liveNode';
 
@@ -20,17 +21,10 @@ const DEMO = resolve(import.meta.dirname, '../../../../scenes/demos/2d/role_play
 const parse = (rel: string) => new TscnParser().parse(readFileSync(join(DEMO, rel), 'utf8'));
 
 const opponent = parse('combat/combatants/opponent.tscn');
-const ctx: LiveTreeContext = {
-  externalResources: opponent.externalResources,
-  internalResources: [],
-  sceneCache: {
-    getCached: (path) =>
-      ({
-        'res://combat/combatants/combatant.tscn': parse('combat/combatants/combatant.tscn'),
-        'res://combat/combatants/sprites/sprite.tscn': parse('combat/combatants/sprites/sprite.tscn'),
-      })[path],
-  },
-};
+const ctx = contextOver(opponent, {
+  'res://combat/combatants/combatant.tscn': parse('combat/combatants/combatant.tscn'),
+  'res://combat/combatants/sprites/sprite.tscn': parse('combat/combatants/sprites/sprite.tscn'),
+});
 
 /** The collapsed live node at `path` and the scope its own refs resolve against. */
 function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
@@ -85,11 +79,7 @@ material_override = SubResource("2")
 `);
 
   it('resolves it to the root scene’s resource, as the viewport does', () => {
-    const hostCtx: LiveTreeContext = {
-      externalResources: host.externalResources,
-      internalResources: host.internalResources,
-      sceneCache: { getCached: (path) => (path === 'res://sub.tscn' ? sub : undefined) },
-    };
+    const hostCtx = contextOver(host, { 'res://sub.tscn': sub });
     const { node: merged, scope } = liveStep(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
     const id = resourceRef(merged.rawProperties.material_override!)!.id;
 

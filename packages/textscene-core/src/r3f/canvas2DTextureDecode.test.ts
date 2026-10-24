@@ -1,13 +1,13 @@
 /**
- * The 2D-canvas texture retag and its define. `pinNoColorSpace` exists because
- * R3F's `applyProps` rewrites a `map`-slot texture's `colorSpace` to `SRGBColorSpace`
+ * The 2D-canvas texture retag and its define. The retag is a pin because R3F's
+ * `applyProps` rewrites a `map`-slot texture's `colorSpace` to `SRGBColorSpace`
  * on commit (`colorMaps.includes(key)`, `events-*.js`), so an R3F bump can break it.
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import * as THREE from 'three';
-import { pinNoColorSpace, useCanvas2DTexture, useCanvasSrgbDefines } from './canvas2DTextureDecode';
+import { useCanvas2DTexture, useCanvasSrgbDefines } from './canvas2DTextureDecode';
 import { markSrgbBytes } from './srgbByteTextures';
 
 /** Linear and Disabled, the viewport defaults (`viewport.h:419-420`). */
@@ -18,25 +18,6 @@ function makeTexture(colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE
   texture.colorSpace = colorSpace;
   return texture;
 }
-
-describe('pinNoColorSpace', () => {
-  it('reads back NoColorSpace', () => {
-    const texture = makeTexture(THREE.SRGBColorSpace);
-    pinNoColorSpace(texture);
-    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
-  });
-
-  it('discards a later reassignment attempt without throwing (strict-mode safe)', () => {
-    const texture = makeTexture();
-    pinNoColorSpace(texture);
-    expect(() => {
-      // The exact mutation `@react-three/fiber`'s `applyProps` performs on a
-      // texture assigned to a `map` JSX prop.
-      texture.colorSpace = THREE.SRGBColorSpace;
-    }).not.toThrow();
-    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
-  });
-});
 
 describe('useCanvas2DTexture', () => {
   it('returns null for a null/undefined input, allocating nothing', () => {

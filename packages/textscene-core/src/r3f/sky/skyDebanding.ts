@@ -5,10 +5,10 @@
  */
 
 import * as THREE from 'three';
-import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits } from '../shaderPatch/chunkPatch.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
-import { SKY_FOG, THREE_BACKGROUND_TONE_CURVE } from '../fog/fogComposite.js';
+import { installFogComposite, THREE_BACKGROUND_TONE_CURVE } from '../fog/fogComposite.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { GODOT_DEBANDING_NOISE_GLSL } from '../../godot/rendering/environment/skyDebanding.js';
 
@@ -34,22 +34,17 @@ const GODOT_DEBANDING = /* glsl */ `	{
 	}
 ${THREE_BACKGROUND_TONE_CURVE}`;
 
-const debandCube = onChunk('backgroundCube_frag', (shader) => {
-  const patched = applyEdits(shader, [{ three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_DEBANDING }]);
-  return patched && `uniform vec3 ${DEBANDING_UNIFORM};\n${GODOT_DEBANDING_NOISE_GLSL}${patched}`;
-});
-
 /**
- * Patches three's cube background for every program compiled after the call. The noise follows
- * the sky fog, so the fog patch must be installed first. A second call changes nothing.
+ * Installs the fog, whose sky fog the noise follows, then patches three's cube background, for
+ * every program compiled after the call. A second call changes nothing.
  */
 export function installSkyDebanding(): void {
-  const isPatched = installChunkPatch({
-    names: ['backgroundCube_frag'],
-    isApplied: (chunks) => chunks.backgroundCube_frag.includes(DEBANDING_UNIFORM),
-    apply: debandCube,
-    missing: `backgroundCube_frag has no ${THREE_BACKGROUND_TONE_CURVE.trim()}`,
-    requires: { backgroundCube_frag: SKY_FOG },
+  const isPatched = installChunkEdits({
+    requires: [installFogComposite],
+    edits: [{ chunk: 'backgroundCube_frag', three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_DEBANDING }],
+    mark: DEBANDING_UNIFORM,
+    patch: 'sky debanding',
+    prepend: { backgroundCube_frag: `uniform vec3 ${DEBANDING_UNIFORM};\n${GODOT_DEBANDING_NOISE_GLSL}` },
   });
   if (!isPatched) return;
   backgroundCube().fragmentShader = THREE.ShaderChunk.backgroundCube_frag;

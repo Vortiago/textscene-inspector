@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { DFG_SIZE } from '../godot/rendering/materials/dfgTable.generated.js';
-import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { releasedOnUnmount, sharedTexture } from './sharedTexture.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
@@ -116,13 +116,6 @@ const EDITS: readonly ChunkEdit<SpecularChunk>[] = [
   ...THREE_REFLECTION_OCCLUSION.map((three) => ({ chunk: 'aomap_fragment' as const, three, godot: '' })),
 ];
 
-/** The chunks with every edit, and Godot's occlusion after three's AO, which every lit program runs. */
-function withSpecularOcclusion(chunks: Chunks<SpecularChunk>): Chunks<SpecularChunk> | null {
-  const patched = applyChunkEdits(chunks, EDITS);
-  if (patched === null) return null;
-  return { ...patched, aomap_fragment: `${patched.aomap_fragment}${GODOT_SPECULAR_OCCLUSION}` };
-}
-
 /**
  * Godot's table as a texture, read at `(NdotV, roughness)` with Godot's linear clamped sampler. It is
  * shared, not cloned per material, so the release on unmount frees the one object each renderer uploads.
@@ -142,12 +135,12 @@ class DfgTexture extends sharedTexture(THREE.DataTexture) {
  * chunks, and `godotIndirectSpecular.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotIndirectSpecular(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_physical_pars_fragment', 'lights_fragment_begin', 'aomap_fragment'],
-    isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes(GODOT_INDIRECT_SPECULAR),
-    apply: withSpecularOcclusion,
-    missing:
-      'lights_physical_pars_fragment, lights_fragment_begin or aomap_fragment lacks a text the specular patch replaces',
+  const isPatched = installChunkEdits({
+    edits: EDITS,
+    mark: GODOT_INDIRECT_SPECULAR,
+    patch: 'specular',
+    // Godot's occlusion after three's AO, which every lit program runs.
+    append: { aomap_fragment: GODOT_SPECULAR_OCCLUSION },
   });
   if (isPatched) installLitUniform(DFG_UNIFORM, releasedOnUnmount(new DfgTexture()));
 }

@@ -9,7 +9,7 @@
  * reads.
  */
 
-import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
@@ -295,17 +295,17 @@ ${GODOT_SUN_FADE}
 \t\t}
 `;
 
-/** The chunk with Godot's split lookup, or null when three's chunk no longer has the parts it replaces. */
-function godotSplitShadowChunk(chunk: string): string | null {
-  const start = chunk.indexOf(THREE_LOOKUP_START);
-  if (start < 0) return null;
-  const end = chunk.indexOf(LOOKUP_BLOCK_END, start);
-  if (end < 0) return null;
-  return applyEdits(chunk.slice(0, start) + GODOT_LOOKUP + chunk.slice(end), [
-    { three: THREE_SLOT_COUNT, godot: `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}` },
-    { three: THREE_SLOT_MATRICES, godot: GODOT_SLOT_ROWS },
-  ]);
-}
+/** Godot's split lookup in place of three's, with the slot count and the rows it reads. */
+const SPLIT_SHADOW_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
+  {
+    chunk: CHUNK,
+    three: THREE_LOOKUP_START,
+    until: LOOKUP_BLOCK_END,
+    godot: GODOT_LOOKUP + LOOKUP_BLOCK_END,
+  },
+  { chunk: CHUNK, three: THREE_SLOT_COUNT, godot: `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}` },
+  { chunk: CHUNK, three: THREE_SLOT_MATRICES, godot: GODOT_SLOT_ROWS },
+];
 
 /**
  * Installs the soft shadow filter, then replaces three's chunk, for every program compiled after the
@@ -314,12 +314,11 @@ function godotSplitShadowChunk(chunk: string): string | null {
  * second call changes nothing.
  */
 export function installGodotSplitShadow(): void {
-  if (!installSoftShadowFilter()) return;
-  const isPatched = installChunkPatch({
-    names: [CHUNK],
-    isApplied: (chunks) => chunks[CHUNK].includes(SPLIT_LOOKUP),
-    apply: onChunk(CHUNK, godotSplitShadowChunk),
-    missing: `${CHUNK} has no sun shadow lookup to replace`,
+  const isPatched = installChunkEdits({
+    requires: [installSoftShadowFilter],
+    edits: SPLIT_SHADOW_EDITS,
+    mark: SPLIT_LOOKUP,
+    patch: 'split shadow',
   });
   if (!isPatched) return;
   installSunShadowUniforms();
