@@ -40,6 +40,17 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
 }
 
 /**
+ * Writes a Godot canvas point `(x, y)` at `offset` as the three point `(x, -y, 0)` of a Node2D
+ * group's local space. A gizmo that builds line segments in a Float32Array calls it for each vertex.
+ * `0 - y`, not `-y`, keeps a zero y at +0.
+ */
+export function writeGodotPointAsThree(out: Float32Array, offset: number, x: number, y: number): void {
+  out[offset] = x;
+  out[offset + 1] = 0 - y;
+  out[offset + 2] = 0;
+}
+
+/**
  * A Node2D's local `Transform2D`, each absent part at its `node_2d.h:39-42` default: position
  * `(0, 0)`, rotation 0, scale `(1, 1)` and skew 0. A hand-built bag may skip the parser that
  * fills them.

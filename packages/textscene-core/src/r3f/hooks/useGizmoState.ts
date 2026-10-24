@@ -3,12 +3,13 @@
  * one. Godot's gizmo plugins draw some parts for every node and others only for the selected node,
  * and each part says which (ADR-0056). Hover does not show a gizmo: `HoverHighlight` is the hover
  * cue. Outside a NodeDispatcher the path is null, so no node owns the gizmo and it stays hidden.
+ * `PluginGizmo` reads it for a gizmo-plugin gizmo, and `useGizmoDrawn` for the rest.
  */
 
 import { useNodePath } from '../contexts/NodePathContext';
-import { useOptionalSelection } from '../contexts/SelectionContext';
 import { useShowGizmos } from '../contexts/ViewportModeContext';
 import type { GizmoVariant } from '../gizmo/gizmoVariant';
+import { useIsSelected } from './useIsSelected';
 
 /** Whether a gizmo plugin draws a part for every node or only for the selected node. */
 export type GizmoDrawnFor = 'every-node' | 'selected-only';
@@ -17,10 +18,10 @@ export type GizmoState = GizmoVariant | 'hidden';
 
 export function useGizmoState(drawnFor: GizmoDrawnFor): GizmoState {
   const showGizmos = useShowGizmos();
-  const path = useNodePath();
-  const selection = useOptionalSelection();
-  if (!showGizmos || path === null) return 'hidden';
-  if (selection?.selectedNodePath === path) return 'selected';
+  const isInNode = useNodePath() !== null;
+  const isSelected = useIsSelected();
+  if (!showGizmos || !isInNode) return 'hidden';
+  if (isSelected) return 'selected';
   return drawnFor === 'every-node' ? 'unselected' : 'hidden';
 }
 

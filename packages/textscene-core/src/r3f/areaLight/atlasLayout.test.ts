@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildAreaLightAtlas, type AreaTextureImage } from './atlasLayout';
+import { buildAreaLightAtlas } from './atlasLayout';
+import type { GodotImage } from '../textureAtlas/godotImage';
 import { mipSize } from '../../resources/processing/mipChain';
 
 /** A `width × height` image whose texel at `x`, `y` is `rgbaAt(x, y)`, in sRGB bytes. */
@@ -7,7 +8,7 @@ function image(
   width: number,
   height: number,
   rgbaAt: (x: number, y: number) => readonly number[]
-): AreaTextureImage {
+): GodotImage {
   const data = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) data.set(rgbaAt(x, y), (y * width + x) * 4);

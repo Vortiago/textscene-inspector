@@ -13,17 +13,23 @@ import { Node3D } from '../../base/node3d/Component';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2DRid } from '../../../resources/useTexture2D';
-import { applyTextureState, releaseBoundTexture } from '../../../resources/textures/applyTextureState';
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
 import { distanceFade } from '../../../godot/rendering/distanceFade';
 import { TrackedObjects } from '../../../r3f/trackedObjects';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import {
+  decalAtlasRect,
+  decalAtlasTexture,
+  holdDecalTexture,
+  releaseDecalTexture,
+  updateDecalAtlas,
+} from './decalAtlas';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
 import {
   buildDecalProjectionGeometry,
@@ -46,9 +52,6 @@ const UNIT_BOX_EDGES = new Float32Array(aabbEdges(centredAabb({ x: 1, y: 1, z: 1
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources, internalResources } = useSceneResources();
-  // Godot's editor outlines the projector box for every decal, faint while it is not selected
-  // (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none.
-  const gizmoState = useGizmoState('every-node');
 
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -66,14 +69,22 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   // By RID, as `Decal::set_texture` passes it (`scene/3d/decal.cpp:46`): an AtlasTexture projects
   // its whole sheet, and a CanvasTexture, a RID the decal atlas refuses (`texture_storage.cpp:2941`),
-  // projects nothing. The projection material samples it as `map` through the clamp bind below: a
-  // cache entry that already clamps is reused untouched, and only a bind-time clone is disposed.
+  // projects nothing. The decal atlas copies it, so the shared cache entry is never bound or disposed.
   const { texture: albedoTexture } = useTexture2DRid(
     properties.texture_albedo,
     externalResources,
     internalResources
   );
   const albedo = albedoTexture ?? null;
+  const maxTextureSize = useThree((s) => s.gl.capabilities.maxTextureSize);
+
+  // The decal atlas holds the texture while this decal projects it (`decal_set_texture`,
+  // `texture_storage.cpp:2944-2950`), and two decals with one texture share one rectangle.
+  useEffect(() => {
+    if (!albedo) return undefined;
+    holdDecalTexture(albedo);
+    return () => releaseDecalTexture(albedo);
+  }, [albedo]);
 
   // An active AnimationPlayer can drive `modulate` and `size` (ADR-0017); `null`
   // means none is, so the authored value shows. The projection maths is
@@ -115,21 +126,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     // Godot's rule, `decal.cull_mask & instance.layers`, applies as the receivers are collected.
     const receivers = collectDecalReceivers(scene, boxAABB, properties.cull_mask);
 
-    // Godot samples the decal through its clamped atlas: the blit uses REPEAT_DISABLED
-    // (`copy_effects.cpp:592`) and fragments outside the box are discarded
-    // (`scene_forward_clustered.glsl:1585-1587`). The consumer states clamp and never
-    // inherits a Repeat from the shared producer. The blit copies any format into an RGBA8 atlas
-    // (`texture_storage.cpp:3163`) that the shader reads through its sRGB view
-    // (`render_forward_clustered.cpp:3213`), so a decal decodes sRGB whatever its source format.
-    // The atlas blits its own mip chain, sampled at the `decals/filter` default of Linear Mipmap
-    // (`rendering_server.cpp:3804`), so a decal mipmaps even when its import has none.
-    const projectionMap = applyTextureState(albedo, {
-      repeat: false,
-      colorSpace: THREE.SRGBColorSpace,
-      buildsMipChain: true,
-    });
-
-    const projection: DecalProjectionLook = { map: projectionMap, color, opacity };
+    const projection: DecalProjectionLook = { map: decalAtlasTexture(), color, opacity };
     const materials = new DecalProjectionMaterials(projection);
     materialsRef.current = materials;
 
@@ -164,7 +161,6 @@ export function Decal({ node, children }: NodeComponentProps) {
       }
       materialsRef.current = null;
       materials.dispose();
-      releaseBoundTexture(projectionMap);
     };
     // `size` is the authored Vector3 (stable identity) unless an
     // AnimationPlayer is driving it, in which case a size keyframe rebuilds the
@@ -213,8 +209,9 @@ export function Decal({ node, children }: NodeComponentProps) {
     };
   }, [scene]);
 
-  // Before each render, for whichever camera renders the scene, the projections follow their
-  // receivers' shading, and the decal takes its distance fade. Godot computes that fade per decal per
+  // Before each render, for whichever camera renders the scene, the decal atlas rebuilds if a texture
+  // joined it, the projections move onto the texture's rectangle and follow their receivers' shading,
+  // and the decal takes its distance fade. Godot computes that fade per decal per
   // render, not per fragment: `update_decal_buffer` measures the rendering camera's distance to the
   // decal's origin, culls past `begin + length` and folds the rest into modulate alpha.
   const {
@@ -227,7 +224,9 @@ export function Decal({ node, children }: NodeComponentProps) {
     if (!group) return undefined;
     const stop = observeSceneCamera(scene, (camera) => {
       const materials = materialsRef.current;
-      if (!materials) return;
+      if (!materials || !albedo) return;
+      updateDecalAtlas(maxTextureSize);
+      materials.placeInAtlas(decalAtlasRect(albedo));
       materials.followReceivers();
       if (fades)
         showFaded(
@@ -245,15 +244,17 @@ export function Decal({ node, children }: NodeComponentProps) {
       group.visible = true;
       materialsRef.current?.setOpacity(opacity);
     };
-  }, [scene, fades, fadeBegin, fadeLength, opacity]);
+  }, [scene, albedo, maxTextureSize, fades, fadeBegin, fadeLength, opacity]);
 
   return (
     <Node3D node={node}>
-      {gizmoState !== 'hidden' && (
+      {/* Godot's editor outlines the projector box for every decal, faint while it is not selected
+          (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
+      <PluginGizmo drawnFor="every-node">
         <group scale={[size.x, size.y, size.z]}>
-          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} variant={gizmoState} />
+          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} />
         </group>
-      )}
+      </PluginGizmo>
       {/* Projection meshes attach here imperatively, to an unscaled group, so
           they inherit only the decal's world transform, not `size`. */}
       <group ref={projectionRef} />

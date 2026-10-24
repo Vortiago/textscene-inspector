@@ -29,6 +29,12 @@ describe('parseTscnContent', () => {
     expect(sceneGraph!.flattenedNodes.map((n) => n.name)).toEqual(['Root', 'Child']);
   });
 
+  it('keeps the [editable] paths of the root scene on its ParsedScene', () => {
+    const content = `${MINIMAL_TSCN}\n[editable path="Child"]\n`;
+    const { sceneGraph } = parseTscnContent(content, 'res://my-scene.tscn');
+    expect(sceneGraph!.scenes.get('res://my-scene.tscn')!.editableInstances).toEqual(['Child']);
+  });
+
   it('returns a passive null result (no error) for empty content', () => {
     expect(parseTscnContent('', 'res://x.tscn')).toEqual({ sceneGraph: null, error: null });
   });

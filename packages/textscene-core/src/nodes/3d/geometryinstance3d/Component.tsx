@@ -9,8 +9,8 @@ import type * as THREE from 'three';
 import { Node3D } from '../../base/node3d/Component';
 import type { NodeComponent, NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
-import { useGizmoState, type GizmoDrawnFor } from '../../../r3f/hooks/useGizmoState';
-import type { GizmoVariant } from '../../../r3f/gizmo/gizmoVariant';
+import type { GizmoDrawnFor } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
@@ -38,17 +38,16 @@ export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
   return invisibleBase(UndrawnGeometryInstance);
 }
 
-/** What `undrawnGeometryInstanceWithGizmos` mounts: the type's gizmos in the variant its node is in. */
+/** What `undrawnGeometryInstanceWithGizmos` mounts: the type's gizmos, inside a `PluginGizmo`. */
 export interface GeometryInstanceGizmosProps<Properties> {
   /** The node's properties, which are `Properties` for the type that registers the gizmos. */
   properties: Properties;
-  variant: GizmoVariant;
 }
 
 /**
  * An undrawn GeometryInstance3D that carries its editor gizmos (ADR-0056). `drawnFor` says which
- * nodes Godot draws the gizmo plugin for. `Gizmos` is mounted for those nodes, and draws the parts
- * that only a selected gizmo has when its `variant` is selected.
+ * nodes Godot draws the gizmo plugin for. `Gizmos` is mounted for those nodes, and mounts the parts
+ * that only a selected gizmo has in a selected-only `PluginGizmo` of their own.
  */
 export function undrawnGeometryInstanceWithGizmos<Properties>(
   useOwnAabb: UseOwnAabb,
@@ -57,12 +56,11 @@ export function undrawnGeometryInstanceWithGizmos<Properties>(
 ): NodeComponent {
   const Undrawn = undrawnGeometryInstance(useOwnAabb);
   function UndrawnGeometryInstanceWithGizmos({ node, children }: NodeComponentProps) {
-    const gizmoState = useGizmoState(drawnFor);
     return (
       <Undrawn node={node}>
-        {gizmoState !== 'hidden' && (
-          <Gizmos properties={node.properties as Properties} variant={gizmoState} />
-        )}
+        <PluginGizmo drawnFor={drawnFor}>
+          <Gizmos properties={node.properties as Properties} />
+        </PluginGizmo>
         {children}
       </Undrawn>
     );

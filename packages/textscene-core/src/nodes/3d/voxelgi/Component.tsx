@@ -5,17 +5,18 @@
  */
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { Node3D } from '../../base/node3d/Component';
 import { VoxelGIGizmo } from './Gizmo';
 import type { VoxelGIProperties } from './types';
 
 function UndrawnVoxelGI({ node, children }: NodeComponentProps) {
-  const gizmoVisible = useGizmoDrawn('selected-only');
   return (
     <Node3D node={node}>
-      {gizmoVisible && <VoxelGIGizmo voxelGi={node.properties as VoxelGIProperties} />}
+      <PluginGizmo drawnFor="selected-only">
+        <VoxelGIGizmo voxelGi={node.properties as VoxelGIProperties} />
+      </PluginGizmo>
       {children}
     </Node3D>
   );

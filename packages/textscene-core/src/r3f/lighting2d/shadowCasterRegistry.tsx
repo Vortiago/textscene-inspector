@@ -10,7 +10,7 @@ import type { OccluderCullMode, Quad2, ShadowCasterEdges } from './shadowVolumes
 import { visibleInTree } from '../visibleInTree';
 
 export interface ShadowCaster {
-  /** Local-space `[ax,ay,0, bx,by,0, …]`: `polygonToSegments`' output verbatim. */
+  /** Local-space `[ax,ay,0, bx,by,0, …]`: `godotPolylineToSegments`' output verbatim. */
   segments: Float32Array;
   cullMode: OccluderCullMode;
   /** `LightOccluder2D.occluder_light_mask`. */

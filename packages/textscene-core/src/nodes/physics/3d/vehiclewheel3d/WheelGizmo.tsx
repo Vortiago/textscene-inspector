@@ -7,7 +7,6 @@
 
 import { useMemo } from 'react';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
-import type { GizmoVariant } from '../../../../r3f/gizmo/gizmoVariant';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 import { degToRad } from '../../../../godot/math/math.js';
@@ -24,20 +23,12 @@ interface WheelGizmoProps {
   radius: number;
   /** Effective wheel_rest_length (Godot default 0.15). */
   restLength: number;
-  variant: GizmoVariant;
 }
 
-export function WheelGizmo({ radius, restLength, variant }: WheelGizmoProps) {
+export function WheelGizmo({ radius, restLength }: WheelGizmoProps) {
   const positions = useMemo(() => buildWheelGizmo(radius, restLength), [radius, restLength]);
   const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
-  return (
-    <GizmoLine
-      positions={positions}
-      color={color}
-      opacity={DEFAULT_COLLISION_DEBUG_COLOR.a}
-      variant={variant}
-    />
-  );
+  return <GizmoLine positions={positions} color={color} opacity={DEFAULT_COLLISION_DEBUG_COLOR.a} />;
 }
 
 function buildWheelGizmo(radius: number, restLength: number): Float32Array {

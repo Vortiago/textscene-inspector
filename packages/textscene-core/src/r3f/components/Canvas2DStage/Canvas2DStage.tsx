@@ -60,6 +60,8 @@ interface Canvas2DStageProps {
   internalResources: readonly TscnInternalResource[];
   /** ExtResources for texture refs inside the Control canvas (ADR-0009: explicit props). */
   externalResources: readonly TscnExternalResource[];
+  /** The scene's `[editable]` paths, which decide the look of a gizmo inside an instance. */
+  editableInstances?: readonly string[];
   /**
    * The path the host opened the scene under. A new one is a scene opening, which starts
    * load time again. An edit or a failed parse of the open scene keeps it.
@@ -71,6 +73,7 @@ export function Canvas2DStage({
   nodes,
   internalResources,
   externalResources,
+  editableInstances,
   scenePath,
 }: Canvas2DStageProps) {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -370,6 +373,7 @@ export function Canvas2DStage({
         nodes={nodes}
         internalResources={internalResources}
         externalResources={externalResources}
+        editableInstances={editableInstances}
         pan={pan}
         zoom={zoom}
       />

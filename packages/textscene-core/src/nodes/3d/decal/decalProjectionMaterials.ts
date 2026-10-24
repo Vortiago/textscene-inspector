@@ -12,6 +12,7 @@ import {
   disablesSpecularOcclusion,
   specularOcclusionUserData,
 } from '../../../r3f/godotIndirectSpecular';
+import type { DecalAtlasRect } from './decalAtlas';
 import {
   drawsLightModesOf,
   lightModesInjection,
@@ -20,8 +21,9 @@ import {
   type LightModes,
 } from '../../../r3f/lightModes';
 
-/** What every projection of one decal shares: its texture, tint and opacity. */
+/** What every projection of one decal shares: the decal atlas, tint and opacity. */
 export interface DecalProjectionLook {
+  /** The decal atlas. `placeInAtlas` moves each projection's UVs onto the decal's rectangle in it. */
   map: THREE.Texture;
   color: THREE.Color;
   opacity: number;
@@ -119,6 +121,25 @@ function projectionMaterial(look: DecalProjectionLook, shading: ReceiverShading)
 interface Projection {
   mesh: THREE.Mesh;
   receiver: THREE.Mesh;
+  /** The UVs the geometry was baked with, over the whole texture, which the atlas rectangle scales. */
+  textureUv: Float32Array;
+}
+
+/**
+ * Maps the projection's texture UVs into `rect`, as the shader of Godot's decal does
+ * (`scene_forward_clustered.glsl:1604`), and shows it. Without a rectangle the projection has no
+ * texture to sample, and is hidden.
+ */
+function placeIn(rect: DecalAtlasRect | undefined, { mesh, textureUv }: Projection): void {
+  mesh.visible = rect !== undefined;
+  if (!rect) return;
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  const placed = uv.array as Float32Array;
+  for (let i = 0; i < textureUv.length; i += 2) {
+    placed[i] = textureUv[i]! * rect.width + rect.x;
+    placed[i + 1] = textureUv[i + 1]! * rect.height + rect.y;
+  }
+  uv.needsUpdate = true;
 }
 
 export class DecalProjectionMaterials {
@@ -126,14 +147,31 @@ export class DecalProjectionMaterials {
   private readonly byShading = new Map<string, THREE.MeshPhysicalMaterial>();
   /** Each projection `project` built. Cleared by `dispose`. */
   private readonly projections: Projection[] = [];
+  /** Where the decal's texture lies in the atlas. Written only by `placeInAtlas`. */
+  private rect: DecalAtlasRect | undefined;
 
   constructor(private readonly look: DecalProjectionLook) {}
 
-  /** A projection mesh of `geometry` onto `receiver`, shaded as the receiver is. */
+  /**
+   * A projection mesh of `geometry` onto `receiver`, shaded as the receiver is. `geometry`'s `uv`
+   * runs over the whole texture, top row at v = 0, and this rewrites it into the atlas.
+   */
   project(geometry: THREE.BufferGeometry, receiver: THREE.Mesh): THREE.Mesh {
     const mesh = new THREE.Mesh(geometry, this.materialFor(receiver));
-    this.projections.push({ mesh, receiver });
+    const projection = { mesh, receiver, textureUv: Float32Array.from(geometry.getAttribute('uv').array) };
+    this.projections.push(projection);
+    placeIn(this.rect, projection);
     return mesh;
+  }
+
+  /**
+   * Moves every projection onto `rect`, the decal's texture in the atlas. The atlas hands out the
+   * same rectangle until it rebuilds, so one that is the same object moves nothing.
+   */
+  placeInAtlas(rect: DecalAtlasRect | undefined): void {
+    if (rect === this.rect) return;
+    this.rect = rect;
+    for (const projection of this.projections) placeIn(rect, projection);
   }
 
   /**
