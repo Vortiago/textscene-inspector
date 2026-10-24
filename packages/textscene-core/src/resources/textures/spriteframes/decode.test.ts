@@ -76,6 +76,12 @@ describe('the animations decodeSpriteFrames reads', () => {
     expect(map.get('up')!.loop).toBe(false);
   });
 
+  it('reads a loop saved as an int, which `anim.loop = d["loop"]` converts to a bool (edge case)', () => {
+    // sprite_frames.cpp:207
+    const map = animationsOf('[{"frames": [], "loop": 0, "name": &"a", "speed": 5.0}]');
+    expect(map.get('a')!.loop).toBe(false);
+  });
+
   it('drops an animation dict lacking "speed" or "loop", as the loader does', () => {
     // `ERR_CONTINUE(!d.has("speed")); ERR_CONTINUE(!d.has("loop"))`
     // (sprite_frames.cpp:201-202): the dict never becomes an animation, and the

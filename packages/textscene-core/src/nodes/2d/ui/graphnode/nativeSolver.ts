@@ -281,10 +281,20 @@ controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);
 interface GraphNodeDrawRow {
   rawIndex: number;
   slot: GraphNodeSlot;
-  /** `slot_y_cache[slot_index]`: the row's vertical centre, Godot px. */
+  /** `slot_y_cache[slot_index]`: the row's vertical centre in whole Godot px, since the cache is a `Vector<int>` (`graph_node.h:88`, `.cpp:283`). */
   slotY: number;
   /** `child_rect` for `draw_stylebox`, or `null` when no visible child sits at `rawIndex` (`graph_node.cpp:687-693`). */
   styleboxRect: Rect2 | null;
+}
+
+/** `theme_override_constants/port_h_offset`, else `0` (`default_theme.cpp`'s own literal, not scaled), as the `int` Godot stores (`graph_node.cpp:1011`). */
+export function portHOffsetOf(constants: Readonly<Record<string, number>>): number {
+  return Math.trunc(constants.port_h_offset ?? 0);
+}
+
+/** The x of a right port: `Point2i(get_size().x - port_h_offset, slot_y)` (`graph_node.cpp:666`, `:1050`) keeps whole pixels. */
+export function rightPortX(width: number, portHOffset: number): number {
+  return Math.trunc(width - portHOffset);
 }
 
 /**
@@ -303,7 +313,7 @@ export function graphNodeDrawRows(
   const visible = n.children.filter(isSortableControl);
   const yCenters = visible.map((child) => {
     const r = childRects.get(child.path);
-    return r ? r.y + r.h / 2 : 0;
+    return r ? Math.trunc(r.y + r.h / 2) : 0;
   });
 
   const keys = new Set<number>(props.slots.keys());

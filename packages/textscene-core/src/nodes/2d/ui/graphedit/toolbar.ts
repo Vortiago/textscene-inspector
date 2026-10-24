@@ -72,10 +72,12 @@ export interface GraphEditToolbar {
   items: ToolbarItem[];
 }
 
-/** The two text measurements the row's minimum size depends on, at the toolbar's own font. */
+/** The text measurements the row's minimum size depends on, at the toolbar's own font. */
 export interface ToolbarTextMetrics {
   /** One shaped run's size: `TextParagraph::get_size` as every caller here consumes it. */
   measure: (text: string) => Vector2;
+  /** `font->get_char_size('W', font_size).x` (`line_edit.cpp:2451`): one advance, not a ceiled run. */
+  emSpaceWidthPx: number;
   /** `font->get_height(font_size)`: `Label`'s and `LineEdit`'s own minimum-height floor. */
   fontHeightPx: number;
 }
@@ -136,11 +138,10 @@ function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics):
   const normal = contentMarginSize(theme.widgets.lineEdit.normal);
   const readOnly = contentMarginSize(theme.widgets.lineEdit.readOnly);
   const styleMin = { x: Math.max(normal.x, readOnly.x), y: Math.max(normal.y, readOnly.y) };
-  const emWidth = metrics.measure('W').x;
   return {
     x:
       styleMin.x +
-      LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidth +
+      LINE_EDIT_MINIMUM_CHARACTER_WIDTH * metrics.emSpaceWidthPx +
       spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x),
     y: styleMin.y + metrics.fontHeightPx,
   };

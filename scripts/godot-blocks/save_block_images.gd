@@ -1,7 +1,7 @@
 # Writes core's textures/image/godotSaved/ test images and the unit-sprite2d-block-compressed
 # golden through Godot 4.6.3. Each `<case>.tres` is an ImageTexture as Godot saves it, and
-# `<case>.rgba8.tres` is its `Image.decompress()` output after the texture swizzle
-# (`texture_storage.cpp:1997-2076`, `:2246-2261`). Usage:
+# `<case>.rgba8.tres` is its `Image.decompress()` output, mip levels included, after the texture
+# swizzle (`texture_storage.cpp:1997-2076`, `:2246-2261`). Usage:
 #   godot --headless --path <any project> --script save_block_images.gd -- <godotSaved folder> <scenes/fixtures>
 extends SceneTree
 
@@ -77,7 +77,6 @@ func decompressed(image: Image) -> Image:
 	var rgba8: Image = image.duplicate()
 	rgba8.decompress()
 	rgba8.convert(Image.FORMAT_RGBA8)
-	rgba8.clear_mipmaps()
 	if image.get_format() == Image.FORMAT_DXT1:
 		# The DXT1 swizzle reads alpha as one (`texture_storage.cpp:2011`).
 		for y in rgba8.get_height():

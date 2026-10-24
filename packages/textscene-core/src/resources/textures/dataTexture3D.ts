@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { toHalfFloatTexels } from './halfFloatTexels';
+import { uploadedTexels } from './halfFloatTexels';
 
 /** Single-channel or RGBA texels, slice after slice, rows from the top. */
 type Texture3DFormat = typeof THREE.RedFormat | typeof THREE.RGBAFormat;
@@ -18,10 +18,9 @@ export function dataTexture3D(
   depth: number,
   format: Texture3DFormat
 ): THREE.Data3DTexture {
-  const isFloat = texels instanceof Float32Array;
-  const texture = new THREE.Data3DTexture(isFloat ? toHalfFloatTexels(texels) : texels, width, height, depth);
+  const texture = new THREE.Data3DTexture(uploadedTexels(texels), width, height, depth);
   texture.format = format;
-  texture.type = isFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  texture.type = texels instanceof Float32Array ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = THREE.NoColorSpace;
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;

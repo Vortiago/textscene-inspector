@@ -1,7 +1,8 @@
-/** A texture rebuilt from RGBA8 bytes the CPU wrote, with any mip chain the CPU built for it. */
+/** A texture rebuilt from texels the CPU holds, with any mip chain the CPU built or the file stored. */
 
 import * as THREE from 'three';
 import { copySampling } from './copySampling';
+import { godotTextureFilterState } from './godotTextureFilter';
 import { mipChain, reversedLevel, type MipLevel } from '../processing/mipChain';
 import { isBottomUp } from '../../utils/reversedRows';
 
@@ -25,16 +26,32 @@ export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.D
   return texture;
 }
 
+/** One level as a `DataTexture` uploads it: bytes, or half-float bits for a texture of half floats. */
+export interface TextureLevel {
+  data: Uint8Array | Uint16Array;
+  width: number;
+  height: number;
+}
+
 /**
  * Hands three the whole chain `levels` holds, so it uploads them as they stand and builds none.
  * One level is no chain: `texture` keeps its sampler and the GPU's choice. The first level holds
  * `texture`'s own bytes. Returns whether a chain was attached.
  */
-export function carryMipChain(texture: THREE.DataTexture, levels: MipLevel[]): boolean {
+function carryMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): boolean {
   if (levels.length < 2) return false;
   texture.mipmaps = levels;
   texture.generateMipmaps = false;
   return true;
+}
+
+/**
+ * {@link carryMipChain} for a texture no material has sampled yet: with a chain it also takes the
+ * minification of Godot's default sampler (`LINEAR_WITH_MIPMAPS`, `material.h:573`), so the
+ * levels are read between. A binding that authors `texture_filter` rewrites it.
+ */
+export function carryDefaultMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): void {
+  if (carryMipChain(texture, levels)) texture.minFilter = godotTextureFilterState(undefined).minFilter;
 }
 
 /**

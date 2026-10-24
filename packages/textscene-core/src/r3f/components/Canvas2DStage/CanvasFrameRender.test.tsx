@@ -1,9 +1,12 @@
-/** The 2D canvas multisamples only when the project's `msaa_2d` asks (`scene_tree.cpp:2079-2080`). */
+/**
+ * The 2D canvas always draws through its frame, so row 0 of the target is the canvas top, and it
+ * multisamples only when the project's `msaa_2d` asks (`scene_tree.cpp:2079-2080`).
+ */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
-import { CanvasMsaa } from './CanvasMsaa';
+import { CanvasFrameRender } from './CanvasFrameRender';
 import { withProject } from '../../testing/ProjectFixture';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 
@@ -40,7 +43,7 @@ async function renderPriorityIn(project: string | null) {
   const probe: Probe = { get: null, hasProject: false };
   await ReactThreeTestRenderer.create(
     <ProjectFixture>
-      <CanvasMsaa />
+      <CanvasFrameRender />
       <StoreProbe probe={probe} />
     </ProjectFixture>,
     { beforeReturn: listSampleCounts(FOUR_SAMPLES_ONLY) }
@@ -49,24 +52,29 @@ async function renderPriorityIn(project: string | null) {
   return () => probe.get!().internal.priority;
 }
 
-describe('<CanvasMsaa>', () => {
+describe('<CanvasFrameRender>', () => {
   it('owns the render when the project turns msaa_2d on', async () => {
     const priority = await renderPriorityIn('[rendering]\nanti_aliasing/quality/msaa_2d=2\n');
     expect(priority()).toBe(1);
   });
 
-  it('leaves the render to R3F with no project', async () => {
+  it('owns the render with no project, drawing single-sampled', async () => {
     const priority = await renderPriorityIn(null);
-    expect(priority()).toBe(0);
+    expect(priority()).toBe(1);
   });
 
-  it('leaves the render to R3F for 2X on a device whose lowest count is 4 (edge case)', async () => {
+  it('owns the render with msaa_2d off', async () => {
+    const priority = await renderPriorityIn('[rendering]\nanti_aliasing/quality/msaa_2d=0\n');
+    expect(priority()).toBe(1);
+  });
+
+  it('owns the render for 2X on a device whose lowest count is 4 (edge case)', async () => {
     const priority = await renderPriorityIn('[rendering]\nanti_aliasing/quality/msaa_2d=1\n');
-    expect(priority()).toBe(0);
+    expect(priority()).toBe(1);
   });
 
-  it('leaves the render to R3F for an msaa_2d the setter refuses (edge case)', async () => {
+  it('owns the render for an msaa_2d the setter refuses (edge case)', async () => {
     const priority = await renderPriorityIn('[rendering]\nanti_aliasing/quality/msaa_2d=7\n');
-    expect(priority()).toBe(0);
+    expect(priority()).toBe(1);
   });
 });

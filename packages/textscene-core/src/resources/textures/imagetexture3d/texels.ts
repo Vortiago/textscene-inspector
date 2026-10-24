@@ -5,7 +5,7 @@
  */
 
 import type { LayeredTexels } from '../layeredTexels';
-import type { DecodedImage } from '../image/decode';
+import type { DecodedLevel } from '../image/decode';
 
 /**
  * The first image sets the size. The first image of another size starts the mipmaps, so the
@@ -13,7 +13,7 @@ import type { DecodedImage } from '../image/decode';
  * without a texture.
  */
 export function stackSlices(
-  images: readonly Omit<DecodedImage, 'format'>[]
+  images: readonly DecodedLevel[]
 ): LayeredTexels<Uint8Array | Float32Array> | null {
   const first = images[0];
   if (!first) return null;

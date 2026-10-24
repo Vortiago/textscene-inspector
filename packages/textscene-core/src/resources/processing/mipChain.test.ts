@@ -3,11 +3,25 @@
  * bytes, or the texture importer's output for the normal map.
  */
 import { describe, expect, it } from 'vitest';
-import { mipChain } from './mipChain';
+import { mipChain, mipSize } from './mipChain';
 
 function levelBytes(base: number[], width: number, height: number, renormalize = false): number[][] {
   return mipChain({ data: new Uint8Array(base), width, height }, renormalize).map((level) => [...level.data]);
 }
+
+describe('mipSize', () => {
+  it('halves the side once per level', () => {
+    expect([0, 1, 2].map((level) => mipSize(256, level))).toEqual([256, 128, 64]);
+  });
+
+  it('stops at one texel past the last halving (edge case)', () => {
+    expect(mipSize(256, 12)).toBe(1);
+  });
+
+  it('keeps an empty side at one texel (error case)', () => {
+    expect(mipSize(0, 0)).toBe(1);
+  });
+});
 
 describe('mipChain', () => {
   it('averages each 2 × 2 block in byte space, rounding half up', () => {

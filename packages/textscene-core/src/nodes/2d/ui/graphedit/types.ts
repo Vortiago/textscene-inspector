@@ -27,6 +27,8 @@ export interface GraphEditProperties extends ControlProperties {
   zoomMinusDisabled?: boolean;
   /** `zoom_max` reached `zoom`: `zoom_plus_button->set_disabled(zoom == zoom_max)` (`graph_edit.cpp:2446`). */
   zoomPlusDisabled?: boolean;
+  /** A setter queued `_update_scroll_offset` while the file applied (`loadOrder.ts`): the settled frame has no minimap connection (`minimapConnections.ts`). */
+  queuedScrollOffsetUpdate?: boolean;
   /** `show_grid`: `graph_edit.cpp:3070`. Default `true` (`graph_edit.h:200`). */
   showGrid?: boolean;
   /** `grid_pattern`: `graph_edit.cpp:3071`, `PROPERTY_HINT_ENUM "Lines,Dots"`. Default `0` (LINES, `graph_edit.h:201`). */
