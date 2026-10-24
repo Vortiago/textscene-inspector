@@ -15,6 +15,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
+import { mipSize } from '../../resources/processing/mipChain.js';
 import { channelToByte, sRGBChannelToLinear } from '../../utils/colorSpace.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
 import {
@@ -160,11 +161,6 @@ function store(mip: Uint8Array, mipWidth: number, pixels: Pixels, x: number, y: 
       );
     }
   }
-}
-
-/** A mip's side: the atlas's side halved `level` times, at least 1. */
-export function mipSize(size: number, level: number): number {
-  return Math.max(size >> level, 1);
 }
 
 /** `raw`'s mips past 0, each blurred from the one before (`:3528-3575`). */

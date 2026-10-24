@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildAreaLightAtlas } from './atlasLayout';
 import type { GodotImage } from '../textureAtlas/godotImage';
-import { mipSize } from './atlasMipmaps';
+import { mipSize } from '../../resources/processing/mipChain';
 
 /** A `width × height` image whose texel at `x`, `y` is `rgbaAt(x, y)`, in sRGB bytes. */
 function image(

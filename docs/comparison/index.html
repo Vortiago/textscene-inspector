@@ -6835,7 +6835,24 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A texture whose pixels the scene or a <code>.tres</code> saves inline, as an <code>Image</code> sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other uncompressed format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with <code>use_hdr</code>.</p></div>
+        <div class="prose"><p>A texture whose pixels the scene or a <code>.tres</code> saves inline, as an <code>Image</code> sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other uncompressed format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The mip levels a saved Image stores are sampled as saved (next section). The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with <code>use_hdr</code>.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>ImageTexture mip levels</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-imagetexture-mipmaps-godot.png" alt="Godot render of ImageTexture mip levels">
+          <img class="img-ours" src="images/unit-imagetexture-mipmaps-ours.png" alt="Our render of ImageTexture mip levels">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>An <code>Image</code> saved with <code>mipmaps</code> on stores every level below the top one in its bytes. A minified ImageTexture samples them as saved, because Godot uploads them (<code>texture_storage.cpp</code>, <code>texture_2d_initialize</code>) and never rebuilds them. The previewer decodes each stored level and uploads it, so a level that is not the average of the one above draws as saved. The checker draws grey at its top level. Its stored levels are solid red, green and blue, so the strip shows which level each part samples. The strip ends before the blue level, in both engines. A texture filter without mipmaps samples the top level only, in both engines.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Block-compressed Image</h3><span class="status st-done">Done</span></div>
