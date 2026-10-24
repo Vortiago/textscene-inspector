@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
+import { EditedRootProvider } from '../contexts/InstanceOwnersContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider, type SceneResourcesProviderProps } from '../SceneResourcesContext';
@@ -18,9 +19,11 @@ export interface SceneStackProps {
   /**
    * The sub-resources and external resources the stack provides: a whole parsed scene, or either
    * array alone. An omitted array reaches SceneResourcesProvider as `undefined`, so its stable
-   * empty default holds.
+   * empty default holds. A parsed scene's `[editable]` paths decide which instances count as editable.
    */
-  scene: Pick<SceneResourcesProviderProps, 'internalResources' | 'externalResources'>;
+  scene: Pick<SceneResourcesProviderProps, 'internalResources' | 'externalResources'> & {
+    editableInstances?: readonly string[];
+  };
   loader: ResourceLoader;
   /** The workspace the canvas draws. Omitted, no workspace provider mounts: the default holds. */
   workspace?: CanvasWorkspace;
@@ -45,10 +48,12 @@ export function SceneStack({
         internalResources={scene.internalResources}
         externalResources={scene.externalResources}
       >
-        <SelectionProvider>
-          {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-          {children}
-        </SelectionProvider>
+        <EditedRootProvider editableInstances={scene.editableInstances}>
+          <SelectionProvider>
+            {selectedPath !== null && <SelectSeeder path={selectedPath} />}
+            {children}
+          </SelectionProvider>
+        </EditedRootProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );

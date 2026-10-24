@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
+import { godotPolylineToSegments } from '../../../r3f/gizmo/godotPolylineToSegments';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
@@ -40,26 +41,6 @@ export function Path2D({ node, children }: NodeComponentProps) {
 }
 
 function PathCurveGizmo({ sampler }: { sampler: Curve2DSampler }) {
-  const positions = useMemo(() => buildPolylineSegments(sampler.points), [sampler]);
-  return <GizmoLine positions={positions} color={PATH_COLOR} />;
-}
-
-/**
- * Turns the flat Godot-space polyline `[x0,y0,x1,y1,…]` into LineSegments
- * positions `(v0,v1),(v1,v2),…`, negating Y inside the Node2D group.
- */
-function buildPolylineSegments(points: number[]): Float32Array {
-  const vertexCount = Math.floor(points.length / 2);
-  const segCount = Math.max(0, vertexCount - 1);
-  const positions = new Float32Array(segCount * 2 * 3);
-  let o = 0;
-  for (let i = 0; i + 1 < vertexCount; i++) {
-    positions[o++] = points[i * 2]!;
-    positions[o++] = -points[i * 2 + 1]!;
-    positions[o++] = 0;
-    positions[o++] = points[(i + 1) * 2]!;
-    positions[o++] = -points[(i + 1) * 2 + 1]!;
-    positions[o++] = 0;
-  }
-  return positions;
+  const positions = useMemo(() => godotPolylineToSegments(sampler.points, false), [sampler]);
+  return positions && <GizmoLine positions={positions} color={PATH_COLOR} />;
 }

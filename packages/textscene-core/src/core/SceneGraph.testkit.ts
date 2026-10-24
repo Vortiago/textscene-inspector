@@ -14,7 +14,6 @@ export function createSceneGraphFromTscnScene(
   return buildSceneGraph({
     path: scenePath,
     nodes: tscnScene.nodes,
-    externalScenes: [],
     internalResources: tscnScene.internalResources || [],
     externalResources: tscnScene.externalResources || [],
   });

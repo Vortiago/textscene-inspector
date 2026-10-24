@@ -13,6 +13,7 @@ import { useUniqueNamePaths } from '../../useUniqueNames';
 import { liftOverrideChildren } from './glbNodeOverrides';
 import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
 import { useVisibilityParent } from '../../visibilityRange/VisibilityParentContext';
+import { useInstancedScenePaths } from '../../contexts/InstancedScenePathsContext';
 
 /** What the node that instances a GLB hands to the GLB root. */
 interface GlbInstance {
@@ -22,6 +23,8 @@ interface GlbInstance {
   overrides: readonly LiveNode[];
   /** The visibility parent the GLB root passes on to its nodes, or null for none. */
   visibilityParent: string | null;
+  /** The scenes that enclose the instancing node, which authored the `overrides`. */
+  hostScenePaths: readonly string[];
   /**
    * The GLB the instancing node loaded, for the order of its own children. Absent for a GLB opened
    * as the scene, which loads its own.
@@ -43,6 +46,7 @@ const SCENE_ROOT: GlbInstance = {
   rawProperties: Object.freeze({}),
   overrides: [],
   visibilityParent: null,
+  hostScenePaths: [],
 };
 
 /** The node that instances this GLB, or, for a GLB opened as the scene, its own root at `nodePath`. */
@@ -64,6 +68,7 @@ export function GlbInstanceProvider({ node, path, glb, children }: GlbInstancePr
   // The GLB root is a Node3D in Godot, so it passes on a visibility parent.
   const inherited = useVisibilityParent();
   const uniquePaths = useUniqueNamePaths(path);
+  const hostScenePaths = useInstancedScenePaths();
   const own = parseNode3D(
     { type: 'node', attributes: { name: node.name } },
     node.rawProperties
@@ -74,9 +79,10 @@ export function GlbInstanceProvider({ node, path, glb, children }: GlbInstancePr
       rawProperties: node.rawProperties,
       overrides: liftOverrideChildren(node.children),
       visibilityParent,
+      hostScenePaths,
       glb,
     }),
-    [node.rawProperties, node.children, visibilityParent, glb]
+    [node.rawProperties, node.children, visibilityParent, hostScenePaths, glb]
   );
   return <GlbInstanceContext.Provider value={instance}>{children}</GlbInstanceContext.Provider>;
 }

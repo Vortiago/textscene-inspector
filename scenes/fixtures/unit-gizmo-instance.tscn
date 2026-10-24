@@ -1,0 +1,17 @@
+; Two instances of unit-gizmo-instance-child.tscn, for the one variable no other golden moves: the grey
+; look Godot gives the gizmo of a node the edited scene does not own (ADR-0056). `Locked` is a plain
+; instance, so its emitter gizmo is grey. `Editable` is listed by `[editable]`, so its emitter gizmo
+; keeps the particles colour, as a node of this scene's own would.
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-gizmo-instance-child.tscn" id="1_child"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Locked" parent="." instance=ExtResource("1_child")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0)
+
+[node name="Editable" parent="." instance=ExtResource("1_child")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0)
+
+[editable path="Editable"]

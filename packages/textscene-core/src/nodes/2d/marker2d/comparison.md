@@ -11,8 +11,9 @@ renders_as: a cross gizmo for every node
 # Marker2D
 
 Marker2D is a transform anchor that draws a small cross at its origin in the editor.
-The previewer draws that cross for every node (ADR-0056). A capture keeps the Gizmos
-toggle off, so a plain capture shows nothing, as Godot's game render does.
+The previewer draws that cross for every node (ADR-0056). It has a red x axis and a green
+y axis, and each negative half is darker, as in Godot. A capture keeps the Gizmos toggle off, so a
+plain capture shows nothing, as Godot's game render does.
 
 ## Linting
 

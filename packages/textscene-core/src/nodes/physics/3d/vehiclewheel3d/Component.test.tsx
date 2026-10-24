@@ -11,6 +11,11 @@ import { VehicleWheel3D } from './Component';
 import { parseVehicleWheel3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../../r3f/testing/gizmoContract';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
 function wheelNode(props: Record<string, string> = {}): TscnNode {
@@ -26,10 +31,16 @@ function wheelNode(props: Record<string, string> = {}): TscnNode {
 async function renderWheel(
   selectedPath: string | null,
   props: Record<string, string> = {},
-  showGizmos = true
+  showGizmos = true,
+  instantiated = false
 ) {
   return ReactThreeTestRenderer.create(
-    <GizmoScene nodePath="Wheel1" selectedPath={selectedPath} showGizmos={showGizmos}>
+    <GizmoScene
+      nodePath="Wheel1"
+      selectedPath={selectedPath}
+      showGizmos={showGizmos}
+      instantiated={instantiated}
+    >
       <VehicleWheel3D node={wheelNode(props)} />
     </GizmoScene>
   );
@@ -58,6 +69,15 @@ function containsPoint(positions: Float32Array, [x, y, z]: [number, number, numb
   return false;
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Wheel1',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos, instantiated }) =>
+    renderWheel(selectedPath, {}, showGizmos, instantiated),
+};
+describeGizmoToggle('<VehicleWheel3D>', GIZMO_CASE);
+describeInstantiatedGizmo('<VehicleWheel3D>', GIZMO_CASE);
+
 describe('<VehicleWheel3D> gizmo state', () => {
   it('draws the wheel gizmo at the alpha of the collision colour, 0.42, when selected', async () => {
     expect(lineOpacities(await renderWheel('Wheel1'))).toEqual([DEFAULT_COLLISION_DEBUG_COLOR.a]);
@@ -69,11 +89,6 @@ describe('<VehicleWheel3D> gizmo state', () => {
   ])('draws the wheel gizmo at 0.3 of that alpha, 0.126, when %s', async (_label, selectedPath) => {
     const [opacity] = lineOpacities(await renderWheel(selectedPath));
     expect(opacity).toBeCloseTo(DEFAULT_COLLISION_DEBUG_COLOR.a * 0.3, 10);
-  });
-
-  it('draws no wheel gizmo with the Gizmos toggle off, selected', async () => {
-    const renderer = await renderWheel('Wheel1', {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('draws no mesh of its own — the visible wheel is a child MeshInstance3D', async () => {
