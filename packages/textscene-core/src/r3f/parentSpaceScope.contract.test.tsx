@@ -15,6 +15,7 @@ import { SceneStack } from './testing/SceneStack';
 import { HiddenSeeder } from './testing/HiddenSeeder';
 
 import './nodes/index';
+import { settleLoads } from './testing/settleLoads';
 
 interface RenderOptions {
   workspace?: CanvasWorkspace;
@@ -36,7 +37,7 @@ async function renderWorld(tscn: string, options: RenderOptions = {}): Promise<T
       </WorldEnvironmentScope>
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return sceneRootOf(renderer);
 }
 

@@ -8,6 +8,7 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
+import { perObject } from '../../../utils/perObject';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
 import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
@@ -202,23 +203,17 @@ export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
 }
 
 /**
- * Written only by `referencesKey`: the key of each mesh object, which holds its resources and its
- * lookups for good. One build reads it once. A mesh whose font awaits metrics has no entry: its key
- * moves when they settle.
- */
-const keyByMesh = new WeakMap<ResolvableResource, string>();
-
 /**
  * A key over the content of each resource the mesh's build reads, and over its font, empty for a
  * type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
+ * A mesh object holds its resources and its lookups for good, so a key is read once per object. A
+ * mesh whose font awaits metrics is read each time: its key moves when they settle.
  */
 export function referencesKey(mesh: ResolvableResource): string {
-  const cached = keyByMesh.get(mesh);
-  if (cached !== undefined) return cached;
-  const key = readReferencesKey(mesh);
-  if (!isAwaitingFontMetrics(mesh)) keyByMesh.set(mesh, key);
-  return key;
+  return isAwaitingFontMetrics(mesh) ? readReferencesKey(mesh) : finalReferencesKey(mesh);
 }
+
+const finalReferencesKey = perObject(readReferencesKey);
 
 function readReferencesKey(mesh: ResolvableResource): string {
   const { resource, resources, loadedFile } = mesh;
@@ -243,7 +238,7 @@ interface BuiltSurface {
  * resources the build reads change. A resource's entries go when the parsed resource does, so the
  * geometry and the AABB of one mesh share one build.
  */
-const builtSurfaces = new WeakMap<TscnInternalResource, Map<number, BuiltSurface>>();
+const builtSurfaces = perObject<TscnInternalResource, Map<number, BuiltSurface>>(() => new Map());
 
 /**
  * The surface `_update` hands the rendering server (`primitive_meshes.cpp:45-123`), in Godot's
@@ -255,8 +250,7 @@ const builtSurfaces = new WeakMap<TscnInternalResource, Map<number, BuiltSurface
 export function primitiveMeshSurface(mesh: ResolvableResource, texelSize: number): GodotSurface | null {
   const { resource } = mesh;
   if (!isPrimitiveMeshType(resource.type)) return null;
-  let byTexelSize = builtSurfaces.get(resource);
-  if (!byTexelSize) builtSurfaces.set(resource, (byTexelSize = new Map()));
+  const byTexelSize = builtSurfaces(resource);
   const key = referencesKey(mesh);
   const built = byTexelSize.get(texelSize);
   if (built?.referencesKey === key) return built.surface;

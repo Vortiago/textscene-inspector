@@ -2,7 +2,7 @@
  * Godot's specular weights ride three's own lines. A three release that rewrites one fails here,
  * not silently in a capture.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   SPECULAR_OCCLUSION_DISABLED,
@@ -11,14 +11,12 @@ import {
   specularOcclusionUserData,
 } from './godotIndirectSpecular';
 import { warningsOf } from './testing/logWarnings';
+import { restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 import { DFG_SIZE } from '../godot/rendering/materials/dfgTable.generated';
 
-const CHUNKS = ['lights_physical_pars_fragment', 'lights_fragment_begin', 'aomap_fragment'] as const;
-const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));
+const threeChunks = { ...THREE.ShaderChunk };
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-});
+restoreShaderGlobalsAfterEach();
 
 function patchedChunks() {
   installGodotIndirectSpecular();

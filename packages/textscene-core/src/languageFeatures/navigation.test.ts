@@ -262,6 +262,56 @@ describe('definitionRangeAt of a node path that Godot seats differently from its
     expect(definitionLine(lines, 'Gone/../Button')).toBe(1);
   });
 
+  it('resolves a parent= that only its parent_id_path recovers to the heading the trail lands on', () => {
+    // The path misses, so the trail seats the node under the heading it names (packed_scene.cpp:161-163).
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Door" type="Node3D" parent="." unique_id=7]',
+      '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(1);
+  });
+
+  it('gives nothing for a parent= that names a later heading, which has not been built yet', () => {
+    // The walk runs while the headings above are built (packed_scene.cpp:157-165), so the path vanishes.
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="Early" type="Node3D" parent="Later"]',
+      '[node name="Later" type="Node3D" parent="."]',
+    ];
+    const document = new LanguageDocument(lines.join('\n'));
+    const character = lines[1]!.indexOf('"Later"') + 1;
+    expect(definitionRangeAt(document, { line: 1, character })).toBeUndefined();
+  });
+
+  it('resolves a connection end that only its uid path recovers', () => {
+    // A path that misses falls back to the id trail (packed_scene.cpp:161-163, :657-658).
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="Gone" to="." method="_on_ready" from_uid_path=PackedInt32Array(7)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(1);
+  });
+
+  it('resolves a to= that only its to_uid_path recovers', () => {
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="." to="Gone" method="_on_ready" to_uid_path=PackedInt32Array(7)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(1);
+  });
+
+  it('gives nothing for a connection end whose uid path names no heading', () => {
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="Gone" to="." method="_on_ready" from_uid_path=PackedInt32Array(99)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(undefined);
+  });
+
   it('gives nothing for a parent= that walks only once simplified, which the loader never simplifies', () => {
     const lines = [
       '[node name="Root" type="Node3D"]',

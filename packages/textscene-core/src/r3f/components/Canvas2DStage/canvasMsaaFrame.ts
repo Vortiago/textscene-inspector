@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { drawFullScreen, fullScreenPass } from '../../fullScreenPass';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
-import { perRenderer } from '../../perRenderer';
+import { perObject } from '../../../utils/perObject';
 
 /** Each texel to the pixel under it, so the copy neither filters nor converts. */
 const COPY_FRAGMENT = /* glsl */ `
@@ -21,7 +21,7 @@ void main() {
  * A pass per renderer, not per frame: `setSize` calls `dispose`, so a frame's own pass would
  * recompile on each resize.
  */
-const copyPassFor = perRenderer(() =>
+const copyPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
   fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: null } })
 );
 

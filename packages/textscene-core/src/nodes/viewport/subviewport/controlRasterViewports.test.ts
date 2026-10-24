@@ -122,7 +122,7 @@ texture = ExtResource("2")
   it('keeps the OUTER scope for a host-authored child of an instance node', () => {
     // A multi-root sub-scene does not collapse: the instance node stays, its
     // authored children keep the outer scope, and the loaded roots get the
-    // sub-scene's, the split `liveChildGroups` documents.
+    // sub-scene's, the split `liveStep` documents.
     const authored = parse(`[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://inner.png" id="9"]
@@ -165,7 +165,7 @@ texture = ExtResource("2")
   });
 
   it("keeps the HOST internalResources pool for a host-authored SubViewport under a multi-root instance, not the sub-scene's", () => {
-    // Pins `liveChildGroups`' optional `internalResources` argument, which no
+    // Pins the host scope's `internalResources` pool, which no
     // other test here reads. Host and sub-scene both declare id "1" for a
     // different StyleBoxFlat, so a wrong pool shows as a wrong colour, not as
     // an absent one.

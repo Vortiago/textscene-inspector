@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
+import { ShadowmaskMode } from '../../../godot/scene/lightmapGi';
 import { parseLightmapGI } from './parser';
 
 const lightmap = (properties: Record<string, string>) =>
@@ -16,5 +17,22 @@ describe('parseLightmapGI', () => {
 
   it('reads no light data when the node has none, its default (edge case)', () => {
     expect(lightmap({}).lightData).toBeUndefined();
+  });
+
+  it('reads the shadowmask mode', () => {
+    expect(lightmap({ shadowmask_mode: '1' }).shadowmaskMode).toBe(ShadowmaskMode.REPLACE);
+    expect(lightmap({ shadowmask_mode: '2' }).shadowmaskMode).toBe(ShadowmaskMode.OVERLAY);
+  });
+
+  it('reads no shadowmask when the node leaves the mode out, its default (lightmap_gi.h:206)', () => {
+    expect(lightmap({}).shadowmaskMode).toBe(ShadowmaskMode.NONE);
+  });
+
+  it('reads mode Only, which a script stores and the inspector does not offer', () => {
+    expect(lightmap({ shadowmask_mode: '3' }).shadowmaskMode).toBe(ShadowmaskMode.ONLY);
+  });
+
+  it('reads no shadowmask for a mode past the enum (edge case)', () => {
+    expect(lightmap({ shadowmask_mode: '4' }).shadowmaskMode).toBe(ShadowmaskMode.NONE);
   });
 });

@@ -35,24 +35,36 @@ function toSolveNode(node: TscnNode, path: string): SolveNode {
   };
 }
 
+/** Every registered Control type, read once the side-effect import has registered them. */
+const TYPES = controlComponentRegistry.getAllTypeNames();
+
+/** Whether a walked tree of `type` with a probe child draws the probe's group. */
+async function rendersProbeChild(type: string): Promise<boolean> {
+  const node = parseWithProbeChild(type);
+  const renderer = await ReactThreeTestRenderer.create(
+    <ControlCanvasWalker
+      tree={[toSolveNode(node, node.name)]}
+      generation={0}
+      viewport={VIEWPORT}
+      theme={THEME}
+      measurer={null}
+    />
+  );
+  const found = renderer.scene
+    .findAllByType('Group')
+    .some((g) => (g.instance as { name: string }).name === PROBE_GROUP_NAME);
+  await renderer.unmount();
+  return found;
+}
+
 describe('Native Control subtree conformance', () => {
-  it('renders a Control child of every registered type as part of the walked tree', async () => {
-    const dropped: string[] = [];
+  it('reads the registered types, so the cases cannot pass vacuously', () => {
+    expect(TYPES.length).toBeGreaterThan(50);
+  });
 
-    for (const type of controlComponentRegistry.getAllTypeNames()) {
-      const node = parseWithProbeChild(type);
-      const root = toSolveNode(node, node.name);
-
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
-
-      const found = renderer.scene
-        .findAllByType('Group')
-        .some((g) => (g.instance as { name: string }).name === PROBE_GROUP_NAME);
-      if (!found) dropped.push(type);
-    }
-
-    expect(dropped).toEqual([]);
+  // One case per type, not one loop: the 61 renders took 1 to 1.3 s in one test, and a full run's
+  // load stretched that past the 5 s limit.
+  it.each(TYPES)('renders a Control child of a %s as part of the walked tree', async (type) => {
+    expect(await rendersProbeChild(type)).toBe(true);
   });
 });

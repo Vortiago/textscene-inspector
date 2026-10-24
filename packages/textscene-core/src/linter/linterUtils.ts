@@ -2,7 +2,7 @@
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import type { RawNode } from '../parser/types.js';
-import { perTree } from '../utils/perTree.js';
+import { perObject } from '../utils/perObject.js';
 
 /**
  * Scene-tree facts built in one depth-first pass for the helpers below. A rule calls
@@ -52,7 +52,7 @@ function buildSceneIndex(roots: readonly RawNode[]): SceneIndex {
   return { parentOf, underInstanceAncestor, nodesByType };
 }
 
-const getSceneIndex = perTree(buildSceneIndex);
+const getSceneIndex = perObject(buildSceneIndex);
 
 /** Shared empty result for a type miss: one frozen instance, not an allocation per miss. */
 const NO_MATCHES: readonly RawNode[] = Object.freeze([]);

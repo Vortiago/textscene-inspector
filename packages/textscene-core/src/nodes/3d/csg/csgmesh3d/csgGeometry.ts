@@ -49,6 +49,7 @@ function namesNoMesh(meshRef: string | undefined, ctx: CsgGeometryContext): bool
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
   const mesh = meshOf(properties, ctx);
+  // A mesh that names nothing builds Godot's empty brush (`csg_shape.cpp:1126-1128`).
   if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
   // Not built while the metrics of its font settle, and the context changes when they have.
   if (!isDrawableMesh(mesh) || isAwaitingFontMetrics(mesh)) return null;
@@ -108,6 +109,11 @@ function meshKey(mesh: CsgMesh): string {
   return `${mesh.file.path}#${identityKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
 }
 
+/** Godot's empty brush: a closed solid with no face. */
+function emptySolid(): CsgSolid {
+  return csgSolid(emptyBrush(), []);
+}
+
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */
 interface MeshFaces {
   positions: Float32Array;
@@ -117,12 +123,10 @@ interface MeshFaces {
   materials: CsgMaterialAddress[];
 }
 
-/** Godot's empty brush: a closed solid with no face. */
-function emptySolid(): CsgSolid {
-  return csgSolid(emptyBrush(), []);
-}
-
-/** The empty solid for a mesh with no faces (`csg_shape.cpp:1265-1267`). */
+/**
+ * The solid of every surface's triangles, each with its material, flipped with `flipFaces`
+ * (`csg_shape.cpp:1136-1269`). A mesh with no triangle builds the empty brush (`:1265-1267`).
+ */
 function buildMeshBrush(
   surfaces: readonly CsgMeshSurface[],
   nodeMaterial: CsgMaterialAddress,
@@ -176,7 +180,7 @@ function normalsAgree(normals: Float32Array | undefined, u: number, v: number): 
   return true;
 }
 
-/** One draw group per run of faces that share a material. `applyCsgNormals` keeps the face order. */
+/** One draw group per run of faces that share a material. `shadeCsgFaces` keeps the face order. */
 function addMaterialGroups(geometry: THREE.BufferGeometry, faceMaterials: readonly number[]): void {
   let start = 0;
   for (let face = 1; face <= faceMaterials.length; face++) {

@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TscnNode } from '../../../../parser/types';
+import { perObject } from '../../../../utils/perObject';
 import type {
   MinimumSizeFn,
   SolveContext,
@@ -214,18 +215,9 @@ interface ResolvedImageRun {
  * At `unitsPerEm` units the advance chain returns that size rounded to 1/64px,
  * exact for whole and half pixels and within 1/128px otherwise.
  */
-function imageObjectFontMetrics(base: FontMetrics): FontMetrics {
-  let face = imageFaces.get(base);
-  if (!face) imageFaces.set(base, (face = wrapForImageObject(base)));
-  return face;
-}
+const imageObjectFontMetrics = perObject(wrapForImageObject);
 
-/**
- * Written only by `imageObjectFontMetrics`, never cleared. One wrapper per face, so `shapeText`
- * sees the same face on every call and a layout memoised on it keeps its hits.
- */
-const imageFaces = new WeakMap<FontMetrics, FontMetrics>();
-
+/** One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. */
 function wrapForImageObject(base: FontMetrics): FontMetrics {
   // A fractional width skips the whole-pixel round, and the size change at each
   // edge resets the remainder and kerning, as a separate shaped run would.

@@ -4,7 +4,7 @@
  * smoothstep across its penumbra, and Godot with a power of the angle from the axis.
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 
 /**
  * Godot's distance falloff. three's own clamps the falloff at 100, where Godot clamps the distance
@@ -50,19 +50,11 @@ export function godotConePenumbra(angle: number, angleAttenuation: number): numb
   return 1 - Math.acos(cosine) / angle;
 }
 
-/** The text that proves the patch installed, which a patch that reads it requires. */
-export const LIGHT_ATTENUATION_MARK = SPOT_CONE;
-
 /**
  * Replaces three's attenuation for every program compiled after the call. A three release that
  * rewrites a replaced line keeps its chunk, and `godotLightAttenuation.test.ts` fails on that
- * release. A second call changes nothing.
+ * release. True when the chunk holds the patch after the call. A second call changes nothing.
  */
-export function installGodotLightAttenuation(): void {
-  installChunkPatch({
-    names: ['lights_pars_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(LIGHT_ATTENUATION_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, ATTENUATION_EDITS),
-    missing: 'lights_pars_begin lacks a line the light attenuation patch replaces',
-  });
+export function installGodotLightAttenuation(): boolean {
+  return installChunkEdits({ edits: ATTENUATION_EDITS, mark: SPOT_CONE, patch: 'light attenuation' });
 }

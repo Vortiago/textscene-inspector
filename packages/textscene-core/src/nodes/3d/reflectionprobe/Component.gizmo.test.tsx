@@ -1,6 +1,7 @@
 /**
- * <ReflectionProbe> draws Godot's editor gizmo only while it is selected (ADR-0018): the blend box,
- * the lines to the outer box and the origin cross (`reflection_probe_gizmo_plugin.cpp:149-212`).
+ * <ReflectionProbe> draws Godot's editor gizmo only while it is selected and the Gizmos toggle is on
+ * (`reflection_probe_gizmo_plugin.cpp:152`): the blend box, the lines to the outer box and the origin
+ * cross (`reflection_probe_gizmo_plugin.cpp:149-212`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -8,9 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import { ReflectionProbe } from './Component';
 import { parseReflectionProbe } from './parser';
 
@@ -26,16 +25,13 @@ function probe(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}) {
+async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Probe">
-        <ReflectionProbe node={probe(props)}>
-          <group name="Child" />
-        </ReflectionProbe>
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Probe" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <ReflectionProbe node={probe(props)}>
+        <group name="Child" />
+      </ReflectionProbe>
+    </GizmoScene>
   );
 }
 
@@ -61,6 +57,11 @@ describe('<ReflectionProbe> gizmo gate', () => {
   ])('draws the blend box and the internal lines only when %s', async (_label, selectedPath, expected) => {
     const renderer = await render(selectedPath);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+  });
+
+  it('draws nothing with the Gizmos toggle off, selected', async () => {
+    const renderer = await render('Probe', {}, false);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

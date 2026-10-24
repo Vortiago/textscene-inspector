@@ -1,11 +1,12 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   mipmapBiasInjection,
   renderWithMipmapBias,
   viewportSamplersUserData,
   writeMainViewMipmapBias,
 } from './godotMipmapBias';
+import { installGodotNormalMapRead } from './godotNormalMap';
 import type { ProgramShader } from '../materialProgramInputs';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import { dropMipChain } from '../../resources/textures/godotTextureFilter';
@@ -85,6 +86,17 @@ describe('mipmapBiasInjection', () => {
 
   it('shares one uniform between programs, so one write reaches every material', () => {
     expect(patched('standard').uniforms[BIAS_UNIFORM]).toBe(patched('physical').uniforms[BIAS_UNIFORM]);
+  });
+});
+
+describe('the bias on the tangent-space normal read', () => {
+  beforeAll(installGodotNormalMapRead);
+
+  it('biases the gradient read of the normal map, which the roughness limiter shares', () => {
+    const compiled = resolved(patched('standard').fragmentShader);
+
+    expect(compiled).toContain('godotMapNormal(');
+    expect(compiled).not.toMatch(/textureGrad\(\s*normalMap\s*,/);
   });
 });
 

@@ -30,9 +30,9 @@
  */
 
 import { isEqualApprox } from '../../../godot/math/math.js';
-import { storedReal, storedVector2 } from '../../../godot/math/real.js';
+import { storedReal } from '../../../godot/math/real.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
-import { boolOr, floatOr, vec2iOr, vec2Or } from '../../../parser/valueParsers.js';
+import { boolOr, realOr, realVec2Or, vec2iOr } from '../../../parser/valueParsers.js';
 import { decodePrimitiveMesh } from '../primitivemesh/decode.js';
 import { PLANE_MESH_DEFAULTS, type PlaneMeshDefaults } from './decode.js';
 
@@ -55,11 +55,11 @@ export function planeMeshLightmapSizeHint(
       changed = next !== addUv2;
       addUv2 = next;
     } else if (key === 'uv2_padding') {
-      const next = storedReal(floatOr(value, padding, 'PlaneMesh uv2_padding'));
+      const next = realOr(value, padding, 'PlaneMesh uv2_padding');
       changed = !isEqualApprox(next, padding);
       if (changed) padding = next;
     } else if (key === 'size') {
-      const next = storedVector2(vec2Or(value, size, 'PlaneMesh size'));
+      const next = realVec2Or(value, size, 'PlaneMesh size');
       changed = next.x !== size.x || next.y !== size.y;
       size = next;
     }

@@ -1,6 +1,8 @@
 # Transform/path nodes (2D and 3D) draw editor gizmos, gated on selection
 
-- Status: Accepted
+- Status: Superseded by ADR-0056: the gizmos follow Godot's split of every-node and selected-only
+  parts, behind a Gizmos toggle. This record keeps why the selection gate came first. The
+  `useGizmoVisible()` hook it names is now `useGizmoState()`.
 - **Amends ADR-0008** for `Marker3D`/`Path3D`/`PathFollow3D`, which are no longer fully invisible
   (see below). The rest of the transform-only set of ADR-0008 (physics bodies, `Skeleton3D`,
   unsupported types) is unchanged.

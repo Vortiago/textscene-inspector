@@ -77,7 +77,7 @@ the sheets comparable, so use one of these and no other:
 | **Approximated** | Drawn by a different method, so it differs under some inputs. |
 | **Shader missing** | Godot's effect is a fragment shader the previewer does not reproduce. |
 | **Needs runtime** | Only a running game shows it: physics, particles, audio, an XR session. |
-| **Editor only** | Godot draws it only in the editor. Here it is selection-gated or absent. |
+| **Editor only** | Godot draws it only in the editor. Here it draws when the Gizmos toggle is on, and a capture keeps the toggle off. |
 | **Resource gap** | It depends on a resource type the previewer does not decode. |
 
 ```markdown
@@ -208,7 +208,7 @@ There is no render to assess, so red is wrong and grey implies that someone stil
 has to look. The status is **checked, not trusted**. A
 `renderIntent: 'transform-only'` registration in the slice's `index.r3f.ts` must
 back the sheet, and `sheets.test.mjs` asserts that. Judge by runtime output only.
-An editor-only or selection-gated gizmo (ADR-0018) does not make a node visual,
+An editor-only gizmo (ADR-0056) does not make a node visual,
 and a node that should draw **or drive** but does not yet is `unimplemented`,
 never this.
 
@@ -287,9 +287,9 @@ sentence does.
 - **No visual of its own?** A Timer, a RemoteTransform or an AudioStreamPlayer
   draws nothing. Say so in one line under the heading. That absence is the
   useful fact.
-- **Selection-gated gizmos** (Marker3D, Path3D, PathFollow3D, ADR-0018) and
-  **toggle-gated** overlays (collision shapes, ADR-0005/0006) do not appear in a
-  plain capture. Say the gizmo is gated, not missing.
+- **Gizmos** (Marker3D, Path3D, PathFollow3D, ADR-0056) and **toggle-gated**
+  overlays (collision shapes, ADR-0005/0006) do not appear in a plain capture.
+  Say the gizmo is gated by a toggle or by the selection, not missing.
 - **Editor-only gizmos** (light bulbs, camera frustums) appear in neither image.
   The reference renders the game, not the editor. Never report their absence as a
   bug.

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { renderTargetMapInjection, renderTargetMapUserData, type TargetMapSampler } from './renderTargetMap';
 import type { ProgramShader } from '../materialProgramInputs';
+import { programShader } from '../testing/patchedFragment';
 
 const FLIPPED_V = { scale: { x: 2, y: -3 }, offset: { x: 0.25, y: 1 } };
 const REPEATING: TargetMapSampler = { uv: FLIPPED_V, repeats: true, isNearest: false };
@@ -12,11 +13,7 @@ function recording(sampler: TargetMapSampler): THREE.MeshBasicMaterial {
 
 /** The shader `material`'s render-target albedo patch leaves, from three's basic program. */
 function patched(material: THREE.Material): ProgramShader {
-  const shader: ProgramShader = {
-    vertexShader: THREE.ShaderLib.basic.vertexShader,
-    fragmentShader: THREE.ShaderLib.basic.fragmentShader,
-    uniforms: {},
-  };
+  const shader = programShader('basic');
   renderTargetMapInjection(material.userData)!.onBeforeCompile.call(material, shader);
   return shader;
 }

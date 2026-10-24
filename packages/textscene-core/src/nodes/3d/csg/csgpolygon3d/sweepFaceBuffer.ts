@@ -16,7 +16,7 @@ interface SweepFaceBuffer {
   ): void;
   /** Un-write the last `count` triangles, so the next `putTri` overwrites them. */
   rewind(count: number): void;
-  /** The written prefix, ready for `applyCsgNormals`. */
+  /** The written prefix, ready for `shadeCsgFaces`. */
   finish(invert: boolean): CsgFaceSoup;
 }
 

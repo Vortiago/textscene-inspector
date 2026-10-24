@@ -9,7 +9,7 @@
  * reads.
  */
 
-import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
@@ -18,6 +18,7 @@ import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
 import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
+  SUN_DRAWN_FIRST,
   SUN_RANGE_BEGINS,
   SUN_SHADOW_FADES,
   SUN_SHADOW_ROWS,
@@ -175,9 +176,11 @@ const GODOT_SUN_FADE = `
 `;
 
 /**
- * The replacement. `getSunShadow` takes the soft shadow for a sun with an angle, else the split
- * lookup (`:2408-2478`), and fades either out, so a fragment past the fade samples nothing.
- * `directionalShadow.md` (The split lookup) gives the split choice, filter radius and blend band.
+ * The replacement. `godotSunShadowBeforeFade` takes the soft shadow for a sun with an angle, else
+ * the split lookup (`:2408-2478`), and `getSunShadow` fades it out, so a fragment past the fade
+ * samples nothing. A lightmapped program finishes the mix itself, since its shadowmask replaces or
+ * darkens the fade (`lightmapProgram.ts`). `directionalShadow.md` (The split lookup) gives the
+ * split choice, filter radius and blend band.
  */
 const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
@@ -243,6 +246,34 @@ const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOK
 \t\t}
 ${GODOT_SUN_SOFT_SHADOW}
 ${GODOT_SUN_FADE}
+\t\tfloat godotSunShadowBeforeFade(
+\t\t\t#if defined( SHADOWMAP_TYPE_PCF )
+\t\t\t\tsampler2DShadow shadowMap,
+\t\t\t#else
+\t\t\t\tsampler2D shadowMap,
+\t\t\t#endif
+\t\t\tSunLightShadow sunLightShadow,
+\t\t\tint shadowIndex
+\t\t) {
+
+\t\t\t${SOFT_SHADOW_BLOCK}
+\t\t\t\tif ( ${SUN_SOFT_SHADOWS}[ shadowIndex ].w > 0.0 ) return godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex );
+\t\t\t#endif
+\t\t\treturn godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex );
+
+\t\t}
+
+\t\tfloat godotSunShadowFaded( float shadow, float fadeOut ) {
+
+\t\t\treturn mix( shadow, 1.0, fadeOut );
+
+\t\t}
+
+\t\t#ifdef GODOT_LIGHTMAP
+\t\t\tuniform float ${SUN_DRAWN_FIRST}[ NUM_SUN_LIGHT_SHADOWS ];
+\t\t\tfloat godotLightmapSunShadow( float shadow, float fadeOut, float opacity, float isDrawnFirst );
+\t\t#endif
+
 \t\tfloat getSunShadow(
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
 \t\t\t\tsampler2DShadow shadowMap,
@@ -254,26 +285,27 @@ ${GODOT_SUN_FADE}
 \t\t) {
 
 \t\t\tfloat fadeOut = godotSunShadowFadeOut( shadowIndex );
-\t\t\tif ( fadeOut >= 1.0 ) return 1.0;
-\t\t\t${SOFT_SHADOW_BLOCK}
-\t\t\t\tif ( ${SUN_SOFT_SHADOWS}[ shadowIndex ].w > 0.0 ) return mix( godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );
+\t\t\tfloat shadow = fadeOut >= 1.0 ? 1.0 : godotSunShadowBeforeFade( shadowMap, sunLightShadow, shadowIndex );
+\t\t\t#ifdef GODOT_LIGHTMAP
+\t\t\t\treturn godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity, ${SUN_DRAWN_FIRST}[ shadowIndex ] );
+\t\t\t#else
+\t\t\t\treturn godotSunShadowFaded( shadow, fadeOut );
 \t\t\t#endif
-\t\t\treturn mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );
 
 \t\t}
 `;
 
-/** The chunk with Godot's split lookup, or null when three's chunk no longer has the parts it replaces. */
-function godotSplitShadowChunk(chunk: string): string | null {
-  const start = chunk.indexOf(THREE_LOOKUP_START);
-  if (start < 0) return null;
-  const end = chunk.indexOf(LOOKUP_BLOCK_END, start);
-  if (end < 0) return null;
-  return applyEdits(chunk.slice(0, start) + GODOT_LOOKUP + chunk.slice(end), [
-    { three: THREE_SLOT_COUNT, godot: `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}` },
-    { three: THREE_SLOT_MATRICES, godot: GODOT_SLOT_ROWS },
-  ]);
-}
+/** Godot's split lookup in place of three's, with the slot count and the rows it reads. */
+const SPLIT_SHADOW_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
+  {
+    chunk: CHUNK,
+    three: THREE_LOOKUP_START,
+    until: LOOKUP_BLOCK_END,
+    godot: GODOT_LOOKUP + LOOKUP_BLOCK_END,
+  },
+  { chunk: CHUNK, three: THREE_SLOT_COUNT, godot: `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}` },
+  { chunk: CHUNK, three: THREE_SLOT_MATRICES, godot: GODOT_SLOT_ROWS },
+];
 
 /**
  * Installs the soft shadow filter, then replaces three's chunk, for every program compiled after the
@@ -282,12 +314,11 @@ function godotSplitShadowChunk(chunk: string): string | null {
  * second call changes nothing.
  */
 export function installGodotSplitShadow(): void {
-  if (!installSoftShadowFilter()) return;
-  const isPatched = installChunkPatch({
-    names: [CHUNK],
-    isApplied: (chunks) => chunks[CHUNK].includes(SPLIT_LOOKUP),
-    apply: onChunk(CHUNK, godotSplitShadowChunk),
-    missing: `${CHUNK} has no sun shadow lookup to replace`,
+  const isPatched = installChunkEdits({
+    requires: [installSoftShadowFilter],
+    edits: SPLIT_SHADOW_EDITS,
+    mark: SPLIT_LOOKUP,
+    patch: 'split shadow',
   });
   if (!isPatched) return;
   installSunShadowUniforms();

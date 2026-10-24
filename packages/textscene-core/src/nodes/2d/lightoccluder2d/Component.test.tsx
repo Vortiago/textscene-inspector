@@ -1,5 +1,5 @@
 /**
- * <LightOccluder2D>: topology, gizmo gate, absent resource, and publication to the
+ * <LightOccluder2D>: topology, gizmo state, absent resource, and publication to the
  * shadow-caster registry. It mirrors lightoccluder2d-contract.test.tsx but
  * imports nothing from it.
  */
@@ -27,6 +27,7 @@ import '../../2d/lightoccluder2d/index';
 import '../../2d/lightoccluder2d/index.r3f';
 import '../../../linter/index';
 import { errorsOf } from '../../../linter/testing/tierLists';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 describe('polygonToSegments', () => {
   it('returns null for fewer than 2 points', () => {
@@ -130,12 +131,12 @@ async function renderIntoRegistry(tscn: string) {
       </SceneResourcesProvider>
     </CanvasWorkspaceProvider>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   return registry;
 }
 
 describe('LightOccluder2D publishes to the shadow-caster registry', () => {
-  it('registers one caster even though the outline gizmo stays unselected', async () => {
+  it('registers one caster whatever the outline gizmo draws', async () => {
     expect((await renderIntoRegistry(occScene())).casters()).toHaveLength(1);
   });
 

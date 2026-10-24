@@ -12,40 +12,24 @@ import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
 import { resourceRef } from '../godot/variant/resourceRef';
-import {
-  LiveTree,
-  liveChildGroups,
-  liveNodeScope,
-  mergedNodeOf,
-  rootScope,
-  type LiveTreeContext,
-} from './liveSceneTree';
+import { LiveTree, liveStep, rootScope } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 import type { SceneScope } from '../parser/types';
-import { scopeOf, type LiveNode } from '../resources/liveNode';
+import type { LiveNode } from '../resources/liveNode';
 
 const DEMO = resolve(import.meta.dirname, '../../../../scenes/demos/2d/role_playing_game');
 const parse = (rel: string) => new TscnParser().parse(readFileSync(join(DEMO, rel), 'utf8'));
 
 const opponent = parse('combat/combatants/opponent.tscn');
-const ctx: LiveTreeContext = {
-  externalResources: opponent.externalResources,
-  internalResources: [],
-  sceneCache: {
-    getCached: (path) =>
-      ({
-        'res://combat/combatants/combatant.tscn': parse('combat/combatants/combatant.tscn'),
-        'res://combat/combatants/sprites/sprite.tscn': parse('combat/combatants/sprites/sprite.tscn'),
-      })[path],
-  },
-};
+const ctx = contextOver(opponent, {
+  'res://combat/combatants/combatant.tscn': parse('combat/combatants/combatant.tscn'),
+  'res://combat/combatants/sprites/sprite.tscn': parse('combat/combatants/sprites/sprite.tscn'),
+});
 
 /** The collapsed live node at `path` and the scope its own refs resolve against. */
 function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
-  const link = new LiveTree(opponent.nodes, ctx).at(path)!;
-  return {
-    node: mergedNodeOf(link.groups) ?? link.node,
-    scope: liveNodeScope(link.node, link.scope, link.groups),
-  };
+  const { step } = new LiveTree(opponent.nodes, ctx).at(path)!;
+  return { node: step.node, scope: step.scope };
 }
 
 /** The path the raw `key` of the live node at `path` resolves to. */
@@ -95,17 +79,10 @@ material_override = SubResource("2")
 `);
 
   it('resolves it to the root scene’s resource, as the viewport does', () => {
-    const hostCtx: LiveTreeContext = {
-      externalResources: host.externalResources,
-      internalResources: host.internalResources,
-      sceneCache: { getCached: (path) => (path === 'res://sub.tscn' ? sub : undefined) },
-    };
-    const [group] = liveChildGroups(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
-    const merged = group!.mergedNode!;
+    const hostCtx = contextOver(host, { 'res://sub.tscn': sub });
+    const { node: merged, scope } = liveStep(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
     const id = resourceRef(merged.rawProperties.material_override!)!.id;
 
-    expect(findSubResource(scopeOf(merged, group!.scope).internalResources, id)?.data.albedo_color).toBe(
-      'Color(1, 0, 0, 1)'
-    );
+    expect(findSubResource(scope.internalResources, id)?.data.albedo_color).toBe('Color(1, 0, 0, 1)');
   });
 });

@@ -3,6 +3,7 @@
  * walk, so a builder reads a font without a hook, and the caller loads each path the walk read.
  */
 
+import { recordingReads } from '../../../r3f/cacheSources';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import type { LoadedFont } from '../../scopedResource';
 import { resolveInlineFontResource } from './decode';
@@ -26,12 +27,7 @@ export function resolveFontReference(
     ref,
     externalResources,
     internalResources,
-    {
-      getCached: (path) => {
-        paths.push(path);
-        return loadedFont(path);
-      },
-    },
+    recordingReads({ getCached: loadedFont }, (path) => paths.push(path)),
     new Set()
   );
   return { font, paths };

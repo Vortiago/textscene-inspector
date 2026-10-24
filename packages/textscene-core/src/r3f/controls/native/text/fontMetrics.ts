@@ -1,9 +1,11 @@
 /**
  * The font-metrics contract the native Control text engine shapes against, and the px quantisation
  * every implementation shares, from design-unit data alone. The whole-pixel advance round above the
- * subpixel threshold carries a remainder, so it lives in `textLayout.ts`. This module imports
- * nothing, so no consumer pulls in Open Sans's baked data.
+ * subpixel threshold carries a remainder, so it lives in `textLayout.ts`. This module imports only
+ * `perObject`, so no consumer pulls in Open Sans's baked data.
  */
+
+import { perObject } from '../../../../utils/perObject';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -165,10 +167,10 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
 }
 
 /**
- * Written only by `withVariation`, never cleared. One wrapper per face, embolden and skew, so a
- * layout memoised on `FontMetrics` identity keeps its hits.
+ * The wrappers of one face, by embolden and skew: one each, so a layout memoised on `FontMetrics`
+ * identity keeps its hits.
  */
-const variedFaces = new WeakMap<FontMetrics, Map<string, FontMetrics>>();
+const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
 
 /**
  * `metrics` with a `FontVariation`'s `embolden` and `skew` set. The wrapper reads every other field
@@ -179,8 +181,7 @@ export function withVariation(
   { embolden = 0, skew = 0 }: { embolden?: number; skew?: number }
 ): FontMetrics {
   if (embolden === 0 && skew === 0) return metrics;
-  let byVariation = variedFaces.get(metrics);
-  if (!byVariation) variedFaces.set(metrics, (byVariation = new Map()));
+  const byVariation = variationsOf(metrics);
   const key = `${embolden}/${skew}`;
   let wrapped = byVariation.get(key);
   if (!wrapped)

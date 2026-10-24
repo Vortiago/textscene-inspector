@@ -10,6 +10,7 @@ import {
   DEFAULT_VIEWPORT,
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_FOG_STORAGE_KEY,
+  SHOW_GIZMOS_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
@@ -104,6 +105,7 @@ export function TscnPreviewShell({
   // persists.
   const [initialViewport] = useState<PersistedViewport>(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, DEFAULT_VIEWPORT.mode, isViewportMode),
+    showGizmos: readPersisted(SHOW_GIZMOS_STORAGE_KEY, DEFAULT_VIEWPORT.showGizmos, isBoolean),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, DEFAULT_VIEWPORT.showGrid, isBoolean),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
     showFog: readPersisted(SHOW_FOG_STORAGE_KEY, DEFAULT_VIEWPORT.showFog, isBoolean),

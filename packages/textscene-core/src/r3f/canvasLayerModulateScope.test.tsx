@@ -15,6 +15,7 @@ import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 import './controls/index';
+import { settleLoads } from './testing/settleLoads';
 
 /**
  * Both families at once: a `Control` carrying `modulate` above a `CanvasLayer`
@@ -57,7 +58,7 @@ async function renderScene(): Promise<THREE.Object3D | null> {
       <ControlCanvasLayer nodes={parsed.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;

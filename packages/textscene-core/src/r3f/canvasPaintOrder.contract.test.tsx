@@ -16,6 +16,7 @@ import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 import './controls/index';
+import { settleLoads } from './testing/settleLoads';
 
 /**
  * A `Node2D` root holding a full-rect `ColorRect` backdrop and one `Polygon2D`
@@ -61,7 +62,7 @@ async function renderWorld(
       <ControlCanvasLayer nodes={parsed.nodes} />
     </SceneStack>
   );
-  await new Promise<void>((r) => setTimeout(r, 10));
+  await settleLoads();
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;

@@ -15,6 +15,7 @@ import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -79,7 +80,7 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
 
     // `request()` resolves through FileEventBus.loadAsync to null and emits
     // `texture:failed`, so the hook turns `missing` and a re-render swaps in magenta.
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await settleLoads();
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
@@ -110,7 +111,7 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
     };
 
     await renderInLoader(node, internalResources, externalResources, loader);
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await settleLoads();
 
     expect(requestedPath).toBe('res://textures/shared.png');
   });

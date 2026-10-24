@@ -14,12 +14,13 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import {
-  applyCanvasItemSampler,
+  canvasItemCloneSampler,
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { undecodedClone } from '../../../../r3f/undecodedTexture';
+import { drawnClone } from '../../../../r3f/drawnClone';
+import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
@@ -62,12 +63,10 @@ function useLayerTexture(
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
   // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
   // would upload a whole GPU copy that never draws, under its own sampler settings.
-  const layer = useMemo(() => {
-    if (!raw) return null;
-    const cloned = undecodedClone(raw);
-    applyCanvasItemSampler(cloned, sampler);
-    return cloned;
-  }, [raw, sampler]);
+  const layer = useMemo(
+    () => (raw ? drawnClone(raw, canvasItemCloneSampler(sampler)) : null),
+    [raw, sampler]
+  );
   return useUploadedClone(layer);
 }
 
@@ -77,42 +76,17 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vector2 | null
 ): THREE.Texture | null {
-  // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
-  // render, and a clone per render would upload the texture again each time.
-  const crop = region && textureSize ? cropWindow(region, textureSize) : null;
-  const [repeatX, repeatY, offsetX, offsetY] = crop ?? [];
+  // The caller memoises `region` and `textureSize`, so a render that keeps them clones and
+  // uploads nothing.
   const cropped = useMemo(() => {
-    if (
-      !texture ||
-      repeatX === undefined ||
-      repeatY === undefined ||
-      offsetX === undefined ||
-      offsetY === undefined
-    ) {
-      return null;
-    }
-    const cloned = texture.clone();
-    cloned.wrapS = THREE.ClampToEdgeWrapping;
-    cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.repeat.set(repeatX, repeatY);
-    cloned.offset.set(offsetX, offsetY);
-    cloned.needsUpdate = true;
-    return cloned;
-  }, [texture, repeatX, repeatY, offsetX, offsetY]);
+    if (!texture || !region || !textureSize) return null;
+    return drawnClone(texture, {
+      colorSpace: THREE.NoColorSpace,
+      wrap: THREE.ClampToEdgeWrapping,
+      window: regionUvWindow(region, textureSize),
+    });
+  }, [texture, region, textureSize]);
   return useUploadedClone(cropped);
-}
-
-/** `region`'s UV window in `textureSize`, as repeat x, repeat y, offset x, offset y. */
-function cropWindow(
-  region: { x: number; y: number; w: number; h: number },
-  textureSize: Vector2
-): [number, number, number, number] {
-  return [
-    region.w / textureSize.x,
-    region.h / textureSize.y,
-    region.x / textureSize.x,
-    1 - (region.y + region.h) / textureSize.y,
-  ];
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
@@ -129,9 +103,10 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   );
   const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
 
-  const underSize = naturalSize(underTexture);
-  const progressSize = naturalSize(progressTexture);
-  const overSize = naturalSize(overTexture);
+  // Memoised, so the geometry and crop memos that read a size rebuild only when its texture changes.
+  const underSize = useMemo(() => naturalSize(underTexture), [underTexture]);
+  const progressSize = useMemo(() => naturalSize(progressTexture), [progressTexture]);
+  const overSize = useMemo(() => naturalSize(overTexture), [overTexture]);
 
   const ninePatchStretch = props.ninePatchStretch === true;
   const stretchMarginLeft = props.stretchMarginLeft ?? 0;
@@ -173,7 +148,13 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     fillMode === TextureProgressBarFillMode.COUNTER_CLOCKWISE ||
     fillMode === TextureProgressBarFillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
-  const progressOffset = props.textureProgressOffset ?? ZERO;
+  const progressOffsetX = props.textureProgressOffset?.x ?? 0;
+  const progressOffsetY = props.textureProgressOffset?.y ?? 0;
+  // Memoised on the numbers: a reparse makes a new offset object, which would crop and upload again.
+  const progressOffset: Vector2 = useMemo(
+    () => ({ x: progressOffsetX, y: progressOffsetY }),
+    [progressOffsetX, progressOffsetY]
+  );
 
   const underNinePatch = useMemo(() => {
     if (!underTexture || !underSize || !ninePatchStretch) return null;

@@ -1,7 +1,7 @@
 /**
  * The THREE helper lifecycle: build a helper bound to a target, update it per frame, and dispose
  * it when the deps change or the component unmounts. A factory that returns null tears the helper
- * down, which is how a gizmo applies its selection gate. Every helper is editor chrome.
+ * down, which is how a gizmo applies its state (ADR-0056). Every helper is editor chrome.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';

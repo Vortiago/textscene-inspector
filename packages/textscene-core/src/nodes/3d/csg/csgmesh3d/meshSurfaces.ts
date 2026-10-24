@@ -16,6 +16,7 @@ import { referencedFilePath, resolveReference } from '../../../../resources/reso
 import type { ResolvableResource } from '../../../../resources/scopedResource';
 import { meshKind, primitiveMaterialAddress } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
+import { perObject } from '../../../../utils/perObject';
 
 /** The arrays of a Godot surface the brush builder reads, and the surface's material. */
 export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normals' | 'uvs' | 'indices'> {
@@ -32,7 +33,7 @@ export interface CsgMesh extends ResolvableResource {
  * Written only by `resolveMesh`: the meshes of each context by reference. A context holds its
  * tables and files for good, so a reference names the same mesh for as long as the context lives.
  */
-const meshesByContext = new WeakMap<CsgGeometryContext, Map<string, CsgMesh | null>>();
+const meshesByContext = perObject<CsgGeometryContext, Map<string, CsgMesh | null>>(() => new Map());
 
 /**
  * The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. The same
@@ -40,8 +41,7 @@ const meshesByContext = new WeakMap<CsgGeometryContext, Map<string, CsgMesh | nu
  */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
   if (!meshRef) return null;
-  let meshes = meshesByContext.get(ctx);
-  if (!meshes) meshesByContext.set(ctx, (meshes = new Map()));
+  const meshes = meshesByContext(ctx);
   const cached = meshes.get(meshRef);
   if (cached !== undefined) return cached;
   const mesh = readMesh(meshRef, ctx);

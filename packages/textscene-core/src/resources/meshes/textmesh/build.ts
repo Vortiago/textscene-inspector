@@ -23,6 +23,7 @@ import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics'
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { isControlChar, shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
+import { perObject } from '../../../utils/perObject';
 import type { GodotSurface } from '../godotSurface';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter';
 import { buildGlyphMeshData, type ContourInfo, type ContourVertex, type GlyphMeshData } from './glyphMesh';
@@ -105,19 +106,18 @@ type GlyphMeshes = Map<number, GlyphMeshData | null>;
  * belongs to the font and not to a TextMesh, so a few settings stay: two meshes of one font at two
  * sizes do not discard each other's glyphs on every edit.
  */
-const glyphMeshCaches = new WeakMap<SfntOutlines, Map<string, GlyphMeshes>>();
+const glyphMeshCaches = perObject<SfntOutlines, Map<string, GlyphMeshes>>(() => new Map());
 
 /** The settings kept per font. A slider drag makes one per value, so the oldest go. */
 const MAX_CACHED_SETTINGS_PER_FONT = 8;
 
 /** The cache of `settings`, made if it is new, and the most recent of its font. */
 function cachedGlyphMeshes(outlines: SfntOutlines, settings: string): GlyphMeshes {
-  const byFont = glyphMeshCaches.get(outlines) ?? new Map<string, GlyphMeshes>();
+  const byFont = glyphMeshCaches(outlines);
   const meshes = byFont.get(settings) ?? new Map();
   byFont.delete(settings);
   byFont.set(settings, meshes);
   if (byFont.size > MAX_CACHED_SETTINGS_PER_FONT) byFont.delete(byFont.keys().next().value!);
-  glyphMeshCaches.set(outlines, byFont);
   return meshes;
 }
 

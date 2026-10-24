@@ -7,7 +7,7 @@ import { useSelection } from '../contexts/SelectionContext';
 
 /**
  * Selects `path` from inside a SelectionProvider once mounted, and again whenever `path` changes.
- * Null clears the selection, which is how a test drops a gizmo's selection gate.
+ * Null clears the selection, which is how a test leaves every node unselected.
  */
 export function SelectSeeder({ path }: { path: string | null }): null {
   const { setSelectedNodePath } = useSelection();

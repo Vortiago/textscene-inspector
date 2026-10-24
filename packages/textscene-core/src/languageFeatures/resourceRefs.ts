@@ -11,6 +11,7 @@ import {
   resourceRefSpansByLine,
   type ResourceRef,
 } from '../godot/variant/resourceRef.js';
+import { perObject } from '../utils/perObject.js';
 import type { LanguageDocument, DocumentSection } from './document.js';
 import { headingAttribute, lineRange, lineRangeContains, spanContains } from './ranges.js';
 import type { Position, Range } from './types.js';
@@ -57,23 +58,15 @@ export function openReferenceAt(textBeforeCursor: string): ResourceReference | u
   return reference ? toReference(reference) : undefined;
 }
 
-/** Written only by {@link referencesByLine}. An entry lives as long as its document. */
-const referencesByDocument = new WeakMap<LanguageDocument, readonly ResourceReferenceSpan[][]>();
-
 /** The reference occurrences on each zero-based line, read once per document. */
-function referencesByLine(document: LanguageDocument): readonly ResourceReferenceSpan[][] {
-  let byLine = referencesByDocument.get(document);
-  if (!byLine) {
-    byLine = resourceRefSpansByLine(document.lines).map((spans, lineIndex) =>
-      spans.map((span) => ({
-        ...toReference(span),
-        range: lineRange(lineIndex, { start: span.start, end: span.end }),
-      }))
-    );
-    referencesByDocument.set(document, byLine);
-  }
-  return byLine;
-}
+const referencesByLine = perObject((document: LanguageDocument): readonly ResourceReferenceSpan[][] =>
+  resourceRefSpansByLine(document.lines).map((spans, lineIndex) =>
+    spans.map((span) => ({
+      ...toReference(span),
+      range: lineRange(lineIndex, { start: span.start, end: span.end }),
+    }))
+  )
+);
 
 /** Every reference occurrence in the file, declaration headings' `instance=` included. */
 export function resourceReferences(document: LanguageDocument): readonly ResourceReferenceSpan[] {

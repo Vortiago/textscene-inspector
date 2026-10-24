@@ -50,8 +50,8 @@ export const SCENE_COMPOSITION_SCENES = [
   },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
   // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
-  // is selection-gated (ADR-0018), so this is the runtime view: projection
-  // only. The projection edges are AA-sensitive.
+  // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime
+  // view: projection only. The projection edges are AA-sensitive.
   { name: 'decal', file: 'unit-decal.tscn' },
   // The one variable against `decal`: a receiver on `layers = 2` under a
   // `cull_mask` that clears layer 2. Godot's rule is `decal.cull_mask &
@@ -75,10 +75,12 @@ export const SCENE_COMPOSITION_SCENES = [
     file: 'unit-material-anisotropy-flowmap.tscn',
   },
   // A Polygon2D PathFollow2D at progress_ratio 0.5 along its Path2D. The path
-  // gizmos are selection-gated (ADR-0018), so this pins the follower's placement.
+  // gizmos are off in a capture without `gizmos: true` (ADR-0056), so this pins the follower's
+  // placement.
   { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', mode: '2d' },
   // A BoxMesh PathFollow3D at progress_ratio 0.5 along its Path3D. The curve
-  // gizmo is selection-gated (ADR-0018), so this pins the follower's placement.
+  // gizmo is off in a capture without `gizmos: true` (ADR-0056), so this pins the follower's
+  // placement.
   { name: 'pathfollow3d-follow', file: 'unit-pathfollow-3d.tscn' },
   // Where a Node3D's parent link ends (ADR-0008): a plain Node between two
   // Node3Ds drops the transform, and a hidden one no longer hides; top_level
@@ -86,6 +88,9 @@ export const SCENE_COMPOSITION_SCENES = [
   { name: 'node3d-plain-node-transform', file: 'unit-node3d-plain-node-transform.tscn' },
   { name: 'node3d-plain-node-visibility', file: 'unit-node3d-plain-node-visibility.tscn' },
   { name: 'node3d-top-level', file: 'unit-node3d-top-level.tscn' },
+  // A `parent="Gone"` that does not walk, and a `parent_id_path` naming `Moved`: the orange box sits
+  // under Moved at x = 1.5, right of the grey reference, not under the root at x = 0.5.
+  { name: 'node-parent-id-path', file: 'unit-node-parent-id-path.tscn' },
   // A hidden AudioListener3D over an orange box: a type that draws nothing of
   // its own still hides its subtree, so only the grey reference draws.
   { name: 'transform-only-3d-hidden', file: 'unit-transform-only-3d-hidden.tscn' },

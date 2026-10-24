@@ -58,6 +58,16 @@ export function sliceImage<Source extends SourcePixels>(
   return { texels: texels as LayerTexelsOf<Source>, width, height, depth };
 }
 
+/**
+ * The layers cut down to their red byte, one byte for each texel: all a shadowmask reads, so its
+ * texture takes a quarter of the memory.
+ */
+export function redOnly({ texels, ...size }: LayeredTexels): LayeredTexels {
+  const red = new Uint8Array(texels.length / 4);
+  for (let texel = 0; texel < red.length; texel++) red[texel] = texels[texel * 4]!;
+  return { texels: red, ...size };
+}
+
 /** Whether `data` already has the texel type its layers take, so a stack of whole rows is itself. */
 function isLayerTexels<Source extends SourcePixels>(data: Source): data is Source & LayerTexelsOf<Source> {
   return data instanceof Uint16Array || data instanceof Uint8Array;
