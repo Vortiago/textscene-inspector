@@ -1113,6 +1113,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightmap Gi Exposure",
+    "file": "unit-lightmap-gi-exposure.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightmap Gi Gridmap",
     "file": "unit-lightmap-gi-gridmap.tscn",
     "category": "Other"
@@ -3399,6 +3404,16 @@ export const fixtures: Fixture[] = [
     "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
     "category": "Unit - 2D UI Controls",
     "root": "layout-direction-root-rtl"
+  },
+  {
+    "name": "Camera Attributes Exposure Sky",
+    "file": "unit-camera-attributes-exposure-sky.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera Attributes Exposure",
+    "file": "unit-camera-attributes-exposure.tscn",
+    "category": "Unit - Basic Nodes"
   },
   {
     "name": "Camera Basic",
