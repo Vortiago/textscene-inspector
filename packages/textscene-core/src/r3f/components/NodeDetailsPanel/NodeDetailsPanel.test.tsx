@@ -37,9 +37,9 @@ function Selector({ path }: { path: string | null }) {
 
 const FAKE_TYPE = '___PanelTestType___';
 
-/** A node's reader of a TextMesh, which no slice builds. */
-function TextMeshHolder() {
-  useUndrawnMeshReport('TextMesh');
+/** A node's reader of a mesh type no slice builds. */
+function FutureMeshHolder() {
+  useUndrawnMeshReport('FutureMesh');
   return null;
 }
 
@@ -123,7 +123,7 @@ describe('<NodeDetailsPanel>', () => {
         <NodeDetailsPanel />
         <Selector path="Sign" />
         <NodePathProvider path="Sign">
-          <TextMeshHolder />
+          <FutureMeshHolder />
         </NodePathProvider>
       </UndrawnMeshesProvider>,
       { wrapper: panelWrap(graph) }
@@ -132,7 +132,7 @@ describe('<NodeDetailsPanel>', () => {
       screen.getByTestId('select-node').click();
     });
 
-    expect(screen.getByText(/Its TextMesh mesh is not yet drawn/)).toBeTruthy();
+    expect(screen.getByText(/Its FutureMesh mesh is not yet drawn/)).toBeTruthy();
   });
 
   it("shows Godot's empty-shape warning for a shape with an empty brush", async () => {

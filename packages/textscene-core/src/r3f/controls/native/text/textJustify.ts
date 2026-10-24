@@ -2,21 +2,32 @@
  * Line justification, a port of `TextServer::shaped_text_fit_to_width`
  * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`) scoped to what a Latin font with no
  * kashida elongation glyphs and no BiDi reaches. It ports `WORD_BOUND`, `TRIM_EDGE_SPACES` and
- * `AFTER_LAST_TAB`. The other flags do nothing here:
+ * `AFTER_LAST_TAB`. Without `TRIM_EDGE_SPACES` it skips the break spaces at the ends of a line, as
+ * `shaped_text_fit_to_width` does. The other flags do nothing here:
  * - `KASHIDA` fires only on elongation glyphs (Arabic tatweel runs), which the Latin shaper never tags.
  * - `CONSTRAIN_ELLIPSIS` is not wired. It needs a Label with autowrap off, `HORIZONTAL_ALIGNMENT_FILL`
  *   and a trimming `text_overrun_behavior` (the label slice's `comparison.md`).
- * - The `SKIP_LAST_LINE` flags and `DO_NOT_SKIP_SINGLE_LINE` decide which lines a caller fits at all
- *   (`label.cpp:273-297`), so they are the caller's business.
+ * - The `SKIP_LAST_LINE` flags and `DO_NOT_SKIP_SINGLE_LINE` decide which lines a caller fits at all,
+ *   so they are the caller's business, and `justifyToLineIndex` answers it for Label and TextMesh.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { isTabChar, isWhitespace, type TextLineLayout } from './textLayout';
+import { isTabChar, isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+
+/**
+ * Whether glyph `i` carries `GRAPHEME_IS_BREAK_SOFT`: a space after which a break may fall
+ * (`text_server_adv.cpp:6396-6400`). Only the last space of a run does, and a line ends at one.
+ */
+function isBreakSpace(glyphs: readonly GlyphPlacement[], i: number): boolean {
+  if (!isWhitespace(glyphs[i]!.char.codePointAt(0)!)) return false;
+  const next = glyphs[i + 1];
+  return next === undefined || !isWhitespace(next.char.codePointAt(0)!);
+}
 
 interface FitLineOptions {
   fontSizePx: number;
@@ -71,10 +82,11 @@ export function fitLineToWidth(
       endPos -= 1;
     }
   }
-  // The `else` branch (`:5601-5607`, skip breaks without resetting width) is
-  // unreachable here: this engine's line breaker never leaves a hard/soft
-  // break glyph at an emitted line's interior edge -- breaks are what split
-  // lines apart in the first place.
+  // :5601-5607, without TRIM_EDGE_SPACES: the edge break spaces keep their width and leave the space count.
+  else {
+    while (startPos < endPos && isBreakSpace(glyphs, startPos)) startPos += 1;
+    while (startPos < endPos && isBreakSpace(glyphs, endPos)) endPos -= 1;
+  }
 
   // :5610-5624 -- GRAPHEME_IS_SPACE, not punctuation; the vendored charset's
   // only such glyph is a literal space.
@@ -109,4 +121,29 @@ export function fitLineToWidth(
     line: { text: line.text, glyphs: outGlyphs, widthPx: finalWidthPx },
     fitWidthMinimumReached,
   };
+}
+
+/** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */
+function lineHasVisibleChars(line: TextLineLayout): boolean {
+  return line.glyphs.some((g) => !isWhitespace(g.char.codePointAt(0)!));
+}
+
+/**
+ * How many leading `lines` get justified: `jst_to_line` of Label for autowrap off (`label.cpp:304-319`)
+ * and of TextMesh (`primitive_meshes.cpp:3284-3304`). Label's autowrap-on copy (`:273-289`) serves
+ * `lines_hidden`, which this slice does not model.
+ */
+export function justifyToLineIndex(lines: readonly TextLineLayout[], flags: number): number {
+  if (lines.length === 1 && flags & JustificationFlag.DO_NOT_SKIP_SINGLE_LINE) return lines.length;
+  let jstToLine = lines.length;
+  if (flags & JustificationFlag.SKIP_LAST_LINE) jstToLine = lines.length - 1;
+  if (flags & JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lineHasVisibleChars(lines[i]!)) {
+        jstToLine = i;
+        break;
+      }
+    }
+  }
+  return jstToLine;
 }

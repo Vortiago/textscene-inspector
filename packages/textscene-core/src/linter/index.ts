@@ -163,6 +163,7 @@ import '../resources/tileset/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
 import '../resources/meshes/tubetrailmesh/linterValidators.js';
 import '../resources/meshes/ribbontrailmesh/linterValidators.js';
+import '../resources/meshes/textmesh/linterValidators.js';
 import '../resources/meshes/mesh/linterValidators.js';
 import '../resources/meshes/primitivemesh/linterValidators.js';
 import '../resources/meshes/multimesh/linterValidators.js';

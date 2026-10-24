@@ -18,7 +18,6 @@ import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/contro
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  LABEL_DEFAULT_JUSTIFICATION_FLAGS,
   LABEL_PARAGRAPH_SEPARATOR,
   LABEL_THEME_FONT_KEY,
   applyVisibleCharsReveal,
@@ -40,6 +39,7 @@ import {
   OverrunBehavior,
   VisibleCharactersBehavior,
   JustificationFlag,
+  DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
 
 /**
@@ -133,7 +133,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // label.cpp:266-267 -- a non-empty tab_stops always adds AFTER_LAST_TAB,
   // on top of whatever the scene's own justification_flags already set.
   const effectiveJustificationFlags = useMemo(() => {
-    const base = props.justificationFlags ?? LABEL_DEFAULT_JUSTIFICATION_FLAGS;
+    const base = props.justificationFlags ?? DEFAULT_JUSTIFICATION_FLAGS;
     return props.tabStopsPx && props.tabStopsPx.length > 0 ? base | JustificationFlag.AFTER_LAST_TAB : base;
   }, [props.justificationFlags, props.tabStopsPx]);
 

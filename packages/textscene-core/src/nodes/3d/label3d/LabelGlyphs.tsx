@@ -8,10 +8,8 @@ import { useMemo, useSyncExternalStore, type RefObject } from 'react';
 import * as THREE from 'three';
 import { shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
-import {
-  onSceneFontMetricsSettled,
-  peekBundledCanvasFontMetrics,
-} from '../../../r3f/controls/native/text/sceneFontLoader';
+import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
+import { onSceneFontMetricsSettled } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSettingsParser';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';

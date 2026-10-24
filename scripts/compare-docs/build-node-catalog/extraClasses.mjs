@@ -20,4 +20,5 @@ export const RESOURCE_CLASSES = [
   { name: 'Sky', chain: ['Resource'] },
   { name: 'Texture2D', chain: ['Texture', 'Resource'] },
   { name: 'ArrayMesh', chain: ['Mesh', 'Resource'] },
+  { name: 'TextMesh', chain: ['PrimitiveMesh', 'Mesh', 'Resource'] },
 ];

@@ -16,7 +16,7 @@ export interface LabelProperties extends ControlProperties {
   clipText?: boolean;
   /** `Label.ellipsis_char`'s first character; undefined falls back to the engine default (…). */
   ellipsisChar?: string;
-  /** `TextServer::JustificationFlag` bitmask. Undefined means the Godot default (`label.h:46`, `LABEL_DEFAULT_JUSTIFICATION_FLAGS`). */
+  /** `TextServer::JustificationFlag` bitmask. Undefined means the Godot default (`label.h:46`, `DEFAULT_JUSTIFICATION_FLAGS`). */
   justificationFlags?: number;
   /** `Label.tab_stops`, px. Undefined or empty applies no tab stops. */
   tabStopsPx?: number[];

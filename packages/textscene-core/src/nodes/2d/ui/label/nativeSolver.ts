@@ -15,13 +15,12 @@ import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMet
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   clampAutowrapMode,
-  isWhitespace,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { fitLineToWidth } from '../../../../r3f/controls/native/text/textJustify';
+import { fitLineToWidth, justifyToLineIndex } from '../../../../r3f/controls/native/text/textJustify';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -35,7 +34,7 @@ import {
   AutowrapMode,
   OverrunBehavior,
   VisibleCharactersBehavior,
-  JustificationFlag,
+  DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
@@ -405,37 +404,6 @@ export interface LabelLinePlacement {
   line: TextLineLayout;
 }
 
-/** `Label.jst_flags`'s default (`label.h:46`), used absent a scene override. */
-export const LABEL_DEFAULT_JUSTIFICATION_FLAGS =
-  JustificationFlag.WORD_BOUND |
-  JustificationFlag.KASHIDA |
-  JustificationFlag.SKIP_LAST_LINE |
-  JustificationFlag.DO_NOT_SKIP_SINGLE_LINE;
-
-/** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */
-function lineHasVisibleChars(line: TextLineLayout): boolean {
-  return line.glyphs.some((g) => !isWhitespace(g.char.codePointAt(0)!));
-}
-
-/**
- * How many leading `lines` get justified: `jst_to_line` for autowrap off (`label.cpp:304-319`).
- * The autowrap-on copy (`:273-289`) serves `lines_hidden`, which this slice does not model.
- */
-function justifyToLineIndex(lines: TextLineLayout[], flags: number): number {
-  if (lines.length === 1 && flags & JustificationFlag.DO_NOT_SKIP_SINGLE_LINE) return lines.length;
-  let jstToLine = lines.length;
-  if (flags & JustificationFlag.SKIP_LAST_LINE) jstToLine = lines.length - 1;
-  if (flags & JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS) {
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (lineHasVisibleChars(lines[i]!)) {
-        jstToLine = i;
-        break;
-      }
-    }
-  }
-  return jstToLine;
-}
-
 /**
  * `Label::_get_line_rect`'s x (`label.cpp:487-512`). H_CENTER writes `int(size.width - line_size.width) / 2`
  * and H_RIGHT `int(size.width - margin - line_size.width)`, both truncating toward zero. A box narrower
@@ -488,7 +456,7 @@ export function layoutLabelLines(
   boxHeightPx: number,
   horizontalAlignment: number | undefined,
   verticalAlignment: number | undefined,
-  justificationFlags: number = LABEL_DEFAULT_JUSTIFICATION_FLAGS,
+  justificationFlags: number = DEFAULT_JUSTIFICATION_FLAGS,
   // Feeds only `fitLineToWidth`'s 0.1*font_size shrink floor. The default is the theme's 16.
   fontSizePx: number = 16,
   direction: LabelLayoutDirection = {}

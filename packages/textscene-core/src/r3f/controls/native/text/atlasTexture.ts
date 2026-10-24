@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { createExternalStore, useExternalStoreValue } from '../../../hooks/createExternalStore';
-import { OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
+import { OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlasImage';
 import { releasedOnUnmount } from '../../../sharedTexture';
 
 /** Written only by `getAtlasTexture`, and never cleared. */

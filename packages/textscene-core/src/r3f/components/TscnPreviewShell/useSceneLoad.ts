@@ -8,8 +8,8 @@ import { usePendingResourceCount } from '../../../resources/usePendingResourceCo
 import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
+import { subscribeToNothing } from '../../../utils/subscribeToNothing.js';
 
-const NO_SUBSCRIPTION = () => () => {};
 const NO_SCENE = () => null;
 
 export interface SceneLoad {
@@ -22,7 +22,7 @@ export function useSceneLoad(): SceneLoad {
   const control = useOptionalViewportActions();
   const currentScene = useOptionalHierarchy()?.sceneGraph ?? null;
   const renderedScene = useSyncExternalStore(
-    control?.subscribeScreenshotHandler ?? NO_SUBSCRIPTION,
+    control?.subscribeScreenshotHandler ?? subscribeToNothing,
     control?.screenshotScene ?? NO_SCENE
   );
   // Every hook runs on every render, so React sees one hook order.

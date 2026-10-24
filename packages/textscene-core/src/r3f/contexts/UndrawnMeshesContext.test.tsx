@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { NodePathProvider } from './NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshReport, useUndrawnMeshTypes } from './UndrawnMeshesContext';
 
+const UNDRAWN_TYPE = 'FutureMesh';
+
 function Reporter({ path, type }: { path: string; type: string }) {
   return (
     <NodePathProvider path={path}>
@@ -31,18 +33,13 @@ function renderTypes(children: ReactNode, path = 'Root/Wall') {
 }
 
 describe('UndrawnMeshesContext', () => {
-  it('lists a mesh type no slice builds for the node that holds it', () => {
-    renderTypes(<Reporter path="Root/Wall" type="TextMesh" />);
-    expect(screen.getByTestId('types').textContent).toBe('TextMesh');
-  });
-
-  it('lists nothing for a mesh type a slice builds', () => {
-    renderTypes(<Reporter path="Root/Wall" type="BoxMesh" />);
-    expect(screen.getByTestId('types').textContent).toBe('');
+  it('lists a reported mesh type for the node that holds it', () => {
+    renderTypes(<Reporter path="Root/Wall" type={UNDRAWN_TYPE} />);
+    expect(screen.getByTestId('types').textContent).toBe(UNDRAWN_TYPE);
   });
 
   it("keeps another node's mesh types apart", () => {
-    renderTypes(<Reporter path="Root/Sign" type="TextMesh" />);
+    renderTypes(<Reporter path="Root/Sign" type={UNDRAWN_TYPE} />);
     expect(screen.getByTestId('types').textContent).toBe('');
   });
 
@@ -50,20 +47,20 @@ describe('UndrawnMeshesContext', () => {
     const holders = (count: number) => (
       <UndrawnMeshesProvider>
         {Array.from({ length: count }, (_, i) => (
-          <Reporter key={i} path="Root/Wall" type="TextMesh" />
+          <Reporter key={i} path="Root/Wall" type={UNDRAWN_TYPE} />
         ))}
         <Types path="Root/Wall" />
       </UndrawnMeshesProvider>
     );
     const { rerender } = render(holders(2));
     rerender(holders(1));
-    expect(screen.getByTestId('types').textContent).toBe('TextMesh');
+    expect(screen.getByTestId('types').textContent).toBe(UNDRAWN_TYPE);
   });
 
   it('drops a type once its last holder lets go', () => {
     const tree = (isHeld: boolean) => (
       <UndrawnMeshesProvider>
-        {isHeld && <Reporter path="Root/Wall" type="TextMesh" />}
+        {isHeld && <Reporter path="Root/Wall" type={UNDRAWN_TYPE} />}
         <Types path="Root/Wall" />
       </UndrawnMeshesProvider>
     );

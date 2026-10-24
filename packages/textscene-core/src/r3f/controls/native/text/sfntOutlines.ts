@@ -1,0 +1,51 @@
+/**
+ * A TrueType font's glyph outlines as Godot's text server hands them to TextMesh: the glyph index of
+ * a character from `cmap` (`sfntCmap.ts`), and the points of that glyph from `glyf` (`sfntGlyf.ts`).
+ * A font with no `glyf` table (OpenType-CFF, or a compressed container) gets no reader.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
+ */
+
+import { cmapLookup } from './sfntCmap';
+import { glyphContourReader, type GlyphContours } from './sfntGlyf';
+import { openSfnt } from './sfntTables';
+
+export interface SfntOutlines {
+  /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
+  glyphIndex(codePoint: number): number;
+  /** The contours of a glyph at `fontSizePx`, or null for a glyph with no outline. */
+  glyphContours(glyphIndex: number, fontSizePx: number): GlyphContours | null;
+}
+
+/** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
+function orOnRangeError<T>(read: () => T, fallback: T): T {
+  try {
+    return read();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return fallback;
+  }
+}
+
+/**
+ * Reads the outlines of a TrueType font, or returns `null`, never throws, for a font with no
+ * `glyf` table, no readable `cmap` or a table that does not fit its buffer. The reader answers
+ * no glyph, not an error, for an offset a corrupt table puts past the buffer.
+ */
+export function parseSfntOutlines(bytes: ArrayBuffer): SfntOutlines | null {
+  const sfnt = openSfnt(bytes);
+  if (!sfnt) return null;
+  const cmap = sfnt.tables.get('cmap');
+  const contours = glyphContourReader(sfnt);
+  if (!cmap || !contours) return null;
+  const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
+  if (!lookup) return null;
+
+  return {
+    glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
+    glyphContours: (glyphIndex, fontSizePx) => orOnRangeError(() => contours(glyphIndex, fontSizePx), null),
+  };
+}

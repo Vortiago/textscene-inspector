@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ParsedResource } from '../../parser/parsedResource';
-import type { TscnExternalResource, TscnNode } from '../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../parser/types';
 import { MissingResourcesProvider, useMissingResources } from '../contexts/MissingResourcesContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
+import { FONT_PATH, trueTypeFontFile } from '../../resources/meshes/textmesh/textMeshFont.testkit';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import {
   createFakeResourceLoader,
@@ -36,7 +37,12 @@ function node(type: string, properties: Record<string, unknown>, children: TscnN
 /** A box root holding a CSGMesh3D whose mesh is `rock.tres`. */
 const ROOT = node('CSGBox3D', {}, [node('CSGMesh3D', { mesh: 'ExtResource("1")', flipFaces: false })]);
 
-function renderSetupWith(root: TscnNode | null, fake: FakeResourceLoader) {
+function renderSetupWith(
+  root: TscnNode | null,
+  fake: FakeResourceLoader,
+  internalResources: TscnInternalResource[] = [],
+  externalResources: TscnExternalResource[] = EXT
+) {
   return renderHook(
     ({ root: current }: { root: TscnNode | null }) => {
       const { missingPaths, uploadedPaths } = useMissingResources();
@@ -47,7 +53,12 @@ function renderSetupWith(root: TscnNode | null, fake: FakeResourceLoader) {
       wrapper: ({ children }: { children: ReactNode }) => (
         <MissingResourcesProvider>
           <ResourceLoaderProvider loader={fake.loader}>
-            <SceneResourcesProvider externalResources={EXT}>{children}</SceneResourcesProvider>
+            <SceneResourcesProvider
+              internalResources={internalResources}
+              externalResources={externalResources}
+            >
+              {children}
+            </SceneResourcesProvider>
           </ResourceLoaderProvider>
         </MissingResourcesProvider>
       ),
@@ -126,5 +137,72 @@ describe('useCsgGeometryContext', () => {
     const result = renderSetup(node('CSGBox3D', {}), fake);
     expect(result.current.setup.isLoading).toBe(false);
     expect(fake.resources.pinCounts.size).toBe(0);
+  });
+});
+
+describe('useCsgGeometryContext for a TextMesh', () => {
+  const TEXT: TscnInternalResource = {
+    id: 'Text',
+    type: 'TextMesh',
+    data: { text: '"H"', font: 'ExtResource("font")' },
+  };
+  const FONT_REFERENCE: TscnExternalResource = { id: 'font', type: 'FontFile', path: FONT_PATH };
+  const TEXT_ROOT = node('CSGBox3D', {}, [
+    node('CSGMesh3D', { mesh: 'SubResource("Text")', flipFaces: false }),
+  ]);
+
+  function renderText(fake: FakeResourceLoader) {
+    return renderSetupWith(TEXT_ROOT, fake, [TEXT], [FONT_REFERENCE]).result;
+  }
+
+  it('loads while the font file the TextMesh names is not there', () => {
+    const fake = createFakeResourceLoader();
+
+    const result = renderText(fake);
+
+    expect(result.current.setup.isLoading).toBe(true);
+    expect(result.current.setup.context.loadedFont(FONT_PATH)).toBeUndefined();
+  });
+
+  it('serves the font once it loads, and loads on until its metrics settle', async () => {
+    const fake = createFakeResourceLoader();
+    const result = renderText(fake);
+    const font = trueTypeFontFile();
+
+    act(() => fake.fonts._resolve(FONT_PATH, font));
+    expect(result.current.setup.context.loadedFont(FONT_PATH)).toBe(font);
+    expect(result.current.setup.isLoading).toBe(true);
+
+    await waitFor(() => expect(result.current.setup.isLoading).toBe(false));
+  });
+
+  it('gives a context of its own once the metrics settle', async () => {
+    const fake = createFakeResourceLoader();
+    const result = renderText(fake);
+    act(() => fake.fonts._resolve(FONT_PATH, trueTypeFontFile()));
+    const awaiting = result.current.setup.context;
+
+    await waitFor(() => expect(result.current.setup.isLoading).toBe(false));
+
+    expect(result.current.setup.context).not.toBe(awaiting);
+  });
+
+  it('stops loading, and names the failure, for a font file that failed', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderText(fake);
+
+    act(() => fake.fonts._fail(FONT_PATH, 'gone'));
+
+    expect(result.current.setup.isLoading).toBe(false);
+    expect(result.current.missing.has(FONT_PATH)).toBe(true);
+  });
+
+  it('listens to no font bus for a subtree with no shape that reads a font', () => {
+    const fake = createFakeResourceLoader();
+    const onChange = vi.spyOn(fake.eventBus, 'onChange');
+
+    renderSetupWith(node('CSGBox3D', {}), fake);
+
+    expect(onChange.mock.calls.map(([busTypes]) => busTypes)).not.toContainEqual(['font']);
   });
 });

@@ -168,7 +168,7 @@ describe('<MeshInstance3D> procedural texture pins', () => {
   it('pins only the slots that resolved to a cached texture', async () => {
     await renderMixed();
 
-    // Keys are `sceneToken:subResourceId`; the token belongs to the array the
+    // Keys are `sceneKey:subResourceId`; the key belongs to the array the
     // provider assembled, so the sub-resource half is what identifies the pin.
     expect(traffic.pinned.map((key) => key.split(':')[1])).toEqual(['GradientTexture2D_qhu5r']);
   });
