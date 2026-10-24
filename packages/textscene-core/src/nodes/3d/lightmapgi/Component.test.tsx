@@ -15,6 +15,8 @@ import './index.r3f';
 import '../../base/node3d/index';
 import '../../base/node3d/index.r3f';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
+import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { usePublishCameraAttributes } from '../../../r3f/environment/worldExposure';
 
 const ATLAS_PATH = 'res://bake.exr';
 const SHADOWMASK_PATH = 'res://bake_shadow.png';
@@ -38,22 +40,41 @@ function scene(lightmapLines: string, dataLines: string) {
   );
 }
 
+/** Probe data with no points, which still carries the exposure the bake ran at. */
+const bakedAt = (exposure: number) =>
+  `probe_data = {\n"bounds": AABB(0, 0, 0, 0, 0, 0), "points": PackedVector3Array(), "tetrahedra": PackedInt32Array(), ` +
+  `"bsp": PackedInt32Array(), "sh": PackedColorArray(), "interior": false, "baked_exposure": ${exposure}\n}\n`;
+
+function PublishedExposure({ multiplier }: { multiplier: number }) {
+  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: multiplier } });
+  return null;
+}
+
 interface Bake {
   atlas: THREE.DataArrayTexture | null;
   /** Undefined for a bake that saved no shadowmask, null for one whose texture is missing. */
   shadowmask?: THREE.DataArrayTexture | null;
   lightmapLines?: string;
+  /** The `exposure_multiplier` of the world's camera attributes, or none. */
+  exposureMultiplier?: number;
+  /** The exposure the bake ran at, in the data's `probe_data`. */
+  bakedExposure?: number;
 }
 
-async function mount({ atlas, shadowmask, lightmapLines = '' }: Bake) {
+async function mount({ atlas, shadowmask, lightmapLines = '', exposureMultiplier, bakedExposure }: Bake) {
   const fake = createFakeResourceLoader();
   if (atlas) fake.textureArrays.seed(ATLAS_PATH, atlas);
   if (shadowmask) fake.textureArrays.seed(SHADOWMASK_PATH, shadowmask);
-  const dataLines = shadowmask === undefined ? '' : `shadowmask_textures = [ExtResource("2_mask")]\n`;
+  const dataLines =
+    (shadowmask === undefined ? '' : `shadowmask_textures = [ExtResource("2_mask")]\n`) +
+    (bakedExposure === undefined ? '' : bakedAt(bakedExposure));
   const parsed = scene(lightmapLines, dataLines);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={parsed}>
-      <NodeTree node={parsed.nodes[0]!} path="Root" />
+      <WorldEnvironmentScope world="main">
+        {exposureMultiplier !== undefined && <PublishedExposure multiplier={exposureMultiplier} />}
+        <NodeTree node={parsed.nodes[0]!} path="Root" />
+      </WorldEnvironmentScope>
     </SceneStack>
   );
   await settleLoads();
@@ -63,6 +84,23 @@ async function mount({ atlas, shadowmask, lightmapLines = '' }: Bake) {
 
 const oneLayer = () => dataArrayTexture(new Uint16Array(4), 1, 1, 1);
 const oneMaskLayer = () => dataArrayTexture(new Uint8Array(1), 1, 1, 1);
+
+describe('<LightmapGI> exposure', () => {
+  const exposureScaleOf = async (bake: Bake) =>
+    (await mount(bake)).lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale;
+
+  it('reads the atlas at the world exposure over the exposure the bake ran at', async () => {
+    expect(await exposureScaleOf({ atlas: oneLayer(), exposureMultiplier: 2, bakedExposure: 4 })).toBe(0.5);
+  });
+
+  it('reads the atlas at the world exposure when the bake ran at 1', async () => {
+    expect(await exposureScaleOf({ atlas: oneLayer(), exposureMultiplier: 3 })).toBe(3);
+  });
+
+  it('reads the atlas at 1 without camera attributes, whatever the bake ran at (:1222-1227)', async () => {
+    expect(await exposureScaleOf({ atlas: oneLayer(), bakedExposure: 4 })).toBe(1);
+  });
+});
 
 describe('<LightmapGI>', () => {
   it('assigns each node its data names its rect and slice', async () => {

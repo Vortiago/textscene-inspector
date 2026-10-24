@@ -38,11 +38,25 @@ export class LightmapInstance {
   usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;
   /** The bake's capture bounds, in the LightmapGI's space (`lightmap_gi.cpp:229`). */
   bounds: Aabb = EMPTY_AABB;
+  /**
+   * The factor the atlas reads at: the world's exposure over the bake's, or 1 without camera
+   * attributes (`render_forward_clustered.cpp:1222-1229`).
+   */
+  exposureScale = 1;
   /** Written only by the scene's `SceneLightmaps` before each render: whether the cull keeps it. */
   isDrawn = false;
 
   /** `object` is the LightmapGI's node, whose pose places the bounds and whose visibility hides it. */
   constructor(readonly object: THREE.Object3D) {}
+}
+
+/**
+ * The factor a lightmap's atlas reads at: the world's exposure normalisation over the bake's, or 1
+ * with no camera attributes (`render_forward_clustered.cpp:1222-1229`). Godot divides by the baked
+ * exposure as it is, so a baked exposure of 0 gives infinity there too.
+ */
+export function lightmapExposureScale(normalization: number | null, bakedExposure: number): number {
+  return normalization === null ? 1 : normalization / bakedExposure;
 }
 
 /** The LightmapGI that lights a node, and the node's place in its atlas. */

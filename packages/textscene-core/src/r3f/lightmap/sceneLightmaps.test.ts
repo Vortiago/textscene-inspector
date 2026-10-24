@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
 import { fireSceneRender } from '../testing/fireSceneRender';
-import { assignedUsers, LightmapInstance, lightmapsOf } from './sceneLightmaps';
+import { assignedUsers, LightmapInstance, lightmapExposureScale, lightmapsOf } from './sceneLightmaps';
 
 function user(path: string, subInstance = -1): LightmapUser {
   return { path, uvScale: { x: 0, y: 0, width: 1, height: 1 }, sliceIndex: 0, subInstance };
@@ -186,5 +186,19 @@ describe('LightmapInstance.isDrawn', () => {
     const { scene } = sceneWith(instance);
     renderLookingAt(scene, new THREE.Vector3(0, 0, 0));
     expect(instance.isDrawn).toBe(false);
+  });
+});
+
+describe('lightmapExposureScale', () => {
+  it('divides the world exposure by the exposure the bake ran at', () => {
+    expect(lightmapExposureScale(2, 4)).toBe(0.5);
+  });
+
+  it('is 1 without camera attributes, whatever the bake ran at', () => {
+    expect(lightmapExposureScale(null, 4)).toBe(1);
+  });
+
+  it('is 0 under an exposure of 0 (edge case)', () => {
+    expect(lightmapExposureScale(0, 1)).toBe(0);
   });
 });
