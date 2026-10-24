@@ -208,7 +208,8 @@ copy beside it. Paths are under `packages/textscene-core/src/`.
 - An engine enum: an `as const` object in `godot/`, read with `enumMember` in
   `godot/classdb/enumNames.ts` and `enumOr` in `parser/valueParsers.ts`.
 - A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a
-  build that throws stores nothing.
+  build that throws stores nothing. Pass `keeps` for a value that is not final yet.
+- A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
 - An entry by its key in a frozen table: `firstWith` and `lastWith` in `utils/keyedLookup.ts`, and
   `firstIndexWith` for its index. They build one Map for each table.
 - A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
