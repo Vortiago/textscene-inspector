@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { readImagePixels } from '../../resources/formats/image/imagePixels.js';
+import { perObject } from '../../utils/perObject.js';
 import { isBottomUp, reversedRows } from '../../utils/reversedRows.js';
 
 export interface GodotImage {
@@ -12,19 +13,10 @@ export interface GodotImage {
 
 /**
  * Each texture's last read, so an atlas rebuild reads again only a texture whose pixels changed:
- * a read of a decoded image is a GPU readback. Written only by `godotImage`, and collected with
- * its texture.
+ * a read of a decoded image is a GPU readback. Undefined when the pixels cannot be read, as before
+ * the image decodes.
  */
-const reads = new WeakMap<THREE.Texture, { version: number; image: GodotImage | undefined }>();
-
-/** Undefined when `texture`'s pixels cannot be read, as before its image decodes. */
-function godotImage(texture: THREE.Texture): GodotImage | undefined {
-  const read = reads.get(texture);
-  if (read?.version === texture.version) return read.image;
-  const image = readGodotImage(texture);
-  reads.set(texture, { version: texture.version, image });
-  return image;
-}
+const godotImage = perObject(readGodotImage, { stamp: ({ version }) => version });
 
 function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   if (!readsAsBytes(texture)) return undefined;

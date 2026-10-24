@@ -35,4 +35,32 @@ describe('perObject', () => {
     expect(() => read(key)).toThrow('lost context');
     expect(read(key)).toEqual({});
   });
+
+  it('builds again when the key stamp moves', () => {
+    const build = vi.fn((key: { version: number }) => ({ builtAt: key.version }));
+    const read = perObject(build, { stamp: ({ version }) => version });
+    const key = { version: 1 };
+    const first = read(key);
+    key.version = 2;
+    expect(read(key)).not.toBe(first);
+    expect(read(key)).toEqual({ builtAt: 2 });
+    expect(build).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not build again while the key stamp holds', () => {
+    const build = vi.fn((key: { version: number }) => ({ key }));
+    const read = perObject(build, { stamp: ({ version }) => version });
+    const key = { version: 1 };
+    expect(read(key)).toBe(read(key));
+    expect(build).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an undefined value while the key stamp holds (edge case)', () => {
+    const build = vi.fn((_key: { version: number }) => undefined);
+    const read = perObject(build, { stamp: ({ version }) => version });
+    const key = { version: 1 };
+    read(key);
+    expect(read(key)).toBeUndefined();
+    expect(build).toHaveBeenCalledTimes(1);
+  });
 });
