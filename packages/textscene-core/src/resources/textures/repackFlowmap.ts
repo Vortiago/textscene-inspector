@@ -18,9 +18,14 @@ export function repackAnisotropyFlowmap(texture: THREE.Texture): THREE.Texture |
   return out;
 }
 
-/** The flowmap's levels: the chain its import built, else its readable image alone. */
+/**
+ * The flowmap's levels: the chain it carries, else its readable image alone. A half-float chain
+ * is no bytes, so such a flowmap reads its top level through `readImagePixels`, which clamps it.
+ */
 function flowmapLevels(texture: THREE.Texture): ImagePixels[] | undefined {
-  if (texture.mipmaps.length > 1) return texture.mipmaps as ImagePixels[];
+  if (texture.mipmaps.length > 1 && texture.type === THREE.UnsignedByteType) {
+    return texture.mipmaps as ImagePixels[];
+  }
   const pixels = readImagePixels(texture.image);
   return pixels && [pixels];
 }

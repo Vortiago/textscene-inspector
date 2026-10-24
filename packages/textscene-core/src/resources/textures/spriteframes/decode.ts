@@ -6,7 +6,12 @@
  */
 
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
-import { dictKey, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
+import {
+  dictBoolField,
+  dictKey,
+  dictNumberField,
+  dictStringField,
+} from '../../../godot/variant/variantParser.js';
 import { matchedFloat } from '../../../godot/variant/number.js';
 import { SPRITE_FRAME_MINIMUM_DURATION } from '../../../godot/scene/spriteFramesResource.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -25,6 +30,7 @@ const frameTexture = keyedResourceRefReader('texture');
 // `-`. Read once per frame dict, so neither is `g`-flagged or carries a `lastIndex`.
 const DURATION_RE = dictNumberField('duration');
 const SPEED_RE = dictNumberField('speed');
+const LOOP_RE = dictBoolField('loop');
 
 /**
  * The four keys an animation dict must carry to become an animation at all
@@ -61,13 +67,13 @@ function parseSpriteFramesAnimations(animationsValue: string): Map<string, Sprit
     // spelling either takes (`"texture": null`, a bare ref).
     const frames = readFrames(block);
     const speedMatch = SPEED_RE.exec(block);
-    const loopMatch = block.match(/"loop"\s*:\s*(true|false)/);
+    const loop = boolSlotValue(LOOP_RE.exec(block)?.[1]);
     result.set(name, {
       name,
       frames: frames.map((f) => f.texture),
       durations: frames.map((f) => f.duration),
       fps: finiteFps(speedMatch),
-      loop: loopMatch ? boolSlotValue(loopMatch[1]) === true : true,
+      loop: loop ?? true,
     });
   }
   return result;

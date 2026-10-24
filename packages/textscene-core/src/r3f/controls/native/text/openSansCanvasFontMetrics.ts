@@ -2,7 +2,7 @@
  * The bundled Open Sans SemiBold as a `'canvas'`-kind `FontMetrics`, for the canvas-2D painter.
  * Godot's default project font is not MSDF and rasterises through FreeType
  * (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`).
- * The bundled arm of `sceneFontLoader.ts` is the only production caller.
+ * `bundledFontLoader.ts` is the only production caller.
  */
 
 // Only the rasteriser changes: every number reads through `OPEN_SANS_FONT_METRICS`, never

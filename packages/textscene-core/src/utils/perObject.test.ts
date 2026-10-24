@@ -35,4 +35,25 @@ describe('perObject', () => {
     expect(() => read(key)).toThrow('lost context');
     expect(read(key)).toEqual({});
   });
+
+  it('builds again on the next ask for a value the keep rule refuses', () => {
+    let next = 0;
+    const build = vi.fn(() => next++);
+    const read = perObject(build, { keeps: (value) => value >= 2 });
+    const key = {};
+    expect([read(key), read(key), read(key), read(key)]).toEqual([0, 1, 2, 2]);
+    expect(build).toHaveBeenCalledTimes(3);
+  });
+
+  it('hands the keep rule the built value and its key', () => {
+    const keeps = vi.fn(() => true);
+    const key = { size: 3 };
+    perObject((k: { size: number }) => k.size * 2, { keeps })(key);
+    expect(keeps).toHaveBeenCalledWith(6, key);
+  });
+
+  it('returns a refused value to the one that asked (edge case)', () => {
+    const read = perObject(() => 'draft', { keeps: () => false });
+    expect(read({})).toBe('draft');
+  });
 });

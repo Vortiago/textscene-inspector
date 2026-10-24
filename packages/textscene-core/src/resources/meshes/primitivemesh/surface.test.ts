@@ -53,7 +53,7 @@ describe('primitiveMeshSurface', () => {
 
   it('is null for a type with no slice here', () => {
     expect(
-      primitiveMeshSurface(scopedMesh({ id: 'text', type: 'TextMesh', data: {} }), TEXEL_SIZE)
+      primitiveMeshSurface(scopedMesh({ id: 'future', type: 'FutureMesh', data: {} }), TEXEL_SIZE)
     ).toBeNull();
   });
 });

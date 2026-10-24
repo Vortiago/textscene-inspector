@@ -60,6 +60,11 @@ _Avoid_: "mipmaps" for a chain the GPU generates.
 **Noise mip chain** (`resources/textures/noisetexture2d/pixels.ts`):
 The **Imported mip chain** of a NoiseTexture2D whose `generate_mipmaps` is on, built in the worker job beside the pixels. No level is renormalised.
 
+**Stored mip chain** (`resources/textures/image/decode.ts`):
+The levels below the top one that a saved `Image` holds in its bytes when its `mipmaps` is on, down to 1 × 1.
+The texture uploads them as saved and builds none, so a level that is not the average of the one above draws as saved.
+_Avoid_: **Imported mip chain** for a saved `Image`, whose levels no importer built.
+
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
 _Avoid_: the bare name for the **Screen-space roughness limiter**.

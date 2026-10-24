@@ -100,7 +100,7 @@ function ftDivFix(a: number, b: number): number {
 }
 
 /** `freetype/src/base/ftcalc.c`'s `FT_MulFix`: `a * b / 65536`, rounded half up on the magnitude. */
-function ftMulFix(a: number, b: number): number {
+export function ftMulFix(a: number, b: number): number {
   const sign = Math.sign(a) * Math.sign(b);
   const magnitude = Math.floor((Math.abs(a) * Math.abs(b) + FIXED_16_16_ONE / 2) / FIXED_16_16_ONE);
   return sign * magnitude;
@@ -119,6 +119,15 @@ function freeTypeSizeRequest(unitsPerEm: number, fontSizePx: number): { xScale: 
   // `req.width = sz * 64.0` lands in an `FT_Long`, truncating toward zero.
   const requested26_6 = Math.trunc(fontSizePx * 64);
   return { xScale: ftDivFix(requested26_6, unitsPerEm), ppem: (requested26_6 + 32) >> 6 };
+}
+
+/**
+ * FreeType's `x_scale` for `fontSizePx`: the 16.16 factor that takes a design-unit coordinate to 26.6
+ * px (`FT_MulFix(units, scale)`), which scales every outline point Godot reads
+ * (`text_server_adv.cpp:3613`, `FT_Load_Glyph`).
+ */
+export function getFontOutlineScale(unitsPerEm: number, fontSizePx: number): number {
+  return freeTypeSizeRequest(unitsPerEm, fontSizePx).xScale;
 }
 
 /** `servers/text/text_server.h:172`: the largest font size `SUBPIXEL_POSITIONING_AUTO` still positions subpixel-precisely. */

@@ -155,6 +155,26 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
   });
 });
 
+describe('rasterizeAtlasTexture — a half-float sheet with a stored mip chain', () => {
+  it('crops its top level and carries no chain, which half-float bits cannot average (edge case)', () => {
+    const one = THREE.DataUtils.toHalfFloat(1);
+    const top = new Uint16Array([one, 0, 0, one, 0, one, 0, one]);
+    const halfSheet = new THREE.DataTexture(top, 2, 1, THREE.RGBAFormat);
+    halfSheet.type = THREE.HalfFloatType;
+    halfSheet.mipmaps = [
+      { data: top, width: 2, height: 1 },
+      { data: new Uint16Array([one, one, one, one]), width: 1, height: 1 },
+    ] as unknown as THREE.Texture['mipmaps'];
+    halfSheet.generateMipmaps = false;
+    const crop = rasterizeAtlasTexture(
+      halfSheet,
+      layout({ width: 2, height: 1, source: { x: 0, y: 0, width: 2, height: 1 } })
+    )!;
+    expect(crop.mipmaps).toHaveLength(0);
+    expect(Array.from((crop.image as { data: Uint16Array }).data)).toEqual(Array.from(top));
+  });
+});
+
 describe('rasterizeAtlasTexture — a sheet with an imported mip chain', () => {
   /** `texture` carrying the chain `levels` builds from its bytes, as its import stores it. */
   function sheetWithChain(

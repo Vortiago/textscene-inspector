@@ -15,6 +15,7 @@ import {
 } from '../../../resources/meshes/primitivemesh/surface.testkit';
 import { missingResourcesWrapper } from '../../../resources/testing/missingResourcesWrapper';
 import { subResource } from '../../../testing/subResource';
+import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { useMeshAabb } from './meshAabb';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
@@ -149,5 +150,55 @@ describe('useMeshAabb over a TubeTrailMesh whose Curve is a .tres', () => {
     act(() => fake.resources._resolve(CURVE_PATH, curveFile('3')));
 
     expect(result.current?.size.x).toBeCloseTo(3, 5);
+  });
+});
+
+describe('useMeshAabb over a TextMesh', () => {
+  const FONT_PATH = 'res://fonts/open-sans.ttf';
+  const FONT_FILE = {
+    kind: 'file' as const,
+    bytes: fixtureFontBytes('open-sans-semibold-subset.ttf'),
+    mimeType: 'font/ttf',
+    fallbacks: [],
+    properties: {},
+  };
+  const resourcesOf = (data: Record<string, string>): SceneResources => ({
+    internalResources: [
+      { id: 'text', type: 'TextMesh', data: { text: '"HH"', font: 'ExtResource("font")', ...data } },
+    ],
+    externalResources: [{ id: 'font', type: 'FontFile', path: FONT_PATH }],
+  });
+  const renderTextAabb = (resources: SceneResources) => {
+    const fake = createFakeResourceLoader();
+    const { result } = renderHook(() => useMeshAabb('SubResource("text")', resources), {
+      wrapper: missingResourcesWrapper(fake.loader),
+    });
+    return { fake, result };
+  };
+
+  it('is unknown while the font loads, then bounds the glyphs it builds', async () => {
+    const { fake, result } = renderTextAabb(resourcesOf({}));
+    expect(result.current).toBeNull();
+
+    await act(async () => fake.fonts._resolve(FONT_PATH, FONT_FILE));
+
+    expect(result.current?.size.x).toBeGreaterThan(0);
+    expect(result.current?.size.z).toBeCloseTo(0.05, 6);
+  });
+
+  it('takes a custom box over the glyphs', async () => {
+    const { fake, result } = renderTextAabb(resourcesOf({ custom_aabb: 'AABB(0, 0, 0, 7, 8, 9)' }));
+
+    await act(async () => fake.fonts._resolve(FONT_PATH, FONT_FILE));
+
+    expect(result.current?.size).toEqual({ x: 7, y: 8, z: 9 });
+  });
+
+  it('stays unknown for a font with no TrueType outlines', async () => {
+    const { fake, result } = renderTextAabb(resourcesOf({}));
+
+    await act(async () => fake.fonts._resolve(FONT_PATH, { ...FONT_FILE, bytes: new ArrayBuffer(8) }));
+
+    expect(result.current).toBeNull();
   });
 });

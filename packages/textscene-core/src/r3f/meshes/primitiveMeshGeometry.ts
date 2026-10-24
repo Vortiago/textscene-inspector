@@ -10,7 +10,7 @@ import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMe
 import { godotSurfacesGeometry } from '../../resources/meshes/godotSurface';
 import type { ResolvableResource } from '../../resources/scopedResource';
 import { meshContentKey } from '../../resources/meshes/meshSource';
-import { isPrimitiveMeshType, primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
+import { isDrawablePrimitiveMesh, primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
 
 /**
  * Written only by `primitiveMeshGeometry`. An entry leaves when its geometry is disposed, which
@@ -48,10 +48,10 @@ function forgetSharedGeometry(key: string, geometry: THREE.BufferGeometry): void
 /**
  * The box the rendering server holds for a PrimitiveMesh: its `custom_aabb`, else the box of the
  * vertices it builds (`mesh_storage.cpp:705-712`). A mesh Godot builds no surface for is `AABB()`.
- * Null for a type with no slice here.
+ * Null for a type with no slice here, and for a TextMesh whose font has no TrueType outlines.
  */
 export function primitiveMeshAabb(mesh: ResolvableResource): Aabb | null {
-  if (!isPrimitiveMeshType(mesh.resource.type)) return null;
+  if (!isDrawablePrimitiveMesh(mesh)) return null;
   const custom = parseNonEmptyAabb(mesh.resource.data['custom_aabb'], 'custom_aabb');
   if (custom) return custom;
   // The texel size only scales UV2, which moves no vertex.

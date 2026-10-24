@@ -948,6 +948,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Imagetexture Mipmaps",
+    "file": "unit-imagetexture-mipmaps.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Importer Mesh Instance 3d",
     "file": "unit-importer-mesh-instance-3d.tscn",
     "category": "Other"
@@ -2980,6 +2985,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sphere Mesh",
     "file": "unit-sphere-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh",
+    "file": "unit-text-mesh.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

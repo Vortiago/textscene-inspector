@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GlyphPlacement, TextLineLayout } from './textLayout';
-import { fitLineToWidth } from './textJustify';
+import { fitLineToWidth, justifyToLineIndex } from './textJustify';
 import { JustificationFlag } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
@@ -66,6 +66,51 @@ describe('fitLineToWidth', () => {
     expect(result.line.widthPx).toBeCloseTo(10.578125, 10);
   });
 
+  describe('without TRIM_EDGE_SPACES, a wrapped line keeps its edge spaces and skips the break spaces (text_server_adv.cpp:5600-5607)', () => {
+    it('leaves a trailing break space out of the space count but keeps its width in the line', () => {
+      const line = mkLine([
+        ['A', 10],
+        [' ', 4],
+        ['B', 10],
+        [' ', 4],
+      ]);
+      const result = fitLineToWidth(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
+      // The slack is 40 - 28, all for the one inner space: the trailing break space keeps its 4.
+      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([10, 16, 10, 4]);
+      expect(result.line.widthPx).toBe(40);
+    });
+
+    it('does not stretch a line whose only space is its break space', () => {
+      const line = mkLine([
+        ['A', 10],
+        [' ', 4],
+      ]);
+      const result = fitLineToWidth(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
+      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([10, 4]);
+    });
+
+    it('leaves a leading break space out of the space count too', () => {
+      const line = mkLine([
+        [' ', 4],
+        ['A', 10],
+        [' ', 4],
+        ['B', 10],
+      ]);
+      const result = fitLineToWidth(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
+      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([4, 10, 16, 10]);
+    });
+
+    it('counts a space that is not the last of its run, since a break follows only the last', () => {
+      const line = mkLine([
+        ['A', 10],
+        [' ', 4],
+        [' ', 4],
+      ]);
+      const result = fitLineToWidth(line, 40, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
+      expect(result.line.glyphs.map((glyph) => glyph.advance)).toEqual([10, 26, 4]);
+    });
+  });
+
   it('AFTER_LAST_TAB only justifies the run past the LAST tab glyph (text_server_adv.cpp:5547-5570)', () => {
     const line = mkLine([
       [' ', 2],
@@ -91,5 +136,31 @@ describe('fitLineToWidth', () => {
     const result = fitLineToWidth(line, 50, JustificationFlag.WORD_BOUND, { fontSizePx: FONT_SIZE_PX });
     expect(result.line).toBe(line);
     expect(result.fitWidthMinimumReached).toBe(false);
+  });
+});
+
+describe('justifyToLineIndex', () => {
+  const word = mkLine([['A', 10]]);
+  const blank = mkLine([[' ', 4]]);
+  const { SKIP_LAST_LINE, SKIP_LAST_LINE_WITH_VISIBLE_CHARS, DO_NOT_SKIP_SINGLE_LINE } = JustificationFlag;
+
+  it('fits every line when no skip flag is set', () => {
+    expect(justifyToLineIndex([word, word, word], 0)).toBe(3);
+  });
+
+  it('leaves the last line alone under SKIP_LAST_LINE', () => {
+    expect(justifyToLineIndex([word, word, word], SKIP_LAST_LINE)).toBe(2);
+  });
+
+  it('fits a single line when DO_NOT_SKIP_SINGLE_LINE is set, whatever else is', () => {
+    expect(justifyToLineIndex([word], SKIP_LAST_LINE | DO_NOT_SKIP_SINGLE_LINE)).toBe(1);
+  });
+
+  it('skips a single line under SKIP_LAST_LINE without DO_NOT_SKIP_SINGLE_LINE', () => {
+    expect(justifyToLineIndex([word], SKIP_LAST_LINE)).toBe(0);
+  });
+
+  it('leaves the last line with visible characters and every line after it alone', () => {
+    expect(justifyToLineIndex([word, word, blank], SKIP_LAST_LINE_WITH_VISIBLE_CHARS)).toBe(1);
   });
 });

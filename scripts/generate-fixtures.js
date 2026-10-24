@@ -33,6 +33,7 @@ function detectCategory(filename) {
     filename.startsWith('unit-capsule') ||
     filename.startsWith('unit-plane') ||
     filename.startsWith('unit-torus') ||
+    filename.startsWith('unit-text-mesh') ||
     filename.startsWith('unit-prism') ||
     filename.startsWith('unit-quad') ||
     filename.startsWith('unit-mesh') ||

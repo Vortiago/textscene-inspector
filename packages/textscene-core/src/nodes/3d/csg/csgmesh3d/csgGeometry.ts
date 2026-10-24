@@ -14,12 +14,22 @@ import {
 } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
-import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
+import {
+  isDrawableMesh,
+  meshContentKey,
+  meshKind,
+  undrawnMeshType,
+} from '../../../../resources/meshes/meshSource';
+import {
+  primitiveMeshFiles,
+  isAwaitingFontMetrics,
+  primitiveMeshFontFiles,
+  referencesKey,
+} from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import { findExtResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
 import type { LoadedFile } from '../../../../resources/scopedResource';
-import { perObject } from '../../../../utils/perObject';
+import { identityKey } from '../../../../utils/identityKey';
 import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
@@ -38,24 +48,44 @@ function namesNoMesh(meshRef: string | undefined, ctx: CsgGeometryContext): bool
 
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
-  const mesh = resolveMesh(p.mesh, ctx);
+  const mesh = meshOf(properties, ctx);
   // A mesh that names nothing builds Godot's empty brush (`csg_shape.cpp:1126-1128`).
-  if (!mesh) return namesNoMesh(p.mesh, ctx) ? csgSolid(emptyBrush(), []) : null;
-  if (meshKind(mesh.resource.type) === null) return null;
+  if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
+  // Not built while the metrics of its font settle, and the context changes when they have.
+  if (!isDrawableMesh(mesh) || isAwaitingFontMetrics(mesh)) return null;
   return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
 
 export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: CsgGeometryContext): string {
   const p = properties as unknown as CSGMesh3DProperties;
-  const mesh = resolveMesh(p.mesh, ctx);
+  const mesh = meshOf(properties, ctx);
   return `mesh:${p.flipFaces}:${mesh ? meshKey(mesh) : `unresolved:${p.mesh}`}`;
 }
 
-export function csgMesh3DMeshType(
+/** The mesh the node's `mesh` property names in `ctx`, or null as `resolveMesh` has it. */
+function meshOf(properties: Record<string, unknown>, ctx: CsgGeometryContext): CsgMesh | null {
+  return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx);
+}
+
+export function csgMesh3DUndrawnMeshType(
   properties: Record<string, unknown>,
   ctx: CsgGeometryContext
 ): string | null {
-  return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx)?.resource.type ?? null;
+  const mesh = meshOf(properties, ctx);
+  return mesh && undrawnMeshType(mesh, mesh);
+}
+
+export function csgMesh3DReadsFonts(properties: Record<string, unknown>, ctx: CsgGeometryContext): string[] {
+  const mesh = meshOf(properties, ctx);
+  return mesh ? primitiveMeshFontFiles(mesh, ctx.loadedFont) : [];
+}
+
+export function csgMesh3DAwaitsFontMetrics(
+  properties: Record<string, unknown>,
+  ctx: CsgGeometryContext
+): boolean {
+  const mesh = meshOf(properties, ctx);
+  return mesh !== null && isAwaitingFontMetrics(mesh);
 }
 
 export function csgMesh3DReadsFiles(
@@ -70,18 +100,18 @@ export function csgMesh3DReadsFiles(
   return [...(path ? [path] : []), ...(scoped ? primitiveMeshFiles(scoped) : [])];
 }
 
-/** A number for each parsed file. A reload parses a new object, so it takes a new key. */
-const fileKey = perObject<object, number>(() => nextFileKey++);
-/** Written only by `fileKey`, once per new file. It never resets. */
-let nextFileKey = 0;
-
 /**
  * A scene mesh keys on its content, and on the resources it builds from, since the parser allocates a
  * fresh one per reparse. A mesh in a file keys on that parse and on the files its build reads.
  */
 function meshKey(mesh: CsgMesh): string {
   if (!mesh.file) return meshContentKey(mesh);
-  return `${mesh.file.path}#${fileKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
+  return `${mesh.file.path}#${identityKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
+}
+
+/** Godot's empty brush: a closed solid with no face. */
+function emptySolid(): CsgSolid {
+  return csgSolid(emptyBrush(), []);
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */
@@ -103,7 +133,7 @@ function buildMeshBrush(
   flipFaces: boolean
 ): CsgSolid {
   const faces = meshFaces(surfaces, nodeMaterial);
-  if (faces.smooth.length === 0) return csgSolid(emptyBrush(), []);
+  if (faces.smooth.length === 0) return emptySolid();
   const brush = shadeCsgFaces({ ...faces, invert: flipFaces });
   if (faces.materials.length > 1) addMaterialGroups(brush.geometry, faces.faceMaterials);
   return csgSolid(brush, faces.materials);

@@ -1,20 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { areaTextureMipmaps, mipSize } from './atlasMipmaps';
+import { areaTextureMipmaps } from './atlasMipmaps';
 import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas';
-
-describe('mipSize', () => {
-  it('halves the side once per level', () => {
-    expect([0, 1, 2].map((level) => mipSize(256, level))).toEqual([256, 128, 64]);
-  });
-
-  it('stops at one texel past the last halving (edge case)', () => {
-    expect(mipSize(256, 12)).toBe(1);
-  });
-
-  it('keeps an empty side at one texel (error case)', () => {
-    expect(mipSize(0, 0)).toBe(1);
-  });
-});
 
 describe('areaTextureMipmaps', () => {
   it('fills every mip of the placed texture', () => {
