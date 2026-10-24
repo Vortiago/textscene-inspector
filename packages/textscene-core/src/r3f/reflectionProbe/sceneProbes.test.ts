@@ -9,6 +9,7 @@ import { captureCameras } from './captureCameras';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
+import { holdSceneExposure } from '../exposure/sceneExposure';
 
 const CLEAR = new THREE.Color(0.3, 0.3, 0.3);
 
@@ -99,6 +100,26 @@ describe('SceneProbes.update', () => {
     settle();
 
     expect(facesDrawn()).toBe(6);
+  });
+
+  it('captures every probe again when the scene exposure changes, as the capture holds the factor once', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject());
+    const release = holdSceneExposure(scene, 2);
+    settle();
+    facesDrawn();
+    release();
+    holdSceneExposure(scene, 3);
+
+    expect(facesDrawn()).toBe(6);
+  });
+
+  it('keeps a capture while the scene exposure stays', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject());
+    holdSceneExposure(scene, 2);
+    settle();
+    facesDrawn();
+
+    expect(facesDrawn()).toBe(0);
   });
 
   it('keeps showing a stale capture until its probe captures again (edge case)', async () => {

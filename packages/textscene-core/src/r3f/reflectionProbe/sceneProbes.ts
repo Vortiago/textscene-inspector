@@ -32,6 +32,7 @@ import { PROBE_ROW_TEXELS, probeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
+import { exposureOfScene } from '../exposure/sceneExposure.js';
 
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
@@ -67,11 +68,17 @@ export class SceneProbes {
   private settledFrames = 0;
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
-  /** What the captures saw of the environment, which a sky that bakes later changes. */
-  private seen: { environment: unknown; background: unknown; clearColor: number } = {
+  /**
+   * What the captures saw of the environment, which a sky that bakes later changes, and of the
+   * exposure that scaled their lights, background and emission. A probe samples at the exposure over
+   * the one it captured at (`light_storage.cpp:1810-1814`), which a capture made again at the new
+   * exposure keeps at 1.
+   */
+  private seen: { environment: unknown; background: unknown; clearColor: number; exposure: number } = {
     environment: undefined,
     background: undefined,
     clearColor: -1,
+    exposure: -1,
   };
   private readonly stopObserving: (() => void)[];
   /** The lights whose shadows a capture without shadows hid, put back once the render ends. */
@@ -147,18 +154,20 @@ export class SceneProbes {
   }
 
   /**
-   * Marks every capture stale once new content settles, or once the environment the captures saw
-   * changes. A stale capture still draws, so no probe vanishes until it captures again.
+   * Marks every capture stale once new content settles, or once the environment or exposure the
+   * captures saw change. A stale capture still draws, so no probe vanishes until it captures again.
    */
   private markCapturesStale(clearColor: THREE.Color): void {
     const { environment, background } = this.scene;
     const { seen } = this;
+    const exposure = exposureOfScene(this.scene);
     const hasNewEnvironment =
       environment !== seen.environment ||
       background !== seen.background ||
-      clearColor.getHex() !== seen.clearColor;
+      clearColor.getHex() !== seen.clearColor ||
+      exposure !== seen.exposure;
     if (!this.hasNewContent && !hasNewEnvironment) return;
-    this.seen = { environment, background, clearColor: clearColor.getHex() };
+    this.seen = { environment, background, clearColor: clearColor.getHex(), exposure };
     this.hasNewContent = false;
     this.generation += 1;
   }

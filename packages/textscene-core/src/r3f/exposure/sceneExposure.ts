@@ -18,21 +18,24 @@ export function exposureOfScene(scene: THREE.Scene): number {
   return exposures.get(scene) ?? 1;
 }
 
+/** Renders `scene` with `factor` until the returned function runs. */
+export function holdSceneExposure(scene: THREE.Scene, factor: number): () => void {
+  exposures.set(scene, factor);
+  const stopWriting = observeSceneCamera(scene, () => {
+    EMISSION_EXPOSURE[0] = factor;
+  });
+  const stopClearing = observeSceneRenderEnd(scene, () => {
+    EMISSION_EXPOSURE[0] = 1;
+  });
+  return () => {
+    stopWriting();
+    stopClearing();
+    exposures.delete(scene);
+  };
+}
+
 /** Renders the scene of the enclosing world with `factor` until the world unmounts. */
 export function useSceneExposure(factor: number): void {
   const scene = useThree((state) => state.scene);
-  useEffect(() => {
-    exposures.set(scene, factor);
-    const stopWriting = observeSceneCamera(scene, () => {
-      EMISSION_EXPOSURE[0] = factor;
-    });
-    const stopClearing = observeSceneRenderEnd(scene, () => {
-      EMISSION_EXPOSURE[0] = 1;
-    });
-    return () => {
-      stopWriting();
-      stopClearing();
-      exposures.delete(scene);
-    };
-  }, [scene, factor]);
+  useEffect(() => holdSceneExposure(scene, factor), [scene, factor]);
 }
