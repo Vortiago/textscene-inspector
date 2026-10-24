@@ -88,7 +88,7 @@ describe('perObject', () => {
   it('checks the stamp on a hit and the keep rule on a store, together', () => {
     const key = { version: 1 };
     const keeps = vi.fn((value: number) => value >= 10);
-    const build = vi.fn(() => key.version * 10);
+    const build = vi.fn((versioned: { version: number }) => versioned.version * 10);
     const read = perObject(build, { keeps, stamp: ({ version }) => version });
     expect([read(key), read(key)]).toEqual([10, 10]);
     key.version = 2;
