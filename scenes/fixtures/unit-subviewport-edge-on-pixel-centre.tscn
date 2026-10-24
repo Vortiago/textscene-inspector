@@ -1,0 +1,34 @@
+; A SubViewport whose 2D content has edges on pixel centres in y. A 2D pass draws its canvas
+; through a y-down frame, as the root canvas does (ADR-0057), so the rasteriser's tie rule covers
+; the rows Godot covers: the polygon draws rows 300 to 359 and the line row 300 (#852). The
+; container's origin is whole, so each viewport row is one screen row.
+
+[gd_scene format=3 uid="uid://unitsubviewportedge"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Container" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 500.0
+offset_bottom = 400.0
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+handle_input_locally = false
+size = Vector2i(400, 300)
+render_target_update_mode = 4
+
+[node name="Polygon" type="Polygon2D" parent="Container/Viewport"]
+position = Vector2(50, 200.5)
+color = Color(0, 0.6, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 60, 0, 60)
+
+[node name="Line" type="Line2D" parent="Container/Viewport"]
+points = PackedVector2Array(200, 200.5, 300, 200.5)
+width = 1.0
+default_color = Color(0, 0, 0, 1)

@@ -16,6 +16,7 @@ function props(p: Partial<GraphEditProperties> = {}): GraphEditProperties {
 /** 8px per character, an 18px run height and a 19px font line pitch: round numbers so every expectation below is arithmetic, not measurement. */
 const metrics: ToolbarTextMetrics = {
   measure: (text) => ({ x: text.length * 8, y: 18 }),
+  emSpaceWidthPx: 8,
   fontHeightPx: 19,
 };
 
@@ -116,6 +117,15 @@ describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)'
     // 48 + 7*24 + 58 = 274, plus 8 separations of 4 = 306; tallest is 27.
     expect(bar.panelRect.w).toBe(306 + 8);
     expect(bar.panelRect.h).toBe(27 + 4);
+  });
+
+  it("sizes the SpinBox field by 'W' advance as it is, not as a ceiled run (line_edit.cpp:2451)", () => {
+    const fractional = graphEditToolbar(props({ showZoomLabel: true }), theme, {
+      ...metrics,
+      emSpaceWidthPx: 7.5,
+    })!;
+    // Four em spaces, half a pixel narrower each.
+    expect(fractional.panelRect.w).toBe(bar.panelRect.w - 2);
   });
 
   it('lays the row out left to right with one separation between neighbours', () => {

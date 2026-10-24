@@ -268,6 +268,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Edge On Pixel Centre",
+    "file": "unit-canvas-edge-on-pixel-centre.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Group",
     "file": "unit-canvas-group.tscn",
     "category": "Other"
@@ -810,6 +815,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Graph Edit Minimap Button Hidden",
     "file": "unit-graph-edit-minimap-button-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Connection Origin",
+    "file": "unit-graph-edit-minimap-connection-origin.tscn",
     "category": "Other"
   },
   {
@@ -1925,6 +1935,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Subtree Under Leaf Nodes",
     "file": "unit-subtree-under-leaf-nodes.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Subviewport Edge On Pixel Centre",
+    "file": "unit-subviewport-edge-on-pixel-centre.tscn",
     "category": "Other"
   },
   {

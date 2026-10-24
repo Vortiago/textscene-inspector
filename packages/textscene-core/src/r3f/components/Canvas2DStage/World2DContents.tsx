@@ -20,7 +20,7 @@ import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryCon
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 import { ProjectClearColor } from '../../ProjectClearColor.js';
-import { CanvasMsaa } from './CanvasMsaa.js';
+import { CanvasFrameRender } from './CanvasFrameRender.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 
@@ -70,7 +70,7 @@ export function World2DContents({
           <EditedRootProvider editableInstances={editableInstances}>
             <CameraRig pan={pan} zoom={zoom} />
             <ProjectClearColor />
-            <CanvasMsaa />
+            <CanvasFrameRender />
             {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
             <CanvasLighting2DProvider canvasModulate={canvasModulate}>

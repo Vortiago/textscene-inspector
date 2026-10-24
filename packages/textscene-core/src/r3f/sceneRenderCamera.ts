@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { World2DCamera } from './components/Canvas2DStage/world2DCamera';
 
 /** `target` is the render target the render draws into, null for the canvas. */
 type SceneCameraObserver = (camera: THREE.Camera, target: THREE.WebGLRenderTarget | null) => void;
@@ -34,9 +35,12 @@ const hooks = new WeakMap<THREE.Scene, SceneHook>();
 /** Written only by `createViewportCanvasCamera`. A camera leaves it once it is collected. */
 const viewportCanvasCameras = new WeakSet<THREE.Camera>();
 
-/** The camera a 2D sub-viewport draws its canvas through, through its Godot canvas transform. */
+/**
+ * The camera a 2D sub-viewport draws its canvas through, through its Godot canvas transform. Like the
+ * root's, it holds the canvas top at GL row 0, so its pass draws into a `CanvasFrame`.
+ */
 export function createViewportCanvasCamera(): THREE.OrthographicCamera {
-  const camera = new THREE.OrthographicCamera();
+  const camera = new World2DCamera();
   viewportCanvasCameras.add(camera);
   return camera;
 }

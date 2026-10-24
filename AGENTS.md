@@ -212,7 +212,8 @@ copy beside it. Paths are under `packages/textscene-core/src/`.
 - An entry by its key in a frozen table: `firstWith` and `lastWith` in `utils/keyedLookup.ts`, and
   `firstIndexWith` for its index. They build one Map for each table.
 - A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
-- The parent of a node path: `parentPathOf` in `utils/nodePath.ts`.
+- A node path from its parent and a name: `joinPath` in `utils/nodePath.ts`, and `parentPathOf`
+  for the parent of a path.
 - `res://` roots: `ResRoots` in `resources/resRoots.ts`.
 - A GLB for one consumer: `useGlb` in `resources/useGlb.ts`.
 - Where a node under a GLB instance attaches: `resolveGlbAttachments` in
@@ -235,6 +236,27 @@ copy beside it. Paths are under `packages/textscene-core/src/`.
 - A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
   through it, before the upload.
 - A React context that holds a store: `createStoreContext` in `r3f/hooks/createStoreContext.tsx`.
+- A composite in a property slot: `slotTupleRegex` in `godot/variant/number.ts`. Use
+  `variantTupleRegex` only for a Variant position, such as an animation keyframe.
+- One end of a `[connection]`: `connectionEndResolver` in `parser/connectionEnd.ts`.
+- A walk of the Live scene tree: `LiveTree.fold` and `walkLiveTree` in `r3f/liveSceneTree.ts`,
+  with `LiveTree.at` for one path and `liveStep` for one node's step.
+- A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
+  `resources/useSubOrExtResource.ts`, and `useLoadedFiles` in `resources/useLoadedFiles.ts` for a
+  plan of many files.
+- Row order of RGBA pixels: `reversedRows`, `reverseRowsInPlace` and `isBottomUp` in
+  `utils/reversedRows.ts`, and `reversedLevel` in `resources/processing/mipChain.ts` for a level.
+- A CPU mip chain as Godot builds it: `mipChain` in `resources/processing/mipChain.ts`. Attach the
+  levels to a `DataTexture` with `carryMipChain` in `resources/textures/texelTexture.ts`.
+- Half floats from 32-bit floats: `toHalfFloatTexels` in `resources/textures/halfFloatTexels.ts`.
+- A texture every material samples as one object: `sharedTexture` and `releasedOnUnmount` in
+  `r3f/sharedTexture.ts`.
+- A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
+- A Godot sRGB colour as a linear `THREE.Color`: `godotColorToLinear`, `setGodotColorLinear` and
+  `useGodotLinearColor` in `r3f/godotColor.ts`.
+- What an editor gizmo draws for its node: `useGizmoState` in `r3f/hooks/useGizmoState.ts`.
+- A value that changes often and that few components read: `createExternalStore` and
+  `useExternalStoreValue` in `r3f/hooks/createExternalStore.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
 - In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in
   `r3f/testing/shaderPatches.ts`.

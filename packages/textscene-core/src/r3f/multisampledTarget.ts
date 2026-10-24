@@ -47,7 +47,7 @@ export function useSampleCount(mode: number, type: THREE.TextureDataType): numbe
 /**
  * Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). A target that takes output
  * like the drawing buffer stores an 8-bit sRGB tag linear (`:2120`), so such a target is linear or
- * pins its format, as `CanvasMsaaFrame` pins RGBA8.
+ * pins its format, as `CanvasFrame` pins RGBA8.
  */
 function colourStorage(texture: TargetTexture): ColourStorage {
   if (texture.internalFormat !== null) return texture.internalFormat;

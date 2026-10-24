@@ -1,6 +1,6 @@
 # GraphEdit engine notes
 
-The engine reasoning behind two GraphEdit modules, too long for a code comment. Every cite is
+The engine reasoning behind three GraphEdit modules, too long for a code comment. Every cite is
 Godot 4.6.3 source. A bare `:line` is `scene/gui/graph_edit.cpp`.
 
 ## Load order (`loadOrder.ts`)
@@ -42,6 +42,36 @@ neither.
 
 `anchors_preset` and `layout_mode` rewrite the offsets against the same empty parent rect. Godot's
 saver writes them ahead of the `offset_*` keys that overwrite them.
+
+## Minimap connections (`minimapConnections.ts`)
+
+`_minimap_draw` reads `_cache.from_pos` and `_cache.to_pos` of each connection (`:1872-1873`). Only
+`_update_connections` writes them (`:1647-1648`), and it runs on the connections layer's `draw`
+signal (`:3191`). A cache that nothing has filled holds `(0, 0)`, and the minimap draws a zero-length
+line, which shows nothing.
+
+A probe in Godot 4.6.3 listened to the `draw` signals of the minimap and the connections layer.
+Without a setter, the order is minimap, layer, minimap. The second minimap draw has a filled cache,
+so the connections show. With `scroll_offset` or a moving `zoom`, the order is minimap, layer, and
+no second minimap draw follows. The connections never show.
+
+The second draw comes from `_update_scroll_offset` (`:438`). It moves every child from its
+`position_offset` to its screen position, and each move emits `item_rect_changed`, which queues a
+minimap redraw (`:728`). A redraw that is already pending is not queued again
+(`scene/main/canvas_item.cpp:477-479`), and deferred calls run first in, first out. Two cases follow.
+
+- No setter queues `_update_scroll_offset` while the file loads. The first one comes from
+  `_update_top_connection_layer`, which `add_connection` queues (`:296`) and which calls
+  `_update_scrollbars` (`:1733`, `:524`). It lands behind the redraws that tree entry queues. The
+  children move after the layer has drawn, and the second minimap draw sees the cache.
+- `set_scroll_offset` (`:409`) and a `zoom` that moves (`:2448` into `:524`) queue
+  `_update_scroll_offset` during load, ahead of those redraws. The children have moved before the
+  minimap draws. The cache is empty then, and no later move queues a redraw.
+
+Without a setter, the scroll offset is `(0, 0)` and the zoom is 1, so a child moves only when its
+`position_offset` is not `(0, 0)`. If every child sits at the origin, nothing moves and the minimap
+draws once, empty. A hidden child counts, because `set_position` emits `item_rect_changed` for it
+too.
 
 ## Connection stroke (`connectionStroke.ts`)
 

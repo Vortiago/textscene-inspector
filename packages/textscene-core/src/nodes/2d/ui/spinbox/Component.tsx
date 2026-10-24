@@ -24,6 +24,7 @@ import {
 import { resolveRangeValue } from '../shared/range';
 import { SPIN_BOX_ICONS } from './icons';
 import {
+  spinBoxArrowPosition,
   spinBoxLayout,
   spinBoxDisplayText,
   spinBoxFieldTextTheme,
@@ -121,16 +122,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const upIconLinear = useGodotLinearColor(upIconColorSrgb);
   const downIconLinear = useGodotLinearColor(downIconColorSrgb);
 
-  // `Point2i up_icon_left/top` (`spin_box.cpp:475-476`): centred in the button's rect at the
-  // icon's native, unscaled size.
-  const upIconPos = {
-    x: layout.upRect.x + (layout.upRect.w - upIconSize.x) / 2,
-    y: layout.upRect.y + (layout.upRect.h - upIconSize.y) / 2,
-  };
-  const downIconPos = {
-    x: layout.downRect.x + (layout.downRect.w - downIconSize.x) / 2,
-    y: layout.downRect.y + (layout.downRect.h - downIconSize.y) / 2,
-  };
+  const upIconPos = spinBoxArrowPosition(layout.upRect, upIconSize);
+  const downIconPos = spinBoxArrowPosition(layout.downRect, downIconSize);
 
   // SpinBox's own `theme_override_styles/*` items, empty in the default theme, so each draws only
   // under an override. `up_down_buttons_separator` has zero height (`SpinBoxLayout`) and never draws.
