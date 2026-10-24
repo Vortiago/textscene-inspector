@@ -5,7 +5,7 @@ export interface PerObjectOptions<K extends object> {
    * A number that tells when a key's value is stale, read on each ask. The value builds again when
    * the stamp differs from the one it was built under, as with a texture's `version`.
    */
-  stamp: (key: K) => number;
+  stamp?: (key: K) => number;
 }
 
 interface Built<T> {
@@ -21,7 +21,7 @@ interface Built<T> {
  */
 export function perObject<K extends object, T>(
   build: (key: K) => T,
-  { stamp = () => 0 }: Partial<PerObjectOptions<K>> = {}
+  { stamp = () => 0 }: PerObjectOptions<K> = {}
 ): (key: K) => T {
   const built = new WeakMap<K, Built<T>>();
   return (key) => {
