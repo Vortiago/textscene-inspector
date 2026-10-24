@@ -33,7 +33,12 @@ A minified AtlasTexture samples the chain its sheet's import built. The sheet ho
 ## ImageTexture
 <!-- compare: image=unit-material-albedo-image-format status=done fixture=unit-material-albedo-image-format.tscn -->
 
-A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other uncompressed format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with `use_hdr`.
+A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other uncompressed format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The mip levels a saved Image stores are sampled as saved (next section). The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with `use_hdr`.
+
+## ImageTexture mip levels
+<!-- compare: image=unit-imagetexture-mipmaps status=done fixture=unit-imagetexture-mipmaps.tscn -->
+
+An `Image` saved with `mipmaps` on stores every level below the top one in its bytes. A minified ImageTexture samples them as saved, because Godot uploads them (`texture_storage.cpp`, `texture_2d_initialize`) and never rebuilds them. The previewer decodes each stored level and uploads it, so a level that is not the average of the one above draws as saved. The checker draws grey at its top level. Its stored levels are solid red, green and blue, so the strip shows which level each part samples. The strip ends before the blue level, in both engines. A texture filter without mipmaps samples the top level only, in both engines.
 
 ## Block-compressed Image
 <!-- compare: image=unit-sprite2d-block-compressed status=done fixture=unit-sprite2d-block-compressed.tscn -->

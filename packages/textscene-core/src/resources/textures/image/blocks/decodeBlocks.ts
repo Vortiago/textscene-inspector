@@ -20,15 +20,18 @@ export const BLOCK_FORMATS: Readonly<Record<string, BlockFormat>> = { ...S3TC_FO
 
 const BLOCK_SIDE = 4;
 
-/** RGBA8 texels, or null for data shorter than the top level, which Godot refuses. */
-export function decodeBlocks(
-  bytes: Uint8Array,
-  { width, height }: ImageSize,
-  { bytesPerBlock, decode }: BlockFormat
-): Uint8Array | null {
+/** The bytes one level of `size` takes: a whole number of blocks, so a side below 4 takes one. */
+export function blockBytes({ width, height }: ImageSize, { bytesPerBlock }: BlockFormat): number {
+  return Math.ceil(width / BLOCK_SIDE) * Math.ceil(height / BLOCK_SIDE) * bytesPerBlock;
+}
+
+/** RGBA8 texels, or null for data shorter than the level, which Godot refuses. */
+export function decodeBlocks(bytes: Uint8Array, size: ImageSize, format: BlockFormat): Uint8Array | null {
+  if (bytes.length < blockBytes(size, format)) return null;
+  const { width, height } = size;
+  const { bytesPerBlock, decode } = format;
   const blocksWide = Math.ceil(width / BLOCK_SIDE);
   const blocksHigh = Math.ceil(height / BLOCK_SIDE);
-  if (bytes.length < blocksWide * blocksHigh * bytesPerBlock) return null;
   const out = new Uint8Array(width * height * 4);
   const texels = new Uint8Array(BLOCK_SIDE * BLOCK_SIDE * 4);
   for (let blockY = 0; blockY < blocksHigh; blockY++) {

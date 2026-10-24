@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { toHalfFloatTexels } from './halfFloatTexels';
+import { uploadedTexels } from './halfFloatTexels';
 import { recordGodotFormat } from './sourceColorSpace';
 
 /**
@@ -18,10 +18,8 @@ export function colourDataTexture(
   height: number,
   format: string
 ): THREE.DataTexture {
-  const isFloat = texels instanceof Float32Array;
-  const data = isFloat ? toHalfFloatTexels(texels) : texels;
-  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
-  texture.type = isFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  const texture = new THREE.DataTexture(uploadedTexels(texels), width, height, THREE.RGBAFormat);
+  texture.type = texels instanceof Float32Array ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;

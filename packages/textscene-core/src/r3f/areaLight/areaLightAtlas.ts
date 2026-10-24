@@ -14,7 +14,7 @@ import {
   type AreaTextureImage,
   type AreaTexturePlacement,
 } from './atlasLayout.js';
-import { mipSize } from './atlasMipmaps.js';
+import { mipSize } from '../../resources/processing/mipChain.js';
 import { readImagePixels } from '../../resources/formats/image/imagePixels.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';

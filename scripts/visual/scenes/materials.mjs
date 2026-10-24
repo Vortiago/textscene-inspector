@@ -47,6 +47,9 @@ export const MATERIAL_SCENES = [
   // The one variable: a NoiseTexture2D's CPU mip chain, which a minified quad samples. The other
   // NoiseTexture2D goldens draw their texture near its base level.
   { name: 'noisetexture2d-mipmaps', file: 'unit-noisetexture2d-mipmaps.tscn' },
+  // The one variable: the mip levels a saved Image stores, which a minified ImageTexture samples.
+  // No other golden saves an Image with mipmaps.
+  { name: 'imagetexture-mipmaps', file: 'unit-imagetexture-mipmaps.tscn' },
   // The FastNoiseLite domain warp, which no other noise scene turns on.
   { name: 'noisetexture2d-domain-warp', file: 'unit-noisetexture2d-domain-warp.tscn', mode: '2d' },
 
