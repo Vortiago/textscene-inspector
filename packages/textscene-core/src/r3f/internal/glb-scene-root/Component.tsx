@@ -240,7 +240,7 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
 
 /**
  * One `<GlbSurfaceMaterialOverride>` per override node with a `surface_material_override/0`. The
- * path resolves through `matchGlbTarget`, as the transform overrides do, so a Godot path and a
+ * path resolves through `resolveGlbOverrideTarget`, as the transform overrides do, so a Godot path and a
  * three path that disagree about importer-synthesised levels land on one mesh.
  */
 function useGlbMaterialOverrides(

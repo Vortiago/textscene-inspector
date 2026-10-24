@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { cloneWithMaterials, createGLBMesh } from './glbProcessing';
 import { nodesGlb } from './testing/nodesGlb';
-import { godotNodeName, godotNodeRole } from './nodeNames';
+import { RIG_GLB } from './testing/rigGlb';
+import { godotFramePaths, godotNodeName, godotNodePaths, isGlbObject, isGodotSceneRoot } from './godotNodes';
 import { NO_SIDECAR } from './testing/noSidecar';
 
 function byName(root: THREE.Object3D, name: string): THREE.Object3D {
@@ -32,14 +33,14 @@ describe('godotNodeName', () => {
     const root = await createGLBMesh(nodesGlb([{ name: 'Hip.L' }], { skins: [{ joints: [0] }] }), NO_SIDECAR);
     const hip = byName(root, 'HipL');
     expect(godotNodeName(hip)).toBe('Hip_L');
-    expect(godotNodeRole(hip)).toBe('bone');
+    expect(godotNodePaths(hip)).toEqual([]);
   });
 
   it('names the mesh under a joint after the joint, as Godot names its MeshInstance3D', async () => {
     const glb = nodesGlb([{ name: 'Hand', mesh: 0 }], { skins: [{ joints: [0] }] });
     const mesh = byName(await createGLBMesh(glb, NO_SIDECAR), 'Hand').children[0]!;
     expect(godotNodeName(mesh)).toBe('Hand');
-    expect(godotNodeRole(mesh)).toBe('node');
+    expect(godotNodePaths(mesh)).toEqual(['Skeleton3D/Hand/Hand']);
   });
 
   it('names the camera under a joint after the joint, as Godot names its Camera3D', async () => {
@@ -49,17 +50,39 @@ describe('godotNodeName', () => {
     });
     const camera = byName(await createGLBMesh(glb, NO_SIDECAR), 'Head').children[0]!;
     expect(godotNodeName(camera)).toBe('Head');
-    expect(godotNodeRole(camera)).toBe('node');
+    expect(godotNodePaths(camera)).toEqual(['Skeleton3D/Head/Head']);
   });
 
-  it('marks a skinned mesh, which Godot puts straight under its Skeleton3D', async () => {
+  it('gives a skinned mesh its place below the Skeleton3D, where Godot moves it', async () => {
     const glb = nodesGlb([{ name: 'Hip' }, { name: 'Body', mesh: 0, skin: 0 }], { skins: [{ joints: [0] }] });
-    expect(godotNodeRole(byName(await createGLBMesh(glb, NO_SIDECAR), 'Body'))).toBe('skinnedMesh');
+    expect(godotNodePaths(byName(await createGLBMesh(glb, NO_SIDECAR), 'Body'))).toEqual(['Skeleton3D/Body']);
   });
 
-  it('gives any other object no name and the node role', async () => {
+  it('gives the Skeleton3D to the object above it, and the BoneAttachment3D to its bone, as stand-ins', async () => {
+    const root = await createGLBMesh(RIG_GLB, NO_SIDECAR);
+    expect(godotFramePaths(byName(root, 'Armature'))).toEqual(['Armature/Skeleton3D']);
+    expect(godotFramePaths(byName(root, 'Hip'))).toEqual(['Armature/Skeleton3D/Hip']);
+    expect(godotNodePaths(byName(root, 'Hip'))).toEqual([]);
+  });
+
+  it('gives a node its path and the scene root its mark', async () => {
+    const glb = nodesGlb([
+      { name: 'A', children: [1] },
+      { name: 'B', mesh: 0 },
+    ]);
+    const root = await createGLBMesh(glb, NO_SIDECAR);
+    expect(godotNodePaths(byName(root, 'B'))).toEqual(['A/B']);
+    expect([isGodotSceneRoot(root), isGodotSceneRoot(byName(root, 'B'))]).toEqual([true, false]);
+  });
+
+  it('gives a primitive of a Group no path, and marks it a part of the glTF', async () => {
     const root = await createGLBMesh(nodesGlb([{ name: 'Multi', mesh: 1 }]), NO_SIDECAR);
     const primitive = byName(root, 'Multi').children[0]!;
-    expect(godotNodeRole(primitive)).toBe('node');
+    expect(godotNodePaths(primitive)).toEqual([]);
+    expect(isGlbObject(primitive)).toBe(true);
+  });
+
+  it('marks no object of a scene that mounts the glTF', () => {
+    expect(isGlbObject(new THREE.Object3D())).toBe(false);
   });
 });

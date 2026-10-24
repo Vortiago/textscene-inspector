@@ -9,9 +9,9 @@ import type * as THREE from 'three';
 import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
-import { godotNodeName } from '../../../resources/formats/glb/nodeNames';
+import { godotNodeName } from '../../../resources/formats/glb/godotNodes';
 import { flattenGlbObjects } from './glbHierarchy';
-import { matchGlbTarget } from './matchGlbTarget';
+import { findGlbTarget } from './glbPathLookup';
 
 const GODOT_4_4 = { ...NO_SIDECAR, naming: { ...NO_SIDECAR.naming, namingVersion: 1 } };
 
@@ -30,10 +30,10 @@ async function match(
   options = NO_SIDECAR
 ): Promise<THREE.Object3D | undefined> {
   const root = await createGLBMesh(glb, options);
-  return matchGlbTarget(flattenGlbObjects(root), godotPath, { allowAncestor: false })?.object;
+  return findGlbTarget(flattenGlbObjects(root), godotPath)?.object;
 }
 
-describe('matchGlbTarget in a skeleton', () => {
+describe('glbPathLookup in a skeleton', () => {
   it('finds a node in the BoneAttachment3D of the bone above it', async () => {
     const sword = await match(SWORD, 'Skeleton3D/Hand/Sword');
     expect(sword && godotNodeName(sword)).toBe('Sword');

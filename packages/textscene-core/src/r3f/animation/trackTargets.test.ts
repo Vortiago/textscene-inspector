@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { AnimationClip, NumberKeyframeTrack, VectorKeyframeTrack } from 'three';
 import * as logger from '../../logger';
 import { bindClip, splitTrackName, trackTargetFinder, trackTargetPaths } from './trackTargets';
-import { tagGodotNodeNames } from '../../resources/formats/glb/nodeNames';
+import { tagAsLoadedGlb } from '../../resources/formats/glb/testing/loadedGlbTags';
+import { addBoneRig } from '../internal/glb-scene-root/glbGraph.testkit';
 
 /** The dispatcher's shape: an unnamed wrapper registered by path, around the node's named group. */
 function mountNode(parent: THREE.Object3D, name: string): { wrapper: THREE.Object3D; group: THREE.Object3D } {
@@ -13,6 +14,17 @@ function mountNode(parent: THREE.Object3D, name: string): { wrapper: THREE.Objec
   wrapper.add(group);
   parent.add(wrapper);
   return { wrapper, group };
+}
+
+/** A mounted glTF of the node Armature, the joint Hip below it and the mesh Sword on the joint. */
+function mountRobot(): {
+  robot: ReturnType<typeof mountNode>;
+  armature: THREE.Object3D;
+  sword: THREE.Object3D;
+} {
+  const robot = mountNode(new THREE.Scene(), 'Robot');
+  const { armature, sword } = addBoneRig(robot.group);
+  return { robot, armature, sword };
 }
 
 describe('trackTargetFinder', () => {
@@ -41,17 +53,33 @@ describe('trackTargetFinder', () => {
     expect(trackTargetFinder(new Map([['Root/Arm', outer.wrapper]]))('Root/Arm')).toBe(outer.group);
   });
 
-  it('walks by name into content no path registers, such as a glTF scene', () => {
+  it('walks one name for each segment into content no path registers, where it holds no glTF', () => {
     const scene = new THREE.Scene();
-    const robot = mountNode(scene, 'Robot');
-    const armature = new THREE.Object3D();
-    armature.name = 'Armature';
-    const hip = new THREE.Bone();
-    hip.name = 'Hip';
-    armature.add(hip);
-    robot.group.add(armature);
-    const objects = new Map([['Root/Robot', robot.wrapper]]);
-    expect(trackTargetFinder(objects)('Root/Robot/Armature/Hip')).toBe(hip);
+    const root = mountNode(scene, 'Scene');
+    const child = mountNode(root.group, 'Child');
+    const sub = mountNode(child.group, 'Sub');
+    expect(trackTargetFinder(new Map([['Scene', root.wrapper]]))('Scene/Child/Sub')).toBe(sub.group);
+  });
+
+  it('walks into a glTF by the paths Godot’s importer gives its nodes', () => {
+    const { robot, armature, sword } = mountRobot();
+    const find = trackTargetFinder(new Map([['Root/Robot', robot.wrapper]]));
+    expect(find('Root/Robot/Armature')).toBe(armature);
+    expect(find('Root/Robot/Armature/Skeleton3D/Hip/Sword')).toBe(sword);
+  });
+
+  it('finds nothing for a Skeleton3D or a BoneAttachment3D, which no object holds the properties of', () => {
+    const { robot } = mountRobot();
+    const find = trackTargetFinder(new Map([['Root/Robot', robot.wrapper]]));
+    expect(find('Root/Robot/Armature/Skeleton3D')).toBeNull();
+    expect(find('Root/Robot/Armature/Skeleton3D/Hip')).toBeNull();
+  });
+
+  it('finds nothing in a glTF for a path the importer builds no node at', () => {
+    const { robot } = mountRobot();
+    expect(
+      trackTargetFinder(new Map([['Root/Robot', robot.wrapper]]))('Root/Robot/Armature/Hip/Sword')
+    ).toBeNull();
   });
 
   it('walks into a glTF scene by the names Godot’s importer gives its nodes', () => {
@@ -60,7 +88,7 @@ describe('trackTargetFinder', () => {
     const cube = new THREE.Object3D();
     cube.name = 'Cube001';
     model.group.add(cube);
-    tagGodotNodeNames(model.group, new Map([[cube, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
+    tagAsLoadedGlb(model.group, { gltfNames: { Cube001: 'Cube.001' } });
     const objects = new Map([['Root/Model', model.wrapper]]);
     expect(trackTargetFinder(objects)('Root/Model/Cube_001')).toBe(cube);
   });
@@ -74,7 +102,7 @@ describe('trackTargetFinder', () => {
 
   it('never walks into another node’s subtree for a node that is not mounted', () => {
     const scene = new THREE.Scene();
-    const root = mountNode(scene, 'Root');
+    const root = mountNode(scene, 'Scene');
     const other = mountNode(root.group, 'Other');
     const deeper = mountNode(other.group, 'Sprite');
     const objects = new Map([

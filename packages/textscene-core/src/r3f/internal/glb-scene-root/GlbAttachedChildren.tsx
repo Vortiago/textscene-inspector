@@ -21,7 +21,6 @@ import type { GlbRoot } from './GlbInstanceContext';
 import type { GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
 import { isApplicableGlbOverride, resolveGlbAttachments, type GlbAttachment } from './glbNodeOverrides';
-import { reportIndirectMatch } from './matchGlbTarget';
 import { insertAtIndex } from '../../../godot/scene/siblingIndex';
 import { warn } from '../../../logger';
 
@@ -79,8 +78,6 @@ function attachedChildren(
   const entries = links.map((link) => link.entry);
   const { attached: placed, rest } = resolveGlbAttachments(entries, root.overrides);
   warnUnattached(rest);
-  for (const { node, target, match } of placed)
-    reportIndirectMatch(node.instanceSubPath!, entries[target]!, match);
   const orders = attachedOrders(entries, childOrders(rootOrder, entries.length), placed);
   return placed.map(({ node, target }) => ({
     node,

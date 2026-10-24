@@ -1,6 +1,6 @@
 /**
  * A host scene's overrides on nodes inside a loaded GLB. A shallow override names a GLB node and
- * resolves by name. A deep one carries `instanceSubPath` and resolves through `matchGlbTarget`,
+ * resolves by name. A deep one carries `instanceSubPath` and resolves through `matchGlbNode`,
  * since Godot's importer invents nodes three's does not.
  */
 
@@ -10,10 +10,8 @@ import { applyGlbNodeOverrides, resolveGlbAttachments } from './glbNodeOverrides
 import { flattenGlbObjects } from './glbHierarchy';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
-import { buildTestGlbGraph } from './glbGraph.testkit';
-import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
-import { tagMeshInstances } from '../../../resources/formats/glb/meshInstances';
-import type { GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
+import { addBoneRig, buildTestGlbGraph } from './glbGraph.testkit';
+import { tagAsLoadedGlb } from '../../../resources/formats/glb/testing/loadedGlbTags';
 
 const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   rawProperties: {},
@@ -27,15 +25,25 @@ const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
 
 describe('applyGlbNodeOverrides', () => {
   it('applies layers from a deep override, across the level Godot synthesised', () => {
-    const root = buildTestGlbGraph(['Skeleton/Robot']);
+    const root = buildTestGlbGraph([]);
+    addBoneRig(root);
 
     applyGlbNodeOverrides(root, [
-      override('Robot', { instanceSubPath: 'Skeleton/Skeleton3D', rawProperties: { layers: '2' } }),
+      override('Sword', { instanceSubPath: 'Armature/Skeleton3D/Hip', rawProperties: { layers: '2' } }),
     ]);
 
-    const robot = root.children[0]!.children[0]!;
-    expect(robot.name).toBe('Robot');
-    expect(visualLayersOf(robot)).toBe(2);
+    expect(visualLayersOf(root.getObjectByName('Sword')!)).toBe(2);
+  });
+
+  it('drops an override of a Skeleton3D, which no object holds the properties of', () => {
+    const root = buildTestGlbGraph([]);
+    const { armature } = addBoneRig(root);
+
+    applyGlbNodeOverrides(root, [
+      override('Skeleton3D', { instanceSubPath: 'Armature', rawProperties: { visible: 'false' } }),
+    ]);
+
+    expect(armature.visible).toBe(true);
   });
 
   it('stamps layers on a mesh’s surfaces, but not on the node under it', () => {
@@ -46,15 +54,7 @@ describe('applyGlbNodeOverrides', () => {
     const [part1, part2] = [new THREE.Mesh(), new THREE.Mesh()];
     body.add(part1, part2, hand!);
     root.add(body);
-    tagMeshInstances(
-      root,
-      new Map<unknown, GLTFReference>([
-        [body, { nodes: 0, meshes: 0 }],
-        [part1, { meshes: 0, primitives: 0 }],
-        [part2, { meshes: 0, primitives: 1 }],
-        [hand, { nodes: 1, meshes: 1 }],
-      ])
-    );
+    tagAsLoadedGlb(root, { primitives: [part1!, part2!] });
 
     applyGlbNodeOverrides(root, [override('Body', { rawProperties: { layers: '4' } })]);
 
@@ -62,9 +62,8 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it("resolves an override by Godot's name for a node three spells otherwise", () => {
-    const root = buildTestGlbGraph(['Cube001']);
+    const root = buildTestGlbGraph(['Cube001'], { gltfNames: { Cube001: 'Cube.001' } });
     const cube = root.children[0]!;
-    tagGodotNodeNames(root, new Map([[cube, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
 
     applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { layers: '2' } })]);
 
@@ -72,25 +71,27 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it("resolves a shallow override to the root by Godot's name for it", () => {
-    const root = buildTestGlbGraph([]);
-    root.name = 'Cube001';
-    tagGodotNodeNames(root, new Map([[root, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
+    // A glTF of one node loads with the node as the scene root.
+    const cube = buildTestGlbGraph(['Cube001'], { gltfNames: { Cube001: 'Cube.001' } }).children[0]!;
 
-    applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { visible: 'false' } })]);
+    applyGlbNodeOverrides(cube, [override('Cube_001', { rawProperties: { visible: 'false' } })]);
 
-    expect(root.visible).toBe(false);
+    expect(cube.visible).toBe(false);
   });
 
   it('resolves a deep override by PATH, not by bare name', () => {
-    // Two objects share a name; only the one whose path agrees may be touched.
-    const root = buildTestGlbGraph(['Weapons/Body', 'Character/Torso/Body']);
+    // Godot numbers the second of two glTF nodes named Body `Body2`, which a path elsewhere must not reach.
+    const root = buildTestGlbGraph(['Weapons/Body', 'Character/Torso/Body_1'], {
+      gltfNames: { Body_1: 'Body' },
+    });
 
     applyGlbNodeOverrides(root, [
-      override('Body', { instanceSubPath: 'Character/Torso', rawProperties: { layers: '2' } }),
+      override('Body2', { instanceSubPath: 'Weapons', rawProperties: { layers: '2' } }),
+      override('Body2', { instanceSubPath: 'Character/Torso', rawProperties: { layers: '4' } }),
     ]);
 
     const [weapons, character] = root.children;
-    expect(visualLayersOf(character!.children[0]!.children[0]!)).toBe(2);
+    expect(visualLayersOf(character!.children[0]!.children[0]!)).toBe(4);
     expect(visualLayersOf(weapons!.children[0]!)).toBe(1);
   });
 
@@ -178,28 +179,31 @@ describe('applyGlbNodeOverrides', () => {
 });
 
 describe('resolveGlbAttachments', () => {
+  const boneRigRoot = (): THREE.Object3D => {
+    const root = buildTestGlbGraph([]);
+    addBoneRig(root);
+    return root;
+  };
+
   const lamp = (instanceSubPath: string): TscnNode =>
     override('Lamp', { type: 'Node3D', instanceSubPath, overridesExistingNode: false });
 
-  it('attaches a typed child to the object its parent path names, across the level Godot synthesised', () => {
-    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+  it('attaches a typed child to the bone a BoneAttachment3D follows, across the level Godot synthesised', () => {
+    const entries = flattenGlbObjects(boneRigRoot());
 
-    const { attached } = resolveGlbAttachments(entries, [lamp('Skeleton/Skeleton3D/Robot')]);
+    const { attached } = resolveGlbAttachments(entries, [lamp('Armature/Skeleton3D/Hip')]);
 
     expect(attached.map(({ node, target }) => [node.name, entries[target]!.relPath])).toEqual([
-      ['Lamp', 'Skeleton/Robot'],
+      ['Lamp', 'Armature/Hip'],
     ]);
   });
 
-  it('says how each path matched, so the viewport can report a match across added levels', () => {
-    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+  it('attaches a typed child to the object a path names exactly', () => {
+    const entries = flattenGlbObjects(boneRigRoot());
 
-    const { attached } = resolveGlbAttachments(entries, [
-      lamp('Skeleton/Skeleton3D/Robot'),
-      lamp('Skeleton'),
-    ]);
+    const { attached } = resolveGlbAttachments(entries, [lamp('Armature')]);
 
-    expect(attached.map(({ match }) => match)).toEqual(['subsequence', 'exact']);
+    expect(attached.map(({ target }) => entries[target]!.relPath)).toEqual(['Armature']);
   });
 
   it('attaches no override, which names an existing node rather than adding one', () => {

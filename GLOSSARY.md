@@ -571,6 +571,10 @@ _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derive
 The node that instances a lone `.glb`, as in Godot. Each GLB object has the path of that node followed by its own, and no row stands for the **GLBSceneRoot**.
 _Avoid_: A path segment for the GLB file name. Two paths for one GLB object.
 
+**Imported scene tree** (`godot/import/gltfImportScene.ts`):
+The nodes Godot's glTF importer builds from a `.glb`, each with its full path below the **GLB root**. It holds a Skeleton3D, a BoneAttachment3D for each bone with a child, and a skinned mesh below its Skeleton3D, which three's graph does not.
+_Avoid_: A match on three's names or levels. A nearest-ancestor or ordered-subsequence match.
+
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).
 Each copy keeps the id its own file wrote as `authoredId`, and the inspector shows that id.

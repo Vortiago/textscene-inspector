@@ -1,6 +1,7 @@
 /**
  * Applies an instancing scene's overrides, such as `[node name="plafoniera" parent="."]`, to
- * nodes inside the GLB it instances: transform, `layers` and `visible`. A GLB with no override
+ * nodes inside the GLB it instances: transform, `layers` and `visible`. A path into a Skeleton3D or
+ * BoneAttachment3D names a node that has no object of its own, so it binds nothing. A GLB with no override
  * keeps its baked offsets. `surface_material_override/0` needs an async load, so
  * `GlbSurfaceMaterialOverride` applies it. The scene cull applies the GeometryInstance3D state
  * (`glbGeometryInstances.ts`).
@@ -15,13 +16,13 @@ import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInst
 import { joinPath } from '../../../utils/nodePath';
 import { perObject } from '../../../utils/perObject';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
-import { findGlbTarget, matchGlbTarget, type GlbTargetMatchKind } from './matchGlbTarget.js';
+import { findGlbNode, findGlbTarget, matchGlbNode } from './glbPathLookup.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
  * The GLB object an override names, or `undefined` when nothing could be it. Both the writer here
  * and the material slots in `Component.tsx` use it, so one node never means two objects. A
- * shallow override takes the first name match, the root included, since a single-node GLB is
+ * shallow override names a child of the GLB root, or the root itself, since a single-node GLB is
  * addressed by its root's name.
  */
 export function resolveGlbOverrideTarget(
@@ -29,11 +30,11 @@ export function resolveGlbOverrideTarget(
   entries: readonly GlbObjectEntry[],
   override: TscnNode
 ): THREE.Object3D | undefined {
-  if (override.instanceSubPath) {
-    return matchGlbTarget(entries, joinPath(override.instanceSubPath, override.name))?.object;
+  const path = joinPath(override.instanceSubPath ?? '', override.name);
+  if (override.instanceSubPath || glbObjectName(root) !== override.name) {
+    return matchGlbNode(entries, path)?.object;
   }
-  const byName = entries.find((e) => glbObjectName(e.object) === override.name)?.object;
-  return byName ?? (glbObjectName(root) === override.name ? root : undefined);
+  return findGlbNode(entries, path)?.object ?? root;
 }
 
 /**
@@ -86,17 +87,10 @@ function glbAttachPath(child: TscnNode): string | null {
   return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
 }
 
-/** The lookup result of an override, which attaches to no object. */
-const NO_TARGET = { entry: null, kind: 'none' } as const;
-
-/**
- * A typed node of the instancing scene, with the index of the entry of the GLB object it is added
- * to, and how its path matched that entry.
- */
+/** A typed node of the instancing scene, with the index of the entry of the GLB object it is added to. */
 export interface GlbAttachment {
   node: LiveNode;
   target: number;
-  match: GlbTargetMatchKind;
 }
 
 /**
@@ -113,9 +107,8 @@ export function resolveGlbAttachments(
   const rest: LiveNode[] = [];
   for (const node of nodes) {
     const path = glbAttachPath(node);
-    const { entry, kind } = path === null ? NO_TARGET : findGlbTarget(entries, path);
-    // `indexOf` costs one more pass of the scan `findGlbTarget` has made, for a node that attaches.
-    if (entry) attached.push({ node, target: entries.indexOf(entry), match: kind });
+    const entry = path === null ? null : findGlbTarget(entries, path);
+    if (entry) attached.push({ node, target: entry.index });
     else rest.push(node);
   }
   return { attached, rest };

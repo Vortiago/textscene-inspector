@@ -11,7 +11,7 @@ import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCas
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
-import { tagGodotNodeNames } from './nodeNames';
+import { tagGodotNodes } from './godotNodes';
 import {
   gltfImportNames,
   type GltfImportNames,
@@ -138,7 +138,7 @@ export async function createGLBMesh(
   root.animations = gltf.animations;
   nameClips(root.animations, names.animations);
   tagMeshInstances(root, gltf.parser.associations);
-  tagGodotNodeNames(root, gltf.parser.associations, names.nodes);
+  tagGodotNodes(root, gltf.parser.associations, names);
   importMissingMaterialsAsGodotDefault(root, gltf.parser.associations);
   importBlendAsDepthPrepass(root);
   return root;

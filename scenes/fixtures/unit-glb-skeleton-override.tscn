@@ -1,0 +1,30 @@
+[gd_scene load_steps=3 format=3]
+
+; One variable: a type-less override of a node inside an instanced skinned `.glb`, written with the
+; path Godot's importer gives it. The importer builds a Skeleton3D below `Armature`, and a
+; BoneAttachment3D named `Hip` in it that holds `Sword`, which the file holds under the bone. The
+; override moves `Sword` 1.5 units above the bone. A path that names no node moves nothing, so the
+; box stays beside `Body`, where the file puts it. The two posts hold the framed bounds still.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-skeleton.glb" id="1_glb"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_post"]
+size = Vector3(0.1, 4.2, 0.1)
+
+[node name="GlbSkeletonOverride" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("1_glb")]
+
+[node name="Sword" parent="Model/Armature/Skeleton3D/Hip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 2, 0)
+
+[node name="PostLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="PostRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 1, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 3, 0)

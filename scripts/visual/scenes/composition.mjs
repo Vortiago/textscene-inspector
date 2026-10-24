@@ -38,6 +38,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // A type-less override of a GLB node sets its properties and adds no node: the model moves to the
   // right and its torso halves.
   { name: 'glb-property-override', file: 'unit-glb-property-override.tscn' },
+  // The one variable: a type-less override whose path runs through the Skeleton3D and the
+  // BoneAttachment3D Godot's importer builds, which the red box moves up through.
+  { name: 'glb-skeleton-override', file: 'unit-glb-skeleton-override.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a
