@@ -88,6 +88,21 @@ export function lerpf(from: number, to: number, weight: number): number {
 }
 
 /**
+ * The float overload of `Math::remap` (`core/math/math_funcs.h:508-510`): `inverse_lerp` of the value
+ * in the input range, then `lerp` into the output range, each step rounded in float.
+ */
+export function remapf(
+  value: number,
+  inStart: number,
+  inStop: number,
+  outStart: number,
+  outStop: number
+): number {
+  const weight = f(f(f(value) - f(inStart)) / f(f(inStop) - f(inStart)));
+  return lerpf(f(outStart), f(outStop), weight);
+}
+
+/**
  * The float overload of `Math::cubic_interpolate` (`core/math/math_funcs.h:350-356`), a
  * Catmull-Rom from `from` to `to` with the neighbours as tangents, rounded as each float
  * operation rounds.

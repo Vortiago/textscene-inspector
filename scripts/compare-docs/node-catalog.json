@@ -3497,6 +3497,16 @@
       ],
       "docs": "https://docs.godotengine.org/en/stable/classes/class_arraymesh.html",
       "source": "https://github.com/godotengine/godot/blob/master/scene/resources/mesh.h"
+    },
+    {
+      "name": "TextMesh",
+      "chain": [
+        "PrimitiveMesh",
+        "Mesh",
+        "Resource"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_textmesh.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/resources/3d/primitive_meshes.h"
     }
   ],
   "extras": [

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../../parser/types';
 import type { SceneResources } from '../SceneResourcesContext';
+import type { FontFileResource } from '../../resources/fonts/font/types';
+import { MissingResourcesProvider } from '../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import {
   createFakeResourceLoader,
@@ -11,6 +13,7 @@ import {
 import { useResourceResolution } from '../../resources/useSubOrExtResource';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnMeshesContext';
+import { fixtureFontBytes } from '../controls/native/text/sfntOutlines.testkit';
 import { arrayMeshPath, useMeshContent } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
@@ -100,15 +103,103 @@ function renderUnderNode<T>(nodePath: string, hook: () => T) {
 }
 
 describe('useMeshContent for a mesh type no slice builds', () => {
-  const TEXT: TscnInternalResource = { id: 'text', type: 'TextMesh', data: {} };
-  const SCENE: SceneResources = { internalResources: [TEXT], externalResources: [] };
+  const FUTURE: TscnInternalResource = { id: 'future', type: 'FutureMesh', data: {} };
+  const SCENE: SceneResources = { internalResources: [FUTURE], externalResources: [] };
 
   it("names the type in the holding node's details", () => {
     const { result } = renderUnderNode('Root/Sign', () => {
-      useMeshContent(useResourceResolution('SubResource("text")', SCENE));
+      useMeshContent(useResourceResolution('SubResource("future")', SCENE));
       return useUndrawnMeshTypes('Root/Sign');
     });
-    expect(result.current).toEqual(['TextMesh']);
+    expect(result.current).toEqual(['FutureMesh']);
+  });
+});
+
+const FONT_PATH = 'res://fonts/open-sans.ttf';
+const TRUE_TYPE_FILE: FontFileResource = {
+  kind: 'file',
+  bytes: fixtureFontBytes('open-sans-semibold-subset.ttf'),
+  mimeType: 'font/ttf',
+  fallbacks: [],
+  properties: {},
+};
+const NOT_AN_SFNT_FILE: FontFileResource = { ...TRUE_TYPE_FILE, bytes: new ArrayBuffer(8) };
+
+describe('useMeshContent for a TextMesh', () => {
+  const TEXT: TscnInternalResource = {
+    id: 'text',
+    type: 'TextMesh',
+    data: { text: '"Hi"', font: 'ExtResource("font")', material: 'SubResource("paint")' },
+  };
+  const PAINT: TscnInternalResource = { id: 'paint', type: 'StandardMaterial3D', data: {} };
+  const NO_FONT: TscnInternalResource = { id: 'plain', type: 'TextMesh', data: { text: '"Hi"' } };
+  const SCENE: SceneResources = {
+    internalResources: [TEXT, PAINT, NO_FONT],
+    externalResources: [{ id: 'font', type: 'FontFile', path: FONT_PATH }],
+  };
+
+  function renderText(ref: string) {
+    const fake = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => ({
+        content: useMeshContent(useResourceResolution(ref, SCENE)),
+        undrawn: useUndrawnMeshTypes('Root/Sign'),
+      }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <MissingResourcesProvider>
+            <ResourceLoaderProvider loader={fake.loader}>
+              <UndrawnMeshesProvider>
+                <NodePathProvider path="Root/Sign">{children}</NodePathProvider>
+              </UndrawnMeshesProvider>
+            </ResourceLoaderProvider>
+          </MissingResourcesProvider>
+        ),
+      }
+    );
+    return { fake, result };
+  }
+
+  it('loads, and names no undrawn type, while its font file loads', () => {
+    const { result } = renderText('SubResource("text")');
+    expect(result.current).toEqual({ content: { kind: 'loading' }, undrawn: [] });
+  });
+
+  it('draws the glyph outlines of the font once its file and its metrics load, under the mesh own material', async () => {
+    const { fake, result } = renderText('SubResource("text")');
+
+    await act(async () => fake.fonts._resolve(FONT_PATH, TRUE_TYPE_FILE));
+
+    const { content, undrawn } = result.current;
+    if (content.kind !== 'surfaced') throw new Error(`expected a surfaced mesh, got ${content.kind}`);
+    const [part] = content.mesh.parts;
+    expect(part.geometry.getAttribute('position').count).toBeGreaterThan(0);
+    expect(part.surfaceIndices).toEqual([0]);
+    expect(part.materials[0]).toBeDefined();
+    expect(content.mesh.primitive).toBe(TEXT);
+    expect(undrawn).toEqual([]);
+  });
+
+  it('stays undrawn, and names its type, for a font with no TrueType outlines', async () => {
+    const { fake, result } = renderText('SubResource("text")');
+
+    await act(async () => fake.fonts._resolve(FONT_PATH, NOT_AN_SFNT_FILE));
+
+    expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] });
+  });
+
+  it('stays undrawn, and names its type, for a font file that failed to load', () => {
+    const { fake, result } = renderText('SubResource("text")');
+
+    act(() => fake.fonts._fail(FONT_PATH, 'gone'));
+
+    expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] });
+  });
+
+  it('stays undrawn, and names its type, for a TextMesh with no font', () => {
+    const { result } = renderText('SubResource("plain")');
+
+    expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] });
   });
 });
 

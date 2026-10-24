@@ -9,8 +9,8 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from './previewCaptureState.js';
 import { useSceneLoad } from './useSceneLoad.js';
+import { subscribeToNothing } from '../../../utils/subscribeToNothing.js';
 
-const NO_SUBSCRIPTION = () => () => {};
 const NO_HANDLER = () => false;
 
 export function CaptureStateReporter({
@@ -22,7 +22,7 @@ export function CaptureStateReporter({
 }) {
   const control = useOptionalViewportActions();
   const hasHandler = useSyncExternalStore(
-    control?.subscribeScreenshotHandler ?? NO_SUBSCRIPTION,
+    control?.subscribeScreenshotHandler ?? subscribeToNothing,
     control?.hasScreenshotHandler ?? NO_HANDLER
   );
   const takeScreenshot = control?.takeScreenshot;

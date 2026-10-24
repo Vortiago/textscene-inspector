@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseSfntScalars } from './sfntTables';
+import { openSfnt, parseSfntScalars } from './sfntTables';
 
 const CORPUS_TTF = join(
   import.meta.dirname,
@@ -66,5 +66,19 @@ describe('parseSfntScalars', () => {
     dv.setUint32(20, 1_000_000, false); // offset, past the buffer
     dv.setUint32(24, 54, false); // length
     expect(parseSfntScalars(buf)).toBeNull();
+  });
+});
+
+describe('openSfnt', () => {
+  it('opens the bytes of a font file once, for every reader of its tables', () => {
+    const bytes = toArrayBuffer(readFileSync(CORPUS_TTF));
+
+    expect(openSfnt(bytes)).toBe(openSfnt(bytes));
+  });
+
+  it('answers null again for bytes that are no plain SFNT', () => {
+    const bytes = toArrayBuffer(readFileSync(CORPUS_WOFF2));
+
+    expect([openSfnt(bytes), openSfnt(bytes)]).toEqual([null, null]);
   });
 });

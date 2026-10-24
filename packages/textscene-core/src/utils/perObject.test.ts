@@ -63,4 +63,37 @@ describe('perObject', () => {
     expect(read(key)).toBeUndefined();
     expect(build).toHaveBeenCalledTimes(1);
   });
+
+  it('builds again on the next ask for a value the keep rule refuses', () => {
+    let next = 0;
+    const build = vi.fn(() => next++);
+    const read = perObject(build, { keeps: (value) => value >= 2 });
+    const key = {};
+    expect([read(key), read(key), read(key), read(key)]).toEqual([0, 1, 2, 2]);
+    expect(build).toHaveBeenCalledTimes(3);
+  });
+
+  it('hands the keep rule the built value and its key', () => {
+    const keeps = vi.fn(() => true);
+    const key = { size: 3 };
+    perObject((k: { size: number }) => k.size * 2, { keeps })(key);
+    expect(keeps).toHaveBeenCalledWith(6, key);
+  });
+
+  it('returns a refused value to the one that asked (edge case)', () => {
+    const read = perObject(() => 'draft', { keeps: () => false });
+    expect(read({})).toBe('draft');
+  });
+
+  it('checks the stamp on a hit and the keep rule on a store, together', () => {
+    const key = { version: 1 };
+    const keeps = vi.fn((value: number) => value >= 10);
+    const build = vi.fn(() => key.version * 10);
+    const read = perObject(build, { keeps, stamp: ({ version }) => version });
+    expect([read(key), read(key)]).toEqual([10, 10]);
+    key.version = 2;
+    expect([read(key), read(key)]).toEqual([20, 20]);
+    expect(build).toHaveBeenCalledTimes(2);
+    expect(keeps).toHaveBeenCalledTimes(2);
+  });
 });

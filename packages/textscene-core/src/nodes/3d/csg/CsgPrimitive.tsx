@@ -82,7 +82,9 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const registration = nodeComponentRegistry.getCsgShape(node.type);
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
-  useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
+  // Not while the root loads a file or a font: the mesh is unknown, not undrawn.
+  const isRootLoading = inAncestorPlan ? subtree.status === 'pending' : setup.isLoading;
+  useUndrawnMeshReport(isRootLoading ? null : (registration?.undrawnMeshType?.(builderProps, ctx) ?? null));
   const { ownSolid, isOpen, hasNoFaces } = useMemo(
     () => {
       const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);

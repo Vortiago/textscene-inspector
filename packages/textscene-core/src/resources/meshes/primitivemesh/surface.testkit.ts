@@ -5,7 +5,7 @@ import type { TscnInternalResource } from '../../../parser/types.js';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext.js';
 import type { ParsedResource } from '../../../parser/parsedResource.js';
 import type { ResolvableResource } from '../../scopedResource.js';
-import { loadedFilesOf, NO_FILES } from '../../testing/loadedFiles.js';
+import { loadedFilesOf, NO_FILES, NO_FONTS } from '../../testing/loadedFiles.js';
 import type { GodotSurface } from '../godotSurface.js';
 
 /** Vertex `vertex` of an array that holds `size` numbers per vertex. */
@@ -47,7 +47,12 @@ export function scopedMesh(
   resource: TscnInternalResource,
   ...internalResources: TscnInternalResource[]
 ): ResolvableResource {
-  return { resource, resources: { ...NO_RESOURCES, internalResources }, loadedFile: NO_FILES };
+  return {
+    resource,
+    resources: { ...NO_RESOURCES, internalResources },
+    loadedFile: NO_FILES,
+    loadedFont: NO_FONTS,
+  };
 }
 
 /** `mesh` with the files in `parsed` loaded, keyed by path. */

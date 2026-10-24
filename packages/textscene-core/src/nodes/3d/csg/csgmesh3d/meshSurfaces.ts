@@ -54,7 +54,12 @@ function readMesh(meshRef: string, ctx: CsgGeometryContext): CsgMesh | null {
   if (!scoped) return null;
   const path = referencedFilePath(meshRef, ctx);
   const parsed = path ? ctx.loadedFile(path) : undefined;
-  return { ...scoped, loadedFile: ctx.loadedFile, file: path && parsed ? { path, parsed } : null };
+  return {
+    ...scoped,
+    loadedFile: ctx.loadedFile,
+    loadedFont: ctx.loadedFont,
+    file: path && parsed ? { path, parsed } : null,
+  };
 }
 
 /**

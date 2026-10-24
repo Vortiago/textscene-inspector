@@ -3,8 +3,10 @@ import { CSGMesh3D } from './Component';
 import {
   csgMesh3DGeometry,
   csgMesh3DGeometryKey,
-  csgMesh3DMeshType,
+  csgMesh3DAwaitsFontMetrics,
   csgMesh3DReadsFiles,
+  csgMesh3DReadsFonts,
+  csgMesh3DUndrawnMeshType,
 } from './csgGeometry';
 
 nodeComponentRegistry.register({
@@ -15,6 +17,8 @@ nodeComponentRegistry.register({
     geometry: csgMesh3DGeometry,
     geometryKey: csgMesh3DGeometryKey,
     readsFiles: csgMesh3DReadsFiles,
-    meshType: csgMesh3DMeshType,
+    readsFonts: csgMesh3DReadsFonts,
+    awaitsFontMetrics: csgMesh3DAwaitsFontMetrics,
+    undrawnMeshType: csgMesh3DUndrawnMeshType,
   },
 });

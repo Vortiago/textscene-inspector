@@ -377,7 +377,7 @@ describe('<MeshInstance3D> external PrimitiveMesh', () => {
     expect((mesh.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000);
   });
 
-  it('draws the placeholder for a mesh type no slice here builds', async () => {
+  it('draws the placeholder for a TextMesh with no TrueType font', async () => {
     const mesh = await renderCrate({
       [WALL_PATH]: '[gd_resource type="TextMesh" format=3]\n\n[resource]\n',
     });

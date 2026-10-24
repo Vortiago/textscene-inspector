@@ -12,7 +12,7 @@ import { perObject } from '../../../utils/perObject';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
 import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
-import type { ResolvableResource, ScopedResource } from '../../scopedResource';
+import type { LoadedFont, ResolvableResource, ScopedResource } from '../../scopedResource';
 import type { GodotSurface } from '../godotSurface';
 import { decodePrimitiveMesh } from './decode';
 import { flipFaces } from './flipFaces';
@@ -38,6 +38,14 @@ import { decodeTubeTrailMesh } from '../tubetrailmesh/decode';
 import { buildTubeTrailMeshSurface } from '../tubetrailmesh/build';
 import { decodeRibbonTrailMesh } from '../ribbontrailmesh/decode';
 import { buildRibbonTrailMeshSurface } from '../ribbontrailmesh/build';
+import { buildTextMeshSurface } from '../textmesh/build';
+import { decodeTextMesh } from '../textmesh/decode';
+import {
+  textMeshFont,
+  textMeshFontFiles,
+  textMeshFontKey,
+  type TextMeshFont,
+} from '../textmesh/textMeshFont';
 
 /** What a type's build reads: its properties, and the resources those properties name. */
 interface BuildInput {
@@ -49,6 +57,8 @@ interface BuildInput {
    * id, or a file not loaded.
    */
   references: Readonly<Record<string, TscnInternalResource | null>>;
+  /** The font of a type that declares `font`, null for any other. */
+  font: TextMeshFont | null;
 }
 
 /** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
@@ -60,6 +70,11 @@ interface PrimitiveMeshType {
   build: (input: BuildInput) => GodotSurface | null;
   /** The properties of the type that name a resource its build reads. */
   references?: readonly string[];
+  /** The font the build extrudes, which has to load first: the files it names and how far it has loaded. */
+  font?: {
+    files: (scoped: ScopedResource, loadedFont: LoadedFont) => string[];
+    read: (mesh: ResolvableResource) => TextMeshFont;
+  };
   /**
    * The lightmap size hint of a type whose builder writes no UV2: `PrimitiveMesh::_update` scales
    * its UV by it instead. PlaneMesh and its QuadMesh subclass derive it as they set their
@@ -72,6 +87,14 @@ interface PrimitiveMeshType {
 const CURVE_PROPERTY = 'curve';
 
 /**
+ * The lightmap size hint of a type that does not override `_update_lightmap_size`: the authored
+ * one, which `set_lightmap_size_hint` stores as it is.
+ */
+function authoredLightmapSizeHint(type: string): LightmapSizeHint {
+  return (data) => vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, `${type} lightmap_size_hint`);
+}
+
+/**
  * A trail mesh builds from its properties and its Curve, and keeps the authored lightmap size hint,
  * as neither overrides `_update_lightmap_size`.
  */
@@ -82,8 +105,7 @@ function curveTrailMeshType(
   return {
     build: ({ data, references }) => build(data, references[CURVE_PROPERTY] ?? null),
     references: [CURVE_PROPERTY],
-    lightmapSizeHint: (data) =>
-      vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, `${type} lightmap_size_hint`),
+    lightmapSizeHint: authoredLightmapSizeHint(type),
   };
 }
 
@@ -118,6 +140,14 @@ const TYPES: Record<string, PrimitiveMeshType> = {
   RibbonTrailMesh: curveTrailMeshType('RibbonTrailMesh', (data, curve) =>
     buildRibbonTrailMeshSurface(decodeRibbonTrailMesh(data, curve))
   ),
+  // No face to extrude without a font, so the build gives none: `isDrawablePrimitiveMesh` tells that
+  // from a mesh that is empty. TextMesh writes no UV2 and keeps the authored lightmap size hint.
+  TextMesh: {
+    build: ({ data, font }) =>
+      font?.status === 'ready' ? buildTextMeshSurface(decodeTextMesh(data), font.face) : null,
+    font: { files: textMeshFontFiles, read: textMeshFont },
+    lightmapSizeHint: authoredLightmapSizeHint('TextMesh'),
+  },
 };
 
 /**
@@ -143,19 +173,57 @@ export function primitiveMeshFiles({ resource, resources }: ScopedResource): str
   );
 }
 
+/** Whether the build of `type` reads the font of the mesh, which loads on the font bus. */
+export function primitiveMeshReadsFont(type: string): boolean {
+  return TYPES[type]?.font !== undefined;
+}
+
+/** The font files the mesh's `font` names, for a type that reads one. Its build reads them once they load. */
+export function primitiveMeshFontFiles(scoped: ScopedResource, loadedFont: LoadedFont): string[] {
+  return TYPES[scoped.resource.type]?.font?.files(scoped, loadedFont) ?? [];
+}
+
+/** The font the build of `mesh` reads, or null for a type that reads none. */
+function primitiveMeshFont(mesh: ResolvableResource): TextMeshFont | null {
+  return TYPES[mesh.resource.type]?.font?.read(mesh) ?? null;
+}
+
+/** Whether the font of `mesh` has loaded and its metrics are still to settle, so no surface builds yet. */
+export function isAwaitingFontMetrics(mesh: ResolvableResource): boolean {
+  return primitiveMeshFont(mesh)?.status === 'awaitingMetrics';
+}
+
 /**
- * A key over the content of each resource the mesh's build reads, empty for a type that reads
- * none. A resource that is not there, or not loaded, is part of the key as missing. A mesh object
- * holds its resources and its file lookup for good, so the key is read once per mesh object.
+ * Whether this previewer can build `mesh`. A type with no slice here cannot, and neither can a
+ * mesh whose font has no TrueType outlines: Godot draws both. A mesh that builds no surface is
+ * drawable and empty.
  */
-export const referencesKey = perObject(({ resource, resources, loadedFile }: ResolvableResource): string =>
-  referencesOf(resource.type)
-    .map((property) => {
+export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
+  return isPrimitiveMeshType(mesh.resource.type) && primitiveMeshFont(mesh)?.status !== 'unreadable';
+}
+
+/**
+/**
+ * A key over the content of each resource the mesh's build reads, and over its font, empty for a
+ * type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
+ * A mesh object holds its resources and its lookups for good, so a key is read once per object. A
+ * mesh whose font awaits metrics is read each time: its key moves when they settle.
+ */
+export const referencesKey = perObject(readReferencesKey, {
+  keeps: (_key, mesh) => !isAwaitingFontMetrics(mesh),
+});
+
+function readReferencesKey(mesh: ResolvableResource): string {
+  const { resource, resources, loadedFile } = mesh;
+  const font = primitiveMeshFont(mesh);
+  return [
+    ...referencesOf(resource.type).map((property) => {
       const named = resolveReference(resource.data[property], resources, loadedFile);
       return named ? resourceContentKey(named.resource) : 'missing';
-    })
-    .join('|')
-);
+    }),
+    ...(font ? [textMeshFontKey(font)] : []),
+  ].join('|');
+}
 
 /** A surface and the content of the references it was built from. */
 interface BuiltSurface {
@@ -174,8 +242,8 @@ const builtSurfaces = perObject<TscnInternalResource, Map<number, BuiltSurface>>
  * The surface `_update` hands the rendering server (`primitive_meshes.cpp:45-123`), in Godot's
  * arrays. `mesh` holds the tables and files its references resolve in. `texelSize` is the project's
  * PrimitiveMesh texel size, which turns `uv2_padding` into world units (`:403-407`). Null for an
- * unknown, external (GLB) or unresolvable type, or a mesh Godot would refuse to build. The surface
- * is shared, so a caller copies before it writes.
+ * unknown, external (GLB) or unresolvable type, a mesh Godot would refuse to build, or a font that
+ * is not ready. The surface is shared, so a caller copies before it writes.
  */
 export function primitiveMeshSurface(mesh: ResolvableResource, texelSize: number): GodotSurface | null {
   const { resource } = mesh;
@@ -201,7 +269,7 @@ function buildSurface(mesh: ResolvableResource, texelSize: number): GodotSurface
       resolveReferencedResource(resource.data[property], resources, loadedFile),
     ])
   );
-  const built = type.build({ data: resource.data, uv2Padding, references });
+  const built = type.build({ data: resource.data, uv2Padding, references, font: primitiveMeshFont(mesh) });
   if (!built) return null;
   const surface =
     base.addUv2 && type.lightmapSizeHint

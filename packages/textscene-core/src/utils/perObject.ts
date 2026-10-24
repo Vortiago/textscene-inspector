@@ -1,6 +1,11 @@
 /** A value built once for each key object, made on the first ask for that key. */
 
-export interface PerObjectOptions<K extends object> {
+export interface PerObjectOptions<K extends object, T> {
+  /**
+   * Whether to keep a built value for the next ask. A value it refuses goes to the caller that asked
+   * and is built again for the next, for a value that is not final yet.
+   */
+  keeps?: (value: T, key: K) => boolean;
   /**
    * A number that tells when a key's value is stale, read on each ask. The value builds again when
    * the stamp differs from the one it was built under, as with a texture's `version`.
@@ -21,7 +26,7 @@ interface Built<T> {
  */
 export function perObject<K extends object, T>(
   build: (key: K) => T,
-  { stamp = () => 0 }: PerObjectOptions<K> = {}
+  { keeps, stamp = () => 0 }: PerObjectOptions<K, T> = {}
 ): (key: K) => T {
   const built = new WeakMap<K, Built<T>>();
   return (key) => {
@@ -29,7 +34,7 @@ export function perObject<K extends object, T>(
     const stored = built.get(key);
     if (stored?.stamp === current) return stored.value;
     const value = build(key);
-    built.set(key, { stamp: current, value });
+    if (!keeps || keeps(value, key)) built.set(key, { stamp: current, value });
     return value;
   };
 }

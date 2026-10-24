@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
+import { readyTextMesh, textMeshWith } from '../../resources/meshes/textmesh/textMeshFont.testkit';
 import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
 import { COARSE_TUBE, curveEndingAt, scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import { subResource } from '../../testing/subResource';
@@ -120,8 +121,18 @@ describe('primitiveMeshGeometry', () => {
 
   it('is null for a type with no slice here', () => {
     expect(
-      primitiveMeshGeometry(scopedMesh({ id: 'text', type: 'TextMesh', data: {} }), TEXEL_SIZE)
+      primitiveMeshGeometry(scopedMesh({ id: 'future', type: 'FutureMesh', data: {} }), TEXEL_SIZE)
     ).toBeNull();
+  });
+
+  it('is null for a TextMesh whose font is not loaded', () => {
+    expect(primitiveMeshGeometry(textMeshWith(), TEXEL_SIZE)).toBeNull();
+  });
+
+  it('draws the glyphs of a TextMesh once its font is ready', async () => {
+    const geometry = primitiveMeshGeometry(await readyTextMesh(), TEXEL_SIZE);
+
+    expect(geometry!.getAttribute('position').count).toBeGreaterThan(0);
   });
 });
 
@@ -155,6 +166,17 @@ describe('primitiveMeshAabb', () => {
   });
 
   it('is unknown for a type with no slice here', () => {
-    expect(primitiveMeshAabb(scopedMesh({ id: 'text', type: 'TextMesh', data: {} }))).toBeNull();
+    expect(primitiveMeshAabb(scopedMesh({ id: 'future', type: 'FutureMesh', data: {} }))).toBeNull();
+  });
+
+  it('is unknown for a TextMesh whose font has no TrueType outlines', () => {
+    expect(primitiveMeshAabb(textMeshWith())).toBeNull();
+  });
+
+  it('bounds the glyphs of a TextMesh once its font is ready', async () => {
+    const aabb = primitiveMeshAabb(await readyTextMesh())!;
+
+    expect(aabb.size.x).toBeGreaterThan(0);
+    expect(aabb.size.y).toBeGreaterThan(0);
   });
 });
