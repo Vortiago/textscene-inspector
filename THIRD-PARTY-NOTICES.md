@@ -26,7 +26,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/areaLight/ltcIntegral.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (the edge fit, the horizon clip and the LTC integrals for diffuse and specular) |
 | `packages/textscene-core/src/r3f/areaLight/areaLightChunk.ts` | `servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl` (`light_process_area` and `get_omni_attenuation`) |
 | `packages/textscene-core/src/r3f/areaLight/areaTextureFetch.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (`fetch_ltc_lod` and the form-factor texture fetch) |
-| `packages/textscene-core/src/r3f/areaLight/atlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas`: the cell sizes and the packing) |
+| `packages/textscene-core/src/r3f/areaLight/atlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas`: the cell sizes) |
+| `packages/textscene-core/src/r3f/textureAtlas/atlasPacking.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas` and `update_decal_atlas`: the best-fit skyline packing and the doubling of the width) |
+| `packages/textscene-core/src/nodes/3d/decal/decalAtlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_decal_atlas`: the cell sizes, the atlas size and each rectangle) |
 | `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
 | `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
