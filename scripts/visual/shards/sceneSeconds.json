@@ -67,6 +67,7 @@
   "control-node2d-ancestor-transform": 2.5,
   "control-scene-font-magnified": 3.5,
   "control-scene-font-theme": 3.5,
+  "control-scene-font-typo-metrics": 2.8,
   "control-scene-font-woff2": 2.8,
   "control-theme-base-class": 2.8,
   "control-top-level": 2.5,

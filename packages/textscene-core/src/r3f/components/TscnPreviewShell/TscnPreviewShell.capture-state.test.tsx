@@ -12,7 +12,8 @@ import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
 import { useResourceLoader } from '../../../resources/useResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { beginTextureWork } from '../../../resources/textures/textureWork';
+import { textureWork } from '../../../resources/textures/textureWork';
+import { fontWork } from '../../controls/native/text/sceneFontLoader';
 import type { PreviewCaptureState } from './previewCaptureState';
 import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 import type { SceneGraph } from '../../../core/SceneGraph';
@@ -193,7 +194,7 @@ describe('<TscnPreviewShell> capture state', () => {
 
   it('reports pending while a texture is building, and ready once it is done', () => {
     arrangeCanvas({});
-    const endTextureWork = beginTextureWork();
+    const endTextureWork = textureWork.begin();
     try {
       const { states } = renderShell();
       expect(latest(states)).toEqual({ status: 'pending' });
@@ -203,6 +204,21 @@ describe('<TscnPreviewShell> capture state', () => {
       expect(latest(states)?.status).toBe('ready');
     } finally {
       endTextureWork();
+    }
+  });
+
+  it('reports pending while a scene font is loading, and ready once it settles', () => {
+    arrangeCanvas({});
+    const endFontWork = fontWork.begin();
+    try {
+      const { states } = renderShell();
+      expect(latest(states)).toEqual({ status: 'pending' });
+
+      act(() => endFontWork());
+
+      expect(latest(states)?.status).toBe('ready');
+    } finally {
+      endFontWork();
     }
   });
 
@@ -250,9 +266,24 @@ describe('<TscnPreviewShell> scene load status', () => {
     expect(sceneLoadStatus()).not.toBeNull();
   });
 
+  it('shows "Loading scene…" while a scene font is loading, and leaves once it settles', () => {
+    arrangeCanvas({});
+    const endFontWork = fontWork.begin();
+    try {
+      renderShell();
+      expect(sceneLoadStatus()?.textContent).toBe('Loading scene…');
+
+      act(() => endFontWork());
+
+      expect(sceneLoadStatus()).toBeNull();
+    } finally {
+      endFontWork();
+    }
+  });
+
   it('gives way to the texture work status, so one status shows at a time (edge case)', () => {
     arrangeCanvas({});
-    const endTextureWork = beginTextureWork();
+    const endTextureWork = textureWork.begin();
     try {
       renderShell();
       expect(sceneLoadStatus()).toBeNull();

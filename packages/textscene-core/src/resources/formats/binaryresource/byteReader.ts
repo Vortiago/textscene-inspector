@@ -21,6 +21,10 @@ export class ByteReader {
     this.offset = offset;
   }
 
+  u8(): number {
+    return this.view.getUint8(this.advance(1));
+  }
+
   u16(): number {
     return this.view.getUint16(this.advance(2), this.isLittleEndian);
   }

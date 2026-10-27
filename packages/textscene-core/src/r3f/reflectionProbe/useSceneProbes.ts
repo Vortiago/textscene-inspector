@@ -7,7 +7,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { useResourceLoader } from '../../resources/useResource.js';
-import { pendingTextureWork } from '../../resources/textures/textureWork.js';
+import { textureWork } from '../../resources/textures/textureWork.js';
+import { fontWork } from '../controls/native/text/sceneFontLoader.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';
 import { SceneProbes } from './sceneProbes.js';
 
@@ -44,7 +45,7 @@ export function useSceneProbes(): void {
   useFrame(() => {
     const held = heldByScene.get(scene);
     if (!held || held.holders.values().next().value !== holder) return;
-    const pending = (loader?.pendingResourceCount ?? 0) + pendingTextureWork();
+    const pending = (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending();
     if (held.probes.update(pending, clearColor.current)) invalidate();
   });
 }

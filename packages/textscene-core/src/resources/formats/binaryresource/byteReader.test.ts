@@ -8,6 +8,10 @@ describe('ByteReader', () => {
     expect(new ByteReader(bytes(1, 0, 0, 0, 0xff, 0xff, 0xff, 0xff)).u32()).toBe(1);
   });
 
+  it('reads one byte, whatever the byte order', () => {
+    expect(new ByteReader(bytes(0xab, 1)).u8()).toBe(0xab);
+  });
+
   it('reads big endian once the header says so', () => {
     const reader = new ByteReader(bytes(0, 0, 0, 2));
     reader.isLittleEndian = false;
