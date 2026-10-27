@@ -23,8 +23,13 @@ const UNSELECTED_COLOUR_FACTOR = 0.6;
 function iconAlbedo(variant: GizmoVariant, isInstantiated: boolean): Rgba {
   const albedo = isInstantiated ? INSTANTIATED_GIZMO_COLOUR : WHITE;
   if (variant === 'selected') return albedo;
-  const dimmed = UNSELECTED_COLOUR_FACTOR;
-  return { r: albedo.r * dimmed, g: albedo.g * dimmed, b: albedo.b * dimmed, a: albedo.a };
+  const { r, g, b, a } = albedo;
+  return {
+    r: r * UNSELECTED_COLOUR_FACTOR,
+    g: g * UNSELECTED_COLOUR_FACTOR,
+    b: b * UNSELECTED_COLOUR_FACTOR,
+    a,
+  };
 }
 
 /** `modulate` is the vertex colour of the quad, white for a node that tints nothing. */

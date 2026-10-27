@@ -5,7 +5,7 @@ status: linter-only
 fixture: unit-audio-listener-3d.tscn
 # image: unit-audio-listener-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a billboard icon on a transform-only group
 ---
 
 # AudioListener3D

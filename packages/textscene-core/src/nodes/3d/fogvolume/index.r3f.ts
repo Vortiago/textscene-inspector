@@ -1,6 +1,6 @@
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { FogVolume } from './Component';
-import { hasGizmoShape } from './Gizmo';
+import { fogVolumeHasGizmo } from '../../../godot/rendering/environment/fogVolume';
 import type { FogVolumeProperties } from './types';
 
 nodeComponentRegistry.register({
@@ -8,6 +8,6 @@ nodeComponentRegistry.register({
   Component: FogVolume,
   editorIcon: {
     icon: 'GizmoFogVolume',
-    isDrawn: (node) => hasGizmoShape((node.properties as FogVolumeProperties).shape),
+    isDrawn: (node) => fogVolumeHasGizmo((node.properties as FogVolumeProperties).shape),
   },
 });

@@ -76,7 +76,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md): no geometry of its own, a working blend-tree driver
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md): an invisible transform-only group
 - [AreaLight3D](../../packages/textscene-core/src/nodes/3d/lights/arealight3d/comparison.md): a THREE.RectAreaLight shaded as Godot 4.7.2's area light
-- [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md): nothing (a transform-only group)
+- [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md): a billboard icon on a transform-only group
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md): a billboard icon, and a range and cone gizmo for the selected node
 - [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing yet, Godot applies its bone constraints each frame, the previewer does not

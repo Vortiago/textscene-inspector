@@ -24,6 +24,35 @@ export function isEditorHelper(object: THREE.Object3D): boolean {
   return object.userData[EDITOR_HELPER_KEY] === true;
 }
 
+/**
+ * Hides every visible object of `scene` that `shouldHide` picks, and answers the call that shows them
+ * again. A subtree that is already hidden stays hidden through the restore.
+ *
+ * @canonical Hide the scene objects a pass must not draw, and show them again after it
+ */
+export function hideObjects(
+  scene: THREE.Object3D,
+  shouldHide: (object: THREE.Object3D) => boolean
+): () => void {
+  const hidden: THREE.Object3D[] = [];
+  scene.traverseVisible((object) => {
+    if (shouldHide(object)) hidden.push(object);
+  });
+  for (const object of hidden) object.visible = false;
+  return () => {
+    for (const object of hidden) object.visible = true;
+  };
+}
+
+/**
+ * Hides every editor chrome subtree of `scene`. A pass through a camera that is not the editor's
+ * draws no chrome, as Godot's gizmos live in the editor viewport alone. A node icon aligned to the
+ * editor camera would also draw skewed.
+ */
+export function hideEditorHelpers(scene: THREE.Object3D): () => void {
+  return hideObjects(scene, isEditorHelper);
+}
+
 const NODE_ICON_KEY = 'tscnNodeIcon';
 
 /**

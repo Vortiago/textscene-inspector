@@ -38,8 +38,11 @@ export function useFixedSize(
     // Godot's VERTEX patch scales the model-view basis and leaves the origin, which equals scaling
     // `object.scale`. Not a `ProgramInjection`: Label3D's glyph material bypasses that seam, and a
     // scale the scene graph sees keeps raycasts and `frameSceneBounds.ts` matching the pixels.
-    if (scalesWithDepth(camera)) object.updateWorldMatrix(true, false);
-    const sc = fixedSizeFactor(camera, worldOrigin.setFromMatrixPosition(object.matrixWorld));
+    if (scalesWithDepth(camera)) {
+      object.updateWorldMatrix(true, false);
+      worldOrigin.setFromMatrixPosition(object.matrixWorld);
+    }
+    const sc = fixedSizeFactor(camera, worldOrigin);
     object.scale.set(authoredScale[0] * sc, authoredScale[1] * sc, authoredScale[2] * sc);
   });
 }

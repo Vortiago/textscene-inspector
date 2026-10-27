@@ -143,6 +143,9 @@ pointer root resolves. The raycast hits the icon square, as Godot's does. The ic
 `frameSceneBounds` or the hover and selection boxes, so it changes no frame and no box. The icon files
 are Godot's own SVGs, listed in THIRD-PARTY-NOTICES.md.
 
+A SubViewport pass hides every editor chrome subtree, since Godot's gizmos live in the editor viewport alone,
+and an icon aligned to the editor camera would draw skewed through the camera of the viewport.
+
 ### What the toggle and the selection do not change
 
 PathFollow child placement is scene state. Path2D and Path3D always provide their curve to
