@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { ViewportActionsProvider } from '../contexts/ViewportActionsContext';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
@@ -17,6 +18,7 @@ import {
   useExposureFactor,
   useOptionalExposureFactor,
   usePublishCameraAttributes,
+  usePublishRenderCamera,
   type CameraAttributesResolution,
 } from './worldExposure';
 
@@ -85,13 +87,47 @@ function read(renderer: Renderer): { optionalFactor: number | null; factor: numb
   return renderer.scene.find((node) => node.props.name === 'Reader').props.userData;
 }
 
-function inRoot(children: ReactNode) {
+/** A Camera3D at `order`: it publishes the attributes it holds, as the node does. */
+function CameraAt({
+  order,
+  path,
+  current = false,
+  cameraAttributes = NO_RESOLUTION,
+}: {
+  order: TreeOrder;
+  path: string;
+  current?: boolean;
+  cameraAttributes?: CameraAttributesResolution;
+}) {
+  return (
+    <TreeOrderProvider order={order}>
+      <PublishingCamera path={path} current={current} cameraAttributes={cameraAttributes} />
+    </TreeOrderProvider>
+  );
+}
+
+function PublishingCamera({
+  path,
+  current,
+  cameraAttributes,
+}: {
+  path: string;
+  current: boolean;
+  cameraAttributes: CameraAttributesResolution;
+}) {
+  usePublishRenderCamera(path, current, cameraAttributes);
+  return null;
+}
+
+function inRoot(children: ReactNode, activeCameraPath: string | null = null) {
   return (
     <ViewportModeProvider>
-      <WorldEnvironmentScope world="root">
-        {children}
-        <Reader />
-      </WorldEnvironmentScope>
+      <ViewportActionsProvider initialActiveCameraPath={activeCameraPath}>
+        <WorldEnvironmentScope world="root">
+          {children}
+          <Reader />
+        </WorldEnvironmentScope>
+      </ViewportActionsProvider>
     </ViewportModeProvider>
   );
 }
@@ -222,6 +258,144 @@ describe('the exposure of a world', () => {
       .findAll((node) => node.props.name === 'Reader')
       .map((node) => node.props.userData.optionalFactor);
     expect(optionalFactors.sort()).toEqual([2, null]);
+  });
+});
+
+/**
+ * The viewport renders through one Camera3D, and its valid attributes replace the world's
+ * (`renderer_scene_cull.cpp:2707`, `:3562-3565`).
+ */
+describe('the exposure of a world seen through a Camera3D', () => {
+  it('takes the attributes of the camera the viewer looks through over the WorldEnvironment', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={attributes(5)} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(read(renderer)).toEqual({ optionalFactor: 5, factor: 5 });
+  });
+
+  it('applies the camera attributes with no WorldEnvironment at all', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<CameraAt order={[0]} path="Root/Camera3D" cameraAttributes={attributes(3)} />, 'Root/Camera3D')
+    );
+    expect(read(renderer)).toEqual({ optionalFactor: 3, factor: 3 });
+  });
+
+  it('leaves the WorldEnvironment attributes in force in the free view', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={attributes(5)} />
+        </>
+      )
+    );
+    expect(read(renderer).factor).toBe(2);
+  });
+
+  it('ignores a camera the viewer does not look through', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/A" cameraAttributes={attributes(5)} />
+          <CameraAt order={[2]} path="Root/B" cameraAttributes={attributes(9)} />
+        </>,
+        'Root/B'
+      )
+    );
+    expect(read(renderer).factor).toBe(9);
+  });
+
+  it('keeps the WorldEnvironment attributes for a camera that holds none', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Camera3D" />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(read(renderer).factor).toBe(2);
+  });
+
+  it('keeps a camera multiplier of 0, which is a valid exposure', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={attributes(0)} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(read(renderer)).toEqual({ optionalFactor: 0, factor: 0 });
+  });
+
+  it('elects the last current camera of a sub-viewport, as the viewport does', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <WorldEnvironmentScope world="subViewport">
+          <CameraAt order={[0]} path="Root/Sub/A" cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Sub/B" current cameraAttributes={attributes(3)} />
+          <CameraAt order={[2]} path="Root/Sub/C" current cameraAttributes={attributes(4)} />
+          <Reader />
+        </WorldEnvironmentScope>
+      )
+    );
+    const factors = renderer.scene
+      .findAll((node) => node.props.name === 'Reader')
+      .map((node) => node.props.userData.factor);
+    expect(factors.sort()).toEqual([1, 4]);
+  });
+
+  it('elects the first camera of a sub-viewport when none is current', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <WorldEnvironmentScope world="subViewport">
+          <CameraAt order={[0]} path="Root/Sub/A" cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Sub/B" cameraAttributes={attributes(3)} />
+          <Reader />
+        </WorldEnvironmentScope>
+      )
+    );
+    const factors = renderer.scene
+      .findAll((node) => node.props.name === 'Reader')
+      .map((node) => node.props.userData.factor);
+    expect(factors.sort()).toEqual([1, 2]);
+  });
+
+  it('holds the place of a camera whose attributes still load', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={PENDING_RESOLUTION} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(read(renderer)).toEqual({ optionalFactor: null, factor: 1 });
+  });
+
+  it('returns to the WorldEnvironment attributes when the camera leaves', async () => {
+    const tree = (withCamera: boolean) =>
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          {withCamera && <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={attributes(5)} />}
+        </>,
+        'Root/Camera3D'
+      );
+    const renderer = await ReactThreeTestRenderer.create(tree(true));
+    await renderer.update(tree(false));
+    expect(read(renderer).factor).toBe(2);
   });
 });
 

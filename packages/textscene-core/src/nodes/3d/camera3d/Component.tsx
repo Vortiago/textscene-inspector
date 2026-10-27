@@ -16,12 +16,15 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../r3f/hooks/useTHREEHelper';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
+import { usePublishRenderCamera } from '../../../r3f/environment/worldExposure';
+import { useResolvedCameraAttributes } from '../worldenvironment/useResolvedCameraAttributes';
 
 const DEFAULT_ASPECT = 16 / 9;
 
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
   const tscnPath = useNodePath() ?? node.name;
+  usePublishRenderCamera(tscnPath, properties.current, useResolvedCameraAttributes(properties.attributes));
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]

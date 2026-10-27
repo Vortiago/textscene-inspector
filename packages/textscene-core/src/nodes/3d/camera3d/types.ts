@@ -28,6 +28,12 @@ export interface Camera3DProperties extends Node3DProperties {
 
   // Additional properties
   current: boolean;
+  /**
+   * Reference to a CameraAttributesPractical or CameraAttributesPhysical (optional), in the
+   * `SubResource("id")` or the `ExtResource("id")` form. Its `exposure_multiplier` scales the frame
+   * while the viewport renders through this camera (`r3f/environment/worldExposure.tsx`).
+   */
+  attributes?: string;
   cull_mask: number;
   doppler_tracking: number;
 }

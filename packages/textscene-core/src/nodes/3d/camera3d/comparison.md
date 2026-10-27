@@ -45,6 +45,12 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 
 The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum_offset`) warn and fall back to Godot's defaults through `floatOr` and `vec2Or`, and `cull_mask` and `doppler_tracking` to `1048575` and `0`. `projection` and `keep_aspect` silently treat any unrecognised value as the default. `current` reads every spelling a BOOL slot converts, so `1` makes the camera current. Text no BOOL slot reads leaves the camera inactive without a warning.
 
+## Exposure
+
+While the viewer looks through a Camera3D, or a sub-viewport elects it, the exposure factor of its `attributes` replaces the one of the world (`renderer_scene_cull.cpp:3562-3565`). A camera with no valid `attributes` leaves the world's exposure in force. The WorldEnvironment sheet lists what the factor scales.
+
 ## Known limitations
+
+- **Not drawn** A CameraAttributesPhysical does not set the `fov`, `near` and `far` of its camera (`camera_3d.cpp:565-567`), and its depth of field does not draw.
 
 - **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.

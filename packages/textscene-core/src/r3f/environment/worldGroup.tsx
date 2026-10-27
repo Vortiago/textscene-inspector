@@ -1,7 +1,8 @@
 /**
- * A group of one viewport's WorldEnvironments, as Godot's World3D keeps it: the WorldEnvironments
- * inside publish to it, and its chooser answers the first one in tree order that holds a valid
- * resource (`world_environment.cpp:43-48`, `:87-93`). Godot keeps a group per resource slot, so the
+ * What one viewport's world gathers from the nodes inside it, as Godot's World3D keeps it. A
+ * publication set holds every node's value in tree order. A group is a set of WorldEnvironment
+ * resolutions whose chooser answers the first one in tree order that holds a valid resource
+ * (`world_environment.cpp:43-48`, `:87-93`). Godot keeps a group per resource slot, so the
  * Environment and the CameraAttributes each choose their node apart (ADR-0025).
  */
 
@@ -20,40 +21,40 @@ export type WorldResolution<Resolved extends object> =
 export const PENDING_RESOLUTION: { status: 'pending' } = { status: 'pending' };
 export const NO_RESOLUTION: { status: 'none' } = { status: 'none' };
 
-interface Publication<R extends { status: string }> {
+interface Publication<T> {
   key: object;
   order: TreeOrder;
-  resolution: R;
+  value: T;
 }
 
-interface Publisher<R extends { status: string }> {
-  publish(publication: Publication<R>): void;
+interface Publisher<T> {
+  publish(publication: Publication<T>): void;
   withdraw(key: object): void;
 }
 
-export interface WorldGroup<R extends { status: string }> {
+export interface WorldPublications<T> {
   /** Holds the publications of the world below it. One per world, above every reader. */
   Provider: (props: { children: ReactNode }) => ReactNode;
-  /** Puts a WorldEnvironment's resolution in its world. Layout effects, so the chooser updates before paint. */
-  usePublish: (resolution: R) => void;
-  /** The world's resolution: null with no WorldEnvironment, `none` when none holds a valid one. */
-  useChosen: () => R | null;
+  /** Puts a node's value in its world. Layout effects, so the readers update before paint. */
+  usePublish: (value: T) => void;
+  /** Like `usePublish`, for a node that may stand outside any world: it publishes nowhere then. */
+  usePublishIfInWorld: (value: T) => void;
+  /** Every value of the world in tree order, an ancestor first. A new array when one changes. */
+  useAll: () => readonly T[];
 }
 
-/** A `pending` publication holds its place, since its resource may turn out valid. */
-export function createWorldGroup<Resolved extends object>(): WorldGroup<WorldResolution<Resolved>> {
-  type R = WorldResolution<Resolved>;
-  const PublisherContext = createContext<Publisher<R> | null>(null);
-  const PublicationsContext = createContext<readonly Publication<R>[]>([]);
+/**
+ * The publications sort in tree order, as Godot's group sorts its nodes, an ancestor first
+ * (`scene_tree.cpp:1568-1581`). React's mount order differs for a late sub-scene and for a child.
+ */
+export function createWorldPublications<T>(): WorldPublications<T> {
+  const PublisherContext = createContext<Publisher<T> | null>(null);
+  const PublicationsContext = createContext<readonly Publication<T>[]>([]);
 
-  /**
-   * The publications sort in tree order, as Godot's group sorts its nodes, an ancestor first
-   * (`scene_tree.cpp:1568-1581`). React's mount order differs for a late sub-scene and for a child.
-   */
   function Provider({ children }: { children: ReactNode }) {
-    const [publications, setPublications] = useState<readonly Publication<R>[]>([]);
+    const [publications, setPublications] = useState<readonly Publication<T>[]>([]);
     const publisher = useMemo(
-      (): Publisher<R> => ({
+      (): Publisher<T> => ({
         publish: (publication) =>
           setPublications((current) => {
             const previous = current.find((entry) => entry.key === publication.key);
@@ -74,27 +75,56 @@ export function createWorldGroup<Resolved extends object>(): WorldGroup<WorldRes
     );
   }
 
-  function usePublish(resolution: R): void {
-    const publisher = useContext(PublisherContext);
-    if (!publisher)
-      throw new Error('expected a world environment scope above a WorldEnvironment, found none');
+  function usePublishTo(publisher: Publisher<T> | null, value: T): void {
     const [key] = useState(() => ({}));
     const order = useTreeOrder();
-    useLayoutEffect(() => () => publisher.withdraw(key), [publisher, key]);
-    useLayoutEffect(() => publisher.publish({ key, order, resolution }), [publisher, key, order, resolution]);
+    useLayoutEffect(() => (publisher ? () => publisher.withdraw(key) : undefined), [publisher, key]);
+    useLayoutEffect(() => publisher?.publish({ key, order, value }), [publisher, key, order, value]);
   }
 
-  function useChosen(): R | null {
+  function usePublish(value: T): void {
+    const publisher = useContext(PublisherContext);
+    if (!publisher)
+      throw new Error('expected a world environment scope above the publishing node, found none');
+    usePublishTo(publisher, value);
+  }
+
+  function usePublishIfInWorld(value: T): void {
+    usePublishTo(useContext(PublisherContext), value);
+  }
+
+  function useAll(): readonly T[] {
     const publications = useContext(PublicationsContext);
+    return useMemo(() => publications.map((entry) => entry.value), [publications]);
+  }
+
+  return { Provider, usePublish, usePublishIfInWorld, useAll };
+}
+
+function isSamePublication<T>(a: Publication<T>, b: Publication<T>): boolean {
+  return a.value === b.value && compareTreeOrder(a.order, b.order) === 0;
+}
+
+export interface WorldGroup<R extends { status: string }> {
+  Provider: WorldPublications<R>['Provider'];
+  /** Puts a WorldEnvironment's resolution in its world. */
+  usePublish: WorldPublications<R>['usePublish'];
+  /** The world's resolution: null with no WorldEnvironment, `none` when none holds a valid one. */
+  useChosen: () => R | null;
+}
+
+/** A `pending` publication holds its place, since its resource may turn out valid. */
+export function createWorldGroup<Resolved extends object>(): WorldGroup<WorldResolution<Resolved>> {
+  type R = WorldResolution<Resolved>;
+  const { Provider, usePublish, useAll } = createWorldPublications<R>();
+
+  function useChosen(): R | null {
+    const resolutions = useAll();
     return useMemo(() => {
-      if (publications.length === 0) return null;
-      return publications.find((entry) => entry.resolution.status !== 'none')?.resolution ?? NO_RESOLUTION;
-    }, [publications]);
+      if (resolutions.length === 0) return null;
+      return resolutions.find((resolution) => resolution.status !== 'none') ?? NO_RESOLUTION;
+    }, [resolutions]);
   }
 
   return { Provider, usePublish, useChosen };
-}
-
-function isSamePublication<R extends { status: string }>(a: Publication<R>, b: Publication<R>): boolean {
-  return a.resolution === b.resolution && compareTreeOrder(a.order, b.order) === 0;
 }

@@ -33,7 +33,7 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 
 ## Exposure
 
-The `camera_attributes` of the first WorldEnvironment that holds a CameraAttributesPractical or CameraAttributesPhysical apply to the world. They are chosen apart from the Environment, so a node with no Environment can set the exposure. The `exposure_multiplier` is the exposure factor. It scales:
+The `camera_attributes` of the first WorldEnvironment that holds a CameraAttributesPractical or CameraAttributesPhysical apply to the world. They are chosen apart from the Environment, so a node with no Environment can set the exposure. The `attributes` of the Camera3D the viewport renders through replace them (`renderer_scene_cull.cpp:3562-3565`). That camera is the one the viewer looks through, and a sub-viewport elects its own. The free view has none. The `exposure_multiplier` is the exposure factor. It scales:
 
 - the energy of each light, including the lights of a GLB file, and each emission, by the factor.
 - a colour background and a sky background by the factor, before the linear conversion for a colour.
@@ -45,4 +45,3 @@ A flat ambient light does not scale. With no Environment, the clear colour does 
 ## Known limitations
 
 - **Not drawn** Auto exposure, depth of field and the physical light units of a CameraAttributesPhysical have no effect, since only `exposure_multiplier` applies.
-- **Not drawn** The `Camera3D.attributes` of a camera does not apply: the editor camera holds no attributes.
