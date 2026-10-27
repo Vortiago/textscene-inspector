@@ -10,6 +10,11 @@ import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import './index.r3f';
 import { parseVoxelGI } from './parser';
@@ -29,9 +34,19 @@ function voxelGi(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
+async function render(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true,
+  instantiated = false
+) {
   return ReactThreeTestRenderer.create(
-    <GizmoScene nodePath="Probe" selectedPath={selectedPath} showGizmos={showGizmos}>
+    <GizmoScene
+      nodePath="Probe"
+      selectedPath={selectedPath}
+      showGizmos={showGizmos}
+      instantiated={instantiated}
+    >
       <VoxelGI node={voxelGi(props)}>
         <group name="Child" />
       </VoxelGI>
@@ -53,6 +68,14 @@ async function gizmoLines(props: Record<string, string>) {
   });
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Probe',
+  drawnFor: 'selected-only',
+  mount: ({ selectedPath, showGizmos, instantiated }) => render(selectedPath, {}, showGizmos, instantiated),
+};
+describeGizmoToggle('<VoxelGI>', GIZMO_CASE);
+describeInstantiatedGizmo('<VoxelGI>', GIZMO_CASE);
+
 describe('<VoxelGI> gizmo gate', () => {
   it.each([
     ['the node is selected', 'Probe', 2],
@@ -61,11 +84,6 @@ describe('<VoxelGI> gizmo gate', () => {
   ])('draws the box and the grid only when %s', async (_label, selectedPath, expected) => {
     const renderer = await render(selectedPath);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
-  });
-
-  it('draws nothing with the Gizmos toggle off, selected', async () => {
-    const renderer = await render('Probe', {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

@@ -18,6 +18,7 @@ export const PRIMITIVE_SCENES = [
   { name: 'quadmesh', file: 'unit-quadmesh.tscn' },
   { name: 'quadmesh-orientation', file: 'unit-quadmesh-orientation.tscn' },
   { name: 'sphere-mesh-texture-uv', file: 'unit-sphere-mesh-texture-uv.tscn' },
+  { name: 'text-mesh', file: 'unit-text-mesh.tscn' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
   { name: 'torus-mesh-texture-uv', file: 'unit-torus-mesh-texture-uv.tscn' },
   { name: 'tube-trail-mesh-texture-uv', file: 'unit-tube-trail-mesh-texture-uv.tscn' },
@@ -47,6 +48,9 @@ export const PRIMITIVE_SCENES = [
   // An open brush is an empty manifold: the quad and the open cylinder draw nothing, the
   // box beside them draws, and an open quad under a subtraction removes nothing.
   { name: 'csg-mesh-open-brush', file: 'unit-csg-mesh-open-brush.tscn' },
+  // A TextMesh in a CSGMesh3D builds its brush from the glyph outlines once its font loads: the left
+  // text draws as a solid, the right one cuts its letters out of a box.
+  { name: 'csg-mesh-text-mesh', file: 'unit-csg-mesh-text-mesh.tscn' },
   // A texture on a brush: each shape's V must run the way Godot's does.
   { name: 'csg-texture-uv', file: 'unit-csg-texture-uv.tscn' },
   // DEPTH extrudes to local -Z over [-depth, 0], not to +Z and not centred. The

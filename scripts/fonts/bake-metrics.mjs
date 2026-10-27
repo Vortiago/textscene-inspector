@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas and bytes into the
- * committed `openSans{Metrics,Atlas,FontBytes}.ts` modules the native Control
+ * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas, atlas image and bytes into the
+ * committed `openSans{Metrics,Atlas,AtlasImage,FontBytes}.ts` modules the native Control
  * text painter reads: `node scripts/fonts/bake-metrics.mjs [--check]`. `--check`
  * diffs a fresh bake against them byte for byte and exits 1 on a difference.
  */
@@ -26,6 +26,7 @@ const WOFF2_PATH = join(REPO_ROOT, 'packages/textscene-core/assets/fonts/OpenSan
 const TEXT_DIR = join(REPO_ROOT, 'packages/textscene-core/src/r3f/controls/native/text');
 const METRICS_OUT = join(TEXT_DIR, 'openSansMetrics.ts');
 const ATLAS_OUT = join(TEXT_DIR, 'openSansAtlas.ts');
+const ATLAS_IMAGE_OUT = join(TEXT_DIR, 'openSansAtlasImage.ts');
 const FONT_BYTES_OUT = join(TEXT_DIR, 'openSansFontBytes.ts');
 
 // Full ASCII printable, 0x20 (space) to 0x7E (~), 95 glyphs. Do not narrow it.
@@ -374,11 +375,12 @@ export function getUnderlineThicknessPx(fontSizePx: number): number {
 `;
 }
 
-function renderAtlasModule({ pngDataUrl, glyphsByChar, atlasInfo }) {
+function renderAtlasModule({ glyphsByChar, atlasInfo }) {
   return `${GENERATED_HEADER}
-// The glyph table and atlas image below are generated data (base64 + a
-// per-glyph JSON table for CHARSET.length glyphs) on single very long lines;
-// this file is excluded from lint entirely via eslint.config.js's ignore list.
+// The glyph table below is generated data (a per-glyph JSON table for CHARSET.length
+// glyphs) on one very long line; this file is excluded from lint entirely via
+// eslint.config.js's ignore list. The atlas image lives in \`openSansAtlasImage.ts\`, so a
+// shaper that reads only this table does not carry the image.
 
 /** One glyph's MSDF-atlas placement/geometry, in atlas-bake-size pixels (see \`OPEN_SANS_ATLAS_INFO.fontSize\`). */
 export interface OpenSansGlyph {
@@ -440,6 +442,13 @@ export const OPEN_SANS_ATLAS_INFO: OpenSansAtlasInfo = ${JSON.stringify(atlasInf
  * own width instead of collapsing the line around it.
  */
 export const OPEN_SANS_ATLAS_GLYPHS: Record<string, OpenSansGlyph> = ${JSON.stringify(glyphsByChar)};
+`;
+}
+
+function renderAtlasImageModule(pngDataUrl) {
+  return `${GENERATED_HEADER}
+// The base64 payload below is generated data on one very long line. Like
+// \`openSansFontBytes.ts\` this file is one string export and lints clean.
 
 /** MSDF atlas texture (\`distanceField.fieldType: "msdf"\`), inline so it rides \`img-src ... data:\` under the VS Code webview CSP (ADR-0003). */
 export const OPEN_SANS_ATLAS_PNG_DATA_URL = ${JSON.stringify(pngDataUrl)};
@@ -477,22 +486,25 @@ async function bake() {
 
   return {
     metricsSource: renderMetricsModule(metrics),
-    atlasSource: renderAtlasModule({ pngDataUrl, glyphsByChar, atlasInfo }),
+    atlasSource: renderAtlasModule({ glyphsByChar, atlasInfo }),
+    atlasImageSource: renderAtlasImageModule(pngDataUrl),
     fontBytesSource: renderFontBytesModule(readFileSync(WOFF2_PATH)),
   };
 }
 
 async function main() {
   const check = process.argv.includes('--check');
-  const { metricsSource, atlasSource, fontBytesSource } = await bake();
+  const { metricsSource, atlasSource, atlasImageSource, fontBytesSource } = await bake();
+  const outputs = [
+    [METRICS_OUT, metricsSource],
+    [ATLAS_OUT, atlasSource],
+    [ATLAS_IMAGE_OUT, atlasImageSource],
+    [FONT_BYTES_OUT, fontBytesSource],
+  ];
 
   if (check) {
     let stale = false;
-    for (const [path, expected] of [
-      [METRICS_OUT, metricsSource],
-      [ATLAS_OUT, atlasSource],
-      [FONT_BYTES_OUT, fontBytesSource],
-    ]) {
+    for (const [path, expected] of outputs) {
       let actual;
       try {
         actual = readFileSync(path, 'utf8');
@@ -522,12 +534,10 @@ async function main() {
     return;
   }
 
-  writeFileSync(METRICS_OUT, metricsSource);
-  writeFileSync(ATLAS_OUT, atlasSource);
-  writeFileSync(FONT_BYTES_OUT, fontBytesSource);
-  console.log(`[bake-metrics] wrote ${METRICS_OUT}`);
-  console.log(`[bake-metrics] wrote ${ATLAS_OUT}`);
-  console.log(`[bake-metrics] wrote ${FONT_BYTES_OUT}`);
+  for (const [path, source] of outputs) {
+    writeFileSync(path, source);
+    console.log(`[bake-metrics] wrote ${path}`);
+  }
 }
 
 main().catch((err) => {

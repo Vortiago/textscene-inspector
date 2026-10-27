@@ -19,7 +19,11 @@ export interface Vector3 {
 /** The components of a `Vector3`, in the order Godot indexes them (`v[0]`, `v[1]`, `v[2]`). */
 export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
 
-/** `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero. */
+/**
+ * `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero.
+ *
+ * @oneWay A unit vector
+ */
 export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
   const lengthSquared = vector3LengthSquared(x, y, z);
   if (lengthSquared === 0) return [0, 0, 0];

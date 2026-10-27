@@ -12,6 +12,11 @@ import { heading } from '../../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { GizmoScene } from '../../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../../r3f/testing/gizmoContract';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
@@ -64,7 +69,12 @@ function emitter(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
+async function render(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true,
+  instantiated = false
+) {
   const fake = createFakeResourceLoader();
   fake.resources.seed(FILE_PATH, {
     resourceType: 'ParticleProcessMaterial',
@@ -75,7 +85,12 @@ async function render(selectedPath: string | null, props: Record<string, string>
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={RESOURCES} externalResources={EXTERNAL_RESOURCES}>
-        <GizmoScene nodePath="Sparks" selectedPath={selectedPath} showGizmos={showGizmos}>
+        <GizmoScene
+          nodePath="Sparks"
+          selectedPath={selectedPath}
+          showGizmos={showGizmos}
+          instantiated={instantiated}
+        >
           <GPUParticles3D node={emitter(props)}>
             <group name="Child" />
           </GPUParticles3D>
@@ -97,6 +112,16 @@ async function gizmoLines(props: Record<string, string>) {
   });
 }
 
+// The process material adds the emission shape, so the case covers both gizmo parts.
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Sparks',
+  drawnFor: 'selected-only',
+  mount: ({ selectedPath, showGizmos, instantiated }) =>
+    render(selectedPath, { process_material: 'SubResource("Process_sphere")' }, showGizmos, instantiated),
+};
+describeGizmoToggle('<GPUParticles3D>', GIZMO_CASE);
+describeInstantiatedGizmo('<GPUParticles3D>', GIZMO_CASE);
+
 describe('<GPUParticles3D> gizmo gate', () => {
   it.each([
     ['the node is selected', 'Sparks', 1],
@@ -105,11 +130,6 @@ describe('<GPUParticles3D> gizmo gate', () => {
   ])('draws the box only when %s', async (_label, selectedPath, expected) => {
     const renderer = await render(selectedPath);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
-  });
-
-  it('draws nothing with the Gizmos toggle off, selected', async () => {
-    const renderer = await render('Sparks', { process_material: 'SubResource("Process_sphere")' }, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

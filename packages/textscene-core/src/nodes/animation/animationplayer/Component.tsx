@@ -15,6 +15,7 @@ import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/Ani
 import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
+import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride, loopSettingsFor } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
@@ -45,8 +46,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // Selection-driven (ADR-0012): this player owns the transport only while it
   // is the node selected in the tree.
   const nodePath = useNodePath();
-  const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
-  const isSelected = nodePath !== null && nodePath === selectedNodePath;
+  const isSelected = useIsSelected();
 
   // AnimationMixer.active gates everything: `seek_internal` returns on `!active`
   // (animation_player.cpp:664), refusing this transport's scrub as well as the process callback

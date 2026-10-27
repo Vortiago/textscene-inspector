@@ -6,7 +6,7 @@
 
 import { extend } from '@react-three/fiber';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
-import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { ReflectionProbeObject } from '../../../r3f/reflectionProbe/reflectionProbeObject';
 import { useSceneProbes } from '../../../r3f/reflectionProbe/useSceneProbes';
@@ -20,12 +20,13 @@ const ReflectionProbeElement = extend(ReflectionProbeObject);
 export function ReflectionProbe({ node, children }: NodeComponentProps) {
   useSceneProbes();
   const treeOrder = useTreeOrder();
-  const gizmoVisible = useGizmoDrawn('selected-only');
   const probe = node.properties as ReflectionProbeProperties;
   return (
     <Node3D node={node}>
       <ReflectionProbeElement probe={probe} treeOrder={treeOrder} />
-      {gizmoVisible && <ReflectionProbeGizmo probe={probe} />}
+      <PluginGizmo drawnFor="selected-only">
+        <ReflectionProbeGizmo probe={probe} />
+      </PluginGizmo>
       {children}
     </Node3D>
   );

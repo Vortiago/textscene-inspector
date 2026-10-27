@@ -34,6 +34,17 @@ export const GIZMO_SCENES = [
   // axes for every node (`cpu_particles_3d_gizmo_plugin.cpp:98`) but not the solid box or the
   // emission shape, and Path3D draws its curve (`path_3d_editor_plugin.cpp:320`).
   { name: 'cpuparticles3d-unselected', file: 'unit-cpuparticles3d-gizmo.tscn', gizmos: true },
+  // The same emitter inside two instances. `Locked` is a plain instance, so Godot draws its gizmo in the
+  // grey of a node the edited scene does not own (`node_3d_editor_gizmos.cpp:907-917`). `Editable` is
+  // listed by `[editable]` and keeps the particles colour. One golden has nothing selected, and one
+  // selects the locked emitter.
+  { name: 'cpuparticles3d-instanced-unselected', file: 'unit-gizmo-instance.tscn', gizmos: true },
+  {
+    name: 'cpuparticles3d-instanced-selected',
+    file: 'unit-gizmo-instance.tscn',
+    gizmos: true,
+    select: 'Root/Locked/Emitter',
+  },
   // The box gizmos of the types whose Godot editor gizmo is a box volume. VisibleOnScreenNotifier3D and
   // its Enabler draw the box, the axes and a faint fill. ReflectionProbe draws the blend box, the lines
   // to the outer box and the origin cross. VoxelGI draws the box and its cell grid. FogVolume draws the box.

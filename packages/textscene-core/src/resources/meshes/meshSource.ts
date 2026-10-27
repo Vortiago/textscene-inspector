@@ -8,7 +8,7 @@ import type { ResolvableResource, ScopedResource } from '../scopedResource.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import { ARRAY_MESH_TYPES } from './arraymesh/decode.js';
 import { resourceContentKey } from '../resourceContentKey.js';
-import { isPrimitiveMeshType, referencesKey } from './primitivemesh/surface.js';
+import { isDrawablePrimitiveMesh, isPrimitiveMeshType, referencesKey } from './primitivemesh/surface.js';
 
 export interface MeshSource extends ResolvableResource {
   /** The path the mesh loads from, a file or a **Sub-resource path**. Null for a mesh in the scene. */
@@ -28,6 +28,26 @@ export function meshKind(type: string): MeshKind | null {
   if (ARRAY_MESH_TYPES.has(type)) return 'arrayMesh';
   if (SURFACELESS_MESH_TYPES.has(type)) return 'surfaceless';
   return isPrimitiveMeshType(type) ? 'primitive' : null;
+}
+
+/**
+ * Whether this previewer draws `mesh`. A type no slice builds is not drawn, and neither is a
+ * TextMesh whose font it cannot read. A mesh with no surface is drawn, and empty.
+ */
+export function isDrawableMesh(mesh: ResolvableResource): boolean {
+  const kind = meshKind(mesh.resource.type);
+  return kind === 'primitive' ? isDrawablePrimitiveMesh(mesh) : kind !== null;
+}
+
+/**
+ * The type of `scoped` to report as undrawn, or null for a mesh this previewer draws. `resolved` is
+ * the mesh once the files and the font its build reads have loaded, and null while they load: the
+ * mesh is unknown then, not undrawn.
+ */
+export function undrawnMeshType(scoped: ScopedResource, resolved: ResolvableResource | null): string | null {
+  const { type } = scoped.resource;
+  if (meshKind(type) === null) return type;
+  return resolved && !isDrawableMesh(resolved) ? type : null;
 }
 
 /**

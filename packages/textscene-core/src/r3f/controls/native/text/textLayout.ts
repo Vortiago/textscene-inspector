@@ -262,7 +262,7 @@ export function isTabChar(ch: string): boolean {
 }
 
 /** `core/string/char_utils.h::is_control`: C0 controls and DEL through the C1 range, tab and linebreaks included. */
-function isControlChar(cp: number): boolean {
+export function isControlChar(cp: number): boolean {
   return cp <= 0x001f || (cp >= 0x007f && cp <= 0x009f);
 }
 

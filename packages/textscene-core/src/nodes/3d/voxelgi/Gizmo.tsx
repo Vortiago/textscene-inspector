@@ -1,6 +1,6 @@
 /**
  * The editor gizmo of a VoxelGI: the 12 edges of its box, and the grid of its cells at a low opacity
- * (`voxel_gi_gizmo_plugin.cpp:96-164`). The component gates it with `useGizmoState`.
+ * (`voxel_gi_gizmo_plugin.cpp:96-164`). The component mounts it in a selected-only `PluginGizmo`.
  */
 
 import { useMemo } from 'react';
@@ -24,7 +24,7 @@ export function VoxelGIGizmo({ voxelGi }: { voxelGi: VoxelGIProperties }) {
   const grid = useMemo(() => new Float32Array(cellGridLines(box, voxelGiCells(subdiv))), [box, subdiv]);
   return (
     <>
-      <AabbGizmo aabb={box} color={GIZMO_COLOR} variant="selected" />
+      <AabbGizmo aabb={box} color={GIZMO_COLOR} />
       <GizmoLine positions={grid} color={useGodotLinearColor(GIZMO_COLOR)} opacity={GRID_ALPHA} />
     </>
   );

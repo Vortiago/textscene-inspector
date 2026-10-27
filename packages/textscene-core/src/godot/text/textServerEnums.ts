@@ -20,6 +20,17 @@ export const AutowrapMode = {
 export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
 
 /**
+ * `TextServer::ContourPointTag` (`servers/text/text_server.h:194-198`): the tag in the `z` of each point
+ * `font_get_glyph_contours` returns. FreeType's `FT_CURVE_TAG` of the point is the value, so a
+ * conic control point is 0.
+ */
+export const ContourPointTag = {
+  OFF_CONIC: 0,
+  ON: 1,
+  OFF_CUBIC: 2,
+} as const;
+
+/**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …
  * OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6 (servers/text/text_server.h:123-130).
  * `FoldableContainer`'s hint stops at OVERRUN_TRIM_WORD_ELLIPSIS (4).
@@ -51,6 +62,13 @@ export const JustificationFlag = {
   SKIP_LAST_LINE_WITH_VISIBLE_CHARS: 1 << 6,
   DO_NOT_SKIP_SINGLE_LINE: 1 << 7,
 } as const;
+
+/** The `jst_flags` default of `Label` (`label.h:46`) and of `TextMesh` (`primitive_meshes.h:585`). */
+export const DEFAULT_JUSTIFICATION_FLAGS =
+  JustificationFlag.WORD_BOUND |
+  JustificationFlag.KASHIDA |
+  JustificationFlag.SKIP_LAST_LINE |
+  JustificationFlag.DO_NOT_SKIP_SINGLE_LINE;
 
 /**
  * The `JustificationFlag` bits a `justification_flags` hint offers, identical in `label.cpp:1437`

@@ -2,7 +2,7 @@
  * What a resolved mesh draws: its geometry and each draw group's own material, whatever kind of
  * mesh it is and wherever it lives. MeshInstance3D and GridMap read a mesh through this one hook.
  * An ArrayMesh with a path decodes once through the ArrayMesh processor. Every other mesh builds in
- * place.
+ * place. A TextMesh builds once its font has loaded.
  */
 
 import { useMemo } from 'react';
@@ -12,7 +12,12 @@ import { warn } from '../../logger';
 import { projectPrimitiveMeshTexelSize } from '../../parser/projectSettingsParser';
 import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
 import { godotSurfaceParts } from '../../resources/meshes/godotSurface';
-import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../resources/meshes/meshSource';
+import {
+  meshKind,
+  primitiveMaterialAddress,
+  undrawnMeshType,
+  type MeshSource,
+} from '../../resources/meshes/meshSource';
 import { useResolvableMesh } from '../../resources/meshes/useResolvableMesh';
 import type { ScopedResource } from '../../resources/scopedResource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
@@ -77,10 +82,12 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
   return resourcePath && scoped && meshKind(scoped.resource.type) === 'arrayMesh' ? resourcePath : null;
 }
 
+/**
+ * @oneWay Mesh content and its disposal
+ */
 export function useMeshContent(resolution: ResourceResolution): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
-  useUndrawnMeshReport(scoped?.resource.type ?? null);
   const processorPath = arrayMeshPath(resolution);
   // `''` requests nothing.
   const fileArrayMesh = useResource<ArrayMeshResource>(processorPath ?? '', 'arraymesh');
@@ -92,6 +99,8 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
   const { mesh: resolvable, isLoading: isLoadingReferences } = useResolvableMesh(
     kind === 'primitive' ? scoped : null
   );
+  const undrawnType = scoped ? undrawnMeshType(scoped, resolvable) : null;
+  useUndrawnMeshReport(undrawnType);
   const primitiveSurfaced = usePrimitiveMesh(
     useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath])
   );
@@ -102,6 +111,7 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
   if (kind === 'surfaceless') return EMPTY;
   if (kind === 'primitive') {
     if (isLoadingReferences) return LOADING;
+    if (undrawnType) return UNRESOLVED;
     return primitiveSurfaced ? { kind: 'surfaced', mesh: primitiveSurfaced } : EMPTY;
   }
   if (!processorPath) return sceneSurfaced ? { kind: 'surfaced', mesh: sceneSurfaced } : UNRESOLVED;

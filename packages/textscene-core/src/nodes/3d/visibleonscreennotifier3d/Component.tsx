@@ -6,7 +6,7 @@
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { AabbAxesGizmo } from '../../../r3f/components/AabbAxesGizmo';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { Node3D } from '../../base/node3d/Component';
 import type { VisibleOnScreenNotifier3DProperties } from './types';
 
@@ -18,12 +18,11 @@ const SOLID_ALPHA = 0.1;
 
 export function VisibleOnScreenNotifier3D({ node, children }: NodeComponentProps) {
   const { aabb } = node.properties as VisibleOnScreenNotifier3DProperties;
-  const gizmoState = useGizmoState('every-node');
   return (
     <Node3D node={node}>
-      {gizmoState !== 'hidden' && (
-        <AabbAxesGizmo aabb={aabb} color={GIZMO_COLOR} solidAlpha={SOLID_ALPHA} variant={gizmoState} />
-      )}
+      <PluginGizmo drawnFor="every-node">
+        <AabbAxesGizmo aabb={aabb} color={GIZMO_COLOR} solidAlpha={SOLID_ALPHA} />
+      </PluginGizmo>
       {children}
     </Node3D>
   );

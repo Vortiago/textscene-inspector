@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
+import { notifySceneFontMetricsSettled } from '../../r3f/controls/native/text/sceneFontLoader';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
 import { missingResourcesWrapper } from '../testing/missingResourcesWrapper';
 import { COARSE_TUBE, curveEndingAt } from './primitivemesh/surface.testkit';
+import { FONT_PATH, textMeshWith, trueTypeFontFile } from './textmesh/textMeshFont.testkit';
 import { useResolvableMesh } from './useResolvableMesh';
 
 const CURVE_PATH = 'res://grow.tres';
@@ -58,5 +60,103 @@ describe('useResolvableMesh', () => {
     const { result } = renderMesh(null);
 
     expect(result.current).toEqual({ mesh: null, isLoading: false });
+  });
+});
+
+describe('useResolvableMesh for a TextMesh', () => {
+  const TEXT = textMeshWith();
+  const textScoped: ScopedResource = { resource: TEXT.resource, resources: TEXT.resources };
+
+  it('requests the font file, and is no mesh while it loads', () => {
+    const fake = createFakeResourceLoader();
+    const request = vi.fn();
+    fake.fonts.setRequestImpl(request);
+    const { result } = renderHook(() => useResolvableMesh(textScoped), {
+      wrapper: missingResourcesWrapper(fake.loader),
+    });
+
+    expect(request).toHaveBeenCalledWith(FONT_PATH);
+    expect(result.current).toEqual({ mesh: null, isLoading: true });
+  });
+
+  it('is no mesh while the metrics of the loaded font settle, then serves the mesh with its font', async () => {
+    const fake = createFakeResourceLoader();
+    const { result } = renderHook(() => useResolvableMesh(textScoped), {
+      wrapper: missingResourcesWrapper(fake.loader),
+    });
+    const font = trueTypeFontFile();
+
+    act(() => fake.fonts._resolve(FONT_PATH, font));
+    expect(result.current).toEqual({ mesh: null, isLoading: true });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.mesh!.loadedFont(FONT_PATH)).toBe(font);
+  });
+
+  it('serves the mesh, and not loading, for a font that failed to load', () => {
+    const fake = createFakeResourceLoader();
+    const { result } = renderHook(() => useResolvableMesh(textScoped), {
+      wrapper: missingResourcesWrapper(fake.loader),
+    });
+
+    act(() => fake.fonts._fail(FONT_PATH, 'gone'));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.mesh!.loadedFont(FONT_PATH)).toBeUndefined();
+  });
+});
+
+describe('useResolvableMesh and the metrics of a font that settle', () => {
+  function renderCounting(scoped: ScopedResource, fake = createFakeResourceLoader()) {
+    let renders = 0;
+    const { result } = renderHook(
+      () => {
+        renders += 1;
+        return useResolvableMesh(scoped);
+      },
+      { wrapper: missingResourcesWrapper(fake.loader) }
+    );
+    return { fake, result, renders: () => renders };
+  }
+
+  it('does not render again for a mesh that reads no font', () => {
+    const { renders } = renderCounting(BOX);
+    const before = renders();
+
+    act(() => notifySceneFontMetricsSettled());
+
+    expect(renders()).toBe(before);
+  });
+
+  it('does not render again for a TextMesh whose font has no TrueType outlines', () => {
+    const text = textMeshWith();
+    const { fake, renders } = renderCounting({ resource: text.resource, resources: text.resources });
+    act(() => fake.fonts._resolve(FONT_PATH, { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) }));
+    const before = renders();
+
+    act(() => notifySceneFontMetricsSettled());
+
+    expect(renders()).toBe(before);
+  });
+
+  it('does not render again for a TextMesh whose metrics have settled', async () => {
+    const text = textMeshWith();
+    const { fake, result, renders } = renderCounting({ resource: text.resource, resources: text.resources });
+    act(() => fake.fonts._resolve(FONT_PATH, trueTypeFontFile()));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const before = renders();
+
+    act(() => notifySceneFontMetricsSettled());
+
+    expect(renders()).toBe(before);
+  });
+
+  it('listens to no font bus for a mesh that reads no font', () => {
+    const fake = createFakeResourceLoader();
+    const onChange = vi.spyOn(fake.eventBus, 'onChange');
+
+    renderCounting(BOX, fake);
+
+    expect(onChange.mock.calls.map(([busTypes]) => busTypes)).not.toContainEqual(['font']);
   });
 });

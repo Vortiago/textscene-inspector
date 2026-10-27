@@ -12,7 +12,7 @@ Godot's texture projector: it casts `texture_albedo` down the node's local -Y ax
 
 <!-- compare: image=unit-decal status=limitation fixture=unit-decal.tscn -->
 
-The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (`copy_effects.cpp:592`), and fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`). The decal sampler is one of the viewport's samplers (`render_forward_clustered.cpp:3434-3455`), so the viewport's `texture_mipmap_bias` offsets the decal's mip level as it does a material's.
+The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its rectangle of the decal atlas (see "Mip chain"), clamped as Godot samples it: fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`). The decal sampler is one of the viewport's samplers (`render_forward_clustered.cpp:3434-3455`), so the viewport's `texture_mipmap_bias` offsets the decal's mip level as it does a material's.
 
 ## Texture wrappers
 
@@ -24,7 +24,13 @@ A decal takes its texture's RID (`scene/3d/decal.cpp:46`), as a material slot do
 
 <!-- compare: image=unit-decal-mipmap-import status=done fixture=unit-decal-mipmap-import.tscn -->
 
-The decal atlas gives each decal a mip chain, even over an import without one. It halves each level in the atlas's RGBA8 bytes (`texture_storage.cpp:3162-3226`). The previewer builds the same chain on the CPU with the importer's 2 × 2 byte average. So the minified red and green checker projects a dark yellow, as in Godot.
+One decal atlas holds every albedo texture that a decal projects, as in Godot (`texture_storage.cpp:3038-3258`). Two decals with one texture share one rectangle. The atlas packs the textures with Godot's best-fit skyline in its size order. Each texture takes a cell of `(size / 32) + 1` with a border of 32 texels, and the atlas has five levels (`texture_storage.h:274`).
+
+Level 0 copies each texture into its rectangle over transparent black. Each next level halves the whole previous level in RGBA8 bytes with the importer's 2 × 2 byte average (`:3220-3222`). The atlas rebuilds only when a texture joins it or changes its pixels. A texture that leaves keeps its place until then (`:3258`).
+
+The projection samples `uv * rect.size + rect.position` of the atlas, linear between levels. So its rim blends the transparent border, and a small level blends a neighbouring texture, as in Godot. The minified red and green checker projects a dark yellow, as in Godot.
+
+A texture that would push the atlas past the GPU's `MAX_TEXTURE_SIZE` stays out, the last to join first, with a console warning. Godot has no such limit.
 
 ## Linting
 
@@ -69,5 +75,3 @@ The linter warns (`resource-type-excluded-by-hint`) when one of the four `textur
 - **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so the projection carries albedo alone.
 - **Approximated** The projection takes the scalar roughness, metallic and `diffuse_mode` of its receiver's first surface, not its maps.
 - **Approximated** In Godot 4.6 an untextured decal hides each decal sorted after it (`texture_storage.cpp:3420`, `:3485`), where the previewer draws each decal on its own.
-- **Approximated** At the projection rim Godot fades the outer half-texel toward the transparent padding of its atlas, where the clamped sample here stays crisp.
-- **Approximated** A decal's mip chain halves its own texture, where Godot halves the whole atlas and can blend a neighbouring decal into the smallest levels.

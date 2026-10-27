@@ -9,6 +9,7 @@ import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
+import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
@@ -56,7 +57,9 @@ export function TscnSceneContents() {
             internalResources={rootScene.internalResources}
             externalResources={rootScene.externalResources}
           >
-            <NodeDispatcher nodes={nodes} />
+            <EditedRootProvider editableInstances={rootScene.editableInstances}>
+              <NodeDispatcher nodes={nodes} />
+            </EditedRootProvider>
           </SceneResourcesProvider>
         )}
         <ControlRasterLayer

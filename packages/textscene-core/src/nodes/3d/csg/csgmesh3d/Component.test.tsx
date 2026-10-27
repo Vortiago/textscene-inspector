@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
@@ -9,6 +9,7 @@ import { parseTresFile } from '../../../../parser/parsedResource';
 import { fixturesDir } from '../../../../parser/testing/parserKit';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import { FONT_PATH, trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import { parseCSGMesh3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
@@ -169,8 +170,75 @@ async function undrawnTypesFor(resource: TscnInternalResource): Promise<string[]
 
 describe('<CSGMesh3D> mesh type no slice builds', () => {
   it("names the type in the node's details", async () => {
+    const future: TscnInternalResource = { id: 'FutureMesh_csg', type: 'FutureMesh', data: {} };
+    expect(await undrawnTypesFor(future)).toEqual(['FutureMesh']);
+  });
+
+  it("names the type of a TextMesh with no font in the node's details", async () => {
     const text: TscnInternalResource = { id: 'TextMesh_csg', type: 'TextMesh', data: {} };
     expect(await undrawnTypesFor(text)).toEqual(['TextMesh']);
+  });
+});
+
+describe('<CSGMesh3D> TextMesh', () => {
+  const TEXT: TscnInternalResource = {
+    id: 'TextMesh_csg',
+    type: 'TextMesh',
+    data: { text: '"H"', font: 'ExtResource("font")' },
+  };
+  const FONT: TscnExternalResource = { id: 'font', type: 'FontFile', path: FONT_PATH };
+
+  async function renderText() {
+    const fake = createFakeResourceLoader();
+    let types: string[] = [];
+    function Types() {
+      types = useUndrawnMeshTypes('Mesh');
+      return null;
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <UndrawnMeshesProvider>
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider internalResources={[TEXT]} externalResources={[FONT]}>
+            <NodePathProvider path="Mesh">
+              <CSGMesh3D node={makeNode({ mesh: 'SubResource("TextMesh_csg")' })} />
+            </NodePathProvider>
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+        <Types />
+      </UndrawnMeshesProvider>
+    );
+    return { fake, renderer, undrawnTypes: () => types };
+  }
+
+  it('draws nothing, and names no type, while its font file loads', async () => {
+    const { renderer, undrawnTypes } = await renderText();
+
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
+    expect(undrawnTypes()).toEqual([]);
+  });
+
+  it('draws the glyphs once its font file and the metrics of the font have loaded', async () => {
+    const { fake, renderer, undrawnTypes } = await renderText();
+
+    await ReactThreeTestRenderer.act(async () => fake.fonts._resolve(FONT_PATH, trueTypeFontFile()));
+    await vi.waitFor(async () => {
+      await ReactThreeTestRenderer.act(async () => {});
+      expect(drawnMeshes(renderer.scene)).toHaveLength(1);
+    });
+
+    expect(findMesh(renderer.scene).geometry.getAttribute('position').count).toBeGreaterThan(0);
+    expect(undrawnTypes()).toEqual([]);
+  });
+
+  it('names the type once its font file is there and has no TrueType outlines', async () => {
+    const { fake, renderer, undrawnTypes } = await renderText();
+
+    await ReactThreeTestRenderer.act(async () =>
+      fake.fonts._resolve(FONT_PATH, { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) })
+    );
+
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
+    expect(undrawnTypes()).toEqual(['TextMesh']);
   });
 });
 

@@ -26,7 +26,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/areaLight/ltcIntegral.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (the edge fit, the horizon clip and the LTC integrals for diffuse and specular) |
 | `packages/textscene-core/src/r3f/areaLight/areaLightChunk.ts` | `servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl` (`light_process_area` and `get_omni_attenuation`) |
 | `packages/textscene-core/src/r3f/areaLight/areaTextureFetch.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (`fetch_ltc_lod` and the form-factor texture fetch) |
-| `packages/textscene-core/src/r3f/areaLight/atlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas`: the cell sizes and the packing) |
+| `packages/textscene-core/src/r3f/areaLight/atlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas`: the cell sizes) |
+| `packages/textscene-core/src/r3f/textureAtlas/atlasPacking.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas` and `update_decal_atlas`: the best-fit skyline packing and the doubling of the width) |
+| `packages/textscene-core/src/nodes/3d/decal/decalAtlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_decal_atlas`: the cell sizes, the atlas size and each rectangle) |
 | `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
 | `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
@@ -53,6 +55,12 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/ribbontrailmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`RibbonTrailMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/textmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/textmesh/glyphMesh.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`) |
+| `packages/textscene-core/src/resources/meshes/textmesh/textMeshLines.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s line breaking and `HORIZONTAL_ALIGNMENT_FILL` justification) |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntOutlines.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
+| `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/lightmapSizeHint.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_update_lightmap_size` and the setters that call it) |
@@ -143,9 +151,10 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/hexCodeBox.ts` | `servers/text/text_server.cpp` (`TextServer::get_hex_code_box_size`, `TextServer::draw_hex_code_box`, `TextServer::_draw_hex_code_box_number`) |
 | `packages/textscene-core/src/r3f/controls/native/text/textLayout.ts` | `scene/gui/label.cpp` (`Label::_shape`'s autowrap flag mapping) and `servers/text/text_server.cpp` (`TextServer::shaped_text_get_line_breaks`'s width accumulation, safe-break bookkeeping and edge-space trimming) |
 | `packages/textscene-core/src/r3f/controls/native/text/textOverrun.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_overrun_trim_to_width`) and `servers/text/text_server.cpp` (`TextServer::get_overrun_flags_from_behavior`, `shaped_text_draw`'s trim/ellipsis consumption) |
-| `packages/textscene-core/src/r3f/controls/native/text/textJustify.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_fit_to_width`) |
+| `packages/textscene-core/src/r3f/controls/native/text/textJustify.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_fit_to_width`), `scene/gui/label.cpp` (`Label::_shape`'s choice of the lines to justify) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh`'s same choice) |
 | `packages/textscene-core/src/r3f/controls/native/text/textTabStops.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_tab_align`) |
-| `packages/textscene-core/src/nodes/3d/label3d/glyphLayout.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s per-line vertical origin for `VERTICAL_ALIGNMENT_*` and horizontal line offset for `HORIZONTAL_ALIGNMENT_*`, including `FILL` falling through to `CENTER`) |
+| `packages/textscene-core/src/nodes/3d/label3d/glyphLayout.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s per-line vertical origin for `VERTICAL_ALIGNMENT_*`) |
+| `packages/textscene-core/src/godot/math/alignment.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s horizontal line offset) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s), with `FILL` falling through to `CENTER` |
 | `packages/textscene-core/src/nodes/2d/ui/aspectratiocontainer/nativeSolver.ts` | `scene/gui/aspect_ratio_container.cpp` (`AspectRatioContainer::get_minimum_size` and `_notification`'s `NOTIFICATION_SORT_CHILDREN` ratio/stretch-mode/alignment math, including its proportional-TextureRect skip) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/checkbutton/nativeSolver.ts` | `scene/gui/check_button.cpp` (`CheckButton::get_minimum_size`, `get_icon_size`, `_notification`'s `NOTIFICATION_DRAW` toggle placement and layout-direction icon/side selection) and `scene/theme/default_theme.cpp` (CheckButton's `checked`/`unchecked` icons, `h_separation`, `check_v_offset` and `cb_empty` margins) |
 | `packages/textscene-core/src/nodes/2d/ui/flowcontainer/nativeSolver.ts` | `scene/gui/flow_container.cpp` (`FlowContainer::_resort`'s line-wrapping pass, per-line cross-axis fill, EXPAND stretch, `alignment`/`last_wrap_alignment`/`reverse_fill`, and `get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
@@ -306,11 +315,14 @@ vendors the identical font Godot ships rather than substituting a system or web 
 `packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2` is an unmodified copy of
 Godot 4.6.3's vendored file. `scripts/fonts/bake-metrics.mjs` reads it at build time
 (decompressing to a TTF in memory, since neither the metrics tool nor the atlas tool
-decompresses real Brotli woff2 itself) and bakes the three committed artifacts
+decompresses real Brotli woff2 itself) and bakes the four committed artifacts
 `openSansMetrics.ts` (font-wide scalar metrics + kerning table), `openSansAtlas.ts`
-(the pre-baked MSDF glyph atlas — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
-pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows) and
+(the pre-baked MSDF glyph table — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
+pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows),
+`packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image) and
 `packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face).
+
+`scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh golden and the tests that read glyph outlines use it, since the vendored woff2 has no `glyf` table to read.
 
 Per Godot's own `COPYRIGHT.txt` (`Files: thirdparty/fonts/OpenSans*.woff2`) and
 `thirdparty/README.md`:

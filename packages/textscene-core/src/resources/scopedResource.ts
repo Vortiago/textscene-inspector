@@ -7,6 +7,7 @@
 import type { ParsedResource } from '../parser/parsedResource';
 import type { TscnInternalResource } from '../parser/types';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
+import type { FontResource } from './fonts/font/types';
 
 export interface ScopedResource {
   resource: TscnInternalResource;
@@ -17,7 +18,11 @@ export interface ScopedResource {
 /** The parse of a loaded file, or undefined while it loads and after it failed. */
 export type LoadedFile = (path: string) => ParsedResource | undefined;
 
-/** A {@link ScopedResource} that also holds the lookup its ExtResource references resolve through. */
+/** A font file's resource, or undefined while it loads and after it failed. */
+export type LoadedFont = (path: string) => FontResource | undefined;
+
+/** A {@link ScopedResource} that also holds the lookups its ExtResource references resolve through. */
 export interface ResolvableResource extends ScopedResource {
   loadedFile: LoadedFile;
+  loadedFont: LoadedFont;
 }

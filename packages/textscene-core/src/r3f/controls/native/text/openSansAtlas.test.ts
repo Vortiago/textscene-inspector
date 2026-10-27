@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
+import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
+import { OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlasImage';
 
 /**
  * Reads a PNG's `IHDR` width and height without a decoder: after the 8-byte
