@@ -14,7 +14,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
-import { pendingTextureWork, subscribeTextureWork } from './textures/textureWork';
+import { textureWork } from './textures/textureWork';
 import {
   useProceduralTexture,
   useProceduralTexture3D,
@@ -308,8 +308,8 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     );
     await flush();
     const countsBeforeShown: number[] = [];
-    const unsubscribe = subscribeTextureWork(() => {
-      if (!isShown) countsBeforeShown.push(pendingTextureWork());
+    const unsubscribe = textureWork.subscribe(() => {
+      if (!isShown) countsBeforeShown.push(textureWork.pending());
     });
     runs[0]?.complete();
     await flush();
@@ -317,7 +317,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
 
     expect(isShown).toBe(true);
     expect(countsBeforeShown).not.toContain(0);
-    expect(pendingTextureWork()).toBe(0);
+    expect(textureWork.pending()).toBe(0);
   });
 
   it('keeps the old texture through an edit, then swaps and unpins it', async () => {

@@ -30,6 +30,11 @@ export const NOTICE_SOURCES = [
   { section: 'bcdec block decoder', copyright: /Copyright \(c\) 2022 Sergii Kudlai/ },
   { section: 'FastLZ', copyright: /Copyright \(C\) 2005-2020 Ariya Hidayat/ },
   { section: 'FastNoiseLite', copyright: /Copyright\(c\) 2023 Jordan Peck/, isInstalled: true },
+  {
+    section: 'Brotli decoder',
+    copyright: /Copyright 2013 Google Inc\. All Rights Reserved\./,
+    isInstalled: true,
+  },
 ];
 
 /**

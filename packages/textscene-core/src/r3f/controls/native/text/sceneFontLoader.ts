@@ -5,13 +5,16 @@
  */
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { parseSfntScalars, type SfntScalars } from './sfntTables';
+import { faceDescriptors } from './sceneFontFace';
+import { openFontContainer } from './fontContainer';
+import { parseSfntScalars, readAxisDefaults, type SfntScalars } from './sfntTables';
 import {
   createRuntimeFontMetrics,
   type CanvasFontMetrics,
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
 import { fontVariationEmbolden, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
+import { createWorkCount } from '../../../../resources/workCount';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -56,6 +59,12 @@ export function notifySceneFontMetricsSettled(): void {
   settleCount.set(settleCount.get() + 1);
 }
 
+/**
+ * The scene font loads in flight, from the peek that starts one until it settles. The shell shows
+ * "Loading scene…" meanwhile, so a capture never settles on the bundled default.
+ */
+export const fontWork = createWorkCount();
+
 type CacheEntry =
   { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
 
@@ -85,7 +94,8 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
  */
 export async function registerFontFace(
   family: string,
-  bytes: () => ArrayBuffer
+  bytes: () => ArrayBuffer,
+  descriptors?: FontFaceDescriptors
 ): Promise<Document | undefined> {
   // Read lazily: a non-DOM environment answers `undefined`, and a late `document.fonts` is still seen.
   const { FontFace: FontFaceCtor, document: doc } = globalThis as {
@@ -93,20 +103,26 @@ export async function registerFontFace(
     document?: Document;
   };
   if (!FontFaceCtor || !doc?.fonts) return undefined;
-  const face = new FontFaceCtor(family, bytes());
+  const face = new FontFaceCtor(family, bytes(), descriptors);
   await face.load();
   doc.fonts.add(face);
   return doc;
 }
 
 /**
- * Registers `bytes` as a fresh `FontFace` and builds its `CanvasFontMetrics`. Ascent and descent
- * come from `head` and `hhea` for a plain SFNT, else from canvas box metrics. Throws on an invalid
- * font, and `resolveSceneFontMetrics` catches and falls back.
+ * Registers `bytes` as a fresh `FontFace` held at its `fvar` defaults, and builds its
+ * `CanvasFontMetrics`. Ascent and descent come from the font's tables, as FreeType reads them, for a font in a container
+ * `fontContainer.ts` opens, else from canvas box metrics. Throws on an invalid font, and
+ * `resolveSceneFontMetrics` catches and falls back.
  */
 async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<CanvasFontMetrics> {
   const family = `tscn-scene-font-${++familyCounter}`;
-  const doc = await registerFontFace(family, () => bytes);
+  const sfnt = await openFontContainer(bytes);
+  const doc = await registerFontFace(
+    family,
+    () => bytes,
+    sfnt ? faceDescriptors(readAxisDefaults(sfnt)) : undefined
+  );
   if (!doc) {
     logger.warn(
       `[SceneFont] Node "${nodePath}": no FontFace/document.fonts in this environment; falling back to the bundled default font.`
@@ -114,7 +130,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
     throw new Error('FontFace unavailable');
   }
 
-  const tableScalars = parseSfntScalars(bytes);
+  const tableScalars = sfnt && parseSfntScalars(sfnt);
 
   const measureCanvas = doc.createElement('canvas');
   const ctx = measureCanvas.getContext('2d');
@@ -144,7 +160,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
       descent: boxMetrics.fontBoundingBoxDescent,
     };
     logger.info(
-      `[SceneFont] Node "${nodePath}": font bytes are not a table-parseable SFNT (likely .woff2); using canvas fontBoundingBoxAscent/Descent as a measured approximation for ascent/descent -- see loadRuntimeFont's own doc for the measured error this carries.`
+      `[SceneFont] Node "${nodePath}": font bytes did not open into readable head and hhea tables; using canvas fontBoundingBoxAscent/Descent as a measured approximation for ascent/descent.`
     );
   }
 
@@ -177,12 +193,14 @@ async function resolveSceneFontMetrics(
         return OPEN_SANS_FONT_METRICS;
       });
 
+  const endWork = fontWork.begin();
   metricsCache.set(resolved.leaf, { status: 'pending', promise });
   const metrics = await promise;
   metricsCache.set(resolved.leaf, { status: 'settled', metrics });
   // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
   // settled cache.
   notifySceneFontMetricsSettled();
+  endWork();
   return metrics;
 }
 

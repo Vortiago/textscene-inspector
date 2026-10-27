@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { act, render, screen } from '@testing-library/react';
-import { beginTextureWork } from '../../../resources/textures/textureWork';
+import { textureWork } from '../../../resources/textures/textureWork';
 import { TextureWorkStatus } from './TextureWorkStatus';
 import { TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 
@@ -21,7 +21,7 @@ describe('<TextureWorkStatus>', () => {
     render(<TextureWorkStatus />);
     let end: () => void = () => {};
     act(() => {
-      end = beginTextureWork();
+      end = textureWork.begin();
     });
     const status = screen.getByTestId(TEXTURE_WORK_STATUS_TESTID);
     expect(status.getAttribute('role')).toBe('status');
@@ -36,7 +36,7 @@ describe('<TextureWorkStatus>', () => {
     render(<TextureWorkStatus />);
     let end: () => void = () => {};
     act(() => {
-      end = beginTextureWork();
+      end = textureWork.begin();
     });
     expect(screen.getByTestId(TEXTURE_WORK_STATUS_TESTID).className).toMatch(/statChip/);
     act(() => end());

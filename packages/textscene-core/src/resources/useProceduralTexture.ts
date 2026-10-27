@@ -11,7 +11,7 @@ import type * as THREE from 'three';
 import type { TscnInternalResource } from '../parser/types.js';
 import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
 import { usePendingWhile } from './usePendingWhile.js';
-import { beginTextureWork } from './textures/textureWork.js';
+import { textureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import { withKey } from '../utils/keySet.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
@@ -152,7 +152,7 @@ function useProceduralSlots(
  * and the count never reads zero between them.
  */
 function useTextureWorkWhile(isWorking: boolean): void {
-  useEffect(() => (isWorking ? beginTextureWork() : undefined), [isWorking]);
+  useEffect(() => (isWorking ? textureWork.begin() : undefined), [isWorking]);
 }
 
 interface Landed {

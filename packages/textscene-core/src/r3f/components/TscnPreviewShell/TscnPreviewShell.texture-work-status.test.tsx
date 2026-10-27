@@ -14,7 +14,7 @@ vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
-import { beginTextureWork } from '../../../resources/textures/textureWork';
+import { textureWork } from '../../../resources/textures/textureWork';
 import { TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 
 const SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
@@ -24,7 +24,7 @@ describe('<TscnPreviewShell> texture work status', () => {
     render(<TscnPreviewShell panelId="texture-work" content={SCENE} />);
     let end: () => void = () => {};
     act(() => {
-      end = beginTextureWork();
+      end = textureWork.begin();
     });
 
     const status = screen.getByTestId(TEXTURE_WORK_STATUS_TESTID);
