@@ -107,10 +107,11 @@ describe('<LightmapGI> drawn at another exposure', () => {
   /** The exposure scale of the floor's lightmap while the scene draws at `exposure`. */
   async function exposureScaleAt(bake: Bake, exposure: number | null) {
     const { lightmaps, scene } = await mount(bake);
-    let inside: number | undefined;
-    drawAtExposure(scene, exposure, () => {
-      inside = lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale;
-    });
+    const inside = drawAtExposure(
+      scene,
+      exposure,
+      () => lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale
+    );
     return { inside, after: lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale };
   }
 

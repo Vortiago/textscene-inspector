@@ -441,10 +441,7 @@ describe('SkyLayer under an exposure', () => {
     it('reads the radiance the view baked at that exposure, and puts it back', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ intensity: 1.5 })));
-      let inside = NaN;
-      drawAtExposure(scene, 3, () => {
-        inside = scene.environmentIntensity;
-      });
+      const inside = drawAtExposure(scene, 3, () => scene.environmentIntensity);
       expect(inside).toBeCloseTo(1.5 * 2 * 3, 10);
       expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4, 10);
     });
@@ -452,10 +449,7 @@ describe('SkyLayer under an exposure', () => {
     it('draws the background at that exposure, and puts it back', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ backgroundIntensity: 1.5 })));
-      let inside = NaN;
-      drawAtExposure(scene, 3, () => {
-        inside = scene.backgroundIntensity;
-      });
+      const inside = drawAtExposure(scene, 3, () => scene.backgroundIntensity);
       expect(inside).toBeCloseTo(1.5 * 3, 10);
       expect(scene.backgroundIntensity).toBeCloseTo(1.5 * 2, 10);
     });
@@ -463,20 +457,17 @@ describe('SkyLayer under an exposure', () => {
     it('draws at no exposure as at 1', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ intensity: 1.5, backgroundIntensity: 1.5 })));
-      let inside: number[] = [];
-      drawAtExposure(scene, null, () => {
-        inside = [scene.environmentIntensity, scene.backgroundIntensity];
-      });
+      const inside = drawAtExposure(scene, null, () => [
+        scene.environmentIntensity,
+        scene.backgroundIntensity,
+      ]);
       expect(inside).toEqual([3, 1.5]);
     });
 
     it('leaves the background alone when the sky paints none', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ asBackground: false })));
-      let inside = NaN;
-      drawAtExposure(scene, 3, () => {
-        inside = scene.backgroundIntensity;
-      });
+      const inside = drawAtExposure(scene, 3, () => scene.backgroundIntensity);
       expect(inside).toBe(1);
     });
 
@@ -484,10 +475,7 @@ describe('SkyLayer under an exposure', () => {
       built.next = skyEnvironment();
       const { scene, update } = await mount(exposed(2, sky({ intensity: 1.5 })));
       await update(exposed(2, null));
-      let inside = NaN;
-      drawAtExposure(scene, 3, () => {
-        inside = scene.environmentIntensity;
-      });
+      const inside = drawAtExposure(scene, 3, () => scene.environmentIntensity);
       expect(inside).toBe(1);
     });
   });

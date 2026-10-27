@@ -78,11 +78,7 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
   describe('drawn at another exposure', () => {
     /** The background's hex while `scene` draws at `exposure`. */
     function backgroundHexAt(scene: THREE.Scene, exposure: number | null): string {
-      let inside = '';
-      drawAtExposure(scene, exposure, () => {
-        inside = backgroundHex(scene);
-      });
-      return inside;
+      return drawAtExposure(scene, exposure, () => backgroundHex(scene));
     }
 
     it('scales the colour in sRGB by that exposure, so 0.2 becomes 0.6 at 3', async () => {
@@ -101,6 +97,12 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
       backgroundHexAt(scene, 3);
       expect(scene.background).toBe(drawn);
       expect(backgroundHex(scene)).toBe('666666');
+    });
+
+    it('draws with the one texture again at the same exposure', async () => {
+      const { scene } = await mount(BACKGROUND_COLOR, 2);
+      const drawnTexture = () => drawAtExposure(scene, 3, () => scene.background);
+      expect(drawnTexture()).toBe(drawnTexture());
     });
   });
 

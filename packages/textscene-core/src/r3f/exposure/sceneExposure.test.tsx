@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EMISSION_EXPOSURE } from './emissionExposure';
 import {
   drawAtExposure,
+  drawnExposureRatio,
   exposureOfScene,
   registerExposureStage,
   useSceneExposure,
@@ -100,12 +101,10 @@ describe('worldExposureOfScene', () => {
 describe('drawAtExposure', () => {
   /** The emission factor a render fired inside `drawAtExposure` writes. */
   function emissionDrawnAt(scene: THREE.Scene, exposure: number | null): number {
-    let drawn = NaN;
-    drawAtExposure(scene, exposure, () => {
+    return drawAtExposure(scene, exposure, () => {
       fireSceneRender(scene, CAMERA);
-      drawn = EMISSION_EXPOSURE[0]!;
+      return EMISSION_EXPOSURE[0]!;
     });
-    return drawn;
   }
 
   it('draws the emission at the given exposure instead of the one the scene holds', async () => {
@@ -155,16 +154,34 @@ describe('drawAtExposure', () => {
     scene.remove(light);
   });
 
+  it('puts everything back when a stage throws', async () => {
+    const { scene } = await mount(4);
+    const light = new THREE.PointLight(0xffffff, 8);
+    scene.add(light);
+    const stopStage = registerExposureStage(scene, () => {
+      throw new Error('stage failed');
+    });
+    expect(() => drawAtExposure(scene, 2, () => 'drawn')).toThrow('stage failed');
+    stopStage();
+    expect(light.intensity).toBe(8);
+    expect(EMISSION_EXPOSURE[0]).toBe(1);
+    expect(drawnExposureRatio(scene)).toBe(1);
+    scene.remove(light);
+  });
+
+  it('answers the ratio of the drawn exposure to the held one inside a draw only', async () => {
+    const { scene } = await mount(4);
+    const inside = drawAtExposure(scene, 2, () => drawnExposureRatio(scene));
+    expect([inside, drawnExposureRatio(scene)]).toEqual([0.5, 1]);
+  });
+
   describe('lights', () => {
     it('scales each light by the given exposure over the held one, and puts it back', async () => {
       const { scene } = await mount(4);
       const point = new THREE.PointLight(0xffffff, 8);
       const sun = new THREE.DirectionalLight(0xffffff, 12);
       scene.add(point, sun);
-      let inside: number[] = [];
-      drawAtExposure(scene, 2, () => {
-        inside = [point.intensity, sun.intensity];
-      });
+      const inside = drawAtExposure(scene, 2, () => [point.intensity, sun.intensity]);
       expect(inside).toEqual([4, 6]);
       expect([point.intensity, sun.intensity]).toEqual([8, 12]);
       scene.remove(point, sun);
@@ -174,10 +191,7 @@ describe('drawAtExposure', () => {
       const { scene } = await mount(4);
       const ambient = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambient);
-      let inside = NaN;
-      drawAtExposure(scene, 2, () => {
-        inside = ambient.intensity;
-      });
+      const inside = drawAtExposure(scene, 2, () => ambient.intensity);
       expect(inside).toBe(0.5);
       scene.remove(ambient);
     });
@@ -186,10 +200,7 @@ describe('drawAtExposure', () => {
       const { scene } = await mount(null);
       const point = new THREE.PointLight(0xffffff, 8);
       scene.add(point);
-      let inside = NaN;
-      drawAtExposure(scene, 2, () => {
-        inside = point.intensity;
-      });
+      const inside = drawAtExposure(scene, 2, () => point.intensity);
       expect(inside).toBe(16);
       scene.remove(point);
     });
@@ -198,10 +209,7 @@ describe('drawAtExposure', () => {
       const { scene } = await mount(4);
       const point = new THREE.PointLight(0xffffff, 8);
       scene.add(point);
-      let inside = NaN;
-      drawAtExposure(scene, null, () => {
-        inside = point.intensity;
-      });
+      const inside = drawAtExposure(scene, null, () => point.intensity);
       expect(inside).toBe(2);
       scene.remove(point);
     });

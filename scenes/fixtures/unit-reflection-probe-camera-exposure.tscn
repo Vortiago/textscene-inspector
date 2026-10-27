@@ -1,8 +1,7 @@
-; One variable: the exposure of the Camera3D that renders the frame. The WorldEnvironment holds
-; exposure_multiplier = 1 and the Camera3D holds 4. Godot captures the ReflectionProbe at the exposure of the
-; world and shows it at the exposure over the one it captured at (`render_forward_clustered.cpp:1714-1716`,
-; `light_storage.cpp:1810-1814`), so the flat ambient light and the clear colour in the capture
-; reach the ball scaled by 4 as well. A capture at the exposure of the camera would show them at 1.
+; The WorldEnvironment holds exposure_multiplier 1 and the Camera3D holds 4. Godot captures the
+; ReflectionProbe at the exposure of the world and shows it at the exposure over the one it captured
+; at (`render_forward_clustered.cpp:1714-1716`, `light_storage.cpp:1810-1814`), so the flat ambient
+; and the clear colour in the capture reach the ball scaled by 4. A capture at 4 would show them at 1.
 [gd_scene format=3]
 
 [sub_resource type="CameraAttributesPractical" id="Camera_attributes_world"]

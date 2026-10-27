@@ -131,12 +131,8 @@ export function SkyLayer({
     }
     exposeAs(exposure);
     const stopStaging = registerExposureStage(scene, (target) => {
-      const { environmentIntensity, backgroundIntensity: shownBackgroundIntensity } = scene;
       exposeAs(target ?? 1);
-      return () => {
-        scene.environmentIntensity = environmentIntensity;
-        if (asBackground) scene.backgroundIntensity = shownBackgroundIntensity;
-      };
+      return () => exposeAs(exposure);
     });
     const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
 

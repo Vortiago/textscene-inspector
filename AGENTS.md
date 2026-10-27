@@ -237,8 +237,8 @@ Tag a new shared helper. Do not edit the list.
   `r3f/exposure/exposureOverBaked.ts`.
 - The exposure a scene renders with: `exposureOfScene`, `worldExposureOfScene` and
   `useSceneExposure` in `r3f/exposure/sceneExposure.ts`.
-- The state a scene draws for another exposure: `registerExposureStage` and `drawAtExposure` in
-  `r3f/exposure/sceneExposure.ts`.
+- The state a scene draws for another exposure: `registerExposureStage`, `drawAtExposure` and
+  `drawnExposureRatio` in `r3f/exposure/sceneExposure.ts`.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
 - A Godot sRGB colour as a linear `THREE.Color`: `godotColorToLinear`, `setGodotColorLinear` and
   `useGodotLinearColor` in `r3f/godotColor.ts`.

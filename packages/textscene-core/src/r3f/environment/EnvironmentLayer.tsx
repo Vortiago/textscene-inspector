@@ -106,23 +106,39 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
   // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
   useEffect(() => {
     if (showsColor) {
-      const showAs = (factor: number) => {
+      const textureAt = (factor: number) => {
         const exposedColor = scaledRgb(backgroundColor, factor);
-        return hasFog
-          ? showBackground(scene, foggedClearColorTexture(exposedColor), backgroundEnergy * factor)
-          : showBackground(scene, clearColorTexture(exposedColor), 1);
+        return hasFog ? foggedClearColorTexture(exposedColor) : clearColorTexture(exposedColor);
       };
-      const hideBackground = showAs(exposure);
-      const stopStaging = registerExposureStage(scene, (target) => showAs(target ?? 1));
+      const intensityAt = (factor: number) => (hasFog ? backgroundEnergy * factor : 1);
+      const heldTexture = textureAt(exposure);
+      const restoreBackground = showBackground(scene, heldTexture, intensityAt(exposure));
+      // Kept for the next draw: a probe that captures each frame draws at the same exposure each time.
+      let stagedTexture: { factor: number; texture: THREE.Texture } | null = null;
+      const stopStaging = registerExposureStage(scene, (target) => {
+        const factor = target ?? 1;
+        if (stagedTexture?.factor !== factor) {
+          stagedTexture?.texture.dispose();
+          stagedTexture = { factor, texture: textureAt(factor) };
+        }
+        return showBackground(scene, stagedTexture.texture, intensityAt(factor));
+      });
       return () => {
         stopStaging();
-        hideBackground();
+        restoreBackground();
+        heldTexture.dispose();
+        stagedTexture?.texture.dispose();
       };
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as
       // "sky here" rather than as a black void.
-      return showBackground(scene, clearColorTexture(UNRESOLVED_SKY_COLOR), 1);
+      const placeholder = clearColorTexture(UNRESOLVED_SKY_COLOR);
+      const restoreBackground = showBackground(scene, placeholder, 1);
+      return () => {
+        restoreBackground();
+        placeholder.dispose();
+      };
     }
     return undefined;
   }, [
@@ -142,10 +158,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
 
-/**
- * Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found, which
- * frees `texture`.
- */
+/** Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found. */
 function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
   const previousBackground = scene.background;
   const previousIntensity = scene.backgroundIntensity;
@@ -154,7 +167,6 @@ function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: n
   return () => {
     scene.background = previousBackground;
     scene.backgroundIntensity = previousIntensity;
-    texture.dispose();
   };
 }
 
