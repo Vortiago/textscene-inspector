@@ -96,7 +96,7 @@ function inScene(scenario) {
     /** A decal of `rgb` at `position`, taller than the receivers so the fades stay at 1. */
     addDecal(rgb, position, properties = {}) {
       const decal = new DecalObject();
-      decal.decal = parseDecal(
+      decal.look = parseDecal(
         { type: 'node', attributes: { type: 'Decal', name: 'D' } },
         { size: 'Vector3(2, 4, 2)', upper_fade: '0', lower_fade: '0', ...properties }
       );

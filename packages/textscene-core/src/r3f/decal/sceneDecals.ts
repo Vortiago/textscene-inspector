@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { decalAtlasRect, decalAtlasTexture, updateDecalAtlas } from '../../nodes/3d/decal/decalAtlas.js';
+import { decalAtlasTexture, updateDecalAtlas } from '../../nodes/3d/decal/decalAtlas.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { currentMipmapBias } from '../materials/godotMipmapBias.js';
 import { observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
@@ -15,7 +15,7 @@ import { TrackedObjects } from '../trackedObjects.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { isDecal, type DecalObject } from './decalObject.js';
 import { EditorChromeLayers } from './editorChromeLayers.js';
-import { DECAL_ROW_TEXELS, DecalRows, type DrawnDecal } from './decalRows.js';
+import { DECAL_ROW_TEXELS, DecalRows } from './decalRows.js';
 import { decalAtlasSlot, decalRowsSlot, SHOWN_COUNT, SHOWN_MIPMAP_BIAS, shownDecals } from './decalSlots.js';
 
 export class SceneDecals {
@@ -62,8 +62,7 @@ export class SceneDecals {
       return;
     }
     updateDecalAtlas(this.renderer.capabilities.maxTextureSize);
-    if (this.rows.pack(this.ordered.map(drawnDecal), camera.matrixWorld))
-      this.rowTexture.invalidate(this.rows);
+    if (this.rows.pack(this.ordered, camera.matrixWorld)) this.rowTexture.invalidate(this.rows);
     if (this.rows.count === 0) {
       shownDecals[SHOWN_COUNT] = 0;
       return;
@@ -87,12 +86,4 @@ export class SceneDecals {
   private endRender(): void {
     shownDecals[SHOWN_COUNT] = 0;
   }
-}
-
-function drawnDecal(object: DecalObject): DrawnDecal {
-  return {
-    matrixWorld: object.matrixWorld,
-    look: object.decal,
-    albedoRect: (object.albedo && decalAtlasRect(object.albedo)) ?? null,
-  };
 }

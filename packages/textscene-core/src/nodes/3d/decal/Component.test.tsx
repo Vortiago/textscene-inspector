@@ -165,7 +165,7 @@ describe('<Decal>', () => {
 
     const [decal, ...others] = decalObjects(renderer);
     expect(others).toEqual([]);
-    expect(decal!.decal).toMatchObject({ albedo_mix: 0.7, normal_fade: 0.4 });
+    expect(decal!.look).toMatchObject({ albedo_mix: 0.7, normal_fade: 0.4 });
   });
 
   it('gives the decal object its place in tree order', async () => {
@@ -344,7 +344,7 @@ describe('<Decal>', () => {
         </AnimatedValueProvider>
       </SceneStack>
     );
-    const modulate = () => decalObjects(renderer)[0]!.decal.modulate;
+    const modulate = () => decalObjects(renderer)[0]!.look.modulate;
 
     await ReactThreeTestRenderer.act(async () => registry!.set('D', 'modulate', [1, 0.5, 0.25, 0.1]));
     expect(modulate()).toEqual({ r: 1, g: 0.5, b: 0.25, a: 0.1 });

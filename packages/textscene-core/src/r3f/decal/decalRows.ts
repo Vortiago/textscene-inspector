@@ -113,7 +113,11 @@ function fadeAt(look: DecalLook, distance: number): number {
 const row = new Float32Array(DECAL_ROW_TEXELS * 4);
 
 function setTexel(texel: number, x: number, y: number, z: number, w: number): void {
-  row.set([x, y, z, w], texel * 4);
+  const at = texel * 4;
+  row[at] = x;
+  row[at + 1] = y;
+  row[at + 2] = z;
+  row[at + 3] = w;
 }
 
 function decalTexels(decal: DrawnDecal, rect: DecalAtlasRect, fade: number): Float32Array {

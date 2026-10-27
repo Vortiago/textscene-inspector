@@ -76,7 +76,7 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      <DecalElement decal={decal} albedo={albedo} treeOrder={treeOrder} />
+      <DecalElement look={decal} albedo={albedo} treeOrder={treeOrder} />
       {/* Godot's editor outlines the projector box for every decal, faint while it is not selected
           (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
       <PluginGizmo drawnFor="every-node">

@@ -34,7 +34,7 @@ function texture(): THREE.Texture {
 
 function decalObject(properties: Record<string, string> = {}, treeOrder = [0]): DecalObject {
   const object = new DecalObject();
-  object.decal = parseDecal(heading('Decal', { name: 'Decal' }), properties);
+  object.look = parseDecal(heading('Decal', { name: 'Decal' }), properties);
   object.albedo = texture();
   object.treeOrder = treeOrder;
   return object;
