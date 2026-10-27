@@ -4,7 +4,7 @@
  * `Viewport::find_world_3d` falls through to the parent, or else a detached portal
  * scene. One mount either way, since two `registerNodeObject` calls at one path collide.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -131,6 +131,20 @@ function CanvasRendersThrough({ name }: { name: string }) {
   return null;
 }
 
+/** How many times the pass calls `gl.clear` itself in the next frame, which a render's autoClear never counts. */
+async function explicitClearsNextFrame(
+  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
+  gl: THREE.WebGLRenderer
+): Promise<number> {
+  const clear = vi.spyOn(gl, 'clear');
+  try {
+    await advanceFrameWithStubbedGl(renderer, gl);
+    return clear.mock.calls.length;
+  } finally {
+    clear.mockRestore();
+  }
+}
+
 /** The sub-viewport's Camera3D after two passes, and the aspect each pass last fitted it to. */
 async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null) {
   const { renderer, gl } = await renderScene(scene3D(), '3d', 'Root/Viewport', canvasCamera);
@@ -138,6 +152,19 @@ async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null) {
   await advanceFrameWithStubbedGl(renderer, gl());
   return instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByProps({ name: 'Camera3D' }));
 }
+
+/** 3D content inside the sub-viewport, with no camera to render it through. */
+const NO_CAMERA_SCENE = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Inside" type="MeshInstance3D" parent="Viewport"]
+mesh = SubResource("1")
+`;
 
 /** 3D content inside the sub-viewport, with a camera to render it through. */
 const scene3D = (viewportProps = '') => `[gd_scene format=3]
@@ -491,18 +518,42 @@ size = Vector2i(300, 300)
    * unrendered viewport from a missing one.
    */
   it('publishes a target for content with no camera', async () => {
-    const { published } = await renderScene(`[gd_scene format=3]
+    const { published } = await renderScene(NO_CAMERA_SCENE);
+    expect(published()).not.toBeNull();
+  });
 
-[sub_resource type="BoxMesh" id="1"]
+  // A render clears only while the renderer's autoClear is on (see `CanvasFrame.render`).
+  it('leaves the clear of a 3D target to its camera render while autoClear is on', async () => {
+    const { renderer, gl } = await renderScene(scene3D());
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(0);
+  });
 
-[node name="Root" type="Node3D"]
+  it('clears a 3D target by hand once autoClear is off', async () => {
+    const { renderer, gl } = await renderScene(scene3D());
+    gl().autoClear = false;
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
+  });
+
+  it('clears a 3D target by hand when no camera renders into it', async () => {
+    const { renderer, gl } = await renderScene(NO_CAMERA_SCENE);
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
+  });
+
+  it('clears no 2D target by hand, since its frame clears and the copy overwrites', async () => {
+    const { renderer, gl, published } = await renderScene(
+      `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
 
-[node name="Inside" type="MeshInstance3D" parent="Viewport"]
-mesh = SubResource("1")
-`);
+[node name="Inside" type="Polygon2D" parent="Viewport"]
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
+`,
+      '2d'
+    );
     expect(published()).not.toBeNull();
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(0);
   });
 
   it('leaves its own camera fitted to the target, which only the pass renders through', async () => {
