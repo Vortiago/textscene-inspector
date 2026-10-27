@@ -15,7 +15,7 @@ import { ArithmeticOperators } from './cffArithmetic';
 import { MalformedCharstring, OperandStack } from './cffOperandStack';
 import { FLEX_OPERANDS, PathOperators } from './cffPathOperators';
 import { GlyphPen, type CharstringContour } from './cffPen';
-import { subrBias, type CffFont, type CffPrivate } from './cffTables';
+import { twoByteInteger, type CffFont, type CffPrivate } from './cffTables';
 
 /** `CF2_OPERAND_STACK_SIZE`, and `CFF2_DEFAULT_STACK` for a CFF2 table. */
 const OPERAND_STACK_CFF1 = 48;
@@ -214,10 +214,8 @@ class CharstringRun {
       stack.pushFixed((bytes[0]! << 24) | (bytes[1]! << 16) | (bytes[2]! << 8) | bytes[3]!);
     } else if (op <= 246) {
       stack.pushInt(op - 139);
-    } else if (op <= 250) {
-      stack.pushInt((op - 247) * 256 + cursor.readByte() + 108);
     } else {
-      stack.pushInt(-((op - 251) * 256 + cursor.readByte()) - 108);
+      stack.pushInt(twoByteInteger(op, cursor.readByte()));
     }
   }
 
@@ -226,7 +224,7 @@ class CharstringRun {
       throw new MalformedCharstring(`subroutines nest deeper than ${MAX_SUBROUTINE_DEPTH}`);
     const subroutines = isGlobal ? this.font.globalSubrs : this.glyphPrivate.localSubrs;
     const number = this.stack.popInt();
-    const entry = subroutines.entry(number + subrBias(subroutines.count));
+    const entry = subroutines.subroutine(number);
     if (!entry)
       throw new MalformedCharstring(
         `${isGlobal ? 'global' : 'local'} subroutine ${number} is not in the font`

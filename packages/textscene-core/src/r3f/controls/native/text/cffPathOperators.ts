@@ -15,16 +15,18 @@ import { GlyphPen } from './cffPen';
 /** `ADD_INT32`: coordinates wrap in 32 bits. */
 const add = (a: number, b: number) => (a + b) | 0;
 
+const ESCAPE_HFLEX = 34;
+const ESCAPE_FLEX = 35;
+const ESCAPE_HFLEX1 = 36;
+const ESCAPE_FLEX1 = 37;
+
 /** The operators `12 34` to `12 37`, with which of a flex's twelve deltas each reads from the stack (`cf2_doFlex`). */
 export const FLEX_OPERANDS: ReadonlyMap<number, readonly boolean[]> = new Map([
-  // hflex
-  [34, [true, false, true, true, true, false, true, false, true, false, true, false]],
-  // flex
-  [35, Array<boolean>(12).fill(true)],
-  // hflex1
-  [36, [true, true, true, true, true, false, true, false, true, true, true, false]],
-  // flex1: its last delta is read apart, along whichever axis the curve has moved further.
-  [37, [true, true, true, true, true, true, true, true, true, true, false, false]],
+  [ESCAPE_HFLEX, [true, false, true, true, true, false, true, false, true, false, true, false]],
+  [ESCAPE_FLEX, Array<boolean>(12).fill(true)],
+  [ESCAPE_HFLEX1, [true, true, true, true, true, false, true, false, true, true, true, false]],
+  // Its last delta is read apart, along whichever axis the curve has moved further.
+  [ESCAPE_FLEX1, [true, true, true, true, true, true, true, true, true, true, false, false]],
 ]);
 
 export class PathOperators {

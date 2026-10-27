@@ -22,6 +22,8 @@ interface CffIndex {
   readonly count: number;
   /** The byte range of entry `i`, or null past the last entry. */
   entry(i: number): { start: number; end: number } | null;
+  /** The byte range of subroutine `number`, which a call names minus the INDEX's bias, or null when there is none. */
+  subroutine(number: number): { start: number; end: number } | null;
 }
 
 /** What a glyph's font dict gives its charstring. */
@@ -80,12 +82,9 @@ class CffReader {
     const offsetAt = (i: number) => this.readOffset(offsets + i * offSize, offSize);
     const end = dataStart + offsetAt(count);
     if (end > this.dv.byteLength) throw new RangeError(`CFF INDEX at ${at} ends at ${end}, past the table`);
-    return {
-      count,
-      entry: (i) =>
-        i >= 0 && i < count ? { start: dataStart + offsetAt(i), end: dataStart + offsetAt(i + 1) } : null,
-      end,
-    };
+    const entry: CffIndex['entry'] = (i) =>
+      i >= 0 && i < count ? { start: dataStart + offsetAt(i), end: dataStart + offsetAt(i + 1) } : null;
+    return { count, entry, subroutine: (number) => entry(number + subrBias(count)), end };
   }
 
   private readOffset(at: number, size: number): number {
@@ -117,10 +116,8 @@ class CffReader {
         at = real.next;
       } else if (b0 >= 32 && b0 <= 246) {
         operands.push(b0 - 139);
-      } else if (b0 >= 247 && b0 <= 250) {
-        operands.push((b0 - 247) * 256 + this.dv.getUint8(at++) + 108);
-      } else if (b0 >= 251 && b0 <= 254) {
-        operands.push(-(b0 - 251) * 256 - this.dv.getUint8(at++) - 108);
+      } else if (b0 >= 247 && b0 <= 254) {
+        operands.push(twoByteInteger(b0, this.dv.getUint8(at++)));
       }
     }
     return entries;
@@ -144,13 +141,18 @@ function first(dict: Dict, operator: number): number | undefined {
   return dict.get(operator)?.[0];
 }
 
+/** The integer of a number whose first byte is 247 to 254: 247 to 250 are positive, 251 to 254 negative (Technical Note 5176 Table 3). */
+export function twoByteInteger(first: number, second: number): number {
+  return first <= 250 ? (first - 247) * 256 + second + 108 : -((first - 251) * 256 + second) - 108;
+}
+
 /** The standard charstring bias for a subroutine INDEX (Technical Note 5177 §4.7). */
-export function subrBias(count: number): number {
+function subrBias(count: number): number {
   if (count < 1240) return 107;
   return count < 33900 ? 1131 : 32768;
 }
 
-const EMPTY_INDEX: CffIndex = { count: 0, entry: () => null };
+const EMPTY_INDEX: CffIndex = { count: 0, entry: () => null, subroutine: () => null };
 
 /** The character of each nibble of a packed real; 0xd is reserved and 0xf ends the number. */
 const REAL_NIBBLE_SYMBOLS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'E-', '', '-', ''];
