@@ -40,8 +40,9 @@ The `camera_attributes` of the first WorldEnvironment that holds a CameraAttribu
 - the ambient light and the reflection of a sky by the factor squared.
 - a baked lightmap by the factor over the exposure the bake ran at, and only while the attributes exist.
 
-A flat ambient light does not scale. With no Environment, the clear colour does not scale. A ReflectionProbe holds the factor once, through its capture. The `camera-attributes-exposure`, `camera-attributes-exposure-sky` and `lightmap-gi-exposure` goldens pin these.
+A flat ambient light does not scale. With no Environment, the clear colour does not scale. A ReflectionProbe holds the factor once, through its capture, and shows it at the exposure over the one it captured at (`light_storage.cpp:1810-1814`). The `camera-attributes-exposure`, `camera-attributes-exposure-sky`, `camera-attributes-exposure-camera` and `lightmap-gi-exposure` goldens pin these.
 
 ## Known limitations
 
 - **Not drawn** Auto exposure, depth of field and the physical light units of a CameraAttributesPhysical have no effect, since only `exposure_multiplier` applies.
+- **Approximated** A ReflectionProbe captures at the exposure of the camera that views it. Godot captures at the exposure of the world and rescales. The two differ in the lit surfaces a capture sees, only while the camera and the world hold different exposures.

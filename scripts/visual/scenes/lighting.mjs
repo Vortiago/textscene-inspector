@@ -126,6 +126,13 @@ export const LIGHTING_SCENES = [
   // CameraAttributesPractical at exposure_multiplier 2: Godot scales a light's energy, an emission and
   // a colour background by it, and a flat ambient not at all.
   { name: 'camera-attributes-exposure', file: 'unit-camera-attributes-exposure.tscn', camera: 'Root/Camera3D' },
+  // Camera3D.attributes at exposure_multiplier 2 over a WorldEnvironment at 0.25: the camera's
+  // attributes replace the world's, so the frame draws as the golden above does.
+  {
+    name: 'camera-attributes-exposure-camera',
+    file: 'unit-camera-attributes-exposure-camera.tscn',
+    camera: 'Root/Camera3D',
+  },
   // The same exposure over a procedural sky: the sky's background scales by the factor, its ambient and
   // reflection by its square.
   { name: 'camera-attributes-exposure-sky', file: 'unit-camera-attributes-exposure-sky.tscn', camera: 'Root/Camera3D' },

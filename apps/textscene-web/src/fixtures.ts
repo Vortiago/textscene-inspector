@@ -3406,6 +3406,11 @@ export const fixtures: Fixture[] = [
     "root": "layout-direction-root-rtl"
   },
   {
+    "name": "Camera Attributes Exposure Camera",
+    "file": "unit-camera-attributes-exposure-camera.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Camera Attributes Exposure Sky",
     "file": "unit-camera-attributes-exposure-sky.tscn",
     "category": "Unit - Basic Nodes"
