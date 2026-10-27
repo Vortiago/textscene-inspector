@@ -4,7 +4,7 @@
  * `Viewport::find_world_3d` falls through to the parent, or else a detached portal
  * scene. One mount either way, since two `registerNodeObject` calls at one path collide.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -129,6 +129,20 @@ function CanvasRendersThrough({ name }: { name: string }) {
     if (camera) set({ camera });
   }, [scene, set, name]);
   return null;
+}
+
+/** How many times the pass calls `gl.clear` itself in the next frame, which a render's autoClear never counts. */
+async function explicitClearsNextFrame(
+  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
+  gl: THREE.WebGLRenderer
+): Promise<number> {
+  const clear = vi.spyOn(gl, 'clear');
+  try {
+    await advanceFrameWithStubbedGl(renderer, gl);
+    return clear.mock.calls.length;
+  } finally {
+    clear.mockRestore();
+  }
 }
 
 /** The sub-viewport's Camera3D after two passes, and the aspect each pass last fitted it to. */
@@ -503,6 +517,27 @@ size = Vector2i(300, 300)
 mesh = SubResource("1")
 `);
     expect(published()).not.toBeNull();
+  });
+
+  // A render clears the target it draws into, so only a pass with no camera clears it by hand.
+  it('leaves the clear of a 3D target to the render of its camera', async () => {
+    const { renderer, gl } = await renderScene(scene3D());
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(0);
+  });
+
+  it('clears a 3D target by hand when no camera renders into it', async () => {
+    const { renderer, gl } = await renderScene(`[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Inside" type="MeshInstance3D" parent="Viewport"]
+mesh = SubResource("1")
+`);
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
   });
 
   it('leaves its own camera fitted to the target, which only the pass renders through', async () => {

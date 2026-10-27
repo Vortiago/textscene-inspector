@@ -239,6 +239,14 @@ offset_bottom = 100.5
     expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
   });
 
+  // The frame's render clears the frame and the copy overwrites every texel of the target.
+  it('clears no target by hand, since the frame clears and the copy overwrites', async () => {
+    const { renderer, gl } = await mount(parse(GUI_SCENE));
+    const clear = vi.spyOn(gl, 'clear');
+    await advanceFrameWithStubbedGl(renderer, gl);
+    expect(clear).not.toHaveBeenCalled();
+  });
+
   it('unregisters on unmount, so a removed sub-viewport stops resolving', async () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     const { renderer } = await mount(parse(GUI_SCENE), seen);

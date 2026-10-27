@@ -86,9 +86,10 @@ export function viewportMsaaMode(
 const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
- * Bind `target`, clear it, run `draw`, and restore the render target, clear colour,
- * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the
- * pass.
+ * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
+ * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the pass. `draw`
+ * clears the target: a render does through the renderer's autoClear, so a draw that renders no
+ * camera clears by hand.
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -110,7 +111,6 @@ export function renderToOffscreenTarget(
     if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
-    gl.clear(true, true, true);
     options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
