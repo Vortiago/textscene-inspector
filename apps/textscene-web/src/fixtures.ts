@@ -3183,6 +3183,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Scene Font Typo Metrics",
+    "file": "unit-control-scene-font-typo-metrics.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Scene Font Woff2",
     "file": "unit-control-scene-font-woff2.tscn",
     "category": "Unit - 2D UI Controls"

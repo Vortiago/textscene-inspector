@@ -4,8 +4,8 @@ TextScene Inspector is MIT licensed (see `LICENSE`). It additionally contains, a
 distributes, material from the third parties below.
 
 Runtime npm dependencies are not enumerated here; each carries its own licence in its
-published package. FastNoiseLite is the exception, since its package keeps the licence in a
-source comment that a bundler strips.
+published package. FastNoiseLite and the Brotli decoder are the exceptions, since their
+packages keep the licence in a source comment that a bundler strips.
 
 ---
 
@@ -322,6 +322,8 @@ pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allow
 
 `scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh golden and the tests that read glyph outlines use it, since the vendored woff2 has no `glyf` table to read.
 
+`scenes/fixtures/fonts/open-sans-typo-metrics-subset.ttf` is that subset with the `OS/2` typographic ascender and descender changed to 1700 and -450, so they differ from `hhea`. The typo-metrics golden uses it.
+
 Per Godot's own `COPYRIGHT.txt` (`Files: thirdparty/fonts/OpenSans*.woff2`) and
 `thirdparty/README.md`:
 
@@ -587,6 +589,34 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+---
+
+## Brotli decoder
+
+<https://github.com/google/brotli>
+
+The `brotli` npm package (1.3.3) is a JavaScript port of Google's Brotli decoder. The previewer
+uses it to decompress the tables of a `.woff2` scene font. The package ships Google's licence as
+a comment in its decoder files, which a bundler strips, so a bundle that holds the package carries
+the notice here. The decoder is by Google and is licensed Apache-2.0, and the package is licensed
+MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright 2013 Google Inc. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
 
 ---

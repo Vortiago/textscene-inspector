@@ -116,6 +116,7 @@
   },
   "dependencies": {
     "fastnoise-lite": "catalog:",
+    "brotli": "catalog:",
     "fzstd": "catalog:",
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
