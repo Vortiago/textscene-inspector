@@ -5,23 +5,41 @@
  * which a clone copies.
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
 import type { GltfImportNames } from '../../../godot/import/gltfImportNames';
 import type { GltfSceneNode } from '../../../godot/import/gltfImportScene';
+import { parentPathOf } from '../../../utils/nodePath';
 import { isMeshInstance } from './meshInstances';
 
 const TAG_KEY = 'textsceneGodot';
 
-/** Written only by `tagGodotNodes`. A path list is absent on an object that holds no path. */
+export type GodotFrameKind = 'skeleton' | 'boneAttachment';
+
+/** A node the importer adds that three has no object of its own for. */
+export interface GodotFrame {
+  path: string;
+  kind: GodotFrameKind;
+}
+
+/** Written by `tagGodotNodes` and `markFrameGroup`. A list is absent on an object that holds none. */
 interface GodotTag {
   name?: string;
   paths?: string[];
-  framePaths?: string[];
+  frames?: GodotFrame[];
+  /** The path of the Skeleton3D the object is a bone of. */
+  skeleton?: string;
+  /** The path of the Skeleton3D or BoneAttachment3D the object holds the children of. */
+  frameGroup?: string;
+  /** The `Matrix4` elements of the object's glTF transform, where Godot makes the node a bone. */
+  rest?: number[];
+  /** Set on a skinned mesh that Godot moves below its Skeleton3D. */
+  underSkeleton?: true;
   sceneRoot?: true;
 }
 
 const NO_PATHS: readonly string[] = Object.freeze([]);
+const NO_FRAMES: readonly GodotFrame[] = Object.freeze([]);
 
 type Associations = ReadonlyMap<unknown, GLTFReference>;
 
@@ -64,13 +82,43 @@ export function tagGodotNodes(
       ? (boneContent(object, associations) ?? object)
       : object;
   };
+  const skeletonPaths = new Set(scene.filter((node) => node.kind === 'skeleton').map((node) => node.path));
   for (const godotNode of scene) {
     const object = objectOf(godotNode);
     const tag = object && tagOf(object);
     if (!tag) continue;
-    const list = godotNode.kind === 'node' ? (tag.paths ??= []) : (tag.framePaths ??= []);
-    list.push(godotNode.path);
+    if (godotNode.kind === 'node') (tag.paths ??= []).push(godotNode.path);
+    else if (godotNode.kind !== 'animationPlayer') {
+      (tag.frames ??= []).push({ path: godotNode.path, kind: godotNode.kind });
+    }
+    if (godotNode.kind === 'skeleton') tagBones(godotNode.bones ?? [], godotNode.path, objectsByNode);
+    if (object instanceof THREE.SkinnedMesh && skeletonPaths.has(parentPathOf(godotNode.path) ?? '')) {
+      tag.underSkeleton = true;
+    }
+    if (
+      godotNode.kind === 'node' &&
+      nodes[godotNode.gltfNode]?.isBone &&
+      objectsByNode.get(godotNode.gltfNode) === object
+    ) {
+      tag.rest = localMatrix(object).elements;
+    }
   }
+}
+
+function tagBones(
+  bones: readonly number[],
+  skeletonPath: string,
+  objectsByNode: ReadonlyMap<number, THREE.Object3D>
+): void {
+  for (const bone of bones) {
+    const object = objectsByNode.get(bone);
+    const tag = object && tagOf(object);
+    if (tag) tag.skeleton = skeletonPath;
+  }
+}
+
+function localMatrix(object: THREE.Object3D): THREE.Matrix4 {
+  return new THREE.Matrix4().compose(object.position, object.quaternion, object.scale);
 }
 
 /** The mesh, camera or light GLTFLoader puts below the bone object `bone`, if it holds one. */
@@ -108,13 +156,44 @@ export function godotNodePaths(object: THREE.Object3D): readonly string[] {
 }
 
 /**
- * Every path below the GLB root of a Godot node that `object` only stands in for: a Skeleton3D, which
- * three has no object for, and a BoneAttachment3D, which follows the bone. Such an object holds the
- * node's place in space, so a node attached below the path rides with it. It holds no property of
- * the node, so a write to the path has no object to land on.
+ * Every Skeleton3D and BoneAttachment3D that `object` stands in for, which three has no object for:
+ * a Skeleton3D stands in for the object above its first bone, and a BoneAttachment3D follows its
+ * bone. Such an object holds the node's place in space, so a node attached below the path rides
+ * with it. It holds no property of the node.
  */
-export function godotFramePaths(object: THREE.Object3D): readonly string[] {
-  return tagOf(object)?.framePaths ?? NO_PATHS;
+export function godotFrames(object: THREE.Object3D): readonly GodotFrame[] {
+  return tagOf(object)?.frames ?? NO_FRAMES;
+}
+
+/** The path of the Skeleton3D that `object` is a bone of, or undefined for any other object. */
+export function godotSkeletonOfBone(object: THREE.Object3D): string | undefined {
+  return tagOf(object)?.skeleton;
+}
+
+/** Makes `group` the object of the Skeleton3D or BoneAttachment3D at `framePath`, which holds its children. */
+export function markFrameGroup(group: THREE.Object3D, framePath: string): void {
+  group.userData[TAG_KEY] = { frameGroup: framePath } satisfies GodotTag;
+}
+
+/** The path of the Skeleton3D or BoneAttachment3D that `object` is the group of, or undefined. */
+export function frameGroupPath(object: THREE.Object3D): string | undefined {
+  return tagOf(object)?.frameGroup;
+}
+
+/**
+ * The rest pose of the bone Godot makes of the node `object` is, as the glTF transform `object`
+ * carried when it loaded. Godot gives such a node an identity transform below the BoneAttachment3D
+ * (`gltf_document.cpp:4646-4648` sets the transform of a non-joint only), so a transform written to
+ * the node composes onto this pose. Undefined for a node that keeps its own transform.
+ */
+export function godotBoneRest(object: THREE.Object3D): THREE.Matrix4 | undefined {
+  const rest = tagOf(object)?.rest;
+  return rest && new THREE.Matrix4().fromArray(rest);
+}
+
+/** Whether `object` is a skinned mesh that Godot moves below its Skeleton3D. */
+export function isUnderGodotSkeleton(object: THREE.Object3D): object is THREE.SkinnedMesh {
+  return tagOf(object)?.underSkeleton === true;
 }
 
 /** Whether `object` is the root of a loaded glTF, whose tags are its own and not an outer glTF's. */

@@ -42,3 +42,4 @@ Skeleton3D registers `parseNode3D` directly, so `motion_scale`, `show_rest_only`
 
 - **Needs runtime** Godot poses its bones each frame and deforms any mesh bound to it, but here the bones hold the rest pose.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.
+- **Not drawn** In an instanced GLB, a scene override of `show_rest_only`, `motion_scale` or `bones/*` is ignored with a warning, where Godot reads it. Only `transform` and `visible` apply there.

@@ -5,9 +5,15 @@
  * collide, and a path through a missing node binds nothing, as Godot's `get_node` does.
  */
 
-import { AnimationClip, type KeyframeTrack, type Object3D } from 'three';
+import { AnimationClip, type KeyframeTrack, type Matrix4, type Object3D } from 'three';
 import { warn } from '../../logger';
-import { godotNodeName, isGlbObject, isGodotSceneRoot } from '../../resources/formats/glb/godotNodes';
+import {
+  godotBoneRest,
+  godotNodeName,
+  isGlbObject,
+  isGodotSceneRoot,
+} from '../../resources/formats/glb/godotNodes';
+import { composeTracksOntoRestPose } from './restPoseTracks';
 import { findGlbObject } from '../internal/glb-scene-root/glbPathLookup';
 
 /** A node name never holds a `.` (`godot/string/nodeName.ts`), so the first one ends the path. */
@@ -98,6 +104,7 @@ export function trackTargetFinder(
  * dropped with a warning, so the rest of the clip still plays.
  */
 export function bindClip(clip: AnimationClip, targets: ReadonlyMap<string, Object3D>): AnimationClip {
+  const restByUuid = new Map<string, Matrix4>();
   const tracks = clip.tracks.flatMap((track): KeyframeTrack[] => {
     const { path, property } = splitTrackName(track.name);
     const target = targets.get(path);
@@ -105,9 +112,12 @@ export function bindClip(clip: AnimationClip, targets: ReadonlyMap<string, Objec
       warn(`[AnimationPlayer] "${clip.name}": no node at "${path}", so its ${property} track binds nothing`);
       return [];
     }
+    const rest = godotBoneRest(target);
+    if (rest) restByUuid.set(target.uuid, rest);
     const renamed = track.clone();
     renamed.name = `${target.uuid}${property}`;
     return [renamed];
   });
-  return new AnimationClip(clip.name, clip.duration, tracks, clip.blendMode);
+  const bound = restByUuid.size === 0 ? tracks : composeTracksOntoRestPose(tracks, restByUuid);
+  return new AnimationClip(clip.name, clip.duration, bound, clip.blendMode);
 }

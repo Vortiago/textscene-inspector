@@ -41,6 +41,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // The one variable: a type-less override whose path runs through the Skeleton3D and the
   // BoneAttachment3D Godot's importer builds, which the red box moves up through.
   { name: 'glb-skeleton-override', file: 'unit-glb-skeleton-override.tscn' },
+  // The properties of the nodes the importer builds: the left model moves its Skeleton3D and halves
+  // its skinned mesh by an override, the right lifts a node Godot makes a bone above its rest pose.
+  { name: 'glb-frames', file: 'unit-glb-frames.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a

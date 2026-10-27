@@ -5,8 +5,10 @@
  * selects by the mesh AABB, not the live pose.
  */
 import * as THREE from 'three';
+import { godotMatrixWorld } from '../resources/formats/glb/skinnedMeshSpace';
 
 const _box = /*@__PURE__*/ new THREE.Box3();
+const _matrix = /*@__PURE__*/ new THREE.Matrix4();
 
 /**
  * Object3D that may carry geometry and/or an object-level bounding box
@@ -41,7 +43,7 @@ export function computeWorldBoundingBox(
     const src = bearing.isInstancedMesh || bearing.isBatchedMesh ? bearing : geometry;
     if (src.boundingBox === null) src.computeBoundingBox?.();
     if (!src.boundingBox) return;
-    _box.copy(src.boundingBox).applyMatrix4(child.matrixWorld);
+    _box.copy(src.boundingBox).applyMatrix4(godotMatrixWorld(child, _matrix));
     target.union(_box);
   });
   return target;

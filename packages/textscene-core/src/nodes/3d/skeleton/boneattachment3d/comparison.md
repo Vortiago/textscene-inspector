@@ -38,3 +38,4 @@ The lenient parser reads BoneAttachment3D through `parseNode3D`, so `bone_name`,
 ## Known limitations
 
 - **Approximated** The attachment and its children sit at the authored `transform`, where Godot moves them to the bone's pose each update.
+- **Not drawn** In an instanced GLB, a scene override of `bone_name`, `bone_idx`, `override_pose` or `use_external_skeleton` is ignored with a warning, where Godot reads it. Only `visible` applies there.

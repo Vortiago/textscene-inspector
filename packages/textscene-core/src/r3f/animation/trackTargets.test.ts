@@ -4,6 +4,10 @@ import { AnimationClip, NumberKeyframeTrack, VectorKeyframeTrack } from 'three';
 import * as logger from '../../logger';
 import { bindClip, splitTrackName, trackTargetFinder, trackTargetPaths } from './trackTargets';
 import { tagAsLoadedGlb } from '../../resources/formats/glb/testing/loadedGlbTags';
+import { godotBoneRest } from '../../resources/formats/glb/godotNodes';
+import { createGLBMesh } from '../../resources/formats/glb/glbProcessing';
+import { RIG_GLB } from '../../resources/formats/glb/testing/rigGlb';
+import { NO_SIDECAR } from '../../resources/formats/glb/testing/noSidecar';
 import { addBoneRig } from '../internal/glb-scene-root/glbGraph.testkit';
 
 /** The dispatcher's shape: an unnamed wrapper registered by path, around the node's named group. */
@@ -68,11 +72,27 @@ describe('trackTargetFinder', () => {
     expect(find('Root/Robot/Armature/Skeleton3D/Hip/Sword')).toBe(sword);
   });
 
-  it('finds nothing for a Skeleton3D or a BoneAttachment3D, which no object holds the properties of', () => {
-    const { robot } = mountRobot();
-    const find = trackTargetFinder(new Map([['Root/Robot', robot.wrapper]]));
-    expect(find('Root/Robot/Armature/Skeleton3D')).toBeNull();
-    expect(find('Root/Robot/Armature/Skeleton3D/Hip')).toBeNull();
+  describe('on an imported rig', () => {
+    async function findInImportedRig() {
+      const glb = await createGLBMesh(RIG_GLB, NO_SIDECAR);
+      const robot = mountNode(new THREE.Scene(), 'Robot');
+      robot.group.add(glb);
+      return { glb, find: trackTargetFinder(new Map([['Root/Robot', robot.wrapper]])) };
+    }
+
+    it('finds the group of a Skeleton3D, which holds the transform of the node', async () => {
+      const { find } = await findInImportedRig();
+
+      const skeleton = find('Root/Robot/Armature/Skeleton3D');
+
+      expect(skeleton?.children.map((child) => child.name)).toEqual(['Hip']);
+    });
+
+    it('finds nothing for a BoneAttachment3D, which takes the pose of its bone', async () => {
+      const { find } = await findInImportedRig();
+
+      expect(find('Root/Robot/Armature/Skeleton3D/Hip')).toBeNull();
+    });
   });
 
   it('finds nothing in a glTF for a path the importer builds no node at', () => {
@@ -130,6 +150,30 @@ describe('trackTargetPaths', () => {
 });
 
 describe('bindClip', () => {
+  it('composes a track onto the rest pose of a node Godot makes a bone', () => {
+    const { robot, sword } = mountRobot();
+    sword.position.set(1.5, 0.5, 0);
+    tagAsLoadedGlb(robot.group, { namingVersion: 1 });
+    expect(godotBoneRest(sword)).toBeDefined();
+    const clip = new AnimationClip('lift', 1, [
+      new VectorKeyframeTrack(
+        'Root/Robot/Armature/Skeleton3D/Sword/Sword.position',
+        [0, 1],
+        [0, 0, 0, 0, 1.5, 0]
+      ),
+    ]);
+    const find = trackTargetFinder(new Map([['Root/Robot', robot.wrapper]]));
+
+    const bound = bindClip(
+      clip,
+      new Map([
+        ['Root/Robot/Armature/Skeleton3D/Sword/Sword', find('Root/Robot/Armature/Skeleton3D/Sword/Sword')!],
+      ])
+    );
+
+    expect(Array.from(bound.tracks[0]!.values)).toEqual([1.5, 0.5, 0, 1.5, 2, 0]);
+  });
+
   it('renames each track to its target’s uuid, which PropertyBinding matches exactly', () => {
     const target = new THREE.Object3D();
     const clip = new AnimationClip('slide', 1, [

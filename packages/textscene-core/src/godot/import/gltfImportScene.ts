@@ -51,6 +51,8 @@ export interface GltfSceneNode {
    * Skeleton3D's is the glTF node that put it in the tree. -1 for an AnimationPlayer.
    */
   gltfNode: number;
+  /** A Skeleton3D's bones, as glTF node indices. Absent on any other node. */
+  bones?: readonly number[];
 }
 
 const ANIMATION_PLAYER_NAME = 'AnimationPlayer';
@@ -62,6 +64,8 @@ interface SceneNode {
   gltfNode: number;
   /** Whether Godot makes it an ImporterMeshInstance3D, which a skinned mesh is. */
   isMeshInstance: boolean;
+  /** The bones of a Skeleton3D. */
+  bones?: readonly number[];
   parent: SceneNode | null;
   /** In the order Godot lists them. A Set removes a moved child without a scan of its siblings. */
   readonly children: Set<SceneNode>;
@@ -106,6 +110,7 @@ class SceneBuilder {
   constructor(private readonly source: GltfSceneSource) {
     this.skeletons = source.skeletons.map((bones) => {
       const node = sceneNode(SKELETON_NAME, 'skeleton', -1);
+      node.bones = bones;
       for (const bone of bones) {
         this.skeletonByBone.set(bone, node);
         this.sceneNodes.set(bone, node);
@@ -334,7 +339,12 @@ class SceneBuilder {
 function flatten(node: SceneNode, parentPath: string, into: GltfSceneNode[]): GltfSceneNode[] {
   for (const child of node.children) {
     const path = parentPath === '' ? child.name : `${parentPath}/${child.name}`;
-    into.push({ path, kind: child.kind, gltfNode: child.gltfNode });
+    into.push({
+      path,
+      kind: child.kind,
+      gltfNode: child.gltfNode,
+      ...(child.bones && { bones: child.bones }),
+    });
     flatten(child, path, into);
   }
   return into;

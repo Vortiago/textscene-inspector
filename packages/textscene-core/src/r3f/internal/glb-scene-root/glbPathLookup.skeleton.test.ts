@@ -30,7 +30,7 @@ async function match(
   options = NO_SIDECAR
 ): Promise<THREE.Object3D | undefined> {
   const root = await createGLBMesh(glb, options);
-  return findGlbTarget(flattenGlbObjects(root), godotPath)?.object;
+  return findGlbTarget(flattenGlbObjects(root), godotPath)?.entry.object;
 }
 
 describe('glbPathLookup in a skeleton', () => {
@@ -54,7 +54,7 @@ describe('glbPathLookup in a skeleton', () => {
     );
     const hand = await match(glb, 'Skeleton3D/Hand/Hand');
     expect(hand?.type).toBe('Mesh');
-    expect(hand?.parent?.type).toBe('Bone');
+    expect(hand?.parent?.parent?.type).toBe('Bone');
   });
 
   it('skips the bones between a node and the skeleton’s parent', async () => {

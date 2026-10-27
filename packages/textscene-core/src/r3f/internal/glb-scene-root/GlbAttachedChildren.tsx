@@ -79,10 +79,10 @@ function attachedChildren(
   const { attached: placed, rest } = resolveGlbAttachments(entries, root.overrides);
   warnUnattached(rest);
   const orders = attachedOrders(entries, childOrders(rootOrder, entries.length), placed);
-  return placed.map(({ node, target }) => ({
+  return placed.map(({ node, target, host }) => ({
     node,
     path: joinPath(joinPath(rootPath, entries[target]!.relPath), node.name),
-    target: entries[target]!.object,
+    target: host,
     order: orders.get(node)!,
     visibilityParent: links[target]!.place.parentPath,
   }));

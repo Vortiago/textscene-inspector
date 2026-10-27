@@ -13,14 +13,14 @@ import { RIG_GLB } from '../../../resources/formats/glb/testing/rigGlb';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
 import { flattenGlbObjects } from './glbHierarchy';
-import { findGlbNode, findGlbTarget, matchGlbNode } from './glbPathLookup';
+import { findGlbFrame, findGlbNode, findGlbTarget, matchGlbNode } from './glbPathLookup';
 
 async function entriesOf(glb: ArrayBuffer, options = NO_SIDECAR) {
   return flattenGlbObjects(await createGLBMesh(glb, options));
 }
 
 async function targetOf(glb: ArrayBuffer, godotPath: string, options = NO_SIDECAR) {
-  return findGlbTarget(await entriesOf(glb, options), godotPath)?.object;
+  return findGlbTarget(await entriesOf(glb, options), godotPath)?.entry.object;
 }
 
 const nameOf = (object: THREE.Object3D | undefined) => object?.name;
@@ -93,13 +93,38 @@ describe('findGlbNode', () => {
   });
 });
 
+describe('findGlbFrame', () => {
+  it('finds a Skeleton3D with the group of its root bones as the host', async () => {
+    const frame = findGlbFrame(await entriesOf(RIG_GLB), 'Armature/Skeleton3D');
+
+    expect([frame?.kind, frame?.entry.object.name, frame?.host.children.map(nameOf)]).toEqual([
+      'skeleton',
+      'Armature',
+      ['Hip'],
+    ]);
+  });
+
+  it('finds a BoneAttachment3D with the group of what hangs on its bone as the host', async () => {
+    const frame = findGlbFrame(await entriesOf(RIG_GLB), 'Armature/Skeleton3D/Hip');
+
+    expect([frame?.kind, frame?.entry.object.name, frame?.host.children.map(nameOf)]).toEqual([
+      'boneAttachment',
+      'Hip',
+      ['Sword'],
+    ]);
+  });
+
+  it('finds none for a node', async () => {
+    expect(findGlbFrame(await entriesOf(RIG_GLB), 'Armature/Skeleton3D/Body')).toBeNull();
+  });
+});
+
 describe('matchGlbNode', () => {
-  it('returns null and warns once for a node the object only stands in for', async () => {
+  it('returns null and stays quiet for a frame, whose properties `glbFrameOverrides` writes', async () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
     expect(matchGlbNode(await entriesOf(RIG_GLB), 'Armature/Skeleton3D')).toBeNull();
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Armature/Skeleton3D'));
+    expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
   });
 

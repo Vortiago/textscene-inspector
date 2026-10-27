@@ -35,15 +35,58 @@ describe('applyGlbNodeOverrides', () => {
     expect(visualLayersOf(root.getObjectByName('Sword')!)).toBe(2);
   });
 
-  it('drops an override of a Skeleton3D, which no object holds the properties of', () => {
-    const root = buildTestGlbGraph([]);
-    const { armature } = addBoneRig(root);
+  describe('on a node Godot makes a bone', () => {
+    const move = (position: { x: number; y: number; z: number }): TscnNode =>
+      override('Sword', {
+        instanceSubPath: 'Armature/Skeleton3D/Sword',
+        properties: {
+          transform: {
+            basis_x: { x: 1, y: 0, z: 0 },
+            basis_y: { x: 0, y: 1, z: 0 },
+            basis_z: { x: 0, y: 0, z: 1 },
+            origin: position,
+          },
+        },
+      });
 
-    applyGlbNodeOverrides(root, [
-      override('Skeleton3D', { instanceSubPath: 'Armature', rawProperties: { visible: 'false' } }),
-    ]);
+    function swordUnderBone(namingVersion: number) {
+      const root = buildTestGlbGraph([]);
+      const { sword } = addBoneRig(root);
+      sword.position.set(1.5, 0.5, 0);
+      tagAsLoadedGlb(root, { namingVersion });
+      return { root, sword };
+    }
 
-    expect(armature.visible).toBe(true);
+    it('adds the transform to the rest pose the bone holds', () => {
+      const { root, sword } = swordUnderBone(1);
+
+      applyGlbNodeOverrides(root, [move({ x: 0, y: 1.5, z: 0 })]);
+
+      expect(sword.position.toArray()).toEqual([1.5, 2, 0]);
+    });
+
+    it('adds it once when the overrides apply again', () => {
+      const { root, sword } = swordUnderBone(1);
+      const overrides = [move({ x: 0, y: 1.5, z: 0 })];
+
+      applyGlbNodeOverrides(root, overrides);
+      applyGlbNodeOverrides(root, overrides);
+
+      expect(sword.position.toArray()).toEqual([1.5, 2, 0]);
+    });
+
+    it('replaces the transform of a node Godot keeps as a node', () => {
+      const root = buildTestGlbGraph([]);
+      const { sword } = addBoneRig(root);
+      sword.position.set(1.5, 0.5, 0);
+      tagAsLoadedGlb(root);
+
+      applyGlbNodeOverrides(root, [
+        { ...move({ x: 0, y: 1.5, z: 0 }), instanceSubPath: 'Armature/Skeleton3D/Hip' },
+      ]);
+
+      expect(sword.position.toArray()).toEqual([0, 1.5, 0]);
+    });
   });
 
   it('stamps layers on a mesh’s surfaces, but not on the node under it', () => {

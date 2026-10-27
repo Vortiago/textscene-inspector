@@ -9,7 +9,7 @@ import { parseGeometryInstance3D } from '../../../nodes/3d/geometryinstance3d/pa
 import type { GeometryInstance3DProperties } from '../../../nodes/3d/geometryinstance3d/types';
 import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
 import { godotNodePaths } from '../../../resources/formats/glb/godotNodes';
-import { joinPath } from '../../../utils/nodePath';
+import { joinPath, parentPathOf } from '../../../utils/nodePath';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbRoot } from './GlbInstanceContext';
@@ -47,7 +47,7 @@ export function glbNodeLinks(
   uniquePaths: ReadonlyMap<string, string> | undefined
 ): GlbNodeLink[] {
   const overrides = overridesByTarget(object, entries, root.overrides);
-  const passedOn = new Map<THREE.Object3D, string | null>();
+  const passedOn = new Map<string, string | null>();
   return entries.map((entry) => {
     const override = overrides.get(entry.object);
     const path =
@@ -62,13 +62,14 @@ export function glbNodeLinks(
       override?.rawProperties ?? {}
     );
     // `has`, not `??`: a parent whose own link resolves to none passes none on.
-    const parent = entry.object.parent!;
-    const inherited = passedOn.has(parent) ? (passedOn.get(parent) ?? null) : root.visibilityParent;
+    const parent = parentPathOf(entry.relPath);
+    const inherited =
+      parent !== null && passedOn.has(parent) ? (passedOn.get(parent) ?? null) : root.visibilityParent;
     const parentPath =
       path === null
         ? inherited
         : visibilityParentOf(path, properties.visibility_parent, inherited, uniquePaths);
-    passedOn.set(entry.object, parentPath);
+    passedOn.set(entry.relPath, parentPath);
     return { entry, properties, place: { path, parentPath } };
   });
 }

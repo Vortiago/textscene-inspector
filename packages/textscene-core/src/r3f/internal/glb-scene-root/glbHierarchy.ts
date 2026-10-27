@@ -8,7 +8,11 @@
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import type { LiveNode } from '../../../resources/liveNode.js';
-import { godotNodeName, isGodotSceneRoot } from '../../../resources/formats/glb/godotNodes.js';
+import {
+  frameGroupPath,
+  godotNodeName,
+  isGodotSceneRoot,
+} from '../../../resources/formats/glb/godotNodes.js';
 import { insertAtIndex } from '../../../godot/scene/siblingIndex.js';
 import { joinPath, parentPathOf } from '../../../utils/nodePath.js';
 import { perObject } from '../../../utils/perObject.js';
@@ -52,11 +56,21 @@ export interface GlbObjectEntry {
   index: number;
 }
 
-/** The children of `object` that belong to its GLB: a GLB mounted below it is another tree. */
+/**
+ * The children of `object` that belong to its GLB: a GLB mounted below it is another tree. The
+ * group of a Skeleton3D or BoneAttachment3D is no node of the walk, so its children count as the host's.
+ */
 function ownChildren(object: THREE.Object3D): readonly THREE.Object3D[] {
-  return object.children.some(isGodotSceneRoot)
+  const children = object.children.some(isGodotSceneRoot)
     ? object.children.filter((child) => !isGodotSceneRoot(child))
     : object.children;
+  return children.some(isFrameGroup)
+    ? children.flatMap((child) => (isFrameGroup(child) ? ownChildren(child) : [child]))
+    : children;
+}
+
+function isFrameGroup(object: THREE.Object3D): boolean {
+  return frameGroupPath(object) !== undefined;
 }
 
 /**
@@ -185,7 +199,7 @@ function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly Live
  * each node R3F renders below it.
  */
 export function glbSceneRootChildCount(root: THREE.Object3D): number {
-  const topLevel = flattenGlbObjects(root).filter((entry) => entry.object.parent === root).length;
+  const topLevel = flattenGlbObjects(root).filter((entry) => parentPathOf(entry.relPath) === null).length;
   return topLevel + (root.animations.length > 0 ? 1 : 0);
 }
 

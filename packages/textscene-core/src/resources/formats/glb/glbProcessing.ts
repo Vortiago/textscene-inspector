@@ -11,7 +11,9 @@ import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCas
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
-import { tagGodotNodes } from './godotNodes';
+import { isUnderGodotSkeleton, tagGodotNodes } from './godotNodes';
+import { groupFrames } from './frameGroups';
+import { placeSkinnedMeshInSkeletonSpace } from './skinnedMeshSpace';
 import {
   gltfImportNames,
   type GltfImportNames,
@@ -139,6 +141,7 @@ export async function createGLBMesh(
   nameClips(root.animations, names.animations);
   tagMeshInstances(root, gltf.parser.associations);
   tagGodotNodes(root, gltf.parser.associations, names);
+  groupFrames(root);
   importMissingMaterialsAsGodotDefault(root, gltf.parser.associations);
   importBlendAsDepthPrepass(root);
   return root;
@@ -221,6 +224,7 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
   forEachSurfaceMaterial(cloned, (material, assign) => assign(importedSurfaceMaterial(material.clone())));
 
   cloned.traverse((node) => {
+    if (isUnderGodotSkeleton(node)) placeSkinnedMeshInSkeletonSpace(node);
     if (node instanceof THREE.Mesh) {
       // Godot's glTF import mounts every surface as a MeshInstance3D that casts
       // (SHADOW_CASTING_SETTING_ON) and always receives shadows. three defaults both to

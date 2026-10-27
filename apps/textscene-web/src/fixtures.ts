@@ -638,6 +638,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Frames",
+    "file": "unit-glb-frames.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Lightmap Miss",
     "file": "unit-glb-lightmap-miss.tscn",
     "category": "Other"
