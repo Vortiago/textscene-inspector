@@ -219,6 +219,8 @@ Tag a new shared helper. Do not edit the list.
   a double beyond the float range as inf, as `real_t` does.
 - An AABB that must have a size: `parseNonEmptyAabb` in `parser/valueParsers.ts`.
 - A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
+- The size of the viewport that a node renders in: `useViewportSize` in
+  `r3f/contexts/ViewportSizeContext.tsx`.
 - A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
   through it, before the upload.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
