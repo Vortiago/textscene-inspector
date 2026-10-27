@@ -44,8 +44,11 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 
 `speed_scale` and `playback_default_blend_time` fall back to `1.0` and `0.0` only when the value fails to parse as a float. `callback_mode_process` and `callback_mode_method` re-check the enum through `enumOr` and fall back to `IDLE` (1) and `DEFERRED` (0). Each has a deprecated 3.x spelling that Godot forwards to the same setter, so the parser reads both spellings into one field. `root_node` defaults to `NodePath("..")` when absent.
 
+A track that names a node of an instanced `.glb` uses the path Godot's importer gives the node (ADR-0058). A transform track on a node that Godot makes a bone composes onto its rest pose. A transform track on a `Skeleton3D` moves its bones and the nodes below it. A track on a `BoneAttachment3D` binds nothing, since the bone sets its transform. A track on a path that names no node binds nothing and logs a warning. A `visible` value track hides the node and what is below it. It plays on a `Node3D`, a `CanvasItem` that is not a `Control`, a GLB node, a `Skeleton3D` and a `BoneAttachment3D`.
+
 ## Known limitations
 
 - **Not drawn** Only transform and value tracks play, so `bezier`, `method`, `audio` and nested `animation` tracks are parsed and ignored (ADR-0011).
 - **Approximated** Cubic interpolation plays as a smooth spline on transform tracks and as linear on `modulate` and `size` tracks (ADR-0017).
 - **Approximated** Per-key `transition` easing plays as linear, so an eased clip reaches the same poses on a different curve (ADR-0017).
+- **Not drawn** A `visible` value track on a `Control` plays nothing, since a hidden `Control` also leaves the layout solve, which reads the authored value.

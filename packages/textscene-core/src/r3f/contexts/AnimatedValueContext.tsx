@@ -49,7 +49,18 @@ export function useAnimatedValueRegistry(): AnimatedValueRegistry {
  * inline lambda does not re-subscribe every render.
  */
 export function useAnimatedValue<T>(property: string, decode: (tuple: number[]) => T): T | null {
-  const nodePath = useNodePath();
+  return useAnimatedValueAt(useNodePath(), property, decode);
+}
+
+/**
+ * {@link useAnimatedValue} for the node at `nodePath`, for a caller that renders the node's own
+ * provider, where `useNodePath` still answers with the parent's path.
+ */
+export function useAnimatedValueAt<T>(
+  nodePath: string | null,
+  property: string,
+  decode: (tuple: number[]) => T
+): T | null {
   const registry = useAnimatedValueRegistry();
   const [value, setValue] = useState<T | null>(null);
   const decodeRef = useRef(decode);

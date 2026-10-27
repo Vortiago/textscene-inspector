@@ -5,6 +5,7 @@
  */
 
 import type * as THREE from 'three';
+import { frameGroupPath } from './godotNodes';
 import type { RootScale } from './types';
 
 /**
@@ -26,8 +27,18 @@ export function applyRootScale(root: THREE.Object3D, rootScale: RootScale | null
   // well as sizes, so a multi-part asset shrinks as one piece. Godot also scales
   // animation position tracks when it bakes, and this does not, so animated positions
   // play at the unscaled amplitude.
-  for (const child of root.children) {
+  for (const child of bakedChildren(root)) {
     child.position.multiplyScalar(scale);
     child.scale.multiplyScalar(scale);
   }
+}
+
+/**
+ * The direct children of `root` as Godot has them. A frame group is no node of the scene, so the
+ * bake reaches what it holds, and a transform a scene writes to the group replaces nothing of it.
+ */
+function bakedChildren(root: THREE.Object3D): THREE.Object3D[] {
+  return root.children.flatMap((child) =>
+    frameGroupPath(child) === undefined ? [child] : bakedChildren(child)
+  );
 }

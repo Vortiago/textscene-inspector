@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { AnimationClip, EulerOrder, Object3D } from 'three';
+import type { AnimationClip, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -26,6 +26,7 @@ import {
   trackTargetFinder,
   trackTargetPaths,
 } from '../../../r3f/animation/trackTargets';
+import { GODOT_EULER_ORDER } from '../../../r3f/animation/restPoseTracks';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveAnimations } from './animationResolver';
@@ -37,7 +38,6 @@ import { sampleSteppedValue, sampleInterpolatedValue, VALUE_PUSH_PROPERTIES } fr
 import type { AnimationPlayerProperties } from './types';
 
 /** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
-const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
 
 export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationPlayerProperties;

@@ -10,6 +10,12 @@ import { parseNode2D } from '../../nodes/base/node2d/parser';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { CanvasItem2D } from './CanvasItem2D';
+import {
+  AnimatedValueProvider,
+  useAnimatedValueRegistry,
+  type AnimatedValueRegistry,
+} from '../contexts/AnimatedValueContext';
+import { NodePathProvider } from '../contexts/NodePathContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import type { CanvasItemTint } from '../canvasItemModulate';
 import type { ItemPlacement } from '../lighting2d/itemLightList';
@@ -62,6 +68,44 @@ describe('CanvasItem2D', () => {
     const r = await ReactThreeTestRenderer.create(<CanvasItem2D node={node} props={node2DProps(node)} />);
     const group = r.scene.children[0]!.instance as THREE.Group;
     expect(group.visible).toBe(false);
+  });
+
+  describe('a pushed visible value', () => {
+    let registry: AnimatedValueRegistry;
+    function RegistryProbe() {
+      registry = useAnimatedValueRegistry();
+      return null;
+    }
+    const mount = (node: TscnNode) =>
+      ReactThreeTestRenderer.create(
+        <AnimatedValueProvider>
+          <RegistryProbe />
+          <NodePathProvider path="CI">
+            <CanvasItem2D node={node} props={node2DProps(node)} />
+          </NodePathProvider>
+        </AnimatedValueProvider>
+      );
+    const push = (value: number[] | null) =>
+      ReactThreeTestRenderer.act(async () => registry.set('CI', 'visible', value));
+
+    it('hides the group, and shows it again when released', async () => {
+      const r = await mount(makeNode());
+      const group = r.scene.children[0]!.instance as THREE.Group;
+
+      await push([0]);
+      expect(group.visible).toBe(false);
+
+      await push(null);
+      expect(group.visible).toBe(true);
+    });
+
+    it('shows a group whose authored visible is false', async () => {
+      const r = await mount(makeNode({ visible: 'false' }));
+
+      await push([1]);
+
+      expect((r.scene.children[0]!.instance as THREE.Group).visible).toBe(true);
+    });
   });
 
   it('hands the body the linear own-pixel tint; children inherit modulate but not self_modulate', async () => {

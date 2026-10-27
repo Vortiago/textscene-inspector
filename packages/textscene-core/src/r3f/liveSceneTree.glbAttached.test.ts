@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { collectLiveNodes, type LiveTreeContext } from './liveSceneTree';
 import { makeNode } from '../parser/testing/parserKit';
 import type { TscnNode, TscnScene } from '../parser/types';
+import { tagAsLoadedGlb } from '../resources/formats/glb/testing/loadedGlbTags';
 import '../nodes/node/index';
 
 const GLB_PATH = 'res://rig.glb';
@@ -20,6 +21,7 @@ function rigGlb(): THREE.Object3D {
   const skeleton = named('Skeleton');
   skeleton.add(named('Torso'), named('Arm'));
   root.add(skeleton);
+  tagAsLoadedGlb(root);
   return root;
 }
 

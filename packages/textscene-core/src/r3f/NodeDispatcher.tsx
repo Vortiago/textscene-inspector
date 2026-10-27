@@ -30,6 +30,7 @@ import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
+import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
 import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
@@ -82,10 +83,12 @@ export interface NodeDispatcherProps {
 /**
  * Whether Godot hides `node` itself: a Node3D whose `visible` is false hides its Node3D descendants
  * too (`node_3d.cpp:1132-1143`). A descendant of another family escapes to the world root first
- * (`parentSpaceScope.tsx`), so the wrapper hides only what Godot hides.
+ * (`parentSpaceScope.tsx`), so the wrapper hides only what Godot hides. `animatedVisible` is the
+ * value an AnimationPlayer track pushes, null when none does.
  */
-function isHiddenNode3D(node: TscnNode): boolean {
-  return spaceFamilyOf(node.type) === 'Node3D' && (node.properties as Node3DProperties).visible === false;
+function isHiddenNode3D(node: TscnNode, animatedVisible: boolean | null): boolean {
+  if (spaceFamilyOf(node.type) !== 'Node3D') return false;
+  return !(animatedVisible ?? (node.properties as Node3DProperties).visible !== false);
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
@@ -247,7 +250,9 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
   // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
   // walks each child's whole subtree, which on every render is quadratic in depth.
   const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
-  const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node);
+  // A pushed `visible` takes the place of the authored one, as a GLB node's does.
+  const animatedVisible = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
+  const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node, animatedVisible);
   const inheritedCanvasRoots = useCanvasRootRanges();
   // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
   // its counter over its children (`canvas_layer.cpp:261-267`).
