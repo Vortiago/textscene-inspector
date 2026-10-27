@@ -1,5 +1,5 @@
 /**
- * Godot scales a shaded surface's emission by the exposure normalisation factor of the render
+ * Godot scales a shaded surface's emission by the exposure factor of the render
  * (`scene_forward_clustered.glsl:1679-1683`; an unshaded surface keeps its emission whole). The
  * lit programs read the factor from one shared buffer, which `sceneExposure.ts` writes before each
  * render of a scene.

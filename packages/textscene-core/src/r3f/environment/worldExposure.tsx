@@ -1,7 +1,7 @@
 /**
  * The exposure of a world: the CameraAttributes its first valid WorldEnvironment holds, chosen apart
  * from the Environment (`world_environment.cpp:87-93`). Godot scales the frame by the attributes'
- * exposure normalisation factor, which is the `exposure_multiplier` while the project uses no
+ * exposure normalisation factor, which this code calls the exposure factor. It is the `exposure_multiplier` while the project uses no
  * physical light units (`camera_attributes_storage.cpp:133-138`, `camera_attributes.cpp:56-64`).
  */
 
@@ -31,21 +31,21 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
 
 function ExposureProvider({ children }: { children: ReactNode }) {
   const chosen = cameraAttributes.useChosen();
-  const normalization = chosen?.status === 'resolved' ? chosen.attributes.exposureMultiplier : null;
-  useSceneExposure(normalization);
-  return <ExposureContext.Provider value={normalization}>{children}</ExposureContext.Provider>;
+  const optionalFactor = chosen?.status === 'resolved' ? chosen.attributes.exposureMultiplier : null;
+  useSceneExposure(optionalFactor);
+  return <ExposureContext.Provider value={optionalFactor}>{children}</ExposureContext.Provider>;
 }
 
 /**
- * The world's exposure normalisation factor, or null without CameraAttributes. A lightmap needs the
+ * The world's exposure factor, or null without CameraAttributes. A lightmap needs the
  * difference: with no attributes it reads 1, not the factor over its baked exposure
  * (`render_forward_clustered.cpp:1222-1229`).
  */
-export function useExposureNormalization(): number | null {
+export function useOptionalExposureFactor(): number | null {
   return useContext(ExposureContext);
 }
 
 /** The factor a consumer scales by: 1 without CameraAttributes. */
 export function useExposureFactor(): number {
-  return useExposureNormalization() ?? 1;
+  return useOptionalExposureFactor() ?? 1;
 }

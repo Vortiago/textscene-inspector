@@ -16,8 +16,8 @@ export interface WorldEnvironmentProperties extends NodeProperties {
   environment: string;
 
   /**
-   * Reference to CameraAttributes SubResource (optional)
-   * Format: SubResource("CameraAttributes_123")
+   * Reference to a CameraAttributesPractical or CameraAttributesPhysical (optional)
+   * Format: SubResource("CameraAttributes_123") or ExtResource("2_abc")
    *
    * Its `exposure_multiplier` scales the frame (`r3f/environment/worldExposure.tsx`).
    */

@@ -1,6 +1,6 @@
 /**
  * A world's exposure scales the energy of every Light3D that draws in it, as Godot multiplies a
- * light's energy by the exposure normalisation factor when it fills the light buffer
+ * light's energy by the exposure factor when it fills the light buffer
  * (`light_storage.cpp:656-658`, `:884-886`).
  */
 

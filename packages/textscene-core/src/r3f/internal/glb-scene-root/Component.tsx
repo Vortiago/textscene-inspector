@@ -36,6 +36,7 @@ import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { GlbAttachedChildren } from './GlbAttachedChildren';
+import { useGlbLightExposure } from './useGlbLightExposure';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -76,6 +77,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
   useInstancingNodeTransform(object, root.rawProperties);
+  useGlbLightExposure(object);
   const uniquePaths = useUniqueNamePaths(root.path);
   const links = useMemo(
     () => (object ? glbNodeLinks(object, entries, root, uniquePaths) : []),

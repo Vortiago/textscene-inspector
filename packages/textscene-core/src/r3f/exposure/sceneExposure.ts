@@ -4,7 +4,7 @@
  * sub-viewport included, draws with its own.
  */
 
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
@@ -40,5 +40,6 @@ function holdSceneExposure(scene: THREE.Scene, factor: number): () => void {
  */
 export function useSceneExposure(factor: number | null): void {
   const scene = useThree((state) => state.scene);
-  useEffect(() => (factor === null ? undefined : holdSceneExposure(scene, factor)), [scene, factor]);
+  // A layout effect, so the buffer changes in the commit that changes every light's intensity.
+  useLayoutEffect(() => (factor === null ? undefined : holdSceneExposure(scene, factor)), [scene, factor]);
 }

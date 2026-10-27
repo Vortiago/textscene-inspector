@@ -15,7 +15,7 @@ import type { LightmapGIData } from '../../../resources/lightmapgidata/types';
 import { useResource } from '../../../resources/useResource';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useExposureNormalization } from '../../../r3f/environment/worldExposure';
+import { useOptionalExposureFactor } from '../../../r3f/environment/worldExposure';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
 import {
@@ -64,7 +64,7 @@ function BakedLightmap({
   const uniquePaths = useUniqueNamePaths(path);
   const order = useTreeOrder();
   const usesBicubicFilter = projectUsesLightmapBicubicFilter(useProjectSettings().settings);
-  const exposureScale = lightmapExposureScale(useExposureNormalization(), data.bakedExposure);
+  const exposureScale = lightmapExposureScale(useOptionalExposureFactor(), data.bakedExposure);
   const lightmapLoads = useLoadedTextures();
   const shadowmaskLoads = useLoadedTextures();
   const lightmapAtlas = useAtlas(data.lightmapTextures, lightmapLoads.loaded);

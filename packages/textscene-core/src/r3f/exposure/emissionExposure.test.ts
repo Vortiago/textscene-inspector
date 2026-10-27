@@ -1,5 +1,5 @@
 /**
- * A lit program scales its emission by the exposure normalisation factor, as Godot's scene shader
+ * A lit program scales its emission by the exposure factor, as Godot's scene shader
  * does for every shaded material (`scene_forward_clustered.glsl:1679-1683`). The tests read the
  * installed three, so a release that rewrites the replaced line fails here.
  */

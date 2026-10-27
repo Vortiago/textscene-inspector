@@ -15,7 +15,7 @@ import type { EnvironmentResolution } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 import {
   useExposureFactor,
-  useExposureNormalization,
+  useOptionalExposureFactor,
   usePublishCameraAttributes,
   type CameraAttributesResolution,
 } from './worldExposure';
@@ -76,12 +76,12 @@ function Publishing({
 
 /** Shows what a consumer in the world reads. */
 function Reader() {
-  const normalization = useExposureNormalization();
+  const optionalFactor = useOptionalExposureFactor();
   const factor = useExposureFactor();
-  return <group name="Reader" userData={{ normalization, factor }} />;
+  return <group name="Reader" userData={{ optionalFactor, factor }} />;
 }
 
-function read(renderer: Renderer): { normalization: number | null; factor: number } {
+function read(renderer: Renderer): { optionalFactor: number | null; factor: number } {
   return renderer.scene.find((node) => node.props.name === 'Reader').props.userData;
 }
 
@@ -99,28 +99,28 @@ function inRoot(children: ReactNode) {
 describe('the exposure of a world', () => {
   it('is none, and the factor 1, with no WorldEnvironment', async () => {
     const renderer = await ReactThreeTestRenderer.create(inRoot(null));
-    expect(read(renderer)).toEqual({ normalization: null, factor: 1 });
+    expect(read(renderer)).toEqual({ optionalFactor: null, factor: 1 });
   });
 
   it('is the exposure_multiplier of a camera_attributes-only WorldEnvironment', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(<WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />)
     );
-    expect(read(renderer)).toEqual({ normalization: 2, factor: 2 });
+    expect(read(renderer)).toEqual({ optionalFactor: 2, factor: 2 });
   });
 
   it('is none for a WorldEnvironment with only an Environment', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(<WorldEnvironmentAt order={[0]} env={environment('a')} />)
     );
-    expect(read(renderer)).toEqual({ normalization: null, factor: 1 });
+    expect(read(renderer)).toEqual({ optionalFactor: null, factor: 1 });
   });
 
   it('keeps a multiplier of 0, which is a valid exposure and not no exposure', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(<WorldEnvironmentAt order={[0]} cameraAttributes={attributes(0)} />)
     );
-    expect(read(renderer)).toEqual({ normalization: 0, factor: 0 });
+    expect(read(renderer)).toEqual({ optionalFactor: 0, factor: 0 });
   });
 
   it('takes the first WorldEnvironment with valid attributes when two resolve', async () => {
@@ -170,7 +170,7 @@ describe('the exposure of a world', () => {
         </>
       )
     );
-    expect(read(renderer)).toEqual({ normalization: null, factor: 1 });
+    expect(read(renderer)).toEqual({ optionalFactor: null, factor: 1 });
   });
 
   it('follows the attributes when they change', async () => {
@@ -186,7 +186,7 @@ describe('the exposure of a world', () => {
       inRoot(<WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />)
     );
     await renderer.update(inRoot(null));
-    expect(read(renderer)).toEqual({ normalization: null, factor: 1 });
+    expect(read(renderer)).toEqual({ optionalFactor: null, factor: 1 });
   });
 
   it('keeps a sub-viewport world apart from the root world', async () => {
@@ -218,10 +218,10 @@ describe('the exposure of a world', () => {
         </>
       )
     );
-    const normalizations = renderer.scene
+    const optionalFactors = renderer.scene
       .findAll((node) => node.props.name === 'Reader')
-      .map((node) => node.props.userData.normalization);
-    expect(normalizations.sort()).toEqual([2, null]);
+      .map((node) => node.props.userData.optionalFactor);
+    expect(optionalFactors.sort()).toEqual([2, null]);
   });
 });
 
