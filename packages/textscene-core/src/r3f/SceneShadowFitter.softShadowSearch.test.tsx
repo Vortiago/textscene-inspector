@@ -9,6 +9,7 @@ import { TscnSceneContents } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
+import { isNodeIcon } from './editorHelpers';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { DIRECTIONAL_SOFT_SHADOWS, LIGHT_SOFT_SHADOWS } from './shadowFilter/softShadowSearch';
@@ -42,8 +43,11 @@ ${lights}`;
   scene.updateMatrixWorld();
   camera.updateMatrixWorld();
   fireSceneRender(scene, camera);
-  const box = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-  const defines = (box.material as THREE.Material & { defines?: Record<string, unknown> }).defines ?? {};
+  const [box] = renderer.scene
+    .findAllByType('Mesh')
+    .map((mesh) => mesh.instance as THREE.Mesh)
+    .filter((mesh) => !isNodeIcon(mesh));
+  const defines = (box!.material as THREE.Material & { defines?: Record<string, unknown> }).defines ?? {};
   await renderer.unmount();
   return defines;
 }

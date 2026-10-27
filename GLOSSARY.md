@@ -421,6 +421,10 @@ _Avoid_: "collision mesh".
 An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `showCollisions`.
 _Avoid_: "debug shape".
 
+**Node icon** (`r3f/nodeIcon/`):
+Godot's billboard icon at the origin of a node, at a fixed size on screen. A node type declares it through `editorIcon` in its registration. It follows the Gizmos toggle and is faint while the node is unselected (ADR-0056).
+_Avoid_: "sprite", "label".
+
 **CSG root**:
 The `CSGShape3D` whose direct parent is not a `CSGShape3D`, and the only node in a CSG subtree that draws a mesh (ADR-0027).
 _Avoid_: "CSG parent", "combiner".

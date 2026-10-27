@@ -10,6 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactThreeTest } from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from './NodeDispatcher';
+import { isNodeIcon } from './editorHelpers';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 
@@ -20,8 +21,9 @@ type ReactThreeTestInstance = ReactThreeTest.ReactThreeTestInstance;
 
 // The test renderer's tree API, since `instanceof` fails across its second
 // three.js copy under `traverse()`.
+/** The meshes the nodes draw. A node icon is editor chrome. */
 function findMeshes(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {
-  return scene.findAllByType('Mesh');
+  return scene.findAllByType('Mesh').filter((mesh) => !isNodeIcon(mesh.instance));
 }
 
 function findLights(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {

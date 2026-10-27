@@ -49,6 +49,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { hsvToRgb } from '../../../../godot/math/color';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   COLOR_MODE_NAMES,
@@ -67,7 +68,6 @@ import {
   SHAPE_HSV_RECTANGLE,
   extractHsv,
   hexRowColumns,
-  hsvToRgb,
   hueIndicatorY,
   invertRgb,
   modeRowButtonRects,

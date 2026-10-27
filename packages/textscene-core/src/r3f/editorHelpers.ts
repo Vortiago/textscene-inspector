@@ -23,3 +23,18 @@ export function markEditorHelper(object: THREE.Object3D): void {
 export function isEditorHelper(object: THREE.Object3D): boolean {
   return object.userData[EDITOR_HELPER_KEY] === true;
 }
+
+const NODE_ICON_KEY = 'tscnNodeIcon';
+
+/**
+ * The `userData` of a node's billboard icon. Its size follows the camera, so no bounds include it:
+ * not the framing, not the hover and selection boxes of its node.
+ */
+export function nodeIconUserData(): { tscnNodeIcon: true } {
+  return { [NODE_ICON_KEY]: true };
+}
+
+/** Whether `object` is a node's billboard icon. */
+export function isNodeIcon(object: THREE.Object3D): boolean {
+  return object.userData[NODE_ICON_KEY] === true;
+}

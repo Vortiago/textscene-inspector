@@ -13,6 +13,11 @@ import type { FogVolumeProperties } from './types';
 /** `editors/3d_gizmos/gizmo_colors/fog_volume` (`editor_settings.cpp:885`). */
 const GIZMO_COLOR = Object.freeze({ r: 0.5, g: 0.7, b: 1 });
 
+/** Whether the gizmo plugin draws the box and the icon: every shape but WORLD (`fog_volume_gizmo_plugin.cpp:99-123`). */
+export function hasGizmoShape(shape: FogVolumeProperties['shape']): boolean {
+  return shape !== FogVolumeShape.WORLD;
+}
+
 interface FogVolumeGizmoProps {
   size: Vector3;
   shape: FogVolumeProperties['shape'];
@@ -20,6 +25,6 @@ interface FogVolumeGizmoProps {
 
 export function FogVolumeGizmo({ size, shape }: FogVolumeGizmoProps) {
   const box = useMemo(() => centredAabb(size), [size]);
-  if (shape === FogVolumeShape.WORLD) return null;
+  if (!hasGizmoShape(shape)) return null;
   return <AabbGizmo aabb={box} color={GIZMO_COLOR} />;
 }

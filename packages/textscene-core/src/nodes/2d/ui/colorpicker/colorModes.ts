@@ -10,7 +10,8 @@
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
-import { extractHsv, hsvToRgb } from './nativeSolver';
+import { extractHsv } from './nativeSolver';
+import { hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 import type { Rgba } from '../../../../godot/math/math';
 

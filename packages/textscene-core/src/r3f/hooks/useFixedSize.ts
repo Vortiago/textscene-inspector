@@ -1,17 +1,17 @@
 /**
  * Godot's `FLAG_FIXED_SIZE` (`scene/resources/material.cpp:1357-1381`), applied per frame: the quad
  * keeps one on-screen size at any distance. SpriteBase3D and Label3D both hand it to
- * `get_material_for_2d` (`sprite_3d.cpp:299`, `label_3d.cpp:396`). `IS_MULTIVIEW` (stereo) has no
- * counterpart, since this renderer has one camera.
+ * `get_material_for_2d` (`sprite_3d.cpp:299`, `label_3d.cpp:396`).
  */
 
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useRef, type RefObject } from 'react';
+import { fixedSizeFactor } from '../fixedSizeFactor';
 import type { Vec3Tuple } from '../nodeTransform';
 
 /** Scratch, reused across frames: this runs on every rendered frame. */
-const viewSpaceOrigin = new THREE.Vector3();
+const worldOrigin = new THREE.Vector3();
 
 export function useFixedSize(
   ref: RefObject<THREE.Object3D | null>,
@@ -38,18 +38,8 @@ export function useFixedSize(
     // Godot's VERTEX patch scales the model-view basis and leaves the origin, which equals scaling
     // `object.scale`. Not a `ProgramInjection`: Label3D's glyph material bypasses that seam, and a
     // scale the scene graph sees keeps raycasts and `frameSceneBounds.ts` matching the pixels.
-    const projection = camera.projectionMatrix.elements;
-    let sc: number;
-    // Branch on `PROJECTION_MATRIX[3][3]` as the emitted GLSL does, not on the camera's class.
-    if (projection[15] !== 0) {
-      // Orthogonal: `h = abs(1 / (2 * PROJECTION_MATRIX[1][1]))`, `sc = h * 2`, with no depth term.
-      sc = Math.abs(1 / projection[5]!);
-    } else {
-      // Perspective: `sc = -(MODELVIEW_MATRIX)[3].z`, the origin's view-space depth.
-      object.updateWorldMatrix(true, false);
-      viewSpaceOrigin.setFromMatrixPosition(object.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
-      sc = -viewSpaceOrigin.z;
-    }
+    object.updateWorldMatrix(true, false);
+    const sc = fixedSizeFactor(camera, worldOrigin.setFromMatrixPosition(object.matrixWorld));
     object.scale.set(authoredScale[0] * sc, authoredScale[1] * sc, authoredScale[2] * sc);
   });
 }

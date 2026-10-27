@@ -49,7 +49,7 @@ gizmo that is drawn for every node, sits in `<SelectedOnly>`.
 | --- | --- |
 | Every node, faint when unselected | CPUParticles3D box and centre axes, Path3D curve, SpringArm3D line, VehicleWheel3D, Camera3D frustum, Decal box, VisibleOnScreenNotifier3D and Enabler edges and axes, FogVolume box |
 | Every node, full colour | Marker3D (one material with no variants, `marker_3d_gizmo_plugin.cpp:80-92,115`), Marker2D, Path2D, LightOccluder2D |
-| Selected node only | Light helpers, AudioStreamPlayer3D, GPUParticles3D box, CPUParticles3D solid box, every emission shape, ReflectionProbe, VoxelGI, PathFollow2D and PathFollow3D handle |
+| Selected node only | Light helpers, the range and cone of AudioStreamPlayer3D, GPUParticles3D box, CPUParticles3D solid box, every emission shape, ReflectionProbe, VoxelGI, PathFollow2D and PathFollow3D handle |
 
 The Notifier, Enabler and FogVolume rows follow their gizmo plugins
 (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`, `fog_volume_gizmo_plugin.cpp:92-125`),
@@ -122,8 +122,26 @@ particles colour. The fill of the selected locked emitter draws rgb(167), two fa
 The goldens `cpuparticles3d-instanced-unselected` and `cpuparticles3d-instanced-selected` show both cases.
 
 The Light helpers are three.js helpers, not Godot gizmo materials, and #908 rebuilds them through
-`GizmoLine`. They keep their colour until then. The audio speaker silhouette is a previewer shape,
-and it takes the look of the node's gizmo.
+`GizmoLine`. They keep their colour until then.
+
+### The node icon
+
+Godot's gizmo plugins add a billboard icon to a light, a camera, an emitter, a probe, a decal, a fog
+volume and an audio node, outside any selection check (`node_3d_editor_gizmos.cpp:949-989`). A node
+type declares it as `editorIcon` in its registration, and the dispatcher mounts it inside the node's
+transform for every render intent, so a transform-only or pending type keeps its status.
+
+The icon is a plugin gizmo that draws for every node, so `PluginGizmo` gates it and gives it the
+unselected and instantiated looks of the other parts. The quad ignores the scale of the node and keeps
+one size on screen: its basis is the camera rotation times the factor of `FLAG_FIXED_SIZE`
+(`material.cpp:1357-1381`), which `fixedSizeFactor` holds for every fixed-size draw. A light passes its
+colour at full HSV value as the tint (`light_3d_gizmo_plugin.cpp:150-155`). A FogVolume with the WORLD
+shape draws no icon, as in Godot.
+
+A click on the icon selects its node, because the icon sits under the node group that the delegated
+pointer root resolves. The raycast hits the icon square, as Godot's does. The icon is no geometry for
+`frameSceneBounds` or the hover and selection boxes, so it changes no frame and no box. The icon files
+are Godot's own SVGs, listed in THIRD-PARTY-NOTICES.md.
 
 ### What the toggle and the selection do not change
 

@@ -13,6 +13,7 @@ import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
 import { isInvisibleBase } from './invisibleBase';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent';
+import type { EditorIconRegistration } from './nodeIcon/editorIconRegistration';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -66,6 +67,12 @@ export interface NodeComponentRegistration {
    * node, and the component that draws one group. See `YSortDispatcher`.
    */
   ySortGroup?: YSortGroupRegistration;
+  /**
+   * The billboard icon Godot's 3D editor draws at the node's origin (ADR-0056). The dispatcher
+   * mounts it inside the node's transform for every render intent, so a `pending` or `transform-only`
+   * type keeps its status.
+   */
+  editorIcon?: EditorIconRegistration;
 }
 
 export interface YSortGroupDescription {
@@ -179,6 +186,11 @@ class NodeComponentRegistryImpl {
   renderIntentOf(typeName: string): NodeComponentRegistration['renderIntent'] | undefined {
     const registration = this.registry.get(typeName);
     return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
+  }
+
+  /** The icon registration of a type, or undefined when Godot's editor draws no icon for it. */
+  editorIconOf(typeName: string): EditorIconRegistration | undefined {
+    return this.registry.get(typeName)?.editorIcon;
   }
 
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {

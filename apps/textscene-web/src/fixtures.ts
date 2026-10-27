@@ -3481,6 +3481,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Node Icons",
+    "file": "unit-node-icons.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Node Parent Id Path",
     "file": "unit-node-parent-id-path.tscn",
     "category": "Unit - Basic Nodes"

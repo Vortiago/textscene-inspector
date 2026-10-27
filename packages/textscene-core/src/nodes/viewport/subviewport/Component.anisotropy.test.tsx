@@ -9,6 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { waitFor } from '@testing-library/react';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { isNodeIcon } from '../../../r3f/editorHelpers';
 import {
   ViewportPassOrchestrator,
   ViewportPassProvider,
@@ -68,6 +69,7 @@ texture_filter = 5
 const textureOf = (root: THREE.Object3D): THREE.Texture | null => {
   let found: THREE.Texture | null = null;
   root.traverse((object) => {
+    if (isNodeIcon(object)) return;
     const material = (object as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined;
     if (material?.map) found = material.map;
   });
