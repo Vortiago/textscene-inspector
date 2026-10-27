@@ -17,7 +17,7 @@ import {
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
-import { useFontMetricsSettleCount } from '../../../r3f/controls/native/text/useFontMetricsSettleCount';
+import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import { resolveFontOrDefault } from '../../../resources/styles/theme/lookup';
@@ -60,6 +60,6 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   };
   const label3DFont = isLoadingFont || isLoadingProjectFonts ? undefined : settledFont();
   // Listens only while a face is missing: a label that has its font draws the same through every later settle.
-  useFontMetricsSettleCount(label3DFont === undefined);
+  useSceneFontSettleCount(label3DFont === undefined);
   return label3DFont;
 }

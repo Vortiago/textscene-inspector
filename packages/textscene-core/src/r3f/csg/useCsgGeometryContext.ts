@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
-import { useFontMetricsSettleCount } from '../controls/native/text/useFontMetricsSettleCount';
+import { useSceneFontSettleCount } from '../controls/native/text/useSceneFontSettleCount';
 import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import { useLoadedFilesAndFonts } from '../../resources/useLoadedFilesAndFonts';
@@ -48,7 +48,7 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
     [pools, loadedFile, loadedFont, projectFonts]
   );
   const isAwaitingFont = shapes.some(({ properties, shape }) => shape.awaitsFont?.(properties, loaded));
-  useFontMetricsSettleCount(isAwaitingFont);
+  useSceneFontSettleCount(isAwaitingFont);
   // The meshes of a context hold the metrics they read, so a context that read them before they
   // settled gives way to a copy, with meshes of its own, when they have.
   const context = useMemo(

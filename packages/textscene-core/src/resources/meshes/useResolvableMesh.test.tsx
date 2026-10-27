@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
-import { notifySceneFontMetricsSettled } from '../../r3f/controls/native/text/sceneFontLoader';
+import { notifySceneFontSettled } from '../../r3f/controls/native/text/sceneFontLoader';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
@@ -123,7 +123,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     const { renders } = renderCounting(BOX);
     const before = renders();
 
-    act(() => notifySceneFontMetricsSettled());
+    act(() => notifySceneFontSettled());
 
     expect(renders()).toBe(before);
   });
@@ -135,7 +135,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    act(() => notifySceneFontMetricsSettled());
+    act(() => notifySceneFontSettled());
 
     expect(renders()).toBe(before);
   });
@@ -147,7 +147,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    act(() => notifySceneFontMetricsSettled());
+    act(() => notifySceneFontSettled());
 
     expect(renders()).toBe(before);
   });

@@ -4,7 +4,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { onSceneFontMetricsSettled, sceneFontSettleCount } from './sceneFontLoader';
+import { onSceneFontSettled, sceneFontSettleCount } from './sceneFontLoader';
 import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
 
 /**
@@ -13,7 +13,7 @@ import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
  * between a render and its subscription still re-renders the reader. The snapshot is the same in
  * both branches: one that switched with the branch left the reader a render behind when the wait ended.
  */
-export function useFontMetricsSettleCount(isAwaitingFont: boolean): number {
-  const subscribe = isAwaitingFont ? onSceneFontMetricsSettled : subscribeToNothing;
+export function useSceneFontSettleCount(isAwaitingFont: boolean): number {
+  const subscribe = isAwaitingFont ? onSceneFontSettled : subscribeToNothing;
   return useSyncExternalStore(subscribe, sceneFontSettleCount, sceneFontSettleCount);
 }

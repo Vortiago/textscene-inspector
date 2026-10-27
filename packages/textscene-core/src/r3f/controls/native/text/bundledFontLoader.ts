@@ -6,7 +6,7 @@
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
-import { notifySceneFontMetricsSettled, registerFontFace } from './sceneFontLoader';
+import { notifySceneFontSettled, registerFontFace } from './sceneFontLoader';
 import * as logger from '../../../../logger';
 import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
 
@@ -38,7 +38,7 @@ async function registerBundledFont(): Promise<void> {
     );
   } finally {
     // Notifies on any settle, as the scene arm does, so a consumer that peeked re-renders once.
-    notifySceneFontMetricsSettled();
+    notifySceneFontSettled();
   }
 }
 

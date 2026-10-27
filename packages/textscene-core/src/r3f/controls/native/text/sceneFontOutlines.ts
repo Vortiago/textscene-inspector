@@ -9,7 +9,7 @@ import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFon
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { resolveFontFileBytes } from './sceneFontResolution';
-import { notifySceneFontMetricsSettled } from './sceneFontLoader';
+import { notifySceneFontSettled } from './sceneFontLoader';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
@@ -40,7 +40,7 @@ async function loadOutlines(key: object, read: () => Promise<SfntOutlines | null
     return null;
   });
   outlinesCache.set(key, { status: 'settled', outlines });
-  notifySceneFontMetricsSettled();
+  notifySceneFontSettled();
 }
 
 /** The settled outlines under `key`, starting their load on the first peek. */

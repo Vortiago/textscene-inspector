@@ -47,7 +47,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
-import { useFontMetricsSettleCount } from './text/useFontMetricsSettleCount';
+import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
@@ -850,7 +850,7 @@ export function useBuildSolveTree(
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   // With or without a loader: `peekSceneFontMetrics` starts font loads from the
   // solve itself and answers with the bundled fallback until the metrics settle.
-  const fontMetricsVersion = useFontMetricsSettleCount(true);
+  const fontMetricsVersion = useSceneFontSettleCount(true);
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;

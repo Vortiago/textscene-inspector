@@ -40,7 +40,7 @@ const SYNTHETIC_UNITS_PER_EM = 1000;
 let familyCounter = 0;
 
 /**
- * How many loads have settled, never reset. Written only by `notifySceneFontMetricsSettled`. A hook
+ * How many loads have settled, never reset. Written only by `notifySceneFontSettled`. A hook
  * reads the count as the snapshot of `useSyncExternalStore`, so a load that settles between its
  * render and its subscription still re-renders it.
  */
@@ -53,14 +53,14 @@ export const sceneFontSettleCount = settleCount.get;
  * resource on its first settle and once for the bundled font, never for a font that short-circuits
  * synchronously.
  */
-export const onSceneFontMetricsSettled = settleCount.subscribe;
+export const onSceneFontSettled = settleCount.subscribe;
 
 /**
  * Fires every settled listener, for a scene font load and for the bundled font registration. A
  * throwing listener does not stop the later ones: the store rethrows the first error once all
  * have run.
  */
-export function notifySceneFontMetricsSettled(): void {
+export function notifySceneFontSettled(): void {
   settleCount.set(settleCount.get() + 1);
 }
 
@@ -203,7 +203,7 @@ async function resolveSceneFontMetrics(
   try {
     // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
     // settled cache.
-    notifySceneFontMetricsSettled();
+    notifySceneFontSettled();
   } finally {
     // A throwing listener must not leave the work counted: a capture waits on it for good.
     endWork();
