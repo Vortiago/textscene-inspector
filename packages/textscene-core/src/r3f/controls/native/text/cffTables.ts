@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { blueFactsOf, type BlueFacts } from './cffPrivateDict';
+import { privateBluesOf, type PrivateBlues } from './cffPrivateDict';
 import {
   EXPERT_CHARSET,
   EXPERT_SUBSET_CHARSET,
@@ -33,7 +33,7 @@ export interface CffPrivate {
   /** `vsindex` of the Private DICT, the variation data a `blend` reads when the glyph names none. CFF2 only. */
   readonly vsindex: number;
   /** The Private DICT's alignment zones, which hint a glyph's y. */
-  readonly blues: BlueFacts;
+  readonly blues: PrivateBlues;
 }
 
 export interface CffFont {
@@ -41,7 +41,7 @@ export interface CffFont {
   readonly isCff2: boolean;
   readonly charStrings: CffIndex;
   readonly globalSubrs: CffIndex;
-  /** The Private DICT facts of the font dict that holds `glyphIndex`. */
+  /** The Private DICT of the font dict that holds `glyphIndex`. */
   privateOf(glyphIndex: number): CffPrivate;
   /** The glyph the charset gives a StandardEncoding code, or null. CFF1 only: `seac` names its parts by standard character. */
   glyphOfStandardCode(code: number): number | null;
@@ -67,7 +67,7 @@ const OP_FDSELECT = 1237;
 /** Operators run to 26, since the CFF2 Top and Private DICTs add `vsindex`, `blend`, `vstore` and `maxstack` above CFF's 21. */
 const LAST_OPERATOR = 26;
 
-type Dict = ReadonlyMap<number, readonly number[]>;
+export type Dict = ReadonlyMap<number, readonly number[]>;
 
 class CffReader {
   constructor(
@@ -264,14 +264,14 @@ function fontDictsOf(reader: CffReader, at: number): Dict[] {
 function privateOf(reader: CffReader, base: number, font: Dict, isCff2: boolean): CffPrivate {
   const [size, offset] = font.get(OP_PRIVATE) ?? [0, 0];
   if (!size || offset === undefined)
-    return { localSubrs: EMPTY_INDEX, vsindex: 0, blues: blueFactsOf(new Map()) };
+    return { localSubrs: EMPTY_INDEX, vsindex: 0, blues: privateBluesOf(new Map()) };
   const start = base + offset;
   const priv = reader.dict(start, start + size);
   const subrs = first(priv, OP_SUBRS);
   return {
     localSubrs: subrs === undefined ? EMPTY_INDEX : reader.index(start + subrs),
     vsindex: isCff2 ? (first(priv, OP_VSINDEX) ?? 0) : 0,
-    blues: blueFactsOf(priv),
+    blues: privateBluesOf(priv),
   };
 }
 

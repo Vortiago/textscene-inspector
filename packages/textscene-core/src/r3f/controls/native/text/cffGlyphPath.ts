@@ -42,7 +42,6 @@ export class GlyphPath {
   private currentDevice: Point = { x: 0, y: 0 };
   private queued: QueuedElement | null = null;
   private isMovePending = true;
-  private isOpen = false;
   private isClosing = false;
 
   /** `hintOrigin` is the y where a `seac` accent starts, which the stems of the accent are relative to. */
@@ -83,12 +82,11 @@ export class GlyphPath {
 
   /** Ends the open contour with a line back to its start (`cf2_glyphpath_closeOpenPath`). */
   closeOpenPath(): void {
-    if (!this.isOpen) return;
+    if (this.isMovePending) return;
     this.isClosing = true;
     this.lineTo(this.start.x, this.start.y);
     if (this.queued) this.draw(this.queued, this.hintMap, this.start, this.firstHintMap);
     this.isMovePending = true;
-    this.isOpen = false;
     this.isClosing = false;
     this.queued = null;
   }
@@ -98,7 +96,7 @@ export class GlyphPath {
    * stems of one counter group keep together when hint groups later pull them apart.
    */
   lockCounterStems(counterMask: HintMask): void {
-    new HintMap(this.blues, this.initialMap).build(this.hints, counterMask, 0, false);
+    new HintMap(this.blues, this.initialMap).build(this.hints, counterMask, 0);
   }
 
   /** Starts a contour if a move waits, then draws the element in the queue and queues `element`. */
@@ -106,7 +104,6 @@ export class GlyphPath {
     if (this.isMovePending) {
       this.startContour();
       this.isMovePending = false;
-      this.isOpen = true;
     }
     if (this.queued) this.draw(this.queued, this.hintMap, this.current, this.hintMap);
     this.queued = element;
@@ -148,6 +145,6 @@ export class GlyphPath {
   }
 
   private buildHintMap(): void {
-    this.hintMap.build(this.hints, this.hints.mask, this.hintOrigin, false);
+    this.hintMap.build(this.hints, this.hints.mask, this.hintOrigin);
   }
 }

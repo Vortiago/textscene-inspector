@@ -10,7 +10,7 @@
 
 import { doubleToFixed, ftMulDiv, intToFixed, roundFixed } from './cffFixed';
 import { EdgeFlag, MIN_COUNTER, isBottomEdge, isTopEdge, isValidEdge, type HintEdge } from './cffHintEdge';
-import type { BlueFacts } from './cffPrivateDict';
+import type { PrivateBlues } from './cffPrivateDict';
 import { FIXED_16_16_ONE, ftDivFix, ftMulFix } from './fontMetrics';
 
 interface Zone {
@@ -32,7 +32,7 @@ const EPSILON = 1;
 
 /** The overshoot boost never reaches half a pixel, or the baseline could go below zero. */
 const MAX_BOOST = 0x7fff;
-/** Changed from 0.5 to 0.6 in FreeType for 10 ppem Arial. */
+/** The overshoot boost at a scale of zero, in pixels. */
 const BOOST_AT_ZERO = doubleToFixed(0.6);
 
 const LANGUAGE_GROUP_IDEOGRAPHIC = 1;
@@ -50,23 +50,25 @@ export class BlueZones {
 
   /** `scale` takes character space to device space, 16.16: the font size over the em. */
   constructor(
-    facts: BlueFacts,
+    privateBlues: PrivateBlues,
     readonly scale: number
   ) {
-    this.blueFuzz = intToFixed(facts.blueFuzz);
-    this.blueShift = intToFixed(facts.blueShift);
-    this.emBoxEdges = hasEmBoxHeuristic(facts) ? emBoxEdgesAt(scale) : null;
+    this.blueFuzz = intToFixed(privateBlues.blueFuzz);
+    this.blueShift = intToFixed(privateBlues.blueShift);
+    this.emBoxEdges = hasEmBoxHeuristic(privateBlues) ? emBoxEdgesAt(scale) : null;
     if (this.emBoxEdges) {
       this.zones = [];
       this.suppressesOvershoot = false;
       return;
     }
 
-    const { zones, maxHeight } = zonesOf(facts);
-    snapToFamilyEdges(zones, facts, scale);
+    const { zones, maxHeight } = zonesOf(privateBlues);
+    snapToFamilyEdges(zones, privateBlues, scale);
     // BlueScale cannot exceed the scale at which the tallest zone is one pixel.
     const blueScale =
-      maxHeight > 0 ? Math.min(facts.blueScale, ftDivFix(FIXED_16_16_ONE, maxHeight)) : facts.blueScale;
+      maxHeight > 0
+        ? Math.min(privateBlues.blueScale, ftDivFix(FIXED_16_16_ONE, maxHeight))
+        : privateBlues.blueScale;
     this.suppressesOvershoot = scale < blueScale;
     const boost = this.suppressesOvershoot
       ? Math.min(BOOST_AT_ZERO - ftMulDiv(BOOST_AT_ZERO, scale, blueScale), MAX_BOOST)
@@ -117,7 +119,7 @@ export class BlueZones {
 }
 
 /** An ideographic font whose zones are absent, or the two dummy ones Adobe tools write outside the em box. */
-function hasEmBoxHeuristic({ languageGroup, blueValues }: BlueFacts): boolean {
+function hasEmBoxHeuristic({ languageGroup, blueValues }: PrivateBlues): boolean {
   if (languageGroup !== LANGUAGE_GROUP_IDEOGRAPHIC) return false;
   if (blueValues.length === 0) return true;
   const [bottomLow, bottomHigh, topLow, topHigh] = blueValues;
@@ -135,29 +137,22 @@ function hasEmBoxHeuristic({ languageGroup, blueValues }: BlueFacts): boolean {
  * pixel grid's edge, and give ideographic glyphs a net pixel of height.
  */
 function emBoxEdgesAt(scale: number): { bottom: HintEdge; top: HintEdge } {
-  const flags = EdgeFlag.Locked | EdgeFlag.Synthetic;
-  const bottomCs = ICF_BOTTOM - EPSILON;
-  const topCs = ICF_TOP + EPSILON;
+  /** A locked ghost edge at `csCoord`, `margin` pixels past the pixel it rounds to. */
+  const ghostEdge = (flag: number, csCoord: number, margin: number): HintEdge => ({
+    flags: flag | EdgeFlag.Locked | EdgeFlag.Synthetic,
+    csCoord,
+    dsCoord: roundFixed(ftMulFix(csCoord, scale)) + margin,
+    scale,
+    index: 0,
+  });
   return {
-    bottom: {
-      flags: EdgeFlag.GhostBottom | flags,
-      csCoord: bottomCs,
-      dsCoord: roundFixed(ftMulFix(bottomCs, scale)) - MIN_COUNTER,
-      scale,
-      index: 0,
-    },
-    top: {
-      flags: EdgeFlag.GhostTop | flags,
-      csCoord: topCs,
-      dsCoord: roundFixed(ftMulFix(topCs, scale)) + MIN_COUNTER,
-      scale,
-      index: 0,
-    },
+    bottom: ghostEdge(EdgeFlag.GhostBottom, ICF_BOTTOM - EPSILON, -MIN_COUNTER),
+    top: ghostEdge(EdgeFlag.GhostTop, ICF_TOP + EPSILON, MIN_COUNTER),
   };
 }
 
 /** The `BlueValues` and `OtherBlues` as zones, and the height of the tallest. A zone with its edges the wrong way round is dropped. */
-function zonesOf({ blueValues, otherBlues }: BlueFacts): { zones: Zone[]; maxHeight: number } {
+function zonesOf({ blueValues, otherBlues }: PrivateBlues): { zones: Zone[]; maxHeight: number } {
   const zones: Zone[] = [];
   let maxHeight = 0;
   const add = (csBottomEdge: number, csTopEdge: number, isBottom: boolean) => {
@@ -182,9 +177,9 @@ function zonesOf({ blueValues, otherBlues }: BlueFacts): { zones: Zone[]; maxHei
  * Moves each flat edge to the nearest Family zone's, if that is within a device pixel. A Family
  * zone sets the same edge across the fonts of a family, so their glyphs align alike.
  */
-function snapToFamilyEdges(zones: Zone[], facts: BlueFacts, scale: number): void {
+function snapToFamilyEdges(zones: Zone[], privateBlues: PrivateBlues, scale: number): void {
   const pixel = ftDivFix(FIXED_16_16_ONE, scale);
-  const { familyBlues, familyOtherBlues } = facts;
+  const { familyBlues, familyOtherBlues } = privateBlues;
   for (const zone of zones) {
     const fontEdge = zone.csFlatEdge;
     let nearest = Number.MAX_SAFE_INTEGER;

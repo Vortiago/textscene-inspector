@@ -21,12 +21,13 @@ import {
   noEdge,
   stemEdge,
   type HintEdge,
+  type StemHint,
 } from './cffHintEdge';
-import { HintMask, type GlyphHints } from './cffGlyphHints';
+import { HintMask, MAX_STEMS, type GlyphHints } from './cffGlyphHints';
 import { ftMulFix } from './fontMetrics';
 
 /** `CF2_MAX_HINT_EDGES`: two edges for each of the most stems a mask holds. */
-const MAX_EDGES = 192;
+const MAX_EDGES = 2 * MAX_STEMS;
 
 export class HintMap {
   /** True once built: until then a map is empty, and the glyph path builds it at its first move. */
@@ -50,7 +51,8 @@ export class HintMap {
   clone(): HintMap {
     const copy = new HintMap(this.blues, this.initialMap);
     copy.isValid = this.isValid;
-    copy.edges = this.edges.map((edge) => ({ ...edge }));
+    // A built map never changes its edges, so a clone shares them: `build` replaces the array.
+    copy.edges = this.edges;
     return copy;
   }
 
@@ -74,9 +76,10 @@ export class HintMap {
    * initial map. `mask` is changed when a glyph has none: all its stems are on. `hintOrigin` moves
    * the stems of a `seac` accent.
    */
-  build(hints: GlyphHints, mask: HintMask, hintOrigin: number, isInitial: boolean): void {
+  build(hints: GlyphHints, mask: HintMask, hintOrigin: number): void {
+    const isInitial = this.initialMap === this;
     if (!isInitial && !this.initialMap.isValid) {
-      this.initialMap.build(hints, new HintMask(), hintOrigin, true);
+      this.initialMap.build(hints, new HintMask(), hintOrigin);
     }
     if (!mask.isValid) mask.setAll(hints.stemCount);
 
@@ -94,21 +97,21 @@ export class HintMap {
       this.insert(this.blues.emBoxEdges.bottom, noEdge());
       this.insert(noEdge(), this.blues.emBoxEdges.top);
     }
-    stems.forEach((_, i) => {
-      if (!pending[i]) return;
+    for (let i = 0; i < stems.length; i++) {
+      if (!pending[i]) continue;
       const [bottom, top] = edgesOf(i);
       if (isLockedEdge(bottom) || isLockedEdge(top) || this.blues.capture(bottom, top)) {
         this.insert(bottom, top);
         pending[i] = false;
       }
-    });
+    }
 
     if (isInitial) {
       this.lockBaselineWhenUncovered();
     } else {
-      stems.forEach((_, i) => {
+      for (let i = 0; i < stems.length; i++) {
         if (pending[i]) this.insert(...edgesOf(i));
-      });
+      }
     }
 
     adjustHints(this.edges);
@@ -130,7 +133,7 @@ export class HintMap {
   }
 
   /** Saves where each stem landed, so a later map that uses the stem puts it in the same place. */
-  private rememberPlaces(stems: GlyphHints['horizontalStems']): void {
+  private rememberPlaces(stems: StemHint[]): void {
     for (const edge of this.edges) {
       if (isSyntheticEdge(edge)) continue;
       const stem = stems[edge.index]!;

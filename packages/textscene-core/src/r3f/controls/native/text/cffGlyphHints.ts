@@ -26,11 +26,6 @@ export class HintMask {
     return this.bits.length;
   }
 
-  /** Whether stem `index` is on. */
-  isOn(index: number): boolean {
-    return this.bits[index] ?? false;
-  }
-
   /** Reads the mask for `stemCount` stems from `readByte` (`cf2_hintmask_read`). No byte is read for no stems. */
   read(stemCount: number, readByte: () => number): void {
     this.setCount(stemCount);

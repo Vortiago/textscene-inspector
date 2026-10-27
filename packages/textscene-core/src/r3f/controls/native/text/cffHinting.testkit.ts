@@ -207,15 +207,19 @@ export const ACCENT_FONT = fontOf(
   { blues: ZONES, charset: [34, 125, 35] }
 );
 
-/** CFF2, where a charstring has no `endchar`: the zones written plainly, and each written as a `blend` of zero deltas. */
+// CFF2, where a charstring has no `endchar`: the zones written plainly, and each written as a `blend` of zero deltas.
 const CFF2_BLUES: TestBlues = { blueValues: [-10, 0, 700, 710], otherBlues: [-210, -200] };
 const CFF2_GLYPHS = [
   cs(-10, 20, 680, 20, 'hstem', ...box(100, -10, 500, 700)),
   cs(0, 20, 660, 20, 'hstem', ...box(100, 0, 500, 700)),
 ];
-const cff2Font = (extra: Partial<TestCffFont>) => ({
-  ...fontOf(CFF2_GLYPHS, { version: 2, blues: CFF2_BLUES, ...extra }),
+const cff2Font = (extra: Partial<TestCffFont>): TestCffFont => ({
+  unitsPerEm: 1000,
   glyphs: [cs(), ...CFF2_GLYPHS],
+  cmap: new Map(CFF2_GLYPHS.map((_, i) => [0x41 + i, i + 1])),
+  version: 2,
+  blues: CFF2_BLUES,
+  ...extra,
 });
 
 export const CFF2_FONT = cff2Font({});

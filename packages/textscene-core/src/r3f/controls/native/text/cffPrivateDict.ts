@@ -8,11 +8,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import type { Dict } from './cffTables';
 import { FIXED_16_16_ONE, ftDivFix } from './fontMetrics';
 
-type Dict = ReadonlyMap<number, readonly number[]>;
-
-export interface BlueFacts {
+export interface PrivateBlues {
   /** The first zone is a bottom zone, the rest top zones. Each zone is a bottom edge then a top edge, 16.16. An even count. */
   readonly blueValues: readonly number[];
   /** Bottom zones, as pairs. */
@@ -49,15 +48,15 @@ const MAX_BLUE_SHIFT_OR_FUZZ = 1000;
 const BLUE_SCALE_UNIT = 1000;
 const DEFAULT_BLUE_SCALE = 0.039625;
 
-/** A DICT number in 16.16, rounded half away from zero (`cff_parse_fixed`). */
-function toFixed(value: number, scale = 1): number {
+/** A DICT number in 16.16, rounded half away from zero (`cff_parse_fixed`), where `doubleToFixed` rounds half up. */
+function dictNumberToFixed(value: number, scale = 1): number {
   return Math.sign(value) * Math.round(Math.abs(value) * scale * FIXED_16_16_ONE);
 }
 
 /** The running sums of a delta-encoded array of at most `max` numbers, each in 16.16 (`cff_kind_delta_fixed`). */
 function deltaFixed(dict: Dict, operator: number, max: number): number[] {
   let sum = 0;
-  return (dict.get(operator) ?? []).slice(0, max).map((delta) => (sum += toFixed(delta)));
+  return (dict.get(operator) ?? []).slice(0, max).map((delta) => (sum += dictNumberToFixed(delta)));
 }
 
 /** A whole number in `[0, 1000]`, or `fallback` for a value FreeType takes for corrupt. */
@@ -66,13 +65,13 @@ function boundedNumber(dict: Dict, operator: number, fallback: number): number {
   return value < 0 || value > MAX_BLUE_SHIFT_OR_FUZZ ? fallback : value;
 }
 
-export function blueFactsOf(privateDict: Dict): BlueFacts {
+export function privateBluesOf(privateDict: Dict): PrivateBlues {
   const blueValues = deltaFixed(privateDict, OP_BLUE_VALUES, MAX_BLUE_VALUES);
   const blueScaleOperand = privateDict.get(OP_BLUE_SCALE)?.[0];
   const blueScaleThousand =
     blueScaleOperand === undefined
       ? Math.trunc(DEFAULT_BLUE_SCALE * FIXED_16_16_ONE * BLUE_SCALE_UNIT)
-      : toFixed(blueScaleOperand, BLUE_SCALE_UNIT);
+      : dictNumberToFixed(blueScaleOperand, BLUE_SCALE_UNIT);
   return {
     // FreeType drops the odd value left by a zone without a top edge.
     blueValues: blueValues.slice(0, blueValues.length & ~1),

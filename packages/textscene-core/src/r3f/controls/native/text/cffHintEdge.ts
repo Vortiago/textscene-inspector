@@ -91,12 +91,10 @@ export function stemEdge(
       edge.csCoord = stem.min;
       edge.flags = EdgeFlag.GhostTop;
     }
-  } else if (width < 0) {
-    // An inverted pair: CoolType swaps the edges, and so does FreeType.
-    edge.csCoord = isBottom ? stem.max : stem.min;
-    edge.flags = isBottom ? EdgeFlag.PairBottom : EdgeFlag.PairTop;
   } else {
-    edge.csCoord = isBottom ? stem.min : stem.max;
+    // An inverted pair swaps its edges: CoolType does, and so does FreeType.
+    const [low, high] = width < 0 ? [stem.max, stem.min] : [stem.min, stem.max];
+    edge.csCoord = isBottom ? low : high;
     edge.flags = isBottom ? EdgeFlag.PairBottom : EdgeFlag.PairTop;
   }
 

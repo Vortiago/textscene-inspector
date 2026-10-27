@@ -20,6 +20,7 @@ import type { StemHint } from './cffHintEdge';
 import { MalformedCharstring, OperandStack } from './cffOperandStack';
 import { FLEX_OPERANDS, PathOperators } from './cffPathOperators';
 import { ContourBuilder, type CharstringContour } from './cffPen';
+import type { PrivateBlues } from './cffPrivateDict';
 import { twoByteInteger, type CffFont, type CffPrivate } from './cffTables';
 
 /** `CF2_OPERAND_STACK_SIZE`, and `CFF2_DEFAULT_STACK` for a CFF2 table. */
@@ -260,18 +261,21 @@ class CharstringRun {
    * bytes included, which then run as operators.
    */
   private maskHints(): void {
-    if (this.stack.count > 1 && this.hints.mask.isValid) return;
-    this.declareStems(this.hints.verticalStems);
-    this.hints.mask.read(this.hints.stemCount, () => this.cursor.readByte());
+    this.readMask(this.hints.mask);
   }
 
   /** `cntrmask`: as a `hintmask`, but the mask only places and locks the stems of a counter group, and sets no mask. */
   private maskCounters(): void {
-    if (this.stack.count > 1 && this.hints.mask.isValid) return;
-    this.declareStems(this.hints.verticalStems);
     const counterMask = new HintMask();
-    counterMask.read(this.hints.stemCount, () => this.cursor.readByte());
-    this.glyphPath.lockCounterStems(counterMask);
+    if (this.readMask(counterMask)) this.glyphPath.lockCounterStems(counterMask);
+  }
+
+  /** Declares the vstem the operands hold and reads the mask bytes into `mask`. False when FreeType ignores the operator. */
+  private readMask(mask: HintMask): boolean {
+    if (this.stack.count > 1 && this.hints.mask.isValid) return false;
+    this.declareStems(this.hints.verticalStems);
+    mask.read(this.hints.stemCount, () => this.cursor.readByte());
+    return true;
   }
 
   /** `vsindex` selects the variation data a later `blend` reads. Only CFF2 has it, and only before a `blend`. */
@@ -353,6 +357,24 @@ class CharstringRun {
   }
 }
 
+/** The sizes a font keeps zones for, so a size that changes every frame cannot grow the cache without bound. */
+const MAX_SCALES_PER_FONT = 16;
+
+/** Written only by `blueZonesAt`. A font's entry goes when the font's blue values are collected. */
+const zonesOfFont = new WeakMap<PrivateBlues, Map<number, BlueZones>>();
+
+/** The zones of `blues` at `scale`, shared by the glyphs of a size: a zone is read-only once built. */
+function blueZonesAt(blues: PrivateBlues, scale: number): BlueZones {
+  let atScale = zonesOfFont.get(blues);
+  if (!atScale) zonesOfFont.set(blues, (atScale = new Map()));
+  let zones = atScale.get(scale);
+  if (!zones) {
+    if (atScale.size >= MAX_SCALES_PER_FONT) atScale.clear();
+    atScale.set(scale, (zones = new BlueZones(blues, scale)));
+  }
+  return zones;
+}
+
 /**
  * The contours glyph `glyphIndex` draws at `scale`, the 16.16 factor from a design unit to a
  * pixel, or null for a glyph that does not exist or whose charstring FreeType would refuse to load.
@@ -370,7 +392,7 @@ export function interpretCharstring(
     new CharstringRun(
       font,
       glyphPrivate,
-      new BlueZones(glyphPrivate.blues, scale),
+      blueZonesAt(glyphPrivate.blues, scale),
       charstring,
       contours,
       false,

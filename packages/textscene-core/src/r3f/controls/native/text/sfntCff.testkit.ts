@@ -165,9 +165,10 @@ function dict(entries: readonly DictEntry[]): ByteWriter {
   for (const [name, operands] of entries) {
     for (const operand of operands) {
       if (typeof operand === 'number') out.u8(29).u32(operand >>> 0);
-      else
+      else {
         for (const byte of 'real' in operand ? realBytes(operand.real) : operandBytes(operand.small))
           out.u8(byte);
+      }
     }
     for (const byte of DICT_OPS[name]) out.u8(byte);
   }
