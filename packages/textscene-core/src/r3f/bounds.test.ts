@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
 import { computeWorldBoundingBox } from './bounds.js';
+import { placeSkinnedMeshInSkeletonSpace } from '../resources/formats/glb/skinnedMeshSpace.js';
 
 function unitBoxGeometry(): THREE.BufferGeometry {
   const geo = new THREE.BoxGeometry(2, 2, 2); // local AABB: (-1,-1,-1)..(1,1,1)
@@ -78,5 +79,24 @@ describe('computeWorldBoundingBox', () => {
     const parent = new THREE.Group();
     parent.add(new THREE.Object3D(), new THREE.Group());
     expect(computeWorldBoundingBox(parent).isEmpty()).toBe(true);
+  });
+
+  it('bounds a skinned mesh below a Skeleton3D at its Godot node transform, not three’s world matrix', () => {
+    const frame = new THREE.Group();
+    frame.position.set(10, 0, 0);
+    const hip = new THREE.Bone();
+    const skinned = new THREE.SkinnedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
+    frame.add(hip, skinned);
+    skinned.bind(new THREE.Skeleton([hip]), new THREE.Matrix4());
+    placeSkinnedMeshInSkeletonSpace(skinned);
+    skinned.position.set(0, 4, 0);
+    const scene = new THREE.Scene();
+    scene.add(frame);
+    frame.scale.setScalar(2);
+
+    const center = computeWorldBoundingBox(scene).getCenter(new THREE.Vector3());
+
+    // The frame at (10, 0, 0) scaled by 2, times the mesh at (0, 4, 0): (10, 8, 0).
+    expect(center.toArray()).toEqual([10, 8, 0]);
   });
 });

@@ -4,7 +4,8 @@
  * derivation notice is in `polygonGeometry.ts`.
  */
 
-import { warnOnce } from './polygonSweepFrames';
+import { warnOnce } from '../../../../utils/warnOnce';
+import { SWEEP_WARNINGS } from './polygonSweepFrames';
 import { MAX_PATH_EXTRUSIONS, type CsgPolygonSpec } from './polygonSweepSpec';
 import { PathIntervalType, PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 
@@ -50,6 +51,7 @@ export function extrusionCounts(spec: CsgPolygonSpec, curveLength: number): Extr
   if (!Number.isFinite(extrusions) || extrusions < 1) return null;
   if (extrusions > MAX_PATH_EXTRUSIONS) {
     warnOnce(
+      SWEEP_WARNINGS,
       'csgpolygon-extrusions',
       `[CSGPolygon3D] ${extrusions} extrusions exceeds the ${MAX_PATH_EXTRUSIONS} cap — ` +
         'clamping. Raise path_interval to sweep the whole curve.'
@@ -60,6 +62,7 @@ export function extrusionCounts(spec: CsgPolygonSpec, curveLength: number): Extr
   if (mode === PolygonMode.PATH) {
     if (spec.pathRotation === PathRotation.PATH_FOLLOW) {
       warnOnce(
+        SWEEP_WARNINGS,
         'csgpolygon-path-follow',
         '[CSGPolygon3D] path_rotation = PATH_FOLLOW renders as PATH: the curve’s baked ' +
           'up-vectors and per-point tilts are not reproduced, so a banking path differs.'
@@ -67,6 +70,7 @@ export function extrusionCounts(spec: CsgPolygonSpec, curveLength: number): Extr
     }
     if (spec.pathRotationAccurate) {
       warnOnce(
+        SWEEP_WARNINGS,
         'csgpolygon-rotation-accurate',
         '[CSGPolygon3D] path_rotation_accurate renders as false: sampling with rotation ' +
           'is not reproduced.'

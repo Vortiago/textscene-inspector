@@ -8,7 +8,8 @@ import type { LiveNode } from '../../../resources/liveNode';
 import { parseGeometryInstance3D } from '../../../nodes/3d/geometryinstance3d/parser';
 import type { GeometryInstance3DProperties } from '../../../nodes/3d/geometryinstance3d/types';
 import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
-import { joinPath } from '../../../utils/nodePath';
+import { godotNodePaths } from '../../../resources/formats/glb/godotNodes';
+import { joinPath, parentPathOf } from '../../../utils/nodePath';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbRoot } from './GlbInstanceContext';
@@ -26,8 +27,17 @@ export interface GlbNodeLink {
 }
 
 /**
+ * The path of the Godot node an entry's object is, below the GLB root. A mesh that holds children
+ * stands for two nodes, and the last is the mesh below its Skeleton3D, which the cull measures. An
+ * object that stands for no node, such as a bone, keeps its `relPath`.
+ */
+function godotPathBelowRoot(entry: GlbObjectEntry): string {
+  return godotNodePaths(entry.object).at(-1) ?? entry.relPath;
+}
+
+/**
  * Each GLB node below the root in `entries` order, as the instancing scene leaves it. A node
- * without an override of its own is at its `relPath` under the root, and takes its parent's
+ * without an override of its own is at its Godot path under the root, and takes its parent's
  * visibility parent.
  */
 export function glbNodeLinks(
@@ -37,7 +47,7 @@ export function glbNodeLinks(
   uniquePaths: ReadonlyMap<string, string> | undefined
 ): GlbNodeLink[] {
   const overrides = overridesByTarget(object, entries, root.overrides);
-  const passedOn = new Map<THREE.Object3D, string | null>();
+  const passedOn = new Map<string, string | null>();
   return entries.map((entry) => {
     const override = overrides.get(entry.object);
     const path =
@@ -45,20 +55,21 @@ export function glbNodeLinks(
         ? null
         : joinPath(
             root.path,
-            override ? joinPath(override.instanceSubPath ?? '', override.name) : entry.relPath
+            override ? joinPath(override.instanceSubPath ?? '', override.name) : godotPathBelowRoot(entry)
           );
     const properties = parseGeometryInstance3D(
       { type: 'node', attributes: { name: glbObjectName(entry.object) } },
       override?.rawProperties ?? {}
     );
     // `has`, not `??`: a parent whose own link resolves to none passes none on.
-    const parent = entry.object.parent!;
-    const inherited = passedOn.has(parent) ? (passedOn.get(parent) ?? null) : root.visibilityParent;
+    const parent = parentPathOf(entry.relPath);
+    const inherited =
+      parent !== null && passedOn.has(parent) ? (passedOn.get(parent) ?? null) : root.visibilityParent;
     const parentPath =
       path === null
         ? inherited
         : visibilityParentOf(path, properties.visibility_parent, inherited, uniquePaths);
-    passedOn.set(entry.object, parentPath);
+    passedOn.set(entry.relPath, parentPath);
     return { entry, properties, place: { path, parentPath } };
   });
 }
