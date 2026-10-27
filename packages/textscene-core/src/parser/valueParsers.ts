@@ -85,7 +85,7 @@ export function parseOptionalAabb(value: string | undefined, context = 'value'):
  * A box that an `AABB()` clears, such as `custom_aabb` (`renderer_scene_cull.cpp:1093`,
  * `mesh_storage.cpp:705-712`, `:2236`): the box, or null where it is absent, malformed or empty.
  *
- * @oneWay An AABB that must have a size
+ * @canonical An AABB that must have a size
  */
 export function parseNonEmptyAabb(value: string | undefined, context: string): Aabb | null {
   const box = parseOptionalAabb(value, context);
@@ -108,7 +108,7 @@ export function floatOr(value: string | undefined, fallback: number, context = '
  * {@link floatOr} as a `real_t` field holds it. The double is tested for finite before it is
  * stored, so `1e39` reads as the inf a `real_t` stores.
  *
- * @oneWay A `real_t` field
+ * @canonical A `real_t` field
  *   They store a double beyond the float range as inf, as `real_t` does.
  */
 export function realOr(value: string | undefined, fallback: number, context = 'value'): number {
@@ -230,7 +230,7 @@ export function nonNegativeSizeOr<T extends { x: number; y: number; z?: number }
 }
 
 /**
- * @oneWay An engine enum, held as an `as const` object in `godot/`
+ * @canonical An engine enum, held as an `as const` object in `godot/`
  */
 export function enumOr<T extends number>(
   value: string | undefined,
@@ -273,7 +273,7 @@ export function vec3Or(value: string | undefined, fallback: Vector3, context = '
 /**
  * {@link vec2Or} as a `Vector2` field holds it, each component at single precision.
  *
- * @oneWay A `real_t` field
+ * @canonical A `real_t` field
  */
 export function realVec2Or(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
   return storedVector2(vec2Or(value, fallback, context));
@@ -282,7 +282,7 @@ export function realVec2Or(value: string | undefined, fallback: Vector2, context
 /**
  * {@link vec3Or} as a `Vector3` field holds it, each component at single precision.
  *
- * @oneWay A `real_t` field
+ * @canonical A `real_t` field
  */
 export function realVec3Or(value: string | undefined, fallback: Vector3, context = 'value'): Vector3 {
   return storedVector3(vec3Or(value, fallback, context));

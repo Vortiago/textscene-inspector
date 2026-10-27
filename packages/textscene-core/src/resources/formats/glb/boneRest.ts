@@ -19,7 +19,7 @@ const _local = new THREE.Matrix4();
  * Writes `rest` times `local` into `out`. A part of `local` that a track does not drive stays at
  * its identity, so one value of a track composes through the same product as a whole override.
  *
- * @oneWay A transform written to a node Godot makes a bone, composed onto its rest pose
+ * @canonical A transform written to a node Godot makes a bone, composed onto its rest pose
  */
 export function composeOntoRest(rest: THREE.Matrix4, local: LocalPose, out: LocalPose): LocalPose {
   _local.compose(local.position, local.quaternion, local.scale);

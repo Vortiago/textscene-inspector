@@ -52,7 +52,7 @@ function withValue(
 /**
  * The `visible` values the player holds for the nodes and frames of the GLB.
  *
- * @oneWay A `visible` value track on a node of an instanced GLB
+ * @canonical A `visible` value track on a node of an instanced GLB
  */
 export function useAnimatedGlbVisibility(
   entries: readonly GlbObjectEntry[],

@@ -9,7 +9,7 @@ const warnedKeys = perObject((): Set<string> => new Set());
  * Warns with `message` the first time `owner` asks for `key`, then stays quiet. The owner decides
  * how long the silence lasts: a WeakMap entry ends with it, and a module constant lasts the session.
  *
- * @oneWay A warning that must appear once, not on every pass or rebuild
+ * @canonical A warning that must appear once, not on every pass or rebuild
  */
 export function warnOnce(owner: object, key: string, message: string): void {
   const warned = warnedKeys(owner);

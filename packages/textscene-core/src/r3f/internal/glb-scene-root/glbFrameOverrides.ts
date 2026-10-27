@@ -73,7 +73,7 @@ export interface FrameMembers {
  * Each Skeleton3D and BoneAttachment3D of the GLB with the objects below it. The GLB root hides
  * them in turn, since a frame's `visible` and the `visible` of a node below it both apply.
  *
- * @oneWay The Skeleton3D and BoneAttachment3D groups of an instanced GLB, with what each hides
+ * @canonical The Skeleton3D and BoneAttachment3D groups of an instanced GLB, with what each hides
  */
 export function frameMembers(entries: readonly GlbObjectEntry[]): FrameMembers[] {
   return glbFrames(entries).map((frame) => ({ frame, below: objectsBelowFrame(entries, frame) }));

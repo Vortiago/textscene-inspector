@@ -198,7 +198,7 @@ function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly Live
  * building them. Counted on the walk, not on `root.children`: a mounted clone gains a child for
  * each node R3F renders below it.
  *
- * @oneWay The children of a GLB scene root
+ * @canonical The children of a GLB scene root
  */
 export function glbSceneRootChildCount(root: THREE.Object3D): number {
   const topLevel = flattenGlbObjects(root).filter((entry) => parentPathOf(entry.relPath) === null).length;

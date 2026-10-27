@@ -110,7 +110,7 @@ export interface GlbAttachment {
  * Both the scene tree and the viewport resolve through here, so one node never lands on two objects.
  * It looks up through the quiet `findGlbTarget`, and the caller reports what stays unplaced.
  *
- * @oneWay Where a node under a GLB instance attaches
+ * @canonical Where a node under a GLB instance attaches
  *   The scene tree and the viewport both call it.
  */
 export function resolveGlbAttachments(

@@ -23,7 +23,7 @@ export const FULL_UV_WINDOW: Readonly<UvWindow> = Object.freeze({
 /**
  * The window that samples `region` of a texture of `size` pixels.
  *
- * @oneWay A UV window on a texture
+ * @canonical A UV window on a texture
  */
 export function regionUvWindow(region: Rect2, size: Vector2): UvWindow {
   return {
@@ -37,7 +37,7 @@ export function regionUvWindow(region: Rect2, size: Vector2): UvWindow {
  * mirrors the drawn quad. three has no negative-size quad. Under `RepeatWrapping`, GLSL's floor-mod
  * `fract()` lands on Godot's `(rectSize - x) mod textureSize`.
  *
- * @oneWay A UV window on a texture
+ * @canonical A UV window on a texture
  */
 export function flippedUvWindow({ repeat, offset }: UvWindow, flipH: boolean, flipV: boolean): UvWindow {
   return {
@@ -49,7 +49,7 @@ export function flippedUvWindow({ repeat, offset }: UvWindow, flipH: boolean, fl
 /**
  * Points `texture`'s sampler at `window`.
  *
- * @oneWay A UV window on a texture
+ * @canonical A UV window on a texture
  */
 export function applyUvWindow(texture: THREE.Texture, { repeat, offset }: UvWindow): void {
   texture.repeat.set(repeat.x, repeat.y);
