@@ -17,21 +17,29 @@ function sampledFrame(drawn: THREE.Object3D): THREE.Texture | undefined {
   return material?.uniforms?.frame?.value;
 }
 
-/** A renderer that records each draw, the target bound for it and the frame a copy samples. */
+/**
+ * A renderer that records each draw, the target bound for it and the frame a copy samples, and each
+ * explicit clear with the number of draws that came before it. Its `autoClear` is on, as three's is.
+ */
 function recordingRenderer(width: number, height: number) {
   const draws: { drawn: THREE.Object3D; target: Target; sampled: THREE.Texture | undefined }[] = [];
+  const clears: { target: Target; drawsBefore: number }[] = [];
   let bound: Target = null;
   const gl = {
+    autoClear: true,
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
     getRenderTarget: () => bound,
     setRenderTarget: (target: Target) => {
       bound = target;
     },
+    clear: () => {
+      clears.push({ target: bound, drawsBefore: draws.length });
+    },
     render: (drawn: THREE.Object3D) => {
       draws.push({ drawn, target: bound, sampled: sampledFrame(drawn) });
     },
   };
-  return { gl: gl as unknown as THREE.WebGLRenderer, draws };
+  return { gl: gl as unknown as THREE.WebGLRenderer, draws, clears };
 }
 
 const scene = new THREE.Scene();
@@ -68,6 +76,29 @@ describe('createCanvasFrame', () => {
     expect(draws).toHaveLength(2);
     expect(stepsOfDraws).toEqual([null, 'Canvas copy']);
     profile.stop();
+    frame.dispose();
+  });
+
+  // A render clears only while the renderer's autoClear is on, which the tone-map composer turns off.
+  it('clears itself before the world draws when the renderer does not clear on render', () => {
+    const { gl, draws, clears } = recordingRenderer(64, 64);
+    gl.autoClear = false;
+    const frame = multisampledFrame(0);
+
+    frame.render(gl, scene, camera);
+
+    expect(clears).toEqual([{ target: frame, drawsBefore: 0 }]);
+    expect(draws[0]!.drawn).toBe(scene);
+    frame.dispose();
+  });
+
+  it('leaves the clear to the render when the renderer clears on render (edge case)', () => {
+    const { gl, clears } = recordingRenderer(64, 64);
+    const frame = multisampledFrame(0);
+
+    frame.render(gl, scene, camera);
+
+    expect(clears).toEqual([]);
     frame.dispose();
   });
 

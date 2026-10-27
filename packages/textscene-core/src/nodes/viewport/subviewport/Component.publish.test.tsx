@@ -519,10 +519,10 @@ mesh = SubResource("1")
     expect(published()).not.toBeNull();
   });
 
-  // A render clears the target it draws into, so only a pass with no camera clears it by hand.
-  it('leaves the clear of a 3D target to the render of its camera', async () => {
+  // A render clears only while the renderer's autoClear is on, which the tone-map composer turns off.
+  it('clears a 3D target by hand, once, before its camera renders', async () => {
     const { renderer, gl } = await renderScene(scene3D());
-    expect(await explicitClearsNextFrame(renderer, gl())).toBe(0);
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
   });
 
   it('clears a 3D target by hand when no camera renders into it', async () => {
@@ -538,6 +538,23 @@ mesh = SubResource("1")
 mesh = SubResource("1")
 `);
     expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
+  });
+
+  it('clears no 2D target by hand, since its frame clears and the copy overwrites', async () => {
+    const { renderer, gl, published } = await renderScene(
+      `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Inside" type="Polygon2D" parent="Viewport"]
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
+`,
+      '2d'
+    );
+    expect(published()).not.toBeNull();
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(0);
   });
 
   it('leaves its own camera fitted to the target, which only the pass renders through', async () => {

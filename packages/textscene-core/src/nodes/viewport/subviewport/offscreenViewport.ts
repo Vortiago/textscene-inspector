@@ -88,8 +88,7 @@ const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 /**
  * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
  * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the pass. `draw`
- * clears the target: a render does through the renderer's autoClear, so a draw that renders no
- * camera clears by hand.
+ * clears whatever it needs cleared.
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
