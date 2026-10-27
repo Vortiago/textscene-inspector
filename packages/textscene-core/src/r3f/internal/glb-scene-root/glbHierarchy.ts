@@ -13,7 +13,7 @@ import {
   godotNodeName,
   isGodotSceneRoot,
 } from '../../../resources/formats/glb/godotNodes.js';
-import { insertAtIndex } from '../../../godot/scene/siblingIndex.js';
+import { addAtIndex, insertAtIndex } from '../../../godot/scene/siblingIndex.js';
 import { joinPath, parentPathOf } from '../../../utils/nodePath.js';
 import { perObject } from '../../../utils/perObject.js';
 
@@ -113,14 +113,16 @@ function glbInternalNodeType(displayType: string): string {
 }
 
 /**
- * Synthetic `TscnNode`s for the scene tree, one per entry of `root`, and each node by its relPath.
- * Each name is the disambiguated relPath segment, so `joinPath(parent, name)` reproduces `relPath`.
+ * Synthetic `TscnNode`s for the scene tree, one per entry of `entries`, listed in the entries' order
+ * as `nodes`. Each name is the disambiguated relPath segment, so `joinPath(parent, name)` reproduces
+ * `relPath`.
  */
-function glbTreeNodes(root: THREE.Object3D): { topLevel: TscnNode[]; nodeAt: ReadonlyMap<string, TscnNode> } {
+function glbTreeNodes(entries: readonly GlbObjectEntry[]): { topLevel: TscnNode[]; nodes: TscnNode[] } {
   const topLevel: TscnNode[] = [];
+  const nodes: TscnNode[] = [];
   // Each entry comes after its parent's, so the parent's node is built by the time a child needs it.
   const nodeAt = new Map<string, TscnNode>();
-  for (const { relPath, object } of flattenGlbObjects(root)) {
+  for (const { relPath, object } of entries) {
     const parentPath = parentPathOf(relPath);
     const name = parentPath === null ? relPath : relPath.slice(parentPath.length + 1);
     const displayType = glbDisplayType(object.type);
@@ -133,10 +135,11 @@ function glbTreeNodes(root: THREE.Object3D): { topLevel: TscnNode[]; nodeAt: Rea
       properties: { glbDisplayType: displayType, glbRelPath: relPath } as Record<string, unknown>,
     };
     nodeAt.set(relPath, node);
+    nodes.push(node);
     const parent = nodeAt.get(parentPath ?? '');
     (parent?.children ?? topLevel).push(node);
   }
-  return { topLevel, nodeAt };
+  return { topLevel, nodes };
 }
 
 /**
@@ -147,13 +150,63 @@ export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
 const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
 /**
+ * A child as it stands among the children of a GLB object: one of the GLB's own objects, as the index
+ * of its entry, or a node the instancing scene adds.
+ */
+export type GlbChild = { readonly entry: number } | LiveNode;
+
+/**
+ * The children of each target in `placed` once Godot has added the nodes: the target's own objects are
+ * there first, since the instanced scene is built before the instancing scene adds its nodes, and each
+ * node goes to the end and then to its `index=` (`packed_scene.cpp:541-545`). Only a target that gains
+ * a node is listed. Both the scene tree and the viewport's tree order read the children from here.
+ *
+ * @param entries the objects of the GLB, as `flattenGlbObjects` lists them
+ * @param placed each node with the index of the entry it is added to, in authored order
+ */
+export function glbChildrenBelow(
+  entries: readonly GlbObjectEntry[],
+  placed: readonly { node: LiveNode; target: number }[]
+): Map<number, GlbChild[]> {
+  const childrenOf = new Map<number, GlbChild[]>();
+  for (const { node, target } of placed) {
+    let children = childrenOf.get(target);
+    if (!children) {
+      children = childEntryIndices(entries, target).map((entry) => ({ entry }));
+      childrenOf.set(target, children);
+    }
+    insertAtIndex(children, node);
+  }
+  return childrenOf;
+}
+
+/** The indices of the entries directly below the one at `index`, which `flattenGlbObjects` lists in pre-order. */
+function childEntryIndices(entries: readonly GlbObjectEntry[], index: number): number[] {
+  const prefix = `${entries[index]!.relPath}/`;
+  const children: number[] = [];
+  for (let k = index + 1; entries[k]?.relPath.startsWith(prefix); k++) {
+    if (!entries[k]!.relPath.includes('/', prefix.length)) children.push(k);
+  }
+  return children;
+}
+
+/**
  * Adds each of `attached` below the synthetic node whose `relPath` is its `glbTargetRelPath`, which
  * `splitAttachedChildren` sets.
  */
-function addAttachedChildren(nodeAt: ReadonlyMap<string, TscnNode>, attached: readonly LiveNode[]): void {
-  for (const child of attached) {
-    const target = nodeAt.get(child.glbTargetRelPath!);
-    if (target) insertAtIndex(target.children, child);
+function addAttachedChildren(
+  entries: readonly GlbObjectEntry[],
+  nodes: readonly TscnNode[],
+  attached: readonly LiveNode[]
+): void {
+  if (attached.length === 0) return;
+  const entryAt = new Map(entries.map((entry) => [entry.relPath, entry.index]));
+  const placed = attached.flatMap((node) => {
+    const target = entryAt.get(node.glbTargetRelPath!);
+    return target === undefined ? [] : [{ node, target }];
+  });
+  for (const [target, children] of glbChildrenBelow(entries, placed)) {
+    nodes[target]!.children = children.map((child) => ('entry' in child ? nodes[child.entry]! : child));
   }
 }
 
@@ -174,8 +227,9 @@ function freezeNodes(nodes: TscnNode[]): TscnNode[] {
 }
 
 function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
-  const { topLevel: nodes, nodeAt } = glbTreeNodes(root);
-  addAttachedChildren(nodeAt, attached);
+  const entries = flattenGlbObjects(root);
+  const { topLevel: nodes, nodes: nodeOfEntry } = glbTreeNodes(entries);
+  addAttachedChildren(entries, nodeOfEntry, attached);
   const clips = root.animations;
   if (clips.length > 0) {
     nodes.push({
@@ -194,24 +248,27 @@ function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly Live
 }
 
 /**
- * How many children {@link glbSceneRootChildren} gives the root, with nothing attached, without
- * building them. Counted on the walk, not on `root.children`: a mounted clone gains a child for
- * each node R3F renders below it.
+ * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren`
+ * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
+ * clips, and `hostChildren` added to the root after them, each moved to its `index=`. The live
+ * tree's step calls it, and so does the viewport's draw order, so the tree's rows,
+ * `resolveLiveEntry` and the viewport place the same children the same way.
  *
  * @canonical The children of a GLB scene root
  */
-export function glbSceneRootChildCount(root: THREE.Object3D): number {
-  const topLevel = flattenGlbObjects(root).filter((entry) => parentPathOf(entry.relPath) === null).length;
-  return topLevel + (root.animations.length > 0 ? 1 : 0);
+export function glbSceneRootChildren(
+  root: THREE.Object3D,
+  attached: readonly LiveNode[],
+  hostChildren: readonly LiveNode[] = []
+): TscnNode[] {
+  // Attaching writes into the nodes, so an attached list builds its own copy.
+  const objects = attached.length > 0 ? buildGlbSceneRootChildren(root, attached) : plainChildren(root);
+  // Without host children the objects are the GLB's shared, frozen answer.
+  return hostChildren.length > 0 ? addAtIndex<TscnNode>(objects, ...hostChildren) : objects;
 }
 
-/**
- * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren`
- * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
- * clips. `liveStep` calls it, so the tree's rows, `resolveLiveEntry` and the viewport see the same
- * children.
- */
-export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
-  // Attaching writes into the nodes, so an attached list builds its own copy.
-  return attached.length > 0 ? buildGlbSceneRootChildren(root, attached) : plainChildren(root);
+/** `hostChildren` in the order they stand among the children of the GLB `root`. */
+export function glbHostChildrenInOrder(root: THREE.Object3D, hostChildren: readonly LiveNode[]): LiveNode[] {
+  const host = new Set<TscnNode>(hostChildren);
+  return glbSceneRootChildren(root, [], hostChildren).filter((child): child is LiveNode => host.has(child));
 }

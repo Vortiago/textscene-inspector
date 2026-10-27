@@ -39,8 +39,8 @@ import {
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
-import { collapseLiveNode } from './liveSceneTree.js';
-import { useCollapseCache } from './useLiveSceneTree.js';
+import { useLiveStepOf } from './useLiveSceneTree.js';
+import { useResourceLoader } from '../resources/useResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -60,8 +60,7 @@ import {
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { liftedWithoutOverrides } from './internal/glb-scene-root/glbNodeOverrides.js';
-import { glbSceneRootChildCount } from './internal/glb-scene-root/glbHierarchy.js';
-import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
+import { glbHostChildrenInOrder } from './internal/glb-scene-root/glbHierarchy.js';
 import { useGlb } from '../resources/useGlb.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
@@ -404,26 +403,29 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // The same merge the tree, inspector and panels make. `effective !== node`
   // means a single root `.tscn` merged in. A `.glb` or multi-root scene returns `node`.
-  // Memoized ahead of the early returns, so a hover elsewhere does not re-merge
-  // this subtree every frame.
-  const collapseCache = useCollapseCache(node, loadPath, loadedScene);
-  const effective = useMemo(() => {
-    if (!loadedScene) return node;
-    const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
-    return collapseLiveNode(node, scope, collapseCache);
-  }, [node, ambientScope, enclosingScenePaths, collapseCache, loadedScene]);
+  // The live tree hands back the same step until a load changes it, so a hover elsewhere
+  // does not re-merge this subtree.
+  const scope = useMemo<SceneScope>(
+    () => ({ ...ambientScope, instancedScenePaths: enclosingScenePaths }),
+    [ambientScope, enclosingScenePaths]
+  );
+  const step = useLiveStepOf(node, scope);
+  const effective = step.node;
 
   const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
-  // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
-  // move to their `index=` among them (`packed_scene.cpp:541-544`). The root takes this load.
+  // Loaded here, not by the GLB root, for its objects: the host children move to their `index=`
+  // among them (`packed_scene.cpp:541-544`). The root takes this load.
   const glb = useGlb(glbPath);
+  const loader = useResourceLoader();
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a stripped node is a new
-  // object. The objects are counted only for a child that states an `index=`.
+  // object. The order is read only for a child that states an `index=`, from the loader's template,
+  // whose children every consumer of the GLB shares.
   const shallow = useMemo(() => {
     const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
     if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
-    return { ...stripped, children: orderAmongPlaced(stripped.children, glbSceneRootChildCount(glb.value)) };
-  }, [node, glbPath, glb.value]);
+    const objects = (glbPath && loader?.glbMeshes.getCached(glbPath)) || glb.value;
+    return { ...stripped, children: glbHostChildrenInOrder(objects, stripped.children) };
+  }, [node, glbPath, glb.value, loader]);
   // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();

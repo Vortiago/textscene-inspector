@@ -1,7 +1,15 @@
 /** Builds and reads the live scene tree, for tests over a main scene and the scenes it instances. */
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types';
-import { resolveLiveEntry, type CachedSceneSource, type LiveTreeContext } from './liveSceneTree';
+import {
+  LiveTree,
+  resolveLiveEntry,
+  type CachedGlbSource,
+  type CachedSceneSource,
+  type LiveStep,
+  type LiveTreeContext,
+  type SceneScope,
+} from './liveSceneTree';
 
 /** The collapsed node at `path`, or null when a segment does not resolve. */
 export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext) {
@@ -34,4 +42,25 @@ export function contextOver(
     sceneCache: sceneCacheOver(scenes),
     ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
   };
+}
+
+/**
+ * The step of `node` where it sits in a group of scope `scope`, over `sceneCache` and `glbCache`. A tree of
+ * its own takes it, so a test that changes a cache in place asks again.
+ *
+ * @canonical In tests, the step of one node over caches
+ */
+export function stepOver(
+  node: TscnNode,
+  scope: SceneScope,
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
+): LiveStep {
+  const ctx: LiveTreeContext = {
+    externalResources: scope.externalResources,
+    internalResources: scope.internalResources,
+    sceneCache,
+    ...(glbCache ? { glbCache } : {}),
+  };
+  return new LiveTree([], ctx).stepOf(node, scope);
 }
