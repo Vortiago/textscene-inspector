@@ -65,7 +65,7 @@ export interface ResRoot extends ResourceProvider {
 /**
  * The roots of one host's scenes, and every answer read from the filesystem to find them.
  *
- * @oneWay `res://` roots
+ * @canonical `res://` roots
  */
 export interface ResRoots {
   /** The root of the scene at the absolute `scene` path, or null for a scene in no project and outside the workspace. */

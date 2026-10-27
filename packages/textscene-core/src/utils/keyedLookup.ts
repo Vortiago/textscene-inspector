@@ -32,7 +32,7 @@ const indexItself = <T>(_entry: T, index: number): number => index;
 /**
  * The first entry of a table whose key is `key`, or undefined where none is.
  *
- * @oneWay An entry by its key in a frozen table
+ * @canonical An entry by its key in a frozen table
  *   They build one Map for each table.
  */
 export function firstWith<T, K>(keyOf: (entry: T) => K): (table: readonly T[], key: K) => T | undefined {
@@ -42,7 +42,7 @@ export function firstWith<T, K>(keyOf: (entry: T) => K): (table: readonly T[], k
 /**
  * The last entry of a table whose key is `key`, or undefined where none is.
  *
- * @oneWay An entry by its key in a frozen table
+ * @canonical An entry by its key in a frozen table
  */
 export function lastWith<T, K>(keyOf: (entry: T) => K): (table: readonly T[], key: K) => T | undefined {
   return keyedLookup(keyOf, entryItself, false);
@@ -51,7 +51,7 @@ export function lastWith<T, K>(keyOf: (entry: T) => K): (table: readonly T[], ke
 /**
  * The index of the first entry of a table whose key is `key`, or undefined where none is.
  *
- * @oneWay An entry by its key in a frozen table
+ * @canonical An entry by its key in a frozen table
  */
 export function firstIndexWith<T, K>(
   keyOf: (entry: T) => K

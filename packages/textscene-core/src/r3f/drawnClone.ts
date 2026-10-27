@@ -21,7 +21,7 @@ export interface CloneSampler {
  * the clone reaches `useUploadedClone`: a change after the upload moves three's cache key, and three
  * uploads the whole image again at the next draw.
  *
- * @oneWay A texture clone that a node draws
+ * @canonical A texture clone that a node draws
  *   Set every sampler field through it, before the upload.
  */
 export function drawnClone(texture: THREE.Texture, sampler: CloneSampler): THREE.Texture {
