@@ -6,7 +6,7 @@
  */
 
 import { nodePathNames } from '../string/nodePath.js';
-import { validateNodeName } from '../string/nodeName.js';
+import { serialChildName, validateNodeName } from '../string/nodeName.js';
 import { parseSlotInt } from '../variant/intReader.js';
 import { int32Elements } from '../variant/packedInt32.js';
 import { INT32_MIN } from '../variant/intWidth.js';
@@ -124,4 +124,12 @@ export function reparentedName(parentPath: string, name: string): string {
   const spelled = (parentPath.startsWith('/') ? '/' : '') + withPeriod.join('/');
   const prefix = spelled.replace(/^\.\//, '').replaceAll('/', '@');
   return validateNodeName(`${prefix}#${name}`);
+}
+
+/**
+ * The name a re-parented orphan takes under the scene root: {@link reparentedName}, numbered past
+ * the root children that hold it (`set_name`, `node.cpp:1450`, `:1593-1640`).
+ */
+export function reRootedName(parentPath: string, name: string, rootChildNames: ReadonlySet<string>): string {
+  return serialChildName(reparentedName(parentPath, name), rootChildNames);
 }

@@ -74,6 +74,11 @@ export function renderWithMipmapBias(bias: number, render: () => void): void {
   }
 }
 
+/** The bias the render now under way samples at: its pass's, or the root viewport's. */
+export function currentMipmapBias(): number {
+  return biasUniform.value;
+}
+
 /**
  * Sets the bias for a render of a scene the main view draws, which takes the root viewport's
  * `rootBias`. A SubViewport pass that renders the same scene keeps its own bias.

@@ -1,7 +1,7 @@
 /**
- * A TrueType font's glyph outlines as Godot's text server hands them to TextMesh: the glyph index of
- * a character from `cmap` (`sfntCmap.ts`), and the points of that glyph from `glyf` (`sfntGlyf.ts`).
- * A font with no `glyf` table (OpenType-CFF, or a compressed container) gets no reader.
+ * A font's glyph outlines as Godot's text server hands them to TextMesh: the glyph index of a
+ * character from `cmap` (`sfntCmap.ts`), and the points of that glyph from `glyf` (`sfntGlyf.ts`) or
+ * from `CFF ` and `CFF2` (`sfntCff.ts`). A font with neither (a compressed container) gets no reader.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -10,7 +10,9 @@
  */
 
 import { cmapLookup } from './sfntCmap';
-import { glyphContourReader, type GlyphContours } from './sfntGlyf';
+import type { GlyphContours } from './glyphContours';
+import { cffContourReader } from './sfntCff';
+import { glyphContourReader } from './sfntGlyf';
 import { openSfnt } from './sfntTables';
 
 export interface SfntOutlines {
@@ -31,15 +33,15 @@ function orOnRangeError<T>(read: () => T, fallback: T): T {
 }
 
 /**
- * Reads the outlines of a TrueType font, or returns `null`, never throws, for a font with no
- * `glyf` table, no readable `cmap` or a table that does not fit its buffer. The reader answers
+ * Reads the outlines of a TrueType or OpenType-CFF font, or returns `null`, never throws, for a
+ * font with no `glyf` or CFF table, no readable `cmap` or a table that does not fit its buffer. The reader answers
  * no glyph, not an error, for an offset a corrupt table puts past the buffer.
  */
 export function parseSfntOutlines(bytes: ArrayBuffer): SfntOutlines | null {
   const sfnt = openSfnt(bytes);
   if (!sfnt) return null;
   const cmap = sfnt.tables.get('cmap');
-  const contours = glyphContourReader(sfnt);
+  const contours = glyphContourReader(sfnt) ?? cffContourReader(sfnt);
   if (!cmap || !contours) return null;
   const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
   if (!lookup) return null;

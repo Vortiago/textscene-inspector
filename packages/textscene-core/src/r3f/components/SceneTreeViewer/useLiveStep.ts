@@ -11,16 +11,15 @@ import { glbPathOf, loneGlbRootPath } from '../../../resources/glbSceneRoot.js';
 import { liveInstancePath } from '../../../resources/liveNode.js';
 import { liveStep, singlePathCache, type LiveStep } from '../../liveSceneTree.js';
 import { firstCached } from '../../cacheSources.js';
+import { useCollapseCache } from '../../useLiveSceneTree.js';
 import { useGlbCache } from './useGlbCache.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 
 export function useLiveStep(node: TscnNode, scope: SceneScope): LiveStep {
   const scenePath = liveInstancePath(node, scope);
   const subScene = useSubSceneChildren(node.instance, scope.externalResources, scenePath);
-  const withoutGlb = useMemo(
-    () => liveStep(node, scope, singlePathCache(scenePath, subScene)),
-    [node, scope, scenePath, subScene]
-  );
+  const subSceneCache = useCollapseCache(node, scenePath, subScene);
+  const withoutGlb = useMemo(() => liveStep(node, scope, subSceneCache), [node, scope, subSceneCache]);
 
   // The merge is known from the step, so the GLB a merged root instances loads without a second merge.
   const merged = withoutGlb.isMerged ? withoutGlb.node : undefined;
@@ -38,10 +37,7 @@ export function useLiveStep(node: TscnNode, scope: SceneScope): LiveStep {
 
   return useMemo(() => {
     if (!glbCache) return withoutGlb;
-    const sceneCache = firstCached(
-      singlePathCache(scenePath, subScene),
-      singlePathCache(mergedScenePath, instancedByMerged)
-    );
+    const sceneCache = firstCached(subSceneCache, singlePathCache(mergedScenePath, instancedByMerged));
     return liveStep(node, scope, sceneCache, glbCache);
-  }, [glbCache, withoutGlb, node, scope, scenePath, subScene, mergedScenePath, instancedByMerged]);
+  }, [glbCache, withoutGlb, node, scope, subSceneCache, mergedScenePath, instancedByMerged]);
 }

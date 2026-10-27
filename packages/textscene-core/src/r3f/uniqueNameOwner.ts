@@ -107,7 +107,9 @@ class PlacedLiveTree {
         segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
       }
     }
-    const placed = segments.join('/');
+    // A child its file seated outside the instance climbs out of it with `..`.
+    const spelt = segments.join('/');
+    const placed = segments.includes('..') ? simplifiedNodePath(spelt) : spelt;
     this.placements.set(livePath, placed);
     return placed;
   }

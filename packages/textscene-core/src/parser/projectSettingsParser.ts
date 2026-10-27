@@ -295,6 +295,23 @@ export function projectAnisotropicFilteringLevel(settings: ProjectSettings | nul
   );
 }
 
+/** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */
+const DEFAULT_DECAL_FILTER = 3;
+
+/** `RS::DECAL_FILTER_LINEAR_MIPMAPS_ANISOTROPIC`, the last filter `RS::DecalFilter` names. */
+const MAX_DECAL_FILTER = 5;
+
+/**
+ * `rendering/textures/decals/filter`, which the renderer reads for every decal sampler
+ * (`renderer_scene_render_rd.cpp:1730`). It numbers the filters as `BaseMaterial3D.TextureFilter`
+ * does from Nearest on. A value outside `RS::DecalFilter` keeps the default, as a switch with no
+ * case for it binds no sampler (`render_forward_clustered.cpp:3436-3460`).
+ */
+export function projectDecalFilter(settings: ProjectSettings | null): number {
+  const filter = parseOptionalInt(settings?.['rendering/textures/decals/filter']);
+  return filter !== undefined && filter >= 0 && filter <= MAX_DECAL_FILTER ? filter : DEFAULT_DECAL_FILTER;
+}
+
 /** Godot's default `rendering/textures/default_filters/texture_mipmap_bias` (`rendering_server.cpp:3803`). */
 const DEFAULT_TEXTURE_MIPMAP_BIAS = 0;
 

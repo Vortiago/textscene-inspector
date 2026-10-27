@@ -9,6 +9,7 @@ import { captureCameras } from './captureCameras';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -56,8 +57,9 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
   return { renderer, scene, sceneProbes, facesDrawn, settle };
 }
 
-/** The exposure normalisation of the first probe in the rows `sceneProbes` last packed. */
-function packedNormalisation(renderer: THREE.WebGLRenderer): number {
+/** The exposure normalisation of the first probe in the rows a render of `scene` shows. */
+function shownNormalisation(renderer: THREE.WebGLRenderer, scene: THREE.Scene): number {
+  fireSceneRender(scene, new THREE.PerspectiveCamera());
   const packs = vi.mocked(renderer.initTexture).mock.calls;
   const packed = packs[packs.length - 1]![0] as THREE.DataTexture;
   const rows = packed.image.data as Float32Array;
@@ -176,29 +178,40 @@ describe('SceneProbes rendering', () => {
     expect(Array.from(shownProbes.subarray(0, 3))).toEqual([1, expect.closeTo(0.8, 6), 6]);
   });
 
-  it('uploads the rows when a capture changes them, not every frame', async () => {
-    const { renderer, facesDrawn, settle } = await sceneWith(probeObject());
+  /** The scene rows' texture as the last render of the scene uploaded it. */
+  function uploadedRows(uploads: { mock: { calls: unknown[][] } }): THREE.DataTexture {
+    return uploads.mock.calls.at(-1)![0] as THREE.DataTexture;
+  }
+
+  it('uploads the rows when a capture changes them, not every render', async () => {
+    const { renderer, scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
     const uploads = vi.spyOn(renderer, 'initTexture');
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    const { version } = uploadedRows(uploads);
 
-    facesDrawn();
-    facesDrawn();
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
 
-    expect(uploads).not.toHaveBeenCalled();
+    expect(uploadedRows(uploads).version).toBe(version);
   });
 
-  it('uploads the rows of a second probe, which need a taller texture (edge case)', async () => {
-    const { renderer, facesDrawn, settle } = await sceneWith(probeObject({}, [0]), probeObject({}, [1]));
+  it('writes the rows of a second probe to the scene rows (edge case)', async () => {
+    const { renderer, scene, facesDrawn, settle } = await sceneWith(
+      probeObject({}, [0]),
+      probeObject({}, [1])
+    );
     settle();
+    facesDrawn();
     facesDrawn();
     const uploads = vi.spyOn(renderer, 'initTexture');
 
-    facesDrawn();
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
 
-    const rows = uploads.mock.calls.at(-1)![0] as THREE.DataTexture;
-    expect(rows.image.height).toBe(2);
-    expect(rows.version).toBeGreaterThan(0);
+    const data = uploadedRows(uploads).image.data as Float32Array;
+    const atlasLayerOf = (row: number) => data[(row * SCENE_ROW_TEXELS + 6) * 4 + 3];
+    expect([atlasLayerOf(0), atlasLayerOf(1)].sort()).toEqual([0, 1]);
   });
 
   it('stops showing a probe once it hides (edge case)', async () => {
@@ -271,30 +284,30 @@ describe('SceneProbes exposure normalisation', () => {
   }
 
   it('is 1 while the exposure stays the one the probe captured at', async () => {
-    const { renderer } = await capturedAt(2);
+    const { renderer, scene } = await capturedAt(2);
 
-    expect(packedNormalisation(renderer)).toBe(1);
+    expect(shownNormalisation(renderer, scene)).toBe(1);
   });
 
   it('is the exposure over the one the probe captured at, after the exposure changes', async () => {
-    const { renderer, world, facesDrawn } = await capturedAt(2);
+    const { renderer, scene, world, facesDrawn } = await capturedAt(2);
     await world.update(<Exposed factor={3} />);
     facesDrawn();
 
-    expect(packedNormalisation(renderer)).toBe(1.5);
+    expect(shownNormalisation(renderer, scene)).toBe(1.5);
   });
 
   it('is 1 once the scene holds no exposure, whatever the probe captured at', async () => {
-    const { renderer, world, facesDrawn } = await capturedAt(2);
+    const { renderer, scene, world, facesDrawn } = await capturedAt(2);
     await world.update(<group />);
     facesDrawn();
 
-    expect(packedNormalisation(renderer)).toBe(1);
+    expect(shownNormalisation(renderer, scene)).toBe(1);
   });
 
   it('is the exposure over 1 for a probe captured before the scene held any (render_forward_clustered.cpp:1714)', async () => {
     const world = await ReactThreeTestRenderer.create(<group />);
-    const { renderer, facesDrawn, settle } = await probesIn(
+    const { renderer, scene, facesDrawn, settle } = await probesIn(
       world.scene.instance as THREE.Scene,
       probeObject()
     );
@@ -304,7 +317,7 @@ describe('SceneProbes exposure normalisation', () => {
     await world.update(<Exposed factor={4} />);
     facesDrawn();
 
-    expect(packedNormalisation(renderer)).toBe(4);
+    expect(shownNormalisation(renderer, scene)).toBe(4);
   });
 
   describe('under a camera that exposes the view apart from the world', () => {
@@ -336,17 +349,17 @@ describe('SceneProbes exposure normalisation', () => {
     });
 
     it("shows the capture at the camera's exposure over the world's it captured at (light_storage.cpp:1810)", async () => {
-      const { renderer, facesDrawn } = await capturedUnder(4, 2);
+      const { renderer, scene, facesDrawn } = await capturedUnder(4, 2);
       facesDrawn();
 
-      expect(packedNormalisation(renderer)).toBe(2);
+      expect(shownNormalisation(renderer, scene)).toBe(2);
     });
 
     it('shows a world with no attributes of its own at the camera exposure over 1', async () => {
-      const { renderer, facesDrawn } = await capturedUnder(4, null);
+      const { renderer, scene, facesDrawn } = await capturedUnder(4, null);
       facesDrawn();
 
-      expect(packedNormalisation(renderer)).toBe(4);
+      expect(shownNormalisation(renderer, scene)).toBe(4);
     });
 
     it('waits while the camera exposes the view at 0, whose lights hold no energy to rescale (edge case)', async () => {

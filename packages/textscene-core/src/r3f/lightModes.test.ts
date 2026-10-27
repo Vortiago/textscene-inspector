@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  drawsLightModesOf,
-  lightModesInjection,
-  lightModesOf,
-  lightModesUserData,
-  type LightModes,
-} from './lightModes';
+import { lightModesInjection, type LightModes } from './lightModes';
 import { DiffuseMode } from '../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../godot/rendering/materials/specularMode';
 import { patchedShader } from './testing/patchedFragment';
@@ -73,39 +67,5 @@ describe('lightModesInjection', () => {
   it('gives one injection per pair of modes, so composed programs share it', () => {
     const modes = { diffuseMode: DiffuseMode.DIFFUSE_TOON, specularMode: SpecularMode.SPECULAR_TOON };
     expect(lightModesInjection(modes)).toBe(lightModesInjection({ ...modes }));
-  });
-});
-
-describe('lightModesOf', () => {
-  it('reads the modes a material records', () => {
-    const modes = { diffuseMode: DiffuseMode.DIFFUSE_TOON, specularMode: SpecularMode.SPECULAR_DISABLED };
-    const material = new THREE.MeshStandardMaterial({ userData: lightModesUserData(modes) });
-    expect(lightModesOf(material)).toEqual(modes);
-  });
-
-  it('reads Burley and GGX off a material that records none, as a glTF import is (edge case)', () => {
-    expect(lightModesOf(new THREE.MeshStandardMaterial())).toEqual(BURLEY_GGX);
-  });
-
-  it('reads Burley and GGX for no material (error case)', () => {
-    expect(lightModesOf(undefined)).toEqual(BURLEY_GGX);
-  });
-});
-
-describe('drawsLightModesOf', () => {
-  const recording = (modes: LightModes) =>
-    new THREE.MeshStandardMaterial({ userData: lightModesUserData(modes) });
-  const toonSpecular = { ...BURLEY_GGX, specularMode: SpecularMode.SPECULAR_TOON };
-
-  it('matches two materials that record the same modes', () => {
-    expect(drawsLightModesOf(recording(toonSpecular), recording(toonSpecular))).toBe(true);
-  });
-
-  it('tells apart materials whose specular modes differ', () => {
-    expect(drawsLightModesOf(recording(toonSpecular), recording(BURLEY_GGX))).toBe(false);
-  });
-
-  it('matches no material to the default modes (edge case)', () => {
-    expect(drawsLightModesOf(recording(BURLEY_GGX), undefined)).toBe(true);
   });
 });

@@ -17,11 +17,13 @@ const OTHER_CHUNK = 'alphamap_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
 const threeOtherChunk = THREE.ShaderChunk[OTHER_CHUNK];
 const threeBasicShader = THREE.ShaderLib.basic.fragmentShader;
+const threeBasicVertexShader = THREE.ShaderLib.basic.vertexShader;
 
 afterEach(() => {
   THREE.ShaderChunk[CHUNK] = threeChunk;
   THREE.ShaderChunk[OTHER_CHUNK] = threeOtherChunk;
   THREE.ShaderLib.basic.fragmentShader = threeBasicShader;
+  THREE.ShaderLib.basic.vertexShader = threeBasicVertexShader;
 });
 
 describe('applyEdits', () => {
@@ -255,6 +257,59 @@ describe('installChunkEdits', () => {
     const fragmentShaders = { basic: [{ three: 'basic', godot: 'godot' }] };
     installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', fragmentShaders });
     expect(THREE.ShaderLib.basic.fragmentShader).toBe('godot');
+  });
+
+  it("writes a program's vertex shader edits with the chunks", () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[OTHER_CHUNK] = 'three';
+    THREE.ShaderLib.basic.vertexShader = 'basic';
+    const vertexShaders = { basic: [{ three: 'basic', godot: 'godot' }] };
+    installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', vertexShaders });
+    expect(THREE.ShaderLib.basic.vertexShader).toBe('godot');
+  });
+
+  it('installs a patch of program edits alone, proved by its mark in the program', () => {
+    THREE.ShaderLib.basic.fragmentShader = 'basic';
+    const patch = {
+      edits: [],
+      mark: 'godot',
+      patch: 'programs',
+      fragmentShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
+    };
+    expect([installChunkEdits(patch), installChunkEdits(patch)]).toEqual([true, true]);
+    expect(THREE.ShaderLib.basic.fragmentShader).toBe('godot');
+  });
+
+  it("proves a patch of program edits by the mark in a program's vertex shader", () => {
+    THREE.ShaderLib.basic.vertexShader = 'basic';
+    const patch = {
+      edits: [],
+      mark: 'godot',
+      patch: 'programs',
+      vertexShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
+    };
+    expect([installChunkEdits(patch), installChunkEdits(patch)]).toEqual([true, true]);
+    expect(THREE.ShaderLib.basic.vertexShader).toBe('godot');
+  });
+
+  it('throws for a mark that no edit writes (error case)', () => {
+    const patch = { edits: [], mark: 'godot', patch: 'programs' };
+    expect(() => installChunkEdits(patch)).toThrow(/expected an edit of the programs patch to write/);
+  });
+
+  it("leaves the chunks and both stages alone when a program's vertex shader lacks an edit's text (error case)", () => {
+    THREE.ShaderLib.basic.fragmentShader = 'basic';
+    const patch = {
+      edits: [],
+      mark: 'godot',
+      patch: 'programs',
+      fragmentShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
+      vertexShaders: { basic: [{ three: 'absent', godot: 'godot' }] },
+    };
+    expect(warningsOf(() => installChunkEdits(patch))).toEqual([
+      "[Shading] three's basic fragment shader or basic vertex shader lacks a line the programs patch replaces",
+    ]);
+    expect(THREE.ShaderLib.basic.fragmentShader).toBe('basic');
   });
 
   it("leaves the chunks alone when a program lacks an edit's text (error case)", () => {

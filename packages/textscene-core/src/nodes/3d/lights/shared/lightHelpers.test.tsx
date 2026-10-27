@@ -1,5 +1,5 @@
 /**
- * Light, camera and audio gizmos show only for the selected node while the Gizmos toggle is on
+ * Light and audio gizmos show only for the selected node while the Gizmos toggle is on
  * (`light_3d_gizmo_plugin.cpp:160,200,243`): no selection gives no helpers however many lights
  * exist, and a light's path gives that light's helper alone. Hover is not a trigger.
  */
@@ -10,7 +10,6 @@ import type { TscnNode } from '../../../../parser/types';
 import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
-import type { Camera3DProperties } from '../../camera3d/types';
 
 import type { AudioStreamPlayer3DProperties } from '../../../audio/audiostreamplayer3d/types';
 
@@ -22,10 +21,8 @@ import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeConte
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
-import { InWorld } from '../../../../r3f/testing/InWorld';
 
 import '../../../../r3f/nodes/index';
-import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../../godot/scene/camera3d';
 import { AttenuationModel, DopplerTracking } from '../../../../godot/scene/audio';
 
 function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
@@ -359,177 +356,6 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     expect(helperWorldPos.x).toBeCloseTo(lightWorldPos.x, 5);
     expect(helperWorldPos.y).toBeCloseTo(lightWorldPos.y, 5);
     expect(helperWorldPos.z).toBeCloseTo(lightWorldPos.z, 5);
-  });
-});
-
-/** Camera3D's `THREE.CameraHelper` frustum is gated by `useGizmoState()` too. */
-function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): TscnNode {
-  const props: Camera3DProperties = {
-    name,
-    projection: Camera3DProjectionType.PERSPECTIVE,
-    fov: 75,
-    size: 1,
-    keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
-    near: 0.05,
-    far: 4000,
-    h_offset: 0,
-    v_offset: 0,
-    frustum_offset: { x: 0, y: 0 },
-    cull_mask: 1048575,
-    doppler_tracking: 0,
-    current: false,
-    ...overrides,
-  };
-  return { rawProperties: {}, name, type: 'Camera3D', children: [], properties: props };
-}
-
-describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () => {
-  it('renders zero CameraHelper frusta when the Gizmos toggle is off, selected', async () => {
-    const graph = createSceneGraphFromTscnScene({ nodes: [cameraNode('CamA')] });
-    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <ViewportModeProvider initialShowGizmos={false}>
-          <SelectionProvider>
-            <SelectSeeder path="CamA" />
-            <NodeDispatcher nodes={rootNodes} />
-          </SelectionProvider>
-        </ViewportModeProvider>
-      </HierarchyProvider>
-    );
-
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
-    expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(0);
-  });
-
-  it('renders zero CameraHelper frusta when nothing is selected', async () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [cameraNode('CamA'), cameraNode('CamB')],
-    });
-    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <NodeDispatcher nodes={rootNodes} />
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
-    expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(0);
-  });
-
-  it('renders exactly one CameraHelper when the camera path is selected', async () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [cameraNode('CamA'), cameraNode('CamB')],
-    });
-    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <SelectSeeder path="CamA" />
-          <InWorld>
-            <NodeDispatcher nodes={rootNodes} />
-          </InWorld>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
-    expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
-  });
-
-  it('tears the CameraHelper down when selection moves to a different camera', async () => {
-    const graph = createSceneGraphFromTscnScene({
-      nodes: [cameraNode('CamA'), cameraNode('CamB')],
-    });
-    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <SelectSeeder path="CamA" />
-          <InWorld>
-            <NodeDispatcher nodes={rootNodes} />
-          </InWorld>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
-    expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
-
-    await renderer.update(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <SelectSeeder path="CamB" />
-          <InWorld>
-            <NodeDispatcher nodes={rootNodes} />
-          </InWorld>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
-  });
-
-  it("CameraHelper sits at the camera's own world transform, not squared through a transformed ancestor", async () => {
-    // THREE.CameraHelper has the light helpers' `matrix = camera.matrixWorld`
-    // aliasing. Camera3D puts its transform on the `<perspectiveCamera>` with no
-    // group of its own, so only a transformed ancestor, whose group holds both
-    // the camera and its sibling helper, reproduces the doubling.
-    const parentNode: TscnNode = {
-      rawProperties: {},
-      name: 'Rig',
-      type: 'Node3D',
-      children: [cameraNode('RigCam')],
-      properties: {
-        name: 'Rig',
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 10, y: 5, z: -3 },
-        },
-      },
-    };
-    const graph = createSceneGraphFromTscnScene({ nodes: [parentNode] });
-    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
-
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-        <SelectionProvider>
-          <SelectSeeder path="Rig/RigCam" />
-          <InWorld>
-            <NodeDispatcher nodes={rootNodes} />
-          </InWorld>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    // The correction applies after one `useFrame` tick (see the DirectionalLight test).
-    await renderer.advanceFrames(1, 16);
-
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
-    scene.updateMatrixWorld(true);
-    const [helper] = findHelpersOfType(scene, THREE.CameraHelper);
-    expect(helper).toBeDefined();
-
-    const [cameraNode3] = renderer.scene.findAllByType('PerspectiveCamera');
-    expect(cameraNode3).toBeDefined();
-    const camera = cameraNode3!.instance as unknown as THREE.PerspectiveCamera;
-
-    const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
-    const cameraWorldPos = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
-    expect(cameraWorldPos.x).toBeCloseTo(10, 5);
-    expect(cameraWorldPos.y).toBeCloseTo(5, 5);
-    expect(cameraWorldPos.z).toBeCloseTo(-3, 5);
-    expect(helperWorldPos.x).toBeCloseTo(cameraWorldPos.x, 5);
-    expect(helperWorldPos.y).toBeCloseTo(cameraWorldPos.y, 5);
-    expect(helperWorldPos.z).toBeCloseTo(cameraWorldPos.z, 5);
   });
 });
 

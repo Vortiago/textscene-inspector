@@ -91,14 +91,21 @@ export const GIZMO_SCENES = [
     gizmos: true,
     select: 'Root/SpotLight3D',
   },
-  // unit-multi-camera.tscn (not unit-camera-basic.tscn): a red box sits
-  // in-frustum for depth reference alongside the selected CameraHelper.
+  // The Camera3D gizmo is Godot's pyramid or box, drawn for every camera (`camera_3d_gizmo_plugin.cpp:258`).
+  // unit-multi-camera.tscn (not unit-camera-basic.tscn): a red box sits in-frustum for depth
+  // reference. The selected golden draws MainCamera in full beside three faint cameras, and the
+  // unselected one draws all four faint.
   {
     name: 'camera3d-selected',
     file: 'unit-multi-camera.tscn',
     gizmos: true,
     select: 'Root/MainCamera',
   },
+  { name: 'camera3d-unselected', file: 'unit-multi-camera.tscn', gizmos: true },
+  // The Decal gizmo is Godot's box with vertical stubs and a tick (`decal_gizmo_plugin.cpp:92-128`),
+  // drawn for every decal. The selected golden draws one decal in full beside a faint one.
+  { name: 'decal-selected', file: 'unit-decal.tscn', gizmos: true, select: 'Scene/Decal_Albedo' },
+  { name: 'decal-unselected', file: 'unit-decal.tscn', gizmos: true },
   {
     name: 'audio-stream-player-3d-selected',
     file: 'unit-audio-stream-player.tscn',

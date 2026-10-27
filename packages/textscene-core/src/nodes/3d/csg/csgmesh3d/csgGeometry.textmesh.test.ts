@@ -108,7 +108,7 @@ describe('csgMesh3DGeometry for a TextMesh with depth', () => {
 });
 
 describe('csgMesh3DUndrawnMeshType for a TextMesh', () => {
-  it('names the type for a mesh whose font has no TrueType outlines', () => {
+  it('names the type for a mesh whose font has no readable outlines', () => {
     const notAnSfnt = { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) };
 
     expect(csgMesh3DUndrawnMeshType(PROPERTIES, contextWith(notAnSfnt))).toBe('TextMesh');

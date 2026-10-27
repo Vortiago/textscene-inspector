@@ -19,6 +19,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'quadmesh-orientation', file: 'unit-quadmesh-orientation.tscn' },
   { name: 'sphere-mesh-texture-uv', file: 'unit-sphere-mesh-texture-uv.tscn' },
   { name: 'text-mesh', file: 'unit-text-mesh.tscn' },
+  // The same scene under an OpenType-CFF font, whose outlines are cubic.
+  { name: 'text-mesh-cff', file: 'unit-text-mesh-cff.tscn' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
   { name: 'torus-mesh-texture-uv', file: 'unit-torus-mesh-texture-uv.tscn' },
   { name: 'tube-trail-mesh-texture-uv', file: 'unit-tube-trail-mesh-texture-uv.tscn' },

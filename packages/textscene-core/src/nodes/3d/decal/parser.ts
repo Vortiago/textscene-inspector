@@ -2,7 +2,7 @@
  * Decal parser: parses Decal TSCN properties into a typed shape, with Godot's defaults: size
  * (2, 2, 2), white opaque modulate, albedo_mix and emission_energy 1, normal_fade 0, upper and
  * lower fade 0.3, cull_mask 0xFFFFF (the 20 editor-visible layers), and distance fade off at
- * begin 40 and length 10. Texture references are set only when present.
+ * begin 40 and length 10, and sorting_offset 0. Texture references are set only when present.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -18,11 +18,8 @@ import type { Vector3 } from '../../../godot/math/vector.js';
 /** Godot Decal default box size. */
 const DEFAULT_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 
-/**
- * Godot Decal default `cull_mask`. Exported so the projection's own default argument cannot drift
- * from what the parser hands it.
- */
-export const DECAL_DEFAULT_CULL_MASK = GODOT_EDITOR_LAYERS_MASK;
+/** Godot Decal default `cull_mask`. */
+const DEFAULT_CULL_MASK = GODOT_EDITOR_LAYERS_MASK;
 
 export function parseDecal(heading: ParsedHeading, properties: Record<string, string>): DecalProperties {
   const baseProperties = parseNode3D(heading, properties);
@@ -48,10 +45,11 @@ export function parseDecal(heading: ParsedHeading, properties: Record<string, st
     // NaN-producing `pow` base later.
     upper_fade: Math.max(0, floatOr(properties.upper_fade, 0.3)),
     lower_fade: Math.max(0, floatOr(properties.lower_fade, 0.3)),
-    cull_mask: intOr(properties.cull_mask, DECAL_DEFAULT_CULL_MASK, 'Decal.cull_mask', 'uint32'),
+    cull_mask: intOr(properties.cull_mask, DEFAULT_CULL_MASK, 'Decal.cull_mask', 'uint32'),
     distance_fade_enabled: boolOr(properties.distance_fade_enabled, false),
     distance_fade_begin: floatOr(properties.distance_fade_begin, 40),
     distance_fade_length: floatOr(properties.distance_fade_length, 10),
+    sorting_offset: floatOr(properties.sorting_offset, 0),
   };
 
   if (properties.texture_albedo) result.texture_albedo = properties.texture_albedo;

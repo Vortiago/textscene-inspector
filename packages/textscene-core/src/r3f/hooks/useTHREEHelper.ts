@@ -123,7 +123,7 @@ export function usePrimitiveHelper<H extends HelperLike>(
 
 /**
  * For a helper whose constructor aliases `this.matrix = target.matrixWorld` with
- * `matrixAutoUpdate = false`: DirectionalLightHelper, PointLightHelper and CameraHelper. Mounted
+ * `matrixAutoUpdate = false`: DirectionalLightHelper and PointLightHelper. Mounted
  * under a non-identity parent, that alias applies the parent twice. SpotLightHelper is already
  * parent-aware. The correction runs in the per-frame `update()`, so keep `tickUpdate: true`.
  */
@@ -141,7 +141,7 @@ export function correctHelperForParentGroup<H extends THREE.Object3D & { update:
     const parent = helper.parent;
     if (parent) {
       parent.updateWorldMatrix(true, false);
-      // `CameraHelper.update()` leaves the camera's world matrix stale.
+      // The render loop refreshes the target's world matrix after this frame callback, so refresh it here.
       target.updateWorldMatrix(true, false);
       // Local = parent⁻¹ · target, so the parent chain reproduces the target's world matrix.
       // matrixWorld is copied too, so it is right before that traversal runs.
