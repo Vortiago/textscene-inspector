@@ -13,7 +13,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { InsideLockedInstance, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { InsideLockedInstance, lineMaterials, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 import {
   describeGizmoToggle,
   describeInstantiatedGizmo,
@@ -30,9 +31,13 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { reportsMaxTextureSize } from '../../../r3f/testing/reportsMaxTextureSize';
 import { decalAtlasRect, decalAtlasTexture, holdDecalTexture, releaseDecalTexture } from './decalAtlas';
+import { decalGizmoLines } from './gizmoLines';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
+
+/** `editors/3d_gizmos/gizmo_colors/decal` (`editor_settings.cpp:884`). */
+const GIZMO_COLOUR = godotColorToLinear({ r: 0.6, g: 0.5, b: 1 });
 
 /** The context a decal's atlas fits: the GPU limit the test canvas reports. */
 const GPU_TEXTURE_SIZE = 4096;
@@ -140,18 +145,27 @@ describeGizmoToggle('<Decal>', GIZMO_CASE);
 describeInstantiatedGizmo('<Decal>', GIZMO_CASE);
 
 describe('<Decal>', () => {
-  it('draws the box gizmo at its colour alpha 0.9 when the node is selected', async () => {
+  it("draws the box gizmo in Godot's decal colour, at the colour's alpha 1, when the node is selected", async () => {
     const renderer = await render({ node: makeNode(), selectedPath: NODE_NAME });
-    expect(lineOpacities(renderer)).toEqual([0.9]);
+    expect(lineOpacities(renderer)).toEqual([1]);
+    expect(lineMaterials(renderer)[0]!.color.toArray()).toEqual(GIZMO_COLOUR.toArray());
   });
 
   it.each([
     ['nothing is selected', undefined],
     ['a different node is selected', 'SomethingElse'],
-  ])('draws the box gizmo faintly, at 0.9 times 0.3, when %s', async (_label, selectedPath) => {
+  ])('draws the box gizmo faintly, at 0.3 of that alpha, when %s', async (_label, selectedPath) => {
     const renderer = await render({ node: makeNode(), selectedPath });
     expect(lineOpacities(renderer)).toHaveLength(1);
-    expect(lineOpacities(renderer)[0]).toBeCloseTo(0.27, 10);
+    expect(lineOpacities(renderer)[0]).toBeCloseTo(0.3, 10);
+    expect(lineMaterials(renderer)[0]!.color.toArray()).toEqual(GIZMO_COLOUR.toArray());
+  });
+
+  it("draws Godot's lines: full top and bottom edges, vertical stubs and the tick", async () => {
+    const renderer = await render({ node: makeNode(), selectedPath: NODE_NAME });
+    const [box] = renderer.scene.findAllByType('LineSegments');
+    const positions = (box!.instance as THREE.LineSegments).geometry.getAttribute('position').array;
+    expect(Array.from(positions)).toEqual(Array.from(decalGizmoLines({ x: 1, y: 1, z: 1 })));
   });
 
   it('scales the box gizmo by size', async () => {

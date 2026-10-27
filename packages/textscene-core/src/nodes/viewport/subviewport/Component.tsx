@@ -17,6 +17,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
+import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
 import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
 import {
@@ -47,6 +48,7 @@ import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
+import type { Vector2 } from '../../../godot/math/vector';
 import { viewportTargetSize } from './targetSize';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
@@ -84,17 +86,20 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // dispatcher hands it (subtreeConformance).
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
+  const size = viewportTargetSize(properties.size, useViewportRect(path));
   const contents = (
-    <World2DLightingBoundary>
-      <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
-    </World2DLightingBoundary>
+    <ViewportSizeProvider size={size}>
+      <World2DLightingBoundary>
+        <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
+      </World2DLightingBoundary>
+    </ViewportSizeProvider>
   );
 
   return (
     <Node node={node}>
       {rendersInline ? contents : null}
       {rasterizes ? (
-        <OffscreenViewport node={node} path={path} kind={kind} rendersInline={rendersInline}>
+        <OffscreenViewport node={node} path={path} size={size} kind={kind} rendersInline={rendersInline}>
           {rendersInline ? null : contents}
         </OffscreenViewport>
       ) : null}
@@ -104,6 +109,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
 
 interface OffscreenViewportProps extends NodeComponentProps {
   path: string;
+  size: Vector2;
   kind: '2d' | '3d';
   rendersInline: boolean;
 }
@@ -113,10 +119,10 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * A separate component, so a Control-only sub-viewport mounts none of its hooks
  * and leaves the key to `ControlRasterPass.tsx`.
  */
-function OffscreenViewport({ node, path, kind, rendersInline, children }: OffscreenViewportProps) {
+function OffscreenViewport({ node, path, size, kind, rendersInline, children }: OffscreenViewportProps) {
   const properties = node.properties as SubViewportProperties;
-  const { size, transparent_bg: transparentBg } = properties;
-  const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
+  const { transparent_bg: transparentBg } = properties;
+  const { x: width, y: height } = size;
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();

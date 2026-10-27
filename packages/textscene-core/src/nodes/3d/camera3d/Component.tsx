@@ -1,21 +1,19 @@
 /**
- * <Camera3D>: renders a Godot Camera3D as a non-active R3F camera with a CameraHelper gizmo, so
+ * <Camera3D>: renders a Godot Camera3D as a non-active R3F camera with Godot's editor gizmo, so
  * its placement shows in the editor viewport. The active viewport camera lives on the host
  * <Canvas>. This is a passive scene-tree node.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import type { ReactNode, RefObject } from 'react';
-import * as THREE from 'three';
+import type { ReactNode } from 'react';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
 import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
-import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../r3f/hooks/useTHREEHelper';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
+import { CameraGizmo } from './Gizmo';
 import { usePublishCamera } from '../../../r3f/environment/worldExposure';
 import { useResolvedCameraAttributes } from '../../../r3f/environment/useResolvedCameraAttributes';
 
@@ -67,23 +65,26 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     properties.projection === Camera3DProjectionType.ORTHOGONAL ? 'orthographicCamera' : 'perspectiveCamera';
 
   // PROJECTION_FRUSTUM draws through a perspective camera with a view offset. A new three camera
-  // class remounts, through the key, the tag, the lens fit and the gizmo with it.
+  // class remounts, through the key, the tag and the lens fit with it.
   return (
-    <SceneCamera
-      key={CameraElement}
-      element={CameraElement}
-      name={node.name}
-      tscnPath={tscnPath}
-      current={properties.current}
-      position={offsetPosition}
-      rotation={rotation}
-      scale={scale}
-      lens={lens}
-      near={safeNear}
-      far={safeFar}
-    >
-      {children}
-    </SceneCamera>
+    <>
+      <SceneCamera
+        key={CameraElement}
+        element={CameraElement}
+        name={node.name}
+        tscnPath={tscnPath}
+        current={properties.current}
+        position={offsetPosition}
+        rotation={rotation}
+        scale={scale}
+        lens={lens}
+        near={safeNear}
+        far={safeFar}
+      >
+        {children}
+      </SceneCamera>
+      <CameraGizmo lens={lens} near={properties.near} position={position} rotation={rotation} scale={scale} />
+    </>
   );
 }
 
@@ -135,46 +136,16 @@ function SceneCamera({
     fitToAspect(camera, fittedAspect(camera) ?? DEFAULT_ASPECT);
   }, [lens, near, far]);
   return (
-    <>
-      <CameraElement
-        ref={cameraRef}
-        name={name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        near={near}
-        far={far}
-      >
-        {children}
-      </CameraElement>
-      <CameraGizmo cameraRef={cameraRef} name={`${name}_helper`} />
-    </>
+    <CameraElement
+      ref={cameraRef}
+      name={name}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      near={near}
+      far={far}
+    >
+      {children}
+    </CameraElement>
   );
-}
-
-interface CameraGizmoProps {
-  cameraRef: RefObject<THREE.Camera | null>;
-  name: string;
-}
-
-function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
-  // The gizmo shows only while this Camera3D's tree row is selected, as the light gizmos do.
-  const visible = useGizmoDrawn('selected-only');
-  // `THREE.CameraHelper` aliases `this.matrix = camera.matrixWorld` with `matrixAutoUpdate = false`,
-  // as the light helpers do. Mounted as a `<primitive>` sibling inside the node's transform group,
-  // not at the scene root, it would double-transform the frustum under a transformed ancestor
-  // without `correctHelperForParentGroup`.
-  const helper = usePrimitiveHelper<THREE.CameraHelper>(() => {
-    if (!visible) return null;
-    const camera = cameraRef.current;
-    if (!camera) return null;
-    const created = new THREE.CameraHelper(camera);
-    created.name = name;
-    // The wrapped `update()` applies the correction (`r3f/hooks/useTHREEHelper.ts`), so
-    // `tickUpdate` stays at its default (true) though the frustum is static: one Matrix4 invert a
-    // frame, paid only while this camera is selected.
-    return correctHelperForParentGroup(created, camera);
-  }, [cameraRef, name, visible]);
-
-  return helper ? <primitive object={helper} /> : null;
 }
