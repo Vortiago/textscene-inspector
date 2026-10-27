@@ -21,7 +21,10 @@ function Exposed({ object, multiplier }: { object: THREE.Object3D; multiplier: n
 }
 
 function Published({ object, multiplier }: { object: THREE.Object3D; multiplier: number }) {
-  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: multiplier } });
+  usePublishCameraAttributes({
+    status: 'resolved',
+    attributes: { exposureMultiplier: multiplier, autoExposure: null },
+  });
   return <Lit object={object} />;
 }
 

@@ -367,7 +367,10 @@ describe('SkyLayer debanding', () => {
 
 /** Publishes a CameraAttributes of `multiplier` to the world it is in. */
 function Exposure({ multiplier }: { multiplier: number }) {
-  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: multiplier } });
+  usePublishCameraAttributes({
+    status: 'resolved',
+    attributes: { exposureMultiplier: multiplier, autoExposure: null },
+  });
   return null;
 }
 

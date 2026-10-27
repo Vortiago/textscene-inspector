@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { compositeProgram, GLOW_MAP_UNIFORM } from './godotCompositor';
+import { AUTO_EXPOSURE_SCALE_UNIFORM, LUMINANCE_UNIFORM } from './godotLuminance';
+import type { AutoExposure } from '../cameraattributes/types';
 import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from './godotGlowPyramid';
 import type { GlowParams } from './godotGlow';
 import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
@@ -26,6 +28,7 @@ function linearOptions(): CompositeOptions {
     glow: glowOn(),
     toneMapping: FILMIC,
     adjustments: null,
+    autoExposure: null,
     exposure: 1,
     transparentBackground: false,
     usesBicubicGlowUpscale: false,
@@ -46,6 +49,7 @@ function shaderOf(
     glow,
     toneMapping,
     adjustments,
+    autoExposure: null,
     exposure: 1,
     transparentBackground: false,
     usesBicubicGlowUpscale: true,
@@ -100,6 +104,7 @@ describe('compositeProgram — the shader it emits', () => {
       glow: glowOn(),
       toneMapping: FILMIC,
       adjustments: null,
+      autoExposure: null,
       exposure: 1,
       transparentBackground: true,
       usesBicubicGlowUpscale: true,
@@ -148,14 +153,14 @@ describe('compositeProgram — exposure', () => {
   // `tonemap_exposure` at 1.0, where a double-exposed glow or a scaled sum looks the same.
   it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
-    expect(glsl).toContain('* godotExposure');
+    expect(glsl).toContain('* godotFrameExposure');
     expect(glsl).toContain('godotToneMap(color)');
-    expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
+    expect(glsl).not.toMatch(/glow[^;]*godotFrameExposure/);
   });
 
   it('applies exposure exactly once, whichever side of the curve blends', () => {
     for (const mode of [GlowBlendMode.SCREEN, GlowBlendMode.SOFTLIGHT, GlowBlendMode.MIX]) {
-      const occurrences = body(glowOn({ glow_blend_mode: String(mode) })).match(/godotExposure/g);
+      const occurrences = body(glowOn({ glow_blend_mode: String(mode) })).match(/\* godotFrameExposure/g);
       expect(occurrences, `blend mode ${mode}`).toHaveLength(1);
     }
   });
@@ -163,13 +168,79 @@ describe('compositeProgram — exposure', () => {
   it('tonemaps operands that are exposed already', () => {
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
     expect(glsl).toContain('godotToneMap(glow)');
-    expect(glsl).toContain('godotToneMap(inputColor.rgb * godotExposure)');
+    expect(glsl).toContain('godotToneMap(inputColor.rgb * godotFrameExposure)');
   });
 
   it('blends the scene colour unclamped, so a negative channel lowers the glow as in Godot', () => {
     // `tonemap.glsl:875,892`: only `apply_tonemapping` clamps, after the blend. The sky's dither
     // leaves a channel below zero, and a clamp before the blend raises the sum by that much.
-    expect(body(glowOn())).toContain('godotGlowBlend(inputColor.rgb * godotExposure, glow)');
+    expect(body(glowOn())).toContain('godotGlowBlend(inputColor.rgb * godotFrameExposure, glow)');
+  });
+});
+
+const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance: 1 };
+
+/** `mainImage`'s body with an auto exposure on. */
+function autoBody(glow: GlowParams | null, tonemapExposure = 1): string {
+  const { fragmentShader } = compositeProgram({
+    glow,
+    toneMapping: FILMIC,
+    adjustments: null,
+    autoExposure: AUTO_EXPOSURE,
+    exposure: tonemapExposure,
+    transparentBackground: false,
+    usesBicubicGlowUpscale: true,
+  });
+  return fragmentShader.slice(fragmentShader.indexOf('void mainImage'));
+}
+
+describe('compositeProgram — auto exposure (tonemap.glsl:869-873)', () => {
+  it('multiplies the exposure by the gain, once, before the glow blend and the curve', () => {
+    for (const mode of [GlowBlendMode.SCREEN, GlowBlendMode.SOFTLIGHT, GlowBlendMode.MIX]) {
+      const glsl = autoBody(glowOn({ glow_blend_mode: String(mode) }));
+      expect(glsl.match(/godotAutoExposureGain\(\)/g), `blend mode ${mode}`).toHaveLength(1);
+      expect(glsl).toContain('inputColor.rgb * godotFrameExposure');
+    }
+  });
+
+  it('scales the exposure the tonemap holds, not replaces it (tonemap.glsl:869-873)', () => {
+    expect(autoBody(null)).toContain('float godotFrameExposure = godotExposure * godotAutoExposureGain();');
+  });
+
+  it('exposes the scene colour with the frame exposure without a glow too', () => {
+    expect(autoBody(null)).toContain('godotToneMap(inputColor.rgb * godotFrameExposure)');
+  });
+
+  it('leaves the gathered glow alone, which the bright pass has divided already', () => {
+    expect(autoBody(glowOn())).not.toMatch(/glow[^;]*godotFrameExposure/);
+  });
+
+  it('keeps the exposure as it is without an auto exposure, and samples no luminance', () => {
+    const glsl = composite(glowOn());
+    expect(glsl).toContain('float godotFrameExposure = godotExposure * godotAutoExposureGain();');
+    expect(glsl).toMatch(/float godotAutoExposureGain\(\) \{\s*return 1\.0;/);
+    expect(glsl).not.toContain(LUMINANCE_UNIFORM);
+  });
+});
+
+describe('compositeProgram — texture units', () => {
+  /** The fragment texture units a WebGL2 context guarantees. */
+  const GUARANTEED_UNITS = 16;
+  const EVERY_LEVEL = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((level) => [`glow_levels/${level}`, '1']));
+
+  it('holds every sampler of the shader and the frame under the units WebGL2 guarantees', () => {
+    const { fragmentShader } = compositeProgram({
+      glow: glowOn({ ...EVERY_LEVEL, glow_map: 'SubResource("Gradient_1")' }),
+      toneMapping: FILMIC,
+      adjustments: null,
+      autoExposure: AUTO_EXPOSURE,
+      exposure: 1,
+      transparentBackground: false,
+      usesBicubicGlowUpscale: true,
+    });
+    const samplers = fragmentShader.match(/^\s*uniform\s+sampler2D\s/gm) ?? [];
+    const frame = 1;
+    expect(samplers.length + frame).toBeLessThanOrEqual(GUARANTEED_UNITS);
   });
 });
 
@@ -177,7 +248,7 @@ describe('compositeProgram — which side of the tone curve the blend falls on',
   it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
     expect(glsl).toContain('godotToneMap(glow)');
-    expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
+    expect(glsl).not.toMatch(/glow[^;]*godotFrameExposure/);
   });
 
   it('blends before the tone curve for SCREEN and after it for SOFTLIGHT', () => {
@@ -274,7 +345,7 @@ describe('compositeProgram — with the glow flag clear', () => {
   const tone = { mode: ToneMapper.FILMIC, white: 1 };
 
   it('exposes the scene colour and applies the curve, in that order', () => {
-    expect(body(null, tone)).toContain('godotToneMap(inputColor.rgb * godotExposure)');
+    expect(body(null, tone)).toContain('godotToneMap(inputColor.rgb * godotFrameExposure)');
   });
 
   it('gathers no glow and declares no buffer to gather from', () => {
@@ -290,7 +361,7 @@ describe('compositeProgram — with the glow flag clear', () => {
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
     const glsl = composite(null, { mode: ToneMapper.LINEAR, white: 1 });
     expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
-    expect(glsl).toContain('* godotExposure');
+    expect(glsl).toContain('* godotFrameExposure');
   });
 });
 
@@ -367,6 +438,7 @@ describe('compositeProgram — the uniforms it returns', () => {
       glow,
       toneMapping: FILMIC,
       adjustments: null,
+      autoExposure: null,
       exposure,
       transparentBackground: false,
       usesBicubicGlowUpscale: true,
@@ -403,6 +475,21 @@ describe('compositeProgram — the uniforms it returns', () => {
     ];
     expect(Object.keys(program(glowOn()).uniforms)).toEqual(glowUniforms);
     expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([...glowUniforms, GLOW_MAP_UNIFORM]);
+  });
+
+  it('adds the luminance sampler, unbound, and the scale with an auto exposure', () => {
+    const { fragmentShader, uniforms } = compositeProgram({
+      glow: null,
+      toneMapping: FILMIC,
+      adjustments: null,
+      autoExposure: { scale: 0.7, minLuminance: 0, maxLuminance: 1 },
+      exposure: 1,
+      transparentBackground: false,
+      usesBicubicGlowUpscale: true,
+    });
+    expect(uniforms[LUMINANCE_UNIFORM]).toBeNull();
+    expect(uniforms[AUTO_EXPOSURE_SCALE_UNIFORM]).toBe(0.7);
+    expect(Object.keys(uniforms).sort()).toEqual(declaredUniforms(fragmentShader).sort());
   });
 
   it('starts the exposure at the authored value and each texture unbound', () => {

@@ -14,8 +14,10 @@ import { waitFor } from '@testing-library/react';
 import { useCompositorPass, type CompositorPass } from './useCompositorPass';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import type { EnvironmentSettings } from '../../resources/environment/types';
+import type { AutoExposure } from '../../resources/cameraattributes/types';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { COMMIT_FRAMES_AFTER_SETTLE, ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
+import { usePublishCameraAttributes, WorldExposureScope } from './worldExposure';
 import { withProject } from '../testing/ProjectFixture';
 import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
 
@@ -33,6 +35,11 @@ function switchableMesh() {
   };
 }
 
+function PublishedAutoExposure({ autoExposure }: { autoExposure: AutoExposure | null }) {
+  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: 1, autoExposure } });
+  return null;
+}
+
 interface Mounted {
   renderer: Renderer;
   pass: () => CompositorPass | null;
@@ -45,6 +52,7 @@ async function mount(
     loader = new ResourceLoader(),
     content = new THREE.Object3D(),
     Wrapper = Fragment as ComponentType<{ children: ReactNode }>,
+    autoExposure = null as AutoExposure | null,
   } = {}
 ): Promise<Mounted> {
   const seen: { pass: CompositorPass | null } = { pass: null };
@@ -54,10 +62,21 @@ async function mount(
     seen.pass = useCompositorPass(settings);
     return null;
   }
+  /** The world's attributes, which the hook reads its auto exposure from. */
+  function WorldWithAutoExposure({ children }: { children: ReactNode }) {
+    return (
+      <WorldExposureScope>
+        <PublishedAutoExposure autoExposure={autoExposure} />
+        {children}
+      </WorldExposureScope>
+    );
+  }
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderContext.Provider value={loader}>
       <Wrapper>
-        <Probe />
+        <WorldWithAutoExposure>
+          <Probe />
+        </WorldWithAutoExposure>
       </Wrapper>
     </ResourceLoaderContext.Provider>,
     { gl: rendererOver(context) }
@@ -81,7 +100,7 @@ describe('useCompositorPass for an Environment', () => {
 
   it('mounts a pass without glow for the adjustments alone', async () => {
     const { pass } = await mount(environmentSettingsOf({ adjustment_enabled: 'true' }));
-    expect(pass()).toEqual({ glow: null, samples: 0 });
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null });
   });
 
   it('mounts no pass for an enabled glow whose every level weight is zero (edge case)', async () => {
@@ -96,6 +115,33 @@ describe('useCompositorPass for an Environment', () => {
   });
 });
 
+const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance: 1 };
+
+describe('useCompositorPass for an auto exposure', () => {
+  // Godot reduces the luminance whenever the camera attributes enable it (`renderer_scene_render_rd.cpp:551`).
+  it('mounts a pass without glow for the auto exposure alone, and carries it', async () => {
+    const { pass } = await mount(environmentSettingsOf({}), { autoExposure: AUTO_EXPOSURE });
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: AUTO_EXPOSURE });
+  });
+
+  it('mounts a pass for the auto exposure with no Environment', async () => {
+    const { pass } = await mount(null, { autoExposure: AUTO_EXPOSURE });
+    expect(pass()?.autoExposure).toBe(AUTO_EXPOSURE);
+  });
+
+  it('carries it with the glow', async () => {
+    const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'true' }), {
+      autoExposure: AUTO_EXPOSURE,
+    });
+    expect([pass()?.glow, pass()?.autoExposure]).toEqual([expect.anything(), AUTO_EXPOSURE]);
+  });
+
+  it('mounts no pass on a canvas without a real GL context (error path)', async () => {
+    const { pass } = await mount(null, { autoExposure: AUTO_EXPOSURE, context: null });
+    expect(pass()).toBeNull();
+  });
+});
+
 describe('useCompositorPass with no Environment', () => {
   it('mounts no pass when nothing blends and MSAA is off', async () => {
     const { pass } = await mount(null);
@@ -105,7 +151,7 @@ describe('useCompositorPass with no Environment', () => {
   it('mounts a multisampled pass without glow for MSAA alone', async () => {
     const Wrapper = withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n');
     const { pass } = await mount(null, { Wrapper });
-    await waitFor(() => expect(pass()).toEqual({ glow: null, samples: 4 }));
+    await waitFor(() => expect(pass()).toEqual({ glow: null, samples: 4, autoExposure: null }));
   });
 
   it('mounts a pass without glow for a blended surface', async () => {
@@ -113,7 +159,7 @@ describe('useCompositorPass with no Environment', () => {
     blend();
     const { renderer, pass } = await mount(null, { content: mesh });
     await advance(renderer, 1);
-    expect(pass()).toEqual({ glow: null, samples: 0 });
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null });
   });
 });
 
