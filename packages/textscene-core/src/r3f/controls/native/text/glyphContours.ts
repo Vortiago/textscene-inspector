@@ -10,6 +10,7 @@
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
+import { ftMulFix } from './fontMetrics';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
@@ -39,6 +40,19 @@ export interface ScaledOutline {
   y: number[];
   tags: ContourTag[];
   contourEnds: number[];
+}
+
+/** The entries `[xx, xy, yx, yy]` of a 2 x 2 matrix, 16.16. */
+export type Matrix2x2 = readonly [number, number, number, number];
+
+/** `FT_Vector_Transform` of every point of `outline` by `matrix`. */
+export function transformOutline(outline: ScaledOutline, [xx, xy, yx, yy]: Matrix2x2): void {
+  for (let i = 0; i < outline.x.length; i++) {
+    const x = outline.x[i]!;
+    const y = outline.y[i]!;
+    outline.x[i] = ftMulFix(x, xx) + ftMulFix(y, xy);
+    outline.y[i] = ftMulFix(x, yx) + ftMulFix(y, yy);
+  }
 }
 
 const FIXED_26_6 = 64;

@@ -4,17 +4,19 @@
  * of a CID-keyed font or of a `CFF2` table may hold a matrix of its own.
  */
 
-import { box, fontOf, glyph, ZONES } from './cffHinting.testkit';
-import { charstring as cs, type TestCffFont, type TestDictOperand } from './sfntCff.testkit';
-
-/** The largest integer that takes fewer than five bytes in a DICT here. */
-const MAX_SMALL = 1131;
+import { box, cff2Of, fontOf, glyph, ZONES } from './cffHinting.testkit';
+import {
+  charstring as cs,
+  MAX_TWO_BYTE_INTEGER,
+  type TestCffFont,
+  type TestDictOperand,
+} from './sfntCff.testkit';
 
 /** The six operands `a b c d e f` of a `FontMatrix`: a whole number as an integer, the rest, texts included, as reals. */
 export function matrixOperands(...values: readonly (number | string)[]): TestDictOperand[] {
   return values.map((value) => {
     if (typeof value === 'string' || !Number.isInteger(value)) return { real: value };
-    return Math.abs(value) <= MAX_SMALL ? { small: value } : value;
+    return Math.abs(value) <= MAX_TWO_BYTE_INTEGER ? { small: value } : value;
   });
 }
 
@@ -61,11 +63,4 @@ export const SHEARED_FONT_DICTS_FONT = cidFont(
   matrixOperands(0.001, 0, 0.0003, 0.001, 0, 0)
 );
 
-/** The charstrings of a `CFF2` table have no `endchar`. */
-export const CFF2_HALF_SIZE_FONT: TestCffFont = {
-  unitsPerEm: 1000,
-  glyphs: [cs(), cs(...box(100, 0, 500, 700))],
-  cmap: new Map([[0x41, 1]]),
-  version: 2,
-  fontDictMatrices: [HALF_SIZE],
-};
+export const CFF2_HALF_SIZE_FONT = cff2Of([cs(...box(100, 0, 500, 700))], { fontDictMatrices: [HALF_SIZE] });

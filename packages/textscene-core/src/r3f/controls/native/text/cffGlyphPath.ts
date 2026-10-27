@@ -21,7 +21,11 @@ const QUEUED_NONE = 0;
 const QUEUED_LINE = 1;
 const QUEUED_CURVE = 2;
 
-/** Where the end of a queued element sits in `GlyphPath.queued`. */
+/** Where the points of a queued element sit in `GlyphPath.queued`: the control points of a curve, then its end. */
+const FIRST_X = 0;
+const FIRST_Y = 1;
+const SECOND_X = 2;
+const SECOND_Y = 3;
 const END_X = 4;
 const END_Y = 5;
 
@@ -30,8 +34,6 @@ export class GlyphPath {
   private hintMap: HintMap;
   /** The map in force when the contour began, which draws the line that closes it. */
   private firstHintMap: HintMap;
-  /** The scale from character space to device space, which places x. */
-  private readonly scale: number;
   /** A contour's start and the point drawn last, in character space. The path starts at the origin whatever the charstring's first move says. */
   private startX = 0;
   private startY = 0;
@@ -55,7 +57,6 @@ export class GlyphPath {
     private readonly blues: BlueZones,
     private readonly hintOrigin: number
   ) {
-    this.scale = blues.scale;
     this.initialMap = new HintMap(blues);
     this.hintMap = new HintMap(blues, this.initialMap);
     this.firstHintMap = this.hintMap.clone();
@@ -85,7 +86,13 @@ export class GlyphPath {
 
   curveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void {
     this.drawQueued();
-    this.queued.set([x1, y1, x2, y2, x3, y3]);
+    const { queued } = this;
+    queued[FIRST_X] = x1;
+    queued[FIRST_Y] = y1;
+    queued[SECOND_X] = x2;
+    queued[SECOND_Y] = y2;
+    queued[END_X] = x3;
+    queued[END_Y] = y3;
     this.queuedKind = QUEUED_CURVE;
     if (this.hints.mask.isNew) this.buildHintMap();
     this.currentX = x3;
@@ -125,7 +132,7 @@ export class GlyphPath {
   private startContour(): void {
     // A path with no move at all synthesizes one at the origin, which also builds the first map.
     if (!this.hintMap.isValid) this.moveTo(this.startX, this.startY);
-    this.currentDeviceX = ftMulFix(this.currentX, this.scale);
+    this.currentDeviceX = this.deviceX(this.currentX);
     this.currentDeviceY = this.hintMap.map(this.currentY);
     this.pen.moveTo(this.currentDeviceX, this.currentDeviceY);
   }
@@ -139,15 +146,15 @@ export class GlyphPath {
   private draw(map: HintMap, nextX: number, nextY: number, endMap: HintMap): void {
     const { queued } = this;
     if (this.queuedKind === QUEUED_LINE) {
-      this.lineToDevice(ftMulFix(queued[END_X]!, this.scale), endMap.map(queued[END_Y]!));
+      this.lineToDevice(this.deviceX(queued[END_X]!), endMap.map(queued[END_Y]!));
     } else {
-      const endX = ftMulFix(queued[END_X]!, this.scale);
+      const endX = this.deviceX(queued[END_X]!);
       const endY = map.map(queued[END_Y]!);
       this.pen.curveTo(
-        ftMulFix(queued[0]!, this.scale),
-        map.map(queued[1]!),
-        ftMulFix(queued[2]!, this.scale),
-        map.map(queued[3]!),
+        this.deviceX(queued[FIRST_X]!),
+        map.map(queued[FIRST_Y]!),
+        this.deviceX(queued[SECOND_X]!),
+        map.map(queued[SECOND_Y]!),
         endX,
         endY
       );
@@ -157,7 +164,12 @@ export class GlyphPath {
     // The same end placed by the same map is where the pen already is.
     const endsAtNext = nextX === queued[END_X] && nextY === queued[END_Y];
     if (endsAtNext && (this.queuedKind === QUEUED_LINE || endMap === map)) return;
-    this.lineToDevice(ftMulFix(nextX, this.scale), endMap.map(nextY));
+    this.lineToDevice(this.deviceX(nextX), endMap.map(nextY));
+  }
+
+  /** x in device space: x is scaled and never hinted. */
+  private deviceX(x: number): number {
+    return ftMulFix(x, this.blues.scale);
   }
 
   private lineToDevice(x: number, y: number): void {

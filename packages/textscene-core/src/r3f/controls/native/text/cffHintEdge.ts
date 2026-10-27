@@ -100,8 +100,8 @@ export function stemEdge(
   }
 
   csCoord += hintOrigin;
-  if (flags === 0 || !stem.used) return { flags, csCoord, dsCoord: ftMulFix(csCoord, scale), scale, index };
-  const edge = { flags, csCoord, dsCoord: 0, scale, index };
+  const edge = { flags, csCoord, dsCoord: ftMulFix(csCoord, scale), scale, index };
+  if (flags === 0 || !stem.used) return edge;
   edge.dsCoord = isTopEdge(edge) ? stem.maxDS : stem.minDS;
   edge.flags |= EdgeFlag.Locked;
   return edge;

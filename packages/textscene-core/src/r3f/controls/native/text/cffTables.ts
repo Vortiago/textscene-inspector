@@ -9,12 +9,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import {
-  readFontMatrixEntry,
-  resolveFontMatrices,
-  type FontMatrix,
-  type FontMatrixEntry,
-} from './cffFontMatrix';
+import { resolveFontMatrices, type FontMatrix } from './cffFontMatrix';
+import { readFontMatrix } from './cffFontMatrixOperands';
 import { privateBluesOf, type PrivateBlues } from './cffPrivateDict';
 import {
   EXPERT_CHARSET,
@@ -78,8 +74,13 @@ const OP_FDSELECT = 1237;
 /** Operators run to 26, since the CFF2 Top and Private DICTs add `vsindex`, `blend`, `vstore` and `maxstack` above CFF's 21. */
 const LAST_OPERATOR = 26;
 
-/** The operands of each operator, except the `FontMatrix`, whose entry is a `FontMatrixEntry`: its reals need their digits. */
 export type Dict = ReadonlyMap<number, readonly number[]>;
+
+/** A DICT's operands, and its `FontMatrix`, which needs the digits of its reals and so is not read from the operands. */
+interface ParsedDict {
+  readonly operands: Dict;
+  readonly fontMatrix: FontMatrix | undefined;
+}
 
 class CffReader {
   constructor(
@@ -110,12 +111,14 @@ class CffReader {
   }
 
   /** The DICT in bytes `[start, end)`: each operator with the operands before it. */
-  dict(start: number, end: number): Dict {
+  dict(start: number, end: number): ParsedDict {
     const entries = new Map<number, readonly number[]>();
+    let fontMatrix: FontMatrix | undefined;
     let operands: number[] = [];
+    // Where each operand starts, kept for the FontMatrix: the operands before a `blend` are the first it leaves.
     let operandStarts: number[] = [];
     let at = start;
-    let operandAt = start;
+    let operandAt: number;
     const take = (operand: number) => {
       operands.push(operand);
       operandStarts.push(operandAt);
@@ -128,9 +131,11 @@ class CffReader {
         operandStarts.length = operands.length;
       } else if (b0 <= LAST_OPERATOR) {
         const operator = b0 === 12 ? 1200 + this.dv.getUint8(at++) : b0;
-        const value =
-          operator === OP_FONT_MATRIX ? readFontMatrixEntry(this.dv, operandStarts, end) : operands;
-        if (value) entries.set(operator, value);
+        if (operator === OP_FONT_MATRIX) {
+          fontMatrix = readFontMatrix(this.dv, operands, operandStarts, end) ?? undefined;
+        } else {
+          entries.set(operator, operands);
+        }
         operands = [];
         operandStarts = [];
       } else if (b0 === 28) {
@@ -149,7 +154,7 @@ class CffReader {
         take(twoByteInteger(b0, this.dv.getUint8(at++)));
       }
     }
-    return entries;
+    return { operands: entries, fontMatrix };
   }
 
   /** The packed-nibble real number (Technical Note 5176 Table 5) whose first byte after the `30` operator is at `start`. */
@@ -178,11 +183,6 @@ function defaultInstance(operands: number[]): number[] {
 
 function first(dict: Dict, operator: number): number | undefined {
   return dict.get(operator)?.[0];
-}
-
-/** The `FontMatrix` of a DICT, which `CffReader.dict` keeps as an entry rather than as operands. */
-function fontMatrixOf(dict: Dict): FontMatrixEntry | undefined {
-  return dict.get(OP_FONT_MATRIX) as FontMatrixEntry | undefined;
 }
 
 /** The integer of a number whose first byte is 247 to 254: 247 to 250 are positive, 251 to 254 negative (Technical Note 5176 Table 3). */
@@ -282,7 +282,7 @@ function regionCounts(dv: DataView, store: number): readonly (number | null)[] {
   });
 }
 
-function fontDictsOf(reader: CffReader, at: number): Dict[] {
+function fontDictsOf(reader: CffReader, at: number): ParsedDict[] {
   const index = reader.index(at);
   return Array.from({ length: index.count }, (_, i) => {
     const { start, end } = index.entry(i)!;
@@ -290,12 +290,12 @@ function fontDictsOf(reader: CffReader, at: number): Dict[] {
   });
 }
 
-function privateOf(reader: CffReader, base: number, font: Dict, isCff2: boolean): CffPrivate {
-  const [size, offset] = font.get(OP_PRIVATE) ?? [0, 0];
+function privateOf(reader: CffReader, base: number, font: ParsedDict, isCff2: boolean): CffPrivate {
+  const [size, offset] = font.operands.get(OP_PRIVATE) ?? [0, 0];
   if (!size || offset === undefined)
     return { localSubrs: EMPTY_INDEX, vsindex: 0, blues: privateBluesOf(new Map()) };
   const start = base + offset;
-  const priv = reader.dict(start, start + size);
+  const priv = reader.dict(start, start + size).operands;
   const subrs = first(priv, OP_SUBRS);
   return {
     localSubrs: subrs === undefined ? EMPTY_INDEX : reader.index(start + subrs),
@@ -305,7 +305,7 @@ function privateOf(reader: CffReader, base: number, font: Dict, isCff2: boolean)
 }
 
 /** The Top DICT, and where the global subroutine INDEX that follows it starts, or null for a CFF with no Top DICT. */
-function topDictOf(reader: CffReader, base: number): { topDict: Dict; globalSubrsAt: number } | null {
+function topDictOf(reader: CffReader, base: number): { topDict: ParsedDict; globalSubrsAt: number } | null {
   const { dv, isCff2 } = reader;
   if (isCff2) {
     const headerSize = dv.getUint8(base + 2);
@@ -328,29 +328,30 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
   const top = topDictOf(reader, base);
   if (!top) return null;
   const { topDict, globalSubrsAt } = top;
-  const charStringsAt = first(topDict, OP_CHARSTRINGS);
+  const topOperands = topDict.operands;
+  const charStringsAt = first(topOperands, OP_CHARSTRINGS);
   if (charStringsAt === undefined) return null;
   const charStrings = reader.index(base + charStringsAt);
   const globalSubrs = reader.index(globalSubrsAt);
 
-  const fdArrayAt = first(topDict, OP_FDARRAY);
-  const fdSelectAt = first(topDict, OP_FDSELECT);
+  const fdArrayAt = first(topOperands, OP_FDARRAY);
+  const fdSelectAt = first(topOperands, OP_FDSELECT);
   // FreeType reads the font dicts of a CFF only for a CID-keyed font, which the `ROS` operator marks.
-  const hasFontDicts = fdArrayAt !== undefined && (isCff2 || topDict.has(OP_ROS));
+  const hasFontDicts = fdArrayAt !== undefined && (isCff2 || topOperands.has(OP_ROS));
   const fontDicts = hasFontDicts ? fontDictsOf(reader, base + fdArrayAt) : [topDict];
   const privates = fontDicts.map((font) => privateOf(reader, base, font, isCff2));
   const fdOf =
     hasFontDicts && fdSelectAt !== undefined ? fdSelector(dv, base + fdSelectAt, charStrings.count) : () => 0;
   const matrices = resolveFontMatrices(
-    fontMatrixOf(topDict),
-    hasFontDicts ? fontDicts.map(fontMatrixOf) : null,
+    topDict.fontMatrix,
+    hasFontDicts ? fontDicts.map((font) => font.fontMatrix) : null,
     readHeadUnitsPerEm(sfnt)
   );
 
-  const charsetAt = first(topDict, OP_CHARSET) ?? 0;
+  const charsetAt = first(topOperands, OP_CHARSET) ?? 0;
   const sids = isCff2 ? [] : charsetSids(dv, base, charsetAt, charStrings.count);
   if (!sids) return null;
-  const varStoreAt = first(topDict, OP_VARSTORE);
+  const varStoreAt = first(topOperands, OP_VARSTORE);
   const counts = varStoreAt === undefined ? [] : regionCounts(dv, base + varStoreAt + 2);
   return {
     dv,
@@ -359,8 +360,7 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
     globalSubrs,
     privateOf: (glyphIndex) => privates[fdOf(glyphIndex)] ?? privates[0]!,
     unitsPerEm: matrices.top.unitsPerEm,
-    matrixOf: (glyphIndex) =>
-      matrices.fontDicts ? (matrices.fontDicts[fdOf(glyphIndex)] ?? matrices.fontDicts[0]!) : matrices.top,
+    matrixOf: (glyphIndex) => matrices.fontDicts[fdOf(glyphIndex)] ?? matrices.fontDicts[0]!,
     glyphOfStandardCode: (code) => {
       if (code < 0 || code > 255) return null;
       const glyphIndex = sids.indexOf(standardEncodingSid(code));

@@ -29,10 +29,10 @@ export class HintMask {
   /** Reads the mask for `stemCount` stems from `readByte` (`cf2_hintmask_read`). No byte is read for no stems. */
   read(stemCount: number, readByte: () => number): void {
     this.setCount(stemCount);
-    for (let first = 0; first < stemCount; first += 8) {
-      const byte = readByte();
-      for (let i = first; i < Math.min(first + 8, stemCount); i++)
-        this.bits[i] = ((byte >> (7 - (i - first))) & 1) === 1;
+    let byte = 0;
+    for (let i = 0; i < stemCount; i++) {
+      if (i % 8 === 0) byte = readByte();
+      this.bits[i] = ((byte >> (7 - (i % 8))) & 1) === 1;
     }
   }
 

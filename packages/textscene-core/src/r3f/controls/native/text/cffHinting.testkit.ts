@@ -216,14 +216,17 @@ const CFF2_GLYPHS = [
   cs(-10, 20, 680, 20, 'hstem', ...box(100, -10, 500, 700)),
   cs(0, 20, 660, 20, 'hstem', ...box(100, 0, 500, 700)),
 ];
-const cff2Font = (extra: Partial<TestCffFont>): TestCffFont => ({
+
+/** A `CFF2` font of 1000 units per em, with an empty `.notdef` ahead of `glyphs`. */
+export const cff2Of = (glyphs: readonly (readonly number[])[], extra: Partial<TestCffFont>): TestCffFont => ({
   unitsPerEm: 1000,
-  glyphs: [cs(), ...CFF2_GLYPHS],
-  cmap: new Map(CFF2_GLYPHS.map((_, i) => [0x41 + i, i + 1])),
+  glyphs: [cs(), ...glyphs],
+  cmap: new Map(glyphs.map((_, i) => [0x41 + i, i + 1])),
   version: 2,
-  blues: CFF2_BLUES,
   ...extra,
 });
+const cff2Font = (extra: Partial<TestCffFont>): TestCffFont =>
+  cff2Of(CFF2_GLYPHS, { blues: CFF2_BLUES, ...extra });
 
 export const CFF2_FONT = cff2Font({});
 export const CFF2_BLENDED_FONT = cff2Font({ variation: { regionCounts: [1], vsindex: 0 } });

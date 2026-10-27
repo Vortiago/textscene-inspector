@@ -10,7 +10,13 @@
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { ftMulFix, getFontOutlineScale } from './fontMetrics';
-import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
+import {
+  scaledOutlineContours,
+  transformOutline,
+  type GlyphContourReader,
+  type Matrix2x2,
+  type ScaledOutline,
+} from './glyphContours';
 import { readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
 
 const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
@@ -110,9 +116,6 @@ function readSimpleGlyph(dv: DataView, glyph: number, contourCount: number, scal
   };
 }
 
-/** A 2x2 matrix as 16.16 fixed point, `[xx, xy, yx, yy]`. */
-type Matrix2x2 = readonly [number, number, number, number];
-
 /** A component's matrix, or null for the identity. */
 function readComponentMatrix(
   dv: DataView,
@@ -129,16 +132,6 @@ function readComponentMatrix(
     return { matrix: [entry(0), entry(4), entry(2), entry(6)], next: at + 8 };
   }
   return { matrix: null, next: at };
-}
-
-/** `FT_Vector_Transform` of every point of `outline` by `[xx, xy, yx, yy]`. */
-function transformOutline(outline: ScaledOutline, [xx, xy, yx, yy]: Matrix2x2): void {
-  for (let i = 0; i < outline.x.length; i++) {
-    const x = outline.x[i]!;
-    const y = outline.y[i]!;
-    outline.x[i] = ftMulFix(x, xx) + ftMulFix(y, xy);
-    outline.y[i] = ftMulFix(x, yx) + ftMulFix(y, yy);
-  }
 }
 
 class GlyphReader {

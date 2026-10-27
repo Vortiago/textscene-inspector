@@ -65,10 +65,15 @@ const OPERATORS = {
 
 type OperatorName = keyof typeof OPERATORS;
 
+/** The largest magnitude a DICT or charstring integer takes in at most two bytes. */
+export const MAX_TWO_BYTE_INTEGER = 1131;
+
 function operandBytes(value: number): number[] {
   if (value >= -107 && value <= 107) return [value + 139];
-  if (value >= 108 && value <= 1131) return [((value - 108) >> 8) + 247, (value - 108) & 0xff];
-  if (value <= -108 && value >= -1131) return [((-value - 108) >> 8) + 251, (-value - 108) & 0xff];
+  if (value >= 108 && value <= MAX_TWO_BYTE_INTEGER)
+    return [((value - 108) >> 8) + 247, (value - 108) & 0xff];
+  if (value <= -108 && value >= -MAX_TWO_BYTE_INTEGER)
+    return [((-value - 108) >> 8) + 251, (-value - 108) & 0xff];
   return [28, (value >> 8) & 0xff, value & 0xff];
 }
 

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFontMatrixEntry } from './cffFontMatrix';
+import { readFontMatrix } from './cffFontMatrixOperands';
 import {
   CFF2_HALF_SIZE_FONT,
   EXPONENT_FONT,
@@ -89,38 +89,44 @@ describe('the FontMatrix of a font dict', () => {
  * it falls back to looks the same, so Godot does not show them.
  */
 describe('reading the operands of a FontMatrix', () => {
-  const entryOf = (...values: (number | string)[]) => {
+  const matrixOf = (...values: (number | string)[]) => {
     const bytes: number[] = [];
     const starts = matrixOperands(...values).map((operand) => {
       const at = bytes.length;
       bytes.push(...dictOperandBytes(operand));
       return at;
     });
-    return readFontMatrixEntry(new DataView(new Uint8Array(bytes).buffer), starts, bytes.length);
+    return readFontMatrix(
+      new DataView(new Uint8Array(bytes).buffer),
+      values.map(Number),
+      starts,
+      bytes.length
+    );
   };
-  const DEFAULT_ENTRY = [65536, 0, 0, 65536, 0, 0, 1];
+  const DEFAULT_MATRIX = { xx: 65536, yx: 0, xy: 0, yy: 65536, offsetX: 0, offsetY: 0, unitsPerEm: 1 };
 
   it('keeps the operands at the one scale that fits the largest, and the scale as units per em', () => {
-    expect(entryOf(0.001, 0, 0.0003, 0.001, 0.05, 0.02)).toEqual([6554, 0, 1966, 6554, 327680, 131072, 100]);
+    expect(matrixOf(0.001, 0, 0.0003, 0.001, 0.05, 0.02)).toEqual({
+      xx: 6554,
+      yx: 0,
+      xy: 1966,
+      yy: 6554,
+      offsetX: 327680,
+      offsetY: 131072,
+      unitsPerEm: 100,
+    });
   });
 
-  it('falls back to the default matrix for operands that differ by more than nine powers of ten', () => {
-    expect(entryOf(0.001, 0, 0, 0.001, 1e-13, 0)).toEqual(DEFAULT_ENTRY);
-  });
-
-  it('falls back to the default matrix for operands larger than a 16.16 number', () => {
-    expect(entryOf(100000, 0, 0, 100000, 0, 0)).toEqual(DEFAULT_ENTRY);
-  });
-
-  it('falls back to the default matrix for a matrix without a determinant', () => {
-    expect(entryOf(0.001, 0, 0.001, 0, 0, 0)).toEqual(DEFAULT_ENTRY);
-  });
-
-  it('falls back to the default matrix for operands that are all zero', () => {
-    expect(entryOf(0, 0, 0, 0, 0, 0)).toEqual(DEFAULT_ENTRY);
+  it.each([
+    ['operands that differ by more than nine powers of ten', [0.001, 0, 0, 0.001, 1e-13, 0]],
+    ['operands larger than a 16.16 number', [100000, 0, 0, 100000, 0, 0]],
+    ['a matrix without a determinant', [0.001, 0, 0.001, 0, 0, 0]],
+    ['operands that are all zero', [0, 0, 0, 0, 0, 0]],
+  ])('falls back to the default matrix for %s', (_, values) => {
+    expect(matrixOf(...values)).toEqual(DEFAULT_MATRIX);
   });
 
   it('reads no matrix from fewer than six operands', () => {
-    expect(entryOf(0.001, 0, 0, 0.001, 0)).toBeNull();
+    expect(matrixOf(0.001, 0, 0, 0.001, 0)).toBeNull();
   });
 });

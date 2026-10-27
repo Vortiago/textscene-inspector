@@ -155,6 +155,7 @@ export class HintMap {
     if (isPair && top.csCoord < bottom.csCoord) return;
 
     const { edges } = this;
+    // Indexed, not `findIndex`: no closure per insert.
     let at = 0;
     while (at < edges.length && edges[at]!.csCoord < first.csCoord) at++;
     const next = edges[at];
