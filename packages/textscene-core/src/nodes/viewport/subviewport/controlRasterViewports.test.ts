@@ -118,7 +118,7 @@ texture = ExtResource("2")
   it('keeps the OUTER scope for a host-authored child of an instance node', () => {
     // A multi-root sub-scene does not collapse: the instance node stays, its
     // authored children keep the outer scope, and the loaded roots get the
-    // sub-scene's, the split `liveStep` documents.
+    // sub-scene's, the split `LiveTree.stepOf` documents.
     const authored = parse(`[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://inner.png" id="9"]

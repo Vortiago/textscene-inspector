@@ -121,14 +121,17 @@ describe('a step reused by a tree over a later snapshot', () => {
     expect(stepOver(instance, rootScope(ctx), ctx.sceneCache)).toBe(first);
   });
 
-  it('takes the step of a scope again after it was asked in many others (edge case)', () => {
+  it('keeps the step of a scope it was asked in after it was asked in many others (edge case)', () => {
     const ctx = contextOver(main, { 'res://kid.tscn': kid });
     const first = stepOver(instance, rootScope(ctx), ctx.sceneCache);
     for (let other = 0; other < 20; other++) {
-      stepOver(instance, { ...rootScope(ctx), externalResources: [] }, ctx.sceneCache);
-      stepOver(instance, { ...rootScope(ctx), internalResources: [] }, ctx.sceneCache);
+      stepOver(
+        instance,
+        { ...rootScope(ctx), instancedScenePaths: [`res://room${other}.tscn`] },
+        ctx.sceneCache
+      );
     }
 
-    expect(stepOver(instance, rootScope(ctx), ctx.sceneCache)).not.toBe(first);
+    expect(stepOver(instance, rootScope(ctx), ctx.sceneCache)).toBe(first);
   });
 });

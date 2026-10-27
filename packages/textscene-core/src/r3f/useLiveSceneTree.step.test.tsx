@@ -3,13 +3,14 @@
  * is the tree's, so a load of a scene or GLB it did not read hands back the same object.
  */
 import { describe, expect, it } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import type { ReactNode } from 'react';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { makeNode } from '../parser/testing/parserKit.js';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types.js';
+import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
@@ -40,6 +41,21 @@ function mount(node: TscnNode) {
   );
   const hook = renderHook(() => useLiveStepOf(node, scope), { wrapper });
   return { fake, hook };
+}
+
+/** Asks the step of the instance, and then lets `kid.tscn` land with no event, as a load nobody listens for does. */
+function LoadsUnseen({ fake }: { fake: ReturnType<typeof createFakeResourceLoader> }) {
+  useLiveStepOf(instance, scope);
+  fake.scenes.seed('res://kid.tscn', kid);
+  return null;
+}
+
+/** Records, for each render, whether the scene reads as loaded and whether the step merged it. */
+function MountedScene({ renders }: { renders: [loaded: boolean, merged: boolean][] }) {
+  const loaded =
+    useInstancedScene('ExtResource("1")', externalResources, 'res://kid.tscn').status === 'loaded';
+  renders.push([loaded, useLiveStepOf(instance, scope).isMerged]);
+  return null;
 }
 
 describe('useLiveStepOf', () => {
@@ -74,5 +90,36 @@ describe('useLiveStepOf', () => {
     const hook = renderHook(() => useLiveStepOf(instance, scope));
 
     expect([hook.result.current.node, hook.result.current.isMerged]).toEqual([instance, false]);
+  });
+
+  it('never gives a step that has not read a scene the same render finds loaded', () => {
+    const fake = createFakeResourceLoader();
+    const renders: [loaded: boolean, merged: boolean][] = [];
+
+    render(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <LoadsUnseen fake={fake} />
+        <MountedScene renders={renders} />
+      </ResourceLoaderProvider>
+    );
+
+    expect(renders.filter(([loaded, merged]) => loaded && !merged)).toEqual([]);
+  });
+
+  it('never gives a step that has not read a scene the same render finds loaded, for a load by event', () => {
+    const fake = createFakeResourceLoader();
+    const renders: [loaded: boolean, merged: boolean][] = [];
+    render(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <MountedScene renders={renders} />
+      </ResourceLoaderProvider>
+    );
+
+    act(() => fake.scenes._resolve('res://kid.tscn', kid));
+
+    expect([renders.at(-1), renders.filter(([loaded, merged]) => loaded && !merged)]).toEqual([
+      [true, true],
+      [],
+    ]);
   });
 });

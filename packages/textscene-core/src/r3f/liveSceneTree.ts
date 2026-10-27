@@ -550,7 +550,7 @@ export class LiveTree {
       recordingReads(glbs, (path, answer) => glbReads.set(path, answer))
     );
     const others = entries.filter((entry) => entry !== previous);
-    stepsByNode.set(node, [...others, { scope: own, sceneReads, glbReads, step }].slice(-STEPS_PER_NODE));
+    stepsByNode.set(node, [...others, { scope: own, sceneReads, glbReads, step }]);
     return step;
   }
 
@@ -589,16 +589,11 @@ interface RememberedStep {
 }
 
 /**
- * The scopes one node keeps a step for. A tree row and the viewport ask in scopes of their own, and a
- * sub-scene's node is asked under each chain of scenes that encloses it. The oldest step drops out
- * first and is taken again when asked.
- */
-const STEPS_PER_NODE = 8;
-
-/**
  * Written only by {@link LiveTree.stepOf}: the steps of a node under each scope it was asked in.
  * They outlive the tree that took them, since a load that a step did not read leaves it as it is.
- * The entries clear when nothing holds the node any more.
+ * A sub-scene's node is asked under each chain of scenes that encloses it, so a node keeps every
+ * scope it was asked in: an evicting limit would take the step again at each load. The scopes are
+ * the scenes' own and finite, and the entries clear when nothing holds the node any more.
  */
 const stepsByNode = new WeakMap<LiveNode, RememberedStep[]>();
 
