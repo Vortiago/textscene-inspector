@@ -62,7 +62,11 @@ export interface ResRoot extends ResourceProvider {
   listFiles(extension: string): Promise<readonly string[]>;
 }
 
-/** The roots of one host's scenes, and every answer read from the filesystem to find them. */
+/**
+ * The roots of one host's scenes, and every answer read from the filesystem to find them.
+ *
+ * @oneWay `res://` roots
+ */
 export interface ResRoots {
   /** The root of the scene at the absolute `scene` path, or null for a scene in no project and outside the workspace. */
   rootOf(scene: string): Promise<ResRoot | null>;

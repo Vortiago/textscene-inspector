@@ -37,6 +37,8 @@ export function boolLiteralAsNumber(text: string): 1 | 0 | undefined {
  * The double a literal holds in an INT or FLOAT slot, or `null` for text the tokenizer cannot read:
  * the BOOL arm first, then the TSCN float grammar. Every reader of a numeric property starts here.
  * A packed-array element is no property write and reads {@link parseGodotFloat} alone.
+ *
+ * @oneWay A scalar slot
  */
 export function scalarSlotValue(text: string): number | null {
   return boolLiteralAsNumber(text) ?? parseGodotFloat(text);
@@ -45,6 +47,8 @@ export function scalarSlotValue(text: string): number | null {
 /**
  * {@link scalarSlotValue} of a property as the file writes it: undefined for an absent key and for
  * a value the slot refuses. `inf` and `nan` stay, for a consumer that draws what Godot draws.
+ *
+ * @oneWay A scalar slot that the consumer draws as `inf` and `nan`, as Godot does
  */
 export function writtenScalarSlotValue(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;

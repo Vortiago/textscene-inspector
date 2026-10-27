@@ -29,17 +29,30 @@ function keyedLookup<T, K, V>(
 const entryItself = <T>(entry: T): T => entry;
 const indexItself = <T>(_entry: T, index: number): number => index;
 
-/** The first entry of a table whose key is `key`, or undefined where none is. */
+/**
+ * The first entry of a table whose key is `key`, or undefined where none is.
+ *
+ * @oneWay An entry by its key in a frozen table
+ *   They build one Map for each table.
+ */
 export function firstWith<T, K>(keyOf: (entry: T) => K): (table: readonly T[], key: K) => T | undefined {
   return keyedLookup(keyOf, entryItself, true);
 }
 
-/** The last entry of a table whose key is `key`, or undefined where none is. */
+/**
+ * The last entry of a table whose key is `key`, or undefined where none is.
+ *
+ * @oneWay An entry by its key in a frozen table
+ */
 export function lastWith<T, K>(keyOf: (entry: T) => K): (table: readonly T[], key: K) => T | undefined {
   return keyedLookup(keyOf, entryItself, false);
 }
 
-/** The index of the first entry of a table whose key is `key`, or undefined where none is. */
+/**
+ * The index of the first entry of a table whose key is `key`, or undefined where none is.
+ *
+ * @oneWay An entry by its key in a frozen table
+ */
 export function firstIndexWith<T, K>(
   keyOf: (entry: T) => K
 ): (table: readonly T[], key: K) => number | undefined {

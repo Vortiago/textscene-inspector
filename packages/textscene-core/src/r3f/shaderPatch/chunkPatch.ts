@@ -259,6 +259,8 @@ function editedText(patch: ChunkEditsPatch<ChunkName>): string {
  * first installs each patch in `requires`, and one that fails skips this patch. A three release
  * that lacks a replaced text keeps all of three's own text, and the call warns once and is false.
  * A second call changes nothing.
+ *
+ * @oneWay A text edit on three's shader chunks
  */
 export function installChunkEdits<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): boolean {
   if (THREE.ShaderChunk[markedChunk(patch)].includes(patch.mark)) return true;

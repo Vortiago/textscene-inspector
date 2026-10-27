@@ -38,6 +38,8 @@ function tupleRegex(typeName: string, arity: number, convertible: boolean): RegE
  * `can_convert_strict` converts into that type, because the write goes through
  * `VariantCaster<T>::cast` (`binder_common.h:223`): `SubViewport.size = Vector2(1920, 1080)`
  * is a file Godot opens.
+ *
+ * @oneWay A composite in a property slot
  */
 export function slotTupleRegex(typeName: string, arity: number): RegExp {
   return tupleRegex(typeName, arity, true);
@@ -51,6 +53,8 @@ export const TRANSFORM2D_SLOT_RE = slotTupleRegex('Transform2D', 6);
  * An animation keyframe keeps the Variant, so the slot grammar would truncate a `Vector3`
  * rotation key to whole degrees. Two named functions, no default: they differ for eight
  * type names, and a call site does not show which one it reads.
+ *
+ * @oneWay A composite in a Variant position, such as an animation keyframe
  */
 export function variantTupleRegex(typeName: string, arity: number): RegExp {
   return tupleRegex(typeName, arity, false);

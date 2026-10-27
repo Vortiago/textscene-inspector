@@ -23,6 +23,8 @@ const PARAM_BOUND_KEYS: readonly string[] = CPU_PARTICLES_PARAMS.flatMap((stem) 
  * `properties` without its non-finite bounds, in the order the file lists the rest, and those
  * bounds. The stored form is tested, since `1e39` is finite as a double and inf as a `real_t`. With
  * every bound finite, `drawable` is `properties` itself.
+ *
+ * @oneWay The CPUParticles2D bounds a draw can use
  */
 export function drawableParamBounds(properties: Record<string, string>): {
   drawable: Record<string, string>;

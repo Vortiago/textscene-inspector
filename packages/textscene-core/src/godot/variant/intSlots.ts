@@ -72,6 +72,8 @@ export function ruleInt(
  * The int the slot stores, or `null` for text Godot cannot read or a FLOAT it cannot convert. An INT
  * literal past the round-trip band wraps, so the renderer draws what Godot holds. Same shape as
  * {@link ruleInt}, which the linter uses.
+ *
+ * @oneWay An integer in an int slot
  */
 export function slotInt(
   raw: string | undefined,
