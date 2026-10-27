@@ -60,8 +60,9 @@ SpringArm3D and VehicleWheel3D draw in the collision colour at its alpha of 0.42
 so their unselected lines draw at 0.126.
 
 The Camera3D and Decal gizmos draw Godot's own lines in the colours of `editor_settings.cpp:883-884`.
-The camera lines take the aspect the previewer fits the camera to, and they sit on the node, not on
-the camera that `h_offset` and `v_offset` move. The PathFollow handle is a previewer addition, since
+The camera lines take the aspect of the viewport that holds the camera, which is the nearest
+SubViewport or else the project's window size (`node_3d_editor_plugin.cpp:10445`), and they sit on the
+node, not on the camera that `h_offset` and `v_offset` move. The PathFollow handle is a previewer addition, since
 Godot draws no gizmo for a follower.
 
 ### The instantiated look

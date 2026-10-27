@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { identityTransform3D } from '../../../godot/math/transform3d';
+import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { GizmoScene, lineMaterials, lineOpacities, type TestRenderer } from '../../../r3f/testing/GizmoScene';
 import {
@@ -21,14 +22,13 @@ import { instanceAs } from '../testing/reactThreeTestInstance';
 import { makeCameraNode } from './cameraNode.testkit';
 import { Camera3D } from './Component';
 import { cameraGizmoLines } from './gizmoLines';
-import { fitToAspect } from './projectionFit';
 
 const NODE_PATH = 'Cam';
 
 /** `editors/3d_gizmos/gizmo_colors/camera` (`editor_settings.cpp:883`). */
 const GIZMO_COLOUR = godotColorToLinear({ r: 0.8, g: 0.4, b: 0.8 });
 
-/** The lines of the default camera, which mounts at 16:9, for `aspect`. */
+/** The lines of the default camera for `aspect`. */
 function defaultLines(aspect = 16 / 9): number[] {
   const lens = {
     projection: Camera3DProjectionType.PERSPECTIVE,
@@ -47,11 +47,18 @@ interface Place {
   instantiated?: boolean;
   /** Puts the camera under a group at this position. */
   ancestorAt?: [number, number, number];
+  /** Puts the camera in a viewport of this size, as a SubViewport does. */
+  viewportSize?: { x: number; y: number };
 }
 
-function camera(node: TscnNode, ancestorAt?: Place['ancestorAt']): ReactNode {
+function camera(
+  node: TscnNode,
+  ancestorAt?: Place['ancestorAt'],
+  viewportSize?: Place['viewportSize']
+): ReactNode {
   const mounted = <Camera3D node={node} />;
-  return ancestorAt ? <group position={ancestorAt}>{mounted}</group> : mounted;
+  const placed = ancestorAt ? <group position={ancestorAt}>{mounted}</group> : mounted;
+  return viewportSize ? <ViewportSizeProvider size={viewportSize}>{placed}</ViewportSizeProvider> : placed;
 }
 
 async function render({
@@ -60,6 +67,7 @@ async function render({
   showGizmos = true,
   instantiated = false,
   ancestorAt,
+  viewportSize,
 }: Place = {}) {
   return ReactThreeTestRenderer.create(
     <GizmoScene
@@ -68,7 +76,7 @@ async function render({
       showGizmos={showGizmos}
       instantiated={instantiated}
     >
-      {camera(node, ancestorAt)}
+      {camera(node, ancestorAt, viewportSize)}
     </GizmoScene>
   );
 }
@@ -108,7 +116,7 @@ describe('<Camera3D> gizmo', () => {
     expect(lineMaterials(renderer)[0]!.color.toArray()).toEqual(GIZMO_COLOUR.toArray());
   });
 
-  it('draws the pyramid of the default lens over the 16:9 aspect a camera mounts at', async () => {
+  it('draws the pyramid of the default lens over the default 1152 by 648 project viewport', async () => {
     expect(positionsOf(gizmoLine(await render()))).toEqual(defaultLines());
   });
 
@@ -129,10 +137,8 @@ describe('<Camera3D> gizmo', () => {
     expect(positionsOf(gizmoLine(renderer))).not.toEqual(before);
   });
 
-  it('redraws for the aspect that a viewport fits the camera to', async () => {
-    const renderer = await render();
-    const fitted = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
-    await ReactThreeTestRenderer.act(async () => fitToAspect(fitted, 0.5));
+  it('draws over the aspect of the viewport that holds the camera (`Node3DEditor::get_camera_viewport_size`)', async () => {
+    const renderer = await render({ viewportSize: { x: 200, y: 400 } });
     expect(positionsOf(gizmoLine(renderer))).toEqual(defaultLines(0.5));
   });
 

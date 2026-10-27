@@ -5,15 +5,17 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import type { ReactNode, RefObject } from 'react';
+import type { ReactNode } from 'react';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
-import { DEFAULT_ASPECT, fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
+import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
 import { CameraGizmo } from './Gizmo';
+
+const DEFAULT_ASPECT = 16 / 9;
 
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
@@ -59,15 +61,12 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   const CameraElement =
     properties.projection === Camera3DProjectionType.ORTHOGONAL ? 'orthographicCamera' : 'perspectiveCamera';
 
-  const cameraRef = useRef<FiberCamera>(null);
-
   // PROJECTION_FRUSTUM draws through a perspective camera with a view offset. A new three camera
-  // class remounts, through the key, the tag, the lens fit and the gizmo that listens to the camera.
+  // class remounts, through the key, the tag and the lens fit with it.
   return (
     <>
       <SceneCamera
         key={CameraElement}
-        cameraRef={cameraRef}
         element={CameraElement}
         name={node.name}
         tscnPath={tscnPath}
@@ -81,21 +80,12 @@ export function Camera3D({ node, children }: NodeComponentProps) {
       >
         {children}
       </SceneCamera>
-      <CameraGizmo
-        key={CameraElement}
-        cameraRef={cameraRef}
-        lens={lens}
-        near={properties.near}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-      />
+      <CameraGizmo lens={lens} near={properties.near} position={position} rotation={rotation} scale={scale} />
     </>
   );
 }
 
 interface SceneCameraProps {
-  cameraRef: RefObject<FiberCamera | null>;
   element: 'perspectiveCamera' | 'orthographicCamera';
   name: string;
   tscnPath: string;
@@ -111,7 +101,6 @@ interface SceneCameraProps {
 }
 
 function SceneCamera({
-  cameraRef,
   element: CameraElement,
   name,
   tscnPath,
@@ -124,6 +113,7 @@ function SceneCamera({
   far,
   children,
 }: SceneCameraProps) {
+  const cameraRef = useRef<FiberCamera>(null);
   useEffect(() => {
     if (cameraRef.current) {
       // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it,
@@ -132,7 +122,7 @@ function SceneCamera({
       cameraRef.current.userData.tscnPath = tscnPath;
       cameraRef.current.userData.tscnCurrent = current;
     }
-  }, [cameraRef, tscnPath, current]);
+  }, [tscnPath, current]);
   // `manual` keeps R3F's resize from refitting the projection to the canvas in pixels. The viewport
   // that renders through the camera refits it to its own aspect, and a lens change keeps that aspect.
   useLayoutEffect(() => {
@@ -141,7 +131,7 @@ function SceneCamera({
     camera.manual = true;
     setLens(camera, lens);
     fitToAspect(camera, fittedAspect(camera) ?? DEFAULT_ASPECT);
-  }, [cameraRef, lens, near, far]);
+  }, [lens, near, far]);
   return (
     <CameraElement
       ref={cameraRef}
