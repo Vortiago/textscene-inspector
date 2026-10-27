@@ -123,9 +123,11 @@ describe('<ControlRasterPasses>', () => {
     await advanceFrameWithStubbedGl(renderer, gl, (target) => {
       if (target) bound.push(target.texture);
     });
-    const bindings = bound.map((texture) =>
-      texture === plain.texture ? 'plain' : texture === decoding.texture ? 'decoding' : 'frame'
-    );
+    const labelOf = new Map<THREE.Texture | undefined, string>([
+      [plain.texture, 'plain'],
+      [decoding.texture, 'decoding'],
+    ]);
+    const bindings = bound.map((texture) => labelOf.get(texture) ?? 'frame');
     // The pass clears the plain target, draws into the frame, copies into the plain target.
     expect(bindings).toEqual(['plain', 'frame', 'plain', 'decoding']);
   });
@@ -215,8 +217,8 @@ offset_bottom = 100.5
     }
   });
 
-  // `renderer_canvas_render_rd.cpp:679-682`: Godot's framebuffer row 0 is the canvas top, which
-  // decides the row a Control edge on a pixel centre covers.
+  // Godot's canvas puts the canvas top on framebuffer row 0 (`RendererCanvasRenderRD::canvas_render_items`
+  // screen transform), which decides the row a Control edge on a pixel centre covers.
   it('draws through a camera that maps the canvas top to NDC y = -1, as the 2D pass does', async () => {
     const { renderer, gl } = await mount(parse(GUI_SCENE));
     const drawn: { camera: THREE.Camera | null } = { camera: null };

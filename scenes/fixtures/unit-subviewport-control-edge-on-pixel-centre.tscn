@@ -1,6 +1,5 @@
 ; One variable: the bottom edge of a Control in a Control-only SubViewport sits on a pixel centre
-; in y (the ColorRect is 60.5 high). unit-subviewport-edge-on-pixel-centre moves the same edge in
-; a 2D viewport, and no other scene puts a Control edge on a centre.
+; in y. unit-subviewport-edge-on-pixel-centre moves the same edge in a 2D viewport.
 
 [gd_scene format=3 uid="uid://unitsubviewportcontroledge"]
 

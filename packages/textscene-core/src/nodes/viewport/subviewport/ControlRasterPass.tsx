@@ -23,9 +23,8 @@ import { nativeTheme } from '../../../r3f/controls/native/nativeTheme.js';
 import { measureText } from '../../../r3f/controls/native/text/measurer.js';
 import type { Rect2 } from '../../../godot/math/rect2.js';
 import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from './offscreenViewport.js';
-import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
-import { useCanvasPassCamera } from './useCanvasPassCamera.js';
+import { useCanvasPass } from './useCanvasPass.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
@@ -51,7 +50,8 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
 
-  const { size, transparent_bg: transparentBg } = node.properties as SubViewportProperties;
+  const properties = node.properties as SubViewportProperties;
+  const { size, transparent_bg: transparentBg } = properties;
   const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
 
   const gl = useThree((state) => state.gl);
@@ -71,15 +71,9 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     () => createCanvasTarget(width, height, node.name),
     [width, height, node.name]
   );
-  // Controls are canvas items, so the 2D buffer's mode applies, to the frame the pass draws
-  // through (ADR-0057). The target it copies into never multisamples.
+  // Controls are canvas items, so the 2D buffer's mode applies.
   const target = useMultisampledTarget(0, createTarget);
-  const frame = useMultisampledTarget(
-    viewportMsaaMode(node.properties as SubViewportProperties, '2d'),
-    createCanvasFrame
-  );
-
-  const camera = useCanvasPassCamera({ x: width, y: height });
+  const { camera, frame } = useCanvasPass(width, height, viewportMsaaMode(properties, '2d'));
 
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   // The rtl climb steps straight over a `SubViewport` (`control.cpp:3584-3598`,
@@ -115,7 +109,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-      <SubViewportSamplerScope properties={node.properties as SubViewportProperties}>
+      <SubViewportSamplerScope properties={properties}>
         <ControlCanvasWalker
           tree={tree}
           generation={generation}
