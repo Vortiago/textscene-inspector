@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { beginTextureWork, pendingTextureWork, subscribeTextureWork } from './textureWork';
+import { createWorkCount } from './workCount';
 
 const ends: Array<() => void> = [];
+const work = createWorkCount();
 function begin(): () => void {
-  const end = beginTextureWork();
+  const end = work.begin();
   ends.push(end);
   return end;
 }
@@ -11,12 +12,12 @@ afterEach(() => {
   ends.splice(0).forEach((end) => end());
 });
 
-describe('texture work', () => {
+describe('work count', () => {
   it('counts work from its start to its end', () => {
     const end = begin();
-    expect(pendingTextureWork()).toBe(1);
+    expect(work.pending()).toBe(1);
     end();
-    expect(pendingTextureWork()).toBe(0);
+    expect(work.pending()).toBe(0);
   });
 
   it('ends a piece of work once, however often its end is called', () => {
@@ -24,16 +25,22 @@ describe('texture work', () => {
     const end = begin();
     end();
     end();
-    expect(pendingTextureWork()).toBe(1);
+    expect(work.pending()).toBe(1);
   });
 
   it('notifies a subscriber on each change, until it unsubscribes', () => {
     const listener = vi.fn();
-    const unsubscribe = subscribeTextureWork(listener);
+    const unsubscribe = work.subscribe(listener);
     const end = begin();
     end();
     unsubscribe();
     begin();
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps one count apart from another', () => {
+    const other = createWorkCount();
+    begin();
+    expect(other.pending()).toBe(0);
   });
 });
