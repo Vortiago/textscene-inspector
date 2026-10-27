@@ -73,7 +73,7 @@ export function ruleInt(
  * literal past the round-trip band wraps, so the renderer draws what Godot holds. Same shape as
  * {@link ruleInt}, which the linter uses.
  *
- * @oneWay An integer in an int slot
+ * @canonical An integer in an int slot
  */
 export function slotInt(
   raw: string | undefined,

@@ -20,7 +20,7 @@ export function signedLightEnergy(
  * three's intensity: a negative light subtracts, in three as in Godot. The world's exposure scales
  * every light's energy as it fills the light buffer (`light_storage.cpp:656-658`, `:884-886`).
  *
- * @oneWay A light's intensity under the exposure of its world
+ * @canonical A light's intensity under the exposure of its world
  */
 export function useLightIntensity(
   properties: Pick<BaseLightProperties, 'light_energy' | 'light_negative'>

@@ -33,7 +33,7 @@ const stages = new WeakMap<THREE.Scene, Set<ExposureStage>>();
 /**
  * The factor `scene` renders with, or null without a world that holds an exposure.
  *
- * @oneWay The exposure a scene renders with
+ * @canonical The exposure a scene renders with
  */
 export function exposureOfScene(scene: THREE.Scene): number | null {
   return held.get(scene)?.view ?? null;
@@ -43,7 +43,7 @@ export function exposureOfScene(scene: THREE.Scene): number | null {
  * The factor of the attributes of the world of `scene` itself, or null without them. A camera of
  * the world may render it with others (`exposureOfScene`).
  *
- * @oneWay The exposure a scene renders with
+ * @canonical The exposure a scene renders with
  */
 export function worldExposureOfScene(scene: THREE.Scene): number | null {
   return held.get(scene)?.world ?? null;
@@ -53,7 +53,7 @@ export function worldExposureOfScene(scene: THREE.Scene): number | null {
  * Has `stage` run for each `drawAtExposure` of `scene` until the returned function runs. A consumer
  * whose state follows the exposure registers one, so a draw at another exposure shows it.
  *
- * @oneWay The state a scene draws for another exposure
+ * @canonical The state a scene draws for another exposure
  */
 export function registerExposureStage(scene: THREE.Scene, stage: ExposureStage): () => void {
   const registered = stages.get(scene) ?? new Set<ExposureStage>();
@@ -69,7 +69,7 @@ export function registerExposureStage(scene: THREE.Scene, stage: ExposureStage):
  * at the exposure the scene holds changes nothing. A light scales by the exposure over the held one,
  * so a scene at the held exposure 0, whose lights hold no energy, keeps them dark.
  *
- * @oneWay The state a scene draws for another exposure
+ * @canonical The state a scene draws for another exposure
  */
 export function drawAtExposure<T>(scene: THREE.Scene, exposure: number | null, draw: () => T): T {
   if (exposure === exposureOfScene(scene)) return draw();
@@ -93,7 +93,7 @@ export function drawAtExposure<T>(scene: THREE.Scene, exposure: number | null, d
  * under a held exposure of 0. A light that sets its own energy before each render applies it, since
  * `drawAtExposure` scales the energy only once.
  *
- * @oneWay The state a scene draws for another exposure
+ * @canonical The state a scene draws for another exposure
  */
 export function drawnExposureRatio(scene: THREE.Scene): number {
   const drawn = drawnExposures.get(scene);
@@ -131,7 +131,7 @@ function writeEmissionExposure(scene: THREE.Scene, factor: number): () => void {
  * `worldFactor` as the factor of its own attributes. A null factor holds nothing: the emission
  * buffer already reads 1 outside a render of a world that holds one.
  *
- * @oneWay The exposure a scene renders with
+ * @canonical The exposure a scene renders with
  */
 export function useSceneExposure(factor: number | null, worldFactor: number | null): void {
   const scene = useThree((state) => state.scene);

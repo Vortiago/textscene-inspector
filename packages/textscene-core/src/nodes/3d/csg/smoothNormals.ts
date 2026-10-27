@@ -107,7 +107,7 @@ export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
 /**
  * The brush of a shape that builds nothing.
  *
- * @oneWay An empty CSG brush
+ * @canonical An empty CSG brush
  */
 export function emptyBrush(): ShadedBrush {
   return shadeCsgFaces({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });

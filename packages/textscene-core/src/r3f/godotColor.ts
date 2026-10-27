@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
- * @oneWay A Godot sRGB colour as a linear `THREE.Color`
+ * @canonical A Godot sRGB colour as a linear `THREE.Color`
  */
 export function godotColorToLinear(c: { r: number; g: number; b: number }): THREE.Color {
   return setGodotColorLinear(new THREE.Color(), c);
@@ -18,7 +18,7 @@ export function godotColorToLinear(c: { r: number; g: number; b: number }): THRE
 /**
  * Writes Godot's sRGB `color` into `target` as linear, for a caller that allocates nothing per draw.
  *
- * @oneWay A Godot sRGB colour as a linear `THREE.Color`
+ * @canonical A Godot sRGB colour as a linear `THREE.Color`
  */
 export function setGodotColorLinear(
   target: THREE.Color,
@@ -31,7 +31,7 @@ export function setGodotColorLinear(
  * Memoised on the r/g/b values, not the object identity, so a colour object that churns per
  * render (animated modulate, re-derived properties) allocates no fresh THREE.Color.
  *
- * @oneWay A Godot sRGB colour as a linear `THREE.Color`
+ * @canonical A Godot sRGB colour as a linear `THREE.Color`
  */
 export function useGodotLinearColor(c: { r: number; g: number; b: number }): THREE.Color {
   const { r, g, b } = c;

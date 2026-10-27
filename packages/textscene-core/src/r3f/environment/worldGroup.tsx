@@ -45,7 +45,7 @@ export interface WorldPublications<T> {
  * The publications sort in tree order, as Godot's group sorts its nodes, an ancestor first
  * (`scene_tree.cpp:1568-1581`). React's mount order differs for a late sub-scene and for a child.
  *
- * @oneWay A value a node publishes to its viewport's world
+ * @canonical A value a node publishes to its viewport's world
  */
 export function createWorldPublications<T>(): WorldPublications<T> {
   const PublisherContext = createContext<Publisher<T> | null>(null);
@@ -111,7 +111,7 @@ export type WorldGroup<R extends { status: string }> = Pick<
 /**
  * A `pending` publication holds its place, since its resource may turn out valid.
  *
- * @oneWay The first valid resource of a world's WorldEnvironments
+ * @canonical The first valid resource of a world's WorldEnvironments
  */
 export function createWorldGroup<Resolved extends object>(): WorldGroup<WorldResolution<Resolved>> {
   type R = WorldResolution<Resolved>;

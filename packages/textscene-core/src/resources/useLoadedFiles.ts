@@ -58,7 +58,7 @@ const NO_BUS_TYPES: readonly ResourceType[] = [];
  * resource**. Only a load of a file the plan named re-runs the plan. A caller keeps `plan` stable
  * while its inputs hold.
  *
- * @oneWay A plan of many resource files to load
+ * @canonical A plan of many resource files to load
  */
 export function useLoadedFiles(plan: (loadedFile: LoadedFile) => readonly string[]): LoadedFiles {
   return useCachedFiles(PARSED_RESOURCES, plan);

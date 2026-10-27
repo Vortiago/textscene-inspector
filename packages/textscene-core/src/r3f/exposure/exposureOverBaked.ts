@@ -8,7 +8,7 @@
  * with no camera attributes (`render_forward_clustered.cpp:1222-1229`, `light_storage.cpp:1810-1814`).
  * Godot divides by the baked exposure as it is, so a baked exposure of 0 gives infinity there too.
  *
- * @oneWay The scale of a baked lightmap or a captured probe under the exposure
+ * @canonical The scale of a baked lightmap or a captured probe under the exposure
  */
 export function exposureOverBaked(exposure: number | null, bakedExposure: number): number {
   return exposure === null ? 1 : exposure / bakedExposure;
