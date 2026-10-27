@@ -258,6 +258,7 @@ Tag a new shared helper. Do not edit the list.
 - A plan of many resource files to load: `useLoadedFiles` in `resources/useLoadedFiles.ts`.
 - A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
   `resources/useSubOrExtResource.ts`.
+- A page-wide count of work in flight: `createWorkCount` in `resources/workCount.ts`.
 - A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
 - An entry by its key in a frozen table: `firstWith`, `lastWith` and `firstIndexWith` in
   `utils/keyedLookup.ts`. They build one Map for each table.
@@ -266,9 +267,12 @@ Tag a new shared helper. Do not edit the list.
 - A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a build
   that throws stores nothing. Pass `keeps` for a value that is not final yet, and `stamp` for a key
   whose contents change, as a texture's `version`.
+- In tests, the signed volume of a brush: `enclosedVolume` in `r3f/csg/testing/brushVolume.ts`.
 - In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
 - In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
 - In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in
   `r3f/testing/shaderPatches.ts`.
+- In tests, the distinct positions of a mesh: `distinctPositions` in
+  `resources/meshes/textmesh/distinctPositions.testkit.ts`.
 <!-- one-way:end -->
