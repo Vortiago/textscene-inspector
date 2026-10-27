@@ -51,6 +51,8 @@ export class LightmapInstance {
  * The factor a lightmap's atlas reads at: the world's exposure factor over the bake's, or 1
  * with no camera attributes (`render_forward_clustered.cpp:1222-1229`). Godot divides by the baked
  * exposure as it is, so a baked exposure of 0 gives infinity there too.
+ *
+ * @oneWay A lightmap's exposure scale
  */
 export function lightmapExposureScale(exposureFactor: number | null, bakedExposure: number): number {
   return exposureFactor === null ? 1 : exposureFactor / bakedExposure;

@@ -88,12 +88,18 @@ function ExposureProvider({ children }: { children: ReactNode }) {
  * The world's exposure factor, or null without CameraAttributes. A lightmap needs the
  * difference: with no attributes it reads 1, not the factor over its baked exposure
  * (`render_forward_clustered.cpp:1222-1229`).
+ *
+ * @oneWay The exposure factor of a world
  */
 export function useOptionalExposureFactor(): number | null {
   return useContext(ExposureContext);
 }
 
-/** The factor a consumer scales by: 1 without CameraAttributes. */
+/**
+ * The factor a consumer scales by: 1 without CameraAttributes.
+ *
+ * @oneWay The exposure factor of a world
+ */
 export function useExposureFactor(): number {
   return useOptionalExposureFactor() ?? 1;
 }

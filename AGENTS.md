@@ -203,6 +203,9 @@ Tag a new shared helper. Do not edit the list.
   `godot/classdb/enumNames.ts`, and `enumOr` in `parser/valueParsers.ts`.
 - Angles: `degToRad` and `radToDeg` in `godot/math/math.ts`.
 - A unit vector: `normalizedVector3` in `godot/math/vector.ts`.
+- The camera a viewport renders through: `electViewportCamera` in `godot/scene/camera3d.ts`.
+- The classes a CameraAttributes slot accepts: `CAMERA_ATTRIBUTES_TYPES` in
+  `godot/scene/cameraAttributes.ts`.
 - An integer from the file: `parseGodotInt` in `godot/variant/intReader.ts`.
 - An integer in an int slot: `slotInt` in `godot/variant/intSlots.ts`.
 - A composite in a property slot: `slotTupleRegex` in `godot/variant/number.ts`.
@@ -214,6 +217,8 @@ Tag a new shared helper. Do not edit the list.
 - The CPUParticles2D bounds a draw can use: `drawableParamBounds` in
   `nodes/2d/cpuparticles2d/drawableParamBounds.ts`.
 - An empty CSG brush: `emptyBrush` in `nodes/3d/csg/smoothNormals.ts`.
+- A light's intensity under the exposure of its world: `useLightIntensity` in
+  `nodes/3d/lights/shared/lightStrength.ts`.
 - One end of a `[connection]`: `connectionEndResolver` in `parser/connectionEnd.ts`.
 - A `real_t` field: `realOr`, `realVec2Or` and `realVec3Or` in `parser/valueParsers.ts`. They store
   a double beyond the float range as inf, as `real_t` does.
@@ -221,6 +226,14 @@ Tag a new shared helper. Do not edit the list.
 - A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
 - A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
   through it, before the upload.
+- The exposure factor of a world: `useOptionalExposureFactor` and `useExposureFactor` in
+  `r3f/environment/worldExposure.tsx`.
+- A value a node publishes to its viewport's world: `createWorldPublications` in
+  `r3f/environment/worldGroup.tsx`.
+- The first valid resource of a world's WorldEnvironments: `createWorldGroup` in
+  `r3f/environment/worldGroup.tsx`.
+- The exposure a scene renders with: `exposureOfScene` and `useSceneExposure` in
+  `r3f/exposure/sceneExposure.ts`.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
 - A Godot sRGB colour as a linear `THREE.Color`: `godotColorToLinear`, `setGodotColorLinear` and
   `useGodotLinearColor` in `r3f/godotColor.ts`.
@@ -232,6 +245,7 @@ Tag a new shared helper. Do not edit the list.
   `r3f/internal/glb-scene-root/glbHierarchy.ts`.
 - Where a node under a GLB instance attaches: `resolveGlbAttachments` in
   `r3f/internal/glb-scene-root/glbNodeOverrides.ts`. The scene tree and the viewport both call it.
+- A lightmap's exposure scale: `lightmapExposureScale` in `r3f/lightmap/sceneLightmaps.ts`.
 - A walk of the Live scene tree: `liveStep`, `LiveTree` and `walkLiveTree` in
   `r3f/liveSceneTree.ts`. Fold it with `LiveTree.fold`, and read one path with `LiveTree.at`.
 - Mesh content and its disposal: `useMeshContent` in `r3f/meshes/meshContent.ts`, and
