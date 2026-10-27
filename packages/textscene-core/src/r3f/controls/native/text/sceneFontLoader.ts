@@ -165,7 +165,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
       descent: boxMetrics.fontBoundingBoxDescent,
     };
     logger.info(
-      `[SceneFont] Node "${nodePath}": font bytes have no readable head and hhea tables; using canvas fontBoundingBoxAscent/Descent as a measured approximation for ascent/descent.`
+      `[SceneFont] Node "${nodePath}": font bytes did not open into readable head and hhea tables; using canvas fontBoundingBoxAscent/Descent as a measured approximation for ascent/descent.`
     );
   }
 

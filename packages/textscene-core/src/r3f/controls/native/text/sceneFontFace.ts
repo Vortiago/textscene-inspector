@@ -5,6 +5,10 @@
  * axis, so a font whose default is 300 draws a step too heavy without these.
  */
 
+/** The ranges CSS accepts for `font-weight` and `font-stretch`. A descriptor outside them rejects `FontFace.load()`. */
+const CSS_WEIGHT_RANGE = { min: 1, max: 1000 } as const;
+const CSS_MIN_STRETCH_PERCENT = 0;
+
 /**
  * `weight` and `stretch` are the route every engine honours, the VS Code floor of Chromium 114
  * included. `variationSettings` pins every axis, `opsz` too, where the engine reads it (Chrome 140+,
@@ -19,8 +23,10 @@ export function faceDescriptors(
 
   const { wght, wdth } = axisDefaults;
   return {
-    ...(wght !== undefined && { weight: String(wght) }),
-    ...(wdth !== undefined && { stretch: `${wdth}%` }),
+    ...(wght !== undefined &&
+      wght >= CSS_WEIGHT_RANGE.min &&
+      wght <= CSS_WEIGHT_RANGE.max && { weight: String(wght) }),
+    ...(wdth !== undefined && wdth >= CSS_MIN_STRETCH_PERCENT && { stretch: `${wdth}%` }),
     variationSettings: axes.map(([tag, value]) => `"${tag}" ${value}`).join(', '),
   };
 }

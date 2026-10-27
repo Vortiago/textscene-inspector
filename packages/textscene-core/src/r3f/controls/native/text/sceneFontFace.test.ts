@@ -90,6 +90,12 @@ describe('faceDescriptors', () => {
     expect(descriptors).toEqual({ variationSettings: '"CASL" 0.25' });
   });
 
+  it('leaves out a weight or stretch that CSS rejects, so the font still loads (error case)', () => {
+    const descriptors = faceDescriptors({ wght: 0, wdth: -5, CASL: 1 });
+
+    expect(descriptors).toEqual({ variationSettings: '"wght" 0, "wdth" -5, "CASL" 1' });
+  });
+
   it('answers no descriptors for a font with no axes', () => {
     expect(faceDescriptors({})).toBeUndefined();
   });

@@ -119,7 +119,8 @@ function isTransformedTable(tag: string, version: number): boolean {
 function readDirectoryEntry(reader: ByteReader): DirectoryEntry {
   const flags = reader.u8();
   const tagIndex = flags & TAG_INDEX_MASK;
-  const tag = tagIndex === ARBITRARY_TAG_INDEX ? reader.utf8(TAG_SIZE) : KNOWN_TAGS[tagIndex];
+  const tag =
+    tagIndex === ARBITRARY_TAG_INDEX ? String.fromCharCode(...reader.take(TAG_SIZE)) : KNOWN_TAGS[tagIndex];
   if (tag === undefined) throw new RangeError(`expected a known table tag index, got ${tagIndex}`);
   const isTransformed = isTransformedTable(tag, flags >> TRANSFORM_VERSION_SHIFT);
   const originalLength = readBase128(reader);
