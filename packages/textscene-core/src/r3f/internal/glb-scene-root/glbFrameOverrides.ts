@@ -55,7 +55,7 @@ export function applyGlbFrameOverride(
  * What hiding `frame` hides: its group, which holds the root bones or what hangs on the bone, and
  * every object that stands for a node below it, such as a skinned mesh the group does not hold.
  */
-export function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: GlbFrame): THREE.Object3D[] {
+function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: GlbFrame): THREE.Object3D[] {
   const below = `${frame.path}/`;
   const nodes = entries
     .filter(({ object }) => godotNodePaths(object).some((path) => path.startsWith(below)))
@@ -63,13 +63,20 @@ export function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: Glb
   return frame.group ? [frame.group, ...nodes] : nodes;
 }
 
+/** A frame of the GLB with the objects its `visible` governs, as {@link objectsBelowFrame} lists them. */
+export interface FrameMembers {
+  frame: GlbFrame;
+  below: readonly THREE.Object3D[];
+}
+
 /**
- * The group of each frame of the GLB that has one, whose `visible` the GLB root owns.
+ * Each Skeleton3D and BoneAttachment3D of the GLB with the objects below it. The GLB root hides
+ * them in turn, since a frame's `visible` and the `visible` of a node below it both apply.
  *
- * @oneWay The Skeleton3D and BoneAttachment3D groups of an instanced GLB
+ * @oneWay The Skeleton3D and BoneAttachment3D groups of an instanced GLB, with what each hides
  */
-export function frameGroupsOf(entries: readonly GlbObjectEntry[]): THREE.Object3D[] {
-  return glbFrames(entries).flatMap(({ group }) => group ?? []);
+export function frameMembers(entries: readonly GlbObjectEntry[]): FrameMembers[] {
+  return glbFrames(entries).map((frame) => ({ frame, below: objectsBelowFrame(entries, frame) }));
 }
 
 function warnUnreadProperties(entries: readonly GlbObjectEntry[], frame: GlbFrame, override: TscnNode): void {

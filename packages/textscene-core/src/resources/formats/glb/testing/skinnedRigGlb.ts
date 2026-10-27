@@ -2,6 +2,7 @@
  * A binary glTF of a skinned rig: the node Armature, at `offset`, holds the joint Hip
  * and the skinned mesh Body, whose three vertices all follow Hip. Its inverse bind matrix undoes
  * the offset, so the triangle draws where its vertices are. Godot builds Armature > Skeleton3D > Body.
+ * With `bodyChild`, Body also holds the node Cap, which makes Body stand for two Godot nodes.
  */
 
 import { binChunk, glbOfChunks, jsonChunk } from './triangleGlb';
@@ -10,7 +11,10 @@ const POSITIONS = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
 const JOINTS = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 const WEIGHTS = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]);
 
-export function skinnedRigGlb(offset: readonly [number, number, number]): ArrayBuffer {
+export function skinnedRigGlb(
+  offset: readonly [number, number, number],
+  { bodyChild = false } = {}
+): ArrayBuffer {
   // Column-major, so the translation sits in the last column.
   const inverseBind = new Float32Array([
     1,
@@ -43,7 +47,8 @@ export function skinnedRigGlb(offset: readonly [number, number, number]): ArrayB
     nodes: [
       { name: 'Armature', translation: [...offset], children: [1, 2] },
       { name: 'Hip' },
-      { name: 'Body', mesh: 0, skin: 0 },
+      { name: 'Body', mesh: 0, skin: 0, ...(bodyChild && { children: [3] }) },
+      ...(bodyChild ? [{ name: 'Cap' }] : []),
     ],
     skins: [{ joints: [1], inverseBindMatrices: 3 }],
     meshes: [{ primitives: [{ attributes: { POSITION: 0, JOINTS_0: 1, WEIGHTS_0: 2 } }] }],

@@ -228,8 +228,8 @@ Tag a new shared helper. Do not edit the list.
   `useExternalStoreValue` in `r3f/hooks/createExternalStore.ts`.
 - A React context that holds a store: `createStoreContext` in `r3f/hooks/createStoreContext.tsx`.
 - What an editor gizmo draws for its node: `useGizmoState` in `r3f/hooks/useGizmoState.ts`.
-- The Skeleton3D and BoneAttachment3D groups of an instanced GLB: `frameGroupsOf` in
-  `r3f/internal/glb-scene-root/glbFrameOverrides.ts`.
+- The Skeleton3D and BoneAttachment3D groups of an instanced GLB, with what each hides:
+  `frameMembers` in `r3f/internal/glb-scene-root/glbFrameOverrides.ts`.
 - The children of a GLB scene root: `glbSceneRootChildCount` in
   `r3f/internal/glb-scene-root/glbHierarchy.ts`.
 - Where a node under a GLB instance attaches: `resolveGlbAttachments` in

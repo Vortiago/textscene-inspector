@@ -16,7 +16,7 @@ import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInst
 import { joinPath } from '../../../utils/nodePath';
 import { perObject } from '../../../utils/perObject';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
-import { applyGlbFrameOverride, objectsBelowFrame } from './glbFrameOverrides.js';
+import { applyGlbFrameOverride } from './glbFrameOverrides.js';
 import { writeNodeTransform } from './glbNodeTransform.js';
 import { findGlbFrame, findGlbNode, findGlbTarget, matchGlbNode } from './glbPathLookup.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -192,24 +192,36 @@ function applyToNode(root: THREE.Object3D, entries: readonly GlbObjectEntry[], o
   return true;
 }
 
-/**
- * The objects the overrides with `visible = false` hide: the node each names, or for a Skeleton3D or
- * BoneAttachment3D the objects below it. The caller owns the result.
- */
+/** The objects the overrides with `visible = false` hide: the node each names. A frame is {@link hiddenGlbFramePaths}. The caller owns the result. */
 export function hiddenGlbObjects(
   root: THREE.Object3D,
   entries: readonly GlbObjectEntry[],
   overrides: readonly TscnNode[]
 ): Set<THREE.Object3D> {
   const hidden = new Set<THREE.Object3D>();
-  for (const override of overrides) {
-    if (boolSlotValue(override.rawProperties.visible) !== false || !isApplicableGlbOverride(override))
-      continue;
-    const frame = findGlbFrame(entries, glbOverridePath(override));
-    const objects = frame
-      ? objectsBelowFrame(entries, frame)
-      : [resolveGlbOverrideTarget(root, entries, override)];
-    for (const object of objects) if (object) hidden.add(object);
+  for (const override of hiddenOverrides(overrides)) {
+    if (findGlbFrame(entries, glbOverridePath(override))) continue;
+    const object = resolveGlbOverrideTarget(root, entries, override);
+    if (object) hidden.add(object);
   }
   return hidden;
+}
+
+/** The paths of the Skeleton3D and BoneAttachment3D nodes that the overrides with `visible = false` hide. */
+export function hiddenGlbFramePaths(
+  entries: readonly GlbObjectEntry[],
+  overrides: readonly TscnNode[]
+): Set<string> {
+  const hidden = new Set<string>();
+  for (const override of hiddenOverrides(overrides)) {
+    const frame = findGlbFrame(entries, glbOverridePath(override));
+    if (frame) hidden.add(frame.path);
+  }
+  return hidden;
+}
+
+function hiddenOverrides(overrides: readonly TscnNode[]): TscnNode[] {
+  return overrides.filter(
+    (override) => boolSlotValue(override.rawProperties.visible) === false && isApplicableGlbOverride(override)
+  );
 }

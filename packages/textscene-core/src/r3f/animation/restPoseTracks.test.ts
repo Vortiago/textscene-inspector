@@ -73,6 +73,20 @@ describe('composeTracksOntoRestPose', () => {
     ]);
   });
 
+  it("reads the rotation components in Godot's YXZ order", () => {
+    const angles = { x: 0.4, y: 0.9, z: 0.2 };
+    const tracks = (['x', 'y', 'z'] as const).map(
+      (axis) => new THREE.NumberKeyframeTrack(`${UUID}.rotation[${axis}]`, [0], [angles[axis]])
+    );
+    const expected = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(angles.x, angles.y, angles.z, 'YXZ')
+    );
+
+    const [composed] = composeTracksOntoRestPose(tracks, rest(new THREE.Vector3()));
+
+    Array.from(composed!.values).forEach((value, i) => expect(value).toBeCloseTo(expected.toArray()[i]!, 5));
+  });
+
   it('leaves a rotation with a component missing as it is', () => {
     const track = new THREE.NumberKeyframeTrack(`${UUID}.rotation[y]`, [0], [1]);
 

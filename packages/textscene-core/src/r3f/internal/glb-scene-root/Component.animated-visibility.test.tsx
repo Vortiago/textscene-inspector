@@ -19,6 +19,8 @@ import { visibleInTree } from '../../visibleInTree';
 import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
 import { RIG_GLB } from '../../../resources/formats/glb/testing/rigGlb';
+import { skinnedRigGlb } from '../../../resources/formats/glb/testing/skinnedRigGlb';
+import { godotNodePaths } from '../../../resources/formats/glb/godotNodes';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { settleLoads } from '../../testing/settleLoads';
@@ -43,9 +45,9 @@ const override = (name: string, instanceSubPath: string, raw: Record<string, str
   overridesExistingNode: true,
 });
 
-async function renderRig(children: TscnNode[] = []) {
+async function renderRig(children: TscnNode[] = [], glb: ArrayBuffer = RIG_GLB) {
   const fake = createFakeResourceLoader();
-  seedGlbInstance(fake, GLB_PATH, await createGLBMesh(RIG_GLB, NO_SIDECAR));
+  seedGlbInstance(fake, GLB_PATH, await createGLBMesh(glb, NO_SIDECAR));
   const instance: TscnNode = {
     ...parsedNode({ name: 'Rig', type: 'Node', instance: 'ExtResource("rig")' }),
     children,
@@ -106,5 +108,37 @@ describe('GLBSceneRoot — a pushed visible value', () => {
     await push('Rig/Armature/Skeleton3D/Hip/Sword', [0]);
 
     expect(visibleInTree(named('Body'))).toBe(true);
+  });
+
+  it('keeps a node an override hides below a Skeleton3D hidden when the track shows the Skeleton3D', async () => {
+    const { named, push } = await renderRig([
+      override('Sword', 'Armature/Skeleton3D/Hip', { visible: 'false' }),
+    ]);
+
+    await push('Rig/Armature/Skeleton3D', [1]);
+
+    expect(visibleInTree(named('Sword'))).toBe(false);
+  });
+
+  it('keeps a node its own track hides below a Skeleton3D hidden when the Skeleton3D track is released', async () => {
+    const { named, push } = await renderRig();
+    await push('Rig/Armature/Skeleton3D/Hip/Sword', [0]);
+
+    await push('Rig/Armature/Skeleton3D', [0]);
+    await push('Rig/Armature/Skeleton3D', null);
+
+    expect(visibleInTree(named('Sword'))).toBe(false);
+  });
+
+  it('hides a skinned mesh that holds a child at each Godot path the mesh stands for', async () => {
+    const { named, push } = await renderRig([], skinnedRigGlb([0, 0, 0], { bodyChild: true }));
+    const paths = godotNodePaths(named('Body')).map((path) => `Rig/${path}`);
+
+    for (const path of paths) {
+      await push(path, [0]);
+      expect([path, named('Body').visible]).toEqual([path, false]);
+      await push(path, null);
+    }
+    expect(paths).toHaveLength(2);
   });
 });

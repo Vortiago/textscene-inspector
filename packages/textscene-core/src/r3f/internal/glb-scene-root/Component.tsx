@@ -11,13 +11,14 @@ import { useGlb } from '../../../resources/useGlb';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbRoot } from './GlbInstanceContext';
 import { useGlbGeometryInstances } from './glbGeometryInstances';
-import { frameGroupsOf } from './glbFrameOverrides';
+import { frameMembers } from './glbFrameOverrides';
 import { glbNodeLinks } from './glbNodeLinks';
 import { useAnimatedGlbVisibility } from './useAnimatedGlbVisibility';
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import { useInstancingNodeTransform } from './instancingNodeTransform';
 import {
   applyGlbNodeOverrides,
+  hiddenGlbFramePaths,
   hiddenGlbObjects,
   isApplicableGlbOverride,
   resolveGlbOverrideTarget,
@@ -113,18 +114,27 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     [object, entries, overrides]
   );
 
-  // A pushed `visible` track writes the property an override writes, so it takes its place.
-  const animatedVisible = useAnimatedGlbVisibility(entries, links, root.path);
-  const frameGroups = useMemo(() => frameGroupsOf(entries), [entries]);
+  const overrideHiddenFrames = useMemo(() => hiddenGlbFramePaths(entries, overrides), [entries, overrides]);
+
+  // A pushed `visible` track writes the property an override writes, so it takes its place. A node
+  // draws when its own value and the value of each Skeleton3D and BoneAttachment3D above it say so.
+  const animatedVisible = useAnimatedGlbVisibility(entries, root.path);
+  const frames = useMemo(() => frameMembers(entries), [entries]);
   const hiddenNodePaths = selection?.hiddenNodePaths;
   useEffect(() => {
     if (nodePath === null) return;
-    const authored = (object: THREE.Object3D) => animatedVisible.get(object) ?? !overrideHidden.has(object);
-    for (const { relPath, object: obj } of entries) {
-      obj.visible = !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false) && authored(obj);
+    const hiddenByFrame = new Set<THREE.Object3D>();
+    for (const { frame, below } of frames) {
+      const isShown = animatedVisible.get(frame.path) ?? !overrideHiddenFrames.has(frame.path);
+      if (!isShown) for (const object of below) hiddenByFrame.add(object);
     }
-    for (const group of frameGroups) group.visible = authored(group);
-  }, [entries, frameGroups, nodePath, hiddenNodePaths, overrideHidden, animatedVisible]);
+    for (const { relPath, object: obj } of entries) {
+      const isShown = animatedVisible.get(obj) ?? !overrideHidden.has(obj);
+      const isTreeHidden = hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false;
+      obj.visible = isShown && !isTreeHidden && !hiddenByFrame.has(obj);
+    }
+    for (const { frame } of frames) if (frame.group) frame.group.visible = !hiddenByFrame.has(frame.group);
+  }, [entries, frames, nodePath, hiddenNodePaths, overrideHidden, overrideHiddenFrames, animatedVisible]);
 
   // As in Godot, a GLB's clips live on an `AnimationPlayer` child that `glbSceneRootChildren`
   // synthesises, so selecting that child, not the GLB root, activates the driver.

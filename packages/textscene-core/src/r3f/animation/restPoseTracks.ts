@@ -5,6 +5,7 @@
 
 import {
   Euler,
+  type EulerOrder,
   type KeyframeTrack,
   type Matrix4,
   Quaternion,
@@ -15,6 +16,9 @@ import {
 import { composeOntoRest, type LocalPose } from '../../resources/formats/glb/boneRest';
 
 const ROTATION_COMPONENT = /^(.+)\.rotation\[([xyz])\]$/;
+
+/** The order Godot reads a node's Euler angles in, which the rotation components of a track are written in. */
+export const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
 
 /**
  * `tracks` with the transform tracks of each object in `restByUuid` composed onto its rest pose. A
@@ -110,7 +114,7 @@ function mapQuaternions(
 
 function rotationTrack([x, y, z]: KeyframeTrack[], rest: Matrix4, name: string): QuaternionKeyframeTrack {
   const times = Array.from(x!.times);
-  const euler = new Euler();
+  const euler = new Euler(0, 0, 0, GODOT_EULER_ORDER);
   const quaternion = new Quaternion();
   const values = times.flatMap((_, i) => {
     quaternion.setFromEuler(euler.set(x!.values[i]!, y!.values[i]!, z!.values[i]!));

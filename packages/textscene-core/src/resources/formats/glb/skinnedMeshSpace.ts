@@ -1,9 +1,8 @@
 /**
  * Puts a skinned mesh in the space Godot gives it: below the Skeleton3D, with its own transform
- * relative to the skeleton. Godot resets the transform the glTF gives the mesh node when it moves
- * the mesh there (`gltf_document.cpp:5919`), and draws the skinned vertices through the mesh's
- * transform in the skeleton's space. Three's attached bind mode cancels the mesh's transform, so
- * the mesh draws detached, with its world matrix `S * O * S^-1` for the skeleton frame `S`.
+ * relative to the skeleton (Godot resets the mesh node's glTF transform there, `gltf_document.cpp:5919`).
+ * Three's attached bind mode cancels the mesh's transform, so the mesh draws detached, with its
+ * world matrix `S * O * S^-1` for the skeleton frame `S`.
  */
 
 import * as THREE from 'three';
@@ -20,7 +19,7 @@ const parentInverse = new THREE.Matrix4();
 
 /**
  * The object the Skeleton3D sits below: the parent of the bone nearest the root, which is the first
- * one in tree order when several are equally near. Null for a skeleton with no bone.
+ * one in the skeleton's bone order when several are equally near. Null for a skeleton with no bone.
  */
 function skeletonFrame(mesh: THREE.SkinnedMesh): THREE.Object3D | null {
   const known = frameOfPlacedMesh.get(mesh);
