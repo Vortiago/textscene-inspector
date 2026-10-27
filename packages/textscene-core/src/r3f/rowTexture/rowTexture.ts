@@ -1,17 +1,24 @@
-/**
- * A float texture of packed rows, one row of texels per light or volume, that the light pass reads.
- * It uploads again only when it holds another view's rows, or when they changed.
- */
+/** The float texture a pass reads its packed rows from: a light, volume, probe or decal per row. */
 
 import * as THREE from 'three';
 import type { PackedRows } from './packedRows.js';
 
-export class FogRowTexture {
+/**
+ * Holds `PackedRows` in a float texture of one row of texels per light, volume, probe or decal. It
+ * uploads again only when it holds other rows, or when they changed.
+ *
+ * @canonical A float texture of packed rows
+ */
+export class RowTexture {
   texture: THREE.DataTexture;
   /** The rows the texture holds, null before the first upload or after `invalidate`. */
   private uploaded: PackedRows | null = null;
 
-  constructor(private readonly width: number) {
+  /** `beforeReplace` gets the texture a growth is about to dispose, so the owner stops pointing at it. */
+  constructor(
+    private readonly width: number,
+    private readonly beforeReplace?: (texture: THREE.DataTexture) => void
+  ) {
     this.texture = rowTexture(width, 1);
   }
 
@@ -27,6 +34,7 @@ export class FogRowTexture {
   hold(rows: PackedRows): THREE.DataTexture {
     const height = this.texture.image.height;
     if (height < rows.count) {
+      this.beforeReplace?.(this.texture);
       this.texture.dispose();
       this.texture = rowTexture(this.width, Math.max(rows.count, height * 2));
       this.uploaded = null;

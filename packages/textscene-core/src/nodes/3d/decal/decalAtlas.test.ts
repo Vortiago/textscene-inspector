@@ -5,8 +5,10 @@ import {
   decalAtlasTexture,
   holdDecalTexture,
   releaseDecalTexture,
+  setDecalAtlasFilter,
   updateDecalAtlas,
 } from './decalAtlas';
+import { godotTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 
 const MAX_TEXTURE_SIZE = 4096;
 
@@ -189,5 +191,49 @@ describe('the decal atlas', () => {
 
     expect(decalAtlasRect(textures[4]!)).toBeDefined();
     vi.restoreAllMocks();
+  });
+});
+
+describe('the decal atlas filter', () => {
+  afterEach(() => setDecalAtlasFilter(godotTextureFilterState(3)));
+
+  it('samples nearest, with no mip filter, under the Nearest filter (render_forward_clustered.cpp:3437)', () => {
+    setDecalAtlasFilter(godotTextureFilterState(0));
+
+    const atlas = decalAtlasTexture();
+    expect([atlas.magFilter, atlas.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+
+  it('samples a nearest mip chain under the Nearest Mipmap filter (:3443)', () => {
+    setDecalAtlasFilter(godotTextureFilterState(2));
+
+    const atlas = decalAtlasTexture();
+    expect([atlas.magFilter, atlas.minFilter]).toEqual([
+      THREE.NearestFilter,
+      THREE.NearestMipmapLinearFilter,
+    ]);
+  });
+
+  it('samples at the anisotropy of the level under an anisotropic filter (:3449)', () => {
+    setDecalAtlasFilter(godotTextureFilterState(5, 3));
+
+    expect(decalAtlasTexture().anisotropy).toBe(8);
+  });
+
+  it('keeps its levels under a filter that reads none', () => {
+    setDecalAtlasFilter(godotTextureFilterState(1));
+
+    expect(decalAtlasTexture().mipmaps.length).toBeGreaterThan(1);
+  });
+
+  it('uploads again when the filter changes, and not when it stays', () => {
+    const atlas = decalAtlasTexture();
+    const { version } = atlas;
+
+    setDecalAtlasFilter(godotTextureFilterState(3));
+    expect(atlas.version).toBe(version);
+
+    setDecalAtlasFilter(godotTextureFilterState(1));
+    expect(atlas.version).toBe(version + 1);
   });
 });

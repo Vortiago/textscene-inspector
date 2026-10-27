@@ -468,6 +468,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Roughness Receiver",
+    "file": "unit-decal-roughness-receiver.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Triangulation",
+    "file": "unit-decal-triangulation.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -2317,6 +2327,12 @@ export const fixtures: Fixture[] = [
     "file": "alpha-antialiasing/unit-alpha-antialiasing.tscn",
     "category": "Other",
     "root": "alpha-antialiasing"
+  },
+  {
+    "name": "Decal Filter",
+    "file": "decal-filter/unit-decal-filter.tscn",
+    "category": "Other",
+    "root": "decal-filter"
   },
   {
     "name": "Glow Linear Upscale",

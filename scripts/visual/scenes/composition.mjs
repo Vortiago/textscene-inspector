@@ -61,7 +61,7 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
   },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
-  // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
+  // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime
   // view: projection only. The projection edges are AA-sensitive.
   { name: 'decal', file: 'unit-decal.tscn' },
@@ -70,6 +70,17 @@ export const SCENE_COMPOSITION_SCENES = [
   // instance.layers`, so the left floor shows bare albedo and the right one the
   // checkerboard. `unit-decal.tscn` uses cull_mask = 1048575, which excludes nothing.
   { name: 'decal-cull-mask', file: 'unit-decal-cull-mask.tscn' },
+  // The one variable against `decal`: the floor's subdivision. Godot mixes a decal per fragment,
+  // so a floor of two triangles shows the same checkerboard as a fine one. A per-vertex mix draws
+  // nothing on the coarse floor.
+  { name: 'decal-triangulation', file: 'unit-decal-triangulation.tscn' },
+  // The one variable against `decal`: a roughness texture on the receiver. Godot keeps it under a
+  // decal, so the highlight of the smooth end runs through the footprint. A scalar roughness cuts it
+  // off at the box.
+  { name: 'decal-roughness-receiver', file: 'unit-decal-roughness-receiver.tscn' },
+  // The one variable against `decal`: the project's `rendering/textures/decals/filter`, Nearest. An
+  // 8 by 8 texture magnified over the floor keeps hard texel edges. The default filter blurs them.
+  { name: 'decal-filter', file: 'decal-filter/unit-decal-filter.tscn' },
   // One image, two StandardMaterial3D sub-resources differing only in
   // `texture_filter` (0 NEAREST, 3 LINEAR_WITH_MIPMAPS): the one scene that sees
   // per-material texture cloning. The loader caches one THREE.Texture per path,

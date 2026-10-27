@@ -4,12 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  SPECULAR_OCCLUSION_DISABLED,
-  disablesSpecularOcclusion,
-  installGodotIndirectSpecular,
-  specularOcclusionUserData,
-} from './godotIndirectSpecular';
+import { SPECULAR_OCCLUSION_DISABLED, installGodotIndirectSpecular } from './godotIndirectSpecular';
 import { warningsOf } from './testing/logWarnings';
 import { restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 import { DFG_SIZE } from '../godot/rendering/materials/dfgTable.generated';
@@ -32,6 +27,13 @@ describe('installGodotIndirectSpecular', () => {
     expect(patchedChunks().begin).toContain(
       'texture2D( godotDfgTable, vec2( clamp( dot( geometryNormal, geometryViewDir ), 0.0001, 1.0 ), material.godotRoughness ) ).rg'
     );
+  });
+
+  it("binds no table of three's, and weighs a refraction by no Fresnel term (material.cpp:1829-1831)", () => {
+    const { pars, begin } = patchedChunks();
+
+    expect(pars + begin).not.toContain('dfgLUT');
+    expect(pars).toContain('vec2 fab = vec2( 0.0 );');
   });
 
   it("weighs the reflection with Godot's split sum and energy compensation", () => {
@@ -126,20 +128,5 @@ describe('installGodotIndirectSpecular', () => {
 
     expect(warningsOf(installGodotIndirectSpecular)).toEqual([]);
     expect(patchedChunks()).toEqual(once);
-  });
-});
-
-describe('disablesSpecularOcclusion', () => {
-  it('reads the setting a material records', () => {
-    const material = new THREE.MeshStandardMaterial({ userData: specularOcclusionUserData(true) });
-    expect(disablesSpecularOcclusion(material)).toBe(true);
-  });
-
-  it("reads Godot's default, occlusion on, off a material that records none (edge case)", () => {
-    expect(disablesSpecularOcclusion(new THREE.MeshStandardMaterial())).toBe(false);
-  });
-
-  it("reads Godot's default for no material (error case)", () => {
-    expect(disablesSpecularOcclusion(undefined)).toBe(false);
   });
 });

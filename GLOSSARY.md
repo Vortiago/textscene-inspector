@@ -534,9 +534,18 @@ The one texture that holds the `area_texture` of every AreaLight3D, each in a ce
 A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
+**Decal term** (`r3f/decal/`):
+The part of every 3D program's fragment shader that mixes the decals into the albedo, as Godot's clustered shader does. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+_Avoid_: "decal projection", which names the baked mesh the term replaced.
+
+**Scene rows** (`r3f/sceneRows/`):
+The one float texture that holds the rows of a scene's Reflection probes and Decals: the probes' first, the decals' after them. Each row is one probe or decal, as the shader fetches it.
+Both share it because a fragment shader has 16 texture units.
+_Avoid_: "probe rows" and "decal rows", which name one band of it.
+
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
 The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-A Decal reads its rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The Decal term reads each Decal's rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:
