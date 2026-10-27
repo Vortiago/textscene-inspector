@@ -18,7 +18,8 @@ import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 import type { LightOccluder2DProperties } from './types';
-import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
+import { parseOccluderCullMode } from './polygonShapes';
+import { godotPolylineToSegments } from '../../../r3f/gizmo/godotPolylineToSegments';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
@@ -35,7 +36,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
     if (!occluderResource) return null;
     const data = occluderResource.data;
     if (!data.polygon) return null;
-    // Flat `[x0,y0,x1,y1,...]`, which polygonToSegments pairs and Y-negates. A
+    // Flat `[x0,y0,x1,y1,...]`, which godotPolylineToSegments pairs and Y-negates. A
     // malformed literal is the linter's to report, not a throw through render.
     let raw: Float32Array;
     try {
@@ -45,7 +46,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
       return null;
     }
     const closed = boolSlotValue(data.closed) !== false;
-    return polygonToSegments(raw, closed);
+    return godotPolylineToSegments(raw, closed);
   }, [occluderResource]);
 
   const cullMode = useMemo(

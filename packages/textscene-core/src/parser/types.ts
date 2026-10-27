@@ -60,6 +60,11 @@ export interface TscnScene<N extends RawNode = TscnNode> {
    */
   resourceType?: string;
   /**
+   * The simplified `path=` of each `[editable]` heading, in file order: the instance nodes whose
+   * content the editor lets the user edit (`resource_format_text.cpp:400`). Absent where none.
+   */
+  editableInstances?: readonly string[];
+  /**
    * A `.tres` file's own `[resource]` body. Absent in a `.tscn`, where the loader refuses the tag
    * (`resource_format_text.cpp:723-728`).
    */

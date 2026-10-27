@@ -207,7 +207,10 @@ export function useViewportMode(): ViewportModeValue {
   return useContext(ViewportModeContext);
 }
 
-/** Whether the editor gizmos draw. It changes only with the Gizmos toggle. */
+/**
+ * Whether the editor gizmos draw. Every other toggle reads `useViewportMode()`. This one has a context of
+ * its own, so a gizmo re-renders for the Gizmos toggle alone.
+ */
 export function useShowGizmos(): boolean {
   return useContext(ShowGizmosContext);
 }

@@ -1,15 +1,15 @@
 /**
  * A line gizmo: a BufferGeometry from flat `positions` and optional `colors`, drawn as an unlit
- * transparent `<lineSegments>` over the scene. The caller gates it with `useGizmoState` and passes
- * the state it got as `variant`. R3F does not dispose an attached geometry, so the gizmo disposes
- * it on rebuild.
+ * transparent `<lineSegments>` over the scene. A Godot gizmo-plugin gizmo mounts it inside a
+ * `PluginGizmo`, which gives it the look of its node. R3F does not dispose an attached geometry, so
+ * the gizmo disposes it on rebuild.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { gizmoAlpha, type GizmoVariant } from '../gizmo/gizmoVariant';
+import { useGizmoLook } from '../gizmo/useGizmoLook';
 import { GIZMO_RENDER_ORDER, GizmoGroup } from './GizmoGroup';
 
 interface GizmoLineProps {
@@ -17,12 +17,10 @@ interface GizmoLineProps {
   positions: Float32Array;
   /** Optional flat per-vertex RGB colours; when set, the material uses them. */
   colors?: Float32Array;
-  /** Solid line colour (ignored when `colors` is set; defaults to white). */
+  /** Solid line colour, which multiplies `colors` when those are set. Defaults to white. */
   color?: THREE.ColorRepresentation;
   /** The opacity of the lines, from 0 to 1: the alpha of the colour a Godot gizmo material has. */
   opacity?: number;
-  /** The look of the material: the faint one of a node that is not selected. Defaults to selected. */
-  variant?: GizmoVariant;
 }
 
 const FLOATS_PER_SEGMENT = 6;
@@ -61,10 +59,10 @@ function finiteSegments(positions: Float32Array, colors: Float32Array | undefine
 export function GizmoLine({
   positions: allPositions,
   colors: allColors,
-  color,
-  opacity = 1,
-  variant = 'selected',
+  color: ownColor,
+  opacity: ownOpacity = 1,
 }: GizmoLineProps) {
+  const { color, opacity } = useGizmoLook(ownColor ?? 0xffffff, ownOpacity);
   const { positions, colors } = useMemo(
     () => finiteSegments(allPositions, allColors),
     [allPositions, allColors]
@@ -84,14 +82,14 @@ export function GizmoLine({
     () =>
       materialProgramInputs({
         props: {
-          color: color ?? 0xffffff,
-          opacity: gizmoAlpha(variant, opacity),
+          color,
+          opacity,
           vertexColors: hasColors,
           depthWrite: false,
           transparent: true,
         },
       }),
-    [color, variant, opacity, hasColors]
+    [color, opacity, hasColors]
   );
   if (!geometry) return null;
 

@@ -6,6 +6,7 @@
  */
 
 import { EMPTY_AABB } from '../../../../godot/math/aabb';
+import { SelectedOnly } from '../../../../r3f/gizmo/PluginGizmo';
 import {
   undrawnGeometryInstanceWithGizmos,
   type GeometryInstanceGizmosProps,
@@ -14,12 +15,14 @@ import { CPUParticlesBoxGizmo, EmissionShapeGizmo } from '../gizmo/ParticleGizmo
 import { useCPUParticles3DAabb } from './ownAabb';
 import type { CPUParticles3DProperties } from './types';
 
-function Gizmos({ properties, variant }: GeometryInstanceGizmosProps<CPUParticles3DProperties>) {
+function Gizmos({ properties }: GeometryInstanceGizmosProps<CPUParticles3DProperties>) {
   return (
     <>
       {/* The box the node authors, `AABB()` for none, and not the parser's null (the multimesh box). */}
-      <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} variant={variant} />
-      {variant === 'selected' && <EmissionShapeGizmo emission={properties.emission} />}
+      <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} />
+      <SelectedOnly>
+        <EmissionShapeGizmo emission={properties.emission} />
+      </SelectedOnly>
     </>
   );
 }

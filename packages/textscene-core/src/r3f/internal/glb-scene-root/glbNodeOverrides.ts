@@ -109,6 +109,9 @@ export interface GlbAttachment {
  * authored order, and the rest of `nodes`. A typed node whose path names none stays among the rest.
  * Both the scene tree and the viewport resolve through here, so one node never lands on two objects.
  * It looks up through the quiet `findGlbTarget`, and the caller reports what stays unplaced.
+ *
+ * @oneWay Where a node under a GLB instance attaches
+ *   The scene tree and the viewport both call it.
  */
 export function resolveGlbAttachments(
   entries: readonly GlbObjectEntry[],

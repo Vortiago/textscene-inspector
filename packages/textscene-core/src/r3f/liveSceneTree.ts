@@ -382,6 +382,8 @@ export interface LiveStep {
 /**
  * The step for `node` where it sits in a group of scope `groupScope`. An instance merges once
  * here, so no reader merges a second time.
+ *
+ * @oneWay A walk of the Live scene tree
  */
 export function liveStep(
   node: LiveNode,
@@ -471,6 +473,9 @@ export interface LiveLink {
 /**
  * The live tree over one cache snapshot, each node's step taken once however many paths pass
  * through it. Every question over one context gets the tree {@link liveTreeOf} returns.
+ *
+ * @oneWay A walk of the Live scene tree
+ *   Fold it with `LiveTree.fold`, and read one path with `LiveTree.at`.
  */
 export class LiveTree {
   /** The groups a walk starts from: the outer roots, in the root scene's scope. */
@@ -621,7 +626,11 @@ export function resolveLiveEntry(
   return { node: last.collapsed, instanceRef: last.raw.instance };
 }
 
-/** Depth-first walk of the live tree, calling `visit` with each collapsed node and its full path. */
+/**
+ * Depth-first walk of the live tree, calling `visit` with each collapsed node and its full path.
+ *
+ * @oneWay A walk of the Live scene tree
+ */
 export function walkLiveTree(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,

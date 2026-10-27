@@ -42,6 +42,9 @@ const UNRESOLVED: ResourceResolution = {
   isNone: false,
 };
 
+/**
+ * @oneWay A resource property that names a SubResource or an ExtResource
+ */
 export function useResourceResolution(ref: string | undefined, pools: SceneResources): ResourceResolution {
   const inline = resolveSubResourceRef(ref, pools.internalResources);
   const fileResolution = usePathResolution(inline ? null : parsedResourcePath(ref, pools.externalResources));
