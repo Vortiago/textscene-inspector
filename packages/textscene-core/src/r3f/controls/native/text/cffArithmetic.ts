@@ -8,8 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { ftDivFix, ftMulFix } from './fontMetrics';
-import { FIXED_ONE, type OperandStack } from './cffOperandStack';
+import { FIXED_16_16_ONE, ftDivFix, ftMulFix } from './fontMetrics';
+import type { OperandStack } from './cffOperandStack';
 
 const FIXED_MAX = 0x7fffffff;
 
@@ -67,7 +67,7 @@ const FIXED_UNARY = new Map<number, (value: number) => number>([
 
 /** `FT_SqrtFixed`: the square root of a positive 16.16 number, by the Babylonian method with rounded-up division. */
 function fixedSqrt(value: number): number {
-  const radicand = value * FIXED_ONE - 1;
+  const radicand = value * FIXED_16_16_ONE - 1;
   let estimate = 2 ** ((17 + (31 - Math.clz32(value))) >> 1);
   let previous: number;
   do {

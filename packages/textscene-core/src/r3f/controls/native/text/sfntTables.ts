@@ -149,6 +149,12 @@ export function readUnitsPerEm(dv: DataView, head: TableRecord): number {
   return dv.getUint16(head.offset + HEAD_UNITS_PER_EM_OFFSET, false);
 }
 
+/** The `unitsPerEm` of a font's `head` table, or 0 for a font with no `head` or one that does not fit. */
+export function readHeadUnitsPerEm({ dv, tables }: SfntFile): number {
+  const head = tables.get('head');
+  return head && tableFits(dv, head, HEAD_TABLE_MIN_LENGTH) ? readUnitsPerEm(dv, head) : 0;
+}
+
 /** The signed ascender and descender, in design units, that FreeType gives the face. */
 interface VerticalMetrics {
   readonly ascender: number;

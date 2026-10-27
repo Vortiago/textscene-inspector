@@ -18,7 +18,7 @@ import {
 import type { SfntFile, TableRecord } from './sfntTables';
 
 /** The entries of an INDEX, as absolute byte ranges in the table's buffer. */
-export interface CffIndex {
+interface CffIndex {
   readonly count: number;
   /** The byte range of entry `i`, or null past the last entry. */
   entry(i: number): { start: number; end: number } | null;
@@ -73,7 +73,7 @@ class CffReader {
   index(at: number): CffIndex & { end: number } {
     const count = this.isCff2 ? this.dv.getUint32(at, false) : this.dv.getUint16(at, false);
     const countSize = this.isCff2 ? 4 : 2;
-    if (count === 0) return { count, entry: () => null, end: at + countSize };
+    if (count === 0) return { ...EMPTY_INDEX, end: at + countSize };
     const offSize = this.dv.getUint8(at + countSize);
     const offsets = at + countSize + 1;
     const dataStart = offsets + (count + 1) * offSize - 1;
@@ -128,14 +128,13 @@ class CffReader {
 
   /** A packed-nibble real number (Technical Note #5176 Table 5). */
   private real(start: number): { value: number; next: number } {
-    const symbols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'E-', '', '-', ''];
     let text = '';
     let at = start + 1;
     for (;;) {
       const byte = this.dv.getUint8(at++);
       for (const nibble of [byte >> 4, byte & 0x0f]) {
         if (nibble === 0x0f) return { value: Number(text), next: at };
-        text += symbols[nibble];
+        text += REAL_NIBBLE_SYMBOLS[nibble];
       }
     }
   }
@@ -152,6 +151,9 @@ export function subrBias(count: number): number {
 }
 
 const EMPTY_INDEX: CffIndex = { count: 0, entry: () => null };
+
+/** The character of each nibble of a packed real; 0xd is reserved and 0xf ends the number. */
+const REAL_NIBBLE_SYMBOLS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'E-', '', '-', ''];
 
 /** The glyph to font dict map of an `FDSelect` (Technical Note #5176 §19, #5177 for format 4). */
 function fdSelector(dv: DataView, at: number, glyphCount: number): (glyphIndex: number) => number {

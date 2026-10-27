@@ -1,8 +1,8 @@
 /**
  * The mesh data of one glyph, ported from `TextMesh::_generate_glyph_mesh_data`
  * (`scene/resources/3d/primitive_meshes.cpp:3043-3202`): the contours of the outline as polygons
- * with conic and cubic arcs stepped at `curve_step`, each contour's length and direction, the bounds, and the
- * triangles that fill the glyph. A TextMesh reuses one glyph's data wherever the glyph repeats.
+ * with conic and cubic arcs stepped at `curve_step`, each contour's length and direction, the bounds,
+ * and the triangles that fill the glyph. A TextMesh reuses one glyph's data wherever the glyph repeats.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { bezierInterpolatef } from '../../../godot/math/math';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
@@ -57,15 +58,30 @@ function midpoint(a: ContourPoint, b: ContourPoint): Vector2 {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
-/** The step of `t` along an arc whose ends are `chord` px apart; Godot sums `t` in `float`. */
-function arcStep(chord: number, curveStep: number): number {
-  return toFloat(Math.min(MAX_ARC_STEP, Math.max(MIN_ARC_STEP, toFloat(curveStep / chord))));
+/**
+ * The smooth points of an arc between `start` and `end`, `curve_step` px apart along the chord, at
+ * the `t` that `pointAt` turns into a position in px. Godot sums `t` in `float` and clamps its step
+ * to a hundredth to half of the arc (`primitive_meshes.cpp:3096`), so a step of 0.1 stops after nine
+ * points where a `double` gives ten.
+ */
+function steppedArc(
+  start: Vector2,
+  end: Vector2,
+  curveStep: number,
+  pixelSize: number,
+  pointAt: (t: number) => Vector2
+): ContourVertex[] {
+  const chord = Math.hypot(start.x - end.x, start.y - end.y);
+  const step = toFloat(Math.min(MAX_ARC_STEP, Math.max(MIN_ARC_STEP, toFloat(curveStep / chord))));
+  const vertices: ContourVertex[] = [];
+  for (let t = step; t < 1; t = toFloat(t + step)) {
+    const { x, y } = pointAt(t);
+    vertices.push({ point: { x: x * pixelSize, y: y * pixelSize }, isSharp: false });
+  }
+  return vertices;
 }
 
-/**
- * The points a conic arc adds between its two ends, `curve_step` px apart along the chord. A step of
- * 0.1 stops after nine points where a `double` gives ten.
- */
+/** The points a conic arc adds between its two ends (`:3098-3105`). */
 function conicArcPoints(
   start: Vector2,
   control: Vector2,
@@ -73,45 +89,25 @@ function conicArcPoints(
   curveStep: number,
   pixelSize: number
 ): ContourVertex[] {
-  const step = arcStep(Math.hypot(start.x - end.x, start.y - end.y), curveStep);
-  const vertices: ContourVertex[] = [];
-  for (let t = step; t < 1; t = toFloat(t + step)) {
+  return steppedArc(start, end, curveStep, pixelSize, (t) => {
     const omt = 1 - t;
-    vertices.push({
-      point: {
-        x: (control.x + omt * omt * (start.x - control.x) + t * t * (end.x - control.x)) * pixelSize,
-        y: (control.y + omt * omt * (start.y - control.y) + t * t * (end.y - control.y)) * pixelSize,
-      },
-      isSharp: false,
-    });
-  }
-  return vertices;
+    return {
+      x: control.x + omt * omt * (start.x - control.x) + t * t * (end.x - control.x),
+      y: control.y + omt * omt * (start.y - control.y) + t * t * (end.y - control.y),
+    };
+  });
 }
 
-/** One coordinate of `Math::bezier_interpolate` (`core/math/math_funcs.h:442-451`). */
-function cubicCoordinate(start: number, control1: number, control2: number, end: number, t: number): number {
-  const omt = 1 - t;
-  return start * omt ** 3 + control1 * omt * omt * t * 3 + control2 * omt * t * t * 3 + end * t ** 3;
-}
-
-/** The points a cubic arc adds between its ends, stepped over the chord as a conic arc is (`:3128-3142`). */
+/** The points a cubic arc adds between its ends, through `Vector2::bezier_interpolate` (`:3128-3142`). */
 function cubicArcPoints(
   [start, control1, control2, end]: readonly [Vector2, Vector2, Vector2, Vector2],
   curveStep: number,
   pixelSize: number
 ): ContourVertex[] {
-  const step = arcStep(Math.hypot(start.x - end.x, start.y - end.y), curveStep);
-  const vertices: ContourVertex[] = [];
-  for (let t = step; t < 1; t = toFloat(t + step)) {
-    vertices.push({
-      point: {
-        x: cubicCoordinate(start.x, control1.x, control2.x, end.x, t) * pixelSize,
-        y: cubicCoordinate(start.y, control1.y, control2.y, end.y, t) * pixelSize,
-      },
-      isSharp: false,
-    });
-  }
-  return vertices;
+  return steppedArc(start, end, curveStep, pixelSize, (t) => ({
+    x: bezierInterpolatef(start.x, control1.x, control2.x, end.x, t),
+    y: bezierInterpolatef(start.y, control1.y, control2.y, end.y, t),
+  }));
 }
 
 /**
@@ -129,18 +125,19 @@ function contourPolygon(
   const polygon: ContourVertex[] = [];
   for (let j = start; j <= end; j++) {
     const current = points[j]!;
-    const previous = points[j === start ? end : j - 1]!;
     if (current.tag === ContourPointTag.ON) {
       polygon.push({ point: { x: current.x * pixelSize, y: current.y * pixelSize }, isSharp: true });
     } else if (current.tag === ContourPointTag.OFF_CUBIC) {
       // The arc takes the next control point too, so the loop steps past it.
       const second = j === end ? start : j + 1;
       const to = second === end ? start : second + 1;
+      const previous = points[j === start ? end : j - 1]!;
       polygon.push(
         ...cubicArcPoints([previous, current, points[second]!, points[to]!], curveStep, pixelSize)
       );
       j++;
     } else {
+      const previous = points[j === start ? end : j - 1]!;
       const next = points[j === end ? start : j + 1]!;
       // Two control points in a row meet at a virtual on-curve point between them.
       const from = previous.tag === ContourPointTag.ON ? previous : midpoint(previous, current);

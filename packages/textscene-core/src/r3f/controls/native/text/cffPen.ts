@@ -9,14 +9,13 @@
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-
-type PointTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
+import type { ContourTag } from './glyphContours';
 
 /** One contour: ON points at the ends of its segments, cubic control points between them. */
 export interface CharstringContour {
   x: number[];
   y: number[];
-  tags: PointTag[];
+  tags: ContourTag[];
 }
 
 export class GlyphPen {

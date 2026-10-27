@@ -11,11 +11,14 @@
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 
+/** `ContourPointTag`: ON, or a conic or cubic control point. */
+export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
+
 /** One outline point, in px from the glyph origin with y down, as `font_get_glyph_contours` returns it. */
 export interface ContourPoint {
   x: number;
   y: number;
-  tag: (typeof ContourPointTag)[keyof typeof ContourPointTag];
+  tag: ContourTag;
 }
 
 /** What `TextServer::font_get_glyph_contours` returns for one glyph (`text_server_adv.cpp:3597-3652`). */
@@ -34,20 +37,23 @@ export type GlyphContourReader = (glyphIndex: number, fontSizePx: number) => Gly
 export interface ScaledOutline {
   x: number[];
   y: number[];
-  tags: (typeof ContourPointTag)[keyof typeof ContourPointTag][];
+  tags: ContourTag[];
   contourEnds: number[];
 }
 
 const FIXED_26_6 = 64;
+
+/** Whether the points of `values` do not all share one value. */
+function varies(values: readonly number[]): boolean {
+  return values.some((value) => value !== values[0]);
+}
 
 /**
  * `FT_Outline_Get_Orientation` is `FT_ORIENTATION_FILL_RIGHT` (`ftoutln.c`): the sign of the
  * area the control polygon spans over every contour. Collapsed in x or y, it is neither.
  */
 function isFillRight(outline: ScaledOutline): boolean {
-  const hasWidth = Math.max(...outline.x) !== Math.min(...outline.x);
-  const hasHeight = Math.max(...outline.y) !== Math.min(...outline.y);
-  if (!hasWidth || !hasHeight) return false;
+  if (!varies(outline.x) || !varies(outline.y)) return false;
   let area = 0;
   let first = 0;
   for (const last of outline.contourEnds) {

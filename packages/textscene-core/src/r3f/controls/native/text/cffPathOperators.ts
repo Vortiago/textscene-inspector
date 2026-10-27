@@ -35,10 +35,6 @@ export class PathOperators {
     private y: number
   ) {}
 
-  closeOpenPath(): void {
-    this.pen.closeOpenPath();
-  }
-
   relativeMove(stack: OperandStack): void {
     this.y = add(this.y, stack.popFixed());
     this.x = add(this.x, stack.popFixed());
@@ -70,12 +66,12 @@ export class PathOperators {
 
   /** `rrcurveto`: a curve for each six operands, the operands left over dropped. */
   relativeCurves(stack: OperandStack): void {
-    this.curvesFrom(stack, 0);
+    this.curves(stack);
   }
 
   /** `rcurveline`: `rrcurveto` and then a line from the operands left over. */
   curvesThenLine(stack: OperandStack): void {
-    const at = this.curvesFrom(stack, 0);
+    const at = this.curves(stack);
     this.lineBy(stack.real(at), stack.real(at + 1));
   }
 
@@ -163,9 +159,9 @@ export class PathOperators {
     points.push(isAlongX ? this.y : add(points[11]!, lastDelta));
   }
 
-  /** Curves from operand `from` while six remain. Returns where the operands left over begin. */
-  private curvesFrom(stack: OperandStack, from: number): number {
-    let at = from;
+  /** Curves while six operands remain. Returns where the operands left over begin. */
+  private curves(stack: OperandStack): number {
+    let at = 0;
     for (; at + 6 <= stack.count; at += 6) this.curveBy(stack, at);
     return at;
   }

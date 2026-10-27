@@ -17,11 +17,9 @@ import type { CharstringContour } from './cffPen';
 import { openCff } from './cffTables';
 import { ftMulFix, getFontOutlineScale } from './fontMetrics';
 import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
-import { readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
+import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
-const HEAD_TABLE_MIN_LENGTH = 20;
-
-/** Bits a 16.16 coordinate drops to become 26.6: `cff_builder_add_point` shifts right by 10. */
+/** The divisor of the arithmetic shift right by 10 that `cff_builder_add_point` makes, from 16.16 to 26.6. */
 const FIXED_16_16_TO_26_6 = 1024;
 
 /**
@@ -59,10 +57,9 @@ function scaledOutline(contours: readonly CharstringContour[], scale: number): S
 
 /** The glyph-contour reader of a font's CFF outlines, or null for a font with no readable `CFF ` or `CFF2` table or no `head`. */
 export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
-  const head = sfnt.tables.get('head');
-  if (!head || !tableFits(sfnt.dv, head, HEAD_TABLE_MIN_LENGTH)) return null;
-  const unitsPerEm = readUnitsPerEm(sfnt.dv, head);
-  const font = unitsPerEm === 0 ? null : openCff(sfnt);
+  const unitsPerEm = readHeadUnitsPerEm(sfnt);
+  if (unitsPerEm === 0) return null;
+  const font = openCff(sfnt);
   if (!font) return null;
 
   return (glyphIndex, fontSizePx) => {

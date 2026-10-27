@@ -33,6 +33,9 @@ const MAX_STEMS = 96;
 /** The instructions one charstring may run. FreeType's number "matches Avalon" (`psintrp.c`). */
 const INSTRUCTION_LIMIT = 20_000_000;
 
+/** Where a glyph's own charstring, and the base of a `seac`, starts drawing. */
+const ORIGIN = { x: 0, y: 0 };
+
 const OP = {
   hstem: 1,
   vstem: 3,
@@ -306,7 +309,7 @@ class CharstringRun {
         `blend of ${values} values needs ${operands} operands, got ${stack.count}`
       );
     const first = stack.count - operands;
-    for (let i = 0; i < values; i++) stack.setReal(first + i, stack.real(first + i));
+    for (let i = 0; i < values; i++) stack.markFixed(first + i);
     stack.drop(operands - values);
     this.hasBlended = true;
   }
@@ -329,7 +332,7 @@ class CharstringRun {
    * standard character code.
    */
   private endChar(): void {
-    this.path.closeOpenPath();
+    this.pen.closeOpenPath();
     if (this.font.isCff2 || this.stack.count <= 1) return;
     if (this.isComponent) throw new MalformedCharstring('seac inside a seac component');
     const accentCode = this.stack.popInt();
@@ -337,7 +340,7 @@ class CharstringRun {
     const y = this.stack.popFixed();
     const x = this.stack.popFixed();
     this.drawComponent(accentCode, { x, y });
-    this.drawComponent(baseCode, { x: 0, y: 0 });
+    this.drawComponent(baseCode, ORIGIN);
   }
 
   private drawComponent(standardCode: number, origin: { x: number; y: number }): void {
@@ -358,10 +361,7 @@ export function interpretCharstring(font: CffFont, glyphIndex: number): Charstri
   if (!charstring) return null;
   const contours: CharstringContour[] = [];
   try {
-    new CharstringRun(font, font.privateOf(glyphIndex), charstring, contours, false, {
-      x: 0,
-      y: 0,
-    }).execute();
+    new CharstringRun(font, font.privateOf(glyphIndex), charstring, contours, false, ORIGIN).execute();
   } catch (error) {
     // A DataView read that leaves the table is a corrupt font, which FreeType also refuses.
     if (error instanceof MalformedCharstring || error instanceof RangeError) return null;

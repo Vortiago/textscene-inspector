@@ -86,7 +86,7 @@ export function getFontLinePitchPx(
 }
 
 /** 1.0 in FreeType's 16.16 fixed point (`FT_Fixed`). */
-const FIXED_16_16_ONE = 65536;
+export const FIXED_16_16_ONE = 65536;
 
 /**
  * `freetype/include/freetype/fttypes.h`'s `FT_DivFix` (`freetype/src/base/ftcalc.c`):

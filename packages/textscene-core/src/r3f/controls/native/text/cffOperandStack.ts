@@ -9,10 +9,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { FIXED_16_16_ONE } from './fontMetrics';
+
 /** A charstring FreeType refuses to load. */
 export class MalformedCharstring extends Error {}
-
-export const FIXED_ONE = 0x10000;
 
 export class OperandStack {
   private fixeds: number[] = [];
@@ -25,7 +25,7 @@ export class OperandStack {
   }
 
   pushInt(value: number): void {
-    this.push(value * FIXED_ONE, true);
+    this.push(value * FIXED_16_16_ONE, true);
   }
 
   pushFixed(value: number): void {
@@ -54,10 +54,9 @@ export class OperandStack {
     return value;
   }
 
-  setReal(index: number, value: number): void {
-    if (index >= this.count)
-      throw new MalformedCharstring(`operand ${index} is past the ${this.count} on the stack`);
-    this.fixeds[index] = value;
+  /** Makes the operand `index` places above the bottom a fixed-point number: a blended value is no integer. */
+  markFixed(index: number): void {
+    this.real(index);
     this.integerFlags[index] = false;
   }
 
@@ -69,8 +68,8 @@ export class OperandStack {
   }
 
   clear(): void {
-    this.fixeds = [];
-    this.integerFlags = [];
+    this.fixeds.length = 0;
+    this.integerFlags.length = 0;
   }
 
   /**
