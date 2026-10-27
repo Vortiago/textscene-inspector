@@ -47,7 +47,10 @@ const bakedAt = (exposure: number) =>
   `"bsp": PackedInt32Array(), "sh": PackedColorArray(), "interior": false, "baked_exposure": ${exposure}\n}\n`;
 
 function PublishedExposure({ multiplier }: { multiplier: number }) {
-  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: multiplier } });
+  usePublishCameraAttributes({
+    status: 'resolved',
+    attributes: { exposureMultiplier: multiplier, autoExposure: null },
+  });
   return null;
 }
 

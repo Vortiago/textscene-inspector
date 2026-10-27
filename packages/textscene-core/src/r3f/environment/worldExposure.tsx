@@ -7,7 +7,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import type { CameraAttributes } from '../../resources/cameraattributes/types';
+import type { AutoExposure, CameraAttributes } from '../../resources/cameraattributes/types';
 import { electViewportCamera } from '../../godot/scene/camera3d';
 import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
@@ -53,26 +53,29 @@ function renderCameraOf(
   return worldCameras.find((camera) => camera.path === viewedPath) ?? null;
 }
 
-/** The exposure factor of `attributes`, or null while there are none to read. */
-function exposureFactorOf(attributes: CameraAttributesResolution | null): number | null {
-  return attributes?.status === 'resolved' ? attributes.attributes.exposureMultiplier : null;
+/** The attributes of a resolution, or null while there are none to read. */
+function attributesOf(resolution: CameraAttributesResolution | null): CameraAttributes | null {
+  return resolution?.status === 'resolved' ? resolution.attributes : null;
 }
 
-/** Null with no valid CameraAttributes, which Godot's frame does not scale at all. */
-const ExposureContext = createContext<number | null>(null);
+/**
+ * The CameraAttributes the world renders with, null when there are no valid ones, and Godot's frame
+ * is not scaled at all. The factor and the auto exposure are read from the one record.
+ */
+const CameraAttributesContext = createContext<CameraAttributes | null>(null);
 
 /** Chooses the world's CameraAttributes and gives its readers the exposure. One per world. */
 export function WorldExposureScope({ children }: { children: ReactNode }) {
   return (
     <cameraAttributes.Provider>
       <cameras.Provider>
-        <ExposureProvider>{children}</ExposureProvider>
+        <CameraAttributesProvider>{children}</CameraAttributesProvider>
       </cameras.Provider>
     </cameraAttributes.Provider>
   );
 }
 
-function ExposureProvider({ children }: { children: ReactNode }) {
+function CameraAttributesProvider({ children }: { children: ReactNode }) {
   const world = useWorldKind();
   const viewedPath = useOptionalViewportActions()?.activeCameraPath ?? null;
   const renderCamera = renderCameraOf(world, viewedPath, cameras.useAll());
@@ -81,9 +84,12 @@ function ExposureProvider({ children }: { children: ReactNode }) {
   // (`renderer_scene_cull.cpp:3562-3565`). While a camera's `.tres` loads, the world's hold, since
   // Godot has no load gap to show.
   const chosen = renderCamera?.attributes.status === 'resolved' ? renderCamera.attributes : worldAttributes;
-  const factor = exposureFactorOf(chosen);
-  useSceneExposure(factor, exposureFactorOf(worldAttributes));
-  return <ExposureContext.Provider value={factor}>{children}</ExposureContext.Provider>;
+  const attributes = attributesOf(chosen);
+  useSceneExposure(
+    attributes?.exposureMultiplier ?? null,
+    attributesOf(worldAttributes)?.exposureMultiplier ?? null
+  );
+  return <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>;
 }
 
 /**
@@ -94,7 +100,7 @@ function ExposureProvider({ children }: { children: ReactNode }) {
  * @canonical The exposure factor of a world
  */
 export function useOptionalExposureFactor(): number | null {
-  return useContext(ExposureContext);
+  return useContext(CameraAttributesContext)?.exposureMultiplier ?? null;
 }
 
 /**
@@ -104,4 +110,12 @@ export function useOptionalExposureFactor(): number | null {
  */
 export function useExposureFactor(): number {
   return useOptionalExposureFactor() ?? 1;
+}
+
+/**
+ * The auto exposure of the attributes the world renders with, or null without one. The root
+ * world's compositor reduces the frame's luminance for it.
+ */
+export function useAutoExposure(): AutoExposure | null {
+  return useContext(CameraAttributesContext)?.autoExposure ?? null;
 }
