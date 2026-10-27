@@ -9,8 +9,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../parser/types';
 import type { Transform3D } from '../../godot/math/transform3d';
 import { NodeDispatcher } from '../NodeDispatcher';
-import { isNodeIcon } from '../editorHelpers';
 import { SelectionProvider } from '../contexts/SelectionContext';
+import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { visibleInTree } from '../visibleInTree';
@@ -70,7 +70,9 @@ function kidNode(): TscnNode {
 async function renderScene(nodes: TscnNode[]) {
   return ReactThreeTestRenderer.create(
     <SelectionProvider>
-      <NodeDispatcher nodes={nodes} />
+      <ViewportModeProvider initialShowGizmos={false}>
+        <NodeDispatcher nodes={nodes} />
+      </ViewportModeProvider>
     </SelectionProvider>
   );
 }
@@ -100,10 +102,9 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
       expect(group.instance.position.toArray()).toEqual([2, 3, 4]);
       expect(group.instance.visible).toBe(true);
 
-      // 3. Nothing in the whole rendered scene owns a mesh or geometry. The node icon is editor
-      // chrome, not what the node draws.
-      const meshes = renderer.scene.findAllByType('Mesh').filter((mesh) => !isNodeIcon(mesh.instance));
-      expect(meshes).toHaveLength(0);
+      // 3. Nothing in the whole rendered scene owns a mesh or geometry. The Gizmos toggle is off,
+      // since the node icon is editor chrome, not what the node draws.
+      expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
     }
   );
 

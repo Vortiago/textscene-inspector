@@ -12,8 +12,8 @@ import { GIZMO_RENDER_ORDER, GizmoGroup } from '../components/GizmoGroup';
 import { nodeIconUserData } from '../editorHelpers';
 import { useGizmoLookValue } from '../gizmo/PluginGizmo';
 import { materialProgramInputs } from '../materialProgramInputs';
-import type { Rgba } from '../../godot/math/math';
-import type { EditorIconName } from './editorIcons';
+import type { TscnNode } from '../../parser/types';
+import type { EditorIconRegistration } from './editorIconRegistration';
 import { editorIconTexture } from './editorIconTexture';
 import { iconAppearance } from './iconAppearance';
 import { iconWorldMatrix } from './iconWorldMatrix';
@@ -30,18 +30,21 @@ const ALPHA_SCISSOR = 0.1;
 const nodeOrigin = new THREE.Vector3();
 
 interface BillboardIconProps {
-  icon: EditorIconName;
-  modulate: Rgba;
+  node: TscnNode;
+  registration: EditorIconRegistration;
 }
 
 /** Mounts only inside a {@link PluginGizmo}, which gives the look of the node. */
-export function BillboardIcon({ icon, modulate }: BillboardIconProps) {
+export function BillboardIcon({ node, registration }: BillboardIconProps) {
   const look = useGizmoLookValue();
+  if (!look) throw new Error('expected BillboardIcon inside a PluginGizmo, found none');
+  const { icon } = registration;
   const meshRef = useRef<THREE.Mesh>(null);
-  const { r, g, b, a } = modulate;
+  // Under the gate, so a node with the Gizmos toggle off never parses its light colour.
+  const modulate = useMemo(() => registration.modulate?.(node), [registration, node]);
   const { color, opacity } = useMemo(
-    () => iconAppearance(look?.variant ?? 'selected', look?.isInstantiated ?? false, { r, g, b, a }),
-    [look?.variant, look?.isInstantiated, r, g, b, a]
+    () => iconAppearance(look.variant, look.isInstantiated, modulate),
+    [look.variant, look.isInstantiated, modulate]
   );
   const program = useMemo(
     () =>

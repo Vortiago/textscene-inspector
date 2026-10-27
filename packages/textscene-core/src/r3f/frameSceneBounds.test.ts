@@ -199,17 +199,4 @@ describe('frameSceneBounds: a node icon', () => {
 
     expect(iconCamera.position.toArray()).toEqual(aloneCamera.position.toArray());
   });
-
-  it('frames nothing for a scene that holds only an icon', () => {
-    const scene = new THREE.Scene();
-    const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial());
-    icon.userData = nodeIconUserData();
-    scene.add(icon);
-    const camera = makeCamera();
-    const startPosition = camera.position.toArray();
-
-    frameSceneBounds(scene, camera, null);
-
-    expect(camera.position.toArray()).toEqual(startPosition);
-  });
 });

@@ -102,12 +102,18 @@ describe('computeWorldBoundingBox', () => {
   });
 });
 
+/** A node icon quad, the mesh whose size follows the camera. */
+function iconMesh(): THREE.Mesh {
+  const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial());
+  icon.userData = nodeIconUserData();
+  return icon;
+}
+
 describe('computeWorldBoundingBox: a node icon', () => {
   it('adds nothing to the box of its node, whose size follows the camera', () => {
     const node = new THREE.Group();
     node.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
-    const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial());
-    icon.userData = nodeIconUserData();
+    const icon = iconMesh();
     icon.position.set(50, 0, 0);
     node.add(icon);
 
@@ -116,9 +122,7 @@ describe('computeWorldBoundingBox: a node icon', () => {
 
   it('bounds nothing when the icon is all the node holds', () => {
     const node = new THREE.Group();
-    const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial());
-    icon.userData = nodeIconUserData();
-    node.add(icon);
+    node.add(iconMesh());
 
     expect(computeWorldBoundingBox(node).isEmpty()).toBe(true);
   });

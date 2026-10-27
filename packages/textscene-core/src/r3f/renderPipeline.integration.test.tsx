@@ -10,9 +10,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactThreeTest } from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from './NodeDispatcher';
-import { isNodeIcon } from './editorHelpers';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { SelectionProvider } from './contexts/SelectionContext';
+import { ViewportModeProvider } from './contexts/ViewportModeContext';
 
 // Pull in all self-registering node components
 import './nodes/index';
@@ -21,9 +21,8 @@ type ReactThreeTestInstance = ReactThreeTest.ReactThreeTestInstance;
 
 // The test renderer's tree API, since `instanceof` fails across its second
 // three.js copy under `traverse()`.
-/** The meshes the nodes draw. A node icon is editor chrome. */
 function findMeshes(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {
-  return scene.findAllByType('Mesh').filter((mesh) => !isNodeIcon(mesh.instance));
+  return scene.findAllByType('Mesh');
 }
 
 function findLights(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {
@@ -40,12 +39,14 @@ async function renderScene(content: string) {
   const scene = parser.parse(content);
   const renderer = await ReactThreeTestRenderer.create(
     <SelectionProvider>
-      <SceneResourcesProvider
-        internalResources={scene.internalResources}
-        externalResources={scene.externalResources}
-      >
-        <NodeDispatcher nodes={scene.nodes} />
-      </SceneResourcesProvider>
+      <ViewportModeProvider initialShowGizmos={false}>
+        <SceneResourcesProvider
+          internalResources={scene.internalResources}
+          externalResources={scene.externalResources}
+        >
+          <NodeDispatcher nodes={scene.nodes} />
+        </SceneResourcesProvider>
+      </ViewportModeProvider>
     </SelectionProvider>
   );
   return renderer;

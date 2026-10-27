@@ -292,8 +292,10 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
 
   const children: ReactNode[] = [];
   // Inside the node's own group, as a child, so the icon sits at its origin whatever the component draws.
-  if (nodeComponentRegistry.editorIconOf(node.type))
-    children.push(<NodeEditorIcon key="__icon" node={node} />);
+  const editorIcon = nodeComponentRegistry.editorIconOf(node.type);
+  if (editorIcon) {
+    children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
+  }
   if (inlineChildren.length > 0) {
     children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
   }

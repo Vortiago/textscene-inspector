@@ -8,16 +8,14 @@
 import { describe, expect, it } from 'vitest';
 import { iconAppearance } from './iconAppearance';
 
-const WHITE = { r: 1, g: 1, b: 1, a: 1 };
-
 describe('iconAppearance', () => {
   it('draws a selected icon in its own colours', () => {
-    const { color, opacity } = iconAppearance('selected', false, WHITE);
+    const { color, opacity } = iconAppearance('selected', false);
     expect([color.r, color.g, color.b, opacity]).toEqual([1, 1, 1, 1]);
   });
 
   it('multiplies an unselected icon albedo by 0.6 before the sRGB conversion', () => {
-    const { color, opacity } = iconAppearance('unselected', false, WHITE);
+    const { color, opacity } = iconAppearance('unselected', false);
     expect(color.toArray()).toEqual([0.3185468, 0.3185468, 0.3185468].map((c) => expect.closeTo(c, 6)));
     expect(opacity).toBe(1);
   });
@@ -33,18 +31,18 @@ describe('iconAppearance', () => {
   });
 
   it('draws a selected icon of a node the edited scene does not own in the instantiated grey', () => {
-    const { color, opacity } = iconAppearance('selected', true, WHITE);
+    const { color, opacity } = iconAppearance('selected', true);
     expect(color.toArray()).toEqual([0.4479884, 0.4479884, 0.4479884].map((c) => expect.closeTo(c, 6)));
     expect(opacity).toBe(0.6);
   });
 
   it('dims the instantiated grey of an unselected icon and leaves its alpha', () => {
-    const { color, opacity } = iconAppearance('unselected', true, WHITE);
+    const { color, opacity } = iconAppearance('unselected', true);
     expect(color.toArray()).toEqual([0.147319, 0.147319, 0.147319].map((c) => expect.closeTo(c, 6)));
     expect(opacity).toBe(0.6);
   });
 
   it('multiplies the modulate alpha into the opacity', () => {
-    expect(iconAppearance('selected', false, { ...WHITE, a: 0.25 }).opacity).toBe(0.25);
+    expect(iconAppearance('selected', false, { r: 1, g: 1, b: 1, a: 0.25 }).opacity).toBe(0.25);
   });
 });

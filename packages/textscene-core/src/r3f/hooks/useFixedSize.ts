@@ -7,7 +7,7 @@
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useRef, type RefObject } from 'react';
-import { fixedSizeFactor } from '../fixedSizeFactor';
+import { fixedSizeFactor, scalesWithDepth } from '../fixedSizeFactor';
 import type { Vec3Tuple } from '../nodeTransform';
 
 /** Scratch, reused across frames: this runs on every rendered frame. */
@@ -38,7 +38,7 @@ export function useFixedSize(
     // Godot's VERTEX patch scales the model-view basis and leaves the origin, which equals scaling
     // `object.scale`. Not a `ProgramInjection`: Label3D's glyph material bypasses that seam, and a
     // scale the scene graph sees keeps raycasts and `frameSceneBounds.ts` matching the pixels.
-    object.updateWorldMatrix(true, false);
+    if (scalesWithDepth(camera)) object.updateWorldMatrix(true, false);
     const sc = fixedSizeFactor(camera, worldOrigin.setFromMatrixPosition(object.matrixWorld));
     object.scale.set(authoredScale[0] * sc, authoredScale[1] * sc, authoredScale[2] * sc);
   });
