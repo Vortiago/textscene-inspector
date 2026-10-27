@@ -1,0 +1,38 @@
+; The one variable: a CSGMesh3D whose mesh is a TextMesh with depth. The left text draws as a solid, and
+; the right text, subtracted from a CSGBox3D, cuts its letters out with walls in its own material. No other
+; golden shows it: unit-text-mesh draws its TextMesh through a MeshInstance3D. The plate is taller and wider
+; than the text and thinner than its depth, so the cut passes through and no cut edge lies where Godot
+; hints a glyph by a pixel.
+[gd_scene load_steps=5 format=3 uid="uid://unitcsgmeshtextmesh"]
+
+[ext_resource type="FontFile" path="res://fonts/open-sans-semibold-subset.ttf" id="1_font"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
+albedo_color = Color(0.85, 0.25, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue"]
+albedo_color = Color(0.2, 0.45, 0.85, 1)
+
+[sub_resource type="TextMesh" id="TextMesh_hog"]
+text = "Hog"
+font = ExtResource("1_font")
+font_size = 64
+depth = 0.2
+
+[node name="CsgMeshTextMeshRoot" type="Node3D"]
+
+[node name="Solid" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.1, 0)
+mesh = SubResource("TextMesh_hog")
+material = SubResource("StandardMaterial3D_red")
+
+[node name="Plate" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0, 0)
+size = Vector3(1.8, 1.2, 0.12)
+material = SubResource("StandardMaterial3D_red")
+
+[node name="Cut" type="CSGMesh3D" parent="Plate"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0.1, 0)
+operation = 2
+mesh = SubResource("TextMesh_hog")
+material = SubResource("StandardMaterial3D_blue")
