@@ -3,7 +3,7 @@
  * (`renderer_scene_render_rd.cpp:707`, `tone_mapper.cpp:177`).
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
@@ -13,8 +13,13 @@ import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { LUMINANCE_UNIFORM } from '../../resources/environment/godotLuminance';
+import type { AutoExposure } from '../../resources/cameraattributes/types';
+import { testRenderer } from '../../testing/recordingWebGL';
 
-function effectWith(properties: Record<string, string>) {
+const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance: 1 };
+
+function effectWith(properties: Record<string, string>, autoExposure: AutoExposure | null = null) {
   const settings = createEnvironmentSettings(
     decodeEnvironment({ glow_enabled: 'true', ...properties }),
     DEFAULT_CLEAR_COLOR
@@ -22,6 +27,7 @@ function effectWith(properties: Record<string, string>) {
   return new GodotToneMapEffect({
     glow: glowParamsFor(settings),
     adjustments: null,
+    autoExposure,
     toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
     exposure: 1,
     transparentBackground: false,
@@ -142,5 +148,44 @@ describe('GodotToneMapEffect glow texture size', () => {
     effect.setSize(800, 600);
     effect.setSize(201, 101);
     expect(textureSize(effect)).toEqual([100, 50]);
+  });
+});
+
+describe('GodotToneMapEffect auto exposure', () => {
+  const luminanceOf = (effect: GodotToneMapEffect) => effect.uniforms.get(LUMINANCE_UNIFORM)?.value;
+
+  it('samples a luminance texture from construction, which the reduction fills for each frame', () => {
+    expect(luminanceOf(effectWith({}, AUTO_EXPOSURE))).toBeInstanceOf(THREE.Texture);
+  });
+
+  it('samples none without an auto exposure', () => {
+    expect(luminanceOf(effectWith({}))).toBeUndefined();
+  });
+
+  it('reduces the frame before it builds the glow, which reads the luminance (renderer_scene_render_rd.cpp:551-607)', async () => {
+    const { renderer } = await testRenderer();
+    const effect = effectWith({}, AUTO_EXPOSURE);
+    const drawn: THREE.ShaderMaterial[] = [];
+    vi.spyOn(renderer, 'render').mockImplementation((quad) => {
+      drawn.push((quad as THREE.Mesh).material as THREE.ShaderMaterial);
+    });
+    effect.setSize(64, 64);
+    effect.update(renderer, new THREE.WebGLRenderTarget(64, 64));
+    const names = drawn.map(({ name }) => name.split('.')[0]);
+    expect(names.indexOf('GodotGlow')).toBeGreaterThan(names.lastIndexOf('GodotLuminance'));
+    expect(names).toContain('GodotLuminance');
+  });
+
+  it('gives the first glow level the luminance the composite samples', async () => {
+    const { renderer } = await testRenderer();
+    const effect = effectWith({}, AUTO_EXPOSURE);
+    const drawn: THREE.ShaderMaterial[] = [];
+    vi.spyOn(renderer, 'render').mockImplementation((quad) => {
+      drawn.push((quad as THREE.Mesh).material as THREE.ShaderMaterial);
+    });
+    effect.setSize(64, 64);
+    effect.update(renderer, new THREE.WebGLRenderTarget(64, 64));
+    const brightPass = drawn.find(({ name }) => name === 'GodotGlow.FirstVertical')!;
+    expect(brightPass.uniforms[LUMINANCE_UNIFORM]!.value).toBe(luminanceOf(effect));
   });
 });

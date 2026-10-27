@@ -497,6 +497,14 @@ _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 The `exposure_multiplier` of the CameraAttributes that a world renders with. A world with no CameraAttributes has none, which a baked lightmap tells from the factor 1.
 _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 
+**Auto exposure** (`r3f/environment/LuminanceReduction.ts`):
+The exposure divided by the **Frame luminance** over `auto_exposure_scale`, in the tone-map pass and the glow's bright pass. A still frame shows the settled value, so `auto_exposure_speed` has no part.
+_Avoid_: "eye adaptation", "adaptive exposure".
+
+**Frame luminance**:
+The one value the **Auto exposure** reads: the largest channel of the HDR frame, averaged in 8-texel blocks over the top left region the last level reaches, held between the luminance range of the CameraAttributes.
+_Avoid_: "brightness", "average colour". The mean of the whole frame, which Godot's blocks do not compute.
+
 **Radiance layer**:
 One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
 _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
