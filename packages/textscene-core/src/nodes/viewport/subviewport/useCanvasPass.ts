@@ -15,7 +15,7 @@ import { applyOrthoFrame, orthoFrameForSize } from './offscreenViewport';
  * the pass draws through (ADR-0057). The frame takes the viewport's `msaa_2d` mode, so the target it
  * copies into never multisamples. A pass that draws no canvas passes mode 0.
  *
- * @oneWay The camera and frame of a sub-viewport's 2D pass
+ * @canonical The camera and frame of a sub-viewport's 2D pass
  */
 export function useCanvasPass(
   width: number,

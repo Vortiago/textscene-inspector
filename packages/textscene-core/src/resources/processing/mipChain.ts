@@ -36,7 +36,7 @@ export function lowerLevelSizes(top: ImageSize): ImageSize[] {
 /**
  * `level` with its rows in reverse order: top-down as Godot holds it, or bottom-up as a `DataTexture` uploads it.
  *
- * @oneWay Row order of RGBA pixels
+ * @canonical Row order of RGBA pixels
  */
 export function reversedLevel({ data, width, height }: MipLevel): MipLevel {
   return { data: reversedRows(data, width, height), width, height };
@@ -49,7 +49,7 @@ export function reversedLevel({ data, width, height }: MipLevel): MipLevel {
  * A level of `reuse` at the same index and size is written over, not allocated: a fresh buffer
  * costs 60 ms of page faults for a 4096 × 8192 level, on every rebuild of an atlas.
  *
- * @oneWay A CPU mip chain as Godot builds it
+ * @canonical A CPU mip chain as Godot builds it
  */
 export function mipChain(
   base: MipLevel,

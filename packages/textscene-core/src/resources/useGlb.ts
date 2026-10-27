@@ -6,7 +6,7 @@ import { useResource, type ResourceResult } from './useResource.js';
 /**
  * The GLB at `path`, a clone for this consumer once loaded. No path requests nothing.
  *
- * @oneWay A GLB for one consumer
+ * @canonical A GLB for one consumer
  */
 export function useGlb(path: string | undefined): ResourceResult<THREE.Object3D> {
   return useResource<THREE.Object3D>(path ?? '', 'glb');

@@ -35,7 +35,7 @@ const quadFor = perObject<THREE.WebGLRenderer, THREE.Mesh>(() => {
 /**
  * A pass that overwrites its target with `fragmentShader`, reading `uniforms`.
  *
- * @oneWay A full-screen pass
+ * @canonical A full-screen pass
  */
 export function fullScreenPass(
   name: string,
@@ -74,7 +74,7 @@ export function fullScreenDepthPass(
  * Draws `pass` into `layer` (a cube face or a 3D slice) and `mip` of `target`. A null `target` is
  * the drawing buffer.
  *
- * @oneWay A full-screen pass
+ * @canonical A full-screen pass
  */
 export function drawFullScreen(
   renderer: THREE.WebGLRenderer,

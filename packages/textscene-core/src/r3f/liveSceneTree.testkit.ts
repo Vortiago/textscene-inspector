@@ -10,7 +10,7 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
 /**
  * The context of `main`, with each scene path in `scenes` cached and every other path not.
  *
- * @oneWay In tests, a live-tree context over scenes
+ * @canonical In tests, a live-tree context over scenes
  */
 export function contextOver(main: TscnScene, scenes: Record<string, TscnScene>): LiveTreeContext {
   return {
