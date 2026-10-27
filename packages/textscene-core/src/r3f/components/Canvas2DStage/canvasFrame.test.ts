@@ -79,7 +79,6 @@ describe('createCanvasFrame', () => {
     frame.dispose();
   });
 
-  // A render clears only while the renderer's autoClear is on, which the tone-map composer turns off.
   it('clears itself before the world draws when the renderer does not clear on render', () => {
     const { gl, draws, clears } = recordingRenderer(64, 64);
     gl.autoClear = false;
@@ -92,7 +91,7 @@ describe('createCanvasFrame', () => {
     frame.dispose();
   });
 
-  it('leaves the clear to the render when the renderer clears on render (edge case)', () => {
+  it('leaves the clear to the render when the renderer clears on render', () => {
     const { gl, clears } = recordingRenderer(64, 64);
     const frame = multisampledFrame(0);
 

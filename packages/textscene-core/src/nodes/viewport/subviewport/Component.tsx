@@ -190,8 +190,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         toneMapping,
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
-          // A 3D pass clears its target itself, since a render clears only while the renderer's
-          // `autoClear` is on and the tone-map composer turns it off. A 2D pass copies over it.
+          // A 3D pass clears its target itself, as `CanvasFrame.render` explains. A 2D pass copies over it.
           if (kind === '3d') gl.clear(true, true, true);
           if (!camera) return;
           renderWithMipmapBias(mipmapBias, () =>

@@ -153,6 +153,19 @@ async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null) {
   return instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByProps({ name: 'Camera3D' }));
 }
 
+/** 3D content inside the sub-viewport, with no camera to render it through. */
+const NO_CAMERA_SCENE = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Inside" type="MeshInstance3D" parent="Viewport"]
+mesh = SubResource("1")
+`;
+
 /** 3D content inside the sub-viewport, with a camera to render it through. */
 const scene3D = (viewportProps = '') => `[gd_scene format=3]
 
@@ -505,38 +518,18 @@ size = Vector2i(300, 300)
    * unrendered viewport from a missing one.
    */
   it('publishes a target for content with no camera', async () => {
-    const { published } = await renderScene(`[gd_scene format=3]
-
-[sub_resource type="BoxMesh" id="1"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Viewport" type="SubViewport" parent="."]
-
-[node name="Inside" type="MeshInstance3D" parent="Viewport"]
-mesh = SubResource("1")
-`);
+    const { published } = await renderScene(NO_CAMERA_SCENE);
     expect(published()).not.toBeNull();
   });
 
-  // A render clears only while the renderer's autoClear is on, which the tone-map composer turns off.
+  // The render of a camera cannot be relied on to clear (see `CanvasFrame.render`).
   it('clears a 3D target by hand, once, before its camera renders', async () => {
     const { renderer, gl } = await renderScene(scene3D());
     expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
   });
 
   it('clears a 3D target by hand when no camera renders into it', async () => {
-    const { renderer, gl } = await renderScene(`[gd_scene format=3]
-
-[sub_resource type="BoxMesh" id="1"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Viewport" type="SubViewport" parent="."]
-
-[node name="Inside" type="MeshInstance3D" parent="Viewport"]
-mesh = SubResource("1")
-`);
+    const { renderer, gl } = await renderScene(NO_CAMERA_SCENE);
     expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
   });
 

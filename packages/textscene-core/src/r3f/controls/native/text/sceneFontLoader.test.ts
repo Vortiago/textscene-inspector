@@ -270,16 +270,16 @@ describe('fontWork', () => {
     const off = onSceneFontMetricsSettled(() => {
       throw new Error('listener failed');
     });
-    const unhandled: unknown[] = [];
-    const record = (reason: unknown) => unhandled.push(reason);
-    process.on('unhandledRejection', record);
+    // The load runs unawaited, so its rejection is the listener's error and nothing else.
+    const swallow = () => undefined;
+    process.on('unhandledRejection', swallow);
     try {
       peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/P');
       await settleLoads();
       expect(fontWork.pending()).toBe(0);
     } finally {
       off();
-      process.off('unhandledRejection', record);
+      process.off('unhandledRejection', swallow);
     }
   });
 
