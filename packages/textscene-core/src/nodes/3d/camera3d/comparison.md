@@ -52,5 +52,5 @@ While the viewer looks through a Camera3D, or a sub-viewport elects it, the expo
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical does not set the `fov`, `near` and `far` of its camera (`camera_3d.cpp:565-567`), and its depth of field does not draw.
-
+- **Not drawn** The `attributes` of a Camera3D in a SubViewport that shares the root world do not scale that SubViewport's texture. The pass draws the one scene at the exposure of the root world, and Godot scales it by the exposure of the camera the SubViewport renders through (`renderer_scene_cull.cpp:2707`).
 - **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.

@@ -816,8 +816,7 @@ tr:last-child td{border-bottom:0}
 <h3>Exposure</h3>
 <p>While the viewer looks through a Camera3D, or a sub-viewport elects it, the exposure factor of its <code>attributes</code> replaces the one of the world (<code>renderer_scene_cull.cpp:3562-3565</code>). A camera with no valid <code>attributes</code> leaves the world's exposure in force. The WorldEnvironment sheet lists what the factor scales.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> A CameraAttributesPhysical does not set the <code>fov</code>, <code>near</code> and <code>far</code> of its camera (<code>camera_3d.cpp:565-567</code>), and its depth of field does not draw.</li></ul>
-<ul><li><strong>Editor only</strong> The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.</li></ul></div>
+<ul><li><strong>Not drawn</strong> A CameraAttributesPhysical does not set the <code>fov</code>, <code>near</code> and <code>far</code> of its camera (<code>camera_3d.cpp:565-567</code>), and its depth of field does not draw.</li><li><strong>Not drawn</strong> The <code>attributes</code> of a Camera3D in a SubViewport that shares the root world do not scale that SubViewport's texture. The pass draws the one scene at the exposure of the root world, and Godot scales it by the exposure of the camera the SubViewport renders through (<code>renderer_scene_cull.cpp:2707</code>).</li><li><strong>Editor only</strong> The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="CanvasGroup" hidden>
       <header class="sheet-head">
