@@ -14,19 +14,16 @@ import { CollisionDebugLines } from '../../shared/CollisionDebugLines';
 
 function Wireframe({ mesh }: { mesh: SurfacedMesh }) {
   const positions = useMemo(() => meshDebugLines(mesh), [mesh]);
-  return <CollisionDebugLines positions={positions} />;
+  return (
+    <PluginGizmo drawnFor="every-node">
+      <CollisionDebugLines positions={positions} />
+    </PluginGizmo>
+  );
 }
 
 export function SoftBody3D({ node, children }: NodeComponentProps) {
   return (
-    <MeshInstance3D
-      node={node}
-      gizmo={(mesh) => (
-        <PluginGizmo drawnFor="every-node">
-          <Wireframe mesh={mesh} />
-        </PluginGizmo>
-      )}
-    >
+    <MeshInstance3D node={node} gizmo={(mesh) => <Wireframe mesh={mesh} />}>
       {children}
     </MeshInstance3D>
   );

@@ -98,12 +98,15 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     scale,
     shadow,
     godotLayers: properties.layers,
-    subtree: (
-      <>
-        {content.kind === 'surfaced' && gizmo?.(content.mesh)}
-        {children}
-      </>
-    ),
+    subtree:
+      gizmo && content.kind === 'surfaced' ? (
+        <>
+          {gizmo(content.mesh)}
+          {children}
+        </>
+      ) : (
+        children
+      ),
     overlay: overlaySource ? (
       <MaterialOverlayMesh
         meshRef={meshRef}
