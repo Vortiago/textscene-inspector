@@ -75,6 +75,8 @@ const rowsOfScenes = new SceneHolding((_scene, renderer) => new SceneRows(render
 /**
  * The rows of `scene` and the call that lets go of them. The probes and the decals of one scene hold
  * the same rows; the last to let go frees the texture.
+ *
+ * @canonical The per-scene row texture a program reads probes and decals from
  */
 export function holdSceneRows(
   scene: THREE.Scene,
