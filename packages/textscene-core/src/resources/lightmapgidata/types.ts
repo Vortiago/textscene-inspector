@@ -26,4 +26,6 @@ export interface LightmapGIData {
   users: readonly LightmapUser[];
   /** The capture's bounds in the LightmapGI's space, which the renderer culls the lightmap by. */
   bounds: Aabb;
+  /** The exposure factor the bake ran at, which the lightmap divides out of the scene's (`lightmap_gi.h:70`). */
+  bakedExposure: number;
 }

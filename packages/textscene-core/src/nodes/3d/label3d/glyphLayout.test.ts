@@ -10,13 +10,8 @@ import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSa
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/glyphQuads';
 import { label3DAabb, layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  type HorizontalAlignment,
-} from '../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../godot/math/alignment';
+import type { EnumValue } from '../../../godot/classdb/enumNames';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 
 const FONT_SIZE = 32;
@@ -33,14 +28,14 @@ function shape(text: string, lineSpacingPx = 0) {
 describe('layoutLabel3DLines', () => {
   it('centres a single line vertically on the origin (label_3d.cpp VERTICAL_ALIGNMENT_CENTER default)', () => {
     const layout = shape('Hi');
-    const [placement] = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_CENTER, 0);
+    const [placement] = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER, 0);
     const contentHeightPx = layout.heightPx; // line_spacing 0
     expect(placement!.y).toBeCloseTo(-contentHeightPx / 2, 6);
   });
 
   it('each subsequent line advances by exactly one linePitchPx', () => {
     const layout = shape('A\nB\nC');
-    const placements = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_CENTER, 0);
+    const placements = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER, 0);
     expect(placements.length).toBe(3);
     expect(placements[1]!.y - placements[0]!.y).toBeCloseTo(layout.linePitchPx, 6);
     expect(placements[2]!.y - placements[1]!.y).toBeCloseTo(layout.linePitchPx, 6);
@@ -48,35 +43,35 @@ describe('layoutLabel3DLines', () => {
 
   it('LEFT starts every line at x=0 regardless of its own width', () => {
     const layout = shape('A\nBB');
-    const placements = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_LEFT, 0);
+    const placements = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, 0);
     expect(placements[0]!.x).toBe(0);
     expect(placements[1]!.x).toBe(0);
   });
 
   it('CENTER centres each line independently by its own width', () => {
     const layout = shape('A\nBB');
-    const placements = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_CENTER, 0);
+    const placements = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER, 0);
     expect(placements[0]!.x).toBeCloseTo(-layout.lines[0]!.widthPx / 2, 6);
     expect(placements[1]!.x).toBeCloseTo(-layout.lines[1]!.widthPx / 2, 6);
   });
 
   it('RIGHT ends every line at x=0 (offset = -lineWidth)', () => {
     const layout = shape('A\nBB');
-    const placements = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_RIGHT, 0);
+    const placements = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT, 0);
     expect(placements[0]!.x).toBeCloseTo(-layout.lines[0]!.widthPx, 6);
     expect(placements[1]!.x).toBeCloseTo(-layout.lines[1]!.widthPx, 6);
   });
 
   it('FILL folds into CENTER (label_3d.cpp:592 falls FILL through to the CENTER case; no per-line justification)', () => {
     const layout = shape('BB');
-    const center = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_CENTER, 0);
-    const fill = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_FILL, 0);
+    const center = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER, 0);
+    const fill = layoutLabel3DLines(layout, HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL, 0);
     expect(fill[0]!.x).toBeCloseTo(center[0]!.x, 6);
   });
 
   it('line_spacing widens the per-line pitch and the vertical-centring subtraction', () => {
     const withSpacing = shape('A\nB', 5);
-    const placements = layoutLabel3DLines(withSpacing, HORIZONTAL_ALIGNMENT_CENTER, 5);
+    const placements = layoutLabel3DLines(withSpacing, HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER, 5);
     expect(placements[1]!.y - placements[0]!.y).toBeCloseTo(
       getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 5),
       6
@@ -95,7 +90,7 @@ describe('layoutLabel3DLines', () => {
         baselineOffsetPx: 35,
         fontMetrics: OPEN_SANS_FONT_METRICS,
       },
-      HORIZONTAL_ALIGNMENT_CENTER,
+      HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
       0
     );
     expect(placements).toEqual([]);
@@ -105,36 +100,39 @@ describe('layoutLabel3DLines', () => {
 describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over)', () => {
   const PIXEL_SIZE = 0.01;
 
-  function aabbOf(text: string, alignment: HorizontalAlignment, lineSpacingPx = 0) {
+  function aabbOf(text: string, alignment: EnumValue<typeof HorizontalAlignment>, lineSpacingPx = 0) {
     const layout = shape(text, lineSpacingPx);
     return label3DAabb(layoutLabel3DLines(layout, alignment, lineSpacingPx), layout.linePitchPx, PIXEL_SIZE);
   }
 
-  function centreOf(text: string, alignment: HorizontalAlignment, lineSpacingPx = 0) {
+  function centreOf(text: string, alignment: EnumValue<typeof HorizontalAlignment>, lineSpacingPx = 0) {
     const { position, size } = aabbOf(text, alignment, lineSpacingPx);
     return { x: position.x + size.x / 2, y: position.y + size.y / 2 };
   }
 
   it('centres a CENTER label on its origin', () => {
-    const centre = centreOf('A\nBB', HORIZONTAL_ALIGNMENT_CENTER);
+    const centre = centreOf('A\nBB', HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER);
     expect(centre.x).toBeCloseTo(0, 6);
     expect(centre.y).toBeCloseTo(0, 6);
   });
 
   it('lowers the centre by half the line spacing, which the last line box carries below the text', () => {
-    expect(centreOf('A\nB', HORIZONTAL_ALIGNMENT_CENTER, 6).y).toBeCloseTo(-3 * PIXEL_SIZE, 6);
+    expect(centreOf('A\nB', HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER, 6).y).toBeCloseTo(
+      -3 * PIXEL_SIZE,
+      6
+    );
   });
 
   it('spans a LEFT label from its origin to its widest line', () => {
     const layout = shape('A\nBB');
     const widest = Math.max(...layout.lines.map((line) => line.widthPx));
-    const { position, size } = aabbOf('A\nBB', HORIZONTAL_ALIGNMENT_LEFT);
+    const { position, size } = aabbOf('A\nBB', HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT);
     expect([position.x, size.x]).toEqual([0, widest * PIXEL_SIZE]);
   });
 
   it('spans two line pitches for two lines', () => {
     const layout = shape('A\nB');
-    expect(aabbOf('A\nB', HORIZONTAL_ALIGNMENT_CENTER).size.y).toBeCloseTo(
+    expect(aabbOf('A\nB', HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER).size.y).toBeCloseTo(
       2 * layout.linePitchPx * PIXEL_SIZE,
       6
     );
@@ -157,7 +155,11 @@ describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over
 describe('layoutLabel3DLines + <TextRun> (the composed ink position — Label3D has no golden)', () => {
   function composedTopY(text: string, lineSpacingPx: number, lineIndex: number): number {
     const layout = shape(text, lineSpacingPx);
-    const placement = layoutLabel3DLines(layout, HORIZONTAL_ALIGNMENT_CENTER, lineSpacingPx)[lineIndex]!;
+    const placement = layoutLabel3DLines(
+      layout,
+      HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+      lineSpacingPx
+    )[lineIndex]!;
     const quads = buildGlyphQuadArrays(soloLineLayout(placement.line, layout), FONT_SIZE, 0);
     // Vertex order per quad is TL, TR, BL, BR; TL's y is float index 1.
     return -placement.y + quads.positions[1]!;

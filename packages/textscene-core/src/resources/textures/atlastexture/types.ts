@@ -8,7 +8,10 @@
 /** The `type` an AtlasTexture sub-resource declares. */
 export const ATLAS_TEXTURE_TYPE = 'AtlasTexture';
 
-/** A `Rect2(x, y, width, height)` literal, in atlas pixels (top-left origin, like Godot). */
+/**
+ * A rectangle in an atlas: left, top, width and height, top row first. An AtlasTexture's `region`
+ * holds atlas pixels, and `fractionOfAtlas` returns fractions of the atlas.
+ */
 export interface AtlasRect {
   x: number;
   y: number;

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
+import { skinnedRigGlb } from '../../../resources/formats/glb/testing/skinnedRigGlb';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { settleLoads } from '../../testing/settleLoads';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -315,5 +316,30 @@ describe('a GODOT_single_root GLB, whose glTF node 0 is the instancing node', ()
     );
     await edit('');
     expect(objectNamed('RootNode').position.toArray()).toEqual([0, 0, -1]);
+  });
+});
+
+describe('a skinned GLB mesh below a Skeleton3D', () => {
+  /** In front of the camera, 41 units from it. */
+  const ARMATURE_OFFSET = [0, 0, -30] as const;
+
+  /** The host and the rig, whose Armature is 30 units behind the origin and whose triangle draws at the origin. */
+  async function renderRig(rangeEnd: number) {
+    const fake = createFakeResourceLoader();
+    fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(skinnedRigGlb(ARMATURE_OFFSET), NO_SIDECAR));
+    const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
+    const lines = `\n[node name="Body" parent="Lamp/Armature/Skeleton3D"]\nvisibility_range_end = ${rangeEnd}\n`;
+    const renderer = await ReactThreeTestRenderer.create(hostTree(fake, lines, ''), { camera });
+    await settleLoads();
+    await renderScene(renderer, camera);
+    return renderer.scene.instance.getObjectByName('Body') as THREE.Mesh;
+  }
+
+  it('measures its range from the node Godot places it at, which holds the Armature offset', async () => {
+    expect(drawsColour(await renderRig(20))).toBe(false);
+  });
+
+  it('draws within its range', async () => {
+    expect(drawsColour(await renderRig(60))).toBe(true);
   });
 });

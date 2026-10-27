@@ -32,6 +32,8 @@ import { PROBE_ROW_TEXELS, probeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
+import { drawAtExposure, exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure.js';
+import { exposureOverBaked } from '../exposure/exposureOverBaked.js';
 
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
@@ -73,6 +75,14 @@ export class SceneProbes {
     background: undefined,
     clearColor: -1,
   };
+  /**
+   * The exposure each probe last captured at, written only by `capture`, and only while the world
+   * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
+   * probe is shown at the exposure over this one (`light_storage.cpp:1810-1814`).
+   */
+  private readonly bakedExposures = new WeakMap<ReflectionProbeObject, number>();
+  /** The exposure the packed rows were made for, so a change of exposure packs them again. */
+  private packedExposure: number | null = null;
   private readonly stopObserving: (() => void)[];
   /** The lights whose shadows a capture without shadows hid, put back once the render ends. */
   private readonly hiddenShadows: { shadow: THREE.LightShadow; intensity: number }[] = [];
@@ -105,14 +115,17 @@ export class SceneProbes {
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(clearColor);
-    const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
+    const stale = this.canCapture() ? probes.findIndex((probe, layer) => !this.isCaptured(probe, layer)) : -1;
     if (stale !== -1) {
       beginStep(this.renderer, 'Reflection probes');
       this.capture(probes[stale]!, stale, atlas, clearColor);
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
-    if (stale !== -1 || !sameElements(captured, this.packed)) this.pack(captured);
+    const exposure = exposureOfScene(this.scene);
+    if (stale !== -1 || !sameElements(captured, this.packed) || exposure !== this.packedExposure) {
+      this.pack(captured, exposure);
+    }
     return stale !== -1;
   }
 
@@ -123,6 +136,15 @@ export class SceneProbes {
     this.atlas?.target.dispose();
     this.cube.dispose();
     this.rows.dispose();
+  }
+
+  /**
+   * A capture draws at the exposure of the world, not of the camera (`render_forward_clustered.cpp:1714-1716`).
+   * A camera that exposes the view at 0 leaves every light with no energy to rescale to the world's,
+   * so a capture waits for a camera that shows the world.
+   */
+  private canCapture(): boolean {
+    return exposureOfScene(this.scene) !== 0 || worldExposureOfScene(this.scene) === 0;
   }
 
   /** The atlas for `probes`, made again with their count and layout, which drops every capture. */
@@ -148,7 +170,8 @@ export class SceneProbes {
 
   /**
    * Marks every capture stale once new content settles, or once the environment the captures saw
-   * changes. A stale capture still draws, so no probe vanishes until it captures again.
+   * changes. A stale capture still draws, so no probe vanishes until it captures again. A change of
+   * exposure marks none: Godot rescales the capture instead.
    */
   private markCapturesStale(clearColor: THREE.Color): void {
     const { environment, background } = this.scene;
@@ -190,29 +213,34 @@ export class SceneProbes {
     const capture = { isInterior: probe.interior, hasShadows: probe.enableShadows };
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes, capture);
-    const restore = stageCapture(this.scene, probe, clearColor);
-    try {
-      drawOffscreen(this.renderer, () => {
-        this.renderer.autoClear = true;
-        cameras.forEach((camera, face) => {
-          this.renderer.setRenderTarget(this.cube, face);
-          this.renderer.render(this.scene, camera);
+    const worldExposure = worldExposureOfScene(this.scene);
+    drawAtExposure(this.scene, worldExposure, () => {
+      const restore = stageCapture(this.scene, probe, clearColor);
+      try {
+        drawOffscreen(this.renderer, () => {
+          this.renderer.autoClear = true;
+          cameras.forEach((camera, face) => {
+            this.renderer.setRenderTarget(this.cube, face);
+            this.renderer.render(this.scene, camera);
+          });
         });
-      });
-    } finally {
-      restore();
-    }
+      } finally {
+        restore();
+      }
+    });
     const radianceFilter =
       probe.updateMode === ReflectionProbeUpdateMode.ALWAYS ? 'fast' : 'importance-sample';
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
     const { generation } = this;
     this.captures.set(object, { layer, generation, probe, matrixWorld: object.matrixWorld.clone() });
+    if (worldExposure !== null) this.bakedExposures.set(object, worldExposure);
   }
 
-  /** Writes the rows of `probes` in Godot's order, and uploads them. */
-  private pack(probes: readonly ReflectionProbeObject[]): void {
-    const rows = probeRows(reflectionProbeOrder(probes.map((object) => this.drawnProbe(object))));
+  /** Writes the rows of `probes` in Godot's order, shown at `exposure`, and uploads them. */
+  private pack(probes: readonly ReflectionProbeObject[], exposure: number | null): void {
+    const rows = probeRows(reflectionProbeOrder(probes.map((object) => this.drawnProbe(object, exposure))));
     this.packed = probes;
+    this.packedExposure = exposure;
     const current = this.rows.image.data as Float32Array;
     if (current.length === rows.length) {
       current.set(rows);
@@ -225,9 +253,15 @@ export class SceneProbes {
     this.renderer.initTexture(this.rows);
   }
 
-  private drawnProbe(object: ReflectionProbeObject): DrawnProbe {
+  private drawnProbe(object: ReflectionProbeObject, exposure: number | null): DrawnProbe {
     const worldToLocal = probeFrame(object.matrixWorld).invert();
-    return { ...object.probe, worldToLocal, atlasLayer: this.captures.get(object)!.layer };
+    const exposureNormalization = exposureOverBaked(exposure, this.bakedExposures.get(object) ?? 1);
+    return {
+      ...object.probe,
+      worldToLocal,
+      atlasLayer: this.captures.get(object)!.layer,
+      exposureNormalization,
+    };
   }
 
   /** Points every lit material at this scene's probes for a render, or at none for a capture's. */

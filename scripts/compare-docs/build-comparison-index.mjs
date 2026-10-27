@@ -4,18 +4,15 @@
  * description is current, so a hand-kept list goes stale unseen. `--check` fails instead of
  * writing, and `validate` runs it.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
+import { orderedCategories } from './categoryOrder.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, '../..');
-const INDEX = resolve(ROOT, 'docs/comparison/README.md');
+const INDEX = resolve(REPO_ROOT, 'docs/comparison/README.md');
 const START = '## 3D';
-
-/** `2D` before `3D` before the rest, and A-Z inside a category. */
-const CATEGORY_ORDER = ['3D', '2D', 'Resources', 'Other'];
 
 function rows() {
   const byCategory = new Map();
@@ -30,7 +27,7 @@ function rows() {
     byCategory.get(category).push(`- [${sheet.meta.type}](${href})${renders ? `: ${renders}` : ''}`);
   }
   const out = [];
-  const seen = [...byCategory.keys()].sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+  const seen = orderedCategories(byCategory.keys());
   for (const category of seen) {
     out.push(`## ${category}`, '');
     out.push(...byCategory.get(category).sort((a, b) => a.localeCompare(b)));
@@ -47,13 +44,7 @@ if (cut === -1) {
 }
 const next = current.slice(0, cut) + rows();
 
-if (process.argv.includes('--check')) {
-  if (next !== current) {
-    console.error('[comparison-index] docs/comparison/README.md is STALE — run `pnpm docs:index`.');
-    process.exit(1);
-  }
-  console.log('[comparison-index] up to date.');
-} else {
-  writeFileSync(INDEX, next);
-  console.log(`[comparison-index] wrote ${next.slice(cut).split('\n- ').length - 1} rows.`);
-}
+const outputs = [[INDEX, next]];
+const tool = 'comparison-index';
+if (process.argv.includes('--check')) checkGenerated(outputs, { tool, command: 'pnpm docs:index' });
+else writeGenerated(outputs, { tool });

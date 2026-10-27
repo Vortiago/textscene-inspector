@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeThemeAddresses, resolveInlineThemeResource } from './decode';
 import type { FontResource } from '../../fonts/font/types';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 const FONT_A: FontResource = {
   kind: 'file',
@@ -193,7 +194,7 @@ describe('resolveInlineThemeResource', () => {
       },
       ext,
       int,
-      { getCached: () => undefined },
+      NOTHING_CACHED,
       new Set()
     );
     expect(resource.properties).toEqual({ 'Panel/unknown_data_type/panel': 'null' });

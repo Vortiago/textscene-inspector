@@ -34,12 +34,7 @@ import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { type Rgba } from '../../../../godot/math/math';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-} from '../../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,
@@ -338,7 +333,7 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
 
   let xOfs: number;
   switch (alignment) {
-    case HORIZONTAL_ALIGNMENT_CENTER: {
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER: {
       const totalMargin = styleMargin.left + styleMargin.right;
       const iconTerm = hasIcon ? iconWidthPx : 0;
       const diff = Math.trunc(rectSize.x - totalMargin - textWidthPx - iconTerm);
@@ -346,11 +341,11 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
       xOfs = styleMargin.left + Math.max(0, centered);
       break;
     }
-    case HORIZONTAL_ALIGNMENT_RIGHT:
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT:
       xOfs = rtl ? styleMargin.left : trailingEdgeX;
       break;
-    case HORIZONTAL_ALIGNMENT_LEFT:
-    case HORIZONTAL_ALIGNMENT_FILL:
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT:
+    case HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL:
     default:
       xOfs = rtl ? trailingEdgeX : styleMargin.left;
       break;
@@ -360,7 +355,7 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
   // the right margin again (`:1477`). Under RTL the icon sits at the left margin, so the text floors
   // past it (`:1473-1474`), and CENTER shifts by the icon width (`:1469-1471`).
   if (hasIcon) {
-    if (alignment === HORIZONTAL_ALIGNMENT_CENTER) {
+    if (alignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
       if (rtl) xOfs += iconWidthPx;
     } else {
       xOfs = rtl
@@ -439,18 +434,18 @@ export function lineEditCaretRect(input: {
     // LEFT/FILL and RIGHT swap under RTL (`:1560-1584`). CENTER reads `right_icon`'s raw width
     // (`right_icon->get_width()`, `:1570`), never the expand-mode size or the clear button.
     switch (alignment) {
-      case HORIZONTAL_ALIGNMENT_CENTER: {
+      case HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER: {
         const totalMargin = styleMargin.left + styleMargin.right;
         const inner = Math.trunc(rectSize.x - totalMargin - rightIconRawWidthPx);
         x = styleMargin.left + Math.max(0, Math.trunc(inner / 2));
         break;
       }
-      case HORIZONTAL_ALIGNMENT_RIGHT:
+      case HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT:
         // RTL puts it at `x_ofs`, which the caller already resolved as `textPenX` (:1578-1584).
         x = rtl ? textPenX : ofsMaxPx;
         break;
-      case HORIZONTAL_ALIGNMENT_LEFT:
-      case HORIZONTAL_ALIGNMENT_FILL:
+      case HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT:
+      case HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL:
       default:
         x = rtl ? ofsMaxPx : styleMargin.left;
         break;

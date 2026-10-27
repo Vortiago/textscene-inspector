@@ -1,10 +1,10 @@
 /**
  * The native (WebGL) render-to-texture publisher for a Control-only sub-viewport
  * (`viewportContentKind === 'dom'`), which `<SubViewport>`'s own pass declines. It
- * mounts the Control walker into a detached scene, renders it through a fixed camera
+ * mounts the Control walker into a detached scene, draws it through a fixed camera
  * framing the target rect, and publishes a texture consumers sample directly.
  */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -22,14 +22,9 @@ import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme.js';
 import { measureText } from '../../../r3f/controls/native/text/measurer.js';
 import type { Rect2 } from '../../../godot/math/rect2.js';
-import {
-  applyOrthoFrame,
-  createCanvasTarget,
-  orthoFrameForSize,
-  renderToOffscreenTarget,
-  viewportMsaaMode,
-} from './offscreenViewport.js';
+import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
+import { useCanvasPass } from './useCanvasPass.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
@@ -55,7 +50,8 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
 
-  const { size, transparent_bg: transparentBg } = node.properties as SubViewportProperties;
+  const properties = node.properties as SubViewportProperties;
+  const { size, transparent_bg: transparentBg } = properties;
   const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
 
   const gl = useThree((state) => state.gl);
@@ -75,18 +71,9 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     () => createCanvasTarget(width, height, node.name),
     [width, height, node.name]
   );
-  // Controls are canvas items, so the 2D buffer's mode applies.
-  const target = useMultisampledTarget(
-    viewportMsaaMode(node.properties as SubViewportProperties, '2d'),
-    createTarget
-  );
-
-  const camera = useMemo(() => new THREE.OrthographicCamera(), []);
-  useEffect(() => {
-    camera.near = 0.1;
-    camera.far = 4000;
-    applyOrthoFrame(camera, orthoFrameForSize({ x: width, y: height }));
-  }, [camera, width, height]);
+  // The frame takes the 2D buffer's multisampling, so the target it copies into never multisamples.
+  const target = useMultisampledTarget(0, createTarget);
+  const { camera, frame } = useCanvasPass(width, height, viewportMsaaMode(properties, '2d'));
 
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   // The rtl climb steps straight over a `SubViewport` (`control.cpp:3584-3598`,
@@ -107,9 +94,9 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
       transparentBg,
       // Controls are never tonemapped, on-screen or off.
       toneMapping: THREE.NoToneMapping,
-      draw: () => gl.render(portalScene, camera),
+      draw: () => frame.render(gl, portalScene, camera),
     });
-  }, [gl, target, clearColor, transparentBg, portalScene, camera]);
+  }, [gl, target, frame, clearColor, transparentBg, portalScene, camera]);
 
   usePublishViewportPass({
     path,
@@ -122,7 +109,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-      <SubViewportSamplerScope properties={node.properties as SubViewportProperties}>
+      <SubViewportSamplerScope properties={properties}>
         <ControlCanvasWalker
           tree={tree}
           generation={generation}

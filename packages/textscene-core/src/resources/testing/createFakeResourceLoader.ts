@@ -20,6 +20,8 @@ import { createClearCache } from '../resourceProcessorClear';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
+import { isGodotSceneRoot } from '../formats/glb/godotNodes';
+import { tagAsLoadedGlb } from '../formats/glb/testing/loadedGlbTags';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 
 export interface FakeProcessor<T> {
@@ -70,6 +72,22 @@ export interface FakeResourceLoader {
   readonly jobRunner: WorkerJobRunner;
   /** Every ExtResource passed to `loader.register`, in call order. */
   readonly registerCalls: ExtResource[];
+}
+
+/**
+ * The real loader tags every GLB it returns with its Godot paths. A hand-built graph gets the same
+ * tags on its way in, so a test seeds the shape it needs and finds it by Godot path.
+ */
+function taggingLoadedGlbs(processor: FakeProcessor<THREE.Object3D>): FakeProcessor<THREE.Object3D> {
+  const tagged = <V extends THREE.Object3D | null>(glb: V): V => {
+    if (glb instanceof THREE.Object3D && !isGodotSceneRoot(glb)) tagAsLoadedGlb(glb);
+    return glb;
+  };
+  return {
+    ...processor,
+    seed: (path, glb) => processor.seed(path, tagged(glb)),
+    _resolve: (path, glb) => processor._resolve(path, tagged(glb)),
+  };
 }
 
 function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): FakeProcessor<T> {
@@ -135,7 +153,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
   const textures3D = makeFakeProcessor<THREE.Data3DTexture>(eventBus, 'texture3d');
   const textureArrays = makeFakeProcessor<THREE.DataArrayTexture>(eventBus, 'texture2darray');
-  const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
+  const glbMeshes = taggingLoadedGlbs(makeFakeProcessor<THREE.Object3D>(eventBus, 'glb'));
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
   const resources = makeFakeProcessor<ParsedResource>(eventBus, 'resource');
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');

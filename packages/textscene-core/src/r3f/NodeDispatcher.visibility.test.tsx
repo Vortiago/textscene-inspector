@@ -8,6 +8,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SelectionProvider } from './contexts/SelectionContext';
+import {
+  AnimatedValueProvider,
+  useAnimatedValueRegistry,
+  type AnimatedValueRegistry,
+} from './contexts/AnimatedValueContext';
 import { HiddenSeeder } from './testing/HiddenSeeder';
 import { visibleInTree } from './visibleInTree';
 
@@ -140,5 +145,46 @@ describe("<NodeDispatcher> Godot's `visible`", () => {
       </SelectionProvider>
     );
     expect(findWrappingGroup(renderer.scene, 'Plain')!.visible).toBe(true);
+  });
+});
+
+describe('<NodeDispatcher> a pushed visible value', () => {
+  let registry: AnimatedValueRegistry;
+  function RegistryProbe() {
+    registry = useAnimatedValueRegistry();
+    return null;
+  }
+
+  async function render(nodes: TscnNode[]) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <AnimatedValueProvider>
+          <RegistryProbe />
+          <NodeDispatcher nodes={nodes} />
+        </AnimatedValueProvider>
+      </SelectionProvider>
+    );
+    const push = (path: string, value: number[] | null) =>
+      ReactThreeTestRenderer.act(async () => registry.set(path, 'visible', value));
+    return { renderer, push };
+  }
+
+  it('hides a Node3D, and shows it again when released', async () => {
+    const { renderer, push } = await render([makeNode('Alpha', 'Node3D')]);
+
+    await push('Alpha', [0]);
+    expect(findWrappingGroup(renderer.scene, 'Alpha')!.visible).toBe(false);
+
+    await push('Alpha', null);
+    expect(findWrappingGroup(renderer.scene, 'Alpha')!.visible).toBe(true);
+  });
+
+  it('shows a Node3D whose authored visible is false', async () => {
+    const hidden = { ...makeNode('Alpha', 'Node3D'), properties: { visible: false } };
+    const { renderer, push } = await render([hidden]);
+
+    await push('Alpha', [1]);
+
+    expect(findWrappingGroup(renderer.scene, 'Alpha')!.visible).toBe(true);
   });
 });

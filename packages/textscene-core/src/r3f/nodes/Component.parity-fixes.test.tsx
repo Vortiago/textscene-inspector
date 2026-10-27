@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Camera3D } from '../../nodes/3d/camera3d/Component';
+import { Camera3DInWorld } from '../../nodes/3d/camera3d/Camera3DInWorld.testkit';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
@@ -235,7 +235,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         },
       } as Camera3DProperties,
     };
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
     const cam = renderer.scene.findByType('PerspectiveCamera').instance as THREE.Camera;
     // Identity basis + h_offset=2.5 → position.x shifts by 2.5.
     expect(cam.position.x).toBeCloseTo(2.5, 5);
@@ -271,7 +271,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         },
       } as Camera3DProperties,
     };
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
     const cam = renderer.scene.findByType('PerspectiveCamera').instance as THREE.Camera;
     expect(cam.position.x).toBeCloseTo(0, 5);
     expect(cam.position.y).toBeCloseTo(-1.5, 5);
@@ -309,7 +309,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         },
       } as Camera3DProperties,
     };
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
     const cam = renderer.scene.findByType('PerspectiveCamera').instance as THREE.Camera;
     expect(cam.position.x).toBeCloseTo(0, 5);
     expect(cam.position.y).toBeCloseTo(1, 5);

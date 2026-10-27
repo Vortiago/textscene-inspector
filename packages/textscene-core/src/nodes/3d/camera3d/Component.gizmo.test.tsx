@@ -20,7 +20,7 @@ import {
 import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { makeCameraNode } from './cameraNode.testkit';
-import { Camera3D } from './Component';
+import { Camera3DInWorld } from './Camera3DInWorld.testkit';
 import { cameraGizmoLines } from './gizmoLines';
 
 const NODE_PATH = 'Cam';
@@ -56,7 +56,7 @@ function camera(
   ancestorAt?: Place['ancestorAt'],
   viewportSize?: Place['viewportSize']
 ): ReactNode {
-  const mounted = <Camera3D node={node} />;
+  const mounted = <Camera3DInWorld node={node} />;
   const placed = ancestorAt ? <group position={ancestorAt}>{mounted}</group> : mounted;
   return viewportSize ? <ViewportSizeProvider size={viewportSize}>{placed}</ViewportSizeProvider> : placed;
 }
@@ -131,7 +131,7 @@ describe('<Camera3D> gizmo', () => {
     const before = positionsOf(gizmoLine(renderer));
     await renderer.update(
       <GizmoScene nodePath={NODE_PATH} selectedPath={NODE_PATH}>
-        <Camera3D node={makeCameraNode({ fov: 30 })} />
+        <Camera3DInWorld node={makeCameraNode({ fov: 30 })} />
       </GizmoScene>
     );
     expect(positionsOf(gizmoLine(renderer))).not.toEqual(before);

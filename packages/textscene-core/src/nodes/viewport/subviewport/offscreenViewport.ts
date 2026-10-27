@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
+import { electViewportCamera } from '../../../godot/scene/camera3d';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/applyTextureState';
@@ -86,9 +87,9 @@ export function viewportMsaaMode(
 const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
- * Bind `target`, clear it, run `draw`, and restore the render target, clear colour,
- * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the
- * pass.
+ * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
+ * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the pass. `draw`
+ * clears whatever it needs cleared.
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -110,7 +111,6 @@ export function renderToOffscreenTarget(
     if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
-    gl.clear(true, true, true);
     options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
@@ -122,27 +122,20 @@ export function renderToOffscreenTarget(
 /**
  * The camera a sub-viewport renders through, or null when it has none. Only a
  * descendant counts: a `Camera3D` joins `get_viewport()` on ENTER_WORLD, and a
- * shared-world source holds every viewport's cameras. `scene/3d/camera_3d.cpp`'s
- * `_camera_3d_set` overwrites, so the last `current` wins, or else the first.
+ * shared-world source holds every viewport's cameras.
  */
 export function selectViewportCamera(root: THREE.Object3D, viewportPath: string): THREE.Camera | null {
   const prefix = `${viewportPath}/`;
-  let first: THREE.Camera | null = null;
-  let lastCurrent: THREE.Camera | null = null;
+  const cameras: THREE.Camera[] = [];
 
   // Depth-first pre-order, which is the order nodes enter the tree.
   root.traverse((object) => {
     if (!(object as THREE.Camera).isCamera) return;
     const path = object.userData?.tscnPath;
-    if (typeof path !== 'string' || !path.startsWith(prefix)) return;
-    if (object.userData?.tscnCurrent === true) {
-      lastCurrent = object as THREE.Camera;
-      return;
-    }
-    first ??= object as THREE.Camera;
+    if (typeof path === 'string' && path.startsWith(prefix)) cameras.push(object as THREE.Camera);
   });
 
-  return lastCurrent ?? first;
+  return electViewportCamera(cameras, (camera) => camera.userData?.tscnCurrent === true);
 }
 
 /**

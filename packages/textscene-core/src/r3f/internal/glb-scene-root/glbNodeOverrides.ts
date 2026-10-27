@@ -1,11 +1,12 @@
 /**
  * Applies an instancing scene's overrides, such as `[node name="plafoniera" parent="."]`, to
- * nodes inside the GLB it instances: transform, `layers` and `visible`. A GLB with no override
+ * nodes inside the GLB it instances: transform, `layers` and `visible`. A Skeleton3D or
+ * BoneAttachment3D takes its own properties (`glbFrameOverrides.ts`). A GLB with no override
  * keeps its baked offsets. `surface_material_override/0` needs an async load, so
  * `GlbSurfaceMaterialOverride` applies it. The scene cull applies the GeometryInstance3D state
  * (`glbGeometryInstances.ts`).
  */
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { LiveNode } from '../../../resources/liveNode';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
@@ -15,13 +16,20 @@ import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInst
 import { joinPath } from '../../../utils/nodePath';
 import { perObject } from '../../../utils/perObject';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
-import { findGlbTarget, matchGlbTarget, type GlbTargetMatchKind } from './matchGlbTarget.js';
+import { applyGlbFrameOverride } from './glbFrameOverrides.js';
+import { writeNodeTransform } from './glbNodeTransform.js';
+import { findGlbFrame, findGlbNode, findGlbTarget, matchGlbNode } from './glbPathLookup.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+
+/** The Godot path below the GLB root of the node an override names. */
+function glbOverridePath(override: TscnNode): string {
+  return joinPath(override.instanceSubPath ?? '', override.name);
+}
 
 /**
  * The GLB object an override names, or `undefined` when nothing could be it. Both the writer here
  * and the material slots in `Component.tsx` use it, so one node never means two objects. A
- * shallow override takes the first name match, the root included, since a single-node GLB is
+ * shallow override names a child of the GLB root, or the root itself, since a single-node GLB is
  * addressed by its root's name.
  */
 export function resolveGlbOverrideTarget(
@@ -29,11 +37,11 @@ export function resolveGlbOverrideTarget(
   entries: readonly GlbObjectEntry[],
   override: TscnNode
 ): THREE.Object3D | undefined {
-  if (override.instanceSubPath) {
-    return matchGlbTarget(entries, joinPath(override.instanceSubPath, override.name))?.object;
+  const path = glbOverridePath(override);
+  if (override.instanceSubPath || glbObjectName(root) !== override.name) {
+    return matchGlbNode(entries, path)?.object;
   }
-  const byName = entries.find((e) => glbObjectName(e.object) === override.name)?.object;
-  return byName ?? (glbObjectName(root) === override.name ? root : undefined);
+  return findGlbNode(entries, path)?.object ?? root;
 }
 
 /**
@@ -86,17 +94,14 @@ function glbAttachPath(child: TscnNode): string | null {
   return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
 }
 
-/** The lookup result of an override, which attaches to no object. */
-const NO_TARGET = { entry: null, kind: 'none' } as const;
-
 /**
- * A typed node of the instancing scene, with the index of the entry of the GLB object it is added
- * to, and how its path matched that entry.
+ * A typed node of the instancing scene, with the index of the entry of the GLB object it is placed
+ * by, and the object it is added to.
  */
 export interface GlbAttachment {
   node: LiveNode;
   target: number;
-  match: GlbTargetMatchKind;
+  host: THREE.Object3D;
 }
 
 /**
@@ -116,9 +121,8 @@ export function resolveGlbAttachments(
   const rest: LiveNode[] = [];
   for (const node of nodes) {
     const path = glbAttachPath(node);
-    const { entry, kind } = path === null ? NO_TARGET : findGlbTarget(entries, path);
-    // `indexOf` costs one more pass of the scan `findGlbTarget` has made, for a node that attaches.
-    if (entry) attached.push({ node, target: entries.indexOf(entry), match: kind });
+    const target = path === null ? null : findGlbTarget(entries, path);
+    if (target) attached.push({ node, target: target.entry.index, host: target.host });
     else rest.push(node);
   }
   return { attached, rest };
@@ -156,33 +160,68 @@ export function applyGlbNodeOverrides(
   entries: readonly GlbObjectEntry[] = flattenGlbObjects(root)
 ): Set<string> {
   const applied = new Set<string>();
-  if (overrides.length === 0) return applied;
-
   for (const override of overrides) {
     if (!isApplicableGlbOverride(override)) continue;
-
-    const layers = parseOptionalInt(override.rawProperties.layers, 'uint32');
-    const visible = override.rawProperties.visible;
-    const transform = (override.properties as Node3DProperties).transform;
-    // Nothing to write means nothing to resolve: an override with only
-    // `surface_material_override/0` skips the path match.
-    if (layers === undefined && visible === undefined && !transform) continue;
-
-    const target = resolveGlbOverrideTarget(root, entries, override);
-    if (!target) continue;
-
-    // An override node has no type, so `layers` lands in `rawProperties`.
-    if (layers !== undefined) stampMeshInstanceLayers(target, layers);
-    if (visible !== undefined) target.visible = boolSlotValue(visible) !== false;
-    if (!transform) continue;
-
-    const { position, rotation, scale } = decomposeForR3F(transform);
-    target.position.set(position[0], position[1], position[2]);
-    target.rotation.set(rotation[0], rotation[1], rotation[2]);
-    target.scale.set(scale[0], scale[1], scale[2]);
-    target.updateMatrix();
-    applied.add(override.name);
+    const frame = findGlbFrame(entries, glbOverridePath(override));
+    const wroteTransform = frame
+      ? applyGlbFrameOverride(entries, frame, override)
+      : applyToNode(root, entries, override);
+    if (wroteTransform) applied.add(override.name);
   }
-
   return applied;
+}
+
+/** Writes `layers`, `visible` and `transform` of `override` on its node, and returns whether it wrote the transform. */
+function applyToNode(root: THREE.Object3D, entries: readonly GlbObjectEntry[], override: TscnNode): boolean {
+  const layers = parseOptionalInt(override.rawProperties.layers, 'uint32');
+  const visible = override.rawProperties.visible;
+  const transform = (override.properties as Node3DProperties).transform;
+  // Nothing to write means nothing to resolve: an override with only
+  // `surface_material_override/0` skips the path match.
+  if (layers === undefined && visible === undefined && !transform) return false;
+
+  const target = resolveGlbOverrideTarget(root, entries, override);
+  if (!target) return false;
+
+  // An override node has no type, so `layers` lands in `rawProperties`.
+  if (layers !== undefined) stampMeshInstanceLayers(target, layers);
+  if (visible !== undefined) target.visible = boolSlotValue(visible) !== false;
+  if (!transform) return false;
+
+  writeNodeTransform(target, decomposeForR3F(transform));
+  return true;
+}
+
+/** The objects the overrides with `visible = false` hide: the node each names. A frame is {@link hiddenGlbFramePaths}. The caller owns the result. */
+export function hiddenGlbObjects(
+  root: THREE.Object3D,
+  entries: readonly GlbObjectEntry[],
+  overrides: readonly TscnNode[]
+): Set<THREE.Object3D> {
+  const hidden = new Set<THREE.Object3D>();
+  for (const override of hiddenOverrides(overrides)) {
+    if (findGlbFrame(entries, glbOverridePath(override))) continue;
+    const object = resolveGlbOverrideTarget(root, entries, override);
+    if (object) hidden.add(object);
+  }
+  return hidden;
+}
+
+/** The paths of the Skeleton3D and BoneAttachment3D nodes that the overrides with `visible = false` hide. */
+export function hiddenGlbFramePaths(
+  entries: readonly GlbObjectEntry[],
+  overrides: readonly TscnNode[]
+): Set<string> {
+  const hidden = new Set<string>();
+  for (const override of hiddenOverrides(overrides)) {
+    const frame = findGlbFrame(entries, glbOverridePath(override));
+    if (frame) hidden.add(frame.path);
+  }
+  return hidden;
+}
+
+function hiddenOverrides(overrides: readonly TscnNode[]): TscnNode[] {
+  return overrides.filter(
+    (override) => boolSlotValue(override.rawProperties.visible) === false && isApplicableGlbOverride(override)
+  );
 }

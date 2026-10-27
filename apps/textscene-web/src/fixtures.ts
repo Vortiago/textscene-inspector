@@ -648,6 +648,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Frames",
+    "file": "unit-glb-frames.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Lightmap Miss",
     "file": "unit-glb-lightmap-miss.tscn",
     "category": "Other"
@@ -660,6 +665,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glb Property Override",
     "file": "unit-glb-property-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Skeleton Override",
+    "file": "unit-glb-skeleton-override.tscn",
     "category": "Other"
   },
   {
@@ -1120,6 +1130,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Lightmap Gi Directional",
     "file": "unit-lightmap-gi-directional.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Exposure",
+    "file": "unit-lightmap-gi-exposure.tscn",
     "category": "Other"
   },
   {
@@ -1623,6 +1638,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Camera Exposure",
+    "file": "unit-reflection-probe-camera-exposure.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe",
     "file": "unit-reflection-probe.tscn",
     "category": "Other"
@@ -1940,6 +1960,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Subtree Under Leaf Nodes",
     "file": "unit-subtree-under-leaf-nodes.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Subviewport Control Edge On Pixel Centre",
+    "file": "unit-subviewport-control-edge-on-pixel-centre.tscn",
     "category": "Other"
   },
   {
@@ -3419,6 +3444,21 @@ export const fixtures: Fixture[] = [
     "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
     "category": "Unit - 2D UI Controls",
     "root": "layout-direction-root-rtl"
+  },
+  {
+    "name": "Camera Attributes Exposure Camera",
+    "file": "unit-camera-attributes-exposure-camera.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera Attributes Exposure Sky",
+    "file": "unit-camera-attributes-exposure-sky.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera Attributes Exposure",
+    "file": "unit-camera-attributes-exposure.tscn",
+    "category": "Unit - Basic Nodes"
   },
   {
     "name": "Camera Basic",

@@ -5,7 +5,8 @@
  * the names three's loader gives.
  */
 
-import { gltfObjects, isGltfJsonObject, type GltfJsonObject } from './gltf.js';
+import { gltfObjects, isGltfJsonObject, usesGodotSingleRoot, type GltfJsonObject } from './gltf.js';
+import { gltfImportScene, type GltfSceneNode, type GltfSceneSourceNode } from './gltfImportScene.js';
 import { gltfSkeletonBones, type ImportNode } from './gltfSkeletons.js';
 import { validateNodeName } from '../string/nodeName.js';
 
@@ -22,18 +23,11 @@ export interface GltfNamingOptions {
 /** `gltf/naming_version`'s default (`editor_scene_importer_gltf.cpp:87`). */
 export const DEFAULT_GLTF_NAMING_VERSION = 2;
 
-/**
- * Where the importer puts a node under a skeleton. A `bone` is a bone of its Skeleton3D, and a node
- * only when it holds a mesh, a camera or a light, which goes in a BoneAttachment3D of the bone's
- * name. A `skinnedMesh` goes straight under the Skeleton3D. A `node` under a bone goes in that
- * bone's BoneAttachment3D (`gltf_document.cpp:4612-4658,4777-4860`).
- */
-export type GltfNodeRole = 'node' | 'bone' | 'skinnedMesh';
-
 export interface GltfNodeName {
   /** The node name, or for a bone the name of the nodes its BoneAttachment3D holds. */
   name: string;
-  role: GltfNodeRole;
+  /** Whether the importer makes the node a bone of a Skeleton3D, which is no node of the scene. */
+  isBone: boolean;
 }
 
 /** Godot's `unique_names`, filled by `_gen_unique_name_static` (`gltf_document.cpp:7223-7242`). */
@@ -155,23 +149,25 @@ export interface GltfImportNames {
   meshes: string[];
   /** Null for an animation the importer skips, or that has no name to store. */
   animations: (GltfClip | null)[];
+  /** The nodes of the scene the importer builds, which a scene's node path into the glTF names. */
+  scene: GltfSceneNode[];
 }
 
 /** The names of `json`, the parsed glTF document. A document with no `nodes` names none. */
 export function gltfImportNames(json: unknown, options: GltfNamingOptions): GltfImportNames {
-  if (!isGltfJsonObject(json)) return { nodes: [], meshes: [], animations: [] };
+  if (!isGltfJsonObject(json)) return { nodes: [], meshes: [], animations: [], scene: [] };
   const { namingVersion, importAsSkeletonBones, fileName } = options;
   const names = new UniqueNames();
   // `_parse_scenes` reserves the name before it reads anything (`gltf_document.cpp:528`).
   names.take('Skeleton3D');
-  const scene = loadedScene(json, fileName);
+  const loaded = loadedScene(json, fileName);
   const sceneName =
-    namingVersion === 0 && gltfObjects(json['scenes']).length > 0 ? names.take(scene.name) : scene.name;
+    namingVersion === 0 && gltfObjects(json['scenes']).length > 0 ? names.take(loaded.name) : loaded.name;
 
   const nodeObjects = gltfObjects(json['nodes']);
   const nodes = importNodes(nodeObjects);
   // Before 4.5 the roots are every parentless node (`gltf_document.cpp:655-676`).
-  const roots = namingVersion < 2 ? nodes.flatMap((node, i) => (node.parent < 0 ? [i] : [])) : scene.roots;
+  const roots = namingVersion < 2 ? nodes.flatMap((node, i) => (node.parent < 0 ? [i] : [])) : loaded.roots;
   const skinJoints = gltfObjects(json['skins']).map((skin) =>
     indexes(skin['joints']).filter((j) => j < nodes.length)
   );
@@ -181,7 +177,10 @@ export function gltfImportNames(json: unknown, options: GltfNamingOptions): Gltf
     importAsSkeletonBones ? roots : [],
     importAsSkeletonBones || namingVersion < 2
   );
-  const bones = new Set(skeletons.flat());
+  const skeletonOfBone = new Map(
+    skeletons.flatMap((bones, i) => bones.map((bone): [number, number] => [bone, i]))
+  );
+  const bones = new Set(skeletonOfBone.keys());
 
   const sceneNames = nodeObjects.map((node, i) => {
     if (bones.has(i)) return null;
@@ -196,20 +195,53 @@ export function gltfImportNames(json: unknown, options: GltfNamingOptions): Gltf
   );
   const bonesByNode = boneNames(nodeObjects, skeletons, names.used, namingVersion);
 
-  const nodeNames = sceneNames.map((name, i): GltfNodeName => {
-    if (name === null) return { name: validateNodeName(bonesByNode.get(i)!), role: 'bone' };
-    const { mesh, skin } = nodes[i]!;
-    return { name, role: mesh >= 0 && skin >= 0 ? 'skinnedMesh' : 'node' };
+  const nodeNames = sceneNames.map((name, i): GltfNodeName =>
+    name === null ? { name: validateNodeName(bonesByNode.get(i)!), isBone: true } : { name, isBone: false }
+  );
+  const animations = gltfObjects(json['animations']);
+  const scene = gltfImportScene({
+    nodes: nodes.map((node, i) => sceneSourceNode(node, nodeObjects[i]!, nodeNames[i]!.name)),
+    rootNodes: roots.filter((root) => root < nodes.length),
+    skeletons,
+    skinSkeletons: skinJoints.map((joints) => skeletonOfBone.get(joints[0] ?? -1) ?? -1),
+    singleRoot: usesGodotSingleRoot(json),
+    namingVersion,
+    hasAnimations: animations.some(isImportedAnimation),
   });
-  return { nodes: nodeNames, meshes, animations: animationNames(gltfObjects(json['animations'])) };
+  return { nodes: nodeNames, meshes, animations: animationNames(animations), scene };
+}
+
+/** `_parse_nodes` (`gltf_document.cpp:563-652`): the light a `KHR_lights_punctual` node holds, or -1. */
+function lightIndex(node: GltfJsonObject): number {
+  const extensions = node['extensions'];
+  const light = isGltfJsonObject(extensions) ? extensions['KHR_lights_punctual'] : undefined;
+  return isGltfJsonObject(light) ? index(light['light']) : -1;
+}
+
+function sceneSourceNode(node: ImportNode, object: GltfJsonObject, name: string): GltfSceneSourceNode {
+  const { children, parent, joint, mesh, skin } = node;
+  return {
+    name,
+    children,
+    parent,
+    joint,
+    mesh,
+    skin,
+    camera: index(object['camera']),
+    light: lightIndex(object),
+  };
+}
+
+/** Whether `_parse_animations` keeps the animation: it needs channels and samplers (`:3741-3743`). */
+function isImportedAnimation(animation: GltfJsonObject): boolean {
+  return Array.isArray(animation['channels']) && Array.isArray(animation['samplers']);
 }
 
 /** `_parse_animations` (`gltf_document.cpp:3735-3756`): each named animation that has channels and samplers. */
 function animationNames(animations: readonly GltfJsonObject[]): (GltfClip | null)[] {
   const taken = new Set<string>();
   return animations.map((animation) => {
-    if (!Array.isArray(animation['channels']) || !Array.isArray(animation['samplers'])) return null;
-    if (typeof animation['name'] !== 'string') return null;
+    if (!isImportedAnimation(animation) || typeof animation['name'] !== 'string') return null;
     const name = animation['name'];
     const lower = name.toLowerCase();
     const loops = ['loop', 'cycle'].some((word) => lower.startsWith(word) || lower.endsWith(word));

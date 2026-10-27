@@ -12,7 +12,7 @@
 
 import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../../../../godot/math/math';
 import type { GeometryBuffers } from './connectionStroke';
-import type { Vector2 } from '../../../../godot/math/vector.js';
+import { normalizedVector2, type Vector2 } from '../../../../godot/math/vector.js';
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
 const POLYLINE_FEATHER_SIZE = 1.25;
@@ -28,12 +28,6 @@ function scale(v: Vector2, by: number): Vector2 {
   return { x: v.x * by, y: v.y * by };
 }
 
-/** `Vector2::normalized()`: a zero-length vector stays `(0, 0)`. */
-function normalized(v: Vector2): Vector2 {
-  const length = Math.hypot(v.x, v.y);
-  return length === 0 ? { x: 0, y: 0 } : { x: v.x / length, y: v.y / length };
-}
-
 /** `Vector2::orthogonal()`: `Vector2(y, -x)`. */
 function orthogonal(v: Vector2): Vector2 {
   return { x: v.y, y: -v.x };
@@ -46,7 +40,7 @@ function isZeroApproxVec(v: Vector2): boolean {
 /** `compute_polyline_segment_dir` (`:912-930`). */
 function segmentDir(points: readonly Vector2[], index: number, previous: Vector2): Vector2 {
   if (index === points.length - 1) return previous;
-  const dir = normalized({
+  const dir = normalizedVector2({
     x: points[index + 1]!.x - points[index]!.x,
     y: points[index + 1]!.y - points[index]!.y,
   });
@@ -57,7 +51,7 @@ function segmentDir(points: readonly Vector2[], index: number, previous: Vector2
 function edgeOffsetClamped(dir: Vector2, previous: Vector2): Vector2 {
   const dirLength = Math.hypot(dir.x, dir.y);
   const previousLength = Math.hypot(previous.x, previous.y);
-  let bisector = normalized({
+  let bisector = normalizedVector2({
     x: previous.x * dirLength - dir.x * previousLength,
     y: previous.y * dirLength - dir.y * previousLength,
   });
@@ -116,12 +110,18 @@ export function polylineStrokeGeometry(
 
   let firstSegmentDir: Vector2 = { x: 0, y: 0 };
   for (let i = 1; i < pointCount; i++) {
-    firstSegmentDir = normalized({ x: points[i]!.x - points[i - 1]!.x, y: points[i]!.y - points[i - 1]!.y });
+    firstSegmentDir = normalizedVector2({
+      x: points[i]!.x - points[i - 1]!.x,
+      y: points[i]!.y - points[i - 1]!.y,
+    });
     if (!isZeroApproxVec(firstSegmentDir)) break;
   }
   let lastSegmentDir: Vector2 = { x: 0, y: 0 };
   for (let i = pointCount - 1; i >= 1; i--) {
-    lastSegmentDir = normalized({ x: points[i]!.x - points[i - 1]!.x, y: points[i]!.y - points[i - 1]!.y });
+    lastSegmentDir = normalizedVector2({
+      x: points[i]!.x - points[i - 1]!.x,
+      y: points[i]!.y - points[i - 1]!.y,
+    });
     if (!isZeroApproxVec(lastSegmentDir)) break;
   }
 

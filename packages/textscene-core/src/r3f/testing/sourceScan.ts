@@ -17,7 +17,7 @@ export interface SourceFile {
 /**
  * Never walked: generated output and installed packages are nobody's source. `.vscode-test` is a
  * downloaded, gitignored VS Code, so walking it makes every corpus depend on whether the machine has
- * run the extension gate. `scripts/testOnlyExports.mjs` reads the same list.
+ * run the extension gate. `scripts/sourceTree.mjs` reads the same list.
  */
 const SKIPPED_DIRECTORIES = new Set<string>(skippedDirectories);
 
@@ -231,7 +231,7 @@ export function walkSources(
 
 /**
  * `.ts` or `.tsx` that is not a test, a test kit or a file under `testing/`: the shape every guard
- * here scans, and the split `scripts/testOnlyExports.mjs` makes.
+ * here scans, and the split `isTestFile` in `scripts/sourceTree.mjs` makes.
  */
 export const isProductionSource = (name: string, path: string): boolean =>
   /\.tsx?$/.test(name) && !/\.(test|spec|testkit)\.tsx?$/.test(name) && !/[\\/]testing[\\/]/.test(path);

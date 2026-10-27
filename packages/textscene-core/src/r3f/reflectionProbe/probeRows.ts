@@ -24,14 +24,20 @@ export interface DrawnProbe {
   reflectionMask: number;
   boxProjection: boolean;
   atlasLayer: number;
+  /**
+   * What the capture and the ambient it gives scale by: the exposure the scene renders with over the
+   * one the probe captured at, or 1 with no exposure (`light_storage.cpp:1810-1814`).
+   */
+  exposureNormalization: number;
 }
 
 /**
  * The texels of one probe: the world-to-local matrix's rows, the half size and the blend distance,
  * the origin offset and the intensity, the ambient and its mode, then the mask, the box projection
- * and the atlas layer. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
+ * and the atlas layer, then the exposure normalisation. The mask goes in two 16-bit halves, as a
+ * float holds 24 bits exactly.
  */
-export const PROBE_ROW_TEXELS = 7;
+export const PROBE_ROW_TEXELS = 8;
 
 /** The probes' texels, in order, or one empty probe for none, as a texture needs a texel. */
 export function probeRows(probes: readonly DrawnProbe[]): Float32Array {
@@ -54,6 +60,7 @@ function probeTexels(probe: DrawnProbe): number[] {
     [originOffset.x, originOffset.y, originOffset.z, probe.intensity],
     [...ambient, probe.ambientMode],
     [reflectionMask & 0xffff, reflectionMask >>> 16, probe.boxProjection ? 1 : 0, probe.atlasLayer],
+    [probe.exposureNormalization, 0, 0, 0],
   ];
   return texels.flat();
 }

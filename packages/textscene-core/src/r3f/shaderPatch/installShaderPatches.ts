@@ -23,6 +23,7 @@ import { installGodotPositionalShadow } from '../positionalShadow/positionalShad
 import { installFogComposite } from '../fog/fogComposite.js';
 import { installSkyProjection } from '../sky/skyProjection.js';
 import { installSkyDebanding } from '../sky/skyDebanding.js';
+import { installEmissionExposure } from '../exposure/emissionExposure.js';
 
 /**
  * Every patch a canvas draws with. Each install installs the patches it reads first. The order only
@@ -47,6 +48,7 @@ const SHADER_PATCH_INSTALLS: readonly (() => unknown)[] = [
   installFogComposite,
   installSkyProjection,
   installSkyDebanding,
+  installEmissionExposure,
 ];
 
 export function installShaderPatches(): void {

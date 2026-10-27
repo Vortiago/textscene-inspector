@@ -38,12 +38,8 @@ import {
   graphFrameTitleTextMin,
 } from './nativeSolver';
 import type { GraphFrameProperties } from './types';
+import { lightened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
-
-/** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
-function lightened(c: Rgba, amount: number): Rgba {
-  return { r: c.r + (1 - c.r) * amount, g: c.g + (1 - c.g) * amount, b: c.b + (1 - c.b) * amount, a: c.a };
-}
 
 /**
  * The two tint arms (`graph_frame.cpp:113-124`), picked by the theme slot's kind.

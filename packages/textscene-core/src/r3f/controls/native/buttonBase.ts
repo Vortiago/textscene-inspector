@@ -16,14 +16,7 @@ import type { FontMetrics } from './text/fontMetrics';
 import { shapeText, type TextLayoutResult } from './text/textLayout';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  VERTICAL_ALIGNMENT_BOTTOM,
-  VERTICAL_ALIGNMENT_CENTER,
-  VERTICAL_ALIGNMENT_TOP,
-} from '../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import type { Vector2 } from '../../../godot/math/vector';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
@@ -159,12 +152,16 @@ interface ButtonContentLayout {
   drawableSize: Vector2;
 }
 
-const H_CENTER = HORIZONTAL_ALIGNMENT_CENTER;
-const H_LEFT = HORIZONTAL_ALIGNMENT_LEFT;
-const H_RIGHT = HORIZONTAL_ALIGNMENT_RIGHT;
-const V_CENTER = VERTICAL_ALIGNMENT_CENTER;
-const V_TOP = VERTICAL_ALIGNMENT_TOP;
-const V_BOTTOM = VERTICAL_ALIGNMENT_BOTTOM;
+const {
+  HORIZONTAL_ALIGNMENT_CENTER: H_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT: H_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT: H_RIGHT,
+} = HorizontalAlignment;
+const {
+  VERTICAL_ALIGNMENT_CENTER: V_CENTER,
+  VERTICAL_ALIGNMENT_TOP: V_TOP,
+  VERTICAL_ALIGNMENT_BOTTOM: V_BOTTOM,
+} = VerticalAlignment;
 
 /**
  * `Button::_notification`'s icon and text placement (`button.cpp:233-456`), with

@@ -36,6 +36,7 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 const GUI_SCENE = `[gd_scene format=3]
 
@@ -55,11 +56,10 @@ function parse(source: string): TscnScene {
 }
 
 function walk(scene: TscnScene) {
-  return collectControlRasterViewports(
-    scene.nodes,
-    { getCached: () => undefined },
-    { internalResources: scene.internalResources, externalResources: scene.externalResources }
-  );
+  return collectControlRasterViewports(scene.nodes, NOTHING_CACHED, {
+    internalResources: scene.internalResources,
+    externalResources: scene.externalResources,
+  });
 }
 
 /** Reports every entry the registry resolves at `path`, in order. */
@@ -123,7 +123,13 @@ describe('<ControlRasterPasses>', () => {
     await advanceFrameWithStubbedGl(renderer, gl, (target) => {
       if (target) bound.push(target.texture);
     });
-    expect(bound).toEqual([plain.texture, decoding.texture]);
+    const labelOf = new Map<THREE.Texture | undefined, string>([
+      [plain.texture, 'plain'],
+      [decoding.texture, 'decoding'],
+    ]);
+    const bindings = bound.map((texture) => labelOf.get(texture) ?? 'frame');
+    // The pass clears the plain target, draws into the frame, copies into the plain target.
+    expect(bindings).toEqual(['plain', 'frame', 'plain', 'decoding']);
   });
 
   it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
@@ -209,6 +215,36 @@ offset_bottom = 100.5
     } finally {
       projectSettingsMock.settings = null;
     }
+  });
+
+  // Godot's canvas puts the canvas top on framebuffer row 0 (`RendererCanvasRenderRD::canvas_render_items`
+  // screen transform), which decides the row a Control edge on a pixel centre covers.
+  it('draws through a camera that maps the canvas top to NDC y = -1, as the 2D pass does', async () => {
+    const { renderer, gl } = await mount(parse(GUI_SCENE));
+    const drawn: { camera: THREE.Camera | null } = { camera: null };
+    await withStubbedGl(
+      gl,
+      {
+        onRender: (_, __, camera) => {
+          drawn.camera ??= camera;
+        },
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+
+    drawn.camera!.updateMatrixWorld(true);
+    const canvasTop = new THREE.Vector3(160, 0, 0).project(drawn.camera!);
+    const canvasBottom = new THREE.Vector3(160, -240, 0).project(drawn.camera!);
+
+    expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
+  });
+
+  // The frame's render clears the frame and the copy overwrites every texel of the target.
+  it('clears no target by hand, since the frame clears and the copy overwrites', async () => {
+    const { renderer, gl } = await mount(parse(GUI_SCENE));
+    const clear = vi.spyOn(gl, 'clear');
+    await advanceFrameWithStubbedGl(renderer, gl);
+    expect(clear).not.toHaveBeenCalled();
   });
 
   it('unregisters on unmount, so a removed sub-viewport stops resolving', async () => {

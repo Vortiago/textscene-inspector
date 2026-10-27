@@ -25,6 +25,10 @@ describe('addAtIndex', () => {
     expect(namesOf(addAtIndex(siblings, named('N', -1)))).toEqual(['A', 'B', 'C', 'N']);
   });
 
+  it('adds several nodes in turn, each against the siblings placed before it', () => {
+    expect(namesOf(addAtIndex(siblings, named('M', 1), named('N', 1)))).toEqual(['A', 'N', 'M', 'B', 'C']);
+  });
+
   it('leaves the siblings it was given as they were', () => {
     addAtIndex(siblings, named('N', 0));
     expect(namesOf(siblings)).toEqual(['A', 'B', 'C']);

@@ -6,6 +6,7 @@
 
 import type * as THREE from 'three';
 import type { ReflectionProbeProperties } from '../../nodes/3d/reflectionprobe/types.js';
+import { isAmbientLight } from '../ambientLight.js';
 import { isEditorHelper } from '../editorHelpers.js';
 import { isInMask } from '../visualLayers.js';
 
@@ -52,17 +53,11 @@ function hideCulled(scene: THREE.Scene, cullMask: number): () => void {
   };
 }
 
-/** The lights that stand for the environment's ambient, which an interior capture drops. */
-function isAmbient(object: THREE.Object3D): object is THREE.Light {
-  const o = object as THREE.Object3D & Record<string, unknown>;
-  return !!(o.isAmbientLight || o.isHemisphereLight || o.isLightProbe);
-}
-
 function dropEnvironment(scene: THREE.Scene, clearColor: THREE.Color): () => void {
   const { environmentIntensity, background } = scene;
   const ambients: { light: THREE.Light; intensity: number }[] = [];
   scene.traverse((object) => {
-    if (isAmbient(object)) ambients.push({ light: object, intensity: object.intensity });
+    if (isAmbientLight(object)) ambients.push({ light: object, intensity: object.intensity });
   });
   // The intensity, not `environment`: a program compiles `USE_ENVMAP` from the environment.
   scene.environmentIntensity = 0;

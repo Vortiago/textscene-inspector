@@ -6,9 +6,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { collectLiveNodes, type LiveTreeContext } from './liveSceneTree';
+import { collectLiveNodes } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 import { makeNode } from '../parser/testing/parserKit';
 import type { TscnNode, TscnScene } from '../parser/types';
+import { tagAsLoadedGlb } from '../resources/formats/glb/testing/loadedGlbTags';
 import '../nodes/node/index';
 
 const GLB_PATH = 'res://rig.glb';
@@ -20,6 +22,7 @@ function rigGlb(): THREE.Object3D {
   const skeleton = named('Skeleton');
   skeleton.add(named('Torso'), named('Arm'));
   root.add(skeleton);
+  tagAsLoadedGlb(root);
   return root;
 }
 
@@ -29,12 +32,13 @@ const GLB_SCENE: TscnScene = {
   internalResources: [],
 };
 
-const CTX: LiveTreeContext = {
-  externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }],
-  internalResources: [],
-  sceneCache: { getCached: (path) => (path === GLB_PATH ? GLB_SCENE : undefined) },
-  glbCache: { getCached: (path) => (path === GLB_PATH ? rigGlb() : undefined) },
-};
+const SCENES = { [GLB_PATH]: GLB_SCENE };
+const GLBS = { [GLB_PATH]: rigGlb() };
+const CTX = contextOver(
+  { externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }], internalResources: [] },
+  SCENES,
+  GLBS
+);
 
 function typed(name: string, instanceSubPath: string): TscnNode {
   return { ...makeNode(name, 'Marker3D'), instanceSubPath };
@@ -156,13 +160,14 @@ describe('a GLB instanced by the root of a sub-scene, in the live tree', () => {
       externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }],
       internalResources: [],
     };
-    const ctx: LiveTreeContext = {
-      ...CTX,
-      externalResources: [{ id: 'wrapper', path: 'res://wrapper.tscn', type: 'PackedScene' }],
-      sceneCache: {
-        getCached: (path) => (path === 'res://wrapper.tscn' ? wrapper : CTX.sceneCache.getCached(path)),
+    const ctx = contextOver(
+      {
+        externalResources: [{ id: 'wrapper', path: 'res://wrapper.tscn', type: 'PackedScene' }],
+        internalResources: [],
       },
-    };
+      { ...SCENES, 'res://wrapper.tscn': wrapper },
+      GLBS
+    );
     const roots = [makeNode('Body', 'Node', { instance: 'ExtResource("wrapper")' })];
 
     expect(collectLiveNodes(roots, ctx, () => true).map((entry) => entry.path)).toEqual([

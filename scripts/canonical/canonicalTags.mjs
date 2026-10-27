@@ -1,8 +1,10 @@
 /**
- * Reads the `@canonical` tags of the core's source as a list of shared helpers. A tag sits in the
+ * Reads the `@canonical` tags of the repo's source as a list of shared helpers. A tag sits in the
  * doc comment of an export: its first line is the job, and the lines after it, up to the next tag,
  * are a note. The list then names only exports that exist.
  */
+
+import { isTestFile } from '../sourceTree.mjs';
 
 const DOC_COMMENT = /\/\*\*([\s\S]*?)\*\/[ \t]*\n([^\n]*)/g;
 const EXPORT_NAME =
@@ -11,7 +13,7 @@ const TAG = /^@(\w+)\s*(.*)$/;
 
 /**
  * The tagged exports of one source file, in the order they appear. `file` is the path the list
- * prints, relative to the core's `src/`. Throws on a tag that is not on an export or has no job.
+ * prints, relative to the repo root. Throws on a tag that is not on an export or has no job.
  */
 export function canonicalEntries(text, file) {
   const entries = [];
@@ -57,11 +59,9 @@ export function renderCanonicalList(entries) {
 }
 
 function compareJobs([a], [b]) {
-  return isTestHelper(a) - isTestHelper(b) || a.file.localeCompare(b.file) || a.job.localeCompare(b.job);
-}
-
-function isTestHelper({ file }) {
-  return /(^|\/)testing\/|\.testkit\./.test(file);
+  return (
+    isTestFile(a.file) - isTestFile(b.file) || a.file.localeCompare(b.file) || a.job.localeCompare(b.job)
+  );
 }
 
 function item(helpers) {
