@@ -47,8 +47,11 @@ export interface CffFont {
   privateOf(glyphIndex: number): CffPrivate;
   /** The units per em of the Top DICT, the ones a font dict's `matrixOf` is relative to. */
   readonly unitsPerEm: number;
-  /** The `FontMatrix` of the font dict that holds `glyphIndex`, or the Top DICT's for a font with no font dicts. */
-  matrixOf(glyphIndex: number): FontMatrix;
+  /**
+   * The `FontMatrix` of the font dict that holds `glyphIndex`, or the Top DICT's for a font with no
+   * font dicts. Null when the `FDSelect` names a font dict the font lacks: FreeType refuses that glyph.
+   */
+  matrixOf(glyphIndex: number): FontMatrix | null;
   /** The glyph the charset gives a StandardEncoding code, or null. CFF1 only: `seac` names its parts by standard character. */
   glyphOfStandardCode(code: number): number | null;
   /** The regions an ItemVariationData blends over, or null for a `vsindex` the store lacks. CFF2 only. */
@@ -133,6 +136,8 @@ class CffReader {
         const operator = b0 === 12 ? 1200 + this.dv.getUint8(at++) : b0;
         if (operator === OP_FONT_MATRIX) {
           fontMatrix = readFontMatrix(this.dv, operands, operandStarts, end) ?? undefined;
+          // FreeType fails the DICT, and with it the font (`cff_parse_font_matrix` returns Stack_Underflow).
+          if (!fontMatrix) throw new RangeError(`FontMatrix needs 6 operands, got ${operands.length}`);
         } else {
           entries.set(operator, operands);
         }
@@ -337,8 +342,11 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
   const fdArrayAt = first(topOperands, OP_FDARRAY);
   const fdSelectAt = first(topOperands, OP_FDSELECT);
   // FreeType reads the font dicts of a CFF only for a CID-keyed font, which the `ROS` operator marks.
-  const hasFontDicts = fdArrayAt !== undefined && (isCff2 || topOperands.has(OP_ROS));
-  const fontDicts = hasFontDicts ? fontDictsOf(reader, base + fdArrayAt) : [topDict];
+  const isCidKeyed = fdArrayAt !== undefined && (isCff2 || topOperands.has(OP_ROS));
+  const listedFontDicts = isCidKeyed ? fontDictsOf(reader, base + fdArrayAt) : [];
+  // An empty FDArray leaves the Top DICT in charge, as it does in FreeType (`num_subfonts` is 0).
+  const hasFontDicts = listedFontDicts.length > 0;
+  const fontDicts = hasFontDicts ? listedFontDicts : [topDict];
   const privates = fontDicts.map((font) => privateOf(reader, base, font, isCff2));
   const fdOf =
     hasFontDicts && fdSelectAt !== undefined ? fdSelector(dv, base + fdSelectAt, charStrings.count) : () => 0;
@@ -360,7 +368,7 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
     globalSubrs,
     privateOf: (glyphIndex) => privates[fdOf(glyphIndex)] ?? privates[0]!,
     unitsPerEm: matrices.top.unitsPerEm,
-    matrixOf: (glyphIndex) => matrices.fontDicts[fdOf(glyphIndex)] ?? matrices.fontDicts[0]!,
+    matrixOf: (glyphIndex) => matrices.fontDicts[fdOf(glyphIndex)] ?? null,
     glyphOfStandardCode: (code) => {
       if (code < 0 || code > 255) return null;
       const glyphIndex = sids.indexOf(standardEncodingSid(code));

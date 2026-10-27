@@ -73,11 +73,9 @@ export interface FontMatrices {
 }
 
 /**
- * The Top DICT's matrix and that of each font dict, from the matrices the DICTs hold as written
- * (`undefined` for a DICT with none). A Top DICT without a matrix has the identity with the units
- * per em of the `head` table. A font dict without a matrix takes the Top DICT's, and one with a
- * matrix is multiplied with the Top DICT's, if that has one. `fontDictMatrices` is null for a font
- * with no font dicts.
+ * The matrices of the Top DICT and of each font dict, from those the DICTs hold as written
+ * (`undefined` for none). A DICT without one takes the Top DICT's, which is the identity at the
+ * `head` units per em if it has none. A font dict with one is multiplied with the Top DICT's.
  */
 export function resolveFontMatrices(
   topMatrix: FontMatrix | undefined,

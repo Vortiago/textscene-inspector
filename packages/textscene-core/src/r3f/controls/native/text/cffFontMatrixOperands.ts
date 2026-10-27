@@ -15,6 +15,9 @@ import { FIXED_16_16_ONE, ftDivFix, ftMulDiv } from './fontMetrics';
 /** The largest integer part of a 16.16 number. */
 const MAX_FIXED_INTEGER = 0x7fff;
 
+/** Past this, another digit would overflow the 32-bit number FreeType accumulates: it counts a power of ten instead. */
+const DIGIT_LIMIT = 0xccccccc;
+
 const REAL_OPERATOR = 30;
 const END_OF_DATA = -1;
 
@@ -59,7 +62,7 @@ function parseScaledReal(dv: DataView, start: number, limit: number): ScaledNumb
   for (; nibble !== END_OF_DATA; nibble = nextNibble()) {
     if (nibble === 0xe) isNegative = true;
     else if (nibble > 9) break;
-    else if (number >= 0xccccccc) exponentAdd++;
+    else if (number >= DIGIT_LIMIT) exponentAdd++;
     else if (nibble || number) {
       integerLength++;
       number = number * 10 + nibble;
@@ -68,7 +71,7 @@ function parseScaledReal(dv: DataView, start: number, limit: number): ScaledNumb
   if (nibble === 0xa) {
     for (nibble = nextNibble(); nibble !== END_OF_DATA && nibble < 10; nibble = nextNibble()) {
       if (!nibble && !number) exponentAdd--;
-      else if (number < 0xccccccc && fractionLength < 9) {
+      else if (number < DIGIT_LIMIT && fractionLength < 9) {
         fractionLength++;
         number = number * 10 + nibble;
       }

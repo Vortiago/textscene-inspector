@@ -43,7 +43,7 @@ export class GlyphPath {
   private currentDeviceY = 0;
   /**
    * The element waiting to be drawn, with its points in character space: three x, y pairs for a
-   * curve and only the last pair for a line. Written by `queue`, which fills it with no allocation.
+   * curve and only the last pair for a line. Written by `lineTo` and `curveTo` with no allocation.
    */
   private readonly queued = new Float64Array(6);
   private queuedKind = QUEUED_NONE;

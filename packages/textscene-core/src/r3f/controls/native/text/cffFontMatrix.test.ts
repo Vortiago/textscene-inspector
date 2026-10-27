@@ -9,13 +9,17 @@ import { describe, expect, it } from 'vitest';
 import { readFontMatrix } from './cffFontMatrixOperands';
 import {
   CFF2_HALF_SIZE_FONT,
+  EMPTY_FONT_DICTS_FONT,
   EXPONENT_FONT,
+  FORMAT_0_FONT,
   HALF_SIZE_FONT,
   INHERITED_OFFSET_FONT,
+  MISSING_FONT_DICT_FONT,
   OFFSET_FONT,
   SHEARED_FONT,
   SHEARED_FONT_DICTS_FONT,
   SHEARED_HALF_SIZE_FONT,
+  SHORT_MATRIX_FONT,
   SLOPED_FONT,
   STRETCHED_FONT,
   matrixOperands,
@@ -81,6 +85,30 @@ describe('the FontMatrix of a font dict', () => {
     expect(drawnAt(CFF2_HALF_SIZE_FONT, 1, 13)).toEqual([
       '0.640625,0 3.25,0 3.25,-4.546875 0.640625,-4.546875',
     ]);
+  });
+});
+
+describe('the font dicts of a CFF that FreeType repairs or refuses', () => {
+  it('draws with the Top DICT when the FDArray is empty', () => {
+    expect(drawnAt(EMPTY_FONT_DICTS_FONT, 1, 13)).toEqual([
+      '1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375',
+    ]);
+    expect(drawnAt(EMPTY_FONT_DICTS_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 9.203125,-9 4,-9']);
+  });
+
+  it('draws no glyph whose FDSelect names a font dict the font lacks', () => {
+    expect(drawnAt(MISSING_FONT_DICT_FONT, 1, 13)).toEqual([
+      '1.296875,0 6.5,0 6.5,-9.09375 1.296875,-9.09375',
+    ]);
+    expect(drawnAt(MISSING_FONT_DICT_FONT, 2, 13)).toBeNull();
+  });
+
+  it('reads an FDSelect of format 0', () => {
+    expect(drawnAt(FORMAT_0_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 6.5,-10 1.296875,-10']);
+  });
+
+  it('opens no font whose FontMatrix has fewer than six operands', () => {
+    expect(drawnAt(SHORT_MATRIX_FONT, 1, 13)).toBeNull();
   });
 });
 

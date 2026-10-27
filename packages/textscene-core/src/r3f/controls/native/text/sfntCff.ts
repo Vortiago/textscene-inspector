@@ -65,6 +65,7 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
 
   return (glyphIndex, fontSizePx) => {
     const matrix = font.matrixOf(glyphIndex);
+    if (!matrix) return null;
     const outlineScale = rescaledOutlineScale(
       getFontOutlineScale(headUnitsPerEm, fontSizePx),
       font.unitsPerEm,

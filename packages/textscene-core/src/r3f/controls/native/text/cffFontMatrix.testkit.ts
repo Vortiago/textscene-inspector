@@ -64,3 +64,18 @@ export const SHEARED_FONT_DICTS_FONT = cidFont(
 );
 
 export const CFF2_HALF_SIZE_FONT = cff2Of([cs(...box(100, 0, 500, 700))], { fontDictMatrices: [HALF_SIZE] });
+
+/** A CID-keyed font whose `FDArray` is empty: FreeType then draws with the Top DICT, which here shears. */
+export const EMPTY_FONT_DICTS_FONT: TestCffFont = {
+  ...cidFont([], [0, 0, 0], matrixOperands(0.001, 0, 0.0003, 0.001, 0, 0)),
+  fontDictCount: 0,
+};
+
+/** Glyph 2 names a second font dict, which the font lacks. */
+export const MISSING_FONT_DICT_FONT: TestCffFont = { ...cidFont([undefined], [0, 0, 1]), fontDictCount: 1 };
+
+/** The font dicts are chosen by an `FDSelect` of format 0. */
+export const FORMAT_0_FONT: TestCffFont = { ...cidFont([undefined], [0, 0, 0]), hasFdSelectFormat0: true };
+
+/** A `FontMatrix` of five operands, with which FreeType cannot open the font. */
+export const SHORT_MATRIX_FONT = withTopMatrix(0.001, 0, 0, 0.001, 0);

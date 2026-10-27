@@ -114,6 +114,10 @@ export interface TestCffFont {
   localSubrs?: readonly (readonly (readonly number[])[])[];
   /** The font dict of each glyph, as an `FDSelect` format 3 holds it. One font dict when absent. */
   fdSelect?: readonly number[];
+  /** Writes the `FDSelect` as format 0, one byte for each glyph, instead of format 3. */
+  hasFdSelectFormat0?: boolean;
+  /** The number of font dicts when it is not the one that `fdSelect` and `localSubrs` need: 0 for an empty `FDArray`. */
+  fontDictCount?: number;
   /** CFF 1: the string id of glyph 1 onward, as a charset holds them: format 0 unless `charsetFormat` says 1 or 2. A 3 writes the range form under a format no CFF defines. */
   charset?: readonly number[];
   charsetFormat?: 0 | 1 | 2 | 3;
@@ -259,6 +263,12 @@ function fdSelectFormat3(fdSelect: readonly number[]): ByteWriter {
   return out.u16(fdSelect.length);
 }
 
+function fdSelectFormat0(fdSelect: readonly number[]): ByteWriter {
+  const out = new ByteWriter().u8(0);
+  for (const fd of fdSelect) out.u8(fd);
+  return out;
+}
+
 function varStore(regionCounts: readonly number[]): ByteWriter {
   const datas = regionCounts.map((count) => {
     const data = new ByteWriter().u16(0).u16(0).u16(count);
@@ -300,7 +310,10 @@ const ZERO_POSITIONS: Positions = {
 const DICT_ENTRY_SIZE = 6;
 
 function fontDictCount(font: TestCffFont): number {
-  return Math.max(1, font.localSubrs?.length ?? 0, ...(font.fdSelect ?? []).map((fd) => fd + 1));
+  return (
+    font.fontDictCount ??
+    Math.max(1, font.localSubrs?.length ?? 0, ...(font.fdSelect ?? []).map((fd) => fd + 1))
+  );
 }
 
 /** A Private DICT, and the local subroutines that follow it. */
@@ -367,7 +380,8 @@ function assemble(font: TestCffFont, at: Positions): { table: ByteWriter; positi
   if (!isCff2 && font.charset) place('charset', charsetTable(font.charset, font.charsetFormat ?? 0));
   place('charStrings', index(font.glyphs, isCff2));
   if (hasFdArray) {
-    place('fdSelect', fdSelectFormat3(font.fdSelect ?? new Array<number>(font.glyphs.length).fill(0)));
+    const fdSelect = font.fdSelect ?? new Array<number>(font.glyphs.length).fill(0);
+    place('fdSelect', font.hasFdSelectFormat0 ? fdSelectFormat0(fdSelect) : fdSelectFormat3(fdSelect));
     const fontDicts = privates.map((_, fd) => {
       const matrix = font.fontDictMatrices?.[fd];
       const entries: DictEntry[] = matrix ? [['fontMatrix', matrix]] : [];
