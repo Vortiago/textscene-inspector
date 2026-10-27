@@ -194,7 +194,7 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
 ### One canonical helper for each job
 
 Each job has one helper. Use it, and extend it when it falls short. Never write a second copy
-beside it. `pnpm canonical` prints every helper with its job and its path under
-`packages/textscene-core/src/`, one job a line, so `pnpm -s canonical | grep -i <word>` finds one.
+beside it. `pnpm canonical` prints every helper in the `src/` of each package and in `scripts/`,
+with its job and its path, one job a line, so `pnpm -s canonical | grep -i <word>` finds one.
 When you write a new shared helper, put a `@canonical <job>` tag in its doc comment. The lines after
 the tag are its note.
