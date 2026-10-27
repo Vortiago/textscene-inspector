@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { frameSceneBounds } from './frameSceneBounds';
+import { nodeIconUserData } from './editorHelpers';
 import { editorCameraDirection } from './godotEditorCamera';
 
 /** Mirrors `GroundGrid()` in TscnCanvas.tsx: a large, framing-exempt grid. */
@@ -177,5 +178,25 @@ describe('frameSceneBounds — a PointMesh beside a mesh', () => {
   // `Node3DEditorViewport` unions the AABB of every visual instance, a point's included.
   it('stretches the bounds to the point, as it does for any instance', () => {
     expect(targetOf(box(), drawnPoint(10)).x).toBeCloseTo(4.5, 5);
+  });
+});
+
+describe('frameSceneBounds: a node icon', () => {
+  it('does not move the frame, since its size follows the camera', () => {
+    const meshAlone = new THREE.Scene();
+    meshAlone.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial()));
+
+    const withIcon = new THREE.Scene();
+    withIcon.add(meshAlone.children[0]!.clone());
+    const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial());
+    icon.userData = nodeIconUserData();
+    icon.position.set(100, 0, 0);
+    withIcon.add(icon);
+
+    const [aloneCamera, iconCamera] = [makeCamera(), makeCamera()];
+    frameSceneBounds(meshAlone, aloneCamera, null);
+    frameSceneBounds(withIcon, iconCamera, null);
+
+    expect(iconCamera.position.toArray()).toEqual(aloneCamera.position.toArray());
   });
 });

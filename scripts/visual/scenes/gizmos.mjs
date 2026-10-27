@@ -120,4 +120,9 @@ export const GIZMO_SCENES = [
     gizmos: true,
     select: 'Scene/Speaker_Cone',
   },
+  // The node icons: Godot's billboard icon at the origin of a light, a camera, both particle emitters
+  // and an audio player. The tinted lights show the light colour, and the selected spot light shows an
+  // icon at full colour beside the dimmed rest.
+  { name: 'node-icons', file: 'unit-node-icons.tscn', gizmos: true },
+  { name: 'node-icons-selected', file: 'unit-node-icons.tscn', gizmos: true, select: 'Root/Spot' },
 ];

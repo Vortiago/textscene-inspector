@@ -1,6 +1,6 @@
 /**
  * AudioStreamPlayer3D types. The property surface matches the linterParser.ts validators. The
- * previewer plays no audio, so the R3F component draws a speaker gizmo at the node's transform.
+ * previewer plays no audio, so the R3F component draws its range and emission cone at the node's transform.
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';

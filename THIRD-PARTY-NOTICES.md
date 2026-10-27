@@ -276,6 +276,27 @@ orchestrator-owned:
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.
 
+### Vendored node icons
+
+`packages/textscene-core/src/r3f/nodeIcon/editorIcons.ts` embeds unmodified copies of the node icons Godot 4.6.3's 3D editor draws at the origin of a node, base64-encoded the same way. They are Godot Engine files under the same MIT licence below:
+
+| File |
+|---|
+| `editor/icons/Gizmo3DSamplePlayer.svg` |
+| `editor/icons/GizmoAudioListener3D.svg` |
+| `editor/icons/GizmoCPUParticles3D.svg` |
+| `editor/icons/GizmoCamera3D.svg` |
+| `editor/icons/GizmoDecal.svg` |
+| `editor/icons/GizmoDirectionalLight.svg` |
+| `editor/icons/GizmoFogVolume.svg` |
+| `editor/icons/GizmoGPUParticles3D.svg` |
+| `editor/icons/GizmoLight.svg` |
+| `editor/icons/GizmoLightmapGI.svg` |
+| `editor/icons/GizmoLightmapProbe.svg` |
+| `editor/icons/GizmoReflectionProbe.svg` |
+| `editor/icons/GizmoSpotLight.svg` |
+| `editor/icons/GizmoVoxelGI.svg` |
+
 ### Licence
 
 ```
