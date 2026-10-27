@@ -7,18 +7,17 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { LINT_EXEMPT_CATEGORIES, collectSheetFiles, parseFrontmatter, sheetLabel } from './sheetSources.mjs';
 import { loadClassBaseTypes, loadCoreLinter } from './loadCoreLinter.mjs';
 import { coverageFor, renderCoverage } from './lintCoverage.mjs';
 import { requireFreshDist } from '../distFreshness.mjs';
-import { replaceMarkedBlock, writeOrCheck } from '../generatedFile.mjs';
+import { checkGenerated, replaceMarkedBlock, writeGenerated } from '../generatedFile.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { CATALOG_OUT } from './build-node-catalog/paths.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const COVERAGE_OUT = join(here, 'lint-coverage.json');
-const CORE = join(here, '../../packages/textscene-core');
+const COVERAGE_OUT = join(REPO_ROOT, 'scripts/compare-docs/lint-coverage.json');
+const CORE = join(REPO_ROOT, 'packages/textscene-core');
 
 const BEGIN = (type) => `<!-- lint:begin ${type} -->`;
 const END = '<!-- lint:end -->';
@@ -34,7 +33,7 @@ function applyBlock(text, type, rendered) {
   // place and appends a second `## Linting` section that never converges.
   const markers = [...text.matchAll(/<!-- lint:begin \S+ -->/g)];
   if (markers.length > 1) {
-    throw new Error(`${type}: more than one lint:begin marker, so no one block to rewrite`);
+    throw new Error(`${type}: expected at most one lint:begin marker in the sheet, found ${markers.length}.`);
   }
   if (markers.length === 1) {
     const renamed = text.replace(markers[0][0], BEGIN(type));
@@ -111,10 +110,9 @@ for (const node of catalog.nodes.filter((n) => !n.supported)) {
 const payload = `${JSON.stringify({ generated: 'pnpm docs:lint-sections', unsupported }, null, 2)}\n`;
 outputs.push([COVERAGE_OUT, payload]);
 
-const changed = writeOrCheck(outputs, { check, tool: 'lint-sections', command: 'pnpm docs:lint-sections' });
-if (!check) {
-  const written = changed.filter((path) => path !== COVERAGE_OUT).length;
-  console.log(
-    `[lint-sections] ${written} sheet(s) updated, ${exempt} exempt, ${Object.keys(unsupported).length} unsupported node(s) → lint-coverage.json`
-  );
-}
+const report = {
+  tool: 'lint-sections',
+  summary: `${exempt} sheet(s) exempt, ${Object.keys(unsupported).length} unsupported node(s) in lint-coverage.json`,
+};
+if (check) checkGenerated(outputs, { ...report, command: 'pnpm docs:lint-sections' });
+else writeGenerated(outputs, report);

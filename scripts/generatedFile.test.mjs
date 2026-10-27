@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { replaceMarkedBlock, writeOrCheck } from './generatedFile.mjs';
+import { checkGenerated, replaceMarkedBlock, writeGenerated } from './generatedFile.mjs';
 
 const BEGIN = '<!-- x:begin -->';
 const END = '<!-- x:end -->';
@@ -28,14 +28,14 @@ describe('replaceMarkedBlock', () => {
   });
 });
 
-describe('writeOrCheck', () => {
-  const report = { tool: 'gen', command: 'pnpm gen' };
+describe('writeGenerated and checkGenerated', () => {
   let dir;
+  let logs;
   let errors;
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'generated-file-'));
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    logs = vi.spyOn(console, 'log').mockImplementation(() => {});
     errors = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -45,50 +45,111 @@ describe('writeOrCheck', () => {
     process.exitCode = undefined;
   });
 
-  it('writes a file whose text changed and returns its path', () => {
-    const fresh = join(dir, 'fresh.txt');
-    const changed = join(dir, 'changed.txt');
-    writeFileSync(fresh, 'same');
-    writeFileSync(changed, 'old');
-    const outputs = [
-      [fresh, 'same'],
-      [changed, 'new'],
-    ];
-    expect(writeOrCheck(outputs, { check: false, ...report })).toEqual([changed]);
-    expect(readFileSync(changed, 'utf8')).toBe('new');
+  const printed = (spy) => spy.mock.calls.join('\n');
+
+  /** A file at `name` in the temporary directory that holds `text`. */
+  function fileWith(name, text) {
+    const path = join(dir, name);
+    writeFileSync(path, text);
+    return path;
+  }
+
+  describe('writeGenerated', () => {
+    it('writes a file whose text changed and leaves a fresh one alone', () => {
+      const fresh = fileWith('fresh.txt', 'same');
+      const changed = fileWith('changed.txt', 'old');
+      writeGenerated(
+        [
+          [fresh, 'same'],
+          [changed, 'new'],
+        ],
+        { tool: 'gen' }
+      );
+      expect(readFileSync(changed, 'utf8')).toBe('new');
+      expect(printed(logs)).toContain('changed.txt');
+      expect(printed(logs)).not.toContain('fresh.txt');
+    });
+
+    it('creates a missing file in a missing directory', () => {
+      const path = join(dir, 'sub/out.txt');
+      writeGenerated([[path, 'text']], { tool: 'gen' });
+      expect(readFileSync(path, 'utf8')).toBe('text');
+    });
+
+    it('says the files are up to date when nothing changed', () => {
+      const fresh = fileWith('fresh.txt', 'same');
+      writeGenerated([[fresh, 'same']], { tool: 'gen' });
+      expect(printed(logs)).toBe('[gen] up to date.');
+    });
+
+    it('prints the summary', () => {
+      const fresh = fileWith('fresh.txt', 'same');
+      writeGenerated([[fresh, 'same']], { tool: 'gen', summary: '3 sheet(s)' });
+      expect(printed(logs)).toContain('3 sheet(s)');
+    });
   });
 
-  it('creates a missing file in a missing directory', () => {
-    const path = join(dir, 'sub/out.txt');
-    writeOrCheck([[path, 'text']], { check: false, ...report });
-    expect(readFileSync(path, 'utf8')).toBe('text');
-  });
+  describe('checkGenerated', () => {
+    const report = { tool: 'gen', command: 'pnpm gen' };
 
-  it('under check, writes nothing and returns the stale and the missing paths', () => {
-    const stale = join(dir, 'stale.txt');
-    const missing = join(dir, 'missing.txt');
-    writeFileSync(stale, 'old');
-    const outputs = [
-      [stale, 'new'],
-      [missing, 'text'],
-    ];
-    expect(writeOrCheck(outputs, { check: true, ...report })).toEqual([stale, missing]);
-    expect(readFileSync(stale, 'utf8')).toBe('old');
-    expect(existsSync(missing)).toBe(false);
-  });
+    it('writes neither a stale nor a missing file', () => {
+      const stale = fileWith('stale.txt', 'old');
+      const missing = join(dir, 'missing.txt');
+      checkGenerated(
+        [
+          [stale, 'new'],
+          [missing, 'text'],
+        ],
+        report
+      );
+      expect(readFileSync(stale, 'utf8')).toBe('old');
+      expect(existsSync(missing)).toBe(false);
+    });
 
-  it('under check, fails the run with the command that regenerates a stale file', () => {
-    const stale = join(dir, 'stale.txt');
-    writeFileSync(stale, 'old');
-    writeOrCheck([[stale, 'new']], { check: true, ...report });
-    expect(process.exitCode).toBe(1);
-    expect(errors.mock.calls.join('\n')).toContain('`pnpm gen`');
-  });
+    it('fails the run, naming each stale path and the command that regenerates it', () => {
+      const stale = fileWith('stale.txt', 'old');
+      const fresh = fileWith('fresh.txt', 'same');
+      checkGenerated(
+        [
+          [stale, 'new'],
+          [fresh, 'same'],
+        ],
+        report
+      );
+      expect(process.exitCode).toBe(1);
+      expect(printed(errors)).toContain('stale.txt');
+      expect(printed(errors)).not.toContain('fresh.txt');
+      expect(printed(errors)).toContain('`pnpm gen`');
+    });
 
-  it('under check, leaves the exit code alone when every file is fresh', () => {
-    const fresh = join(dir, 'fresh.txt');
-    writeFileSync(fresh, 'same');
-    expect(writeOrCheck([[fresh, 'same']], { check: true, ...report })).toEqual([]);
-    expect(process.exitCode).toBeUndefined();
+    it('names the first line where a stale file differs', () => {
+      const stale = fileWith('stale.txt', 'a\nb\nc\n');
+      checkGenerated([[stale, 'a\nb\nX\n']], report);
+      expect(printed(errors)).toContain('first difference at line 3');
+    });
+
+    it('names a file that one more line would make fresh', () => {
+      const stale = fileWith('stale.txt', 'a\n');
+      checkGenerated([[stale, 'a\nb\n']], report);
+      expect(printed(errors)).toContain('first difference at line 2');
+    });
+
+    it('names a missing file as missing', () => {
+      checkGenerated([[join(dir, 'missing.txt'), 'text']], report);
+      expect(printed(errors)).toContain('missing.txt (missing)');
+    });
+
+    it('leaves the exit code alone and says up to date when every file is fresh', () => {
+      const fresh = fileWith('fresh.txt', 'same');
+      checkGenerated([[fresh, 'same']], report);
+      expect(process.exitCode).toBeUndefined();
+      expect(printed(logs)).toBe('[gen] up to date.');
+    });
+
+    it('prints the summary', () => {
+      const stale = fileWith('stale.txt', 'old');
+      checkGenerated([[stale, 'new']], { ...report, summary: '3 sheet(s)' });
+      expect(printed(errors)).toContain('3 sheet(s)');
+    });
   });
 });

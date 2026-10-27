@@ -5,9 +5,9 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { replaceMarkedBlock, writeOrCheck } from '../generatedFile.mjs';
+import { checkGenerated, replaceMarkedBlock, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { readSourceTree } from '../testOnlyExports.mjs';
+import { readSourceTree } from '../sourceTree.mjs';
 import { oneWayEntries, renderOneWayList } from './oneWayTags.mjs';
 
 const SOURCE = join(REPO_ROOT, 'packages/textscene-core/src');
@@ -27,7 +27,7 @@ function agentsWithList(entries) {
   }
 }
 
-const entries = taggedEntries();
-const check = process.argv.includes('--check');
-writeOrCheck([[AGENTS, agentsWithList(entries)]], { check, tool: 'one-way', command: 'pnpm docs:one-way' });
-if (!check) console.log(`[one-way] wrote ${entries.length} helpers.`);
+const outputs = [[AGENTS, agentsWithList(taggedEntries())]];
+if (process.argv.includes('--check'))
+  checkGenerated(outputs, { tool: 'one-way', command: 'pnpm docs:one-way' });
+else writeGenerated(outputs, { tool: 'one-way' });

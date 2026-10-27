@@ -9,7 +9,7 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { TAU } from '../../packages/textscene-core/src/godot/math/math.ts';
-import { writeOrCheck } from '../generatedFile.mjs';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
 const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/materials/dfgTable.generated.ts');
@@ -153,13 +153,10 @@ export const DFG_TABLE_BASE64 =
 }
 
 function main() {
-  const check = process.argv.includes('--check');
-  writeOrCheck([[OUT, renderTableModule(dfgTable())]], {
-    check,
-    tool: 'bake-dfg',
-    command: 'pnpm godot:dfg',
-  });
-  if (!check) console.log(`[bake-dfg] wrote ${OUT}`);
+  const outputs = [[OUT, renderTableModule(dfgTable())]];
+  if (process.argv.includes('--check'))
+    checkGenerated(outputs, { tool: 'bake-dfg', command: 'pnpm godot:dfg' });
+  else writeGenerated(outputs, { tool: 'bake-dfg' });
 }
 
 // `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.

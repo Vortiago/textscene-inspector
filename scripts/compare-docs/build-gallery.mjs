@@ -9,7 +9,7 @@
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { writeOrCheck } from '../generatedFile.mjs';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT, collectSheetFiles, sheetLabel } from './sheetSources.mjs';
 // `gallery/`: `build` assembles the panels, `panels` and `nav` render them, `markdown` renders
 // sheet prose, `sheetParsing` reads a sheet, `sources` loads the catalog and screenshots,
@@ -60,8 +60,10 @@ function main() {
 
   // Nothing else regenerates the committed copy `docs/comparison/README.md` links (the web
   // build stages its own into `dist/`), so `--check` guards it. `pnpm validate` and CI run it.
-  writeOrCheck([[args.out, html]], { check: args.check, tool: 'gallery', command: 'pnpm docs:gallery' });
-  if (!args.check) console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
+  const outputs = [[args.out, html]];
+  const report = { tool: 'gallery', summary: `${sheets.length} sheet(s)` };
+  if (args.check) checkGenerated(outputs, { ...report, command: 'pnpm docs:gallery' });
+  else writeGenerated(outputs, report);
   if (missing.length) {
     console.warn(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
     for (const m of missing) console.warn(`  ${m}`);

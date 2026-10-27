@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import { writeOrCheck } from '../generatedFile.mjs';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
 
@@ -46,6 +46,7 @@ if (cut === -1) {
 }
 const next = current.slice(0, cut) + rows();
 
-const check = process.argv.includes('--check');
-writeOrCheck([[INDEX, next]], { check, tool: 'comparison-index', command: 'pnpm docs:index' });
-if (!check) console.log(`[comparison-index] wrote ${next.slice(cut).split('\n- ').length - 1} rows.`);
+const outputs = [[INDEX, next]];
+const tool = 'comparison-index';
+if (process.argv.includes('--check')) checkGenerated(outputs, { tool, command: 'pnpm docs:index' });
+else writeGenerated(outputs, { tool });

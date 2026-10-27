@@ -4,7 +4,7 @@
  * after it, up to the next tag, are a note. The list then names only exports that exist.
  */
 
-import { isTestFile } from '../testOnlyExports.mjs';
+import { isTestFile } from '../sourceTree.mjs';
 
 const DOC_COMMENT = /\/\*\*([\s\S]*?)\*\/[ \t]*\n([^\n]*)/g;
 const EXPORT_NAME =

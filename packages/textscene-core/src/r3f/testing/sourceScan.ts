@@ -17,7 +17,7 @@ export interface SourceFile {
 /**
  * Never walked: generated output and installed packages are nobody's source. `.vscode-test` is a
  * downloaded, gitignored VS Code, so walking it makes every corpus depend on whether the machine has
- * run the extension gate. `scripts/testOnlyExports.mjs` reads the same list.
+ * run the extension gate. `scripts/sourceTree.mjs` reads the same list.
  */
 const SKIPPED_DIRECTORIES = new Set<string>(skippedDirectories);
 

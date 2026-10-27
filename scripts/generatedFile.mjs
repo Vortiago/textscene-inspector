@@ -1,6 +1,6 @@
 /**
  * Shared steps of a script that generates a committed file: splice a generated block between two
- * markers, and write the file or, under `--check`, report that it is stale.
+ * markers, and write the files or, under `--check`, report the stale ones.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -20,32 +20,58 @@ export function replaceMarkedBlock(text, begin, end, body) {
 }
 
 /**
- * Writes each `[path, text]` of `outputs` whose file differs from `text`, and returns those paths.
- * Under `check` it writes nothing: it reports the stale paths with the `command` that regenerates
- * them and fails the run, or reports that every file is up to date. `tool` prefixes each message.
+ * Writes each `[path, text]` of `outputs` whose file differs from `text`, and names the paths it
+ * wrote, or says every file is up to date. `tool` prefixes each message, and `summary`, when
+ * given, follows the outcome.
  */
-export function writeOrCheck(outputs, { check, tool, command }) {
-  const changed = outputs.filter(([path, text]) => readOrNothing(path) !== text);
-  const paths = changed.map(([path]) => path);
-  if (check) {
-    reportCheck(paths, { tool, command });
-    return paths;
-  }
+export function writeGenerated(outputs, { tool, summary }) {
+  const changed = staleOutputs(outputs);
   for (const [path, text] of changed) {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, text);
   }
-  return paths;
-}
-
-function reportCheck(stale, { tool, command }) {
-  if (stale.length === 0) {
-    console.log(`[${tool}] up to date.`);
+  if (changed.length === 0) {
+    console.log(outcome(tool, 'up to date', summary, '.'));
     return;
   }
-  console.error(`[${tool}] ${stale.length} file(s) are STALE, run \`${command}\`:`);
-  for (const path of stale) console.error(`  ${displayPath(path)}`);
+  console.log(outcome(tool, `wrote ${changed.length} file(s)`, summary, ':'));
+  for (const [path] of changed) console.log(`  ${displayPath(path)}`);
+}
+
+/**
+ * Writes nothing. Names each stale path of `outputs` with the line where it first differs and the
+ * `command` that regenerates it, and fails the run, or says every file is up to date. `tool` and
+ * `summary` work as in `writeGenerated`.
+ */
+export function checkGenerated(outputs, { tool, command, summary }) {
+  const stale = staleOutputs(outputs);
+  if (stale.length === 0) {
+    console.log(outcome(tool, 'up to date', summary, '.'));
+    return;
+  }
+  console.error(outcome(tool, `${stale.length} file(s) are STALE`, summary, `, run \`${command}\`:`));
+  for (const [path, text] of stale)
+    console.error(`  ${displayPath(path)} (${difference(readOrNothing(path), text)})`);
   process.exitCode = 1;
+}
+
+function staleOutputs(outputs) {
+  return outputs.filter(([path, text]) => readOrNothing(path) !== text);
+}
+
+function outcome(tool, text, summary, end) {
+  return `[${tool}] ${text}${summary ? ` (${summary})` : ''}${end}`;
+}
+
+/** Where `actual`, which differs from `expected`, first departs from it, as a reader finds it. */
+function difference(actual, expected) {
+  if (actual === undefined) return 'missing';
+  const actualLines = actual.split('\n');
+  const expectedLines = expected.split('\n');
+  const lineCount = Math.max(actualLines.length, expectedLines.length);
+  let index = 0;
+  while (index < lineCount && actualLines[index] === expectedLines[index]) index++;
+  return `first difference at line ${index + 1}`;
 }
 
 /** Nothing, not an empty string, for a missing file: an empty generated file is real. */
