@@ -250,4 +250,12 @@ ${heading}`);
 
     expect(livePaths(main, { 'res://base.tscn': BASE })).toContain('Main/Deep/X');
   });
+
+  it('shows a heading under the root while the base is not loaded, and seats it once the base loads', () => {
+    const main = inheriting('[node name="Z" type="Node3D" parent="Nope/Deeper"]');
+
+    expect(livePaths(main, {})).toContain('Main/Z');
+    expect(livePaths(main, { 'res://base.tscn': BASE })).not.toContain('Main/Z');
+    expect(livePaths(main, { 'res://base.tscn': BASE })).toContain('Main/Nope_Deeper#Z');
+  });
 });
