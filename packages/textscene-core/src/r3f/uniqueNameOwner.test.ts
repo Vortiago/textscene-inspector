@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import { contextOver } from './liveSceneTree.testkit.js';
+import type { LiveTreeContext } from './liveSceneTree.js';
 import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
