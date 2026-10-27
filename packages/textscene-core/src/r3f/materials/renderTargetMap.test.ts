@@ -4,7 +4,7 @@ import { renderTargetMapInjection, renderTargetMapUserData, type TargetMapSample
 import type { ProgramShader } from '../materialProgramInputs';
 import { programShader } from '../testing/patchedFragment';
 
-const FLIPPED_V = { scale: { x: 2, y: -3 }, offset: { x: 0.25, y: 1 } };
+const FLIPPED_V = { repeat: { x: 2, y: -3 }, offset: { x: 0.25, y: 1 } };
 const REPEATING: TargetMapSampler = { uv: FLIPPED_V, repeats: true, isNearest: false };
 
 function recording(sampler: TargetMapSampler): THREE.MeshBasicMaterial {
@@ -43,7 +43,7 @@ describe('renderTargetMapInjection: the UV transform', () => {
 
     material.userData = renderTargetMapUserData({
       ...REPEATING,
-      uv: { scale: { x: 1, y: 1 }, offset: { x: 0.5, y: 0 } },
+      uv: { repeat: { x: 1, y: 1 }, offset: { x: 0.5, y: 0 } },
     });
 
     expect(uniform.value).toEqual(new THREE.Matrix3().setUvTransform(0.5, 0, 1, 1, 0, 0, 0));

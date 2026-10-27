@@ -13,6 +13,13 @@ import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } fr
 import { GLOW_TEXTURE_SIZE_UNIFORM, glowGatherGlsl, glowLevelUniform } from './godotGlowPyramid';
 import { glslFloat } from '../../utils/glslLiterals';
 import { toneMappingEffectGlsl } from './godotToneMapping';
+import {
+  AUTO_EXPOSURE_GAIN_GLSL,
+  AUTO_EXPOSURE_SCALE_UNIFORM,
+  LUMINANCE_UNIFORM,
+  NO_AUTO_EXPOSURE_GAIN_GLSL,
+} from './godotLuminance';
+import type { AutoExposure } from '../cameraattributes/types';
 import { resolvedWhite } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer';
@@ -43,6 +50,8 @@ export interface CompositeOptions {
    * cubic B-spline rather than one bilinear fetch (`renderer_scene_render_rd.cpp:1717`).
    */
   usesBicubicGlowUpscale: boolean;
+  /** Null when the camera attributes hold no auto exposure: `FLAG_USE_AUTO_EXPOSURE` clear. */
+  autoExposure: AutoExposure | null;
   /** Godot `tonemap_exposure`, the starting value of the exposure uniform. */
   exposure: number;
 }
@@ -65,18 +74,24 @@ export interface CompositeProgram {
  * The whole composite in `tonemap.glsl`'s order: exposure, glow gather and blend, tone curve, then
  * the adjustments. Godot exposes the scene once before the blend (`color.rgb *= exposure`), and the
  * bright pass already exposed the glow, so the curve runs at exposure 1.0. A null `glow` clears
- * `FLAG_USE_GLOW`, and a null `adjustments` clears `FLAG_USE_BCS`.
+ * `FLAG_USE_GLOW`, a null `adjustments` clears `FLAG_USE_BCS` and a null `autoExposure` clears
+ * `FLAG_USE_AUTO_EXPOSURE`.
  */
 export function compositeProgram({
   glow,
   toneMapping,
   adjustments,
+  autoExposure,
   exposure,
   transparentBackground,
   usesBicubicGlowUpscale,
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
+    ...(autoExposure && {
+      [LUMINANCE_UNIFORM]: { glslType: 'sampler2D', value: null },
+      [AUTO_EXPOSURE_SCALE_UNIFORM]: { glslType: 'float', value: autoExposure.scale },
+    }),
     ...Object.fromEntries(
       (glow?.gatheredLevels ?? []).map((level) => [
         glowLevelUniform(level),
@@ -92,10 +107,12 @@ export function compositeProgram({
   const flooredWhite = resolvedWhite(toneMapping.mode, toneMapping.white);
   const fragmentShader = /* glsl */ `
 ${declarationsGlsl(declarations)}
+${autoExposure ? AUTO_EXPOSURE_GAIN_GLSL : NO_AUTO_EXPOSURE_GAIN_GLSL}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
 ${glow ? glowGatherGlsl(glow, usesBicubicGlowUpscale) + blendGlsl(glow, flooredWhite) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+${FRAME_EXPOSURE_GLSL}
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
 ${adjustments ? adjustmentsGlsl(adjustments) : ''}
   outputColor = vec4(color, ${transparentBackground ? 'inputColor.a' : '1.0'});
@@ -106,6 +123,13 @@ ${adjustments ? adjustmentsGlsl(adjustments) : ''}
     uniforms: Object.fromEntries(Object.entries(declarations).map(([name, { value }]) => [name, value])),
   };
 }
+
+/**
+ * The exposure of one frame: the tonemap's own, times the gain of the auto exposure, which is 1
+ * without one (`tonemap.glsl:869-873`).
+ */
+const FRAME_EXPOSURE = 'godotFrameExposure';
+const FRAME_EXPOSURE_GLSL = `  float ${FRAME_EXPOSURE} = ${EXPOSURE_UNIFORM} * godotAutoExposureGain();`;
 
 /** One `uniform` line per declaration, so the shader and the uniform map come from one list. */
 function declarationsGlsl(declarations: Record<string, UniformDeclaration>): string {
@@ -120,9 +144,9 @@ function declarationsGlsl(declarations: Record<string, UniformDeclaration>): str
  */
 function glowAndToneMapGlsl(glow: GlowParams): string {
   const blend = blendsAfterToneMapping(glow)
-    ? /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});
+    ? /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${FRAME_EXPOSURE});
   color = godotGlowBlend(color, godotToneMap(glow));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(inputColor.rgb * ${EXPOSURE_UNIFORM}, glow);
+    : /* glsl */ `  vec3 color = godotGlowBlend(inputColor.rgb * ${FRAME_EXPOSURE}, glow);
   color = godotToneMap(color);`;
   const map = samplesGlowMap(glow)
     ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
@@ -135,7 +159,7 @@ ${map}${blend}`;
  * `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. Nothing clamps the
  * scene colour before the blend: every curve but LINEAR clamps for itself (`:258`).
  */
-const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});`;
+const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${FRAME_EXPOSURE});`;
 
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on

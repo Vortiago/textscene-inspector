@@ -10,7 +10,7 @@ import type { NoiseTexture2DData } from './types';
 import type { NoiseTexture2DInput } from './pixels';
 import { seamlessSource } from '../../noise/image/noiseImage';
 import { colourDataTexture } from '../colourDataTexture';
-import { carryDefaultMipChain } from '../texelTexture';
+import { carryMipChain, GODOT_DEFAULT_MIN_FILTER } from '../texelTexture';
 import type { MipLevel } from '../../processing/mipChain';
 
 /**
@@ -39,7 +39,7 @@ export function noiseTextureFits({
 export function noiseDataTexture(levels: MipLevel[], input: NoiseTexture2DInput): THREE.DataTexture {
   const { tex } = input;
   const texture = colourDataTexture(levels[0]!.data, tex.width, tex.height, imageFormat(input));
-  carryDefaultMipChain(texture, levels);
+  carryMipChain(texture, levels, GODOT_DEFAULT_MIN_FILTER);
   // A normal map carries directions, not colour, so it starts raw, as its normal slot reads it.
   if (tex.asNormalMap) texture.colorSpace = THREE.NoColorSpace;
   // A seamless image tiles. A non-seamless one clamps like every other procedural texture.

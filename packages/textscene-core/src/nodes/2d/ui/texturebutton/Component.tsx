@@ -13,7 +13,6 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
 import { rectTextureSampler } from '../texturerect/rectTexture';
-import { drawnClone } from '../../../../r3f/drawnClone';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -21,7 +20,7 @@ import {
   type TextureButtonSlot,
 } from './nativeSolver';
 import type { TextureButtonProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 
 interface ImageLike {
   width?: number;
@@ -61,18 +60,10 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     return { textureSize, ...textureButtonDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
   }, [rawTexture, rect.w, rect.h, props.stretchMode]);
 
-  const preparedTexture = useMemo(() => {
-    if (!rawTexture || !draw) return null;
-    return drawnClone(
-      rawTexture,
-      rectTextureSampler(draw, sampler, {
-        flipH: props.flipH === true,
-        flipV: props.flipV === true,
-      })
-    );
-  }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
-
-  const drawnTexture = useUploadedClone(preparedTexture);
+  const drawnTexture = useOwnedTextureView(
+    rawTexture,
+    draw && rectTextureSampler(draw, sampler, { flipH: props.flipH === true, flipV: props.flipV === true })
+  );
 
   if (!draw || !drawnTexture) return null;
 

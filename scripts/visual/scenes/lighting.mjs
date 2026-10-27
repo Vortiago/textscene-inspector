@@ -143,6 +143,22 @@ export const LIGHTING_SCENES = [
   // The same exposure over a procedural sky: the sky's background scales by the factor, its ambient and
   // reflection by its square.
   { name: 'camera-attributes-exposure-sky', file: 'unit-camera-attributes-exposure-sky.tscn', camera: 'Root/Camera3D' },
+  // CameraAttributesPractical auto exposure over a procedural sky: Godot divides the exposure by the
+  // luminance of the frame's top left region, which holds the sky.
+  {
+    name: 'camera-attributes-auto-exposure',
+    file: 'unit-camera-attributes-auto-exposure.tscn',
+    camera: 'Root/Camera3D',
+  },
+  // CameraAttributesPhysical with a luminance range above the frame's luminance: Godot holds the
+  // luminance at the minimum.
+  {
+    name: 'camera-attributes-auto-exposure-physical',
+    file: 'unit-camera-attributes-auto-exposure-physical.tscn',
+    camera: 'Root/Camera3D',
+  },
+  // Auto exposure under glow: the bright pass judges the exposed values.
+  { name: 'glow-auto-exposure', file: 'unit-glow-auto-exposure.tscn', camera: 'Root/Camera3D' },
   // A LightmapGI bake lights a box and the ground: a Static sun's light, its shadow and a red
   // bounce, all read from the atlas through UV2. The headers state why no other golden shows it.
   { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },

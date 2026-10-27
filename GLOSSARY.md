@@ -73,6 +73,11 @@ _Avoid_: the bare name for the **Screen-space roughness limiter**.
 The shader step that raises a pixel's roughness by how far its normal differs from the normal of its pixel pair.
 Godot takes a fine derivative. WebGL 2 has none, so a pixel with a normal map reads the map one texel along its pair.
 
+**Texture view** (`resources/textures/textureView.ts`):
+The texture a consumer samples: a shared source with the sampler state the consumer states laid over it.
+It is the source itself when the source already samples that way, and one clone that the consumer owns when it does not.
+_Avoid_: "texture clone", which names how a view is made, not what it is.
+
 **Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
 The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
 It changes only a texture that has levels to choose between.
@@ -493,6 +498,14 @@ _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 The `exposure_multiplier` of the CameraAttributes that a world renders with. A world with no CameraAttributes has none, which a baked lightmap tells from the factor 1.
 _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 
+**Auto exposure** (`r3f/environment/LuminanceReduction.ts`):
+The exposure divided by the **Frame luminance** over `auto_exposure_scale`, in the tone-map pass and the glow's bright pass. A still frame shows the settled value, so `auto_exposure_speed` has no part.
+_Avoid_: "eye adaptation", "adaptive exposure".
+
+**Frame luminance**:
+The one value the **Auto exposure** reads: the largest channel of the HDR frame, averaged in 8-texel blocks over the top left region the last level reaches, held between the luminance range of the CameraAttributes.
+_Avoid_: "brightness", "average colour". The mean of the whole frame, which Godot's blocks do not compute.
+
 **Radiance layer**:
 One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
 _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
@@ -534,9 +547,18 @@ The one texture that holds the `area_texture` of every AreaLight3D, each in a ce
 A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
+**Decal term** (`r3f/decal/`):
+The part of every 3D program's fragment shader that mixes the decals into the albedo, as Godot's clustered shader does. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+_Avoid_: "decal projection", which names the baked mesh the term replaced.
+
+**Scene rows** (`r3f/sceneRows/`):
+The one float texture that holds the rows of a scene's Reflection probes and Decals: the probes' first, the decals' after them. Each row is one probe or decal, as the shader fetches it.
+Both share it because a fragment shader has 16 texture units.
+_Avoid_: "probe rows" and "decal rows", which name one band of it.
+
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
 The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-A Decal reads its rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The Decal term reads each Decal's rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:

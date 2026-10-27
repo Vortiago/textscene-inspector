@@ -37,6 +37,8 @@ import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
+import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
+import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
 import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
@@ -114,7 +116,7 @@ const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
 const targetMapOf = (repeats: boolean, isNearest: boolean) =>
-  renderTargetMapUserData({ uv: { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
+  renderTargetMapUserData({ uv: { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
 
 const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
   withPointDraw(
@@ -227,7 +229,7 @@ function compiled(injection: InjectionCase, program: ProgramName): ProgramShader
 const THREE_CHUNK_NAMES = new Set(Object.keys(THREE.ShaderChunk));
 
 /** The chunks the patches add. A chunk three later ships under the same name would be overwritten silently. */
-const ADDED_CHUNKS = [GODOT_FOG_PARS_CHUNK];
+const ADDED_CHUNKS = [INSTANCE_LAYERS_CHUNK, SCENE_ROWS_CHUNK, 'godot_decal_pars', GODOT_FOG_PARS_CHUNK];
 
 let restoreGlobals: () => void;
 

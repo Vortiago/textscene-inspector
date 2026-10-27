@@ -20,6 +20,7 @@ import { parseSprite3D } from '../nodes/3d/sprite3d/parser';
 import { Decal } from '../nodes/3d/decal/Component';
 import { parseDecal } from '../nodes/3d/decal/parser';
 import { decalAtlasTexture, updateDecalAtlas } from '../nodes/3d/decal/decalAtlas';
+import { isDecal, type DecalObject } from '../r3f/decal/decalObject';
 import { TextureRect } from '../nodes/2d/ui/texturerect/Component';
 import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Button } from '../nodes/2d/ui/button/Component';
@@ -215,7 +216,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
     expect(imageSize(maps[0]!).width).toBe(256);
   });
 
-  it('Decal — projects the inline gradient onto a receiver surface', async () => {
+  it('Decal — holds the inline gradient in the decal atlas', async () => {
     // Godot 4.6.3, `unit-decal-gradienttexture.tscn`: probe (477, 378) reads
     // rgb(237, 165, 160) on the floor where the undecorated plane reads
     // rgb(225, 228, 232): the projection is drawn.
@@ -223,26 +224,16 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
       'Decal',
       parseDecal(heading('Decal'), { texture_albedo: INLINE_REF, size: 'Vector3(3, 3, 3)' })
     );
-    const renderer = await provide(
-      <>
-        <mesh name="Receiver" rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[8, 8]} />
-          <meshStandardMaterial />
-        </mesh>
-        <Decal node={decal} />
-      </>
-    );
+    const renderer = await provide(<Decal node={decal} />);
 
-    // The projection meshes are added imperatively to the decal's own group
-    // (see that component's doc for why), so they live in the THREE scene
-    // rather than in the test renderer's React view of it.
-    const projected: THREE.Mesh[] = [];
+    const decals: DecalObject[] = [];
     (renderer.scene.instance as THREE.Object3D).traverse((obj) => {
-      if (obj.userData.isDecalProjection === true) projected.push(obj as THREE.Mesh);
+      if (isDecal(obj)) decals.push(obj);
     });
-    expect(projected).toHaveLength(1);
+    expect(decals).toHaveLength(1);
+    expect(decals[0]!.albedo).not.toBeNull();
 
-    // The projection samples the decal atlas, which holds the 256 x 256 gradient: 256 / 32 + 1 = 9
+    // The decal samples the decal atlas, which holds the 256 x 256 gradient: 256 / 32 + 1 = 9
     // cells, so 16 cells of 32 texels wide, and nearest_power_of_2(9 * 32) = 512 tall.
     updateDecalAtlas(MAX_TEXTURE_SIZE);
     expect(decalAtlasTexture().image).toMatchObject({ width: 512, height: 512 });

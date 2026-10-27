@@ -1,7 +1,8 @@
 /**
  * The root world's tone mapping on its canvas: one route per frame. The curve installs for every
  * pass that renders the root world, and the compositor's tone pass draws the canvas when glow,
- * blending, the adjustments or MSAA need it, or three draws the curve per material when nothing does.
+ * blending, the adjustments, the auto exposure or MSAA need it, or three draws the curve per material
+ * when nothing does.
  */
 
 import { useEffect } from 'react';

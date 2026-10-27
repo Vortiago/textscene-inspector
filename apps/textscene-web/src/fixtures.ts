@@ -468,6 +468,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Roughness Receiver",
+    "file": "unit-decal-roughness-receiver.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Triangulation",
+    "file": "unit-decal-triangulation.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -715,6 +725,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glow Authored",
     "file": "unit-glow-authored.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Auto Exposure",
+    "file": "unit-glow-auto-exposure.tscn",
     "category": "Other"
   },
   {
@@ -2319,6 +2334,12 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Decal Filter",
+    "file": "decal-filter/unit-decal-filter.tscn",
+    "category": "Other",
+    "root": "decal-filter"
+  },
+  {
     "name": "Glow Linear Upscale",
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",
@@ -3474,6 +3495,16 @@ export const fixtures: Fixture[] = [
     "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
     "category": "Unit - 2D UI Controls",
     "root": "layout-direction-root-rtl"
+  },
+  {
+    "name": "Camera Attributes Auto Exposure Physical",
+    "file": "unit-camera-attributes-auto-exposure-physical.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera Attributes Auto Exposure",
+    "file": "unit-camera-attributes-auto-exposure.tscn",
+    "category": "Unit - Basic Nodes"
   },
   {
     "name": "Camera Attributes Exposure Camera",

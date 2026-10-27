@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { TEXTURE_SLOTS, type TextureSlot } from '../../resources/materials/standardmaterial3d/types';
-import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
+import { releaseView } from '../../resources/textures/textureView';
 import { pendingMapStandIn } from './pendingMapStandIn';
 
 function texel(slot: TextureSlot): number[] {
@@ -46,7 +46,7 @@ describe('pendingMapStandIn', () => {
       let disposed = false;
       const onDispose = () => (disposed = true);
       standIn.addEventListener('dispose', onDispose);
-      releaseBoundTexture(standIn);
+      releaseView(standIn);
       standIn.removeEventListener('dispose', onDispose);
       expect(disposed, slot).toBe(false);
     }

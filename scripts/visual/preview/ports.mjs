@@ -12,6 +12,7 @@ const PREVIEW_PORTS = {
   compareAnimation: { port: 4323, envName: 'COMPARE_ANIMATION_PORT' },
   perf: { port: 4325, envName: 'PERF_PORT' },
   skyLayersGpu: { port: 4327, envName: 'GPU_GATE_PORT' },
+  decalGpu: { port: 4337, envName: 'DECAL_GPU_PORT' },
   e2eWeb: { port: 4329, envName: 'E2E_WEB_PORT' },
   uniformVectors: { port: 4331, envName: 'UNIFORM_VECTORS_PORT' },
   rendererConsumer: { port: 4335, envName: 'RENDERER_CONSUMER_PORT' },

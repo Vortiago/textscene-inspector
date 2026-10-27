@@ -12,7 +12,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
 import { resetProceduralTextures, type JobRunner } from '../proceduralBuilds';
 import { resolveNoiseTexture2D } from './resolveNoiseTexture';
-import { applyTextureState } from '../applyTextureState';
+import { textureView } from '../textureView';
 import { godotTextureFilterState, samplesMipChain } from '../godotTextureFilter';
 
 const ICE = `[gd_resource type="StandardMaterial3D" format=3]
@@ -235,9 +235,12 @@ albedo_texture = SubResource("wide")
 });
 
 describe('a NoiseTexture2D in a 3D texture slot', () => {
+  const filterState = (filter?: number) =>
+    filter === undefined ? undefined : godotTextureFilterState(filter);
+
   const bound = async (filter?: number) => {
     const { texture } = await built(ALBEDO);
-    return applyTextureState(texture, { colorSpace: THREE.SRGBColorSpace, filter });
+    return textureView(texture, { colorSpace: THREE.SRGBColorSpace, filter: filterState(filter) });
   };
 
   it('samples between its levels under the default texture_filter (LINEAR_WITH_MIPMAPS)', async () => {
@@ -266,7 +269,7 @@ describe('a NoiseTexture2D in a 3D texture slot', () => {
     'uploads no levels under texture_filter %i, and the shared texture keeps its chain',
     async (filter) => {
       const { texture: shared } = await built(ALBEDO);
-      const texture = applyTextureState(shared, { colorSpace: THREE.SRGBColorSpace, filter });
+      const texture = textureView(shared, { colorSpace: THREE.SRGBColorSpace, filter: filterState(filter) });
       expect([texture.mipmaps.length, shared.mipmaps.length]).toEqual([0, 6]);
     }
   );

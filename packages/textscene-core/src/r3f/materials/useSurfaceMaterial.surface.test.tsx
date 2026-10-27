@@ -11,7 +11,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
-import type { UVTransform } from '../../resources/textures/applyTextureState';
+import type { UvWindow } from '../uvWindow';
 import { GLTF_SURFACE, type TexturedSurface } from './surfaceTextures';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { renderTargetMapUserData } from './renderTargetMap';
@@ -107,7 +107,7 @@ function viewportProps(properties: Record<string, string>, surface?: TexturedSur
 
 const TARGET_SAMPLER_KEYS = Object.keys(
   renderTargetMapUserData({
-    uv: { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } },
+    uv: { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } },
     repeats: true,
     isNearest: false,
   })
@@ -119,7 +119,7 @@ function recordsTargetSampler({ userData }: THREE.MeshPhysicalMaterialParameters
 }
 
 /** The sampler a render-target albedo with this transform records on its material. */
-function targetSampler(uv: UVTransform) {
+function targetSampler(uv: UvWindow) {
   return renderTargetMapUserData({ uv, repeats: true, isNearest: false });
 }
 
@@ -157,13 +157,13 @@ describe('useSurfaceMaterial with a render-target albedo', () => {
     const { props, decoding } = viewportProps({ uv1_scale: 'Vector3(2, 3, 1)' });
 
     expect(props.map).toBe(decoding);
-    expect(props.userData).toMatchObject(targetSampler({ scale: { x: 2, y: 3 }, offset: { x: 0, y: 0 } }));
+    expect(props.userData).toMatchObject(targetSampler({ repeat: { x: 2, y: 3 }, offset: { x: 0, y: 0 } }));
   });
 
   it("flips the target's V on a glTF surface, as for any other map", () => {
     const { props } = viewportProps({}, GLTF_SURFACE);
 
-    expect(props.userData).toMatchObject(targetSampler({ scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } }));
+    expect(props.userData).toMatchObject(targetSampler({ repeat: { x: 1, y: -1 }, offset: { x: 0, y: 1 } }));
   });
 
   it('hands no UV transform for a file albedo, which carries its own (edge case)', () => {

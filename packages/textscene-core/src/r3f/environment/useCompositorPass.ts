@@ -1,8 +1,8 @@
 /**
  * The compositor's tone pass for one canvas: whether it mounts, with what glow and how many samples.
- * Glow, blending, the adjustments and MSAA all run in that pass, so it owns the tone curve when any
- * is live. The pass needs a real 3D GL context, so a 2D canvas, test-renderer and a headless DOM get
- * none.
+ * Glow, blending, the adjustments, the auto exposure and MSAA all run in that pass, so it owns the
+ * tone curve when any is live. The pass needs a real 3D GL context, so a 2D canvas, test-renderer and
+ * a headless DOM get none.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -10,6 +10,8 @@ import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glowParamsFor, type GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentSettings } from '../../resources/environment/types';
+import type { AutoExposure } from '../../resources/cameraattributes/types';
+import { useAutoExposure } from './worldExposure';
 import { useResourceLoader } from '../../resources/useResource';
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
@@ -26,6 +28,8 @@ export interface CompositorPass {
   glow: GlowParams | null;
   /** The scene buffer's samples per pixel, 0 for one buffer that does not multisample. */
   samples: number;
+  /** Null when the camera attributes hold no auto exposure. */
+  autoExposure: AutoExposure | null;
 }
 
 /**
@@ -33,8 +37,11 @@ export interface CompositorPass {
  * multisamples and blends in the HDR buffer. Glow mounts on the environment's flag alone, as Godot's glow
  * chain runs (`renderer_scene_render_rd.cpp:575`, `:686`). MSAA mounts it too: Godot resolves the 3D
  * buffer in linear HDR (`render_forward_clustered.cpp:2402`) before the tonemap pass reads it (`:2514`).
+ * An auto exposure mounts it too: Godot reduces the luminance of the finished frame for the tonemap to
+ * read (`renderer_scene_render_rd.cpp:551-570`).
  */
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
+  const autoExposure = useAutoExposure();
   const hasBlended = useBlendedSurfaceLatch();
   const draws3D = useDraws3D();
   const msaa3D = useSampleCount(useProjectSettings().msaaModes.msaa3D, SCENE_BUFFER_TYPE);
@@ -42,9 +49,9 @@ export function useCompositorPass(settings: EnvironmentSettings | null): Composi
   return useMemo(() => {
     if (!draws3D) return null;
     const glow = settings && glowParamsFor(settings);
-    const needed = glow || hasBlended || settings?.adjustments || msaa3D > 0;
-    return needed ? { glow, samples: msaa3D } : null;
-  }, [draws3D, settings, hasBlended, msaa3D]);
+    const needed = glow || hasBlended || settings?.adjustments || autoExposure || msaa3D > 0;
+    return needed ? { glow, samples: msaa3D, autoExposure } : null;
+  }, [draws3D, settings, hasBlended, autoExposure, msaa3D]);
 }
 
 /**
