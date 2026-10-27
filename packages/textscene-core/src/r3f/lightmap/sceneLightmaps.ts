@@ -38,6 +38,8 @@ export class LightmapInstance {
   usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;
   /** The bake's capture bounds, in the LightmapGI's space (`lightmap_gi.cpp:229`). */
   bounds: Aabb = EMPTY_AABB;
+  /** The factor the atlas reads at, from {@link exposureOverBaked}. */
+  exposureScale = 1;
   /** Written only by the scene's `SceneLightmaps` before each render: whether the cull keeps it. */
   isDrawn = false;
 

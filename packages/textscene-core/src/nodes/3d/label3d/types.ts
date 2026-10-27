@@ -43,7 +43,7 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   line_spacing: number;
 
   /** Horizontal alignment of each line within the quad (default 1 = CENTER). */
-  horizontal_alignment: HorizontalAlignment;
+  horizontal_alignment: EnumValue<typeof HorizontalAlignment>;
 
   /** Draw on top of everything regardless of depth (default false). */
   no_depth_test: boolean;

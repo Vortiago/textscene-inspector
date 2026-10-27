@@ -19,6 +19,7 @@ import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFon
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { warnOnce } from '../../../../utils/warnOnce';
+import { createExternalStore } from '../../../hooks/createExternalStore';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
 // bundled default before any DOM font API. The skip is deliberate, so it does not warn.
@@ -38,50 +39,29 @@ const SYNTHETIC_UNITS_PER_EM = 1000;
 /** A counter suffix per load, so two scene fonts never collide in `document.fonts`. */
 let familyCounter = 0;
 
-/** A no-argument re-render trigger. */
-export type SceneFontMetricsListener = () => void;
+/**
+ * How many loads have settled, never reset. Written only by `notifySceneFontMetricsSettled`. A hook
+ * reads the count as the snapshot of `useSyncExternalStore`, so a load that settles between its
+ * render and its subscription still re-renders it.
+ */
+const settleCount = createExternalStore(0);
 
-const settledListeners = new Set<SceneFontMetricsListener>();
-
-/** Written only by `notifySceneFontMetricsSettled`, and never reset. */
-let settleCount = 0;
+export const sceneFontSettleCount = settleCount.get;
 
 /**
- * How many loads have settled. A hook reads it as the snapshot of `useSyncExternalStore`, so a
- * load that settles between its render and its subscription still re-renders it.
+ * Subscribes to a font metrics load settling, and returns an unsubscribe function. It fires once per
+ * resource on its first settle and once for the bundled font, never for a font that short-circuits
+ * synchronously.
  */
-export function sceneFontSettleCount(): number {
-  return settleCount;
-}
-
-/**
- * Subscribes to a font metrics load settling, and returns an unsubscribe function. `useBuildSolveTree.ts`
- * calls the same generation `bump` from it as for a resource arrival. It fires once per resource on
- * its first settle and once for the bundled font, never for a font that short-circuits synchronously.
- */
-export function onSceneFontMetricsSettled(listener: SceneFontMetricsListener): () => void {
-  settledListeners.add(listener);
-  return () => {
-    settledListeners.delete(listener);
-  };
-}
+export const onSceneFontMetricsSettled = settleCount.subscribe;
 
 /**
  * Fires every settled listener, for a scene font load and for the bundled font registration. A
- * throwing listener does not stop the later ones, so none misses the settle: the first error is
- * rethrown once all have run.
+ * throwing listener does not stop the later ones: the store rethrows the first error once all
+ * have run.
  */
 export function notifySceneFontMetricsSettled(): void {
-  settleCount += 1;
-  const failures: unknown[] = [];
-  for (const listener of settledListeners) {
-    try {
-      listener();
-    } catch (error) {
-      failures.push(error);
-    }
-  }
-  if (failures.length > 0) throw failures[0];
+  settleCount.set(settleCount.get() + 1);
 }
 
 /**

@@ -36,6 +36,7 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 const GUI_SCENE = `[gd_scene format=3]
 
@@ -55,11 +56,10 @@ function parse(source: string): TscnScene {
 }
 
 function walk(scene: TscnScene) {
-  return collectControlRasterViewports(
-    scene.nodes,
-    { getCached: () => undefined },
-    { internalResources: scene.internalResources, externalResources: scene.externalResources }
-  );
+  return collectControlRasterViewports(scene.nodes, NOTHING_CACHED, {
+    internalResources: scene.internalResources,
+    externalResources: scene.externalResources,
+  });
 }
 
 /** Reports every entry the registry resolves at `path`, in order. */

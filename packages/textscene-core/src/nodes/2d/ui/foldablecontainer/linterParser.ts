@@ -15,11 +15,7 @@ import {
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 import { FOLDABLE_CONTAINER_TITLE_POSITION_NAMES } from '../../../../godot/scene/gui.js';
-import {
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_NAMES,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-} from '../../../../godot/math/alignment.js';
+import { HORIZONTAL_ALIGNMENT_NAMES, HorizontalAlignment } from '../../../../godot/math/alignment.js';
 
 validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:558, PROPERTY_HINT_NONE. set_folded
@@ -33,8 +29,8 @@ validatorRegistry.registerAll('FoldableContainer', {
   // `alignment` stops at RIGHT on the hint tier only: its setter (button.cpp:737-741) assigns FILL.
   title_alignment: v.enumInt(
     'title_alignment',
-    HORIZONTAL_ALIGNMENT_LEFT,
-    HORIZONTAL_ALIGNMENT_RIGHT,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT,
     HORIZONTAL_ALIGNMENT_NAMES,
     { enforced: 'foldable_container.cpp:128' }
   ),

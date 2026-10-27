@@ -7,13 +7,10 @@ import { parseColor, colorOr } from '../../../utils/colorParser';
 import { parseMaterialFor2dFields } from '../../../parser/materialFor2dParser';
 import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  type HorizontalAlignment,
-} from '../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../godot/math/alignment';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+
+const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -40,16 +37,15 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
     font_size: intOr(properties.font_size, 32, 'font_size'),
     line_spacing: floatOr(properties.line_spacing, 0, 'line_spacing'),
-    horizontal_alignment: parseHorizontalAlignment(properties.horizontal_alignment),
+    // The setter refuses an index outside 0-3 (`label_3d.cpp:678`), so the label keeps CENTER.
+    horizontal_alignment: enumOr(
+      properties.horizontal_alignment,
+      HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+      HORIZONTAL_ALIGNMENTS,
+      'horizontal_alignment'
+    ),
     render_priority: intOr(properties.render_priority, 0, 'render_priority'),
     outline_render_priority: intOr(properties.outline_render_priority, -1, 'outline_render_priority'),
     ...parseMaterialFor2dFields(properties, 'Label3D'),
   };
-}
-
-function parseHorizontalAlignment(value: string | undefined): HorizontalAlignment {
-  const num = intOr(value, HORIZONTAL_ALIGNMENT_CENTER, 'horizontal_alignment');
-  return num >= HORIZONTAL_ALIGNMENT_LEFT && num <= HORIZONTAL_ALIGNMENT_FILL
-    ? (num as HorizontalAlignment)
-    : HORIZONTAL_ALIGNMENT_CENTER;
 }

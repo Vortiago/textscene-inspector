@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
 import type { FontResource } from './types';
 import { resolveProjectDefaultFont } from './projectDefaultFont';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 const FONT: FontResource = {
   kind: 'file',
@@ -63,7 +64,7 @@ describe('resolveProjectDefaultFont', () => {
     const pending = new Set<string>();
     const resolved = resolveProjectDefaultFont(
       settingsNaming('res://fonts/late.otf'),
-      { getCached: () => undefined },
+      NOTHING_CACHED,
       pending
     );
     expect(resolved).toBeNull();

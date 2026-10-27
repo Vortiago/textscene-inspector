@@ -174,7 +174,7 @@ function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   );
   writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);
   const { rect, maxMipmap } = areaTexturePlacement(light);
-  writeVec4(row, FogLightTexel.AREA_TEXTURE, ...rect);
+  writeVec4(row, FogLightTexel.AREA_TEXTURE, rect.x, rect.y, rect.width, rect.height);
   writeViewAxis(FogLightTexel.AREA_WIDTH, light, AREA_LIGHT_AXES.width, light.width, camera, maxMipmap);
   writeViewAxis(FogLightTexel.AREA_HEIGHT, light, AREA_LIGHT_AXES.height, light.height, camera);
   writeParaboloidShadow(light, camera);

@@ -143,6 +143,27 @@ describe('decodeLightmapGIData on text', () => {
     ).toEqual(EMPTY_AABB);
   });
 
+  it('reads the exposure the bake ran at from probe data, which a camera attributes scene divides out', () => {
+    expect(
+      decodeText(probeData('[Vector3(0, 0, 0)]').replace('"baked_exposure": 1.0', '"baked_exposure": 2.5'))
+        .bakedExposure
+    ).toBe(2.5);
+  });
+
+  it('reads the baked exposure of probe data with no points, which set_capture_data stores whole (lightmap_gi.cpp:236)', () => {
+    const data = probeData('PackedVector3Array()').replace('"baked_exposure": 1.0', '"baked_exposure": 0.5');
+    expect(decodeText(data).bakedExposure).toBe(0.5);
+  });
+
+  it('starts at the baked exposure 1 without probe data, as LightmapGIData does (lightmap_gi.h:70)', () => {
+    expect(decodeText('').bakedExposure).toBe(1);
+  });
+
+  it('reads the baked exposure 1 from probe data missing a field, which _set_probe_data refuses (error case)', () => {
+    const data = probeData('PackedVector3Array(0, 0, 0)').replace('"bsp": PackedInt32Array(), ', '');
+    expect(decodeText(data.replace('"baked_exposure": 1.0', '"baked_exposure": 4.0')).bakedExposure).toBe(1);
+  });
+
   it('keeps the users of directional data in the packed format a 4.x bake writes', () => {
     const body = 'uses_spherical_harmonics = true\n_uses_packed_directional = true\n' + ONE_USER;
     expect(decodeText(body).users).toHaveLength(1);

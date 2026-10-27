@@ -60,7 +60,10 @@ describe('the area light atlas', () => {
 
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(lightShowing(texture))).toEqual({ rect: [0, 0, 0.25, 0.25], maxMipmap: 5 });
+    expect(areaTexturePlacement(lightShowing(texture))).toEqual({
+      rect: { x: 0, y: 0, width: 0.25, height: 0.25 },
+      maxMipmap: 5,
+    });
   });
 
   it("puts a bottom-up texture's last row at the atlas's top", () => {
@@ -109,7 +112,7 @@ describe('the area light atlas', () => {
     updateAreaLightAtlas();
 
     // An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`).
-    expect(untexturedPlacement()).toEqual({ rect: [0, 0, 0, 0], maxMipmap: 0 });
+    expect(untexturedPlacement()).toEqual({ rect: { x: 0, y: 0, width: 0, height: 0 }, maxMipmap: 0 });
   });
 
   it('places nothing for a texture whose pixels cannot be read (error case)', () => {

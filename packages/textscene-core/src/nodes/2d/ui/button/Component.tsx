@@ -31,11 +31,7 @@ import {
   buttonTextAlignShiftPx,
   swapAlignmentSide,
 } from '../../../../r3f/controls/native/buttonBase';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -99,9 +95,9 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
       hSeparation: solveNode.constants.h_separation ?? theme.separation,
       iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
       // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
-      textAlignment: props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER,
-      iconAlignment: props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT,
-      verticalIconAlignment: props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER,
+      textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+      iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+      verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
       expandIcon: props.expandIcon === true,
       iconNaturalSize,
       hasText,
@@ -133,8 +129,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
 
   // `button.cpp:262-276`: the same RTL side swap `layoutButtonContent` makes internally.
   const textAlignment = solveNode.rtl
-    ? swapAlignmentSide(props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER)
-    : (props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER);
+    ? swapAlignmentSide(props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
+    : (props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER);
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
@@ -162,7 +158,9 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
     const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
     const iconReserve =
-      content.icon && (props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT) !== HORIZONTAL_ALIGNMENT_CENTER
+      content.icon &&
+      (props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) !==
+        HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
         ? content.icon.rect.w + (solveNode.constants.h_separation ?? theme.separation)
         : 0;
     // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's

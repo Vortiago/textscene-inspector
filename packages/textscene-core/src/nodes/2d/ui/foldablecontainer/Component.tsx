@@ -16,11 +16,7 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-} from '../../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
@@ -43,8 +39,10 @@ const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
 /** `FoldableContainer::_get_actual_alignment` (`foldable_container.cpp:503-511`): RTL swaps LEFT and RIGHT and leaves every other value alone. */
 function actualTitleAlignment(alignment: number, rtl: boolean): number {
   if (!rtl) return alignment;
-  if (alignment === HORIZONTAL_ALIGNMENT_RIGHT) return HORIZONTAL_ALIGNMENT_LEFT;
-  if (alignment === HORIZONTAL_ALIGNMENT_LEFT) return HORIZONTAL_ALIGNMENT_RIGHT;
+  if (alignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT)
+    return HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
+  if (alignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT)
+    return HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT;
   return alignment;
 }
 
@@ -115,11 +113,14 @@ export function FoldableContainer({
   // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`).
   const shapedWidth = trimmedLayout ? shapedTextSizeWidthPx(trimmedLayout.widthPx) : 0;
   const extraSpace = Math.max(titleTextWidth - shapedWidth, 0);
-  const alignment = actualTitleAlignment(props.titleAlignment ?? HORIZONTAL_ALIGNMENT_LEFT, rtl);
+  const alignment = actualTitleAlignment(
+    props.titleAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    rtl
+  );
   const alignmentShift =
-    alignment === HORIZONTAL_ALIGNMENT_RIGHT
+    alignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
       ? extraSpace
-      : alignment === HORIZONTAL_ALIGNMENT_CENTER
+      : alignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
         ? Math.floor(extraSpace / 2)
         : 0;
 

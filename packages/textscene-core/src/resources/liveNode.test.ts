@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SceneScope } from '../parser/types';
-import { liveInstancePath, type LiveNode } from './liveNode';
+import { liveInstancePath, withFallbackScope, type LiveNode } from './liveNode';
 
 const scopeWith = (id: string, path: string): SceneScope => ({
   externalResources: [{ id, type: 'PackedScene', path }],
@@ -38,5 +38,18 @@ describe('liveInstancePath', () => {
   it('resolves nothing for an id the scope does not declare (error case)', () => {
     const instance = node({ instance: 'ExtResource("9")' });
     expect(liveInstancePath(instance, scopeWith('1', 'res://group.tscn'))).toBeNull();
+  });
+});
+
+describe('withFallbackScope', () => {
+  const fallback = scopeWith('1', 'res://fallback.tscn');
+
+  it('stamps a node that carries no scope with the fallback', () => {
+    expect(withFallbackScope(node({}), fallback).scope).toBe(fallback);
+  });
+
+  it('returns a node that carries a scope unchanged', () => {
+    const own = node({ scope: scopeWith('1', 'res://own.tscn') });
+    expect(withFallbackScope(own, fallback)).toBe(own);
   });
 });

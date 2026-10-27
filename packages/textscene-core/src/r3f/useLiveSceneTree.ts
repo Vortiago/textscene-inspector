@@ -18,6 +18,8 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
 import { perObject } from '../utils/perObject.js';
+import { subscribeToNothing } from '../utils/subscribeToNothing.js';
+import { NOTHING_CACHED } from './cacheSources.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -43,7 +45,7 @@ function liveTreeContext(
     ctx: {
       externalResources: root.externalResources,
       internalResources: root.internalResources,
-      sceneCache: loader?.scenes ?? { getCached: () => undefined },
+      sceneCache: loader?.scenes ?? NOTHING_CACHED,
       glbCache: loader?.glbMeshes,
     },
   };
@@ -59,7 +61,7 @@ interface LoadTicks {
   readonly getVersion: () => number;
 }
 
-const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: () => () => {}, getVersion: () => 0 };
+const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: subscribeToNothing, getVersion: () => 0 };
 
 /**
  * The one load counter of a loader, which every reader of its live tree shares. A handler sits on

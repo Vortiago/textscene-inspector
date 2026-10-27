@@ -1,7 +1,8 @@
 /**
  * A fill gizmo: a geometry drawn as an unlit translucent `<mesh>` over the scene. Godot adds a fill
- * only to a selected gizmo, so the caller mounts it in a selected-only `PluginGizmo` (ADR-0056). The
- * caller builds and memoises the geometry.
+ * only to a selected gizmo, so the caller mounts it in a `PluginGizmo` drawn for the selected node
+ * alone (ADR-0056), or in `SelectedOnly` inside a `PluginGizmo` drawn for every node. The caller
+ * builds and memoises the geometry.
  */
 
 import { useMemo } from 'react';

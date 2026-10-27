@@ -61,10 +61,11 @@ export const LIGHTMAP_SH_LAYERS_PER_SLICE = 4;
 /** `rendering/lightmapping/lightmap_gi/use_bicubic_filter` (`rendering_server.cpp:3822`). */
 export const LIGHTMAP_BICUBIC_FILTER_DEFAULT = true;
 
-/** `LightmapGIData`'s defaults (`lightmap_gi.h:63,66`). */
+/** `LightmapGIData`'s defaults (`lightmap_gi.h:63,66,70`). */
 export const LIGHTMAP_GI_DATA_DEFAULTS = {
   usesSphericalHarmonics: false,
   usesPackedDirectional: false,
+  bakedExposure: 1,
 } as const;
 
 /** `LightmapGIData::_set_user_data` reads each user as four elements (`lightmap_gi.cpp:83-89`). */
