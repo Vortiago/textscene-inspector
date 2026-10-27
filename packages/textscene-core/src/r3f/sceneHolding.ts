@@ -15,7 +15,7 @@ interface Held<Value> {
 /**
  * Keeps one `Value` for each scene that has a holder.
  *
- * @oneWay A value that a scene's mounted components share
+ * @canonical A value that a scene's mounted components share
  */
 export class SceneHolding<Value extends { dispose(): void }> {
   /** Written only by `hold` and its release. A scene's entry leaves with its last holder. */

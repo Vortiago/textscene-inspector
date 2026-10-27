@@ -7,7 +7,7 @@ import type { PackedRows } from './packedRows.js';
  * Holds `PackedRows` in a float texture of one row of texels per light, volume, probe or decal. It
  * uploads again only when it holds other rows, or when they changed.
  *
- * @oneWay A float texture of packed rows
+ * @canonical A float texture of packed rows
  */
 export class RowTexture {
   texture: THREE.DataTexture;
