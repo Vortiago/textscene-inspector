@@ -728,6 +728,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Auto Exposure",
+    "file": "unit-glow-auto-exposure.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Bloom Floor",
     "file": "unit-glow-bloom-floor.tscn",
     "category": "Other"
@@ -3490,6 +3495,16 @@ export const fixtures: Fixture[] = [
     "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
     "category": "Unit - 2D UI Controls",
     "root": "layout-direction-root-rtl"
+  },
+  {
+    "name": "Camera Attributes Auto Exposure Physical",
+    "file": "unit-camera-attributes-auto-exposure-physical.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera Attributes Auto Exposure",
+    "file": "unit-camera-attributes-auto-exposure.tscn",
+    "category": "Unit - Basic Nodes"
   },
   {
     "name": "Camera Attributes Exposure Camera",

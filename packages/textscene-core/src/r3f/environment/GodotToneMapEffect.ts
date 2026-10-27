@@ -9,6 +9,7 @@ import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import { glowLevelCap, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import {
+  autoExposedFirstLevelBlurGlsl,
   BLUR_BLURRED_UNIFORM,
   BLUR_SOURCE_UNIFORM,
   firstLevelBlurGlsl,
@@ -22,14 +23,19 @@ import {
   GLOW_MAP_UNIFORM,
   type CompositeOptions,
 } from '../../resources/environment/godotCompositor';
+import { LUMINANCE_UNIFORM } from '../../resources/environment/godotLuminance';
 import { applyTextureState } from '../../resources/textures/applyTextureState';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
+import { createPassTarget } from './passTarget';
+import { LuminanceReduction } from './LuminanceReduction';
 
 export class GodotToneMapEffect extends Effect {
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
+  /** Null when the camera attributes hold no auto exposure. */
+  private readonly luminance: LuminanceReduction | null;
 
   constructor(options: CompositeOptions) {
     const { fragmentShader, uniforms } = compositeProgram(options);
@@ -41,7 +47,11 @@ export class GodotToneMapEffect extends Effect {
     });
 
     this.clearGlowMap();
-    this.pyramid = options.glow ? new GlowPyramid(options.glow, this.uniforms) : null;
+    this.luminance = options.autoExposure && new LuminanceReduction(options.autoExposure);
+    if (this.luminance) this.uniforms.get(LUMINANCE_UNIFORM)!.value = this.luminance.texture;
+    this.pyramid = options.glow
+      ? new GlowPyramid(options.glow, this.uniforms, this.luminance?.gainUniforms ?? null)
+      : null;
   }
 
   /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
@@ -59,12 +69,17 @@ export class GodotToneMapEffect extends Effect {
     this.pyramid?.setSize(width, height);
   }
 
-  /** Builds the pyramid the composite shader gathers from. */
+  /**
+   * Reduces the frame to its luminance, then builds the pyramid the composite shader gathers from,
+   * since the bright pass reads the luminance (`renderer_scene_render_rd.cpp:551-607`).
+   */
   override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
+    this.luminance?.reduce(renderer, inputBuffer);
     this.pyramid?.build(renderer, inputBuffer);
   }
 
   override dispose(): void {
+    this.luminance?.dispose();
     this.pyramid?.dispose();
     super.dispose();
   }
@@ -100,19 +115,22 @@ class GlowPyramid {
   /** Binds each gathered level's sampler in `compositeUniforms`, and rebinds it on every resize. */
   constructor(
     glow: GlowParams,
-    private readonly compositeUniforms: Map<string, THREE.Uniform>
+    private readonly compositeUniforms: Map<string, THREE.Uniform>,
+    autoExposureUniforms: Record<string, THREE.IUniform> | null
   ) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
     this.topLevel = glow.maxLevel;
     this.gatheredLevels = glow.gatheredLevels;
-    this.firstBlur = new LevelBlur('First', firstLevelBlurGlsl(glow));
+    this.firstBlur = autoExposureUniforms
+      ? new LevelBlur('First', autoExposedFirstLevelBlurGlsl(glow), autoExposureUniforms)
+      : new LevelBlur('First', firstLevelBlurGlsl(glow));
     this.laterBlur = new LevelBlur('Later', laterLevelBlurGlsl(glow));
 
     for (let level = 0; level <= this.maxLevel; level++) {
-      this.levelTargets.push(createTarget(`GodotGlow.Level${level}`));
-      this.horizontalTargets.push(createTarget(`GodotGlow.Horizontal${level}`));
+      this.levelTargets.push(createPassTarget(`GodotGlow.Level${level}`));
+      this.horizontalTargets.push(createPassTarget(`GodotGlow.Horizontal${level}`));
     }
     const sizeUniform = compositeUniforms.get(GLOW_TEXTURE_SIZE_UNIFORM);
     this.textureSize = sizeUniform ? (sizeUniform.value = new THREE.Vector2()) : null;
@@ -167,12 +185,14 @@ class LevelBlur {
   private readonly horizontal: THREE.ShaderMaterial;
   private readonly vertical: THREE.ShaderMaterial;
 
-  constructor(name: string, glsl: LevelBlurGlsl) {
+  /** `verticalUniforms` are the ones the vertical pass reads besides the horizontal result. */
+  constructor(name: string, glsl: LevelBlurGlsl, verticalUniforms: Record<string, THREE.IUniform> = {}) {
     this.horizontal = fullScreenPass(`GodotGlow.${name}Horizontal`, glsl.horizontal, {
       [BLUR_SOURCE_UNIFORM]: { value: null },
     });
     this.vertical = fullScreenPass(`GodotGlow.${name}Vertical`, glsl.vertical, {
       [BLUR_BLURRED_UNIFORM]: { value: null },
+      ...verticalUniforms,
     });
   }
 
@@ -192,16 +212,4 @@ class LevelBlur {
     this.horizontal.dispose();
     this.vertical.dispose();
   }
-}
-
-function createTarget(name: string): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(1, 1, {
-    depthBuffer: false,
-    stencilBuffer: false,
-    // The bright pass keeps values well above 1 (Godot caps at 12 by default),
-    // so the chain has to stay floating point or the halo clips to white.
-    type: THREE.HalfFloatType,
-  });
-  target.texture.name = name;
-  return target;
 }

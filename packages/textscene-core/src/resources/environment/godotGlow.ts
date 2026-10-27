@@ -160,7 +160,9 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
  * Godot's bright pass (`copy.glsl:183-200`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`). It
  * gates on the peak RGB channel, not Rec. 709 luminance, so a saturated blue emissive
  * still blooms. It multiplies the colour by the knee rather than subtracting the
- * threshold, and `glow_bloom` floors the knee: at 1.0 every pixel glows.
+ * threshold, and `glow_bloom` floors the knee: at 1.0 every pixel glows. The colour is divided by
+ * the luminance over the scale between the strength and the exposure (`copy.glsl:187-198`). The
+ * caller defines `godotAutoExposureGain`.
  */
 export function brightPassGlsl(params: GlowParams): string {
   // Godot's order: strength and exposure multiply before the knee and the cap.
@@ -170,6 +172,7 @@ export function brightPassGlsl(params: GlowParams): string {
   return /* glsl */ `
 vec3 godotGlowBrightPass(vec3 color) {
   color *= ${glslFloat(params.strength)};
+  color *= godotAutoExposureGain();
   color *= ${glslFloat(params.exposure)};
   float luminance = max(color.r, max(color.g, color.b));
   float feedback = max(
