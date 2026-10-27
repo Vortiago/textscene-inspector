@@ -3,7 +3,7 @@
  * stands for it (`frameGroups.ts`). The group takes `visible`, and a Skeleton3D's `transform`.
  * Godot sets a BoneAttachment3D's transform from its bone (`bone_attachment_3d.cpp:311`), so that
  * one has no effect. The properties that pose bones or move an attachment to another bone are not
- * read yet (#980), and the override warns for each.
+ * read yet, and the override warns for each.
  */
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';

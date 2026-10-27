@@ -9,7 +9,13 @@ import { addBoneRig, buildTestGlbGraph } from './glbGraph.testkit';
 import { glbNodeLinks } from './glbNodeLinks';
 import type { GlbRoot } from './GlbInstanceContext';
 
-const ROOT: GlbRoot = { path: 'Model', rawProperties: {}, overrides: [], visibilityParent: null };
+const ROOT: GlbRoot = {
+  path: 'Model',
+  rawProperties: {},
+  overrides: [],
+  visibilityParent: null,
+  hostScenePaths: [],
+};
 
 function placePaths(): Record<string, string | null> {
   const glb = buildTestGlbGraph([]);

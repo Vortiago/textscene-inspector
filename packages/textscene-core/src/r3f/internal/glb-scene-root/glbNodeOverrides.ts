@@ -22,7 +22,7 @@ import { findGlbFrame, findGlbNode, findGlbTarget, matchGlbNode } from './glbPat
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /** The Godot path below the GLB root of the node an override names. */
-export function glbOverridePath(override: TscnNode): string {
+function glbOverridePath(override: TscnNode): string {
   return joinPath(override.instanceSubPath ?? '', override.name);
 }
 
