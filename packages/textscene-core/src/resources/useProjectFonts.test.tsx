@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as logger from '../logger';
 import { ProjectSettingsProvider } from '../r3f/contexts/ProjectSettingsContext';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { NO_PROJECT_FONTS } from './fonts/font/projectFonts';
@@ -71,6 +72,19 @@ describe('useProjectFonts', () => {
     expect(result.current.projectFonts.projectTheme).toBeNull();
     expect(result.current.projectFonts.projectDefaultFont).not.toBeNull();
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('warns once that the project font failed, and draws the bundled font', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { result, rerender } = renderProjectFonts({ ...FILES, 'res://body_font.tres': '' });
+
+    await settle();
+    rerender();
+
+    expect(result.current.projectFonts.projectDefaultFont).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toContain('res://body_font.tres');
+    warn.mockRestore();
   });
 
   it('answers no project fonts until project.godot has loaded', () => {

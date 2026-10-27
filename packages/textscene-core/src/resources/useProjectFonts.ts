@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
+import type { CacheSource } from '../r3f/cacheSources';
 import { useProjectSettings } from '../r3f/contexts/ProjectSettingsContext';
 import { projectFontPath, projectThemePath } from '../parser/projectSettingsParser';
 import { resolveProjectFonts, NO_PROJECT_FONTS, type ProjectFonts } from './fonts/font/projectFonts';
@@ -14,6 +15,11 @@ export interface LoadedProjectFonts {
   projectFonts: ProjectFonts;
   /** True while the theme or the font has neither loaded nor failed. */
   isLoading: boolean;
+}
+
+/** Tells a failed load (null) from a pending one (undefined): the loaded-file reader answers undefined for both. */
+function settledSource<T>(loadedFile: (path: string) => T | undefined, isLoading: boolean): CacheSource<T> {
+  return { getCached: (path) => loadedFile(path) ?? (isLoading ? undefined : null) };
 }
 
 /**
@@ -35,11 +41,11 @@ export function useProjectFonts(isNeeded: boolean): LoadedProjectFonts {
     () =>
       isNeeded
         ? resolveProjectFonts(settings, {
-            themes: { getCached: themes.loadedFile },
-            fonts: { getCached: fonts.loadedFile },
+            themes: settledSource(themes.loadedFile, themes.isLoading),
+            fonts: settledSource(fonts.loadedFile, fonts.isLoading),
           })
         : NO_PROJECT_FONTS,
-    [isNeeded, settings, themes.loadedFile, fonts.loadedFile]
+    [isNeeded, settings, themes.loadedFile, themes.isLoading, fonts.loadedFile, fonts.isLoading]
   );
   return { projectFonts, isLoading: themes.isLoading || fonts.isLoading };
 }

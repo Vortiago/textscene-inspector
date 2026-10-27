@@ -130,6 +130,29 @@ describe('rebuildGlyfTables', () => {
     expect(hex(loca)).toBe('0000' + '0000' + '0012' + '0022');
   });
 
+  describe('two composite glyphs of 18 bytes each', () => {
+    const component = [...u16(0x0008), ...u16(1), 0x03, 0x04, ...u16(0x4000)];
+    const twoScaled: Streams = {
+      contourCounts: [...u16(0xffff), ...u16(0xffff)],
+      composites: [...component, ...component],
+      boxes: [0xc0, 0, 0, 0, ...new Array<number>(16).fill(0)],
+    };
+
+    it('keeps the glyphs of a short loca on two-byte boundaries, so padding cannot outgrow the offsets', () => {
+      const { glyf, loca } = rebuildGlyfTables(transformedGlyf(2, 0, twoScaled));
+
+      expect(glyf.length).toBe(36);
+      expect(hex(loca)).toBe('0000' + '0009' + '0012');
+    });
+
+    it('keeps the glyphs of a long loca on four-byte boundaries', () => {
+      const { glyf, loca } = rebuildGlyfTables(transformedGlyf(2, 1, twoScaled));
+
+      expect(glyf.length).toBe(40);
+      expect(hex(loca)).toBe('00000000' + '00000014' + '00000028');
+    });
+  });
+
   it('keeps a stored box in place of the box of the points', () => {
     const stored: Streams = {
       contourCounts: u16(1),

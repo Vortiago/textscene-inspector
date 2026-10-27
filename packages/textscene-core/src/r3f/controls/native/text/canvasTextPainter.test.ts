@@ -151,17 +151,26 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     args: unknown[];
     lineWidth: number;
     composite: string;
+    /** The horizontal shear (`c`) of the transform in force. */
+    shear: number;
   }
 
   /** Records every draw call of one stroked paint, scratch canvases included: happy-dom has no 2D context. */
-  function paintStrokedRecording(layout: ReturnType<typeof layoutFor>, strokeWidthPx: number) {
+  function paintStrokedRecording(layout: ReturnType<typeof layoutFor>, strokeWidthPx: number, skew = 0) {
     const calls: Call[] = [];
+    let matrix = new DOMMatrix();
     const ctx = {
       lineWidth: 1,
       globalCompositeOperation: 'source-over',
       save: () => {},
       restore: () => {},
-      transform: () => {},
+      transform: (a: number, b: number, c: number, d: number, e: number, f: number) => {
+        matrix = matrix.multiply(new DOMMatrix([a, b, c, d, e, f]));
+      },
+      setTransform: (m: DOMMatrix | number, ...rest: number[]) => {
+        matrix = m instanceof DOMMatrix ? m : new DOMMatrix([m, ...rest]);
+      },
+      getTransform: () => matrix,
       measureText: () => ({
         actualBoundingBoxLeft: 0,
         actualBoundingBoxRight: 8,
@@ -174,10 +183,16 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
       clearRect: () => {},
     };
     const record = (op: string, args: unknown[]) =>
-      calls.push({ op, args, lineWidth: ctx.lineWidth, composite: ctx.globalCompositeOperation });
+      calls.push({
+        op,
+        args,
+        lineWidth: ctx.lineWidth,
+        composite: ctx.globalCompositeOperation,
+        shear: matrix.c,
+      });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
-    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, strokeWidthPx);
-    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, 0, canvasLayout, strokeWidthPx);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
+    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, strokeWidthPx);
     return { calls, canvasLayout };
   }
 
@@ -193,6 +208,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
         args: ['A', canvasLayout.offsetXPx, canvasLayout.offsetYPx + layout.baselineOffsetPx],
         lineWidth: 4,
         composite: 'source-over',
+        shear: 0,
       },
     ]);
   });
@@ -207,11 +223,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
     expect(ring.lineWidth).toBeCloseTo(4 + GROWTH_PX, 10);
-    expect((placed.args[5] as number) + (ring.args[1] as number)).toBeCloseTo(
-      canvasLayout.offsetXPx + GROWTH_PX / 2,
-      10
-    );
-    expect((placed.args[6] as number) + (ring.args[2] as number)).toBeCloseTo(baselineY - GROWTH_PX / 2, 10);
+    expect(ring.args).toEqual(['A', canvasLayout.offsetXPx + GROWTH_PX / 2, baselineY - GROWTH_PX / 2]);
     expect(placed.composite).toBe('source-over');
   });
 
@@ -225,6 +237,16 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     expect(hole.args).toEqual(ring.args);
     expect(erosion.args).toEqual(ring.args);
     expect(calls.some((c) => c.op === 'drawImage' && c.composite === 'destination-out')).toBe(true);
+  });
+
+  // A bitmap drawn under the shear would be resampled and soften the ring beside the vector fill.
+  it('cuts the ring in the sheared space and places the bitmap unsheared', () => {
+    const { calls } = paintStrokedRecording(boldLayoutFor('A', 1.2), 4, 0.3);
+    const ring = calls.find((c) => c.op === 'strokeText' && c.composite === 'source-over')!;
+    const placed = calls.filter((c) => c.op === 'drawImage').at(-1)!;
+
+    expect(ring.shear).toBeCloseTo(-0.3, 10);
+    expect(placed.shear).toBe(0);
   });
 
   it('cuts the rings of every glyph on the same two scratch canvases', () => {

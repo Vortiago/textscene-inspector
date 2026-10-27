@@ -38,8 +38,12 @@ const ONE_MORE_BYTE_BASE_2 = 506;
 const TRIPLET_OFF_CURVE = 0x80;
 const TRIPLET_ENCODING_MASK = 0x7f;
 
-/** The glyph offsets are kept on four-byte boundaries, as the reference decoder writes them. */
-const GLYPH_ALIGNMENT = 4;
+/**
+ * A long `loca` keeps its glyphs on four-byte boundaries, as the reference decoder writes them. A
+ * short one keeps them on two, so the padding cannot push a font past the bytes its offsets reach.
+ */
+const LONG_GLYPH_ALIGNMENT = 4;
+const SHORT_GLYPH_ALIGNMENT = 2;
 const SHORT_LOCA_FORMAT = 0;
 const LONG_LOCA_FORMAT = 1;
 /** A short `loca` holds `offset / 2` in a `UInt16`. */
@@ -321,9 +325,12 @@ function glyphAt(index: number, bitmap: Uint8Array, streams: Streams): Uint8Arra
   return simpleGlyph(contourCount, isBoxStored ? readStoredBox(streams.boxes) : null, streams);
 }
 
-/** The glyphs laid end to end, each padded to the alignment, and the offset each starts at, with the end last. */
-function joinGlyphs(glyphs: readonly Uint8Array[]): { glyf: Uint8Array; offsets: number[] } {
-  const padded = glyphs.map((glyph) => Math.ceil(glyph.length / GLYPH_ALIGNMENT) * GLYPH_ALIGNMENT);
+/** The glyphs laid end to end, each padded to `alignment`, and the offset each starts at, with the end last. */
+function joinGlyphs(
+  glyphs: readonly Uint8Array[],
+  alignment: number
+): { glyf: Uint8Array; offsets: number[] } {
+  const padded = glyphs.map((glyph) => Math.ceil(glyph.length / alignment) * alignment);
   const offsets = [0];
   for (const length of padded) offsets.push(offsets[offsets.length - 1]! + length);
   const glyf = new Uint8Array(offsets[offsets.length - 1]!);
@@ -374,6 +381,9 @@ export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
   };
   const glyphs = Array.from({ length: glyphCount }, (_, index) => glyphAt(index, bitmap, streams));
 
-  const { glyf, offsets } = joinGlyphs(glyphs);
+  const { glyf, offsets } = joinGlyphs(
+    glyphs,
+    locaFormat === LONG_LOCA_FORMAT ? LONG_GLYPH_ALIGNMENT : SHORT_GLYPH_ALIGNMENT
+  );
   return { glyf, loca: locaOf(offsets, locaFormat) };
 }

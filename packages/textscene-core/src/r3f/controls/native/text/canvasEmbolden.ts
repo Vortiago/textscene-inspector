@@ -35,6 +35,14 @@ export function paintEmboldenedFill(
   ctx.strokeText(char, x, y);
 }
 
+/** A box of whole pixels on the raster. */
+interface PixelBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /**
  * The two scratch canvases that cut the outline rings of one paint pass. They grow to the largest
  * glyph and are cleared between glyphs, so a long label allocates two canvases, not two for each glyph.
@@ -47,26 +55,21 @@ export class EmboldenRingPainter {
   constructor(private readonly target: CanvasRenderingContext2D) {}
 
   /**
-   * Strokes the outline ring of an emboldened glyph: the annulus `ringWidthPx` wide that FreeType's
-   * stroker leaves round the grown contour. A centred canvas stroke reaches `ringWidthPx / 2` each
-   * side of the unbolded contour, so the ring is a stroke of `ringWidthPx + growthPx` at the shift,
-   * less what lies inside the grown contour's inner edge: the glyph eroded by `(ringWidthPx - growthPx) / 2`,
-   * or dilated by the same where the growth is the wider. The ring is cut on a scratch canvas of the
-   * glyph's ink, so a neighbour's ring is not cut by this glyph's hole.
+   * Strokes the `ringWidthPx` annulus that FreeType's stroker leaves round the grown contour: a
+   * stroke of `ringWidthPx + growthPx` at the shift, less the glyph eroded by `(ringWidthPx - growthPx) / 2`
+   * (dilated where the growth is the wider). The cut runs on scratch canvases that share the raster's
+   * transform, so a skew stays vector-sharp, and a neighbour's ring keeps its ink.
    */
   paint(char: string, penX: number, baselineY: number, growthPx: number, ringWidthPx: number): void {
-    const ink = this.target.measureText(char);
+    const matrix = this.target.getTransform();
     const reachPx = Math.ceil((ringWidthPx + growthPx) / 2 + growthPx);
-    const originX = Math.floor(penX - ink.actualBoundingBoxLeft - reachPx);
-    const originY = Math.floor(baselineY - ink.actualBoundingBoxAscent - reachPx);
-    const width = Math.ceil(penX + ink.actualBoundingBoxRight + reachPx) - originX;
-    const height = Math.ceil(baselineY + ink.actualBoundingBoxDescent + reachPx) - originY;
-    const ring = this.scratch(this.ring, width, height);
-    const hole = this.scratch(this.hole, width, height);
+    const bounds = this.inkBounds(char, penX, baselineY, reachPx, matrix);
+    const ring = this.scratch(this.ring, bounds, matrix);
+    const hole = this.scratch(this.hole, bounds, matrix);
     if (!ring || !hole) return;
 
-    const x = penX - originX + growthPx / 2;
-    const y = baselineY - originY - growthPx / 2;
+    const x = penX + growthPx / 2;
+    const y = baselineY - growthPx / 2;
     ring.lineWidth = ringWidthPx + growthPx;
     ring.strokeText(char, x, y);
 
@@ -77,21 +80,73 @@ export class EmboldenRingPainter {
       hole.globalCompositeOperation = erosionPx > 0 ? 'destination-out' : 'source-over';
       hole.strokeText(char, x, y);
     }
+    ring.setTransform(1, 0, 0, 1, 0, 0);
     ring.globalCompositeOperation = 'destination-out';
     ring.drawImage(hole.canvas, 0, 0);
     ring.globalCompositeOperation = 'source-over';
-    this.target.drawImage(ring.canvas, 0, 0, width, height, originX, originY, width, height);
+    this.target.save();
+    this.target.setTransform(1, 0, 0, 1, 0, 0);
+    this.target.drawImage(
+      ring.canvas,
+      0,
+      0,
+      bounds.width,
+      bounds.height,
+      bounds.x,
+      bounds.y,
+      bounds.width,
+      bounds.height
+    );
+    this.target.restore();
   }
 
-  /** The cleared 2D context of `canvas`, at least `width` by `height`, drawing text as the raster does. Null with no 2D context. */
-  private scratch(canvas: HTMLCanvasElement, width: number, height: number): CanvasRenderingContext2D | null {
+  /** The whole-pixel box on the raster that holds the glyph's ink, `reachPx` wider on each side, once `matrix` has moved it. */
+  private inkBounds(
+    char: string,
+    penX: number,
+    baselineY: number,
+    reachPx: number,
+    matrix: DOMMatrix
+  ): PixelBox {
+    const ink = this.target.measureText(char);
+    const left = penX - ink.actualBoundingBoxLeft - reachPx;
+    const right = penX + ink.actualBoundingBoxRight + reachPx;
+    const top = baselineY - ink.actualBoundingBoxAscent - reachPx;
+    const bottom = baselineY + ink.actualBoundingBoxDescent + reachPx;
+    const corners = [
+      matrix.transformPoint({ x: left, y: top }),
+      matrix.transformPoint({ x: right, y: top }),
+      matrix.transformPoint({ x: left, y: bottom }),
+      matrix.transformPoint({ x: right, y: bottom }),
+    ];
+    const x = Math.floor(Math.min(...corners.map((corner) => corner.x)));
+    const y = Math.floor(Math.min(...corners.map((corner) => corner.y)));
+    return {
+      x,
+      y,
+      width: Math.ceil(Math.max(...corners.map((corner) => corner.x))) - x,
+      height: Math.ceil(Math.max(...corners.map((corner) => corner.y))) - y,
+    };
+  }
+
+  /**
+   * The cleared 2D context of `canvas`, at least as large as `box`, drawing text as the raster does
+   * under `matrix`, with the box at its origin. Null with no 2D context.
+   */
+  private scratch(
+    canvas: HTMLCanvasElement,
+    box: PixelBox,
+    matrix: DOMMatrix
+  ): CanvasRenderingContext2D | null {
     // A resize clears the canvas and resets its context.
-    if (canvas.width < width) canvas.width = width;
-    if (canvas.height < height) canvas.height = height;
+    if (canvas.width < box.width) canvas.width = box.width;
+    if (canvas.height < box.height) canvas.height = box.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(new DOMMatrix().translate(-box.x, -box.y).multiply(matrix));
     const like = this.target;
     ctx.font = like.font;
     ctx.textAlign = like.textAlign;
