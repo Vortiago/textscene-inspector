@@ -6,17 +6,6 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  Decal: {
-    linterOnly: [
-      // Godot serialises `sorting_offset` for a Decal (Decal::_validate_property
-      // restores it from VisualInstance3D's PROPERTY_USAGE_NONE). It biases only
-      // draw order among transparent surfaces.
-      'sorting_offset',
-    ],
-    reason:
-      'sorting_offset is a real serialised Decal property, so the linter checks its format, but it only tunes transparency sort order and the renderer has nothing to do with it.',
-  },
-
   ReflectionProbe: {
     linterOnly: [
       // reflection_probe.cpp:90-92: the LOD threshold of the meshes the capture draws. The

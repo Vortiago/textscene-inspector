@@ -194,7 +194,7 @@ describe('useMeshAabb over a TextMesh', () => {
     expect(result.current?.size).toEqual({ x: 7, y: 8, z: 9 });
   });
 
-  it('stays unknown for a font with no TrueType outlines', async () => {
+  it('stays unknown for a font with no readable outlines', async () => {
     const { fake, result } = renderTextAabb(resourcesOf({}));
 
     await act(async () => fake.fonts._resolve(FONT_PATH, { ...FONT_FILE, bytes: new ArrayBuffer(8) }));

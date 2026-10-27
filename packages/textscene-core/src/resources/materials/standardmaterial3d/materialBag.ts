@@ -27,9 +27,9 @@ import {
   emissionTextureAddUserData,
 } from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
-import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
+import { lightModesInjection } from '../../../r3f/lightModes';
 import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
-import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
+import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
   parallaxInjection,
@@ -100,7 +100,7 @@ function noMaterialBag(): StandardMaterialBag {
       metalness: DEFAULT_MATERIAL_METALLIC,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       side: THREE.FrontSide,
-      userData: { ...lightModesUserData(GODOT_DEFAULT_LIGHT_MODES), ...viewportSamplersUserData() },
+      userData: viewportSamplersUserData(),
     },
     injection: lightModesInjection(GODOT_DEFAULT_LIGHT_MODES),
   };
@@ -199,8 +199,7 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
  * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO, height and edge-ramp uniforms read
- * theirs at upload, and a decal reads the light modes and the specular occlusion. A fresh object per
- * bag, as the `.tres` loader writes keys into it.
+ * theirs at upload. A fresh object per bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
@@ -213,8 +212,6 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
       scalars.roughnessTextureChannelMask,
       scalars.metallicTextureChannelMask
     ),
-    ...lightModesUserData(scalars),
-    ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
     ...heightmapUserData(scalars.heightmap),
     ...viewportSamplersUserData(),
   };

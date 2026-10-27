@@ -152,7 +152,7 @@ describe('<GridMap> item with an inline PrimitiveMesh Godot builds no surface fo
   });
 });
 
-describe('<GridMap> item whose mesh path holds a TextMesh with no TrueType font', () => {
+describe('<GridMap> item whose mesh path holds a TextMesh with no readable font', () => {
   it('draws the placeholder', async () => {
     const tile = await renderInstancedTile({
       library: `[gd_resource type="MeshLibrary" format=3]
@@ -168,7 +168,7 @@ item/0/mesh = ExtResource("1_text")
   });
 });
 
-describe('<GridMap> item whose inline mesh is a TextMesh with no TrueType font', () => {
+describe('<GridMap> item whose inline mesh is a TextMesh with no readable font', () => {
   it('draws the placeholder, as the previewer has no outlines to draw', async () => {
     const tile = await renderInstancedTile({
       library: inlineMeshLibrary('[sub_resource type="TextMesh" id="Mesh_item"]'),

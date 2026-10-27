@@ -17,6 +17,10 @@ const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FREED_OTHERWISE: Record<string, string> = {
   'r3f/fog/fogUniforms.ts':
     "Each pass draws its texture as its own render target's, and three frees it with the target.",
+  'r3f/decal/decalSlots.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
+  'r3f/sceneRows/sceneRowsSlot.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/reflectionProbe/probeSlots.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/sky/skyLayerArray.ts':

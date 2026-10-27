@@ -48,7 +48,8 @@ function forgetSharedGeometry(key: string, geometry: THREE.BufferGeometry): void
 /**
  * The box the rendering server holds for a PrimitiveMesh: its `custom_aabb`, else the box of the
  * vertices it builds (`mesh_storage.cpp:705-712`). A mesh Godot builds no surface for is `AABB()`.
- * Null for a type with no slice here, and for a TextMesh whose font has no TrueType outlines.
+ * Null for a type with no slice here, and for a TextMesh whose font has no outlines the previewer
+ * reads.
  */
 export function primitiveMeshAabb(mesh: ResolvableResource): Aabb | null {
   if (!isDrawablePrimitiveMesh(mesh)) return null;

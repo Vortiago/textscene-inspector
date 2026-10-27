@@ -16,10 +16,6 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { metallicRoughnessChannelsUserData } from '../../../r3f/materials/godotMetallicRoughnessChannels';
-import { lightModesUserData } from '../../../r3f/lightModes';
-import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
-import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
-import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -383,32 +379,9 @@ describe('standardMaterialBags — specular occlusion', () => {
   it('patches nothing on an unshaded surface, which has no reflection (edge case)', () => {
     expect(bag({ disable_specular_occlusion: 'true', shading_mode: '0' }).injection).toBeUndefined();
   });
-
-  it('records the setting, for a decal to shade its projection with', () => {
-    const material = materialFromBag(bag({ disable_specular_occlusion: 'true' }));
-    expect(disablesSpecularOcclusion(material)).toBe(true);
-  });
 });
 
 describe('standardMaterialBags — light modes', () => {
-  it('records the modes, for a decal to shade its projection with', () => {
-    expect(materialFromBag(bag({ diffuse_mode: '2', specular_mode: '1' })).userData).toMatchObject(
-      lightModesUserData({
-        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT_WRAP,
-        specularMode: SpecularMode.SPECULAR_TOON,
-      })
-    );
-  });
-
-  it("records Lambert and GGX on Godot's default surface", () => {
-    expect(materialFromBag(standardMaterialBags(null).unfaded).userData).toMatchObject(
-      lightModesUserData({
-        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT,
-        specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
-      })
-    );
-  });
-
   it('patches nothing for Burley and GGX, the terms the lighting chunk writes by default', () => {
     // `material.h:608-609`.
     expect(bag({}).injection).toBeUndefined();
