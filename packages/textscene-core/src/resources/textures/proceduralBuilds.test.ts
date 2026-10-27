@@ -17,7 +17,7 @@ import {
   type ProceduralBuildPlan,
   type ProceduralTextureLookup,
 } from './proceduralBuilds';
-import { pendingTextureWork } from './textureWork';
+import { textureWork } from './textureWork';
 
 const [pixelCase] = NOISE_PIXEL_CASES;
 if (!pixelCase) throw new Error('expected a noise pixel case');
@@ -169,11 +169,11 @@ describe('resolveProceduralSubResourceAsync', () => {
   it('counts a build as texture work until it lands', async () => {
     const { runner, runs } = fakeRunner();
     const handle = pendingLookup(scene('1')).start(runner);
-    expect(pendingTextureWork()).toBe(1);
+    expect(textureWork.pending()).toBe(1);
     runs[0]?.resolve(output());
     await handle.settled;
 
-    expect(pendingTextureWork()).toBe(0);
+    expect(textureWork.pending()).toBe(0);
   });
 
   it('stops counting an aborted build', async () => {
@@ -181,7 +181,7 @@ describe('resolveProceduralSubResourceAsync', () => {
     pendingLookup(scene('1')).start(runner).release();
     await settle();
 
-    expect(pendingTextureWork()).toBe(0);
+    expect(textureWork.pending()).toBe(0);
   });
 
   it('settles null, with a warning, when the pixels cannot be allocated', async () => {

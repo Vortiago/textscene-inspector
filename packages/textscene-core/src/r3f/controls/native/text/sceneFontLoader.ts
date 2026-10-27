@@ -14,6 +14,7 @@ import {
   type DesignUnitWidthFn,
 } from './runtimeFontMetrics';
 import { fontVariationEmbolden, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
+import { createWorkCount } from '../../../../resources/workCount';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -69,6 +70,12 @@ export function notifySceneFontMetricsSettled(): void {
   settleCount += 1;
   for (const listener of settledListeners) listener();
 }
+
+/**
+ * The scene font loads in flight, from the peek that starts one until it settles. The shell shows
+ * "Loading scene…" meanwhile, so a capture never settles on the bundled default.
+ */
+export const fontWork = createWorkCount();
 
 type CacheEntry =
   { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
@@ -198,12 +205,14 @@ async function resolveSceneFontMetrics(
         return OPEN_SANS_FONT_METRICS;
       });
 
+  const endWork = fontWork.begin();
   metricsCache.set(resolved.leaf, { status: 'pending', promise });
   const metrics = await promise;
   metricsCache.set(resolved.leaf, { status: 'settled', metrics });
   // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
   // settled cache.
   notifySceneFontMetricsSettled();
+  endWork();
   return metrics;
 }
 
