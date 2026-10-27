@@ -17,6 +17,7 @@ import { installGodotLightBakeMode } from '../lightBakeMode/lightBakeModeChunk.j
 import { installGodotLightSize } from '../lightSize/lightSizeChunk.js';
 import { installGodotSkyLighting } from '../godotSkyLighting.js';
 import { installGodotReflectionProbes } from '../reflectionProbe/probeShaderChunk.js';
+import { installGodotDecals } from '../decal/decalShaderChunk.js';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk.js';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.js';
 import { installGodotPositionalShadow } from '../positionalShadow/positionalShadowChunk.js';
@@ -40,6 +41,7 @@ const SHADER_PATCH_INSTALLS: readonly (() => unknown)[] = [
   installGodotAreaLight,
   installGodotClearcoat,
   installGodotReflectionProbes,
+  installGodotDecals,
   installGodotSplitShadow,
   installDirectionalShadowAtlas,
   installGodotPositionalShadow,

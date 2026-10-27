@@ -49,7 +49,7 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
   },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
-  // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
+  // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime
   // view: projection only. The projection edges are AA-sensitive.
   { name: 'decal', file: 'unit-decal.tscn' },

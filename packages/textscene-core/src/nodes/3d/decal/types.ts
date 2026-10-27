@@ -54,4 +54,7 @@ export interface DecalProperties extends Node3DProperties {
 
   /** Distance over which the fade completes; past it the decal is culled (default: 10). */
   distance_fade_length: number;
+
+  /** Added to the camera distance when decals sort, nearest first (default: 0). */
+  sorting_offset: number;
 }
