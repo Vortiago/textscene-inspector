@@ -7,7 +7,7 @@ import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import { enclosedVolume } from '../../../../r3f/csg/testing/brushVolume';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
 import type { FontFileResource } from '../../../../resources/fonts/font/types';
-import { distinctPositions } from '../../../../resources/meshes/textmesh/distinctPositions.testkit';
+import { distinctAttributePositions } from '../../../../resources/meshes/textmesh/distinctPositions.testkit';
 import { FONT_PATH, trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import {
   csgMesh3DAwaitsFontMetrics,
@@ -83,7 +83,7 @@ describe('csgMesh3DGeometry for a TextMesh with depth', () => {
     const positions = (await brush(DEEP_PROPERTIES)).getAttribute('position');
 
     expect(positions.count / 3).toBe(44);
-    expect(distinctPositions(positions.array)).toHaveLength(24);
+    expect(distinctAttributePositions(positions)).toHaveLength(24);
   });
 
   it('spans the x and z extent Godot builds', async () => {
