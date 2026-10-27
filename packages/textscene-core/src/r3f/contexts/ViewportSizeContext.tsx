@@ -16,7 +16,7 @@ export function ViewportSizeProvider({ size, children }: { size: Vector2; childr
   return <ViewportSizeContext.Provider value={size}>{children}</ViewportSizeContext.Provider>;
 }
 
-/** @oneWay The size of the viewport that a node renders in */
+/** @canonical The size of the viewport that a node renders in */
 export function useViewportSize(): Vector2 {
   const enclosing = useContext(ViewportSizeContext);
   const { viewportSize } = useProjectSettings();

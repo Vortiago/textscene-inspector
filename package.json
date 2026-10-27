@@ -28,7 +28,7 @@
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter \"./packages/*\" build && pnpm -r type-check",
     "type-check:tests": "pnpm -r type-check:tests",
-    "validate": "pnpm format:check && pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:index --check && pnpm docs:gallery --check && pnpm docs:one-way --check && pnpm fonts:bake --check && pnpm godot:dfg --check && pnpm godot:ltc --check && pnpm vsc:package && pnpm check:bundle-size && pnpm check:package",
+    "validate": "pnpm format:check && pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:index --check && pnpm docs:gallery --check && pnpm fonts:bake --check && pnpm godot:dfg --check && pnpm godot:ltc --check && pnpm vsc:package && pnpm check:bundle-size && pnpm check:package",
     "check": "node scripts/githooks/check.mjs",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
     "fonts:bake": "node scripts/fonts/bake-metrics.mjs",
@@ -74,7 +74,7 @@
     "docs:lint-sections": "node scripts/compare-docs/build-lint-sections.mjs",
     "docs:index": "node scripts/compare-docs/build-comparison-index.mjs",
     "docs:gallery": "node scripts/compare-docs/build-gallery.mjs",
-    "docs:one-way": "node scripts/one-way/build-one-way-list.mjs",
+    "canonical": "node scripts/canonical/list-canonical-helpers.mjs",
     "recapture": "node scripts/compare-docs/recapture.mjs"
   },
   "keywords": [

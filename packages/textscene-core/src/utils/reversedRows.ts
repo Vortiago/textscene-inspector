@@ -15,7 +15,7 @@ type ReversedPixels<Source extends Pixels> = Source extends Float32Array
 /**
  * `rgba`'s rows in reverse order. Reversing twice gives back the input.
  *
- * @oneWay Row order of RGBA pixels
+ * @canonical Row order of RGBA pixels
  */
 export function reversedRows<Source extends Pixels>(
   rgba: Source,
@@ -33,7 +33,7 @@ export function reversedRows<Source extends Pixels>(
 /**
  * Reverses the rows of `rgba` where they lie, through one row of scratch: no second buffer.
  *
- * @oneWay Row order of RGBA pixels
+ * @canonical Row order of RGBA pixels
  */
 export function reverseRowsInPlace(rgba: Pixels, width: number, height: number): void {
   const rowTexels = width * 4;
@@ -57,7 +57,7 @@ function emptyLike(rgba: Pixels, length: number): Uint8Array | Uint16Array | Flo
  * Whether `texture`'s pixels run bottom-up: a typed array that uploads without `flipY`. A typed
  * array with `flipY`, such as `applyAlphaBorderFix`'s readback of a decoded image, runs top-down.
  *
- * @oneWay Row order of RGBA pixels
+ * @canonical Row order of RGBA pixels
  */
 export function isBottomUp(texture: { flipY: boolean; image: unknown }): boolean {
   return !texture.flipY && ArrayBuffer.isView((texture.image as { data?: unknown } | null)?.data);

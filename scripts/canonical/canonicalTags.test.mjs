@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { oneWayEntries, renderOneWayList } from './oneWayTags.mjs';
+import { canonicalEntries, renderCanonicalList } from './canonicalTags.mjs';
 
 const FILE = 'utils/perObject.ts';
 
@@ -7,25 +7,25 @@ function source(doc, declaration) {
   return `/**\n${doc.map((line) => ` * ${line}`.trimEnd()).join('\n')}\n */\n${declaration}\n`;
 }
 
-describe('oneWayEntries', () => {
+describe('canonicalEntries', () => {
   it('reads the job, the export it sits on and the file', () => {
     const text = source(
-      ['A reader.', '', '@oneWay A cache keyed by an object'],
+      ['A reader.', '', '@canonical A cache keyed by an object'],
       'export function perObject() {}'
     );
-    expect(oneWayEntries(text, FILE)).toEqual([
+    expect(canonicalEntries(text, FILE)).toEqual([
       { job: 'A cache keyed by an object', note: '', name: 'perObject', file: FILE },
     ]);
   });
 
   it('reads the lines after the job as its note, up to the next tag', () => {
     const doc = [
-      '@oneWay A cache keyed by an object',
+      '@canonical A cache keyed by an object',
       '  It holds a WeakMap.',
       '  A throw stores nothing.',
       '@returns a reader',
     ];
-    expect(oneWayEntries(source(doc, 'export const perObject = 1;'), FILE)[0].note).toBe(
+    expect(canonicalEntries(source(doc, 'export const perObject = 1;'), FILE)[0].note).toBe(
       'It holds a WeakMap. A throw stores nothing.'
     );
   });
@@ -39,37 +39,37 @@ describe('oneWayEntries', () => {
       ['export let counter = 0;', 'counter'],
     ];
     for (const [declaration, name] of declarations) {
-      expect(oneWayEntries(source(['@oneWay A job'], declaration), FILE)[0].name).toBe(name);
+      expect(canonicalEntries(source(['@canonical A job'], declaration), FILE)[0].name).toBe(name);
     }
   });
 
   it('reads a tagged export that follows the module comment', () => {
-    const text = `/** The module. */\n\n${source(['@oneWay A job'], 'export function joinPath() {}')}`;
-    expect(oneWayEntries(text, FILE).map(({ name }) => name)).toEqual(['joinPath']);
+    const text = `/** The module. */\n\n${source(['@canonical A job'], 'export function joinPath() {}')}`;
+    expect(canonicalEntries(text, FILE).map(({ name }) => name)).toEqual(['joinPath']);
   });
 
   it('reads no entry from a doc comment with no tag', () => {
-    expect(oneWayEntries(source(['A reader.'], 'export function perObject() {}'), FILE)).toEqual([]);
+    expect(canonicalEntries(source(['A reader.'], 'export function perObject() {}'), FILE)).toEqual([]);
   });
 
   it('refuses a tag on a declaration that is not exported, so a tag cannot name a private helper', () => {
-    expect(() => oneWayEntries(source(['@oneWay A job'], 'function hidden() {}'), FILE)).toThrow(
-      'utils/perObject.ts:4: expected an export after the @oneWay doc comment, got "function hidden() {}"'
+    expect(() => canonicalEntries(source(['@canonical A job'], 'function hidden() {}'), FILE)).toThrow(
+      'utils/perObject.ts:4: expected an export after the @canonical doc comment, got "function hidden() {}"'
     );
   });
 
   it('refuses a tag with no job', () => {
-    expect(() => oneWayEntries(source(['@oneWay'], 'export function perObject() {}'), FILE)).toThrow(
-      'utils/perObject.ts: expected a job after @oneWay on perObject, got none'
+    expect(() => canonicalEntries(source(['@canonical'], 'export function perObject() {}'), FILE)).toThrow(
+      'utils/perObject.ts: expected a job after @canonical on perObject, got none'
     );
   });
 });
 
-describe('renderOneWayList', () => {
+describe('renderCanonicalList', () => {
   const entry = (job, name, file, note = '') => ({ job, note, name, file });
 
   it('writes one line for each job, with its helpers and their file', () => {
-    expect(renderOneWayList([entry('Angles', 'degToRad', 'godot/math/math.ts')])).toBe(
+    expect(renderCanonicalList([entry('Angles', 'degToRad', 'godot/math/math.ts')])).toBe(
       '- Angles: `degToRad` in `godot/math/math.ts`.\n'
     );
   });
@@ -80,14 +80,14 @@ describe('renderOneWayList', () => {
       entry('Angles', 'radToDeg', 'godot/math/math.ts'),
       entry('Angles', 'turns', 'godot/math/turns.ts'),
     ];
-    expect(renderOneWayList(entries)).toBe(
+    expect(renderCanonicalList(entries)).toBe(
       '- Angles: `degToRad` and `radToDeg` in `godot/math/math.ts`, and `turns` in `godot/math/turns.ts`.\n'
     );
   });
 
   it('adds the note after the helpers', () => {
     expect(
-      renderOneWayList([entry('Angles', 'degToRad', 'godot/math/math.ts', 'Never divide by 180.')])
+      renderCanonicalList([entry('Angles', 'degToRad', 'godot/math/math.ts', 'Never divide by 180.')])
     ).toBe('- Angles: `degToRad` in `godot/math/math.ts`. Never divide by 180.\n');
   });
 
@@ -98,19 +98,15 @@ describe('renderOneWayList', () => {
       entry('Angles', 'degToRad', 'godot/math/math.ts'),
     ];
     expect(
-      renderOneWayList(entries)
+      renderCanonicalList(entries)
         .split('\n')
         .map((line) => line.slice(0, 12))
     ).toEqual(['- Angles: `d', '- Paths: `jo', '- In tests, ', '']);
   });
 
-  it('wraps at 100 columns without breaking a code span', () => {
-    const note = 'Read it with `an as const object` and a long tail of words that runs past the edge.';
-    const lines = renderOneWayList([entry('Angles', 'degToRad', 'godot/math/math.ts', note)])
-      .trimEnd()
-      .split('\n');
-    expect(lines.every((line) => line.length <= 100)).toBe(true);
-    expect(lines.slice(1).every((line) => line.startsWith('  '))).toBe(true);
-    expect(lines.some((line) => line.includes('`an as const object`'))).toBe(true);
+  it('keeps a long entry on one line, so a grep for one word prints all of it', () => {
+    const note = 'Read it with `an as const object` and a long tail of words that runs well past any edge.';
+    const list = renderCanonicalList([entry('Angles', 'degToRad', 'godot/math/math.ts', note)]);
+    expect(list.trimEnd().split('\n')).toHaveLength(1);
   });
 });

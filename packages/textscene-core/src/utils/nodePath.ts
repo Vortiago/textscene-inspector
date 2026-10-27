@@ -6,7 +6,7 @@
 /**
  * The path of a child named `childName` below the node at `parentPath`.
  *
- * @oneWay A node path from its parent and a name
+ * @canonical A node path from its parent and a name
  */
 export function joinPath(parentPath: string, childName: string): string {
   return parentPath ? `${parentPath}/${childName}` : childName;
@@ -15,7 +15,7 @@ export function joinPath(parentPath: string, childName: string): string {
 /**
  * The path of the node that holds the one at `path`, or null where `path` names a single segment.
  *
- * @oneWay The parent of a node path
+ * @canonical The parent of a node path
  */
 export function parentPathOf(path: string): string | null {
   const cut = path.lastIndexOf('/');

@@ -12,7 +12,7 @@ export interface WorkCount {
   subscribe(onChange: () => void): () => void;
 }
 
-/** @oneWay A page-wide count of work in flight */
+/** @canonical A page-wide count of work in flight */
 export function createWorkCount(): WorkCount {
   const store = createExternalStore(0);
   return {

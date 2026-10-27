@@ -2,7 +2,7 @@
 
 import type * as THREE from 'three';
 
-/** @oneWay In tests, the distinct positions of a mesh */
+/** @canonical In tests, the distinct positions of a mesh */
 export function distinctPositions(positions: ArrayLike<number>): [number, number, number][] {
   const byKey = new Map<string, [number, number, number]>();
   for (let i = 0; i < positions.length; i += 3) {
