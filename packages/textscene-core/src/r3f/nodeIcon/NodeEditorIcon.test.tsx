@@ -23,10 +23,11 @@ const HIDDEN_ICON: EditorIconRegistration = { icon: 'GizmoFogVolume', isDrawn: (
 const NODE = { name: 'Node', type: 'Node3D', properties: {}, children: [] } as unknown as TscnNode;
 
 async function render(
-  registration: EditorIconRegistration,
+  registration: EditorIconRegistration | EditorIconRegistration[],
   options: { selectedPath?: string | null; showGizmos?: boolean; instantiated?: boolean } = {}
 ) {
   const { selectedPath = null, showGizmos, instantiated } = options;
+  const registrations = [registration].flat();
   const renderer = await ReactThreeTestRenderer.create(
     <GizmoScene
       nodePath="Node"
@@ -34,7 +35,9 @@ async function render(
       showGizmos={showGizmos}
       instantiated={instantiated}
     >
-      <NodeEditorIcon node={NODE} registration={registration} />
+      {registrations.map((each, index) => (
+        <NodeEditorIcon key={index} node={NODE} registration={each} />
+      ))}
     </GizmoScene>
   );
   return renderer.scene.findAllByType('Mesh').map((mesh) => mesh.instance as THREE.Mesh);
@@ -99,6 +102,16 @@ describe('NodeEditorIcon', () => {
     const [first] = await render(CAMERA_ICON);
     const [second] = await render(CAMERA_ICON, { selectedPath: 'Node' });
     expect(materialOf(first!).map).toBe(materialOf(second!).map);
+  });
+
+  it('draws icons of one look through one material', async () => {
+    const [first, second] = await render([CAMERA_ICON, CAMERA_ICON]);
+    expect(materialOf(first!)).toBe(materialOf(second!));
+  });
+
+  it('draws icons of two looks through two materials', async () => {
+    const [plain, tinted] = await render([CAMERA_ICON, TINTED_ICON]);
+    expect(materialOf(plain!)).not.toBe(materialOf(tinted!));
   });
 
   it('tags the quad as a node icon, which no bounds include', async () => {
