@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { markFrameGroup } from './godotNodes';
 import { applyRootScale } from './rootScale';
 
 /** A GLB-shaped root: a scene root with one transformed child holding a mesh. */
@@ -87,5 +88,19 @@ describe('applyRootScale', () => {
   it('does not throw on a childless root', () => {
     const root = new THREE.Object3D();
     expect(() => applyRootScale(root, { scale: 0.01, bake: true })).not.toThrow();
+  });
+
+  it('bakes into what a frame group holds, so a transform written to the group keeps the bake', () => {
+    const root = new THREE.Object3D();
+    const group = new THREE.Group();
+    const bone = new THREE.Bone();
+    bone.position.set(0, 10, 0);
+    group.add(bone);
+    root.add(group);
+    markFrameGroup(group, 'Armature/Skeleton3D');
+
+    applyRootScale(root, { scale: 0.01, bake: true });
+
+    expect([group.scale.toArray(), bone.position.y]).toEqual([[1, 1, 1], 0.1]);
   });
 });

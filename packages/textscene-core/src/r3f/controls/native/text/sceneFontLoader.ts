@@ -18,6 +18,7 @@ import { createWorkCount } from '../../../../resources/workCount';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
+import { warnOnce } from '../../../../utils/warnOnce';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
 // bundled default before any DOM font API. The skip is deliberate, so it does not warn.
@@ -65,10 +66,22 @@ export function onSceneFontMetricsSettled(listener: SceneFontMetricsListener): (
   };
 }
 
-/** Fires every settled listener, for a scene font load and for the bundled font registration. */
+/**
+ * Fires every settled listener, for a scene font load and for the bundled font registration. A
+ * throwing listener does not stop the later ones, so none misses the settle: the first error is
+ * rethrown once all have run.
+ */
 export function notifySceneFontMetricsSettled(): void {
   settleCount += 1;
-  for (const listener of settledListeners) listener();
+  const failures: unknown[] = [];
+  for (const listener of settledListeners) {
+    try {
+      listener();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) throw failures[0];
 }
 
 /**
@@ -84,16 +97,14 @@ type CacheEntry =
 const metricsCache = new WeakMap<FontFileResource, CacheEntry>();
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
-const warnedUnresolvable = new WeakSet<FontResource>();
-
 function warnUnresolvable(font: FontResource, nodePath: string): void {
-  if (warnedUnresolvable.has(font)) return;
-  warnedUnresolvable.add(font);
   const reason =
     font.kind === 'system'
       ? `a SystemFont (OS family names: ${font.fontNames.join(', ') || '(none)'}) -- this previewer has no access to the user's system fonts`
       : 'no FontFile in its fallback chain carries loadable bytes';
-  logger.warn(
+  warnOnce(
+    font,
+    'unresolvable',
     `[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`
   );
 }
@@ -209,10 +220,14 @@ async function resolveSceneFontMetrics(
   metricsCache.set(resolved.leaf, { status: 'pending', promise });
   const metrics = await promise;
   metricsCache.set(resolved.leaf, { status: 'settled', metrics });
-  // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
-  // settled cache.
-  notifySceneFontMetricsSettled();
-  endWork();
+  try {
+    // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
+    // settled cache.
+    notifySceneFontMetricsSettled();
+  } finally {
+    // A throwing listener must not leave the work counted: a capture waits on it for good.
+    endWork();
+  }
   return metrics;
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gltfImportNames, type GltfNamingOptions, type GltfNodeRole } from './gltfImportNames';
+import { gltfImportNames, type GltfNamingOptions } from './gltfImportNames';
 
 const CURRENT: GltfNamingOptions = { namingVersion: 2, importAsSkeletonBones: false, fileName: 'robot' };
 const GODOT_4_0: GltfNamingOptions = { ...CURRENT, namingVersion: 0 };
@@ -8,8 +8,8 @@ function names(json: unknown, options: GltfNamingOptions = CURRENT): string[] {
   return gltfImportNames(json, options).nodes.map(({ name }) => name);
 }
 
-function roles(json: unknown, options: GltfNamingOptions = CURRENT): GltfNodeRole[] {
-  return gltfImportNames(json, options).nodes.map(({ role }) => role);
+function isBones(json: unknown, options: GltfNamingOptions = CURRENT): boolean[] {
+  return gltfImportNames(json, options).nodes.map(({ isBone }) => isBone);
 }
 
 describe('gltfImportNames: named nodes', () => {
@@ -100,8 +100,8 @@ describe('gltfImportNames: bones', () => {
     skins: [{ joints: [0] }],
   };
 
-  it('gives a joint the bone role, and marks a skinned mesh', () => {
-    expect(roles(rig)).toEqual(['node', 'bone', 'bone', 'skinnedMesh']);
+  it('marks a joint a bone', () => {
+    expect(isBones(rig)).toEqual([false, true, true, false]);
   });
 
   it('names the nodes before the bones, so a bone takes a name a node holds with _2', () => {
@@ -114,21 +114,16 @@ describe('gltfImportNames: bones', () => {
       nodes: [{ name: 'Hip', children: [1] }, { name: 'Gap', children: [2] }, { name: 'Knee' }],
       skins: [{ joints: [0, 2] }],
     };
-    expect(roles(json)).toEqual(['bone', 'bone', 'bone']);
+    expect(isBones(json)).toEqual([true, true, true]);
   });
 
   it('keeps a node under a joint a node from 4.5, and makes it a bone before', () => {
-    expect(roles(sword)).toEqual(['bone', 'node']);
-    expect(roles(sword, { ...CURRENT, namingVersion: 1 })).toEqual(['bone', 'bone']);
+    expect(isBones(sword)).toEqual([true, false]);
+    expect(isBones(sword, { ...CURRENT, namingVersion: 1 })).toEqual([true, true]);
   });
 
   it('makes every scene node but a leaf skinned mesh a bone under import_as_skeleton_bones', () => {
-    expect(roles(rig, { ...CURRENT, importAsSkeletonBones: true })).toEqual([
-      'bone',
-      'bone',
-      'bone',
-      'skinnedMesh',
-    ]);
+    expect(isBones(rig, { ...CURRENT, importAsSkeletonBones: true })).toEqual([true, true, true, false]);
   });
 
   it('names an unnamed bone bone, numbered from 2 past a node of that name', () => {

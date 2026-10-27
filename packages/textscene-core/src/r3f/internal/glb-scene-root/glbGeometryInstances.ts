@@ -7,6 +7,7 @@
 import { useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { godotMatrixWorld } from '../../../resources/formats/glb/skinnedMeshSpace';
 import { parseGeometryInstance3D } from '../../../nodes/3d/geometryinstance3d/parser';
 import type { GeometryInstance3DProperties } from '../../../nodes/3d/geometryinstance3d/types';
 import {
@@ -172,7 +173,7 @@ function glbPlacement(object: THREE.Object3D, surfaces: readonly MeshSurface[]):
   const box = surfacesBox(object, surfaces);
   return {
     nodeMatrixWorld(target) {
-      target.copy(object.matrixWorld);
+      godotMatrixWorld(object, target);
       return true;
     },
     ownAabb(target) {

@@ -105,7 +105,7 @@ omission.
 >   object moves, so the React tree, `useThree()` and every context stay as they were.
 > - A typed node whose parent path descends into an instanced `.glb` takes the same move.
 >   `GlbAttachedChildren` attaches its three object to the GLB object that path resolves to
->   (`matchGlbTarget`), so the node takes that object's transform and visibility as Godot adds it
+>   (`findGlbTarget`), so the node takes that object's transform and visibility as Godot adds it
 >   to that node (`packed_scene.cpp:157-165`, `:541`).
 > - A node whose class the file does not state stays in its parent's group (`nodeEscapesParent`).
 >   An `instance=` node takes the sub-scene root's class (ADR-0013), and a `.glb` root is a Node3D.
