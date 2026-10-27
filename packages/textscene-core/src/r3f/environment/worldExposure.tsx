@@ -8,16 +8,12 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { CameraAttributes } from '../../resources/cameraattributes/types';
 import { useSceneExposure } from '../exposure/sceneExposure';
-import { createWorldGroup } from './worldGroup';
+import { createWorldGroup, type WorldResolution } from './worldGroup';
 
-/** What a WorldEnvironment's `camera_attributes` resolves to. */
-export type CameraAttributesResolution =
-  { status: 'pending' } | { status: 'none' } | { status: 'resolved'; attributes: CameraAttributes };
+/** What a WorldEnvironment's `camera_attributes` resolves to, when it holds a valid one. */
+export type CameraAttributesResolution = WorldResolution<{ attributes: CameraAttributes }>;
 
-export const PENDING_CAMERA_ATTRIBUTES: CameraAttributesResolution = { status: 'pending' };
-export const NO_CAMERA_ATTRIBUTES: CameraAttributesResolution = { status: 'none' };
-
-const cameraAttributes = createWorldGroup<CameraAttributesResolution>(NO_CAMERA_ATTRIBUTES);
+const cameraAttributes = createWorldGroup<{ attributes: CameraAttributes }>();
 
 export const usePublishCameraAttributes = cameraAttributes.usePublish;
 

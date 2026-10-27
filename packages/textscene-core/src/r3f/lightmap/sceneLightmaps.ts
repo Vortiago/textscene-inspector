@@ -38,10 +38,7 @@ export class LightmapInstance {
   usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;
   /** The bake's capture bounds, in the LightmapGI's space (`lightmap_gi.cpp:229`). */
   bounds: Aabb = EMPTY_AABB;
-  /**
-   * The factor the atlas reads at: the world's exposure over the bake's, or 1 without camera
-   * attributes (`render_forward_clustered.cpp:1222-1229`).
-   */
+  /** The factor the atlas reads at, from {@link lightmapExposureScale}. */
   exposureScale = 1;
   /** Written only by the scene's `SceneLightmaps` before each render: whether the cull keeps it. */
   isDrawn = false;

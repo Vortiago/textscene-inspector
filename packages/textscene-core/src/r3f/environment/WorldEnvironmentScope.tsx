@@ -13,20 +13,12 @@ import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import { WorldExposureScope } from './worldExposure';
-import { createWorldGroup } from './worldGroup';
+import { createWorldGroup, type WorldResolution } from './worldGroup';
 
-/**
- * What a WorldEnvironment's `environment` resolves to. `none` is no reference, a `.tres` that
- * failed to load or a resource of another type: Godot holds no valid Environment for any of them.
- */
-export type EnvironmentResolution =
-  { status: 'pending' } | { status: 'none' } | { status: 'resolved'; environment: EnvironmentLayerProps };
+/** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
+export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
 
-/** The one `pending` and `none` value, so an unchanged resolution publishes nothing. */
-export const PENDING_ENVIRONMENT: EnvironmentResolution = { status: 'pending' };
-export const NO_ENVIRONMENT: EnvironmentResolution = { status: 'none' };
-
-const environments = createWorldGroup<EnvironmentResolution>(NO_ENVIRONMENT);
+const environments = createWorldGroup<{ environment: EnvironmentLayerProps }>();
 
 export const usePublishEnvironment = environments.usePublish;
 

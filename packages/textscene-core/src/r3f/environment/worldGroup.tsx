@@ -10,24 +10,28 @@ import { compareTreeOrder, useTreeOrder, type TreeOrder } from '../contexts/Tree
 
 /**
  * What a WorldEnvironment's slot resolves to. `none` is no reference, a `.tres` that failed to load
- * or a resource of another type: Godot holds no valid resource for any of them.
+ * or a resource of another type: Godot holds no valid resource for any of them. `Resolved` is what
+ * a valid one adds.
  */
-export interface Resolution {
-  status: 'pending' | 'none' | 'resolved';
-}
+export type WorldResolution<Resolved extends object> =
+  { status: 'pending' } | { status: 'none' } | ({ status: 'resolved' } & Resolved);
 
-interface Publication<R extends Resolution> {
+/** The one `pending` and `none` value of every slot, so an unchanged resolution publishes nothing. */
+export const PENDING_RESOLUTION: { status: 'pending' } = { status: 'pending' };
+export const NO_RESOLUTION: { status: 'none' } = { status: 'none' };
+
+interface Publication<R extends { status: string }> {
   key: object;
   order: TreeOrder;
   resolution: R;
 }
 
-interface Publisher<R extends Resolution> {
+interface Publisher<R extends { status: string }> {
   publish(publication: Publication<R>): void;
   withdraw(key: object): void;
 }
 
-export interface WorldGroup<R extends Resolution> {
+export interface WorldGroup<R extends { status: string }> {
   /** Holds the publications of the world below it. One per world, above every reader. */
   Provider: (props: { children: ReactNode }) => ReactNode;
   /** Puts a WorldEnvironment's resolution in its world. Layout effects, so the chooser updates before paint. */
@@ -36,11 +40,9 @@ export interface WorldGroup<R extends Resolution> {
   useChosen: () => R | null;
 }
 
-/**
- * `none` is the one value an absent slot publishes, so an unchanged resolution publishes nothing.
- * A `pending` publication holds its place, since its resource may turn out valid.
- */
-export function createWorldGroup<R extends Resolution>(none: R): WorldGroup<R> {
+/** A `pending` publication holds its place, since its resource may turn out valid. */
+export function createWorldGroup<Resolved extends object>(): WorldGroup<WorldResolution<Resolved>> {
+  type R = WorldResolution<Resolved>;
   const PublisherContext = createContext<Publisher<R> | null>(null);
   const PublicationsContext = createContext<readonly Publication<R>[]>([]);
 
@@ -86,13 +88,13 @@ export function createWorldGroup<R extends Resolution>(none: R): WorldGroup<R> {
     const publications = useContext(PublicationsContext);
     return useMemo(() => {
       if (publications.length === 0) return null;
-      return publications.find((entry) => entry.resolution.status !== 'none')?.resolution ?? none;
+      return publications.find((entry) => entry.resolution.status !== 'none')?.resolution ?? NO_RESOLUTION;
     }, [publications]);
   }
 
   return { Provider, usePublish, useChosen };
 }
 
-function isSamePublication<R extends Resolution>(a: Publication<R>, b: Publication<R>): boolean {
+function isSamePublication<R extends { status: string }>(a: Publication<R>, b: Publication<R>): boolean {
   return a.resolution === b.resolution && compareTreeOrder(a.order, b.order) === 0;
 }

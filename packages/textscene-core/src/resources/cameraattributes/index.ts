@@ -4,12 +4,13 @@
  * React-free.
  */
 
+import { CAMERA_ATTRIBUTES_TYPES } from '../../godot/scene/cameraAttributes';
 import { registerResourceSlice } from '../sliceRegistration';
 
 registerResourceSlice({
   slice: 'cameraattributes',
   kind: 'godot-text',
-  typeNames: ['CameraAttributesPractical', 'CameraAttributesPhysical'],
+  typeNames: [...CAMERA_ATTRIBUTES_TYPES],
   busType: 'resource',
 });
 

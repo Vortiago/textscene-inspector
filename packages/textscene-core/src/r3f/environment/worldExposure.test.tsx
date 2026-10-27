@@ -10,11 +10,10 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
-import { WorldEnvironmentScope, usePublishEnvironment, NO_ENVIRONMENT } from './WorldEnvironmentScope';
+import { WorldEnvironmentScope, usePublishEnvironment } from './WorldEnvironmentScope';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
+import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 import {
-  NO_CAMERA_ATTRIBUTES,
-  PENDING_CAMERA_ATTRIBUTES,
   useExposureFactor,
   useExposureNormalization,
   usePublishCameraAttributes,
@@ -49,8 +48,8 @@ function environment(name: string): EnvironmentResolution {
 /** A WorldEnvironment at `order`: it publishes both slots, as the node does. */
 function WorldEnvironmentAt({
   order,
-  cameraAttributes = NO_CAMERA_ATTRIBUTES,
-  env = NO_ENVIRONMENT,
+  cameraAttributes = NO_RESOLUTION,
+  env = NO_RESOLUTION,
 }: {
   order: TreeOrder;
   cameraAttributes?: CameraAttributesResolution;
@@ -166,7 +165,7 @@ describe('the exposure of a world', () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <>
-          <WorldEnvironmentAt order={[0]} cameraAttributes={PENDING_CAMERA_ATTRIBUTES} />
+          <WorldEnvironmentAt order={[0]} cameraAttributes={PENDING_RESOLUTION} />
           <WorldEnvironmentAt order={[1]} cameraAttributes={attributes(5)} />
         </>
       )
@@ -230,9 +229,7 @@ describe('usePublishCameraAttributes', () => {
   it('refuses a WorldEnvironment outside any world', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(
-      ReactThreeTestRenderer.create(
-        <Publishing cameraAttributes={NO_CAMERA_ATTRIBUTES} env={NO_ENVIRONMENT} />
-      )
+      ReactThreeTestRenderer.create(<Publishing cameraAttributes={NO_RESOLUTION} env={NO_RESOLUTION} />)
     ).rejects.toThrow(/expected a world environment scope/);
   });
 });
