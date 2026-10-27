@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { node2dWorldPosition } from './node2dWorldTransform';
 // The Instance root merge parses an unregistered root type, here Node2D, with the Node parser.
 import '../nodes/node/index';
-import type { LiveTreeContext, CachedSceneSource } from './liveSceneTree';
+import { contextOver } from './liveSceneTree.testkit';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../parser/types';
 
 function tnode(
@@ -22,15 +22,7 @@ function tnode(
 
 const at = (x: number, y: number) => ({ position: `Vector2(${x}, ${y})` });
 
-const emptyCtx: LiveTreeContext = {
-  externalResources: [],
-  internalResources: [],
-  sceneCache: { getCached: () => undefined },
-};
-
-function cacheOf(entries: Record<string, TscnScene>): CachedSceneSource {
-  return { getCached: (p) => entries[p] };
-}
+const emptyCtx = contextOver({ externalResources: [], internalResources: [] }, {});
 
 function ext(id: string, path: string): TscnExternalResource {
   return { id, path, type: 'PackedScene' };
@@ -82,11 +74,10 @@ describe('node2dWorldPosition', () => {
     };
     const player = tnode('Player', at(100, 50), [], { type: '', instance: 'ExtResource("p")' });
     const roots = [tnode('World', {}, [player])];
-    const ctx: LiveTreeContext = {
-      externalResources: [ext('p', 'res://player.tscn')],
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://player.tscn': playerScene }),
-    };
+    const ctx = contextOver(
+      { externalResources: [ext('p', 'res://player.tscn')], internalResources: [] },
+      { 'res://player.tscn': playerScene }
+    );
 
     expect(node2dWorldPosition(roots, ctx, 'World/Player/Cam')).toEqual({ x: 120, y: 60 });
   });

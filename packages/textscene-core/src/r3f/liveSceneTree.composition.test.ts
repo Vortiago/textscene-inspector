@@ -6,15 +6,9 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
-import {
-  collectLiveNodes,
-  liveStep,
-  rootScope,
-  walkLiveTree,
-  type CachedSceneSource,
-  type LiveTreeContext,
-} from './liveSceneTree';
+import { collectLiveNodes, liveStep, rootScope, walkLiveTree, type LiveTreeContext } from './liveSceneTree';
 import { contextOver } from './liveSceneTree.testkit';
+import { recordingReads } from './cacheSources';
 
 const BASE = `[gd_scene format=3]
 
@@ -74,21 +68,15 @@ function manyKids(): TscnScene {
 ${Array.from({ length: KIDS }, (_, i) => heading(i)).join('')}`);
 }
 
-/** A cache over `scenes` that counts the reads of each path. */
-function countingCache(scenes: Record<string, TscnScene>): {
-  sceneCache: CachedSceneSource;
-  reads: (path: string) => number;
-} {
+/** A context over `main`'s pools and `scenes` that counts the reads of each scene path. */
+function countingContext(
+  main: TscnScene,
+  scenes: Record<string, TscnScene>
+): { ctx: LiveTreeContext; reads: (path: string) => number } {
   const counts = new Map<string, number>();
-  return {
-    sceneCache: {
-      getCached: (path) => {
-        counts.set(path, (counts.get(path) ?? 0) + 1);
-        return scenes[path];
-      },
-    },
-    reads: (path) => counts.get(path) ?? 0,
-  };
+  const ctx = contextOver(main, scenes);
+  const sceneCache = recordingReads(ctx.sceneCache, (path) => counts.set(path, (counts.get(path) ?? 0) + 1));
+  return { ctx: { ...ctx, sceneCache }, reads: (path) => counts.get(path) ?? 0 };
 }
 
 const parse = (text: string): TscnScene => new TscnParser().parse(text);
@@ -117,17 +105,16 @@ describe('a walk over many instances of one inherited scene', () => {
 
   it('reads the base from the cache once', () => {
     const main = manyKids();
-    const { sceneCache, reads } = countingCache(sceneRecord());
+    const { ctx, reads } = countingContext(main, sceneRecord());
 
-    walkLiveTree(main.nodes, { ...contextOver(main, {}), sceneCache }, noop);
+    walkLiveTree(main.nodes, ctx, noop);
 
     expect(reads('res://base.tscn')).toBe(1);
   });
 
   it('reads the base zero times when it walks the same snapshot again', () => {
     const main = manyKids();
-    const { sceneCache, reads } = countingCache(sceneRecord());
-    const ctx = { ...contextOver(main, {}), sceneCache };
+    const { ctx, reads } = countingContext(main, sceneRecord());
     walkLiveTree(main.nodes, ctx, noop);
     const afterFirst = reads('res://base.tscn');
 
@@ -198,16 +185,11 @@ describe('the composition of an inherited sub-scene', () => {
     const main = parse(MAIN);
     const scenes = sceneRecord();
     const reads: string[] = [];
-    const sceneCache: CachedSceneSource = {
-      getCached: (path) => {
-        reads.push(path);
-        return scenes[path];
-      },
-    };
-    const ctx = { ...contextOver(main, scenes), sceneCache };
+    const full = contextOver(main, scenes);
+    const ctx = { ...full, sceneCache: recordingReads(full.sceneCache, (path) => reads.push(path)) };
     const instance = main.nodes[0]!.children.find((n) => n.name === 'K0')!;
 
-    liveStep(instance, rootScope(ctx), sceneCache);
+    liveStep(instance, rootScope(ctx), ctx.sceneCache);
 
     expect(reads.filter((path) => path === 'res://kid.tscn')).toHaveLength(1);
   });
@@ -216,10 +198,7 @@ describe('the composition of an inherited sub-scene', () => {
     const main = parse(MAIN);
     const scenes = sceneRecord();
     const full = contextOver(main, scenes);
-    const kidOnly: LiveTreeContext = {
-      ...full,
-      sceneCache: { getCached: (path) => (path === 'res://kid.tscn' ? scenes[path] : undefined) },
-    };
+    const kidOnly = contextOver(main, { 'res://kid.tscn': scenes['res://kid.tscn']! });
     const fullTable = tableOf(main, full, 'Main/K0');
     tableOf(main, kidOnly, 'Main/K0');
 
