@@ -48,5 +48,4 @@ The lenient parser reuses MeshInstance3D's parse. The scene cull measures the no
 ## Known limitations
 
 - **Editor only** The wireframe draws for every soft body when the Gizmos toggle is on, which a capture keeps off.
-- **Not drawn** Godot draws a wireframe for a triangle-strip surface of an ArrayMesh, but here the decoder skips that surface.
 - **Needs runtime** Godot moves, culls and smooth-shades the mesh as the simulation runs, but the previewer keeps the rest mesh, its box and its normals.

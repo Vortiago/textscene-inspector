@@ -21,6 +21,7 @@ import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { subResource } from '../../../../testing/subResource';
 import { parseMeshInstance3D } from '../../../3d/meshinstance3d/parser';
+import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 import { inlineTwoSurfaceMesh } from '../../../3d/meshinstance3d/testing/twoSurfaceMesh';
 import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
@@ -117,6 +118,19 @@ describe('<SoftBody3D> wireframe', () => {
   it('draws the segments of both surfaces of a two-surface ArrayMesh', async () => {
     const renderer = await renderSoftBody('SubResource("walls")', [inlineTwoSurfaceMesh('walls')]);
     expect(segments(renderer).length / 6).toBe(12);
+  });
+
+  // `Mesh::generate_triangle_mesh` (`mesh.cpp:352-366`) reads a strip of indices 2, 0, 3, 2, 1, 0 as
+  // the triangles (2, 0, 3), (0, 2, 3), (3, 2, 1) and (2, 0, 1).
+  it('draws the wireframe of a triangle-strip surface, four triangles over six indices', async () => {
+    const strip: TscnInternalResource = {
+      id: 'strip',
+      type: 'ArrayMesh',
+      data: { _surfaces: wallQuadSurfaces({ primitive: 4 }) },
+    };
+    const flat = segments(await renderSoftBody('SubResource("strip")', [strip]));
+    expect(flat).toHaveLength(12 * 2 * 3);
+    expect(flat.slice(0, 6)).toEqual([1, 1, 1, -1, -1, 1]);
   });
 
   it('draws no wireframe, and no mesh, without a mesh', async () => {
