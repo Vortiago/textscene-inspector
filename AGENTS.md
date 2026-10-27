@@ -275,9 +275,12 @@ Tag a new shared helper. Do not edit the list.
   that throws stores nothing. Pass `keeps` for a value that is not final yet, and `stamp` for a key
   whose contents change, as a texture's `version`.
 - A warning that must appear once, not on every pass or rebuild: `warnOnce` in `utils/warnOnce.ts`.
+- In tests, the signed volume of a brush: `enclosedVolume` in `r3f/csg/testing/brushVolume.ts`.
 - In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
 - In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
 - In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in
   `r3f/testing/shaderPatches.ts`.
+- In tests, the distinct positions of a mesh: `distinctPositions` in
+  `resources/meshes/textmesh/distinctPositions.testkit.ts`.
 <!-- one-way:end -->
