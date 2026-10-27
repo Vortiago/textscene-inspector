@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
@@ -47,7 +47,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
-import { useFontMetricsSettleCount } from '../../../resources/meshes/textmesh/useFontMetricsSettleCount';
+import { onSceneFontMetricsSettled, sceneFontSettleCount } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
@@ -860,7 +860,11 @@ export function useBuildSolveTree(
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   // With or without a loader: `peekSceneFontMetrics` starts font loads from the
   // solve itself and answers with the bundled fallback until the metrics settle.
-  const fontMetricsVersion = useFontMetricsSettleCount(true);
+  const fontMetricsVersion = useSyncExternalStore(
+    onSceneFontMetricsSettled,
+    sceneFontSettleCount,
+    sceneFontSettleCount
+  );
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;

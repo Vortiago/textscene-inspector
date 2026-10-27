@@ -1,11 +1,20 @@
 /** Builds and reads the live scene tree, for tests over a main scene and the scenes it instances. */
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types';
-import { resolveLiveEntry, type LiveTreeContext } from './liveSceneTree';
+import { resolveLiveEntry, type CachedSceneSource, type LiveTreeContext } from './liveSceneTree';
 
 /** The collapsed node at `path`, or null when a segment does not resolve. */
 export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext) {
   return resolveLiveEntry(path, roots, ctx)?.node ?? null;
+}
+
+/**
+ * A scene cache that holds each scene path in `scenes` and no other path.
+ *
+ * @oneWay In tests, a scene cache over scenes
+ */
+export function sceneCacheOver(scenes: Readonly<Record<string, TscnScene>>): CachedSceneSource {
+  return { getCached: (path) => scenes[path] };
 }
 
 /**
@@ -22,7 +31,7 @@ export function contextOver(
   return {
     externalResources: main.externalResources,
     internalResources: main.internalResources,
-    sceneCache: { getCached: (path) => scenes[path] },
+    sceneCache: sceneCacheOver(scenes),
     ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
   };
 }

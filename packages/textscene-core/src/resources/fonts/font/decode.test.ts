@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { decodeFont, resolveInlineFontResource } from './decode';
 import { resolveOnlySubResource } from '../../../testing/subResource';
 import type { FontLoaderFn, FontResource } from './types';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 /** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
 const NO_OP_LOADER: FontLoaderFn = async () => null;
@@ -17,7 +18,7 @@ const FONT_A: FontResource = {
 /** The `fontNames` an inline SystemFont with this `font_names` value resolves to. */
 function fontNamesOf(fontNames: string): string[] {
   const font = resolveOnlySubResource('SystemFont', { font_names: fontNames }, (ref, internalResources) =>
-    resolveInlineFontResource(ref, [], internalResources, { getCached: () => undefined }, new Set())
+    resolveInlineFontResource(ref, [], internalResources, NOTHING_CACHED, new Set())
   );
   if (font?.kind !== 'system') throw new Error(`expected a SystemFont, got ${font?.kind ?? 'null'}`);
   return font.fontNames;
@@ -199,13 +200,12 @@ describe('resolveInlineFontResource', () => {
   });
 
   it('collects an uncached ExtResource address into pending and returns null for this pass', () => {
-    const cache = { getCached: () => undefined };
     const pending = new Set<string>();
     const resolved = resolveInlineFontResource(
       'ExtResource("1")',
       [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
       [],
-      cache,
+      NOTHING_CACHED,
       pending
     );
     expect(resolved).toBeNull();
@@ -227,13 +227,12 @@ describe('resolveInlineFontResource', () => {
   });
 
   it('decodes a scene-inline SystemFont sub-resource synchronously, no cache involved', () => {
-    const cache = { getCached: () => undefined };
     const pending = new Set<string>();
     const resolved = resolveInlineFontResource(
       'SubResource("SystemFont_1")',
       [],
       [{ id: 'SystemFont_1', type: 'SystemFont', data: { font_names: 'PackedStringArray("sans-serif")' } }],
-      cache,
+      NOTHING_CACHED,
       pending
     );
     expect(resolved).toEqual({ kind: 'system', fontNames: ['sans-serif'], properties: {} });
@@ -262,13 +261,12 @@ describe('resolveInlineFontResource', () => {
   });
 
   it('a FontVariation with no base_font resolves to a null baseFont', () => {
-    const cache = { getCached: () => undefined };
     const pending = new Set<string>();
     const resolved = resolveInlineFontResource(
       'SubResource("FontVariation_1")',
       [],
       [{ id: 'FontVariation_1', type: 'FontVariation', data: {} }],
-      cache,
+      NOTHING_CACHED,
       pending
     );
     expect(resolved).toEqual({ kind: 'variation', baseFont: null, properties: {} });
@@ -303,13 +301,7 @@ describe('resolveInlineFontResource', () => {
   });
 
   it('returns null for a SubResource id that is not declared', () => {
-    const resolved = resolveInlineFontResource(
-      'SubResource("Missing")',
-      [],
-      [],
-      { getCached: () => undefined },
-      new Set()
-    );
+    const resolved = resolveInlineFontResource('SubResource("Missing")', [], [], NOTHING_CACHED, new Set());
     expect(resolved).toBeNull();
   });
 
@@ -318,15 +310,14 @@ describe('resolveInlineFontResource', () => {
       'SubResource("StyleBoxFlat_1")',
       [],
       [{ id: 'StyleBoxFlat_1', type: 'StyleBoxFlat', data: {} }],
-      { getCached: () => undefined },
+      NOTHING_CACHED,
       new Set()
     );
     expect(resolved).toBeNull();
   });
 
   it('returns null for an absent or malformed ref', () => {
-    const cache = { getCached: () => undefined };
-    expect(resolveInlineFontResource(undefined, [], [], cache, new Set())).toBeNull();
-    expect(resolveInlineFontResource('not-a-ref', [], [], cache, new Set())).toBeNull();
+    expect(resolveInlineFontResource(undefined, [], [], NOTHING_CACHED, new Set())).toBeNull();
+    expect(resolveInlineFontResource('not-a-ref', [], [], NOTHING_CACHED, new Set())).toBeNull();
   });
 });

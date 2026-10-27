@@ -11,7 +11,7 @@ import {
   type LiveTreeContext,
   type SceneScope,
 } from './liveSceneTree';
-import { contextOver, liveNodeAt } from './liveSceneTree.testkit';
+import { contextOver, liveNodeAt, sceneCacheOver } from './liveSceneTree.testkit';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
@@ -133,11 +133,7 @@ describe('liveStep and instancedScenePaths', () => {
       internalResources: [],
     };
     const scope: SceneScope = { externalResources: [ext('1', 'res://multi.tscn')], internalResources: [] };
-    const groups = liveStep(
-      instance,
-      scope,
-      contextOver(scope, { 'res://multi.tscn': multi }).sceneCache
-    ).groups;
+    const groups = liveStep(instance, scope, sceneCacheOver({ 'res://multi.tscn': multi })).groups;
     expect(groups.map((g) => [g.origin, g.scope.instancedScenePaths])).toEqual([
       ['subscene', ['res://multi.tscn']],
     ]);
@@ -156,7 +152,7 @@ describe('liveStep and instancedScenePaths', () => {
       internalResources: [],
     };
     const scope: SceneScope = { externalResources: [ext('1', 'res://outer.tscn')], internalResources: [] };
-    const cache = contextOver(scope, { 'res://outer.tscn': outer, 'res://inner.tscn': inner }).sceneCache;
+    const cache = sceneCacheOver({ 'res://outer.tscn': outer, 'res://inner.tscn': inner });
 
     const [merged] = liveStep(instance, scope, cache).groups;
     expect(merged?.scope.externalResources).toBe(innerExt);
@@ -202,11 +198,7 @@ describe('collapseLiveNode and instancedScenePaths', () => {
     const node = makeNode('L', 'Node3D', { instance: 'ExtResource("1")' });
     const scope: SceneScope = { externalResources: [ext('1', 'res://loop.tscn')], internalResources: [] };
 
-    const collapsed = collapseLiveNode(
-      node,
-      scope,
-      contextOver(scope, { 'res://loop.tscn': selfRooted }).sceneCache
-    );
+    const collapsed = collapseLiveNode(node, scope, sceneCacheOver({ 'res://loop.tscn': selfRooted }));
     expect(collapsed.instance).toBe('ExtResource("1")');
     expect(collapsed).not.toBe(node);
   });

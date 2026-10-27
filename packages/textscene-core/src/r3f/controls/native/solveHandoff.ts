@@ -32,9 +32,9 @@ interface Memoised<T> {
  * solver and the painter cannot disagree. Both maps are weak, so a discarded
  * generation's nodes and a replaced theme take their entries with them.
  */
-// Node identity is a sound key: `buildSolveTree` rebuilds the forest on every scene,
-// texture, resource, theme or font arrival and when a font's metrics settle
-// (`buildSolveTree.ts:1031-1097`, `text/sceneFontLoader.ts`'s `onSceneFontMetricsSettled`).
+// Node identity is a sound key: `useBuildSolveTree` rebuilds the forest on every scene,
+// texture, resource, theme or font arrival, and on each `onSceneFontMetricsSettled` tick
+// from `text/sceneFontLoader.ts`.
 // A `SolveNode` survives a theme change, so the key needs the theme too.
 export function defineShare<T>(compute: Share<T>): Share<T> {
   // Theme identity is stable: both builders memoise it on the scale alone

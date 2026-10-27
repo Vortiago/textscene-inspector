@@ -59,7 +59,8 @@ export function answeredOnce<T>(source: CacheSource<T>): CacheSource<T> {
   const answers = new Map<string, T | null | undefined>();
   return {
     getCached: (path) => {
-      if (answers.has(path)) return answers.get(path);
+      const known = answers.get(path);
+      if (known !== undefined || answers.has(path)) return known;
       const answer = source.getCached(path);
       answers.set(path, answer);
       return answer;

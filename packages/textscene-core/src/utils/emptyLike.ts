@@ -20,3 +20,12 @@ export function emptyLike<Source extends Pixels>(pixels: Source, length: number)
   if (pixels instanceof Uint16Array) return new Uint16Array(length) as PlainPixelsOf<Source>;
   return new Uint8Array(length) as PlainPixelsOf<Source>;
 }
+
+/**
+ * Whether `pixels` already has the texel kind `emptyLike` would give it, so a copy can share them.
+ *
+ * @oneWay A buffer of the same texel kind as some pixels
+ */
+export function isPlainPixels<Source extends Pixels>(pixels: Source): pixels is Source & PlainPixelsOf<Source> {
+  return !(pixels instanceof Uint8ClampedArray);
+}

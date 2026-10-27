@@ -18,14 +18,13 @@ import {
 } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
-/** No loader (the linter bundle, isolated tests): nothing is cached, ever. */
-
 export function useViewportContentKind(node: TscnNode): ViewportContentKind {
   // The sub-viewport's children resolve their instance refs against the scene
   // the sub-viewport lives in, the scope in force here.
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);
+  // No loader is mounted in the linter bundle or an isolated test.
   const sceneCache = loader?.scenes ?? NOTHING_CACHED;
 
   return useMemo(

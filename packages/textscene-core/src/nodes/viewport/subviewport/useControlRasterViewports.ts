@@ -13,8 +13,6 @@ import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
 import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
-/** No PackedScene cache mounted yet (first paint, isolated tests). */
-
 export function useControlRasterViewports(
   nodes: readonly TscnNode[],
   internalResources: readonly TscnInternalResource[],
@@ -32,6 +30,7 @@ export function useControlRasterViewports(
     () =>
       collectControlRasterViewports(
         nodes,
+        // No loader is mounted on first paint or in an isolated test.
         loader?.scenes ?? NOTHING_CACHED,
         { internalResources, externalResources },
         layoutDirectionEnv

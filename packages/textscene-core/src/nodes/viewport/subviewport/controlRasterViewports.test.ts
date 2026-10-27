@@ -14,14 +14,10 @@ import { collectControlRasterViewports } from './controlRasterViewports';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
+import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
-}
-
-/** A scene cache answering for exactly the paths in `scenes`. */
-function cache(scenes: Record<string, TscnScene>): CachedSceneSource {
-  return { getCached: (path) => scenes[path] };
 }
 
 /** `collectControlRasterViewports` over a whole parsed scene, root scope. */
@@ -112,7 +108,7 @@ texture = ExtResource("2")
 
 [node name="Panel" parent="." instance=ExtResource("1")]
 `);
-    const found = collect(host, cache({ 'res://panel_3d.tscn': sub }));
+    const found = collect(host, sceneCacheOver({ 'res://panel_3d.tscn': sub }));
     expect(found).toHaveLength(1);
     expect(found[0]!.path).toBe('World/Panel/SubViewport');
     expect(found[0]!.externalResources).toBe(sub.externalResources);
@@ -153,11 +149,10 @@ texture = ExtResource("2")
 
 [node name="Panel" type="Panel" parent="Multi/Own"]
 `);
-    const found = collectControlRasterViewports(
-      host.nodes,
-      { getCached: (path) => (path === 'res://multi.tscn' ? sub : undefined) },
-      { internalResources: host.internalResources, externalResources: host.externalResources }
-    );
+    const found = collectControlRasterViewports(host.nodes, sceneCacheOver({ 'res://multi.tscn': sub }), {
+      internalResources: host.internalResources,
+      externalResources: host.externalResources,
+    });
     const byPath = Object.fromEntries(found.map((v) => [v.path, v]));
     expect(Object.keys(byPath).sort()).toEqual(['World/Multi/Deep', 'World/Multi/Own']);
     expect(byPath['World/Multi/Own']!.externalResources).toBe(host.externalResources);
@@ -200,11 +195,10 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="Panel" type="Panel" parent="Multi/Own"]
 `);
-    const found = collectControlRasterViewports(
-      host.nodes,
-      { getCached: (path) => (path === 'res://multi.tscn' ? sub : undefined) },
-      { internalResources: host.internalResources, externalResources: host.externalResources }
-    );
+    const found = collectControlRasterViewports(host.nodes, sceneCacheOver({ 'res://multi.tscn': sub }), {
+      internalResources: host.internalResources,
+      externalResources: host.externalResources,
+    });
     const byPath = Object.fromEntries(found.map((v) => [v.path, v]));
 
     const hostOwned = byPath['World/Multi/Own']!;
@@ -250,7 +244,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="B" parent="." instance=ExtResource("1")]
 `);
-    const found = collect(self, cache({ 'res://self.tscn': self }));
+    const found = collect(self, sceneCacheOver({ 'res://self.tscn': self }));
     expect(found.map((v) => v.path)).toEqual(['Root/Hud', 'Root/A/Hud', 'Root/B/Hud']);
   });
 
@@ -303,7 +297,7 @@ size = Vector2i(320, 240)
 text = "hi"
 `);
 
-    const found = collect(scene, cache({ [PANEL_SCENE]: panel }));
+    const found = collect(scene, sceneCacheOver({ [PANEL_SCENE]: panel }));
     expect(found.map((v) => v.path)).toEqual(['Root/SubViewport']);
   });
 
@@ -325,7 +319,7 @@ text = "hi"
 [node name="Mesh" type="MeshInstance3D" parent="."]
 `);
 
-    expect(collect(scene, cache({ [PANEL_SCENE]: world }))).toHaveLength(0);
+    expect(collect(scene, sceneCacheOver({ [PANEL_SCENE]: world }))).toHaveLength(0);
   });
 
   // `Control::is_layout_rtl()` climbs through ancestors that are a `Control` or

@@ -10,6 +10,7 @@ import { resolveStandaloneViewportSubtree, viewportContentKind } from './viewpor
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
+import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {
@@ -286,12 +287,7 @@ describe('resolveStandaloneViewportSubtree', () => {
 ${extra}`);
     const node = parsed.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
     const loaded = new TscnParser().parse(subScene);
-    const cache: CachedSceneSource = {
-      getCached: (path) =>
-        path === 'res://sub.tscn'
-          ? { nodes: loaded.nodes, externalResources: loaded.externalResources }
-          : undefined,
-    };
+    const cache = sceneCacheOver({ 'res://sub.tscn': loaded });
     return { node, externalResources: parsed.externalResources, cache };
   }
 
@@ -383,14 +379,7 @@ ${extra}`);
 
 [node name="TileRoot" type="TileMapLayer"]
 `);
-    const cache: CachedSceneSource = {
-      getCached: (path) =>
-        path === 'res://level.tscn'
-          ? { nodes: level.nodes, externalResources: level.externalResources }
-          : path === 'res://tile.tscn'
-            ? { nodes: tile.nodes, externalResources: tile.externalResources }
-            : undefined,
-    };
+    const cache = sceneCacheOver({ 'res://level.tscn': level, 'res://tile.tscn': tile });
     expect(viewportContentKind(resolveStandaloneViewportSubtree(node, outer.externalResources, cache))).toBe(
       '2d'
     );
