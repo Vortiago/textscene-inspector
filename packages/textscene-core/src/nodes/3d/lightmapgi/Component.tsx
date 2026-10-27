@@ -17,6 +17,7 @@ import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalExposureFactor } from '../../../r3f/environment/worldExposure';
 import { exposureOverBaked } from '../../../r3f/exposure/exposureOverBaked';
+import { registerExposureStage } from '../../../r3f/exposure/sceneExposure';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
 import { assignedUsers, LightmapInstance, lightmapsOf } from '../../../r3f/lightmap/sceneLightmaps';
@@ -77,6 +78,20 @@ function BakedLightmap({
   const instance = useMemo(() => object && new LightmapInstance(object), [object]);
 
   useLayoutEffect(() => (instance ? lightmapsOf(scene).add(instance) : undefined), [scene, instance]);
+  // A draw at another exposure reads the atlas over the exposure the bake ran at, as the draw's own.
+  useLayoutEffect(
+    () =>
+      instance
+        ? registerExposureStage(scene, (exposure) => {
+            const { exposureScale: shown } = instance;
+            instance.exposureScale = exposureOverBaked(exposure, data.bakedExposure);
+            return () => {
+              instance.exposureScale = shown;
+            };
+          })
+        : undefined,
+    [scene, instance, data.bakedExposure]
+  );
   useLayoutEffect(() => {
     if (!instance) return;
     instance.order = order;

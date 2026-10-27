@@ -53,6 +53,11 @@ function renderCameraOf(
   return worldCameras.find((camera) => camera.path === viewedPath) ?? null;
 }
 
+/** The exposure factor of `attributes`, or null while there are none to read. */
+function exposureFactorOf(attributes: CameraAttributesResolution | null): number | null {
+  return attributes?.status === 'resolved' ? attributes.attributes.exposureMultiplier : null;
+}
+
 /** Null with no valid CameraAttributes, which Godot's frame does not scale at all. */
 const ExposureContext = createContext<number | null>(null);
 
@@ -72,13 +77,13 @@ function ExposureProvider({ children }: { children: ReactNode }) {
   const viewedPath = useOptionalViewportActions()?.activeCameraPath ?? null;
   const renderCamera = renderCameraOf(world, viewedPath, cameras.useAll());
   const worldAttributes = cameraAttributes.useChosen();
-  // A camera's valid attributes replace the world's: Godot forces them over the scenario's
-  // (`renderer_scene_cull.cpp:3562-3565`), and a pending `.tres` holds the place of a valid one.
-  const chosen =
-    renderCamera && renderCamera.attributes.status !== 'none' ? renderCamera.attributes : worldAttributes;
-  const optionalFactor = chosen?.status === 'resolved' ? chosen.attributes.exposureMultiplier : null;
-  useSceneExposure(optionalFactor);
-  return <ExposureContext.Provider value={optionalFactor}>{children}</ExposureContext.Provider>;
+  // A camera's resolved attributes replace the world's: Godot forces them over the scenario's
+  // (`renderer_scene_cull.cpp:3562-3565`). While a camera's `.tres` loads, the world's hold, since
+  // Godot has no load gap to show.
+  const chosen = renderCamera?.attributes.status === 'resolved' ? renderCamera.attributes : worldAttributes;
+  const factor = exposureFactorOf(chosen);
+  useSceneExposure(factor, exposureFactorOf(worldAttributes));
+  return <ExposureContext.Provider value={factor}>{children}</ExposureContext.Provider>;
 }
 
 /**

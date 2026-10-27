@@ -9,6 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { WorldKindProvider } from './WorldKindContext';
 import { WorldExposureScope, usePublishCameraAttributes } from './worldExposure';
+import { drawAtExposure } from '../exposure/sceneExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
@@ -72,6 +73,35 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
   it('scales the colour once more by background_energy_multiplier', async () => {
     const { scene } = await mount({ ...BACKGROUND_COLOR, background_energy_multiplier: '2' }, 2);
     expect(backgroundHex(scene)).toBe('cccccc');
+  });
+
+  describe('drawn at another exposure', () => {
+    /** The background's hex while `scene` draws at `exposure`. */
+    function backgroundHexAt(scene: THREE.Scene, exposure: number | null): string {
+      let inside = '';
+      drawAtExposure(scene, exposure, () => {
+        inside = backgroundHex(scene);
+      });
+      return inside;
+    }
+
+    it('scales the colour in sRGB by that exposure, so 0.2 becomes 0.6 at 3', async () => {
+      const { scene } = await mount(BACKGROUND_COLOR, 2);
+      expect(backgroundHexAt(scene, 3)).toBe('999999');
+    });
+
+    it('draws the colour as it is at no exposure', async () => {
+      const { scene } = await mount(BACKGROUND_COLOR, 2);
+      expect(backgroundHexAt(scene, null)).toBe('333333');
+    });
+
+    it('puts the background it drew with back', async () => {
+      const { scene } = await mount(BACKGROUND_COLOR, 2);
+      const drawn = scene.background;
+      backgroundHexAt(scene, 3);
+      expect(scene.background).toBe(drawn);
+      expect(backgroundHex(scene)).toBe('666666');
+    });
   });
 
   it('leaves the colour alone in a world with no CameraAttributes', async () => {

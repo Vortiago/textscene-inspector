@@ -20,6 +20,7 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
+import { registerExposureStage } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
 import { scaledRgb } from '../../utils/colorParser';
 
@@ -105,10 +106,18 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
   // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
   useEffect(() => {
     if (showsColor) {
-      const exposedColor = scaledRgb(backgroundColor, exposure);
-      return hasFog
-        ? showBackground(scene, foggedClearColorTexture(exposedColor), backgroundEnergy * exposure)
-        : showBackground(scene, clearColorTexture(exposedColor), 1);
+      const showAs = (factor: number) => {
+        const exposedColor = scaledRgb(backgroundColor, factor);
+        return hasFog
+          ? showBackground(scene, foggedClearColorTexture(exposedColor), backgroundEnergy * factor)
+          : showBackground(scene, clearColorTexture(exposedColor), 1);
+      };
+      const hideBackground = showAs(exposure);
+      const stopStaging = registerExposureStage(scene, (target) => showAs(target ?? 1));
+      return () => {
+        stopStaging();
+        hideBackground();
+      };
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as

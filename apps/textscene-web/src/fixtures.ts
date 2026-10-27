@@ -1628,6 +1628,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Camera Exposure",
+    "file": "unit-reflection-probe-camera-exposure.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe",
     "file": "unit-reflection-probe.tscn",
     "category": "Other"

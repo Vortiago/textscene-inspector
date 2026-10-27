@@ -7759,9 +7759,9 @@ tr:last-child td{border-bottom:0}
 <h3>Exposure</h3>
 <p>The <code>camera_attributes</code> of the first WorldEnvironment that holds a valid one set the exposure of the world, apart from the Environment. The <code>attributes</code> of the Camera3D that the world renders through replace them (<code>renderer_scene_cull.cpp</code>). The exposure scales:</p>
 <ul><li>the energy of each light, including the lights of a GLB file, and each emission.</li><li>a colour background and a sky background, a colour before the linear conversion.</li><li>the ambient light and the reflection of a sky, by the square.</li><li>a baked lightmap, over the exposure of the bake.</li></ul>
-<p>A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe holds the exposure through its capture. The goldens in <code>scripts/visual/scenes/lighting.mjs</code> pin these.</p>
+<p>A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe captures at the exposure of the world and shows at the exposure of the camera over it. The goldens in <code>scripts/visual/scenes/lighting.mjs</code> pin these.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> Auto exposure, depth of field and physical light units have no effect.</li><li><strong>Approximated</strong> A ReflectionProbe captures at the exposure of the camera that views it, where Godot captures at the exposure of the world.</li></ul></div>
+<ul><li><strong>Not drawn</strong> Auto exposure, depth of field and physical light units have no effect.</li><li><strong>Approximated</strong> Under a camera whose exposure differs from the world's, a ReflectionProbe in a scene with a sun and a sky differs from Godot.</li></ul></div>
     </article>
     <article class="sheet" data-type="XRAnchor3D" hidden>
       <header class="sheet-head">

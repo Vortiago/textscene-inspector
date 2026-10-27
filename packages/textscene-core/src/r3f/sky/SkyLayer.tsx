@@ -22,6 +22,7 @@ import { skyEuler } from './skyRotation';
 import { SkyLayerArray } from './skyLayerArray';
 import { observeSceneCamera } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
+import { registerExposureStage } from '../exposure/sceneExposure';
 import { debandSky } from './skyDebanding';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -112,20 +113,35 @@ export function SkyLayer({
     const previousBackgroundRotation = scene.backgroundRotation.clone();
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
 
+    // The radiance is baked at the exposure of the view, and a surface reads it at the exposure it
+    // draws at. A draw at another exposure keeps the bake, as Godot rebakes a layer at a time
+    // (`sky.cpp`, `update_radiance_buffers`).
+    const exposeAs = (factor: number) => {
+      scene.environmentIntensity = intensity * exposure * factor;
+      if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
+    };
     scene.environment = built.environment;
-    scene.environmentIntensity = intensity * exposure ** 2;
     scene.environmentRotation.copy(skyRotation);
     const layerArray = new SkyLayerArray(gl, built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
     const stopShowingLayers = observeSceneCamera(scene, () => layerArray.show(contributionRef.current));
     if (asBackground) {
       scene.background = built.background;
-      scene.backgroundIntensity = backgroundIntensity * exposure;
       scene.backgroundRotation.copy(skyRotation);
     }
+    exposeAs(exposure);
+    const stopStaging = registerExposureStage(scene, (target) => {
+      const { environmentIntensity, backgroundIntensity: shownBackgroundIntensity } = scene;
+      exposeAs(target ?? 1);
+      return () => {
+        scene.environmentIntensity = environmentIntensity;
+        if (asBackground) scene.backgroundIntensity = shownBackgroundIntensity;
+      };
+    });
     const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
 
     return () => {
+      stopStaging();
       stopShowingLayers();
       stopDebanding?.();
       scene.environment = previousEnvironment;

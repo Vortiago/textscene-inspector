@@ -40,9 +40,9 @@ The `camera_attributes` of the first WorldEnvironment that holds a valid one set
 - the ambient light and the reflection of a sky, by the square.
 - a baked lightmap, over the exposure of the bake.
 
-A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe holds the exposure through its capture. The goldens in `scripts/visual/scenes/lighting.mjs` pin these.
+A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe captures at the exposure of the world and shows at the exposure of the camera over it. The goldens in `scripts/visual/scenes/lighting.mjs` pin these.
 
 ## Known limitations
 
 - **Not drawn** Auto exposure, depth of field and physical light units have no effect.
-- **Approximated** A ReflectionProbe captures at the exposure of the camera that views it, where Godot captures at the exposure of the world.
+- **Approximated** Under a camera whose exposure differs from the world's, a ReflectionProbe in a scene with a sun and a sky differs from Godot.

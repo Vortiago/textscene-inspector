@@ -5,6 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { ViewportActionsProvider } from '../contexts/ViewportActionsContext';
@@ -14,6 +15,7 @@ import type { EnvironmentLayerProps } from './EnvironmentLayer';
 import { WorldEnvironmentScope, usePublishEnvironment } from './WorldEnvironmentScope';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
+import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure';
 import {
   useExposureFactor,
   useOptionalExposureFactor,
@@ -371,7 +373,7 @@ describe('the exposure of a world seen through a Camera3D', () => {
     expect(factors.sort()).toEqual([1, 2]);
   });
 
-  it('holds the place of a camera whose attributes still load', async () => {
+  it("holds the world's exposure while a camera's attributes still load", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <>
@@ -381,7 +383,21 @@ describe('the exposure of a world seen through a Camera3D', () => {
         'Root/Camera3D'
       )
     );
-    expect(read(renderer)).toEqual({ optionalFactor: null, factor: 1 });
+    expect(read(renderer)).toEqual({ optionalFactor: 2, factor: 2 });
+  });
+
+  it("keeps the world's own exposure for the scene while a camera's attributes replace the view's", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={attributes(5)} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    const scene = renderer.scene.instance as THREE.Scene;
+    expect([exposureOfScene(scene), worldExposureOfScene(scene)]).toEqual([5, 2]);
   });
 
   it('returns to the WorldEnvironment attributes when the camera leaves', async () => {

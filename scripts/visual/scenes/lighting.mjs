@@ -133,6 +133,13 @@ export const LIGHTING_SCENES = [
     file: 'unit-camera-attributes-exposure-camera.tscn',
     camera: 'Root/Camera3D',
   },
+  // A ReflectionProbe under a Camera3D whose exposure differs from the world's: the probe captures at the
+  // world's exposure and shows at the exposure over it.
+  {
+    name: 'reflection-probe-camera-exposure',
+    file: 'unit-reflection-probe-camera-exposure.tscn',
+    camera: 'Root/Camera3D',
+  },
   // The same exposure over a procedural sky: the sky's background scales by the factor, its ambient and
   // reflection by its square.
   { name: 'camera-attributes-exposure-sky', file: 'unit-camera-attributes-exposure-sky.tscn', camera: 'Root/Camera3D' },

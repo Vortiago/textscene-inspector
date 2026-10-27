@@ -17,6 +17,7 @@ import '../../base/node3d/index.r3f';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { usePublishCameraAttributes } from '../../../r3f/environment/worldExposure';
+import { drawAtExposure } from '../../../r3f/exposure/sceneExposure';
 
 const ATLAS_PATH = 'res://bake.exr';
 const SHADOWMASK_PATH = 'res://bake_shadow.png';
@@ -79,7 +80,7 @@ async function mount({ atlas, shadowmask, lightmapLines = '', exposureMultiplier
   );
   await settleLoads();
   const lightmaps = lightmapsOf(renderer.scene.instance as unknown as THREE.Scene);
-  return { renderer, lightmaps };
+  return { renderer, lightmaps, scene: renderer.scene.instance as unknown as THREE.Scene };
 }
 
 const oneLayer = () => dataArrayTexture(new Uint16Array(4), 1, 1, 1);
@@ -99,6 +100,34 @@ describe('<LightmapGI> exposure', () => {
 
   it('reads the atlas at 1 without camera attributes, whatever the bake ran at (:1222-1227)', async () => {
     expect(await exposureScaleOf({ atlas: oneLayer(), bakedExposure: 4 })).toBe(1);
+  });
+});
+
+describe('<LightmapGI> drawn at another exposure', () => {
+  /** The exposure scale of the floor's lightmap while the scene draws at `exposure`. */
+  async function exposureScaleAt(bake: Bake, exposure: number | null) {
+    const { lightmaps, scene } = await mount(bake);
+    let inside: number | undefined;
+    drawAtExposure(scene, exposure, () => {
+      inside = lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale;
+    });
+    return { inside, after: lightmaps.assignmentFor('Root/Floor')?.lightmap.exposureScale };
+  }
+
+  it('reads the atlas at that exposure over the exposure the bake ran at, and puts it back', async () => {
+    const { inside, after } = await exposureScaleAt(
+      { atlas: oneLayer(), exposureMultiplier: 2, bakedExposure: 4 },
+      6
+    );
+    expect([inside, after]).toEqual([1.5, 0.5]);
+  });
+
+  it('reads the atlas at 1 for no exposure, whatever the bake ran at', async () => {
+    const { inside } = await exposureScaleAt(
+      { atlas: oneLayer(), exposureMultiplier: 2, bakedExposure: 4 },
+      null
+    );
+    expect(inside).toBe(1);
   });
 });
 

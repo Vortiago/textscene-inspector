@@ -59,10 +59,9 @@ export function createWorldPublications<T>(): WorldPublications<T> {
           setPublications((current) => {
             const previous = current.find((entry) => entry.key === publication.key);
             if (previous && isSamePublication(previous, publication)) return current;
-            const next = previous
+            return previous
               ? current.map((entry) => (entry === previous ? publication : entry))
               : [...current, publication];
-            return next.sort((a, b) => compareTreeOrder(a.order, b.order));
           }),
         withdraw: (key) => setPublications((current) => current.filter((entry) => entry.key !== key)),
       }),
@@ -87,7 +86,11 @@ export function createWorldPublications<T>(): WorldPublications<T> {
 
   function useAll(): readonly T[] {
     const publications = useContext(PublicationsContext);
-    return useMemo(() => publications.map((entry) => entry.value), [publications]);
+    // Sorted here, once for a commit that publishes many, not on each publication.
+    return useMemo(
+      () => [...publications].sort((a, b) => compareTreeOrder(a.order, b.order)).map((entry) => entry.value),
+      [publications]
+    );
   }
 
   return { Provider, usePublish, useAll };

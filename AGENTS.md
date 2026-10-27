@@ -223,6 +223,7 @@ Tag a new shared helper. Do not edit the list.
 - A `real_t` field: `realOr`, `realVec2Or` and `realVec3Or` in `parser/valueParsers.ts`. They store
   a double beyond the float range as inf, as `real_t` does.
 - An AABB that must have a size: `parseNonEmptyAabb` in `parser/valueParsers.ts`.
+- Whether a light stands for the environment's ambient: `isAmbientLight` in `r3f/ambientLight.ts`.
 - A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
 - A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
   through it, before the upload.
@@ -234,7 +235,9 @@ Tag a new shared helper. Do not edit the list.
   `r3f/environment/worldGroup.tsx`.
 - The scale of a baked lightmap or a captured probe under the exposure: `exposureOverBaked` in
   `r3f/exposure/exposureOverBaked.ts`.
-- The exposure a scene renders with: `exposureOfScene` and `useSceneExposure` in
+- The exposure a scene renders with: `exposureOfScene`, `worldExposureOfScene` and
+  `useSceneExposure` in `r3f/exposure/sceneExposure.ts`.
+- The state a scene draws for another exposure: `registerExposureStage` and `drawAtExposure` in
   `r3f/exposure/sceneExposure.ts`.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
 - A Godot sRGB colour as a linear `THREE.Color`: `godotColorToLinear`, `setGodotColorLinear` and
