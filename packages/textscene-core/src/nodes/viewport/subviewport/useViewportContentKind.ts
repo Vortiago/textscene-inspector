@@ -8,7 +8,6 @@
 import { useMemo } from 'react';
 
 import type { TscnNode } from '../../../parser/types.js';
-import type { CachedSceneSource } from '../../../r3f/liveSceneTree.js';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
@@ -17,9 +16,9 @@ import {
   viewportContentKind,
   type ViewportContentKind,
 } from './viewportContent.js';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
 /** No loader (the linter bundle, isolated tests): nothing is cached, ever. */
-const NO_SCENES: CachedSceneSource = { getCached: () => undefined };
 
 export function useViewportContentKind(node: TscnNode): ViewportContentKind {
   // The sub-viewport's children resolve their instance refs against the scene
@@ -27,7 +26,7 @@ export function useViewportContentKind(node: TscnNode): ViewportContentKind {
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);
-  const sceneCache = loader?.scenes ?? NO_SCENES;
+  const sceneCache = loader?.scenes ?? NOTHING_CACHED;
 
   return useMemo(
     () => viewportContentKind(resolveStandaloneViewportSubtree(node, externalResources, sceneCache)),

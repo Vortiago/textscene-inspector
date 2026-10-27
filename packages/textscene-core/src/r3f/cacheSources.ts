@@ -8,6 +8,13 @@ export interface CacheSource<T> {
 }
 
 /**
+ * A source that holds nothing, for a walk with no loader: every path reads as never requested.
+ *
+ * @oneWay A `getCached` reader for a walk
+ */
+export const NOTHING_CACHED: CacheSource<never> = { getCached: () => undefined };
+
+/**
  * A source that answers each path from the first of `sources` that holds it.
  *
  * @oneWay A `getCached` reader for a walk
@@ -25,15 +32,37 @@ export function firstCached<T>(...sources: readonly CacheSource<T>[]): CacheSour
 }
 
 /**
- * `source`, with each path it is asked for handed to `onRead`.
+ * `source`, with each path it is asked for handed to `onRead` with the answer it gave.
  *
  * @oneWay A `getCached` reader for a walk
  */
-export function recordingReads<T>(source: CacheSource<T>, onRead: (path: string) => void): CacheSource<T> {
+export function recordingReads<T>(
+  source: CacheSource<T>,
+  onRead: (path: string, answer: T | null | undefined) => void
+): CacheSource<T> {
   return {
     getCached: (path) => {
-      onRead(path);
-      return source.getCached(path);
+      const answer = source.getCached(path);
+      onRead(path, answer);
+      return answer;
+    },
+  };
+}
+
+/**
+ * `source`, asked once for each path: a later ask gets the first answer, a missing one included.
+ * It holds one snapshot of a cache that changes in place.
+ *
+ * @oneWay A `getCached` reader for a walk
+ */
+export function answeredOnce<T>(source: CacheSource<T>): CacheSource<T> {
+  const answers = new Map<string, T | null | undefined>();
+  return {
+    getCached: (path) => {
+      if (answers.has(path)) return answers.get(path);
+      const answer = source.getCached(path);
+      answers.set(path, answer);
+      return answer;
     },
   };
 }

@@ -9,6 +9,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { resolveStandaloneViewportSubtree, viewportContentKind } from './viewportContent';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {
@@ -294,8 +295,6 @@ ${extra}`);
     return { node, externalResources: parsed.externalResources, cache };
   }
 
-  const EMPTY_CACHE: CachedSceneSource = { getCached: () => undefined };
-
   it('classifies an untouched instance of a 2D sub-scene as 2d once it is cached', () => {
     const { node, externalResources, cache } = scene(`[gd_scene format=3]
 
@@ -349,7 +348,7 @@ ${extra}`);
 
   it('leaves the subtree alone while the sub-scene is still loading', () => {
     const { node, externalResources } = scene('[gd_scene format=3]\n\n[node name="X" type="Node2D"]\n');
-    const resolved = resolveStandaloneViewportSubtree(node, externalResources, EMPTY_CACHE);
+    const resolved = resolveStandaloneViewportSubtree(node, externalResources, NOTHING_CACHED);
     expect(resolved.children[0]?.type).toBe('Node');
     expect(viewportContentKind(resolved)).toBe('3d');
   });

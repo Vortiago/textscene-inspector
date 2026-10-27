@@ -10,22 +10,22 @@ import { resolve } from 'node:path';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnScene } from '../../../parser/types';
 import { repoRoot } from '../../../parser/testing/parserKit';
-import { collectControlRasterViewports, type SceneScopeSource } from './controlRasterViewports';
+import { collectControlRasterViewports } from './controlRasterViewports';
+import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
 }
 
 /** A scene cache answering for exactly the paths in `scenes`. */
-function cache(scenes: Record<string, TscnScene>): SceneScopeSource {
+function cache(scenes: Record<string, TscnScene>): CachedSceneSource {
   return { getCached: (path) => scenes[path] };
 }
 
-const NO_SCENES: SceneScopeSource = { getCached: () => undefined };
-
 /** `collectControlRasterViewports` over a whole parsed scene, root scope. */
-function collect(scene: TscnScene, sceneCache: SceneScopeSource = NO_SCENES) {
+function collect(scene: TscnScene, sceneCache: CachedSceneSource = NOTHING_CACHED) {
   return collectControlRasterViewports(scene.nodes, sceneCache, {
     internalResources: scene.internalResources,
     externalResources: scene.externalResources,
@@ -230,7 +230,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="Panel" type="Panel" parent="Pending/Own"]
 `);
-    const found = collect(host, NO_SCENES);
+    const found = collect(host, NOTHING_CACHED);
     expect(found.map((v) => v.path)).toEqual(['World/Pending/Own']);
     expect(found[0]!.externalResources).toBe(host.externalResources);
   });
@@ -256,7 +256,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
   it('returns nothing for an empty tree rather than throwing', () => {
     expect(
-      collectControlRasterViewports([], NO_SCENES, {
+      collectControlRasterViewports([], NOTHING_CACHED, {
         internalResources: [],
         externalResources: [],
       })

@@ -18,6 +18,7 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
 import { perObject } from '../utils/perObject.js';
+import { NOTHING_CACHED } from './cacheSources.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -43,7 +44,7 @@ function liveTreeContext(
     ctx: {
       externalResources: root.externalResources,
       internalResources: root.internalResources,
-      sceneCache: loader?.scenes ?? { getCached: () => undefined },
+      sceneCache: loader?.scenes ?? NOTHING_CACHED,
       glbCache: loader?.glbMeshes,
     },
   };

@@ -11,7 +11,6 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
@@ -32,7 +31,6 @@ import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
 import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import type { ParsedResource } from '../../../parser/parsedResource';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import { resolveProjectDefaultFont } from '../../../resources/fonts/font/projectDefaultFont';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
@@ -61,7 +59,7 @@ import {
   type LiveLink,
   type SceneScope,
 } from '../../liveSceneTree';
-import { recordingReads } from '../../cacheSources';
+import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
 import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
@@ -90,12 +88,6 @@ interface UseBuildSolveTreeResult {
   /** Bumps on every load or failure and on settled font metrics: a stable dependency for a consumer's memo. */
   generation: number;
 }
-
-const EMPTY_SCENE_CACHE: CachedSceneSource = { getCached: () => undefined };
-const NO_TEXTURE_CACHE = { getCached: (): THREE.Texture | null | undefined => undefined };
-const NO_RESOURCE_CACHE = { getCached: (): ParsedResource | null | undefined => undefined };
-const NO_THEME_CACHE = { getCached: (): ThemeResource | null | undefined => undefined };
-const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | undefined => undefined };
 
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
 const NO_THEME_SCOPE: ThemeResolutionScope = {
@@ -421,15 +413,13 @@ function buildForest(
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
 
-  const sceneCache: CachedSceneSource = loader
-    ? recordingReads(loader.scenes, recordRead)
-    : EMPTY_SCENE_CACHE;
+  const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
   const tree = liveTreeOf(nodes, ctx);
-  const textureCache = loader ? recordingReads(loader.textures, recordRead) : NO_TEXTURE_CACHE;
-  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NO_RESOURCE_CACHE;
-  const themeCache = loader ? recordingReads(loader.themes, recordRead) : NO_THEME_CACHE;
-  const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NO_FONT_CACHE;
+  const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
+  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
+  const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
+  const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NOTHING_CACHED;
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An
