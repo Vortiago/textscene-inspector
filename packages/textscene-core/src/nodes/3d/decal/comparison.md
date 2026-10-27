@@ -86,5 +86,5 @@ The linter warns (`resource-type-excluded-by-hint`) when one of the four `textur
 ## Known limitations
 
 - **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so a decal carries albedo alone.
-- **Approximated** An untextured decal takes a place among the 512 and draws nothing. Godot leaves its buffer row unwritten (`texture_storage.cpp:3420`), so the row holds stale data.
-- **Approximated** The project setting `rendering/textures/decals/filter` is not read (`renderer_scene_render_rd.cpp:1730`). The decal sampler always filters linearly between mip levels.
+- **Approximated** An untextured decal takes a place among the 512 and draws nothing, where Godot leaves its buffer row unwritten (`texture_storage.cpp:3420`).
+- **Approximated** The decal sampler always filters linearly between mip levels, as the project setting `rendering/textures/decals/filter` is not read (`renderer_scene_render_rd.cpp:1730`).

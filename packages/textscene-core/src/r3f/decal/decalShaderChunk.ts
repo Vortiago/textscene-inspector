@@ -18,7 +18,7 @@ import { DECAL_UNIFORMS, decalAtlasSlot, decalRowsSlot, shownDecals } from './de
 const { atlas, rows, shown } = DECAL_UNIFORMS;
 
 /** The chunk that holds the decal functions, which each program that mixes decals includes. */
-export const GODOT_DECAL_PARS_CHUNK = 'godot_decal_pars';
+const GODOT_DECAL_PARS_CHUNK = 'godot_decal_pars';
 
 const VIEW_VARYING = 'vGodotDecalView';
 const NORMAL_VARYING = 'vGodotDecalNormal';
