@@ -123,9 +123,32 @@ export const LIGHTING_SCENES = [
   { name: 'reflection-probe-box-projection', file: 'unit-reflection-probe-box-projection.tscn' },
   // AMBIENT_COLOR on one ReflectionProbe: the floor in its box takes a red ambient.
   { name: 'reflection-probe-ambient-color', file: 'unit-reflection-probe-ambient-color.tscn' },
+  // CameraAttributesPractical at exposure_multiplier 2: Godot scales a light's energy, an emission and
+  // a colour background by it, and a flat ambient not at all.
+  { name: 'camera-attributes-exposure', file: 'unit-camera-attributes-exposure.tscn', camera: 'Root/Camera3D' },
+  // Camera3D.attributes at exposure_multiplier 2 over a WorldEnvironment at 0.25: the camera's
+  // attributes replace the world's, so the frame draws as the golden above does.
+  {
+    name: 'camera-attributes-exposure-camera',
+    file: 'unit-camera-attributes-exposure-camera.tscn',
+    camera: 'Root/Camera3D',
+  },
+  // A ReflectionProbe under a Camera3D whose exposure differs from the world's: the probe captures at the
+  // world's exposure and shows at the exposure over it.
+  {
+    name: 'reflection-probe-camera-exposure',
+    file: 'unit-reflection-probe-camera-exposure.tscn',
+    camera: 'Root/Camera3D',
+  },
+  // The same exposure over a procedural sky: the sky's background scales by the factor, its ambient and
+  // reflection by its square.
+  { name: 'camera-attributes-exposure-sky', file: 'unit-camera-attributes-exposure-sky.tscn', camera: 'Root/Camera3D' },
   // A LightmapGI bake lights a box and the ground: a Static sun's light, its shadow and a red
   // bounce, all read from the atlas through UV2. The headers state why no other golden shows it.
   { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },
+  // The same bake under CameraAttributes at exposure_multiplier 2: Godot reads the atlas at the factor
+  // over the exposure the bake ran at.
+  { name: 'lightmap-gi-exposure', file: 'unit-lightmap-gi-exposure.tscn' },
   // A GLB box named by the bake whose unwrap the project commits no cache for: it reads no
   // lightmap and draws with ambient light, where the ground still reads its atlas.
   { name: 'lightmap-gi-glb-unwrap-miss', file: 'unit-glb-lightmap-miss.tscn' },

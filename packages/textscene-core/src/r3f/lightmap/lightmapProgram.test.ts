@@ -100,6 +100,18 @@ describe('LIGHTMAP_PROGRAM shaders', () => {
   });
 });
 
+describe('the lightmap exposure', () => {
+  const ambient = functionBody(fragment, 'vec3 godotLightmapAmbient');
+
+  it('scales the L0 texel of a plain lightmap (scene_forward_clustered.glsl:1872-1874)', () => {
+    expect(ambient).toContain('vec3 l0 = godotLightmapTexel( uvw ) * godotLightmapExposure;');
+  });
+
+  it('scales only L0 of directional data, which the L1 bands then follow through l0 * 4.0 (:1863-1868)', () => {
+    expect(ambient).not.toMatch(/l1\w+ = [^;]*godotLightmapExposure/);
+  });
+});
+
 const { mix } = GLSL_BUILT_INS;
 
 /**
@@ -249,6 +261,13 @@ describe('LIGHTMAP_PROGRAM uniforms', () => {
     const normal = new THREE.Vector3(1, 0, 0).applyMatrix3(basis);
     expect(normal.x).toBeCloseTo(0, 12);
     expect(normal.z).toBeCloseTo(1, 12);
+  });
+
+  it('reads the exposure scale of the lightmap, which is 1 for a material bound to none', () => {
+    const bound = assignment();
+    bound.lightmap.exposureScale = 2.5;
+    expect(uniformsBoundTo(bound).godotLightmapExposure!.value).toBe(2.5);
+    expect(uniformsBoundTo(null).godotLightmapExposure!.value).toBe(1);
   });
 
   it("reads the lightmap's directional data and filter", () => {

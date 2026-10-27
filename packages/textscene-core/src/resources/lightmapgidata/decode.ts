@@ -5,7 +5,7 @@
  */
 
 import type { TscnExternalResource } from '../../parser/types';
-import { parseOptionalAabb, parseOptionalRect2 } from '../../parser/valueParsers';
+import { floatOr, parseOptionalAabb, parseOptionalRect2 } from '../../parser/valueParsers';
 import { EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 import { splitTopLevel } from '../../godot/string/string';
 import { slotInt } from '../../godot/variant/intSlots';
@@ -14,6 +14,7 @@ import { boolSlotValue } from '../../godot/variant/variantBool';
 import {
   arrayLiteralBody,
   dictCallField,
+  dictNumberField,
   nodePathLiteral,
   packedArrayForms,
 } from '../../godot/variant/variantParser';
@@ -43,12 +44,14 @@ export function decodeLightmapGIData(
     usesSphericalHarmonics,
     users: isAssignable ? lightmapUsers(properties.user_data) : [],
     bounds: captureBounds(properties.probe_data),
+    bakedExposure: bakedExposure(properties.probe_data),
   };
 }
 
 const readBounds = dictCallField('bounds', 'AABB');
 const readPoints = dictPackedField('points', 'PackedVector3Array');
 const POINTS_FORMS = packedArrayForms('PackedVector3Array');
+const BAKED_EXPOSURE_FIELD = dictNumberField('baked_exposure');
 
 /**
  * The bounds `probe_data` gives the capture. `set_capture_data` keeps them only with probe points
@@ -61,6 +64,16 @@ function captureBounds(probeData: string | undefined): Aabb {
   if (points === null || packedFloatCount(POINTS_FORMS, points, 3) === 0) return EMPTY_AABB;
   const bounds = readBounds(probeData);
   return (bounds !== null && parseOptionalAabb(`AABB(${bounds})`, 'LightmapGIData probe_data')) || EMPTY_AABB;
+}
+
+/**
+ * The exposure the bake ran at. `set_capture_data` stores it whole, with or without points
+ * (`lightmap_gi.cpp:236-237`), once `_set_probe_data` has accepted the fields.
+ */
+function bakedExposure(probeData: string | undefined): number {
+  const fallback = LIGHTMAP_GI_DATA_DEFAULTS.bakedExposure;
+  if (probeData === undefined || missingProbeDataField(probeData) !== null) return fallback;
+  return floatOr(BAKED_EXPOSURE_FIELD.exec(probeData)?.[1], fallback, 'LightmapGIData baked_exposure');
 }
 
 /** The path of each external TextureLayered the array names, in order. */

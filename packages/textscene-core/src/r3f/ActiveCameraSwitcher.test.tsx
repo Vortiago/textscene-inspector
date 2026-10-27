@@ -12,7 +12,7 @@ import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
-import { Camera3D } from '../nodes/3d/camera3d/Component';
+import { Camera3DInWorld } from '../nodes/3d/camera3d/Camera3DInWorld.testkit';
 import type { TscnNode } from '../parser/types';
 
 function graph() {
@@ -33,7 +33,7 @@ async function mount(initialActiveCameraPath?: string, projection: '0' | '1' = '
   return ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: graph(), panelId: 'p' }}>
       <ViewportActionsProvider initialActiveCameraPath={initialActiveCameraPath}>
-        <Camera3D node={cameraNode(projection)} />
+        <Camera3DInWorld node={cameraNode(projection)} />
         <ActiveCameraSwitcher />
       </ViewportActionsProvider>
     </HierarchyProvider>

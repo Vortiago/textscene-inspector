@@ -489,6 +489,10 @@ _Avoid_: "override", "fallback".
 The illumination a sky background gives the scene, which in Godot is a radiance map that both lights and reflects, unlike the flat `AMBIENT_SOURCE_COLOR`.
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 
+**Exposure factor** (`r3f/environment/worldExposure.tsx`):
+The `exposure_multiplier` of the CameraAttributes that a world renders with. A world with no CameraAttributes has none, which a baked lightmap tells from the factor 1.
+_Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
+
 **Radiance layer**:
 One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
 _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.

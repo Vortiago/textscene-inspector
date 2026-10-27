@@ -78,8 +78,9 @@ void godotReflectionProbe( int index, vec4 flags, vec3 position, vec3 reflectVec
 			float exit = min( min( godotBoxExit( localPosition.x, direction.x, extents.x ), godotBoxExit( localPosition.y, direction.y, extents.y ) ), godotBoxExit( localPosition.z, direction.z, extents.z ) );
 			localReflect = localPosition + direction * exit - offset.xyz;
 		}
+		float exposureNormalization = godotProbeTexel( index, 7 ).x;
 		float weight = max( 0.0, blend - reflection.a );
-		vec3 colour = godotProbeAtlasRead( localReflect, flags.w, sqrt( roughness ) * ${glslFloat(MAX_ROUGHNESS_LOD)} ) * offset.w;
+		vec3 colour = godotProbeAtlasRead( localReflect, flags.w, sqrt( roughness ) * ${glslFloat(MAX_ROUGHNESS_LOD)} ) * exposureNormalization * offset.w;
 		reflection += vec4( colour * weight, weight );
 	}
 	if ( ambient.a >= 1.0 ) return;
@@ -88,8 +89,9 @@ void godotReflectionProbe( int index, vec4 flags, vec3 position, vec3 reflectVec
 	if ( mode == ${ReflectionProbeAmbientMode.DISABLED} ) return;
 	vec3 colour = probeAmbient.rgb;
 	if ( mode == ${ReflectionProbeAmbientMode.ENVIRONMENT} ) {
+		float exposureNormalization = godotProbeTexel( index, 7 ).x;
 		vec3 localNormal = vec3( dot( toLocalX.xyz, normal ), dot( toLocalY.xyz, normal ), dot( toLocalZ.xyz, normal ) );
-		colour = godotProbeAtlasRead( localNormal, flags.w, ${glslFloat(MAX_ROUGHNESS_LOD)} );
+		colour = godotProbeAtlasRead( localNormal, flags.w, ${glslFloat(MAX_ROUGHNESS_LOD)} ) * exposureNormalization;
 	}
 	float weight = max( 0.0, blend - ambient.a );
 	ambient += vec4( colour * weight, weight );
