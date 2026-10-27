@@ -31,7 +31,7 @@ import { AREA_LIGHT_ATLAS_UNIFORM } from '../areaLight/areaTextureFetch.js';
 import { CasterPose } from './casterPose.js';
 import { FOG_LIGHT_TEXELS, FogLightRows } from './fogLights.js';
 import { FogDensityAtlas } from './fogDensityAtlas.js';
-import { FogRowTexture } from './fogRowTexture.js';
+import { RowTexture } from '../rowTexture/rowTexture.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { FOG_VOLUME_TEXELS, FogVolumeRows, type FogVolumeView } from './fogVolumeRows.js';
 import { bindRadiance, skyRadiance } from './fogSky.js';
@@ -248,8 +248,8 @@ export class VolumetricFogPass {
   /** The integrated fog of the view that rendered last, through the texture every fog program samples. */
   private readonly volume = volumeTarget('VolumetricFogVolume');
   private readonly viewport = new THREE.Vector4();
-  private readonly lights = new FogRowTexture(FOG_LIGHT_TEXELS);
-  private readonly volumes = new FogRowTexture(FOG_VOLUME_TEXELS);
+  private readonly lights = new RowTexture(FOG_LIGHT_TEXELS);
+  private readonly volumes = new RowTexture(FOG_VOLUME_TEXELS);
   private readonly lightMaterial = sliceMaterial('Light', FOG_LIGHT_FRAGMENT, {
     gridSize: { value: new THREE.Vector3() },
     frustumBegin: { value: new THREE.Vector2() },

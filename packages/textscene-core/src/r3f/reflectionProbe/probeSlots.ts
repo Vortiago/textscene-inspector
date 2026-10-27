@@ -1,12 +1,11 @@
 /**
  * What every lit program reads of the reflection probes (`probeShaderChunk.ts`): the reflection
- * atlas, the probes' rows, their count and the atlas's layout, and the drawn instance's layers. Each
+ * atlas, the probes' rows, and their count and the atlas's layout. Each
  * scene with probes shows its own before each of its renders, and none after, so a scene without
  * probes reads none.
  */
 
 import * as THREE from 'three';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/scene/visualLayers.js';
 import { sharedTexture } from '../sharedTexture.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 
@@ -14,7 +13,6 @@ export const REFLECTION_PROBE_UNIFORMS = {
   atlas: 'godotReflectionAtlas',
   rows: 'godotReflectionProbeRows',
   probes: 'godotReflectionProbes',
-  instanceLayers: 'godotInstanceLayers',
 } as const;
 
 /**
@@ -43,9 +41,4 @@ export const shownProbes = installedOr(
   REFLECTION_PROBE_UNIFORMS.probes,
   Float32Array,
   () => new Float32Array(4)
-);
-
-/** The layers of the instance being drawn, Godot's default between draws. */
-export const instanceLayers = installedOr(REFLECTION_PROBE_UNIFORMS.instanceLayers, Uint32Array, () =>
-  Uint32Array.of(GODOT_DEFAULT_VISUAL_LAYERS)
 );

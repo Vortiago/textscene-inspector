@@ -1,6 +1,6 @@
 /**
- * Rows of floats, one per light or volume, that each pack rewrites in place and compares as it
- * writes, so an unchanged pack uploads nothing.
+ * Rows of floats, one per light, volume, probe or decal, that each pack rewrites in place and
+ * compares as it writes, so an unchanged pack uploads nothing.
  */
 
 /** Rows of `width` texels, `count` of them, then unused space. */

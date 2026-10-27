@@ -14,7 +14,7 @@ import {
   type SurfaceBillboard,
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
-import { restoreInstanceLayers, showInstanceLayers } from './reflectionProbe/instanceLayers';
+import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
 import { pointShadowSizeInjection } from './materials/godotPoint';

@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers';
-import { instanceLayers, shownProbes } from './probeSlots';
+import { instanceLayers } from './instanceLayersChunk';
+import { shownProbes } from '../reflectionProbe/probeSlots';
+import { shownDecals } from '../decal/decalSlots';
 import { setVisualLayers } from '../visualLayers';
 import { testRenderer } from '../../testing/recordingWebGL';
 
@@ -12,6 +14,7 @@ beforeEach(() => {
 afterEach(() => {
   restoreInstanceLayers();
   shownProbes[0] = 0;
+  shownDecals[0] = 0;
   vi.restoreAllMocks();
 });
 
@@ -44,7 +47,7 @@ describe('showInstanceLayers', () => {
     expect(set).not.toHaveBeenCalled();
   });
 
-  it('leaves them alone in a render that shows no probe (edge case)', async () => {
+  it('leaves them alone in a render that shows no probe and no decal (edge case)', async () => {
     const { renderer } = await testRenderer();
     shownProbes[0] = 0;
     const set = vi.spyOn(renderer, 'setRenderTarget');
@@ -53,6 +56,16 @@ describe('showInstanceLayers', () => {
 
     expect(instanceLayers[0]).toBe(1);
     expect(set).not.toHaveBeenCalled();
+  });
+
+  it('shows them in a render that shows decals and no probe', async () => {
+    const { renderer } = await testRenderer();
+    shownProbes[0] = 0;
+    shownDecals[0] = 2;
+
+    showInstanceLayers(renderer, meshOnLayers(4));
+
+    expect(instanceLayers[0]).toBe(4);
   });
 });
 

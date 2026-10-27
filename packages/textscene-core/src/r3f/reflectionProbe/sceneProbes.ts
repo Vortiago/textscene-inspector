@@ -23,12 +23,13 @@ import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { drawOffscreen } from '../offscreen.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { RowTexture } from '../rowTexture/rowTexture.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { captureCameras, probeCaptureOf, probeFrame } from './captureCameras.js';
 import { stageCapture } from './captureStage.js';
-import { PROBE_ROW_TEXELS, probeRows, type DrawnProbe } from './probeRows.js';
+import { PROBE_ROW_TEXELS, ProbeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
@@ -59,8 +60,12 @@ export class SceneProbes {
   private readonly captures = new Map<ReflectionProbeObject, Capture>();
   /** Advanced only by `markCapturesStale`, so each probe captures again. */
   private generation = 0;
-  /** The rows of the drawn probes, made again when their count changes. */
-  private rows = rowsTexture(probeRows([]));
+  /** The rows of the drawn probes, rewritten in place by `pack`. */
+  private readonly rows = new ProbeRows();
+  /** The texture the rows upload into, which a growth replaces after the slot lets go of it. */
+  private readonly rowTexture = new RowTexture(PROBE_ROW_TEXELS, (replaced) =>
+    leaveSlot(this.renderer, rowsSlot, replaced)
+  );
   /** The probes the rows hold, written only by `pack`. */
   private packed: readonly ReflectionProbeObject[] = [];
   /** Frames since the scene last had a resource on its way. */
@@ -122,7 +127,7 @@ export class SceneProbes {
     this.leaveSlots();
     this.atlas?.target.dispose();
     this.cube.dispose();
-    this.rows.dispose();
+    this.rowTexture.dispose();
   }
 
   /** The atlas for `probes`, made again with their count and layout, which drops every capture. */
@@ -211,18 +216,10 @@ export class SceneProbes {
 
   /** Writes the rows of `probes` in Godot's order, and uploads them. */
   private pack(probes: readonly ReflectionProbeObject[]): void {
-    const rows = probeRows(reflectionProbeOrder(probes.map((object) => this.drawnProbe(object))));
     this.packed = probes;
-    const current = this.rows.image.data as Float32Array;
-    if (current.length === rows.length) {
-      current.set(rows);
-      this.rows.needsUpdate = true;
-    } else {
-      this.leaveSlots();
-      this.rows.dispose();
-      this.rows = rowsTexture(rows);
-    }
-    this.renderer.initTexture(this.rows);
+    const drawn = reflectionProbeOrder(probes.map((object) => this.drawnProbe(object)));
+    if (this.rows.pack(drawn)) this.rowTexture.invalidate(this.rows);
+    this.renderer.initTexture(this.rowTexture.hold(this.rows));
   }
 
   private drawnProbe(object: ReflectionProbeObject): DrawnProbe {
@@ -241,7 +238,7 @@ export class SceneProbes {
     shownProbes[1] = atlas.layout.borderSize;
     shownProbes[2] = atlas.layout.layerSizes.length - 1;
     showInSlot(this.renderer, atlasSlot, atlas.target.texture);
-    showInSlot(this.renderer, rowsSlot, this.rows);
+    showInSlot(this.renderer, rowsSlot, this.rowTexture.texture);
   }
 
   /** Hides each light's shadow from a capture without shadows. */
@@ -265,14 +262,6 @@ export class SceneProbes {
   /** Leaves no slot on this scene's textures before they are freed. */
   private leaveSlots(): void {
     if (this.atlas) leaveSlot(this.renderer, atlasSlot, this.atlas.target.texture);
-    leaveSlot(this.renderer, rowsSlot, this.rows);
+    leaveSlot(this.renderer, rowsSlot, this.rowTexture.texture);
   }
-}
-
-/** A texture of `rows`, a probe's row of texels per line, marked for its first upload. */
-function rowsTexture(rows: Float32Array): THREE.DataTexture {
-  const height = rows.length / (PROBE_ROW_TEXELS * 4);
-  const texture = new THREE.DataTexture(rows, PROBE_ROW_TEXELS, height, THREE.RGBAFormat, THREE.FloatType);
-  texture.needsUpdate = true;
-  return texture;
 }

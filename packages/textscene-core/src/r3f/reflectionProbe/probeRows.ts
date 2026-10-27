@@ -9,6 +9,7 @@ import type { Vector3 } from '../../godot/math/vector.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { RowBuffer } from '../rowTexture/packedRows.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {
@@ -33,11 +34,18 @@ export interface DrawnProbe {
  */
 export const PROBE_ROW_TEXELS = 7;
 
-/** The probes' texels, in order, or one empty probe for none, as a texture needs a texel. */
-export function probeRows(probes: readonly DrawnProbe[]): Float32Array {
-  const rows = new Float32Array(Math.max(probes.length, 1) * PROBE_ROW_TEXELS * 4);
-  probes.forEach((probe, index) => rows.set(probeTexels(probe), index * PROBE_ROW_TEXELS * 4));
-  return rows;
+/** The rows of the drawn probes, rewritten in place by each `pack`. */
+export class ProbeRows extends RowBuffer {
+  constructor() {
+    super(PROBE_ROW_TEXELS * 4);
+  }
+
+  /** Packs `probes` in order, and answers whether any row changed. */
+  pack(probes: readonly DrawnProbe[]): boolean {
+    this.begin();
+    for (const probe of probes) this.append(Float32Array.from(probeTexels(probe)));
+    return this.finish();
+  }
 }
 
 function probeTexels(probe: DrawnProbe): number[] {
