@@ -1939,7 +1939,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>Every 3D program mixes the decals into its albedo per fragment, as Godot's clustered shader does (<code>scene_forward_clustered.glsl:1535-1654</code>). So the mix needs no mesh detail, and it follows a moving, skinned or animated receiver. A decal reaches a fragment through the box, <code>cull_mask</code>, the depth and normal fades and the decal atlas (see &quot;Mip chain&quot;). The decal sampler is one of the viewport's samplers (<code>render_forward_clustered.cpp:3434-3455</code>), so <code>texture_mipmap_bias</code> offsets the decal's mip level as it does a material's.</p>
-<p>Editor gizmos draw on layer 26 (<code>node_3d_editor_gizmos.cpp:222</code>), which a default <code>cull_mask</code> leaves out. A gizmo takes a decal only when the mask holds that layer.</p></div>
+<p>Editor gizmos draw on layer 27 of 1 to 32, bit 26 (<code>node_3d_editor_gizmos.cpp:222</code>), which a default <code>cull_mask</code> leaves out. A gizmo takes a decal only when the mask holds that layer.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Receiver terms</h3><span class="status st-done">Done</span></div>

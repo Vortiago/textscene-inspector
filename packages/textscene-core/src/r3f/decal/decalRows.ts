@@ -86,7 +86,7 @@ export class DecalRows extends RowBuffer {
     for (const decal of decals) {
       if (this.candidates.length === MAX_DECALS) break;
       const distance = cameraOrigin.distanceTo(decalOrigin.setFromMatrixPosition(decal.matrixWorld));
-      if (isPastFade(decal.look, distance)) continue;
+      if (isPastFade(decal.look, distance) || isFlat(decal)) continue;
       this.order.push(this.candidates.length);
       this.candidates.push(decal);
       this.distances.push(distance);
@@ -101,6 +101,11 @@ export class DecalRows extends RowBuffer {
     this.candidates.length = 0;
     return this.finish();
   }
+}
+
+/** Whether the node's scale has collapsed the box, whose matrix then has no inverse to project through. */
+function isFlat({ matrixWorld }: DrawnDecal): boolean {
+  return matrixWorld.determinant() === 0;
 }
 
 /** Whether `distance` lies past the end of the decal's fade, where Godot leaves the decal out. */

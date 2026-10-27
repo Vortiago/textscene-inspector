@@ -133,7 +133,7 @@ const UNLIT_VERTEX_EDITS: readonly TextEdit[] = [
  * Mixes the decals into the albedo of three's standard, physical and basic programs, and gives
  * every program with fog the atlas, the rows and the shown decals. A three release that rewrites a
  * replaced line keeps all its programs, and `decalShaderChunk.test.ts` fails on that release.
- * True when the programs hold the mix after the call. A second call changes nothing.
+ * True when the programs hold the mix. A second call changes nothing.
  */
 export function installGodotDecals(): boolean {
   const isPatched = installChunkEdits({

@@ -1,8 +1,7 @@
 /**
  * What every lit program reads of the reflection probes (`probeShaderChunk.ts`): the reflection
- * atlas, the probes' rows, and their count and the atlas's layout. Each
- * scene with probes shows its own before each of its renders, and none after, so a scene without
- * probes reads none.
+ * atlas, the probes' rows, and their count and the atlas's layout. Each scene with probes shows its
+ * own before each of its renders, and none after, so a scene without probes reads none.
  */
 
 import * as THREE from 'three';

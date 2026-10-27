@@ -14,7 +14,7 @@ Godot's texture projector: it casts `texture_albedo` down the node's local -Y ax
 
 Every 3D program mixes the decals into its albedo per fragment, as Godot's clustered shader does (`scene_forward_clustered.glsl:1535-1654`). So the mix needs no mesh detail, and it follows a moving, skinned or animated receiver. A decal reaches a fragment through the box, `cull_mask`, the depth and normal fades and the decal atlas (see "Mip chain"). The decal sampler is one of the viewport's samplers (`render_forward_clustered.cpp:3434-3455`), so `texture_mipmap_bias` offsets the decal's mip level as it does a material's.
 
-Editor gizmos draw on layer 26 (`node_3d_editor_gizmos.cpp:222`), which a default `cull_mask` leaves out. A gizmo takes a decal only when the mask holds that layer.
+Editor gizmos draw on layer 27 of 1 to 32, bit 26 (`node_3d_editor_gizmos.cpp:222`), which a default `cull_mask` leaves out. A gizmo takes a decal only when the mask holds that layer.
 
 ## Receiver terms
 

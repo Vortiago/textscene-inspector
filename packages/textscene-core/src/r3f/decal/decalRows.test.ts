@@ -168,6 +168,12 @@ describe('DecalRows.pack order', () => {
 });
 
 describe('DecalRows.pack culling', () => {
+  it('leaves out a decal whose node is scaled to nothing, which has no box to project (edge case)', () => {
+    const flat = { ...decalAt([0, 0, -3]), matrixWorld: new THREE.Matrix4().makeScale(0, 1, 1) };
+
+    expect(packed([flat]).count).toBe(0);
+  });
+
   const FADED = { distance_fade_enabled: true, distance_fade_begin: 5, distance_fade_length: 10 };
 
   it('leaves a decal past its fade end out (texture_storage.cpp:3338-3342)', () => {
