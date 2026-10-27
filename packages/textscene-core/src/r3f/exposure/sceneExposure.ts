@@ -19,7 +19,7 @@ export function exposureOfScene(scene: THREE.Scene): number {
 }
 
 /** Renders `scene` with `factor` until the returned function runs. */
-export function holdSceneExposure(scene: THREE.Scene, factor: number): () => void {
+function holdSceneExposure(scene: THREE.Scene, factor: number): () => void {
   exposures.set(scene, factor);
   const stopWriting = observeSceneCamera(scene, () => {
     EMISSION_EXPOSURE[0] = factor;
@@ -34,8 +34,11 @@ export function holdSceneExposure(scene: THREE.Scene, factor: number): () => voi
   };
 }
 
-/** Renders the scene of the enclosing world with `factor` until the world unmounts. */
-export function useSceneExposure(factor: number): void {
+/**
+ * Renders the scene of the enclosing world with `factor` until the world unmounts. A null factor
+ * holds nothing: the emission buffer already reads 1 outside a render of a world that holds one.
+ */
+export function useSceneExposure(factor: number | null): void {
   const scene = useThree((state) => state.scene);
-  useEffect(() => holdSceneExposure(scene, factor), [scene, factor]);
+  useEffect(() => (factor === null ? undefined : holdSceneExposure(scene, factor)), [scene, factor]);
 }

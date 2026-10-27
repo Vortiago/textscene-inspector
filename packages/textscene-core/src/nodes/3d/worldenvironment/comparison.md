@@ -44,6 +44,6 @@ A flat ambient light does not scale. With no Environment, the clear colour does 
 
 ## Known limitations
 
-- **Not drawn** Auto exposure, depth of field and the physical light units of a CameraAttributesPhysical (`exposure_aperture`, `exposure_shutter_speed`, `exposure_sensitivity`) have no effect. Only `exposure_multiplier` applies.
+- **Not drawn** Auto exposure, depth of field and the physical light units of a CameraAttributesPhysical have no effect, since only `exposure_multiplier` applies.
 - **Not drawn** The `Camera3D.attributes` of a camera does not apply: the editor camera holds no attributes.
-- **Not drawn** The lights of a GLB file do not scale by the exposure. The previewer reads no Godot import conversion for them.
+- **Not drawn** The lights of a GLB file do not scale by the exposure, since the previewer reads no Godot import conversion for them.

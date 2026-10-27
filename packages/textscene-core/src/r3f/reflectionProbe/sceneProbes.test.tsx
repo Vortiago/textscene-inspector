@@ -9,9 +9,15 @@ import { captureCameras } from './captureCameras';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
-import { holdSceneExposure } from '../exposure/sceneExposure';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useSceneExposure } from '../exposure/sceneExposure';
 
 const CLEAR = new THREE.Color(0.3, 0.3, 0.3);
+
+function Exposed({ factor }: { factor: number }) {
+  useSceneExposure(factor);
+  return null;
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -26,8 +32,11 @@ function probeObject(properties: Record<string, string> = {}, treeOrder = [0]): 
 }
 
 async function sceneWith(...probes: ReflectionProbeObject[]) {
+  return probesIn(new THREE.Scene(), ...probes);
+}
+
+async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) {
   const { renderer } = await testRenderer();
-  const scene = new THREE.Scene();
   scene.add(...probes);
   scene.updateMatrixWorld();
   const sceneProbes = new SceneProbes(renderer, scene);
@@ -103,19 +112,18 @@ describe('SceneProbes.update', () => {
   });
 
   it('captures every probe again when the scene exposure changes, as the capture holds the factor once', async () => {
-    const { scene, facesDrawn, settle } = await sceneWith(probeObject());
-    const release = holdSceneExposure(scene, 2);
+    const world = await ReactThreeTestRenderer.create(<Exposed factor={2} />);
+    const { facesDrawn, settle } = await probesIn(world.scene.instance as THREE.Scene, probeObject());
     settle();
     facesDrawn();
-    release();
-    holdSceneExposure(scene, 3);
+    await world.update(<Exposed factor={3} />);
 
     expect(facesDrawn()).toBe(6);
   });
 
   it('keeps a capture while the scene exposure stays', async () => {
-    const { scene, facesDrawn, settle } = await sceneWith(probeObject());
-    holdSceneExposure(scene, 2);
+    const world = await ReactThreeTestRenderer.create(<Exposed factor={2} />);
+    const { facesDrawn, settle } = await probesIn(world.scene.instance as THREE.Scene, probeObject());
     settle();
     facesDrawn();
 

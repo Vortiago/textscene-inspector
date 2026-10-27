@@ -9,7 +9,7 @@ import { EMISSION_EXPOSURE } from './emissionExposure';
 import { exposureOfScene, useSceneExposure } from './sceneExposure';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 
-function Exposed({ factor }: { factor: number }) {
+function Exposed({ factor }: { factor: number | null }) {
   useSceneExposure(factor);
   return null;
 }
@@ -22,7 +22,7 @@ function sceneOf(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.crea
 
 /** Mounts `factor` and answers the scene its renders are fired on. */
 async function mount(factor: number | null) {
-  const renderer = await ReactThreeTestRenderer.create(factor === null ? null : <Exposed factor={factor} />);
+  const renderer = await ReactThreeTestRenderer.create(<Exposed factor={factor} />);
   return { renderer, scene: sceneOf(renderer) };
 }
 
@@ -55,9 +55,10 @@ describe('useSceneExposure', () => {
 
   it('writes nothing for a scene that holds no exposure', async () => {
     const { scene } = await mount(null);
-    EMISSION_EXPOSURE[0] = 1;
+    EMISSION_EXPOSURE[0] = 5;
     fireSceneRender(scene, CAMERA);
-    expect(EMISSION_EXPOSURE[0]).toBe(1);
+    expect(EMISSION_EXPOSURE[0]).toBe(5);
+    EMISSION_EXPOSURE[0] = 1;
   });
 
   it('stops writing when the world unmounts', async () => {
