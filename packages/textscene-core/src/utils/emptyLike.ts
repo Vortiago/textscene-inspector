@@ -13,7 +13,7 @@ export type PlainPixelsOf<Source extends Pixels> = Source extends Float32Array
 /**
  * A zeroed buffer of `length` texels, of the kind `pixels` holds.
  *
- * @oneWay A buffer of the same texel kind as some pixels
+ * @canonical A buffer of the same texel kind as some pixels
  */
 export function emptyLike<Source extends Pixels>(pixels: Source, length: number): PlainPixelsOf<Source> {
   if (pixels instanceof Float32Array) return new Float32Array(length) as PlainPixelsOf<Source>;
@@ -24,7 +24,7 @@ export function emptyLike<Source extends Pixels>(pixels: Source, length: number)
 /**
  * Whether `pixels` already has the texel kind `emptyLike` would give it, so a copy can share them.
  *
- * @oneWay A buffer of the same texel kind as some pixels
+ * @canonical A buffer of the same texel kind as some pixels
  */
 export function isPlainPixels<Source extends Pixels>(
   pixels: Source

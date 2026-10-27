@@ -208,7 +208,7 @@ interface ColorChannels {
  * `Color::darkened` (`core/math/color.h:119-125`): each colour channel shrinks by `amount`.
  * Double, not float, as the callers' colours are.
  *
- * @oneWay A darker or lighter colour
+ * @canonical A darker or lighter colour
  */
 export function darkened<C extends ColorChannels>(color: C, amount: number): C {
   const kept = 1 - amount;
@@ -219,7 +219,7 @@ export function darkened<C extends ColorChannels>(color: C, amount: number): C {
  * `Color::lightened` (`core/math/color.h:127-133`): each colour channel moves toward white by `amount`.
  * Double, not float, as the callers' colours are.
  *
- * @oneWay A darker or lighter colour
+ * @canonical A darker or lighter colour
  */
 export function lightened<C extends ColorChannels>(color: C, amount: number): C {
   const { r, g, b } = color;

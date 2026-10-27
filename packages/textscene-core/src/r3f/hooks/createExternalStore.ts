@@ -16,7 +16,7 @@ export interface ExternalStore<T> {
 }
 
 /**
- * @oneWay A value that changes often and that few components read
+ * @canonical A value that changes often and that few components read
  */
 export function createExternalStore<T>(initial: T): ExternalStore<T> {
   let value = initial;
@@ -41,7 +41,7 @@ export function createExternalStore<T>(initial: T): ExternalStore<T> {
 /**
  * Subscribes the calling component to an {@link ExternalStore}'s value.
  *
- * @oneWay A value that changes often and that few components read
+ * @canonical A value that changes often and that few components read
  */
 export function useExternalStoreValue<T>(store: ExternalStore<T>): T {
   return useSyncExternalStore(store.subscribe, store.get, store.get);

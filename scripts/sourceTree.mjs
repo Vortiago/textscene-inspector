@@ -1,6 +1,6 @@
 /**
  * Reads a source tree into memory, path to text, and tells a test file from a production one.
- * The test-only-export scan and the one-way list both read the tree this way.
+ * The test-only-export scan and the canonical helper list both read the tree this way.
  */
 
 import { readFileSync, readdirSync } from 'node:fs';

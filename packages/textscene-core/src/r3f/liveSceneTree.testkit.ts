@@ -11,7 +11,7 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
 /**
  * A scene cache that holds each scene path in `scenes` and no other path.
  *
- * @oneWay In tests, a scene cache over scenes
+ * @canonical In tests, a scene cache over scenes
  */
 export function sceneCacheOver(scenes: Readonly<Record<string, TscnScene>>): CachedSceneSource {
   return { getCached: (path) => scenes[path] };
@@ -21,7 +21,7 @@ export function sceneCacheOver(scenes: Readonly<Record<string, TscnScene>>): Cac
  * The context of `main`'s pools, with each scene path in `scenes` and each GLB path in `glbs`
  * cached and every other path not.
  *
- * @oneWay In tests, a live-tree context over scenes
+ * @canonical In tests, a live-tree context over scenes
  */
 export function contextOver(
   main: Pick<TscnScene, 'externalResources' | 'internalResources'>,

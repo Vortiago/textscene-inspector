@@ -57,7 +57,7 @@ function storedOrNull(
  * error). A float truncates toward zero (`-5.9` is -5), and the result is narrowed, as setters take
  * `int`. A BOOL is no argument there: a property write reads {@link parseSlotInt}.
  *
- * @oneWay An integer from the file
+ * @canonical An integer from the file
  */
 export function parseGodotInt(
   value: string,

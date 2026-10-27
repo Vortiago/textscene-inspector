@@ -14,7 +14,7 @@ const holders = new WeakMap<Disposable, number>();
  * object. A microtask, not now: StrictMode releases and takes the object again in one task, and
  * disposing it then makes three upload it a second time.
  *
- * @oneWay Mesh content and its disposal
+ * @canonical Mesh content and its disposal
  */
 export function useDisposeOnRelease(object: Disposable | null | undefined): void {
   useEffect(() => {

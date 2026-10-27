@@ -7,6 +7,6 @@ let nextKey = 0;
  * A number for each object that holds while the object lives, for a string key over objects. Two
  * objects of equal content take two keys, so a reload that parses a new object takes a new key.
  *
- * @oneWay A number for an object, for a string key over objects
+ * @canonical A number for an object, for a string key over objects
  */
 export const identityKey = perObject<object, number>(() => nextKey++);

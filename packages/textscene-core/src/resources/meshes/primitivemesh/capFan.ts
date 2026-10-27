@@ -25,7 +25,7 @@ export interface CapFace {
 /**
  * A fan facing up, centred on (0.25, 0.75) in UV (`:1169`, `:2596-2677`).
  *
- * @oneWay The cap of a cylinder or a tube
+ * @canonical The cap of a cylinder or a tube
  */
 export const TOP_CAP: CapFace = {
   normalY: 1,
@@ -36,7 +36,7 @@ export const TOP_CAP: CapFace = {
 /**
  * A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:1216`, `:2680-2732`).
  *
- * @oneWay The cap of a cylinder or a tube
+ * @canonical The cap of a cylinder or a tube
  */
 export const BOTTOM_CAP: CapFace = {
   normalY: -1,
@@ -51,7 +51,7 @@ const NO_UV2: DiscUv = () => ZERO_UV2;
 /**
  * The centre at `y`, then each column of `rim` at `radius`.
  *
- * @oneWay The cap of a cylinder or a tube
+ * @canonical The cap of a cylinder or a tube
  */
 export function writeCapFan(
   writer: SurfaceWriter,

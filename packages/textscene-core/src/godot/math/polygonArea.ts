@@ -7,7 +7,7 @@ import type { Vector2 } from './vector';
  * It is positive for a counter-clockwise ring, y up. Double, not `real_t`: callers read its sign
  * and compare areas, and no caller draws the value.
  *
- * @oneWay The signed area of a polygon
+ * @canonical The signed area of a polygon
  */
 export function signedPolygonArea(points: readonly Vector2[]): number {
   let doubledArea = 0;

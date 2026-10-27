@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 
 /**
- * @oneWay Half floats from 32-bit floats
+ * @canonical Half floats from 32-bit floats
  */
 export function toHalfFloatTexels(texels: Float32Array): Uint16Array {
   const halves = new Uint16Array(texels.length);
