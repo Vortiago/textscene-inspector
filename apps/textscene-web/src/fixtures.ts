@@ -3203,6 +3203,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Scene Font Typo Metrics",
+    "file": "unit-control-scene-font-typo-metrics.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Scene Font Woff2",
     "file": "unit-control-scene-font-woff2.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3558,6 +3563,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Mesh Sources",
     "file": "unit-csg-mesh-sources.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Mesh Text Mesh",
+    "file": "unit-csg-mesh-text-mesh.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

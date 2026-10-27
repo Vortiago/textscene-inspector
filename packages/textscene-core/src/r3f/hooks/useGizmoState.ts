@@ -17,7 +17,7 @@ export type GizmoDrawnFor = 'every-node' | 'selected-only';
 export type GizmoState = GizmoVariant | 'hidden';
 
 /**
- * @oneWay What an editor gizmo draws for its node
+ * @canonical What an editor gizmo draws for its node
  */
 export function useGizmoState(drawnFor: GizmoDrawnFor): GizmoState {
   const showGizmos = useShowGizmos();

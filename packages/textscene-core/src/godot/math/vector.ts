@@ -22,7 +22,7 @@ export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
 /**
  * `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero.
  *
- * @oneWay A unit vector
+ * @canonical A unit vector
  */
 export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
   const lengthSquared = vector3LengthSquared(x, y, z);

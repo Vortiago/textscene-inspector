@@ -100,15 +100,22 @@ second font cannot reimplement it and drop it.
   bundler change or an asset-loading refactor that breaks this fails loudly.
 - **Scene fonts are not scale-invariant.** A canvas raster is resolution-dependent where
   an MSDF atlas is not. Acceptable: the 2D parity capture renders at zoom 1.
-- **`.woff2` cannot be table-parsed in the browser.** The SFNT reader takes
-  `head`/`hhea` from raw bytes, validated against `fontkit` on the corpus `.ttf`/`.otf`
-  files at 100% match. But a `.woff2` is Brotli-compressed, and `DecompressionStream`
-  has no `brotli`. Those fall back to canvas `fontBoundingBoxAscent/Descent`, measured at
-  a fixed 1000px reference size. At that size a real corpus `.woff2` matches its true
-  `hhea` values (950/250) **exactly**, while at 16px and 42px the same measurement drifts
-  by up to 12.5 units, because Chromium pixel-snaps small-size text metrics. The residual
-  risk: this is Chromium's bounding box, not FreeType's `hhea`, and a font whose author
-  pads its bounding box beyond `hhea` carries that padding in undetected.
+- **A `.woff` or `.woff2` decompresses for its tables.** `fontContainer.ts` opens a plain sfnt,
+  a WOFF and a WOFF2 into one table source, and reads only `head`, `hhea`, `OS/2` and `fvar`.
+  A WOFF table is a zlib stream. A WOFF2 is one Brotli stream, which a pure-JS decoder
+  decompresses. The decoder loads lazily, since `DecompressionStream` has no `brotli` format
+  and the CSP blocks WASM. Ascent and descent follow FreeType's choice between the `OS/2`
+  typographic, the `hhea` and the Windows metrics (`sfobjs.c:1380-1413`), validated against
+  `fontkit` on the corpus `.ttf`/`.otf` files. The loader passes the `fvar` defaults to
+  `FontFace` as descriptors, because Chromium otherwise maps the CSS weight `normal` onto
+  the `wght` axis, where Godot resets every axis to its default
+  (`text_server_adv.cpp:1930-1933`).
+- **A container that does not decompress keeps the canvas fallback.** Ascent and descent
+  then come from `fontBoundingBoxAscent/Descent`, measured at a fixed 1000px reference size.
+  At that size a corpus `.woff2` matched its `hhea` values (950/250) exactly, while at 16px
+  and 42px the same measurement drifted by up to 12.5 units, because Chromium pixel-snaps
+  small-size text metrics. This is Chromium's bounding box, not FreeType's, so a font that
+  pads its box carries that padding in undetected.
 - **A font that fails to load renders in the bundled default, never nothing.** This
   matches Godot's own fallback to the theme default, with a per-resource deduplicated
   `logger.warn` that names the node path. A `SystemFont` (OS family names) takes the same

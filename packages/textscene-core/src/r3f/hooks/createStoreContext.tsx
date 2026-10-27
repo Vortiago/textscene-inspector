@@ -19,7 +19,7 @@ export interface StoreContext<T> {
  * A store context whose stores start at `initial`. Without a provider, a writer sets a stand-in
  * store that nothing reads.
  *
- * @oneWay A React context that holds a store
+ * @canonical A React context that holds a store
  */
 export function createStoreContext<T>(initial: T, displayName: string): StoreContext<T> {
   const Context = createContext<ExternalStore<T>>(createExternalStore(initial));

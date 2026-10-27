@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
-import { pendingTextureWork } from '../../resources/textures/textureWork';
+import { textureWork } from '../../resources/textures/textureWork';
 import { fakeTiledUploads, type FakeUpload } from './fakeTiledUploads.testkit';
 import { useTiledUpload, useUploadedClone } from './useTiledUpload';
 
@@ -44,10 +44,10 @@ describe('useTiledUpload', () => {
     const texture = named('a');
     const retire = vi.fn();
     renderHook(() => useTiledUpload(texture, retire), { wrapper });
-    expect(pendingTextureWork()).toBe(1);
+    expect(textureWork.pending()).toBe(1);
 
     await finish(pending[0]);
-    expect(pendingTextureWork()).toBe(0);
+    expect(textureWork.pending()).toBe(0);
   });
 
   it('keeps showing the old texture while the new one uploads, then retires the old one', async () => {
@@ -158,7 +158,7 @@ describe('useTiledUpload', () => {
     expect(pending[1]?.cancelled).toBe(true);
     expect(retire).toHaveBeenCalledWith(first);
     expect(retire).toHaveBeenCalledWith(second);
-    expect(pendingTextureWork()).toBe(0);
+    expect(textureWork.pending()).toBe(0);
   });
 
   it('shows nothing, and retires what it held, when the texture goes away', async () => {

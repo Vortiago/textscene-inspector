@@ -17,7 +17,7 @@ import {
   cacheProceduralTexture,
   clearProceduralTextures,
 } from './proceduralTextureCache';
-import { beginTextureWork } from './textureWork';
+import { textureWork } from './textureWork';
 
 export type JobRunner = Pick<WorkerJobRunner, 'run'>;
 
@@ -181,7 +181,7 @@ function joinBuild(
 
 function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runner: JobRunner): Build {
   const controller = new AbortController();
-  const endWork = beginTextureWork();
+  const endWork = textureWork.begin();
   const settled = runner.run(plan.job, plan.input, controller.signal).then(
     (output) => {
       const texture = plan.wrap(output);

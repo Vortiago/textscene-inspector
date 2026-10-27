@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  fontWork,
   onSceneFontMetricsSettled,
   peekSceneFontMetrics,
   peekSettledSceneFontMetrics,
@@ -240,6 +241,36 @@ describe('onSceneFontMetricsSettled', () => {
       offA();
       offB();
     }
+  });
+});
+
+describe('fontWork', () => {
+  it('counts a font load from the peek that starts it until it settles, so a capture waits for it', async () => {
+    const leaf = fontFile(new ArrayBuffer(4));
+
+    peekSceneFontMetrics(leaf, 'Root/K');
+    expect(fontWork.pending()).toBe(1);
+    await settleLoads();
+
+    expect(fontWork.pending()).toBe(0);
+  });
+
+  it('counts one load for two peeks of one font, which share it', async () => {
+    const leaf = fontFile(new ArrayBuffer(4));
+
+    peekSceneFontMetrics(leaf, 'Root/L');
+    peekSettledSceneFontMetrics(leaf, 'Root/M');
+    expect(fontWork.pending()).toBe(1);
+    await settleLoads();
+
+    expect(fontWork.pending()).toBe(0);
+  });
+
+  it('counts no work for a font that settles by itself on the bundled default', () => {
+    peekSceneFontMetrics(undefined, 'Root/N');
+    peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/O');
+
+    expect(fontWork.pending()).toBe(0);
   });
 });
 
