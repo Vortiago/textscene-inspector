@@ -64,14 +64,15 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   if (!font) return null;
 
   return (glyphIndex, fontSizePx) => {
-    const matrix = font.matrixOf(glyphIndex);
-    if (!matrix) return null;
+    const fontDict = font.fontDictOf(glyphIndex);
+    if (!fontDict) return null;
+    const { matrix } = fontDict;
     const outlineScale = rescaledOutlineScale(
       getFontOutlineScale(headUnitsPerEm, fontSizePx),
       font.unitsPerEm,
       matrix
     );
-    const contours = interpretCharstring(font, glyphIndex, charstringScale(outlineScale));
+    const contours = interpretCharstring(font, glyphIndex, fontDict.private, charstringScale(outlineScale));
     if (!contours) return null;
     const outline = scaledOutline(contours);
     if (outline.x.length === 0) return null;

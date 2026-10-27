@@ -372,17 +372,18 @@ function blueZonesAt(blues: PrivateBlues, scale: number): BlueZones {
 
 /**
  * The contours glyph `glyphIndex` draws at `scale`, the 16.16 factor from a design unit to a
- * pixel, or null for a glyph that does not exist or whose charstring FreeType would refuse to load.
+ * pixel, with the Private DICT `glyphPrivate` of its font dict, or null for a glyph that does not
+ * exist or whose charstring FreeType would refuse to load.
  */
 export function interpretCharstring(
   font: CffFont,
   glyphIndex: number,
+  glyphPrivate: CffPrivate,
   scale: number
 ): CharstringContour[] | null {
   const charstring = font.charStrings.entry(glyphIndex);
   if (!charstring) return null;
   const contours: CharstringContour[] = [];
-  const glyphPrivate = font.privateOf(glyphIndex);
   try {
     new CharstringRun(
       font,

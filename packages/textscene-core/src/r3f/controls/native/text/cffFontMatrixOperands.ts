@@ -10,24 +10,17 @@
  */
 
 import { identityFontMatrix, type FontMatrix } from './cffFontMatrix';
+import { readRealDigits } from './cffReal';
 import { FIXED_16_16_ONE, ftDivFix, ftMulDiv } from './fontMetrics';
 
 /** The largest integer part of a 16.16 number. */
 const MAX_FIXED_INTEGER = 0x7fff;
-
-/** Past this, another digit would overflow the 32-bit number FreeType accumulates: it counts a power of ten instead. */
-const DIGIT_LIMIT = 0xccccccc;
-
-/** FreeType keeps at most nine digits after the point, and gives up on an exponent beyond 1000 (`cff_parse_real`). */
-const MAX_FRACTION_DIGITS = 9;
-const MAX_EXPONENT = 1000;
 
 /** The powers of ten that `cff_parse_font_matrix` accepts for its largest operand, and the spread between the largest and the smallest. */
 const MIN_LARGEST_SCALING = -9;
 const MAX_SCALING_SPREAD = 9;
 
 const REAL_OPERATOR = 30;
-const END_OF_DATA = -1;
 
 /** A number as a 16.16 value times a power of ten. */
 interface ScaledNumber {
@@ -41,70 +34,18 @@ const powerOfTen = (exponent: number): number => 10 ** exponent;
 
 const signed = (magnitude: number, isNegative: boolean): number => (isNegative ? -magnitude : magnitude);
 
-/** Whether a read of `size` bytes at `at` crosses `limit`, which FreeType tests with `p + size > limit && limit >= p`. */
-const crosses = (at: number, size: number, limit: number): boolean => at + size > limit && limit >= at;
-
 /** `cff_parse_real` with a scaling: the real whose operator `30` is at `start`, as 16.16 and the power of ten left over. */
 function parseScaledReal(dv: DataView, start: number, limit: number): ScaledNumber {
-  let at = start;
-  let phase = 4;
-  const nextNibble = (): number => {
-    if (phase) {
-      at++;
-      if (crosses(at, 1, limit)) return END_OF_DATA;
-    }
-    const nibble = (dv.getUint8(at) >> phase) & 0xf;
-    phase = 4 - phase;
-    return nibble;
-  };
-
-  let isNegative = false;
-  let hasOverflow = false;
-  let number = 0;
-  let exponent = 0;
-  let exponentAdd = 0;
-  let integerLength = 0;
-  let fractionLength = 0;
-
-  let nibble = nextNibble();
-  for (; nibble !== END_OF_DATA; nibble = nextNibble()) {
-    if (nibble === 0xe) isNegative = true;
-    else if (nibble > 9) break;
-    else if (number >= DIGIT_LIMIT) exponentAdd++;
-    else if (nibble || number) {
-      integerLength++;
-      number = number * 10 + nibble;
-    }
+  const digits = readRealDigits(dv, start, limit);
+  if (!digits || !digits.number) return ZERO_NUMBER;
+  if (digits.overflow !== 'none') {
+    return { value: digits.overflow === 'small' ? 0 : signed(0x7fffffff, digits.isNegative), scaling: 0 };
   }
-  if (nibble === 0xa) {
-    for (nibble = nextNibble(); nibble !== END_OF_DATA && nibble < 10; nibble = nextNibble()) {
-      if (!nibble && !number) exponentAdd--;
-      else if (number < DIGIT_LIMIT && fractionLength < MAX_FRACTION_DIGITS) {
-        fractionLength++;
-        number = number * 10 + nibble;
-      }
-    }
-  }
-  let isExponentNegative = false;
-  if (nibble === 0xc) {
-    isExponentNegative = true;
-    nibble = 0xb;
-  }
-  if (nibble === 0xb) {
-    for (nibble = nextNibble(); nibble !== END_OF_DATA && nibble < 10; nibble = nextNibble()) {
-      if (exponent > MAX_EXPONENT) hasOverflow = true;
-      else exponent = exponent * 10 + nibble;
-    }
-    if (isExponentNegative) exponent = -exponent;
-  }
-  if (nibble === END_OF_DATA || !number) return ZERO_NUMBER;
-  if (hasOverflow) return { value: isExponentNegative ? 0 : signed(0x7fffffff, isNegative), scaling: 0 };
-
   return scaledReal(
-    number,
-    exponent + exponentAdd + integerLength,
-    fractionLength + integerLength,
-    isNegative
+    digits.number,
+    digits.exponent + digits.integerLength,
+    digits.fractionLength + digits.integerLength,
+    digits.isNegative
   );
 }
 

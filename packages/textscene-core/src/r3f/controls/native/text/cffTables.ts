@@ -11,6 +11,7 @@
 
 import { resolveFontMatrices, type FontMatrix } from './cffFontMatrix';
 import { readFontMatrix } from './cffFontMatrixOperands';
+import { readRealValue, realEnd } from './cffReal';
 import { privateBluesOf, type PrivateBlues } from './cffPrivateDict';
 import {
   EXPERT_CHARSET,
@@ -38,20 +39,25 @@ export interface CffPrivate {
   readonly blues: PrivateBlues;
 }
 
+/** What a font dict gives the glyphs it holds. */
+export interface CffFontDict {
+  readonly private: CffPrivate;
+  readonly matrix: FontMatrix;
+}
+
 export interface CffFont {
   readonly dv: DataView;
   readonly isCff2: boolean;
   readonly charStrings: CffIndex;
   readonly globalSubrs: CffIndex;
-  /** The Private DICT of the font dict that holds `glyphIndex`. */
-  privateOf(glyphIndex: number): CffPrivate;
-  /** The units per em of the Top DICT, the ones a font dict's `matrixOf` is relative to. */
+  /** The units per em of the Top DICT, the ones the matrix of a font dict is relative to. */
   readonly unitsPerEm: number;
   /**
-   * The `FontMatrix` of the font dict that holds `glyphIndex`, or the Top DICT's for a font with no
-   * font dicts. Null when the `FDSelect` names a font dict the font lacks: FreeType refuses that glyph.
+   * What the font dict that holds `glyphIndex` gives it, or the Top DICT for a font with no font
+   * dicts. Null when the `FDSelect` names a font dict the font lacks: FreeType refuses that glyph
+   * (`cff_decoder_prepare`, cffdecode.c:2373-2378).
    */
-  matrixOf(glyphIndex: number): FontMatrix | null;
+  fontDictOf(glyphIndex: number): CffFontDict | null;
   /** The glyph the charset gives a StandardEncoding code, or null. CFF1 only: `seac` names its parts by standard character. */
   glyphOfStandardCode(code: number): number | null;
   /** The regions an ItemVariationData blends over, or null for a `vsindex` the store lacks. CFF2 only. */
@@ -150,9 +156,8 @@ class CffReader {
         take(this.dv.getInt32(at, false));
         at += 4;
       } else if (b0 === 30) {
-        const real = this.real(at);
-        take(real.value);
-        at = real.next;
+        take(readRealValue(this.dv, at - 1, end));
+        at = realEnd(this.dv, at - 1);
       } else if (b0 >= 32 && b0 <= 246) {
         take(b0 - 139);
       } else if (b0 >= 247 && b0 <= 254) {
@@ -160,19 +165,6 @@ class CffReader {
       }
     }
     return { operands: entries, fontMatrix };
-  }
-
-  /** The packed-nibble real number (Technical Note 5176 Table 5) whose first byte after the `30` operator is at `start`. */
-  private real(start: number): { value: number; next: number } {
-    let text = '';
-    let at = start;
-    for (;;) {
-      const byte = this.dv.getUint8(at++);
-      for (const nibble of [byte >> 4, byte & 0x0f]) {
-        if (nibble === 0x0f) return { value: Number(text), next: at };
-        text += REAL_NIBBLE_SYMBOLS[nibble];
-      }
-    }
   }
 }
 
@@ -202,9 +194,6 @@ function subrBias(count: number): number {
 }
 
 const EMPTY_INDEX: CffIndex = { count: 0, entry: () => null, subroutine: () => null };
-
-/** The character of each nibble of a packed real; 0xd is reserved and 0xf ends the number. */
-const REAL_NIBBLE_SYMBOLS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'E-', '', '-', ''];
 
 /** The glyph to font dict map of an `FDSelect` (Technical Note 5176 §19, 5177 for format 4). */
 function fdSelector(dv: DataView, at: number, glyphCount: number): (glyphIndex: number) => number {
@@ -356,6 +345,11 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
     readHeadUnitsPerEm(sfnt)
   );
 
+  const fontDictList = privates.map((priv, i): CffFontDict => ({
+    private: priv,
+    matrix: matrices.fontDicts[i]!,
+  }));
+
   const charsetAt = first(topOperands, OP_CHARSET) ?? 0;
   const sids = isCff2 ? [] : charsetSids(dv, base, charsetAt, charStrings.count);
   if (!sids) return null;
@@ -366,9 +360,8 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
     isCff2,
     charStrings,
     globalSubrs,
-    privateOf: (glyphIndex) => privates[fdOf(glyphIndex)] ?? privates[0]!,
     unitsPerEm: matrices.top.unitsPerEm,
-    matrixOf: (glyphIndex) => matrices.fontDicts[fdOf(glyphIndex)] ?? null,
+    fontDictOf: (glyphIndex) => fontDictList[fdOf(glyphIndex)] ?? null,
     glyphOfStandardCode: (code) => {
       if (code < 0 || code > 255) return null;
       const glyphIndex = sids.indexOf(standardEncodingSid(code));
