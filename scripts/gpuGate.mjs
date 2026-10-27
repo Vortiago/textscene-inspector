@@ -15,6 +15,8 @@ import { previewPort } from './visual/preview/ports.mjs';
  * `root` holds the page `index.html`. The page defines `window[entry]`, which returns the samples
  * as plain data. `failuresOf` answers one message for each check the samples fail. Sets the exit
  * code to 1 when any check fails.
+ *
+ * @canonical A GPU gate script
  */
 export async function runGpuGate({ name, harness, root, entry, failuresOf }) {
   const { port } = previewPort(harness);
