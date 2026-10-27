@@ -1,16 +1,13 @@
 /**
- * Reads the `@oneWay` tags of the core's source and writes them as the AGENTS.md list of shared
- * helpers. A tag sits in the doc comment of an export: its first line is the job, and the lines
- * after it, up to the next tag, are a note. The list then names only exports that exist.
+ * Reads the `@oneWay` tags of the core's source as a list of shared helpers. A tag sits in the doc
+ * comment of an export: its first line is the job, and the lines after it, up to the next tag, are
+ * a note. The list then names only exports that exist.
  */
 
 const DOC_COMMENT = /\/\*\*([\s\S]*?)\*\/[ \t]*\n([^\n]*)/g;
 const EXPORT_NAME =
   /^export\s+(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\*?|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/;
 const TAG = /^@(\w+)\s*(.*)$/;
-
-/** A column past which `renderOneWayList` wraps, as the hand-written text of AGENTS.md does. */
-const WIDTH = 100;
 
 /**
  * The tagged exports of one source file, in the order they appear. `file` is the path the list
@@ -47,8 +44,8 @@ function oneWayTag(body) {
 }
 
 /**
- * The markdown list: one item for each job, its helpers grouped by file, ordered by the path of
- * its first helper, with the test helpers last.
+ * The list: one line for each job, so a grep for a word of the job prints the whole entry. Its
+ * helpers are grouped by file, ordered by the path of the first, with the test helpers last.
  */
 export function renderOneWayList(entries) {
   const jobs = new Map();
@@ -56,12 +53,7 @@ export function renderOneWayList(entries) {
     if (!jobs.has(entry.job)) jobs.set(entry.job, []);
     jobs.get(entry.job).push(entry);
   }
-  return (
-    [...jobs.values()]
-      .sort(compareJobs)
-      .map((helpers) => wrap(item(helpers)))
-      .join('\n') + '\n'
-  );
+  return [...jobs.values()].sort(compareJobs).map(item).join('\n') + '\n';
 }
 
 function compareJobs([a], [b]) {
@@ -85,22 +77,4 @@ function item(helpers) {
 
 function joinAnd(names) {
   return names.length < 3 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
-}
-
-/** Greedy wrap at `WIDTH` with a two-space hang. A code span is one word, so it never breaks. */
-function wrap(text) {
-  const words = text.match(/(?:`[^`]*`|[^\s`])+/g);
-  const lines = [];
-  let line = '';
-  for (const word of words) {
-    const next = line ? `${line} ${word}` : word;
-    if (next.length > WIDTH && line) {
-      lines.push(line);
-      line = `  ${word}`;
-    } else {
-      line = next;
-    }
-  }
-  lines.push(line);
-  return lines.join('\n');
 }

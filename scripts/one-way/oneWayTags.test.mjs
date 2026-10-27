@@ -104,13 +104,9 @@ describe('renderOneWayList', () => {
     ).toEqual(['- Angles: `d', '- Paths: `jo', '- In tests, ', '']);
   });
 
-  it('wraps at 100 columns without breaking a code span', () => {
-    const note = 'Read it with `an as const object` and a long tail of words that runs past the edge.';
-    const lines = renderOneWayList([entry('Angles', 'degToRad', 'godot/math/math.ts', note)])
-      .trimEnd()
-      .split('\n');
-    expect(lines.every((line) => line.length <= 100)).toBe(true);
-    expect(lines.slice(1).every((line) => line.startsWith('  '))).toBe(true);
-    expect(lines.some((line) => line.includes('`an as const object`'))).toBe(true);
+  it('keeps a long entry on one line, so a grep for one word prints all of it', () => {
+    const note = 'Read it with `an as const object` and a long tail of words that runs well past any edge.';
+    const list = renderOneWayList([entry('Angles', 'degToRad', 'godot/math/math.ts', note)]);
+    expect(list.trimEnd().split('\n')).toHaveLength(1);
   });
 });
