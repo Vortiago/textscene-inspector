@@ -108,9 +108,10 @@ function arrayMeshSurfaces(
     warn(`[CSGMesh3D] ${label} builds no brush: ${String(error)}`);
     return [];
   }
-  // A points surface adds nothing: the brush builder skips every surface that is not triangles.
+  // A points or strip surface adds nothing: the brush builder skips every surface that is not
+  // PRIMITIVE_TRIANGLES (`csg_shape.cpp:1137-1139`).
   return mesh.surfaces
-    .filter((surface) => !surface.isPoints)
+    .filter((surface) => !surface.isPoints && !surface.isTriangleStrip)
     .map((surface) => ({
       positions: surface.positions,
       normals: surface.normals,

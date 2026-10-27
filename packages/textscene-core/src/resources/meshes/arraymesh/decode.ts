@@ -183,6 +183,7 @@ function decodeSurfaces(
       tangents,
       indices,
       ...(isPoints && { isPoints }),
+      ...(isStrip && { isTriangleStrip: isStrip }),
       ...readMaterial(block),
     });
   }
