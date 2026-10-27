@@ -122,7 +122,7 @@ Screenshot: WEB-08-a, the chip on `GPUParticles2D` in `example-dodge-player.tscn
 
 Expected:
 - SpotLight3D: a cone. OmniLight3D: a sphere at its range. DirectionalLight3D: an octahedron.
-- Camera3D: a frustum.
+- Camera3D: a frustum in the camera colour, faint while the camera is not selected.
 
 Screenshots: WEB-09-a lights, WEB-09-b camera.
 

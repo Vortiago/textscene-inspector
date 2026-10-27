@@ -1,5 +1,5 @@
 /**
- * Reads the `@canonical` tags of the core's source as a list of shared helpers. A tag sits in the
+ * Reads the `@canonical` tags of the repo's source as a list of shared helpers. A tag sits in the
  * doc comment of an export: its first line is the job, and the lines after it, up to the next tag,
  * are a note. The list then names only exports that exist.
  */
@@ -13,7 +13,7 @@ const TAG = /^@(\w+)\s*(.*)$/;
 
 /**
  * The tagged exports of one source file, in the order they appear. `file` is the path the list
- * prints, relative to the core's `src/`. Throws on a tag that is not on an export or has no job.
+ * prints, relative to the repo root. Throws on a tag that is not on an export or has no job.
  */
 export function canonicalEntries(text, file) {
   const entries = [];

@@ -8,6 +8,8 @@ renders_as: a texture projected onto the surfaces its box intersects
 
 Godot's texture projector: it casts `texture_albedo` down the node's local -Y axis onto the surfaces inside its `size` box, blended onto the lit surface.
 
+The editor draws the box as a gizmo (`decal_gizmo_plugin.cpp`). The previewer draws it for every decal when the Gizmos toggle is on, faint while the decal is not selected (ADR-0056). Godot's runtime draws no box, so a capture that compares with Godot keeps the toggle off.
+
 ## Projection
 
 <!-- compare: image=unit-decal status=limitation fixture=unit-decal.tscn -->

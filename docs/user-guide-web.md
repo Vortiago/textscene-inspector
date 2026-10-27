@@ -41,7 +41,7 @@ The right dock holds the scene tree above three tabs.
 - **Cameras:** view the scene through one of its Camera3D nodes.
 
 A click on a mesh in the viewport also selects it.
-Lights, cameras and particle emitters have no geometry, so they show a wireframe gizmo. The **Gizmos** toggle in **Display** shows or hides every gizmo, and it is on by default. As in Godot, some gizmos draw for every node and fade when the node is not selected: an emitter box, a path curve, a spring arm, a vehicle wheel, a decal box, a visibility notifier and a fog volume. A marker, a 2D path and a light occluder draw at full colour. A gizmo of a node inside an instanced scene is grey, as in Godot, unless the scene file lists the instance with `[editable]`. Lights, cameras, audio players, reflection probes and VoxelGI draw their gizmo only for the selected node.
+Lights, cameras and particle emitters have no geometry, so they show a wireframe gizmo. The **Gizmos** toggle in **Display** shows or hides every gizmo, and it is on by default. As in Godot, some gizmos draw for every node and fade when the node is not selected: an emitter box, a path curve, a spring arm, a vehicle wheel, a camera frustum, a decal box, a visibility notifier and a fog volume. A marker, a 2D path and a light occluder draw at full colour. A gizmo of a node inside an instanced scene is grey, as in Godot, unless the scene file lists the instance with `[editable]`. Lights, audio players, reflection probes and VoxelGI draw their gizmo only for the selected node.
 
 ## Fix a missing file
 

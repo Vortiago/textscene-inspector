@@ -787,7 +787,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Camera3D" hidden>
       <header class="sheet-head">
         <h2>Camera3D</h2>
-        <span class="renders">renders as a frustum gizmo for the selected node</span>
+        <span class="renders">renders as Godot's editor frustum gizmo, drawn for every camera</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_camera3d.html" target="_blank" rel="noopener" title="Godot class reference for Camera3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/camera_3d.h" target="_blank" rel="noopener" title="Godot engine source for Camera3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-camera3d.tscn" target="_blank" rel="noopener" title="Open unit-camera3d.tscn in the previewer"><code>unit-camera3d.tscn</code> ↗</a>
@@ -808,7 +808,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>An authored viewpoint that draws nothing at runtime. The previewer matches that and draws only a frustum gizmo for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). With nothing selected, the camera is absent from both images.</p>
+      <div class="prose"><p>An authored viewpoint that draws nothing at runtime. The previewer matches that, so a capture with the Gizmos toggle off shows no camera in either image. With the toggle on, the previewer draws Godot's editor gizmo (<code>camera_3d_gizmo_plugin.cpp</code>) for every camera, faint while the camera is not selected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). The gizmo sits on the node, and it takes the aspect of the viewport that holds the camera.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Camera3D</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>attributes</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>compositor</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>cull_mask</code></td><td>32-bit layer mask (layers 1-32)</td><td></td></tr><tr><td><code>current</code></td><td>true or false</td><td></td></tr><tr><td><code>doppler_tracking</code></td><td>enum 0-2 (DISABLED/IDLE_STEP/PHYSICS_STEP)</td><td>warning</td></tr><tr><td><code>environment</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>far</code></td><td>float &gt;= 0.01</td><td>warning below</td></tr><tr><td><code>fov</code></td><td>float 1-179</td><td>error</td></tr><tr><td><code>frustum_offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>h_offset</code></td><td>float</td><td></td></tr><tr><td><code>keep_aspect</code></td><td>enum 0-1 (KEEP_WIDTH/KEEP_HEIGHT)</td><td>warning</td></tr><tr><td><code>near</code></td><td>float &gt;= 0.001</td><td>warning below</td></tr><tr><td><code>projection</code></td><td>enum 0-2 (PERSPECTIVE/ORTHOGONAL/FRUSTUM)</td><td>error</td></tr><tr><td><code>size</code></td><td>float &gt;= 0.001</td><td>error at or below 0.00001, warning below 0.001</td></tr><tr><td><code>v_offset</code></td><td>float</td><td></td></tr></tbody></table></div>
@@ -817,7 +817,7 @@ tr:last-child td{border-bottom:0}
 <h3>Exposure</h3>
 <p>The exposure of a valid <code>attributes</code> replaces the world's while the world renders through that camera (<code>renderer_scene_cull.cpp</code>). The WorldEnvironment sheet lists what the exposure scales.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> A CameraAttributesPhysical sets no <code>fov</code>, <code>near</code> or <code>far</code>, and no depth of field draws.</li><li><strong>Not drawn</strong> A Camera3D in a SubViewport that shares the root world leaves that SubViewport at the exposure of the root world.</li><li><strong>Editor only</strong> The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.</li></ul></div>
+<ul><li><strong>Not drawn</strong> A CameraAttributesPhysical sets no <code>fov</code>, <code>near</code> or <code>far</code>, and no depth of field draws.</li><li><strong>Not drawn</strong> A Camera3D in a SubViewport that shares the root world leaves that SubViewport at the exposure of the root world.</li><li><strong>Editor only</strong> The frustum gizmo appears only in Godot's editor, and here it draws for every camera when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="CanvasGroup" hidden>
       <header class="sheet-head">
@@ -1924,7 +1924,8 @@ tr:last-child td{border-bottom:0}
         <span class="status st-limitation">Limitation</span>
       </header>
       
-      <div class="prose intro"><p>Godot's texture projector: it casts <code>texture_albedo</code> down the node's local -Y axis onto the surfaces inside its <code>size</code> box, blended onto the lit surface.</p></div>
+      <div class="prose intro"><p>Godot's texture projector: it casts <code>texture_albedo</code> down the node's local -Y axis onto the surfaces inside its <code>size</code> box, blended onto the lit surface.</p>
+<p>The editor draws the box as a gizmo (<code>decal_gizmo_plugin.cpp</code>). The previewer draws it for every decal when the Gizmos toggle is on, faint while the decal is not selected (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>). Godot's runtime draws no box, so a capture that compares with Godot keeps the toggle off.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Projection</h3><span class="status st-limitation">Limitation</span></div>
@@ -7859,7 +7860,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="XRCamera3D" hidden>
       <header class="sheet-head">
         <h2>XRCamera3D</h2>
-        <span class="renders">renders as a frustum gizmo for the selected node, as Camera3D</span>
+        <span class="renders">renders as a frustum gizmo for every camera, as Camera3D</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_xrcamera3d.html" target="_blank" rel="noopener" title="Godot class reference for XRCamera3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h" target="_blank" rel="noopener" title="Godot engine source for XRCamera3D">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-xr-camera-3d.tscn" target="_blank" rel="noopener" title="Open unit-xr-camera-3d.tscn in the previewer"><code>unit-xr-camera-3d.tscn</code> ↗</a>
@@ -7868,13 +7869,13 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-unreviewed"></div>
       
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
-      <div class="prose"><p>The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same frustum gizmo for the selected node (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>) from the same component.</p>
+      <div class="prose"><p>The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same frustum gizmo for every camera (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0056-editor-gizmos-follow-godots-view-gizmos.md" target="_blank" rel="noopener">ADR-0056</a>) from the same component.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 inherited from Node3D, 10 inherited from Node); <code>XRCamera3D</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-camera3d-properties</code> (type-family match)</td><td><code>camera3d-multiple-current</code></td><td>info</td></tr><tr><td></td><td><code>camera3d-invalid-clipping-planes</code></td><td>error</td></tr><tr><td></td><td><code>camera3d-zero-depth-range</code></td><td>warning</td></tr><tr><td><code>valid-xrcamera3d-parent</code></td><td><code>xrcamera3d-parent-not-xrorigin3d</code></td><td>warning</td></tr></tbody></table></div>
 <p>XRCamera3D has no <code>linterParser.ts</code> of its own, so strict parsing validates whatever Node3D and Camera3D declare. A malformed inherited <code>transform</code> is a strict error, while the lenient <code>parseCamera3D</code>, through <code>parseNode3D</code>, keeps rendering with the identity transform.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> The frustum gizmo draws for the selected node when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
+<ul><li><strong>Editor only</strong> The frustum gizmo draws for every camera when the Gizmos toggle is on, which a capture keeps off.</li></ul></div>
     </article>
     <article class="sheet" data-type="XRController3D" hidden>
       <header class="sheet-head">

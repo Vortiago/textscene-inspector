@@ -9,6 +9,7 @@ import { useEffect, useMemo } from 'react';
 import { extend } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
@@ -19,16 +20,15 @@ import { useSceneDecals } from '../../../r3f/decal/useSceneDecals';
 import { useTexture2DRid } from '../../../resources/useTexture2D';
 import type { DecalProperties } from './types';
 import { holdDecalTexture, releaseDecalTexture } from './decalAtlas';
-import { aabbEdges, centredAabb } from '../../../godot/math/aabb';
+import { decalGizmoLines } from './gizmoLines';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector3 } from '../../../godot/math/vector';
 
-/** Wireframe colour and colour alpha of the projection-box gizmo. */
-const BOX_COLOR = '#ff9d3b';
-const BOX_ALPHA = 0.9;
+/** `editors/3d_gizmos/gizmo_colors/decal` (`editor_settings.cpp:884`). */
+const GIZMO_COLOUR = godotColorToLinear({ r: 0.6, g: 0.5, b: 1 });
 
-/** The edges of a unit cube. `size` scales the gizmo group, so animating `size` stays a cheap scale write. */
-const UNIT_BOX_EDGES = new Float32Array(aabbEdges(centredAabb({ x: 1, y: 1, z: 1 })));
+/** The gizmo of a unit box. `size` scales the gizmo group, so animating `size` stays a cheap scale write. */
+const UNIT_BOX_LINES = decalGizmoLines({ x: 1, y: 1, z: 1 });
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const DecalElement = extend(DecalObject);
@@ -77,11 +77,11 @@ export function Decal({ node, children }: NodeComponentProps) {
   return (
     <Node3D node={node}>
       <DecalElement look={decal} albedo={albedo} treeOrder={treeOrder} />
-      {/* Godot's editor outlines the projector box for every decal, faint while it is not selected
+      {/* Godot's editor draws the projector box for every decal, faint while it is not selected
           (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
       <PluginGizmo drawnFor="every-node">
         <group scale={[size.x, size.y, size.z]}>
-          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} />
+          <GizmoLine positions={UNIT_BOX_LINES} color={GIZMO_COLOUR} />
         </group>
       </PluginGizmo>
       {children}

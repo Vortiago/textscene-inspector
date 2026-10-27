@@ -14,12 +14,20 @@ const TEST_RE = /\.(test|spec|testkit)\.(tsx?|m?js)$|(^|\/)testing\//;
 /** Never walked: the list `sourceScan.ts` reads, so both scans see the same files. */
 const SKIPPED_DIRECTORIES = new Set(skippedDirectories);
 
-/** A test, a test kit or a file under `testing/` is a test file. Its imports prove nothing. */
+/**
+ * A test, a test kit or a file under `testing/` is a test file. Its imports prove nothing.
+ *
+ * @canonical Whether a script reads a file as a test file
+ */
 export function isTestFile(path) {
   return TEST_RE.test(path);
 }
 
-/** Every `.ts` and `.tsx` file under `dir`, keyed by its path relative to `dir`, POSIX-style. */
+/**
+ * Every `.ts` and `.tsx` file under `dir`, keyed by its path relative to `dir`, POSIX-style.
+ *
+ * @canonical A source tree read into memory by a script
+ */
 export function readSourceTree(dir) {
   return readFiles(dir, [dir], SOURCE_RE);
 }
@@ -27,6 +35,8 @@ export function readSourceTree(dir) {
 /**
  * Every source file under `dirs` that may import a package's tree, script files included, keyed by
  * its path relative to `root`, POSIX-style.
+ *
+ * @canonical A source tree read into memory by a script
  */
 export function readImporters(root, dirs) {
   return readFiles(root, dirs, IMPORTER_RE);
