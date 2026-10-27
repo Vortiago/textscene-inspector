@@ -10,6 +10,7 @@ import {
   geometryDrawsPoints,
   godotSurfaceParts,
   godotSurfacesGeometry,
+  godotTriangleVertices,
   type GodotSurface,
 } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
@@ -275,5 +276,33 @@ describe('godotSurfaceParts', () => {
 
   it('draws no part for a mesh with no surface', () => {
     expect(godotSurfaceParts([])).toEqual([]);
+  });
+});
+
+describe('godotTriangleVertices', () => {
+  const quad = (indices: number[]): GodotSurface => ({
+    positions: new Float32Array(12),
+    indices,
+  });
+
+  it("gives each triangle's vertices in the order Godot stored them", () => {
+    const geometry = godotSurfacesGeometry([quad([0, 1, 2, 0, 2, 3])]);
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2, 0, 2, 3]);
+  });
+
+  it('offsets the vertices of a later surface into the merged geometry', () => {
+    const geometry = godotSurfacesGeometry([quad([0, 1, 2]), quad([0, 1, 2])]);
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2, 4, 5, 6]);
+  });
+
+  it('reads a geometry with no index three vertices at a time, in the stored winding', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 2, 1]);
+  });
+
+  it('drops the vertices of an incomplete triangle', () => {
+    const geometry = godotSurfacesGeometry([quad([0, 1, 2, 3])]);
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2]);
   });
 });
