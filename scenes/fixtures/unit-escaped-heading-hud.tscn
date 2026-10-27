@@ -1,0 +1,16 @@
+; The sub-scene for `integration-escaped-heading-lamp`: a blue box to the left of the origin.
+
+[gd_scene load_steps=3 format=3 uid="uid://unitescapedheadinghud"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_hud"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hud"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Hud" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("BoxMesh_hud")
+surface_material_override/0 = SubResource("StandardMaterial3D_hud")

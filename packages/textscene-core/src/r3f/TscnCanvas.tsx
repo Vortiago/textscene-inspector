@@ -6,6 +6,7 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
@@ -40,7 +41,7 @@ export function TscnSceneContents() {
   const hierarchy = useOptionalHierarchy();
   const sceneGraph = hierarchy?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const nodes = rootScene?.nodes ?? null;
+  const nodes = useSeatedRoots() ?? null;
   // A grid and a prompt, since an empty black canvas looks like a renderer crash.
   const isEmpty = nodes === null || nodes.length === 0;
 
