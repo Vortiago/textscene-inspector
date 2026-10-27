@@ -409,7 +409,10 @@ export function contourText(contours: GlyphContours): string[] {
   });
 }
 
-/** What glyph `glyphIndex` of `font` draws at `fontSizePx`, as `contourText`, or null when it draws nothing. */
+/**
+ * What glyph `glyphIndex` of `font` draws at `fontSizePx`, as `contourText`, or null when it draws nothing.
+ * @canonical The points a built CFF test font draws, as text
+ */
 export function drawnAt(font: TestCffFont, glyphIndex: number, fontSizePx: number): string[] | null {
   const contours = parseSfntOutlines(buildTestCffFont(font))?.glyphContours(glyphIndex, fontSizePx);
   return contours ? contourText(contours) : null;

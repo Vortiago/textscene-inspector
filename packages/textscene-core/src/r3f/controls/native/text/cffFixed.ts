@@ -12,16 +12,23 @@ import { FIXED_16_16_ONE } from './fontMetrics';
 
 const HALF = FIXED_16_16_ONE / 2;
 
+/** @canonical A whole number as 16.16 fixed point, for FreeType-ported code */
 export function intToFixed(value: number): number {
   return value * FIXED_16_16_ONE;
 }
 
-/** `cf2_doubleToFixed`: rounded half up. */
+/**
+ * `cf2_doubleToFixed`: rounded half up.
+ * @canonical A double as 16.16 fixed point, for FreeType-ported code
+ */
 export function doubleToFixed(value: number): number {
   return Math.floor(value * FIXED_16_16_ONE + 0.5);
 }
 
-/** `cf2_fixedRound`: the nearest whole number, half up. */
+/**
+ * `cf2_fixedRound`: the nearest whole number, half up.
+ * @canonical Round a 16.16 fixed point value to a whole pixel
+ */
 export function roundFixed(value: number): number {
   return Math.floor((value + HALF) / FIXED_16_16_ONE) * FIXED_16_16_ONE;
 }
@@ -31,7 +38,10 @@ export function fractionOfFixed(value: number): number {
   return value - Math.floor(value / FIXED_16_16_ONE) * FIXED_16_16_ONE;
 }
 
-/** `FT_MulDiv`: `a * b / c`, rounded half up on the magnitude. A zero `c` gives the largest 32-bit magnitude, signed by `a * b`. */
+/**
+ * `FT_MulDiv`: `a * b / c`, rounded half up on the magnitude. A zero `c` gives the largest 32-bit magnitude, signed by `a * b`.
+ * @canonical FreeType's `a * b / c` in integers
+ */
 export function ftMulDiv(a: number, b: number, c: number): number {
   if (c === 0) return a * b < 0 ? -0x7fffffff : 0x7fffffff;
   const sign = Math.sign(a) * Math.sign(b) * Math.sign(c);
