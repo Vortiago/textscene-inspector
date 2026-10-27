@@ -28,7 +28,7 @@ export function useTextureView(
   source: THREE.Texture | null | undefined,
   sampler: ViewSampler | null | undefined
 ): THREE.Texture | null {
-  return useView(source, sampler, (from, wanted) => (wanted ? textureView(from, wanted) : from));
+  return useView(source, sampler, sharedView);
 }
 
 /**
@@ -40,10 +40,14 @@ export function useOwnedTextureView(
   source: THREE.Texture | null | undefined,
   sampler: ViewSampler | null | undefined
 ): THREE.Texture | null {
-  return useView(source, sampler, (from, wanted) => (wanted ? ownedTextureView(from, wanted) : null));
+  return useView(source, sampler, ownedView);
 }
 
 type MakeView = (source: THREE.Texture, sampler: ViewSampler | null | undefined) => THREE.Texture | null;
+
+const sharedView: MakeView = (source, sampler) => (sampler ? textureView(source, sampler) : source);
+
+const ownedView: MakeView = (source, sampler) => (sampler ? ownedTextureView(source, sampler) : null);
 
 function useView(
   source: THREE.Texture | null | undefined,
@@ -51,9 +55,7 @@ function useView(
   make: MakeView
 ): THREE.Texture | null {
   const stated = useStatedByValue(sampler);
-  // `make` is one function per hook, so it never changes the view.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const view = useMemo(() => (source ? make(source, stated) : null), [source, stated]);
+  const view = useMemo(() => (source ? make(source, stated) : null), [source, stated, make]);
   return useDrawnView(view);
 }
 
