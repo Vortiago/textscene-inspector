@@ -43,15 +43,18 @@ function visibleTargets(
   return [...nodes, ...frames];
 }
 
+/** `values` with `objects` set to `value`, or the same map when it holds that already, so a steady push re-renders nothing. */
 function withValue(
   values: AnimatedVisible,
   objects: readonly THREE.Object3D[],
   value: number[] | null
 ): AnimatedVisible {
+  const visible = value === null ? undefined : value[0] !== 0;
+  if (objects.every((object) => values.get(object) === visible)) return values;
   const next = new Map(values);
   for (const object of objects) {
-    if (value === null) next.delete(object);
-    else next.set(object, value[0] !== 0);
+    if (visible === undefined) next.delete(object);
+    else next.set(object, visible);
   }
   return next;
 }

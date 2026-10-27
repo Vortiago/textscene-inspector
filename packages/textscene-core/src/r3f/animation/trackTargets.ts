@@ -112,7 +112,7 @@ export function bindClip(clip: AnimationClip, targets: ReadonlyMap<string, Objec
       warn(`[AnimationPlayer] "${clip.name}": no node at "${path}", so its ${property} track binds nothing`);
       return [];
     }
-    const rest = godotBoneRest(target);
+    const rest = restByUuid.has(target.uuid) ? undefined : godotBoneRest(target);
     if (rest) restByUuid.set(target.uuid, rest);
     const renamed = track.clone();
     renamed.name = `${target.uuid}${property}`;

@@ -22,10 +22,9 @@ export interface GlbFrame {
   kind: GodotFrameKind;
   /** The entry of the object it follows. */
   entry: GlbObjectEntry;
-  /**
-   * The group that holds what is below the node, or the object it follows when it holds nothing. A
-   * node attached below the path is added to it.
-   */
+  /** The group that holds the root bones or what hangs on the bone. Null when the GLB holds nothing there. */
+  group: THREE.Object3D | null;
+  /** Where a node attached below the path is added: the group, or the object the frame follows. */
   host: THREE.Object3D;
 }
 
@@ -42,15 +41,16 @@ const pathTables = perObject((entries: readonly GlbObjectEntry[]): PathTables =>
   for (const entry of entries) {
     for (const path of godotNodePaths(entry.object)) nodes.set(path, entry);
     for (const { path, kind } of godotFrames(entry.object)) {
-      frames.set(path, { path, kind, entry, host: frameHost(entry.object, path) });
+      const group = frameGroup(entry.object, path);
+      frames.set(path, { path, kind, entry, group, host: group ?? entry.object });
     }
   }
   return { nodes, frames };
 });
 
-/** The group of the frame at `path` if `object` holds one, else `object`. */
-function frameHost(object: THREE.Object3D, path: string): THREE.Object3D {
-  return object.children.find((child) => frameGroupPath(child) === path) ?? object;
+/** The group of the frame at `path` if `object` holds one. */
+function frameGroup(object: THREE.Object3D, path: string): THREE.Object3D | null {
+  return object.children.find((child) => frameGroupPath(child) === path) ?? null;
 }
 
 /**
@@ -95,15 +95,11 @@ export function matchGlbNode(entries: readonly GlbObjectEntry[], godotPath: stri
 export function findGlbTarget(entries: readonly GlbObjectEntry[], godotPath: string): GlbTarget | null {
   const entry = findGlbNode(entries, godotPath);
   if (entry) return { entry, host: entry.object };
-  const frame = findGlbFrame(entries, godotPath);
-  return frame && { entry: frame.entry, host: frame.host };
+  return findGlbFrame(entries, godotPath);
 }
 
 /** The entry a node attached below a path is placed by, and the object it is added to. */
-export interface GlbTarget {
-  entry: GlbObjectEntry;
-  host: THREE.Object3D;
-}
+export type GlbTarget = Pick<GlbFrame, 'entry' | 'host'>;
 
 /**
  * The object that holds the properties of the Godot node at `godotPath` inside the loaded GLB
@@ -113,6 +109,6 @@ export interface GlbTarget {
 export function findGlbObject(root: THREE.Object3D, godotPath: string): THREE.Object3D | null {
   const entries = flattenGlbObjects(root);
   const frame = findGlbFrame(entries, godotPath);
-  if (frame) return frame.kind === 'skeleton' ? frame.host : null;
+  if (frame) return frame.kind === 'skeleton' ? frame.group : null;
   return findGlbNode(entries, godotPath)?.object ?? null;
 }

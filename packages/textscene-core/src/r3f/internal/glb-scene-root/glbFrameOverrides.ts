@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
-import { frameGroupPath, godotNodePaths } from '../../../resources/formats/glb/godotNodes';
+import { godotNodePaths } from '../../../resources/formats/glb/godotNodes';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { decomposeForR3F } from '../../nodeTransform';
 import type { GlbObjectEntry } from './glbHierarchy';
@@ -46,8 +46,8 @@ export function applyGlbFrameOverride(
     return false;
   }
   // A Skeleton3D with no root bone in this GLB has no group to move.
-  if (frameGroupPath(frame.host) === undefined) return false;
-  writeNodeTransform(frame.host, decomposeForR3F(transform));
+  if (!frame.group) return false;
+  writeNodeTransform(frame.group, decomposeForR3F(transform));
   return true;
 }
 
@@ -60,7 +60,7 @@ export function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: Glb
   const nodes = entries
     .filter(({ object }) => godotNodePaths(object).some((path) => path.startsWith(below)))
     .map(({ object }) => object);
-  return frameGroupPath(frame.host) === undefined ? nodes : [frame.host, ...nodes];
+  return frame.group ? [frame.group, ...nodes] : nodes;
 }
 
 /**
@@ -69,7 +69,7 @@ export function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: Glb
  * @oneWay The Skeleton3D and BoneAttachment3D groups of an instanced GLB
  */
 export function frameGroupsOf(entries: readonly GlbObjectEntry[]): THREE.Object3D[] {
-  return glbFrames(entries).flatMap(({ host }) => (frameGroupPath(host) === undefined ? [] : [host]));
+  return glbFrames(entries).flatMap(({ group }) => group ?? []);
 }
 
 function warnUnreadProperties(entries: readonly GlbObjectEntry[], frame: GlbFrame, override: TscnNode): void {

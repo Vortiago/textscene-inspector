@@ -8,11 +8,12 @@
 
 import * as THREE from 'three';
 
-/** Written only by `skeletonFrame`. A mesh's skeleton does not change once the GLB loads. */
-const frameOfMesh = new WeakMap<THREE.SkinnedMesh, THREE.Object3D | null>();
-
-/** Written only by `placeSkinnedMeshInSkeletonSpace`, and never cleared: a placed mesh stays placed. */
-const placedMeshes = new WeakSet<THREE.Object3D>();
+/**
+ * The meshes `placeSkinnedMeshInSkeletonSpace` placed, never cleared: a placed mesh stays placed.
+ * The value is the mesh's frame, which `skeletonFrame` writes on its first ask, because a skeleton
+ * does not change once the GLB loads. Undefined until then, and null for a skeleton with no bone.
+ */
+const frameOfPlacedMesh = new WeakMap<THREE.Object3D, THREE.Object3D | null | undefined>();
 
 const frameInverse = new THREE.Matrix4();
 const parentInverse = new THREE.Matrix4();
@@ -22,15 +23,16 @@ const parentInverse = new THREE.Matrix4();
  * one in tree order when several are equally near. Null for a skeleton with no bone.
  */
 function skeletonFrame(mesh: THREE.SkinnedMesh): THREE.Object3D | null {
-  if (!frameOfMesh.has(mesh)) {
-    const depth = (bone: THREE.Object3D): number => (bone.parent ? depth(bone.parent) + 1 : 0);
-    const nearest = mesh.skeleton.bones.reduce<THREE.Bone | undefined>(
-      (best, bone) => (!best || depth(bone) < depth(best) ? bone : best),
-      undefined
-    );
-    frameOfMesh.set(mesh, nearest?.parent ?? null);
-  }
-  return frameOfMesh.get(mesh)!;
+  const known = frameOfPlacedMesh.get(mesh);
+  if (known !== undefined) return known;
+  const depth = (bone: THREE.Object3D): number => (bone.parent ? depth(bone.parent) + 1 : 0);
+  const nearest = mesh.skeleton.bones.reduce<THREE.Bone | undefined>(
+    (best, bone) => (!best || depth(bone) < depth(best) ? bone : best),
+    undefined
+  );
+  const frame = nearest?.parent ?? null;
+  frameOfPlacedMesh.set(mesh, frame);
+  return frame;
 }
 
 function updateMatrixInSkeletonSpace(this: THREE.SkinnedMesh): void {
@@ -53,7 +55,7 @@ function updateMatrixInSkeletonSpace(this: THREE.SkinnedMesh): void {
  * @oneWay The Godot world matrix of a node in an instanced GLB, which is not three's for a skinned mesh
  */
 export function godotMatrixWorld(object: THREE.Object3D, target: THREE.Matrix4): THREE.Matrix4 {
-  const frame = placedMeshes.has(object) ? skeletonFrame(object as THREE.SkinnedMesh) : null;
+  const frame = frameOfPlacedMesh.has(object) ? skeletonFrame(object as THREE.SkinnedMesh) : null;
   if (!frame) return target.copy(object.matrixWorld);
   return target.compose(object.position, object.quaternion, object.scale).premultiply(frame.matrixWorld);
 }
@@ -64,7 +66,7 @@ export function placeSkinnedMeshInSkeletonSpace(mesh: THREE.SkinnedMesh): void {
   // transform of the mesh node and its parents were at load.
   mesh.bind(mesh.skeleton, new THREE.Matrix4());
   mesh.bindMode = THREE.DetachedBindMode;
-  placedMeshes.add(mesh);
+  frameOfPlacedMesh.set(mesh, undefined);
   mesh.position.set(0, 0, 0);
   mesh.quaternion.identity();
   mesh.scale.set(1, 1, 1);
