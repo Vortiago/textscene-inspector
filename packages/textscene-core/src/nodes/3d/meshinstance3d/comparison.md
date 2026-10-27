@@ -39,5 +39,5 @@ The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
-- **Resource gap** A TextMesh whose font has no outlines the previewer reads draws as a wireframe box, and the node's details name the type.
+- **Resource gap** A TextMesh with a font the previewer cannot read draws a wireframe box, and the node's details name the type.
 - **Approximated** A MeshInstance3D reads `skeleton` and `skin` and does not deform its mesh, so a skinned mesh draws in its rest pose.

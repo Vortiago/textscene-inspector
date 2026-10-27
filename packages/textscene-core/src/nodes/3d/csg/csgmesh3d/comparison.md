@@ -42,4 +42,4 @@ A `mesh` that is an open brush adds nothing to the solid, as in Godot. A PlaneMe
 
 ## Known limitations
 
-- **Resource gap** A TextMesh whose font has no outlines the previewer reads adds nothing to the solid, and the node's details name the type.
+- **Resource gap** A TextMesh with a font the previewer cannot read adds nothing to the solid, and the node's details name the type.

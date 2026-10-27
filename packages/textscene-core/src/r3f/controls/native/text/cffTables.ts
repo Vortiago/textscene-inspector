@@ -1,7 +1,7 @@
 /**
  * Opens the `CFF ` or `CFF2` table of an OpenType font: the INDEX structures, the DICT entries
  * that locate the charstrings and their subroutines, the font dict each glyph belongs to, and, for
- * `seac`, the charset. Adobe Technical Notes #5176 (CFF) and #5177 (Type 2 charstrings) and the
+ * `seac`, the charset. Adobe Technical Notes 5176 (CFF) and 5177 (Type 2 charstrings) and the
  * OpenType `CFF2` table define the layout. `cffCharstring.ts` runs the charstrings it finds.
  *
  * Portions ported from FreeType (FreeType Project License).
@@ -47,7 +47,7 @@ export interface CffFont {
 const CFF1_HEADER_MIN_LENGTH = 4;
 const CFF2_HEADER_LENGTH = 5;
 
-/** DICT operators (Technical Note #5176 Table 9, #5177 `CFF2` Top DICT): a two-byte `12 n` is `1200 + n`. */
+/** DICT operators (Technical Note 5176 Table 9, 5177 `CFF2` Top DICT): a two-byte `12 n` is `1200 + n`. */
 const OP_CHARSET = 15;
 const OP_CHARSTRINGS = 17;
 const OP_PRIVATE = 18;
@@ -126,7 +126,7 @@ class CffReader {
     return entries;
   }
 
-  /** A packed-nibble real number (Technical Note #5176 Table 5). */
+  /** A packed-nibble real number (Technical Note 5176 Table 5). */
   private real(start: number): { value: number; next: number } {
     let text = '';
     let at = start + 1;
@@ -144,7 +144,7 @@ function first(dict: Dict, operator: number): number | undefined {
   return dict.get(operator)?.[0];
 }
 
-/** The standard charstring bias for a subroutine INDEX (Technical Note #5177 §4.7). */
+/** The standard charstring bias for a subroutine INDEX (Technical Note 5177 §4.7). */
 export function subrBias(count: number): number {
   if (count < 1240) return 107;
   return count < 33900 ? 1131 : 32768;
@@ -155,7 +155,7 @@ const EMPTY_INDEX: CffIndex = { count: 0, entry: () => null };
 /** The character of each nibble of a packed real; 0xd is reserved and 0xf ends the number. */
 const REAL_NIBBLE_SYMBOLS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'E-', '', '-', ''];
 
-/** The glyph to font dict map of an `FDSelect` (Technical Note #5176 §19, #5177 for format 4). */
+/** The glyph to font dict map of an `FDSelect` (Technical Note 5176 §19, 5177 for format 4). */
 function fdSelector(dv: DataView, at: number, glyphCount: number): (glyphIndex: number) => number {
   const format = dv.getUint8(at);
   if (format === 0) return (glyphIndex) => dv.getUint8(at + 1 + glyphIndex);
@@ -181,7 +181,7 @@ function fdSelector(dv: DataView, at: number, glyphCount: number): (glyphIndex: 
 }
 
 /**
- * The string id of each glyph, from the charset operand of the Top DICT (Technical Note #5176 §13):
+ * The string id of each glyph, from the charset operand of the Top DICT (Technical Note 5176 §13):
  * 0 to 2 name a predefined charset, else it is the offset of a format 0, 1 or 2 table. Null when a
  * predefined charset has fewer glyphs than the font, which FreeType refuses to load.
  */

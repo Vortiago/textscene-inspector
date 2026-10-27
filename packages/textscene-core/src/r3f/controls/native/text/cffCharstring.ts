@@ -1,10 +1,10 @@
 /**
- * Runs a Type 2 charstring (Adobe Technical Note #5177) to the contours it draws, in the
+ * Runs a Type 2 charstring (Adobe Technical Note 5177) to the contours it draws, in the
  * charstring's 16.16 fixed-point units with y up. It follows FreeType's Adobe engine
  * (`cf2_interpT2CharString` in `psintrp.c`), which Godot's text server loads CFF glyphs through, in
  * what it accepts as well as in what it draws: FreeType refuses a charstring for an operand of the
  * wrong type, an out-of-range subroutine or an operator short of operands, and so does this. Such a
- * charstring draws nothing. Hints only count, since the outline is the unhinted one (#931).
+ * charstring draws nothing. Hints only count, since the outline is the unhinted one.
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright 2007-2014 Adobe Systems Incorporated.

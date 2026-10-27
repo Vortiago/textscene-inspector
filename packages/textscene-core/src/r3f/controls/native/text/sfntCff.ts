@@ -1,7 +1,7 @@
 /**
  * Reads the outline of a glyph from the `CFF ` or `CFF2` table of an OpenType font, scaled to a
  * font size the way FreeType's Adobe engine scales it for a hinted load, which is how Godot loads
- * it (`text_server_adv.cpp:3606`). The engine moves y to the pixel grid by hinting (#931). This
+ * it (`text_server_adv.cpp:3606`). The engine moves y to the pixel grid by hinting. This
  * reader leaves y where the scale puts it, and x, which hinting does not move, matches Godot.
  *
  * Portions ported from FreeType (FreeType Project License).

@@ -1,6 +1,6 @@
 /**
  * The data a CFF table predefines: StandardEncoding, which a `seac` names its parts through, and the
- * charsets of the Expert and Expert Subset fonts (Adobe Technical Note #5176 Appendices B and C).
+ * charsets of the Expert and Expert Subset fonts (Adobe Technical Note 5176 Appendices B and C).
  * A font names one of the charsets by its offset, 1 or 2, instead of listing the glyphs.
  *
  * Portions ported from FreeType (FreeType Project License).
