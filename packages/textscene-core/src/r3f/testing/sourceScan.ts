@@ -231,7 +231,7 @@ export function walkSources(
 
 /**
  * `.ts` or `.tsx` that is not a test, a test kit or a file under `testing/`: the shape every guard
- * here scans, and the split `scripts/testOnlyExports.mjs` makes.
+ * here scans, and the split `isTestFile` in `scripts/sourceTree.mjs` makes.
  */
 export const isProductionSource = (name: string, path: string): boolean =>
   /\.tsx?$/.test(name) && !/\.(test|spec|testkit)\.tsx?$/.test(name) && !/[\\/]testing[\\/]/.test(path);

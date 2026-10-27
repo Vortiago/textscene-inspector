@@ -26,7 +26,7 @@ export function replaceMarkedBlock(text, begin, end, body) {
  */
 export function writeGenerated(outputs, { tool, summary }) {
   const changed = staleOutputs(outputs);
-  for (const [path, text] of changed) {
+  for (const { path, text } of changed) {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, text);
   }
@@ -35,7 +35,7 @@ export function writeGenerated(outputs, { tool, summary }) {
     return;
   }
   console.log(outcome(tool, `wrote ${changed.length} file(s)`, summary, ':'));
-  for (const [path] of changed) console.log(`  ${displayPath(path)}`);
+  for (const { path } of changed) console.log(`  ${displayPath(path)}`);
 }
 
 /**
@@ -50,13 +50,16 @@ export function checkGenerated(outputs, { tool, command, summary }) {
     return;
   }
   console.error(outcome(tool, `${stale.length} file(s) are STALE`, summary, `, run \`${command}\`:`));
-  for (const [path, text] of stale)
-    console.error(`  ${displayPath(path)} (${difference(readOrNothing(path), text)})`);
+  for (const { path, text, actual } of stale)
+    console.error(`  ${displayPath(path)} (${difference(actual, text)})`);
   process.exitCode = 1;
 }
 
+/** Each output whose file differs from its text, with the text the file holds now. */
 function staleOutputs(outputs) {
-  return outputs.filter(([path, text]) => readOrNothing(path) !== text);
+  return outputs
+    .map(([path, text]) => ({ path, text, actual: readOrNothing(path) }))
+    .filter(({ text, actual }) => actual !== text);
 }
 
 function outcome(tool, text, summary, end) {

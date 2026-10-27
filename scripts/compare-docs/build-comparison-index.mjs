@@ -9,12 +9,10 @@ import { dirname, relative, resolve } from 'node:path';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
+import { orderedCategories } from './categoryOrder.mjs';
 
 const INDEX = resolve(REPO_ROOT, 'docs/comparison/README.md');
 const START = '## 3D';
-
-/** `2D` before `3D` before the rest, and A-Z inside a category. */
-const CATEGORY_ORDER = ['3D', '2D', 'Resources', 'Other'];
 
 function rows() {
   const byCategory = new Map();
@@ -29,7 +27,7 @@ function rows() {
     byCategory.get(category).push(`- [${sheet.meta.type}](${href})${renders ? `: ${renders}` : ''}`);
   }
   const out = [];
-  const seen = [...byCategory.keys()].sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+  const seen = orderedCategories(byCategory.keys());
   for (const category of seen) {
     out.push(`## ${category}`, '');
     out.push(...byCategory.get(category).sort((a, b) => a.localeCompare(b)));

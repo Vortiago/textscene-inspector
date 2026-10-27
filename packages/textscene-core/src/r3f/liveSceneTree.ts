@@ -459,7 +459,8 @@ export class LiveTree {
   private readonly links = new Map<string, LiveLink | null>();
   /**
    * Written only by `stepOf`: the step of a node under each scope it was asked in. It holds one
-   * entry per visited node for as long as the tree lives, which is as long as its context.
+   * entry per visited node for as long as the tree lives, which is as long as its context and its
+   * roots.
    */
   private readonly stepsByNode = new Map<LiveNode, { scope: SceneScope; step: LiveStep }[]>();
 
@@ -548,6 +549,10 @@ function sameScope(a: SceneScope, b: SceneScope): boolean {
   );
 }
 
+/**
+ * Written only by {@link liveTreeOf}: one tree for each context and roots. A tree clears when
+ * nothing holds its context or its roots any more.
+ */
 const liveTreesOver = perObject((ctx: LiveTreeContext) =>
   perObject((roots: readonly TscnNode[]) => new LiveTree(roots, ctx))
 );
