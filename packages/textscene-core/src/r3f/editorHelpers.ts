@@ -67,3 +67,9 @@ export function nodeIconUserData(): { tscnNodeIcon: true } {
 export function isNodeIcon(object: THREE.Object3D): boolean {
   return object.userData[NODE_ICON_KEY] === true;
 }
+
+/** Whether `object` is the root of editor chrome or lies under one. */
+export function isUnderEditorHelper(object: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = object; o; o = o.parent) if (isEditorHelper(o)) return true;
+  return false;
+}

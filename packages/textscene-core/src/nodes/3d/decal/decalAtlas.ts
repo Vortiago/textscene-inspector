@@ -14,6 +14,7 @@ import { AtlasTexture, holdAtlasLevels } from '../../../r3f/textureAtlas/atlasTe
 import { readableTextures } from '../../../r3f/textureAtlas/godotImage.js';
 import { fitDecalAtlas, packDecalAtlas } from './decalAtlasLayout.js';
 import type { MipLevel } from '../../../resources/processing/mipChain.js';
+import type { TextureFilterState } from '../../../resources/textures/godotTextureFilter.js';
 import { decalAtlasLevels } from './decalAtlasLevels.js';
 
 /** Sampled through the sRGB view of an RGBA8 texture (`render_forward_clustered.cpp:3213`). */
@@ -36,6 +37,24 @@ export function decalAtlasTexture(): THREE.Texture {
   if (atlasTexture.mipmaps.length === 0)
     holdAtlasLevels(atlasTexture, decalAtlasLevels(packDecalAtlas([]), []));
   return atlasTexture;
+}
+
+/**
+ * Samples the atlas as the decal filter says (`render_forward_clustered.cpp:3436-3460`). The atlas
+ * keeps its own chain whatever the filter, so a filter that reads none leaves the levels unread.
+ * A change uploads the atlas again; the same filter changes nothing.
+ */
+export function setDecalAtlasFilter({ magFilter, minFilter, anisotropy }: TextureFilterState): void {
+  if (
+    atlasTexture.magFilter === magFilter &&
+    atlasTexture.minFilter === minFilter &&
+    atlasTexture.anisotropy === anisotropy
+  )
+    return;
+  atlasTexture.magFilter = magFilter;
+  atlasTexture.minFilter = minFilter;
+  atlasTexture.anisotropy = anisotropy;
+  atlasTexture.needsUpdate = true;
 }
 
 /** Puts `texture` in the atlas for one more holder (`texture_add_to_decal_atlas`). */

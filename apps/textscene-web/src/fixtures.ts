@@ -468,6 +468,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Roughness Receiver",
+    "file": "unit-decal-roughness-receiver.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Triangulation",
+    "file": "unit-decal-triangulation.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -545,6 +555,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Hud",
+    "file": "unit-escaped-heading-hud.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Inner",
+    "file": "unit-escaped-heading-inner.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Player",
+    "file": "unit-escaped-heading-player.tscn",
     "category": "Other"
   },
   {
@@ -2304,6 +2329,12 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Decal Filter",
+    "file": "decal-filter/unit-decal-filter.tscn",
+    "category": "Other",
+    "root": "decal-filter"
+  },
+  {
     "name": "Glow Linear Upscale",
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",
@@ -2580,6 +2611,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "All Primitives",
     "file": "integration-all-primitives.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Escaped Heading Lamp",
+    "file": "integration-escaped-heading-lamp.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Escaped Heading Reroot",
+    "file": "integration-escaped-heading-reroot.tscn",
     "category": "Integration - Multi-Node"
   },
   {
@@ -3010,6 +3051,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sphere Mesh",
     "file": "unit-sphere-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Cff",
+    "file": "unit-text-mesh-cff.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

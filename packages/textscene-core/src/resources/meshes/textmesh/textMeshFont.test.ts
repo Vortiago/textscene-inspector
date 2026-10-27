@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FontFileResource } from '../../fonts/font/types';
-import { FONT_PATH, textMeshWith, trueTypeFontFile } from './textMeshFont.testkit';
+import { FONT_PATH, openTypeFontFile, textMeshWith, trueTypeFontFile } from './textMeshFont.testkit';
 import { textMeshFont, textMeshFontFiles, textMeshFontKey } from './textMeshFont';
 
 const loaded = (font: FontFileResource = trueTypeFontFile()) => ({ [FONT_PATH]: font });
@@ -16,7 +16,7 @@ describe('textMeshFont', () => {
     expect(textMeshFont(textMeshWith())).toEqual({ status: 'unreadable' });
   });
 
-  it('is unreadable for a font file with no TrueType outlines', () => {
+  it('is unreadable for a font file with no outlines', () => {
     const notAnSfnt = { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) };
 
     expect(textMeshFont(textMeshWith({}, loaded(notAnSfnt)))).toEqual({ status: 'unreadable' });
@@ -25,6 +25,16 @@ describe('textMeshFont', () => {
   it('awaits the metrics of a TrueType font, then is ready with its outlines and metrics', async () => {
     const mesh = textMeshWith({}, loaded());
     expect(textMeshFont(mesh)).toEqual({ status: 'awaitingMetrics' });
+
+    await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
+
+    const font = textMeshFont(mesh);
+    if (font.status !== 'ready') throw new Error('expected a ready font');
+    expect(font.face.outlines.glyphIndex(0x48)).toBeGreaterThan(0);
+  });
+
+  it('is ready with the outlines of an OpenType-CFF font', async () => {
+    const mesh = textMeshWith({}, loaded(openTypeFontFile()));
 
     await vi.waitFor(() => expect(textMeshFont(mesh).status).toBe('ready'));
 

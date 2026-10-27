@@ -183,6 +183,61 @@ describe('walkFromRoot', () => {
   });
 });
 
+describe('walkFromRoot with the table of an instance root', () => {
+  const tree = (instanceTable: (path: string) => { has: (key: string) => boolean } | undefined) => ({
+    exists: (path: string) => ['', 'Inner', 'Q'].includes(path),
+    isOpaque: (path: string) => path === 'Inner',
+    uniquePaths: new Map([['%Q', 'Q']]),
+    instanceTable,
+  });
+
+  it('leaves a name the instance root holds to that instance', () => {
+    const held = tree(() => new Map([['%Q', 'Deep/Q']]));
+
+    expect(walkFromRoot('Inner/%Q', held)).toEqual({ unlisted: 'Inner/%Q' });
+  });
+
+  it('reads the owner table where the instance root lacks the name (node.cpp:1930-1938)', () => {
+    const lacking = tree(() => new Map());
+
+    expect(walkFromRoot('Inner/%Q/Leaf', lacking)).toBeNull();
+    expect(walkFromRoot('Inner/%Q', lacking)).toBe('Q');
+  });
+
+  it('finds nothing where neither table holds the name', () => {
+    const lacking = tree(() => new Map());
+
+    expect(walkFromRoot('Inner/%Missing', lacking)).toBeNull();
+  });
+
+  it('leaves the name to the instance while its table is unknown', () => {
+    const unknown = tree(() => undefined);
+
+    expect(walkFromRoot('Inner/%Q', unknown)).toEqual({ unlisted: 'Inner/%Q' });
+  });
+});
+
+describe('walkFromRoot through a claim that climbs out of the walked scene', () => {
+  const inTree = {
+    exists: (path: string) => path === '' || path === 'Body',
+    isOpaque: () => false,
+    uniquePaths: new Map([['%Lamp', '../Lamp']]),
+  };
+
+  it('ends above the root without asking the tree about names it cannot hold', () => {
+    expect(walkFromRoot('%Lamp/Shade', inTree)).toBe('../Lamp/Shade');
+  });
+
+  it('climbs on with a following `..`', () => {
+    expect(walkFromRoot('%Lamp/..', inTree)).toBe('..');
+    expect(walkFromRoot('%Lamp/../..', inTree)).toBe('../..');
+  });
+
+  it('hands a following %Name on as written, for the scene above to answer', () => {
+    expect(walkFromRoot('%Lamp/Shade/%Bulb', inTree)).toBe('../Lamp/Shade/%Bulb');
+  });
+});
+
 describe('walkFromRoot without a tree', () => {
   it('folds a missing name away, the wider answer a caller with no tree gets', () => {
     expect(walkFromRoot('Missing/../Mid')).toBe('Mid');

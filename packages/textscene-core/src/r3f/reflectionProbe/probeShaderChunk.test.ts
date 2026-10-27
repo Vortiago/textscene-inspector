@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotReflectionProbes } from './probeShaderChunk';
-import { atlasSlot, instanceLayers, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots';
+import { atlasSlot, REFLECTION_PROBE_UNIFORMS, shownProbes } from './probeSlots';
+import { instanceLayers, INSTANCE_LAYERS_UNIFORM } from '../instanceLayers/instanceLayersChunk';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import { warningsOf } from '../testing/logWarnings';
@@ -78,9 +79,7 @@ describe('installGodotReflectionProbes', () => {
     const gather = functionBody(probeFunctions, 'void godotGatherReflectionProbes');
 
     expect(gather).toContain('for ( int index = probeCount - 1; index >= 0; index -- )');
-    expect(gather).toContain(
-      `( godotProbeMask( flags ) & ${REFLECTION_PROBE_UNIFORMS.instanceLayers}[ 0 ] ) == 0u`
-    );
+    expect(gather).toContain(`( godotProbeMask( flags ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u`);
   });
 
   it('reflects about a normal bent by the roughness to the fourth, as Godot does for a probe', () => {
@@ -94,9 +93,8 @@ describe('installGodotReflectionProbes', () => {
     const uniforms = THREE.ShaderLib.physical.uniforms;
 
     expect(uniforms[REFLECTION_PROBE_UNIFORMS.atlas]!.value).toBe(atlasSlot);
-    expect(uniforms[REFLECTION_PROBE_UNIFORMS.rows]!.value).toBe(rowsSlot);
     expect(uniforms[REFLECTION_PROBE_UNIFORMS.probes]!.value).toBe(shownProbes);
-    expect(uniforms[REFLECTION_PROBE_UNIFORMS.instanceLayers]!.value).toBe(instanceLayers);
+    expect(uniforms[INSTANCE_LAYERS_UNIFORM]!.value).toBe(instanceLayers);
   });
 
   it('leaves the chunk alone when it lacks its line, and warns (error case)', () => {

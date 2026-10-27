@@ -5,10 +5,10 @@ import { resolveFontFileBytes } from '../../../r3f/controls/native/text/sceneFon
 import { perObject } from '../../../utils/perObject';
 import type { FontResource } from '../../fonts/font/types';
 
-/** Keyed by the bytes of a font file. Null is a font with no TrueType outlines. */
+/** Keyed by the bytes of a font file. Null is a font without outlines this reader parses. */
 const parsedOutlines = perObject(parseSfntOutlines);
 
-/** The outlines of `font`, or null for a font with no loadable bytes or no `glyf` table. */
+/** The outlines of `font`, or null for a font with no loadable bytes or no `glyf` or `CFF ` outlines. */
 export function fontOutlines(font: FontResource | null): SfntOutlines | null {
   const resolved = resolveFontFileBytes(font);
   return resolved && parsedOutlines(resolved.bytes);

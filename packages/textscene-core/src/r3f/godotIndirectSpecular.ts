@@ -13,7 +13,6 @@ import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { releasedOnUnmount, sharedTexture } from './sharedTexture.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
-import { recordedOn } from './materials/recordedOnMaterial.js';
 
 type SpecularChunk = 'lights_physical_pars_fragment' | 'lights_fragment_begin' | 'aomap_fragment';
 
@@ -21,11 +20,20 @@ const DFG_UNIFORM = 'godotDfgTable';
 
 const MATERIAL_STRUCT = 'struct PhysicalMaterial {';
 
+const THREE_DFG_DECLARATION = 'uniform sampler2D dfgLUT;';
+
 const THREE_DFG = 'material.dfg = texture2D( dfgLUT, vec2( material.roughness, dotNVms ) ).rg;';
 
+/**
+ * three's refraction weighs the transmitted light by one minus this Fresnel term. Godot's refraction
+ * has none (`material.cpp:1829-1831`), and dropping it frees the texture unit three's table took: a
+ * fragment shader has 16, and a refracting material with many maps needs them all.
+ */
+const THREE_ENVIRONMENT_DFG = 'vec2 fab = texture2D( dfgLUT, vec2( roughness, dotNV ) ).rg;';
+
 /** `prefiltered_dfg` (`scene_forward_clustered_inc.glsl:482-484`) at Godot's clamped N.V (`:2224`). */
-const GODOT_DFG = /* glsl */ `${THREE_DFG}
-	material.godotDfg = texture2D( ${DFG_UNIFORM}, vec2( clamp( dot( geometryNormal, geometryViewDir ), 0.0001, 1.0 ), material.godotRoughness ) ).rg;`;
+const GODOT_DFG = /* glsl */ `material.godotDfg = texture2D( ${DFG_UNIFORM}, vec2( clamp( dot( geometryNormal, geometryViewDir ), 0.0001, 1.0 ), material.godotRoughness ) ).rg;
+	material.dfg = material.godotDfg;`;
 
 /**
  * `F0` (`scene_forward_lights_inc.glsl:55-58`) is three's blended specular colour, and Godot's f90
@@ -81,19 +89,9 @@ const GODOT_SPECULAR_OCCLUSION = /* glsl */ `
 /** What a material with `disable_specular_occlusion` set compiles with. */
 export const SPECULAR_OCCLUSION_DISABLED: ProgramInjection = defining(OCCLUSION_DISABLED_DEFINE);
 
-/** Where a material records `disable_specular_occlusion`, for a draw that shades it again. */
-const OCCLUSION_DISABLED_KEY = 'godotSpecularOcclusionDisabled';
-
-export function specularOcclusionUserData(isDisabled: boolean): Record<string, unknown> {
-  return { [OCCLUSION_DISABLED_KEY]: isDisabled };
-}
-
-/** Whether `material` records `disable_specular_occlusion`: false, Godot's default, for no record. */
-export function disablesSpecularOcclusion(material: THREE.Material | undefined): boolean {
-  return !!material && recordedOn(material, OCCLUSION_DISABLED_KEY, false);
-}
-
 const EDITS: readonly ChunkEdit<SpecularChunk>[] = [
+  { chunk: 'lights_physical_pars_fragment', three: THREE_DFG_DECLARATION, godot: '' },
+  { chunk: 'lights_physical_pars_fragment', three: THREE_ENVIRONMENT_DFG, godot: 'vec2 fab = vec2( 0.0 );' },
   {
     chunk: 'lights_physical_pars_fragment',
     three: MATERIAL_STRUCT,

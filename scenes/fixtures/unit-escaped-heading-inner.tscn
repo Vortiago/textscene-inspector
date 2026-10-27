@@ -1,0 +1,17 @@
+; The innermost sub-scene for `integration-escaped-heading-reroot`: a blue box
+; to the right of the origin, so a heading seated under it moves visibly.
+
+[gd_scene load_steps=3 format=3 uid="uid://unitescapedheadinginner"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_inner"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inner"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Inner" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+
+[node name="Body" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_inner")
+surface_material_override/0 = SubResource("StandardMaterial3D_inner")

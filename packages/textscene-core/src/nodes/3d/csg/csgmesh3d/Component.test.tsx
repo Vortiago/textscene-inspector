@@ -230,7 +230,7 @@ describe('<CSGMesh3D> TextMesh', () => {
     expect(undrawnTypes()).toEqual([]);
   });
 
-  it('names the type once its font file is there and has no TrueType outlines', async () => {
+  it('names the type once its font file is there and has no readable outlines', async () => {
     const { fake, renderer, undrawnTypes } = await renderText();
 
     await ReactThreeTestRenderer.act(async () =>

@@ -1,4 +1,4 @@
-/** A TextMesh in a scene that holds a TrueType font, for the tests of what reads its font. */
+/** A TextMesh in a scene that holds a TrueType or OpenType-CFF font, for the tests of what reads its font. */
 
 import { vi } from 'vitest';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
@@ -18,6 +18,15 @@ export function trueTypeFontFile(): FontFileResource {
     mimeType: 'font/ttf',
     fallbacks: [],
     properties: {},
+  };
+}
+
+/** A FontFile with CFF outlines, new on each call. */
+export function openTypeFontFile(): FontFileResource {
+  return {
+    ...trueTypeFontFile(),
+    bytes: fixtureFontBytes('montserrat-extra-bold.otf'),
+    mimeType: 'font/otf',
   };
 }
 

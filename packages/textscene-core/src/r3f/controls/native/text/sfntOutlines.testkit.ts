@@ -48,13 +48,17 @@ export interface TestFontInput {
   container?: 'true' | 'ttc';
 }
 
+/** The `sfntVersion` of each container. A collection's first face is TrueType. */
+const SFNT_VERSIONS = { true: 0x74727565, OTTO: 0x4f54544f, ttc: 0x00010000 } as const;
+type SfntContainer = keyof typeof SFNT_VERSIONS;
+
 const ON_CURVE = 0x01;
 const ARG_1_AND_2_ARE_WORDS = 0x0001;
 const ARGS_ARE_XY_VALUES = 0x0002;
 const WE_HAVE_A_SCALE = 0x0008;
 const MORE_COMPONENTS = 0x0020;
 
-class ByteWriter {
+export class ByteWriter {
   private readonly bytes: number[] = [];
 
   get length(): number {
@@ -179,7 +183,7 @@ function cmapFormat12(cmap: ReadonlyMap<number, number>): ByteWriter {
   return out;
 }
 
-function cmapTable({ cmap, cmapFormat }: TestFontInput): ByteWriter {
+export function cmapTable({ cmap, cmapFormat }: Pick<TestFontInput, 'cmap' | 'cmapFormat'>): ByteWriter {
   const subtable = cmapFormat === 4 ? cmapFormat4(cmap) : cmapFormat12(cmap);
   const [platform, encoding] = cmapFormat === 4 ? [3, 1] : [3, 10];
   return new ByteWriter().u16(0).u16(1).u16(platform).u16(encoding).u32(12).raw(subtable);
@@ -195,7 +199,7 @@ function locaAndGlyf(glyphs: readonly TestGlyph[]): { loca: ByteWriter; glyf: By
   return { loca, glyf };
 }
 
-function headTable(unitsPerEm: number): ByteWriter {
+export function headTable(unitsPerEm: number): ByteWriter {
   const out = new ByteWriter().u32(0x00010000).u32(0).u32(0).u32(0x5f0f3cf5).u16(0).u16(unitsPerEm);
   for (let i = 0; i < 16; i++) out.u8(0); // created, modified
   for (let i = 0; i < 8; i++) out.u8(0); // bounding box
@@ -204,26 +208,21 @@ function headTable(unitsPerEm: number): ByteWriter {
   return out;
 }
 
-function maxpTable(numGlyphs: number): ByteWriter {
+export function maxpTable(numGlyphs: number): ByteWriter {
   return new ByteWriter().u32(0x00010000).u16(numGlyphs).raw(new Array<number>(26).fill(0));
 }
 
-/** The font's bytes, whole, with the tables in one directory and each padded to four bytes. */
-export function buildTestFont(input: TestFontInput): ArrayBuffer {
-  const { loca, glyf } = locaAndGlyf(input.glyphs);
-  const tables: [string, ByteWriter][] = [
-    ['cmap', cmapTable(input)],
-    ['glyf', glyf],
-    ['head', headTable(input.unitsPerEm)],
-    ['loca', loca],
-    ['maxp', maxpTable(input.glyphs.length)],
-  ];
-  const sfntStart = input.container === 'ttc' ? 16 : 0;
+/** The bytes of an sfnt file whose directory lists `tables`, each padded to four bytes. */
+export function sfntFileBytes(
+  tables: readonly (readonly [string, ByteWriter])[],
+  container?: SfntContainer
+): ArrayBuffer {
+  const sfntStart = container === 'ttc' ? 16 : 0;
   const directorySize = 12 + tables.length * 16;
   const out = new ByteWriter();
-  if (input.container === 'ttc') out.u32(0x74746366).u16(1).u16(0).u32(1).u32(sfntStart);
+  if (container === 'ttc') out.u32(0x74746366).u16(1).u16(0).u32(1).u32(sfntStart);
   out
-    .u32(input.container === 'true' ? 0x74727565 : 0x00010000)
+    .u32(container ? SFNT_VERSIONS[container] : 0x00010000)
     .u16(tables.length)
     .u16(0)
     .u16(0)
@@ -236,4 +235,19 @@ export function buildTestFont(input: TestFontInput): ArrayBuffer {
   }
   for (const [, table] of tables) out.raw(table).pad4();
   return new Uint8Array(out.toBytes()).buffer;
+}
+
+/** The font's bytes, whole, with the tables in one directory and each padded to four bytes. */
+export function buildTestFont(input: TestFontInput): ArrayBuffer {
+  const { loca, glyf } = locaAndGlyf(input.glyphs);
+  return sfntFileBytes(
+    [
+      ['cmap', cmapTable(input)],
+      ['glyf', glyf],
+      ['head', headTable(input.unitsPerEm)],
+      ['loca', loca],
+      ['maxp', maxpTable(input.glyphs.length)],
+    ],
+    input.container
+  );
 }

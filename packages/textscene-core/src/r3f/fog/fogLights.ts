@@ -23,7 +23,7 @@ import type { SlottedShadow } from '../positionalShadow/slotOpacity.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
 import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
-import { RowBuffer } from './packedRows.js';
+import { RowBuffer } from '../rowTexture/packedRows.js';
 import { areaTexturePlacement } from '../areaLight/areaLightAtlas.js';
 import { writeVec4 } from '../writeVec4.js';
 

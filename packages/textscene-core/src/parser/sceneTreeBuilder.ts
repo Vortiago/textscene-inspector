@@ -30,8 +30,7 @@ import {
   walkedPath,
   type RootWalkTables,
 } from '../godot/string/nodePath.js';
-import { serialChildName } from '../godot/string/nodeName.js';
-import { reparentedName } from '../godot/scene/packedScene.js';
+import { reRootedName } from '../godot/scene/packedScene.js';
 import { idTrailEnd, ownerTrailEnd } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
@@ -211,7 +210,7 @@ function reRoot<N extends SceneNode<N>>(
 ): void {
   const seat = seatCopy(tables, node, resolveOwner);
   seat.authoredName = node.name;
-  seat.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
+  seat.name = reRootedName(node.parent!, node.name, tables.rootChildNames);
   insertAtIndex(tables.root.children, seat);
   register(tables, SCENE_ROOT_PATH, seat, tables.root);
 }

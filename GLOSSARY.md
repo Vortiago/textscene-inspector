@@ -40,7 +40,7 @@ _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
 
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
-The merged node keeps it, and the render path's per-owner tables read it.
+The merged node keeps it, and the render path's per-owner tables read it. A `%Name` that the table lacks at the instance root reads the table of the instance's owner next, which the file above answers.
 _Avoid_: a second composer of an instance's table.
 
 **ExtResource**:
@@ -200,8 +200,8 @@ What the `[node]` and `[connection]` headings state that the scene tree does not
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
-**Re-rooted node** (`reRoot` in `parser/sceneTreeBuilder.ts`):
-A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`.
+**Re-rooted node** (`reRoot` in `parser/sceneTreeBuilder.ts` and in `resources/seatEscaped.ts`):
+A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`. A path through an instance is walked by the live tree, where the instance's graft hands the node back and the file that wrote it re-roots it.
 A node below it re-roots on its own, since the old path no longer exists. Godot does not re-root in a scene it refuses to instantiate, nor where a `parent_id_path=` lands the node.
 _Avoid_: "dropped node", which names a node left out of the tree.
 
@@ -538,9 +538,18 @@ The one texture that holds the `area_texture` of every AreaLight3D, each in a ce
 A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
+**Decal term** (`r3f/decal/`):
+The part of every 3D program's fragment shader that mixes the decals into the albedo, as Godot's clustered shader does. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+_Avoid_: "decal projection", which names the baked mesh the term replaced.
+
+**Scene rows** (`r3f/sceneRows/`):
+The one float texture that holds the rows of a scene's Reflection probes and Decals: the probes' first, the decals' after them. Each row is one probe or decal, as the shader fetches it.
+Both share it because a fragment shader has 16 texture units.
+_Avoid_: "probe rows" and "decal rows", which name one band of it.
+
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
 The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-A Decal reads its rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The Decal term reads each Decal's rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:

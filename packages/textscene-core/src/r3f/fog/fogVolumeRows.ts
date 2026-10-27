@@ -17,7 +17,7 @@ import { setGodotColorLinear } from '../godotColor.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogDensityAtlas } from './fogDensityAtlas.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
-import { RowBuffer } from './packedRows.js';
+import { RowBuffer } from '../rowTexture/packedRows.js';
 import { writeVec4 } from '../writeVec4.js';
 import { cameraFrustum } from '../cameraFrustum.js';
 

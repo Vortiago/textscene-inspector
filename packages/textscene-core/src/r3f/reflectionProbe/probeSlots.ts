@@ -1,29 +1,25 @@
 /**
  * What every lit program reads of the reflection probes (`probeShaderChunk.ts`): the reflection
- * atlas, the probes' rows, their count and the atlas's layout, and the drawn instance's layers. Each
- * scene with probes shows its own before each of its renders, and none after, so a scene without
- * probes reads none.
+ * atlas, and their count and the atlas's layout. The probes' rows are in the scene rows
+ * (`sceneRows.ts`). Each scene with probes shows its own before each of its renders, and none
+ * after, so a scene without probes reads none.
  */
 
 import * as THREE from 'three';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/scene/visualLayers.js';
 import { sharedTexture } from '../sharedTexture.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 
 export const REFLECTION_PROBE_UNIFORMS = {
   atlas: 'godotReflectionAtlas',
-  rows: 'godotReflectionProbeRows',
   probes: 'godotReflectionProbes',
-  instanceLayers: 'godotInstanceLayers',
 } as const;
 
 /**
- * The textures a lit material samples the atlas and the rows through. three never uploads them, as
- * their version stays 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle each holds:
- * the shown scene's, or three's empty texture.
+ * The texture a lit material samples the atlas through. three never uploads it, as its version
+ * stays 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds: the shown
+ * scene's, or three's empty texture.
  */
 class AtlasSlot extends sharedTexture(THREE.DataArrayTexture) {}
-class RowsSlot extends sharedTexture(THREE.DataTexture) {}
 
 // After a dev server reloads this module, each value below is the one the earlier evaluation installed.
 export const atlasSlot = installedOr(
@@ -31,8 +27,6 @@ export const atlasSlot = installedOr(
   THREE.DataArrayTexture,
   () => new AtlasSlot()
 );
-
-export const rowsSlot = installedOr(REFLECTION_PROBE_UNIFORMS.rows, THREE.DataTexture, () => new RowsSlot());
 
 /**
  * The shown probes' count, the atlas's border size and its last layer. Arrays, not scalars: three
@@ -43,9 +37,4 @@ export const shownProbes = installedOr(
   REFLECTION_PROBE_UNIFORMS.probes,
   Float32Array,
   () => new Float32Array(4)
-);
-
-/** The layers of the instance being drawn, Godot's default between draws. */
-export const instanceLayers = installedOr(REFLECTION_PROBE_UNIFORMS.instanceLayers, Uint32Array, () =>
-  Uint32Array.of(GODOT_DEFAULT_VISUAL_LAYERS)
 );
