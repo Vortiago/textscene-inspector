@@ -123,7 +123,11 @@ describe('<ControlRasterPasses>', () => {
     await advanceFrameWithStubbedGl(renderer, gl, (target) => {
       if (target) bound.push(target.texture);
     });
-    expect(bound).toEqual([plain.texture, decoding.texture]);
+    const bindings = bound.map((texture) =>
+      texture === plain.texture ? 'plain' : texture === decoding.texture ? 'decoding' : 'frame'
+    );
+    // The pass clears the plain target, draws into the frame, copies into the plain target.
+    expect(bindings).toEqual(['plain', 'frame', 'plain', 'decoding']);
   });
 
   it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
@@ -209,6 +213,28 @@ offset_bottom = 100.5
     } finally {
       projectSettingsMock.settings = null;
     }
+  });
+
+  // `renderer_canvas_render_rd.cpp:679-682`: Godot's framebuffer row 0 is the canvas top, which
+  // decides the row a Control edge on a pixel centre covers.
+  it('draws through a camera that maps the canvas top to NDC y = -1, as the 2D pass does', async () => {
+    const { renderer, gl } = await mount(parse(GUI_SCENE));
+    const drawn: { camera: THREE.Camera | null } = { camera: null };
+    await withStubbedGl(
+      gl,
+      {
+        onRender: (_, __, camera) => {
+          drawn.camera ??= camera;
+        },
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+
+    drawn.camera!.updateMatrixWorld(true);
+    const canvasTop = new THREE.Vector3(160, 0, 0).project(drawn.camera!);
+    const canvasBottom = new THREE.Vector3(160, -240, 0).project(drawn.camera!);
+
+    expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
   });
 
   it('unregisters on unmount, so a removed sub-viewport stops resolving', async () => {

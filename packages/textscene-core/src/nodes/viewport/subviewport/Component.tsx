@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
@@ -46,9 +46,9 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
+import { useCanvasPassCamera } from './useCanvasPassCamera';
 import type { SubViewportProperties } from './types';
 import { viewportTargetSize } from './targetSize';
-import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
 import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
@@ -149,18 +149,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const projectMipmapBias = useProjectTextureMipmapBias();
   const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
 
-  // A persistent camera for 2D-world content. Godot draws a viewport's canvas
-  // through its canvas transform, the identity until a Camera2D in the subtree
-  // makes itself current, so this starts at the whole target rect and the pass
-  // narrows it to the current camera's view each frame.
-  const orthoCamera = useMemo(() => createViewportCanvasCamera(), []);
+  // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
+  // the subtree makes itself current, so the pass narrows this camera to that view each frame.
+  const orthoCamera = useCanvasPassCamera({ x: width, y: height });
   /** Written only by the pass, through `recompileOnCurveChange`. */
   const portalCurve = useRef({ revision: -1 });
-  useEffect(() => {
-    orthoCamera.near = 0.1;
-    orthoCamera.far = 4000;
-    applyOrthoFrame(orthoCamera, orthoFrameForSize({ x: width, y: height }));
-  }, [orthoCamera, width, height]);
 
   const renderPass = useCallback(() => {
     const source = rendersInline ? mainScene : portalScene;

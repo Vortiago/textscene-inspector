@@ -214,6 +214,8 @@ Tag a new shared helper. Do not edit the list.
 - The CPUParticles2D bounds a draw can use: `drawableParamBounds` in
   `nodes/2d/cpuparticles2d/drawableParamBounds.ts`.
 - An empty CSG brush: `emptyBrush` in `nodes/3d/csg/smoothNormals.ts`.
+- The camera of a sub-viewport's 2D pass: `useCanvasPassCamera` in
+  `nodes/viewport/subviewport/useCanvasPassCamera.ts`.
 - One end of a `[connection]`: `connectionEndResolver` in `parser/connectionEnd.ts`.
 - A `real_t` field: `realOr`, `realVec2Or` and `realVec3Or` in `parser/valueParsers.ts`. They store
   a double beyond the float range as inf, as `real_t` does.

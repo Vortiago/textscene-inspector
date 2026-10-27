@@ -1943,6 +1943,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Subviewport Control Edge On Pixel Centre",
+    "file": "unit-subviewport-control-edge-on-pixel-centre.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Subviewport Edge On Pixel Centre",
     "file": "unit-subviewport-edge-on-pixel-centre.tscn",
     "category": "Other"
