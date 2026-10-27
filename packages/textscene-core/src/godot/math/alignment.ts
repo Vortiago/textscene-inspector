@@ -44,7 +44,7 @@ export const HORIZONTAL_ALIGNMENT_NAMES = enumNamesByValue({
 export const VERTICAL_ALIGNMENT_TOP = 0;
 export const VERTICAL_ALIGNMENT_CENTER = 1;
 export const VERTICAL_ALIGNMENT_BOTTOM = 2;
-export const VERTICAL_ALIGNMENT_FILL = 3;
+const VERTICAL_ALIGNMENT_FILL = 3;
 export type VerticalAlignment =
   | typeof VERTICAL_ALIGNMENT_TOP
   | typeof VERTICAL_ALIGNMENT_CENTER
