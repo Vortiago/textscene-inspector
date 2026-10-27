@@ -6,7 +6,7 @@ import type { Camera3DProperties } from './types';
 
 export function makeCameraNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const properties: Camera3DProperties = {
-    name: 'MyCamera',
+    name: 'Cam',
     projection: Camera3DProjectionType.PERSPECTIVE,
     fov: 75,
     size: 1,
@@ -23,7 +23,7 @@ export function makeCameraNode(overrides: Partial<Camera3DProperties> = {}): Tsc
   };
   return {
     rawProperties: {},
-    name: properties.name ?? 'MyCamera',
+    name: properties.name ?? 'Cam',
     type: 'Camera3D',
     children: [],
     properties,

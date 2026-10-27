@@ -8,6 +8,7 @@ import type * as THREE from 'three';
 import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { InWorld } from '../../../r3f/testing/InWorld';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { cameraGizmoLines } from '../../3d/camera3d/gizmoLines';
@@ -37,7 +38,9 @@ describe('<SubViewport> viewport size', () => {
     const parsed = new TscnParser().parse(SCENE);
     const renderer = await ReactThreeTestRenderer.create(
       <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} showGizmos>
-        <NodeDispatcher nodes={parsed.nodes} />
+        <InWorld>
+          <NodeDispatcher nodes={parsed.nodes} />
+        </InWorld>
       </SceneStack>
     );
 
