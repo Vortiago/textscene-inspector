@@ -67,7 +67,7 @@ export function registerExposureStage(scene: THREE.Scene, stage: ExposureStage):
 /**
  * Runs `draw` with `scene` set for `exposure`, null for none, and puts the scene back after it. A draw
  * at the exposure the scene holds changes nothing. A light scales by the exposure over the held one,
- * so a scene at the held exposure 0, which holds no energy to scale, is not drawn at another.
+ * so a scene at the held exposure 0, whose lights hold no energy, keeps them dark.
  *
  * @oneWay The state a scene draws for another exposure
  */
@@ -89,15 +89,16 @@ export function drawAtExposure<T>(scene: THREE.Scene, exposure: number | null, d
 }
 
 /**
- * The scale from the exposure `scene` holds to the exposure `drawAtExposure` draws it at, or 1
- * outside such a draw. A light that sets its own energy before each render applies it, since
+ * The scale from the held exposure to the one `drawAtExposure` draws at, or 1 outside a draw and
+ * under a held exposure of 0. A light that sets its own energy before each render applies it, since
  * `drawAtExposure` scales the energy only once.
  *
  * @oneWay The state a scene draws for another exposure
  */
 export function drawnExposureRatio(scene: THREE.Scene): number {
   const drawn = drawnExposures.get(scene);
-  return drawn === undefined ? 1 : drawn / (exposureOfScene(scene) ?? 1);
+  const held = exposureOfScene(scene) ?? 1;
+  return drawn === undefined || held === 0 ? 1 : drawn / held;
 }
 
 /** Scales the energy of each Light3D of `scene` by `ratio`: the flat ambient takes no exposure. */

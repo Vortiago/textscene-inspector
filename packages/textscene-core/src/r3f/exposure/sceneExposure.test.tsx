@@ -205,6 +205,15 @@ describe('drawAtExposure', () => {
       scene.remove(point);
     });
 
+    it('keeps a light at the energy it has under a held exposure of 0, which gives no ratio', async () => {
+      const { scene } = await mount(0);
+      const point = new THREE.PointLight(0xffffff, 0);
+      scene.add(point);
+      const inside = drawAtExposure(scene, 2, () => point.intensity);
+      expect(inside).toBe(0);
+      scene.remove(point);
+    });
+
     it('scales a light to 1 over the held exposure for a null exposure', async () => {
       const { scene } = await mount(4);
       const point = new THREE.PointLight(0xffffff, 8);
