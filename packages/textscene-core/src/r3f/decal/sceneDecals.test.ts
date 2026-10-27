@@ -13,7 +13,7 @@ import { GODOT_DEFAULT_VISUAL_LAYERS, GODOT_EDITOR_GIZMO_LAYERS } from '../../go
 import { DecalObject } from './decalObject';
 import { DecalRows } from './decalRows';
 import { SceneDecals } from './sceneDecals';
-import { SHOWN_COUNT, SHOWN_MIPMAP_BIAS, shownDecals } from './decalSlots';
+import { SHOWN_COUNT, SHOWN_GRADIENT_SCALE, shownDecals } from './decalSlots';
 
 const held: THREE.Texture[] = [];
 
@@ -147,12 +147,12 @@ describe('SceneDecals', () => {
     expect(pack.mock.calls[0]![1].elements[12]).toBe(3);
   });
 
-  it('shows the mipmap bias of the render', async () => {
+  it("shows the gradient scale of the render's mipmap bias", async () => {
     const { render } = await sceneWith(decalObject());
 
     renderWithMipmapBias(-1.5, render);
 
-    expect(shownDecals[SHOWN_MIPMAP_BIAS]).toBe(-1.5);
+    expect(shownDecals[SHOWN_GRADIENT_SCALE]).toBeCloseTo(2 ** -1.5, 6);
   });
 
   it('packs nothing once it is disposed', async () => {

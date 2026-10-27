@@ -111,16 +111,22 @@ describe('DecalRows.pack', () => {
     expect(g).toBeCloseTo(0.2140411, 6);
   });
 
-  it('packs the albedo mix and the two fade exponents', () => {
-    const rows = packed([decalAt([0, 0, 0], { albedo_mix: 0.7, upper_fade: 2, lower_fade: 0 })]);
+  it('folds the albedo mix into the alpha', () => {
+    const rows = packed([decalAt([0, 0, 0], { albedo_mix: 0.7, modulate: { r: 1, g: 1, b: 1, a: 0.5 } })]);
 
-    expect(texel(rows, 0, 6).slice(0, 3)).toEqual([expect.closeTo(0.7, 6), 2, 0]);
+    expect(texel(rows, 0, 5)[3]).toBeCloseTo(0.5 * 0.7, 6);
+  });
+
+  it('packs the two fade exponents beside the mask', () => {
+    const rows = packed([decalAt([0, 0, 0], { upper_fade: 2, lower_fade: 0 })]);
+
+    expect(texel(rows, 0, 6).slice(2, 4)).toEqual([2, 0]);
   });
 
   it('splits the 32-bit mask into two halves a float holds exactly', () => {
     const rows = packed([decalAt([0, 0, 0], { cull_mask: 0xabcd_1234 })]);
 
-    expect(texel(rows, 0, 7).slice(0, 2)).toEqual([0x1234, 0xabcd]);
+    expect(texel(rows, 0, 6).slice(0, 2)).toEqual([0x1234, 0xabcd]);
   });
 
   it('clamps a size below 0.001 to 0.001, as Decal::set_size does (decal.cpp:33-36)', () => {
@@ -153,7 +159,7 @@ describe('DecalRows.pack order', () => {
       decalAt([0, 0, -3], { albedo_mix: 0.3 }),
     ]);
 
-    expect([0, 1, 2].map((i) => texel(rows, i, 6)[0])).toEqual([
+    expect([0, 1, 2].map((i) => texel(rows, i, 5)[3])).toEqual([
       expect.closeTo(0.1, 6),
       expect.closeTo(0.2, 6),
       expect.closeTo(0.3, 6),

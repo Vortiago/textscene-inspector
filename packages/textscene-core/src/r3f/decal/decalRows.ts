@@ -37,10 +37,10 @@ export interface DrawnDecal {
 
 /**
  * The texels of one decal: the to-decal matrix's rows, the normal with its fade, the albedo
- * rectangle, the linear modulate with its faded alpha, the mix with the two fade exponents, then
- * the mask. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
+ * rectangle, the linear modulate with its alpha times the distance fade and `albedo_mix`, then the
+ * mask and the two fade exponents. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
  */
-export const DECAL_ROW_TEXELS = 8;
+export const DECAL_ROW_TEXELS = 7;
 
 /** Godot's `max_decals` (`texture_storage.h:348`): the decals past it draw nothing. */
 export const MAX_DECALS = 512;
@@ -61,6 +61,14 @@ const normal = new THREE.Vector3();
 
 /** The rows of the drawn decals, rewritten in place by each `pack`. */
 export class DecalRows extends RowBuffer {
+  /** The decals the distance fade keeps, with their distance and sort key, each by one index. Cleared by `pack`. */
+  private readonly candidates: DrawnDecal[] = [];
+  private readonly distances: number[] = [];
+  private readonly depths: number[] = [];
+  /** The candidates' indices, sorted by depth. Indices, so a pack allocates no entry for each decal. */
+  private readonly order: number[] = [];
+  private readonly byDepth = (a: number, b: number): number => this.depths[a]! - this.depths[b]!;
+
   constructor() {
     super(DECAL_ROW_TEXELS * 4);
   }
@@ -74,27 +82,25 @@ export class DecalRows extends RowBuffer {
     this.begin();
     viewInverse.copy(cameraWorld).invert();
     cameraOrigin.setFromMatrixPosition(cameraWorld);
-    const kept: SortedDecal[] = [];
+    this.candidates.length = this.distances.length = this.depths.length = this.order.length = 0;
     for (const decal of decals) {
-      if (kept.length === MAX_DECALS) break;
+      if (this.candidates.length === MAX_DECALS) break;
       const distance = cameraOrigin.distanceTo(decalOrigin.setFromMatrixPosition(decal.matrixWorld));
       if (isPastFade(decal.look, distance)) continue;
-      kept.push({ decal, distance, depth: distance - decal.look.sorting_offset });
+      this.order.push(this.candidates.length);
+      this.candidates.push(decal);
+      this.distances.push(distance);
+      this.depths.push(distance - decal.look.sorting_offset);
     }
-    kept.sort((a, b) => a.depth - b.depth);
-    for (const { decal, distance } of kept) {
-      if (!decal.albedoRect) continue;
-      this.append(decalTexels(decal, decal.albedoRect, fadeAt(decal.look, distance)));
+    this.order.sort(this.byDepth);
+    for (const index of this.order) {
+      const decal = this.candidates[index]!;
+      const rect = decal.albedoRect;
+      if (rect) this.append(decalTexels(decal, rect, fadeAt(decal.look, this.distances[index]!)));
     }
+    this.candidates.length = 0;
     return this.finish();
   }
-}
-
-/** A decal that the distance fade keeps, with its distance from the camera and its sort key. */
-interface SortedDecal {
-  decal: DrawnDecal;
-  distance: number;
-  depth: number;
 }
 
 /** Whether `distance` lies past the end of the decal's fade, where Godot leaves the decal out. */
@@ -129,9 +135,8 @@ function decalTexels(decal: DrawnDecal, rect: DecalAtlasRect, fade: number): Flo
   setTexel(4, rect.x, rect.y, rect.width, rect.height);
   // Godot's modulate is a linear colour, its alpha untouched (`texture_storage.cpp:3470-3474`).
   const [r, g, b] = sRGBToLinearRGB(look.modulate.r, look.modulate.g, look.modulate.b);
-  setTexel(5, r, g, b, look.modulate.a * fade);
-  setTexel(6, look.albedo_mix, look.upper_fade, look.lower_fade, 0);
-  setTexel(7, look.cull_mask & 0xffff, look.cull_mask >>> 16, 0, 0);
+  setTexel(5, r, g, b, look.modulate.a * fade * look.albedo_mix);
+  setTexel(6, look.cull_mask & 0xffff, look.cull_mask >>> 16, look.upper_fade, look.lower_fade);
   return row;
 }
 

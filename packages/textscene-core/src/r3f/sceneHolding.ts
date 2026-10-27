@@ -41,8 +41,9 @@ export class SceneHolding<Value extends { dispose(): void }> {
     return this.held.get(scene)?.value;
   }
 
-  /** Whether `holder` is the first that still holds `scene`'s value, so it alone does the per-frame work. */
-  isDriver(scene: THREE.Scene, holder: symbol): boolean {
-    return this.held.get(scene)?.holders.values().next().value === holder;
+  /** The value of `scene` for `holder` only when it is the first that still holds it, so it alone does the per-frame work. */
+  drivenBy(scene: THREE.Scene, holder: symbol): Value | undefined {
+    const held = this.held.get(scene);
+    return held?.holders.values().next().value === holder ? held.value : undefined;
   }
 }

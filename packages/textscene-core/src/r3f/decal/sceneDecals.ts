@@ -16,7 +16,13 @@ import { visibleInTree } from '../visibleInTree.js';
 import { isDecal, type DecalObject } from './decalObject.js';
 import { EditorChromeLayers } from './editorChromeLayers.js';
 import { DECAL_ROW_TEXELS, DecalRows } from './decalRows.js';
-import { decalAtlasSlot, decalRowsSlot, SHOWN_COUNT, SHOWN_MIPMAP_BIAS, shownDecals } from './decalSlots.js';
+import {
+  decalAtlasSlot,
+  decalRowsSlot,
+  SHOWN_COUNT,
+  SHOWN_GRADIENT_SCALE,
+  shownDecals,
+} from './decalSlots.js';
 
 export class SceneDecals {
   private readonly decals: TrackedObjects<DecalObject>;
@@ -57,18 +63,12 @@ export class SceneDecals {
   private show(camera: THREE.Camera): void {
     this.chrome.place();
     this.orderVisibleDecals();
-    if (this.ordered.length === 0) {
-      shownDecals[SHOWN_COUNT] = 0;
-      return;
-    }
+    if (this.ordered.length === 0) return this.endRender();
     updateDecalAtlas(this.renderer.capabilities.maxTextureSize);
     if (this.rows.pack(this.ordered, camera.matrixWorld)) this.rowTexture.invalidate(this.rows);
-    if (this.rows.count === 0) {
-      shownDecals[SHOWN_COUNT] = 0;
-      return;
-    }
+    if (this.rows.count === 0) return this.endRender();
     shownDecals[SHOWN_COUNT] = this.rows.count;
-    shownDecals[SHOWN_MIPMAP_BIAS] = currentMipmapBias();
+    shownDecals[SHOWN_GRADIENT_SCALE] = 2 ** currentMipmapBias();
     const atlas = decalAtlasTexture();
     this.renderer.initTexture(atlas);
     this.renderer.initTexture(this.rowTexture.hold(this.rows));

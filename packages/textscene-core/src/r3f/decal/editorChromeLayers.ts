@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { GODOT_EDITOR_GIZMO_LAYERS } from '../../godot/scene/visualLayers.js';
-import { isEditorHelper } from '../editorHelpers.js';
+import { isUnderEditorHelper } from '../editorHelpers.js';
 import { restoreInstanceLayers, showInstanceLayers } from '../instanceLayers/instanceLayers.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { setVisualLayers } from '../visualLayers.js';
@@ -21,15 +21,19 @@ function isDrawable(object: THREE.Object3D): object is Drawable {
 
 /** Whether `object` draws, and it or an ancestor is the root of editor chrome. */
 function isChromeDrawable(object: THREE.Object3D): object is Drawable {
-  if (!isDrawable(object)) return false;
-  for (let o: THREE.Object3D | null = object; o; o = o.parent) if (isEditorHelper(o)) return true;
-  return false;
+  return isDrawable(object) && isUnderEditorHelper(object);
 }
+
+/**
+ * The chrome on the gizmo layer, whichever holder placed it. A holder that a later Decal mounts
+ * replaces another, and a second hook on one drawable would chain a wrapper for each holder.
+ */
+const placed = new WeakSet<Drawable>();
 
 export class EditorChromeLayers {
   private readonly chrome: TrackedObjects<Drawable>;
-  /** The chrome that already draws on the gizmo layer. A drawable is hooked once. */
-  private readonly placed = new WeakSet<Drawable>();
+  /** The `chrome.version` of the last `place`, so a render with no new chrome walks nothing. */
+  private placedVersion = -1;
 
   constructor(scene: THREE.Scene) {
     this.chrome = new TrackedObjects(scene, isChromeDrawable);
@@ -37,9 +41,12 @@ export class EditorChromeLayers {
 
   /** Places the chrome that arrived since the last call. */
   place(): void {
-    for (const drawable of this.chrome.current()) {
-      if (this.placed.has(drawable)) continue;
-      this.placed.add(drawable);
+    const drawables = this.chrome.current();
+    if (this.chrome.version === this.placedVersion) return;
+    this.placedVersion = this.chrome.version;
+    for (const drawable of drawables) {
+      if (placed.has(drawable)) continue;
+      placed.add(drawable);
       setVisualLayers(drawable, GODOT_EDITOR_GIZMO_LAYERS);
       showLayersWhenDrawn(drawable);
     }

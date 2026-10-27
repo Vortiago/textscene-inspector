@@ -7,7 +7,7 @@
 
 import type * as THREE from 'three';
 import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/scene/visualLayers.js';
-import { shownDecals } from '../decal/decalSlots.js';
+import { SHOWN_COUNT, shownDecals } from '../decal/decalSlots.js';
 import { shownProbes } from '../reflectionProbe/probeSlots.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { instanceLayers } from './instanceLayersChunk.js';
@@ -17,7 +17,7 @@ let shownOn: THREE.WebGLRenderer | null = null;
 
 /** Whether the render in progress shows a probe or a decal, the two readers of the layers. */
 function readsLayers(): boolean {
-  return shownProbes[0] !== 0 || shownDecals[0] !== 0;
+  return shownProbes[0] !== 0 || shownDecals[SHOWN_COUNT] !== 0;
 }
 
 /**

@@ -22,10 +22,11 @@ const GODOT_DECAL_PARS_CHUNK = 'godot_decal_pars';
 
 const VIEW_VARYING = 'vGodotDecalView';
 const NORMAL_VARYING = 'vGodotDecalNormal';
+const VARYING_DECLARATIONS = `varying vec3 ${VIEW_VARYING};\nvarying vec3 ${NORMAL_VARYING};\n`;
 
 /**
  * The decal functions, all in view space, as Godot's rows are. `shown` holds the count and the
- * mipmap bias, which scales the gradients as `godotMipmapBiasedGrad` does. A normal of zero length
+ * factor that scales the gradients, as `godotMipmapBiasedGrad` does. A normal of zero length
  * stays zero, as `normalize` of it is NaN, which a mix would carry into the albedo.
  */
 const GODOT_DECAL_GLSL = /* glsl */ `
@@ -39,16 +40,15 @@ vec4 godotDecalTexel( int index, int texel ) {
 }
 
 vec3 godotMixDecal( int index, vec3 albedo, vec3 position, vec3 normal, vec3 positionDx, vec3 positionDy, float gradientScale ) {
-	vec4 flags = godotDecalTexel( index, 7 );
-	if ( ( ( uint( flags.x ) | ( uint( flags.y ) << 16u ) ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u ) return albedo;
 	vec4 toLocalX = godotDecalTexel( index, 0 );
 	vec4 toLocalY = godotDecalTexel( index, 1 );
 	vec4 toLocalZ = godotDecalTexel( index, 2 );
 	vec4 point = vec4( position, 1.0 );
 	vec3 local = vec3( dot( toLocalX, point ), dot( toLocalY, point ), dot( toLocalZ, point ) );
 	if ( any( lessThan( local, vec3( 0.0, - 1.0, 0.0 ) ) ) || any( greaterThan( local, vec3( 1.0 ) ) ) ) return albedo;
-	vec4 mixAndFades = godotDecalTexel( index, 6 );
-	float fade = pow( 1.0 - abs( local.y ), local.y > 0.0 ? mixAndFades.y : mixAndFades.z );
+	vec4 maskAndFades = godotDecalTexel( index, 6 );
+	if ( ( ( uint( maskAndFades.x ) | ( uint( maskAndFades.y ) << 16u ) ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u ) return albedo;
+	float fade = pow( 1.0 - abs( local.y ), local.y > 0.0 ? maskAndFades.z : maskAndFades.w );
 	vec4 upAndFade = godotDecalTexel( index, 3 );
 	if ( upAndFade.w > 0.0 ) fade *= smoothstep( upAndFade.w, 1.0, dot( normal, upAndFade.xyz ) * 0.5 + 0.5 );
 	vec2 gradientX = vec2( dot( toLocalX.xyz, positionDx ), dot( toLocalZ.xyz, positionDx ) ) * gradientScale;
@@ -56,8 +56,7 @@ vec3 godotMixDecal( int index, vec3 albedo, vec3 position, vec3 normal, vec3 pos
 	vec4 rect = godotDecalTexel( index, 4 );
 	vec4 decalAlbedo = textureGrad( ${atlas}, local.xz * rect.zw + rect.xy, gradientX * rect.zw, gradientY * rect.zw );
 	decalAlbedo *= godotDecalTexel( index, 5 );
-	decalAlbedo.a *= fade;
-	return mix( albedo, decalAlbedo.rgb, decalAlbedo.a * mixAndFades.x );
+	return mix( albedo, decalAlbedo.rgb, decalAlbedo.a * fade );
 }
 
 vec3 godotApplyDecals( vec3 albedo, vec3 position, vec3 normal ) {
@@ -67,7 +66,7 @@ vec3 godotApplyDecals( vec3 albedo, vec3 position, vec3 normal ) {
 	vec3 geometryNormal = normalLength > 0.0 ? normal / normalLength : normal;
 	vec3 positionDx = dFdx( position );
 	vec3 positionDy = dFdy( position );
-	float gradientScale = exp2( ${shown}[ 0 ].y );
+	float gradientScale = ${shown}[ 0 ].y;
 	for ( int group = 0; group < count; group += 32 ) {
 		for ( int index = min( group + 31, count - 1 ); index >= group; index -- ) {
 			albedo = godotMixDecal( index, albedo, position, geometryNormal, positionDx, positionDy, gradientScale );
@@ -101,7 +100,7 @@ const LIT_EDITS: readonly TextEdit[] = [
 const UNLIT_FRAGMENT_EDITS: readonly TextEdit[] = [
   {
     three: THREE_MAIN,
-    godot: `#include <${GODOT_DECAL_PARS_CHUNK}>\nvarying vec3 ${VIEW_VARYING};\nvarying vec3 ${NORMAL_VARYING};\n${THREE_MAIN}`,
+    godot: `#include <${GODOT_DECAL_PARS_CHUNK}>\n${VARYING_DECLARATIONS}${THREE_MAIN}`,
   },
   {
     three: '#include <alphahash_fragment>',
@@ -121,7 +120,7 @@ const THREE_NORMAL_GUARD = '#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING
 const UNLIT_VERTEX_EDITS: readonly TextEdit[] = [
   {
     three: THREE_MAIN,
-    godot: `varying vec3 ${VIEW_VARYING};\nvarying vec3 ${NORMAL_VARYING};\n${THREE_MAIN}`,
+    godot: `${VARYING_DECLARATIONS}${THREE_MAIN}`,
   },
   { three: THREE_NORMAL_GUARD, godot: '#if 1' },
   {
@@ -138,7 +137,6 @@ const UNLIT_VERTEX_EDITS: readonly TextEdit[] = [
  */
 export function installGodotDecals(): boolean {
   const isPatched = installChunkEdits({
-    edits: [],
     mark: 'godotApplyDecals(',
     patch: 'decal',
     fragmentShaders: { standard: LIT_EDITS, physical: LIT_EDITS, basic: UNLIT_FRAGMENT_EDITS },

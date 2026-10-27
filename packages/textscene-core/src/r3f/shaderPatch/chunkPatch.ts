@@ -164,7 +164,8 @@ function applyChunkEdits<Name extends ChunkName>(
 
 /** A patch made of chunk edits, as `installChunkEdits` installs it. */
 export interface ChunkEditsPatch<Name extends ChunkName> {
-  edits: readonly ChunkEdit<Name>[];
+  /** The chunk edits. A patch of program edits only leaves them out. */
+  edits?: readonly ChunkEdit<Name>[];
   /**
    * The text that proves the patch installed. An edit writes it, and that edit's chunk is checked, or
    * its program's fragment shader, then its vertex shader, when no chunk edit writes it.
@@ -195,12 +196,10 @@ interface PatchedProgram {
 }
 
 /** Each program with its edits applied, or null when a program or an edit's text is missing. */
-function patchedPrograms({
-  fragmentShaders = {},
-  vertexShaders = {},
-}: ChunkEditsPatch<ChunkName>): PatchedProgram[] | null {
+function patchedPrograms(patch: ChunkEditsPatch<ChunkName>): PatchedProgram[] | null {
+  const { fragmentShaders = {}, vertexShaders = {} } = patch;
   const patched: PatchedProgram[] = [];
-  for (const name of programNames({ fragmentShaders, vertexShaders })) {
+  for (const name of programNames(patch)) {
     const program = THREE.ShaderLib[name];
     const vertexShader = program ? applyEdits(program.vertexShader, vertexShaders[name] ?? []) : null;
     const fragmentShader = program ? applyEdits(program.fragmentShader, fragmentShaders[name] ?? []) : null;
@@ -225,20 +224,25 @@ function alternatives(items: readonly string[]): string {
 
 /** The text of the chunk or program, the first of them, whose edit writes the mark. */
 function markedText<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): string {
-  const { edits, mark, fragmentShaders = {}, vertexShaders = {} } = patch;
+  const { edits = [], mark, fragmentShaders = {}, vertexShaders = {} } = patch;
   const chunkEdit = edits.find((edit) => edit.godot.includes(mark));
   if (chunkEdit) return THREE.ShaderChunk[chunkEdit.chunk];
-  const writes = (programEdits: readonly TextEdit[]) =>
-    programEdits.some((edit) => edit.godot.includes(mark));
-  for (const [name, programEdits] of Object.entries(fragmentShaders) as [ProgramName, readonly TextEdit[]][])
-    if (writes(programEdits)) return THREE.ShaderLib[name]!.fragmentShader;
-  for (const [name, programEdits] of Object.entries(vertexShaders) as [ProgramName, readonly TextEdit[]][])
-    if (writes(programEdits)) return THREE.ShaderLib[name]!.vertexShader;
+  const stages = [
+    [fragmentShaders, 'fragmentShader'],
+    [vertexShaders, 'vertexShader'],
+  ] as const;
+  for (const [shaders, stage] of stages)
+    for (const [name, programEdits] of Object.entries(shaders) as [ProgramName, readonly TextEdit[]][])
+      if (programEdits.some((edit) => edit.godot.includes(mark))) return THREE.ShaderLib[name]![stage];
   throw new Error(`expected an edit of the ${patch.patch} patch to write its mark "${mark}", got none`);
 }
 
 /** Each chunk the patch edits, prepends to or appends to, once. */
-function patchedChunkNames({ edits, prepend = {}, append = {} }: ChunkEditsPatch<ChunkName>): ChunkName[] {
+function patchedChunkNames({
+  edits = [],
+  prepend = {},
+  append = {},
+}: ChunkEditsPatch<ChunkName>): ChunkName[] {
   const names = [...edits.map((edit) => edit.chunk), ...Object.keys(prepend), ...Object.keys(append)];
   return [...new Set(names as ChunkName[])];
 }
@@ -246,7 +250,7 @@ function patchedChunkNames({ edits, prepend = {}, append = {} }: ChunkEditsPatch
 /** The chunks with every edit applied and each added text in, or null as `applyChunkEdits`. */
 function appliedEdits(
   chunks: Chunks<ChunkName>,
-  { edits, prepend = {}, append = {} }: ChunkEditsPatch<ChunkName>
+  { edits = [], prepend = {}, append = {} }: ChunkEditsPatch<ChunkName>
 ): Chunks<ChunkName> | null {
   const patched = applyChunkEdits(chunks, edits);
   if (patched === null) return null;
@@ -258,7 +262,7 @@ function appliedEdits(
 
 /** The warning for a three that lacks an edit's text: each edited chunk and program, and the patch. */
 function missingTextWarning<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): string {
-  const edited = [...new Set(patch.edits.map((edit) => edit.chunk))];
+  const edited = [...new Set((patch.edits ?? []).map((edit) => edit.chunk))];
   const stages = [
     ...Object.keys(patch.fragmentShaders ?? {}).map((name) => `${name} fragment shader`),
     ...Object.keys(patch.vertexShaders ?? {}).map((name) => `${name} vertex shader`),

@@ -67,14 +67,17 @@ describe('SceneHolding', () => {
     const releaseFirst = holding.hold(scene, renderer, first);
     holding.hold(scene, renderer, second);
 
-    expect([holding.isDriver(scene, first), holding.isDriver(scene, second)]).toEqual([true, false]);
+    expect([holding.drivenBy(scene, first), holding.drivenBy(scene, second)]).toEqual([
+      holding.of(scene),
+      undefined,
+    ]);
     releaseFirst();
-    expect(holding.isDriver(scene, second)).toBe(true);
+    expect(holding.drivenBy(scene, second)).toBe(holding.of(scene));
   });
 
   it('names no driver for a scene nobody holds (error case)', () => {
     const { holding } = holdingOf();
 
-    expect(holding.isDriver(new THREE.Scene(), Symbol('stranger'))).toBe(false);
+    expect(holding.drivenBy(new THREE.Scene(), Symbol('stranger'))).toBeUndefined();
   });
 });

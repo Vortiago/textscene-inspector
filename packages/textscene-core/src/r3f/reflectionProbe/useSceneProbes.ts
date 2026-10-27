@@ -25,8 +25,9 @@ export function useSceneProbes(): void {
   const holder = useSceneHolder(probesOfScenes);
 
   useFrame(() => {
-    if (!probesOfScenes.isDriver(scene, holder)) return;
+    const probes = probesOfScenes.drivenBy(scene, holder);
+    if (!probes) return;
     const pending = (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending();
-    if (probesOfScenes.of(scene)!.update(pending, clearColor.current)) invalidate();
+    if (probes.update(pending, clearColor.current)) invalidate();
   });
 }
