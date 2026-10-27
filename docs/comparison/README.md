@@ -154,7 +154,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
 - [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): nothing (a transform-only group)
-- [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): a THREE.Mesh
+- [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): a THREE.Mesh with a wireframe gizmo for every node
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
 - [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform group with a length line for every node
