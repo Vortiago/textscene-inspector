@@ -10,7 +10,7 @@ type Tokens = readonly CharstringToken[];
 const NOTDEF = cs('endchar');
 
 /** A rectangle from `(left, bottom)` to `(right, top)`, drawn clockwise from its lower left. */
-const box = (left: number, bottom: number, right: number, top: number): Tokens => [
+export const box = (left: number, bottom: number, right: number, top: number): Tokens => [
   left,
   bottom,
   'rmoveto',
@@ -67,9 +67,12 @@ function oval(left: number, bottom: number, right: number, top: number): Tokens 
 const hintmask = (stemBits: number): Tokens => [{ raw: [19, stemBits] }];
 const cntrmask = (stemBits: number): Tokens => [{ raw: [20, stemBits] }];
 
-const glyph = (...parts: Tokens[]) => cs(...parts.flat(), 'endchar');
+export const glyph = (...parts: Tokens[]) => cs(...parts.flat(), 'endchar');
 
-function fontOf(glyphs: readonly (readonly number[])[], extra: Partial<TestCffFont> = {}): TestCffFont {
+export function fontOf(
+  glyphs: readonly (readonly number[])[],
+  extra: Partial<TestCffFont> = {}
+): TestCffFont {
   return {
     unitsPerEm: 1000,
     glyphs: [NOTDEF, ...glyphs],
@@ -79,7 +82,7 @@ function fontOf(glyphs: readonly (readonly number[])[], extra: Partial<TestCffFo
 }
 
 /** A baseline zone with an overshoot below it, an ascender zone, a 500 zone and a descender zone. */
-const ZONES: TestBlues = { blueValues: [-10, 0, 700, 710, 500, 510], otherBlues: [-210, -200] };
+export const ZONES: TestBlues = { blueValues: [-10, 0, 700, 710, 500, 510], otherBlues: [-210, -200] };
 
 /** Stems on the zone edges, over them, and in no zone, in boxes, ovals and one pair of close stems. */
 export const ZONE_FONT = fontOf(

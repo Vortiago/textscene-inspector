@@ -9,6 +9,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import {
+  readFontMatrixEntry,
+  resolveFontMatrices,
+  type FontMatrix,
+  type FontMatrixEntry,
+} from './cffFontMatrix';
 import { privateBluesOf, type PrivateBlues } from './cffPrivateDict';
 import {
   EXPERT_CHARSET,
@@ -16,7 +22,7 @@ import {
   ISO_ADOBE_CHARSET,
   standardEncodingSid,
 } from './cffPredefined';
-import type { SfntFile, TableRecord } from './sfntTables';
+import { readHeadUnitsPerEm, type SfntFile, type TableRecord } from './sfntTables';
 
 /** The entries of an INDEX, as absolute byte ranges in the table's buffer. */
 interface CffIndex {
@@ -43,6 +49,10 @@ export interface CffFont {
   readonly globalSubrs: CffIndex;
   /** The Private DICT of the font dict that holds `glyphIndex`. */
   privateOf(glyphIndex: number): CffPrivate;
+  /** The units per em of the Top DICT, the ones a font dict's `matrixOf` is relative to. */
+  readonly unitsPerEm: number;
+  /** The `FontMatrix` of the font dict that holds `glyphIndex`, or the Top DICT's for a font with no font dicts. */
+  matrixOf(glyphIndex: number): FontMatrix;
   /** The glyph the charset gives a StandardEncoding code, or null. CFF1 only: `seac` names its parts by standard character. */
   glyphOfStandardCode(code: number): number | null;
   /** The regions an ItemVariationData blends over, or null for a `vsindex` the store lacks. CFF2 only. */
@@ -60,6 +70,7 @@ const OP_SUBRS = 19;
 const OP_VSINDEX = 22;
 const OP_BLEND = 23;
 const OP_VARSTORE = 24;
+const OP_FONT_MATRIX = 1207;
 const OP_ROS = 1230;
 const OP_FDARRAY = 1236;
 const OP_FDSELECT = 1237;
@@ -67,6 +78,7 @@ const OP_FDSELECT = 1237;
 /** Operators run to 26, since the CFF2 Top and Private DICTs add `vsindex`, `blend`, `vstore` and `maxstack` above CFF's 21. */
 const LAST_OPERATOR = 26;
 
+/** The operands of each operator, except the `FontMatrix`, whose entry is a `FontMatrixEntry`: its reals need their digits. */
 export type Dict = ReadonlyMap<number, readonly number[]>;
 
 class CffReader {
@@ -99,31 +111,42 @@ class CffReader {
 
   /** The DICT in bytes `[start, end)`: each operator with the operands before it. */
   dict(start: number, end: number): Dict {
-    const entries = new Map<number, number[]>();
+    const entries = new Map<number, readonly number[]>();
     let operands: number[] = [];
+    let operandStarts: number[] = [];
     let at = start;
+    let operandAt = start;
+    const take = (operand: number) => {
+      operands.push(operand);
+      operandStarts.push(operandAt);
+    };
     while (at < end) {
+      operandAt = at;
       const b0 = this.dv.getUint8(at++);
       if (b0 === OP_BLEND && this.isCff2) {
         operands = defaultInstance(operands);
+        operandStarts.length = operands.length;
       } else if (b0 <= LAST_OPERATOR) {
         const operator = b0 === 12 ? 1200 + this.dv.getUint8(at++) : b0;
-        entries.set(operator, operands);
+        const value =
+          operator === OP_FONT_MATRIX ? readFontMatrixEntry(this.dv, operandStarts, end) : operands;
+        if (value) entries.set(operator, value);
         operands = [];
+        operandStarts = [];
       } else if (b0 === 28) {
-        operands.push(this.dv.getInt16(at, false));
+        take(this.dv.getInt16(at, false));
         at += 2;
       } else if (b0 === 29) {
-        operands.push(this.dv.getInt32(at, false));
+        take(this.dv.getInt32(at, false));
         at += 4;
       } else if (b0 === 30) {
         const real = this.real(at);
-        operands.push(real.value);
+        take(real.value);
         at = real.next;
       } else if (b0 >= 32 && b0 <= 246) {
-        operands.push(b0 - 139);
+        take(b0 - 139);
       } else if (b0 >= 247 && b0 <= 254) {
-        operands.push(twoByteInteger(b0, this.dv.getUint8(at++)));
+        take(twoByteInteger(b0, this.dv.getUint8(at++)));
       }
     }
     return entries;
@@ -155,6 +178,11 @@ function defaultInstance(operands: number[]): number[] {
 
 function first(dict: Dict, operator: number): number | undefined {
   return dict.get(operator)?.[0];
+}
+
+/** The `FontMatrix` of a DICT, which `CffReader.dict` keeps as an entry rather than as operands. */
+function fontMatrixOf(dict: Dict): FontMatrixEntry | undefined {
+  return dict.get(OP_FONT_MATRIX) as FontMatrixEntry | undefined;
 }
 
 /** The integer of a number whose first byte is 247 to 254: 247 to 250 are positive, 251 to 254 negative (Technical Note 5176 Table 3). */
@@ -313,6 +341,11 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
   const privates = fontDicts.map((font) => privateOf(reader, base, font, isCff2));
   const fdOf =
     hasFontDicts && fdSelectAt !== undefined ? fdSelector(dv, base + fdSelectAt, charStrings.count) : () => 0;
+  const matrices = resolveFontMatrices(
+    fontMatrixOf(topDict),
+    hasFontDicts ? fontDicts.map(fontMatrixOf) : null,
+    readHeadUnitsPerEm(sfnt)
+  );
 
   const charsetAt = first(topDict, OP_CHARSET) ?? 0;
   const sids = isCff2 ? [] : charsetSids(dv, base, charsetAt, charStrings.count);
@@ -325,6 +358,9 @@ function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFon
     charStrings,
     globalSubrs,
     privateOf: (glyphIndex) => privates[fdOf(glyphIndex)] ?? privates[0]!,
+    unitsPerEm: matrices.top.unitsPerEm,
+    matrixOf: (glyphIndex) =>
+      matrices.fontDicts ? (matrices.fontDicts[fdOf(glyphIndex)] ?? matrices.fontDicts[0]!) : matrices.top,
     glyphOfStandardCode: (code) => {
       if (code < 0 || code > 255) return null;
       const glyphIndex = sids.indexOf(standardEncodingSid(code));

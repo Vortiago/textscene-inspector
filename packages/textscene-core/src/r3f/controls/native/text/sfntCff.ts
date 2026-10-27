@@ -13,9 +13,10 @@
  */
 
 import { interpretCharstring } from './cffCharstring';
+import { transformOutline } from './cffFontMatrix';
 import type { CharstringContour } from './cffPen';
-import { openCff } from './cffTables';
-import { getFontOutlineScale } from './fontMetrics';
+import { openCff, type CffFont } from './cffTables';
+import { ftMulDiv, getFontOutlineScale } from './fontMetrics';
 import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
@@ -23,11 +24,25 @@ import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 const FIXED_16_16_TO_26_6 = 1024;
 
 /**
- * The factor the Adobe engine multiplies a 16.16 charstring coordinate by (`cf2_getScaleAndHintFlag`):
- * FreeType's 26.6 scale of the size, divided by 64 with rounding, so the product is a 16.16 px.
+ * FreeType's 26.6 scale of the size, for a glyph in a font dict whose units per em differ from those
+ * of the Top DICT: the scale of the Top DICT's, times the ratio of the two (`cff_slot_load`).
  */
-function charstringScale(unitsPerEm: number, fontSizePx: number): number {
-  return Math.floor((getFontOutlineScale(unitsPerEm, fontSizePx) + 32) / 64);
+function glyphOutlineScale(
+  font: CffFont,
+  glyphIndex: number,
+  unitsPerEm: number,
+  fontSizePx: number
+): number {
+  const scale = getFontOutlineScale(unitsPerEm, fontSizePx);
+  return ftMulDiv(scale, font.unitsPerEm, font.matrixOf(glyphIndex).unitsPerEm);
+}
+
+/**
+ * The factor the Adobe engine multiplies a 16.16 charstring coordinate by (`cf2_getScaleAndHintFlag`):
+ * the 26.6 scale of the glyph, divided by 64 with rounding, so the product is a 16.16 px.
+ */
+function charstringScale(outlineScale: number): number {
+  return Math.floor((outlineScale + 32) / 64);
 }
 
 /**
@@ -63,9 +78,12 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   if (!font) return null;
 
   return (glyphIndex, fontSizePx) => {
-    const contours = interpretCharstring(font, glyphIndex, charstringScale(unitsPerEm, fontSizePx));
+    const outlineScale = glyphOutlineScale(font, glyphIndex, unitsPerEm, fontSizePx);
+    const contours = interpretCharstring(font, glyphIndex, charstringScale(outlineScale));
     if (!contours) return null;
     const outline = scaledOutline(contours);
-    return outline.x.length > 0 ? scaledOutlineContours(outline) : null;
+    if (outline.x.length === 0) return null;
+    transformOutline(outline, font.matrixOf(glyphIndex));
+    return scaledOutlineContours(outline);
   };
 }

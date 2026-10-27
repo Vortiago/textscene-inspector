@@ -116,6 +116,10 @@ export interface TestCffFont {
   predefinedCharset?: 1 | 2;
   /** The blue zones of every font dict. */
   blues?: TestBlues;
+  /** The operands of the Top DICT's `FontMatrix`. */
+  fontMatrix?: readonly TestDictOperand[];
+  /** The operands of the `FontMatrix` of each font dict, undefined for a font dict with none. */
+  fontDictMatrices?: readonly (readonly TestDictOperand[] | undefined)[];
   /** CFF2: the region count of each ItemVariationData, and the `vsindex` of the Private DICT. */
   variation?: { regionCounts: readonly number[]; vsindex?: number };
 }
@@ -129,6 +133,7 @@ const DICT_OPS = {
   blueScale: [12, 9],
   blueShift: [12, 10],
   blueFuzz: [12, 11],
+  fontMatrix: [12, 7],
   languageGroup: [12, 17],
   charset: [15],
   charStrings: [17],
@@ -146,13 +151,19 @@ const DICT_OPS = {
  * the offsets it holds. A value that can be negative is a `small` integer, which takes as few bytes as
  * it can: FreeType on a 64-bit target reads a negative five-byte integer as a large positive one.
  */
-type DictOperand = number | { small: number } | { real: number };
+export type TestDictOperand = number | { small: number } | { real: number | string };
 
-type DictEntry = readonly [keyof typeof DICT_OPS, readonly DictOperand[]];
+type DictEntry = readonly [keyof typeof DICT_OPS, readonly TestDictOperand[]];
+
+const REAL_SYMBOL_NIBBLES: Record<string, number> = { '.': 0xa, E: 0xb, 'E-': 0xc, '-': 0xe };
 
 /** The packed-nibble bytes of a real (Technical Note 5176 Table 5), the `30` operator included. */
-function realBytes(value: number): number[] {
-  const nibbles = [...String(value)].map((char) => (char === '.' ? 0xa : char === '-' ? 0xe : Number(char)));
+function realBytes(value: number | string): number[] {
+  const symbols =
+    String(value)
+      .toUpperCase()
+      .match(/E-|[0-9.E-]/g) ?? [];
+  const nibbles = symbols.map((symbol) => REAL_SYMBOL_NIBBLES[symbol] ?? Number(symbol));
   nibbles.push(0xf);
   if (nibbles.length % 2 === 1) nibbles.push(0xf);
   const bytes = [30];
@@ -160,16 +171,16 @@ function realBytes(value: number): number[] {
   return bytes;
 }
 
+/** The bytes of a DICT operand. */
+export function dictOperandBytes(operand: TestDictOperand): number[] {
+  if (typeof operand === 'number') return [29, ...new ByteWriter().u32(operand >>> 0).toBytes()];
+  return 'real' in operand ? realBytes(operand.real) : operandBytes(operand.small);
+}
+
 function dict(entries: readonly DictEntry[]): ByteWriter {
   const out = new ByteWriter();
   for (const [name, operands] of entries) {
-    for (const operand of operands) {
-      if (typeof operand === 'number') out.u8(29).u32(operand >>> 0);
-      else {
-        for (const byte of 'real' in operand ? realBytes(operand.real) : operandBytes(operand.small))
-          out.u8(byte);
-      }
-    }
+    for (const operand of operands) for (const byte of dictOperandBytes(operand)) out.u8(byte);
     for (const byte of DICT_OPS[name]) out.u8(byte);
   }
   return out;
@@ -316,6 +327,7 @@ function assemble(font: TestCffFont, at: Positions): { table: ByteWriter; positi
   if (!isCff2 && font.charset) topEntries.push(['charset', [at.charset]]);
   if (!isCff2 && font.predefinedCharset) topEntries.push(['charset', [font.predefinedCharset]]);
   topEntries.push(['charStrings', [at.charStrings]]);
+  if (font.fontMatrix) topEntries.push(['fontMatrix', font.fontMatrix]);
   if (hasFdArray)
     topEntries.push(
       ...(isCff2 ? [] : [['ros', [391, 391, 0]] as DictEntry]),
@@ -351,9 +363,11 @@ function assemble(font: TestCffFont, at: Positions): { table: ByteWriter; positi
   place('charStrings', index(font.glyphs, isCff2));
   if (hasFdArray) {
     place('fdSelect', fdSelectFormat3(font.fdSelect ?? new Array<number>(font.glyphs.length).fill(0)));
-    const fontDicts = privates.map((_, fd) =>
-      dict([['private', [privateSize(fd), at.privates[fd] ?? 0]]]).toBytes()
-    );
+    const fontDicts = privates.map((_, fd) => {
+      const matrix = font.fontDictMatrices?.[fd];
+      const entries: DictEntry[] = matrix ? [['fontMatrix', matrix]] : [];
+      return dict([...entries, ['private', [privateSize(fd), at.privates[fd] ?? 0]]]).toBytes();
+    });
     place('fdArray', index(fontDicts, isCff2));
   }
   if (isCff2 && font.variation) place('varStore', varStore(font.variation.regionCounts));
