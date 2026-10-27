@@ -22,6 +22,12 @@ export const SCENE_COMPOSITION_SCENES = [
     name: 'instanced-unique-parent-released',
     file: 'integration-instanced-unique-parent-released.tscn',
   },
+  // A host heading whose walk through an instance finds nothing (`Player/Inner/%Q`). Godot
+  // re-roots it under the file root, so the orange box sits left of the origin, not under Inner.
+  { name: 'escaped-heading-reroot', file: 'integration-escaped-heading-reroot.tscn' },
+  // A host heading whose `%Lamp` walk leaves the instance. Godot seats it under Lamp, so the
+  // orange box sits up and to the right, not under the instance.
+  { name: 'escaped-heading-lamp', file: 'integration-escaped-heading-lamp.tscn' },
   // An instance of an inherited scene: its root owns the base's `%View`, which the quad's
   // ViewportTexture reads from that root.
   {

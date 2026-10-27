@@ -52,6 +52,20 @@ function graft(
   return graftInstanceChildren(rootChildren, hostChildren, scopes, names).children;
 }
 
+/** The whole result of a graft, for a test of what it hands back. */
+function graftResult(
+  rootChildren: readonly LiveNode[],
+  hostChildren: readonly LiveNode[],
+  { names: facts = NO_NAMES }: { names?: InstanceNames } = {}
+) {
+  return graftInstanceChildren(rootChildren, hostChildren, NO_SCOPES, facts);
+}
+
+/** The name and walk end of each child a graft could not seat inside the instance. */
+function escapes(result: ReturnType<typeof graftResult>): [string, string | null][] {
+  return result.escaped.map(({ child, end }) => [child.name, end]);
+}
+
 /** The table and settings a graft reads. */
 function names(settings: InstanceNameSetting[], own: UniqueNamePaths = new Map()): InstanceNames {
   return { own: () => own, settings };
@@ -274,16 +288,14 @@ describe('graftInstanceChildren', () => {
     expect(pivot.children.map((c) => c.name)).toEqual(['Hat']);
   });
 
-  it('appends at the root and warns for a missing name before a %Name', () => {
+  it('hands back a child whose walk reaches a missing name before a %Name', () => {
     // A missing child returns nullptr at once (node.cpp:1941-1946), before the %Name is read.
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const child = node('Hat', { instanceSubPath: 'Elsewhere/%Pivot' });
 
-    const grafted = graft(subScene(), [child], { names: names([], CLAIMS_PIVOT) });
+    const result = graftResult(subScene(), [child], { names: names([], CLAIMS_PIVOT) });
 
-    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Hat']);
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(escapes(result)).toEqual([['Hat', null]]);
   });
 
   it('steps up from the claimed node on a .. after the %Name', () => {
@@ -326,14 +338,13 @@ describe('graftInstanceChildren', () => {
     expect(grafted[1]!.children.map((c) => c.name)).toEqual(['Hat']);
   });
 
-  it('misses a %Name a host override releases', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  it('hands a child on to the owner above where a host override releases its %Name', () => {
     const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: false, hostChildrenBefore: 0 }];
 
-    const grafted = graft(subScene(), [HAT_AT_PIVOT], { names: names(settings, CLAIMS_PIVOT) });
+    const result = graftResult(subScene(), [HAT_AT_PIVOT], { names: names(settings, CLAIMS_PIVOT) });
 
-    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Hat']);
-    warnSpy.mockRestore();
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(escapes(result)).toEqual([['Hat', '../%Pivot']]);
   });
 
   it('grafts at a claim a host override releases only after the child', () => {
@@ -345,14 +356,13 @@ describe('graftInstanceChildren', () => {
     expect(grafted[0]!.children[0]!.children.map((c) => c.name)).toEqual(['Hat']);
   });
 
-  it('misses a claim a host override sets only after the child', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+  it('hands a child on to the owner above where a host override claims its %Name only after it', () => {
     const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: true, hostChildrenBefore: 1 }];
 
-    const grafted = graft(subScene(), [HAT_AT_PIVOT], { names: names(settings) });
+    const result = graftResult(subScene(), [HAT_AT_PIVOT], { names: names(settings) });
 
-    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Hat']);
-    warnSpy.mockRestore();
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(escapes(result)).toEqual([['Hat', '../%Pivot']]);
   });
 
   it('hands a nested instance a setting after the children it holds by then', () => {
@@ -376,7 +386,7 @@ describe('graftInstanceChildren', () => {
 
     const grafted = graft(subTree, [HAT_AT_DEEP], { names: names(settings) });
 
-    expect(grafted.map((c) => c.name)).toEqual(['Inner', 'Hat']);
+    expect(grafted.map((c) => c.name)).toEqual(['Inner']);
     expect(grafted[0]!.instanceNameSettings).toEqual([
       { pathInInstance: 'Body/Deep', isUnique: true, hostChildrenBefore: 0 },
     ]);
@@ -411,24 +421,69 @@ describe('graftInstanceChildren', () => {
     warnSpy.mockRestore();
   });
 
-  it('appends at the root and warns for a %Name the sub-scene does not claim', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    const grafted = graft(subScene(), [node('Hat', { instanceSubPath: '%Gone' })]);
+  it('hands a child on to the owner above where the sub-scene does not claim its %Name', () => {
+    const result = graftResult(subScene(), [node('Hat', { instanceSubPath: '%Gone' })]);
 
-    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Hat']);
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(escapes(result)).toEqual([['Hat', '../%Gone']]);
   });
 
-  it('appends at the root and warns when the sub-path names nothing', () => {
+  it('keeps a child whose %Name the sub-scene claims and whose later step is missing', () => {
+    // Godot finds the node inside the instance and fails there, so no owner above answers.
+    const child = node('Hat', { instanceSubPath: '%Pivot/Missing' });
+
+    const result = graftResult(subScene(), [child], { names: names([], CLAIMS_PIVOT) });
+
+    expect(escapes(result)).toEqual([['Hat', null]]);
+  });
+
+  it('hands back a child whose sub-path names nothing', () => {
+    const result = graftResult(subScene(), [node('Body', { instanceSubPath: 'NoSuch/Path' })]);
+
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(escapes(result)).toEqual([['Body', null]]);
+  });
+
+  it('hands back a child with the sub-path and scope it was authored with', () => {
+    const child = node('Hat', { instanceSubPath: 'NoSuch/Path' });
+
+    const [escaped] = graftResult(subScene(), [child]).escaped;
+
+    expect(escaped!.child).toBe(child);
+    expect(escaped!.scope).toBe(NO_SCOPES.outer);
+  });
+
+  it('hands back a child whose %Name the table holds for a node outside the instance', () => {
+    // Godot jumps to the claimed node wherever it stands (node.cpp:1930-1938).
+    const outside: UniqueNamePaths = new Map([['%Lamp', '../Lamp']]);
+
+    const result = graftResult(subScene(), [node('Shade', { instanceSubPath: '%Lamp' })], {
+      names: names([], outside),
+    });
+
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(escapes(result)).toEqual([['Shade', '../Lamp']]);
+  });
+
+  it('keeps the rest of the walk past a claim that climbs out, as written', () => {
+    const outside: UniqueNamePaths = new Map([['%Lamp', '../Lamp']]);
+    const child = node('Bulb', { instanceSubPath: '%Lamp/Shade/%Other' });
+
+    expect(escapes(graftResult(subScene(), [child], { names: names([], outside) }))).toEqual([
+      ['Bulb', '../Lamp/Shade/%Other'],
+    ]);
+  });
+
+  it('keeps an override that matches no node in the instance, as Godot drops it', () => {
+    // Out of scope for seating: the graft still appends an override with a warning.
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    const child = node('Body', { instanceSubPath: 'NoSuch/Path' });
+    const override = node('Body', { instanceSubPath: 'NoSuch', overridesExistingNode: true });
 
-    const grafted = graft(subScene(), [child]);
+    const result = graftResult(subScene(), [override]);
 
-    // Visible-but-misplaced beats invisible.
-    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Body']);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NoSuch/Path'));
+    expect(result.children.map((c) => c.name)).toEqual(['Sprite2D', 'Body']);
+    expect(result.escaped).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NoSuch'));
     warnSpy.mockRestore();
   });
 
@@ -446,6 +501,49 @@ function deepFreeze(nodes: readonly TscnNode[]): readonly TscnNode[] {
   }
   return Object.freeze(nodes);
 }
+
+describe('graftInstanceChildren: a %Name read at a nested instance', () => {
+  /** A sub-scene that instances `Inner` and holds a `Q` node, which its own table claims. */
+  function innerAndQ(): TscnNode[] {
+    return [node('Inner', { instance: 'ExtResource("2")' }), node('Q')];
+  }
+  const CLAIMS_Q: UniqueNamePaths = new Map([['%Q', 'Q']]);
+  const HAT_AT_INNER_Q = node('Hat', { instanceSubPath: 'Inner/%Q' });
+
+  /** The graft with a nested instance whose table is `nested`, undefined while it is unknown. */
+  function graftWithNested(nested: UniqueNamePaths | undefined) {
+    return graftResult(innerAndQ(), [HAT_AT_INNER_Q], {
+      names: { ...names([], CLAIMS_Q), nested: () => nested },
+    });
+  }
+
+  it('reads the owner table where the nested instance lacks the name (node.cpp:1930-1938)', () => {
+    const result = graftWithNested(new Map());
+
+    expect(result.children.find((c) => c.name === 'Q')!.children.map((c) => c.name)).toEqual(['Hat']);
+    expect(result.uniqueParentPlacements.get('Inner/%Q/Hat')).toBe('Q/Hat');
+  });
+
+  it('leaves the name to the nested instance where its table holds it', () => {
+    const result = graftWithNested(new Map([['%Q', 'Deep/Q']]));
+
+    expect(result.children[0]!.children.map((c) => [c.name, c.instanceSubPath])).toEqual([['Hat', '%Q']]);
+  });
+
+  it('leaves the name to the nested instance while its table is unknown', () => {
+    const result = graftWithNested(undefined);
+
+    expect(result.children[0]!.children.map((c) => [c.name, c.instanceSubPath])).toEqual([['Hat', '%Q']]);
+  });
+
+  it('hands the child back where neither table holds the name', () => {
+    const result = graftResult(innerAndQ(), [HAT_AT_INNER_Q], {
+      names: { ...names([], new Map()), nested: () => new Map() },
+    });
+
+    expect(escapes(result)).toEqual([['Hat', null]]);
+  });
+});
 
 describe('graftInstanceChildren: index=', () => {
   const root = [node('A'), node('B')];

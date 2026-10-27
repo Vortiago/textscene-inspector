@@ -558,6 +558,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Escaped Heading Hud",
+    "file": "unit-escaped-heading-hud.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Inner",
+    "file": "unit-escaped-heading-inner.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Player",
+    "file": "unit-escaped-heading-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fabrik 3d",
     "file": "unit-fabrik-3d.tscn",
     "category": "Other"
@@ -2596,6 +2611,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "All Primitives",
     "file": "integration-all-primitives.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Escaped Heading Lamp",
+    "file": "integration-escaped-heading-lamp.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Escaped Heading Reroot",
+    "file": "integration-escaped-heading-reroot.tscn",
     "category": "Integration - Multi-Node"
   },
   {

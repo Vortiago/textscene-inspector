@@ -8,6 +8,8 @@ import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
+import { holdsDeepChildren, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
+import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
@@ -108,7 +110,14 @@ function collapseOver(
   const subScene = composedSubScene(cached, content, sceneCache);
   // A composed root's nodes resolve in its base's scope, which its own `scope` carries.
   const rootContent = subScene.nodes.length === 1 ? scopeOf(subScene.nodes[0]!, content) : content;
-  return mergeInstanceRoot(node, subScene, { outer, content: rootContent }) ?? node;
+  return (
+    mergeInstanceRoot(node, subScene, { outer, content: rootContent }, collapserOver(sceneCache)) ?? node
+  );
+}
+
+/** `collapseLiveNode` over `sceneCache`, as the seating takes it. */
+function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
+  return (node, scope) => collapseLiveNode(node, scope, sceneCache);
 }
 
 /**
@@ -136,9 +145,9 @@ const compositions = new WeakMap<CachedScene, Composition[]>();
 
 /**
  * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
- * inherits, or the scene as cached where nothing collapses. A composition is reused while the
- * cache still answers what it read, so every instance shares one `%Name` table. The source may be
- * the loader's live cache, which changes in place.
+ * inherits, with the children its own instances handed back seated, or the scene as cached where
+ * nothing changes. A composition is reused while the cache still answers what it read, so every
+ * instance shares one `%Name` table. The source may be the loader's live cache, which changes in place.
  */
 function composedSubScene(
   cached: CachedScene,
@@ -146,7 +155,7 @@ function composedSubScene(
   sceneCache: CachedSceneSource
 ): { nodes: readonly LiveNode[] } {
   const root = cached.nodes[0];
-  if (cached.nodes.length !== 1 || !root?.instance) return cached;
+  if (cached.nodes.length !== 1 || !root || !(root.instance || holdsDeepChildren(root))) return cached;
   const enclosing = content.instancedScenePaths ?? [];
   const stored = compositions.get(cached) ?? [];
   const sameChain = stored.filter((c) => sameElements(c.instancedScenePaths, enclosing));
@@ -170,8 +179,42 @@ function composeRecording(
   // The recorder also sees the reads of a base's own composition, so a change of any base ends this entry.
   const recorder = recordingReads(sceneCache, (path, answer) => reads.set(path, answer));
   const collapsed = collapseLiveNode(root, content, recorder);
-  const composed = collapsed === root ? cached : { nodes: [collapsed] };
+  const [seated] = seatedFile([collapsed], content, recorder, cached.nodes);
+  const composed = seated === root ? cached : { nodes: [seated!] };
   return { instancedScenePaths: content.instancedScenePaths ?? [], reads, composed };
+}
+
+/**
+ * The nodes of one file with the children their instances handed back seated where the file's own
+ * walk puts them. The same array where no instance hands one back.
+ *
+ * @param roots the file's nodes, collapsed over the base an inherited root names
+ * @param scope the scope the file's nodes resolve against
+ * @param seating the nodes as the parse seated them, whose `%Name` claims the file answers a walk with
+ */
+function seatedFile(
+  roots: readonly LiveNode[],
+  scope: SceneScope,
+  sceneCache: CachedSceneSource,
+  seating: readonly LiveNode[]
+): readonly LiveNode[] {
+  const root = roots[0];
+  if (roots.length !== 1 || !root || !(holdsDeepChildren(root) || root.escaped)) return roots;
+  const collapse = collapserOver(sceneCache);
+  // A root that inherits a base, not merged over it yet, hands back through its collapse.
+  const isUnmerged = root.instance !== undefined && root.uniqueNames === undefined;
+  const handedBack = (isUnmerged ? collapse(root, scope) : root).escaped ?? [];
+  const table = root.uniqueNames;
+  const seated = seatInFile(
+    {
+      root,
+      scope: scopeOf(root, scope),
+      claimed: (key) => (table ? table.paths() : cachedUniqueNamesBelowRoot(seating)).get(key),
+      handedBack,
+    },
+    collapse
+  );
+  return seated === root ? roots : [seated];
 }
 
 function stillAnswered(reads: ReadonlyMap<string, CacheAnswer>, sceneCache: CachedSceneSource): boolean {
@@ -455,6 +498,11 @@ export interface LiveLink {
 export class LiveTree {
   /** The groups a walk starts from: the outer roots, in the root scene's scope. */
   readonly rootGroups: readonly LiveChildGroup[];
+  /**
+   * `roots` with the headings their instances hand back seated where the file's walk puts them. The
+   * rows and the viewport draw from these, since each instance they enter collapses on its own.
+   */
+  readonly seatedRoots: readonly TscnNode[];
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
   /**
@@ -471,7 +519,9 @@ export class LiveTree {
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
-    this.rootGroups = [inlineGroup(roots, rootScope(ctx))];
+    const scope = rootScope(ctx);
+    this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
+    this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
   }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */

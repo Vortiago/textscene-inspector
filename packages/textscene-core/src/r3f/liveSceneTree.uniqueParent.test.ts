@@ -231,7 +231,8 @@ unique_name_in_owner = false
     const composed = composedPlayer(bareHost, { 'res://player.tscn': releasing, 'res://base.tscn': base });
 
     expect(childNames(composed, 'A')).toEqual([]);
-    expect(composed.children.map((n) => n.name)).toEqual(['A', 'Hat']);
+    // The walk finds nothing, so Hat re-roots under the inherited root, renamed from its `parent=`.
+    expect(composed.children.map((n) => n.name)).toEqual(['A', '_A#Hat']);
     warnSpy.mockRestore();
   });
 
