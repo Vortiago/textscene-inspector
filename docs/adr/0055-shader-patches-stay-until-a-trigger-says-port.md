@@ -6,8 +6,8 @@
 ## Context
 
 The renderer draws Godot's lit surface by splicing Godot's GLSL into three's built-in shader chunks
-and programs at string anchors. On 22 October 2026 that was about 125 anchors at 44 sites in 37
-modules, and about 1,000 lines of injected GLSL. On 7 October it was 27 anchors at 11 sites.
+and programs at string anchors. The patches install from `r3f/shaderPatch/installShaderPatches.ts`,
+and `programInjections.test.ts` lists the program injections.
 
 A port of Godot's scene shader into our own `ShaderMaterial` costs 40 to 50 files, and every 3D
 golden moves. The cost grows by about 15% per 20 rendering pull requests. A port now costs about
@@ -28,9 +28,8 @@ Keep the splices, and make a missed anchor fail loudly.
 Port the lit surface when the first of these holds:
 
 1. One three.js upgrade breaks 5 or more anchors, or rebasing the patches takes more than a day.
-2. The edits to the light and shadow chunks pass 80. They were 74 on 27 October, counted as every
-   anchor that `applyEdit` matches in a `lights_*`, `shadowmap_*`, `shadowmask_*` or
-   `envmap_physical_pars_fragment` chunk while `programInjections.test.ts` runs.
+2. The edits to the light and shadow chunks pass 80. `r3f/shaderPatch/lightLoopEdits.test.ts`
+   counts them and fails past 80.
 3. A feature must change the structure of the light loop, not lines inside it. Examples are
    Godot's per-mesh light limits and light cull masks.
 
