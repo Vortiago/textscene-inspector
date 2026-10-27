@@ -13,9 +13,10 @@ import {
   INSTANCE_LAYERS_UNIFORM,
   installInstanceLayers,
 } from '../instanceLayers/instanceLayersChunk.js';
-import { DECAL_UNIFORMS, decalAtlasSlot, decalRowsSlot, shownDecals } from './decalSlots.js';
+import { DECAL_FIRST_ROW, installSceneRows, SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk.js';
+import { DECAL_UNIFORMS, decalAtlasSlot, shownDecals } from './decalSlots.js';
 
-const { atlas, rows, shown } = DECAL_UNIFORMS;
+const { atlas, shown } = DECAL_UNIFORMS;
 
 /** The chunk that holds the decal functions, which each program that mixes decals includes. */
 const GODOT_DECAL_PARS_CHUNK = 'godot_decal_pars';
@@ -31,12 +32,12 @@ const VARYING_DECLARATIONS = `varying vec3 ${VIEW_VARYING};\nvarying vec3 ${NORM
  */
 const GODOT_DECAL_GLSL = /* glsl */ `
 uniform highp sampler2D ${atlas};
-uniform highp sampler2D ${rows};
 uniform vec4 ${shown}[ 1 ];
 #include <${INSTANCE_LAYERS_CHUNK}>
+#include <${SCENE_ROWS_CHUNK}>
 
 vec4 godotDecalTexel( int index, int texel ) {
-	return texelFetch( ${rows}, ivec2( texel, index ), 0 );
+	return godotSceneRowTexel( ${DECAL_FIRST_ROW} + index, texel );
 }
 
 vec3 godotMixDecal( int index, vec3 albedo, vec3 position, vec3 normal, vec3 positionDx, vec3 positionDy, float gradientScale ) {
@@ -131,7 +132,7 @@ const UNLIT_VERTEX_EDITS: readonly TextEdit[] = [
 
 /**
  * Mixes the decals into the albedo of three's standard, physical and basic programs, and gives
- * every program with fog the atlas, the rows and the shown decals. A three release that rewrites a
+ * every program with fog the atlas and the shown decals. A three release that rewrites a
  * replaced line keeps all its programs, and `decalShaderChunk.test.ts` fails on that release.
  * True when the programs hold the mix. A second call changes nothing.
  */
@@ -141,11 +142,10 @@ export function installGodotDecals(): boolean {
     patch: 'decal',
     fragmentShaders: { standard: LIT_EDITS, physical: LIT_EDITS, basic: UNLIT_FRAGMENT_EDITS },
     vertexShaders: { basic: UNLIT_VERTEX_EDITS },
-    requires: [installInstanceLayers, installDecalChunk],
+    requires: [installInstanceLayers, installSceneRows, installDecalChunk],
   });
   if (!isPatched) return false;
   installMergedUniform(FOG_UNIFORMS_MERGE, atlas, decalAtlasSlot);
-  installMergedUniform(FOG_UNIFORMS_MERGE, rows, decalRowsSlot);
   installMergedUniform(FOG_UNIFORMS_MERGE, shown, shownDecals);
   return true;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { DECAL_ROW_TEXELS, DecalRows, MAX_DECALS, type DecalLook, type DrawnDecal } from './decalRows';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
+import { DecalRows, MAX_DECALS, type DecalLook, type DrawnDecal } from './decalRows';
 
 const LOOK: DecalLook = {
   size: { x: 2, y: 2, z: 2 },
@@ -41,7 +42,7 @@ function packed(decals: DrawnDecal[], camera = AT_ORIGIN): DecalRows {
 
 /** Texel `texel` of decal `index` in `rows`. */
 function texel(rows: DecalRows, index: number, texel: number): number[] {
-  const start = (index * DECAL_ROW_TEXELS + texel) * 4;
+  const start = (index * SCENE_ROW_TEXELS + texel) * 4;
   return Array.from(rows.data.subarray(start, start + 4));
 }
 

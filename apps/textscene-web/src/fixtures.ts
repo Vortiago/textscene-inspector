@@ -2299,6 +2299,12 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Decal Filter",
+    "file": "decal-filter/unit-decal-filter.tscn",
+    "category": "Other",
+    "root": "decal-filter"
+  },
+  {
     "name": "Glow Linear Upscale",
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",

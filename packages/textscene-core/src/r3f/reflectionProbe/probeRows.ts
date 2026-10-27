@@ -1,6 +1,6 @@
 /**
  * The probes a scene draws with, packed as the texels each lit fragment fetches: Godot's
- * `ReflectionData` (`light_storage.cpp:1785-1824`), one row of `PROBE_ROW_TEXELS` per probe.
+ * `ReflectionData` (`light_storage.cpp:1785-1824`), one row of `SCENE_ROW_TEXELS` per probe.
  */
 
 import type * as THREE from 'three';
@@ -10,6 +10,7 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {
@@ -28,16 +29,14 @@ export interface DrawnProbe {
 }
 
 /**
- * The texels of one probe: the world-to-local matrix's rows, the half size and the blend distance,
- * the origin offset and the intensity, the ambient and its mode, then the mask, the box projection
- * and the atlas layer. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
+ * The rows of the drawn probes, rewritten in place by each `pack`. The texels of one probe: the
+ * world-to-local matrix's rows, the half size and the blend distance, the origin offset and the
+ * intensity, the ambient and its mode, then the mask, the box projection and the atlas layer. The
+ * mask goes in two 16-bit halves, as a float holds 24 bits exactly.
  */
-export const PROBE_ROW_TEXELS = 7;
-
-/** The rows of the drawn probes, rewritten in place by each `pack`. */
 export class ProbeRows extends RowBuffer {
   constructor() {
-    super(PROBE_ROW_TEXELS * 4);
+    super(SCENE_ROW_TEXELS * 4);
   }
 
   /** Packs `probes` in order, and answers whether any row changed. */

@@ -16,11 +16,12 @@ import {
   INSTANCE_LAYERS_UNIFORM,
   installInstanceLayers,
 } from '../instanceLayers/instanceLayersChunk.js';
-import { atlasSlot, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots.js';
+import { installSceneRows, SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk.js';
+import { atlasSlot, REFLECTION_PROBE_UNIFORMS, shownProbes } from './probeSlots.js';
 
 type ProbeChunk = 'lights_physical_pars_fragment' | 'lights_fragment_end';
 
-const { atlas, rows, probes } = REFLECTION_PROBE_UNIFORMS;
+const { atlas, probes } = REFLECTION_PROBE_UNIFORMS;
 
 /**
  * The probe functions, all in world space: Godot's are in view space through a matrix that folds in
@@ -29,12 +30,12 @@ const { atlas, rows, probes } = REFLECTION_PROBE_UNIFORMS;
  */
 const REFLECTION_PROBE_GLSL = /* glsl */ `
 uniform highp sampler2DArray ${atlas};
-uniform highp sampler2D ${rows};
 uniform vec4 ${probes}[ 1 ];
 #include <${INSTANCE_LAYERS_CHUNK}>
+#include <${SCENE_ROWS_CHUNK}>
 ${OCTMAP_GLSL}
 vec4 godotProbeTexel( int index, int texel ) {
-	return texelFetch( ${rows}, ivec2( texel, index ), 0 );
+	return godotSceneRowTexel( index, texel );
 }
 
 uint godotProbeMask( vec4 flags ) {
@@ -150,10 +151,9 @@ export function installGodotReflectionProbes(): void {
     mark: GATHER_PROBES,
     patch: 'reflection probe',
     append: { lights_physical_pars_fragment: REFLECTION_PROBE_GLSL },
-    requires: [installInstanceLayers],
+    requires: [installInstanceLayers, installSceneRows],
   });
   if (!isPatched) return;
   installLitUniform(atlas, atlasSlot);
-  installLitUniform(rows, rowsSlot);
   installLitUniform(probes, shownProbes);
 }

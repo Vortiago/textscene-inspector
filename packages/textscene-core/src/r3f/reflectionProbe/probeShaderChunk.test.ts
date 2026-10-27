@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotReflectionProbes } from './probeShaderChunk';
-import { atlasSlot, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots';
+import { atlasSlot, REFLECTION_PROBE_UNIFORMS, shownProbes } from './probeSlots';
 import { instanceLayers, INSTANCE_LAYERS_UNIFORM } from '../instanceLayers/instanceLayersChunk';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import { scalarGlslFunction } from '../testing/glslScalar';
@@ -93,7 +93,6 @@ describe('installGodotReflectionProbes', () => {
     const uniforms = THREE.ShaderLib.physical.uniforms;
 
     expect(uniforms[REFLECTION_PROBE_UNIFORMS.atlas]!.value).toBe(atlasSlot);
-    expect(uniforms[REFLECTION_PROBE_UNIFORMS.rows]!.value).toBe(rowsSlot);
     expect(uniforms[REFLECTION_PROBE_UNIFORMS.probes]!.value).toBe(shownProbes);
     expect(uniforms[INSTANCE_LAYERS_UNIFORM]!.value).toBe(instanceLayers);
   });

@@ -9,6 +9,7 @@ import { captureCameras } from './captureCameras';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
 
 const CLEAR = new THREE.Color(0.3, 0.3, 0.3);
 
@@ -136,29 +137,40 @@ describe('SceneProbes rendering', () => {
     expect(Array.from(shownProbes.subarray(0, 3))).toEqual([1, expect.closeTo(0.8, 6), 6]);
   });
 
-  it('uploads the rows when a capture changes them, not every frame', async () => {
-    const { renderer, facesDrawn, settle } = await sceneWith(probeObject());
+  /** The scene rows' texture as the last render of the scene uploaded it. */
+  function uploadedRows(uploads: { mock: { calls: unknown[][] } }): THREE.DataTexture {
+    return uploads.mock.calls.at(-1)![0] as THREE.DataTexture;
+  }
+
+  it('uploads the rows when a capture changes them, not every render', async () => {
+    const { renderer, scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
     const uploads = vi.spyOn(renderer, 'initTexture');
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    const { version } = uploadedRows(uploads);
 
-    facesDrawn();
-    facesDrawn();
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
 
-    expect(uploads).not.toHaveBeenCalled();
+    expect(uploadedRows(uploads).version).toBe(version);
   });
 
-  it('uploads the rows of a second probe, which need a taller texture (edge case)', async () => {
-    const { renderer, facesDrawn, settle } = await sceneWith(probeObject({}, [0]), probeObject({}, [1]));
+  it('writes the rows of a second probe to the scene rows (edge case)', async () => {
+    const { renderer, scene, facesDrawn, settle } = await sceneWith(
+      probeObject({}, [0]),
+      probeObject({}, [1])
+    );
     settle();
+    facesDrawn();
     facesDrawn();
     const uploads = vi.spyOn(renderer, 'initTexture');
 
-    facesDrawn();
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
 
-    const rows = uploads.mock.calls.at(-1)![0] as THREE.DataTexture;
-    expect(rows.image.height).toBe(2);
-    expect(rows.version).toBeGreaterThan(0);
+    const data = uploadedRows(uploads).image.data as Float32Array;
+    const atlasLayerOf = (row: number) => data[(row * SCENE_ROW_TEXELS + 6) * 4 + 3];
+    expect([atlasLayerOf(0), atlasLayerOf(1)].sort()).toEqual([0, 1]);
   });
 
   it('stops showing a probe once it hides (edge case)', async () => {

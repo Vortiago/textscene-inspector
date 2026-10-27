@@ -29,6 +29,13 @@ describe('installGodotIndirectSpecular', () => {
     );
   });
 
+  it("binds no table of three's, and weighs a refraction by no Fresnel term (material.cpp:1829-1831)", () => {
+    const { pars, begin } = patchedChunks();
+
+    expect(pars + begin).not.toContain('dfgLUT');
+    expect(pars).toContain('vec2 fab = vec2( 0.0 );');
+  });
+
   it("weighs the reflection with Godot's split sum and energy compensation", () => {
     const { pars } = patchedChunks();
 

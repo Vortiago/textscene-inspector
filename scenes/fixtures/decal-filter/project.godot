@@ -1,0 +1,15 @@
+; A res:// root of its own, because `rendering/textures/decals/filter` is a PROJECT setting and no
+; .tscn can carry one. Kept in a subdirectory rather than at scenes/fixtures: a project.godot there
+; would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Decal filter"
+run/main_scene="res://unit-decal-filter.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+textures/decals/filter=0

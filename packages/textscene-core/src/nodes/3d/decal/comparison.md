@@ -46,6 +46,14 @@ The projection samples `uv * rect.size + rect.position` of the atlas, linear bet
 
 A texture that would push the atlas past the GPU's `MAX_TEXTURE_SIZE` stays out, the last to join first, with a console warning. Godot has no such limit.
 
+## Filter
+
+<!-- compare: image=unit-decal-filter status=done fixture=decal-filter/unit-decal-filter.tscn -->
+
+The decal sampler follows the project setting `rendering/textures/decals/filter`, Linear Mipmap by default (`render_forward_clustered.cpp:3436-3460`, `renderer_scene_render_rd.cpp:1730`). It numbers the filters as `BaseMaterial3D.texture_filter` does, so each maps to the sampler a material gets (`godotTextureFilter.ts`). The anisotropic filters take the anisotropic level of the viewport that draws. A filter without mipmaps reads only the first level of the atlas.
+
+The reference driver and the browser's pick different taps for Nearest with Mipmaps and Anisotropic, so that filter differs from `pnpm ref:godot` (see the comparison README).
+
 ## Linting
 
 <!-- lint:begin Decal -->
@@ -87,4 +95,3 @@ The linter warns (`resource-type-excluded-by-hint`) when one of the four `textur
 
 - **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so a decal carries albedo alone.
 - **Approximated** An untextured decal takes a place among the 512 and draws nothing, where Godot leaves its buffer row unwritten (`texture_storage.cpp:3420`).
-- **Approximated** The decal sampler always filters linearly between mip levels, as the project setting `rendering/textures/decals/filter` is not read (`renderer_scene_render_rd.cpp:1730`).

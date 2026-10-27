@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { heading } from '../../parser/testing/parserKit';
 import { parseDecal } from '../../nodes/3d/decal/parser';
-import { holdDecalTexture, releaseDecalTexture } from '../../nodes/3d/decal/decalAtlas';
+import { holdDecalTexture, releaseDecalTexture, setDecalAtlasFilter } from '../../nodes/3d/decal/decalAtlas';
+import { godotTextureFilterState } from '../../resources/textures/godotTextureFilter';
+import { decalAtlasTexture } from '../../nodes/3d/decal/decalAtlas';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { renderWithMipmapBias } from '../materials/godotMipmapBias';
@@ -19,6 +21,7 @@ const held: THREE.Texture[] = [];
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setDecalAtlasFilter(godotTextureFilterState(3));
   shownDecals.fill(0);
   for (const texture of held.splice(0)) releaseDecalTexture(texture);
 });
@@ -153,6 +156,31 @@ describe('SceneDecals', () => {
     renderWithMipmapBias(-1.5, render);
 
     expect(shownDecals[SHOWN_GRADIENT_SCALE]).toBeCloseTo(2 ** -1.5, 6);
+  });
+
+  it('samples the atlas with the filter it is given', async () => {
+    const { render, sceneDecals } = await sceneWith(decalObject());
+    sceneDecals.setFilter(godotTextureFilterState(0));
+
+    render();
+
+    expect(decalAtlasTexture().minFilter).toBe(THREE.NearestFilter);
+  });
+
+  it("writes the taps of Godot's nearest anisotropic filter once per upload of the atlas", async () => {
+    const { renderer, render, sceneDecals } = await sceneWith(decalObject());
+    const ANISOTROPY_PARAMETER = 0x84fe;
+    vi.spyOn(renderer.extensions, 'get').mockReturnValue({
+      TEXTURE_MAX_ANISOTROPY_EXT: ANISOTROPY_PARAMETER,
+    });
+    vi.spyOn(renderer.capabilities, 'getMaxAnisotropy').mockReturnValue(16);
+    const write = vi.spyOn(renderer.getContext(), 'texParameterf');
+    sceneDecals.setFilter(godotTextureFilterState(4, 2));
+
+    render();
+    render();
+
+    expect(write).toHaveBeenCalledExactlyOnceWith(renderer.getContext().TEXTURE_2D, ANISOTROPY_PARAMETER, 4);
   });
 
   it('packs nothing once it is disposed', async () => {

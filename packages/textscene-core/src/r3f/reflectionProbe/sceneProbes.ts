@@ -23,14 +23,14 @@ import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { drawOffscreen } from '../offscreen.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
-import { RowTexture } from '../rowTexture/rowTexture.js';
+import { holdSceneRows, type SceneRows } from '../sceneRows/sceneRows.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { captureCameras, probeCaptureOf, probeFrame } from './captureCameras.js';
 import { stageCapture } from './captureStage.js';
-import { PROBE_ROW_TEXELS, ProbeRows, type DrawnProbe } from './probeRows.js';
-import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
+import { ProbeRows, type DrawnProbe } from './probeRows.js';
+import { atlasSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
 
@@ -62,10 +62,9 @@ export class SceneProbes {
   private generation = 0;
   /** The rows of the drawn probes, rewritten in place by `pack`. */
   private readonly rows = new ProbeRows();
-  /** The texture the rows upload into, which a growth replaces after the slot lets go of it. */
-  private readonly rowTexture = new RowTexture(PROBE_ROW_TEXELS, (replaced) =>
-    leaveSlot(this.renderer, rowsSlot, replaced)
-  );
+  /** The scene's rows, which the decals of the scene write too. */
+  private readonly sceneRows: SceneRows;
+  private readonly releaseSceneRows: () => void;
   /** The probes the rows hold, written only by `pack`. */
   private packed: readonly ReflectionProbeObject[] = [];
   /** Frames since the scene last had a resource on its way. */
@@ -87,6 +86,9 @@ export class SceneProbes {
     private readonly scene: THREE.Scene
   ) {
     this.probes = new TrackedObjects(scene, isReflectionProbe);
+    const held = holdSceneRows(scene, renderer);
+    this.sceneRows = held.rows;
+    this.releaseSceneRows = held.release;
     this.stopObserving = [
       observeSceneCamera(scene, (camera) => this.show(camera)),
       // After the observers that write each light's shadow for the render.
@@ -127,7 +129,7 @@ export class SceneProbes {
     this.leaveSlots();
     this.atlas?.target.dispose();
     this.cube.dispose();
-    this.rowTexture.dispose();
+    this.releaseSceneRows();
   }
 
   /** The atlas for `probes`, made again with their count and layout, which drops every capture. */
@@ -218,8 +220,7 @@ export class SceneProbes {
   private pack(probes: readonly ReflectionProbeObject[]): void {
     this.packed = probes;
     const drawn = reflectionProbeOrder(probes.map((object) => this.drawnProbe(object)));
-    if (this.rows.pack(drawn)) this.rowTexture.invalidate(this.rows);
-    this.renderer.initTexture(this.rowTexture.hold(this.rows));
+    if (this.rows.pack(drawn)) this.sceneRows.setProbes(this.rows);
   }
 
   private drawnProbe(object: ReflectionProbeObject): DrawnProbe {
@@ -238,7 +239,7 @@ export class SceneProbes {
     shownProbes[1] = atlas.layout.borderSize;
     shownProbes[2] = atlas.layout.layerSizes.length - 1;
     showInSlot(this.renderer, atlasSlot, atlas.target.texture);
-    showInSlot(this.renderer, rowsSlot, this.rowTexture.texture);
+    this.sceneRows.show();
   }
 
   /** Hides each light's shadow from a capture without shadows. */
@@ -262,6 +263,5 @@ export class SceneProbes {
   /** Leaves no slot on this scene's textures before they are freed. */
   private leaveSlots(): void {
     if (this.atlas) leaveSlot(this.renderer, atlasSlot, this.atlas.target.texture);
-    leaveSlot(this.renderer, rowsSlot, this.rowTexture.texture);
   }
 }

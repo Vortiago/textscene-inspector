@@ -1,7 +1,7 @@
 /**
- * What every program reads of the decals (`decalShaderChunk.ts`): the decal atlas, the decals' rows,
- * and their count and gradient scale. Each scene with decals shows its own before each of its renders,
- * and none after, so a scene without decals reads none.
+ * What every program reads of the decals (`decalShaderChunk.ts`): the decal atlas, and their count and
+ * gradient scale. The decals' rows are in the scene rows (`sceneRows.ts`). Each scene with decals shows
+ * its own before each of its renders, and none after, so a scene without decals reads none.
  */
 
 import * as THREE from 'three';
@@ -10,21 +10,22 @@ import { installedOr } from '../shaderPatch/litUniform.js';
 
 export const DECAL_UNIFORMS = {
   atlas: 'godotDecalAtlas',
-  rows: 'godotDecalRows',
   shown: 'godotDecals',
 } as const;
 
 /**
- * The textures a program samples the atlas and the rows through. three never uploads them, as their
- * version stays 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle each holds: the
- * shown scene's, or three's empty texture.
+ * The texture a program samples the atlas through. three never uploads it, as its version stays 0
+ * (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds: the shown scene's, or
+ * three's empty texture.
  */
-class DecalSlot extends sharedTexture(THREE.DataTexture) {}
+class DecalAtlasSlot extends sharedTexture(THREE.DataTexture) {}
 
-// After a dev server reloads this module, each value below is the one the earlier evaluation installed.
-export const decalAtlasSlot = installedOr(DECAL_UNIFORMS.atlas, THREE.DataTexture, () => new DecalSlot());
-
-export const decalRowsSlot = installedOr(DECAL_UNIFORMS.rows, THREE.DataTexture, () => new DecalSlot());
+// After a dev server reloads this module, the value is the one the earlier evaluation installed.
+export const decalAtlasSlot = installedOr(
+  DECAL_UNIFORMS.atlas,
+  THREE.DataTexture,
+  () => new DecalAtlasSlot()
+);
 
 /** The `shownDecals` slot that holds the number of shown decals. */
 export const SHOWN_COUNT = 0;

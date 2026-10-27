@@ -1,6 +1,6 @@
 /**
  * The decals a scene draws with, packed as the texels each lit fragment fetches: Godot's `DecalData`
- * (`texture_storage.cpp:3316-3486`), one row of `DECAL_ROW_TEXELS` per decal, in the view space of
+ * (`texture_storage.cpp:3316-3486`), one row of `SCENE_ROW_TEXELS` per decal, in the view space of
  * the camera that renders them.
  */
 
@@ -10,6 +10,7 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { DecalAtlasRect } from '../../nodes/3d/decal/decalAtlas.js';
 import type { DecalProperties } from '../../nodes/3d/decal/types.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk.js';
 
 /** What a decal reads of its node. */
 export type DecalLook = Pick<
@@ -35,13 +36,6 @@ export interface DrawnDecal {
   albedoRect: DecalAtlasRect | null;
 }
 
-/**
- * The texels of one decal: the to-decal matrix's rows, the normal with its fade, the albedo
- * rectangle, the linear modulate with its alpha times the distance fade and `albedo_mix`, then the
- * mask and the two fade exponents. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
- */
-export const DECAL_ROW_TEXELS = 7;
-
 /** Godot's `max_decals` (`texture_storage.h:348`): the decals past it draw nothing. */
 export const MAX_DECALS = 512;
 
@@ -59,7 +53,12 @@ const decalOrigin = new THREE.Vector3();
 const cameraOrigin = new THREE.Vector3();
 const normal = new THREE.Vector3();
 
-/** The rows of the drawn decals, rewritten in place by each `pack`. */
+/**
+ * The rows of the drawn decals, rewritten in place by each `pack`. The texels of one decal: the
+ * to-decal matrix's rows, the normal with its fade, the albedo rectangle, the linear modulate with
+ * its alpha times the distance fade and `albedo_mix`, then the mask and the two fade exponents. The
+ * mask goes in two 16-bit halves, as a float holds 24 bits exactly.
+ */
 export class DecalRows extends RowBuffer {
   /** The decals the distance fade keeps, with their distance and sort key, each by one index. Cleared by `pack`. */
   private readonly candidates: DrawnDecal[] = [];
@@ -70,7 +69,7 @@ export class DecalRows extends RowBuffer {
   private readonly byDepth = (a: number, b: number): number => this.depths[a]! - this.depths[b]!;
 
   constructor() {
-    super(DECAL_ROW_TEXELS * 4);
+    super(SCENE_ROW_TEXELS * 4);
   }
 
   /**
@@ -121,7 +120,7 @@ function fadeAt(look: DecalLook, distance: number): number {
 }
 
 /** The texels of the decal being packed, overwritten by each `decalTexels`. */
-const row = new Float32Array(DECAL_ROW_TEXELS * 4);
+const row = new Float32Array(SCENE_ROW_TEXELS * 4);
 
 function setTexel(texel: number, x: number, y: number, z: number, w: number): void {
   const at = texel * 4;

@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotDecals } from './decalShaderChunk';
-import { DECAL_UNIFORMS, decalAtlasSlot, decalRowsSlot, shownDecals } from './decalSlots';
+import { DECAL_UNIFORMS, decalAtlasSlot, shownDecals } from './decalSlots';
 import { warningsOf } from '../testing/logWarnings';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
@@ -50,13 +50,12 @@ describe('installGodotDecals', () => {
     expect(vertex).not.toContain('#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING )');
   });
 
-  it('gives every program with fog the atlas, the rows and the shown decals', () => {
+  it('gives every program with fog the atlas and the shown decals', () => {
     installGodotDecals();
 
     for (const program of ['basic', 'standard', 'physical'] as const) {
       const { uniforms } = THREE.ShaderLib[program];
       expect(uniforms[DECAL_UNIFORMS.atlas]!.value).toBe(decalAtlasSlot);
-      expect(uniforms[DECAL_UNIFORMS.rows]!.value).toBe(decalRowsSlot);
       expect(uniforms[DECAL_UNIFORMS.shown]!.value).toBe(shownDecals);
     }
   });

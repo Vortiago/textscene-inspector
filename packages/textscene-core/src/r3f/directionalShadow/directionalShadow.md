@@ -261,7 +261,7 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 
 WebGL 2 guarantees only 16 texture units per program (`MAX_TEXTURE_IMAGE_UNITS`), and a physical material with many maps nears that limit. So the suns share the one unit of the sun shadow atlas, and the omni and spot shadows share the one unit of the positional shadow atlas (`../positionalShadow/positionalShadow.md`). A sampler for each sun would exceed 16 units, so the program would fail to link and the scene would draw nothing lit.
 
-A program adds a unit for the atlas colour when it compiles with the soft shadow's define, and one for a lightmap atlas, whose alpha holds the shadowmask (`../../resources/lightmapgidata/build.ts`). Each shared per-scene table takes a unit too: the sky layers, the DFG tables, and the atlases and rows of the reflection probes and the decals.
+A program adds a unit for the atlas colour when it compiles with the soft shadow's define, and one for a lightmap atlas, whose alpha holds the shadowmask (`../../resources/lightmapgidata/build.ts`). Each shared per-scene table takes a unit too: the sky layers, the DFG table, the atlases of the reflection probes and the decals, and the scene rows that those two share. A patch that needs a table reads one that exists, or adds rows to a texture that exists.
 
 To count a program's units, call `getActiveUniform` on each uniform of a linked program and count the sampler types, in a page that installs `installShaderPatches`. Count before and after a patch that adds a sampler.
 

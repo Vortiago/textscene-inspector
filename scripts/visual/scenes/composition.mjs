@@ -72,6 +72,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // decal, so the highlight of the smooth end runs through the footprint. A scalar roughness cuts it
   // off at the box.
   { name: 'decal-roughness-receiver', file: 'unit-decal-roughness-receiver.tscn' },
+  // The one variable against `decal`: the project's `rendering/textures/decals/filter`, Nearest. An
+  // 8 by 8 texture magnified over the floor keeps hard texel edges. The default filter blurs them.
+  { name: 'decal-filter', file: 'decal-filter/unit-decal-filter.tscn' },
   // One image, two StandardMaterial3D sub-resources differing only in
   // `texture_filter` (0 NEAREST, 3 LINEAR_WITH_MIPMAPS): the one scene that sees
   // per-material texture cloning. The loader caches one THREE.Texture per path,
