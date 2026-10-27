@@ -19,7 +19,7 @@ said. A font in a WOFF or WOFF2 file had metrics for the 2D text and no outlines
 - One source gives the project theme and the project font: `resolveProjectFonts`. The Control
   solve tree calls it in its walk. A node outside the solve tree reads it through `useProjectFonts`.
 - A node with a `font` property and no theme of its own resolves the chain through
-  `resolveFontOrDefault`. The Control chain differs only in the ancestor themes it adds.
+  `fontForNode`. The Control chain differs only in the ancestor themes it adds.
 - One reader opens every font container. A WOFF or WOFF2 file decodes to the plain sfnt tables
   that the TrueType and CFF outline readers already parse. A transformed WOFF2 `glyf` is rebuilt
   to a plain `glyf` and `loca`. No container has an outline path of its own.

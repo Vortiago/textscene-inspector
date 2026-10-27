@@ -4,9 +4,12 @@
  */
 
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultBaseFont } from '../../fonts/font/defaultBaseFont';
 import type { ProjectFonts } from '../../fonts/font/projectFonts';
+import { resolveFontReference } from '../../fonts/font/resolveFontReference';
 import type { FontResource } from '../../fonts/font/types';
+import type { LoadedFont } from '../../scopedResource';
 import type { ThemeResource } from './types';
 
 /**
@@ -189,20 +192,28 @@ export function resolveThemeFontIn(
   return found === undefined ? scope.projectDefaultFont : found;
 }
 
+/** What `fontForNode` reads a font from: the scene's resources, the font files loaded so far, the project's. */
+interface FontContext {
+  resources: SceneResources;
+  loadedFont: LoadedFont;
+  projectFonts: ProjectFonts;
+}
+
 /**
  * The font of a node outside the Control tree that has a `font` property: TextMesh
- * (`primitive_meshes.cpp:3779-3809`) and Label3D (`label_3d.cpp:812-850`). Its own font wins, else
- * the project theme's `font` for the node's type chain, else the default theme's `default_font`.
- * A font that is unset or did not load is `own` null. Null is the bundled font. A scene ancestor's
- * theme is not in the chain.
+ * (`primitive_meshes.cpp:3779-3809`) and Label3D (`label_3d.cpp:812-850`). Its own font, which `ref`
+ * names, wins, else the project theme's `font` for the node's type chain, else the default theme's
+ * `default_font`. A `ref` that is unset, or whose file has not loaded or failed, names no own font.
+ * Null is the bundled font. A scene ancestor's theme is not in the chain.
  *
- * @canonical A TextMesh or Label3D font: own font, project theme, project default font
+ * @canonical The font of a TextMesh or Label3D: own font, project theme, project default font
  */
-export function resolveFontOrDefault(
+export function fontForNode(
   nativeType: string,
-  own: FontResource | null,
-  projectFonts: ProjectFonts
+  ref: string | undefined,
+  { resources, loadedFont, projectFonts }: FontContext
 ): FontResource | null {
+  const own = resolveFontReference(ref, resources, loadedFont).font;
   const scope = themeResolutionScope(nativeType, undefined, [], projectFonts);
   return resolveThemeFontIn(scope, 'font', own ?? undefined);
 }

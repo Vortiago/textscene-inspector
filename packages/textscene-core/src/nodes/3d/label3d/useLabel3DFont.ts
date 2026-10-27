@@ -20,7 +20,7 @@ import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFon
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
 import type { FontResource } from '../../../resources/fonts/font/types';
-import { resolveFontOrDefault } from '../../../resources/styles/theme/lookup';
+import { fontForNode } from '../../../resources/styles/theme/lookup';
 import type { LoadedFont } from '../../../resources/scopedResource';
 import { FONT_FILES, useCachedFiles } from '../../../resources/useLoadedFiles';
 import { useProjectFonts } from '../../../resources/useProjectFonts';
@@ -49,8 +49,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   const bundled = peekBundledCanvasFontMetrics();
   const settledFont = (): Label3DFont | undefined => {
     if (!bundled) return undefined;
-    const own = resolveFontReference(fontRef, resources, loadedFont).font;
-    const font = resolveFontOrDefault('Label3D', own, projectFonts);
+    const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
     return {

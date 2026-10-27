@@ -8,7 +8,7 @@ import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFo
 import { identityKey } from '../../../utils/identityKey';
 import { perObject } from '../../../utils/perObject';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
-import { resolveFontOrDefault } from '../../styles/theme/lookup';
+import { fontForNode } from '../../styles/theme/lookup';
 import type { LoadedFont, ResolvableResource, ScopedResource } from '../../scopedResource';
 import type { TextMeshFace } from './build';
 
@@ -34,8 +34,7 @@ function readTextMeshFont({
   loadedFont,
   projectFonts,
 }: ResolvableResource): TextMeshFont {
-  const own = resolveFontReference(resource.data['font'], resources, loadedFont).font;
-  const font = resolveFontOrDefault('TextMesh', own, projectFonts);
+  const font = fontForNode('TextMesh', resource.data['font'], { resources, loadedFont, projectFonts });
   const outlines = peekSceneFontOutlines(font);
   if (outlines === null) return UNREADABLE;
   // The settled metrics are keyed by the resolved font file, and the name only labels a failure.

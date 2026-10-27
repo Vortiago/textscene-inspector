@@ -4,7 +4,6 @@
  * the same channel. A WOFF2 decompresses with Brotli and rebuilds its `glyf`, so the answer is
  * never there on the first peek. It never throws.
  */
-import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -28,8 +27,8 @@ const BUNDLED = {};
  * draw. Its bytes load as their own chunk, so a scene with no TextMesh never fetches them.
  */
 async function readBundledOutlines(): Promise<SfntOutlines | null> {
-  const { OPEN_SANS_WOFF2_BASE64 } = await import('./openSansFontBytes');
-  return openFontOutlines(decodeBase64Bytes(OPEN_SANS_WOFF2_BASE64).buffer);
+  const { bundledFontBytes } = await import('./bundledFontBytes');
+  return openFontOutlines(bundledFontBytes());
 }
 
 /** Reads the outlines under `key` in the background, and wakes the readers that built without them when they settle. */

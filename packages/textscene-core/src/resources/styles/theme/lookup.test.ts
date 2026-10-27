@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   findThemeFontIn,
+  fontForNode,
   mergeThemedRecord,
   resolveThemeFontIn,
   resolveThemeFontSizeIn,
   themeResolutionScope,
 } from './lookup';
 import { NO_PROJECT_FONTS } from '../../fonts/font/projectFonts';
+import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
 import type { ThemeResource } from './types';
 import type { FontResource, FontVariationResource } from '../../fonts/font/types';
 
@@ -448,5 +450,41 @@ describe('mergeThemedRecord', () => {
       (t) => t.constants
     );
     expect(merged.h_separation).toBe(8);
+  });
+});
+
+describe('fontForNode', () => {
+  const resources = {
+    ...NO_RESOURCES,
+    externalResources: [{ id: 'f', type: 'FontFile', path: 'res://own.ttf' }],
+  };
+  const FONT_REF = 'ExtResource("f")';
+  const loadedFont = (path: string) => (path === 'res://own.ttf' ? FONT_A : undefined);
+  const projectFonts = {
+    projectTheme: theme({ fonts: { TextMesh: { font: FONT_B } } }),
+    projectDefaultFont: FONT_B,
+  };
+
+  it('draws the font the node names, whatever the project holds', () => {
+    expect(fontForNode('TextMesh', FONT_REF, { resources, loadedFont, projectFonts })).toBe(FONT_A);
+  });
+
+  it('draws the project theme font of the node type when the node names none', () => {
+    expect(fontForNode('TextMesh', undefined, { resources, loadedFont, projectFonts })).toBe(FONT_B);
+  });
+
+  it('draws the project default font when the theme names none for the type', () => {
+    const noTheme = { ...projectFonts, projectTheme: null, projectDefaultFont: FONT_A };
+    expect(fontForNode('Label3D', undefined, { resources, loadedFont, projectFonts: noTheme })).toBe(FONT_A);
+  });
+
+  it('draws the bundled font, as null, when the node and the project name none', () => {
+    expect(
+      fontForNode('Label3D', FONT_REF, {
+        resources,
+        loadedFont: () => undefined,
+        projectFonts: NO_PROJECT_FONTS,
+      })
+    ).toBeNull();
   });
 });

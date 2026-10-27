@@ -4,11 +4,10 @@
  * it, so the base64 font bytes stay out of the initial bundle.
  */
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
-import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
+import { bundledFontBytes } from './bundledFontBytes';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { notifySceneFontSettled, registerFontFace } from './sceneFontLoader';
 import * as logger from '../../../../logger';
-import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
 
 /** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */
 const BUNDLED_FAMILY = 'tscn-bundled-open-sans-semibold';
@@ -18,13 +17,9 @@ let bundledRegistration: Promise<void> | undefined;
 /** Undefined until `document.fonts.add` resolves: `fillText` with an unregistered family paints a system font without failing. */
 let bundledMetrics: CanvasFontMetrics | undefined;
 
-function decodeBundledWoff2(): ArrayBuffer {
-  return decodeBase64Bytes(OPEN_SANS_WOFF2_BASE64).buffer;
-}
-
 async function registerBundledFont(): Promise<void> {
   try {
-    const doc = await registerFontFace(BUNDLED_FAMILY, decodeBundledWoff2);
+    const doc = await registerFontFace(BUNDLED_FAMILY, bundledFontBytes);
     if (!doc) {
       logger.warn(
         '[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.'
