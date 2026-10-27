@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fontWork,
+  notifySceneFontMetricsSettled,
   onSceneFontMetricsSettled,
   peekSceneFontMetrics,
   peekSettledSceneFontMetrics,
@@ -240,6 +241,24 @@ describe('onSceneFontMetricsSettled', () => {
     } finally {
       offA();
       offB();
+    }
+  });
+});
+
+describe('notifySceneFontMetricsSettled', () => {
+  it('calls every listener after one throws, then rethrows the first error', () => {
+    const failure = new Error('listener failed');
+    const later = vi.fn();
+    const offFailing = onSceneFontMetricsSettled(() => {
+      throw failure;
+    });
+    const offLater = onSceneFontMetricsSettled(later);
+    try {
+      expect(() => notifySceneFontMetricsSettled()).toThrow(failure);
+      expect(later).toHaveBeenCalledTimes(1);
+    } finally {
+      offFailing();
+      offLater();
     }
   });
 });

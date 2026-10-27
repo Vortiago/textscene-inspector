@@ -65,10 +65,22 @@ export function onSceneFontMetricsSettled(listener: SceneFontMetricsListener): (
   };
 }
 
-/** Fires every settled listener, for a scene font load and for the bundled font registration. */
+/**
+ * Fires every settled listener, for a scene font load and for the bundled font registration. A
+ * throwing listener does not stop the later ones, so none misses the settle: the first error is
+ * rethrown once all have run.
+ */
 export function notifySceneFontMetricsSettled(): void {
   settleCount += 1;
-  for (const listener of settledListeners) listener();
+  const failures: unknown[] = [];
+  for (const listener of settledListeners) {
+    try {
+      listener();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) throw failures[0];
 }
 
 /**
