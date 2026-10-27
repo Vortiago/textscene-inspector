@@ -2,12 +2,14 @@
  * Renders the typed nodes an instancing scene adds inside a GLB, each under the GLB object its
  * parent path names. Godot adds such a node to the node that path resolves to, then moves it to its
  * `index=` among that node's children (`packed_scene.cpp:157-165`, `:540-545`), so it takes that
- * object's transform and visibility, and that place in tree order.
+ * object's transform and visibility, and that place in tree order. The instancing node's scene
+ * authored it, so it sits at that scene's level, not the GLB's.
  */
 import { useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { LiveNode } from '../../../resources/liveNode';
 import { joinPath } from '../../../utils/nodePath';
+import { InstancedScenePathsProvider } from '../../contexts/InstancedScenePathsContext';
 import { DispatchedNode } from '../../NodeDispatcher';
 import { AttachedToObject, ParentTypeProvider } from '../../parentSpaceScope';
 import { VisibilityParentProvider } from '../../visibilityRange/VisibilityParentContext';
@@ -55,7 +57,9 @@ export function GlbAttachedChildren({ links, root }: GlbAttachedChildrenProps): 
       <ParentTypeProvider value={GLB_OBJECT_TYPE}>
         <VisibilityParentProvider value={visibilityParent}>
           <TreeOrderProvider order={order}>
-            <DispatchedNode node={node} path={path} />
+            <InstancedScenePathsProvider paths={root.hostScenePaths}>
+              <DispatchedNode node={node} path={path} />
+            </InstancedScenePathsProvider>
           </TreeOrderProvider>
         </VisibilityParentProvider>
       </ParentTypeProvider>

@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { absoluteEnclosedVolume } from './testing/brushVolume';
 import { drawnMeshes, renderCsgScene, SUBTRACTION } from './testing/csgScene';
 
 const LONE_BOX = `[node name="Root" type="Node3D"]
@@ -36,18 +37,6 @@ function meshes(renderer: Awaited<ReturnType<typeof renderCsgScene>>) {
   return renderer.scene.findAllByType('Mesh');
 }
 
-function volumeOf(geometry: THREE.BufferGeometry): number {
-  const p = (geometry.index ? geometry.toNonIndexed() : geometry).getAttribute('position');
-  let total = 0;
-  for (let i = 0; i < p.count; i += 3) {
-    const a = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
-    const b = new THREE.Vector3(p.getX(i + 1), p.getY(i + 1), p.getZ(i + 1));
-    const c = new THREE.Vector3(p.getX(i + 2), p.getY(i + 2), p.getZ(i + 2));
-    total += a.dot(new THREE.Vector3().crossVectors(b, c)) / 6;
-  }
-  return Math.abs(total);
-}
-
 describe('CSG boolean evaluation, end to end', () => {
   it('subtracts a sphere from a box, leaving ONE drawn mesh with less volume', async () => {
     const renderer = await renderCsgScene(SUBTRACTION);
@@ -57,7 +46,7 @@ describe('CSG boolean evaluation, end to end', () => {
     const geometry = (drawn[0]!.instance as THREE.Mesh).geometry;
     // A 2x2x2 box is 8. The sphere bites a corner out, so the result must be
     // meaningfully smaller while still being most of the block.
-    const volume = volumeOf(geometry);
+    const volume = absoluteEnclosedVolume(geometry);
     expect(volume).toBeLessThan(7.6);
     expect(volume).toBeGreaterThan(5);
   });
@@ -82,7 +71,7 @@ describe('CSG boolean evaluation, end to end', () => {
     const renderer = await renderCsgScene(LONE_BOX);
     const drawn = drawnMeshes(renderer);
     expect(drawn).toHaveLength(1);
-    expect(volumeOf((drawn[0]!.instance as THREE.Mesh).geometry)).toBeCloseTo(8, 5);
+    expect(absoluteEnclosedVolume((drawn[0]!.instance as THREE.Mesh).geometry)).toBeCloseTo(8, 5);
   });
 
   it('folds a CSGCombiner3D subtree into one mesh', async () => {
@@ -100,7 +89,7 @@ size = Vector3(2, 2, 2)
     const drawn = drawnMeshes(renderer);
     expect(drawn).toHaveLength(1);
     // Two 2x2x2 boxes overlapping by half: 8 + 8 - 4 = 12.
-    expect(volumeOf((drawn[0]!.instance as THREE.Mesh).geometry)).toBeCloseTo(12, 1);
+    expect(absoluteEnclosedVolume((drawn[0]!.instance as THREE.Mesh).geometry)).toBeCloseTo(12, 1);
   });
 
   it('leaves a CSG grandchild under a plain Node3D as its OWN drawn mesh', async () => {
@@ -126,6 +115,6 @@ radius = 0.5
     const drawn = drawnMeshes(await renderCsgScene(NESTED_COMBINER_OP));
     const geometry = (drawn[0]!.instance as THREE.Mesh).geometry;
 
-    expect(volumeOf(geometry)).toBeCloseTo(7.657, 3);
+    expect(absoluteEnclosedVolume(geometry)).toBeCloseTo(7.657, 3);
   });
 });

@@ -11,6 +11,11 @@ import type { TscnNode } from '../../../../parser/types';
 import { heading } from '../../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../../r3f/testing/gizmoContract';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import './index.r3f';
 import { parseCPUParticles3D } from './parser';
@@ -31,9 +36,19 @@ function emitter(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
+async function render(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true,
+  instantiated = false
+) {
   return ReactThreeTestRenderer.create(
-    <GizmoScene nodePath="Sparks" selectedPath={selectedPath} showGizmos={showGizmos}>
+    <GizmoScene
+      nodePath="Sparks"
+      selectedPath={selectedPath}
+      showGizmos={showGizmos}
+      instantiated={instantiated}
+    >
       <CPUParticles3D node={emitter(props)}>
         <group name="Child" />
       </CPUParticles3D>
@@ -53,6 +68,14 @@ async function gizmoLines(props: Record<string, string>) {
   });
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Sparks',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos, instantiated }) => render(selectedPath, {}, showGizmos, instantiated),
+};
+describeGizmoToggle('<CPUParticles3D>', GIZMO_CASE);
+describeInstantiatedGizmo('<CPUParticles3D>', GIZMO_CASE);
+
 describe('<CPUParticles3D> gizmo state', () => {
   it('draws the box and its axes in full colour when the node is selected', async () => {
     expect(lineOpacities(await render('Sparks'))).toEqual([1, 1]);
@@ -63,14 +86,6 @@ describe('<CPUParticles3D> gizmo state', () => {
     ['another node is selected', 'Other'],
   ])('draws the box and its axes faintly, at 0.3, when %s', async (_label, selectedPath) => {
     expect(lineOpacities(await render(selectedPath))).toEqual([0.3, 0.3]);
-  });
-
-  it.each([
-    ['selected', 'Sparks'],
-    ['unselected', null],
-  ])('draws nothing with the Gizmos toggle off, %s', async (_label, selectedPath) => {
-    const renderer = await render(selectedPath, {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

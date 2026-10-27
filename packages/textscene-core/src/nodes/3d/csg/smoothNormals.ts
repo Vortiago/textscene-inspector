@@ -104,7 +104,11 @@ export function shadeCsgFaces(soup: CsgFaceSoup): ShadedBrush {
   return { geometry: shade(soup, welds), welds };
 }
 
-/** The brush of a shape that builds nothing. */
+/**
+ * The brush of a shape that builds nothing.
+ *
+ * @oneWay An empty CSG brush
+ */
 export function emptyBrush(): ShadedBrush {
   return shadeCsgFaces({ positions: new Float32Array(0), uvs: new Float32Array(0), smooth: [] });
 }

@@ -11,6 +11,7 @@ import type { GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
 import measured from './build.godot.json';
 import { buildTextMeshSurface, type TextMeshFace } from './build';
 import { decodeTextMesh } from './decode';
+import { distinctPositions } from './distinctPositions.testkit';
 
 interface MeasuredGlyph {
   points: [number, number, number][];
@@ -47,16 +48,6 @@ function measuredFace({ glyphs }: MeasuredMesh): TextMeshFace {
     },
     metrics: OPEN_SANS_FONT_METRICS,
   };
-}
-
-/** The distinct positions of a flat xyz array. */
-function distinctPositions(positions: ArrayLike<number>): [number, number, number][] {
-  const byKey = new Map<string, [number, number, number]>();
-  for (let i = 0; i < positions.length; i += 3) {
-    const position: [number, number, number] = [positions[i]!, positions[i + 1]!, positions[i + 2]!];
-    byKey.set(position.join(','), position);
-  }
-  return [...byKey.values()];
 }
 
 /** How far the position of `from` that lies farthest from every position of `to` is from its nearest. */

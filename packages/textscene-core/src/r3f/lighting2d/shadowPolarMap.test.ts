@@ -202,7 +202,7 @@ describe('buildShadowPolarMap', () => {
 
   it('fills every bin when the light sits inside a closed polygon', () => {
     // A square wound as a closed occluder, the wrap edge already appended, as
-    // `polygonToSegments` hands it over.
+    // `godotPolylineToSegments` hands it over.
     const square: ShadowCasterEdges = worldEdges(
       [-80, -80, 80, -80, 80, -80, 80, 80, 80, 80, -80, 80, -80, 80, -80, -80],
       OccluderPolygon2DCullMode.DISABLED

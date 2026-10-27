@@ -9,6 +9,11 @@ import { Path3D } from './Component';
 import { parsePath3D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 
 // Straight 3-point path: (0,0,0) → (10,0,0) → (10,10,0), zero tangents.
@@ -35,11 +40,17 @@ async function renderPath(
   selectedPath: string | null,
   props: Record<string, string>,
   internalResources: TscnInternalResource[] = [CURVE],
-  showGizmos = true
+  showGizmos = true,
+  instantiated = false
 ) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={internalResources} externalResources={[]}>
-      <GizmoScene nodePath="MyPath" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <GizmoScene
+        nodePath="MyPath"
+        selectedPath={selectedPath}
+        showGizmos={showGizmos}
+        instantiated={instantiated}
+      >
         <Path3D node={pathNode('MyPath', props)}>
           <CurveReader />
         </Path3D>
@@ -58,6 +69,15 @@ function hasCurve(renderer: Awaited<ReturnType<typeof renderPath>>): boolean {
   const reader = renderer.scene.findByProps({ name: 'CurveReader' }).instance;
   return reader.userData['hasCurve'] === true;
 }
+
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'MyPath',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos, instantiated }) =>
+    renderPath(selectedPath, { curve: 'SubResource("Curve3D_1")' }, [CURVE], showGizmos, instantiated),
+};
+describeGizmoToggle('<Path3D>', GIZMO_CASE);
+describeInstantiatedGizmo('<Path3D>', GIZMO_CASE);
 
 describe('<Path3D>', () => {
   it('draws the curve polyline gizmo in full colour when selected and a curve is present', async () => {

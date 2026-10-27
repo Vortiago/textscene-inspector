@@ -6,6 +6,9 @@
 
 import * as THREE from 'three';
 
+/**
+ * @oneWay Half floats from 32-bit floats
+ */
 export function toHalfFloatTexels(texels: Float32Array): Uint16Array {
   const halves = new Uint16Array(texels.length);
   for (let i = 0; i < texels.length; i++) halves[i] = THREE.DataUtils.toHalfFloat(texels[i]!);

@@ -46,6 +46,13 @@ describe('mipChain', () => {
     expect(sizes).toEqual(['8x2', '4x1', '2x1', '1x1']);
   });
 
+  it('stops at the level count, short of 1 × 1', () => {
+    const sizes = mipChain({ data: new Uint8Array(8 * 2 * 4), width: 8, height: 2 }, false, 2).map(
+      ({ width, height }) => `${width}x${height}`
+    );
+    expect(sizes).toEqual(['8x2', '4x1']);
+  });
+
   it('averages a one-texel-wide column down its rows only (edge case)', () => {
     const base = [0, 0, 0, 0, 255, 255, 255, 255, 1, 2, 3, 4, 9, 9, 9, 9];
     expect(levelBytes(base, 1, 4).slice(1)).toEqual([
@@ -74,5 +81,18 @@ describe('mipChain', () => {
     expect(() => mipChain({ data: new Uint8Array(12), width: 2, height: 2 }, false)).toThrow(
       'expected 16 bytes for a 2x2 RGBA8 image, got 12'
     );
+  });
+
+  it('writes a level of `reuse` over when it has the size, and allocates when it does not', () => {
+    const base = { data: new Uint8Array(4 * 4 * 4).map((_, i) => i * 7), width: 4, height: 4 };
+    const fresh = mipChain(base, false);
+    const sameSize = { data: new Uint8Array(2 * 2 * 4).fill(9), width: 2, height: 2 };
+    const otherSize = { data: new Uint8Array(1 * 4 * 4).fill(9), width: 1, height: 4 };
+
+    const reused = mipChain(base, false, Infinity, [base, sameSize, otherSize]);
+
+    expect(reused[1]!.data).toBe(sameSize.data);
+    expect(reused[2]!.data).not.toBe(otherSize.data);
+    expect(reused).toEqual(fresh);
   });
 });

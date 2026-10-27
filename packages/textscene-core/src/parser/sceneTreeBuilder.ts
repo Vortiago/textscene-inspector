@@ -5,7 +5,14 @@
  */
 
 import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
-import { SCENE_ROOT_PATH, joinPath, parentPathOf, pathBetween, spelledNodePath } from '../utils/nodePath.js';
+import {
+  SCENE_ROOT_PATH,
+  joinPath,
+  parentPathOf,
+  pathBetween,
+  relativeTo,
+  spelledNodePath,
+} from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
@@ -494,12 +501,6 @@ function recordInsideInstance<N extends RawNode>(
 /** The ownership record of a file that has seated nothing yet. */
 function emptyOwnership(): SeatingTables<RawNode>['ownership'] {
   return { claims: new Map(), insideInstances: new Map() };
-}
-
-/** `path` below `base`, `''` for `base` itself, or undefined where `path` is not at or below it. */
-function relativeTo(base: string, path: string): string | undefined {
-  if (path === base) return '';
-  return path.startsWith(base + '/') ? path.slice(base.length + 1) : undefined;
 }
 
 /** Where a node sits in the tree, and in the composed tree, both spelt from the root's own name. */

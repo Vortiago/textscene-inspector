@@ -7,7 +7,11 @@ export interface CacheSource<T> {
   getCached: (path: string) => T | null | undefined;
 }
 
-/** A source that answers each path from the first of `sources` that holds it. */
+/**
+ * A source that answers each path from the first of `sources` that holds it.
+ *
+ * @oneWay A `getCached` reader for a walk
+ */
 export function firstCached<T>(...sources: readonly CacheSource<T>[]): CacheSource<T> {
   return {
     getCached: (path) => {
@@ -20,7 +24,11 @@ export function firstCached<T>(...sources: readonly CacheSource<T>[]): CacheSour
   };
 }
 
-/** `source`, with each path it is asked for handed to `onRead`. */
+/**
+ * `source`, with each path it is asked for handed to `onRead`.
+ *
+ * @oneWay A `getCached` reader for a walk
+ */
 export function recordingReads<T>(source: CacheSource<T>, onRead: (path: string) => void): CacheSource<T> {
   return {
     getCached: (path) => {

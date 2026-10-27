@@ -56,7 +56,11 @@ export function snapshotShaderGlobals(): () => void {
   };
 }
 
-/** Puts every global a patch install writes back after each test of the calling file. */
+/**
+ * Puts every global a patch install writes back after each test of the calling file.
+ *
+ * @oneWay In tests, the shader globals a patch changes
+ */
 export function restoreShaderGlobalsAfterEach(): void {
   let restore = (): void => {};
   beforeEach(() => {

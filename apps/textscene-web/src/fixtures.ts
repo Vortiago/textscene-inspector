@@ -633,6 +633,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gizmo Instance Child",
+    "file": "unit-gizmo-instance-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gizmo Instance",
+    "file": "unit-gizmo-instance.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Default Material",
     "file": "unit-glb-default-material.tscn",
     "category": "Other"
@@ -3543,6 +3553,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Mesh Sources",
     "file": "unit-csg-mesh-sources.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Mesh Text Mesh",
+    "file": "unit-csg-mesh-text-mesh.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

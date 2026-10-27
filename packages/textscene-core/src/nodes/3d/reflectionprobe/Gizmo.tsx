@@ -1,6 +1,6 @@
 /**
  * The editor gizmo of a ReflectionProbe: the blend box and the origin cross in the probe colour,
- * and the lines to the outer box at half that opacity. The component gates it with `useGizmoState`.
+ * and the lines to the outer box at half that opacity. The component mounts it in a selected-only `PluginGizmo`.
  */
 
 import { useMemo } from 'react';

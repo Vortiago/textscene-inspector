@@ -18,8 +18,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
-import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
+import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
@@ -47,9 +46,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
 
   // This sprite owns the transport only while it is the node selected in the tree.
   const transport = useAnimationTransport();
-  const nodePath = useNodePath();
-  const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
-  const isActive = nodePath !== null && nodePath === selectedNodePath;
+  const isActive = useIsSelected();
 
   // Register this sprite's clips with the transport while selected, so the
   // Animation tab lists them (the authored `animation` pre-selects).

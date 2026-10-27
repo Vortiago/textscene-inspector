@@ -18,6 +18,8 @@ import { visibleInTree } from '../../visibleInTree';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { settleLoads } from '../../testing/settleLoads';
+import { lineOpacities } from '../../testing/GizmoScene';
+import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../../nodes/physics/shared/debugColor';
 import * as logger from '../../../logger';
 
 import '../../nodes/index';
@@ -322,5 +324,45 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
 
     expect(meshesOf(renderer)).toHaveLength(0);
     expect(warn.mock.calls.filter(([message]) => String(message).includes('Nowhere/Else'))).toHaveLength(1);
+  });
+});
+
+describe('GLBSceneRoot — the gizmo of a typed node attached into the GLB', () => {
+  // The edited scene authored the node, so Godot gives its gizmo the node's own colour, not the
+  // instantiated grey (`node_3d_editor_gizmos.cpp:43-60`). The unselected line draws at 0.3 of that alpha.
+  const OWN_UNSELECTED_ALPHA = DEFAULT_COLLISION_DEBUG_COLOR.a * 0.3;
+
+  function arm(subPath: string): TscnNode {
+    return { ...parsedNode({ name: 'Arm', type: 'SpringArm3D' }), instanceSubPath: subPath };
+  }
+
+  it('draws in its own colour when the edited scene instances the GLB', async () => {
+    const renderer = await render([arm('Skeleton/Torso')]);
+    expect(lineOpacities(renderer)).toEqual([OWN_UNSELECTED_ALPHA, OWN_UNSELECTED_ALPHA]);
+  });
+
+  it('draws in its own colour when a sub-scene instances the GLB', async () => {
+    const LAMP_PATH = 'res://lamp.tscn';
+    const lamp: TscnScene = {
+      nodes: [
+        {
+          ...parsedNode({ name: 'LampRoot', type: 'Node3D' }),
+          children: [parsedNode({ name: 'Mesh', type: 'Node', instance: 'ExtResource("rig")' })],
+        },
+      ],
+      externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }],
+      internalResources: [],
+    };
+    const renderer = await renderScene({
+      roots: [
+        {
+          ...parsedNode({ name: 'Lamp', type: 'Node', instance: 'ExtResource("lamp")' }),
+          children: [arm('Mesh/Skeleton/Torso')],
+        },
+      ],
+      externalResources: [{ id: 'lamp', path: LAMP_PATH, type: 'PackedScene' }],
+      subScenes: new Map([[LAMP_PATH, lamp]]),
+    });
+    expect(lineOpacities(renderer)).toEqual([OWN_UNSELECTED_ALPHA, OWN_UNSELECTED_ALPHA]);
   });
 });

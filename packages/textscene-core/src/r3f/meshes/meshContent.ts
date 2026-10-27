@@ -82,6 +82,9 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
   return resourcePath && scoped && meshKind(scoped.resource.type) === 'arrayMesh' ? resourcePath : null;
 }
 
+/**
+ * @oneWay Mesh content and its disposal
+ */
 export function useMeshContent(resolution: ResourceResolution): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
