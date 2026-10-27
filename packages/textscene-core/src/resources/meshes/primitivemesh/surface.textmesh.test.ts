@@ -70,7 +70,7 @@ describe('primitiveMeshSurface for a TextMesh', () => {
 });
 
 describe('isDrawablePrimitiveMesh', () => {
-  it('is false for a TextMesh whose font has no TrueType outlines', () => {
+  it('is false for a TextMesh whose font has no readable outlines', () => {
     expect(isDrawablePrimitiveMesh(textMeshWith())).toBe(false);
   });
 
