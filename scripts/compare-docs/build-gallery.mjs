@@ -7,8 +7,9 @@
  */
 
 import { pathToFileURL } from 'node:url';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { writeOrCheck } from '../generatedFile.mjs';
 import { REPO_ROOT, collectSheetFiles, sheetLabel } from './sheetSources.mjs';
 // `gallery/`: `build` assembles the panels, `panels` and `nav` render them, `markdown` renders
 // sheet prose, `sheetParsing` reads a sheet, `sources` loads the catalog and screenshots,
@@ -57,23 +58,10 @@ function main() {
   }
   const { html, missing, orphanedMarkers } = build(sheets, args.inline, args.fragment);
 
-  const rel = relative(REPO_ROOT, args.out);
-  const where = rel && !rel.startsWith('..') ? rel : args.out;
-  if (args.check) {
-    // Nothing else regenerates the committed copy `docs/comparison/README.md` links (the web
-    // build stages its own into `dist/`), so `--check` guards it. `pnpm validate` and CI run it.
-    const current = existsSync(args.out) ? readFileSync(args.out, 'utf8') : null;
-    if (current === html) {
-      console.log(`[gallery] ${where} is up to date (${sheets.length} sheet(s)).`);
-    } else {
-      console.error(`[gallery] ${where} is STALE — run \`pnpm docs:gallery\`.`);
-      process.exitCode = 1;
-    }
-  } else {
-    mkdirSync(dirname(args.out), { recursive: true });
-    writeFileSync(args.out, html);
-    console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
-  }
+  // Nothing else regenerates the committed copy `docs/comparison/README.md` links (the web
+  // build stages its own into `dist/`), so `--check` guards it. `pnpm validate` and CI run it.
+  writeOrCheck([[args.out, html]], { check: args.check, tool: 'gallery', command: 'pnpm docs:gallery' });
+  if (!args.check) console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
   if (missing.length) {
     console.warn(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
     for (const m of missing) console.warn(`  ${m}`);

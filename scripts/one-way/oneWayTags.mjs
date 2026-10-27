@@ -4,6 +4,8 @@
  * after it, up to the next tag, are a note. The list then names only exports that exist.
  */
 
+import { isTestFile } from '../testOnlyExports.mjs';
+
 const DOC_COMMENT = /\/\*\*([\s\S]*?)\*\/[ \t]*\n([^\n]*)/g;
 const EXPORT_NAME =
   /^export\s+(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\*?|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/;
@@ -65,11 +67,9 @@ export function renderOneWayList(entries) {
 }
 
 function compareJobs([a], [b]) {
-  return isTestHelper(a) - isTestHelper(b) || a.file.localeCompare(b.file) || a.job.localeCompare(b.job);
-}
-
-function isTestHelper({ file }) {
-  return /(^|\/)testing\/|\.testkit\./.test(file);
+  return (
+    isTestFile(a.file) - isTestFile(b.file) || a.file.localeCompare(b.file) || a.job.localeCompare(b.job)
+  );
 }
 
 function item(helpers) {

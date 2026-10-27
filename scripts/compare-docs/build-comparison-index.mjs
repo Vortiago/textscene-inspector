@@ -4,14 +4,13 @@
  * description is current, so a hand-kept list goes stale unseen. `--check` fails instead of
  * writing, and `validate` runs it.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { writeOrCheck } from '../generatedFile.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, '../..');
-const INDEX = resolve(ROOT, 'docs/comparison/README.md');
+const INDEX = resolve(REPO_ROOT, 'docs/comparison/README.md');
 const START = '## 3D';
 
 /** `2D` before `3D` before the rest, and A-Z inside a category. */
@@ -47,13 +46,6 @@ if (cut === -1) {
 }
 const next = current.slice(0, cut) + rows();
 
-if (process.argv.includes('--check')) {
-  if (next !== current) {
-    console.error('[comparison-index] docs/comparison/README.md is STALE — run `pnpm docs:index`.');
-    process.exit(1);
-  }
-  console.log('[comparison-index] up to date.');
-} else {
-  writeFileSync(INDEX, next);
-  console.log(`[comparison-index] wrote ${next.slice(cut).split('\n- ').length - 1} rows.`);
-}
+const check = process.argv.includes('--check');
+writeOrCheck([[INDEX, next]], { check, tool: 'comparison-index', command: 'pnpm docs:index' });
+if (!check) console.log(`[comparison-index] wrote ${next.slice(cut).split('\n- ').length - 1} rows.`);

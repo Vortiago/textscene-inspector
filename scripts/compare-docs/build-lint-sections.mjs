@@ -6,13 +6,14 @@
  * before core is built. `--check` fails instead of writing when either is stale.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LINT_EXEMPT_CATEGORIES, collectSheetFiles, parseFrontmatter, sheetLabel } from './sheetSources.mjs';
 import { loadClassBaseTypes, loadCoreLinter } from './loadCoreLinter.mjs';
 import { coverageFor, renderCoverage } from './lintCoverage.mjs';
 import { requireFreshDist } from '../distFreshness.mjs';
+import { replaceMarkedBlock, writeOrCheck } from '../generatedFile.mjs';
 import { CATALOG_OUT } from './build-node-catalog/paths.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -29,20 +30,17 @@ const END = '<!-- lint:end -->';
  * is never touched.
  */
 function applyBlock(text, type, rendered) {
-  const block = `${BEGIN(type)}\n${rendered}\n${END}`;
   // Any begin marker, not this type's: keying on `type:` leaves a renamed node's stale block in
   // place and appends a second `## Linting` section that never converges.
   const markers = [...text.matchAll(/<!-- lint:begin \S+ -->/g)];
   if (markers.length > 1) {
-    throw new Error(`${type}: more than one lint:begin marker — cannot tell which block to rewrite`);
+    throw new Error(`${type}: more than one lint:begin marker, so no one block to rewrite`);
   }
   if (markers.length === 1) {
-    const start = markers[0].index;
-    const stop = text.indexOf(END, start);
-    if (stop === -1) throw new Error(`${type}: ${markers[0][0]} has no matching ${END}`);
-    return text.slice(0, start) + block + text.slice(stop + END.length);
+    const renamed = text.replace(markers[0][0], BEGIN(type));
+    return replaceMarkedBlock(renamed, BEGIN(type), END, `${rendered}\n`);
   }
-  const section = `## Linting\n\n${block}\n`;
+  const section = `## Linting\n\n${BEGIN(type)}\n${rendered}\n${END}\n`;
   // Anchored to a real heading: a plain indexOf would splice the section into
   // the middle of any paragraph that happens to mention "## Known limitations".
   const limitations = /^## Known limitations$/m.exec(text);
@@ -79,8 +77,7 @@ const knownTypes = new Set(
   [...catalog.nodes, ...(catalog.resources ?? []), ...(catalog.extras ?? [])].map((n) => n.name)
 );
 
-const stale = [];
-let written = 0;
+const outputs = [];
 let exempt = 0;
 
 for (const file of collectSheetFiles()) {
@@ -100,13 +97,10 @@ for (const file of collectSheetFiles()) {
         `Fix the frontmatter, or re-run \`pnpm nodes:catalog\` if the class is new.`
     );
   }
-  const updated = applyBlock(text, meta.type, renderCoverage(meta.type, coverageFor(meta.type, registries)));
-  if (updated === text) continue;
-  if (check) stale.push(sheetLabel(file));
-  else {
-    writeFileSync(file, updated);
-    written++;
-  }
+  outputs.push([
+    file,
+    applyBlock(text, meta.type, renderCoverage(meta.type, coverageFor(meta.type, registries))),
+  ]);
 }
 
 // Every node the previewer does not implement, for the gallery's synthetic cards.
@@ -115,22 +109,11 @@ for (const node of catalog.nodes.filter((n) => !n.supported)) {
   unsupported[node.name] = coverageFor(node.name, registries);
 }
 const payload = `${JSON.stringify({ generated: 'pnpm docs:lint-sections', unsupported }, null, 2)}\n`;
-const previousCoverage = existsSync(COVERAGE_OUT) ? readFileSync(COVERAGE_OUT, 'utf8') : null;
-if (payload !== previousCoverage) {
-  if (check) stale.push('lint-coverage.json');
-  else writeFileSync(COVERAGE_OUT, payload);
-}
+outputs.push([COVERAGE_OUT, payload]);
 
-if (check) {
-  if (stale.length) {
-    console.error(
-      `[lint-sections] ${stale.length} file(s) are STALE — run \`pnpm docs:lint-sections\`:\n  ${stale.join('\n  ')}`
-    );
-    process.exitCode = 1;
-  } else {
-    console.log(`[lint-sections] up to date (${exempt} sheet(s) exempt).`);
-  }
-} else {
+const changed = writeOrCheck(outputs, { check, tool: 'lint-sections', command: 'pnpm docs:lint-sections' });
+if (!check) {
+  const written = changed.filter((path) => path !== COVERAGE_OUT).length;
   console.log(
     `[lint-sections] ${written} sheet(s) updated, ${exempt} exempt, ${Object.keys(unsupported).length} unsupported node(s) → lint-coverage.json`
   );
