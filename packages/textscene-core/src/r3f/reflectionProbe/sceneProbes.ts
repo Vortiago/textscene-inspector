@@ -68,18 +68,20 @@ export class SceneProbes {
   private settledFrames = 0;
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
-  /**
-   * What the captures saw of the environment, which a sky that bakes later changes, and of the
-   * exposure that scaled their lights, background and emission. A probe samples at the exposure over
-   * the one it captured at (`light_storage.cpp:1810-1814`), which a capture made again at the new
-   * exposure keeps at 1.
-   */
-  private seen: { environment: unknown; background: unknown; clearColor: number; exposure: number } = {
+  /** What the captures saw of the environment, which a sky that bakes later changes. */
+  private seen: { environment: unknown; background: unknown; clearColor: number } = {
     environment: undefined,
     background: undefined,
     clearColor: -1,
-    exposure: -1,
   };
+  /**
+   * The exposure each probe last captured at, written only by `capture`, and only while the scene
+   * holds one: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
+   * probe is shown at the exposure over this one (`light_storage.cpp:1810-1814`).
+   */
+  private readonly bakedExposures = new WeakMap<ReflectionProbeObject, number>();
+  /** The exposure the packed rows were made for, so a change of exposure packs them again. */
+  private packedExposure: number | null = null;
   private readonly stopObserving: (() => void)[];
   /** The lights whose shadows a capture without shadows hid, put back once the render ends. */
   private readonly hiddenShadows: { shadow: THREE.LightShadow; intensity: number }[] = [];
@@ -119,7 +121,10 @@ export class SceneProbes {
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
-    if (stale !== -1 || !sameElements(captured, this.packed)) this.pack(captured);
+    const exposure = exposureOfScene(this.scene);
+    if (stale !== -1 || !sameElements(captured, this.packed) || exposure !== this.packedExposure) {
+      this.pack(captured, exposure);
+    }
     return stale !== -1;
   }
 
@@ -154,20 +159,19 @@ export class SceneProbes {
   }
 
   /**
-   * Marks every capture stale once new content settles, or once the environment or exposure the
-   * captures saw change. A stale capture still draws, so no probe vanishes until it captures again.
+   * Marks every capture stale once new content settles, or once the environment the captures saw
+   * changes. A stale capture still draws, so no probe vanishes until it captures again. A change of
+   * exposure marks none: Godot rescales the capture instead.
    */
   private markCapturesStale(clearColor: THREE.Color): void {
     const { environment, background } = this.scene;
     const { seen } = this;
-    const exposure = exposureOfScene(this.scene);
     const hasNewEnvironment =
       environment !== seen.environment ||
       background !== seen.background ||
-      clearColor.getHex() !== seen.clearColor ||
-      exposure !== seen.exposure;
+      clearColor.getHex() !== seen.clearColor;
     if (!this.hasNewContent && !hasNewEnvironment) return;
-    this.seen = { environment, background, clearColor: clearColor.getHex(), exposure };
+    this.seen = { environment, background, clearColor: clearColor.getHex() };
     this.hasNewContent = false;
     this.generation += 1;
   }
@@ -216,12 +220,15 @@ export class SceneProbes {
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
     const { generation } = this;
     this.captures.set(object, { layer, generation, probe, matrixWorld: object.matrixWorld.clone() });
+    const exposure = exposureOfScene(this.scene);
+    if (exposure !== null) this.bakedExposures.set(object, exposure);
   }
 
-  /** Writes the rows of `probes` in Godot's order, and uploads them. */
-  private pack(probes: readonly ReflectionProbeObject[]): void {
-    const rows = probeRows(reflectionProbeOrder(probes.map((object) => this.drawnProbe(object))));
+  /** Writes the rows of `probes` in Godot's order, shown at `exposure`, and uploads them. */
+  private pack(probes: readonly ReflectionProbeObject[], exposure: number | null): void {
+    const rows = probeRows(reflectionProbeOrder(probes.map((object) => this.drawnProbe(object, exposure))));
     this.packed = probes;
+    this.packedExposure = exposure;
     const current = this.rows.image.data as Float32Array;
     if (current.length === rows.length) {
       current.set(rows);
@@ -234,9 +241,15 @@ export class SceneProbes {
     this.renderer.initTexture(this.rows);
   }
 
-  private drawnProbe(object: ReflectionProbeObject): DrawnProbe {
+  private drawnProbe(object: ReflectionProbeObject, exposure: number | null): DrawnProbe {
     const worldToLocal = probeFrame(object.matrixWorld).invert();
-    return { ...object.probe, worldToLocal, atlasLayer: this.captures.get(object)!.layer };
+    const exposureNormalization = exposure === null ? 1 : exposure / (this.bakedExposures.get(object) ?? 1);
+    return {
+      ...object.probe,
+      worldToLocal,
+      atlasLayer: this.captures.get(object)!.layer,
+      exposureNormalization,
+    };
   }
 
   /** Points every lit material at this scene's probes for a render, or at none for a capture's. */

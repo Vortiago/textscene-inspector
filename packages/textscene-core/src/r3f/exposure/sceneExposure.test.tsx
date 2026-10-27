@@ -73,8 +73,8 @@ describe('useSceneExposure', () => {
     expect(exposureOfScene(scene)).toBe(3);
   });
 
-  it('answers 1 for a scene with no exposure', async () => {
+  it('answers null for a scene with no exposure', async () => {
     const { scene } = await mount(null);
-    expect(exposureOfScene(scene)).toBe(1);
+    expect(exposureOfScene(scene)).toBeNull();
   });
 });

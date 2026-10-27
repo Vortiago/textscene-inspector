@@ -13,9 +13,9 @@ import { EMISSION_EXPOSURE } from './emissionExposure.js';
 /** Written only by `useSceneExposure`, and cleared when that scene's world unmounts. */
 const exposures = new WeakMap<THREE.Scene, number>();
 
-/** The factor `scene` renders with: 1 without a world that holds an exposure. */
-export function exposureOfScene(scene: THREE.Scene): number {
-  return exposures.get(scene) ?? 1;
+/** The factor `scene` renders with, or null without a world that holds an exposure. */
+export function exposureOfScene(scene: THREE.Scene): number | null {
+  return exposures.get(scene) ?? null;
 }
 
 /** Renders `scene` with `factor` until the returned function runs. */
