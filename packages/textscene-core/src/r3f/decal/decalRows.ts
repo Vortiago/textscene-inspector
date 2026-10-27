@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { distanceFade } from '../../godot/rendering/distanceFade.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
-import type { DecalAtlasRect } from '../../nodes/3d/decal/decalAtlas.js';
+import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import type { DecalProperties } from '../../nodes/3d/decal/types.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
 import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk.js';
@@ -33,7 +33,7 @@ export interface DrawnDecal {
   matrixWorld: THREE.Matrix4;
   look: DecalLook;
   /** Null for a decal with no albedo in the atlas, which Godot draws nothing for. */
-  albedoRect: DecalAtlasRect | null;
+  albedoRect: AtlasRect | null;
 }
 
 /** Godot's `max_decals` (`texture_storage.h:348`): the decals past it draw nothing. */
@@ -130,7 +130,7 @@ function setTexel(texel: number, x: number, y: number, z: number, w: number): vo
   row[at + 3] = w;
 }
 
-function decalTexels(decal: DrawnDecal, rect: DecalAtlasRect, fade: number): Float32Array {
+function decalTexels(decal: DrawnDecal, rect: AtlasRect, fade: number): Float32Array {
   const { look } = decal;
   const m = toDecalMatrix(decal).elements;
   for (let i = 0; i < 3; i++) setTexel(i, m[i]!, m[4 + i]!, m[8 + i]!, m[12 + i]!);

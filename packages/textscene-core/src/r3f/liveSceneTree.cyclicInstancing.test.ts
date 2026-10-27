@@ -8,11 +8,10 @@ import {
   collapseLiveNode,
   collectLiveNodes,
   liveStep,
-  type CachedSceneSource,
   type LiveTreeContext,
   type SceneScope,
 } from './liveSceneTree';
-import { liveNodeAt } from './liveSceneTree.testkit';
+import { contextOver, liveNodeAt, sceneCacheOver } from './liveSceneTree.testkit';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
@@ -23,10 +22,6 @@ function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): T
 
 function ext(id: string, path: string): TscnExternalResource {
   return { id, path, type: 'PackedScene' };
-}
-
-function cacheOf(entries: Record<string, TscnScene>): CachedSceneSource {
-  return { getCached: (p) => entries[p] };
 }
 
 function allPaths(roots: readonly TscnNode[], ctx: LiveTreeContext): string[] {
@@ -44,11 +39,7 @@ const SELF_ROOTS = [
   }),
 ];
 const SELF_SCENE: TscnScene = { nodes: SELF_ROOTS, externalResources: SELF_EXT, internalResources: [] };
-const SELF_CTX: LiveTreeContext = {
-  externalResources: SELF_EXT,
-  internalResources: [],
-  sceneCache: cacheOf({ 'res://a.tscn': SELF_SCENE }),
-};
+const SELF_CTX = contextOver(SELF_SCENE, { 'res://a.tscn': SELF_SCENE });
 
 /** `res://a.tscn` instances `res://b.tscn`, which instances `res://a.tscn`. */
 const A_EXT = [ext('1', 'res://b.tscn')];
@@ -63,11 +54,7 @@ const A_ROOTS = [
   makeNode('ARoot', 'Node3D', { children: [makeNode('ToB', 'Node3D', { instance: 'ExtResource("1")' })] }),
 ];
 const A_SCENE: TscnScene = { nodes: A_ROOTS, externalResources: A_EXT, internalResources: [] };
-const INDIRECT_CTX: LiveTreeContext = {
-  externalResources: A_EXT,
-  internalResources: [],
-  sceneCache: cacheOf({ 'res://a.tscn': A_SCENE, 'res://b.tscn': B_SCENE }),
-};
+const INDIRECT_CTX = contextOver(A_SCENE, { 'res://a.tscn': A_SCENE, 'res://b.tscn': B_SCENE });
 
 describe('walkLiveTree over cyclic instancing', () => {
   it('stops at the instance whose scene instances itself, under each of two siblings', () => {
@@ -105,11 +92,10 @@ describe('walkLiveTree over cyclic instancing', () => {
         ],
       }),
     ];
-    const ctx: LiveTreeContext = {
-      externalResources: [ext('1', 'res://leaf.tscn')],
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://leaf.tscn': leaf }),
-    };
+    const ctx = contextOver(
+      { externalResources: [ext('1', 'res://leaf.tscn')], internalResources: [] },
+      { 'res://leaf.tscn': leaf }
+    );
 
     expect(allPaths(roots, ctx)).toEqual(['Root', 'Root/L1', 'Root/L1/Mesh', 'Root/L2', 'Root/L2/Mesh']);
   });
@@ -147,7 +133,7 @@ describe('liveStep and instancedScenePaths', () => {
       internalResources: [],
     };
     const scope: SceneScope = { externalResources: [ext('1', 'res://multi.tscn')], internalResources: [] };
-    const groups = liveStep(instance, scope, cacheOf({ 'res://multi.tscn': multi })).groups;
+    const groups = liveStep(instance, scope, sceneCacheOver({ 'res://multi.tscn': multi })).groups;
     expect(groups.map((g) => [g.origin, g.scope.instancedScenePaths])).toEqual([
       ['subscene', ['res://multi.tscn']],
     ]);
@@ -166,7 +152,7 @@ describe('liveStep and instancedScenePaths', () => {
       internalResources: [],
     };
     const scope: SceneScope = { externalResources: [ext('1', 'res://outer.tscn')], internalResources: [] };
-    const cache = cacheOf({ 'res://outer.tscn': outer, 'res://inner.tscn': inner });
+    const cache = sceneCacheOver({ 'res://outer.tscn': outer, 'res://inner.tscn': inner });
 
     const [merged] = liveStep(instance, scope, cache).groups;
     expect(merged?.scope.externalResources).toBe(innerExt);
@@ -183,11 +169,10 @@ describe('liveStep and instancedScenePaths', () => {
       instance: 'ExtResource("1")',
       children: [makeNode('Spare', 'Node3D', { instance: 'ExtResource("1")' })],
     });
-    const ctx: LiveTreeContext = {
-      externalResources: [ext('1', 'res://leaf.tscn')],
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://leaf.tscn': leaf }),
-    };
+    const ctx = contextOver(
+      { externalResources: [ext('1', 'res://leaf.tscn')], internalResources: [] },
+      { 'res://leaf.tscn': leaf }
+    );
 
     expect(allPaths([host], ctx)).toEqual(['Gun', 'Gun/Mesh', 'Gun/Spare', 'Gun/Spare/Mesh']);
   });
@@ -213,7 +198,7 @@ describe('collapseLiveNode and instancedScenePaths', () => {
     const node = makeNode('L', 'Node3D', { instance: 'ExtResource("1")' });
     const scope: SceneScope = { externalResources: [ext('1', 'res://loop.tscn')], internalResources: [] };
 
-    const collapsed = collapseLiveNode(node, scope, cacheOf({ 'res://loop.tscn': selfRooted }));
+    const collapsed = collapseLiveNode(node, scope, sceneCacheOver({ 'res://loop.tscn': selfRooted }));
     expect(collapsed.instance).toBe('ExtResource("1")');
     expect(collapsed).not.toBe(node);
   });

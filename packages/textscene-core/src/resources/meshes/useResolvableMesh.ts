@@ -14,7 +14,7 @@ import {
   primitiveMeshFontFiles,
   primitiveMeshReadsFont,
 } from './primitivemesh/surface';
-import { useFontMetricsSettleCount } from './textmesh/useFontMetricsSettleCount';
+import { useFontMetricsSettleCount } from '../../r3f/controls/native/text/useFontMetricsSettleCount';
 
 export interface ResolvableMesh {
   /** Null for no mesh, and while a file or the metrics the build reads load. */

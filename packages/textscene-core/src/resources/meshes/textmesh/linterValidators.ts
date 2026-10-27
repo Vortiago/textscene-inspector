@@ -11,9 +11,8 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { hintedBitField, v } from '../../../linter/validators/index.js';
 import {
   HORIZONTAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_BOTTOM,
   VERTICAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_TOP,
+  VerticalAlignment,
 } from '../../../godot/math/alignment.js';
 import {
   AUTOWRAP_MODE_NAMES,
@@ -38,8 +37,8 @@ validatorRegistry.registerAll('TextMesh', {
   // ERR_FAIL_INDEX((int)p_alignment, 4), so FILL loads and warns while 4 and up error.
   vertical_alignment: v.enumInt(
     'vertical_alignment',
-    VERTICAL_ALIGNMENT_TOP,
-    VERTICAL_ALIGNMENT_BOTTOM,
+    VerticalAlignment.VERTICAL_ALIGNMENT_TOP,
+    VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM,
     VERTICAL_ALIGNMENT_NAMES,
     { hinted: 'primitive_meshes.cpp:3667', enforced: 'primitive_meshes.cpp:3728', enforcedMax: { at: 3 } }
   ),

@@ -5,7 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { decalAtlasRect, type DecalAtlasRect } from '../../nodes/3d/decal/decalAtlas.js';
+import { decalAtlasRect } from '../../nodes/3d/decal/decalAtlas.js';
+import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import type { TreeOrder } from '../contexts/TreeOrderContext.js';
 import type { DecalLook, DrawnDecal } from './decalRows.js';
 
@@ -18,7 +19,7 @@ export class DecalObject extends THREE.Object3D implements DrawnDecal {
   /** Set by the decal's component. Decals at one distance draw in it, and the mount order differs. */
   treeOrder!: TreeOrder;
 
-  get albedoRect(): DecalAtlasRect | null {
+  get albedoRect(): AtlasRect | null {
     return (this.albedo && decalAtlasRect(this.albedo)) ?? null;
   }
 }

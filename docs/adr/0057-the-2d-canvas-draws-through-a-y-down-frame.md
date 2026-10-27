@@ -31,12 +31,11 @@ The 2D canvas always draws through a `CanvasFrame`, whatever `msaa_2d` says.
 - Passes that read `gl_FragCoord` or project through the camera, such as the window scissor and the
   canvas item lighting, run on the same flipped target. They need no change.
 
-A 2D SubViewport pass draws the same way: its camera is a `World2DCamera`, and it draws into its own
-`CanvasFrame`, which copies, rows reversed, into the published target. The frame is as large as the
-target and takes the viewport's `msaa_2d` count, so the target itself is single-sampled. Consumers
-sample the target as before. A Polygon2D edge on a pixel centre inside a SubViewport drew one row
-off Godot before (rows 301 to 360 against 300 to 359) and matches it now (1/255). The 3D canvas and
-picking (ADR-0006) keep their own frames.
+Every 2D SubViewport pass draws the same way, the pass for Controls (`ControlRasterPass`) included.
+Its camera is a `World2DCamera`, and it draws into its own `CanvasFrame`, which copies, rows
+reversed, into the published target. The frame is as large as the target and takes the viewport's
+`msaa_2d` count, so the target itself is single-sampled. Consumers sample the target as before. The
+3D canvas and picking (ADR-0006) keep their own frames.
 
 ## Consequences
 

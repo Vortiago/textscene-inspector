@@ -25,7 +25,7 @@ import {
   tintColor,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HORIZONTAL_ALIGNMENT_RIGHT } from '../../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
@@ -215,7 +215,11 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
     x: rtl
       ? styleMargin.left +
         reserved +
-        buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, HORIZONTAL_ALIGNMENT_RIGHT)
+        buttonTextAlignShiftPx(
+          textNaturalSize.x,
+          drawableWidth,
+          HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
+        )
       : styleMargin.left,
     y: centredTextTopPx(customElementHeight, textNaturalSize.y, styleMargin.top),
   };

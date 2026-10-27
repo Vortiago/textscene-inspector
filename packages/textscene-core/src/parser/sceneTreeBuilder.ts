@@ -581,20 +581,22 @@ export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>
 ): H[] {
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
-  return all.filter(({ node }) => !isSeatedAtOwnPath(node, seating));
+  const isSeated = isSeatedAtOwnPathIn(seating);
+  return all.filter((heading) => !isSeated(heading));
 }
 
 /**
- * Whether the heading's node sits at the path its `parent=` names. A re-rooted copy keeps its
- * `authoredName`, a landed one lives under the heading its trail named, and a node the seating left
- * out has no copy.
+ * Whether a heading's node sits at the path its `parent=` names in `seating`. A re-rooted copy keeps
+ * its `authoredName`, a landed one lives under the heading its trail named, and a node the seating
+ * left out has no copy.
  */
-export function isSeatedAtOwnPath<N extends RawNode>(
-  node: N,
-  { seated }: Pick<SceneSeating<N>, 'seated'>
-): boolean {
-  const seat = seated.get(node);
-  return seat !== undefined && !isReRooted(seat) && seat.landedByIdTrail === undefined;
+export function isSeatedAtOwnPathIn<N extends RawNode>({
+  seated,
+}: Pick<SceneSeating<N>, 'seated'>): (heading: { readonly node: N }) => boolean {
+  return ({ node }) => {
+    const seat = seated.get(node);
+    return seat !== undefined && !isReRooted(seat) && seat.landedByIdTrail === undefined;
+  };
 }
 
 /** Whether the tree node is a copy the builder re-rooted, which keeps the name its heading wrote. */

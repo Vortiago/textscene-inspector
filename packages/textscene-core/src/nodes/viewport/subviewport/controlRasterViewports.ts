@@ -9,19 +9,14 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
 import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
-import { liveTreeOf, type LiveTreeContext, type SceneScope } from '../../../r3f/liveSceneTree.js';
+import {
+  liveTreeOf,
+  type CachedSceneSource,
+  type LiveTreeContext,
+  type SceneScope,
+} from '../../../r3f/liveSceneTree.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
-
-/**
- * Read surface for the loader's PackedScene cache. Structural rather than the
- * concrete `ResourceLoader`, so the walk stays pure and a test supplies a map.
- * Every cached scene carries both resource pools, so this satisfies
- * `LiveTreeContext`'s `CachedSceneSource` surface without an adapter.
- */
-export interface SceneScopeSource {
-  getCached: (path: string) => (SceneScope & { nodes: readonly TscnNode[] }) | null | undefined;
-}
 
 /** A sub-viewport whose target is produced by rasterising a Control subtree. */
 export interface ControlRasterViewport extends SceneScope {
@@ -45,7 +40,7 @@ export interface ControlRasterViewport extends SceneScope {
  */
 export function collectControlRasterViewports(
   roots: readonly TscnNode[],
-  sceneCache: SceneScopeSource,
+  sceneCache: CachedSceneSource,
   scope: SceneScope,
   layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
 ): ControlRasterViewport[] {

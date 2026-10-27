@@ -6,16 +6,8 @@
  */
 
 import * as THREE from 'three';
+import { signedPolygonArea } from '../../../godot/math/polygonArea';
 import type { Vector2 } from '../../../godot/math/vector';
-
-/** The shoelace sum of a polygon, which is twice its signed area. It is positive for a counter-clockwise ring, y up. */
-export function doubledSignedArea(polygon: readonly Vector2[]): number {
-  let area = 0;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    area += polygon[j]!.x * polygon[i]!.y - polygon[i]!.x * polygon[j]!.y;
-  }
-  return area;
-}
 
 /** Whether `point` lies inside `polygon`, by a ray to the right. */
 function containsPoint(polygon: readonly Vector2[], point: Vector2): boolean {
@@ -32,7 +24,7 @@ function containsPoint(polygon: readonly Vector2[], point: Vector2): boolean {
 
 /** The size of a polygon's area, whichever way it winds. */
 function polygonArea(polygon: readonly Vector2[]): number {
-  return Math.abs(doubledSignedArea(polygon)) / 2;
+  return Math.abs(signedPolygonArea(polygon));
 }
 
 /** A contour to triangulate, and whether it bounds a hole in the contour that holds it. */
@@ -66,7 +58,7 @@ function fillContour(outer: readonly Vector2[], holes: readonly (readonly Vector
   const corners = [...contour, ...holeContours.flat()];
   return triangles.flatMap(([a, b, c]) => {
     const triangle = [corners[a!]!, corners[b!]!, corners[c!]!] as const;
-    return doubledSignedArea(triangle) < 0 ? [triangle[0], triangle[2], triangle[1]] : [...triangle];
+    return signedPolygonArea(triangle) < 0 ? [triangle[0], triangle[2], triangle[1]] : [...triangle];
   });
 }
 

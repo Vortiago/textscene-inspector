@@ -67,12 +67,17 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
     takeOutputLikeDrawingBuffer(this);
   }
 
-  /** Draws `scene` into the frame and copies the result, rows reversed, to the target bound before. */
+  /**
+   * Draws `scene` into the frame and copies the result, rows reversed, to the target bound before.
+   * The frame clears itself where the render will not: a render clears only while the renderer's
+   * `autoClear` is on, which the tone-map composer turns off.
+   */
   render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
     const previous = gl.getRenderTarget();
     this.sizeLike(gl, previous);
     try {
       gl.setRenderTarget(this);
+      if (!gl.autoClear) gl.clear(true, true, true);
       gl.render(scene, camera);
     } catch (error) {
       gl.setRenderTarget(previous);

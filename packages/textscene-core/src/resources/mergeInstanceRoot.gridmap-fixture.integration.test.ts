@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { TscnParser } from '../parser/TscnParser';
 import { mergeInstanceRoot } from './mergeInstanceRoot';
 import { resolveInstancePath } from './SubResourceResolver';
-import { liveNodeAt } from '../r3f/liveSceneTree.testkit';
+import { liveNodeAt, sceneCacheOver } from '../r3f/liveSceneTree.testkit';
 import { decodeGridMapCells, type GridMapCell } from '../nodes/3d/gridmap/cellData';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { TscnNode, TscnScene } from '../parser/types';
@@ -91,7 +91,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     const scenePath = resolveInstancePath(instanceNode!.instance!, stage.externalResources);
     expect(scenePath).toBe('res://stage/grid_map.tscn');
 
-    const sceneCache = { getCached: (p: string) => (p === scenePath ? gridMapScene : undefined) };
+    const sceneCache = sceneCacheOver({ [scenePath!]: gridMapScene });
 
     const resolved = liveNodeAt('Stage/GridMap', stage.nodes, {
       externalResources: stage.externalResources,
@@ -116,7 +116,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
       'res://stage/stage.tscn': stage,
       'res://stage/grid_map.tscn': gridMapScene,
     };
-    const sceneCache = { getCached: (p: string) => sceneByPath[p] };
+    const sceneCache = sceneCacheOver(sceneByPath);
 
     const resolved = liveNodeAt('Game/Stage/GridMap', game.nodes, {
       externalResources: game.externalResources,

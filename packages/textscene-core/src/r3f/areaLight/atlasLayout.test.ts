@@ -30,14 +30,14 @@ describe('buildAreaLightAtlas', () => {
     const atlas = buildAreaLightAtlas([solid(64, 64, [255, 255, 255, 255])]);
 
     expect([atlas.width, atlas.height]).toEqual([256, 256]);
-    expect(atlas.placements[0]).toEqual({ rect: [0, 0, 0.25, 0.25], maxMipmap: 5 });
+    expect(atlas.placements[0]).toEqual({ rect: { x: 0, y: 0, width: 0.25, height: 0.25 }, maxMipmap: 5 });
   });
 
   it('stretches a 200×100 texture to whole cells, 256×128, with six mips to sample', () => {
     const atlas = buildAreaLightAtlas([solid(200, 100, [255, 255, 255, 255])]);
 
     expect([atlas.width, atlas.height]).toEqual([512, 256]);
-    expect(atlas.placements[0]).toEqual({ rect: [0, 0, 0.5, 0.5], maxMipmap: 6 });
+    expect(atlas.placements[0]).toEqual({ rect: { x: 0, y: 0, width: 0.5, height: 0.5 }, maxMipmap: 6 });
   });
 
   it('packs the wider texture first and stacks the other beneath it', () => {
@@ -45,8 +45,8 @@ describe('buildAreaLightAtlas', () => {
 
     expect([atlas.width, atlas.height]).toEqual([512, 512]);
     expect(atlas.placements.map((placement) => placement.rect)).toEqual([
-      [0, 0.5, 0.125, 0.125],
-      [0, 0, 0.5, 0.25],
+      { x: 0, y: 0.5, width: 0.125, height: 0.125 },
+      { x: 0, y: 0, width: 0.5, height: 0.25 },
     ]);
   });
 

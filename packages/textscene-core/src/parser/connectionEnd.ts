@@ -5,7 +5,7 @@
 
 import { simplifiedNodePath } from '../godot/string/nodePath.js';
 import { builtSceneTrailEnd } from './idTrail.js';
-import { isSeatedAtOwnPath, UNKNOWABLE, type SceneSeating } from './sceneTreeBuilder.js';
+import { isSeatedAtOwnPathIn, UNKNOWABLE, type SceneSeating } from './sceneTreeBuilder.js';
 import type { NodeOrigin, NodePathResolution, RawNode } from './types.js';
 
 /**
@@ -29,7 +29,7 @@ export function connectionEndResolver<N extends RawNode>(
 ): ConnectionEndResolver<N> {
   // An id trail finds a heading at the path it declares (`packed_scene.cpp:1985-2005`), so an
   // orphan, re-rooted or recovered elsewhere, is not there.
-  const isPlaced = ({ node }: NodeOrigin<N>) => isSeatedAtOwnPath(node, seating);
+  const isPlaced = isSeatedAtOwnPathIn(seating);
   return (path, idTrail) => {
     // The loader stores the simplified path (`resource_format_text.cpp:370-371`), so `Gone/..` never walks.
     const walked = seating.resolve(simplifiedNodePath(path));

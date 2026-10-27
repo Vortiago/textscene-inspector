@@ -25,6 +25,7 @@ import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildIn
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
+import { lightened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
@@ -37,11 +38,6 @@ export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
 /** `GraphNodeTitleLabel`'s own `font_color` (`default_theme.cpp:819`). */
 export const GRAPH_NODE_TITLE_DEFAULT_COLOR = CONTROL_FONT_COLOR;
-
-/** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
-function lightened(c: Rgba, amount: number): Rgba {
-  return { r: c.r + (1 - c.r) * amount, g: c.g + (1 - c.g) * amount, b: c.b + (1 - c.b) * amount, a: c.a };
-}
 
 function flatBox(
   bgColor: Rgba,

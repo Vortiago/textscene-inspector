@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { normalizedVector3, vector3Cross, vector3Dot, vector3Maxf } from './vector';
+import { normalizedVector2, normalizedVector3, vector3Cross, vector3Dot, vector3Maxf } from './vector';
+
+describe('normalizedVector2', () => {
+  it('scales a vector to unit length in single precision', () => {
+    expect(normalizedVector2({ x: 3, y: -4 })).toEqual({ x: Math.fround(0.6), y: Math.fround(-0.8) });
+  });
+
+  it('leaves a zero vector zero, as Vector2::normalize does (edge case)', () => {
+    expect(normalizedVector2({ x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+  });
+});
 
 describe('normalizedVector3', () => {
   it('scales a vector to unit length', () => {
