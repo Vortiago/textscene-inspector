@@ -19,10 +19,11 @@ import './styles/labelsettings/index.js';
 // Fonts
 import './fonts/font/index.js';
 
-// Environment + sky + baked light
+// Environment + sky + baked light + camera attributes
 import './environment/index.js';
 import './sky/index.js';
 import './lightmapgidata/index.js';
+import './cameraattributes/index.js';
 
 // Meshes
 import './meshes/arraymesh/index.js';

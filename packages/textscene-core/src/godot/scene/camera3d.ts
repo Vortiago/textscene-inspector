@@ -36,3 +36,18 @@ export const CAMERA_3D_KEEP_ASPECT_HINT_NAMES = labelEnumNames(Camera3DKeepAspec
   KEEP_WIDTH: 'Keep Width',
   KEEP_HEIGHT: 'Keep Height',
 });
+
+/**
+ * The camera a viewport renders through, from its cameras in tree order. Each one entering the
+ * tree claims the viewport when it is `current` or the first (`camera_3d.cpp:189-190`), and a
+ * claim overwrites (`viewport.cpp:4565`), so the last `current` wins, or else the first.
+ *
+ * @canonical The camera a viewport renders through
+ */
+export function electViewportCamera<T>(cameras: readonly T[], isCurrent: (camera: T) => boolean): T | null {
+  let lastCurrent: T | null = null;
+  for (const camera of cameras) {
+    if (isCurrent(camera)) lastCurrent = camera;
+  }
+  return lastCurrent ?? cameras[0] ?? null;
+}

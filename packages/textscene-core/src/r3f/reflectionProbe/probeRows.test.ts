@@ -15,6 +15,7 @@ const PROBE: DrawnProbe = {
   reflectionMask: 0xffff_ffff,
   boxProjection: true,
   atlasLayer: 3,
+  exposureNormalization: 0.5,
 };
 
 /** Texel `texel` of probe `index` in `rows`. */
@@ -52,6 +53,10 @@ describe('probeRows', () => {
 
   it('splits the 32-bit mask into two halves a float holds exactly, with the box projection and the layer', () => {
     expect(texel(probeRows([PROBE]), 0, 6)).toEqual([0xffff, 0xffff, 1, 3]);
+  });
+
+  it('packs the exposure normalisation in its own texel after the mask (light_storage.cpp:1810-1814)', () => {
+    expect(texel(probeRows([PROBE]), 0, 7)).toEqual([0.5, 0, 0, 0]);
   });
 
   it('packs each probe after the one before', () => {

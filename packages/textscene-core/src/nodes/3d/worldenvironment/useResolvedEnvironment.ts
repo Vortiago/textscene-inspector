@@ -10,11 +10,8 @@ import { useResourceResolution, useSubOrExtResource } from '../../../resources/u
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
-import {
-  NO_ENVIRONMENT,
-  PENDING_ENVIRONMENT,
-  type EnvironmentResolution,
-} from '../../../r3f/environment/WorldEnvironmentScope';
+import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
+import { NO_RESOLUTION, PENDING_RESOLUTION } from '../../../r3f/environment/worldGroup';
 import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
 
 /**
@@ -56,8 +53,8 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Envi
   );
 
   return useMemo((): EnvironmentResolution => {
-    if (status === 'pending') return PENDING_ENVIRONMENT;
-    if (!settings || !environment) return NO_ENVIRONMENT;
+    if (status === 'pending') return PENDING_RESOLUTION;
+    if (!settings || !environment) return NO_RESOLUTION;
     return {
       status: 'resolved',
       environment: { settings, sky, resources: environment.resources, skyResources },

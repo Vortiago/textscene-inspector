@@ -83,15 +83,15 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Camera3D: {
     renderGap: [
-      // Per-camera overrides of the world environment, the exposure and DOF
-      // attributes, and the Compositor stack. All three change the image, and no
-      // Environment or Compositor resource slice exists to hang them on.
+      // Per-camera override of the world's environment, and the Compositor stack.
+      // The previewer draws through the editor camera, which holds neither, so a
+      // scene's Camera3D overrides nothing there. `attributes` is read: the camera
+      // the viewer looks through replaces the world's exposure.
       'environment',
-      'attributes',
       'compositor',
     ],
     reason:
-      'A camera can override the environment, carry its own exposure and depth-of-field attributes, and run a compositor stack; the previewer implements none of the three.',
+      'A camera can override the environment and run a compositor stack; the editor camera the previewer draws through holds neither.',
   },
 
   WorldEnvironment: {
