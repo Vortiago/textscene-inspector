@@ -37,7 +37,7 @@ import {
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 import { type Rgba } from '../../../../godot/math/math';
-import { HORIZONTAL_ALIGNMENT_LEFT } from '../../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const DEFAULT_CARET_WIDTH_PX = 1;
@@ -123,7 +123,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       layoutLineEditContent({
         rectSize: { x: rect.w, y: rect.h },
         styleMargin: baseStyleBox.contentMargin,
-        alignment: props.alignment ?? HORIZONTAL_ALIGNMENT_LEFT,
+        alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
         textWidthPx: layout?.widthPx ?? 0,
         textHeightPx: layout?.heightPx ?? 0,
         hasIcon,
@@ -179,7 +179,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         ? lineEditCaretRect({
             rectSize: { x: rect.w, y: rect.h },
             styleMargin: baseStyleBox.contentMargin,
-            alignment: props.alignment ?? HORIZONTAL_ALIGNMENT_LEFT,
+            alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
             fontHeightPx,
             isPlaceholder,
             textPenX: content.textOffset.x,

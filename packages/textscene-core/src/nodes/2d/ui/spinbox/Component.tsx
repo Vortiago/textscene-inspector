@@ -35,7 +35,7 @@ import {
   spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
-import { HORIZONTAL_ALIGNMENT_LEFT } from '../../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
@@ -81,7 +81,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
       layoutLineEditContent({
         rectSize: { x: layout.fieldRect.w, y: layout.fieldRect.h },
         styleMargin: fieldBox.contentMargin,
-        alignment: props.alignment ?? HORIZONTAL_ALIGNMENT_LEFT,
+        alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
         textWidthPx: textLayout.widthPx,
         textHeightPx: textLayout.heightPx,
         rtl: solveNode.rtl,

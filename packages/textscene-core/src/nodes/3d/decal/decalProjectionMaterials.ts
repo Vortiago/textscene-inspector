@@ -12,7 +12,7 @@ import {
   disablesSpecularOcclusion,
   specularOcclusionUserData,
 } from '../../../r3f/godotIndirectSpecular';
-import type { DecalAtlasRect } from './decalAtlas';
+import type { AtlasRect } from '../../../resources/textures/atlastexture/types';
 import {
   drawsLightModesOf,
   lightModesInjection,
@@ -130,7 +130,7 @@ interface Projection {
  * (`scene_forward_clustered.glsl:1604`), and shows it. Without a rectangle the projection has no
  * texture to sample, and is hidden.
  */
-function placeIn(rect: DecalAtlasRect | undefined, { mesh, textureUv }: Projection): void {
+function placeIn(rect: AtlasRect | undefined, { mesh, textureUv }: Projection): void {
   mesh.visible = rect !== undefined;
   if (!rect) return;
   const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
@@ -148,7 +148,7 @@ export class DecalProjectionMaterials {
   /** Each projection `project` built. Cleared by `dispose`. */
   private readonly projections: Projection[] = [];
   /** Where the decal's texture lies in the atlas. Written only by `placeInAtlas`. */
-  private rect: DecalAtlasRect | undefined;
+  private rect: AtlasRect | undefined;
 
   constructor(private readonly look: DecalProjectionLook) {}
 
@@ -168,7 +168,7 @@ export class DecalProjectionMaterials {
    * Moves every projection onto `rect`, the decal's texture in the atlas. The atlas hands out the
    * same rectangle until it rebuilds, so one that is the same object moves nothing.
    */
-  placeInAtlas(rect: DecalAtlasRect | undefined): void {
+  placeInAtlas(rect: AtlasRect | undefined): void {
     if (rect === this.rect) return;
     this.rect = rect;
     for (const projection of this.projections) placeIn(rect, projection);

@@ -4,6 +4,7 @@
  * (`marker_2d.cpp:47-59`, `marker_3d_gizmo_plugin.cpp:60-79`).
  */
 
+import { darkened } from '../../godot/math/color';
 import { Vector3Axis } from '../../godot/math/vector3Axis';
 import { godotColorToLinear } from '../godotColor';
 
@@ -19,12 +20,10 @@ const NEGATIVE_ARM_DARKENING = 0.5;
 export const FLOATS_PER_VERTEX = 3;
 const VERTICES_PER_AXIS = 4;
 
-/** `Color::darkened` (`color.h:119`): the channels shrink by `amount`, before the linear convert. */
-function darkened({ r, g, b }: { r: number; g: number; b: number }, amount: number) {
-  return { r: r * (1 - amount), g: g * (1 - amount), b: b * (1 - amount) };
-}
-
-/** The linear colour of the four vertices of each axis: the positive arm, then the negative arm. */
+/**
+ * The linear colour of the four vertices of each axis: the positive arm, then the negative arm.
+ * The negative arm darkens in sRGB, before the linear convert.
+ */
 const AXIS_VERTEX_COLORS = AXIS_COLORS.map((axisColor) => {
   const positive = godotColorToLinear(axisColor);
   const negative = godotColorToLinear(darkened(axisColor, NEGATIVE_ARM_DARKENING));

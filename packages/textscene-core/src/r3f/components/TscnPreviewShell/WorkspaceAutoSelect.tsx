@@ -10,7 +10,7 @@ import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { workspaceForRoot } from '../../workspaceForScene.js';
 import { useSharedLiveTree } from '../../useLiveSceneTree.js';
-import { collapseLiveNode, rootScope, snapshotScenes } from '../../liveSceneTree.js';
+import { liveTreeOf, rootScope } from '../../liveSceneTree.js';
 
 export function WorkspaceAutoSelect() {
   const { sceneGraph } = useHierarchy();
@@ -20,7 +20,8 @@ export function WorkspaceAutoSelect() {
   const claimed = useMemo(() => {
     const root = liveTree?.roots[0];
     if (!liveTree || !root) return null;
-    return workspaceForRoot(collapseLiveNode(root, rootScope(liveTree.ctx), snapshotScenes(liveTree.ctx)));
+    const { roots, ctx } = liveTree;
+    return workspaceForRoot(liveTreeOf(roots, ctx).stepOf(root, rootScope(ctx)).node);
   }, [liveTree]);
 
   // Once per scene, when the workspace becomes known. A manual toggle then

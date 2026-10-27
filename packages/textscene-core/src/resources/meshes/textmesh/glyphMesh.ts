@@ -11,9 +11,10 @@
  */
 
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
+import { signedPolygonArea } from '../../../godot/math/polygonArea';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
-import { doubledSignedArea, triangulateContours, type TriangulatedContour } from './triangulate';
+import { triangulateContours, type TriangulatedContour } from './triangulate';
 
 /** A polygon vertex. A point on the curve is sharp, and a point stepped along an arc is smooth. */
 export interface ContourVertex {
@@ -111,12 +112,12 @@ function contourPolygon(
 
 /** Counter-clockwise on a y-up page, as polypartition reads the shoelace sum. */
 function isCounterClockwise(polygon: readonly ContourVertex[]): boolean {
-  return doubledSignedArea(polygon.map((vertex) => vertex.point)) > 0;
+  return signedPolygonArea(polygon.map((vertex) => vertex.point)) > 0;
 }
 
 function toTriangulatedContour(polygon: readonly ContourVertex[]): TriangulatedContour {
   const points = polygon.map((vertex) => vertex.point);
-  return { points, isHole: doubledSignedArea(points) < 0 };
+  return { points, isHole: signedPolygonArea(points) < 0 };
 }
 
 function polygonLength(polygon: readonly ContourVertex[]): number {

@@ -21,11 +21,7 @@ import {
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -136,7 +132,11 @@ function buttonIconReservationPx(
   ctx: Pick<SolveContext, 'theme'> & { theme: SolveContext['theme'] }
 ): number {
   if (!n.textureSize || n.textureSize.x <= 0 || n.textureSize.y <= 0) return 0;
-  if ((props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT) === HORIZONTAL_ALIGNMENT_CENTER) return 0;
+  if (
+    (props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) ===
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
+  )
+    return 0;
   const iconSize = fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0);
   return Math.round(iconSize.x) + Math.max(0, n.constants.h_separation ?? ctx.theme.separation);
 }
@@ -184,8 +184,8 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   let width = textSize.x;
   let height = textSize.y;
 
-  const iconAlignment = props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
-  const verticalIconAlignment = props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER;
+  const iconAlignment = props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT;
+  const verticalIconAlignment = props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
   const iconMaxWidth = n.constants.icon_max_width ?? 0;
   const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
 
@@ -193,13 +193,13 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (!props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0) {
     const iconSize = fitIconSize(n.textureSize, iconMaxWidth);
 
-    if (verticalIconAlignment === VERTICAL_ALIGNMENT_CENTER) {
+    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
       height = Math.max(height, iconSize.y);
     } else {
       height += iconSize.y;
     }
 
-    if (iconAlignment !== HORIZONTAL_ALIGNMENT_CENTER) {
+    if (iconAlignment !== HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) {
       width += iconSize.x;
       if (hasText) width += Math.max(0, hSeparation);
     } else {
@@ -208,7 +208,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   }
 
   if (hasText) {
-    if (verticalIconAlignment === VERTICAL_ALIGNMENT_CENTER) {
+    if (verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER) {
       height = Math.max(textSize.y, height);
     } else {
       height += textSize.y;

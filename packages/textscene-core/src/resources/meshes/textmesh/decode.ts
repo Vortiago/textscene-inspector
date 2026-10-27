@@ -9,33 +9,12 @@ import { unquoteString } from '../../../parser/utils';
 import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { clamp } from '../../../godot/math/math';
 import { storedReal, storedVector2 } from '../../../godot/math/real';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  VERTICAL_ALIGNMENT_BOTTOM,
-  VERTICAL_ALIGNMENT_CENTER,
-  VERTICAL_ALIGNMENT_FILL,
-  VERTICAL_ALIGNMENT_TOP,
-  type HorizontalAlignment,
-  type VerticalAlignment,
-} from '../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import { AutowrapMode, DEFAULT_JUSTIFICATION_FLAGS } from '../../../godot/text/textServerEnums';
 import type { TextMeshProperties } from './types';
 
-const HORIZONTAL_ALIGNMENTS: readonly HorizontalAlignment[] = [
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  HORIZONTAL_ALIGNMENT_FILL,
-];
-const VERTICAL_ALIGNMENTS: readonly VerticalAlignment[] = [
-  VERTICAL_ALIGNMENT_TOP,
-  VERTICAL_ALIGNMENT_CENTER,
-  VERTICAL_ALIGNMENT_BOTTOM,
-  VERTICAL_ALIGNMENT_FILL,
-];
+const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
+const VERTICAL_ALIGNMENTS = Object.values(VerticalAlignment);
 
 export function decodeTextMesh(properties: Record<string, string>): TextMeshProperties {
   return {
@@ -43,13 +22,13 @@ export function decodeTextMesh(properties: Record<string, string>): TextMeshProp
     fontSize: clamp(intOr(properties.font_size, 16, 'TextMesh font_size'), 1, 127),
     horizontalAlignment: enumOr(
       properties.horizontal_alignment,
-      HORIZONTAL_ALIGNMENT_CENTER,
+      HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
       HORIZONTAL_ALIGNMENTS,
       'TextMesh horizontal_alignment'
     ),
     verticalAlignment: enumOr(
       properties.vertical_alignment,
-      VERTICAL_ALIGNMENT_CENTER,
+      VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
       VERTICAL_ALIGNMENTS,
       'TextMesh vertical_alignment'
     ),

@@ -27,11 +27,7 @@ import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { layoutButtonContent } from '../../../../r3f/controls/native/buttonBase';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
@@ -92,9 +88,9 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
     styleMargin: { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
     hSeparation: 0,
     iconMaxWidth: 0,
-    textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
-    iconAlignment: HORIZONTAL_ALIGNMENT_LEFT,
-    verticalIconAlignment: VERTICAL_ALIGNMENT_CENTER,
+    textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+    iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
     expandIcon: false,
     iconNaturalSize: { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
     hasText: false,

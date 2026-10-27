@@ -17,12 +17,10 @@ import {
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 import {
-  HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_NAMES,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  VERTICAL_ALIGNMENT_BOTTOM,
   VERTICAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_TOP,
+  HorizontalAlignment,
+  VerticalAlignment,
 } from '../../../../godot/math/alignment.js';
 
 validatorRegistry.registerAll('Button', {
@@ -36,8 +34,8 @@ validatorRegistry.registerAll('Button', {
   // constants. set_text_alignment (button.cpp:737-741) bare-assigns, so FILL warns.
   alignment: v.enumInt(
     'alignment',
-    HORIZONTAL_ALIGNMENT_LEFT,
-    HORIZONTAL_ALIGNMENT_RIGHT,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT,
     HORIZONTAL_ALIGNMENT_NAMES,
     { hinted: 'button.cpp:814' }
   ),
@@ -66,8 +64,8 @@ validatorRegistry.registerAll('Button', {
   // same as `alignment` above.
   icon_alignment: v.enumInt(
     'icon_alignment',
-    HORIZONTAL_ALIGNMENT_LEFT,
-    HORIZONTAL_ALIGNMENT_RIGHT,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT,
     HORIZONTAL_ALIGNMENT_NAMES,
     { hinted: 'button.cpp:821' }
   ),
@@ -75,8 +73,8 @@ validatorRegistry.registerAll('Button', {
   // constants. set_vertical_icon_alignment (button.cpp:759-770) bare-assigns, so FILL warns.
   vertical_icon_alignment: v.enumInt(
     'vertical_icon_alignment',
-    VERTICAL_ALIGNMENT_TOP,
-    VERTICAL_ALIGNMENT_BOTTOM,
+    VerticalAlignment.VERTICAL_ALIGNMENT_TOP,
+    VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM,
     VERTICAL_ALIGNMENT_NAMES,
     { hinted: 'button.cpp:822' }
   ),

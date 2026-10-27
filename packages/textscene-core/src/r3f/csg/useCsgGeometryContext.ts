@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
-import { useFontMetricsSettleCount } from '../../resources/meshes/textmesh/useFontMetricsSettleCount';
+import { useFontMetricsSettleCount } from '../controls/native/text/useFontMetricsSettleCount';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import { useLoadedFilesAndFonts } from '../../resources/useLoadedFilesAndFonts';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';

@@ -2,10 +2,11 @@
  * Which strings a COLOR slot converts: `Color(const String &)` reads HTML hex
  * (`color.cpp:372-394`) or a name `find_named_color` finds (`color.cpp:412-432`). Every named
  * colour expectation is `color_names.inc`'s own `Color::hex(0xRRGGBBAA)` literal, cited by line.
+ * Then `Color::darkened` and `Color::lightened`, on worked examples.
  */
 
 import { describe, expect, it } from 'vitest';
-import { isColorString, namedColor } from './color.js';
+import { darkened, isColorString, lightened, namedColor } from './color.js';
 
 describe('isColorString', () => {
   it.each(['ff0000', '#ff0000', 'F00', '#f00a', 'ff000080', '#FF000080'])('reads the HTML hex %s', (text) => {
@@ -64,5 +65,17 @@ describe('namedColor', () => {
     expect(namedColor('')).toBeUndefined();
     // `Color::from_string` tries `html` first, so the table must not match a hex string.
     expect(namedColor('#ff0000')).toBeUndefined();
+  });
+});
+
+describe('darkened', () => {
+  it('shrinks each colour channel by the amount and keeps alpha', () => {
+    expect(darkened({ r: 0.8, g: 0.4, b: 0, a: 0.5 }, 0.5)).toEqual({ r: 0.4, g: 0.2, b: 0, a: 0.5 });
+  });
+});
+
+describe('lightened', () => {
+  it('moves each colour channel toward white by the amount and keeps alpha', () => {
+    expect(lightened({ r: 0, g: 0.5, b: 1, a: 0.25 }, 0.5)).toEqual({ r: 0.5, g: 0.75, b: 1, a: 0.25 });
   });
 });

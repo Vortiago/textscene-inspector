@@ -5,6 +5,7 @@
  */
 
 import * as THREE from 'three';
+import { emptyLike } from '../../utils/emptyLike';
 import { dataArrayTexture } from '../textures/dataArrayTexture';
 
 /**
@@ -18,8 +19,7 @@ export function combinedAtlas(textures: readonly THREE.DataArrayTexture[]): THRE
   if (textures.some(({ image }) => image.width !== width || image.height !== height)) return null;
   const depth = textures.reduce((sum, { image }) => sum + image.depth, 0);
   const length = textures.reduce((sum, { image }) => sum + image.data!.length, 0);
-  const texels =
-    textures[0]!.image.data instanceof Uint16Array ? new Uint16Array(length) : new Uint8Array(length);
+  const texels = emptyLike(textures[0]!.image.data as Uint16Array | Uint8Array, length);
   let offset = 0;
   for (const { image } of textures) {
     texels.set(image.data as Uint16Array | Uint8Array, offset);

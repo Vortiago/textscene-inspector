@@ -6,6 +6,7 @@
 
 import type { LayeredTexels } from '../layeredTexels';
 import type { DecodedLevel } from '../image/decode';
+import { emptyLike } from '../../../utils/emptyLike';
 
 /**
  * The first image sets the size. The first image of another size starts the mipmaps, so the
@@ -22,10 +23,7 @@ export function stackSlices(
   const depth = mipmapStart === -1 ? images.length : mipmapStart;
 
   const sliceTexels = width * height * 4;
-  const texels =
-    first.data instanceof Float32Array
-      ? new Float32Array(sliceTexels * depth)
-      : new Uint8Array(sliceTexels * depth);
+  const texels = emptyLike(first.data, sliceTexels * depth);
   for (let z = 0; z < depth; z++) texels.set(images[z]!.data, z * sliceTexels);
   return { texels, width, height, depth };
 }

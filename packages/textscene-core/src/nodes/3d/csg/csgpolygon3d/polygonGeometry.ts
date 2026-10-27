@@ -37,18 +37,19 @@ import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import type { ShadedBrush } from '../brushManifold';
 import { extrusionCounts } from './extrusionCounts';
 import { warnOnce } from '../../../../utils/warnOnce';
-import { facingMatrix, PATH_UP, signedArea, SWEEP_WARNINGS, toPoints } from './polygonSweepFrames';
+import { facingMatrix, PATH_UP, SWEEP_WARNINGS, toPoints } from './polygonSweepFrames';
 import { MIN_POLYGON_VERTICES, type CsgPolygonSpec } from './polygonSweepSpec';
 import { PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
 import { degToRad } from '../../../../godot/math/math.js';
+import { signedPolygonArea } from '../../../../godot/math/polygonArea';
 
 export function buildCsgPolygonBrush(spec: CsgPolygonSpec): ShadedBrush {
   const shape = toPoints(spec.polygon);
   if (shape.length < MIN_POLYGON_VERTICES) return emptyBrush();
 
   // Godot normalises to clockwise before triangulating.
-  if (signedArea(shape) > 0) shape.reverse();
+  if (signedPolygonArea(shape) > 0) shape.reverse();
   const shapeSides = shape.length;
 
   // A swept profile is routinely concave, and `fanTriangulate` is convex-only. Polygon2D's
