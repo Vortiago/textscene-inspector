@@ -266,6 +266,23 @@ describe('fontWork', () => {
     expect(fontWork.pending()).toBe(0);
   });
 
+  it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
+    const off = onSceneFontMetricsSettled(() => {
+      throw new Error('listener failed');
+    });
+    const unhandled: unknown[] = [];
+    const record = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', record);
+    try {
+      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/P');
+      await settleLoads();
+      expect(fontWork.pending()).toBe(0);
+    } finally {
+      off();
+      process.off('unhandledRejection', record);
+    }
+  });
+
   it('counts no work for a font that settles by itself on the bundled default', () => {
     peekSceneFontMetrics(undefined, 'Root/N');
     peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/O');

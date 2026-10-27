@@ -209,10 +209,14 @@ async function resolveSceneFontMetrics(
   metricsCache.set(resolved.leaf, { status: 'pending', promise });
   const metrics = await promise;
   metricsCache.set(resolved.leaf, { status: 'settled', metrics });
-  // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
-  // settled cache.
-  notifySceneFontMetricsSettled();
-  endWork();
+  try {
+    // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
+    // settled cache.
+    notifySceneFontMetricsSettled();
+  } finally {
+    // A throwing listener must not leave the work counted: a capture waits on it for good.
+    endWork();
+  }
   return metrics;
 }
 
