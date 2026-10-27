@@ -6,13 +6,14 @@
  */
 
 import type { SceneScope } from '../parser/types';
-import { scopeOf, type LiveNode } from './liveNode';
+import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
 import {
+  endAboveRoot,
   InstanceNameTable,
-  subPathSegments,
+  OUTSIDE,
   type InstanceNames,
   type UniqueNameTable,
 } from './instanceNameTable';
@@ -38,6 +39,8 @@ export interface GraftedInstance {
    * the path below the root the graft placed it at, as of its heading.
    */
   readonly uniqueParentPlacements: ReadonlyMap<string, string>;
+  /** The host children whose `parent=` walk leaves the instance or finds nothing, as of their headings. */
+  readonly escaped: readonly EscapedChild[];
 }
 
 /**
@@ -58,8 +61,10 @@ export function graftInstanceChildren(
   let grafted = [...rootChildren];
   const table = new InstanceNameTable(names);
   const placements = new Map<string, string>();
-  // Kept out of `grafted` until the end, so no later sub-path, fold or setting lands on a node
-  // the graft could not place.
+  const escaped: EscapedChild[] = [];
+  // A child that stays in the instance: an override that matches no node, as Godot's drop is not
+  // modelled, and a child over a base the cache has not composed, whose next collapse seats it. Kept
+  // out of `grafted` until the end, so no later sub-path, fold or setting lands on it.
   const misplaced: LiveNode[] = [];
 
   for (const [index, child] of hostChildren.entries()) {
@@ -75,20 +80,24 @@ export function graftInstanceChildren(
       continue;
     }
 
-    const segments = subPathSegments(child.instanceSubPath, grafted, table.claimed);
-    const next = segments && graftAt(grafted, segments, stamped, scopes.content);
-    if (next) {
+    const segments = table.walk(child.instanceSubPath, grafted);
+    const inside = segments?.[0] === OUTSIDE ? null : segments;
+    const next = inside && graftAt(grafted, inside, stamped, scopes.content);
+    if (inside && next) {
       grafted = next;
       if (child.instanceSubPath.includes(UNIQUE_NODE_PREFIX)) {
-        placements.set(joinPath(child.instanceSubPath, child.name), joinPath(segments.join('/'), child.name));
+        placements.set(joinPath(child.instanceSubPath, child.name), joinPath(inside.join('/'), child.name));
       }
-    } else {
-      // Visible-but-misplaced beats invisible: a sub-path that does not resolve is
-      // a matching failure worth seeing, not a reason to drop the node.
-      warn(
-        `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
-      );
+    } else if (child.overridesExistingNode || names.hasUnloadedBase) {
+      // A base still loading seats the child at its next collapse, so only an override warns.
+      if (child.overridesExistingNode) {
+        warn(
+          `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
+        );
+      }
       misplaced.push(stamped);
+    } else {
+      escaped.push({ child, scope: stamped.scope!, end: walkEnd(segments, child.instanceSubPath, table) });
     }
   }
 
@@ -96,7 +105,21 @@ export function graftInstanceChildren(
     children: [...table.landUpTo(grafted, hostChildren.length), ...misplaced],
     uniqueNames: table,
     uniqueParentPlacements: placements,
+    escaped,
   };
+}
+
+/**
+ * Where a host child that the instance could not seat goes on: the path that leaves the instance,
+ * or null where its walk found nothing the scene above answers.
+ */
+function walkEnd(
+  segments: readonly string[] | null,
+  subPath: string,
+  table: InstanceNameTable
+): string | null {
+  if (segments === null) return endAboveRoot(subPath, table.claimed);
+  return segments[0] === OUTSIDE ? segments.join('/') : null;
 }
 
 /**
@@ -104,7 +127,7 @@ export function graftInstanceChildren(
  * names nothing. Only the nodes along the path are new objects. `siblingScope` is
  * the scope `siblings` resolve against unless a node carries its own.
  */
-function graftAt(
+export function graftAt(
   siblings: readonly LiveNode[],
   segments: readonly string[],
   child: LiveNode,
@@ -139,7 +162,8 @@ function graftAt(
 /** `child` with `rest` as its sub-path below the instance it re-anchors at, or none when `rest` is empty. */
 function reanchored(child: LiveNode, rest: readonly string[]): LiveNode {
   const { instanceSubPath: _authored, ...direct } = child;
-  return rest.length > 0 ? { ...direct, instanceSubPath: rest.join('/') } : direct;
+  if (rest.length === 0) return direct;
+  return { ...direct, instanceSubPath: rest.join('/'), reanchoredFrom: hostChildOf(child) };
 }
 
 /**

@@ -5,7 +5,7 @@
  */
 
 import type { LiveNode } from './liveNode';
-import { pathBetween } from '../utils/nodePath';
+import { joinPath, pathBetween } from '../utils/nodePath';
 import {
   UNIQUE_NODE_PREFIX,
   nodePathNames,
@@ -33,6 +33,12 @@ export interface UniqueNameTable {
   paths(): UniqueNamePaths;
 }
 
+/**
+ * The finished table of the nested instance node at a path below the sub-scene root, as it
+ * collapses now, or undefined where its scene is not known yet.
+ */
+type NestedTable = (path: string) => UniqueNamePaths | undefined;
+
 /** The `%Name` facts a graft reads for one instance. */
 export interface InstanceNames {
   /**
@@ -42,6 +48,16 @@ export interface InstanceNames {
   readonly own: () => UniqueNamePaths;
   /** The instance node's `instanceNameSettings`, in file order. */
   readonly settings: readonly InstanceNameSetting[];
+  /**
+   * Whether the sub-scene root inherits a base that the cache could not compose it over. The table
+   * and the children are not final then: a walk that fails here may still succeed over the base.
+   */
+  readonly hasUnloadedBase?: boolean;
+  /**
+   * The table of a nested instance node, which a `%Name` walk reads before the owner's
+   * (node.cpp:1930-1938). Absent where the graft cannot collapse a nested instance.
+   */
+  readonly nested?: (node: LiveNode) => UniqueNamePaths | undefined;
 }
 
 /**
@@ -53,14 +69,31 @@ export class InstanceNameTable implements UniqueNameTable {
   private readonly changed = new Map<string, string | undefined>();
   private readonly own: () => UniqueNamePaths;
   private readonly settings: readonly InstanceNameSetting[];
+  private readonly nested?: InstanceNames['nested'];
   /** Written only by `landUpTo`: how many of `settings` have landed. */
   private landed = 0;
   /** Written only by `paths`, read once the graft has landed every setting. */
   private finished?: UniqueNamePaths;
 
-  constructor({ own, settings }: InstanceNames) {
+  constructor({ own, settings, nested }: InstanceNames) {
     this.own = own;
     this.settings = settings;
+    this.nested = nested;
+  }
+
+  /**
+   * The sub-path a host child states, walked over `tree` as {@link subPathSegments} walks it, with
+   * the table of each nested instance the walk stands on read first.
+   */
+  walk(subPath: string, tree: readonly LiveNode[]): string[] | null {
+    const { nested } = this;
+    const nestedTable: NestedTable | undefined =
+      nested &&
+      ((path) => {
+        const node = nodeAt(tree, path.split('/'));
+        return node && nested(node);
+      });
+    return subPathSegments(subPath, tree, this.claimed, nestedTable);
   }
 
   /** The path from the sub-scene root that holds `key` now, as in {@link UniqueNamePaths}. */
@@ -232,7 +265,7 @@ function handOutside(
 }
 
 /** The node at `path` below the sub-scene root, or undefined where none sits there. */
-function nodeAt(tree: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
+export function nodeAt(tree: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
   let siblings = tree;
   let found: LiveNode | undefined;
   for (const name of path) {
@@ -288,19 +321,38 @@ function handTo(
 export function subPathSegments(
   subPath: string,
   tree: readonly LiveNode[],
-  claimed: ClaimedPath
+  claimed: ClaimedPath,
+  nested?: NestedTable
 ): string[] | null {
   const segments = subPath.split('/');
   if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return segments;
-  const path = walkedPath(walkFromRoot(subPath, subSceneWalkTables(tree, claimed)));
+  const path = walkedPath(walkFromRoot(subPath, subSceneWalkTables(tree, claimed, nested)));
   if (path === null) return null;
   return path === '' ? [] : path.split('/');
+}
+
+/** The first segment of a walk that left a tree for the one above it. */
+export const OUTSIDE = '..';
+
+/**
+ * The end of a walk that found nothing in a tree whose root is an instance root. A `%Name` first
+ * step that the root's table lacks reads the table of the root's owner next (node.cpp:1930-1938),
+ * which the tree above holds. Null for any other failure: nothing above answers it.
+ */
+export function endAboveRoot(subPath: string, claimed: ClaimedPath): string | null {
+  const [first = ''] = subPath.split('/');
+  const isLacking = first.startsWith(UNIQUE_NODE_PREFIX) && claimed(first) === undefined;
+  return isLacking ? joinPath(OUTSIDE, subPath) : null;
 }
 
 const INSIDE_INSTANCE = 'inside a nested instance';
 
 /** The walk's tables over the sub-scene: a nested instance is opaque, and so is anything below it. */
-function subSceneWalkTables(tree: readonly LiveNode[], claimed: ClaimedPath): RootWalkTables {
+function subSceneWalkTables(
+  tree: readonly LiveNode[],
+  claimed: ClaimedPath,
+  nested?: NestedTable
+): RootWalkTables {
   const reach = (path: string): LiveNode | typeof INSIDE_INSTANCE | undefined => {
     if (path === '') return undefined;
     const segments = path.split('/');
@@ -315,5 +367,10 @@ function subSceneWalkTables(tree: readonly LiveNode[], claimed: ClaimedPath): Ro
       return at === INSIDE_INSTANCE || Boolean(at?.instance);
     },
     uniquePaths: { get: claimed },
+    // Only an instance root has a table of its own: a node below it reads that instance's.
+    instanceTable: (path) => {
+      const at = reach(path);
+      return at === INSIDE_INSTANCE || !at?.instance ? undefined : nested?.(path);
+    },
   };
 }

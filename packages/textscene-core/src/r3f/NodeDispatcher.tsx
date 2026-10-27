@@ -39,7 +39,8 @@ import {
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
-import { collapseLiveNode, singlePathCache } from './liveSceneTree.js';
+import { collapseLiveNode } from './liveSceneTree.js';
+import { useCollapseCache } from './useLiveSceneTree.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -405,11 +406,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // means a single root `.tscn` merged in. A `.glb` or multi-root scene returns `node`.
   // Memoized ahead of the early returns, so a hover elsewhere does not re-merge
   // this subtree every frame.
+  const collapseCache = useCollapseCache(node, loadPath, loadedScene);
   const effective = useMemo(() => {
     if (!loadedScene) return node;
     const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
-    return collapseLiveNode(node, scope, singlePathCache(loadPath, loadedScene));
-  }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
+    return collapseLiveNode(node, scope, collapseCache);
+  }, [node, ambientScope, enclosingScenePaths, collapseCache, loadedScene]);
 
   const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
   // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
