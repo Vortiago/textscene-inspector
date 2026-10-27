@@ -124,7 +124,7 @@ function arrayMeshSurfaces(
 /**
  * A PrimitiveMesh's one surface under its `material` (`primitive_meshes.cpp`, `surface_get_material`
  * answers it for surface 0), in Godot's arrays as the brush builder reads them. A points surface
- * adds nothing: the brush builder skips every surface that is not triangles (`csg_shape.cpp:1148-1150`).
+ * adds nothing: the brush builder skips every surface that is not triangles (`csg_shape.cpp:1137-1139`).
  */
 function primitiveMeshSurfaces(mesh: ResolvableResource, material: CsgMaterialAddress): CsgMeshSurface[] {
   // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.

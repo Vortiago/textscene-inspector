@@ -72,8 +72,8 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
 }
 
 /**
- * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle or one
- * to a point, as `add_surface_from_arrays` with no ARRAY_INDEX does.
+ * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, one
+ * to a point, or one to a strip slot, as `add_surface_from_arrays` with no ARRAY_INDEX does.
  */
 function drawOrderIndices(vertexCount: number): Uint32Array {
   const indices = new Uint32Array(vertexCount);
@@ -183,7 +183,7 @@ function decodeSurfaces(
       tangents,
       indices,
       ...(isPoints && { isPoints }),
-      ...(isStrip && { isTriangleStrip: isStrip }),
+      ...(isStrip && { isTriangleStrip: true }),
       ...readMaterial(block),
     });
   }
