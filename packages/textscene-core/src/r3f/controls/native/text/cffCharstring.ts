@@ -67,6 +67,23 @@ const OP = {
   fixedNumber: 255,
 } as const;
 
+/** The operators that paint, each by the `PathOperators` method that reads its operands. */
+const PATH_OPERATORS = new Map<number, (path: PathOperators) => void>([
+  [OP.rmoveto, (path) => path.relativeMove()],
+  [OP.hmoveto, (path) => path.horizontalMove()],
+  [OP.vmoveto, (path) => path.verticalMove()],
+  [OP.rlineto, (path) => path.relativeLines()],
+  [OP.hlineto, (path) => path.alternatingLines(true)],
+  [OP.vlineto, (path) => path.alternatingLines(false)],
+  [OP.rrcurveto, (path) => path.relativeCurves()],
+  [OP.rcurveline, (path) => path.curvesThenLine()],
+  [OP.rlinecurve, (path) => path.linesThenCurves()],
+  [OP.vvcurveto, (path) => path.verticalVerticalCurves()],
+  [OP.hhcurveto, (path) => path.horizontalHorizontalCurves()],
+  [OP.vhcurveto, (path) => path.alternatingCurves(false)],
+  [OP.hvcurveto, (path) => path.alternatingCurves(true)],
+]);
+
 /** A charstring or subroutine and the byte to read next. A read past its end gives 0, as `cf2_buf_readByte` does. */
 class ByteCursor {
   constructor(
@@ -113,7 +130,7 @@ class CharstringRun {
     this.stack = new OperandStack(font.isCff2 ? OPERAND_STACK_CFF2 : OPERAND_STACK_CFF1);
     this.arithmetic = new ArithmeticOperators(this.stack);
     this.pen = new GlyphPen(contours);
-    this.path = new PathOperators(this.pen, origin.x, origin.y);
+    this.path = new PathOperators(this.stack, this.pen, origin.x, origin.y);
     this.cursor = new ByteCursor(font.dv, charstring.start, charstring.end);
     this.vsindex = glyphPrivate.vsindex;
   }
@@ -164,7 +181,7 @@ class CharstringRun {
 
   /** An operator that leaves nothing on the stack, and an unknown one, which FreeType ignores. */
   private runAndClear(op: number): void {
-    const { stack, path } = this;
+    const { stack } = this;
     switch (op) {
       case OP.hstem:
       case OP.vstem:
@@ -181,45 +198,8 @@ class CharstringRun {
       case OP.vsindex:
         this.selectVariationData();
         break;
-      case OP.rmoveto:
-        path.relativeMove(stack);
-        break;
-      case OP.hmoveto:
-        path.horizontalMove(stack);
-        break;
-      case OP.vmoveto:
-        path.verticalMove(stack);
-        break;
-      case OP.rlineto:
-        path.relativeLines(stack);
-        break;
-      case OP.hlineto:
-        path.alternatingLines(stack, true);
-        break;
-      case OP.vlineto:
-        path.alternatingLines(stack, false);
-        break;
-      case OP.rrcurveto:
-        path.relativeCurves(stack);
-        break;
-      case OP.rcurveline:
-        path.curvesThenLine(stack);
-        break;
-      case OP.rlinecurve:
-        path.linesThenCurves(stack);
-        break;
-      case OP.vvcurveto:
-        path.verticalVerticalCurves(stack);
-        break;
-      case OP.hhcurveto:
-        path.horizontalHorizontalCurves(stack);
-        break;
-      case OP.vhcurveto:
-        path.alternatingCurves(stack, false);
-        break;
-      case OP.hvcurveto:
-        path.alternatingCurves(stack, true);
-        break;
+      default:
+        PATH_OPERATORS.get(op)?.(this.path);
     }
     stack.clear();
   }
@@ -319,7 +299,7 @@ class CharstringRun {
     const op = this.cursor.readByte();
     const flex = FLEX_OPERANDS.get(op);
     if (flex) {
-      this.path.flex(this.stack, flex);
+      this.path.flex(flex);
     } else if (!this.font.isCff2 && this.arithmetic.run(op)) {
       return;
     }

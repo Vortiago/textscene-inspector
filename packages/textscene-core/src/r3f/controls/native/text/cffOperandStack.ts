@@ -14,14 +14,19 @@ import { FIXED_16_16_ONE } from './fontMetrics';
 /** A charstring FreeType refuses to load. */
 export class MalformedCharstring extends Error {}
 
+interface Operand {
+  /** 16.16 fixed point, an integer included. */
+  value: number;
+  isInteger: boolean;
+}
+
 export class OperandStack {
-  private fixeds: number[] = [];
-  private integerFlags: boolean[] = [];
+  private readonly operands: Operand[] = [];
 
   constructor(private readonly capacity: number) {}
 
   get count(): number {
-    return this.fixeds.length;
+    return this.operands.length;
   }
 
   pushInt(value: number): void {
@@ -33,43 +38,37 @@ export class OperandStack {
   }
 
   popInt(): number {
-    if (this.count === 0) throw new MalformedCharstring('operand stack underflow');
-    if (!this.integerFlags[this.count - 1])
+    const top = this.operands[this.count - 1];
+    if (!top) throw new MalformedCharstring('operand stack underflow');
+    if (!top.isInteger)
       throw new MalformedCharstring('expected an integer operand, got a fixed-point number');
     return this.popFixed() >> 16;
   }
 
   popFixed(): number {
-    const value = this.fixeds.pop();
-    this.integerFlags.pop();
-    if (value === undefined) throw new MalformedCharstring('operand stack underflow');
-    return value;
+    const top = this.operands.pop();
+    if (!top) throw new MalformedCharstring('operand stack underflow');
+    return top.value;
   }
 
   /** The operand `index` places above the bottom, as a fixed-point number. */
   real(index: number): number {
-    const value = this.fixeds[index];
-    if (value === undefined)
-      throw new MalformedCharstring(`operand ${index} is past the ${this.count} on the stack`);
-    return value;
+    return this.at(index).value;
   }
 
   /** Makes the operand `index` places above the bottom a fixed-point number: a blended value is no integer. */
   markFixed(index: number): void {
-    this.real(index);
-    this.integerFlags[index] = false;
+    this.at(index).isInteger = false;
   }
 
   /** Drops the `count` operands on top. */
   drop(count: number): void {
     if (count > this.count) throw new MalformedCharstring(`cannot drop ${count} of ${this.count} operands`);
-    this.fixeds.length -= count;
-    this.integerFlags.length -= count;
+    this.operands.length -= count;
   }
 
   clear(): void {
-    this.fixeds.length = 0;
-    this.integerFlags.length = 0;
+    this.operands.length = 0;
   }
 
   /**
@@ -80,17 +79,18 @@ export class OperandStack {
     if (count < 2) return;
     if (count > this.count) throw new MalformedCharstring(`cannot roll ${count} of ${this.count} operands`);
     const by = ((shift % count) + count) % count;
-    const rotate = <T>(items: T[]) => {
-      const rolled = items.slice(0, count);
-      items.splice(0, count, ...rolled.slice(count - by), ...rolled.slice(0, count - by));
-    };
-    rotate(this.fixeds);
-    rotate(this.integerFlags);
+    const rolled = this.operands.slice(0, count);
+    this.operands.splice(0, count, ...rolled.slice(count - by), ...rolled.slice(0, count - by));
   }
 
-  private push(fixed: number, isInteger: boolean): void {
+  private at(index: number): Operand {
+    const operand = this.operands[index];
+    if (!operand) throw new MalformedCharstring(`operand ${index} is past the ${this.count} on the stack`);
+    return operand;
+  }
+
+  private push(value: number, isInteger: boolean): void {
     if (this.count >= this.capacity) throw new MalformedCharstring('operand stack overflow');
-    this.fixeds.push(fixed);
-    this.integerFlags.push(isInteger);
+    this.operands.push({ value, isInteger });
   }
 }

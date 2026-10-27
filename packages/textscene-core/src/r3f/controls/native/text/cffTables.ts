@@ -66,7 +66,7 @@ type Dict = ReadonlyMap<number, readonly number[]>;
 class CffReader {
   constructor(
     readonly dv: DataView,
-    private readonly isCff2: boolean
+    readonly isCff2: boolean
   ) {}
 
   /** The INDEX that starts at `at`, or throws a `RangeError` when its offsets leave the buffer. */
@@ -163,10 +163,12 @@ function fdSelector(dv: DataView, at: number, glyphCount: number): (glyphIndex: 
   const rangeCount = isLong ? dv.getUint32(at + 1, false) : dv.getUint16(at + 1, false);
   const rangeSize = isLong ? 6 : 3;
   const ranges = at + (isLong ? 5 : 3);
-  const firstOf = (i: number) =>
-    isLong ? dv.getUint32(ranges + i * rangeSize, false) : dv.getUint16(ranges + i * rangeSize, false);
-  const fdOf = (i: number) =>
-    isLong ? dv.getUint16(ranges + i * rangeSize + 4, false) : dv.getUint8(ranges + i * rangeSize + 2);
+  const firstOf = isLong
+    ? (i: number) => dv.getUint32(ranges + i * rangeSize, false)
+    : (i: number) => dv.getUint16(ranges + i * rangeSize, false);
+  const fdOf = isLong
+    ? (i: number) => dv.getUint16(ranges + i * rangeSize + 4, false)
+    : (i: number) => dv.getUint8(ranges + i * rangeSize + 2);
   return (glyphIndex) => {
     if (glyphIndex >= glyphCount) return 0;
     let low = 0;
@@ -193,18 +195,25 @@ function charsetSids(
 ): readonly number[] | null {
   const predefined = [ISO_ADOBE_CHARSET, EXPERT_CHARSET, EXPERT_SUBSET_CHARSET][charset];
   if (predefined) return glyphCount <= predefined.length ? predefined.slice(0, glyphCount) : null;
-  const sids = [0];
   const format = dv.getUint8(base + charset);
-  let cursor = base + charset + 1;
-  while (sids.length < glyphCount) {
-    if (format === 0) {
-      sids.push(dv.getUint16(cursor, false));
-      cursor += 2;
-      continue;
-    }
+  const start = base + charset + 1;
+  return format === 0 ? listedSids(dv, start, glyphCount) : rangedSids(dv, start, glyphCount, format === 2);
+}
+
+/** Charset format 0: one string id for each glyph after `.notdef`. */
+function listedSids(dv: DataView, start: number, glyphCount: number): number[] {
+  return [
+    0,
+    ...Array.from({ length: Math.max(0, glyphCount - 1) }, (_, i) => dv.getUint16(start + i * 2, false)),
+  ];
+}
+
+/** Charset formats 1 and 2: ranges of consecutive string ids, each with a one-byte or, in format 2, two-byte count. */
+function rangedSids(dv: DataView, start: number, glyphCount: number, hasLongCount: boolean): number[] {
+  const sids = [0];
+  for (let cursor = start; sids.length < glyphCount; cursor += hasLongCount ? 4 : 3) {
     const firstSid = dv.getUint16(cursor, false);
-    const left = format === 1 ? dv.getUint8(cursor + 2) : dv.getUint16(cursor + 2, false);
-    cursor += format === 1 ? 3 : 4;
+    const left = hasLongCount ? dv.getUint16(cursor + 2, false) : dv.getUint8(cursor + 2);
     for (let i = 0; i <= left && sids.length < glyphCount; i++) sids.push(firstSid + i);
   }
   return sids;
@@ -246,25 +255,30 @@ function privateOf(reader: CffReader, base: number, font: Dict, isCff2: boolean)
   };
 }
 
+/** The Top DICT, and where the global subroutine INDEX that follows it starts, or null for a CFF with no Top DICT. */
+function topDictOf(reader: CffReader, base: number): { topDict: Dict; globalSubrsAt: number } | null {
+  const { dv, isCff2 } = reader;
+  if (isCff2) {
+    const headerSize = dv.getUint8(base + 2);
+    const topLength = dv.getUint16(base + 3, false);
+    return {
+      topDict: reader.dict(base + headerSize, base + headerSize + topLength),
+      globalSubrsAt: base + headerSize + topLength,
+    };
+  }
+  const names = reader.index(base + dv.getUint8(base + 2));
+  const tops = reader.index(names.end);
+  const top = tops.entry(0);
+  return top ? { topDict: reader.dict(top.start, top.end), globalSubrsAt: reader.index(tops.end).end } : null;
+}
+
 function openTables(sfnt: SfntFile, table: TableRecord, isCff2: boolean): CffFont | null {
   const { dv } = sfnt;
   const base = table.offset;
   const reader = new CffReader(dv, isCff2);
-  let topDict: Dict;
-  let globalSubrsAt: number;
-  if (isCff2) {
-    const headerSize = dv.getUint8(base + 2);
-    const topLength = dv.getUint16(base + 3, false);
-    topDict = reader.dict(base + headerSize, base + headerSize + topLength);
-    globalSubrsAt = base + headerSize + topLength;
-  } else {
-    const names = reader.index(base + dv.getUint8(base + 2));
-    const tops = reader.index(names.end);
-    const top = tops.entry(0);
-    if (!top) return null;
-    topDict = reader.dict(top.start, top.end);
-    globalSubrsAt = reader.index(tops.end).end;
-  }
+  const top = topDictOf(reader, base);
+  if (!top) return null;
+  const { topDict, globalSubrsAt } = top;
   const charStringsAt = first(topDict, OP_CHARSTRINGS);
   if (charStringsAt === undefined) return null;
   const charStrings = reader.index(base + charStringsAt);
