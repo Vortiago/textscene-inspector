@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import { contextOver } from './liveSceneTree.testkit.js';
+import type { LiveTreeContext } from './liveSceneTree.js';
 import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
@@ -353,6 +354,58 @@ unique_name_in_owner = true
 
   it('is owned by the file that wrote it, not the instance it renders inside', () => {
     expect(ownerAt('Root/HudInstance/Panel/Hat').path).toBe('Root');
+  });
+});
+
+describe('a node its file seats outside the instance its %Name walked into', () => {
+  // HudInstance's table lacks `%Lamp`, so the walk reads Root's (node.cpp:1930-1938) and Hat
+  // renders under Lamp, which sits beside the instance.
+  const outside = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Hat" type="Node2D" parent="HudInstance/%Lamp"]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node2D" parent="HudInstance/%Lamp/Hat"]
+unique_name_in_owner = true
+`);
+  const outsideCtx: LiveTreeContext = { ...ctx, externalResources: outside.externalResources };
+  const rootTable = () => ownerUniquePaths(claimOwnerOf('Root', outside.nodes, outsideCtx));
+
+  it('spells its claim at the node it renders under', () => {
+    expect(rootTable().get('%Hat')).toBe('Root/Lamp/Hat');
+  });
+
+  it('spells a claim below it there too', () => {
+    expect(rootTable().get('%Brim')).toBe('Root/Lamp/Hat/Brim');
+  });
+});
+
+describe('a node its file re-roots because its %Name walk finds nothing', () => {
+  // Godot renames Hat from the vanished parent and adds it under the file root (packed_scene.cpp:207-215).
+  const vanished = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Hat" type="Node2D" parent="HudInstance/%Gone"]
+unique_name_in_owner = true
+`);
+  const vanishedCtx: LiveTreeContext = { ...ctx, externalResources: vanished.externalResources };
+
+  it('spells its claim at the renamed node under the file root', () => {
+    const table = ownerUniquePaths(claimOwnerOf('Root', vanished.nodes, vanishedCtx));
+
+    expect(table.get('%Hat')).toBe('Root/HudInstance__Gone#Hat');
   });
 });
 

@@ -1,0 +1,10 @@
+; The sub-scene for `integration-escaped-heading-reroot`: it instances the inner
+; scene and claims no `%Q`, so a host heading that names `Player/Inner/%Q` finds nothing.
+
+[gd_scene load_steps=2 format=3 uid="uid://unitescapedheadingplayer"]
+
+[ext_resource type="PackedScene" path="res://unit-escaped-heading-inner.tscn" id="1_inner"]
+
+[node name="Player" type="Node3D"]
+
+[node name="Inner" parent="." instance=ExtResource("1_inner")]

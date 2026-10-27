@@ -75,6 +75,11 @@ export interface RootWalkTables {
   readonly isOpaque: (path: string) => boolean;
   /** `%Name` to the path of the node claiming it, in the scene root's table. */
   readonly uniquePaths: Pick<ReadonlyMap<string, string>, 'get'>;
+  /**
+   * The `%Name` table of the instance root at a path, or undefined where it is not known yet. A walk
+   * over a file's own headings has none: it cannot see inside an instance.
+   */
+  readonly instanceTable?: (path: string) => Pick<ReadonlyMap<string, string>, 'has'> | undefined;
 }
 
 /**
@@ -82,13 +87,15 @@ export interface RootWalkTables {
  * over the names the constructor kept ({@link nodePathWalkNames}): an extra slash adds nothing
  * and a `:subname` addresses a property. The first `floor` segments spell the scene root, so a
  * `..` below them is null. Without `exists`, a missing name folds away under a later `..`, as
- * Godot's walk never does.
+ * Godot's walk never does. A claim can climb out of the walked scene with a leading `..`: the
+ * segments then name nodes of the scene above, which no table here holds, so the walk only
+ * collects them.
  */
 function walk(
   base: readonly string[],
   relative: string,
   floor: number,
-  { uniquePaths, exists, isOpaque }: Partial<RootWalkTables> = {}
+  { uniquePaths, exists, isOpaque, instanceTable }: Partial<RootWalkTables> = {}
 ): string[] | null | UnlistedEnd {
   let segments = [...base];
   const parts = nodePathWalkNames(relative);
@@ -97,25 +104,33 @@ function walk(
     if (part === '..') {
       // Nothing above the root: `!current->data.parent` returns nullptr (node.cpp:1919-1922).
       if (segments.length <= floor) return null;
-      segments.pop();
+      if (segments.at(-1) === '..') segments.push('..');
+      else segments.pop();
       continue;
     }
     if (part.startsWith(UNIQUE_NODE_PREFIX)) {
+      if (segments[0] === '..') return [...segments, ...parts.slice(index)];
       // A jump through the owner's claim table (node.cpp:1930-1938): the walk restarts at the
       // claimed path, so a following `..` steps up from there. An opaque node reads its own table
       // first, which another file fills. Below the root that table shadows any claim here. At the
       // root it holds this file's claims too, so a claim here seats as Godot seats it unshadowed.
       const current = segments.join('/');
       const isOpaqueHere = isOpaque?.(current) === true;
-      const claimed = isOpaqueHere && segments.length > floor ? undefined : uniquePaths?.get(part);
-      if (!claimed) return isOpaqueHere ? { unlisted: [...segments, ...parts.slice(index)].join('/') } : null;
+      const isBelowRoot = segments.length > floor;
+      // An instance root whose table lacks the name defers to its owner's table, here the walk's.
+      const isDeferred = isOpaqueHere && isBelowRoot && instanceTable?.(current)?.has(part) === false;
+      const claimed = isOpaqueHere && isBelowRoot && !isDeferred ? undefined : uniquePaths?.get(part);
+      if (!claimed)
+        return isOpaqueHere && !isDeferred
+          ? { unlisted: [...segments, ...parts.slice(index)].join('/') }
+          : null;
       segments = claimed.split('/');
       continue;
     }
     segments.push(part);
     // A missing child returns nullptr at once (node.cpp:1941-1946), so `Missing/../Real` stops at
     // `Missing`. Only a descent asks: `.` moves nowhere and `..` returns to a visited path.
-    if (exists && !exists(segments.join('/'))) return null;
+    if (segments[0] !== '..' && exists && !exists(segments.join('/'))) return null;
   }
   return segments;
 }

@@ -8,7 +8,10 @@ import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import {
   collectLiveNodes,
+  liveTreeOf,
   resolveLiveEntry,
+  singlePathCache,
+  type CachedSceneSource,
   type LiveTreeContext,
   type LiveTreeEntry,
   type ResolvedLiveNode,
@@ -17,9 +20,11 @@ import type { TscnNode } from '../parser/types.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
+import { holdsDeepChildren } from '../resources/seatEscaped.js';
 import { perObject } from '../utils/perObject.js';
+import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
-import { NOTHING_CACHED } from './cacheSources.js';
+import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -187,6 +192,72 @@ export function useLiveTreeSelection<T>(
     };
   }, [ticks, sceneGraph, loader, select, isSame]);
   return useSyncExternalStore(ticks.subscribe, getSnapshot);
+}
+
+function seatedRootsOf({ roots, ctx }: SharedLiveTree): readonly TscnNode[] {
+  return liveTreeOf(roots, ctx).seatedRoots;
+}
+
+/**
+ * The root nodes of the scene graph in context with the headings their instances hand back seated,
+ * undefined with no root scene. Roots with no such heading are the graph's own array. A load re-renders
+ * the reader only where it moves a heading.
+ *
+ * @canonical The root nodes a viewport or a tree row draws
+ */
+export function useSeatedRoots(): readonly TscnNode[] | undefined {
+  return useLiveTreeSelection(seatedRootsOf, sameElements);
+}
+
+/** A view of a loader's scene cache that remembers each answer it gave, to tell when one is stale. */
+interface RecordedScenes extends CachedSceneSource {
+  /** Written only by `isCurrent`: the load tick at which every answer was last found current. */
+  checkedAt: number;
+  readonly isCurrent: () => boolean;
+}
+
+/** Written only by {@link recordedScenesOf}: the view every mount of a loader shares while it is current. */
+const recordedScenes = new WeakMap<ResourceLoader, RecordedScenes>();
+
+/**
+ * The one scene cache view of `loader` that every mount shares until a scene it read loads, changes
+ * or fails. A mount that reads it again gets the same object, so what collapsed over it stays valid.
+ * The answers are re-read only after a load tick.
+ */
+function recordedScenesOf(loader: ResourceLoader): RecordedScenes {
+  const tick = loadTicksOf(loader).getVersion();
+  const known = recordedScenes.get(loader);
+  if (known?.checkedAt === tick) return known;
+  if (known?.isCurrent()) {
+    known.checkedAt = tick;
+    return known;
+  }
+  const answers = new Map<string, ReturnType<CachedSceneSource['getCached']>>();
+  const view: RecordedScenes = {
+    ...recordingReads(loader.scenes, (path, answer) => answers.set(path, answer)),
+    checkedAt: tick,
+    isCurrent: () => [...answers].every(([path, answer]) => loader.scenes.getCached(path) === answer),
+  };
+  recordedScenes.set(loader, view);
+  return view;
+}
+
+/**
+ * The scene cache a node collapses over. A node whose instance, or whose scene's root, may hand a host
+ * heading back reads the loader's whole cache, since the heading seats in scenes the node does not load.
+ * Any other node reads its own scene only, which keeps each mount's scope to itself (ADR-0009).
+ */
+export function useCollapseCache(
+  node: TscnNode,
+  scenePath: string | null,
+  loaded: { nodes: readonly TscnNode[] } | null | undefined
+): CachedSceneSource {
+  const loader = useResourceLoader();
+  const root = loaded?.nodes[0];
+  const handsBack = holdsDeepChildren(node) || (root !== undefined && holdsDeepChildren(root));
+  useLiveTreeVersion(handsBack ? loader : null);
+  const ownScene = useMemo(() => singlePathCache(scenePath, loaded), [scenePath, loaded]);
+  return handsBack && loader ? recordedScenesOf(loader) : ownScene;
 }
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */
