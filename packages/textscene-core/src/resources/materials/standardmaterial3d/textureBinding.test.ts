@@ -6,7 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bindSlotTexture, materialTextureStates, slotReadsSourceColor } from './textureBinding';
+import { materialTextureStates, slotReadsSourceColor } from './textureBinding';
+import { godotTextureFilterState } from '../../textures/godotTextureFilter';
+import { bindSlotTexture } from './textureBinding.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
@@ -136,6 +138,30 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     expect(bound.colorSpace).toBe(THREE.NoColorSpace);
     expect(bound.source).toBe(shared.source);
     expect(shared.repeat.x).toBe(1);
+  });
+});
+
+describe('materialTextureStates — the sampler each UV set carries', () => {
+  const statesOf = (properties: Record<string, string>, anisotropicFilteringLevel?: number) =>
+    materialTextureStates(
+      parseStandardMaterial3DScalars(properties),
+      anisotropicFilteringLevel ?? DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+    );
+
+  it("carries an authored filter as Godot's sampler state at the viewport's anisotropy level", () => {
+    const { uv1, uv2 } = statesOf({ texture_filter: '4' }, 3);
+
+    expect(uv1.filter).toBe(godotTextureFilterState(4, 3));
+    expect(uv2.filter).toBe(uv1.filter);
+  });
+
+  it('carries no filter when the material keeps the default, so a texture is not cloned for it', () => {
+    expect(statesOf({}).uv1.filter).toBeUndefined();
+  });
+
+  it('carries repeat as wrapping, on by default', () => {
+    expect(statesOf({}).uv1.wrap).toBe(THREE.RepeatWrapping);
+    expect(statesOf({ texture_repeat: 'false' }).uv1.wrap).toBe(THREE.ClampToEdgeWrapping);
   });
 });
 

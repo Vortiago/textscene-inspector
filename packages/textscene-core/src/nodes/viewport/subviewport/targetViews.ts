@@ -11,7 +11,7 @@ import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawFullScreen, fullScreenPass } from '../../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { perObject } from '../../../utils/perObject.js';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
 
@@ -98,11 +98,6 @@ const encodePassFor = copyPassFor('PlainViewCopy', ENCODE_FRAGMENT);
 class ViewCopy implements PassView {
   readonly texture: THREE.Texture;
   private readonly copy: THREE.WebGLRenderTarget;
-  /**
-   * Written only by `retain` and its release. The copy fills above zero. Its storage is freed when
-   * a task ends at zero, since three uploads again after a dispose in the same task.
-   */
-  private retainers = 0;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
@@ -114,20 +109,13 @@ class ViewCopy implements PassView {
     this.texture = this.copy.texture;
   }
 
+  /** The copy fills while a consumer holds it, and frees its storage once none does. */
   retain(): () => void {
-    this.retainers++;
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      this.retainers--;
-      // Deferred, as `useDisposeOnRelease` does: StrictMode and a swapped consumer release and retain in one task.
-      if (this.retainers === 0) queueMicrotask(() => this.disposeIfUnretained());
-    };
+    return holdUntilReleased(this);
   }
 
   fill(): void {
-    if (this.retainers === 0) return;
+    if (!isHeld(this)) return;
     const pass = this.passFor(this.gl);
     pass.uniforms.source!.value = this.source.texture;
     drawOffscreen(this.gl, () => drawFullScreen(this.gl, pass, this.copy));
@@ -135,10 +123,6 @@ class ViewCopy implements PassView {
 
   dispose(): void {
     this.copy.dispose();
-  }
-
-  private disposeIfUnretained(): void {
-    if (this.retainers === 0) this.copy.dispose();
   }
 }
 

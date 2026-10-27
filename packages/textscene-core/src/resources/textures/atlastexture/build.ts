@@ -13,6 +13,7 @@ import {
   type ImageSize,
 } from '../../formats/image/imagePixels';
 import { copySampling } from '../copySampling';
+import { carriesMipLevels } from '../godotTextureFilter';
 import { texelTexture, textureMipChain } from '../texelTexture';
 import type { MipLevel } from '../../processing/mipChain';
 import { copyGodotFormat } from '../sourceColorSpace';
@@ -78,7 +79,7 @@ export function rasterizeAtlasTexture(
   const crop = copySampling(cropRawPixels(raw, layout, region), sheet);
   const sheetLevels = sheet.mipmaps as MipLevel[];
   // Half-float levels are no bytes: `mipChain` would average their bits, so such a crop carries no chain.
-  if (sheetLevels.length <= 1 || raw.data instanceof Uint16Array) return copyGodotFormat(crop, sheet);
+  if (!carriesMipLevels(sheet) || raw.data instanceof Uint16Array) return copyGodotFormat(crop, sheet);
   const rawLevels = sheetLevels.map((level) => ({ ...level, isBottomUp: raw.isBottomUp }));
   return copyGodotFormat(withSheetMipChain(crop, rawLevels, layout), sheet);
 }

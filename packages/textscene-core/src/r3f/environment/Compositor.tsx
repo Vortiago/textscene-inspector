@@ -11,9 +11,9 @@ import { EffectComposer } from '@react-three/postprocessing';
 import { samplesGlowMap, type GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import { useTexture2D } from '../../resources/useTexture2D';
-import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
 import type { SceneResources } from '../SceneResourcesContext';
-import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { useTextureView } from '../useTextureView';
+import { GLOW_MAP_SAMPLER, GodotToneMapEffect } from './GodotToneMapEffect';
 import {
   projectGlowUsesBicubicUpscale,
   projectTransparentBackground,
@@ -101,7 +101,5 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
 function useGlowMap(glow: GlowParams | null, resources: SceneResources): THREE.Texture | null {
   const ref = glow && samplesGlowMap(glow) ? glow.map : undefined;
   const loaded = useTexture2D(ref, resources.externalResources, resources.internalResources).texture;
-  const view = useMemo(() => (loaded ? glowMapView(loaded) : null), [loaded]);
-  useEffect(() => () => releaseBoundTexture(view), [view]);
-  return view;
+  return useTextureView(loaded, GLOW_MAP_SAMPLER);
 }

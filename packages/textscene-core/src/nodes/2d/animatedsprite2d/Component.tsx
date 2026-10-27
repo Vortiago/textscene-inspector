@@ -11,7 +11,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { useCanvas2DTexture, useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
+import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -150,7 +150,6 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // once it no longer draws, so playback leaks no GPU texture.
   const sampler = useNode2DTextureSampler(props);
   const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
-  const srgbDefines = useCanvasSrgbDefines(displayedTexture);
   const { width, height } = useMemo(
     () => frameSizePx(frameTexture ?? undefined, WHOLE_FRAME),
     [frameTexture]
@@ -177,12 +176,11 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
         // this remounts when the map appears, not per frame.
         const program = materialProgramInputs({
           props: {
-            map: displayedTexture,
+            ...canvasMapProps(displayedTexture),
             color,
             opacity,
             transparent: true,
             depthWrite: false,
-            defines: srgbDefines,
           },
           merge: [pixelMaterial],
         });

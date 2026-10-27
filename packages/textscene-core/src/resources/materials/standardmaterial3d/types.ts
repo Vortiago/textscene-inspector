@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
-import type { UVTransform } from '../../textures/applyTextureState';
+import type { UvWindow } from '../../../r3f/uvWindow';
 import type { Vector2 } from '../../../godot/math/vector';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import type { BlendMode } from '../../../godot/rendering/materials/blendMode';
@@ -69,7 +69,7 @@ export type ResolvedTextureSlots = Partial<Record<TextureSlot, THREE.Texture | n
  * The bound textures a material derives from: each slot's map, and the UV transform a
  * render-target albedo samples through, which the shared target cannot carry.
  */
-export type ResolvedTextures = ResolvedTextureSlots & { albedoTargetUv?: UVTransform };
+export type ResolvedTextures = ResolvedTextureSlots & { albedoTargetUv?: UvWindow };
 
 /**
  * A slot's raw reference (`ExtResource("1_x")`, `SubResource("NoiseTexture2D_y")`,
