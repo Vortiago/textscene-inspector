@@ -490,7 +490,7 @@ The illumination a sky background gives the scene, which in Godot is a radiance 
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 
 **Exposure factor** (`r3f/environment/worldExposure.tsx`):
-The `exposure_multiplier` of the CameraAttributes that the first valid WorldEnvironment of a world holds. The world's lights, emission and backgrounds scale by it, and its **Sky ambient** by its square. A world with no CameraAttributes has none, which a baked lightmap tells from the factor 1.
+The `exposure_multiplier` of the CameraAttributes that a world renders with. A world with no CameraAttributes has none, which a baked lightmap tells from the factor 1.
 _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 
 **Radiance layer**:

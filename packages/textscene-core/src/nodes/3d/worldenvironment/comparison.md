@@ -33,16 +33,16 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 
 ## Exposure
 
-The `camera_attributes` of the first WorldEnvironment that holds a CameraAttributesPractical or CameraAttributesPhysical apply to the world. They are chosen apart from the Environment, so a node with no Environment can set the exposure. The `attributes` of the Camera3D the viewport renders through replace them (`renderer_scene_cull.cpp:3562-3565`). That camera is the one the viewer looks through, and a sub-viewport elects its own. The free view has none. The `exposure_multiplier` is the exposure factor. It scales:
+The `camera_attributes` of the first WorldEnvironment that holds a valid one set the exposure of the world, apart from the Environment. The `attributes` of the Camera3D that the world renders through replace them (`renderer_scene_cull.cpp`). The exposure scales:
 
-- the energy of each light, including the lights of a GLB file, and each emission, by the factor.
-- a colour background and a sky background by the factor, before the linear conversion for a colour.
-- the ambient light and the reflection of a sky by the factor squared.
-- a baked lightmap by the factor over the exposure the bake ran at, and only while the attributes exist.
+- the energy of each light, including the lights of a GLB file, and each emission.
+- a colour background and a sky background, a colour before the linear conversion.
+- the ambient light and the reflection of a sky, by the square.
+- a baked lightmap, over the exposure of the bake.
 
-A flat ambient light does not scale. With no Environment, the clear colour does not scale. A ReflectionProbe holds the factor once, through its capture, and shows it at the exposure over the one it captured at (`light_storage.cpp:1810-1814`). The `camera-attributes-exposure`, `camera-attributes-exposure-sky`, `camera-attributes-exposure-camera` and `lightmap-gi-exposure` goldens pin these.
+A flat ambient light and the clear colour of a world with no Environment do not scale. A ReflectionProbe holds the exposure through its capture. The goldens in `scripts/visual/scenes/lighting.mjs` pin these.
 
 ## Known limitations
 
-- **Not drawn** Auto exposure, depth of field and the physical light units of a CameraAttributesPhysical have no effect, since only `exposure_multiplier` applies.
-- **Approximated** A ReflectionProbe captures at the exposure of the camera that views it. Godot captures at the exposure of the world and rescales. The two differ in the lit surfaces a capture sees, only while the camera and the world hold different exposures.
+- **Not drawn** Auto exposure, depth of field and physical light units have no effect.
+- **Approximated** A ReflectionProbe captures at the exposure of the camera that views it, where Godot captures at the exposure of the world.
