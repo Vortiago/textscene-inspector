@@ -10,6 +10,8 @@ import { REPO_ROOT } from './repoRoot.mjs';
 /**
  * `text` with everything between the end of `begin` and the start of `end` replaced by a newline
  * and `body`. `body` brings its own trailing newline. Throws when a marker is missing or out of order.
+ *
+ * @canonical A script that generates a committed file
  */
 export function replaceMarkedBlock(text, begin, end, body) {
   const start = text.indexOf(begin);
@@ -23,6 +25,8 @@ export function replaceMarkedBlock(text, begin, end, body) {
  * Writes each `[path, text]` of `outputs` whose file differs from `text`, and names the paths it
  * wrote, or says every file is up to date. `tool` prefixes each message, and `summary`, when
  * given, follows the outcome.
+ *
+ * @canonical A script that generates a committed file
  */
 export function writeGenerated(outputs, { tool, summary }) {
   const changed = staleOutputs(outputs);
@@ -42,6 +46,8 @@ export function writeGenerated(outputs, { tool, summary }) {
  * Writes nothing. Names each stale path of `outputs` with the line where it first differs and the
  * `command` that regenerates it, and fails the run, or says every file is up to date. `tool` and
  * `summary` work as in `writeGenerated`.
+ *
+ * @canonical A script that generates a committed file
  */
 export function checkGenerated(outputs, { tool, command, summary }) {
   const stale = staleOutputs(outputs);

@@ -23,5 +23,9 @@ export function findRepoRoot(from = dirname(fileURLToPath(import.meta.url))) {
   throw new Error(`repo root (pnpm-workspace.yaml) not found above ${from}`);
 }
 
-/** The repo root, resolved once at import. */
+/**
+ * The repo root, resolved once at import.
+ *
+ * @canonical The repo root in a script
+ */
 export const REPO_ROOT = findRepoRoot();
