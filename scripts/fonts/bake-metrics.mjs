@@ -6,17 +6,15 @@
  * diffs a fresh bake against them byte for byte and exits 1 on a difference.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import generateBMFont from 'msdf-bmfont-xml';
 import * as fontkitNs from 'fontkit';
 import wawoff2 from 'wawoff2';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
 const fontkit = fontkitNs.default ?? fontkitNs;
-
-const __filename = fileURLToPath(import.meta.url);
-const REPO_ROOT = join(dirname(__filename), '..', '..');
 
 // The woff2 is Godot's own distributed `thirdparty/fonts/OpenSans_SemiBold.woff2`,
 // the file `THIRD-PARTY-NOTICES.md` describes. Neither `fontkit` nor
@@ -502,42 +500,8 @@ async function main() {
     [FONT_BYTES_OUT, fontBytesSource],
   ];
 
-  if (check) {
-    let stale = false;
-    for (const [path, expected] of outputs) {
-      let actual;
-      try {
-        actual = readFileSync(path, 'utf8');
-      } catch {
-        actual = null;
-      }
-      if (actual !== expected) {
-        stale = true;
-        console.error(`[bake-metrics] STALE: ${path} does not match a fresh bake of the vendored font.`);
-        if (actual !== null) {
-          const actualLines = actual.split('\n');
-          const expectedLines = expected.split('\n');
-          const firstDiff = actualLines.findIndex((line, i) => line !== expectedLines[i]);
-          console.error(
-            `[bake-metrics]   first differing line: ${firstDiff === -1 ? '(length differs)' : firstDiff + 1}`
-          );
-        }
-      }
-    }
-    if (stale) {
-      console.error(
-        '[bake-metrics] run `node scripts/fonts/bake-metrics.mjs` (no --check) to regenerate, then commit.'
-      );
-      process.exit(1);
-    }
-    console.log('[bake-metrics] OK: committed artifacts match a fresh bake of the vendored font.');
-    return;
-  }
-
-  for (const [path, source] of outputs) {
-    writeFileSync(path, source);
-    console.log(`[bake-metrics] wrote ${path}`);
-  }
+  if (check) checkGenerated(outputs, { tool: 'bake-metrics', command: 'pnpm fonts:bake' });
+  else writeGenerated(outputs, { tool: 'bake-metrics' });
 }
 
 main().catch((err) => {

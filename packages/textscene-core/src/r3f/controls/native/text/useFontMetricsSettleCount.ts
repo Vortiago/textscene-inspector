@@ -4,11 +4,8 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import {
-  onSceneFontMetricsSettled,
-  sceneFontSettleCount,
-} from '../../../r3f/controls/native/text/sceneFontLoader';
-import { subscribeToNothing } from '../../../utils/subscribeToNothing';
+import { onSceneFontMetricsSettled, sceneFontSettleCount } from './sceneFontLoader';
+import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
 
 /**
  * Watches the settled loads only while `isAwaitingMetrics`: a reader with no metrics to wait for

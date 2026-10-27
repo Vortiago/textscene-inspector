@@ -6,10 +6,10 @@
  * diffs a fresh bake against it and exits 1 on a difference.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { TAU } from '../../packages/textscene-core/src/godot/math/math.ts';
+import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
 const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/materials/dfgTable.generated.ts');
@@ -153,18 +153,10 @@ export const DFG_TABLE_BASE64 =
 }
 
 function main() {
-  const source = renderTableModule(dfgTable());
-  if (!process.argv.includes('--check')) {
-    writeFileSync(OUT, source);
-    console.log(`[bake-dfg] wrote ${OUT}`);
-    return;
-  }
-  if (readFileSync(OUT, 'utf8') !== source) {
-    console.error(`[bake-dfg] STALE: ${OUT} does not match a fresh bake.`);
-    console.error('[bake-dfg] run `pnpm godot:dfg` (no --check) to regenerate, then commit.');
-    process.exit(1);
-  }
-  console.log('[bake-dfg] OK: the committed table matches a fresh bake.');
+  const outputs = [[OUT, renderTableModule(dfgTable())]];
+  if (process.argv.includes('--check'))
+    checkGenerated(outputs, { tool: 'bake-dfg', command: 'pnpm godot:dfg' });
+  else writeGenerated(outputs, { tool: 'bake-dfg' });
 }
 
 // `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.

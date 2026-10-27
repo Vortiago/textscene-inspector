@@ -11,6 +11,7 @@ import { lightBufferRange } from '../../godot/rendering/lights/lightBufferRange.
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
+import { writeVec4 } from '../writeVec4.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
 import { areaTexturePlacement } from './areaLightAtlas.js';
@@ -59,7 +60,7 @@ const arrays = new LightUniformArrays({
 /** Where the light's texture lies in the atlas, and the highest mip the shader reads. */
 function writeTexture(set: LightArrays<AreaLightUniform>, index: number, light: THREE.RectAreaLight): void {
   const { rect, maxMipmap } = areaTexturePlacement(light);
-  set[AREA_LIGHT_TEXTURE_RECTS].set(rect, index * 4);
+  writeVec4(set[AREA_LIGHT_TEXTURE_RECTS], index, rect.x, rect.y, rect.width, rect.height);
   set[AREA_LIGHT_TEXTURE_MIPMAPS][index] = maxMipmap;
 }
 

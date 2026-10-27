@@ -50,6 +50,20 @@ describe('createExternalStore', () => {
     expect(b).toHaveBeenCalledTimes(1);
   });
 
+  it('notifies every subscriber after one throws, then rethrows the first error', () => {
+    const store = createExternalStore(0);
+    const failure = new Error('listener failed');
+    const later = vi.fn();
+    store.subscribe(() => {
+      throw failure;
+    });
+    store.subscribe(later);
+
+    expect(() => store.set(1)).toThrow(failure);
+    expect(later).toHaveBeenCalledTimes(1);
+    expect(store.get()).toBe(1);
+  });
+
   it('two stores created independently do not share state', () => {
     const storeA = createExternalStore<string | null>(null);
     const storeB = createExternalStore<string | null>(null);
