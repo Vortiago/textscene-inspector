@@ -2,25 +2,24 @@
 
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import './index';
+import '../../base/node3d/index';
 import { Camera3D } from './Component';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { useExposureFactor } from '../../../r3f/environment/worldExposure';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { Camera3DProperties } from './types';
-import { parseCamera3D } from './parser';
+import { makeNode } from '../../../parser/testing/parserKit';
 import { subResource } from '../../../testing/subResource';
 
-function makeNode(name: string, attributes?: string, current = false): TscnNode {
-  const properties = parseCamera3D(
-    { type: 'Camera3D', attributes: { name } },
-    {
+function cameraNode(name: string, attributes?: string, current = false): TscnNode {
+  return makeNode(name, 'Camera3D', {
+    rawProperties: {
       ...(attributes ? { attributes } : {}),
       ...(current ? { current: 'true' } : {}),
-    }
-  ) as Camera3DProperties;
-  return { rawProperties: {}, name, type: 'Camera3D', children: [], properties };
+    },
+  });
 }
 
 function ExposureReader() {
@@ -50,32 +49,23 @@ async function exposureOf(world: 'root' | 'subViewport', viewed: string | null, 
 
 describe('Camera3D attributes', () => {
   it('scales the frame while the viewer looks through the camera', async () => {
-    expect(await exposureOf('root', 'Main', [makeNode('Main', 'SubResource("Cam")')])).toBe(3);
+    expect(await exposureOf('root', 'Main', [cameraNode('Main', 'SubResource("Cam")')])).toBe(3);
   });
 
   it('leaves the frame alone in the free view', async () => {
-    expect(await exposureOf('root', null, [makeNode('Main', 'SubResource("Cam")')])).toBe(1);
+    expect(await exposureOf('root', null, [cameraNode('Main', 'SubResource("Cam")')])).toBe(1);
   });
 
   it('reads a CameraAttributesPhysical as it reads a Practical', async () => {
-    expect(await exposureOf('root', 'Main', [makeNode('Main', 'SubResource("Other")')])).toBe(6);
+    expect(await exposureOf('root', 'Main', [cameraNode('Main', 'SubResource("Other")')])).toBe(6);
   });
 
   it('scales a sub-viewport by the camera it elects', async () => {
-    const nodes = [makeNode('A', 'SubResource("Cam")'), makeNode('B', 'SubResource("Other")', true)];
+    const nodes = [cameraNode('A', 'SubResource("Cam")'), cameraNode('B', 'SubResource("Other")', true)];
     expect(await exposureOf('subViewport', null, nodes)).toBe(6);
   });
 
-  it('renders alone, outside any world', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <SceneResourcesProvider internalResources={RESOURCES}>
-        <Camera3D node={makeNode('Main', 'SubResource("Cam")')} />
-      </SceneResourcesProvider>
-    );
-    expect(renderer.scene.findAllByType('PerspectiveCamera')).toHaveLength(1);
-  });
-
   it('leaves the frame alone for a camera with no attributes', async () => {
-    expect(await exposureOf('root', 'Main', [makeNode('Main')])).toBe(1);
+    expect(await exposureOf('root', 'Main', [cameraNode('Main')])).toBe(1);
   });
 });

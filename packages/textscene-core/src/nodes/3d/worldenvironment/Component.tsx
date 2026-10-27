@@ -11,7 +11,7 @@ import type { WorldEnvironmentProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { usePublishEnvironment } from '../../../r3f/environment/WorldEnvironmentScope';
 import { usePublishCameraAttributes } from '../../../r3f/environment/worldExposure';
-import { useResolvedCameraAttributes } from './useResolvedCameraAttributes';
+import { useResolvedCameraAttributes } from '../../../r3f/environment/useResolvedCameraAttributes';
 import { useResolvedEnvironment } from './useResolvedEnvironment';
 
 export function WorldEnvironment({ node, children }: NodeComponentProps) {

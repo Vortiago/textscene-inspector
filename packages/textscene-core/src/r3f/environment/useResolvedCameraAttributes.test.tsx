@@ -6,13 +6,13 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useResolvedCameraAttributes } from './useResolvedCameraAttributes';
-import type { CameraAttributesResolution } from '../../../r3f/environment/worldExposure';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type { ParsedResource } from '../../../parser/parsedResource';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { subResource } from '../../../testing/subResource';
+import type { CameraAttributesResolution } from './worldExposure';
+import { SceneResourcesProvider } from '../SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import type { ParsedResource } from '../../parser/parsedResource';
+import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+import { subResource } from '../../testing/subResource';
 
 function tres(resourceType: string, properties: Record<string, string>): ParsedResource {
   return { resourceType, properties, extResources: [], subResources: [] };

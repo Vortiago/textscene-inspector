@@ -17,6 +17,7 @@ import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureCo
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { withProject } from '../../../r3f/testing/ProjectFixture';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { InWorld } from '../../../r3f/testing/InWorld';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 
@@ -87,7 +88,9 @@ async function spriteAnisotropy(source: string, project: string | null): Promise
       <SceneStack loader={fake.loader} scene={parsed} workspace="3d">
         <ViewportTextureProvider>
           <ViewportPassProvider>
-            <NodeDispatcher nodes={parsed.nodes} />
+            <InWorld>
+              <NodeDispatcher nodes={parsed.nodes} />
+            </InWorld>
             <CaptureRenderer captured={captured} />
             <ViewportPassOrchestrator />
           </ViewportPassProvider>

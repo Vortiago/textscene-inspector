@@ -57,8 +57,10 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
 /** The exposure normalisation of the first probe in the rows `sceneProbes` last packed. */
 function packedNormalisation(renderer: THREE.WebGLRenderer): number {
   const packs = vi.mocked(renderer.initTexture).mock.calls;
-  const rows = packs[packs.length - 1]![0].image.data as Float32Array;
-  return rows[7 * 4]!;
+  const packed = packs[packs.length - 1]![0] as THREE.DataTexture;
+  const rows = packed.image.data as Float32Array;
+  const EXPOSURE_NORMALISATION_TEXEL = 7;
+  return rows[EXPOSURE_NORMALISATION_TEXEL * 4]!;
 }
 
 describe('SceneProbes.update', () => {

@@ -18,7 +18,7 @@ import {
   useExposureFactor,
   useOptionalExposureFactor,
   usePublishCameraAttributes,
-  usePublishRenderCamera,
+  usePublishCamera,
   type CameraAttributesResolution,
 } from './worldExposure';
 
@@ -115,7 +115,7 @@ function PublishingCamera({
   current: boolean;
   cameraAttributes: CameraAttributesResolution;
 }) {
-  usePublishRenderCamera(path, current, cameraAttributes);
+  usePublishCamera(path, current, cameraAttributes);
   return null;
 }
 

@@ -33,6 +33,7 @@ import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
 import { exposureOfScene } from '../exposure/sceneExposure.js';
+import { exposureOverBaked } from '../exposure/exposureOverBaked.js';
 
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
@@ -243,7 +244,7 @@ export class SceneProbes {
 
   private drawnProbe(object: ReflectionProbeObject, exposure: number | null): DrawnProbe {
     const worldToLocal = probeFrame(object.matrixWorld).invert();
-    const exposureNormalization = exposure === null ? 1 : exposure / (this.bakedExposures.get(object) ?? 1);
+    const exposureNormalization = exposureOverBaked(exposure, this.bakedExposures.get(object) ?? 1);
     return {
       ...object.probe,
       worldToLocal,

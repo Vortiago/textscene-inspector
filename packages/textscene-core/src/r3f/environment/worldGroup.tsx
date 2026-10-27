@@ -37,8 +37,6 @@ export interface WorldPublications<T> {
   Provider: (props: { children: ReactNode }) => ReactNode;
   /** Puts a node's value in its world. Layout effects, so the readers update before paint. */
   usePublish: (value: T) => void;
-  /** Like `usePublish`, for a node that may stand outside any world: it publishes nowhere then. */
-  usePublishIfInWorld: (value: T) => void;
   /** Every value of the world in tree order, an ancestor first. A new array when one changes. */
   useAll: () => readonly T[];
 }
@@ -77,22 +75,14 @@ export function createWorldPublications<T>(): WorldPublications<T> {
     );
   }
 
-  function usePublishTo(publisher: Publisher<T> | null, value: T): void {
-    const [key] = useState(() => ({}));
-    const order = useTreeOrder();
-    useLayoutEffect(() => (publisher ? () => publisher.withdraw(key) : undefined), [publisher, key]);
-    useLayoutEffect(() => publisher?.publish({ key, order, value }), [publisher, key, order, value]);
-  }
-
   function usePublish(value: T): void {
     const publisher = useContext(PublisherContext);
     if (!publisher)
       throw new Error('expected a world environment scope above the publishing node, found none');
-    usePublishTo(publisher, value);
-  }
-
-  function usePublishIfInWorld(value: T): void {
-    usePublishTo(useContext(PublisherContext), value);
+    const [key] = useState(() => ({}));
+    const order = useTreeOrder();
+    useLayoutEffect(() => () => publisher.withdraw(key), [publisher, key]);
+    useLayoutEffect(() => publisher.publish({ key, order, value }), [publisher, key, order, value]);
   }
 
   function useAll(): readonly T[] {
@@ -100,20 +90,20 @@ export function createWorldPublications<T>(): WorldPublications<T> {
     return useMemo(() => publications.map((entry) => entry.value), [publications]);
   }
 
-  return { Provider, usePublish, usePublishIfInWorld, useAll };
+  return { Provider, usePublish, useAll };
 }
 
 function isSamePublication<T>(a: Publication<T>, b: Publication<T>): boolean {
   return a.value === b.value && compareTreeOrder(a.order, b.order) === 0;
 }
 
-export interface WorldGroup<R extends { status: string }> {
-  Provider: WorldPublications<R>['Provider'];
-  /** Puts a WorldEnvironment's resolution in its world. */
-  usePublish: WorldPublications<R>['usePublish'];
+export type WorldGroup<R extends { status: string }> = Pick<
+  WorldPublications<R>,
+  'Provider' | 'usePublish'
+> & {
   /** The world's resolution: null with no WorldEnvironment, `none` when none holds a valid one. */
   useChosen: () => R | null;
-}
+};
 
 /**
  * A `pending` publication holds its place, since its resource may turn out valid.

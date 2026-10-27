@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Camera3D } from './Component';
+import { Camera3DInWorld } from './Camera3DInWorld.testkit';
 import type { TscnNode } from '../../../parser/types';
 import type { Camera3DProperties } from './types';
 
@@ -34,20 +34,20 @@ function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
 
 describe('Camera3D projection (assertions 60–66)', () => {
   it('#60 fov → PerspectiveCamera.fov', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 60 })} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={makeNode({ fov: 60 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).fov).toBe(60);
   });
 
   it('#61 near → camera.near (clamped to >= 0.001)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ near: 0.1 })} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={makeNode({ near: 0.1 })} />);
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).near).toBe(0.1);
   });
 
   it('#62 far → camera.far', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ near: 0.1, far: 500 })} />
+      <Camera3DInWorld node={makeNode({ near: 0.1, far: 500 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
     expect(instanceAs<THREE.PerspectiveCamera>(cam).far).toBe(500);
@@ -55,7 +55,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#63 projection=1 (ORTHOGRAPHIC) → OrthographicCamera used, not PerspectiveCamera', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 5 })} />
+      <Camera3DInWorld node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 5 })} />
     );
     expect(renderer.scene.findAllByType('OrthographicCamera').length).toBeGreaterThan(0);
     expect(renderer.scene.findAllByType('PerspectiveCamera').length).toBe(0);
@@ -63,7 +63,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#64 projection=0 (PERSPECTIVE) → PerspectiveCamera used', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: Camera3DProjectionType.PERSPECTIVE })} />
+      <Camera3DInWorld node={makeNode({ projection: Camera3DProjectionType.PERSPECTIVE })} />
     );
     expect(renderer.scene.findAllByType('PerspectiveCamera').length).toBeGreaterThan(0);
     expect(renderer.scene.findAllByType('OrthographicCamera').length).toBe(0);
@@ -71,7 +71,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#65 size (ortho) → OrthographicCamera frustum width matches', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 4 })} />
+      <Camera3DInWorld node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 4 })} />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
     const o = instanceAs<THREE.OrthographicCamera>(cam);
@@ -86,7 +86,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
     // KEEP_WIDTH changes the framing relative to KEEP_HEIGHT: at the same size the two modes
     // render different left/right values.
     const widthRenderer = await ReactThreeTestRenderer.create(
-      <Camera3D
+      <Camera3DInWorld
         node={makeNode({
           projection: Camera3DProjectionType.ORTHOGONAL,
           size: 4,
@@ -95,7 +95,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
       />
     );
     const heightRenderer = await ReactThreeTestRenderer.create(
-      <Camera3D
+      <Camera3DInWorld
         node={makeNode({
           projection: Camera3DProjectionType.ORTHOGONAL,
           size: 4,
@@ -116,21 +116,23 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('rebuilds the projection when `size` changes', async () => {
     const orthographic = (size: number) => makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size });
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={orthographic(8)} />);
-    await renderer.update(<Camera3D node={orthographic(2)} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={orthographic(8)} />);
+    await renderer.update(<Camera3DInWorld node={orthographic(2)} />);
     const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
     expect(o.projectionMatrix.elements[5]).toBeCloseTo(2 / 2, 6);
   });
 
   it('tags the new camera with its node path when the projection changes (edge case)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode()} />);
-    await renderer.update(<Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL })} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={makeNode()} />);
+    await renderer.update(
+      <Camera3DInWorld node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL })} />
+    );
     const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
     expect(o.userData.tscnPath).toBe('Cam');
   });
 
   it('builds the perspective projection matrix from `fov`', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 90 })} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={makeNode({ fov: 90 })} />);
     const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
     // A perspective matrix scales y by 1 / tan(fovy / 2), and tan(45°) is 1.
     expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);
@@ -143,7 +145,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
       near: 1,
       frustum_offset: { x: 0.5, y: 0.25 },
     });
-    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(<Camera3DInWorld node={node} />);
     const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
     // The near plane spans 2 × 16/9 by 2, shifted by the offset: (t + b) / (t - b) is 0.5 / 2.
     expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);

@@ -127,17 +127,16 @@ export function renderToOffscreenTarget(
  */
 export function selectViewportCamera(root: THREE.Object3D, viewportPath: string): THREE.Camera | null {
   const prefix = `${viewportPath}/`;
-  const candidates: { current: boolean; camera: THREE.Camera }[] = [];
+  const cameras: THREE.Camera[] = [];
 
   // Depth-first pre-order, which is the order nodes enter the tree.
   root.traverse((object) => {
     if (!(object as THREE.Camera).isCamera) return;
     const path = object.userData?.tscnPath;
-    if (typeof path !== 'string' || !path.startsWith(prefix)) return;
-    candidates.push({ current: object.userData?.tscnCurrent === true, camera: object as THREE.Camera });
+    if (typeof path === 'string' && path.startsWith(prefix)) cameras.push(object as THREE.Camera);
   });
 
-  return electViewportCamera(candidates)?.camera ?? null;
+  return electViewportCamera(cameras, (camera) => camera.userData?.tscnCurrent === true);
 }
 
 /**

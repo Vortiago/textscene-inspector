@@ -30,16 +30,13 @@ interface WorldCamera {
 
 const cameras = createWorldPublications<WorldCamera>();
 
-/**
- * Puts a Camera3D and the `attributes` it holds in its world. A Camera3D rendered alone, outside
- * any world, has no viewport to render through it and publishes nowhere.
- */
-export function usePublishRenderCamera(
+/** Puts a Camera3D and the `attributes` it holds in its world, whether or not the world renders through it. */
+export function usePublishCamera(
   path: string,
   current: boolean,
   attributes: CameraAttributesResolution
 ): void {
-  cameras.usePublishIfInWorld(useMemo(() => ({ path, current, attributes }), [path, current, attributes]));
+  cameras.usePublish(useMemo(() => ({ path, current, attributes }), [path, current, attributes]));
 }
 
 /**
@@ -52,7 +49,7 @@ function renderCameraOf(
   viewedPath: string | null,
   worldCameras: readonly WorldCamera[]
 ): WorldCamera | null {
-  if (world === 'subViewport') return electViewportCamera(worldCameras);
+  if (world === 'subViewport') return electViewportCamera(worldCameras, (camera) => camera.current);
   return worldCameras.find((camera) => camera.path === viewedPath) ?? null;
 }
 

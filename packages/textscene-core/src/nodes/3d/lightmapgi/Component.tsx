@@ -16,14 +16,10 @@ import { useResource } from '../../../resources/useResource';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalExposureFactor } from '../../../r3f/environment/worldExposure';
+import { exposureOverBaked } from '../../../r3f/exposure/exposureOverBaked';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
-import {
-  assignedUsers,
-  LightmapInstance,
-  lightmapExposureScale,
-  lightmapsOf,
-} from '../../../r3f/lightmap/sceneLightmaps';
+import { assignedUsers, LightmapInstance, lightmapsOf } from '../../../r3f/lightmap/sceneLightmaps';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
@@ -64,7 +60,7 @@ function BakedLightmap({
   const uniquePaths = useUniqueNamePaths(path);
   const order = useTreeOrder();
   const usesBicubicFilter = projectUsesLightmapBicubicFilter(useProjectSettings().settings);
-  const exposureScale = lightmapExposureScale(useOptionalExposureFactor(), data.bakedExposure);
+  const exposureScale = exposureOverBaked(useOptionalExposureFactor(), data.bakedExposure);
   const lightmapLoads = useLoadedTextures();
   const shadowmaskLoads = useLoadedTextures();
   const lightmapAtlas = useAtlas(data.lightmapTextures, lightmapLoads.loaded);

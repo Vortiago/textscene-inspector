@@ -27,23 +27,25 @@ describe('Camera3D enum label tables', () => {
 
 describe('electViewportCamera', () => {
   const camera = (name: string, current = false) => ({ name, current });
+  const elect = (cameras: { name: string; current: boolean }[]) =>
+    electViewportCamera(cameras, (candidate) => candidate.current);
 
   it('answers none for a viewport without a camera', () => {
-    expect(electViewportCamera([])).toBeNull();
+    expect(elect([])).toBeNull();
   });
 
   it('answers the first camera when none is current (camera_3d.cpp:189-190, first_camera)', () => {
     const [first, second] = [camera('first'), camera('second')];
-    expect(electViewportCamera([first, second])).toBe(first);
+    expect(elect([first, second])).toBe(first);
   });
 
   it('answers a current camera over an earlier one (camera_3d.cpp:190)', () => {
     const current = camera('current', true);
-    expect(electViewportCamera([camera('first'), current])).toBe(current);
+    expect(elect([camera('first'), current])).toBe(current);
   });
 
   it('answers the last of two current cameras, since a claim overwrites (viewport.cpp:4565)', () => {
     const last = camera('last', true);
-    expect(electViewportCamera([camera('early', true), last])).toBe(last);
+    expect(elect([camera('early', true), last])).toBe(last);
   });
 });

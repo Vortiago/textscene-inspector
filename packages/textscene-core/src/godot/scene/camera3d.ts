@@ -44,6 +44,10 @@ export const CAMERA_3D_KEEP_ASPECT_HINT_NAMES = labelEnumNames(Camera3DKeepAspec
  *
  * @oneWay The camera a viewport renders through
  */
-export function electViewportCamera<T extends { current: boolean }>(cameras: readonly T[]): T | null {
-  return cameras.filter((camera) => camera.current).at(-1) ?? cameras[0] ?? null;
+export function electViewportCamera<T>(cameras: readonly T[], isCurrent: (camera: T) => boolean): T | null {
+  let lastCurrent: T | null = null;
+  for (const camera of cameras) {
+    if (isCurrent(camera)) lastCurrent = camera;
+  }
+  return lastCurrent ?? cameras[0] ?? null;
 }

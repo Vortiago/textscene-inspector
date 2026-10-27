@@ -25,6 +25,7 @@ import { SubViewport } from './Component';
 import { installToneMapping } from '../../../resources/environment/toneMapping';
 import { ToneMapper } from '../../../godot/rendering/environment/toneMapping.js';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { InWorld } from '../../../r3f/testing/InWorld';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
@@ -101,7 +102,7 @@ async function renderScene(
     <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
       <ViewportTextureProvider>
         <ViewportPassProvider>
-          {nodes}
+          <InWorld>{nodes}</InWorld>
           <Probe path={viewportPath} seen={seen} />
           {canvasCamera}
           <CaptureRenderer captured={capturedGl} />

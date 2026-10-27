@@ -232,6 +232,8 @@ Tag a new shared helper. Do not edit the list.
   `r3f/environment/worldGroup.tsx`.
 - The first valid resource of a world's WorldEnvironments: `createWorldGroup` in
   `r3f/environment/worldGroup.tsx`.
+- The scale of a baked lightmap or a captured probe under the exposure: `exposureOverBaked` in
+  `r3f/exposure/exposureOverBaked.ts`.
 - The exposure a scene renders with: `exposureOfScene` and `useSceneExposure` in
   `r3f/exposure/sceneExposure.ts`.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
@@ -245,7 +247,6 @@ Tag a new shared helper. Do not edit the list.
   `r3f/internal/glb-scene-root/glbHierarchy.ts`.
 - Where a node under a GLB instance attaches: `resolveGlbAttachments` in
   `r3f/internal/glb-scene-root/glbNodeOverrides.ts`. The scene tree and the viewport both call it.
-- A lightmap's exposure scale: `lightmapExposureScale` in `r3f/lightmap/sceneLightmaps.ts`.
 - A walk of the Live scene tree: `liveStep`, `LiveTree` and `walkLiveTree` in
   `r3f/liveSceneTree.ts`. Fold it with `LiveTree.fold`, and read one path with `LiveTree.at`.
 - Mesh content and its disposal: `useMeshContent` in `r3f/meshes/meshContent.ts`, and
