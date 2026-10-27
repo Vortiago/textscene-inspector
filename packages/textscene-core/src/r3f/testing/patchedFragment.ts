@@ -25,7 +25,11 @@ export const PROGRAM_OF_TYPE: Readonly<Record<string, ProgramName>> = {
   MeshPhysicalMaterial: 'physical',
 };
 
-/** `program`'s own text, as three hands it to `onBeforeCompile`. */
+/**
+ * `program`'s own text, as three hands it to `onBeforeCompile`.
+ *
+ * @oneWay In tests, a three program's text
+ */
 export function programShader(program: ProgramName): ProgramShader {
   const { vertexShader, fragmentShader } = THREE.ShaderLib[program];
   return { vertexShader, fragmentShader, uniforms: {} };

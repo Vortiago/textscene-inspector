@@ -22,14 +22,22 @@ export interface CapFace {
   isFlipped: boolean;
 }
 
-/** A fan facing up, centred on (0.25, 0.75) in UV (`:1169`, `:2596-2677`). */
+/**
+ * A fan facing up, centred on (0.25, 0.75) in UV (`:1169`, `:2596-2677`).
+ *
+ * @oneWay The cap of a cylinder or a tube
+ */
 export const TOP_CAP: CapFace = {
   normalY: 1,
   uv: (x, z) => [storedReal((x + 1) * 0.25), storedReal(0.5 + (z + 1) * 0.25)],
   isFlipped: false,
 };
 
-/** A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:1216`, `:2680-2732`). */
+/**
+ * A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:1216`, `:2680-2732`).
+ *
+ * @oneWay The cap of a cylinder or a tube
+ */
 export const BOTTOM_CAP: CapFace = {
   normalY: -1,
   uv: (x, z) => [storedReal(0.5 + (x + 1) * 0.25), storedReal(1 - (z + 1) * 0.25)],
@@ -40,7 +48,11 @@ export const BOTTOM_CAP: CapFace = {
 const ZERO_UV2: Vec2 = Object.freeze([0, 0] as const);
 const NO_UV2: DiscUv = () => ZERO_UV2;
 
-/** The centre at `y`, then each column of `rim` at `radius`. */
+/**
+ * The centre at `y`, then each column of `rim` at `radius`.
+ *
+ * @oneWay The cap of a cylinder or a tube
+ */
 export function writeCapFan(
   writer: SurfaceWriter,
   rim: readonly RimColumn[],

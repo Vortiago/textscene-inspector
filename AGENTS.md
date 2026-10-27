@@ -194,72 +194,81 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
 ### One way to do each thing
 
 Each job below has one helper. Use it, and extend it when it falls short. Never write a second
-copy beside it. Paths are under `packages/textscene-core/src/`.
+copy beside it. Paths are under `packages/textscene-core/src/`. `pnpm docs:one-way` writes the list
+from the `@oneWay <job>` tag in each helper's doc comment, and the lines after the tag are its note.
+Tag a new shared helper. Do not edit the list.
 
+<!-- one-way:begin -->
+- An engine enum, held as an `as const` object in `godot/`: `enumMember` in
+  `godot/classdb/enumNames.ts`, and `enumOr` in `parser/valueParsers.ts`.
 - Angles: `degToRad` and `radToDeg` in `godot/math/math.ts`.
 - A unit vector: `normalizedVector3` in `godot/math/vector.ts`.
-- An integer from the file: `parseGodotInt` in `godot/variant/intReader.ts`, and `slotInt` in
-  `godot/variant/intSlots.ts` for an int slot.
-- A scalar slot: `scalarSlotValue` in `godot/variant/variantBool.ts`. Use
-  `writtenScalarSlotValue` where the consumer draws `inf` and `nan` as Godot does.
-- A `real_t` field: `realOr`, `realVec2Or` and `realVec3Or` in `parser/valueParsers.ts`. They
-  store a double beyond the float range as inf, as `real_t` does.
-- An AABB that must have a size: `parseNonEmptyAabb` in `parser/valueParsers.ts`.
-- An engine enum: an `as const` object in `godot/`, read with `enumMember` in
-  `godot/classdb/enumNames.ts` and `enumOr` in `parser/valueParsers.ts`.
-- A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a
-  build that throws stores nothing. Pass `keeps` for a value that is not final yet.
-- A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
-- An entry by its key in a frozen table: `firstWith` and `lastWith` in `utils/keyedLookup.ts`, and
-  `firstIndexWith` for its index. They build one Map for each table.
-- A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
-- A node path from its parent and a name: `joinPath` in `utils/nodePath.ts`, and `parentPathOf`
-  for the parent of a path.
-- `res://` roots: `ResRoots` in `resources/resRoots.ts`.
-- A GLB for one consumer: `useGlb` in `resources/useGlb.ts`.
-- Where a node under a GLB instance attaches: `resolveGlbAttachments` in
-  `r3f/internal/glb-scene-root/glbNodeOverrides.ts`. The scene tree and the viewport both call it.
-- The children of a GLB scene root: `glbSceneRootChildCount` in
-  `r3f/internal/glb-scene-root/glbHierarchy.ts`.
-- Mesh content and its disposal: `useMeshContent` in `r3f/meshes/meshContent.ts` and
-  `useDisposeOnRelease` in `r3f/useDisposeOnRelease.ts`.
-- The rows and rings of a round primitive mesh: `rowAt` and `writeRings` in
-  `resources/meshes/primitivemesh/rows.ts`, with `SurfaceWriter.quadBetweenRows` for the quads.
-- The cap of a cylinder or a tube: `writeCapFan` with `TOP_CAP` and `BOTTOM_CAP` in
-  `resources/meshes/primitivemesh/capFan.ts`.
-- An empty CSG brush: `emptyBrush` in `nodes/3d/csg/smoothNormals.ts`.
+- An integer from the file: `parseGodotInt` in `godot/variant/intReader.ts`.
+- An integer in an int slot: `slotInt` in `godot/variant/intSlots.ts`.
+- A composite in a property slot: `slotTupleRegex` in `godot/variant/number.ts`.
+- A composite in a Variant position, such as an animation keyframe: `variantTupleRegex` in
+  `godot/variant/number.ts`.
+- A scalar slot: `scalarSlotValue` in `godot/variant/variantBool.ts`.
+- A scalar slot that the consumer draws as `inf` and `nan`, as Godot does: `writtenScalarSlotValue`
+  in `godot/variant/variantBool.ts`.
 - The CPUParticles2D bounds a draw can use: `drawableParamBounds` in
   `nodes/2d/cpuparticles2d/drawableParamBounds.ts`.
-- A shader chunk patch: the helpers in `r3f/shaderPatch/chunkPatch.ts`. Install text edits on
-  three's chunks with `installChunkEdits`.
-- A UV window on a texture: `regionUvWindow`, `flippedUvWindow` and `applyUvWindow` in
-  `r3f/uvWindow.ts`.
+- An empty CSG brush: `emptyBrush` in `nodes/3d/csg/smoothNormals.ts`.
+- One end of a `[connection]`: `connectionEndResolver` in `parser/connectionEnd.ts`.
+- A `real_t` field: `realOr`, `realVec2Or` and `realVec3Or` in `parser/valueParsers.ts`. They store
+  a double beyond the float range as inf, as `real_t` does.
+- An AABB that must have a size: `parseNonEmptyAabb` in `parser/valueParsers.ts`.
+- A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
 - A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
   through it, before the upload.
-- A React context that holds a store: `createStoreContext` in `r3f/hooks/createStoreContext.tsx`.
-- A composite in a property slot: `slotTupleRegex` in `godot/variant/number.ts`. Use
-  `variantTupleRegex` only for a Variant position, such as an animation keyframe.
-- One end of a `[connection]`: `connectionEndResolver` in `parser/connectionEnd.ts`.
-- A walk of the Live scene tree: `LiveTree.fold` and `walkLiveTree` in `r3f/liveSceneTree.ts`,
-  with `LiveTree.at` for one path and `liveStep` for one node's step.
-- A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
-  `resources/useSubOrExtResource.ts`, and `useLoadedFiles` in `resources/useLoadedFiles.ts` for a
-  plan of many files.
-- Row order of RGBA pixels: `reversedRows`, `reverseRowsInPlace` and `isBottomUp` in
-  `utils/reversedRows.ts`, and `reversedLevel` in `resources/processing/mipChain.ts` for a level.
-- A CPU mip chain as Godot builds it: `mipChain` in `resources/processing/mipChain.ts`. Attach the
-  levels to a `DataTexture` with `carryMipChain` in `resources/textures/texelTexture.ts`.
-- Half floats from 32-bit floats: `toHalfFloatTexels` in `resources/textures/halfFloatTexels.ts`.
-- A texture every material samples as one object: `sharedTexture` and `releasedOnUnmount` in
-  `r3f/sharedTexture.ts`.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
 - A Godot sRGB colour as a linear `THREE.Color`: `godotColorToLinear`, `setGodotColorLinear` and
   `useGodotLinearColor` in `r3f/godotColor.ts`.
-- What an editor gizmo draws for its node: `useGizmoState` in `r3f/hooks/useGizmoState.ts`.
 - A value that changes often and that few components read: `createExternalStore` and
   `useExternalStoreValue` in `r3f/hooks/createExternalStore.ts`.
+- A React context that holds a store: `createStoreContext` in `r3f/hooks/createStoreContext.tsx`.
+- What an editor gizmo draws for its node: `useGizmoState` in `r3f/hooks/useGizmoState.ts`.
+- The children of a GLB scene root: `glbSceneRootChildCount` in
+  `r3f/internal/glb-scene-root/glbHierarchy.ts`.
+- Where a node under a GLB instance attaches: `resolveGlbAttachments` in
+  `r3f/internal/glb-scene-root/glbNodeOverrides.ts`. The scene tree and the viewport both call it.
+- A walk of the Live scene tree: `liveStep`, `LiveTree` and `walkLiveTree` in
+  `r3f/liveSceneTree.ts`. Fold it with `LiveTree.fold`, and read one path with `LiveTree.at`.
+- Mesh content and its disposal: `useMeshContent` in `r3f/meshes/meshContent.ts`, and
+  `useDisposeOnRelease` in `r3f/useDisposeOnRelease.ts`.
+- A text edit on three's shader chunks: `installChunkEdits` in `r3f/shaderPatch/chunkPatch.ts`.
+- A texture every material samples as one object: `sharedTexture` and `releasedOnUnmount` in
+  `r3f/sharedTexture.ts`.
+- A UV window on a texture: `regionUvWindow`, `flippedUvWindow` and `applyUvWindow` in
+  `r3f/uvWindow.ts`.
+- The cap of a cylinder or a tube: `TOP_CAP`, `BOTTOM_CAP` and `writeCapFan` in
+  `resources/meshes/primitivemesh/capFan.ts`.
+- The rows and rings of a round primitive mesh: `rowAt` and `writeRings` in
+  `resources/meshes/primitivemesh/rows.ts`. Write the quads between them with
+  `SurfaceWriter.quadBetweenRows`.
+- A CPU mip chain as Godot builds it: `mipChain` in `resources/processing/mipChain.ts`, and
+  `textureMipChain` in `resources/textures/texelTexture.ts`.
+- Row order of RGBA pixels: `reversedLevel` in `resources/processing/mipChain.ts`, and
+  `reversedRows`, `reverseRowsInPlace` and `isBottomUp` in `utils/reversedRows.ts`.
+- `res://` roots: `ResRoots` in `resources/resRoots.ts`.
+- Half floats from 32-bit floats: `toHalfFloatTexels` in `resources/textures/halfFloatTexels.ts`.
+- A `DataTexture` that carries a CPU mip chain: `texelTexture` and `carryDefaultMipChain` in
+  `resources/textures/texelTexture.ts`.
+- A GLB for one consumer: `useGlb` in `resources/useGlb.ts`.
+- A plan of many resource files to load: `useLoadedFiles` in `resources/useLoadedFiles.ts`.
+- A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
+  `resources/useSubOrExtResource.ts`.
+- A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
+- An entry by its key in a frozen table: `firstWith`, `lastWith` and `firstIndexWith` in
+  `utils/keyedLookup.ts`. They build one Map for each table.
+- A node path from its parent and a name: `joinPath` in `utils/nodePath.ts`.
+- The parent of a node path: `parentPathOf` in `utils/nodePath.ts`.
+- A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a build
+  that throws stores nothing. Pass `keeps` for a value that is not final yet, and `stamp` for a key
+  whose contents change, as a texture's `version`.
+- In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
+- In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
 - In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in
   `r3f/testing/shaderPatches.ts`.
-- In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
-- In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
+<!-- one-way:end -->

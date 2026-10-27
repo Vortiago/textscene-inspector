@@ -20,6 +20,8 @@ export type ConnectionEndResolver<N extends RawNode> = (
 /**
  * The resolver for the `[node]` headings `origins` and the `seating` built from them. It keeps
  * `origins`, so it lives as long as the scan that holds it.
+ *
+ * @oneWay One end of a `[connection]`
  */
 export function connectionEndResolver<N extends RawNode>(
   origins: readonly NodeOrigin<N>[],

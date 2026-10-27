@@ -15,6 +15,9 @@ export interface Row {
 /**
  * Row `j` of `rowCount + 1` (`primitive_meshes.cpp:1115-1123`, `:2538-2543`, `:2910-2915`). Godot
  * holds V and Y in a `float`, so each rounds to single precision.
+ *
+ * @oneWay The rows and rings of a round primitive mesh
+ *   Write the quads between them with `SurfaceWriter.quadBetweenRows`.
  */
 export function rowAt(j: number, rowCount: number, height: number): Row {
   const v = storedReal(j / rowCount);
@@ -24,6 +27,8 @@ export function rowAt(j: number, rowCount: number, height: number): Row {
 /**
  * Calls `writeRing` for each row `j` of the `rowCount + 1`, then joins the ring it wrote to the ring
  * above with `quadBetweenRows`. Every ring writes the same number of vertices.
+ *
+ * @oneWay The rows and rings of a round primitive mesh
  */
 export function writeRings(writer: SurfaceWriter, rowCount: number, writeRing: (j: number) => void): void {
   let prevrow = writer.vertexCount;
