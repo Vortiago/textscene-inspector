@@ -11,9 +11,9 @@ import { EffectComposer } from '@react-three/postprocessing';
 import { samplesGlowMap, type GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import { useTexture2D } from '../../resources/useTexture2D';
-import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
 import type { SceneResources } from '../SceneResourcesContext';
-import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { useTextureView } from '../useTextureView';
+import { GLOW_MAP_SAMPLER, GodotToneMapEffect } from './GodotToneMapEffect';
 import {
   projectGlowUsesBicubicUpscale,
   projectTransparentBackground,
@@ -27,7 +27,7 @@ import { useDisposeOnRelease } from '../useDisposeOnRelease';
 const COMPOSER_PRIORITY = 1;
 
 interface CompositorProps {
-  /** The glow, and the scene buffer's samples, which resolve before the curve as Godot resolves them. */
+  /** The glow, the auto exposure and the scene buffer's samples. The samples resolve before the curve as Godot resolves them. */
   pass: CompositorPass;
   /** Null when `adjustment_enabled` is false. */
   adjustments: EnvironmentAdjustments | null;
@@ -37,7 +37,7 @@ interface CompositorProps {
 }
 
 export function Compositor({ pass, adjustments, toneMapping, resources }: CompositorProps) {
-  const { glow, samples } = pass;
+  const { glow, samples, autoExposure } = pass;
   const { mode, white, exposure, agxContrast } = toneMapping;
   const glowMap = useGlowMap(glow, resources);
   // The composer draws the canvas, which is the root window's surface.
@@ -54,12 +54,23 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
       new GodotToneMapEffect({
         glow,
         adjustments,
+        autoExposure,
         toneMapping: { mode, white, agxContrast },
         exposure,
         transparentBackground,
         usesBicubicGlowUpscale,
       }) as Effect,
-    [glow, adjustments, mode, white, exposure, agxContrast, transparentBackground, usesBicubicGlowUpscale]
+    [
+      glow,
+      adjustments,
+      autoExposure,
+      mode,
+      white,
+      exposure,
+      agxContrast,
+      transparentBackground,
+      usesBicubicGlowUpscale,
+    ]
   );
   useDisposeOnRelease(effect);
   // A uniform, not an effect rebuild: the map's arrival changes no shader.
@@ -90,7 +101,5 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
 function useGlowMap(glow: GlowParams | null, resources: SceneResources): THREE.Texture | null {
   const ref = glow && samplesGlowMap(glow) ? glow.map : undefined;
   const loaded = useTexture2D(ref, resources.externalResources, resources.internalResources).texture;
-  const view = useMemo(() => (loaded ? glowMapView(loaded) : null), [loaded]);
-  useEffect(() => () => releaseBoundTexture(view), [view]);
-  return view;
+  return useTextureView(loaded, GLOW_MAP_SAMPLER);
 }

@@ -6,7 +6,8 @@
 import type * as THREE from 'three';
 import { materialFromBag } from './build';
 import { standardMaterialBags } from './materialBag';
-import { bindSlotTexture, materialTextureStates } from './textureBinding';
+import { materialTextureStates } from './textureBinding';
+import { bindSlotTexture } from './textureBinding.testkit';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
 

@@ -1,4 +1,8 @@
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { ReflectionProbe } from './Component';
 
-nodeComponentRegistry.register({ typeName: 'ReflectionProbe', Component: ReflectionProbe });
+nodeComponentRegistry.register({
+  typeName: 'ReflectionProbe',
+  Component: ReflectionProbe,
+  editorIcon: { icon: 'GizmoReflectionProbe' },
+});

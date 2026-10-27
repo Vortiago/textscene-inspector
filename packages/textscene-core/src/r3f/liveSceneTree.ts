@@ -13,14 +13,13 @@ import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
-import { addAtIndex } from '../godot/scene/siblingIndex.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { sameElements } from '../utils/sameElements.js';
 import { perObject } from '../utils/perObject.js';
-import { answeredOnce, recordingReads } from './cacheSources.js';
+import { NOTHING_CACHED, answeredOnce, recordingReads } from './cacheSources.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -42,7 +41,7 @@ export interface CachedGlbSource {
 
 /**
  * One context is one snapshot of the loader's caches: the walks over it read each scene path from
- * `sceneCache` once ({@link snapshotScenes}). A caller whose cache changes builds a new context.
+ * `sceneCache` once. A caller whose cache changes builds a new context.
  */
 export interface LiveTreeContext {
   /** The root scene's ExtResources, which its top-level instance refs resolve against. */
@@ -54,27 +53,12 @@ export interface LiveTreeContext {
 }
 
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */
-export const snapshotScenes = perObject((ctx: LiveTreeContext): CachedSceneSource =>
-  answeredOnce(ctx.sceneCache)
-);
+const snapshotScenes = perObject((ctx: LiveTreeContext): CachedSceneSource => answeredOnce(ctx.sceneCache));
 
 /** A node in the live tree: its effective (collapsed) identity and its full path. */
 export interface LiveTreeEntry {
   node: LiveNode;
   path: string;
-}
-
-/**
- * A cache source that answers for one path, so a React walker can hand the walk the one
- * sub-scene or GLB it loaded. Any other path returns `undefined`, which keeps each mount's scope
- * to itself (ADR-0009). A value that is still loading or failed reads as not cached, so the node
- * stays uncollapsed.
- */
-export function singlePathCache<T>(
-  path: string | null | undefined,
-  value: T | null | undefined
-): { getCached: (path: string) => T | undefined } {
-  return { getCached: (p) => (p === path ? (value ?? undefined) : undefined) };
 }
 
 /**
@@ -89,7 +73,7 @@ export function singlePathCache<T>(
  * onto that composed root. The chain stops at a scene that already encloses the node, so a
  * scene that inherits or instances itself ends.
  */
-export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
+function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
   const scenePath = liveInstancePath(node, scope);
   const outer = scopeOf(node, scope);
   if (!scenePath || (outer.instancedScenePaths ?? []).includes(scenePath)) return node;
@@ -217,9 +201,12 @@ function seatedFile(
   return seated === root ? roots : [seated];
 }
 
-function stillAnswered(reads: ReadonlyMap<string, CacheAnswer>, sceneCache: CachedSceneSource): boolean {
+function stillAnswered<Answer>(
+  reads: ReadonlyMap<string, Answer>,
+  cache: { getCached: (path: string) => Answer }
+): boolean {
   for (const [path, answer] of reads) {
-    if (sceneCache.getCached(path) !== answer) return false;
+    if (cache.getCached(path) !== answer) return false;
   }
   return true;
 }
@@ -359,10 +346,8 @@ function glbInstanceGroups(
 ): LiveChildGroup[] {
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
   const stamped = attached.map((child) => withFallbackScope(child, hostScope));
-  const objects = glbSceneRootChildren(object, stamped);
-  if (rest.length === 0) return [{ origin: 'glb', children: objects, scope: hostScope }];
-  // Without attached children the objects are the GLB's shared, frozen answer.
-  const ordered = addAtIndex<TscnNode>(objects, ...rest);
+  const ordered = glbSceneRootChildren(object, stamped, rest);
+  if (rest.length === 0) return [{ origin: 'glb', children: ordered, scope: hostScope }];
   const hostOwn = new Set<TscnNode>(rest);
   const runs: { origin: 'glb' | 'inline'; children: TscnNode[] }[] = [];
   for (const child of ordered) {
@@ -399,11 +384,10 @@ export interface LiveStep {
 
 /**
  * The step for `node` where it sits in a group of scope `groupScope`. An instance merges once
- * here, so no reader merges a second time.
- *
- * @canonical A walk of the Live scene tree
+ * here, so no reader merges a second time. Readers take it through {@link LiveTree.stepOf}, which
+ * keeps it.
  */
-export function liveStep(
+function liveStep(
   node: LiveNode,
   groupScope: SceneScope,
   sceneCache: CachedSceneSource,
@@ -493,7 +477,7 @@ export interface LiveLink {
  * through it. Every question over one context gets the tree {@link liveTreeOf} returns.
  *
  * @canonical A walk of the Live scene tree
- *   Fold it with `LiveTree.fold`, and read one path with `LiveTree.at`.
+ *   Fold it with `LiveTree.fold`, read one path with `LiveTree.at`, and one step with `LiveTree.stepOf`.
  */
 export class LiveTree {
   /** The groups a walk starts from: the outer roots, in the root scene's scope. */
@@ -505,13 +489,6 @@ export class LiveTree {
   readonly seatedRoots: readonly TscnNode[];
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
-  /**
-   * Written only by `stepOf`: the step of a node under each scope it was asked in. It holds one
-   * entry per visited node for as long as the tree lives, which is as long as its context and its
-   * roots.
-   */
-  private readonly stepsByNode = new Map<LiveNode, { scope: SceneScope; step: LiveStep }[]>();
-
   private readonly scenes: CachedSceneSource;
 
   constructor(
@@ -522,6 +499,11 @@ export class LiveTree {
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
     this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
+  }
+
+  /** The root nodes of the loaded scene at `scenePath`, or undefined while it is not loaded. */
+  sceneNodes(scenePath: string): readonly TscnNode[] | undefined {
+    return this.scenes.getCached(scenePath)?.nodes;
   }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */
@@ -544,16 +526,31 @@ export class LiveTree {
   /**
    * The step for `node` where it sits in `scope`, taken once. A node is found by itself and its
    * scope, never by its path: two siblings may share a name, and a sub-scene's nodes sit at
-   * every instance of it.
+   * every instance of it. A tree over a later snapshot gives the same step while every answer the
+   * step read is unchanged.
    */
   stepOf(node: LiveNode, scope: SceneScope): LiveStep {
     const own = scopeOf(node, scope);
-    const entries = this.stepsByNode.get(node) ?? [];
-    const known = entries.find((entry) => sameScope(entry.scope, own));
-    if (known) return known.step;
-    const step = liveStep(node, scope, this.scenes, this.ctx.glbCache);
-    entries.push({ scope: own, step });
-    this.stepsByNode.set(node, entries);
+    const glbs = this.ctx.glbCache ?? NOTHING_CACHED;
+    const entries = stepsByNode.get(node) ?? [];
+    const previous = entries.find((entry) => sameScope(entry.scope, own));
+    if (
+      previous &&
+      stillAnswered(previous.sceneReads, this.scenes) &&
+      stillAnswered(previous.glbReads, glbs)
+    ) {
+      return previous.step;
+    }
+    const sceneReads = new Map<string, CacheAnswer>();
+    const glbReads = new Map<string, GlbAnswer>();
+    const step = liveStep(
+      node,
+      scope,
+      recordingReads(this.scenes, (path, answer) => sceneReads.set(path, answer)),
+      recordingReads(glbs, (path, answer) => glbReads.set(path, answer))
+    );
+    const others = entries.filter((entry) => entry !== previous);
+    stepsByNode.set(node, [...others, { scope: own, sceneReads, glbReads, step }]);
     return step;
   }
 
@@ -580,6 +577,25 @@ export class LiveTree {
     return results;
   }
 }
+
+type GlbAnswer = ReturnType<CachedGlbSource['getCached']>;
+
+/** A step with the scope it was taken in and each cache answer it read, to tell when it is stale. */
+interface RememberedStep {
+  readonly scope: SceneScope;
+  readonly sceneReads: ReadonlyMap<string, CacheAnswer>;
+  readonly glbReads: ReadonlyMap<string, GlbAnswer>;
+  readonly step: LiveStep;
+}
+
+/**
+ * Written only by {@link LiveTree.stepOf}: the steps of a node under each scope it was asked in.
+ * They outlive the tree that took them, since a load that a step did not read leaves it as it is.
+ * A sub-scene's node is asked under each chain of scenes that encloses it, so a node keeps every
+ * scope it was asked in: an evicting limit would take the step again at each load. The scopes are
+ * the scenes' own and finite, and the entries clear when nothing holds the node any more.
+ */
+const stepsByNode = new WeakMap<LiveNode, RememberedStep[]>();
 
 /** What a fold of the live tree does at each node. */
 type FoldVisit<Inherited, Result> = (

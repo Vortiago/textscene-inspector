@@ -392,30 +392,24 @@ function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DPropertie
 }
 
 /**
- * Counts speaker groups (`isAudioGizmoBody`) and range groups (`isAudioRangeSphere`)
- * through the test renderer's tree API. `THREE.Scene.traverse` cannot serve: the
- * test renderer mounts each primitive in R3F-managed groups with other parents.
+ * Counts range groups (`isAudioRangeSphere`) through the test renderer's tree API.
+ * `THREE.Scene.traverse` cannot serve: the test renderer mounts each primitive in R3F-managed
+ * groups with other parents.
  */
-function countAudioGizmoParts(renderer: {
+function countAudioRangeCircles(renderer: {
   scene: { findAllByType: (t: string) => { instance: THREE.Object3D }[] };
-}): { speakerGroups: number; rangeSpheres: number } {
-  const groups = renderer.scene.findAllByType('Group');
-  const speakerGroups = groups.filter((g) => {
-    const ud = g.instance.userData as { isAudioGizmoBody?: boolean };
-    return ud.isAudioGizmoBody === true;
-  }).length;
+}): number {
   // The audible range is a camera-facing circle of lines (what Godot's gizmo
   // plugin draws), so its marker sits on a group wrapping a <lineSegments>,
   // not on a mesh.
-  const rangeSpheres = groups.filter((g) => {
+  return renderer.scene.findAllByType('Group').filter((g) => {
     const ud = g.instance.userData as { isAudioRangeSphere?: boolean };
     return ud.isAudioRangeSphere === true;
   }).length;
-  return { speakerGroups, rangeSpheres };
 }
 
 describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansion)', () => {
-  it('renders zero speaker / range gizmo parts when nothing is selected', async () => {
+  it('renders zero range gizmo parts when nothing is selected', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [audioNode('A', { unit_size: 25 }), audioNode('B', { unit_size: 25 })],
     });
@@ -429,12 +423,10 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
       </HierarchyProvider>
     );
 
-    const { speakerGroups, rangeSpheres } = countAudioGizmoParts(renderer);
-    expect(speakerGroups).toBe(0);
-    expect(rangeSpheres).toBe(0);
+    expect(countAudioRangeCircles(renderer)).toBe(0);
   });
 
-  it('renders the speaker + range gizmo parts only for the selected audio path', async () => {
+  it('renders the range gizmo part only for the selected audio path', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [audioNode('A', { unit_size: 25 }), audioNode('B', { unit_size: 25 })],
     });
@@ -449,10 +441,8 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
       </HierarchyProvider>
     );
 
-    const { speakerGroups, rangeSpheres } = countAudioGizmoParts(renderer);
-    // Selected A → 1 speaker group + 1 range sphere; Unselected B → 0/0.
-    expect(speakerGroups).toBe(1);
-    expect(rangeSpheres).toBe(1);
+    // Selected A → 1 range circle; Unselected B → 0.
+    expect(countAudioRangeCircles(renderer)).toBe(1);
   });
 
   it('hides the gizmo when selection moves off the audio node', async () => {
@@ -470,7 +460,7 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
       </HierarchyProvider>
     );
 
-    expect(countAudioGizmoParts(renderer).speakerGroups).toBe(1);
+    expect(countAudioRangeCircles(renderer)).toBe(1);
 
     await renderer.update(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
@@ -481,9 +471,7 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
       </HierarchyProvider>
     );
 
-    const after = countAudioGizmoParts(renderer);
-    expect(after.speakerGroups).toBe(0);
-    expect(after.rangeSpheres).toBe(0);
+    expect(countAudioRangeCircles(renderer)).toBe(0);
   });
 });
 

@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import type { SurfaceDrawHooks } from '../../surfaceDrawHooks';
 import { useControlClipPlanes } from './controlClipping';
-import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
+import { canvasMapProps } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import type { MaterialAttach } from '../../materials/swappedMaterials';
@@ -39,10 +39,6 @@ export function ControlQuad({
   drawHooks,
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
-  // A `NoColorSpace`-retagged canvas texture and a canvas-content SubViewport
-  // target get the sRGB multiply. A 3D-content target does not.
-  const srgbDefines = useCanvasSrgbDefines(map);
-
   // A `map` is often null on the first render and a texture later, while the quad
   // draws throughout, so the material is replaced, not mutated
   // (`materialProgramInputs.ts`).
@@ -50,12 +46,13 @@ export function ControlQuad({
     const program = materialProgramInputs({
       props: {
         attach,
-        map,
+        // A `NoColorSpace`-retagged canvas texture and a canvas-content SubViewport
+        // target get the sRGB multiply. A 3D-content target does not.
+        ...canvasMapProps(map),
         color,
         opacity,
         transparent: true,
         depthWrite: false,
-        defines: srgbDefines,
         clippingPlanes: clippingPlanes as THREE.Plane[],
       },
       // The double-sided, single-pass pair every flat canvas painter shares.

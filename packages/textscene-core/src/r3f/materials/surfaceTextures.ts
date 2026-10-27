@@ -15,7 +15,7 @@ import {
   useViewportTextureSlot,
 } from '../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
-import { useTiledUpload } from '../tiledUpload/useTiledUpload';
+import { useTextureView } from '../useTextureView';
 import type {
   ResolvedTextures,
   StandardMaterial3DScalars,
@@ -25,16 +25,15 @@ import type {
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
 import { isAnisotropic } from '../../resources/materials/standardmaterial3d/materialBag';
 import {
-  bindSlotTexture,
   materialTextureStates,
   slotReadsSourceColor,
+  slotViewSampler,
   topDownV,
   type MaterialTextureStates,
   type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
-import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
@@ -74,7 +73,7 @@ export function useSurfaceTextures(
 
   const sources = useEachSlot(useSlotTexture, references, resourceTables);
   // The per-material half of every binding: UV set and transform, sampler filter and
-  // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
+  // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const states = useMemo(
     (): MaterialTextureStates | null =>
@@ -170,10 +169,9 @@ function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
 }
 
 /**
- * The map a slot draws: its texture with the material's texture state applied, once on the GPU. A
+ * The map a slot draws: its texture as the material's texture state samples it, once on the GPU. A
  * large map uploads in bands and the slot keeps its old map meanwhile. With none, a stand-in fills
- * the slot while a map uploads or arrives (`pendingMapStandIn.ts`). The upload releases each map
- * the slot stops drawing.
+ * the slot while a map uploads or arrives (`pendingMapStandIn.ts`).
  */
 function useDrawnSlot(
   slot: TextureSlot,
@@ -181,22 +179,11 @@ function useDrawnSlot(
   states: MaterialTextureStates | null
 ): THREE.Texture | undefined {
   const { texture, isArriving } = maps[slot];
-  const bound = useMemo(() => transformedTexture(texture, states, slot), [texture, states, slot]);
-  const drawn = useTiledUpload(bound ?? null, releaseBoundTexture) ?? undefined;
+  // White samples the same under any wrap, filter, window or colour space, so a clone buys nothing.
+  const isSampledAsIs = !texture || !states || texture === defaultWhiteTexture();
+  const drawn = useTextureView(texture, isSampledAsIs ? null : slotViewSampler(texture, slot, states));
   if (drawn) return drawn;
-  return bound || isArriving ? pendingMapStandIn(slot) : undefined;
-}
-
-/** The slot's texture with the material's texture state applied. Undefined while nothing is loaded. */
-function transformedTexture(
-  texture: THREE.Texture | null,
-  states: MaterialTextureStates | null,
-  slot: TextureSlot
-): THREE.Texture | undefined {
-  if (!texture) return undefined;
-  // White samples the same under any wrap, filter, UV transform or colour space, so a clone buys nothing.
-  if (!states || texture === defaultWhiteTexture()) return texture;
-  return bindSlotTexture(texture, slot, states);
+  return texture || isArriving ? pendingMapStandIn(slot) : undefined;
 }
 
 /** The texture states of `scalars` on `surface`. */
@@ -228,5 +215,5 @@ function onGltfUvs(state: UVSetState): UVSetState {
  * three applies `offset` in UV space, Godot's world-triplanar offset is in world units.
  */
 function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
-  return { ...state, uv: { scale: triplanarPlaneScale(mesh, state.uv.scale), offset: state.uv.offset } };
+  return { ...state, uv: { repeat: triplanarPlaneScale(mesh, state.uv.repeat), offset: state.uv.offset } };
 }

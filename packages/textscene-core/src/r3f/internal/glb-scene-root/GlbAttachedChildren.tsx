@@ -20,10 +20,9 @@ import {
   type TreeOrder,
 } from '../../contexts/TreeOrderContext';
 import type { GlbRoot } from './GlbInstanceContext';
-import type { GlbObjectEntry } from './glbHierarchy';
+import { glbChildrenBelow, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
 import { isApplicableGlbOverride, resolveGlbAttachments, type GlbAttachment } from './glbNodeOverrides';
-import { insertAtIndex } from '../../../godot/scene/siblingIndex';
 import { warn } from '../../../logger';
 
 /** A GLB object is a Node3D in Godot, so a child of another family escapes it as it escapes a Node3D. */
@@ -103,13 +102,7 @@ function warnUnattached(unattached: readonly LiveNode[]): void {
 }
 
 /**
- * A GLB object's child, as the index of its entry, or a node attached to that object. An object
- * states no `index=`, as it is in place before any node is added.
- */
-type Sibling = { entry: number } | LiveNode;
-
-/**
- * The tree order of each placed node, among its target's children as `insertAtIndex` leaves them.
+ * The tree order of each placed node, among its target's children as `glbChildrenBelow` leaves them.
  * `entryOrders` gives each GLB object its place by its pre-order index, so a node takes a place
  * just after the subtree of the sibling object before it, or just after the target when it is first.
  */
@@ -118,39 +111,20 @@ function attachedOrders(
   entryOrders: readonly TreeOrder[],
   placed: readonly GlbAttachment[]
 ): Map<LiveNode, TreeOrder> {
-  const siblingsOf = new Map<number, Sibling[]>();
-  for (const { node, target } of placed) {
-    let siblings = siblingsOf.get(target);
-    if (!siblings) {
-      siblings = childEntryIndices(entries, target).map((entry) => ({ entry }));
-      siblingsOf.set(target, siblings);
-    }
-    insertAtIndex(siblings, node);
-  }
   const orders = new Map<LiveNode, TreeOrder>();
-  for (const [target, siblings] of siblingsOf) {
+  for (const [target, children] of glbChildrenBelow(entries, placed)) {
     let after = target;
     let sinceObject = 0;
-    for (const sibling of siblings) {
-      if ('entry' in sibling) {
-        after = lastDescendantIndex(entries, sibling.entry);
+    for (const child of children) {
+      if ('entry' in child) {
+        after = lastDescendantIndex(entries, child.entry);
         sinceObject = 0;
       } else {
-        orders.set(sibling, [...entryOrders[after]!, sinceObject++]);
+        orders.set(child, [...entryOrders[after]!, sinceObject++]);
       }
     }
   }
   return orders;
-}
-
-/** The indices of the entries directly below the one at `index`, which `flattenGlbObjects` lists in pre-order. */
-function childEntryIndices(entries: readonly GlbObjectEntry[], index: number): number[] {
-  const prefix = `${entries[index]!.relPath}/`;
-  const children: number[] = [];
-  for (let k = index + 1; entries[k]?.relPath.startsWith(prefix); k++) {
-    if (!entries[k]!.relPath.includes('/', prefix.length)) children.push(k);
-  }
-  return children;
 }
 
 /** The index of the last entry at or below the one at `index`, which `flattenGlbObjects` lists in pre-order. */

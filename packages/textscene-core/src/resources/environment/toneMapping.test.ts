@@ -195,6 +195,7 @@ describe('the compositor’s tone pass', () => {
       const composite = compositeProgram({
         glow: null,
         adjustments: null,
+        autoExposure: null,
         toneMapping,
         exposure: 1,
         transparentBackground: false,

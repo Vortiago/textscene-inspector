@@ -51,7 +51,7 @@ describe('useResolvedCameraAttributes', () => {
     const seen = await resolution('SubResource("Cam")', [
       subResource('CameraAttributesPractical', 'Cam', { exposure_multiplier: '2' }),
     ]);
-    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 2 } });
+    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 2, autoExposure: null } });
   });
 
   it('reads a CameraAttributesPhysical sub-resource, whose aperture and shutter speed change nothing', async () => {
@@ -61,14 +61,14 @@ describe('useResolvedCameraAttributes', () => {
         exposure_shutter_speed: '30',
       }),
     ]);
-    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 1 } });
+    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 1, autoExposure: null } });
   });
 
   it('reads a CameraAttributesPhysical exposure_multiplier like the Practical one', async () => {
     const seen = await resolution('SubResource("Cam")', [
       subResource('CameraAttributesPhysical', 'Cam', { exposure_multiplier: '2' }),
     ]);
-    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 2 } });
+    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 2, autoExposure: null } });
   });
 
   it('follows an ExtResource .tres', async () => {
@@ -78,7 +78,7 @@ describe('useResolvedCameraAttributes', () => {
       [{ id: '1_cam', path: 'res://cam.tres', type: 'CameraAttributesPractical' }],
       { 'res://cam.tres': tres('CameraAttributesPractical', { exposure_multiplier: '3' }) }
     );
-    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 3 } });
+    expect(seen).toEqual({ status: 'resolved', attributes: { exposureMultiplier: 3, autoExposure: null } });
   });
 
   it('holds none for no reference', async () => {

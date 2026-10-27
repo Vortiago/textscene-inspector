@@ -13,13 +13,13 @@ import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import {
-  canvasItemCloneSampler,
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { drawnClone } from '../../../../r3f/drawnClone';
+import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
@@ -35,7 +35,6 @@ import {
 import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import type { TextureProgressBarProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
@@ -61,13 +60,7 @@ function useLayerTexture(
   sampler: CanvasItemTextureSampler
 ): THREE.Texture | null {
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
-  // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
-  // would upload a whole GPU copy that never draws, under its own sampler settings.
-  const layer = useMemo(
-    () => (raw ? drawnClone(raw, canvasItemCloneSampler(sampler)) : null),
-    [raw, sampler]
-  );
-  return useUploadedClone(layer);
+  return useCanvas2DTexture(raw, sampler);
 }
 
 /** `Texture2D::get_rect_region`'s cropped clone: identity except the UV window (`linearFill.ts`). */
@@ -76,17 +69,15 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vector2 | null
 ): THREE.Texture | null {
-  // The caller memoises `region` and `textureSize`, so a render that keeps them clones and
-  // uploads nothing.
-  const cropped = useMemo(() => {
-    if (!texture || !region || !textureSize) return null;
-    return drawnClone(texture, {
-      colorSpace: THREE.NoColorSpace,
-      wrap: THREE.ClampToEdgeWrapping,
-      window: regionUvWindow(region, textureSize),
-    });
-  }, [texture, region, textureSize]);
-  return useUploadedClone(cropped);
+  return useOwnedTextureView(
+    texture,
+    region &&
+      textureSize && {
+        colorSpace: THREE.NoColorSpace,
+        wrap: THREE.ClampToEdgeWrapping,
+        window: regionUvWindow(region, textureSize),
+      }
+  );
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {

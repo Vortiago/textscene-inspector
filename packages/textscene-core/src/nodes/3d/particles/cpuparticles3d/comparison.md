@@ -118,7 +118,7 @@ An emitter draws these in Godot's editor. Godot draws the box and the axes for e
 - The lines of the emission shape: three circles for a sphere, the 12 edges of a box, and the tapered cylinder for a ring. A point shape and the point-cloud shapes draw no lines.
 - A fill of the box with an opacity of 0.016.
 
-The previewer draws no billboard icon.
+Godot's billboard icon marks the origin of every emitter, faint while it is not selected, and the previewer draws it too.
 
 ## Known limitations
 
