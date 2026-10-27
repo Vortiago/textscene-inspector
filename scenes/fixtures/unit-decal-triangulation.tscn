@@ -1,0 +1,66 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitdecaltriangulation"]
+
+; One variable: the floor's `subdivide_width` and `subdivide_depth`, 0 on the left (two triangles)
+; and 15 on the right. Godot mixes a decal per fragment, so both floors show the same
+; checkerboard. A decal mixed per vertex would draw nothing on the left, since the box edges sit
+; inside the two large triangles.
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_albedo"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_coarse"]
+size = Vector2(3, 3)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_fine"]
+size = Vector2(3, 3)
+subdivide_width = 15
+subdivide_depth = 15
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="CoarseFloor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("PlaneMesh_coarse")
+surface_material_override/0 = SubResource("Material_floor")
+
+[node name="FineFloor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+mesh = SubResource("PlaneMesh_fine")
+surface_material_override/0 = SubResource("Material_floor")
+
+; The boxes are 2 m wide on 3 m floors, so every box edge crosses a triangle interior.
+[node name="Decal_OverCoarse" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+texture_albedo = ExtResource("1_albedo")
+size = Vector3(2, 3, 2)
+albedo_mix = 1.0
+
+[node name="Decal_OverFine" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+texture_albedo = ExtResource("1_albedo")
+size = Vector3(2, 3, 2)
+albedo_mix = 1.0
+
+; The captions sit above y = 2.5, clear of both projection boxes.
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 0)
+text = "Decal over a coarse and a fine floor"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+text = "LEFT 2 triangles, RIGHT 512: the same checkerboard"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

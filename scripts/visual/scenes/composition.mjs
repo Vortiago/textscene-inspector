@@ -58,6 +58,10 @@ export const SCENE_COMPOSITION_SCENES = [
   // instance.layers`, so the left floor shows bare albedo and the right one the
   // checkerboard. `unit-decal.tscn` uses cull_mask = 1048575, which excludes nothing.
   { name: 'decal-cull-mask', file: 'unit-decal-cull-mask.tscn' },
+  // The one variable against `decal`: the floor's subdivision. Godot mixes a decal per fragment,
+  // so a floor of two triangles shows the same checkerboard as a fine one. A per-vertex mix draws
+  // nothing on the coarse floor.
+  { name: 'decal-triangulation', file: 'unit-decal-triangulation.tscn' },
   // One image, two StandardMaterial3D sub-resources differing only in
   // `texture_filter` (0 NEAREST, 3 LINEAR_WITH_MIPMAPS): the one scene that sees
   // per-material texture cloning. The loader caches one THREE.Texture per path,
