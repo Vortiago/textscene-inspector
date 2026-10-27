@@ -12,21 +12,10 @@ const TICK_REACH = 1.2;
 
 const FLOATS_PER_POINT = 3;
 const FLOATS_PER_EDGE = 2 * FLOATS_PER_POINT;
-const EDGE_COUNT = 12;
 
-type Point = [number, number, number];
-
-/** `Vector3::lerp` (`core/math/vector3.h`). */
-function lerpPoint(from: Point, to: Point, weight: number): Point {
-  return [lerp(from[0], to[0], weight), lerp(from[1], to[1], weight), lerp(from[2], to[2], weight)];
-}
-
-/** The box edges, each from the least corner of `size` to its far corner, in the order of `AABB::get_edge`. */
-function boxEdges(size: Vector3): number[][] {
-  const flat = aabbEdges(centredAabb(size));
-  return Array.from({ length: EDGE_COUNT }, (_, edge) =>
-    flat.slice(edge * FLOATS_PER_EDGE, (edge + 1) * FLOATS_PER_EDGE)
-  );
+/** `Vector3::lerp` (`core/math/vector3.h`) on a point's three floats. */
+function lerpPoint(from: number[], to: number[], weight: number): number[] {
+  return from.map((value, axis) => lerp(value, to[axis]!, weight));
 }
 
 /**
@@ -34,10 +23,11 @@ function boxEdges(size: Vector3): number[][] {
  * edge as two stubs, and a tick from the top face along +Y.
  */
 export function decalGizmoLines(size: Vector3): Float32Array {
+  const edges = aabbEdges(centredAabb(size));
   const lines: number[] = [];
-  for (const edge of boxEdges(size)) {
-    const start = edge.slice(0, FLOATS_PER_POINT) as Point;
-    const end = edge.slice(FLOATS_PER_POINT) as Point;
+  for (let edge = 0; edge < edges.length; edge += FLOATS_PER_EDGE) {
+    const start = edges.slice(edge, edge + FLOATS_PER_POINT);
+    const end = edges.slice(edge + FLOATS_PER_POINT, edge + FLOATS_PER_EDGE);
     if (start[1] === end[1]) {
       lines.push(...start, ...end);
     } else {

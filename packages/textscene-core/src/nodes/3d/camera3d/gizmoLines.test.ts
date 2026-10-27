@@ -11,7 +11,7 @@ type Point = readonly [number, number, number];
 const ASPECT_16_9 = 16 / 9;
 const ORIGIN: Point = [0, 0, 0];
 
-/** `ADD_TRIANGLE` and `ADD_QUAD` (`:154-174`): each side of the closed outline, start then end. */
+/** `ADD_TRIANGLE` and `ADD_QUAD` (`:154-174`), written again here so the expected lines share no code with the build. */
 function outline(...corners: Point[]): number[] {
   return corners.flatMap((start, index) => [...start, ...corners[(index + 1) % corners.length]!]);
 }
@@ -48,6 +48,18 @@ function frustum(
   return { ...input, near };
 }
 
+/** The pyramid of a camera: four triangles from the origin, then the up triangle over the top edge. */
+function pyramid(z: number, side: number, up: number, apexY: number, narrowSide: number): number[] {
+  const corner = (x: number, y: number): Point => [x, y, z];
+  return [
+    ...outline(ORIGIN, corner(side, up), corner(side, -up)),
+    ...outline(ORIGIN, corner(-side, up), corner(-side, -up)),
+    ...outline(ORIGIN, corner(side, up), corner(-side, up)),
+    ...outline(ORIGIN, corner(side, -up), corner(-side, -up)),
+    ...outline([0, apexY, z], corner(narrowSide, up), corner(-narrowSide, up)),
+  ];
+}
+
 /** The lines are `Float32Array` positions, so compare them to the float digits that Godot printed. */
 function expectLines(actual: Float32Array, expected: number[]): void {
   expect(actual).toHaveLength(expected.length);
@@ -56,30 +68,18 @@ function expectLines(actual: Float32Array, expected: number[]): void {
 
 describe('cameraGizmoLines', () => {
   describe('perspective', () => {
-    it('draws four triangles from the origin and the up triangle at the default fov 75 over 16:9', () => {
-      const corner = (x: number, y: number): Point => [x, y, -0.4462613];
-      const side = 0.6087614;
-      const up = 0.3424283;
-      expectLines(cameraGizmoLines(perspective()), [
-        ...outline(ORIGIN, corner(side, up), corner(side, -up)),
-        ...outline(ORIGIN, corner(-side, up), corner(-side, -up)),
-        ...outline(ORIGIN, corner(side, up), corner(-side, up)),
-        ...outline(ORIGIN, corner(side, -up), corner(-side, -up)),
-        ...outline([0, 0.646809, -0.4462613], corner(0.1521904, up), corner(-0.1521904, up)),
-      ]);
+    it('draws the pyramid at the default fov 75 over 16:9', () => {
+      expectLines(
+        cameraGizmoLines(perspective()),
+        pyramid(-0.4462613, 0.6087614, 0.3424283, 0.646809, 0.1521904)
+      );
     });
 
     it('narrows the pyramid for fov 30', () => {
-      const corner = (x: number, y: number): Point => [x, y, -0.5433333];
-      const side = 0.258819;
-      const up = 0.1455857;
-      expectLines(cameraGizmoLines(perspective({ fov: 30 })), [
-        ...outline(ORIGIN, corner(side, up), corner(side, -up)),
-        ...outline(ORIGIN, corner(-side, up), corner(-side, -up)),
-        ...outline(ORIGIN, corner(side, up), corner(-side, up)),
-        ...outline(ORIGIN, corner(side, -up), corner(-side, -up)),
-        ...outline([0, 0.2749952, -0.5433333], corner(0.0647048, up), corner(-0.0647048, up)),
-      ]);
+      expectLines(
+        cameraGizmoLines(perspective({ fov: 30 })),
+        pyramid(-0.5433333, 0.258819, 0.1455857, 0.2749952, 0.0647048)
+      );
     });
 
     it('sets the depth of the far corners by the width factor under KEEP_WIDTH', () => {
@@ -135,13 +135,14 @@ describe('cameraGizmoLines', () => {
 
   describe('frustum', () => {
     it('shifts every corner but the origin by frustum_offset (size 1, near 0.05, offset (0.25, -0.5))', () => {
-      const corner = (x: number, y: number): Point => [x, y, -0.0995037];
+      const z = -0.0995037;
+      const corner = (x: number, y: number): Point => [x, y, z];
       expectLines(cameraGizmoLines(frustum(1, 0.05, { x: 0.25, y: -0.5 })), [
         ...outline(ORIGIN, corner(1.2450371, -0.21875), corner(1.2450371, -0.78125)),
         ...outline(ORIGIN, corner(-0.7450371, -0.21875), corner(-0.7450371, -0.78125)),
         ...outline(ORIGIN, corner(1.2450371, -0.21875), corner(-0.7450371, -0.21875)),
         ...outline(ORIGIN, corner(1.2450371, -0.78125), corner(-0.7450371, -0.78125)),
-        ...outline([0.25, 0.03125, -0.0995037], corner(0.375, -0.21875), corner(0.125, -0.21875)),
+        ...outline([0.25, 0.03125, z], corner(0.375, -0.21875), corner(0.125, -0.21875)),
       ]);
     });
 

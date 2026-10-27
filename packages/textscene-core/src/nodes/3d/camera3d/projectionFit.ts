@@ -37,6 +37,18 @@ export type CameraLike = THREE.Camera & {
 
 type FittableCamera = CameraLike & { userData: { lensFit?: LensFit } };
 
+/** Dispatched on a camera each time `fitToAspect` fits it, so a gizmo that draws its shape redraws. */
+interface LensFitEvents {
+  lensfit: unknown;
+}
+
+/** Calls `listener` after each fit of `camera`. Returns the function that stops it. */
+export function onLensFit(camera: THREE.Camera, listener: () => void): () => void {
+  const target = camera as unknown as THREE.EventDispatcher<LensFitEvents>;
+  target.addEventListener('lensfit', listener);
+  return () => target.removeEventListener('lensfit', listener);
+}
+
 /** Records the lens that `fitToAspect` reads. The aspect of an earlier fit stays. */
 export function setLens(camera: THREE.Camera, lens: CameraLens): void {
   const fittable = camera as FittableCamera;
@@ -55,6 +67,7 @@ export function fitToAspect(camera: THREE.Camera, aspect: number): void {
   if (fit.lens.projection === Camera3DProjectionType.FRUSTUM) {
     fitFrustum(camera as THREE.PerspectiveCamera, fit.lens, aspect);
   }
+  (camera as unknown as THREE.EventDispatcher<LensFitEvents>).dispatchEvent({ type: 'lensfit' });
 }
 
 /** The aspect of the last fit, or null for a camera never fitted. */

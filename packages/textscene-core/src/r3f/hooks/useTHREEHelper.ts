@@ -141,7 +141,7 @@ export function correctHelperForParentGroup<H extends THREE.Object3D & { update:
     const parent = helper.parent;
     if (parent) {
       parent.updateWorldMatrix(true, false);
-      // A helper's `update()` can leave the target's world matrix stale.
+      // The render loop refreshes the target's world matrix after this frame callback, so refresh it here.
       target.updateWorldMatrix(true, false);
       // Local = parent⁻¹ · target, so the parent chain reproduces the target's world matrix.
       // matrixWorld is copied too, so it is right before that traversal runs.

@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
-import { useGodotLinearColor } from '../../../r3f/godotColor';
+import { godotColorToLinear, useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
@@ -43,7 +43,7 @@ import { sameElements } from '../../../utils/sameElements';
 import { decalGizmoLines } from './gizmoLines';
 
 /** `editors/3d_gizmos/gizmo_colors/decal` (`editor_settings.cpp:884`). */
-const GIZMO_COLOUR = Object.freeze({ r: 0.6, g: 0.5, b: 1 });
+const GIZMO_COLOUR = godotColorToLinear({ r: 0.6, g: 0.5, b: 1 });
 
 /** The gizmo of a unit box. `size` scales the gizmo group, so animating `size` stays a cheap scale write. */
 const UNIT_BOX_LINES = decalGizmoLines({ x: 1, y: 1, z: 1 });
@@ -104,7 +104,6 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   // Godot stores modulate in sRGB → linear for the shaded material tint.
   const color = useGodotLinearColor(modulate);
-  const gizmoColor = useGodotLinearColor(GIZMO_COLOUR);
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it with modulate alpha into the projection's opacity.
   const opacity = clamp(properties.albedo_mix * modulate.a, 0, 1);
@@ -252,7 +251,7 @@ export function Decal({ node, children }: NodeComponentProps) {
           (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
       <PluginGizmo drawnFor="every-node">
         <group scale={[size.x, size.y, size.z]}>
-          <GizmoLine positions={UNIT_BOX_LINES} color={gizmoColor} />
+          <GizmoLine positions={UNIT_BOX_LINES} color={GIZMO_COLOUR} />
         </group>
       </PluginGizmo>
       {/* Projection meshes attach here imperatively, to an unscaled group, so

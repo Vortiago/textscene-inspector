@@ -30,31 +30,27 @@ function outline(...corners: Point[]): number[] {
   return corners.flatMap((start, index) => [...start, ...corners[(index + 1) % corners.length]!]);
 }
 
-/** A viewport with no area has no aspect, and Godot reads it as 1 (`:151`). */
-function viewportAspectOf(aspect: number): number {
-  return aspect > 0 ? aspect : 1;
-}
-
 /** The width and height factors that fit the frustum in a unit box of the viewport's shape (`:152`). */
 function sizeFactor(viewportAspect: number): { x: number; y: number } {
   return viewportAspect > 1 ? { x: 1, y: 1 / viewportAspect } : { x: viewportAspect, y: 1 };
 }
 
-/** Four triangles from `origin` to the corners of a rectangle at `side` and `up`, then the up triangle. */
-function pyramidLines(side: Point, up: Point, hsize: number, offset: Point): number[] {
+/** Four triangles from the origin to the rectangle at `side` and `±upY`, then the up triangle. */
+function pyramidLines(side: Point, upY: number, hsize: number, offset: Point): number[] {
   const nside: Point = [-side[0], side[1], side[2]];
-  const corner = (sideways: Point, vertical: Point) => add(add(sideways, vertical), offset);
-  const lines = [
-    ...outline(ORIGIN, corner(side, up), corner(side, negate(up))),
-    ...outline(ORIGIN, corner(nside, up), corner(nside, negate(up))),
-    ...outline(ORIGIN, corner(side, up), corner(nside, up)),
-    ...outline(ORIGIN, corner(side, negate(up)), corner(nside, negate(up))),
-  ];
+  const corner = ([x, y, z]: Point, vertical: number) => add([x, y + vertical, z], offset);
   const narrowSide = Math.min(side[0], hsize * UP_TRIANGLE_HALF_WIDTH);
-  const apex = add([0, up[1] + hsize * UP_TRIANGLE_HEIGHT, side[2]], offset);
+  const apex = add([0, upY + hsize * UP_TRIANGLE_HEIGHT, side[2]], offset);
   return [
-    ...lines,
-    ...outline(apex, corner([narrowSide, side[1], side[2]], up), corner([-narrowSide, side[1], side[2]], up)),
+    ...outline(ORIGIN, corner(side, upY), corner(side, -upY)),
+    ...outline(ORIGIN, corner(nside, upY), corner(nside, -upY)),
+    ...outline(ORIGIN, corner(side, upY), corner(nside, upY)),
+    ...outline(ORIGIN, corner(side, -upY), corner(nside, -upY)),
+    ...outline(
+      apex,
+      corner([narrowSide, side[1], side[2]], upY),
+      corner([-narrowSide, side[1], side[2]], upY)
+    ),
   ];
 }
 
@@ -69,7 +65,7 @@ function perspectiveLines({ fov, keepAspect }: CameraLens, viewportAspect: numbe
     0,
     depth * (keepAspect === Camera3DKeepAspect.KEEP_WIDTH ? factor.x : factor.y),
   ];
-  return pyramidLines(side, [0, hsize * factor.y, 0], hsize, ORIGIN);
+  return pyramidLines(side, hsize * factor.y, hsize, ORIGIN);
 }
 
 /** `PROJECTION_ORTHOGONAL` (`:205-232`): the near and far quads, the sides between them, the up triangle. */
@@ -106,12 +102,13 @@ function frustumLines({ size, frustumOffset }: CameraLens, near: number, viewpor
   const hsize = size / 2;
   const [sideX, sideY, sideZ] = normalizedVector3(hsize, 0, -near);
   const side: Point = [sideX * factor.x, sideY, sideZ];
-  return pyramidLines(side, [0, hsize * factor.y, 0], hsize, [frustumOffset.x, frustumOffset.y, 0]);
+  return pyramidLines(side, hsize * factor.y, hsize, [frustumOffset.x, frustumOffset.y, 0]);
 }
 
 /** The gizmo's segments as flat `xyz` pairs: a pyramid for a perspective or frustum camera, a box for an orthogonal one. */
 export function cameraGizmoLines({ lens, near, aspect }: CameraGizmoInput): Float32Array {
-  const viewportAspect = viewportAspectOf(aspect);
+  // A viewport with no area has no aspect, and Godot reads it as 1 (`:151`).
+  const viewportAspect = aspect > 0 ? aspect : 1;
   switch (lens.projection) {
     case Camera3DProjectionType.ORTHOGONAL:
       return new Float32Array(orthogonalLines(lens, viewportAspect));

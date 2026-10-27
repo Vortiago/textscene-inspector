@@ -6,22 +6,14 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
-import type * as THREE from 'three';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
 import { DEFAULT_ASPECT, fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useGodotLinearColor } from '../../../r3f/godotColor';
-import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
-import { cameraGizmoLines } from './gizmoLines';
-import { useFittedAspect } from './useFittedAspect';
-
-/** `editors/3d_gizmos/gizmo_colors/camera` (`editor_settings.cpp:883`). */
-const GIZMO_COLOUR = Object.freeze({ r: 0.8, g: 0.4, b: 0.8 });
+import { CameraGizmo } from './Gizmo';
 
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
@@ -70,7 +62,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   const cameraRef = useRef<FiberCamera>(null);
 
   // PROJECTION_FRUSTUM draws through a perspective camera with a view offset. A new three camera
-  // class remounts, through the key, the tag and the lens fit with it.
+  // class remounts, through the key, the tag, the lens fit and the gizmo that listens to the camera.
   return (
     <>
       <SceneCamera
@@ -89,14 +81,15 @@ export function Camera3D({ node, children }: NodeComponentProps) {
       >
         {children}
       </SceneCamera>
-      {/* On the node, not on the camera: `h_offset` and `v_offset` move only the camera
-          (`camera_3d.cpp:253-258`), and the gizmo takes the node's global transform. The gizmo reads
-          the property `near`, which the camera clamps. */}
-      <group position={position} rotation={rotation} scale={scale}>
-        <PluginGizmo drawnFor="every-node">
-          <CameraGizmoLines cameraRef={cameraRef} lens={lens} near={properties.near} />
-        </PluginGizmo>
-      </group>
+      <CameraGizmo
+        key={CameraElement}
+        cameraRef={cameraRef}
+        lens={lens}
+        near={properties.near}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+      />
     </>
   );
 }
@@ -162,19 +155,4 @@ function SceneCamera({
       {children}
     </CameraElement>
   );
-}
-
-interface CameraGizmoLinesProps {
-  cameraRef: RefObject<THREE.Camera | null>;
-  lens: CameraLens;
-  /** The `near` property, which the frustum projection reads. */
-  near: number;
-}
-
-/** Rebuilt for the aspect of the viewport that the camera renders, which its fit tracks. */
-function CameraGizmoLines({ cameraRef, lens, near }: CameraGizmoLinesProps) {
-  const aspect = useFittedAspect(cameraRef);
-  const positions = useMemo(() => cameraGizmoLines({ lens, near, aspect }), [lens, near, aspect]);
-  const color = useGodotLinearColor(GIZMO_COLOUR);
-  return <GizmoLine positions={positions} color={color} />;
 }
