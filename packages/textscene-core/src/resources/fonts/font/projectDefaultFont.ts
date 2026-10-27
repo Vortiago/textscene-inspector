@@ -3,18 +3,15 @@
  * and the default theme's `default_font`, so it is the last rung of the Control font lookup
  * (`resolveThemeFontIn`).
  */
-import * as logger from '../../../logger';
+import { warnOnce } from '../../../utils/warnOnce';
 import type { ProjectSettings } from '../../../parser/projectSettingsParser';
 import type { FontCacheReader, FontResource } from './types';
 
 /** `ThemeDB::initialize_theme` declares it (`scene/theme/theme_db.cpp:53`). */
 const CUSTOM_FONT_SETTING = 'gui/theme/custom_font';
 
-/**
- * Written only by `resolveProjectDefaultFont`, and never cleared. Keyed by path: the lookup runs on
- * every solve pass, and the failure belongs to the file.
- */
-const warnedPaths = new Set<string>();
+/** Owns the failed-load warnings: the lookup runs on every solve pass, and the failure belongs to the file. */
+const FAILED_LOADS = {};
 
 /**
  * The font `gui/theme/custom_font` names, or null: unset, still loading or failed. A font still loading
@@ -34,9 +31,10 @@ export function resolveProjectDefaultFont(
     pending.add(path);
     return null;
   }
-  if (cached === null && !warnedPaths.has(path)) {
-    warnedPaths.add(path);
-    logger.warn(
+  if (cached === null) {
+    warnOnce(
+      FAILED_LOADS,
+      path,
       `[ProjectFont] ${CUSTOM_FONT_SETTING} names "${path}", which failed to load. Drawing the bundled default font.`
     );
   }

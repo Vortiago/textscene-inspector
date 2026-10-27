@@ -12,6 +12,7 @@ import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { DependencyGraph } from '../dependencyGraph';
 import { visualLayersOf } from '../../r3f/visualLayers';
+import { nodesGlb } from '../formats/glb/testing/nodesGlb';
 
 const GLTF_PATH = 'res://town/lamp/scene.gltf';
 /**
@@ -67,8 +68,11 @@ function nestedGltf(leafName: string): ArrayBuffer {
   return new TextEncoder().encode(JSON.stringify(gltf)).buffer as ArrayBuffer;
 }
 
-async function loadWith(files: Record<string, string>, leafName = 'Object_4'): Promise<THREE.Object3D> {
-  const asset = nestedGltf(leafName);
+async function loadWith(
+  files: Record<string, string>,
+  leafName = 'Object_4',
+  asset = nestedGltf(leafName)
+): Promise<THREE.Object3D> {
   const fileEventBus = new FileEventBus({
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
@@ -120,15 +124,26 @@ describe('createGLBProcessor — import sidecar node layers', () => {
     expect(visualLayersOf(theMesh(root))).toBe(1);
   });
 
-  it("crosses a level Godot's importer synthesised and three's did not", async () => {
-    // Godot inserts a Skeleton3D between an armature and the mesh it skins, so a sidecar
-    // path into any skinned asset names a node three's graph has no counterpart for.
-    const root = await loadWith({
-      [`${GLTF_PATH}.import`]: SIDECAR.replace(
-        'Lowpoly lamp_105/Object_4',
-        'Lowpoly lamp_105/Skeleton3D/Object_4'
-      ),
+  describe('in a skinned glTF', () => {
+    /** Armature holds the joint Hip and the skinned mesh Body, which Godot moves under the Skeleton3D. */
+    const RIG = nodesGlb(
+      [{ name: 'Armature', children: [1, 2] }, { name: 'Hip' }, { name: 'Body', mesh: 0, skin: 0 }],
+      { skins: [{ joints: [1] }] }
+    );
+    const sidecarFor = (nodePath: string) => SIDECAR.replace(NODE_PATH, nodePath);
+
+    it("crosses a level Godot's importer synthesised and three's did not", async () => {
+      const root = await loadWith(
+        { [`${GLTF_PATH}.import`]: sidecarFor('Armature/Skeleton3D/Body') },
+        '',
+        RIG
+      );
+      expect(visualLayersOf(theMesh(root))).toBe(2);
     });
-    expect(visualLayersOf(theMesh(root))).toBe(2);
+
+    it('leaves the default for the place the glTF holds a mesh Godot moved', async () => {
+      const root = await loadWith({ [`${GLTF_PATH}.import`]: sidecarFor('Armature/Body') }, '', RIG);
+      expect(visualLayersOf(theMesh(root))).toBe(1);
+    });
   });
 });

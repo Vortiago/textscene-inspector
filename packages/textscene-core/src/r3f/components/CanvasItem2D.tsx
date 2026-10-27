@@ -16,6 +16,7 @@ import { TextureSampler2DContext, useNode2DTextureSampler } from '../canvasItemT
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { EffectiveZProvider, accumulateCanvasItemZ, useEffectiveZ } from '../lighting2d/canvasItemPlacement';
 import { useCanvasItemRenderOrder } from '../contexts/PaintOrderContext';
+import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
 import { CanvasItemMaterialProvider, useCanvasItemMaterial } from './canvasItemMaterialContext';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
@@ -77,9 +78,16 @@ export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasIt
   // first, so the item's meshes keep their `renderOrder` for private layering,
   // such as an atlas batch's source index.
   const renderOrder = useCanvasItemRenderOrder(node, effectiveZ);
+  // A pushed `visible` takes the place of the authored one, as for a Node3D.
+  const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
 
   return (
-    <group name={node.name} {...transform} visible={props.visible !== false} renderOrder={renderOrder}>
+    <group
+      name={node.name}
+      {...transform}
+      visible={animatedVisible ?? props.visible !== false}
+      renderOrder={renderOrder}
+    >
       <CanvasItemKeyProvider value={renderOrder}>
         {body && (
           <LitCanvasItemPixels material={material} lightMask={props.light_mask} zFinal={effectiveZ}>
