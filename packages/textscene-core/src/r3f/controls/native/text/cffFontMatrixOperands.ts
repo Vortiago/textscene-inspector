@@ -18,6 +18,14 @@ const MAX_FIXED_INTEGER = 0x7fff;
 /** Past this, another digit would overflow the 32-bit number FreeType accumulates: it counts a power of ten instead. */
 const DIGIT_LIMIT = 0xccccccc;
 
+/** FreeType keeps at most nine digits after the point, and gives up on an exponent beyond 1000 (`cff_parse_real`). */
+const MAX_FRACTION_DIGITS = 9;
+const MAX_EXPONENT = 1000;
+
+/** The powers of ten that `cff_parse_font_matrix` accepts for its largest operand, and the spread between the largest and the smallest. */
+const MIN_LARGEST_SCALING = -9;
+const MAX_SCALING_SPREAD = 9;
+
 const REAL_OPERATOR = 30;
 const END_OF_DATA = -1;
 
@@ -71,7 +79,7 @@ function parseScaledReal(dv: DataView, start: number, limit: number): ScaledNumb
   if (nibble === 0xa) {
     for (nibble = nextNibble(); nibble !== END_OF_DATA && nibble < 10; nibble = nextNibble()) {
       if (!nibble && !number) exponentAdd--;
-      else if (number < DIGIT_LIMIT && fractionLength < 9) {
+      else if (number < DIGIT_LIMIT && fractionLength < MAX_FRACTION_DIGITS) {
         fractionLength++;
         number = number * 10 + nibble;
       }
@@ -84,7 +92,7 @@ function parseScaledReal(dv: DataView, start: number, limit: number): ScaledNumb
   }
   if (nibble === 0xb) {
     for (nibble = nextNibble(); nibble !== END_OF_DATA && nibble < 10; nibble = nextNibble()) {
-      if (exponent > 1000) hasOverflow = true;
+      if (exponent > MAX_EXPONENT) hasOverflow = true;
       else exponent = exponent * 10 + nibble;
     }
     if (isExponentNegative) exponent = -exponent;
@@ -178,7 +186,11 @@ export function readFontMatrix(
   const scalings = numbers.filter(({ value }) => value).map(({ scaling }) => scaling);
   if (scalings.length === 0) return identityFontMatrix(1);
   const maxScaling = Math.max(...scalings);
-  if (maxScaling < -9 || maxScaling > 0 || maxScaling - Math.min(...scalings) > 9) {
+  if (
+    maxScaling < MIN_LARGEST_SCALING ||
+    maxScaling > 0 ||
+    maxScaling - Math.min(...scalings) > MAX_SCALING_SPREAD
+  ) {
     return identityFontMatrix(1);
   }
   const [xx, yx, xy, yy, offsetX, offsetY] = numbers.map(({ value, scaling }) =>

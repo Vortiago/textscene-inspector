@@ -75,6 +75,7 @@ export class GlyphPath {
   lineTo(x: number, y: number): void {
     const startsNewMap = this.hints.mask.isNew && !this.isClosing;
     if (this.currentX === x && this.currentY === y && !startsNewMap) return;
+    this.startPendingContour();
     this.drawQueued();
     this.queued[END_X] = x;
     this.queued[END_Y] = y;
@@ -85,6 +86,7 @@ export class GlyphPath {
   }
 
   curveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void {
+    this.startPendingContour();
     this.drawQueued();
     const { queued } = this;
     queued[FIRST_X] = x1;
@@ -120,12 +122,15 @@ export class GlyphPath {
     new HintMap(this.blues, this.initialMap).build(this.hints, counterMask, 0);
   }
 
-  /** Starts a contour if a move waits, then draws the element in the queue, which the caller then refills. */
+  /** Starts a contour if a move waits. */
+  private startPendingContour(): void {
+    if (!this.isMovePending) return;
+    this.startContour();
+    this.isMovePending = false;
+  }
+
+  /** Draws the element in the queue, which the caller then refills. */
   private drawQueued(): void {
-    if (this.isMovePending) {
-      this.startContour();
-      this.isMovePending = false;
-    }
     if (this.queuedKind !== QUEUED_NONE) this.draw(this.hintMap, this.currentX, this.currentY, this.hintMap);
   }
 
