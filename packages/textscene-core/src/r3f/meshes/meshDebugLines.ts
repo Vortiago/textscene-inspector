@@ -22,8 +22,8 @@ const FLOATS_PER_TRIANGLE_EDGES = 6 * FLOATS_PER_VERTEX;
  */
 export function meshDebugLines(mesh: SurfacedMesh): Float32Array {
   const triangleGeometries = mesh.parts.filter((part) => !geometryDrawsPoints(part.geometry));
-  const triangleCount = triangleGeometries.reduce((total, { geometry }) => total + trianglesIn(geometry), 0);
-  const lines = new Float32Array(triangleCount * FLOATS_PER_TRIANGLE_EDGES);
+  const totalTriangles = triangleGeometries.reduce((total, { geometry }) => total + trianglesIn(geometry), 0);
+  const lines = new Float32Array(totalTriangles * FLOATS_PER_TRIANGLE_EDGES);
   let written = 0;
   const writeSegment = (positions: ArrayLike<number>, from: number, to: number) => {
     for (let i = 0; i < FLOATS_PER_VERTEX; i++) lines[written++] = positions[from + i]!;
@@ -33,8 +33,10 @@ export function meshDebugLines(mesh: SurfacedMesh): Float32Array {
     const positions = geometry.getAttribute('position').array;
     const index = geometry.getIndex()?.array;
     const offsetAt = (slot: number) => (index ? index[slot]! : slot) * FLOATS_PER_VERTEX;
-    for (let triangle = 0; triangle < trianglesIn(geometry); triangle++) {
+    const triangleCount = trianglesIn(geometry);
+    for (let triangle = 0; triangle < triangleCount; triangle++) {
       const slot = triangle * VERTICES_PER_TRIANGLE;
+      // Godot's v1 and v2 sit at slots 2 and 1: the geometry reverses the winding.
       const v0 = offsetAt(slot);
       const v1 = offsetAt(slot + 2);
       const v2 = offsetAt(slot + 1);
