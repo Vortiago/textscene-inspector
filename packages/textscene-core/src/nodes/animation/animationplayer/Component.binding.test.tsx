@@ -4,95 +4,22 @@
  * without moving the root, and a node that escaped its parent's three group.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as logger from '../../../logger';
-import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { SceneStack } from '../../../r3f/testing/SceneStack';
-import {
-  AnimationTransportProvider,
-  useAnimationTransport,
-  type AnimationTransport,
-} from '../../../r3f/contexts/AnimationTransportContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { fixturesDir } from '../../../parser/testing/parserKit';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
-import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
-
-import '../../../r3f/nodes/index';
-
-const mounted: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>[] = [];
-afterEach(async () => {
-  for (const renderer of mounted.splice(0)) await renderer.unmount();
-});
-
-let transport: AnimationTransport;
-function Capture() {
-  transport = useAnimationTransport();
-  return null;
-}
-
-/** One animation, "move", sliding the node at `trackPath` from x=0 to x=10 over one second. */
-function moveAnimation(trackPath: string): string {
-  return `[sub_resource type="Animation" id="Move"]
-resource_name = "move"
-length = 1.0
-tracks/0/type = "value"
-tracks/0/path = NodePath("${trackPath}:position")
-tracks/0/interp = 1
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Vector3(0, 0, 0), Vector3(10, 0, 0)]
-}
-
-[sub_resource type="AnimationLibrary" id="Lib"]
-_data = {
-"move": SubResource("Move")
-}
-`;
-}
-
-const PLAYER_BODY = 'libraries/ = SubResource("Lib")';
-
-/** Mounts `tscn` through the dispatcher with `playerPath` selected, plays, and runs half a second. */
-async function playHalfway(tscn: string, playerPath: string): Promise<THREE.Object3D> {
-  const parsed = new TscnParser().parse(tscn);
-  const fake = createFakeResourceLoader();
-  // The scene graph gives the `%Name` table a track resolves through.
-  const renderer = await ReactThreeTestRenderer.create(
-    <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-      <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath={playerPath}>
-        <AnimationTransportProvider>
-          <Capture />
-          <NodeDispatcher nodes={parsed.nodes} />
-        </AnimationTransportProvider>
-      </SceneStack>
-    </HierarchyProvider>
-  );
-  mounted.push(renderer);
-  await ReactThreeTestRenderer.act(async () => transport.play());
-  await renderer.advanceFrames(1, 0.5);
-  const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
-    .children?.[0]?.instance;
-  let root: THREE.Object3D | null | undefined = first;
-  while (root?.parent) root = root.parent;
-  if (!root) throw new Error('the dispatcher mounted nothing');
-  return root;
-}
-
-/** The named group at `names`, walking one name per level from the scene. */
-function objectAt(root: THREE.Object3D, ...names: string[]): THREE.Object3D {
-  let object: THREE.Object3D | undefined = root;
-  for (const name of names) object = object?.getObjectByName(name);
-  if (!object) throw new Error(`nothing at ${names.join('/')}`);
-  return object;
-}
+import {
+  moveAnimation,
+  mountWithPlayer,
+  objectAt,
+  play,
+  playHalfway,
+  PLAYER_BODY,
+  sceneRoot,
+} from '../../../r3f/testing/animationPlayback';
 
 describe('an AnimationPlayer track binds the node its path names', () => {
   it('drives a uniquely named child, the case name-binding also got right', async () => {
@@ -267,29 +194,7 @@ ${PLAYER_BODY}
 `;
 
   /** Mounts the host with the player selected, so its mixer binds before the sub-scene loads. */
-  async function mountBeforeLoad() {
-    const parsed = new TscnParser().parse(HOST_SCENE);
-    const fake = createFakeResourceLoader();
-    const renderer = await ReactThreeTestRenderer.create(
-      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-        <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath="Root/AnimationPlayer">
-          <AnimationTransportProvider>
-            <Capture />
-            <NodeDispatcher nodes={parsed.nodes} />
-          </AnimationTransportProvider>
-        </SceneStack>
-      </HierarchyProvider>
-    );
-    mounted.push(renderer);
-    return { renderer, fake };
-  }
-
-  function sceneRoot(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): THREE.Object3D {
-    let root = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> }).children[0]!
-      .instance;
-    while (root.parent) root = root.parent;
-    return root;
-  }
+  const mountBeforeLoad = () => mountWithPlayer(HOST_SCENE, 'Root/AnimationPlayer');
 
   it('binds it once the sub-scene holding it loads', async () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -297,7 +202,7 @@ ${PLAYER_BODY}
     await ReactThreeTestRenderer.act(async () => {
       fake.scenes._resolve('res://arm.tscn', new TscnParser().parse(ARM_SCENE));
     });
-    await ReactThreeTestRenderer.act(async () => transport.play());
+    await play();
     await renderer.advanceFrames(1, 0.5);
     expect(objectAt(sceneRoot(renderer), 'Inst', 'Arm').position.x).toBeCloseTo(5, 1);
     warn.mockRestore();
@@ -317,7 +222,7 @@ ${PLAYER_BODY}
   it('keeps playing from the transport time when the target arrives mid-play', async () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const { renderer, fake } = await mountBeforeLoad();
-    await ReactThreeTestRenderer.act(async () => transport.play());
+    await play();
     await renderer.advanceFrames(1, 0.4);
     await ReactThreeTestRenderer.act(async () => {
       fake.scenes._resolve('res://arm.tscn', new TscnParser().parse(ARM_SCENE));

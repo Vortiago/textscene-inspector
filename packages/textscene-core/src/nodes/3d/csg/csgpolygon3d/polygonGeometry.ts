@@ -36,7 +36,8 @@ import * as THREE from 'three';
 import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import type { ShadedBrush } from '../brushManifold';
 import { extrusionCounts } from './extrusionCounts';
-import { facingMatrix, PATH_UP, toPoints, warnOnce } from './polygonSweepFrames';
+import { warnOnce } from '../../../../utils/warnOnce';
+import { facingMatrix, PATH_UP, SWEEP_WARNINGS, toPoints } from './polygonSweepFrames';
 import { MIN_POLYGON_VERTICES, type CsgPolygonSpec } from './polygonSweepSpec';
 import { PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
@@ -56,6 +57,7 @@ export function buildCsgPolygonBrush(spec: CsgPolygonSpec): ShadedBrush {
   const triangles = THREE.ShapeUtils.triangulateShape(shape, []);
   if (triangles.length < 1) {
     warnOnce(
+      SWEEP_WARNINGS,
       'csgpolygon-triangulate',
       '[CSGPolygon3D] Failed to triangulate polygon — check for self-intersecting edges.'
     );

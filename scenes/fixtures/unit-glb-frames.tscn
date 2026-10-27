@@ -1,0 +1,41 @@
+[gd_scene load_steps=3 format=3]
+
+; One variable: the properties of nodes Godot's importer builds inside an instanced skinned `.glb`.
+; The left model moves its Skeleton3D, which carries `Body` along, and halves `Body` by an override
+; of its own. The right model imports `Sword` as a bone (`import_as_skeleton_bones`), so the
+; override lifts `Sword` 1.5 units above the rest pose the bone holds, not above the model.
+; The two posts hold the framed bounds still.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-skeleton.glb" id="1_skin"]
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-skeleton-bones.glb" id="2_bones"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_post"]
+size = Vector3(0.1, 4.2, 0.1)
+
+[node name="GlbFrames" type="Node3D"]
+
+[node name="Skinned" parent="." instance=ExtResource("1_skin")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0)
+
+[node name="Skeleton3D" parent="Skinned/Armature" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 0)
+
+[node name="Body" parent="Skinned/Armature/Skeleton3D"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="Bones" parent="." instance=ExtResource("2_bones")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0)
+
+[node name="Sword" parent="Bones/Skeleton3D/Sword"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="PostLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 1, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="PostRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 1, 0)
+mesh = SubResource("BoxMesh_post")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 3, 0)

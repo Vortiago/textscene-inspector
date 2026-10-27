@@ -19,7 +19,7 @@ import { applyRootScale } from '../formats/glb/rootScale';
 import { stampMeshInstanceLayers } from '../formats/glb/meshInstances';
 import type { GltfExtensionRules } from '../formats/glb/types';
 import { flattenGlbObjects } from '../../r3f/internal/glb-scene-root/glbHierarchy';
-import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget';
+import { matchGlbNode } from '../../r3f/internal/glb-scene-root/glbPathLookup';
 import {
   importClipOptions,
   importExternalMaterials,
@@ -169,8 +169,7 @@ function applySidecarRootScale(object: THREE.Object3D, path: string, parsed: Par
 
 /**
  * `_subresources`' per-node `mesh_instance/layers`, matched by node path
- * (`resource_importer_scene.cpp:1836`) through `matchGlbTarget`. No nearest-ancestor fallback:
- * a mask belongs to one mesh instance, and an ancestor would stamp every sibling under it.
+ * (`resource_importer_scene.cpp:1836`) through `matchGlbNode`.
  */
 function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: ParsedImportFile): void {
   const masks = importNodeLayers(parsed);
@@ -178,7 +177,7 @@ function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: Pa
 
   const entries = flattenGlbObjects(object);
   for (const [nodePath, mask] of masks) {
-    const target = matchGlbTarget(entries, nodePath, { allowAncestor: false });
+    const target = matchGlbNode(entries, nodePath);
     if (!target) {
       logger.warn(`[GLBProcessor] ${path}: import sidecar layers path '${nodePath}' names no mesh`);
       continue;

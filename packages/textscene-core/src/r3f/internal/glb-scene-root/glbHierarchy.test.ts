@@ -11,7 +11,7 @@ import {
   glbSceneRootChildren,
   GLB_ANIMATION_PLAYER_NAME,
 } from './glbHierarchy';
-import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
+import { tagAsLoadedGlb } from '../../../resources/formats/glb/testing/loadedGlbTags';
 
 function named<T extends THREE.Object3D>(obj: T, name: string): T {
   obj.name = name;
@@ -33,15 +33,18 @@ function displayTypeFor(object: THREE.Object3D): unknown {
   return displayTypeOf(glbSceneRootChildren(root, [])[0]!);
 }
 
-/** `object` as glTF node 0, which Godot names `godotName`. */
-function godotNamed<T extends THREE.Object3D>(object: T, godotName: string): T {
-  tagGodotNodeNames(object, new Map([[object, { nodes: 0 }]]), [{ name: godotName, role: 'node' }]);
+/** `object` as a glTF node named `gltfName`, which Godot spells otherwise. */
+function godotNamed<T extends THREE.Object3D>(object: T, gltfName: string): T {
+  const scene = new THREE.Group();
+  scene.add(object);
+  tagAsLoadedGlb(scene, { gltfNames: { [object.name]: gltfName } });
+  scene.remove(object);
   return object;
 }
 
 describe('glbObjectName', () => {
   it("takes Godot's name for a glTF node", () => {
-    expect(glbObjectName(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube_001'))).toBe('Cube_001');
+    expect(glbObjectName(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube.001'))).toBe('Cube_001');
   });
 
   it("takes three's name for an object no node names", () => {
@@ -56,7 +59,7 @@ describe('glbObjectName', () => {
 describe('glbSceneRootChildren paths', () => {
   it("paths each node by Godot's name", () => {
     const root = new THREE.Group();
-    root.add(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube_001'));
+    root.add(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube.001'));
     expect(glbSceneRootChildren(root, []).map((n) => [n.name, relPathOf(n)])).toEqual([
       ['Cube_001', 'Cube_001'],
     ]);

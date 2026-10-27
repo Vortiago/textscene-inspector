@@ -18,6 +18,7 @@ import { createWorkCount } from '../../../../resources/workCount';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
+import { warnOnce } from '../../../../utils/warnOnce';
 import { createExternalStore } from '../../../hooks/createExternalStore';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
@@ -72,16 +73,14 @@ type CacheEntry =
 const metricsCache = new WeakMap<FontFileResource, CacheEntry>();
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
-const warnedUnresolvable = new WeakSet<FontResource>();
-
 function warnUnresolvable(font: FontResource, nodePath: string): void {
-  if (warnedUnresolvable.has(font)) return;
-  warnedUnresolvable.add(font);
   const reason =
     font.kind === 'system'
       ? `a SystemFont (OS family names: ${font.fontNames.join(', ') || '(none)'}) -- this previewer has no access to the user's system fonts`
       : 'no FontFile in its fallback chain carries loadable bytes';
-  logger.warn(
+  warnOnce(
+    font,
+    'unresolvable',
     `[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`
   );
 }

@@ -5,19 +5,12 @@
  */
 
 import * as THREE from 'three';
-import { warn } from '../../../../logger';
 
 /**
- * The builder runs on every geometry rebuild, so an unconditional `warn` for an
- * approximation would repeat per keystroke in the source pane and bury real problems.
- * Module-level rather than per-call because "once" has to outlive a single build.
+ * The owner of the sweep's approximation warnings. The builder runs on every geometry rebuild, so
+ * each warns once for the session, not once per keystroke in the source pane.
  */
-const warned = new Set<string>();
-export function warnOnce(key: string, message: string): void {
-  if (warned.has(key)) return;
-  warned.add(key);
-  warn(message);
-}
+export const SWEEP_WARNINGS = {};
 
 export function toPoints(flat: Float32Array): THREE.Vector2[] {
   const out: THREE.Vector2[] = [];

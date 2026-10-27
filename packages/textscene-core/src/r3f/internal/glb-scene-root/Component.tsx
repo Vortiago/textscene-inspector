@@ -11,10 +11,18 @@ import { useGlb } from '../../../resources/useGlb';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbRoot } from './GlbInstanceContext';
 import { useGlbGeometryInstances } from './glbGeometryInstances';
+import { frameMembers } from './glbFrameOverrides';
 import { glbNodeLinks } from './glbNodeLinks';
+import { useAnimatedGlbVisibility } from './useAnimatedGlbVisibility';
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import { useInstancingNodeTransform } from './instancingNodeTransform';
-import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
+import {
+  applyGlbNodeOverrides,
+  hiddenGlbFramePaths,
+  hiddenGlbObjects,
+  isApplicableGlbOverride,
+  resolveGlbOverrideTarget,
+} from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
 import { useNodePath } from '../../contexts/NodePathContext';
@@ -38,7 +46,6 @@ import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { GlbAttachedChildren } from './GlbAttachedChildren';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /** One empty list for a GLB still loading, so each hook keyed on `entries` keeps its memo. */
 const NO_ENTRIES: readonly GlbObjectEntry[] = [];
@@ -102,25 +109,32 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // `applyGlbNodeOverrides` writes `visible` during render, and the hidden-paths effect below then
   // assigns every entry's `visible`. Both write one field, so it resolves here, or an authored
   // `visible = false` is switched back on.
-  const overrideHidden = useMemo(() => {
-    const hidden = new Set<THREE.Object3D>();
-    if (!object) return hidden;
-    for (const override of overrides) {
-      if (boolSlotValue(override.rawProperties.visible) !== false) continue;
-      if (!isApplicableGlbOverride(override)) continue;
-      const target = resolveGlbOverrideTarget(object, entries, override);
-      if (target) hidden.add(target);
-    }
-    return hidden;
-  }, [object, entries, overrides]);
+  const overrideHidden = useMemo(
+    () => (object ? hiddenGlbObjects(object, entries, overrides) : new Set<THREE.Object3D>()),
+    [object, entries, overrides]
+  );
 
+  const overrideHiddenFrames = useMemo(() => hiddenGlbFramePaths(entries, overrides), [entries, overrides]);
+
+  // A pushed `visible` track writes the property an override writes, so it takes its place. A node
+  // draws when its own value and the value of each Skeleton3D and BoneAttachment3D above it say so.
+  const animatedVisible = useAnimatedGlbVisibility(entries, root.path);
+  const frames = useMemo(() => frameMembers(entries), [entries]);
   const hiddenNodePaths = selection?.hiddenNodePaths;
   useEffect(() => {
     if (nodePath === null) return;
-    for (const { relPath, object: obj } of entries) {
-      obj.visible = !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false) && !overrideHidden.has(obj);
+    const hiddenByFrame = new Set<THREE.Object3D>();
+    for (const { frame, below } of frames) {
+      const isShown = animatedVisible.get(frame.path) ?? !overrideHiddenFrames.has(frame.path);
+      if (!isShown) for (const object of below) hiddenByFrame.add(object);
     }
-  }, [entries, nodePath, hiddenNodePaths, overrideHidden]);
+    for (const { relPath, object: obj } of entries) {
+      const isShown = animatedVisible.get(obj) ?? !overrideHidden.has(obj);
+      const isTreeHidden = hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false;
+      obj.visible = isShown && !isTreeHidden && !hiddenByFrame.has(obj);
+    }
+    for (const { frame } of frames) if (frame.group) frame.group.visible = !hiddenByFrame.has(frame.group);
+  }, [entries, frames, nodePath, hiddenNodePaths, overrideHidden, overrideHiddenFrames, animatedVisible]);
 
   // As in Godot, a GLB's clips live on an `AnimationPlayer` child that `glbSceneRootChildren`
   // synthesises, so selecting that child, not the GLB root, activates the driver.
@@ -240,7 +254,7 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
 
 /**
  * One `<GlbSurfaceMaterialOverride>` per override node with a `surface_material_override/0`. The
- * path resolves through `matchGlbTarget`, as the transform overrides do, so a Godot path and a
+ * path resolves through `resolveGlbOverrideTarget`, as the transform overrides do, so a Godot path and a
  * three path that disagree about importer-synthesised levels land on one mesh.
  */
 function useGlbMaterialOverrides(
