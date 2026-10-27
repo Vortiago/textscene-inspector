@@ -228,10 +228,14 @@ Tag a new shared helper. Do not edit the list.
   `useExternalStoreValue` in `r3f/hooks/createExternalStore.ts`.
 - A React context that holds a store: `createStoreContext` in `r3f/hooks/createStoreContext.tsx`.
 - What an editor gizmo draws for its node: `useGizmoState` in `r3f/hooks/useGizmoState.ts`.
+- The Skeleton3D and BoneAttachment3D groups of an instanced GLB: `frameGroupsOf` in
+  `r3f/internal/glb-scene-root/glbFrameOverrides.ts`.
 - The children of a GLB scene root: `glbSceneRootChildCount` in
   `r3f/internal/glb-scene-root/glbHierarchy.ts`.
 - Where a node under a GLB instance attaches: `resolveGlbAttachments` in
   `r3f/internal/glb-scene-root/glbNodeOverrides.ts`. The scene tree and the viewport both call it.
+- A `visible` value track on a node of an instanced GLB: `useAnimatedGlbVisibility` in
+  `r3f/internal/glb-scene-root/useAnimatedGlbVisibility.ts`.
 - A walk of the Live scene tree: `liveStep`, `LiveTree` and `walkLiveTree` in
   `r3f/liveSceneTree.ts`. Fold it with `LiveTree.fold`, and read one path with `LiveTree.at`.
 - Mesh content and its disposal: `useMeshContent` in `r3f/meshes/meshContent.ts`, and
@@ -241,6 +245,10 @@ Tag a new shared helper. Do not edit the list.
   `r3f/sharedTexture.ts`.
 - A UV window on a texture: `regionUvWindow`, `flippedUvWindow` and `applyUvWindow` in
   `r3f/uvWindow.ts`.
+- A transform written to a node Godot makes a bone, composed onto its rest pose: `composeOntoRest`
+  in `resources/formats/glb/boneRest.ts`.
+- The Godot world matrix of a node in an instanced GLB, which is not three's for a skinned mesh:
+  `godotMatrixWorld` in `resources/formats/glb/skinnedMeshSpace.ts`.
 - The cap of a cylinder or a tube: `TOP_CAP`, `BOTTOM_CAP` and `writeCapFan` in
   `resources/meshes/primitivemesh/capFan.ts`.
 - The rows and rings of a round primitive mesh: `rowAt` and `writeRings` in
@@ -266,6 +274,7 @@ Tag a new shared helper. Do not edit the list.
 - A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a build
   that throws stores nothing. Pass `keeps` for a value that is not final yet, and `stamp` for a key
   whose contents change, as a texture's `version`.
+- A warning that must appear once, not on every pass or rebuild: `warnOnce` in `utils/warnOnce.ts`.
 - In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
 - In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.

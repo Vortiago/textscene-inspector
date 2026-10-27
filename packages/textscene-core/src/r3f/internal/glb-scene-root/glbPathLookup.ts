@@ -14,7 +14,7 @@ import {
   type GodotFrameKind,
 } from '../../../resources/formats/glb/godotNodes.js';
 import { perObject } from '../../../utils/perObject.js';
-import { warn } from '../../../logger.js';
+import { warnOnce } from '../../../utils/warnOnce.js';
 
 /** A Skeleton3D or BoneAttachment3D, which three has no object of its own for. */
 export interface GlbFrame {
@@ -63,17 +63,6 @@ function frameHost(object: THREE.Object3D, path: string): THREE.Object3D {
  */
 export function findGlbNode(entries: readonly GlbObjectEntry[], godotPath: string): GlbObjectEntry | null {
   return pathTables(entries).nodes.get(godotPath) ?? null;
-}
-
-/** The messages warned about for one entries list, so each consumer of one override leaves one warning. */
-const warnedMessages = perObject((): Set<string> => new Set());
-
-/** Warns with `message` the first time `entries` asks for it, then stays quiet. */
-export function warnOnce(entries: readonly GlbObjectEntry[], key: string, message: string): void {
-  const warned = warnedMessages(entries);
-  if (warned.has(key)) return;
-  warned.add(key);
-  warn(message);
 }
 
 /** The Skeleton3D or BoneAttachment3D at `godotPath`, or `null` when the path names another node or none. */

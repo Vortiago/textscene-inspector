@@ -3,6 +3,7 @@
  */
 import * as THREE from 'three';
 import type { NodeTransform } from '../../nodeTransform';
+import { composeOntoRest } from '../../../resources/formats/glb/boneRest';
 import { godotBoneRest } from '../../../resources/formats/glb/godotNodes';
 
 /**
@@ -15,12 +16,12 @@ export function writeNodeTransform(
 ): void {
   const rest = godotBoneRest(target);
   if (rest) {
-    const local = new THREE.Matrix4().compose(
-      new THREE.Vector3(...position),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)),
-      new THREE.Vector3(...scale)
-    );
-    rest.multiply(local).decompose(target.position, target.quaternion, target.scale);
+    const local = {
+      position: new THREE.Vector3(...position),
+      quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)),
+      scale: new THREE.Vector3(...scale),
+    };
+    composeOntoRest(rest, local, target);
   } else {
     target.position.set(...position);
     target.rotation.set(...rotation);

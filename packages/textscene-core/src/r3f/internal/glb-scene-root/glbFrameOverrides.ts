@@ -13,7 +13,8 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { decomposeForR3F } from '../../nodeTransform';
 import type { GlbObjectEntry } from './glbHierarchy';
 import { writeNodeTransform } from './glbNodeTransform';
-import { glbFrames, warnOnce, type GlbFrame } from './glbPathLookup';
+import { warnOnce } from '../../../utils/warnOnce';
+import { glbFrames, type GlbFrame } from './glbPathLookup';
 
 /** The drive properties of each frame kind, which change the drawing. A key ending in `/` is a prefix. */
 const UNREAD_PROPERTIES: Readonly<Record<GlbFrame['kind'], readonly string[]>> = {
@@ -62,7 +63,11 @@ export function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: Glb
   return frameGroupPath(frame.host) === undefined ? nodes : [frame.host, ...nodes];
 }
 
-/** The group of each frame of the GLB that has one, whose `visible` the GLB root owns. */
+/**
+ * The group of each frame of the GLB that has one, whose `visible` the GLB root owns.
+ *
+ * @oneWay The Skeleton3D and BoneAttachment3D groups of an instanced GLB
+ */
 export function frameGroupsOf(entries: readonly GlbObjectEntry[]): THREE.Object3D[] {
   return glbFrames(entries).flatMap(({ host }) => (frameGroupPath(host) === undefined ? [] : [host]));
 }

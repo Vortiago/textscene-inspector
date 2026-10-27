@@ -49,6 +49,8 @@ function updateMatrixInSkeletonSpace(this: THREE.SkinnedMesh): void {
  * The matrix Godot gives the node `object` stands for, in `target`. A skinned mesh below a
  * Skeleton3D is the frame times its own transform, where three's world matrix is `S * O * S^-1`.
  * Bounds, and the pose a visibility range measures, ask for this one.
+ *
+ * @oneWay The Godot world matrix of a node in an instanced GLB, which is not three's for a skinned mesh
  */
 export function godotMatrixWorld(object: THREE.Object3D, target: THREE.Matrix4): THREE.Matrix4 {
   const frame = placedMeshes.has(object) ? skeletonFrame(object as THREE.SkinnedMesh) : null;

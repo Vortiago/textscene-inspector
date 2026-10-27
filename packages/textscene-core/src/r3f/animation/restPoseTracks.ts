@@ -1,25 +1,18 @@
 /**
- * Composes the transform tracks of a node Godot makes a bone onto its rest pose. Godot gives the
- * node an identity transform below its BoneAttachment3D, so a track value is relative to the bone's
- * pose, and the object holds the rest pose in its own transform (`godotBoneRest`). The composition
- * takes the rest scale as uniform, as it is for a model: a rest with a shear composes approximately.
+ * Composes the transform tracks of a node Godot makes a bone onto its rest pose (`boneRest.ts`).
+ * Each key composes alone, so a rest with a shear composes approximately.
  */
 
 import {
   Euler,
   type KeyframeTrack,
+  type Matrix4,
   Quaternion,
   QuaternionKeyframeTrack,
   Vector3,
   VectorKeyframeTrack,
-  type Matrix4,
 } from 'three';
-
-interface RestPose {
-  position: Vector3;
-  quaternion: Quaternion;
-  scale: Vector3;
-}
+import { composeOntoRest, type LocalPose } from '../../resources/formats/glb/boneRest';
 
 const ROTATION_COMPONENT = /^(.+)\.rotation\[([xyz])\]$/;
 
@@ -32,16 +25,10 @@ export function composeTracksOntoRestPose(
   tracks: readonly KeyframeTrack[],
   restByUuid: ReadonlyMap<string, Matrix4>
 ): KeyframeTrack[] {
-  const rests = new Map<string, RestPose>();
-  for (const [uuid, matrix] of restByUuid) {
-    const pose = { position: new Vector3(), quaternion: new Quaternion(), scale: new Vector3() };
-    matrix.decompose(pose.position, pose.quaternion, pose.scale);
-    rests.set(uuid, pose);
-  }
   const rotations = rotationComponents(tracks);
   return tracks.flatMap((track): KeyframeTrack[] => {
     const uuid = track.name.slice(0, track.name.indexOf('.'));
-    const rest = rests.get(uuid);
+    const rest = restByUuid.get(uuid);
     if (!rest) return [track];
     const component = ROTATION_COMPONENT.exec(track.name);
     if (component) {
@@ -67,20 +54,32 @@ function rotationComponents(tracks: readonly KeyframeTrack[]): Map<string, Keyfr
   return byUuid;
 }
 
-function composeTrack(track: KeyframeTrack, rest: RestPose): KeyframeTrack {
+function composeTrack(track: KeyframeTrack, rest: Matrix4): KeyframeTrack {
   const property = track.name.slice(track.name.indexOf('.'));
   switch (property) {
     case '.position':
-      return mapVectors(track, (v) =>
-        v.multiply(rest.scale).applyQuaternion(rest.quaternion).add(rest.position)
-      );
+      return mapVectors(track, (v) => onRest(rest, { position: v }).position);
     case '.scale':
-      return mapVectors(track, (v) => v.multiply(rest.scale));
+      return mapVectors(track, (v) => onRest(rest, { scale: v }).scale);
     case '.quaternion':
-      return mapQuaternions(track, (q) => q.premultiply(rest.quaternion));
+      return mapQuaternions(track, (q) => onRest(rest, { quaternion: q }).quaternion);
     default:
       return track;
   }
+}
+
+const ORIGIN = new Vector3();
+const NO_TURN = new Quaternion();
+const UNIT = new Vector3(1, 1, 1);
+const _local: LocalPose = { position: new Vector3(), quaternion: new Quaternion(), scale: new Vector3() };
+const _composed: LocalPose = { position: new Vector3(), quaternion: new Quaternion(), scale: new Vector3() };
+
+/** The pose `part` takes on `rest`, with each part a track does not drive at its identity. The caller reads it at once. */
+function onRest(rest: Matrix4, part: Partial<LocalPose>): LocalPose {
+  _local.position.copy(part.position ?? ORIGIN);
+  _local.quaternion.copy(part.quaternion ?? NO_TURN);
+  _local.scale.copy(part.scale ?? UNIT);
+  return composeOntoRest(rest, _local, _composed);
 }
 
 function withInterpolation<T extends KeyframeTrack>(composed: T, track: KeyframeTrack): T {
@@ -109,15 +108,13 @@ function mapQuaternions(
   return withInterpolation(new QuaternionKeyframeTrack(track.name, Array.from(track.times), values), track);
 }
 
-function rotationTrack([x, y, z]: KeyframeTrack[], rest: RestPose, name: string): QuaternionKeyframeTrack {
+function rotationTrack([x, y, z]: KeyframeTrack[], rest: Matrix4, name: string): QuaternionKeyframeTrack {
   const times = Array.from(x!.times);
   const euler = new Euler();
   const quaternion = new Quaternion();
-  const values = times.flatMap((_, i) =>
-    quaternion
-      .setFromEuler(euler.set(x!.values[i]!, y!.values[i]!, z!.values[i]!))
-      .premultiply(rest.quaternion)
-      .toArray()
-  );
+  const values = times.flatMap((_, i) => {
+    quaternion.setFromEuler(euler.set(x!.values[i]!, y!.values[i]!, z!.values[i]!));
+    return onRest(rest, { quaternion }).quaternion.toArray();
+  });
   return withInterpolation(new QuaternionKeyframeTrack(name, times, values), x!);
 }

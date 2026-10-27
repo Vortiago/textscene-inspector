@@ -56,6 +56,11 @@ function withValue(
   return next;
 }
 
+/**
+ * The objects of the GLB that a pushed `visible` value holds, by object.
+ *
+ * @oneWay A `visible` value track on a node of an instanced GLB
+ */
 export function useAnimatedGlbVisibility(
   entries: readonly GlbObjectEntry[],
   links: readonly GlbNodeLink[],
