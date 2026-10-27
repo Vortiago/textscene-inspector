@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
+import { fontGeneratesMipmaps, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
@@ -96,5 +96,52 @@ describe('fontVariationSkew', () => {
     expect(fontVariationSkew(variation({ variation_transform: 'Transform2D(1, 0.2)' }))).toBe(0);
     expect(fontVariationSkew(fontFile(undefined))).toBe(0);
     expect(fontVariationSkew(null)).toBe(0);
+  });
+});
+
+// `default_theme.cpp:1359-1386`: the project setting reaches the bundled font only, and any other
+// font keeps its own `generate_mipmaps` (`font.cpp:2171-2183`, `false` unless set).
+describe('fontGeneratesMipmaps', () => {
+  const withMipmaps = (value: string): FontFileResource => ({
+    ...fontFile(new ArrayBuffer(4)),
+    properties: { generate_mipmaps: value },
+  });
+
+  it('is undefined for the bundled font, which has no font resource of its own', () => {
+    expect(fontGeneratesMipmaps(null)).toBeUndefined();
+  });
+
+  it('is the generate_mipmaps of a FontFile, false when it sets none', () => {
+    expect([
+      fontGeneratesMipmaps(withMipmaps('true')),
+      fontGeneratesMipmaps(withMipmaps('false')),
+      fontGeneratesMipmaps(fontFile(new ArrayBuffer(4))),
+    ]).toEqual([true, false, false]);
+  });
+
+  it('is the generate_mipmaps of the FontFile a FontVariation wraps', () => {
+    const variation: FontResource = { kind: 'variation', baseFont: withMipmaps('true'), properties: {} };
+
+    expect(fontGeneratesMipmaps(variation)).toBe(true);
+  });
+
+  it('is undefined for a FontVariation over the bundled font', () => {
+    expect(fontGeneratesMipmaps({ kind: 'variation', baseFont: null, properties: {} })).toBeUndefined();
+  });
+
+  it('is the generate_mipmaps of the FontFile behind a bytes-less wrapper', () => {
+    const wrapper = fontFile(undefined, [withMipmaps('true')]);
+
+    expect(fontGeneratesMipmaps(wrapper)).toBe(true);
+  });
+
+  it('is the generate_mipmaps of a SystemFont', () => {
+    const system: FontResource = {
+      kind: 'system',
+      fontNames: ['sans-serif'],
+      properties: { generate_mipmaps: 'true' },
+    };
+
+    expect(fontGeneratesMipmaps(system)).toBe(true);
   });
 });

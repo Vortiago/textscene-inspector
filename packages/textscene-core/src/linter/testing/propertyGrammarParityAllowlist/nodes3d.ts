@@ -23,9 +23,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Label3D: {
     renderGap: [
-      // Text shaping: the font, the locale and BiDi settings the TextServer
-      // shapes glyphs by, and the case transform.
-      'font',
+      // Text shaping: the locale and BiDi settings the TextServer shapes
+      // glyphs by, and the case transform.
       'language',
       'text_direction',
       'structured_text_bidi_override',

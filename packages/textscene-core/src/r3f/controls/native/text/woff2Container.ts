@@ -1,12 +1,14 @@
 /**
  * Reads the tables of a WOFF 2.0 file (W3C WOFF 2.0, §"WOFF2 Header", §"Table directory" and
- * §"Compressed data format"): one Brotli stream holding every table, end to end. A table that the
- * format transforms (`glyf`, `loca`, `hmtx`) stays out, as the readers need none of them.
+ * §"Compressed data format"): one Brotli stream holding every table, end to end. A transformed
+ * `glyf` and `loca` are rebuilt (`woff2Glyf.ts`), and the other transformed table, `hmtx`, stays out:
+ * no reader needs it.
  */
 
 import { ByteReader } from '../../../../resources/formats/binaryresource/byteReader';
 import { loadBrotliDecoder } from './brotliDecoder';
 import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
+import { rebuildGlyfTables } from './woff2Glyf';
 
 export const WOFF2_SIGNATURE = 0x774f4632; // 'wOF2'
 const SFNT_COLLECTION_FLAVOR = 0x74746366; // 'ttcf'
@@ -127,8 +129,21 @@ function readDirectoryEntry(reader: ByteReader): DirectoryEntry {
   return { tag, isTransformed, storedLength: isTransformed ? readBase128(reader) : originalLength };
 }
 
+/**
+ * The `glyf` and `loca` that the transformed `glyf` holds. The `loca` is stored with a length of 0,
+ * so the transformed `glyf` is the one place the pair comes from.
+ */
+function setRebuiltGlyfTables(tables: Map<string, Uint8Array>, transformedGlyf: Uint8Array): void {
+  const { glyf, loca } = rebuildGlyfTables(transformedGlyf);
+  tables.set('glyf', glyf);
+  tables.set('loca', loca);
+}
+
 /** Throws on a collection, a directory or stream that does not fit `bytes`, or a Brotli stream that does not decode to the lengths the directory sums to. */
-export async function readWoff2Tables(bytes: ArrayBuffer): Promise<SfntFile> {
+export async function readWoff2Tables(
+  bytes: ArrayBuffer,
+  tags: readonly string[] = SCENE_FONT_TABLE_TAGS
+): Promise<SfntFile> {
   const dv = new DataView(bytes);
   if (dv.getUint32(FLAVOR_OFFSET, false) === SFNT_COLLECTION_FLAVOR) {
     throw new Error('expected a single-font .woff2, got a font collection');
@@ -151,9 +166,9 @@ export async function readWoff2Tables(bytes: ArrayBuffer): Promise<SfntFile> {
   const tables = new Map<string, Uint8Array>();
   let offset = 0;
   for (const { tag, storedLength, isTransformed } of entries) {
-    if (!isTransformed && SCENE_FONT_TABLE_TAGS.includes(tag)) {
-      tables.set(tag, decoded.subarray(offset, offset + storedLength));
-    }
+    const stored = decoded.subarray(offset, offset + storedLength);
+    if (tag === 'glyf' && isTransformed && tags.includes('glyf')) setRebuiltGlyfTables(tables, stored);
+    else if (!isTransformed && tags.includes(tag)) tables.set(tag, stored);
     offset += storedLength;
   }
   return sfntFileOfTables(tables);

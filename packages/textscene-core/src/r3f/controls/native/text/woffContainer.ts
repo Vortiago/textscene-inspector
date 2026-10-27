@@ -16,7 +16,10 @@ const WOFF_NUM_TABLES_OFFSET = 12;
 const WOFF_RECORD_SIZE = 20;
 
 /** Throws on a directory or a table that does not fit `bytes`, or on a zlib stream that does not inflate to its `origLength`. */
-export async function readWoffTables(bytes: ArrayBuffer): Promise<SfntFile> {
+export async function readWoffTables(
+  bytes: ArrayBuffer,
+  tags: readonly string[] = SCENE_FONT_TABLE_TAGS
+): Promise<SfntFile> {
   const dv = new DataView(bytes);
   const numTables = dv.getUint16(WOFF_NUM_TABLES_OFFSET, false);
   const tables = new Map<string, Uint8Array>();
@@ -25,7 +28,7 @@ export async function readWoffTables(bytes: ArrayBuffer): Promise<SfntFile> {
   for (let index = 0; index < numTables; index++) {
     const at = WOFF_HEADER_SIZE + index * WOFF_RECORD_SIZE;
     const tag = readTag(dv, at);
-    if (!SCENE_FONT_TABLE_TAGS.includes(tag)) continue;
+    if (!tags.includes(tag)) continue;
     const offset = dv.getUint32(at + 4, false);
     const compressedLength = dv.getUint32(at + 8, false);
     const length = dv.getUint32(at + 12, false);

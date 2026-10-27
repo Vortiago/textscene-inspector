@@ -20,6 +20,7 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     // The constructor turns shadows off (`label_3d.cpp:1090`), so the file omits an OFF.
     castShadow: parseOptionalInt(properties.cast_shadow) ?? ShadowCastingSetting.OFF,
     text: properties.text === undefined ? '' : unquoteString(properties.text),
+    font: properties.font,
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
     // The setter refuses an index outside 0-2, PARTICLES included (`label_3d.cpp:1001`), so the
     // label keeps its DISABLED default.

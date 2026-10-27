@@ -50,4 +50,4 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 
 ## Known limitations
 
-- **Resource gap** A TextMesh item with a font the previewer cannot read draws a wireframe box in each cell, and the node's details name the type.
+- **Resource gap** A TextMesh item with a SystemFont draws a wireframe box in each cell, and the node's details name the type.

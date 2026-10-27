@@ -52,13 +52,7 @@ export function resolveTitleFontTheme(
   builtInDefaultSizePx: number,
   defaultColor: Rgba
 ): TitlebarFontTheme {
-  const scope = themeResolutionScope(
-    TITLE_LABEL_NATIVE_TYPE,
-    typeVariation,
-    n.themeChain,
-    n.projectTheme,
-    n.projectDefaultFont
-  );
+  const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectFonts);
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, builtInDefaultSizePx);
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);

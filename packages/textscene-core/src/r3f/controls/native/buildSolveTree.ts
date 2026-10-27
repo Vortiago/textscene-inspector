@@ -32,7 +32,7 @@ import type { ResourceType } from '../../../resources/ResourceEventBus';
 import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
-import { resolveProjectDefaultFont } from '../../../resources/fonts/font/projectDefaultFont';
+import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -496,20 +496,12 @@ function buildForest(
     return out;
   }
 
-  /** The project's default theme (`gui/theme/custom`), resolved once for every node. */
-  const projectTheme: ThemeResource | null = (() => {
-    const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim();
-    if (!projectThemeRef) return null;
-    const cached = themeCache.getCached(projectThemeRef);
-    if (cached === undefined) {
-      pendingThemes.add(projectThemeRef);
-      return null;
-    }
-    return cached;
-  })();
-
-  /** The project's default font (`gui/theme/custom_font`), resolved once for every node. */
-  const projectDefaultFont = resolveProjectDefaultFont(projectSettings, fontCache, pendingFonts);
+  /** The project's theme and default font, resolved once for every node. */
+  const projectFonts = resolveProjectFonts(
+    projectSettings,
+    { themes: themeCache, fonts: fontCache },
+    { themes: pendingThemes, fonts: pendingFonts }
+  );
 
   /**
    * A Texture2D ref's pixel size, or null until known. `textureSize` and every
@@ -761,8 +753,7 @@ function buildForest(
       collapsed.type,
       (collapsed.properties as ControlProperties).themeTypeVariation,
       nodeThemeChain,
-      projectTheme,
-      projectDefaultFont
+      projectFonts
     );
     const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
     const texture = resolveTextureSize(
@@ -805,8 +796,7 @@ function buildForest(
       icons: themedIcons,
       resources: ownScope,
       themeChain: nodeThemeChain,
-      projectTheme,
-      projectDefaultFont,
+      projectFonts,
     };
     const hoistedBelow = isBoundary ? [] : childHoisted;
     return canvasChainBroken || topLevel

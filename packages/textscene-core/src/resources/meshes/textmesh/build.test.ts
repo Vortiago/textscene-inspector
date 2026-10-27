@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
-import { parseSfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { shapedTextSizeWidthPx, shapeText } from '../../../r3f/controls/native/text/textLayout';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
@@ -21,7 +21,7 @@ const BOTTOM = '2';
 /** Half the default depth of 0.05, as the surface's float stores it. */
 const HALF_DEPTH = Math.fround(0.025);
 
-const outlines = parseSfntOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf'))!;
+const outlines = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
 const face: TextMeshFace = { outlines, metrics: OPEN_SANS_FONT_METRICS };
 
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */

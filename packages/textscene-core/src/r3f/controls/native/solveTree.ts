@@ -6,6 +6,7 @@
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
@@ -155,15 +156,10 @@ export interface SolveNode {
    */
   themeChain: readonly ThemeResource[];
   /**
-   * The project's default theme (`gui/theme/custom`), or `null` when unset or
-   * unresolved. Required, like `fontOverrides`.
+   * The project's theme and default font. Every font lookup ends at them, before the bundled font.
+   * Required, like `fontOverrides`.
    */
-  projectTheme: ThemeResource | null;
-  /**
-   * The font `gui/theme/custom_font` names, or `null` when unset, still loading or failed. Every font
-   * lookup ends at it, before the bundled one. Required, like `fontOverrides`.
-   */
-  projectDefaultFont: FontResource | null;
+  projectFonts: ProjectFonts;
   /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default

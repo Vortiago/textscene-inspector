@@ -5,6 +5,7 @@
 
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import { withDefaultBaseFont } from '../../fonts/font/defaultBaseFont';
+import type { ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from './types';
 
@@ -128,8 +129,7 @@ export function themeResolutionScope(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],
-  projectTheme: ThemeResource | null,
-  projectDefaultFont: FontResource | null
+  { projectTheme, projectDefaultFont }: ProjectFonts
 ): ThemeResolutionScope {
   return {
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
@@ -187,6 +187,24 @@ export function resolveThemeFontIn(
   // The default theme's `default_font`, which the project font replaces
   // (`default_theme.cpp:1371-1373`), is the last rung (`theme_owner.cpp:227-254`).
   return found === undefined ? scope.projectDefaultFont : found;
+}
+
+/**
+ * The font of a node outside the Control tree that has a `font` property: TextMesh
+ * (`primitive_meshes.cpp:3779-3809`) and Label3D (`label_3d.cpp:812-850`). Its own font wins, else
+ * the project theme's `font` for the node's type chain, else the default theme's `default_font`.
+ * A font that is unset or did not load is `own` null. Null is the bundled font. A scene ancestor's
+ * theme is not in the chain.
+ *
+ * @canonical A TextMesh or Label3D font: own font, project theme, project default font
+ */
+export function resolveFontOrDefault(
+  nativeType: string,
+  own: FontResource | null,
+  projectFonts: ProjectFonts
+): FontResource | null {
+  const scope = themeResolutionScope(nativeType, undefined, [], projectFonts);
+  return resolveThemeFontIn(scope, 'font', own ?? undefined);
 }
 
 /**

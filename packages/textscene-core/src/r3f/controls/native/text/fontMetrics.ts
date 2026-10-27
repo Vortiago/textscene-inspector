@@ -187,10 +187,10 @@ const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetri
  * `metrics` with a `FontVariation`'s `embolden` and `skew` set. The wrapper reads every other field
  * through the face, so a live getter stays live. With neither, it is the face itself.
  */
-export function withVariation(
-  metrics: FontMetrics,
+export function withVariation<Metrics extends FontMetrics>(
+  metrics: Metrics,
   { embolden = 0, skew = 0 }: { embolden?: number; skew?: number }
-): FontMetrics {
+): Metrics {
   if (embolden === 0 && skew === 0) return metrics;
   const byVariation = variationsOf(metrics);
   const key = `${embolden}/${skew}`;
@@ -200,7 +200,7 @@ export function withVariation(
       key,
       (wrapped = Object.create(metrics, { embolden: { value: embolden }, skew: { value: skew } }))
     );
-  return wrapped!;
+  return wrapped as Metrics;
 }
 
 /**

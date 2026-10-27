@@ -11,6 +11,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import * as logger from '../../../../logger';
 import { faceOfStyle, resolveRichTextFaces } from './styleFaces';
+import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 
 /** `default_theme.cpp:1399`/`:1403`: the second number of the italics `Transform2D`. */
 const ITALIC_SKEW = 0.2;
@@ -78,7 +79,7 @@ describe('resolveRichTextFaces', () => {
 
   it("bases the styles on the project's default font, not the bundled one", () => {
     const projectFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    facesOf(richTextNode({ projectDefaultFont: projectFont }));
+    facesOf(richTextNode({ projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont } }));
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockClear();
     facesOf(richTextNode());
@@ -102,7 +103,11 @@ describe('resolveRichTextFaces', () => {
     const ancestor = facesOf(richTextNode({ themeChain: [themeWith({ bold_font: variation('2') })] }));
     expect(variationOf(ancestor.bold).embolden).toBe(2);
     expect(variationOf(ancestor.italic)).toEqual({ embolden: 0, skew: ITALIC_SKEW });
-    const project = facesOf(richTextNode({ projectTheme: themeWith({ bold_font: variation('4') }) }));
+    const project = facesOf(
+      richTextNode({
+        projectFonts: { ...NO_PROJECT_FONTS, projectTheme: themeWith({ bold_font: variation('4') }) },
+      })
+    );
     expect(variationOf(project.bold).embolden).toBe(4);
   });
 
@@ -131,7 +136,9 @@ describe('resolveRichTextFaces', () => {
       baseFont: null,
       properties: { variation_embolden: '0.5' },
     };
-    const faces = facesOf(richTextNode({ projectDefaultFont: projectFont }));
+    const faces = facesOf(
+      richTextNode({ projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont } })
+    );
     expect(variationOf(faces.normal)).toEqual({ embolden: 0.5, skew: 0 });
     expect(variationOf(faces.bold)).toEqual({ embolden: 1.2, skew: 0 });
     expect(variationOf(faces.italic)).toEqual({ embolden: 0, skew: ITALIC_SKEW });

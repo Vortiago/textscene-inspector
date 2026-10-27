@@ -1,15 +1,16 @@
 /**
  * A mesh with the files its build reads, loaded through the resource loader: a trail mesh whose
  * `curve` is an ExtResource builds once that file has loaded, and a TextMesh once its font file and
- * the metrics of that font have.
+ * the outlines and metrics of that font have.
  */
 
 import { useCallback, useMemo } from 'react';
 import type { LoadedFont, ResolvableResource, ScopedResource } from '../scopedResource';
 import { useLoadedFilesAndFonts } from '../useLoadedFilesAndFonts';
+import { useProjectFonts } from '../useProjectFonts';
 import { usePendingWhile } from '../usePendingWhile';
 import {
-  isAwaitingFontMetrics,
+  isAwaitingFont,
   primitiveMeshFiles,
   primitiveMeshFontFiles,
   primitiveMeshReadsFont,
@@ -17,9 +18,9 @@ import {
 import { useFontMetricsSettleCount } from '../../r3f/controls/native/text/useFontMetricsSettleCount';
 
 export interface ResolvableMesh {
-  /** Null for no mesh, and while a file or the metrics the build reads load. */
+  /** Null for no mesh, and while a file, or the outlines or metrics the build reads, load. */
   mesh: ResolvableResource | null;
-  /** True while a file the build reads has neither loaded nor failed, or its font awaits its metrics. */
+  /** True while a file the build reads has neither loaded nor failed, or its font awaits its outlines or metrics. */
   isLoading: boolean;
 }
 
@@ -35,16 +36,18 @@ export function useResolvableMesh(scoped: ScopedResource | null): ResolvableMesh
     loadedFont,
     isLoading: isLoadingFiles,
   } = useLoadedFilesAndFonts(filesPlan, fontsPlan, readsFonts);
+  const { projectFonts, isLoading: isLoadingProjectFonts } = useProjectFonts(readsFonts);
+  const isLoadingFilesAndFonts = isLoadingFiles || isLoadingProjectFonts;
   const loaded = useMemo(
-    () => (scoped && !isLoadingFiles ? { ...scoped, loadedFile, loadedFont } : null),
-    [scoped, isLoadingFiles, loadedFile, loadedFont]
+    () => (scoped && !isLoadingFilesAndFonts ? { ...scoped, loadedFile, loadedFont, projectFonts } : null),
+    [scoped, isLoadingFilesAndFonts, loadedFile, loadedFont, projectFonts]
   );
-  const isAwaitingMetrics = loaded !== null && isAwaitingFontMetrics(loaded);
-  // The count moves the render that reads the metrics again, once they settle.
-  useFontMetricsSettleCount(isAwaitingMetrics);
-  usePendingWhile(isAwaitingMetrics);
+  const hasFontPending = loaded !== null && isAwaitingFont(loaded);
+  // The count moves the render that reads the font again, once its outlines and metrics settle.
+  useFontMetricsSettleCount(hasFontPending);
+  usePendingWhile(hasFontPending);
   return {
-    mesh: isAwaitingMetrics ? null : loaded,
-    isLoading: isLoadingFiles || isAwaitingMetrics,
+    mesh: hasFontPending ? null : loaded,
+    isLoading: isLoadingFilesAndFonts || hasFontPending,
   };
 }

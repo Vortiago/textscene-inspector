@@ -143,6 +143,98 @@ describe('paintSceneFontCanvas — embolden', () => {
   });
 });
 
+describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  interface Call {
+    op: string;
+    args: unknown[];
+    lineWidth: number;
+    composite: string;
+  }
+
+  /** Records every draw call of one stroked paint, scratch canvases included: happy-dom has no 2D context. */
+  function paintStrokedRecording(layout: ReturnType<typeof layoutFor>, strokeWidthPx: number) {
+    const calls: Call[] = [];
+    const ctx = {
+      lineWidth: 1,
+      globalCompositeOperation: 'source-over',
+      save: () => {},
+      restore: () => {},
+      transform: () => {},
+      measureText: () => ({
+        actualBoundingBoxLeft: 0,
+        actualBoundingBoxRight: 8,
+        actualBoundingBoxAscent: 12,
+        actualBoundingBoxDescent: 0,
+      }),
+      fillText: (...args: unknown[]) => record('fillText', args),
+      strokeText: (...args: unknown[]) => record('strokeText', args),
+      drawImage: (...args: unknown[]) => record('drawImage', args),
+    };
+    const record = (op: string, args: unknown[]) =>
+      calls.push({ op, args, lineWidth: ctx.lineWidth, composite: ctx.globalCompositeOperation });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, strokeWidthPx);
+    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, 0, canvasLayout, strokeWidthPx);
+    return { calls, canvasLayout };
+  }
+
+  const GROWTH_PX = 1.2;
+
+  it('strokes a plain glyph once, centred on its contour at its pen', () => {
+    const layout = layoutFor('A', 0);
+    const { calls, canvasLayout } = paintStrokedRecording(layout, 4);
+
+    expect(calls).toEqual([
+      {
+        op: 'strokeText',
+        args: ['A', canvasLayout.offsetXPx, canvasLayout.offsetYPx + layout.baselineOffsetPx],
+        lineWidth: 4,
+        composite: 'source-over',
+      },
+    ]);
+  });
+
+  // FreeType strokes the emboldened contour (`text_server_adv.cpp:1313-1314`, then `:1376-1403`):
+  // the ring is centred on the contour grown by half the growth, and shifted right and up by half.
+  it('strokes a bold glyph by the ring plus the growth, placed at the shift', () => {
+    const layout = boldLayoutFor('A', 1.2);
+    const { calls, canvasLayout } = paintStrokedRecording(layout, 4);
+    const ring = calls.find((c) => c.op === 'strokeText' && c.composite === 'source-over')!;
+    const placed = calls.filter((c) => c.op === 'drawImage').at(-1)!;
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+
+    expect(ring.lineWidth).toBeCloseTo(4 + GROWTH_PX, 10);
+    expect((placed.args[1] as number) + (ring.args[1] as number)).toBeCloseTo(
+      canvasLayout.offsetXPx + GROWTH_PX / 2,
+      10
+    );
+    expect((placed.args[2] as number) + (ring.args[2] as number)).toBeCloseTo(baselineY - GROWTH_PX / 2, 10);
+    expect(placed.composite).toBe('source-over');
+  });
+
+  it('cuts the ring where the grown glyph is eroded by half the ring minus half the growth', () => {
+    const { calls } = paintStrokedRecording(boldLayoutFor('A', 1.2), 4);
+    const hole = calls.find((c) => c.op === 'fillText')!;
+    const erosion = calls.find((c) => c.op === 'strokeText' && c.composite === 'destination-out')!;
+    const ring = calls.find((c) => c.op === 'strokeText' && c.composite === 'source-over')!;
+
+    expect(erosion.lineWidth).toBeCloseTo(4 - GROWTH_PX, 10);
+    expect(hole.args).toEqual(ring.args);
+    expect(erosion.args).toEqual(ring.args);
+    expect(calls.some((c) => c.op === 'drawImage' && c.composite === 'destination-out')).toBe(true);
+  });
+
+  it('cuts the ring outside the contour where the growth exceeds the ring', () => {
+    const { calls } = paintStrokedRecording(boldLayoutFor('A', 1.2), 1);
+    const dilation = calls.filter((c) => c.op === 'strokeText' && c.lineWidth !== 1 + GROWTH_PX).at(-1)!;
+
+    expect(dilation.lineWidth).toBeCloseTo(GROWTH_PX - 1, 10);
+    expect(dilation.composite).toBe('source-over');
+  });
+});
+
 describe('the outline surface overlays the fill surface exactly', () => {
   // Label3D draws a stroked outline (`label_3d.cpp:610-615`) and the fill from one
   // layout, and they line up despite the stroke padding. Fractional line spacing

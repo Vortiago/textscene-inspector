@@ -9,7 +9,7 @@
 // `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
-import { maxEmboldenGrowthPx, paintEmboldenedFill } from './canvasEmbolden';
+import { maxEmboldenGrowthPx, paintEmboldenedFill, paintEmboldenedRing } from './canvasEmbolden';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -174,7 +174,9 @@ export function paintSceneFontCanvas(
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
-      if (stroked) ctx.strokeText(gp.char, penX, baselineY);
+      if (stroked && gp.emboldenGrowthPx) {
+        paintEmboldenedRing(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx, strokeWidthPx);
+      } else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
       else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else ctx.fillText(gp.char, penX, baselineY);
     }

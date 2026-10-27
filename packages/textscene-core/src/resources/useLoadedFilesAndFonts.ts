@@ -14,6 +14,8 @@ export interface LoadedFilesAndFonts {
   loadedFont: LoadedFont;
   /** True while a file or a font a plan names has neither loaded nor failed. */
   isLoading: boolean;
+  /** True while a font a plan names has neither loaded nor failed. */
+  isLoadingFonts: boolean;
 }
 
 /** A caller keeps both plans stable while their inputs hold, as `useLoadedFiles` asks. */
@@ -32,5 +34,6 @@ export function useLoadedFilesAndFonts(
     loadedFile: files.loadedFile,
     loadedFont: fonts.loadedFile,
     isLoading: files.isLoading || fonts.isLoading,
+    isLoadingFonts: fonts.isLoading,
   };
 }
