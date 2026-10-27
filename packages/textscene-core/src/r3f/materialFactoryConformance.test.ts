@@ -146,8 +146,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
   'packages/textscene-core/src/r3f/lighting2d/fullScreenQuad.tsx':
     'the light pass quad: its callers hand it the accumulator seed, with fixed shaders and one uniform, or a directional light material, memoised on every input and disposed on replacement',
-  'packages/textscene-core/src/r3f/nodeIcon/BillboardIcon.tsx':
-    'mounts the shared material of `iconMaterial`, which a changed look replaces with another material',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/r3f/preview/PreviewSun.tsx':
@@ -177,8 +175,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per built text run; the glyph atlas travels as a uniform, so re-laying-out a run moves no program input',
   'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':
     'one invisible stand-in that hides the draw groups another surface draw owns; three skips an invisible group material, so it is never rendered, so never compiled',
-  'packages/textscene-core/src/r3f/nodeIcon/iconMaterial.ts':
-    'one material per icon, tint and opacity, shared by every icon of that look; its program is fixed at construction and nothing writes it later',
   'packages/textscene-core/src/r3f/csg/evaluateCsgPlan.ts':
     'per-surface sentinels handed to the CSG library so it can group faces — never rendered, so never compiled',
   'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':

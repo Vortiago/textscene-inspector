@@ -4,20 +4,24 @@
  * click on it selects its node, since the delegated pointer root resolves the hit to the node group.
  */
 
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { materialProgramInputs } from '../materialProgramInputs';
 import { releasedOnUnmount } from '../sharedTexture';
 import { GIZMO_RENDER_ORDER, GizmoGroup } from '../components/GizmoGroup';
 import { nodeIconUserData } from '../editorHelpers';
 import { useGizmoLookValue } from '../gizmo/PluginGizmo';
 import type { TscnNode } from '../../parser/types';
 import type { EditorIconRegistration } from './editorIconRegistration';
+import { editorIconTexture } from './editorIconTexture';
 import { iconAppearance } from './iconAppearance';
-import { iconMaterial } from './iconMaterial';
 import { iconWorldMatrix } from './iconWorldMatrix';
 
 const ICON_HALF_SIZE = 0.05;
+
+/** The scissor of the icon material (`node_3d_editor_gizmos.cpp:974-975`). */
+const ALPHA_SCISSOR = 0.1;
 
 /** `Vector3(-s, s, 0)` and its three corners, with the UV from the top left (`:338-351`). */
 const ICON_QUAD = releasedOnUnmount(new THREE.PlaneGeometry(2 * ICON_HALF_SIZE, 2 * ICON_HALF_SIZE));
@@ -42,8 +46,20 @@ export function BillboardIcon({ node, registration }: BillboardIconProps) {
     () => iconAppearance(look.variant, look.isInstantiated, modulate),
     [look.variant, look.isInstantiated, modulate]
   );
-  const gl = useThree((state) => state.gl);
-  const material = useMemo(() => iconMaterial(gl, icon, color, opacity), [gl, icon, color, opacity]);
+  const material = useMemo(
+    () =>
+      materialProgramInputs({
+        props: {
+          map: editorIconTexture(icon),
+          color,
+          opacity,
+          alphaTest: ALPHA_SCISSOR,
+          fog: false,
+          side: THREE.DoubleSide,
+        },
+      }),
+    [icon, color, opacity]
+  );
   const userData = useMemo(nodeIconUserData, []);
 
   // The icon writes its own world matrix, as a whole-node billboard does (`nodeBillboard.ts`).
@@ -62,10 +78,11 @@ export function BillboardIcon({ node, registration }: BillboardIconProps) {
         ref={meshRef}
         geometry={ICON_QUAD}
         renderOrder={GIZMO_RENDER_ORDER}
-        material={material}
         matrixWorldAutoUpdate={false}
         userData={userData}
-      />
+      >
+        <meshBasicMaterial key={material.key} {...material.props} />
+      </mesh>
     </GizmoGroup>
   );
 }

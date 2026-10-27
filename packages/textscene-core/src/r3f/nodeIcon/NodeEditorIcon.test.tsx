@@ -104,16 +104,6 @@ describe('NodeEditorIcon', () => {
     expect(materialOf(first!).map).toBe(materialOf(second!).map);
   });
 
-  it('draws icons of one look through one material', async () => {
-    const [first, second] = await render([CAMERA_ICON, CAMERA_ICON]);
-    expect(materialOf(first!)).toBe(materialOf(second!));
-  });
-
-  it('draws icons of two looks through two materials', async () => {
-    const [plain, tinted] = await render([CAMERA_ICON, TINTED_ICON]);
-    expect(materialOf(plain!)).not.toBe(materialOf(tinted!));
-  });
-
   it('tags the quad as a node icon, which no bounds include', async () => {
     const [mesh] = await render(CAMERA_ICON);
     expect(isNodeIcon(mesh!)).toBe(true);
