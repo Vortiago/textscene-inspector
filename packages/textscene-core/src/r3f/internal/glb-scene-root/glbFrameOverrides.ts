@@ -13,6 +13,7 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { decomposeForR3F } from '../../nodeTransform';
 import type { GlbObjectEntry } from './glbHierarchy';
 import { writeNodeTransform } from './glbNodeTransform';
+import { relativeTo } from '../../../utils/nodePath';
 import { warnOnce } from '../../../utils/warnOnce';
 import { glbFrames, type GlbFrame } from './glbPathLookup';
 
@@ -56,9 +57,8 @@ export function applyGlbFrameOverride(
  * every object that stands for a node below it, such as a skinned mesh the group does not hold.
  */
 function objectsBelowFrame(entries: readonly GlbObjectEntry[], frame: GlbFrame): THREE.Object3D[] {
-  const below = `${frame.path}/`;
   const nodes = entries
-    .filter(({ object }) => godotNodePaths(object).some((path) => path.startsWith(below)))
+    .filter(({ object }) => godotNodePaths(object).some((path) => relativeTo(frame.path, path) !== undefined))
     .map(({ object }) => object);
   return frame.group ? [frame.group, ...nodes] : nodes;
 }

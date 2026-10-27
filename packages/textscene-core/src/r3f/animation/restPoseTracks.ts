@@ -62,11 +62,21 @@ function composeTrack(track: KeyframeTrack, rest: Matrix4): KeyframeTrack {
   const property = track.name.slice(track.name.indexOf('.'));
   switch (property) {
     case '.position':
-      return mapVectors(track, (v) => onRest(rest, { position: v }).position);
+      return mapKeys(
+        track,
+        new Vector3(),
+        VectorKeyframeTrack,
+        (v) => onRest(rest, { position: v }).position
+      );
     case '.scale':
-      return mapVectors(track, (v) => onRest(rest, { scale: v }).scale);
+      return mapKeys(track, new Vector3(), VectorKeyframeTrack, (v) => onRest(rest, { scale: v }).scale);
     case '.quaternion':
-      return mapQuaternions(track, (q) => onRest(rest, { quaternion: q }).quaternion);
+      return mapKeys(
+        track,
+        new Quaternion(),
+        QuaternionKeyframeTrack,
+        (q) => onRest(rest, { quaternion: q }).quaternion
+      );
     default:
       return track;
   }
@@ -91,25 +101,19 @@ function withInterpolation<T extends KeyframeTrack>(composed: T, track: Keyframe
   return composed;
 }
 
-function mapVectors(track: KeyframeTrack, compose: (value: Vector3) => Vector3): VectorKeyframeTrack {
-  const values = Array.from(track.values);
-  const vector = new Vector3();
-  for (let i = 0; i < values.length; i += 3) {
-    compose(vector.fromArray(values, i)).toArray(values, i);
-  }
-  return withInterpolation(new VectorKeyframeTrack(track.name, Array.from(track.times), values), track);
-}
-
-function mapQuaternions(
+/** `track` with `compose` applied to each key, read into `value` and written back. */
+function mapKeys<T extends Vector3 | Quaternion, K extends KeyframeTrack>(
   track: KeyframeTrack,
-  compose: (value: Quaternion) => Quaternion
-): QuaternionKeyframeTrack {
+  value: T,
+  Track: new (name: string, times: number[], values: number[]) => K,
+  compose: (value: T) => T
+): K {
+  const stride = track.getValueSize();
   const values = Array.from(track.values);
-  const quaternion = new Quaternion();
-  for (let i = 0; i < values.length; i += 4) {
-    compose(quaternion.fromArray(values, i)).toArray(values, i);
+  for (let i = 0; i < values.length; i += stride) {
+    compose(value.fromArray(values, i) as T).toArray(values, i);
   }
-  return withInterpolation(new QuaternionKeyframeTrack(track.name, Array.from(track.times), values), track);
+  return withInterpolation(new Track(track.name, Array.from(track.times), values), track);
 }
 
 function rotationTrack([x, y, z]: KeyframeTrack[], rest: Matrix4, name: string): QuaternionKeyframeTrack {
