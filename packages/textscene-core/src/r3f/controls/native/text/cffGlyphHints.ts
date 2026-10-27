@@ -29,8 +29,11 @@ export class HintMask {
   /** Reads the mask for `stemCount` stems from `readByte` (`cf2_hintmask_read`). No byte is read for no stems. */
   read(stemCount: number, readByte: () => number): void {
     this.setCount(stemCount);
-    const bytes = Array.from({ length: (stemCount + 7) >> 3 }, readByte);
-    this.bits = this.bits.map((_, i) => ((bytes[i >> 3]! >> (7 - (i & 7))) & 1) === 1);
+    for (let first = 0; first < stemCount; first += 8) {
+      const byte = readByte();
+      for (let i = first; i < Math.min(first + 8, stemCount); i++)
+        this.bits[i] = ((byte >> (7 - (i - first))) & 1) === 1;
+    }
   }
 
   /** Turns all `stemCount` stems on (`cf2_hintmask_setAll`): the mask a glyph without a `hintmask` has. */
@@ -39,9 +42,9 @@ export class HintMask {
     this.bits.fill(true);
   }
 
-  /** The mask as it is now, to switch bits off without changing it. */
-  copyBits(): boolean[] {
-    return [...this.bits];
+  /** Whether stem `index` is on. */
+  isOn(index: number): boolean {
+    return this.bits[index] ?? false;
   }
 
   private setCount(stemCount: number): void {

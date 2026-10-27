@@ -86,31 +86,33 @@ export class HintMap {
     this.edges = [];
     const stems = hints.horizontalStems;
     if (stems.length > mask.bitCount) return;
-    const pending = mask.copyBits();
-    const edgesOf = (i: number): [HintEdge, HintEdge] => [
-      stemEdge(stems[i]!, i, true, hintOrigin, this.scale),
-      stemEdge(stems[i]!, i, false, hintOrigin, this.scale),
-    ];
+    // The edges of each stem the mask turns on, which the map owns once it takes them in.
+    const pending = stems.map((stem, i): [HintEdge, HintEdge] | null =>
+      mask.isOn(i)
+        ? [stemEdge(stem, i, true, hintOrigin, this.scale), stemEdge(stem, i, false, hintOrigin, this.scale)]
+        : null
+    );
 
-    // Ghost hints at the em box get the highest priority.
+    // Ghost hints at the em box get the highest priority. The zones share theirs, so the map takes copies.
     if (this.blues.emBoxEdges) {
-      this.insert(this.blues.emBoxEdges.bottom, noEdge());
-      this.insert(noEdge(), this.blues.emBoxEdges.top);
+      this.insert({ ...this.blues.emBoxEdges.bottom }, noEdge());
+      this.insert(noEdge(), { ...this.blues.emBoxEdges.top });
     }
     for (let i = 0; i < stems.length; i++) {
-      if (!pending[i]) continue;
-      const [bottom, top] = edgesOf(i);
+      const edges = pending[i];
+      if (!edges) continue;
+      const [bottom, top] = edges;
       if (isLockedEdge(bottom) || isLockedEdge(top) || this.blues.capture(bottom, top)) {
         this.insert(bottom, top);
-        pending[i] = false;
+        pending[i] = null;
       }
     }
 
     if (isInitial) {
       this.lockBaselineWhenUncovered();
     } else {
-      for (let i = 0; i < stems.length; i++) {
-        if (pending[i]) this.insert(...edgesOf(i));
+      for (const edges of pending) {
+        if (edges) this.insert(...edges);
       }
     }
 
@@ -153,8 +155,8 @@ export class HintMap {
     if (isPair && top.csCoord < bottom.csCoord) return;
 
     const { edges } = this;
-    let at = edges.findIndex((edge) => edge.csCoord >= first.csCoord);
-    if (at < 0) at = edges.length;
+    let at = 0;
+    while (at < edges.length && edges[at]!.csCoord < first.csCoord) at++;
     const next = edges[at];
     if (next) {
       if (next.csCoord === first.csCoord) return;
@@ -168,7 +170,8 @@ export class HintMap {
     if (at > 0 && first.dsCoord < edges[at - 1]!.dsCoord) return;
     if (next && last.dsCoord > next.dsCoord) return;
     if (edges.length + (isPair ? 1 : 0) >= MAX_EDGES) return;
-    edges.splice(at, 0, ...(isPair ? [{ ...first }, { ...top }] : [{ ...first }]));
+    if (isPair) edges.splice(at, 0, first, top);
+    else edges.splice(at, 0, first);
   }
 
   /**

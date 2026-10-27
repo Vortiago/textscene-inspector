@@ -79,33 +79,30 @@ export function stemEdge(
   hintOrigin: number,
   scale: number
 ): HintEdge {
-  const edge = noEdge();
   const width = stem.max - stem.min;
+  let csCoord = 0;
+  let flags = 0;
   if (width === GHOST_BOTTOM_WIDTH) {
     if (isBottom) {
-      edge.csCoord = stem.max;
-      edge.flags = EdgeFlag.GhostBottom;
+      csCoord = stem.max;
+      flags = EdgeFlag.GhostBottom;
     }
   } else if (width === GHOST_TOP_WIDTH) {
     if (!isBottom) {
-      edge.csCoord = stem.min;
-      edge.flags = EdgeFlag.GhostTop;
+      csCoord = stem.min;
+      flags = EdgeFlag.GhostTop;
     }
   } else {
     // An inverted pair swaps its edges: CoolType does, and so does FreeType.
     const [low, high] = width < 0 ? [stem.max, stem.min] : [stem.min, stem.max];
-    edge.csCoord = isBottom ? low : high;
-    edge.flags = isBottom ? EdgeFlag.PairBottom : EdgeFlag.PairTop;
+    csCoord = isBottom ? low : high;
+    flags = isBottom ? EdgeFlag.PairBottom : EdgeFlag.PairTop;
   }
 
-  edge.csCoord += hintOrigin;
-  edge.scale = scale;
-  edge.index = index;
-  if (edge.flags !== 0 && stem.used) {
-    edge.dsCoord = isTopEdge(edge) ? stem.maxDS : stem.minDS;
-    edge.flags |= EdgeFlag.Locked;
-  } else {
-    edge.dsCoord = ftMulFix(edge.csCoord, scale);
-  }
+  csCoord += hintOrigin;
+  if (flags === 0 || !stem.used) return { flags, csCoord, dsCoord: ftMulFix(csCoord, scale), scale, index };
+  const edge = { flags, csCoord, dsCoord: 0, scale, index };
+  edge.dsCoord = isTopEdge(edge) ? stem.maxDS : stem.minDS;
+  edge.flags |= EdgeFlag.Locked;
   return edge;
 }

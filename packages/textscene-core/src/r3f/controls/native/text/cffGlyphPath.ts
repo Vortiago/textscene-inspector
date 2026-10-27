@@ -16,25 +16,35 @@ import { HintMap } from './cffHintMap';
 import type { DevicePen } from './cffPen';
 import { ftMulFix } from './fontMetrics';
 
-interface Point {
-  x: number;
-  y: number;
-}
+/** What waits in the queue. */
+const QUEUED_NONE = 0;
+const QUEUED_LINE = 1;
+const QUEUED_CURVE = 2;
 
-/** The element waiting to be drawn, with its points in character space. */
-type QueuedElement =
-  { kind: 'line'; end: Point } | { kind: 'curve'; first: Point; second: Point; end: Point };
+/** Where the end of a queued element sits in `GlyphPath.queued`. */
+const END_X = 4;
+const END_Y = 5;
 
 export class GlyphPath {
   private readonly initialMap: HintMap;
   private hintMap: HintMap;
   /** The map in force when the contour began, which draws the line that closes it. */
   private firstHintMap: HintMap;
+  /** The scale from character space to device space, which places x. */
+  private readonly scale: number;
   /** A contour's start and the point drawn last, in character space. The path starts at the origin whatever the charstring's first move says. */
-  private start: Point = { x: 0, y: 0 };
-  private current: Point = { x: 0, y: 0 };
-  private currentDevice: Point = { x: 0, y: 0 };
-  private queued: QueuedElement | null = null;
+  private startX = 0;
+  private startY = 0;
+  private currentX = 0;
+  private currentY = 0;
+  private currentDeviceX = 0;
+  private currentDeviceY = 0;
+  /**
+   * The element waiting to be drawn, with its points in character space: three x, y pairs for a
+   * curve and only the last pair for a line. Written by `queue`, which fills it with no allocation.
+   */
+  private readonly queued = new Float64Array(6);
+  private queuedKind = QUEUED_NONE;
   private isMovePending = true;
   private isClosing = false;
 
@@ -45,6 +55,7 @@ export class GlyphPath {
     private readonly blues: BlueZones,
     private readonly hintOrigin: number
   ) {
+    this.scale = blues.scale;
     this.initialMap = new HintMap(blues);
     this.hintMap = new HintMap(blues, this.initialMap);
     this.firstHintMap = this.hintMap.clone();
@@ -52,8 +63,8 @@ export class GlyphPath {
 
   moveTo(x: number, y: number): void {
     this.closeOpenPath();
-    this.start = { x, y };
-    this.current = { x, y };
+    this.startX = this.currentX = x;
+    this.startY = this.currentY = y;
     this.isMovePending = true;
     if (!this.hintMap.isValid || this.hints.mask.isNew) this.buildHintMap();
     this.firstHintMap = this.hintMap.clone();
@@ -62,27 +73,36 @@ export class GlyphPath {
   /** A line of zero length adds nothing, unless a new hint mask begins here: its end then lands elsewhere. */
   lineTo(x: number, y: number): void {
     const startsNewMap = this.hints.mask.isNew && !this.isClosing;
-    if (this.current.x === x && this.current.y === y && !startsNewMap) return;
-    this.queue({ kind: 'line', end: { x, y } });
+    if (this.currentX === x && this.currentY === y && !startsNewMap) return;
+    this.drawQueued();
+    this.queued[END_X] = x;
+    this.queued[END_Y] = y;
+    this.queuedKind = QUEUED_LINE;
     if (startsNewMap) this.buildHintMap();
-    this.current = { x, y };
+    this.currentX = x;
+    this.currentY = y;
   }
 
   curveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void {
-    this.queue({ kind: 'curve', first: { x: x1, y: y1 }, second: { x: x2, y: y2 }, end: { x: x3, y: y3 } });
+    this.drawQueued();
+    this.queued.set([x1, y1, x2, y2, x3, y3]);
+    this.queuedKind = QUEUED_CURVE;
     if (this.hints.mask.isNew) this.buildHintMap();
-    this.current = { x: x3, y: y3 };
+    this.currentX = x3;
+    this.currentY = y3;
   }
 
   /** Ends the open contour with a line back to its start (`cf2_glyphpath_closeOpenPath`). */
   closeOpenPath(): void {
     if (this.isMovePending) return;
     this.isClosing = true;
-    this.lineTo(this.start.x, this.start.y);
-    if (this.queued) this.draw(this.queued, this.hintMap, this.start, this.firstHintMap);
+    this.lineTo(this.startX, this.startY);
+    if (this.queuedKind !== QUEUED_NONE) {
+      this.draw(this.hintMap, this.startX, this.startY, this.firstHintMap);
+    }
     this.isMovePending = true;
     this.isClosing = false;
-    this.queued = null;
+    this.queuedKind = QUEUED_NONE;
   }
 
   /**
@@ -93,49 +113,58 @@ export class GlyphPath {
     new HintMap(this.blues, this.initialMap).build(this.hints, counterMask, 0);
   }
 
-  /** Starts a contour if a move waits, then draws the element in the queue and queues `element`. */
-  private queue(element: QueuedElement): void {
+  /** Starts a contour if a move waits, then draws the element in the queue, which the caller then refills. */
+  private drawQueued(): void {
     if (this.isMovePending) {
       this.startContour();
       this.isMovePending = false;
     }
-    if (this.queued) this.draw(this.queued, this.hintMap, this.current, this.hintMap);
-    this.queued = element;
+    if (this.queuedKind !== QUEUED_NONE) this.draw(this.hintMap, this.currentX, this.currentY, this.hintMap);
   }
 
   private startContour(): void {
     // A path with no move at all synthesizes one at the origin, which also builds the first map.
-    if (!this.hintMap.isValid) this.moveTo(this.start.x, this.start.y);
-    this.currentDevice = this.devicePoint(this.hintMap, this.current);
-    this.pen.moveTo(this.currentDevice.x, this.currentDevice.y);
+    if (!this.hintMap.isValid) this.moveTo(this.startX, this.startY);
+    this.currentDeviceX = ftMulFix(this.currentX, this.scale);
+    this.currentDeviceY = this.hintMap.map(this.currentY);
+    this.pen.moveTo(this.currentDeviceX, this.currentDeviceY);
   }
 
   /**
-   * Draws `element`, then a line to `next` if the element does not end there. `map` places a
-   * curve. `endMap` places the end of a line and `next`: it differs from `map` only for the
-   * element that closes a contour, which ends where the contour began, by the map it began with.
+   * Draws the queued element, then a line to `(nextX, nextY)` if the element does not end there.
+   * `map` places a curve. `endMap` places the end of a line and the next point: it differs from
+   * `map` only for the element that closes a contour, which ends where the contour began, by the map
+   * it began with.
    */
-  private draw(element: QueuedElement, map: HintMap, next: Point, endMap: HintMap): void {
-    if (element.kind === 'line') {
-      this.lineToDevice(this.devicePoint(endMap, element.end));
+  private draw(map: HintMap, nextX: number, nextY: number, endMap: HintMap): void {
+    const { queued } = this;
+    if (this.queuedKind === QUEUED_LINE) {
+      this.lineToDevice(ftMulFix(queued[END_X]!, this.scale), endMap.map(queued[END_Y]!));
     } else {
-      const first = this.devicePoint(map, element.first);
-      const second = this.devicePoint(map, element.second);
-      const end = this.devicePoint(map, element.end);
-      this.pen.curveTo(first.x, first.y, second.x, second.y, end.x, end.y);
-      this.currentDevice = end;
+      const endX = ftMulFix(queued[END_X]!, this.scale);
+      const endY = map.map(queued[END_Y]!);
+      this.pen.curveTo(
+        ftMulFix(queued[0]!, this.scale),
+        map.map(queued[1]!),
+        ftMulFix(queued[2]!, this.scale),
+        map.map(queued[3]!),
+        endX,
+        endY
+      );
+      this.currentDeviceX = endX;
+      this.currentDeviceY = endY;
     }
-    this.lineToDevice(this.devicePoint(endMap, next));
+    // The same end placed by the same map is where the pen already is.
+    const endsAtNext = nextX === queued[END_X] && nextY === queued[END_Y];
+    if (endsAtNext && (this.queuedKind === QUEUED_LINE || endMap === map)) return;
+    this.lineToDevice(ftMulFix(nextX, this.scale), endMap.map(nextY));
   }
 
-  private lineToDevice(point: Point): void {
-    if (point.x === this.currentDevice.x && point.y === this.currentDevice.y) return;
-    this.pen.lineTo(point.x, point.y);
-    this.currentDevice = point;
-  }
-
-  private devicePoint(map: HintMap, { x, y }: Point): Point {
-    return { x: ftMulFix(x, this.blues.scale), y: map.map(y) };
+  private lineToDevice(x: number, y: number): void {
+    if (x === this.currentDeviceX && y === this.currentDeviceY) return;
+    this.pen.lineTo(x, y);
+    this.currentDeviceX = x;
+    this.currentDeviceY = y;
   }
 
   private buildHintMap(): void {
