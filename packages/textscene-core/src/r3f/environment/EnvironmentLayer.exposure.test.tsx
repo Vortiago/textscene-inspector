@@ -22,7 +22,10 @@ vi.mock('./Compositor', () => ({ Compositor: () => <group name="Compositor" /> }
 vi.mock('../fog/FogLayer', () => ({ FogLayer: () => <group name="FogLayer" /> }));
 
 function Exposure({ multiplier }: { multiplier: number }) {
-  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: multiplier } });
+  usePublishCameraAttributes({
+    status: 'resolved',
+    attributes: { exposureMultiplier: multiplier, autoExposure: null },
+  });
   return null;
 }
 

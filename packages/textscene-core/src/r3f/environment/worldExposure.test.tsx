@@ -16,7 +16,9 @@ import { WorldEnvironmentScope, usePublishEnvironment } from './WorldEnvironment
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure';
+import type { AutoExposure } from '../../resources/cameraattributes/types';
 import {
+  useAutoExposure,
   useExposureFactor,
   useOptionalExposureFactor,
   usePublishCameraAttributes,
@@ -38,7 +40,7 @@ vi.mock('../preview/PreviewSun', () => ({ PreviewSun: () => <group name="Preview
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function attributes(exposureMultiplier: number): CameraAttributesResolution {
-  return { status: 'resolved', attributes: { exposureMultiplier } };
+  return { status: 'resolved', attributes: { exposureMultiplier, autoExposure: null } };
 }
 
 function environment(name: string): EnvironmentResolution {
@@ -82,11 +84,18 @@ function Publishing({
 function Reader() {
   const optionalFactor = useOptionalExposureFactor();
   const factor = useExposureFactor();
-  return <group name="Reader" userData={{ optionalFactor, factor }} />;
+  const autoExposure = useAutoExposure();
+  return <group name="Reader" userData={{ optionalFactor, factor, autoExposure }} />;
 }
 
 function read(renderer: Renderer): { optionalFactor: number | null; factor: number } {
-  return renderer.scene.find((node) => node.props.name === 'Reader').props.userData;
+  const { optionalFactor, factor } = renderer.scene.find((node) => node.props.name === 'Reader').props
+    .userData;
+  return { optionalFactor, factor };
+}
+
+function readAutoExposure(renderer: Renderer): AutoExposure | null {
+  return renderer.scene.find((node) => node.props.name === 'Reader').props.userData.autoExposure;
 }
 
 /** A Camera3D at `order`: it publishes the attributes it holds, as the node does. */
@@ -412,6 +421,72 @@ describe('the exposure of a world seen through a Camera3D', () => {
     const renderer = await ReactThreeTestRenderer.create(tree(true));
     await renderer.update(tree(false));
     expect(read(renderer).factor).toBe(2);
+  });
+});
+
+const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance: 1 };
+
+function withAutoExposure(autoExposure: AutoExposure | null): CameraAttributesResolution {
+  return { status: 'resolved', attributes: { exposureMultiplier: 1, autoExposure } };
+}
+
+describe('the auto exposure of a world', () => {
+  it('is none with no WorldEnvironment', async () => {
+    expect(readAutoExposure(await ReactThreeTestRenderer.create(inRoot(null)))).toBeNull();
+  });
+
+  it('is none for attributes that hold none', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />)
+    );
+    expect(readAutoExposure(renderer)).toBeNull();
+  });
+
+  it('is the auto exposure of the first WorldEnvironment with valid attributes', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<WorldEnvironmentAt order={[0]} cameraAttributes={withAutoExposure(AUTO_EXPOSURE)} />)
+    );
+    expect(readAutoExposure(renderer)).toBe(AUTO_EXPOSURE);
+  });
+
+  it("is the camera's, which replaces the world's attributes as a whole", async () => {
+    const own: AutoExposure = { scale: 1, minLuminance: 0.1, maxLuminance: 2 };
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={withAutoExposure(AUTO_EXPOSURE)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={withAutoExposure(own)} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(readAutoExposure(renderer)).toBe(own);
+  });
+
+  it("is none under a camera whose attributes hold none, though the world's do (renderer_scene_cull.cpp:3562-3565)", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={withAutoExposure(AUTO_EXPOSURE)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={attributes(1)} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(readAutoExposure(renderer)).toBeNull();
+  });
+
+  it("holds the world's while a camera's attributes still load", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={withAutoExposure(AUTO_EXPOSURE)} />
+          <CameraAt order={[1]} path="Root/Camera3D" cameraAttributes={PENDING_RESOLUTION} />
+        </>,
+        'Root/Camera3D'
+      )
+    );
+    expect(readAutoExposure(renderer)).toBe(AUTO_EXPOSURE);
   });
 });
 

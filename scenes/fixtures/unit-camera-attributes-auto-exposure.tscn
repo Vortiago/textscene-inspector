@@ -1,0 +1,58 @@
+; One variable: CameraAttributesPractical.auto_exposure_enabled over a procedural sky. Godot divides
+; the exposure by the luminance of the frame, held between the bounds, so the sky and the ground draw
+; lighter than with the exposure off. The luminance is the average over the frame's top left region,
+; which holds the sky: a frame read from its bottom row averages the ground alone and draws far
+; brighter, so no other scene shows that order.
+[gd_scene load_steps=10 format=3]
+
+[sub_resource type="CameraAttributesPractical" id="Attr_1"]
+auto_exposure_enabled = true
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 0
+tonemap_exposure = 1
+
+[sub_resource type="BoxMesh" id="Box_1"]
+
+[sub_resource type="StandardMaterial3D" id="Grey_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 1.0
+metallic_specular = 0.0
+
+[sub_resource type="StandardMaterial3D" id="Emissive_1"]
+albedo_color = Color(0, 0, 0, 1)
+roughness = 1.0
+metallic_specular = 0.0
+emission_enabled = true
+emission = Color(0.4, 0.1, 0.1, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+camera_attributes = SubResource("Attr_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 3, 0)
+light_energy = 0.5
+
+[node name="GreyBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("Box_1")
+surface_material_override/0 = SubResource("Grey_1")
+
+[node name="EmissiveBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+mesh = SubResource("Box_1")
+surface_material_override/0 = SubResource("Emissive_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.894427, 0.447214, 0, -0.447214, 0.894427, 0, 2, 4)
+fov = 70.0

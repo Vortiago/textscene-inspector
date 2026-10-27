@@ -21,6 +21,9 @@ export function useResolvedCameraAttributes(
   return useMemo((): CameraAttributesResolution => {
     if (status === 'pending') return PENDING_RESOLUTION;
     if (!scoped || !CAMERA_ATTRIBUTES_TYPES.includes(scoped.resource.type)) return NO_RESOLUTION;
-    return { status: 'resolved', attributes: decodeCameraAttributes(scoped.resource.data) };
+    return {
+      status: 'resolved',
+      attributes: decodeCameraAttributes(scoped.resource.type, scoped.resource.data),
+    };
   }, [status, scoped]);
 }
