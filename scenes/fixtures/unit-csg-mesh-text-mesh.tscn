@@ -1,7 +1,8 @@
 ; The one variable: a CSGMesh3D whose mesh is a TextMesh with depth. The left text draws as a solid, and
 ; the right text, subtracted from a CSGBox3D, cuts its letters out with walls in its own material. No other
-; golden shows it: unit-text-mesh draws its TextMesh through a MeshInstance3D. The box exceeds the text, so
-; no cut edge lies where Godot hints a glyph by a pixel.
+; golden shows it: unit-text-mesh draws its TextMesh through a MeshInstance3D. The plate is taller and wider
+; than the text and thinner than its depth, so the cut passes through and no cut edge lies where Godot
+; hints a glyph by a pixel.
 [gd_scene load_steps=5 format=3 uid="uid://unitcsgmeshtextmesh"]
 
 [ext_resource type="FontFile" path="res://fonts/open-sans-semibold-subset.ttf" id="1_font"]

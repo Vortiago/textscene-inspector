@@ -1,5 +1,6 @@
 /** The distinct positions of a flat xyz array, for the tests that compare a build with Godot's. */
 
+/** @oneWay In tests, the distinct positions of a mesh */
 export function distinctPositions(positions: ArrayLike<number>): [number, number, number][] {
   const byKey = new Map<string, [number, number, number]>();
   for (let i = 0; i < positions.length; i += 3) {

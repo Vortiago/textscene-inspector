@@ -12,7 +12,7 @@ import { type CsgContribution, type CsgPlan } from './csgPlan';
 import { CsgOperation } from '../../godot/scene/csg';
 import type { CsgModule } from './csgModule';
 import type { CsgSolid } from './csgRegistration';
-import { enclosedVolume } from './testing/brushVolume';
+import { absoluteEnclosedVolume } from './testing/brushVolume';
 import type { TscnNode } from '../../parser/types';
 
 const csg = csgLibrary as unknown as CsgModule;
@@ -51,11 +51,6 @@ function plan(contributions: CsgContribution[]): CsgPlan {
   };
 }
 
-/** The volume of a closed brush, whichever way it winds. */
-function volumeOf(geometry: THREE.BufferGeometry): number {
-  return Math.abs(enclosedVolume(geometry));
-}
-
 // Non-indexed, matching what `applyCsgNormals` emits for every real CSG contribution.
 const unitBox = () => new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
 /** A box offset so exactly half of it overlaps the unit box. */
@@ -89,7 +84,7 @@ describe('evaluateCsgPlan', () => {
       csg,
       resolveBoxes([unitBox(), halfOverlapBox()])
     )!;
-    expect(volumeOf(result.geometry)).toBeCloseTo(1.5, 2);
+    expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(1.5, 2);
   });
 
   it('subtracts, leaving half the volume', () => {
@@ -98,7 +93,7 @@ describe('evaluateCsgPlan', () => {
       csg,
       resolveBoxes([unitBox(), halfOverlapBox()])
     )!;
-    expect(volumeOf(result.geometry)).toBeCloseTo(0.5, 2);
+    expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(0.5, 2);
   });
 
   it('intersects, leaving the overlap only', () => {
@@ -107,7 +102,7 @@ describe('evaluateCsgPlan', () => {
       csg,
       resolveBoxes([unitBox(), halfOverlapBox()])
     )!;
-    expect(volumeOf(result.geometry)).toBeCloseTo(0.5, 2);
+    expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(0.5, 2);
     // And the survivor is the +X half, not the whole box.
     result.geometry.computeBoundingBox();
     expect(result.geometry.boundingBox!.min.x).toBeCloseTo(0, 3);
@@ -137,7 +132,7 @@ describe('evaluateCsgPlan', () => {
       resolveBoxes([unitBox(), halfOverlapBox(), new THREE.BoxGeometry(1, 1, 1).translate(1, 0, 0)])
     )!;
     // box + half-overlap = 1.5, minus the +1 box removes its 0.5 overlap → 1.0.
-    expect(volumeOf(result.geometry)).toBeCloseTo(1.0, 2);
+    expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(1.0, 2);
   });
 
   describe('materials', () => {
@@ -206,7 +201,7 @@ describe('evaluateCsgPlan', () => {
         csg,
         resolveBoxes([unitBox(), empty])
       )!;
-      expect(volumeOf(result.geometry)).toBeCloseTo(1, 2);
+      expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(1, 2);
     });
 
     it('passes a lone contribution through unchanged', () => {
@@ -215,7 +210,7 @@ describe('evaluateCsgPlan', () => {
         csg,
         resolveBoxes([unitBox()])
       )!;
-      expect(volumeOf(result.geometry)).toBeCloseTo(1, 5);
+      expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(1, 5);
     });
 
     it('leaves a first-child SUBTRACTION empty, folding into nothing', () => {
@@ -228,7 +223,7 @@ describe('evaluateCsgPlan', () => {
         csg,
         resolveBoxes([unitBox()])
       )!;
-      expect(volumeOf(result.geometry)).toBeCloseTo(1, 5);
+      expect(absoluteEnclosedVolume(result.geometry)).toBeCloseTo(1, 5);
     });
   });
 
@@ -247,7 +242,7 @@ describe('evaluateCsgPlan', () => {
     });
     const planOf = (root: CsgContribution): CsgPlan => ({ ...plan([]), root, geometryCount: 2 });
     const volumeAfter = (root: CsgContribution, solids: CsgSolid[]): number =>
-      volumeOf(evaluateCsgPlan(planOf(root), csg, resolveSolids(solids))!.geometry);
+      absoluteEnclosedVolume(evaluateCsgPlan(planOf(root), csg, resolveSolids(solids))!.geometry);
 
     it('draws nothing for an open root', () => {
       expect(volumeAfter(node(CsgOperation.UNION), [open()])).toBe(0);
