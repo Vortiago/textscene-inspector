@@ -12,7 +12,21 @@ Godot's texture projector: it casts `texture_albedo` down the node's local -Y ax
 
 <!-- compare: image=unit-decal status=limitation fixture=unit-decal.tscn -->
 
-The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its rectangle of the decal atlas (see "Mip chain"), clamped as Godot samples it: fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`). The decal sampler is one of the viewport's samplers (`render_forward_clustered.cpp:3434-3455`), so the viewport's `texture_mipmap_bias` offsets the decal's mip level as it does a material's.
+Every 3D program mixes the decals into its albedo per fragment, as Godot's clustered shader does (`scene_forward_clustered.glsl:1535-1654`). So the mix needs no mesh detail, and it follows a moving, skinned or animated receiver. A decal reaches a fragment through the box, `cull_mask`, the depth and normal fades and the decal atlas (see "Mip chain"). The decal sampler is one of the viewport's samplers (`render_forward_clustered.cpp:3434-3455`), so `texture_mipmap_bias` offsets the decal's mip level as it does a material's.
+
+Editor gizmos draw on layer 26 (`node_3d_editor_gizmos.cpp:222`), which a default `cull_mask` leaves out. A gizmo takes a decal only when the mask holds that layer.
+
+## Receiver terms
+
+<!-- compare: image=unit-decal-roughness-receiver status=done fixture=unit-decal-roughness-receiver.tscn -->
+
+A decal replaces only the receiver's albedo (`scene_forward_clustered.glsl:1610`). The receiver's roughness, metallic and AO maps and the terms of each surface keep shading the decal.
+
+## Order and cap
+
+<!-- compare: image=unit-decal-triangulation status=done fixture=unit-decal-triangulation.tscn -->
+
+The decals sort by distance minus `sorting_offset`, nearest first, and the first 512 that the distance fade keeps are drawn (`texture_storage.cpp:3316-3486`). The shader applies them in groups of 32, the highest index of a group first (`scene_forward_clustered.glsl:1535-1654`), so the nearest decal of a group draws last. `decal-gpu` (`pnpm test:gpu`) checks the order and the cap on the real shaders.
 
 ## Texture wrappers
 
@@ -71,7 +85,6 @@ The linter warns (`resource-type-excluded-by-hint`) when one of the four `textur
 
 ## Known limitations
 
-- **Approximated** The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.
-- **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so the projection carries albedo alone.
-- **Approximated** The projection takes the scalar roughness, metallic and `diffuse_mode` of its receiver's first surface, not its maps.
-- **Approximated** In Godot 4.6 an untextured decal hides each decal sorted after it (`texture_storage.cpp:3420`, `:3485`), where the previewer draws each decal on its own.
+- **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so a decal carries albedo alone.
+- **Approximated** An untextured decal takes a place among the 512 and draws nothing. Godot leaves its buffer row unwritten (`texture_storage.cpp:3420`), so the row holds stale data.
+- **Approximated** The project setting `rendering/textures/decals/filter` is not read (`renderer_scene_render_rd.cpp:1730`). The decal sampler always filters linearly between mip levels.

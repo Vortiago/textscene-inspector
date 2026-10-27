@@ -1937,7 +1937,42 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring <code>cull_mask</code> and the three fades. The projection samples its rectangle of the decal atlas (see &quot;Mip chain&quot;), clamped as Godot samples it: fragments outside the box are discarded (<code>scene_forward_clustered.glsl:1585-1587</code>). The decal sampler is one of the viewport's samplers (<code>render_forward_clustered.cpp:3434-3455</code>), so the viewport's <code>texture_mipmap_bias</code> offsets the decal's mip level as it does a material's.</p></div>
+        <div class="prose"><p>Every 3D program mixes the decals into its albedo per fragment, as Godot's clustered shader does (<code>scene_forward_clustered.glsl:1535-1654</code>). So the mix needs no mesh detail, and it follows a moving, skinned or animated receiver. A decal reaches a fragment through the box, <code>cull_mask</code>, the depth and normal fades and the decal atlas (see &quot;Mip chain&quot;). The decal sampler is one of the viewport's samplers (<code>render_forward_clustered.cpp:3434-3455</code>), so <code>texture_mipmap_bias</code> offsets the decal's mip level as it does a material's.</p>
+<p>Editor gizmos draw on layer 26 (<code>node_3d_editor_gizmos.cpp:222</code>), which a default <code>cull_mask</code> leaves out. A gizmo takes a decal only when the mask holds that layer.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Receiver terms</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-decal-roughness-receiver-godot.png" alt="Godot render of Receiver terms">
+          <img class="img-ours" src="images/unit-decal-roughness-receiver-ours.png" alt="Our render of Receiver terms">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A decal replaces only the receiver's albedo (<code>scene_forward_clustered.glsl:1610</code>). The receiver's roughness, metallic and AO maps and the terms of each surface keep shading the decal.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Order and cap</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-decal-triangulation-godot.png" alt="Godot render of Order and cap">
+          <img class="img-ours" src="images/unit-decal-triangulation-ours.png" alt="Our render of Order and cap">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>The decals sort by distance minus <code>sorting_offset</code>, nearest first, and the first 512 that the distance fade keeps are drawn (<code>texture_storage.cpp:3316-3486</code>). The shader applies them in groups of 32, the highest index of a group first (<code>scene_forward_clustered.glsl:1535-1654</code>), so the nearest decal of a group draws last. <code>decal-gpu</code> (<code>pnpm test:gpu</code>) checks the order and the cap on the real shaders.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Texture wrappers</h3><span class="status st-done">Done</span></div>
@@ -1982,7 +2017,7 @@ tr:last-child td{border-bottom:0}
 <p>The linter warns (<code>resource-type-excluded-by-hint</code>) when one of the four <code>texture_*</code> slots holds a class its hint excludes, such as an <code>AtlasTexture</code>. Godot's editor never offers such a class, and the setter keeps it with a debug warning (<code>decal.cpp:49-58</code>).</p>
 <p><code>size</code> falls back to Godot's default <code>Vector3(2, 2, 2)</code> with a warning when malformed. <code>albedo_mix</code>, <code>emission_energy</code>, <code>normal_fade</code>, <code>upper_fade</code>, <code>lower_fade</code> and <code>cull_mask</code> fall back the same way to <code>1</code>, <code>1</code>, <code>0</code>, <code>0.3</code>, <code>0.3</code> and <code>1048575</code>. The two fade exponents are also clamped at zero, as Godot's setters clamp them. <code>modulate</code> falls back silently to opaque white, and the four <code>texture_*</code> references are copied through unvalidated.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.</li><li><strong>Approximated</strong> <code>texture_normal</code>, <code>texture_orm</code>, <code>texture_emission</code> and <code>emission_energy</code> are parsed but not applied, so the projection carries albedo alone.</li><li><strong>Approximated</strong> The projection takes the scalar roughness, metallic and <code>diffuse_mode</code> of its receiver's first surface, not its maps.</li><li><strong>Approximated</strong> In Godot 4.6 an untextured decal hides each decal sorted after it (<code>texture_storage.cpp:3420</code>, <code>:3485</code>), where the previewer draws each decal on its own.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>texture_normal</code>, <code>texture_orm</code>, <code>texture_emission</code> and <code>emission_energy</code> are parsed but not applied, so a decal carries albedo alone.</li><li><strong>Approximated</strong> An untextured decal takes a place among the 512 and draws nothing. Godot leaves its buffer row unwritten (<code>texture_storage.cpp:3420</code>), so the row holds stale data.</li><li><strong>Approximated</strong> The project setting <code>rendering/textures/decals/filter</code> is not read (<code>renderer_scene_render_rd.cpp:1730</code>). The decal sampler always filters linearly between mip levels.</li></ul></div>
     </article>
     <article class="sheet" data-type="DirectionalLight2D" hidden>
       <header class="sheet-head">

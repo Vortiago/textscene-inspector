@@ -1,7 +1,7 @@
 /**
  * Decal types. Godot's Decal is a VisualInstance3D that projects `texture_albedo` (and optional
  * ORM, normal and emission maps) down local -Y onto surfaces inside an origin-centred box of
- * `size`. The renderer does not project the three maps or `emission_energy`, which are parsed
+ * `size`. The renderer does not apply the three maps or `emission_energy`, which are parsed
  * so the Inspector and linter see the full property surface.
  */
 

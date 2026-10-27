@@ -62,6 +62,10 @@ export const SCENE_COMPOSITION_SCENES = [
   // so a floor of two triangles shows the same checkerboard as a fine one. A per-vertex mix draws
   // nothing on the coarse floor.
   { name: 'decal-triangulation', file: 'unit-decal-triangulation.tscn' },
+  // The one variable against `decal`: a roughness texture on the receiver. Godot keeps it under a
+  // decal, so the highlight of the smooth end runs through the footprint. A scalar roughness cuts it
+  // off at the box.
+  { name: 'decal-roughness-receiver', file: 'unit-decal-roughness-receiver.tscn' },
   // One image, two StandardMaterial3D sub-resources differing only in
   // `texture_filter` (0 NEAREST, 3 LINEAR_WITH_MIPMAPS): the one scene that sees
   // per-material texture cloning. The loader caches one THREE.Texture per path,

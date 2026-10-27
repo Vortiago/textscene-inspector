@@ -1,19 +1,18 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitdecaltriangulation"]
 
-; One variable: the floor's `subdivide_width` and `subdivide_depth`, 0 on the left (two triangles)
-; and 15 on the right. Godot mixes a decal per fragment, so both floors show the same
-; checkerboard. A decal mixed per vertex would draw nothing on the left, since the box edges sit
-; inside the two large triangles.
+; One variable: the floor's subdivision, 0 on the left (two triangles) and 13 by 7 on the right.
+; Godot mixes a decal per fragment, so both floors show the same checkerboard. A decal mixed per
+; vertex draws a different footprint on each, since the box edges cross the triangles.
 
 [ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_albedo"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_coarse"]
-size = Vector2(3, 3)
+size = Vector2(3.5, 3.5)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_fine"]
-size = Vector2(3, 3)
-subdivide_width = 15
-subdivide_depth = 15
+size = Vector2(3.5, 3.5)
+subdivide_width = 13
+subdivide_depth = 7
 
 [sub_resource type="StandardMaterial3D" id="Material_floor"]
 albedo_color = Color(0.5, 0.5, 0.5, 1)
@@ -37,30 +36,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
 mesh = SubResource("PlaneMesh_fine")
 surface_material_override/0 = SubResource("Material_floor")
 
-; The boxes are 2 m wide on 3 m floors, so every box edge crosses a triangle interior.
+; Each box is turned 30 degrees about Y, so its edges cross the triangles at an angle.
 [node name="Decal_OverCoarse" type="Decal" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, -2, 0.5, 0)
 texture_albedo = ExtResource("1_albedo")
-size = Vector3(2, 3, 2)
+size = Vector3(2.5, 2, 2.5)
 albedo_mix = 1.0
 
 [node name="Decal_OverFine" type="Decal" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 2, 0.5, 0)
 texture_albedo = ExtResource("1_albedo")
-size = Vector3(2, 3, 2)
+size = Vector3(2.5, 2, 2.5)
 albedo_mix = 1.0
-
-; The captions sit above y = 2.5, clear of both projection boxes.
-[node name="Title" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 0)
-text = "Decal over a coarse and a fine floor"
-pixel_size = 0.008
-billboard = 1
-modulate = Color(1, 1, 0.7, 1)
-
-[node name="Description" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
-text = "LEFT 2 triangles, RIGHT 512: the same checkerboard"
-pixel_size = 0.006
-billboard = 1
-modulate = Color(1, 1, 1, 1)

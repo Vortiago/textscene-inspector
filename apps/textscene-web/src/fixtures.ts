@@ -468,6 +468,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Roughness Receiver",
+    "file": "unit-decal-roughness-receiver.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Triangulation",
     "file": "unit-decal-triangulation.tscn",
     "category": "Other"
