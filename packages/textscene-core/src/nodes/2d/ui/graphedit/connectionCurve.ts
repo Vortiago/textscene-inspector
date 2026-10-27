@@ -11,7 +11,7 @@
 
 import { bezierInterpolatef, degToRad } from '../../../../godot/math/math.js';
 import { storedReal, storedVector2 } from '../../../../godot/math/real.js';
-import type { Vector2 } from '../../../../godot/math/vector.js';
+import { normalizedVector2, type Vector2 } from '../../../../godot/math/vector.js';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
 const MAX_STAGES = 5;
@@ -53,12 +53,6 @@ function bezierPoint(cp: ConnectionCurveControlPoints, offset: number): Vector2 
   };
 }
 
-/** `Vector2::normalized()`: a zero-length vector stays `(0, 0)` (`core/math/vector2.h`). */
-function normalized(v: Vector2): Vector2 {
-  const len = Math.hypot(v.x, v.y);
-  return len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
-}
-
 /** `Curve2D::_bake_segment2d` (`curve.cpp:846-863`), specialised to one Bezier segment (`p_a`/`p_b` fixed as `cp.p0`/`cp.p3`). */
 function bakeSegment(
   bake: Map<number, Vector2>,
@@ -74,8 +68,8 @@ function bakeSegment(
   const mid = bezierPoint(cp, mp);
   const fin = bezierPoint(cp, end);
 
-  const na = normalized({ x: mid.x - beg.x, y: mid.y - beg.y });
-  const nb = normalized({ x: fin.x - mid.x, y: fin.y - mid.y });
+  const na = normalizedVector2({ x: mid.x - beg.x, y: mid.y - beg.y });
+  const nb = normalizedVector2({ x: fin.x - mid.x, y: fin.y - mid.y });
   const dp = na.x * nb.x + na.y * nb.y;
   if (dp < Math.cos(degToRad(toleranceDeg))) {
     bake.set(mp, mid);

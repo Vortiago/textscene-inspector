@@ -6,19 +6,21 @@
  */
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { liveInstancePath, scopeOf, type LiveNode } from '../resources/liveNode.js';
+import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { holdsDeepChildren, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
-import { insertAtIndex } from '../godot/scene/siblingIndex.js';
+import { addAtIndex } from '../godot/scene/siblingIndex.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { sameElements } from '../utils/sameElements.js';
+import { perObject } from '../utils/perObject.js';
+import { answeredOnce, recordingReads } from './cacheSources.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -51,30 +53,10 @@ export interface LiveTreeContext {
   glbCache?: CachedGlbSource;
 }
 
-/**
- * Written only by {@link snapshotScenes}, keyed by the context. An entry clears when nothing holds
- * that context any more.
- */
-const snapshots = new WeakMap<LiveTreeContext, CachedSceneSource>();
-
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */
-export function snapshotScenes(ctx: LiveTreeContext): CachedSceneSource {
-  let snapshot = snapshots.get(ctx);
-  if (!snapshot) {
-    const answers = new Map<string, CacheAnswer>();
-    snapshot = {
-      getCached: (path) => {
-        const known = answers.get(path);
-        if (known !== undefined || answers.has(path)) return known;
-        const answer = ctx.sceneCache.getCached(path);
-        answers.set(path, answer);
-        return answer;
-      },
-    };
-    snapshots.set(ctx, snapshot);
-  }
-  return snapshot;
-}
+export const snapshotScenes = perObject((ctx: LiveTreeContext): CachedSceneSource =>
+  answeredOnce(ctx.sceneCache)
+);
 
 /** A node in the live tree: its effective (collapsed) identity and its full path. */
 export interface LiveTreeEntry {
@@ -195,14 +177,8 @@ function composeRecording(
 ): Composition {
   const reads = new Map<string, CacheAnswer>();
   // The recorder also sees the reads of a base's own composition, so a change of any base ends this entry.
-  const recorder: CachedSceneSource = {
-    getCached: (path) => {
-      const answer = sceneCache.getCached(path);
-      reads.set(path, answer);
-      return answer;
-    },
-  };
-  const collapsed = root.instance ? collapseLiveNode(root, content, recorder) : root;
+  const recorder = recordingReads(sceneCache, (path, answer) => reads.set(path, answer));
+  const collapsed = collapseLiveNode(root, content, recorder);
   const [seated] = seatedFile([collapsed], content, recorder, cached.nodes);
   const composed = seated === root ? cached : { nodes: [seated!] };
   return { instancedScenePaths: content.instancedScenePaths ?? [], reads, composed };
@@ -382,12 +358,11 @@ function glbInstanceGroups(
   hostScope: SceneScope
 ): LiveChildGroup[] {
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
-  const stamped = attached.map((child) => (child.scope ? child : { ...child, scope: hostScope }));
+  const stamped = attached.map((child) => withFallbackScope(child, hostScope));
   const objects = glbSceneRootChildren(object, stamped);
   if (rest.length === 0) return [{ origin: 'glb', children: objects, scope: hostScope }];
-  // A copy: without attached children the objects are the GLB's shared, frozen answer.
-  const ordered = [...objects];
-  for (const child of rest) insertAtIndex(ordered, child);
+  // Without attached children the objects are the GLB's shared, frozen answer.
+  const ordered = addAtIndex<TscnNode>(objects, ...rest);
   const hostOwn = new Set<TscnNode>(rest);
   const runs: { origin: 'glb' | 'inline'; children: TscnNode[] }[] = [];
   for (const child of ordered) {
@@ -532,7 +507,8 @@ export class LiveTree {
   private readonly links = new Map<string, LiveLink | null>();
   /**
    * Written only by `stepOf`: the step of a node under each scope it was asked in. It holds one
-   * entry per visited node for as long as the tree lives, which is as long as its context.
+   * entry per visited node for as long as the tree lives, which is as long as its context and its
+   * roots.
    */
   private readonly stepsByNode = new Map<LiveNode, { scope: SceneScope; step: LiveStep }[]>();
 
@@ -623,16 +599,17 @@ function sameScope(a: SceneScope, b: SceneScope): boolean {
   );
 }
 
-/** Written only by {@link liveTreeOf}, keyed by the context. */
-const liveTrees = new WeakMap<LiveTreeContext, LiveTree>();
+/**
+ * Written only by {@link liveTreeOf}: one tree for each context and roots. A tree clears when
+ * nothing holds its context or its roots any more.
+ */
+const liveTreesOver = perObject((ctx: LiveTreeContext) =>
+  perObject((roots: readonly TscnNode[]) => new LiveTree(roots, ctx))
+);
 
 /** The live tree every question over `ctx` shares, so a node collapses once for all of them. */
 export function liveTreeOf(roots: readonly TscnNode[], ctx: LiveTreeContext): LiveTree {
-  const known = liveTrees.get(ctx);
-  if (known?.roots === roots) return known;
-  const tree = new LiveTree(roots, ctx);
-  liveTrees.set(ctx, tree);
-  return tree;
+  return liveTreesOver(ctx)(roots);
 }
 
 /**

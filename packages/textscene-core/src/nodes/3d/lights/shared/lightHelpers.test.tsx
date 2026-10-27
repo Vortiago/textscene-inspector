@@ -22,6 +22,7 @@ import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeConte
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
+import { InWorld } from '../../../../r3f/testing/InWorld';
 
 import '../../../../r3f/nodes/index';
 import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../../godot/scene/camera3d';
@@ -430,7 +431,9 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <SelectSeeder path="CamA" />
-          <NodeDispatcher nodes={rootNodes} />
+          <InWorld>
+            <NodeDispatcher nodes={rootNodes} />
+          </InWorld>
         </SelectionProvider>
       </HierarchyProvider>
     );
@@ -449,7 +452,9 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <SelectSeeder path="CamA" />
-          <NodeDispatcher nodes={rootNodes} />
+          <InWorld>
+            <NodeDispatcher nodes={rootNodes} />
+          </InWorld>
         </SelectionProvider>
       </HierarchyProvider>
     );
@@ -461,7 +466,9 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <SelectSeeder path="CamB" />
-          <NodeDispatcher nodes={rootNodes} />
+          <InWorld>
+            <NodeDispatcher nodes={rootNodes} />
+          </InWorld>
         </SelectionProvider>
       </HierarchyProvider>
     );
@@ -496,7 +503,9 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
           <SelectSeeder path="Rig/RigCam" />
-          <NodeDispatcher nodes={rootNodes} />
+          <InWorld>
+            <NodeDispatcher nodes={rootNodes} />
+          </InWorld>
         </SelectionProvider>
       </HierarchyProvider>
     );

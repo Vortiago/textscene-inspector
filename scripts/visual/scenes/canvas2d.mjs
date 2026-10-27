@@ -474,6 +474,7 @@ export const CANVAS_2D_SCENES = [
   // (`pnpm ref:diff`: 1/255). A frame whose row 0 is the canvas bottom draws rows 101-196.
   { name: 'canvas-edge-on-pixel-centre', file: 'unit-canvas-edge-on-pixel-centre.tscn', mode: '2d' },
   { name: 'subviewport-edge-on-pixel-centre', file: 'unit-subviewport-edge-on-pixel-centre.tscn', mode: '2d' },
+  { name: 'subviewport-control-edge-on-pixel-centre', file: 'unit-subviewport-control-edge-on-pixel-centre.tscn', mode: '2d' },
   // The one variable: a Control promoted past a non-Control ancestor, one facet
   // per scene. The walk resets the whole chain at a broken CanvasItem link, so
   // a fix to one facet can move another. Godot 4.6.3 `--mode 2d`: mean 0.001,

@@ -10,14 +10,8 @@ import { useResourceLoader } from '../../../resources/useResource.js';
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser.js';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
-import {
-  collectControlRasterViewports,
-  type ControlRasterViewport,
-  type SceneScopeSource,
-} from './controlRasterViewports.js';
-
-/** No PackedScene cache mounted yet (first paint, isolated tests). */
-const NO_SCENES: SceneScopeSource = { getCached: () => undefined };
+import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';
+import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
 export function useControlRasterViewports(
   nodes: readonly TscnNode[],
@@ -36,7 +30,8 @@ export function useControlRasterViewports(
     () =>
       collectControlRasterViewports(
         nodes,
-        loader?.scenes ?? NO_SCENES,
+        // No loader is mounted on first paint or in an isolated test.
+        loader?.scenes ?? NOTHING_CACHED,
         { internalResources, externalResources },
         layoutDirectionEnv
       ),

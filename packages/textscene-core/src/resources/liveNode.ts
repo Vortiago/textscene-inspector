@@ -74,6 +74,14 @@ export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
 }
 
 /**
+ * `node` stamped with `scope` where it carries none: a node moved into another scene's tree keeps
+ * the pools of the file that authored it.
+ */
+export function withFallbackScope(node: LiveNode, scope: SceneScope): LiveNode {
+  return node.scope ? node : { ...node, scope };
+}
+
+/**
  * The `res://` path of the scene `node` instances, its ref resolved in the scope of the file that
  * authored it ({@link scopeOf}). Null for a node with no instance ref, or a ref that scope does not
  * declare.

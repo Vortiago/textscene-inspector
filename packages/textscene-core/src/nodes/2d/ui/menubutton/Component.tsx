@@ -25,11 +25,7 @@ import {
   tintColor,
   layoutButtonContent,
 } from '../../../../r3f/controls/native/buttonBase';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -83,9 +79,9 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
         styleMargin: baseStyleBox.contentMargin,
         hSeparation: solveNode.constants.h_separation ?? theme.separation,
         iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
-        textAlignment: props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER,
-        iconAlignment: props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT,
-        verticalIconAlignment: props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER,
+        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+        iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+        verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
         expandIcon: props.expandIcon === true,
         iconNaturalSize,
         hasText,

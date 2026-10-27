@@ -7,7 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
-import type { LiveTreeContext } from './liveSceneTree.js';
+import { contextOver } from './liveSceneTree.testkit.js';
+import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
 import * as THREE from 'three';
@@ -71,16 +72,12 @@ const inner = new TscnParser().parse(`[gd_scene format=3]
 [node name="Face" type="Sprite2D" parent="."]
 `);
 
-const scenes = new Map<string, TscnScene>([
-  ['res://hud.tscn', hud],
-  ['res://widget.tscn', widget],
-  ['res://inner.tscn', inner],
-]);
-const ctx: LiveTreeContext = {
-  externalResources: main.externalResources,
-  internalResources: [],
-  sceneCache: { getCached: (p) => scenes.get(p) },
+const scenes: Record<string, TscnScene> = {
+  'res://hud.tscn': hud,
+  'res://widget.tscn': widget,
+  'res://inner.tscn': inner,
 };
+const ctx = contextOver(main, scenes);
 
 const ownerOf = (path: string) => claimOwnerOf(path, main.nodes, ctx);
 
@@ -118,7 +115,7 @@ describe('claimOwnerOf', () => {
   });
 
   it('falls back to the outer root while the sub-scene has not loaded', () => {
-    const unloaded: LiveTreeContext = { ...ctx, sceneCache: { getCached: () => undefined } };
+    const unloaded = { ...ctx, sceneCache: NOTHING_CACHED };
     expect(claimOwnerOf('Root/HudInstance/Sprite', main.nodes, unloaded).parent).toBeUndefined();
   });
 });
@@ -178,12 +175,7 @@ describe('localSceneOf a GLB instance', () => {
   body.name = 'body';
   glb.add(body);
   const glbScene = synthesiseGLBScene('res://model.glb');
-  const glbCtx: LiveTreeContext = {
-    externalResources: host.externalResources,
-    internalResources: [],
-    sceneCache: { getCached: (p) => (p === 'res://model.glb' ? glbScene : undefined) },
-    glbCache: { getCached: (p) => (p === 'res://model.glb' ? glb : undefined) },
-  };
+  const glbCtx = contextOver(host, { 'res://model.glb': glbScene }, { 'res://model.glb': glb });
   const localRoot = (path: string) => localSceneOf(path, host.nodes, glbCtx).path;
 
   it('is the instance node for the GLB root', () => {
@@ -288,7 +280,7 @@ unique_name_in_owner = true
 
 [node name="Lamp" type="Node2D" parent="." owner="HudInstance"]
 `);
-  const nestedCtx: LiveTreeContext = { ...ctx, externalResources: nested.externalResources };
+  const nestedCtx = contextOver(nested, scenes);
   const own = (path: string) => claimOwnerOf(path, nested.nodes, nestedCtx);
 
   it('files an override inside a sub-scene\u2019s own nested instance under that inner instance', () => {
@@ -324,7 +316,7 @@ describe('an override that clears unique_name_in_owner', () => {
 [node name="Panel" parent="HudInstance"]
 unique_name_in_owner = false
 `);
-  const releasingCtx: LiveTreeContext = { ...ctx, externalResources: releasing.externalResources };
+  const releasingCtx = contextOver(releasing, scenes);
 
   it('drops the name from the instance table', () => {
     const owner = claimOwnerOf('Root/HudInstance/Sprite', releasing.nodes, releasingCtx);
@@ -348,7 +340,7 @@ unique_name_in_owner = true
 [node name="Brim" type="Node2D" parent="HudInstance/%Panel/Hat"]
 unique_name_in_owner = true
 `);
-  const throughCtx: LiveTreeContext = { ...ctx, externalResources: through.externalResources };
+  const throughCtx = contextOver(through, scenes);
   const ownerAt = (path: string) => claimOwnerOf(path, through.nodes, throughCtx);
 
   it('spells its claim at the composed path it renders at', () => {
@@ -432,7 +424,7 @@ unique_name_in_owner = true
 [node name="Panel" parent="HudInstance"]
 unique_name_in_owner = false
 `);
-  const releasingCtx: LiveTreeContext = { ...ctx, externalResources: releasingLater.externalResources };
+  const releasingCtx = contextOver(releasingLater, scenes);
 
   it('spells the claim at the node the heading reached', () => {
     const owner = claimOwnerOf('Root', releasingLater.nodes, releasingCtx);
@@ -465,15 +457,8 @@ unique_name_in_owner = true
 
 [node name="Tool" parent="." instance=ExtResource("1")]
 `);
-  const inheritedScenes = new Map<string, TscnScene>([
-    ['res://base.tscn', base],
-    ['res://tool.tscn', inheriting],
-  ]);
-  const inheritedCtx: LiveTreeContext = {
-    externalResources: host.externalResources,
-    internalResources: [],
-    sceneCache: { getCached: (p) => inheritedScenes.get(p) },
-  };
+  const inheritedScenes = { 'res://base.tscn': base, 'res://tool.tscn': inheriting };
+  const inheritedCtx = contextOver(host, inheritedScenes);
   const table = () => ownerUniquePaths(claimOwnerOf('Root/Tool/Blade', host.nodes, inheritedCtx));
 
   it('holds the base scene’s claims', () => {
@@ -485,7 +470,7 @@ unique_name_in_owner = true
   });
 
   it('holds the base scene’s claims for the inherited scene opened on its own', () => {
-    const ownCtx: LiveTreeContext = { ...inheritedCtx, externalResources: inheriting.externalResources };
+    const ownCtx = contextOver(inheriting, inheritedScenes);
     expect(ownerUniquePaths(claimOwnerOf('Tool', inheriting.nodes, ownCtx)).get('%Grip')).toBe('Tool/Grip');
   });
 });
@@ -503,7 +488,7 @@ describe('a node outside an instance whose owner= names that instance', () => {
 [node name="Lamp" type="Node2D" parent="." owner="HudInstance"]
 unique_name_in_owner = true
 `);
-  const lentCtx: LiveTreeContext = { ...ctx, externalResources: lent.externalResources };
+  const lentCtx = contextOver(lent, scenes);
   const pathsAt = (path: string) => ownerUniquePaths(claimOwnerOf(path, lent.nodes, lentCtx));
 
   it('registers its name on the instance table', () => {
@@ -530,12 +515,7 @@ describe('a node outside a nested instance whose owner= names it with no heading
 unique_name_in_owner = true
 `);
   const widgetPaths = (scene: TscnScene) =>
-    ownerUniquePaths(
-      claimOwnerOf('Root/HudInstance/Widget/Face', scene.nodes, {
-        ...ctx,
-        externalResources: scene.externalResources,
-      })
-    );
+    ownerUniquePaths(claimOwnerOf('Root/HudInstance/Widget/Face', scene.nodes, contextOver(scene, scenes)));
 
   it('registers the name of a node inside the outer instance on the nested one', () => {
     expect(widgetPaths(lentToWidget('HudInstance')).get('%Lamp')).toBe('Root/HudInstance/Lamp');
@@ -560,7 +540,7 @@ describe('a node inside one instance whose owner= names a sibling instance', () 
 [node name="Lamp" type="Node2D" parent="HudInstance" owner="InnerInstance"]
 unique_name_in_owner = true
 `);
-  const acrossCtx: LiveTreeContext = { ...ctx, externalResources: lentAcross.externalResources };
+  const acrossCtx = contextOver(lentAcross, scenes);
   const pathsAt = (path: string) => ownerUniquePaths(claimOwnerOf(path, lentAcross.nodes, acrossCtx));
 
   it('registers its name on the instance its owner= names', () => {
@@ -598,11 +578,7 @@ ${lamp}
 unique_name_in_owner = true
 `);
   const ownerAt = (scene: TscnScene, path: string) =>
-    claimOwnerOf(path, scene.nodes, {
-      ...ctx,
-      externalResources: scene.externalResources,
-      sceneCache: { getCached: (p) => (p === 'res://hud.tscn' ? hudClaimingWidget : scenes.get(p)) },
-    });
+    claimOwnerOf(path, scene.nodes, contextOver(scene, { ...scenes, 'res://hud.tscn': hudClaimingWidget }));
 
   it('registers the name on the instance the root table names', () => {
     const scene = parsed('[node name="Lamp" type="Node2D" parent="." owner="%HudInstance"]');
@@ -646,11 +622,11 @@ visible = false
 `);
 
   it('walks the owner from the root of the file that adds the node', () => {
-    const owner = claimOwnerOf('Root/HudInstance/Lamp', host.nodes, {
-      ...ctx,
-      externalResources: host.externalResources,
-      sceneCache: { getCached: (p) => (p === 'res://hud.tscn' ? hudGivingLampToWidget : scenes.get(p)) },
-    });
+    const owner = claimOwnerOf(
+      'Root/HudInstance/Lamp',
+      host.nodes,
+      contextOver(host, { ...scenes, 'res://hud.tscn': hudGivingLampToWidget })
+    );
     expect(owner.path).toBe('Root/HudInstance/Widget');
   });
 });
@@ -670,9 +646,7 @@ describe('an owner= that names no node when instantiate sets it', () => {
 unique_name_in_owner = true
 ${after}`);
   const lampTable = (scene: TscnScene) =>
-    ownerUniquePaths(
-      claimOwnerOf('Root/Lamp', scene.nodes, { ...ctx, externalResources: scene.externalResources })
-    );
+    ownerUniquePaths(claimOwnerOf('Root/Lamp', scene.nodes, contextOver(scene, scenes)));
 
   it('reads no table for an owner declared after the heading', () => {
     const scene = ownerless('Later', '\n[node name="Later" parent="." instance=ExtResource("1")]\n');
@@ -706,11 +680,7 @@ unique_name_in_owner = true
 [node name="Lamp" type="Node2D" parent="." owner="%A"]
 unique_name_in_owner = true
 `);
-  const inheritedCtx: LiveTreeContext = {
-    ...ctx,
-    externalResources: inherited.externalResources,
-    sceneCache: { getCached: (p) => (p === 'res://base.tscn' ? base : scenes.get(p)) },
-  };
+  const inheritedCtx = contextOver(inherited, { ...scenes, 'res://base.tscn': base });
 
   it('registers the name on the base instance the %Name names', () => {
     const owner = claimOwnerOf('Player/A/Face', inherited.nodes, inheritedCtx);
@@ -730,7 +700,7 @@ describe('an owner= recovered through its owner_uid_path', () => {
 [node name="Lamp" type="Node2D" parent="." owner="Gone" owner_uid_path=PackedInt32Array(77)]
 unique_name_in_owner = true
 `);
-  const recoveredCtx: LiveTreeContext = { ...ctx, externalResources: recovered.externalResources };
+  const recoveredCtx = contextOver(recovered, scenes);
 
   it('registers the name on the instance the trail finds', () => {
     const owner = claimOwnerOf('Root/HudInstance/Sprite', recovered.nodes, recoveredCtx);
@@ -759,15 +729,10 @@ unique_name_in_owner = true
   /** How many times the walk to `path` reads a scene from the cache. */
   const sceneReads = (path: string): number => {
     let reads = 0;
+    const lentCtx = contextOver(lent, { ...scenes, 'res://hud.tscn': hudClaimingWidget });
     claimOwnerOf(path, lent.nodes, {
-      ...ctx,
-      externalResources: lent.externalResources,
-      sceneCache: {
-        getCached: (p) => {
-          reads++;
-          return p === 'res://hud.tscn' ? hudClaimingWidget : scenes.get(p);
-        },
-      },
+      ...lentCtx,
+      sceneCache: recordingReads(lentCtx.sceneCache, () => reads++),
     });
     return reads;
   };

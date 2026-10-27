@@ -230,7 +230,7 @@ describe('<AreaLight3D>', () => {
       makeNode({ area_texture: 'SubResource("GradientTexture2D_1")' })
     );
 
-    expect(placementOf(renderer)).toEqual({ rect: [0, 0, 0.25, 0.25], maxMipmap: 5 });
+    expect(placementOf(renderer)).toEqual({ rect: { x: 0, y: 0, width: 0.25, height: 0.25 }, maxMipmap: 5 });
   });
 
   it('takes its texture out of the atlas when it unmounts (edge case)', async () => {

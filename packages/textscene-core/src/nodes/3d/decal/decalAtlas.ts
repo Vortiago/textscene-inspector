@@ -8,19 +8,13 @@
 import * as THREE from 'three';
 import { releasedOnUnmount } from '../../../r3f/sharedTexture.js';
 import { AtlasHolders } from '../../../r3f/textureAtlas/atlasHolders.js';
+import { fractionOfAtlas } from '../../../r3f/textureAtlas/atlasFraction.js';
+import type { AtlasRect } from '../../../resources/textures/atlastexture/types.js';
 import { AtlasTexture, holdAtlasLevels } from '../../../r3f/textureAtlas/atlasTexture.js';
 import { readableTextures } from '../../../r3f/textureAtlas/godotImage.js';
-import { fitDecalAtlas, packDecalAtlas, type DecalAtlasLayout } from './decalAtlasLayout.js';
+import { fitDecalAtlas, packDecalAtlas } from './decalAtlasLayout.js';
 import type { MipLevel } from '../../../resources/processing/mipChain.js';
 import { decalAtlasLevels } from './decalAtlasLevels.js';
-
-/** Where a texture lies in the atlas: left, top, width and height as fractions of it, top row first. */
-export interface DecalAtlasRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 /** Sampled through the sRGB view of an RGBA8 texture (`render_forward_clustered.cpp:3213`). */
 const atlasTexture = releasedOnUnmount(new AtlasTexture('DecalAtlas', THREE.SRGBColorSpace));
@@ -32,7 +26,7 @@ const holders = new AtlasHolders();
  * Where the last build placed each held texture it could read and fit. Written by
  * `updateDecalAtlas`, and cleared of a texture the moment its last holder lets go.
  */
-let rects = new Map<THREE.Texture, DecalAtlasRect>();
+let rects = new Map<THREE.Texture, AtlasRect>();
 
 /** Whether the last build left a readable texture out for the GPU's size. Written only by `updateDecalAtlas`. */
 let leftTexturesOut = false;
@@ -60,7 +54,7 @@ export function releaseDecalTexture(texture: THREE.Texture): void {
 }
 
 /** Where `texture` lies in the atlas, or undefined for a texture the atlas does not hold. */
-export function decalAtlasRect(texture: THREE.Texture): DecalAtlasRect | undefined {
+export function decalAtlasRect(texture: THREE.Texture): AtlasRect | undefined {
   return rects.get(texture);
 }
 
@@ -85,7 +79,9 @@ export function updateDecalAtlas(maxTextureSize: number): void {
     );
   }
   const placed = readable.slice(0, layout.rects.length);
-  rects = new Map(placed.map(({ texture }, index) => [texture, fractionsOf(layout, index)]));
+  rects = new Map(
+    placed.map(({ texture }, index) => [texture, fractionOfAtlas(layout.rects[index]!, layout)])
+  );
   holdAtlasLevels(
     atlasTexture,
     decalAtlasLevels(
@@ -94,9 +90,4 @@ export function updateDecalAtlas(maxTextureSize: number): void {
       atlasTexture.mipmaps as MipLevel[]
     )
   );
-}
-
-function fractionsOf({ width, height, rects: pixels }: DecalAtlasLayout, index: number): DecalAtlasRect {
-  const rect = pixels[index]!;
-  return { x: rect.x / width, y: rect.y / height, width: rect.width / width, height: rect.height / height };
 }

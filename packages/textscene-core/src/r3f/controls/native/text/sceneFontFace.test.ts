@@ -9,30 +9,40 @@ import { fixtureFontBytes } from './sfntOutlines.testkit';
 import type { FontFileResource } from '../../../../resources/fonts/font/types';
 
 class FakeFontFace {
-  static instances: FakeFontFace[] = [];
   constructor(
     readonly family: string,
     readonly source: ArrayBuffer,
     readonly descriptors?: FontFaceDescriptors
-  ) {
-    FakeFontFace.instances.push(this);
-  }
+  ) {}
   load(): Promise<FakeFontFace> {
     return Promise.resolve(this);
   }
 }
 
-function settleLoads(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 10));
+/**
+ * A cold `.woff2` decode can take seconds, so a test waits for its own face. Each call counts faces
+ * on its own list: a load an earlier test left in flight registers there, never as this test's face.
+ */
+const REGISTRATION_TIMEOUT_MS = 10_000;
+
+function fontFaceRecorder(): { FontFace: typeof FakeFontFace; faces: FakeFontFace[] } {
+  const faces: FakeFontFace[] = [];
+  class RecordedFontFace extends FakeFontFace {
+    constructor(...args: ConstructorParameters<typeof FakeFontFace>) {
+      super(...args);
+      faces.push(this);
+    }
+  }
+  return { FontFace: RecordedFontFace, faces };
 }
 
 function fontFile(bytes: ArrayBuffer): FontFileResource {
   return { kind: 'file', bytes, mimeType: 'font/ttf', fallbacks: [], properties: {} };
 }
 
-async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace | undefined> {
-  FakeFontFace.instances = [];
-  vi.stubGlobal('FontFace', FakeFontFace);
+async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace> {
+  const recorder = fontFaceRecorder();
+  vi.stubGlobal('FontFace', recorder.FontFace);
   vi.stubGlobal('document', { fonts: { add: () => {} }, createElement: () => ({ getContext: () => null }) });
   vi.stubEnv('VITEST', 'false');
   vi.resetModules();
@@ -40,8 +50,10 @@ async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace | unde
   vi.spyOn(logger, 'warn').mockImplementation(() => {});
   const { peekSceneFontMetrics } = await import('./sceneFontLoader');
   peekSceneFontMetrics(fontFile(bytes), 'Root/Variable');
-  await settleLoads();
-  return FakeFontFace.instances[0];
+  return vi.waitFor(
+    () => recorder.faces[0] ?? Promise.reject(new Error('expected a registered FontFace, got none')),
+    { timeout: REGISTRATION_TIMEOUT_MS }
+  );
 }
 
 describe('scene font registration', () => {

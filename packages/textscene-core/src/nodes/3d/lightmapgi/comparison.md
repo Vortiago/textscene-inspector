@@ -49,6 +49,8 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 
 The lenient parser reads `light_data` as written, and `shadowmask_mode` as an integer from 0 to 3, where any other value reads as None. Mode 3 (Only) is stored by a script, as the inspector offers 0 to 2. It leaves the other bake settings in the raw property bag, since only a bake reads them. A `light_data` that resolves to no LightmapGIData, such as `light_data = 3`, applies no lightmap and logs nothing.
 
+Under CameraAttributes, the atlas reads at the exposure over the `baked_exposure` of the bake. Without CameraAttributes it reads at 1.
+
 ## Known limitations
 
 - **Not drawn** An object the bake does not name keeps its ambient light, where Godot lights it from the bake's light probes.

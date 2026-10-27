@@ -1,5 +1,6 @@
 /**
- * The strings a COLOR slot converts. `Color(const String &)` reads HTML hex when
+ * Godot's `Color` in plain channels: the strings a COLOR slot converts, and the colour a theme
+ * derives by `darkened` or `lightened`. `Color(const String &)` reads HTML hex when
  * `html_is_valid` passes, and a colour name otherwise (`color.h:274-280`).
  *
  * The named-colour table is ported from Godot Engine (MIT).
@@ -194,4 +195,33 @@ export function namedColor(name: string): Rgba | undefined {
     b: ((packed >>> 8) & 0xff) / 255,
     a: (packed & 0xff) / 255,
   };
+}
+
+/** The colour channels `darkened` and `lightened` change. Alpha, when present, stays. */
+interface ColorChannels {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/**
+ * `Color::darkened` (`core/math/color.h:119-125`): each colour channel shrinks by `amount`.
+ * Double, not float, as the callers' colours are.
+ *
+ * @canonical A darker or lighter colour
+ */
+export function darkened<C extends ColorChannels>(color: C, amount: number): C {
+  const kept = 1 - amount;
+  return { ...color, r: color.r * kept, g: color.g * kept, b: color.b * kept };
+}
+
+/**
+ * `Color::lightened` (`core/math/color.h:127-133`): each colour channel moves toward white by `amount`.
+ * Double, not float, as the callers' colours are.
+ *
+ * @canonical A darker or lighter colour
+ */
+export function lightened<C extends ColorChannels>(color: C, amount: number): C {
+  const { r, g, b } = color;
+  return { ...color, r: r + (1 - r) * amount, g: g + (1 - g) * amount, b: b + (1 - b) * amount };
 }

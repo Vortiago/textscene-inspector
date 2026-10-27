@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { HORIZONTAL_ALIGNMENT_FILL } from '../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../godot/math/alignment';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { fitLineToWidth, justifyToLineIndex } from '../../../r3f/controls/native/text/textJustify';
@@ -58,7 +58,7 @@ export function shapeTextMeshLines(properties: TextMeshProperties, metrics: Font
     autowrapTrimFlags: NO_TRIM_FLAGS,
     fontMetrics: metrics,
   });
-  const isFill = properties.horizontalAlignment === HORIZONTAL_ALIGNMENT_FILL;
+  const isFill = properties.horizontalAlignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL;
   return {
     lines: isFill ? justified(layout.lines, properties) : layout.lines,
     baselineOffsetPx: layout.baselineOffsetPx,

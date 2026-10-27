@@ -12,7 +12,7 @@ import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { lightFogEnergy, lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
+import { lightFogEnergy, lightShadowOpacity, useLightIntensity } from '../shared/lightStrength';
 import { useLightDistanceFade } from '../shared/lightDistanceFade';
 import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMode';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
@@ -30,13 +30,14 @@ import {
 } from '../../../../r3f/areaLight/areaLightAtlas';
 
 /**
- * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's
- * area when the light normalises its energy (4.7.2: `light_storage.cpp:1003`, `:1046`, `:1094-1100`).
+ * Godot's colour scale: `energy * PI` and the exposure, negated for a negative light, divided by the
+ * rectangle's area when the light normalises its energy (4.7.2: `light_storage.cpp:1003`, `:1046`,
+ * `:1050`, `:1094-1100`).
  */
-function areaLightIntensity(properties: AreaLight3DProperties): number {
+function useAreaLightIntensity(properties: AreaLight3DProperties): number {
   const { x: width, y: height } = properties.area_size;
   const area = width * height;
-  const intensity = lightIntensity(properties);
+  const intensity = useLightIntensity(properties);
   return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
 }
 
@@ -103,7 +104,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
     () => transformFromNode3DProperties(properties),
     [properties]
   );
-  const intensity = areaLightIntensity(properties);
+  const intensity = useAreaLightIntensity(properties);
   const shadowOpacity = lightShadowOpacity(properties);
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const userData = useAreaLightUserData(properties);

@@ -9,7 +9,11 @@ import { useSyncExternalStore } from 'react';
 export interface ExternalStore<T> {
   /** Safe to call during render. */
   get(): T;
-  /** A value `Object.is`-equal to the current one is a no-op and notifies nobody. */
+  /**
+   * A value `Object.is`-equal to the current one is a no-op and notifies nobody. A throwing
+   * subscriber does not stop the later ones, so none misses the change: the first error is rethrown
+   * once all have run.
+   */
   set(value: T): void;
   /** Returns the unsubscribe function. */
   subscribe(onStoreChange: () => void): () => void;
@@ -27,7 +31,7 @@ export function createExternalStore<T>(initial: T): ExternalStore<T> {
     set: (next) => {
       if (Object.is(next, value)) return;
       value = next;
-      for (const listener of listeners) listener();
+      notifyAll(listeners);
     },
     subscribe: (onStoreChange) => {
       listeners.add(onStoreChange);
@@ -36,6 +40,18 @@ export function createExternalStore<T>(initial: T): ExternalStore<T> {
       };
     },
   };
+}
+
+function notifyAll(listeners: ReadonlySet<() => void>): void {
+  const failures: unknown[] = [];
+  for (const listener of listeners) {
+    try {
+      listener();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) throw failures[0];
 }
 
 /**

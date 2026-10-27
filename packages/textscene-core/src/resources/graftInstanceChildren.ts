@@ -6,7 +6,7 @@
  */
 
 import type { SceneScope } from '../parser/types';
-import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
+import { hostChildOf, scopeOf, withFallbackScope, type EscapedChild, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
@@ -71,7 +71,7 @@ export function graftInstanceChildren(
     // A setting lands at its heading, so only the host children written after it read it.
     grafted = table.landUpTo(grafted, index);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
-    const stamped = child.scope ? child : { ...child, scope: scopes.outer };
+    const stamped = withFallbackScope(child, scopes.outer);
     if (!child.instanceSubPath) {
       const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
       if (folded) grafted = folded;
@@ -233,7 +233,7 @@ function attachAll(
 ): LiveNode[] {
   let attached = [...siblings];
   for (const child of children) {
-    attached = attach(attached, child.scope ? child : { ...child, scope: childScope }, siblingScope);
+    attached = attach(attached, withFallbackScope(child, childScope), siblingScope);
   }
   return attached;
 }

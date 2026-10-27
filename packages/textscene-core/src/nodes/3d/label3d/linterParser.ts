@@ -11,9 +11,8 @@ import { TEXTURE_FILTER_NAMES } from '../../../godot/rendering/materials/texture
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
 import {
   HORIZONTAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_BOTTOM,
   VERTICAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_TOP,
+  VerticalAlignment,
 } from '../../../godot/math/alignment.js';
 import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/rendering/materials/billboardMode.js';
 import {
@@ -152,8 +151,8 @@ validatorRegistry.registerAll('Label3D', {
   // FILL loads and warns while 4 and up error.
   vertical_alignment: v.enumInt(
     'vertical_alignment',
-    VERTICAL_ALIGNMENT_TOP,
-    VERTICAL_ALIGNMENT_BOTTOM,
+    VerticalAlignment.VERTICAL_ALIGNMENT_TOP,
+    VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM,
     VERTICAL_ALIGNMENT_NAMES,
     {
       hinted: 'label_3d.cpp:157',

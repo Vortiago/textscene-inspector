@@ -20,6 +20,9 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
+import { registerExposureStage } from '../exposure/sceneExposure';
+import { useExposureFactor } from './worldExposure';
+import { scaledRgb } from '../../utils/colorParser';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -87,12 +90,15 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
 /**
  * Draws a colour background, or a placeholder for a sky that does not resolve. `hasSky` is true when
  * a sky resolves, so `<SkyLayer>` owns the background. `hasFog` is true when a fog draws, which fogs it.
+ * The world's exposure scales the colour in sRGB, before the conversion to linear, and under fog the
+ * brightness that draws it again (`render_forward_clustered.cpp:1988-2014`, `:2045`).
  */
 function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
   const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
   const { mode: curveMode, white: curveWhite, agxContrast: curveAgxContrast } = settings.toneMapping;
   const showsColor = showsBackgroundColor(mode);
+  const exposure = useExposureFactor();
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
   // A colour draws as a texture, not a clear, since three's clear skips the curve Godot applies to it.
@@ -100,14 +106,39 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
   // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
   useEffect(() => {
     if (showsColor) {
-      return hasFog
-        ? showBackground(scene, foggedClearColorTexture(backgroundColor), backgroundEnergy)
-        : showBackground(scene, clearColorTexture(backgroundColor), 1);
+      const textureAt = (factor: number) => {
+        const exposedColor = scaledRgb(backgroundColor, factor);
+        return hasFog ? foggedClearColorTexture(exposedColor) : clearColorTexture(exposedColor);
+      };
+      const intensityAt = (factor: number) => (hasFog ? backgroundEnergy * factor : 1);
+      const heldTexture = textureAt(exposure);
+      const restoreBackground = showBackground(scene, heldTexture, intensityAt(exposure));
+      // Kept for the next draw: a probe that captures each frame draws at the same exposure each time.
+      let stagedTexture: { factor: number; texture: THREE.Texture } | null = null;
+      const stopStaging = registerExposureStage(scene, (target) => {
+        const factor = target ?? 1;
+        if (stagedTexture?.factor !== factor) {
+          stagedTexture?.texture.dispose();
+          stagedTexture = { factor, texture: textureAt(factor) };
+        }
+        return showBackground(scene, stagedTexture.texture, intensityAt(factor));
+      });
+      return () => {
+        stopStaging();
+        restoreBackground();
+        heldTexture.dispose();
+        stagedTexture?.texture.dispose();
+      };
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as
       // "sky here" rather than as a black void.
-      return showBackground(scene, clearColorTexture(UNRESOLVED_SKY_COLOR), 1);
+      const placeholder = clearColorTexture(UNRESOLVED_SKY_COLOR);
+      const restoreBackground = showBackground(scene, placeholder, 1);
+      return () => {
+        restoreBackground();
+        placeholder.dispose();
+      };
     }
     return undefined;
   }, [
@@ -116,6 +147,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
     mode,
     backgroundColor,
     backgroundEnergy,
+    exposure,
     hasSky,
     hasFog,
     curveMode,
@@ -126,10 +158,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
 
-/**
- * Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found, which
- * frees `texture`.
- */
+/** Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found. */
 function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
   const previousBackground = scene.background;
   const previousIntensity = scene.backgroundIntensity;
@@ -138,7 +167,6 @@ function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: n
   return () => {
     scene.background = previousBackground;
     scene.backgroundIntensity = previousIntensity;
-    texture.dispose();
   };
 }
 

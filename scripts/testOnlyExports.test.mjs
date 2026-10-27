@@ -8,13 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { findRepoRoot } from './repoRoot.mjs';
-import {
-  entryPointsOf,
-  isTestFile,
-  readImporters,
-  readSourceTree,
-  testOnlyExports,
-} from './testOnlyExports.mjs';
+import { readImporters, readSourceTree } from './sourceTree.mjs';
+import { entryPointsOf, testOnlyExports } from './testOnlyExports.mjs';
 
 const ROOT = findRepoRoot();
 const CORE = resolve(ROOT, 'packages/textscene-core');
@@ -261,18 +256,5 @@ describe('testOnlyExports', () => {
     const found = scan({ 'a.ts': 'export interface Shape {}\nexport type Id = string;' });
 
     expect(found).toEqual([]);
-  });
-});
-
-describe('isTestFile', () => {
-  it.each(['a.test.ts', 'b.spec.tsx', 'c.testkit.ts', 'd.test.mjs', 'linter/testing/kit.ts'])(
-    'treats %s as a test file',
-    (path) => {
-      expect(isTestFile(path)).toBe(true);
-    }
-  );
-
-  it.each(['a.ts', 'testingTools.ts', 'contest.ts', 'run.mjs'])('treats %s as production', (path) => {
-    expect(isTestFile(path)).toBe(false);
   });
 });
