@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { blueFactsOf, type BlueFacts } from './cffPrivateDict';
 import {
   EXPERT_CHARSET,
   EXPERT_SUBSET_CHARSET,
@@ -31,6 +32,8 @@ export interface CffPrivate {
   readonly localSubrs: CffIndex;
   /** `vsindex` of the Private DICT, the variation data a `blend` reads when the glyph names none. CFF2 only. */
   readonly vsindex: number;
+  /** The Private DICT's alignment zones, which hint a glyph's y. */
+  readonly blues: BlueFacts;
 }
 
 export interface CffFont {
@@ -55,6 +58,7 @@ const OP_CHARSTRINGS = 17;
 const OP_PRIVATE = 18;
 const OP_SUBRS = 19;
 const OP_VSINDEX = 22;
+const OP_BLEND = 23;
 const OP_VARSTORE = 24;
 const OP_ROS = 1230;
 const OP_FDARRAY = 1236;
@@ -100,7 +104,9 @@ class CffReader {
     let at = start;
     while (at < end) {
       const b0 = this.dv.getUint8(at++);
-      if (b0 <= LAST_OPERATOR) {
+      if (b0 === OP_BLEND && this.isCff2) {
+        operands = defaultInstance(operands);
+      } else if (b0 <= LAST_OPERATOR) {
         const operator = b0 === 12 ? 1200 + this.dv.getUint8(at++) : b0;
         entries.set(operator, operands);
         operands = [];
@@ -123,10 +129,10 @@ class CffReader {
     return entries;
   }
 
-  /** A packed-nibble real number (Technical Note 5176 Table 5). */
+  /** The packed-nibble real number (Technical Note 5176 Table 5) whose first byte after the `30` operator is at `start`. */
   private real(start: number): { value: number; next: number } {
     let text = '';
-    let at = start + 1;
+    let at = start;
     for (;;) {
       const byte = this.dv.getUint8(at++);
       for (const nibble of [byte >> 4, byte & 0x0f]) {
@@ -135,6 +141,16 @@ class CffReader {
       }
     }
   }
+}
+
+/**
+ * The operands a `blend` in a CFF2 DICT leaves at the default instance: its last operand counts
+ * the values, which are the first operands, and the deltas that follow them go (`cff_parse_blend`
+ * with every region at weight 0).
+ */
+function defaultInstance(operands: number[]): number[] {
+  const count = operands.pop() ?? 0;
+  return count >= 0 && count <= operands.length ? operands.slice(0, count) : [];
 }
 
 function first(dict: Dict, operator: number): number | undefined {
@@ -247,13 +263,15 @@ function fontDictsOf(reader: CffReader, at: number): Dict[] {
 
 function privateOf(reader: CffReader, base: number, font: Dict, isCff2: boolean): CffPrivate {
   const [size, offset] = font.get(OP_PRIVATE) ?? [0, 0];
-  if (!size || offset === undefined) return { localSubrs: EMPTY_INDEX, vsindex: 0 };
+  if (!size || offset === undefined)
+    return { localSubrs: EMPTY_INDEX, vsindex: 0, blues: blueFactsOf(new Map()) };
   const start = base + offset;
   const priv = reader.dict(start, start + size);
   const subrs = first(priv, OP_SUBRS);
   return {
     localSubrs: subrs === undefined ? EMPTY_INDEX : reader.index(start + subrs),
     vsindex: isCff2 ? (first(priv, OP_VSINDEX) ?? 0) : 0,
+    blues: blueFactsOf(priv),
   };
 }
 

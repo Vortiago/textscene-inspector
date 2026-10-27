@@ -4,6 +4,9 @@
  * `charstring` assembles Type 2 operators and operands by name.
  */
 
+import { ContourPointTag } from '../../../../godot/text/textServerEnums';
+import type { GlyphContours } from './glyphContours';
+import { parseSfntOutlines } from './sfntOutlines';
 import { ByteWriter, cmapTable, headTable, sfntFileBytes } from './sfntOutlines.testkit';
 
 export type CharstringToken = number | OperatorName | { fixed: number } | { raw: readonly number[] };
@@ -82,6 +85,18 @@ export function charstring(...tokens: readonly CharstringToken[]): number[] {
   });
 }
 
+/** The Private DICT entries that place blue zones. The zone arrays are absolute values, which the DICT stores as deltas. */
+export interface TestBlues {
+  blueValues?: readonly number[];
+  otherBlues?: readonly number[];
+  familyBlues?: readonly number[];
+  familyOtherBlues?: readonly number[];
+  blueScale?: number;
+  blueShift?: number;
+  blueFuzz?: number;
+  languageGroup?: number;
+}
+
 export interface TestCffFont {
   /** 1 is a `CFF ` table, 2 a `CFF2` table. */
   version?: 1 | 2;
@@ -99,11 +114,22 @@ export interface TestCffFont {
   charsetFormat?: 0 | 1 | 2;
   /** CFF 1: names the predefined Expert (1) or Expert Subset (2) charset instead of listing one. */
   predefinedCharset?: 1 | 2;
+  /** The blue zones of every font dict. */
+  blues?: TestBlues;
   /** CFF2: the region count of each ItemVariationData, and the `vsindex` of the Private DICT. */
   variation?: { regionCounts: readonly number[]; vsindex?: number };
 }
 
 const DICT_OPS = {
+  blend: [23],
+  blueValues: [6],
+  otherBlues: [7],
+  familyBlues: [8],
+  familyOtherBlues: [9],
+  blueScale: [12, 9],
+  blueShift: [12, 10],
+  blueFuzz: [12, 11],
+  languageGroup: [12, 17],
   charset: [15],
   charStrings: [17],
   private: [18],
@@ -115,14 +141,64 @@ const DICT_OPS = {
   fdSelect: [12, 37],
 } as const;
 
-/** A DICT whose integers all take five bytes, so its size does not depend on the offsets it holds. */
-function dict(entries: readonly (readonly [keyof typeof DICT_OPS, readonly number[]])[]): ByteWriter {
+/**
+ * A DICT operand. An offset is a plain integer of five bytes, so a DICT's size does not depend on
+ * the offsets it holds. A value that can be negative is a `small` integer, which takes as few bytes as
+ * it can: FreeType on a 64-bit target reads a negative five-byte integer as a large positive one.
+ */
+type DictOperand = number | { small: number } | { real: number };
+
+type DictEntry = readonly [keyof typeof DICT_OPS, readonly DictOperand[]];
+
+/** The packed-nibble bytes of a real (Technical Note 5176 Table 5), the `30` operator included. */
+function realBytes(value: number): number[] {
+  const nibbles = [...String(value)].map((char) => (char === '.' ? 0xa : char === '-' ? 0xe : Number(char)));
+  nibbles.push(0xf);
+  if (nibbles.length % 2 === 1) nibbles.push(0xf);
+  const bytes = [30];
+  for (let i = 0; i < nibbles.length; i += 2) bytes.push((nibbles[i]! << 4) | nibbles[i + 1]!);
+  return bytes;
+}
+
+function dict(entries: readonly DictEntry[]): ByteWriter {
   const out = new ByteWriter();
   for (const [name, operands] of entries) {
-    for (const operand of operands) out.u8(29).u32(operand >>> 0);
+    for (const operand of operands) {
+      if (typeof operand === 'number') out.u8(29).u32(operand >>> 0);
+      else
+        for (const byte of 'real' in operand ? realBytes(operand.real) : operandBytes(operand.small))
+          out.u8(byte);
+    }
     for (const byte of DICT_OPS[name]) out.u8(byte);
   }
   return out;
+}
+
+const deltas = (values: readonly number[]) => values.map((value, i) => value - (values[i - 1] ?? 0));
+
+/**
+ * The Private DICT entries for `blues`. With `regions` (CFF2), each zone array is a `blend` of
+ * its values, every region's delta 0, and the array operator then takes the blended values.
+ */
+function blueEntries(blues: TestBlues = {}, regions?: number): DictEntry[] {
+  const entries: DictEntry[] = [];
+  const arrays = ['blueValues', 'otherBlues', 'familyBlues', 'familyOtherBlues'] as const;
+  for (const name of arrays) {
+    const values = blues[name];
+    if (!values) continue;
+    const operands = deltas(values).map((small) => ({ small }));
+    if (regions === undefined) {
+      entries.push([name, operands]);
+    } else {
+      const noDeltas = Array.from({ length: values.length * regions }, () => ({ small: 0 }));
+      entries.push(['blend', [...operands, ...noDeltas, { small: values.length }]], [name, []]);
+    }
+  }
+  if (blues.blueScale !== undefined) entries.push(['blueScale', [{ real: blues.blueScale }]]);
+  for (const name of ['blueShift', 'blueFuzz', 'languageGroup'] as const) {
+    if (blues[name] !== undefined) entries.push([name, [{ small: blues[name] }]]);
+  }
+  return entries;
 }
 
 function index(entries: readonly (readonly number[])[], isCff2: boolean): ByteWriter {
@@ -214,11 +290,17 @@ function fontDictCount(font: TestCffFont): number {
 function privateParts(font: TestCffFont, fd: number): { dict: ByteWriter; subrs: ByteWriter } {
   const subrs = font.localSubrs?.[fd];
   const vsindex = font.version === 2 ? font.variation?.vsindex : undefined;
-  const size = ((subrs ? 1 : 0) + (vsindex === undefined ? 0 : 1)) * DICT_ENTRY_SIZE;
-  const entries: [keyof typeof DICT_OPS, number[]][] = [];
-  if (subrs) entries.push(['subrs', [size]]);
+  const entries = blueEntries(
+    font.blues,
+    font.version === 2 ? font.variation?.regionCounts[vsindex ?? 0] : undefined
+  );
   if (vsindex !== undefined) entries.push(['vsindex', [vsindex]]);
-  return { dict: dict(entries), subrs: subrs ? index(subrs, font.version === 2) : new ByteWriter() };
+  // The offset of the local subroutines is the size of the whole Private DICT, their own entry the last of it.
+  const withSubrs: DictEntry[] = [...entries, ['subrs', [dict(entries).length + DICT_ENTRY_SIZE]]];
+  return {
+    dict: dict(subrs ? withSubrs : entries),
+    subrs: subrs ? index(subrs, font.version === 2) : new ByteWriter(),
+  };
 }
 
 /** The `CFF ` or `CFF2` table with its offsets taken from `at`, and where its parts then start. */
@@ -229,13 +311,13 @@ function assemble(font: TestCffFont, at: Positions): { table: ByteWriter; positi
   const privates = Array.from({ length: fdCount }, (_, fd) => privateParts(font, fd));
   const privateSize = (fd: number) => privates[fd]!.dict.length;
 
-  const topEntries: [keyof typeof DICT_OPS, number[]][] = [];
+  const topEntries: DictEntry[] = [];
   if (!isCff2 && font.charset) topEntries.push(['charset', [at.charset]]);
   if (!isCff2 && font.predefinedCharset) topEntries.push(['charset', [font.predefinedCharset]]);
   topEntries.push(['charStrings', [at.charStrings]]);
   if (hasFdArray)
     topEntries.push(
-      ...(isCff2 ? [] : [['ros', [391, 391, 0]] as [keyof typeof DICT_OPS, number[]]]),
+      ...(isCff2 ? [] : [['ros', [391, 391, 0]] as DictEntry]),
       ['fdArray', [at.fdArray]],
       ['fdSelect', [at.fdSelect]]
     );
@@ -314,4 +396,20 @@ export function buildTestCffFont(font: TestCffFont): ArrayBuffer {
     ],
     'OTTO'
   );
+}
+
+/** The contours as text: the points of a contour in order as `x,y`, a cubic control point as `~x,y`. */
+export function contourText(contours: GlyphContours): string[] {
+  let first = 0;
+  return contours.contourEnds.map((end) => {
+    const points = contours.points.slice(first, end + 1);
+    first = end + 1;
+    return points.map((p) => `${p.tag === ContourPointTag.OFF_CUBIC ? '~' : ''}${p.x},${p.y}`).join(' ');
+  });
+}
+
+/** What glyph `glyphIndex` of `font` draws at `fontSizePx`, as `contourText`, or null when it draws nothing. */
+export function drawnAt(font: TestCffFont, glyphIndex: number, fontSizePx: number): string[] | null {
+  const contours = parseSfntOutlines(buildTestCffFont(font))?.glyphContours(glyphIndex, fontSizePx);
+  return contours ? contourText(contours) : null;
 }

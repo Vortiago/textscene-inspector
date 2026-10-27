@@ -1,6 +1,6 @@
 /**
  * The path-painting operators of a Type 2 charstring: how each reads its operands off the stack,
- * moves the current point and draws through the pen. The operand counts follow FreeType's
+ * moves the current point and draws through the glyph path. The operand counts follow FreeType's
  * interpreter (`psintrp.c`) where it differs from the specification: an operator with too many
  * operands drops the extra ones, and one with too few fails.
  *
@@ -10,7 +10,7 @@
  */
 
 import type { OperandStack } from './cffOperandStack';
-import { GlyphPen } from './cffPen';
+import type { GlyphPath } from './cffGlyphPath';
 
 /** `ADD_INT32`: coordinates wrap in 32 bits. */
 const add = (a: number, b: number) => (a + b) | 0;
@@ -33,7 +33,7 @@ export class PathOperators {
   /** The current point, which the operators move relative to. */
   constructor(
     private readonly stack: OperandStack,
-    private readonly pen: GlyphPen,
+    private readonly path: GlyphPath,
     private x: number,
     private y: number
   ) {}
@@ -41,17 +41,17 @@ export class PathOperators {
   relativeMove(): void {
     this.y = add(this.y, this.stack.popFixed());
     this.x = add(this.x, this.stack.popFixed());
-    this.pen.moveTo(this.x, this.y);
+    this.path.moveTo(this.x, this.y);
   }
 
   horizontalMove(): void {
     this.x = add(this.x, this.stack.popFixed());
-    this.pen.moveTo(this.x, this.y);
+    this.path.moveTo(this.x, this.y);
   }
 
   verticalMove(): void {
     this.y = add(this.y, this.stack.popFixed());
-    this.pen.moveTo(this.x, this.y);
+    this.path.moveTo(this.x, this.y);
   }
 
   relativeLines(): void {
@@ -185,11 +185,11 @@ export class PathOperators {
   private lineBy(dx: number, dy: number): void {
     this.x = add(this.x, dx);
     this.y = add(this.y, dy);
-    this.pen.lineTo(this.x, this.y);
+    this.path.lineTo(this.x, this.y);
   }
 
   private curveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void {
-    this.pen.curveTo(x1, y1, x2, y2, x3, y3);
+    this.path.curveTo(x1, y1, x2, y2, x3, y3);
     this.x = x3;
     this.y = y3;
   }

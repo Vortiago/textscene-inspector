@@ -1,38 +1,17 @@
 /**
  * Every expectation is what Godot's text server returned for the same font bytes
  * (`font_get_glyph_contours` of Godot 4.6.3 at 100 px). A font of 1000 units per em at 100 px puts
- * a tenth of a pixel on a unit, and a font without hints leaves y exactly where the scale puts it.
+ * a tenth of a pixel on a unit. The fonts here have no blue zones: `cffHinting.test.ts` covers those.
  */
 
 import { describe, expect, it } from 'vitest';
-import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import type { GlyphContours } from './glyphContours';
-import {
-  buildTestCffFont,
-  charstring as cs,
-  type CharstringToken,
-  type TestCffFont,
-} from './sfntCff.testkit';
-import { parseSfntOutlines } from './sfntOutlines';
+import { charstring as cs, drawnAt, type CharstringToken, type TestCffFont } from './sfntCff.testkit';
 
 const FONT_SIZE_PX = 100;
 const NOTDEF = cs('endchar');
 
-/** The contours as text: the points of a contour in order as `x,y`, a cubic control point as `~x,y`. */
-function contourText(contours: GlyphContours): string[] {
-  let first = 0;
-  return contours.contourEnds.map((end) => {
-    const points = contours.points.slice(first, end + 1);
-    first = end + 1;
-    return points.map((p) => `${p.tag === ContourPointTag.OFF_CUBIC ? '~' : ''}${p.x},${p.y}`).join(' ');
-  });
-}
-
 /** What glyph `glyphIndex` of `font` draws at 100 px, or null when it draws nothing. */
-function drawn(font: TestCffFont, glyphIndex: number): string[] | null {
-  const contours = parseSfntOutlines(buildTestCffFont(font))?.glyphContours(glyphIndex, FONT_SIZE_PX);
-  return contours ? contourText(contours) : null;
-}
+const drawn = (font: TestCffFont, glyphIndex: number) => drawnAt(font, glyphIndex, FONT_SIZE_PX);
 
 function fontOf(glyphs: readonly (readonly number[])[], extra: Partial<TestCffFont> = {}): TestCffFont {
   return {

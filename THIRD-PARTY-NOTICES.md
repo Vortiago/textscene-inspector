@@ -532,9 +532,10 @@ SOFTWARE.
 <https://freetype.org>
 
 `cffTables.ts`, `cffCharstring.ts`, `cffPathOperators.ts`, `cffArithmetic.ts`, `cffOperandStack.ts`,
-`cffPen.ts`, `cffPredefined.ts` and `sfntCff.ts`, all in
-`packages/textscene-core/src/r3f/controls/native/text/`, port the CFF loader and the Adobe
-charstring engine of FreeType, because Godot reads the outlines of an OpenType-CFF font with it
+`cffPen.ts`, `cffPredefined.ts`, `cffPrivateDict.ts`, `cffFixed.ts`, `cffBlues.ts`, `cffGlyphHints.ts`,
+`cffHintEdge.ts`, `cffHintAdjust.ts`, `cffHintMap.ts`, `cffGlyphPath.ts` and `sfntCff.ts`, all in
+`packages/textscene-core/src/r3f/controls/native/text/`, port the CFF loader, the Adobe
+charstring engine and its hinter of FreeType, because Godot reads the outlines of an OpenType-CFF font with it
 (`modules/text_server_adv/text_server_adv.cpp`). Godot vendors it as `thirdparty/freetype`. FreeType
 is by David Turner, Robert Wilhelm and Werner Lemberg, and the charstring engine is by Adobe. It is
 licensed under the FreeType Project License, separately from Godot's own MIT licence above.

@@ -1,8 +1,8 @@
 /**
  * Reads the outline of a glyph from the `CFF ` or `CFF2` table of an OpenType font, scaled to a
  * font size the way FreeType's Adobe engine scales it for a hinted load, which is how Godot loads
- * it (`text_server_adv.cpp:3606`). The engine moves y to the pixel grid by hinting. This
- * reader leaves y where the scale puts it, and x, which hinting does not move, matches Godot.
+ * it (`text_server_adv.cpp:3606`). The engine hints y, moving stem edges onto the pixel grid, and
+ * leaves x where the scale puts it.
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright (C) 1996-2026 by David Turner, Robert Wilhelm, and Werner Lemberg.
@@ -15,7 +15,7 @@
 import { interpretCharstring } from './cffCharstring';
 import type { CharstringContour } from './cffPen';
 import { openCff } from './cffTables';
-import { ftMulFix, getFontOutlineScale } from './fontMetrics';
+import { getFontOutlineScale } from './fontMetrics';
 import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
@@ -30,20 +30,15 @@ function charstringScale(unitsPerEm: number, fontSizePx: number): number {
   return Math.floor((getFontOutlineScale(unitsPerEm, fontSizePx) + 32) / 64);
 }
 
-/** A charstring coordinate in 26.6 px: scaled, then the low bits dropped by an arithmetic shift. */
-function toFixed26_6(coordinate: number, scale: number): number {
-  return Math.floor(ftMulFix(coordinate, scale) / FIXED_16_16_TO_26_6);
-}
-
 /**
  * The contours as FreeType keeps them in a glyph slot. A contour whose last point lands on its
  * first loses that point, and one left with a single point is dropped (`cff_builder_close_contour`).
  */
-function scaledOutline(contours: readonly CharstringContour[], scale: number): ScaledOutline {
+function scaledOutline(contours: readonly CharstringContour[]): ScaledOutline {
   const outline: ScaledOutline = { x: [], y: [], tags: [], contourEnds: [] };
   for (const contour of contours) {
-    const xs = contour.x.map((x) => toFixed26_6(x, scale));
-    const ys = contour.y.map((y) => toFixed26_6(y, scale));
+    const xs = contour.x.map(toFixed26_6);
+    const ys = contour.y.map(toFixed26_6);
     const last = xs.length - 1;
     const pointCount = xs[last] === xs[0] && ys[last] === ys[0] ? last : last + 1;
     if (pointCount < 2) continue;
@@ -55,6 +50,11 @@ function scaledOutline(contours: readonly CharstringContour[], scale: number): S
   return outline;
 }
 
+/** A 16.16 px coordinate in 26.6: the low bits dropped by an arithmetic shift. */
+function toFixed26_6(coordinate: number): number {
+  return Math.floor(coordinate / FIXED_16_16_TO_26_6);
+}
+
 /** The glyph-contour reader of a font's CFF outlines, or null for a font with no readable `CFF ` or `CFF2` table or no `head`. */
 export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   const unitsPerEm = readHeadUnitsPerEm(sfnt);
@@ -63,9 +63,9 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   if (!font) return null;
 
   return (glyphIndex, fontSizePx) => {
-    const contours = interpretCharstring(font, glyphIndex);
+    const contours = interpretCharstring(font, glyphIndex, charstringScale(unitsPerEm, fontSizePx));
     if (!contours) return null;
-    const outline = scaledOutline(contours, charstringScale(unitsPerEm, fontSizePx));
+    const outline = scaledOutline(contours);
     return outline.x.length > 0 ? scaledOutlineContours(outline) : null;
   };
 }

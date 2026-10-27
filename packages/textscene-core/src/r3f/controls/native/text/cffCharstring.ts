@@ -1,10 +1,11 @@
 /**
- * Runs a Type 2 charstring (Adobe Technical Note 5177) to the contours it draws, in the
- * charstring's 16.16 fixed-point units with y up. It follows FreeType's Adobe engine
+ * Runs a Type 2 charstring (Adobe Technical Note 5177) to the contours it draws, in 16.16 fixed-point
+ * px at the font size with y up. It follows FreeType's Adobe engine
  * (`cf2_interpT2CharString` in `psintrp.c`), which Godot's text server loads CFF glyphs through, in
  * what it accepts as well as in what it draws: FreeType refuses a charstring for an operand of the
  * wrong type, an out-of-range subroutine or an operator short of operands, and so does this. Such a
- * charstring draws nothing. Hints only count, since the outline is the unhinted one.
+ * charstring draws nothing. The outline is hinted in y, as Godot loads it: the hints move stem
+ * edges onto the pixel grid, and the glyph path in `cffGlyphPath.ts` applies them.
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright 2007-2014 Adobe Systems Incorporated.
@@ -12,9 +13,13 @@
  */
 
 import { ArithmeticOperators } from './cffArithmetic';
+import { BlueZones } from './cffBlues';
+import { GlyphHints, HintMask } from './cffGlyphHints';
+import { GlyphPath } from './cffGlyphPath';
+import type { StemHint } from './cffHintEdge';
 import { MalformedCharstring, OperandStack } from './cffOperandStack';
 import { FLEX_OPERANDS, PathOperators } from './cffPathOperators';
-import { GlyphPen, type CharstringContour } from './cffPen';
+import { ContourBuilder, type CharstringContour } from './cffPen';
 import { twoByteInteger, type CffFont, type CffPrivate } from './cffTables';
 
 /** `CF2_OPERAND_STACK_SIZE`, and `CFF2_DEFAULT_STACK` for a CFF2 table. */
@@ -26,9 +31,6 @@ const OPERAND_STACK_CFF2 = 513;
  * asks for 10. FreeType checks for more than 16 but keeps room for 16, so a 17th call fails too.
  */
 const MAX_SUBROUTINE_DEPTH = 16;
-
-/** `CF2_MAX_HINTS`: the horizontal and vertical stems together that a hint mask can address. */
-const MAX_STEMS = 96;
 
 /** The instructions one charstring may run. FreeType's number "matches Avalon" (`psintrp.c`). */
 const INSTRUCTION_LIMIT = 20_000_000;
@@ -106,22 +108,22 @@ class CharstringRun {
   private readonly stack: OperandStack;
   private readonly arithmetic: ArithmeticOperators;
   private readonly path: PathOperators;
-  private readonly pen: GlyphPen;
+  private readonly glyphPath: GlyphPath;
+  private readonly hints = new GlyphHints();
   /** The charstrings that called into the one being read, outermost first. */
   private readonly callers: ByteCursor[] = [];
   private cursor: ByteCursor;
-  private stemCount = 0;
-  private hasHintMask = false;
   private vsindex: number;
   private hasBlended = false;
 
   /**
    * `origin` is where the first relative move starts: a `seac` accent is drawn at an offset.
-   * `glyphPrivate` stays that of the glyph a component belongs to, as in FreeType.
+   * `glyphPrivate` stays that of the glyph a component belongs to, as in FreeType, and so do its `blues`.
    */
   constructor(
     private readonly font: CffFont,
     private readonly glyphPrivate: CffPrivate,
+    private readonly blues: BlueZones,
     charstring: { start: number; end: number },
     private readonly contours: CharstringContour[],
     private readonly isComponent: boolean,
@@ -129,8 +131,8 @@ class CharstringRun {
   ) {
     this.stack = new OperandStack(font.isCff2 ? OPERAND_STACK_CFF2 : OPERAND_STACK_CFF1);
     this.arithmetic = new ArithmeticOperators(this.stack);
-    this.pen = new GlyphPen(contours);
-    this.path = new PathOperators(this.stack, this.pen, origin.x, origin.y);
+    this.glyphPath = new GlyphPath(new ContourBuilder(contours), this.hints, blues, origin.y);
+    this.path = new PathOperators(this.stack, this.glyphPath, origin.x, origin.y);
     this.cursor = new ByteCursor(font.dv, charstring.start, charstring.end);
     this.vsindex = glyphPrivate.vsindex;
   }
@@ -184,16 +186,18 @@ class CharstringRun {
     const { stack } = this;
     switch (op) {
       case OP.hstem:
-      case OP.vstem:
       case OP.hstemhm:
+        if (!this.hints.mask.isValid) this.declareStems(this.hints.horizontalStems);
+        break;
+      case OP.vstem:
       case OP.vstemhm:
-        if (!this.hasHintMask) this.countStems();
+        if (!this.hints.mask.isValid) this.declareStems(this.hints.verticalStems);
         break;
       case OP.hintmask:
-        this.maskHints(true);
+        this.maskHints();
         break;
       case OP.cntrmask:
-        this.maskHints(false);
+        this.maskCounters();
         break;
       case OP.vsindex:
         this.selectVariationData();
@@ -239,24 +243,35 @@ class CharstringRun {
     this.cursor = caller;
   }
 
-  /** The stems an operand list declares, each two operands; an odd one out is the width. */
-  private countStems(): void {
-    this.stemCount += this.stack.count >> 1;
+  /** The stems an operand list declares: each is a start, relative to the last stem's end, and a width. An odd one out is the glyph's width. */
+  private declareStems(stems: StemHint[]): void {
+    const { stack } = this;
+    let position = 0;
+    for (let i = stack.count & 1; i < stack.count; i += 2) {
+      const min = (position = (position + stack.real(i)) | 0);
+      const max = (position = (position + stack.real(i + 1)) | 0);
+      stems.push({ min, max, used: false, minDS: 0, maxDS: 0 });
+    }
   }
 
   /**
-   * `hintmask` and `cntrmask`: operands left on the stack are a last `vstem`, and the bytes after
-   * the operator are the mask. Only a `hintmask` ends the stems: a later `hstem` is then ignored.
-   * FreeType ignores a `hintmask` that comes after the mask with more than one operand, mask bytes
-   * included, which then run as operators.
+   * `hintmask`: operands left on the stack are a last `vstem`, and the bytes after the operator
+   * are the mask. FreeType ignores a `hintmask` with more than one operand once a mask is set, mask
+   * bytes included, which then run as operators.
    */
-  private maskHints(endsStems: boolean): void {
-    if (this.stack.count > 1 && this.hasHintMask) return;
-    this.countStems();
-    if (this.stemCount > MAX_STEMS)
-      throw new MalformedCharstring(`${this.stemCount} stems are more than the ${MAX_STEMS} a mask holds`);
-    if (endsStems) this.hasHintMask = true;
-    for (let maskByte = 0; maskByte < (this.stemCount + 7) >> 3; maskByte++) this.cursor.readByte();
+  private maskHints(): void {
+    if (this.stack.count > 1 && this.hints.mask.isValid) return;
+    this.declareStems(this.hints.verticalStems);
+    this.hints.mask.read(this.hints.stemCount, () => this.cursor.readByte());
+  }
+
+  /** `cntrmask`: as a `hintmask`, but the mask only places and locks the stems of a counter group, and sets no mask. */
+  private maskCounters(): void {
+    if (this.stack.count > 1 && this.hints.mask.isValid) return;
+    this.declareStems(this.hints.verticalStems);
+    const counterMask = new HintMask();
+    counterMask.read(this.hints.stemCount, () => this.cursor.readByte());
+    this.glyphPath.lockCounterStems(counterMask);
   }
 
   /** `vsindex` selects the variation data a later `blend` reads. Only CFF2 has it, and only before a `blend`. */
@@ -310,7 +325,7 @@ class CharstringRun {
    * standard character code.
    */
   private endChar(): void {
-    this.pen.closeOpenPath();
+    this.glyphPath.closeOpenPath();
     if (this.font.isCff2 || this.stack.count <= 1) return;
     if (this.isComponent) throw new MalformedCharstring('seac inside a seac component');
     const accentCode = this.stack.popInt();
@@ -326,20 +341,41 @@ class CharstringRun {
     const charstring = glyphIndex === null ? null : this.font.charStrings.entry(glyphIndex);
     if (!charstring)
       throw new MalformedCharstring(`seac names standard character ${standardCode}, which the charset lacks`);
-    new CharstringRun(this.font, this.glyphPrivate, charstring, this.contours, true, origin).execute();
+    new CharstringRun(
+      this.font,
+      this.glyphPrivate,
+      this.blues,
+      charstring,
+      this.contours,
+      true,
+      origin
+    ).execute();
   }
 }
 
 /**
- * The contours glyph `glyphIndex` draws, or null for a glyph that does not exist or whose
- * charstring FreeType would refuse to load.
+ * The contours glyph `glyphIndex` draws at `scale`, the 16.16 factor from a design unit to a
+ * pixel, or null for a glyph that does not exist or whose charstring FreeType would refuse to load.
  */
-export function interpretCharstring(font: CffFont, glyphIndex: number): CharstringContour[] | null {
+export function interpretCharstring(
+  font: CffFont,
+  glyphIndex: number,
+  scale: number
+): CharstringContour[] | null {
   const charstring = font.charStrings.entry(glyphIndex);
   if (!charstring) return null;
   const contours: CharstringContour[] = [];
+  const glyphPrivate = font.privateOf(glyphIndex);
   try {
-    new CharstringRun(font, font.privateOf(glyphIndex), charstring, contours, false, ORIGIN).execute();
+    new CharstringRun(
+      font,
+      glyphPrivate,
+      new BlueZones(glyphPrivate.blues, scale),
+      charstring,
+      contours,
+      false,
+      ORIGIN
+    ).execute();
   } catch (error) {
     // A DataView read that leaves the table is a corrupt font, which FreeType also refuses.
     if (error instanceof MalformedCharstring || error instanceof RangeError) return null;
