@@ -258,6 +258,7 @@ Tag a new shared helper. Do not edit the list.
 - A plan of many resource files to load: `useLoadedFiles` in `resources/useLoadedFiles.ts`.
 - A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
   `resources/useSubOrExtResource.ts`.
+- A page-wide count of work in flight: `createWorkCount` in `resources/workCount.ts`.
 - A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
 - An entry by its key in a frozen table: `firstWith`, `lastWith` and `firstIndexWith` in
   `utils/keyedLookup.ts`. They build one Map for each table.

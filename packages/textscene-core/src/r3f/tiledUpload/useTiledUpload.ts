@@ -7,7 +7,7 @@
 
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import { beginTextureWork } from '../../resources/textures/textureWork';
+import { textureWork } from '../../resources/textures/textureWork';
 import { useNearestAnisotropy } from '../nearestAnisotropy';
 import { TiledUploadContext } from './TiledUploadContext';
 
@@ -30,7 +30,7 @@ export function useTiledUpload<T extends THREE.Texture>(
   useEffect(() => {
     if (!isTiled || !texture || !queue) return undefined;
     const upload = queue.enqueue(texture);
-    const endWork = beginTextureWork();
+    const endWork = textureWork.begin();
     let current = true;
     void upload.done.then((isUploaded) => {
       endWork();

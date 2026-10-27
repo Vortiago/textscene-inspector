@@ -213,11 +213,17 @@ export const CANVAS_2D_SCENES = [
   // two hops down past a themeless Control, resolve it by the ancestor walk.
   // Every other Control golden draws the bundled MSDF atlas.
   { name: 'control-scene-font-theme', file: 'unit-control-scene-font-theme.tscn', mode: '2d' },
-  // The one variable: a `.woff2` font takes the ascent/descent fallback.
-  // `sfntTables.ts` cannot parse Brotli-compressed WOFF2, so the metrics come
-  // from `TextMetrics.fontBoundingBoxAscent`/`.fontBoundingBoxDescent`. No
-  // same-face `.woff2`/`.otf` pair exists, so compare with Godot, not the sibling.
+  // The one variable: a variable `.woff2` font drawn at its `fvar` defaults. Its metrics come
+  // from its own tables, which `fontContainer.ts` decompresses. No same-face `.woff2`/`.otf`
+  // pair exists, so compare with Godot, not the sibling.
   { name: 'control-scene-font-woff2', file: 'unit-control-scene-font-woff2.tscn', mode: '2d' },
+  // The one variable: a font whose OS/2 sets USE_TYPO_METRICS with typographic metrics that
+  // differ from its `hhea`, which FreeType then ignores.
+  {
+    name: 'control-scene-font-typo-metrics',
+    file: 'unit-control-scene-font-typo-metrics.tscn',
+    mode: '2d',
+  },
   // The one variable: a scene font drawn magnified. At 1x no filter kernel runs,
   // so only a scaled Label shows the sampling colour space of the canvas-painted
   // glyph texture. The fixture header settles which space is correct.

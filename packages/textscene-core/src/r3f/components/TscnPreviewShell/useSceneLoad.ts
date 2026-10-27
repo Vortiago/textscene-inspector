@@ -1,11 +1,13 @@
 /**
  * How far the current scene has loaded. It is complete when a frame now would show it whole: the
- * shell has a scene, the canvas has rendered it, and no resource or texture it uses is still on
- * its way.
+ * shell has a scene, the canvas has rendered it, and no resource, texture or scene font it uses is
+ * still on its way.
  */
 import { useSyncExternalStore } from 'react';
 import { usePendingResourceCount } from '../../../resources/usePendingResourceCount.js';
-import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
+import { usePendingWork } from '../../../resources/usePendingWork.js';
+import { textureWork } from '../../../resources/textures/textureWork.js';
+import { fontWork } from '../../controls/native/text/sceneFontLoader.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { subscribeToNothing } from '../../../utils/subscribeToNothing.js';
@@ -27,11 +29,17 @@ export function useSceneLoad(): SceneLoad {
   );
   // Every hook runs on every render, so React sees one hook order.
   const pendingResources = usePendingResourceCount();
-  const pendingTextures = usePendingTextureWork();
+  const pendingTextures = usePendingWork(textureWork);
+  const pendingFonts = usePendingWork(fontWork);
   const hasScene = currentScene !== null;
   return {
     hasScene,
-    isComplete: hasScene && renderedScene === currentScene && pendingResources === 0 && pendingTextures === 0,
+    isComplete:
+      hasScene &&
+      renderedScene === currentScene &&
+      pendingResources === 0 &&
+      pendingTextures === 0 &&
+      pendingFonts === 0,
     pendingTextures,
   };
 }
