@@ -37,13 +37,3 @@ export function roundFixed(value: number): number {
 export function fractionOfFixed(value: number): number {
   return value - Math.floor(value / FIXED_16_16_ONE) * FIXED_16_16_ONE;
 }
-
-/**
- * `FT_MulDiv`: `a * b / c`, rounded half up on the magnitude. A zero `c` gives the largest 32-bit magnitude, signed by `a * b`.
- * @canonical FreeType's `a * b / c` in integers
- */
-export function ftMulDiv(a: number, b: number, c: number): number {
-  if (c === 0) return a * b < 0 ? -0x7fffffff : 0x7fffffff;
-  const sign = Math.sign(a) * Math.sign(b) * Math.sign(c);
-  return sign * Math.floor((Math.abs(a) * Math.abs(b) + Math.floor(Math.abs(c) / 2)) / Math.abs(c));
-}

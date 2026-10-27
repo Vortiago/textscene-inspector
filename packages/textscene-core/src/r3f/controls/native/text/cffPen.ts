@@ -9,7 +9,6 @@
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import type { DevicePen } from './cffGlyphPath';
 import type { ContourTag } from './glyphContours';
 
 /** One contour: ON points at the ends of its segments, cubic control points between them. */
@@ -17,6 +16,13 @@ export interface CharstringContour {
   x: number[];
   y: number[];
   tags: ContourTag[];
+}
+
+/** Where the path lands: device space points in 16.16 px, y up. */
+export interface DevicePen {
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  curveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void;
 }
 
 export class ContourBuilder implements DevicePen {

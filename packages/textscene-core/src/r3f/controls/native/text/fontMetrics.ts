@@ -101,11 +101,20 @@ export function ftDivFix(a: number, b: number): number {
   return sign * magnitude;
 }
 
+/**
+ * `freetype/src/base/ftcalc.c`'s `FT_MulDiv`: `a * b / c`, rounded half up on the magnitude. A zero
+ * `c` gives the largest 32-bit magnitude, signed by `a * b`.
+ * @canonical FreeType's `a * b / c` in integers
+ */
+export function ftMulDiv(a: number, b: number, c: number): number {
+  if (c === 0) return a * b < 0 ? -0x7fffffff : 0x7fffffff;
+  const sign = Math.sign(a) * Math.sign(b) * Math.sign(c);
+  return sign * Math.floor((Math.abs(a) * Math.abs(b) + Math.floor(Math.abs(c) / 2)) / Math.abs(c));
+}
+
 /** `freetype/src/base/ftcalc.c`'s `FT_MulFix`: `a * b / 65536`, rounded half up on the magnitude. */
 export function ftMulFix(a: number, b: number): number {
-  const sign = Math.sign(a) * Math.sign(b);
-  const magnitude = Math.floor((Math.abs(a) * Math.abs(b) + FIXED_16_16_ONE / 2) / FIXED_16_16_ONE);
-  return sign * magnitude;
+  return ftMulDiv(a, b, FIXED_16_16_ONE);
 }
 
 /**

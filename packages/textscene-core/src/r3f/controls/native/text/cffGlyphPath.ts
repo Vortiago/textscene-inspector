@@ -13,14 +13,8 @@
 import type { BlueZones } from './cffBlues';
 import type { GlyphHints, HintMask } from './cffGlyphHints';
 import { HintMap } from './cffHintMap';
+import type { DevicePen } from './cffPen';
 import { ftMulFix } from './fontMetrics';
-
-/** Where the path lands: device space points in 16.16 px, y up. */
-export interface DevicePen {
-  moveTo(x: number, y: number): void;
-  lineTo(x: number, y: number): void;
-  curveTo(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void;
-}
 
 interface Point {
   x: number;

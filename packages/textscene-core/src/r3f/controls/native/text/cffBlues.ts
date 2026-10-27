@@ -8,10 +8,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { doubleToFixed, ftMulDiv, intToFixed, roundFixed } from './cffFixed';
+import { doubleToFixed, intToFixed, roundFixed } from './cffFixed';
 import { EdgeFlag, MIN_COUNTER, isBottomEdge, isTopEdge, isValidEdge, type HintEdge } from './cffHintEdge';
 import type { PrivateBlues } from './cffPrivateDict';
-import { FIXED_16_16_ONE, ftDivFix, ftMulFix } from './fontMetrics';
+import { FIXED_16_16_ONE, ftDivFix, ftMulDiv, ftMulFix } from './fontMetrics';
 
 interface Zone {
   csBottomEdge: number;
