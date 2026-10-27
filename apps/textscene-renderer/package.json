@@ -51,6 +51,7 @@
     "url": "https://github.com/Vortiago/textscene-inspector/issues"
   },
   "dependencies": {
+    "brotli": "catalog:",
     "fzstd": "catalog:",
     "three-bvh-csg": "catalog:",
     "three-mesh-bvh": "catalog:"

@@ -1,8 +1,9 @@
 /**
- * Reads a scene font's table directory and its `head.unitsPerEm` and `hhea` ascender and descender,
- * the scalars the runtime bundle cannot get from `fontkit`, a bake-time-only devDependency that
- * `pnpm check:bundle-size` keeps out. Advances and kerning come from canvas `measureText`, and the
- * glyph outlines from `sfntOutlines.ts`, which opens the font through this module.
+ * Reads a scene font's table directory, its `head.unitsPerEm`, its ascender and descender, and the
+ * default of each `fvar` axis: the facts the runtime bundle cannot get from `fontkit`, a
+ * bake-time-only devDependency that `pnpm check:bundle-size` keeps out. Advances and kerning come from
+ * canvas `measureText`, and the glyph outlines from `sfntOutlines.ts`, which opens the font through
+ * this module. `fontContainer.ts` opens a WOFF or WOFF2 into the same `SfntFile`.
  */
 
 import { perObject } from '../../../../utils/perObject';
@@ -16,9 +17,8 @@ export interface SfntScalars {
 
 /**
  * The sfnt version tags of the OpenType spec, "OpenType Font File" §"sfntVersion". Only plain SFNT
- * reads: TrueType (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first face of a
- * `'ttcf'` collection. WOFF2 tables are Brotli-compressed, and the webview can decompress neither
- * with `DecompressionStream`, which has no `'brotli'` format, nor with WASM, which the CSP blocks.
+ * reads here: TrueType (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first face of a
+ * `'ttcf'` collection. A WOFF or WOFF2 compresses its tables, so `fontContainer.ts` decompresses them first.
  */
 const SFNT_VERSION_TRUETYPE = 0x00010000;
 const SFNT_VERSION_OTTO = 0x4f54544f; // 'OTTO'
@@ -41,6 +41,25 @@ const HEAD_TABLE_MIN_LENGTH = 20;
 const HHEA_ASCENDER_OFFSET = 4; // hhea table: majorVersion(2) minorVersion(2) ascender(2) ...
 const HHEA_DESCENDER_OFFSET = 6;
 const HHEA_TABLE_MIN_LENGTH = 8;
+// OS/2 table: fsSelection at 62, sTypoAscender(2) sTypoDescender(2) sTypoLineGap(2) usWinAscent(2) usWinDescent(2) from 68.
+const OS2_FS_SELECTION_OFFSET = 62;
+const OS2_TYPO_ASCENDER_OFFSET = 68;
+const OS2_TYPO_DESCENDER_OFFSET = 70;
+const OS2_WIN_ASCENT_OFFSET = 74;
+const OS2_WIN_DESCENT_OFFSET = 76;
+const OS2_TABLE_MIN_LENGTH = 78;
+const OS2_USE_TYPO_METRICS = 1 << 7; // fsSelection bit 7
+// fvar table: majorVersion(2) minorVersion(2) axesArrayOffset(2) reserved(2) axisCount(2) axisSize(2) ...
+const FVAR_AXES_ARRAY_OFFSET_FIELD = 4;
+const FVAR_AXIS_COUNT_FIELD = 8;
+const FVAR_HEADER_SIZE = 16;
+// VariationAxisRecord: axisTag(4) minValue(4) defaultValue(4) maxValue(4) flags(2) axisNameID(2)
+const FVAR_AXIS_SIZE = 20;
+const FVAR_AXIS_DEFAULT_OFFSET = 8;
+const FIXED_UNITS = 65536; // Fixed is 16.16
+
+/** The tables the readers of this module use. A compressed container decompresses these and no others. */
+export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar'];
 
 export interface TableRecord {
   offset: number;
@@ -51,6 +70,24 @@ export interface TableRecord {
 export interface SfntFile {
   readonly dv: DataView;
   readonly tables: ReadonlyMap<string, TableRecord>;
+}
+
+/** The tables `tables` names, laid end to end in one buffer, as an `SfntFile` of a font that holds only them. */
+export function sfntFileOfTables(tables: ReadonlyMap<string, Uint8Array>): SfntFile {
+  const buffer = new ArrayBuffer([...tables.values()].reduce((sum, data) => sum + data.length, 0));
+  const records = new Map<string, TableRecord>();
+  let offset = 0;
+  for (const [tag, data] of tables) {
+    new Uint8Array(buffer, offset, data.length).set(data);
+    records.set(tag, { offset, length: data.length });
+    offset += data.length;
+  }
+  return { dv: new DataView(buffer), tables: records };
+}
+
+/** The four-byte tag at `at`. */
+export function readTag(dv: DataView, at: number): string {
+  return String.fromCharCode(dv.getUint8(at), dv.getUint8(at + 1), dv.getUint8(at + 2), dv.getUint8(at + 3));
 }
 
 /** Reads the table directory after the 12-byte sfnt header at `sfntStart`, or `null` if it does not fit in `dv`. */
@@ -64,13 +101,7 @@ function readTableDirectory(dv: DataView, sfntStart: number): Map<string, TableR
   const tables = new Map<string, TableRecord>();
   for (let i = 0; i < numTables; i++) {
     const recordStart = dirStart + i * TABLE_RECORD_SIZE;
-    const tag = String.fromCharCode(
-      dv.getUint8(recordStart),
-      dv.getUint8(recordStart + 1),
-      dv.getUint8(recordStart + 2),
-      dv.getUint8(recordStart + 3)
-    );
-    tables.set(tag, {
+    tables.set(readTag(dv, recordStart), {
       offset: dv.getUint32(recordStart + 8, false),
       length: dv.getUint32(recordStart + 12, false),
     });
@@ -118,25 +149,72 @@ export function readUnitsPerEm(dv: DataView, head: TableRecord): number {
   return dv.getUint16(head.offset + HEAD_UNITS_PER_EM_OFFSET, false);
 }
 
-/**
- * Reads the scalars from raw SFNT bytes. Returns `null`, never throws, for a compressed container,
- * an unknown `sfntVersion`, a missing `head` or `hhea`, or an offset past the buffer, so a broken
- * font falls back to the bundled default.
- */
-export function parseSfntScalars(bytes: ArrayBuffer): SfntScalars | null {
-  const sfnt = openSfnt(bytes);
-  if (!sfnt) return null;
-  const { dv, tables } = sfnt;
+/** The signed ascender and descender, in design units, that FreeType gives the face. */
+interface VerticalMetrics {
+  readonly ascender: number;
+  readonly descender: number;
+}
 
+/**
+ * The vertical metrics Godot reads from FreeType's size metrics (`text_server_adv.cpp:1515-1516`),
+ * which FreeType takes from `OS/2` typographic metrics when the font sets USE_TYPO_METRICS, else
+ * from `hhea`, else from the typographic and then the Windows metrics when `hhea` holds zero
+ * (`thirdparty/freetype/src/sfnt/sfobjs.c:1380-1413`). An `OS/2` table too short to hold them is absent.
+ */
+function readVerticalMetrics(dv: DataView, hhea: TableRecord, os2: TableRecord | undefined): VerticalMetrics {
+  const hasOs2 = os2 !== undefined && tableFits(dv, os2, OS2_TABLE_MIN_LENGTH);
+  const typo = hasOs2 && {
+    ascender: dv.getInt16(os2.offset + OS2_TYPO_ASCENDER_OFFSET, false),
+    descender: dv.getInt16(os2.offset + OS2_TYPO_DESCENDER_OFFSET, false),
+  };
+  if (typo && dv.getUint16(os2.offset + OS2_FS_SELECTION_OFFSET, false) & OS2_USE_TYPO_METRICS) return typo;
+
+  const horizontal = {
+    ascender: dv.getInt16(hhea.offset + HHEA_ASCENDER_OFFSET, false),
+    descender: dv.getInt16(hhea.offset + HHEA_DESCENDER_OFFSET, false),
+  };
+  if (horizontal.ascender !== 0 || horizontal.descender !== 0 || !typo) return horizontal;
+  if (typo.ascender !== 0 || typo.descender !== 0) return typo;
+  return {
+    ascender: dv.getUint16(os2.offset + OS2_WIN_ASCENT_OFFSET, false),
+    descender: -dv.getUint16(os2.offset + OS2_WIN_DESCENT_OFFSET, false),
+  };
+}
+
+/**
+ * Reads the scalars from the tables of an opened font. Returns `null`, never throws, for a missing
+ * `head` or `hhea`, or an offset past the buffer, so a broken font falls back to the bundled default.
+ */
+export function parseSfntScalars({ dv, tables }: SfntFile): SfntScalars | null {
   const head = tables.get('head');
   const hhea = tables.get('hhea');
   if (!head || !hhea) return null;
   if (!tableFits(dv, head, HEAD_TABLE_MIN_LENGTH) || !tableFits(dv, hhea, HHEA_TABLE_MIN_LENGTH)) return null;
 
   const unitsPerEm = readUnitsPerEm(dv, head);
-  const ascender = dv.getInt16(hhea.offset + HHEA_ASCENDER_OFFSET, false);
-  const descender = dv.getInt16(hhea.offset + HHEA_DESCENDER_OFFSET, false);
   if (unitsPerEm === 0) return null; // degenerate; every downstream scale divides by this
 
+  const { ascender, descender } = readVerticalMetrics(dv, hhea, tables.get('OS/2'));
   return { unitsPerEm, ascent: Math.abs(ascender), descent: Math.abs(descender) };
+}
+
+/**
+ * The default value of each `fvar` axis by its tag, as Godot resets every axis to before it applies
+ * a variation (`text_server_adv.cpp:1930-1933`). Empty for a font with no `fvar`, or one whose
+ * axis records do not fit the table.
+ */
+export function readAxisDefaults({ dv, tables }: SfntFile): Readonly<Record<string, number>> {
+  const fvar = tables.get('fvar');
+  const defaults: Record<string, number> = {};
+  if (!fvar || !tableFits(dv, fvar, FVAR_HEADER_SIZE)) return defaults;
+
+  const axesStart = fvar.offset + dv.getUint16(fvar.offset + FVAR_AXES_ARRAY_OFFSET_FIELD, false);
+  const axisCount = dv.getUint16(fvar.offset + FVAR_AXIS_COUNT_FIELD, false);
+  if (axesStart + axisCount * FVAR_AXIS_SIZE > fvar.offset + fvar.length) return defaults;
+
+  for (let axis = 0; axis < axisCount; axis++) {
+    const at = axesStart + axis * FVAR_AXIS_SIZE;
+    defaults[readTag(dv, at)] = dv.getInt32(at + FVAR_AXIS_DEFAULT_OFFSET, false) / FIXED_UNITS;
+  }
+  return defaults;
 }

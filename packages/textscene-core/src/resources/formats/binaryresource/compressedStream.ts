@@ -13,7 +13,7 @@ import { decompressFastLz } from './fastlz';
 const COMPRESSION_MODE_NAMES = enumNamesByValue(CompressionMode);
 
 /** Inflates one block to exactly `size` bytes. */
-type BlockInflater = (block: Uint8Array, size: number) => Uint8Array;
+export type BlockInflater = (block: Uint8Array, size: number) => Uint8Array;
 
 /** `reader` stands just past the magic. */
 export async function inflateCompressedStream(reader: ByteReader): Promise<Uint8Array> {
@@ -49,10 +49,8 @@ async function blockInflater(mode: number): Promise<BlockInflater> {
   switch (mode) {
     case CompressionMode.FastLz:
       return decompressFastLz;
-    case CompressionMode.Deflate: {
-      const { unzlibSync } = await import('three/addons/libs/fflate.module.js');
-      return (block, size) => exactly(size, unzlibSync(block, { out: new Uint8Array(size) }));
-    }
+    case CompressionMode.Deflate:
+      return zlibBlockInflater();
     case CompressionMode.Gzip: {
       const { gunzipSync } = await import('three/addons/libs/fflate.module.js');
       return (block, size) => exactly(size, gunzipSync(block, { out: new Uint8Array(size) }));
@@ -67,6 +65,12 @@ async function blockInflater(mode: number): Promise<BlockInflater> {
     default:
       throw new Error(`expected a compression mode from 0 to ${CompressionMode.Brotli}, got ${mode}`);
   }
+}
+
+/** The one lazy `fflate` import for zlib streams, shared with the WOFF reader of `r3f/controls/native/text`. */
+export async function zlibBlockInflater(): Promise<BlockInflater> {
+  const { unzlibSync } = await import('three/addons/libs/fflate.module.js');
+  return (block, size) => exactly(size, unzlibSync(block, { out: new Uint8Array(size) }));
 }
 
 function exactly(size: number, inflated: Uint8Array): Uint8Array {

@@ -1,9 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; The one variable: a `.woff2` `default_font`. No Brotli decoder runs in the webview, so sfntTables.ts
-; returns null and ascent and descent come from TextMetrics at a 1000px reference size, not the
-; head/hhea read the `.otf` sibling covers. The typeface differs, so Godot arbitrates it directly:
-; columns exact, rows within 1 px.
+; The one variable: a variable `.woff2` `default_font`, drawn at its `fvar` defaults. Recursive's
+; `wght` default is 300, where Chromium would map the CSS weight `normal` onto 400. Ascent and
+; descent come from the font's own tables, as in the `.otf` sibling. No other golden authors a
+; variable font. The typeface differs, so Godot arbitrates it directly.
 
 [ext_resource type="Theme" path="res://unit-control-scene-font-woff2.tres" id="1"]
 

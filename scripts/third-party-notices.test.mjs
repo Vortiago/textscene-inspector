@@ -136,6 +136,19 @@ describe('bundledNotices', () => {
     expect(text).not.toContain('## Godot Engine');
   });
 
+  it('carries the Brotli decoder notice when the bundle holds the decoder', () => {
+    const decoderFile = {
+      path: 'node_modules/.pnpm/brotli@1.3.3/node_modules/brotli/dec/decode.js',
+      text: '/* Copyright 2013 Google Inc. All Rights Reserved. */',
+    };
+
+    const text = bundledNotices(notices, [decoderFile, plainFile]);
+
+    expect(text).toContain('## Brotli decoder');
+    expect(text).toContain('Licensed under the Apache License, Version 2.0');
+    expect(text).not.toContain('## Godot Engine');
+  });
+
   it('carries the font licence when the bundle holds the font', () => {
     const fontFile = {
       path: 'packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts',
