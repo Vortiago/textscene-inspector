@@ -18,7 +18,7 @@ A selected VoxelGI draws the gizmo of Godot's editor in the VoxelGI colour. Godo
 - The 12 edges of the box, a box of `size` centred on the node.
 - The grid of its cells at an opacity of 0.02. The longest side holds 64, 128, 256 or 512 cells by `subdiv`, and each plane inside the box draws four segments.
 
-The previewer draws no edit handles and no billboard icon.
+The previewer draws no edit handles. Godot's billboard icon marks the origin, and the previewer draws it too.
 
 ## Linting
 

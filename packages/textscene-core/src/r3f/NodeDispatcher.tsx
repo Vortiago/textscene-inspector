@@ -47,6 +47,7 @@ import { SceneResourcesProvider, useSceneResources } from './SceneResourcesConte
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { GuardedNodeComponent } from './components/GuardedNodeComponent.js';
+import { NodeEditorIcon } from './nodeIcon/NodeEditorIcon.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
@@ -290,6 +291,11 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
   ));
 
   const children: ReactNode[] = [];
+  // Inside the node's own group, as a child, so the icon sits at its origin whatever the component draws.
+  const editorIcon = nodeComponentRegistry.editorIconOf(node.type);
+  if (editorIcon) {
+    children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
+  }
   if (inlineChildren.length > 0) {
     children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
   }

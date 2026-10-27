@@ -58,6 +58,7 @@ import {
   SHARED_WORLD_TONE_MAPPING,
 } from '../../../resources/environment/toneMapping';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { hideEditorHelpers } from '../../../r3f/editorHelpers';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -201,11 +202,17 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
           const rendersClear = camera !== null && gl.autoClear;
           if (kind === '3d' && !rendersClear) gl.clear(true, true, true);
           if (!camera) return;
-          renderWithMipmapBias(mipmapBias, () =>
-            renderWithShadowAtlas(shadowAtlas, () =>
-              kind === '2d' ? frame.render(gl, source, camera) : gl.render(source, camera)
-            )
-          );
+          // The pass draws through the viewport's own camera, which no editor gizmo is built for.
+          const showChrome = hideEditorHelpers(source);
+          try {
+            renderWithMipmapBias(mipmapBias, () =>
+              renderWithShadowAtlas(shadowAtlas, () =>
+                kind === '2d' ? frame.render(gl, source, camera) : gl.render(source, camera)
+              )
+            );
+          } finally {
+            showChrome();
+          }
         },
       });
     } finally {

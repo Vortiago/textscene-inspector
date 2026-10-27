@@ -10,6 +10,7 @@
  */
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { Rect2 } from '../../../../godot/math/rect2';
+import { colorHue, colorSaturation } from '../../../../godot/math/color';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -113,34 +114,6 @@ export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
   return theme.scale;
 }
 
-/**
- * `Color::from_hsv` (`core/math/color.cpp:458-461`, delegating to
- * `set_hsv`, `:182-227`).
- */
-export function hsvToRgb(h: number, s: number, v: number): Rgba {
-  if (s === 0) return { r: v, g: v, b: v, a: 1 };
-  const hh = (((h * 6) % 6) + 6) % 6;
-  const i = Math.floor(hh);
-  const f = hh - i;
-  const p = v * (1 - s);
-  const q = v * (1 - s * f);
-  const t = v * (1 - s * (1 - f));
-  switch (i) {
-    case 0:
-      return { r: v, g: t, b: p, a: 1 };
-    case 1:
-      return { r: q, g: v, b: p, a: 1 };
-    case 2:
-      return { r: p, g: v, b: t, a: 1 };
-    case 3:
-      return { r: p, g: q, b: v, a: 1 };
-    case 4:
-      return { r: t, g: p, b: v, a: 1 };
-    default:
-      return { r: v, g: p, b: q, a: 1 };
-  }
-}
-
 /** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
 export function invertRgb(c: Rgba): Rgba {
   return { r: 1 - c.r, g: 1 - c.g, b: 1 - c.b, a: c.a };
@@ -171,22 +144,11 @@ export function extractHsv(color: Rgba): HsvColor {
     b: linearChannelToSRGB(linear.b / multiplier),
   };
 
-  const min = Math.min(normalized.r, normalized.g, normalized.b);
-  const max = Math.max(normalized.r, normalized.g, normalized.b);
-  const delta = max - min;
-
-  let h = 0;
-  if (delta !== 0) {
-    if (normalized.r === max) h = (normalized.g - normalized.b) / delta;
-    else if (normalized.g === max) h = 2 + (normalized.b - normalized.r) / delta;
-    else h = 4 + (normalized.r - normalized.g) / delta;
-    h /= 6;
-    if (h < 0) h += 1;
-  }
-  const s = max !== 0 ? delta / max : 0;
-  const v = max;
-
-  return { h, s, v };
+  return {
+    h: colorHue(normalized),
+    s: colorSaturation(normalized),
+    v: Math.max(normalized.r, normalized.g, normalized.b),
+  };
 }
 
 interface ColorPickerRows {

@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import { hsvToRgb } from './nativeSolver';
+import { hsvToRgb } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 
 export interface QuadGeometry {
