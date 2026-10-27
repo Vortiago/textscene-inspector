@@ -71,7 +71,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     () => createCanvasTarget(width, height, node.name),
     [width, height, node.name]
   );
-  // Controls are canvas items, so the 2D buffer's mode applies.
+  // The frame takes the 2D buffer's multisampling, so the target it copies into never multisamples.
   const target = useMultisampledTarget(0, createTarget);
   const { camera, frame } = useCanvasPass(width, height, viewportMsaaMode(properties, '2d'));
 

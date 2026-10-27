@@ -522,9 +522,15 @@ size = Vector2i(300, 300)
     expect(published()).not.toBeNull();
   });
 
-  // The render of a camera cannot be relied on to clear (see `CanvasFrame.render`).
-  it('clears a 3D target by hand, once, before its camera renders', async () => {
+  // A render clears only while the renderer's autoClear is on (see `CanvasFrame.render`).
+  it('leaves the clear of a 3D target to its camera render while autoClear is on', async () => {
     const { renderer, gl } = await renderScene(scene3D());
+    expect(await explicitClearsNextFrame(renderer, gl())).toBe(0);
+  });
+
+  it('clears a 3D target by hand once autoClear is off', async () => {
+    const { renderer, gl } = await renderScene(scene3D());
+    gl().autoClear = false;
     expect(await explicitClearsNextFrame(renderer, gl())).toBe(1);
   });
 
