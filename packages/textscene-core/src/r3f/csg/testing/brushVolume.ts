@@ -7,7 +7,7 @@ import type * as THREE from 'three';
  * the origin. Positive when the faces front outward, as three.js culls them, and negative when the
  * brush is turned inside out.
  *
- * @oneWay In tests, the signed volume of a brush
+ * @canonical In tests, the signed volume of a brush
  */
 export function enclosedVolume(geometry: THREE.BufferGeometry): number {
   const positions = geometry.getAttribute('position');

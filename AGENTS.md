@@ -191,10 +191,10 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
 - Write a comment only for non-obvious information, with no issue or work-item reference.
 - Change the generator, never the text of a generated file or a `lint:begin` section.
 
-### One way to do each thing
+### One canonical helper for each job
 
 Each job has one helper. Use it, and extend it when it falls short. Never write a second copy
-beside it. `pnpm one-way` prints every helper with its job and its path under
-`packages/textscene-core/src/`, one job a line, so `pnpm -s one-way | grep -i <word>` finds one.
-When you write a new shared helper, put an `@oneWay <job>` tag in its doc comment. The lines after
+beside it. `pnpm canonical` prints every helper with its job and its path under
+`packages/textscene-core/src/`, one job a line, so `pnpm -s canonical | grep -i <word>` finds one.
+When you write a new shared helper, put a `@canonical <job>` tag in its doc comment. The lines after
 the tag are its note.

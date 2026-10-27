@@ -83,7 +83,7 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
 }
 
 /**
- * @oneWay Mesh content and its disposal
+ * @canonical Mesh content and its disposal
  */
 export function useMeshContent(resolution: ResourceResolution): MeshContent {
   const { scoped, status, resourcePath } = resolution;
