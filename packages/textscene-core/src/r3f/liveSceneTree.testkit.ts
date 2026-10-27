@@ -1,4 +1,5 @@
 /** Builds and reads the live scene tree, for tests over a main scene and the scenes it instances. */
+import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { resolveLiveEntry, type LiveTreeContext } from './liveSceneTree';
 
@@ -8,14 +9,20 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
 }
 
 /**
- * The context of `main`, with each scene path in `scenes` cached and every other path not.
+ * The context of `main`'s pools, with each scene path in `scenes` and each GLB path in `glbs`
+ * cached and every other path not.
  *
  * @oneWay In tests, a live-tree context over scenes
  */
-export function contextOver(main: TscnScene, scenes: Record<string, TscnScene>): LiveTreeContext {
+export function contextOver(
+  main: Pick<TscnScene, 'externalResources' | 'internalResources'>,
+  scenes: Readonly<Record<string, TscnScene>>,
+  glbs?: Readonly<Record<string, THREE.Object3D>>
+): LiveTreeContext {
   return {
     externalResources: main.externalResources,
     internalResources: main.internalResources,
     sceneCache: { getCached: (path) => scenes[path] },
+    ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
   };
 }

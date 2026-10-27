@@ -11,7 +11,7 @@ import {
 } from '../parser/instantiateRefusal.js';
 import {
   isReRooted,
-  isSeatedAtOwnPath,
+  isSeatedAtOwnPathIn,
   orphanedNodes,
   type SceneSeating,
 } from '../parser/sceneTreeBuilder.js';
@@ -60,7 +60,7 @@ function idRecoveries(
   seating: SceneSeating<RawNode>
 ): Map<NodeOrigin<RawNode>, IdRecovery> {
   const { seated, pathOf } = seating;
-  const isPlaced = ({ node }: NodeOrigin<RawNode>) => isSeatedAtOwnPath(node, seating);
+  const isPlaced = isSeatedAtOwnPathIn(seating);
   const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
   origins.forEach((origin, index) => {
     if (isPlaced(origin)) return;

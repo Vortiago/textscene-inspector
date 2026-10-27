@@ -6,12 +6,12 @@
  */
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { liveInstancePath, scopeOf, type LiveNode } from '../resources/liveNode.js';
+import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
-import { insertAtIndex } from '../godot/scene/siblingIndex.js';
+import { addAtIndex } from '../godot/scene/siblingIndex.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -315,12 +315,11 @@ function glbInstanceGroups(
   hostScope: SceneScope
 ): LiveChildGroup[] {
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
-  const stamped = attached.map((child) => (child.scope ? child : { ...child, scope: hostScope }));
+  const stamped = attached.map((child) => withFallbackScope(child, hostScope));
   const objects = glbSceneRootChildren(object, stamped);
   if (rest.length === 0) return [{ origin: 'glb', children: objects, scope: hostScope }];
-  // A copy: without attached children the objects are the GLB's shared, frozen answer.
-  const ordered = [...objects];
-  for (const child of rest) insertAtIndex(ordered, child);
+  // Without attached children the objects are the GLB's shared, frozen answer.
+  const ordered = addAtIndex<TscnNode>(objects, ...rest);
   const hostOwn = new Set<TscnNode>(rest);
   const runs: { origin: 'glb' | 'inline'; children: TscnNode[] }[] = [];
   for (const child of ordered) {

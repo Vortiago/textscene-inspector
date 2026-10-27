@@ -11,12 +11,12 @@ export function insertAtIndex<T>(siblings: T[], node: T & { index?: number }): v
 }
 
 /**
- * `siblings` with `node` added, as a new array: the siblings may be a shared cache entry, such as
- * the frozen objects of a GLB.
+ * `siblings` with `nodes` added in turn, as a new array: the siblings may be a shared cache entry,
+ * such as the frozen objects of a GLB.
  */
-export function addAtIndex<T extends { index?: number }>(siblings: readonly T[], node: T): T[] {
+export function addAtIndex<T extends { index?: number }>(siblings: readonly T[], ...nodes: T[]): T[] {
   const placed = [...siblings];
-  insertAtIndex(placed, node);
+  for (const node of nodes) insertAtIndex(placed, node);
   return placed;
 }
 

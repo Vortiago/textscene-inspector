@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
@@ -47,7 +47,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
-import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
+import { useFontMetricsSettleCount } from '../../../resources/meshes/textmesh/useFontMetricsSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
@@ -858,16 +858,15 @@ export function useBuildSolveTree(
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
-  const [fontMetricsVersion, setFontMetricsVersion] = useState(0);
+  // With or without a loader: `peekSceneFontMetrics` starts font loads from the
+  // solve itself and answers with the bundled fallback until the metrics settle.
+  const fontMetricsVersion = useFontMetricsSettleCount(true);
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
   // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
   const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
 
-  // With or without a loader: `peekSceneFontMetrics` starts font loads from the
-  // solve itself and answers with the bundled fallback until the metrics settle.
-  useEffect(() => onSceneFontMetricsSettled(() => setFontMetricsVersion((v) => v + 1)), []);
   const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
   // Both counters only grow, so their sum moves whenever either does.
