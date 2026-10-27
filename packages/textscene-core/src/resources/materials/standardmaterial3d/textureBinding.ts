@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import type { ViewSampler } from '../../textures/textureView';
-import { godotTextureFilterState } from '../../textures/godotTextureFilter';
+import { godotTextureFilterState, type TextureFilterState } from '../../textures/godotTextureFilter';
 import type { UvWindow } from '../../../r3f/uvWindow';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
@@ -52,20 +52,14 @@ export function slotReadsSourceColor(slot: TextureSlot): boolean {
 export interface MaterialTextureState {
   /** three's UV channel the slot samples, `UV2_CHANNEL` for Godot's UV2. Omitted means UV1. */
   channel?: number;
-  /** Godot `BaseMaterial3D.texture_filter` ordinal. Omitted means its default. */
-  filter?: number;
+  /** The authored `texture_filter` at the viewport's anisotropy level. Omitted when the material keeps the default. */
+  filter?: TextureFilterState;
   /**
-   * The viewport's `anisotropic_filtering_level`, which sets how far an anisotropic filter samples.
-   * Omitted means Godot's default.
+   * Both axes. Godot's `texture_repeat` is `repeat_enable` on the sampler, and three defaults to
+   * clamp-to-edge, which smears UVs outside 0..1 into stripes. The loader leaves wrapping at that
+   * clamp default (ADR-0044), so this field is the binding's only source of Repeat.
    */
-  anisotropicFilteringLevel?: number;
-  /**
-   * Godot `BaseMaterial3D.texture_repeat`, default true (`flags[FLAG_USE_TEXTURE_REPEAT] = true`,
-   * `repeat_enable` on the sampler). three defaults to clamp-to-edge, which smears UVs outside 0..1
-   * into stripes. The loader leaves wrapping at that clamp default (ADR-0044), so this field is the
-   * binding's only source of Repeat. Omitted means Godot's default.
-   */
-  repeat?: boolean;
+  wrap: THREE.Wrapping;
 }
 
 /** The texture state of the slots that sample one UV set, whose window is always known. */
@@ -93,9 +87,10 @@ export function materialTextureStates(
 ): MaterialTextureStates {
   const sampler = {
     filter:
-      scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter ? undefined : scalars.textureFilter,
-    anisotropicFilteringLevel,
-    repeat: scalars.textureRepeat,
+      scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter
+        ? undefined
+        : godotTextureFilterState(scalars.textureFilter, anisotropicFilteringLevel),
+    wrap: scalars.textureRepeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping,
   };
   const uv2 = { ...sampler, uv: { repeat: scalars.uv2Scale, offset: scalars.uv2Offset } };
   return {
@@ -116,23 +111,12 @@ export function topDownV(state: UVSetState): UVSetState {
   };
 }
 
-/**
- * What `slot` samples of `texture`: Godot's filter at the viewport's anisotropy, its repeat as a
- * wrap, the slot's UV set and window, and the slot's colour space. An unauthored filter states none.
- */
+/** What `slot` samples of `texture`: the sampler and window of the slot's UV set, in the slot's colour space. */
 export function slotViewSampler(
   texture: THREE.Texture,
   slot: TextureSlot,
   states: MaterialTextureStates
 ): ViewSampler {
-  const { filter, anisotropicFilteringLevel, repeat, uv, channel } = states.uv2Slots.includes(slot)
-    ? states.uv2
-    : states.uv1;
-  return {
-    colorSpace: slotColorSpace(slot, texture),
-    filter: filter === undefined ? undefined : godotTextureFilterState(filter, anisotropicFilteringLevel),
-    wrap: repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping,
-    window: uv,
-    channel,
-  };
+  const { filter, wrap, uv, channel } = states.uv2Slots.includes(slot) ? states.uv2 : states.uv1;
+  return { colorSpace: slotColorSpace(slot, texture), filter, wrap, window: uv, channel };
 }
