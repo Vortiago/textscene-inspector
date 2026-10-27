@@ -9,7 +9,7 @@ import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { electViewportCamera } from '../../../godot/scene/camera3d';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
-import { pinColorSpace } from '../../../resources/textures/applyTextureState';
+import { pinColorSpace } from '../../../resources/textures/textureView';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 

@@ -219,7 +219,7 @@ describe('standardMaterialBags — texture slots', () => {
 
 describe('standardMaterialBags — render-target albedo', () => {
   const target = new THREE.WebGLRenderTarget(4, 4).texture;
-  const FLIPPED_V = { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } };
+  const FLIPPED_V = { repeat: { x: 1, y: -1 }, offset: { x: 0, y: 1 } };
 
   it.each([
     ['a lit', {}],

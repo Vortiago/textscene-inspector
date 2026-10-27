@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
+import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
@@ -30,7 +30,6 @@ interface TexturedFillMeshProps {
 
 export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrder }: TexturedFillMeshProps) {
   const clippingPlanes = useControlClipPlanes();
-  const srgbDefines = useCanvasSrgbDefines(texture);
 
   const builtGeometry = useMemo(() => {
     if (!geometry || geometry.positions.length === 0) return null;
@@ -48,12 +47,11 @@ export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrde
 
   const program = materialProgramInputs({
     props: {
-      map: texture,
+      ...canvasMapProps(texture),
       color,
       opacity,
       transparent: true,
       depthWrite: false,
-      defines: srgbDefines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: [canvasItemFacing()],

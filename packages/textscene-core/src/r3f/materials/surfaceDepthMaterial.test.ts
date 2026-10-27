@@ -183,7 +183,7 @@ describe('syncSurfaceDepth', () => {
 
   it("cuts a render-target albedo where the surface samples it, through Godot's sampler", () => {
     const sampler = {
-      uv: { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } },
+      uv: { repeat: { x: 1, y: -1 }, offset: { x: 0, y: 1 } },
       repeats: true,
       isNearest: true,
     };
@@ -202,7 +202,7 @@ describe('syncSurfaceDepth', () => {
   });
 
   it('recompiles when the sampler of a render-target albedo changes', () => {
-    const uv = { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
+    const uv = { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
     const surface = new THREE.MeshBasicMaterial({
       map: new THREE.WebGLRenderTarget(4, 4).texture,
       userData: renderTargetMapUserData({ uv, repeats: true, isNearest: false }),

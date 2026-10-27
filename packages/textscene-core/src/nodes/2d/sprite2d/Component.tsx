@@ -13,7 +13,7 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { useUvWindow } from '../../../r3f/useUvWindow';
-import { useCanvas2DTexture, useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
+import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -67,9 +67,6 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   useUvWindow(drawnTexture, frameWindow);
 
   const displayedTexture = viewportTexture ?? drawnTexture;
-  // A canvas-content ViewportTexture holds sRGB bytes, so it multiplies in sRGB
-  // as a retagged file does. A 3D-content one keeps the linear multiply.
-  const srgbDefines = useCanvasSrgbDefines(displayedTexture);
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
@@ -100,7 +97,6 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
             height={height}
             props={props}
             pixelMaterial={pixelMaterial}
-            srgbDefines={srgbDefines}
           />
         ) : null
       }
@@ -118,7 +114,6 @@ function QuadMesh({
   height,
   props,
   pixelMaterial,
-  srgbDefines,
 }: {
   texture: THREE.Texture;
   color: THREE.Color;
@@ -127,7 +122,6 @@ function QuadMesh({
   height: number;
   props: Sprite2DProperties;
   pixelMaterial: CanvasItemPixelMaterial;
-  srgbDefines: Record<string, string> | undefined;
 }) {
   // Quad centre in Godot 2D space (+Y down), then Y-negated. Centred, it sits at
   // `offset`. Otherwise the top-left does, so the centre is offset + (w/2, h/2).
@@ -136,16 +130,15 @@ function QuadMesh({
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
   // The map is here at the first compile, but the define can change: a 3D-content
-  // ViewportTexture multiplies linearly where a `res://` file multiplies in sRGB,
-  // and a swap changes the program (`materialProgramInputs.ts`).
+  // ViewportTexture multiplies linearly where a canvas-content one and a `res://` file
+  // multiply in sRGB, and a swap changes the program (`materialProgramInputs.ts`).
   const program = materialProgramInputs({
     props: {
-      map: texture,
+      ...canvasMapProps(texture),
       color,
       opacity,
       transparent: true,
       depthWrite: false,
-      defines: srgbDefines,
     },
     merge: [pixelMaterial],
   });

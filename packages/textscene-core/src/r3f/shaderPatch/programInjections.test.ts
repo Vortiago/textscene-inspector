@@ -114,7 +114,7 @@ const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
 const targetMapOf = (repeats: boolean, isNearest: boolean) =>
-  renderTargetMapUserData({ uv: { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
+  renderTargetMapUserData({ uv: { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
 
 const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
   withPointDraw(

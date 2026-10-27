@@ -73,6 +73,11 @@ _Avoid_: the bare name for the **Screen-space roughness limiter**.
 The shader step that raises a pixel's roughness by how far its normal differs from the normal of its pixel pair.
 Godot takes a fine derivative. WebGL 2 has none, so a pixel with a normal map reads the map one texel along its pair.
 
+**Texture view** (`resources/textures/textureView.ts`):
+The texture a consumer samples: a shared source with the sampler state the consumer states laid over it.
+It is the source itself when the source already samples that way, and one clone that the consumer owns when it does not.
+_Avoid_: "texture clone", which names how a view is made, not what it is.
+
 **Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
 The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
 It changes only a texture that has levels to choose between.

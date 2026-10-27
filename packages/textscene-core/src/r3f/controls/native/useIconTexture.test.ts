@@ -5,9 +5,9 @@
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { createElement, type ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
+import { canvasMapProps } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import { fakeCanvasRenderer } from '../../testing/fakeCanvasRenderer';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
@@ -45,9 +45,9 @@ describe('useIconTexture', () => {
   });
 
   it('turns on the sRGB multiply every painter draws it through', () => {
-    const { result } = renderHook(() => useCanvasSrgbDefines(useIconTexture(ICON)));
+    const { result } = renderHook(() => canvasMapProps(useIconTexture(ICON)));
 
-    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    expect(result.current.defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('memoises on the url, so a re-render with the same icon does not reload', () => {
@@ -104,7 +104,7 @@ describe('useIconTexture', () => {
     expect(canvas.gl.texParameterf).toHaveBeenCalledTimes(1);
   });
 
-  it('disposes the texture when the icon turns off, rather than leaking it', () => {
+  it('disposes the texture when the icon turns off, rather than leaking it', async () => {
     const { result, rerender } = renderHook(({ url }) => useOptionalIconTexture(url), {
       initialProps: { url: ICON as string | null },
     });
@@ -112,6 +112,7 @@ describe('useIconTexture', () => {
     const dispose = vi.spyOn(texture, 'dispose');
 
     rerender({ url: null });
+    await act(async () => Promise.resolve());
 
     expect(result.current).toBeNull();
     expect(dispose).toHaveBeenCalled();

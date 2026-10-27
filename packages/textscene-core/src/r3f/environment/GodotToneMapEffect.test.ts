@@ -5,7 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { textureView } from '../../resources/textures/textureView';
+import { GLOW_MAP_SAMPLER, GodotToneMapEffect } from './GodotToneMapEffect';
 import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
 import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from '../../resources/environment/godotGlowPyramid';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
@@ -41,10 +42,10 @@ function sampledMap(effect: GodotToneMapEffect): THREE.Texture {
 
 const MAP = { glow_map: 'SubResource("Gradient_1")' };
 
-describe('glowMapView', () => {
+describe('GLOW_MAP_SAMPLER', () => {
   it('samples the raw texels, clamped, without touching the shared texture', () => {
     const shared = srgbTexture();
-    const view = glowMapView(shared);
+    const view = textureView(shared, GLOW_MAP_SAMPLER);
     expect(view.colorSpace).toBe(THREE.NoColorSpace);
     expect(view.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(shared.colorSpace).toBe(THREE.SRGBColorSpace);

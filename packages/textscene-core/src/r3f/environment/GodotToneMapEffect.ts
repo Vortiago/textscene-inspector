@@ -22,7 +22,7 @@ import {
   GLOW_MAP_UNIFORM,
   type CompositeOptions,
 } from '../../resources/environment/godotCompositor';
-import { applyTextureState } from '../../resources/textures/applyTextureState';
+import type { ViewSampler } from '../../resources/textures/textureView';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
@@ -71,13 +71,13 @@ export class GodotToneMapEffect extends Effect {
 }
 
 /**
- * The view of `glowMap` Godot samples: the raw texels, through the texture's non-sRGB view
- * (`renderer_scene_render_rd.cpp:707`), clamped (`tone_mapper.cpp:177`). A clone when the shared
- * texture diverges, which the caller frees with `releaseBoundTexture`.
+ * What Godot samples of the glow map: the raw texels, through the texture's non-sRGB view
+ * (`renderer_scene_render_rd.cpp:707`), clamped (`tone_mapper.cpp:177`).
  */
-export function glowMapView(glowMap: THREE.Texture): THREE.Texture {
-  return applyTextureState(glowMap, { colorSpace: THREE.NoColorSpace, repeat: false });
-}
+export const GLOW_MAP_SAMPLER: ViewSampler = {
+  colorSpace: THREE.NoColorSpace,
+  wrap: THREE.ClampToEdgeWrapping,
+};
 
 /**
  * The glow levels and the passes that build them, owned as `BloomEffect` owns its own. Not a
