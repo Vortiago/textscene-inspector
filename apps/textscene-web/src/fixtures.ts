@@ -3003,6 +3003,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Cff",
+    "file": "unit-text-mesh-cff.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh",
     "file": "unit-text-mesh.tscn",
     "category": "Unit - Primitive Meshes"

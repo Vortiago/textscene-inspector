@@ -8,6 +8,7 @@
 // units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888): each `ceil(units / 2) / 64`.
 import { describe, expect, it } from 'vitest';
 import {
+  ftDivFix,
   fontUsesSubpixelPositioning,
   getFontAscentPx,
   getFontGlyphAdvancePx,
@@ -126,5 +127,17 @@ describe('withVariation', () => {
   it('returns one object per face, embolden and skew, so a layout memoised on it keeps its hits', () => {
     expect(withVariation(METRICS, { embolden: 1.2 })).toBe(withVariation(METRICS, { embolden: 1.2 }));
     expect(withVariation(METRICS, { embolden: 1.2 })).not.toBe(withVariation(METRICS, { skew: 1.2 }));
+  });
+});
+
+describe('ftDivFix', () => {
+  it('rounds the quotient half up on the magnitude', () => {
+    expect(ftDivFix(1, 3)).toBe(21845);
+    expect(ftDivFix(-1, 3)).toBe(-21845);
+  });
+
+  it('gives the largest 32-bit magnitude for a zero divisor, signed by the dividend', () => {
+    expect(ftDivFix(5, 0)).toBe(0x7fffffff);
+    expect(ftDivFix(-5, 0)).toBe(-0x7fffffff);
   });
 });

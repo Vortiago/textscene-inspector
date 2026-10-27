@@ -195,8 +195,8 @@ export function isAwaitingFontMetrics(mesh: ResolvableResource): boolean {
 
 /**
  * Whether this previewer can build `mesh`. A type with no slice here cannot, and neither can a
- * mesh whose font has no TrueType outlines: Godot draws both. A mesh that builds no surface is
- * drawable and empty.
+ * mesh whose font has no outlines the previewer reads: Godot draws both. A mesh that builds no
+ * surface is drawable and empty.
  */
 export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
   return isPrimitiveMeshType(mesh.resource.type) && primitiveMeshFont(mesh)?.status !== 'unreadable';

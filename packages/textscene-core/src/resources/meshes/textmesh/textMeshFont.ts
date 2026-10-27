@@ -1,5 +1,5 @@
 /**
- * The font a TextMesh builds from, as far as it has loaded: the TrueType outlines it extrudes and
+ * The font a TextMesh builds from, as far as it has loaded: the outlines it extrudes and
  * the metrics that shape its lines. The font file and its metrics both arrive after the scene.
  */
 
@@ -12,7 +12,7 @@ import type { TextMeshFace } from './build';
 import { fontOutlines } from './fontOutlines';
 
 export type TextMeshFont =
-  /** No font, a font not loaded, or one with no TrueType outlines: Godot draws it, this previewer cannot. */
+  /** No font, a font not loaded, or one without outlines this reader parses: Godot draws it, this previewer cannot. */
   { status: 'unreadable' } | { status: 'awaitingMetrics' } | { status: 'ready'; face: TextMeshFace };
 
 const UNREADABLE: TextMeshFont = { status: 'unreadable' };

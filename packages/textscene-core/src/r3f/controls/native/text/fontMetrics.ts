@@ -92,8 +92,10 @@ const FIXED_16_16_ONE = 65536;
  * `freetype/include/freetype/fttypes.h`'s `FT_DivFix` (`freetype/src/base/ftcalc.c`):
  * `a / b` in 16.16, rounded half up on the magnitude (`q = ( ( (FT_UInt64)a << 16 ) +
  * ( b >> 1 ) ) / b`), then signed. A division, not a shift: the intermediate exceeds 32 bits.
+ * A zero divisor gives the largest 32-bit magnitude, signed by `a`, not infinity.
  */
-function ftDivFix(a: number, b: number): number {
+export function ftDivFix(a: number, b: number): number {
+  if (b === 0) return a < 0 ? -0x7fffffff : 0x7fffffff;
   const sign = Math.sign(a) * Math.sign(b);
   const magnitude = Math.floor((Math.abs(a) * FIXED_16_16_ONE + Math.floor(Math.abs(b) / 2)) / Math.abs(b));
   return sign * magnitude;

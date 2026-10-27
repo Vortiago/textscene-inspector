@@ -10,34 +10,8 @@
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { ftMulFix, getFontOutlineScale } from './fontMetrics';
+import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
 import { readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
-
-/** One outline point, in px from the glyph origin with y down, as `font_get_glyph_contours` returns it. */
-export interface ContourPoint {
-  x: number;
-  y: number;
-  tag: (typeof ContourPointTag)[keyof typeof ContourPointTag];
-}
-
-/** What `TextServer::font_get_glyph_contours` returns for one glyph (`text_server_adv.cpp:3597-3652`). */
-export interface GlyphContours {
-  points: readonly ContourPoint[];
-  /** The index of the last point of each contour. */
-  contourEnds: readonly number[];
-  /** `FT_Outline_Get_Orientation` is `FT_ORIENTATION_FILL_RIGHT`: the outer contours wind clockwise. */
-  isFillRight: boolean;
-}
-
-/** The contours of a glyph at `fontSizePx`, or null for a glyph with no outline. */
-type GlyphContourReader = (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
-
-/** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
-interface ScaledOutline {
-  x: number[];
-  y: number[];
-  isOn: boolean[];
-  contourEnds: number[];
-}
 
 const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
 const HEAD_TABLE_MIN_LENGTH = 52;
@@ -131,7 +105,7 @@ function readSimpleGlyph(dv: DataView, glyph: number, contourCount: number, scal
   return {
     x: x.coordinates.map((value) => ftMulFix(value, scale)),
     y: y.coordinates.map((value) => ftMulFix(value, scale)),
-    isOn: flags.map((flag) => (flag & SIMPLE_ON_CURVE) !== 0),
+    tags: flags.map((flag) => (flag & SIMPLE_ON_CURVE ? ContourPointTag.ON : ContourPointTag.OFF_CONIC)),
     contourEnds,
   };
 }
@@ -207,7 +181,7 @@ class GlyphReader {
   }
 
   private loadComposite(start: number, scale: number, depth: number): ScaledOutline {
-    const whole: ScaledOutline = { x: [], y: [], isOn: [], contourEnds: [] };
+    const whole: ScaledOutline = { x: [], y: [], tags: [], contourEnds: [] };
     let at = start;
     let flags: number;
     do {
@@ -251,41 +225,9 @@ function appendOutline(whole: ScaledOutline, part: ScaledOutline, dx: number, dy
   for (let i = 0; i < part.x.length; i++) {
     whole.x.push(part.x[i]! + dx);
     whole.y.push(part.y[i]! + dy);
-    whole.isOn.push(part.isOn[i]!);
+    whole.tags.push(part.tags[i]!);
   }
   for (const end of part.contourEnds) whole.contourEnds.push(firstPoint + end);
-}
-
-/**
- * `FT_Outline_Get_Orientation` is `FT_ORIENTATION_FILL_RIGHT` (`ftoutln.c`): the sign of the
- * area the control polygon spans over every contour. Collapsed in x or y, it is neither.
- */
-function isFillRight(outline: ScaledOutline): boolean {
-  const hasWidth = Math.max(...outline.x) !== Math.min(...outline.x);
-  const hasHeight = Math.max(...outline.y) !== Math.min(...outline.y);
-  if (!hasWidth || !hasHeight) return false;
-  let area = 0;
-  let first = 0;
-  for (const last of outline.contourEnds) {
-    let previous = last;
-    for (let i = first; i <= last; i++) {
-      area += (outline.y[i]! - outline.y[previous]!) * (outline.x[i]! + outline.x[previous]!);
-      previous = i;
-    }
-    first = last + 1;
-  }
-  return area < 0;
-}
-
-const FIXED_26_6 = 64;
-
-function toContours(outline: ScaledOutline): GlyphContours {
-  const points = outline.x.map((x, i): ContourPoint => ({
-    x: x / FIXED_26_6,
-    y: -outline.y[i]! / FIXED_26_6,
-    tag: outline.isOn[i] ? ContourPointTag.ON : ContourPointTag.OFF_CONIC,
-  }));
-  return { points, contourEnds: outline.contourEnds, isFillRight: isFillRight(outline) };
 }
 
 /**
@@ -306,6 +248,6 @@ export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader
   const glyphs = new GlyphReader(dv, glyphCount, tables, isLongLoca);
   return (glyphIndex, fontSizePx) => {
     const outline = glyphs.load(glyphIndex, getFontOutlineScale(unitsPerEm, fontSizePx));
-    return outline && outline.x.length > 0 ? toContours(outline) : null;
+    return outline && outline.x.length > 0 ? scaledOutlineContours(outline) : null;
   };
 }
