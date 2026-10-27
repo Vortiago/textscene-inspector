@@ -4,7 +4,8 @@
  * read the wrong node or the wrong pools.
  */
 import { describe, expect, it } from 'vitest';
-import { liveStep, liveTreeOf, rootScope } from './liveSceneTree';
+import { liveTreeOf, rootScope, type LiveStep } from './liveSceneTree';
+import { stepOver } from './liveSceneTree.testkit';
 import {
   graftedContext,
   hostScene,
@@ -17,12 +18,12 @@ import './nodes/index';
 
 const tree = liveTreeOf(hostScene.nodes, graftedContext);
 
-const childNames = (step: ReturnType<typeof liveStep>) =>
+const childNames = (step: LiveStep) =>
   step.groups.flatMap((group) => group.children.map((child) => child.name));
 
 describe('the step of a plain node', () => {
   const host = hostScene.nodes[0]!;
-  const step = liveStep(host, rootScope(graftedContext), graftedContext.sceneCache);
+  const step = stepOver(host, rootScope(graftedContext), graftedContext.sceneCache);
 
   it('shows the node itself', () => {
     expect(step.node).toBe(host);

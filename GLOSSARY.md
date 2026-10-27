@@ -23,7 +23,7 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
-**Live step** (`LiveStep` in `r3f/liveSceneTree.ts`, from `liveStep`):
+**Live step** (`LiveStep` in `r3f/liveSceneTree.ts`, from `LiveTree.stepOf`):
 One node of the **Live scene tree** as a reader needs it: the node as shown, the **Authored scope** its refs resolve in, and the child groups below it.
 A reader takes all three from the one call, because the authored node and its group's scope are the wrong ones for an instance root and for a grafted node.
 _Avoid_: reading a node's merge, scope or children in separate calls.
@@ -33,7 +33,7 @@ One read of the loader's scene cache that every question over the **Live scene t
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
 _Avoid_: a live tree or a context per consumer, per question.
 
-**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveStep`):
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `LiveTree.stepOf`):
 The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
 _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
@@ -597,14 +597,15 @@ _Avoid_: "asset loader".
 A Node with `instance = ExtResource("scene_id")` whose `.tscn` or `.glb` is loaded and composed into the host tree.
 _Avoid_: "include", "prefab".
 
-**Instance root merge** (`mergeInstanceRoot`, applied through `collapseLiveNode`):
+**Instance root merge** (`mergeInstanceRoot`, applied through `LiveTree.stepOf`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer calls `collapseLiveNode` so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
+Every consumer takes the merge from its **Live step** so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
 **GLB root**:
 The node that instances a lone `.glb`, as in Godot. Each GLB object has the path of that node followed by its own, and no row stands for the **GLBSceneRoot**.
-_Avoid_: A path segment for the GLB file name. Two paths for one GLB object.
+The children of a GLB object or of the GLB root stand in one order, whether each is a GLB object, an attached node or a node of the instancing scene. The rows and the viewport share that order.
+_Avoid_: A path segment for the GLB file name. Two paths for one GLB object. A second order for a GLB child.
 
 **Imported scene tree** (`godot/import/gltfImportScene.ts`):
 The nodes Godot's glTF importer builds from a `.glb`, each with its full path below the **GLB root**. It holds a Skeleton3D, a BoneAttachment3D for each bone with a child, and a skinned mesh below its Skeleton3D, which three's graph does not.
