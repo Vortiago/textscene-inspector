@@ -8,9 +8,9 @@
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { useFontMetricsSettleCount } from '../controls/native/text/useFontMetricsSettleCount';
+import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import { useLoadedFilesAndFonts } from '../../resources/useLoadedFilesAndFonts';
-import { useProjectFonts } from '../../resources/useProjectFonts';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { useSceneResources, type SceneResources } from '../SceneResourcesContext';
 import type { CsgGeometryContext, CsgShapeRegistration } from './csgRegistration';
@@ -32,18 +32,16 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   );
   // A plan with no shape that can read a font names no font bus, so it listens to none.
   const readsFonts = shapes.some(({ shape }) => shape.readsFonts);
-  const { projectFonts, isLoading: isLoadingProjectFonts } = useProjectFonts(readsFonts);
   const fontsPlan = useCallback(
-    (loadedFont: LoadedFont, loadedFile: LoadedFile) =>
+    (loadedFont: LoadedFont, loadedFile: LoadedFile, projectFonts: ProjectFonts) =>
       subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts }),
-    [shapes, pools, projectFonts]
+    [shapes, pools]
   );
-  const {
-    loadedFile,
-    loadedFont,
-    isLoading: isLoadingFiles,
-    isLoadingFonts: isLoadingFontFiles,
-  } = useLoadedFilesAndFonts(filesPlan, fontsPlan, readsFonts);
+  const { loadedFile, loadedFont, projectFonts, isLoading, isLoadingFonts } = useLoadedFilesAndFonts(
+    filesPlan,
+    fontsPlan,
+    readsFonts
+  );
 
   const loaded = useMemo(
     (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont, projectFonts }),
@@ -58,9 +56,11 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `isAwaitingFont` only re-keys the copy.
     [loaded, isAwaitingFont]
   );
-  const isLoading = isLoadingFiles || isLoadingProjectFonts || isAwaitingFont;
-  const isLoadingFonts = isLoadingFontFiles || isLoadingProjectFonts;
-  return useMemo(() => ({ context, isLoading, isLoadingFonts }), [context, isLoading, isLoadingFonts]);
+  const isLoadingBuild = isLoading || isAwaitingFont;
+  return useMemo(
+    () => ({ context, isLoading: isLoadingBuild, isLoadingFonts }),
+    [context, isLoadingBuild, isLoadingFonts]
+  );
 }
 
 /** A CSG node of the plan, with the registration of its shape. */

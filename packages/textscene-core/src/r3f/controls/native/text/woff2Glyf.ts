@@ -45,6 +45,12 @@ const LONG_LOCA_FORMAT = 1;
 /** A short `loca` holds `offset / 2` in a `UInt16`. */
 const MAX_SHORT_LOCA_OFFSET = 0xffff * 2;
 
+function bigEndian(bytes: Uint8Array): ByteReader {
+  const reader = new ByteReader(bytes);
+  reader.isLittleEndian = false;
+  return reader;
+}
+
 export interface RebuiltGlyf {
   glyf: Uint8Array;
   /** In the format of the transform's `indexFormat`, which `head.indexToLocFormat` repeats. */
@@ -64,12 +70,14 @@ interface GlyphBox {
   yMax: number;
 }
 
-/** The bytes of a glyph under construction. */
+/** The bytes of a glyph under construction, in a buffer that doubles when it fills. */
 class GlyphBytes {
-  readonly bytes: number[] = [];
+  private data = new Uint8Array(64);
+  private length = 0;
 
   u8(value: number): void {
-    this.bytes.push(value & 0xff);
+    this.reserve(1);
+    this.data[this.length++] = value & 0xff;
   }
 
   u16(value: number): void {
@@ -77,14 +85,22 @@ class GlyphBytes {
     this.u8(value);
   }
 
-  append(data: Uint8Array): void {
-    for (const byte of data) this.bytes.push(byte);
+  append(bytes: Uint8Array): void {
+    this.reserve(bytes.length);
+    this.data.set(bytes, this.length);
+    this.length += bytes.length;
   }
-}
 
-function int16(reader: ByteReader): number {
-  const value = reader.u16();
-  return value >= 0x8000 ? value - 0x10000 : value;
+  toBytes(): Uint8Array {
+    return this.data.slice(0, this.length);
+  }
+
+  private reserve(count: number): void {
+    if (this.length + count <= this.data.length) return;
+    const grown = new Uint8Array(Math.max(this.data.length * 2, this.length + count));
+    grown.set(this.data);
+    this.data = grown;
+  }
 }
 
 /** `255UInt16` (§"255UInt16 Data Type"). */
@@ -155,17 +171,18 @@ function readPoints(count: number, flags: ByteReader, glyphStream: ByteReader): 
 
 /** The box of the points, which a glyph without a stored box takes. */
 function boxOf(points: readonly Point[]): GlyphBox {
+  if (points.length === 0) return { xMin: 0, yMin: 0, xMax: 0, yMax: 0 };
+  const box = { xMin: Infinity, yMin: Infinity, xMax: -Infinity, yMax: -Infinity };
   let x = 0;
   let y = 0;
-  const box = { xMin: 0, yMin: 0, xMax: 0, yMax: 0 };
-  points.forEach((point, index) => {
+  for (const point of points) {
     x += point.dx;
     y += point.dy;
-    box.xMin = index === 0 ? x : Math.min(box.xMin, x);
-    box.yMin = index === 0 ? y : Math.min(box.yMin, y);
-    box.xMax = index === 0 ? x : Math.max(box.xMax, x);
-    box.yMax = index === 0 ? y : Math.max(box.yMax, y);
-  });
+    box.xMin = Math.min(box.xMin, x);
+    box.yMin = Math.min(box.yMin, y);
+    box.xMax = Math.max(box.xMax, x);
+    box.yMax = Math.max(box.yMax, y);
+  }
   return box;
 }
 
@@ -174,16 +191,23 @@ function writeHeader(glyph: GlyphBytes, contourCount: number, box: GlyphBox): vo
   for (const edge of [box.xMin, box.yMin, box.xMax, box.yMax]) glyph.u16(edge);
 }
 
+const fitsInByte = (delta: number): boolean => Math.abs(delta) <= MAX_SHORT_DELTA;
+
 /** The deltas of one axis, each as a byte, a word, or nothing for a delta of 0. */
-function writeAxis(glyph: GlyphBytes, deltas: readonly number[], isShort: (delta: number) => boolean): void {
+function writeAxis(glyph: GlyphBytes, deltas: readonly number[]): void {
   for (const delta of deltas) {
     if (delta === 0) continue;
-    if (isShort(delta)) glyph.u8(Math.abs(delta));
+    if (fitsInByte(delta)) glyph.u8(Math.abs(delta));
     else glyph.u16(delta);
   }
 }
 
-const fitsInByte = (delta: number): boolean => Math.abs(delta) <= MAX_SHORT_DELTA;
+/** The flag bits of one axis: a zero delta repeats, a short one carries its sign, a long one is a word. */
+function axisFlag(delta: number, shortBit: number, positiveBit: number): number {
+  if (delta === 0) return positiveBit;
+  if (fitsInByte(delta)) return shortBit | (delta > 0 ? positiveBit : 0);
+  return 0;
+}
 
 function writeSimpleGlyph(
   glyph: GlyphBytes,
@@ -195,22 +219,19 @@ function writeSimpleGlyph(
   glyph.u16(instructions.length);
   glyph.append(instructions);
   for (const { dx, dy, isOnCurve } of points) {
-    let flag = isOnCurve ? POINT_ON_CURVE : 0;
-    if (dx === 0) flag |= POINT_X_SAME_OR_POSITIVE;
-    else if (fitsInByte(dx)) flag |= POINT_X_SHORT | (dx > 0 ? POINT_X_SAME_OR_POSITIVE : 0);
-    if (dy === 0) flag |= POINT_Y_SAME_OR_POSITIVE;
-    else if (fitsInByte(dy)) flag |= POINT_Y_SHORT | (dy > 0 ? POINT_Y_SAME_OR_POSITIVE : 0);
-    glyph.u8(flag);
+    glyph.u8(
+      (isOnCurve ? POINT_ON_CURVE : 0) |
+        axisFlag(dx, POINT_X_SHORT, POINT_X_SAME_OR_POSITIVE) |
+        axisFlag(dy, POINT_Y_SHORT, POINT_Y_SAME_OR_POSITIVE)
+    );
   }
   writeAxis(
     glyph,
-    points.map((point) => point.dx),
-    fitsInByte
+    points.map((point) => point.dx)
   );
   writeAxis(
     glyph,
-    points.map((point) => point.dy),
-    fitsInByte
+    points.map((point) => point.dy)
   );
 }
 
@@ -224,20 +245,17 @@ function transformByteCount(flags: number): number {
   return flags & COMPONENT_HAS_2X2 ? 8 : 0;
 }
 
-/** The component records of a composite glyph, up to the one without `MORE_COMPONENTS`, and whether instructions follow. */
-function readComponents(composite: ByteReader): { records: Uint8Array[]; hasInstructions: boolean } {
-  const records: Uint8Array[] = [];
+/** Copies the component records of a composite glyph, up to the one without `MORE_COMPONENTS`, and tells whether instructions follow. */
+function copyComponents(composite: ByteReader, glyph: GlyphBytes): boolean {
   let hasInstructions = false;
   let flags = COMPONENT_MORE;
   while (flags & COMPONENT_MORE) {
     flags = composite.u16();
-    const record = new GlyphBytes();
-    record.u16(flags);
-    record.append(composite.take(GLYPH_INDEX_BYTES + argumentByteCount(flags) + transformByteCount(flags)));
-    records.push(Uint8Array.from(record.bytes));
+    glyph.u16(flags);
+    glyph.append(composite.take(GLYPH_INDEX_BYTES + argumentByteCount(flags) + transformByteCount(flags)));
     hasInstructions ||= (flags & COMPONENT_HAS_INSTRUCTIONS) !== 0;
   }
-  return { records, hasInstructions };
+  return hasInstructions;
 }
 
 interface Streams {
@@ -252,7 +270,7 @@ interface Streams {
 }
 
 function readStoredBox(boxes: ByteReader): GlyphBox {
-  return { xMin: int16(boxes), yMin: int16(boxes), xMax: int16(boxes), yMax: int16(boxes) };
+  return { xMin: boxes.i16(), yMin: boxes.i16(), xMax: boxes.i16(), yMax: boxes.i16() };
 }
 
 function simpleGlyph(contourCount: number, storedBox: GlyphBox | null, streams: Streams): Uint8Array {
@@ -268,20 +286,18 @@ function simpleGlyph(contourCount: number, storedBox: GlyphBox | null, streams: 
   const glyph = new GlyphBytes();
   writeHeader(glyph, contourCount, storedBox ?? boxOf(points));
   writeSimpleGlyph(glyph, contourEnds, points, streams.instructions.take(instructionLength));
-  return Uint8Array.from(glyph.bytes);
+  return glyph.toBytes();
 }
 
 function compositeGlyph(box: GlyphBox, streams: Streams): Uint8Array {
-  const { records, hasInstructions } = readComponents(streams.composites);
   const glyph = new GlyphBytes();
   writeHeader(glyph, COMPOSITE_CONTOUR_COUNT, box);
-  for (const record of records) glyph.append(record);
-  if (hasInstructions) {
+  if (copyComponents(streams.composites, glyph)) {
     const instructions = streams.instructions.take(read255UInt16(streams.glyphStream));
     glyph.u16(instructions.length);
     glyph.append(instructions);
   }
-  return Uint8Array.from(glyph.bytes);
+  return glyph.toBytes();
 }
 
 /** The glyphs whose box the font stores: the bit of glyph `index` in the bitmap, most significant bit first. */
@@ -290,7 +306,7 @@ function hasStoredBox(bitmap: Uint8Array, index: number): boolean {
 }
 
 function glyphAt(index: number, bitmap: Uint8Array, streams: Streams): Uint8Array {
-  const contourCount = int16(streams.contourCounts);
+  const contourCount = streams.contourCounts.i16();
   const isBoxStored = hasStoredBox(bitmap, index);
   if (contourCount === 0) {
     if (isBoxStored) throw new Error(`expected glyph ${index} with no contours to have no stored box`);
@@ -332,8 +348,7 @@ function locaOf(offsets: readonly number[], format: number): Uint8Array {
 
 /** Throws on a table that does not hold the streams its header counts, or a glyph the streams do not describe. */
 export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
-  const header = new ByteReader(transformed);
-  header.isLittleEndian = false;
+  const header = bigEndian(transformed);
   header.u16(); // reserved
   header.u16(); // optionFlags: bit 0 adds an overlap bitmap after the streams, which no reader here needs
   const glyphCount = header.u16();
@@ -343,11 +358,7 @@ export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
   }
   const sizes = Array.from({ length: HEADER_STREAM_COUNT }, () => header.u32());
   const [contourCounts, pointCounts, flags, glyphStream, composites, boxes, instructions] = sizes.map(
-    (size) => {
-      const stream = new ByteReader(header.take(size));
-      stream.isLittleEndian = false;
-      return stream;
-    }
+    (size) => bigEndian(header.take(size))
   ) as [ByteReader, ByteReader, ByteReader, ByteReader, ByteReader, ByteReader, ByteReader];
 
   // The bitmap sits at the start of the box stream, one bit for each glyph, in whole four-byte words.

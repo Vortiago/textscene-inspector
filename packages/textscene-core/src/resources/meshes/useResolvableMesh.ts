@@ -7,7 +7,6 @@
 import { useCallback, useMemo } from 'react';
 import type { LoadedFont, ResolvableResource, ScopedResource } from '../scopedResource';
 import { useLoadedFilesAndFonts } from '../useLoadedFilesAndFonts';
-import { useProjectFonts } from '../useProjectFonts';
 import { usePendingWhile } from '../usePendingWhile';
 import {
   isAwaitingFont,
@@ -31,16 +30,14 @@ export function useResolvableMesh(scoped: ScopedResource | null): ResolvableMesh
     [scoped]
   );
   const readsFonts = scoped !== null && primitiveMeshReadsFont(scoped.resource.type);
-  const {
-    loadedFile,
-    loadedFont,
-    isLoading: isLoadingFiles,
-  } = useLoadedFilesAndFonts(filesPlan, fontsPlan, readsFonts);
-  const { projectFonts, isLoading: isLoadingProjectFonts } = useProjectFonts(readsFonts);
-  const isLoadingFilesAndFonts = isLoadingFiles || isLoadingProjectFonts;
+  const { loadedFile, loadedFont, projectFonts, isLoading } = useLoadedFilesAndFonts(
+    filesPlan,
+    fontsPlan,
+    readsFonts
+  );
   const loaded = useMemo(
-    () => (scoped && !isLoadingFilesAndFonts ? { ...scoped, loadedFile, loadedFont, projectFonts } : null),
-    [scoped, isLoadingFilesAndFonts, loadedFile, loadedFont, projectFonts]
+    () => (scoped && !isLoading ? { ...scoped, loadedFile, loadedFont, projectFonts } : null),
+    [scoped, isLoading, loadedFile, loadedFont, projectFonts]
   );
   const hasFontPending = loaded !== null && isAwaitingFont(loaded);
   // The count moves the render that reads the font again, once its outlines and metrics settle.
@@ -48,6 +45,6 @@ export function useResolvableMesh(scoped: ScopedResource | null): ResolvableMesh
   usePendingWhile(hasFontPending);
   return {
     mesh: hasFontPending ? null : loaded,
-    isLoading: isLoadingFilesAndFonts || hasFontPending,
+    isLoading: isLoading || hasFontPending,
   };
 }

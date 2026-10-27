@@ -9,7 +9,7 @@
 // `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
-import { maxEmboldenGrowthPx, paintEmboldenedFill, paintEmboldenedRing } from './canvasEmbolden';
+import { EmboldenRingPainter, maxEmboldenGrowthPx, paintEmboldenedFill } from './canvasEmbolden';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -160,6 +160,7 @@ export function paintSceneFontCanvas(
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
+  let ringPainter: EmboldenRingPainter | undefined;
 
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
@@ -175,7 +176,13 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
       if (stroked && gp.emboldenGrowthPx) {
-        paintEmboldenedRing(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx, strokeWidthPx);
+        (ringPainter ??= new EmboldenRingPainter(ctx)).paint(
+          gp.char,
+          penX,
+          baselineY,
+          gp.emboldenGrowthPx,
+          strokeWidthPx
+        );
       } else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
       else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else ctx.fillText(gp.char, penX, baselineY);

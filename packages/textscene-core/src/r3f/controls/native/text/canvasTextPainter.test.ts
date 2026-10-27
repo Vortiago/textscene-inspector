@@ -171,6 +171,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
       fillText: (...args: unknown[]) => record('fillText', args),
       strokeText: (...args: unknown[]) => record('strokeText', args),
       drawImage: (...args: unknown[]) => record('drawImage', args),
+      clearRect: () => {},
     };
     const record = (op: string, args: unknown[]) =>
       calls.push({ op, args, lineWidth: ctx.lineWidth, composite: ctx.globalCompositeOperation });
@@ -206,11 +207,11 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
 
     expect(ring.lineWidth).toBeCloseTo(4 + GROWTH_PX, 10);
-    expect((placed.args[1] as number) + (ring.args[1] as number)).toBeCloseTo(
+    expect((placed.args[5] as number) + (ring.args[1] as number)).toBeCloseTo(
       canvasLayout.offsetXPx + GROWTH_PX / 2,
       10
     );
-    expect((placed.args[2] as number) + (ring.args[2] as number)).toBeCloseTo(baselineY - GROWTH_PX / 2, 10);
+    expect((placed.args[6] as number) + (ring.args[2] as number)).toBeCloseTo(baselineY - GROWTH_PX / 2, 10);
     expect(placed.composite).toBe('source-over');
   });
 
@@ -224,6 +225,15 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     expect(hole.args).toEqual(ring.args);
     expect(erosion.args).toEqual(ring.args);
     expect(calls.some((c) => c.op === 'drawImage' && c.composite === 'destination-out')).toBe(true);
+  });
+
+  it('cuts the rings of every glyph on the same two scratch canvases', () => {
+    const create = vi.spyOn(document, 'createElement');
+    paintStrokedRecording(boldLayoutFor('ABC', 1.2), 4);
+    const scratchCanvases = create.mock.calls.filter(([tag]) => tag === 'canvas').length;
+
+    // One canvas is the raster itself.
+    expect(scratchCanvases).toBe(3);
   });
 
   it('cuts the ring outside the contour where the growth exceeds the ring', () => {

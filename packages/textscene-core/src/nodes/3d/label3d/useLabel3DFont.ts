@@ -45,18 +45,21 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
   const { loadedFile: loadedFont, isLoading: isLoadingFont } = useCachedFiles<FontResource>(FONT_FILES, plan);
   const { projectFonts, isLoading: isLoadingProjectFonts } = useProjectFonts(true);
   const { settings } = useProjectSettings();
-  // The count moves this render again once the bundled font or a scene font settles.
-  useFontMetricsSettleCount(true);
 
   const bundled = peekBundledCanvasFontMetrics();
-  if (!bundled || isLoadingFont || isLoadingProjectFonts) return undefined;
-
-  const own = resolveFontReference(fontRef, resources, loadedFont).font;
-  const font = resolveFontOrDefault('Label3D', own, projectFonts);
-  const settled = peekSettledSceneFontMetrics(font, nodePath);
-  if (!settled) return undefined;
-  return {
-    metrics: isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled),
-    generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
+  const settledFont = (): Label3DFont | undefined => {
+    if (!bundled) return undefined;
+    const own = resolveFontReference(fontRef, resources, loadedFont).font;
+    const font = resolveFontOrDefault('Label3D', own, projectFonts);
+    const settled = peekSettledSceneFontMetrics(font, nodePath);
+    if (!settled) return undefined;
+    return {
+      metrics: isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled),
+      generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
+    };
   };
+  const label3DFont = isLoadingFont || isLoadingProjectFonts ? undefined : settledFont();
+  // Listens only while a face is missing: a label that has its font draws the same through every later settle.
+  useFontMetricsSettleCount(label3DFont === undefined);
+  return label3DFont;
 }

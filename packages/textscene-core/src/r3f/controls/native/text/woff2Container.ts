@@ -139,6 +139,18 @@ function setRebuiltGlyfTables(tables: Map<string, Uint8Array>, transformedGlyf: 
   tables.set('loca', loca);
 }
 
+/** Written only by `readWoff2Tables`. The metrics and the outlines of a scene font read one buffer, which Brotli decodes once. */
+const decodedStreams = new WeakMap<ArrayBuffer, Promise<Uint8Array>>();
+
+async function decodeStream(compressed: Uint8Array, decodedLength: number): Promise<Uint8Array> {
+  const decode = await loadBrotliDecoder();
+  const decoded = decode(compressed, decodedLength);
+  if (decoded.length !== decodedLength) {
+    throw new Error(`expected ${decodedLength} decoded bytes, got ${decoded.length}`);
+  }
+  return decoded;
+}
+
 /** Throws on a collection, a directory or stream that does not fit `bytes`, or a Brotli stream that does not decode to the lengths the directory sums to. */
 export async function readWoff2Tables(
   bytes: ArrayBuffer,
@@ -157,11 +169,12 @@ export async function readWoff2Tables(
 
   const decodedLength = entries.reduce((sum, entry) => sum + entry.storedLength, 0);
   const compressed = reader.take(dv.getUint32(TOTAL_COMPRESSED_SIZE_OFFSET, false));
-  const decode = await loadBrotliDecoder();
-  const decoded = decode(compressed, decodedLength);
-  if (decoded.length !== decodedLength) {
-    throw new Error(`expected ${decodedLength} decoded bytes, got ${decoded.length}`);
+  let decoding = decodedStreams.get(bytes);
+  if (!decoding) {
+    decoding = decodeStream(compressed, decodedLength);
+    decodedStreams.set(bytes, decoding);
   }
+  const decoded = await decoding;
 
   const tables = new Map<string, Uint8Array>();
   let offset = 0;

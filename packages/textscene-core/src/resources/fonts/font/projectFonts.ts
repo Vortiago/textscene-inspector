@@ -28,29 +28,23 @@ export interface ProjectFontCaches {
   fonts: CacheSource<FontResource>;
 }
 
-/** The files a resolve found uncached, which the caller requests. */
+/** The files a resolve found uncached, which a caller that loads them requests. */
 export interface PendingProjectFonts {
   themes: Set<string>;
   fonts: Set<string>;
-}
-
-/** The two files the project settings name, for a caller that loads them. Null names no file. */
-export interface ProjectFontPaths {
-  theme: string | null;
-  font: string | null;
-}
-
-export function projectFontPaths(settings: ProjectSettings | null): ProjectFontPaths {
-  return { theme: projectThemePath(settings), font: projectFontPath(settings) };
 }
 
 /** Owns the failed-load warnings: the lookup runs on every solve pass, and the failure belongs to the file. */
 const FAILED_FONT_LOADS = {};
 
 /** The cached value of `path`, or null while it loads (`pending` takes the path) and after it failed. */
-function cachedOrPending<T>(path: string, cache: CacheSource<T>, pending: Set<string>): T | null | undefined {
+function cachedOrPending<T>(
+  path: string,
+  cache: CacheSource<T>,
+  pending: Set<string> | undefined
+): T | null | undefined {
   const cached = cache.getCached(path);
-  if (cached === undefined) pending.add(path);
+  if (cached === undefined) pending?.add(path);
   return cached;
 }
 
@@ -61,7 +55,7 @@ function cachedOrPending<T>(path: string, cache: CacheSource<T>, pending: Set<st
 function resolveDefaultFont(
   path: string,
   fonts: CacheSource<FontResource>,
-  pending: Set<string>
+  pending: Set<string> | undefined
 ): FontResource | null {
   const font = cachedOrPending(path, fonts, pending);
   if (font === null) {
@@ -76,7 +70,7 @@ function resolveDefaultFont(
 
 /**
  * The project font context from `settings`, as the caches hold it now. A file still loading lands
- * in `pending`, which the caller requests. A theme that failed to load is null, as the default theme
+ * in `pending`, when a caller passes it to request them. A theme that failed to load is null, as the default theme
  * then answers every lookup.
  *
  * @canonical The project theme and project default font, from the project settings and the caches
@@ -84,11 +78,12 @@ function resolveDefaultFont(
 export function resolveProjectFonts(
   settings: ProjectSettings | null,
   { themes, fonts }: ProjectFontCaches,
-  pending: PendingProjectFonts
+  pending?: PendingProjectFonts
 ): ProjectFonts {
-  const paths = projectFontPaths(settings);
+  const themePath = projectThemePath(settings);
+  const fontPath = projectFontPath(settings);
   return {
-    projectTheme: paths.theme ? (cachedOrPending(paths.theme, themes, pending.themes) ?? null) : null,
-    projectDefaultFont: paths.font ? resolveDefaultFont(paths.font, fonts, pending.fonts) : null,
+    projectTheme: themePath ? (cachedOrPending(themePath, themes, pending?.themes) ?? null) : null,
+    projectDefaultFont: fontPath ? resolveDefaultFont(fontPath, fonts, pending?.fonts) : null,
   };
 }

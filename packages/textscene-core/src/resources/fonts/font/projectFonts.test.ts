@@ -2,12 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
 import { NOTHING_CACHED, type CacheSource } from '../../../r3f/cacheSources';
 import type { ThemeResource } from '../../styles/theme/types';
-import {
-  NO_PROJECT_FONTS,
-  projectFontPaths,
-  resolveProjectFonts,
-  type PendingProjectFonts,
-} from './projectFonts';
+import { NO_PROJECT_FONTS, resolveProjectFonts, type PendingProjectFonts } from './projectFonts';
 import type { FontResource } from './types';
 
 const FONT: FontResource = {
@@ -34,19 +29,6 @@ function settingsNaming(path: string) {
 const noPending = (): PendingProjectFonts => ({ themes: new Set(), fonts: new Set() });
 const caches = (themes: CacheSource<ThemeResource>, fonts: CacheSource<FontResource>) => ({ themes, fonts });
 
-describe('projectFontPaths', () => {
-  it('names the theme and the font the settings name, trimmed', () => {
-    expect(
-      projectFontPaths({ 'gui/theme/custom': ' res://ui.tres ', 'gui/theme/custom_font': ' res://body.otf ' })
-    ).toEqual({ theme: 'res://ui.tres', font: 'res://body.otf' });
-  });
-
-  it('names neither for no settings, a missing key or an empty value', () => {
-    expect(projectFontPaths(null)).toEqual({ theme: null, font: null });
-    expect(projectFontPaths({ 'gui/theme/custom': '  ' })).toEqual({ theme: null, font: null });
-  });
-});
-
 describe('resolveProjectFonts', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
@@ -56,6 +38,23 @@ describe('resolveProjectFonts', () => {
 
   afterEach(() => {
     warnSpy.mockRestore();
+  });
+
+  it('requests the theme and the font the settings name, trimmed', () => {
+    const pending = noPending();
+    resolveProjectFonts(
+      { 'gui/theme/custom': ' res://ui.tres ', 'gui/theme/custom_font': ' res://body.otf ' },
+      caches(NOTHING_CACHED, NOTHING_CACHED),
+      pending
+    );
+    expect([...pending.themes, ...pending.fonts]).toEqual(['res://ui.tres', 'res://body.otf']);
+  });
+
+  it('requests neither for no settings, a missing key or an empty value', () => {
+    const pending = noPending();
+    resolveProjectFonts(null, caches(NOTHING_CACHED, NOTHING_CACHED), pending);
+    resolveProjectFonts({ 'gui/theme/custom': '  ' }, caches(NOTHING_CACHED, NOTHING_CACHED), pending);
+    expect([...pending.themes, ...pending.fonts]).toEqual([]);
   });
 
   describe('the project default font', () => {

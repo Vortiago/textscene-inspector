@@ -35,67 +35,71 @@ export function paintEmboldenedFill(
   ctx.strokeText(char, x, y);
 }
 
-/** A scratch canvas of `width` by `height` whose context draws text as `like` does, or null with no 2D context. */
-function scratchLike(
-  like: CanvasRenderingContext2D,
-  width: number,
-  height: number
-): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  ctx.font = like.font;
-  ctx.textAlign = like.textAlign;
-  ctx.textBaseline = like.textBaseline;
-  ctx.fillStyle = like.fillStyle;
-  ctx.strokeStyle = like.strokeStyle;
-  ctx.lineJoin = like.lineJoin;
-  ctx.lineCap = like.lineCap;
-  return { canvas, ctx };
-}
-
 /**
- * Strokes the outline ring of an emboldened glyph: the annulus `ringWidthPx` wide that FreeType's
- * stroker leaves round the grown contour. A centred canvas stroke reaches `ringWidthPx / 2` each
- * side of the unbolded contour, so the ring is a stroke of `ringWidthPx + growthPx` at the shift,
- * less what lies inside the grown contour's inner edge: the glyph eroded by `(ringWidthPx - growthPx) / 2`,
- * or dilated by the same where the growth is the wider. The ring is cut on a scratch canvas of the
- * glyph's ink, so a neighbour's ring is not cut by this glyph's hole.
+ * The two scratch canvases that cut the outline rings of one paint pass. They grow to the largest
+ * glyph and are cleared between glyphs, so a long label allocates two canvases, not two for each glyph.
  */
-export function paintEmboldenedRing(
-  ctx: CanvasRenderingContext2D,
-  char: string,
-  penX: number,
-  baselineY: number,
-  growthPx: number,
-  ringWidthPx: number
-): void {
-  const ink = ctx.measureText(char);
-  const reachPx = Math.ceil((ringWidthPx + growthPx) / 2 + growthPx);
-  const originX = Math.floor(penX - ink.actualBoundingBoxLeft - reachPx);
-  const originY = Math.floor(baselineY - ink.actualBoundingBoxAscent - reachPx);
-  const width = Math.ceil(penX + ink.actualBoundingBoxRight + reachPx) - originX;
-  const height = Math.ceil(baselineY + ink.actualBoundingBoxDescent + reachPx) - originY;
-  const ring = scratchLike(ctx, width, height);
-  const hole = scratchLike(ctx, width, height);
-  if (!ring || !hole) return;
+export class EmboldenRingPainter {
+  private readonly ring = document.createElement('canvas');
+  private readonly hole = document.createElement('canvas');
 
-  const x = penX - originX + growthPx / 2;
-  const y = baselineY - originY - growthPx / 2;
-  ring.ctx.lineWidth = ringWidthPx + growthPx;
-  ring.ctx.strokeText(char, x, y);
+  /** `target` is the raster, whose text state (font, alignment, colours, joins) the scratch canvases copy. */
+  constructor(private readonly target: CanvasRenderingContext2D) {}
 
-  hole.ctx.fillText(char, x, y);
-  const erosionPx = ringWidthPx - growthPx;
-  if (erosionPx !== 0) {
-    hole.ctx.lineWidth = Math.abs(erosionPx);
-    hole.ctx.globalCompositeOperation = erosionPx > 0 ? 'destination-out' : 'source-over';
-    hole.ctx.strokeText(char, x, y);
+  /**
+   * Strokes the outline ring of an emboldened glyph: the annulus `ringWidthPx` wide that FreeType's
+   * stroker leaves round the grown contour. A centred canvas stroke reaches `ringWidthPx / 2` each
+   * side of the unbolded contour, so the ring is a stroke of `ringWidthPx + growthPx` at the shift,
+   * less what lies inside the grown contour's inner edge: the glyph eroded by `(ringWidthPx - growthPx) / 2`,
+   * or dilated by the same where the growth is the wider. The ring is cut on a scratch canvas of the
+   * glyph's ink, so a neighbour's ring is not cut by this glyph's hole.
+   */
+  paint(char: string, penX: number, baselineY: number, growthPx: number, ringWidthPx: number): void {
+    const ink = this.target.measureText(char);
+    const reachPx = Math.ceil((ringWidthPx + growthPx) / 2 + growthPx);
+    const originX = Math.floor(penX - ink.actualBoundingBoxLeft - reachPx);
+    const originY = Math.floor(baselineY - ink.actualBoundingBoxAscent - reachPx);
+    const width = Math.ceil(penX + ink.actualBoundingBoxRight + reachPx) - originX;
+    const height = Math.ceil(baselineY + ink.actualBoundingBoxDescent + reachPx) - originY;
+    const ring = this.scratch(this.ring, width, height);
+    const hole = this.scratch(this.hole, width, height);
+    if (!ring || !hole) return;
+
+    const x = penX - originX + growthPx / 2;
+    const y = baselineY - originY - growthPx / 2;
+    ring.lineWidth = ringWidthPx + growthPx;
+    ring.strokeText(char, x, y);
+
+    hole.fillText(char, x, y);
+    const erosionPx = ringWidthPx - growthPx;
+    if (erosionPx !== 0) {
+      hole.lineWidth = Math.abs(erosionPx);
+      hole.globalCompositeOperation = erosionPx > 0 ? 'destination-out' : 'source-over';
+      hole.strokeText(char, x, y);
+    }
+    ring.globalCompositeOperation = 'destination-out';
+    ring.drawImage(hole.canvas, 0, 0);
+    ring.globalCompositeOperation = 'source-over';
+    this.target.drawImage(ring.canvas, 0, 0, width, height, originX, originY, width, height);
   }
-  ring.ctx.globalCompositeOperation = 'destination-out';
-  ring.ctx.drawImage(hole.canvas, 0, 0);
-  ring.ctx.globalCompositeOperation = 'source-over';
-  ctx.drawImage(ring.canvas, originX, originY);
+
+  /** The cleared 2D context of `canvas`, at least `width` by `height`, drawing text as the raster does. Null with no 2D context. */
+  private scratch(canvas: HTMLCanvasElement, width: number, height: number): CanvasRenderingContext2D | null {
+    // A resize clears the canvas and resets its context.
+    if (canvas.width < width) canvas.width = width;
+    if (canvas.height < height) canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const like = this.target;
+    ctx.font = like.font;
+    ctx.textAlign = like.textAlign;
+    ctx.textBaseline = like.textBaseline;
+    ctx.fillStyle = like.fillStyle;
+    ctx.strokeStyle = like.strokeStyle;
+    ctx.lineJoin = like.lineJoin;
+    ctx.lineCap = like.lineCap;
+    return ctx;
+  }
 }

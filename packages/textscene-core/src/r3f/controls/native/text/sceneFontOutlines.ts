@@ -6,7 +6,7 @@
  */
 import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import { resolveFontFileBytes } from './sceneFontResolution';
 import { notifySceneFontMetricsSettled } from './sceneFontLoader';
@@ -18,41 +18,37 @@ type PeekedOutlines = SfntOutlines | null | undefined;
 type CacheEntry = { status: 'pending' } | { status: 'settled'; outlines: SfntOutlines | null };
 
 /** Keyed by the leaf `FontFileResource`, as the metrics are, so a reloaded file is read again and a shared one once. */
-const outlinesCache = new WeakMap<FontFileResource, CacheEntry>();
+const outlinesCache = new WeakMap<object, CacheEntry>();
 
-/** Written only by `loadBundledOutlines`, once. Undefined until its load settles. */
-let bundledOutlines: PeekedOutlines;
-let bundledLoad: Promise<void> | undefined;
-
-/** Reads the bytes of `font` in the background, and wakes the readers that built without them when they settle. */
-async function loadOutlines(font: FontFileResource, bytes: ArrayBuffer): Promise<void> {
-  outlinesCache.set(font, { status: 'pending' });
-  const outlines = await openFontOutlines(bytes).catch((error: unknown) => {
-    logger.warn(`[SceneFont] Failed to read the outlines of a scene font (${String(error)}).`);
-    return null;
-  });
-  outlinesCache.set(font, { status: 'settled', outlines });
-  notifySceneFontMetricsSettled();
-}
+/** The cache key of the bundled font, which has no resource. */
+const BUNDLED = {};
 
 /**
  * The bundled Open Sans SemiBold, which `font: null` and a `FontVariation` with no `base_font`
  * draw. Its bytes load as their own chunk, so a scene with no TextMesh never fetches them.
  */
-async function loadBundledOutlines(): Promise<void> {
-  try {
-    const { OPEN_SANS_WOFF2_BASE64 } = await import('./openSansFontBytes');
-    bundledOutlines = await openFontOutlines(decodeBase64Bytes(OPEN_SANS_WOFF2_BASE64).buffer);
-  } catch (error) {
-    logger.warn(`[BundledFont] Failed to read the bundled font's outlines (${String(error)}).`);
-    bundledOutlines = null;
-  }
+async function readBundledOutlines(): Promise<SfntOutlines | null> {
+  const { OPEN_SANS_WOFF2_BASE64 } = await import('./openSansFontBytes');
+  return openFontOutlines(decodeBase64Bytes(OPEN_SANS_WOFF2_BASE64).buffer);
+}
+
+/** Reads the outlines under `key` in the background, and wakes the readers that built without them when they settle. */
+async function loadOutlines(key: object, read: () => Promise<SfntOutlines | null>): Promise<void> {
+  outlinesCache.set(key, { status: 'pending' });
+  const outlines = await read().catch((error: unknown) => {
+    logger.warn(`[SceneFont] Failed to read the outlines of a font (${String(error)}).`);
+    return null;
+  });
+  outlinesCache.set(key, { status: 'settled', outlines });
   notifySceneFontMetricsSettled();
 }
 
-function peekBundledOutlines(): PeekedOutlines {
-  bundledLoad ??= loadBundledOutlines();
-  return bundledOutlines;
+/** The settled outlines under `key`, starting their load on the first peek. */
+function peekOutlines(key: object, read: () => Promise<SfntOutlines | null>): PeekedOutlines {
+  const cached = outlinesCache.get(key);
+  if (cached) return cached.status === 'settled' ? cached.outlines : undefined;
+  void loadOutlines(key, read);
+  return undefined;
 }
 
 /**
@@ -63,12 +59,8 @@ function peekBundledOutlines(): PeekedOutlines {
  * @canonical Glyph outlines of a scene font in any container, from its font resource
  */
 export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
-  if (!font) return peekBundledOutlines();
+  if (!font) return peekOutlines(BUNDLED, readBundledOutlines);
   const resolved = resolveFontFileBytes(font);
-  if (!resolved) return endsWithoutBase(font) ? peekBundledOutlines() : null;
-
-  const cached = outlinesCache.get(resolved.leaf);
-  if (cached) return cached.status === 'settled' ? cached.outlines : undefined;
-  void loadOutlines(resolved.leaf, resolved.bytes);
-  return undefined;
+  if (!resolved) return endsWithoutBase(font) ? peekOutlines(BUNDLED, readBundledOutlines) : null;
+  return peekOutlines(resolved.leaf, () => openFontOutlines(resolved.bytes));
 }
