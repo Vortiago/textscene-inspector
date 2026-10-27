@@ -23,6 +23,10 @@ interface Built<T> {
  * identity, so the caller keeps a key unchanged for as long as its value holds, or gives a `stamp`
  * that moves when it stops holding. The WeakMap lets an entry be collected with its key. A build
  * that throws stores nothing, so the next ask builds again.
+ *
+ * @oneWay A cache keyed by an object
+ *   It holds a WeakMap, and a build that throws stores nothing. Pass `keeps` for a value that is
+ *   not final yet, and `stamp` for a key whose contents change, as a texture's `version`.
  */
 export function perObject<K extends object, T>(
   build: (key: K) => T,

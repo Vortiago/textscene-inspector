@@ -3,7 +3,11 @@
 /** The integers an `as const` enum object holds, as the type of a property that stores one. */
 export type EnumValue<T extends object> = T[keyof T];
 
-/** The member of `enumObject` that holds `value`, or null: for a setter that refuses an integer no member holds. */
+/**
+ * The member of `enumObject` that holds `value`, or null: for a setter that refuses an integer no member holds.
+ *
+ * @oneWay An engine enum, held as an `as const` object in `godot/`
+ */
 export function enumMember<T extends Record<string, number>>(
   enumObject: T,
   value: number

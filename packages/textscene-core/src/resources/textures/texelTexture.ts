@@ -10,6 +10,8 @@ import { isBottomUp } from '../../utils/reversedRows';
  * A `DataTexture` of `levels` that samples, tags and flips as `source`. Several levels are the
  * whole chain, so three uploads them as they stand and builds none. A single level asks the GPU
  * for a chain wherever `source` samples one. The caller keeps `source`.
+ *
+ * @oneWay A `DataTexture` that carries a CPU mip chain
  */
 export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.DataTexture {
   const [base] = levels;
@@ -49,6 +51,8 @@ function carryMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): bool
  * {@link carryMipChain} for a texture no material has sampled yet: with a chain it also takes the
  * minification of Godot's default sampler (`LINEAR_WITH_MIPMAPS`, `material.h:573`), so the
  * levels are read between. A binding that authors `texture_filter` rewrites it.
+ *
+ * @oneWay A `DataTexture` that carries a CPU mip chain
  */
 export function carryDefaultMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): void {
   if (carryMipChain(texture, levels)) texture.minFilter = godotTextureFilterState(undefined).minFilter;
@@ -57,6 +61,8 @@ export function carryDefaultMipChain(texture: THREE.DataTexture, levels: Texture
 /**
  * `mipChain` of `base`, the bytes of `texture`, in Godot's top-down rows: an odd height drops the
  * bottom row as Godot sees it. Each level comes back in `texture`'s own row order, `base` first.
+ *
+ * @oneWay A CPU mip chain as Godot builds it
  */
 export function textureMipChain(texture: THREE.Texture, base: MipLevel, renormalize: boolean): MipLevel[] {
   if (!isBottomUp(texture)) return mipChain(base, renormalize);
