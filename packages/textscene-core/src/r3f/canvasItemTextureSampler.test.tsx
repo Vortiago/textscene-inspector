@@ -13,7 +13,7 @@ import {
   TextureSampler2DContext,
   ViewportSamplerProvider,
   applyCanvasItemSampler,
-  canvasItemCloneSampler,
+  canvasItemViewSampler,
   inheritTextureSampler,
   useInheritedTextureSampler,
   type AmbientTextureSampler,
@@ -213,15 +213,15 @@ describe('applyCanvasItemSampler', () => {
   });
 });
 
-describe('canvasItemCloneSampler', () => {
+describe('canvasItemViewSampler', () => {
   it('samples the undecoded bytes the 2D canvas filters', () => {
-    expect(canvasItemCloneSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }).colorSpace).toBe(
+    expect(canvasItemViewSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }).colorSpace).toBe(
       THREE.NoColorSpace
     );
   });
 
   it("writes the item's filter and repeat", () => {
-    const { filter, wrap } = canvasItemCloneSampler({ filter: NEAREST, repeat: REPEAT_MIRROR });
+    const { filter, wrap } = canvasItemViewSampler({ filter: NEAREST, repeat: REPEAT_MIRROR });
     expect([filter?.magFilter, wrap]).toEqual([THREE.NearestFilter, THREE.MirroredRepeatWrapping]);
   });
 });

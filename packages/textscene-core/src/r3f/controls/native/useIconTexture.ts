@@ -3,12 +3,13 @@
  * icon cannot fail to resolve, and `TextureLoader.load` returns a blank texture at once, so no
  * caller gates rendering on the load.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
-import { pinNoColorSpace } from '../../../resources/textures/applyTextureState';
+import { pinNoColorSpace } from '../../../resources/textures/textureView';
 import { applyCanvasItemSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { useNearestAnisotropy } from '../../nearestAnisotropy';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { ThemedIconRef } from './solveTree';
@@ -30,7 +31,7 @@ export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | 
     applyCanvasItemSampler(tex, sampler);
     return pinNoColorSpace(tex);
   }, [dataUrl, sampler]);
-  useEffect(() => (texture ? () => texture.dispose() : undefined), [texture]);
+  useDisposeOnRelease(texture);
   useNearestAnisotropy(texture);
   return texture;
 }

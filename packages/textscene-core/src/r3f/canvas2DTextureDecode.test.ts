@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import * as THREE from 'three';
-import { useCanvas2DTexture, useCanvasSrgbDefines } from './canvas2DTextureDecode';
+import { canvasMapProps, useCanvas2DTexture } from './canvas2DTextureDecode';
 import { markSrgbBytes } from './srgbByteTextures';
 
 /** Linear and Disabled, the viewport defaults (`viewport.h:419-420`). */
@@ -96,17 +96,15 @@ describe('useCanvas2DTexture in a canvas', () => {
   });
 });
 
-describe('useCanvasSrgbDefines', () => {
+describe('canvasMapProps', () => {
   it('returns the sRGB-multiply define for a NoColorSpace texture', () => {
     const texture = makeTexture(THREE.NoColorSpace);
-    const { result } = renderHook(() => useCanvasSrgbDefines(texture));
-    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    expect(canvasMapProps(texture).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
-  it('returns undefined for an untouched (SRGBColorSpace) texture', () => {
+  it('returns no define for an untouched (SRGBColorSpace) texture', () => {
     const texture = makeTexture(THREE.SRGBColorSpace);
-    const { result } = renderHook(() => useCanvasSrgbDefines(texture));
-    expect(result.current).toBeUndefined();
+    expect(canvasMapProps(texture).defines).toBeUndefined();
   });
 
   /**
@@ -115,24 +113,22 @@ describe('useCanvasSrgbDefines', () => {
    */
   it('returns the sRGB-multiply define for a texture marked as holding sRGB bytes', () => {
     const texture = markSrgbBytes(makeTexture(THREE.SRGBColorSpace));
-    const { result } = renderHook(() => useCanvasSrgbDefines(texture));
-    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    expect(canvasMapProps(texture).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
-  it('returns undefined for null/undefined (no map bound yet)', () => {
-    const { result } = renderHook(({ tex }) => useCanvasSrgbDefines(tex), {
-      initialProps: { tex: null as THREE.Texture | null },
-    });
-    expect(result.current).toBeUndefined();
-  });
-
-  it('keeps a stable identity across rerenders with the same texture', () => {
+  it('returns the texture as the map', () => {
     const texture = makeTexture(THREE.NoColorSpace);
-    const { result, rerender } = renderHook(({ tex }) => useCanvasSrgbDefines(tex), {
-      initialProps: { tex: texture as THREE.Texture | null },
-    });
-    const first = result.current;
-    rerender({ tex: texture });
-    expect(result.current).toBe(first);
+    expect(canvasMapProps(texture).map).toBe(texture);
+  });
+
+  it('returns an empty map and no define for null and undefined (no map bound yet)', () => {
+    expect(canvasMapProps(null)).toEqual({ map: null, defines: undefined });
+    expect(canvasMapProps(undefined)).toEqual({ map: null, defines: undefined });
+  });
+
+  it('returns one define object for every texture, so a rerender keeps the material', () => {
+    const a = canvasMapProps(makeTexture(THREE.NoColorSpace)).defines;
+    const b = canvasMapProps(makeTexture(THREE.NoColorSpace)).defines;
+    expect(a).toBe(b);
   });
 });

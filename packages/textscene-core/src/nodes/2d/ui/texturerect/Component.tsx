@@ -14,9 +14,8 @@ import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSam
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw } from './nativeSolver';
 import { rectTextureSampler } from './rectTexture';
-import { drawnClone } from '../../../../r3f/drawnClone';
 import type { TextureRectProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 
 interface ImageLike {
   width?: number;
@@ -43,18 +42,10 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     return { textureSize, ...textureRectDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
   }, [rawTexture, rect.w, rect.h, props.stretchMode]);
 
-  const preparedTexture = useMemo(() => {
-    if (!rawTexture || !draw) return null;
-    return drawnClone(
-      rawTexture,
-      rectTextureSampler(draw, sampler, {
-        flipH: props.flipH === true,
-        flipV: props.flipV === true,
-      })
-    );
-  }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
-
-  const drawnTexture = useUploadedClone(preparedTexture);
+  const drawnTexture = useOwnedTextureView(
+    rawTexture,
+    draw && rectTextureSampler(draw, sampler, { flipH: props.flipH === true, flipV: props.flipV === true })
+  );
 
   if (!draw || !drawnTexture) return null;
 

@@ -161,7 +161,7 @@ Carried:
 - `FLAG_ALBEDO_FROM_VERTEX_COLOR` → `vertexColors`, a program input
   (`WebGLPrograms.js:308`), keyed.
 - `FLAG_DISABLE_DEPTH_TEST` → `depthTest`, per-draw state.
-- `FLAG_USE_TEXTURE_REPEAT` → `wrapS`/`wrapT` (`applyTextureState.ts:144`), sampler
+- `FLAG_USE_TEXTURE_REPEAT` → `wrapS`/`wrapT` (`textureView`), sampler
   state like `texture_filter`.
 - `FLAG_USE_SHADOW_TO_OPACITY` → read by `alphaPassMembership` only, so it reaches the
   program indirectly, and its shading effect is unimplemented.

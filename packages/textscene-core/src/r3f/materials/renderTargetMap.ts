@@ -1,6 +1,6 @@
 /**
  * The sampler state of a render-target albedo map, applied in the material's program. A render
- * target never clones (`applyTextureState.ts`), and every reader shares its transform, its
+ * target never clones (`textureView.ts`), and every reader shares its transform, its
  * wrapping and its filter, so the UV transform a slot needs, a glTF surface's V flip included,
  * and Godot's repeat and filter ride on the material instead. The target itself stays linear and
  * clamped, as Sprite2D and SubViewportContainer sample it, so the hand-written sample costs only
@@ -11,12 +11,12 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { editedChunk, editedProgram } from '../shaderPatch/chunkPatch';
-import type { UVTransform } from '../../resources/textures/applyTextureState';
+import { FULL_UV_WINDOW, type UvWindow } from '../uvWindow';
 import { recordedOn } from './recordedOnMaterial';
 
 /** How a material samples its render-target albedo: Godot's sampler state for the slot. */
 export interface TargetMapSampler {
-  uv: UVTransform;
+  uv: UvWindow;
   /** `texture_repeat`: whether a UV outside 0..1 wraps or clamps. */
   repeats: boolean;
   /** Whether `texture_filter` reads the nearest texel. */
@@ -25,8 +25,6 @@ export interface TargetMapSampler {
 
 /** Where a material records its render-target albedo sampler. */
 const TARGET_MAP_KEY = 'godotTargetMap';
-
-const IDENTITY_UV: UVTransform = { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
 
 /** The `userData` that gives a material its render-target albedo sampler, none for undefined. */
 export function renderTargetMapUserData(sampler: TargetMapSampler | undefined): Record<string, unknown> {
@@ -39,13 +37,13 @@ export function renderTargetMapUserData(sampler: TargetMapSampler | undefined): 
  */
 function targetMapTransform(material: Material): IUniform<THREE.Matrix3> {
   const matrix = new THREE.Matrix3();
-  let built: UVTransform | undefined;
+  let built: UvWindow | undefined;
   return {
     get value() {
       const uv =
-        recordedOn<TargetMapSampler | undefined>(material, TARGET_MAP_KEY, undefined)?.uv ?? IDENTITY_UV;
+        recordedOn<TargetMapSampler | undefined>(material, TARGET_MAP_KEY, undefined)?.uv ?? FULL_UV_WINDOW;
       if (uv !== built) {
-        matrix.setUvTransform(uv.offset.x, uv.offset.y, uv.scale.x, uv.scale.y, 0, 0, 0);
+        matrix.setUvTransform(uv.offset.x, uv.offset.y, uv.repeat.x, uv.repeat.y, 0, 0, 0);
         built = uv;
       }
       return matrix;

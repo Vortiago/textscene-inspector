@@ -10,7 +10,7 @@ import type { Sky, SkyBake } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
-import { applyTextureState, releaseBoundTexture } from '../textures/applyTextureState';
+import { releaseView, textureView } from '../textures/textureView';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 
@@ -62,14 +62,14 @@ export interface SkyEnvironmentInput {
 /**
  * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
  * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0044). The result is
- * a clone only when the arrival diverges, and `releaseBoundTexture` frees it
+ * a clone only when the arrival diverges, and `releaseView` frees it
  * only then. Returns null for a sky with no panorama.
  */
 function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
   if (!panorama) return null;
-  return applyTextureState(panorama, {
+  return textureView(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
-    repeat: true,
+    wrap: THREE.RepeatWrapping,
   });
 }
 
@@ -82,10 +82,10 @@ export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
   { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const tiledPanorama = skyPanoramaTexture(panorama);
+  const panoramaView = skyPanoramaTexture(panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
-    uniforms: skyUniforms(sky.material, lights, tiledPanorama),
+    uniforms: skyUniforms(sky.material, lights, panoramaView),
     vertexShader: SKY_VERTEX_SHADER,
     fragmentShader: skyFragmentShader(sky.material),
     side: THREE.BackSide,
@@ -130,7 +130,7 @@ export function buildSkyEnvironment(
     pmrem?.dispose();
     geometry.dispose();
     material.dispose();
-    releaseBoundTexture(tiledPanorama);
+    releaseView(panoramaView);
   }
 
   return {
