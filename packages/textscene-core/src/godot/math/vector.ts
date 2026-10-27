@@ -20,6 +20,18 @@ export interface Vector3 {
 export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
 
 /**
+ * `Vector2::normalize` (`core/math/vector2.cpp:52-59`) in `real_t` float: a zero vector stays zero.
+ *
+ * @oneWay A unit vector
+ */
+export function normalizedVector2({ x, y }: Vector2): Vector2 {
+  const lengthSquared = f(f(x * x) + f(y * y));
+  if (lengthSquared === 0) return { x: 0, y: 0 };
+  const length = f(Math.sqrt(lengthSquared));
+  return { x: f(x / length), y: f(y / length) };
+}
+
+/**
  * `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero.
  *
  * @oneWay A unit vector

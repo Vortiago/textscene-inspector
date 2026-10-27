@@ -201,8 +201,12 @@ Tag a new shared helper. Do not edit the list.
 <!-- one-way:begin -->
 - An engine enum, held as an `as const` object in `godot/`: `enumMember` in
   `godot/classdb/enumNames.ts`, and `enumOr` in `parser/valueParsers.ts`.
+- The values an alignment property can hold: `HORIZONTAL_ALIGNMENTS` and `VERTICAL_ALIGNMENTS` in
+  `godot/math/alignment.ts`.
+- A darker or lighter colour: `darkened` and `lightened` in `godot/math/color.ts`.
 - Angles: `degToRad` and `radToDeg` in `godot/math/math.ts`.
-- A unit vector: `normalizedVector3` in `godot/math/vector.ts`.
+- The signed area of a polygon: `signedPolygonArea` in `godot/math/polygonArea.ts`.
+- A unit vector: `normalizedVector2` and `normalizedVector3` in `godot/math/vector.ts`.
 - An integer from the file: `parseGodotInt` in `godot/variant/intReader.ts`.
 - An integer in an int slot: `slotInt` in `godot/variant/intSlots.ts`.
 - A composite in a property slot: `slotTupleRegex` in `godot/variant/number.ts`.
@@ -218,7 +222,8 @@ Tag a new shared helper. Do not edit the list.
 - A `real_t` field: `realOr`, `realVec2Or` and `realVec3Or` in `parser/valueParsers.ts`. They store
   a double beyond the float range as inf, as `real_t` does.
 - An AABB that must have a size: `parseNonEmptyAabb` in `parser/valueParsers.ts`.
-- A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
+- A `getCached` reader for a walk: `NOTHING_CACHED`, `firstCached`, `recordingReads` and
+  `answeredOnce` in `r3f/cacheSources.ts`.
 - A texture clone that a node draws: `drawnClone` in `r3f/drawnClone.ts`. Set every sampler field
   through it, before the upload.
 - A full-screen pass: `fullScreenPass` and `drawFullScreen` in `r3f/fullScreenPass.ts`.
@@ -239,6 +244,8 @@ Tag a new shared helper. Do not edit the list.
 - A text edit on three's shader chunks: `installChunkEdits` in `r3f/shaderPatch/chunkPatch.ts`.
 - A texture every material samples as one object: `sharedTexture` and `releasedOnUnmount` in
   `r3f/sharedTexture.ts`.
+- Where a texture lies in an atlas, as fractions of it: `fractionOfAtlas` in
+  `r3f/textureAtlas/atlasFraction.ts`.
 - A UV window on a texture: `regionUvWindow`, `flippedUvWindow` and `applyUvWindow` in
   `r3f/uvWindow.ts`.
 - The cap of a cylinder or a tube: `TOP_CAP`, `BOTTOM_CAP` and `writeCapFan` in
@@ -258,6 +265,7 @@ Tag a new shared helper. Do not edit the list.
 - A plan of many resource files to load: `useLoadedFiles` in `resources/useLoadedFiles.ts`.
 - A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
   `resources/useSubOrExtResource.ts`.
+- A buffer of the same texel kind as some pixels: `emptyLike` in `utils/emptyLike.ts`.
 - A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
 - An entry by its key in a frozen table: `firstWith`, `lastWith` and `firstIndexWith` in
   `utils/keyedLookup.ts`. They build one Map for each table.
@@ -266,9 +274,12 @@ Tag a new shared helper. Do not edit the list.
 - A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a build
   that throws stores nothing. Pass `keeps` for a value that is not final yet, and `stamp` for a key
   whose contents change, as a texture's `version`.
+- In tests, the signed volume of a brush: `enclosedVolume` in `r3f/csg/testing/brushVolume.ts`.
 - In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
 - In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
 - In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in
   `r3f/testing/shaderPatches.ts`.
+- In tests, the distinct positions of a mesh: `distinctPositions` in
+  `resources/meshes/textmesh/distinctPositions.testkit.ts`.
 <!-- one-way:end -->

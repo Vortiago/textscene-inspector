@@ -7,6 +7,7 @@ import { heading } from '../../../parser/testing/parserKit';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../godot/math/alignment';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -234,5 +235,15 @@ describe('a billboard value the tokenizer cannot read', () => {
     const props = parseLabel3D(heading('Label3D', { name: 'Text' }), { billboard: '2abc' });
 
     expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
+  });
+});
+
+describe('a horizontal_alignment past FILL', () => {
+  // `set_horizontal_alignment` refuses an index outside 0-3 (`label_3d.cpp:678`).
+  it('keeps the CENTER default and warns', () => {
+    const props = parseLabel3D(heading('Label3D', { name: 'Text' }), { horizontal_alignment: '4' });
+
+    expect(props.horizontal_alignment).toBe(HORIZONTAL_ALIGNMENT_CENTER);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('horizontal_alignment'));
   });
 });

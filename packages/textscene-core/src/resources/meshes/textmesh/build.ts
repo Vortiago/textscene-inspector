@@ -18,7 +18,7 @@ import {
   type VerticalAlignment,
 } from '../../../godot/math/alignment';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
-import type { Vector2 } from '../../../godot/math/vector';
+import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
@@ -192,12 +192,6 @@ function inkBounds(placed: readonly PlacedGlyph[]): InkBounds {
   return bounds;
 }
 
-/** `Vector2::normalized`: the zero vector stays zero. */
-function normalised(dx: number, dy: number): [number, number] {
-  const length = Math.hypot(dx, dy);
-  return length === 0 ? [0, 0] : [dx / length, dy / length];
-}
-
 class TextMeshWriter {
   private readonly writer = new SurfaceWriter(false);
   private readonly hasDepth: boolean;
@@ -252,10 +246,13 @@ class TextMeshWriter {
     contour.forEach((vertex, l) => {
       const previous = contour[l === 0 ? contour.length - 1 : l - 1]!;
       const next = contour[l + 1 === contour.length ? 0 : l + 1]!;
-      const forward = normalised(next.point.x - vertex.point.x, next.point.y - vertex.point.y);
+      const forward = normalizedVector2({
+        x: next.point.x - vertex.point.x,
+        y: next.point.y - vertex.point.y,
+      });
       const backward = vertex.isSharp
         ? forward
-        : normalised(vertex.point.x - previous.point.x, vertex.point.y - previous.point.y);
+        : normalizedVector2({ x: vertex.point.x - previous.point.x, y: vertex.point.y - previous.point.y });
       const segmentLength = Math.hypot(next.point.x - vertex.point.x, next.point.y - vertex.point.y);
       const first = this.writer.vertexCount;
       // Back and front of the segment's start, then of its end.
@@ -268,8 +265,8 @@ class TextMeshWriter {
       for (const { point, z, d, along, row } of quad) {
         this.writer.vertex(
           [point.x + x, -point.y + y, z],
-          [d[1], d[0], 0],
-          [d[0], -d[1], 0, 1],
+          [d.y, d.x, 0],
+          [d.x, -d.y, 0, 1],
           [remapf(along, 0, info.length, 0, 1), row],
           [0, 0]
         );

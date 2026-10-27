@@ -11,31 +11,12 @@ import { clamp } from '../../../godot/math/math';
 import { storedReal, storedVector2 } from '../../../godot/math/real';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  VERTICAL_ALIGNMENT_BOTTOM,
+  HORIZONTAL_ALIGNMENTS,
   VERTICAL_ALIGNMENT_CENTER,
-  VERTICAL_ALIGNMENT_FILL,
-  VERTICAL_ALIGNMENT_TOP,
-  type HorizontalAlignment,
-  type VerticalAlignment,
+  VERTICAL_ALIGNMENTS,
 } from '../../../godot/math/alignment';
 import { AutowrapMode, DEFAULT_JUSTIFICATION_FLAGS } from '../../../godot/text/textServerEnums';
 import type { TextMeshProperties } from './types';
-
-const HORIZONTAL_ALIGNMENTS: readonly HorizontalAlignment[] = [
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  HORIZONTAL_ALIGNMENT_FILL,
-];
-const VERTICAL_ALIGNMENTS: readonly VerticalAlignment[] = [
-  VERTICAL_ALIGNMENT_TOP,
-  VERTICAL_ALIGNMENT_CENTER,
-  VERTICAL_ALIGNMENT_BOTTOM,
-  VERTICAL_ALIGNMENT_FILL,
-];
 
 export function decodeTextMesh(properties: Record<string, string>): TextMeshProperties {
   return {

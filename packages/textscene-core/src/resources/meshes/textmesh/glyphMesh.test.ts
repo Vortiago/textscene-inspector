@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
+import { signedPolygonArea } from '../../../godot/math/polygonArea';
 import { parseSfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
@@ -19,16 +20,6 @@ function oneContour(points: ContourPoint[], isFillRight = true): GlyphContours {
 
 const xy = (data: GlyphMeshData, contour = 0) =>
   data.contours[contour]!.map((vertex) => [vertex.point.x, vertex.point.y]);
-
-/** The signed area of a polygon, positive when it winds counter-clockwise on a y-up page. */
-function signedArea(polygon: readonly { x: number; y: number }[]): number {
-  return (
-    polygon.reduce((sum, a, i) => {
-      const b = polygon[(i + 1) % polygon.length]!;
-      return sum + (a.x * b.y - b.x * a.y);
-    }, 0) / 2
-  );
-}
 
 const SQUARE = (size: number, offset = 0): ContourPoint[] => [
   point(offset, offset),
@@ -166,7 +157,7 @@ describe('buildGlyphMeshData contours', () => {
       isFillRight: true,
     };
     const data = buildGlyphMeshData(contours, 1, 0.5);
-    expect(data.contours.map((polygon) => signedArea(polygon.map((vertex) => vertex.point)))).toEqual([
+    expect(data.contours.map((polygon) => signedPolygonArea(polygon.map((vertex) => vertex.point)))).toEqual([
       100, -16,
     ]);
     expect(data.contoursInfo.map((info) => info.isCounterClockwise)).toEqual([true, false]);
@@ -193,7 +184,7 @@ describe('buildGlyphMeshData triangles', () => {
   function trianglesArea(data: GlyphMeshData): number {
     let area = 0;
     for (let i = 0; i < data.triangles.length; i += 3) {
-      area += signedArea(data.triangles.slice(i, i + 3));
+      area += signedPolygonArea(data.triangles.slice(i, i + 3));
     }
     return area;
   }
@@ -206,7 +197,7 @@ describe('buildGlyphMeshData triangles', () => {
   it('winds every triangle counter-clockwise, as the polygon partitioner does', () => {
     const data = buildGlyphMeshData(oneContour(SQUARE(10)), 1, 0.5);
     for (let i = 0; i < data.triangles.length; i += 3) {
-      expect(signedArea(data.triangles.slice(i, i + 3))).toBeGreaterThan(0);
+      expect(signedPolygonArea(data.triangles.slice(i, i + 3))).toBeGreaterThan(0);
     }
   });
 
@@ -225,7 +216,10 @@ describe('buildGlyphMeshData triangles', () => {
   it.each(['o', 'g', 'B', 'é', '8', 'H'])('covers exactly the area %s encloses', (char) => {
     const contours = font.glyphContours(font.glyphIndex(char.codePointAt(0)!), 64)!;
     const data = buildGlyphMeshData(contours, 1, 0.5);
-    const enclosed = data.contours.reduce((sum, polygon) => sum + signedArea(polygon.map((v) => v.point)), 0);
+    const enclosed = data.contours.reduce(
+      (sum, polygon) => sum + signedPolygonArea(polygon.map((v) => v.point)),
+      0
+    );
     expect(trianglesArea(data)).toBeCloseTo(enclosed, 6);
     expect(enclosed).toBeGreaterThan(0);
   });

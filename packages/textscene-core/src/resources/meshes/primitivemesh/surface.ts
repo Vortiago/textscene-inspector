@@ -203,14 +203,13 @@ export function isDrawablePrimitiveMesh(mesh: ResolvableResource): boolean {
 }
 
 /**
-/**
  * A key over the content of each resource the mesh's build reads, and over its font, empty for a
  * type that reads none. A resource that is not there, or not loaded, is part of the key as missing.
  * A mesh object holds its resources and its lookups for good, so a key is read once per object. A
  * mesh whose font awaits metrics is read each time: its key moves when they settle.
  */
 export const referencesKey = perObject(readReferencesKey, {
-  keeps: (_key, mesh) => !isAwaitingFontMetrics(mesh),
+  keeps: (_value, mesh) => !isAwaitingFontMetrics(mesh),
 });
 
 function readReferencesKey(mesh: ResolvableResource): string {

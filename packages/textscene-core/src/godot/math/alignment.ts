@@ -21,6 +21,18 @@ export type HorizontalAlignment =
   | typeof HORIZONTAL_ALIGNMENT_RIGHT
   | typeof HORIZONTAL_ALIGNMENT_FILL;
 
+/**
+ * Every `HorizontalAlignment`, for `enumOr`: a setter refuses an index outside them.
+ *
+ * @oneWay The values an alignment property can hold
+ */
+export const HORIZONTAL_ALIGNMENTS: readonly HorizontalAlignment[] = [
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  HORIZONTAL_ALIGNMENT_FILL,
+];
+
 export const HORIZONTAL_ALIGNMENT_NAMES = enumNamesByValue({
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_CENTER,
@@ -38,6 +50,18 @@ export type VerticalAlignment =
   | typeof VERTICAL_ALIGNMENT_CENTER
   | typeof VERTICAL_ALIGNMENT_BOTTOM
   | typeof VERTICAL_ALIGNMENT_FILL;
+
+/**
+ * Every `VerticalAlignment`, for `enumOr`: a setter refuses an index outside them.
+ *
+ * @oneWay The values an alignment property can hold
+ */
+export const VERTICAL_ALIGNMENTS: readonly VerticalAlignment[] = [
+  VERTICAL_ALIGNMENT_TOP,
+  VERTICAL_ALIGNMENT_CENTER,
+  VERTICAL_ALIGNMENT_BOTTOM,
+  VERTICAL_ALIGNMENT_FILL,
+];
 
 export const VERTICAL_ALIGNMENT_NAMES = enumNamesByValue({
   VERTICAL_ALIGNMENT_TOP,

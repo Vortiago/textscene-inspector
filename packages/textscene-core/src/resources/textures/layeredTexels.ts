@@ -5,6 +5,7 @@
  */
 
 import type { ImportSlices } from '../../godot/import/layeredTextureImport';
+import { emptyLike, type PlainPixelsOf } from '../../utils/emptyLike';
 
 type Texels = Uint8Array | Uint16Array | Float32Array;
 
@@ -25,18 +26,16 @@ interface LayeredSource<Source extends SourcePixels> {
   height: number;
 }
 
-/** Half-float bits stay half-float bits, and bytes land in a plain `Uint8Array`. */
-type LayerTexelsOf<Source> = Source extends Uint16Array ? Uint16Array : Uint8Array;
-
 /**
  * Each layer is the image's size over the counts, truncated, so a remainder column or row is
  * dropped. Layers run left to right, then top to bottom. Null when a layer is empty, which Godot
- * skips (`:380`), leaving no texture. The texels can share the image's buffer.
+ * skips (`:380`), leaving no texture. The texels can share the image's buffer. Half-float bits
+ * stay half-float bits, and bytes land in a plain `Uint8Array`.
  */
 export function sliceImage<Source extends SourcePixels>(
   image: LayeredSource<Source>,
   { horizontal, vertical }: ImportSlices
-): LayeredTexels<LayerTexelsOf<Source>> | null {
+): LayeredTexels<PlainPixelsOf<Source>> | null {
   const width = Math.trunc(image.width / horizontal);
   const height = Math.trunc(image.height / vertical);
   if (width < 1 || height < 1) return null;
@@ -45,7 +44,7 @@ export function sliceImage<Source extends SourcePixels>(
     return { texels: image.data, width, height, depth };
   }
   const length = width * height * depth * 4;
-  const texels = image.data instanceof Uint16Array ? new Uint16Array(length) : new Uint8Array(length);
+  const texels = emptyLike(image.data, length);
   const rowTexels = width * 4;
   for (let layer = 0; layer < depth; layer++) {
     const left = (layer % horizontal) * width;
@@ -55,7 +54,7 @@ export function sliceImage<Source extends SourcePixels>(
       texels.set(image.data.subarray(source, source + rowTexels), (layer * height + y) * rowTexels);
     }
   }
-  return { texels: texels as LayerTexelsOf<Source>, width, height, depth };
+  return { texels, width, height, depth };
 }
 
 /**
@@ -69,6 +68,6 @@ export function redOnly({ texels, ...size }: LayeredTexels): LayeredTexels {
 }
 
 /** Whether `data` already has the texel type its layers take, so a stack of whole rows is itself. */
-function isLayerTexels<Source extends SourcePixels>(data: Source): data is Source & LayerTexelsOf<Source> {
+function isLayerTexels<Source extends SourcePixels>(data: Source): data is Source & PlainPixelsOf<Source> {
   return data instanceof Uint16Array || data instanceof Uint8Array;
 }

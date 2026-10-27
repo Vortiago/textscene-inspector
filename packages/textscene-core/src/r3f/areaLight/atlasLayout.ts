@@ -15,6 +15,7 @@
  */
 
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
+import { fractionOfAtlas } from '../textureAtlas/atlasFraction.js';
 import { packCells, type CellSize } from '../textureAtlas/atlasPacking.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
 import { areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
@@ -79,10 +80,10 @@ export function buildAreaLightAtlas(images: readonly GodotImage[]): AreaLightAtl
     width: cell.pixelWidth,
     height: cell.pixelHeight,
   }));
-  const placements = placed.map((texture): AreaTexturePlacement => ({
-    rect: [texture.x / width, texture.y / height, texture.width / width, texture.height / height],
-    maxMipmap: maxMipmapOf(texture),
-  }));
+  const placements = placed.map((texture): AreaTexturePlacement => {
+    const rect = fractionOfAtlas(texture, { width, height });
+    return { rect: [rect.x, rect.y, rect.width, rect.height], maxMipmap: maxMipmapOf(texture) };
+  });
   const mipmaps = areaTextureMipmaps(width, height, placed);
   return { width, height, mipmaps, placements };
 }
