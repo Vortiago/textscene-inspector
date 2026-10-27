@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import type { GlyphContours } from './sfntGlyf';
+import type { GlyphContours } from './glyphContours';
 import { parseSfntOutlines } from './sfntOutlines';
-import { buildTestFont, fixtureFontBytes, type TestGlyph, type TestPoint } from './sfntOutlines.testkit';
+import {
+  buildTestFont,
+  cmapTable,
+  fixtureFontBytes,
+  headTable,
+  maxpTable,
+  sfntFileBytes,
+  type TestGlyph,
+  type TestPoint,
+} from './sfntOutlines.testkit';
 
 /** Open Sans SemiBold, 2048 units per em, subset to ASCII letters, digits and `é`. */
 function openSans() {
@@ -74,8 +83,13 @@ describe('parseSfntOutlines containers', () => {
     expect(outlines?.glyphIndex(0x41)).toBe(1);
   });
 
-  it('gives no reader for an OpenType-CFF font, which has no glyf table', () => {
-    expect(parseSfntOutlines(fixtureFontBytes('montserrat-extra-bold.otf'))).toBeNull();
+  it('gives no reader for a font with neither glyf nor CFF outlines', () => {
+    const noOutlines = sfntFileBytes([
+      ['cmap', cmapTable({ cmap: new Map([[0x41, 1]]), cmapFormat: 4 })],
+      ['head', headTable(1000)],
+      ['maxp', maxpTable(2)],
+    ]);
+    expect(parseSfntOutlines(noOutlines)).toBeNull();
   });
 
   it('gives no reader for a WOFF2 container', () => {

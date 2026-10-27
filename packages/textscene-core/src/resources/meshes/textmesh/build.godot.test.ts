@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
-import type { GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
+import type { GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
 import measured from './build.godot.json';
 import { buildTextMeshSurface, type TextMeshFace } from './build';
 import { decodeTextMesh } from './decode';
