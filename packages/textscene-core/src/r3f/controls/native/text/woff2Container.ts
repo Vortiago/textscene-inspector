@@ -4,6 +4,7 @@
  * format transforms (`glyf`, `loca`, `hmtx`) stays out, as the readers need none of them.
  */
 
+import { ByteReader } from '../../../../resources/formats/binaryresource/byteReader';
 import { loadBrotliDecoder } from './brotliDecoder';
 import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
 
@@ -18,6 +19,7 @@ const TOTAL_COMPRESSED_SIZE_OFFSET = 20;
 const TAG_INDEX_MASK = 0x3f;
 const TRANSFORM_VERSION_SHIFT = 6;
 const ARBITRARY_TAG_INDEX = 63; // the tag follows as four bytes
+const TAG_SIZE = 4;
 
 /** The "Known Table Tags" of the WOFF2 spec, by tag index. */
 const KNOWN_TAGS = [
@@ -97,37 +99,16 @@ interface DirectoryEntry {
   isTransformed: boolean;
 }
 
-/** A forward cursor over big-endian bytes. */
-class Cursor {
-  position: number;
-  private readonly bytes: Uint8Array;
-
-  constructor(bytes: Uint8Array, position: number) {
-    this.bytes = bytes;
-    this.position = position;
+function readBase128(reader: ByteReader): number {
+  let accumulated = 0;
+  for (let index = 0; index < BASE128_MAX_BYTES; index++) {
+    const byte = reader.u8();
+    if (index === 0 && byte === 0x80) throw new Error('expected a UIntBase128 with no leading zero');
+    if (accumulated > BASE128_OVERFLOW_LIMIT) throw new Error('expected a UIntBase128 within 32 bits');
+    accumulated = accumulated * 128 + (byte & 0x7f);
+    if ((byte & 0x80) === 0) return accumulated;
   }
-
-  u8(): number {
-    const value = this.bytes[this.position++];
-    if (value === undefined) throw new RangeError('expected a byte, got the end of the file');
-    return value;
-  }
-
-  tag(): string {
-    return String.fromCharCode(this.u8(), this.u8(), this.u8(), this.u8());
-  }
-
-  base128(): number {
-    let accumulated = 0;
-    for (let index = 0; index < BASE128_MAX_BYTES; index++) {
-      const byte = this.u8();
-      if (index === 0 && byte === 0x80) throw new Error('expected a UIntBase128 with no leading zero');
-      if (accumulated > BASE128_OVERFLOW_LIMIT) throw new Error('expected a UIntBase128 within 32 bits');
-      accumulated = accumulated * 128 + (byte & 0x7f);
-      if ((byte & 0x80) === 0) return accumulated;
-    }
-    throw new Error(`expected a UIntBase128 of at most ${BASE128_MAX_BYTES} bytes`);
-  }
+  throw new Error(`expected a UIntBase128 of at most ${BASE128_MAX_BYTES} bytes`);
 }
 
 /** `glyf` and `loca` are transformed at version 0 and plain at version 3; every other table is plain at version 0. */
@@ -135,14 +116,14 @@ function isTransformedTable(tag: string, version: number): boolean {
   return tag === 'glyf' || tag === 'loca' ? version === 0 : version !== 0;
 }
 
-function readDirectoryEntry(cursor: Cursor): DirectoryEntry {
-  const flags = cursor.u8();
+function readDirectoryEntry(reader: ByteReader): DirectoryEntry {
+  const flags = reader.u8();
   const tagIndex = flags & TAG_INDEX_MASK;
-  const tag = tagIndex === ARBITRARY_TAG_INDEX ? cursor.tag() : KNOWN_TAGS[tagIndex];
+  const tag = tagIndex === ARBITRARY_TAG_INDEX ? reader.utf8(TAG_SIZE) : KNOWN_TAGS[tagIndex];
   if (tag === undefined) throw new RangeError(`expected a known table tag index, got ${tagIndex}`);
   const isTransformed = isTransformedTable(tag, flags >> TRANSFORM_VERSION_SHIFT);
-  const originalLength = cursor.base128();
-  return { tag, isTransformed, storedLength: isTransformed ? cursor.base128() : originalLength };
+  const originalLength = readBase128(reader);
+  return { tag, isTransformed, storedLength: isTransformed ? readBase128(reader) : originalLength };
 }
 
 /** Throws on a collection, a directory or stream that does not fit `bytes`, or a Brotli stream that does not decode to the lengths the directory sums to. */
@@ -151,17 +132,15 @@ export async function readWoff2Tables(bytes: ArrayBuffer): Promise<SfntFile> {
   if (dv.getUint32(FLAVOR_OFFSET, false) === SFNT_COLLECTION_FLAVOR) {
     throw new Error('expected a single-font .woff2, got a font collection');
   }
-  const cursor = new Cursor(new Uint8Array(bytes), WOFF2_HEADER_SIZE);
+  const reader = new ByteReader(new Uint8Array(bytes));
+  reader.isLittleEndian = false;
+  reader.seek(WOFF2_HEADER_SIZE);
   const entries = Array.from({ length: dv.getUint16(NUM_TABLES_OFFSET, false) }, () =>
-    readDirectoryEntry(cursor)
+    readDirectoryEntry(reader)
   );
 
   const decodedLength = entries.reduce((sum, entry) => sum + entry.storedLength, 0);
-  const compressed = new Uint8Array(
-    bytes,
-    cursor.position,
-    dv.getUint32(TOTAL_COMPRESSED_SIZE_OFFSET, false)
-  );
+  const compressed = reader.take(dv.getUint32(TOTAL_COMPRESSED_SIZE_OFFSET, false));
   const decode = await loadBrotliDecoder();
   const decoded = decode(compressed, decodedLength);
   if (decoded.length !== decodedLength) {

@@ -7,12 +7,9 @@
 import { openSfnt, type SfntFile } from './sfntTables';
 import { WOFF_SIGNATURE, readWoffTables } from './woffContainer';
 import { WOFF2_SIGNATURE, readWoff2Tables } from './woff2Container';
-import { perObject } from '../../../../utils/perObject';
 
-/** Keyed by the bytes of a font file. Null is bytes that no reader of this module opens. */
-export const openFontContainer = perObject(readContainer);
-
-async function readContainer(bytes: ArrayBuffer): Promise<SfntFile | null> {
+/** Null is bytes that no reader of this module opens. */
+export async function openFontContainer(bytes: ArrayBuffer): Promise<SfntFile | null> {
   if (bytes.byteLength < 4) return null;
   try {
     switch (new DataView(bytes).getUint32(0, false)) {

@@ -41,12 +41,6 @@ describe('openFontContainer', () => {
     expect(font).toEqual({ scalars: { unitsPerEm: 1000, ascent: 968, descent: 251 }, axisDefaults: {} });
   });
 
-  it('opens the bytes of one font file once, whichever reader asks first', async () => {
-    const bytes = fixtureFontBytes('recursive-vf-subset.woff2');
-
-    expect(openFontContainer(bytes)).toBe(openFontContainer(bytes));
-  });
-
   it('answers null, never throws, for a truncated .woff2', async () => {
     const whole = fixtureFontBytes('recursive-vf-subset.woff2');
 

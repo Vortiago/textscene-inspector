@@ -29,22 +29,20 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-function importingFiles(): string[] {
-  return walk(SRC)
-    .filter((file) => IMPORTS_LIBRARY.test(readFileSync(file, 'utf8')))
-    .map((file) => relative(SRC, file).split(sep).join('/'))
-    .sort();
-}
+const IMPORTING_FILES = walk(SRC)
+  .filter((file) => IMPORTS_LIBRARY.test(readFileSync(file, 'utf8')))
+  .map((file) => relative(SRC, file).split(sep).join('/'))
+  .sort();
 
 describe('brotli import site', () => {
   it('is imported by only the allowlisted files', () => {
-    const offenders = importingFiles().filter((file) => !ALLOWED.has(file));
+    const offenders = IMPORTING_FILES.filter((file) => !ALLOWED.has(file));
 
     expect(offenders, `move the import into ${SITE}: ${offenders.join(', ')}`).toEqual([]);
   });
 
   it('finds the import site at all, so the scan is not vacuous', () => {
-    expect(importingFiles()).toContain(SITE);
+    expect(IMPORTING_FILES).toContain(SITE);
   });
 
   it('imports the decoder dynamically, never statically', () => {

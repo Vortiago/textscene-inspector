@@ -4,7 +4,7 @@
  */
 
 import { zlibBlockInflater } from '../../../../resources/formats/binaryresource/compressedStream';
-import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
+import { SCENE_FONT_TABLE_TAGS, readTag, sfntFileOfTables, type SfntFile } from './sfntTables';
 
 export const WOFF_SIGNATURE = 0x774f4646; // 'wOFF'
 const WOFF_HEADER_SIZE = 44;
@@ -16,18 +16,17 @@ const WOFF_RECORD_SIZE = 20;
 export async function readWoffTables(bytes: ArrayBuffer): Promise<SfntFile> {
   const dv = new DataView(bytes);
   const numTables = dv.getUint16(WOFF_NUM_TABLES_OFFSET, false);
-  const inflate = await zlibBlockInflater();
   const tables = new Map<string, Uint8Array>();
 
   for (let index = 0; index < numTables; index++) {
     const at = WOFF_HEADER_SIZE + index * WOFF_RECORD_SIZE;
-    const tag = String.fromCharCode(...new Uint8Array(bytes, at, 4));
+    const tag = readTag(dv, at);
     if (!SCENE_FONT_TABLE_TAGS.includes(tag)) continue;
     const offset = dv.getUint32(at + 4, false);
     const compressedLength = dv.getUint32(at + 8, false);
     const length = dv.getUint32(at + 12, false);
     const stored = new Uint8Array(bytes, offset, compressedLength);
-    tables.set(tag, compressedLength < length ? inflate(stored, length) : stored);
+    tables.set(tag, compressedLength < length ? (await zlibBlockInflater())(stored, length) : stored);
   }
   return sfntFileOfTables(tables);
 }

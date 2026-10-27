@@ -4,6 +4,6 @@
  */
 
 declare module 'brotli/decompress' {
-  /** Decodes one Brotli stream. `outputSize`, when given, is the exact decoded length. Throws on a stream that does not decode into it. */
-  export default function decompress(input: Uint8Array, outputSize?: number): Uint8Array;
+  /** Decodes one Brotli stream. `outputSize` is the exact decoded length. Throws on a stream that does not decode into it. */
+  export default function decompress(input: Uint8Array, outputSize: number): Uint8Array;
 }

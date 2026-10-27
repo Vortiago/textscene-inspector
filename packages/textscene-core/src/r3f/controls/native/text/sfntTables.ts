@@ -85,6 +85,11 @@ export function sfntFileOfTables(tables: ReadonlyMap<string, Uint8Array>): SfntF
   return { dv: new DataView(buffer), tables: records };
 }
 
+/** The four-byte tag at `at`. */
+export function readTag(dv: DataView, at: number): string {
+  return String.fromCharCode(dv.getUint8(at), dv.getUint8(at + 1), dv.getUint8(at + 2), dv.getUint8(at + 3));
+}
+
 /** Reads the table directory after the 12-byte sfnt header at `sfntStart`, or `null` if it does not fit in `dv`. */
 function readTableDirectory(dv: DataView, sfntStart: number): Map<string, TableRecord> | null {
   if (sfntStart + SFNT_HEADER_SIZE > dv.byteLength) return null;
@@ -96,13 +101,7 @@ function readTableDirectory(dv: DataView, sfntStart: number): Map<string, TableR
   const tables = new Map<string, TableRecord>();
   for (let i = 0; i < numTables; i++) {
     const recordStart = dirStart + i * TABLE_RECORD_SIZE;
-    const tag = String.fromCharCode(
-      dv.getUint8(recordStart),
-      dv.getUint8(recordStart + 1),
-      dv.getUint8(recordStart + 2),
-      dv.getUint8(recordStart + 3)
-    );
-    tables.set(tag, {
+    tables.set(readTag(dv, recordStart), {
       offset: dv.getUint32(recordStart + 8, false),
       length: dv.getUint32(recordStart + 12, false),
     });
@@ -215,13 +214,7 @@ export function readAxisDefaults({ dv, tables }: SfntFile): Readonly<Record<stri
 
   for (let axis = 0; axis < axisCount; axis++) {
     const at = axesStart + axis * FVAR_AXIS_SIZE;
-    const tag = String.fromCharCode(
-      dv.getUint8(at),
-      dv.getUint8(at + 1),
-      dv.getUint8(at + 2),
-      dv.getUint8(at + 3)
-    );
-    defaults[tag] = dv.getInt32(at + FVAR_AXIS_DEFAULT_OFFSET, false) / FIXED_UNITS;
+    defaults[readTag(dv, at)] = dv.getInt32(at + FVAR_AXIS_DEFAULT_OFFSET, false) / FIXED_UNITS;
   }
   return defaults;
 }

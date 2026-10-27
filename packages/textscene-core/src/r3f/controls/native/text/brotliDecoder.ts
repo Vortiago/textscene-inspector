@@ -5,13 +5,7 @@
  * brotli format.
  */
 
-type BrotliDecompress = (input: Uint8Array, outputSize: number) => Uint8Array;
-
-/** Written only by `loadBrotliDecoder`, on its first call. It never clears: a failed import stays failed. */
-let pending: Promise<BrotliDecompress> | null = null;
-
-/** Loads the Brotli decoder, memoised so every caller shares one import. */
-export function loadBrotliDecoder(): Promise<BrotliDecompress> {
-  pending ??= import('brotli/decompress').then((m) => m.default);
-  return pending;
+/** Loads the Brotli decoder. The module system memoises the import, so every caller shares one. */
+export async function loadBrotliDecoder() {
+  return (await import('brotli/decompress')).default;
 }
