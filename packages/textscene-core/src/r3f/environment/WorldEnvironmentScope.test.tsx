@@ -13,10 +13,9 @@ import type { EnvironmentLayerProps } from './EnvironmentLayer';
 import {
   WorldEnvironmentScope,
   usePublishEnvironment,
-  NO_ENVIRONMENT,
-  PENDING_ENVIRONMENT,
   type EnvironmentResolution,
 } from './WorldEnvironmentScope';
+import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 
 vi.mock('./EnvironmentLayer', () => ({
   EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
@@ -125,13 +124,13 @@ describe('<WorldEnvironmentScope world="root">', () => {
   });
 
   it('draws with no Environment for a WorldEnvironment whose Environment is missing', async () => {
-    const renderer = await ReactThreeTestRenderer.create(inRoot(<Publisher resolution={NO_ENVIRONMENT} />));
+    const renderer = await ReactThreeTestRenderer.create(inRoot(<Publisher resolution={NO_RESOLUTION} />));
     expect(mountedLayers(renderer)).toEqual(['NoEnvironmentLayer']);
   });
 
   it('draws nothing while the Environment loads', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      inRoot(<Publisher resolution={PENDING_ENVIRONMENT} />)
+      inRoot(<Publisher resolution={PENDING_RESOLUTION} />)
     );
     expect(mountedLayers(renderer)).toEqual([]);
   });
@@ -140,7 +139,7 @@ describe('<WorldEnvironmentScope world="root">', () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <>
-          <Publisher resolution={NO_ENVIRONMENT} />
+          <Publisher resolution={NO_RESOLUTION} />
           <Publisher resolution={resolved('second')} />
         </>
       )
@@ -170,7 +169,7 @@ describe('<WorldEnvironmentScope world="root">', () => {
           <Publisher resolution={resolved('second')} />
         </>
       );
-    const renderer = await ReactThreeTestRenderer.create(tree(PENDING_ENVIRONMENT));
+    const renderer = await ReactThreeTestRenderer.create(tree(PENDING_RESOLUTION));
     await renderer.update(tree(resolved('first')));
     const layer = renderer.scene.find((node) => node.props.name === 'EnvironmentLayer');
     expect(layer.props.userData.settings).toEqual({ name: 'first' });
@@ -231,7 +230,7 @@ describe('<WorldEnvironmentScope world="root"> preview sun', () => {
 
   it('keeps the preview sun while the Environment loads (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      inRoot(<Publisher resolution={PENDING_ENVIRONMENT} />)
+      inRoot(<Publisher resolution={PENDING_RESOLUTION} />)
     );
     expect(previewSunCount(renderer)).toBe(1);
   });
@@ -247,7 +246,7 @@ describe('<WorldEnvironmentScope world="subViewport">', () => {
 
   it('adds no layer for a missing Environment, so the pass keeps its own clear colour', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      inSubViewport(<Publisher resolution={NO_ENVIRONMENT} />)
+      inSubViewport(<Publisher resolution={NO_RESOLUTION} />)
     );
     expect(mountedLayers(renderer)).toEqual([]);
   });
@@ -267,7 +266,7 @@ describe('<WorldEnvironmentScope world="subViewport">', () => {
 describe('usePublishEnvironment', () => {
   it('refuses a WorldEnvironment outside any world', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(ReactThreeTestRenderer.create(<Publisher resolution={NO_ENVIRONMENT} />)).rejects.toThrow(
+    await expect(ReactThreeTestRenderer.create(<Publisher resolution={NO_RESOLUTION} />)).rejects.toThrow(
       /expected a world environment scope/
     );
   });

@@ -7,9 +7,9 @@ import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { useLightDistanceFade } from './lightDistanceFade';
 import {
   lightFogEnergy,
-  lightIntensity,
   lightShadowOpacity,
   positionalLightSpecularAmount,
+  useLightIntensity,
 } from './lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
 import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMode';
@@ -35,7 +35,7 @@ export function usePositionalLight(
   properties: PositionalLightProperties,
   spotAngleAttenuation?: number
 ): PositionalLight {
-  const intensity = lightIntensity(properties);
+  const intensity = useLightIntensity(properties);
   const shadowOpacity = lightShadowOpacity(properties);
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const shadowUserData = usePositionalShadowUserData(properties);

@@ -9,8 +9,17 @@ import { captureCameras } from './captureCameras';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useSceneExposure } from '../exposure/sceneExposure';
+import { observeSceneCamera } from '../sceneRenderCamera';
 
 const CLEAR = new THREE.Color(0.3, 0.3, 0.3);
+
+/** A world that holds `factor` for its view and `world` for its own attributes. */
+function Exposed({ factor, world = factor }: { factor: number; world?: number | null }) {
+  useSceneExposure(factor, world);
+  return null;
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -25,8 +34,11 @@ function probeObject(properties: Record<string, string> = {}, treeOrder = [0]): 
 }
 
 async function sceneWith(...probes: ReflectionProbeObject[]) {
+  return probesIn(new THREE.Scene(), ...probes);
+}
+
+async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) {
   const { renderer } = await testRenderer();
-  const scene = new THREE.Scene();
   scene.add(...probes);
   scene.updateMatrixWorld();
   const sceneProbes = new SceneProbes(renderer, scene);
@@ -42,6 +54,15 @@ async function sceneWith(...probes: ReflectionProbeObject[]) {
     for (let frame = 1; frame < COMMIT_FRAMES_AFTER_SETTLE; frame += 1) facesDrawn();
   };
   return { renderer, scene, sceneProbes, facesDrawn, settle };
+}
+
+/** The exposure normalisation of the first probe in the rows `sceneProbes` last packed. */
+function packedNormalisation(renderer: THREE.WebGLRenderer): number {
+  const packs = vi.mocked(renderer.initTexture).mock.calls;
+  const packed = packs[packs.length - 1]![0] as THREE.DataTexture;
+  const rows = packed.image.data as Float32Array;
+  const EXPOSURE_NORMALISATION_TEXEL = 7;
+  return rows[EXPOSURE_NORMALISATION_TEXEL * 4]!;
 }
 
 describe('SceneProbes.update', () => {
@@ -99,6 +120,25 @@ describe('SceneProbes.update', () => {
     settle();
 
     expect(facesDrawn()).toBe(6);
+  });
+
+  it('keeps its captures when the scene exposure changes, as Godot rescales them instead', async () => {
+    const world = await ReactThreeTestRenderer.create(<Exposed factor={2} />);
+    const { facesDrawn, settle } = await probesIn(world.scene.instance as THREE.Scene, probeObject());
+    settle();
+    facesDrawn();
+    await world.update(<Exposed factor={3} />);
+
+    expect(facesDrawn()).toBe(0);
+  });
+
+  it('keeps a capture while the scene exposure stays', async () => {
+    const world = await ReactThreeTestRenderer.create(<Exposed factor={2} />);
+    const { facesDrawn, settle } = await probesIn(world.scene.instance as THREE.Scene, probeObject());
+    settle();
+    facesDrawn();
+
+    expect(facesDrawn()).toBe(0);
   });
 
   it('keeps showing a stale capture until its probe captures again (edge case)', async () => {
@@ -216,5 +256,109 @@ describe('SceneProbes rendering', () => {
     fireSceneRenderEnd(scene, captureCamera!);
 
     expect([during, light.shadow.intensity]).toEqual([0, 0.8]);
+  });
+});
+
+describe('SceneProbes exposure normalisation', () => {
+  /** A scene exposed at `factor`, its probe captured, with the packing watched. */
+  async function capturedAt(factor: number) {
+    const world = await ReactThreeTestRenderer.create(<Exposed factor={factor} />);
+    const probes = await probesIn(world.scene.instance as THREE.Scene, probeObject());
+    vi.spyOn(probes.renderer, 'initTexture');
+    probes.settle();
+    probes.facesDrawn();
+    return { ...probes, world };
+  }
+
+  it('is 1 while the exposure stays the one the probe captured at', async () => {
+    const { renderer } = await capturedAt(2);
+
+    expect(packedNormalisation(renderer)).toBe(1);
+  });
+
+  it('is the exposure over the one the probe captured at, after the exposure changes', async () => {
+    const { renderer, world, facesDrawn } = await capturedAt(2);
+    await world.update(<Exposed factor={3} />);
+    facesDrawn();
+
+    expect(packedNormalisation(renderer)).toBe(1.5);
+  });
+
+  it('is 1 once the scene holds no exposure, whatever the probe captured at', async () => {
+    const { renderer, world, facesDrawn } = await capturedAt(2);
+    await world.update(<group />);
+    facesDrawn();
+
+    expect(packedNormalisation(renderer)).toBe(1);
+  });
+
+  it('is the exposure over 1 for a probe captured before the scene held any (render_forward_clustered.cpp:1714)', async () => {
+    const world = await ReactThreeTestRenderer.create(<group />);
+    const { renderer, facesDrawn, settle } = await probesIn(
+      world.scene.instance as THREE.Scene,
+      probeObject()
+    );
+    vi.spyOn(renderer, 'initTexture');
+    settle();
+    facesDrawn();
+    await world.update(<Exposed factor={4} />);
+    facesDrawn();
+
+    expect(packedNormalisation(renderer)).toBe(4);
+  });
+
+  describe('under a camera that exposes the view apart from the world', () => {
+    /** The view at `view` and the world's own attributes at `world`, its probe captured, a point light of 8 in it. */
+    async function capturedUnder(view: number, world: number | null) {
+      const light = new THREE.PointLight(0xffffff, 8);
+      const mounted = await ReactThreeTestRenderer.create(<Exposed factor={view} world={world} />);
+      const probes = await probesIn(mounted.scene.instance as THREE.Scene, probeObject());
+      (mounted.scene.instance as THREE.Scene).add(light);
+      vi.spyOn(probes.renderer, 'initTexture');
+      const lightAtRender: number[] = [];
+      observeSceneCamera(mounted.scene.instance as THREE.Scene, () => lightAtRender.push(light.intensity));
+      probes.settle();
+      return { ...probes, lightAtRender, light };
+    }
+
+    it("captures at the world's exposure, not the camera's (render_forward_clustered.cpp:1714)", async () => {
+      const { facesDrawn, lightAtRender } = await capturedUnder(4, 2);
+      facesDrawn();
+
+      expect(new Set(lightAtRender)).toEqual(new Set([4]));
+    });
+
+    it('puts the lights back after the capture', async () => {
+      const { facesDrawn, light } = await capturedUnder(4, 2);
+      facesDrawn();
+
+      expect(light.intensity).toBe(8);
+    });
+
+    it("shows the capture at the camera's exposure over the world's it captured at (light_storage.cpp:1810)", async () => {
+      const { renderer, facesDrawn } = await capturedUnder(4, 2);
+      facesDrawn();
+
+      expect(packedNormalisation(renderer)).toBe(2);
+    });
+
+    it('shows a world with no attributes of its own at the camera exposure over 1', async () => {
+      const { renderer, facesDrawn } = await capturedUnder(4, null);
+      facesDrawn();
+
+      expect(packedNormalisation(renderer)).toBe(4);
+    });
+
+    it('waits while the camera exposes the view at 0, whose lights hold no energy to rescale (edge case)', async () => {
+      const { facesDrawn } = await capturedUnder(0, 2);
+
+      expect(facesDrawn()).toBe(0);
+    });
+
+    it('captures a view at 0 whose world holds 0 too', async () => {
+      const { facesDrawn } = await capturedUnder(0, 0);
+
+      expect(facesDrawn()).toBe(6);
+    });
   });
 });

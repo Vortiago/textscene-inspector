@@ -21,6 +21,8 @@ import { backgroundCube } from '../shaderPatch/backgroundPrograms';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { installSkyDebanding } from './skyDebanding';
+import { WorldExposureScope, usePublishCameraAttributes } from '../environment/worldExposure';
+import { drawAtExposure } from '../exposure/sceneExposure';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
@@ -360,5 +362,152 @@ describe('SkyLayer debanding', () => {
     await update(<directionalLight />);
 
     expect(debandingInRender(scene)).toBe(0);
+  });
+});
+
+/** Publishes a CameraAttributes of `multiplier` to the world it is in. */
+function Exposure({ multiplier }: { multiplier: number }) {
+  usePublishCameraAttributes({ status: 'resolved', attributes: { exposureMultiplier: multiplier } });
+  return null;
+}
+
+function exposed(multiplier: number, children: React.ReactNode) {
+  return (
+    <WorldExposureScope>
+      <Exposure multiplier={multiplier} />
+      {children}
+    </WorldExposureScope>
+  );
+}
+
+/**
+ * Godot bakes the sky's radiance at `background_energy_multiplier` times the exposure, and a surface
+ * reads it at the exposure again (`render_forward_clustered.cpp:1993`, `:2045`,
+ * `render_scene_data_rd.cpp:241-246`), so the exposure scales the ambient and the reflection twice
+ * and the background once. The sky shader scales each light's energy too (`sky.cpp:1086`).
+ */
+describe('SkyLayer under an exposure', () => {
+  const sky = (props: Partial<React.ComponentProps<typeof SkyLayer>> = {}) => (
+    <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} {...props} />
+  );
+
+  it('reads the ambient and the reflection at the exposure squared', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(exposed(2, sky({ intensity: 1.5 })));
+    expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4, 10);
+  });
+
+  it('draws the background at the exposure', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(exposed(2, sky({ backgroundIntensity: 1.5 })));
+    expect(scene.backgroundIntensity).toBeCloseTo(1.5 * 2, 10);
+  });
+
+  it('leaves the background alone when the sky paints none', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(exposed(2, sky({ asBackground: false })));
+    expect(scene.backgroundIntensity).toBe(1);
+  });
+
+  it('draws a declared light at its energy times the exposure', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      exposed(
+        3,
+        <>
+          {sky()}
+          <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
+        </>
+      )
+    );
+    await advance(renderer, 1);
+    expect(lastBake()?.lights[0]?.energy).toBe(6);
+  });
+
+  it('draws a light that declares nothing at its intensity over the scale times the exposure', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      exposed(
+        2,
+        <>
+          {sky()}
+          <directionalLight intensity={Math.PI * 3} />
+        </>
+      )
+    );
+    await advance(renderer, 1);
+    expect(lastBake()?.lights[0]?.energy).toBeCloseTo(6, 10);
+  });
+
+  describe('drawn at another exposure', () => {
+    it('reads the radiance the view baked at that exposure, and puts it back', async () => {
+      built.next = skyEnvironment();
+      const { scene } = await mount(exposed(2, sky({ intensity: 1.5 })));
+      const inside = drawAtExposure(scene, 3, () => scene.environmentIntensity);
+      expect(inside).toBeCloseTo(1.5 * 2 * 3, 10);
+      expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4, 10);
+    });
+
+    it('draws the background at that exposure, and puts it back', async () => {
+      built.next = skyEnvironment();
+      const { scene } = await mount(exposed(2, sky({ backgroundIntensity: 1.5 })));
+      const inside = drawAtExposure(scene, 3, () => scene.backgroundIntensity);
+      expect(inside).toBeCloseTo(1.5 * 3, 10);
+      expect(scene.backgroundIntensity).toBeCloseTo(1.5 * 2, 10);
+    });
+
+    it('draws at no exposure as at 1', async () => {
+      built.next = skyEnvironment();
+      const { scene } = await mount(exposed(2, sky({ intensity: 1.5, backgroundIntensity: 1.5 })));
+      const inside = drawAtExposure(scene, null, () => [
+        scene.environmentIntensity,
+        scene.backgroundIntensity,
+      ]);
+      expect(inside).toEqual([3, 1.5]);
+    });
+
+    it('leaves the background alone when the sky paints none', async () => {
+      built.next = skyEnvironment();
+      const { scene } = await mount(exposed(2, sky({ asBackground: false })));
+      const inside = drawAtExposure(scene, 3, () => scene.backgroundIntensity);
+      expect(inside).toBe(1);
+    });
+
+    it('stages nothing once the sky unmounts', async () => {
+      built.next = skyEnvironment();
+      const { scene, update } = await mount(exposed(2, sky({ intensity: 1.5 })));
+      await update(exposed(2, null));
+      const inside = drawAtExposure(scene, 3, () => scene.environmentIntensity);
+      expect(inside).toBe(1);
+    });
+  });
+
+  it('bakes the noise of a debanded sky for the brightness Godot bakes at', async () => {
+    const renderer = await ReactThreeTestRenderer.create(exposed(2, sky({ intensity: 1.5 })));
+    await advance(renderer, 1);
+    expect(lastBake()?.energy).toBeCloseTo(3, 10);
+  });
+
+  it('bakes again when the exposure changes', async () => {
+    const renderer = await ReactThreeTestRenderer.create(exposed(2, sky()));
+    await advance(renderer, 1);
+    const bakeCount = bakes.length;
+
+    await renderer.update(exposed(5, sky()));
+    await advance(renderer, 1);
+
+    expect(bakes.length).toBeGreaterThan(bakeCount);
+  });
+
+  it('darkens the sky under an exposure of 0 (edge case)', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(exposed(0, sky({ intensity: 1.5, backgroundIntensity: 1.5 })));
+    expect([scene.environmentIntensity, scene.backgroundIntensity]).toEqual([0, 0]);
+  });
+
+  it('reads a sky in a world with no CameraAttributes as before', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(
+      <WorldExposureScope>{sky({ intensity: 1.5, backgroundIntensity: 1.5 })}</WorldExposureScope>
+    );
+    expect([scene.environmentIntensity, scene.backgroundIntensity]).toEqual([1.5, 1.5]);
   });
 });

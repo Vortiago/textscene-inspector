@@ -1,0 +1,52 @@
+[gd_scene format=3]
+
+; One variable: CameraAttributesPractical.exposure_multiplier = 2, on a WorldEnvironment that names no
+; Environment, over the bake of `unit-lightmap-gi-baked`. The bake ran at exposure 1, so Godot reads
+; its atlas at 2 over 1, and the Static sun, which lights nothing in real time, brightens with it.
+; The clear colour is no Environment's background, so it stays. No other scene reads a lightmap under
+; an exposure, so none shows a wrong baked-exposure division.
+
+[ext_resource type="LightmapGIData" uid="uid://cq6e4ueye16gs" path="res://unit-lightmap-gi-baked.lmbake" id="1_7qjqn"]
+
+[sub_resource type="CameraAttributesPractical" id="camera_attributes"]
+exposure_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="PlaneMesh" id="ground"]
+lightmap_size_hint = Vector2i(42, 42)
+material = SubResource("ground_mat")
+add_uv2 = true
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="box_mat"]
+albedo_color = Color(0.9, 0.15, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="box"]
+lightmap_size_hint = Vector2i(19, 28)
+material = SubResource("box_mat")
+add_uv2 = true
+size = Vector3(1.5, 1.5, 1.5)
+
+[node name="Root" type="Node3D" unique_id=225877006]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+camera_attributes = SubResource("camera_attributes")
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1893105268]
+mesh = SubResource("ground")
+
+[node name="Box" type="MeshInstance3D" parent="." unique_id=47215891]
+transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0, 0.75, 0)
+mesh = SubResource("box")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=2079908858]
+transform = Transform3D(-0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, 0.5, -0.5, 0, 4, 0)
+light_bake_mode = 1
+shadow_enabled = true
+
+[node name="LightmapGI" type="LightmapGI" parent="." unique_id=1844889612]
+quality = 0
+environment_mode = 0
+light_data = ExtResource("1_7qjqn")

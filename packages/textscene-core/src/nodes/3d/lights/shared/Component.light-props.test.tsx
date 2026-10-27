@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { drawAtExposure, useSceneExposure } from '../../../../r3f/exposure/sceneExposure';
 import { DirectionalLight3D } from '../directionallight3d/Component';
 import { OmniLight3D } from '../omnilight3d/Component';
 import { SpotLight3D } from '../spotlight3d/Component';
@@ -87,6 +88,12 @@ function spotNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
     children: [],
     properties: props,
   };
+}
+
+/** Holds `factor` as the exposure of the enclosing scene. */
+function HeldExposure({ factor }: { factor: number }) {
+  useSceneExposure(factor, factor);
+  return null;
 }
 
 describe('Lights — properties (assertions 67–80)', () => {
@@ -263,6 +270,26 @@ describe('Lights: sign, shadow opacity and distance fade', () => {
     // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5, and the shadow is past 6 + 4.
     expect(lamp.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
     expect(lamp.shadow.intensity).toBe(0);
+  });
+
+  it('fades a light at the exposure a draw at another exposure sets, not the one the scene holds', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <>
+        <HeldExposure factor={4} />
+        <OmniLight3D
+          node={omniNode({ distance_fade_enabled: true, distance_fade_begin: 10, distance_fade_length: 4 })}
+        />
+      </>
+    );
+    const scene = r.scene.instance as THREE.Scene;
+    const lamp = instanceAs<THREE.PointLight>(r.scene.findByType('PointLight'));
+
+    const inside = drawAtExposure(scene, 2, () => {
+      fireSceneRenderFrom(scene, 12);
+      return lamp.intensity;
+    });
+    // A fade of 0.5, and an exposure of 2 over the 4 the scene holds.
+    expect(inside).toBeCloseTo(0.5 * 0.5 * LIGHT_INTENSITY_SCALE, 6);
   });
 
   it('leaves a light whole while distance_fade_enabled is off', async () => {

@@ -27,14 +27,15 @@ const MAPS_ANCHOR = '#include <lights_fragment_maps>';
 /**
  * Godot's bicubic B-spline filter, four bilinear taps (`:921-978`), and its read of a slice: one
  * layer of light, or four of directional light whose L1 bands it lights along the normal in the
- * LightmapGI's space. Exposure normalisation is 1 without camera attributes
- * (`render_forward_clustered.cpp:1222-1227`).
+ * LightmapGI's space. Only L0 takes the exposure scale, as the bands light through `l0 * en * 4`
+ * (`:1863-1868`).
  */
 const LIGHTMAP_PARS = /* glsl */ `${PARS_ANCHOR}
 uniform bool godotLightmapActive;
 uniform highp sampler2DArray godotLightmap;
 uniform vec4 godotLightmapUvScale;
 uniform float godotLightmapSlice;
+uniform float godotLightmapExposure;
 uniform bool godotLightmapUsesSH;
 uniform bool godotLightmapUsesBicubic;
 uniform vec2 godotLightmapTextureSize;
@@ -68,8 +69,8 @@ vec3 godotLightmapUvw() {
 
 vec3 godotLightmapAmbient( vec3 worldNormal ) {
 	vec3 uvw = godotLightmapUvw();
-	if ( ! godotLightmapUsesSH ) return godotLightmapTexel( uvw );
-	vec3 l0 = godotLightmapTexel( uvw );
+	vec3 l0 = godotLightmapTexel( uvw ) * godotLightmapExposure;
+	if ( ! godotLightmapUsesSH ) return l0;
 	vec3 l1n1 = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 1.0 ) ) - vec3( 0.5 ) ) * 2.0;
 	vec3 l1z = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 2.0 ) ) - vec3( 0.5 ) ) * 2.0;
 	vec3 l1p1 = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 3.0 ) ) - vec3( 0.5 ) ) * 2.0;
@@ -174,6 +175,11 @@ function lightmapUniforms(material: Material): Record<string, IUniform> {
     godotLightmapSlice: {
       get value() {
         return bound()?.user.sliceIndex ?? 0;
+      },
+    },
+    godotLightmapExposure: {
+      get value() {
+        return bound()?.lightmap.exposureScale ?? 1;
       },
     },
     godotLightmapUsesSH: {
