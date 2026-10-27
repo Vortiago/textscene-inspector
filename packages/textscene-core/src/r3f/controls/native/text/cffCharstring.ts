@@ -195,7 +195,7 @@ class CharstringRun {
         if (!this.hints.mask.isValid) this.declareStems(this.hints.verticalStems);
         break;
       case OP.hintmask:
-        this.maskHints();
+        this.readMask(this.hints.mask);
         break;
       case OP.cntrmask:
         this.maskCounters();
@@ -255,22 +255,17 @@ class CharstringRun {
     }
   }
 
-  /**
-   * `hintmask`: operands left on the stack are a last `vstem`, and the bytes after the operator
-   * are the mask. FreeType ignores a `hintmask` with more than one operand once a mask is set, mask
-   * bytes included, which then run as operators.
-   */
-  private maskHints(): void {
-    this.readMask(this.hints.mask);
-  }
-
   /** `cntrmask`: as a `hintmask`, but the mask only places and locks the stems of a counter group, and sets no mask. */
   private maskCounters(): void {
     const counterMask = new HintMask();
     if (this.readMask(counterMask)) this.glyphPath.lockCounterStems(counterMask);
   }
 
-  /** Declares the vstem the operands hold and reads the mask bytes into `mask`. False when FreeType ignores the operator. */
+  /**
+   * `hintmask` and `cntrmask`: operands left on the stack are a last `vstem`, and the bytes after
+   * the operator are the mask, read into `mask`. FreeType ignores one with more than one operand once
+   * a mask is set, mask bytes included, which then run as operators. False when it is ignored.
+   */
   private readMask(mask: HintMask): boolean {
     if (this.stack.count > 1 && this.hints.mask.isValid) return false;
     this.declareStems(this.hints.verticalStems);

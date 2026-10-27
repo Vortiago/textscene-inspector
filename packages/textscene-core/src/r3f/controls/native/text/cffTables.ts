@@ -203,7 +203,7 @@ function fdSelector(dv: DataView, at: number, glyphCount: number): (glyphIndex: 
 /**
  * The string id of each glyph, from the charset operand of the Top DICT (Technical Note 5176 §13):
  * 0 to 2 name a predefined charset, else it is the offset of a format 0, 1 or 2 table. Null when a
- * predefined charset has fewer glyphs than the font, which FreeType refuses to load.
+ * predefined charset has fewer glyphs than the font, or a table has another format: FreeType refuses both.
  */
 function charsetSids(
   dv: DataView,
@@ -214,6 +214,7 @@ function charsetSids(
   const predefined = [ISO_ADOBE_CHARSET, EXPERT_CHARSET, EXPERT_SUBSET_CHARSET][charset];
   if (predefined) return glyphCount <= predefined.length ? predefined.slice(0, glyphCount) : null;
   const format = dv.getUint8(base + charset);
+  if (format > 2) return null;
   const start = base + charset + 1;
   return format === 0 ? listedSids(dv, start, glyphCount) : rangedSids(dv, start, glyphCount, format === 2);
 }

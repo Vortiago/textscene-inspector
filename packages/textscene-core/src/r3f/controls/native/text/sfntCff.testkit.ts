@@ -109,9 +109,9 @@ export interface TestCffFont {
   localSubrs?: readonly (readonly (readonly number[])[])[];
   /** The font dict of each glyph, as an `FDSelect` format 3 holds it. One font dict when absent. */
   fdSelect?: readonly number[];
-  /** CFF 1: the string id of glyph 1 onward, as a charset holds them: format 0 unless `charsetFormat` says 1 or 2. */
+  /** CFF 1: the string id of glyph 1 onward, as a charset holds them: format 0 unless `charsetFormat` says 1 or 2. A 3 writes the range form under a format no CFF defines. */
   charset?: readonly number[];
-  charsetFormat?: 0 | 1 | 2;
+  charsetFormat?: 0 | 1 | 2 | 3;
   /** CFF 1: names the predefined Expert (1) or Expert Subset (2) charset instead of listing one. */
   predefinedCharset?: 1 | 2;
   /** The blue zones of every font dict. */
@@ -216,7 +216,7 @@ function index(entries: readonly (readonly number[])[], isCff2: boolean): ByteWr
 }
 
 /** A charset of `format`: one string id for each glyph from 1, or ranges of consecutive ids. */
-function charsetTable(sids: readonly number[], format: 0 | 1 | 2): ByteWriter {
+function charsetTable(sids: readonly number[], format: 0 | 1 | 2 | 3): ByteWriter {
   const out = new ByteWriter().u8(format);
   if (format === 0) {
     for (const sid of sids) out.u16(sid);
@@ -226,8 +226,8 @@ function charsetTable(sids: readonly number[], format: 0 | 1 | 2): ByteWriter {
     let left = 0;
     while (i + left + 1 < sids.length && sids[i + left + 1] === sids[i]! + left + 1) left++;
     out.u16(sids[i]!);
-    if (format === 1) out.u8(left);
-    else out.u16(left);
+    if (format === 2) out.u16(left);
+    else out.u8(left);
     i += left + 1;
   }
   return out;

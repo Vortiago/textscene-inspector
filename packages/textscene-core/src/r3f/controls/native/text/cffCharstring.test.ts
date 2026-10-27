@@ -613,6 +613,14 @@ describe('CFF charsets', () => {
     expect(drawn(font, 4)).toEqual(['15,-70 20,-70 20,-75 15,-75', '0,0 20,0 20,-20 0,-20']);
   });
 
+  it('refuses a font whose charset has a format no CFF defines', () => {
+    const font = fontOf([SQUARE(50), SQUARE(100), SQUARE(200), seac(66, 194)], {
+      charset: [125, 34, 35, 36],
+      charsetFormat: 3,
+    });
+    expect(drawn(font, 4)).toBeNull();
+  });
+
   it('takes the first glyph a string id names', () => {
     const font = fontOf([SQUARE(100), SQUARE(300), SQUARE(50), seac(65, 194)], {
       charset: [34, 34, 125, 35],
