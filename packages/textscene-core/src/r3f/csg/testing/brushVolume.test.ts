@@ -14,15 +14,7 @@ describe('enclosedVolume', () => {
     expect(enclosedVolume(box().toNonIndexed())).toBeCloseTo(24, 9);
   });
 
-  it('is negative for a box turned inside out', () => {
-    const inverted = box();
-    const index = inverted.getIndex()!;
-    for (let i = 0; i < index.count; i += 3) {
-      const second = index.getX(i + 1);
-      index.setX(i + 1, index.getX(i + 2));
-      index.setX(i + 2, second);
-    }
-
-    expect(enclosedVolume(inverted)).toBeCloseTo(-24, 9);
+  it('is negative for a mirrored box, whose faces front inward', () => {
+    expect(enclosedVolume(box().scale(-1, 1, 1))).toBeCloseTo(-24, 9);
   });
 });

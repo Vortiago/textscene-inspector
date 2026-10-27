@@ -1,6 +1,6 @@
 /** The volume a CSG brush encloses, for the tests that check its winding and its size. */
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
 
 /**
  * The volume the triangles of `geometry` enclose, as the sum of the signed tetrahedra each makes with
@@ -11,12 +11,14 @@ export function enclosedVolume(geometry: THREE.BufferGeometry): number {
   const positions = geometry.getAttribute('position');
   const index = geometry.getIndex();
   const cornerCount = index ? index.count : positions.count;
-  const corner = (i: number) => new THREE.Vector3().fromBufferAttribute(positions, index ? index.getX(i) : i);
+  const vertexAt = (corner: number) => (index ? index.getX(corner) : corner);
   let sixTimesVolume = 0;
   for (let first = 0; first + 2 < cornerCount; first += 3) {
-    sixTimesVolume += corner(first).dot(
-      new THREE.Vector3().crossVectors(corner(first + 1), corner(first + 2))
-    );
+    const [a, b, c] = [vertexAt(first), vertexAt(first + 1), vertexAt(first + 2)];
+    const [ax, ay, az] = [positions.getX(a), positions.getY(a), positions.getZ(a)];
+    const [bx, by, bz] = [positions.getX(b), positions.getY(b), positions.getZ(b)];
+    const [cx, cy, cz] = [positions.getX(c), positions.getY(c), positions.getZ(c)];
+    sixTimesVolume += ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx);
   }
   return sixTimesVolume / 6;
 }

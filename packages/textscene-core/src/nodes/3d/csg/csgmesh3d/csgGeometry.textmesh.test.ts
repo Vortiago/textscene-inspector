@@ -1,14 +1,14 @@
 /** CSGMesh3D's brush for a TextMesh: it builds from the font once the font file and its metrics have loaded. */
 
 import { describe, expect, it, vi } from 'vitest';
-import type * as THREE from 'three';
 import { parseTresFile, type ParsedResource } from '../../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../../parser/types';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
+import { enclosedVolume } from '../../../../r3f/csg/testing/brushVolume';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
 import type { FontFileResource } from '../../../../resources/fonts/font/types';
+import { distinctPositions } from '../../../../resources/meshes/textmesh/distinctPositions.testkit';
 import { FONT_PATH, trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
-import { enclosedVolume } from '../shared/testing/brushVolume';
 import {
   csgMesh3DAwaitsFontMetrics,
   csgMesh3DGeometry,
@@ -31,7 +31,7 @@ const NO_FONT: TscnInternalResource = { id: 'Plain', type: 'TextMesh', data: { t
 const FONT_REFERENCE: TscnExternalResource = { id: 'font', type: 'FontFile', path: FONT_PATH };
 const PROPERTIES = { mesh: 'SubResource("Text")', flipFaces: false };
 
-const TEXT_FILE_PATH = 'res://hog.tres';
+const TEXT_FILE_PATH = 'res://text.tres';
 /** A `.tres` TextMesh whose font is the file's own ExtResource. */
 const TEXT_FILE = parseTresFile(
   `[gd_resource type="TextMesh" format=3]\n\n` +
@@ -53,12 +53,6 @@ async function readyContext(): Promise<CsgGeometryContext> {
   return ctx;
 }
 
-/** The distinct corner positions of a non-indexed geometry, as `x,y,z` strings. */
-function distinctPositions(geometry: THREE.BufferGeometry): Set<string> {
-  const p = geometry.getAttribute('position');
-  return new Set(Array.from({ length: p.count }, (_, i) => [p.getX(i), p.getY(i), p.getZ(i)].join(',')));
-}
-
 describe('csgMesh3DGeometry for a TextMesh', () => {
   it('builds a brush of the glyphs once the font is ready', async () => {
     const solid = csgMesh3DGeometry(PROPERTIES, await readyContext());
@@ -76,32 +70,38 @@ describe('csgMesh3DGeometry for a TextMesh', () => {
 });
 
 describe('csgMesh3DGeometry for a TextMesh with depth', () => {
-  const DEEP = { mesh: 'SubResource("DeepH")', flipFaces: false };
-  const brush = async (properties: typeof DEEP) =>
+  const DEEP_PROPERTIES = { mesh: 'SubResource("DeepH")', flipFaces: false };
+  const brush = async (properties: typeof DEEP_PROPERTIES) =>
     csgMesh3DGeometry(properties, await readyContext())!.geometry;
+  // The H outline of this font encloses 818.158 px² at 64 px (fontTools). A pixel is 0.01 and the depth 0.05.
+  const OUTLINE_VOLUME = 818.158 * 0.01 ** 2 * 0.05;
 
   // Godot's CSG builds an "H" at font_size 64 and depth 0.05 from 44 triangles on 24 distinct
-  // positions, spanning x -0.18 to 0.180312 and z -0.025 to 0.025 (measured in Godot 4.6.3). Godot hints
-  // the glyph to 45 px, so its y extent and its volume are 2.4% under this port's unhinted outline.
+  // positions (measured in Godot 4.6.3). Godot hints the glyph to 45 px, so its y extent and its
+  // volume are 2.4% under this port's unhinted outline.
   it('reaches the brush with the triangles and the positions Godot builds', async () => {
-    const geometry = await brush(DEEP);
+    const positions = (await brush(DEEP_PROPERTIES)).getAttribute('position');
+
+    expect(positions.count / 3).toBe(44);
+    expect(distinctPositions(positions.array)).toHaveLength(24);
+  });
+
+  it('spans the x and z extent Godot builds', async () => {
+    const geometry = await brush(DEEP_PROPERTIES);
     geometry.computeBoundingBox();
 
-    expect(geometry.getAttribute('position').count / 3).toBe(44);
-    expect(distinctPositions(geometry).size).toBe(24);
     expect(geometry.boundingBox!.min.x).toBeCloseTo(-0.18, 6);
     expect(geometry.boundingBox!.max.x).toBeCloseTo(0.180312, 6);
     expect(geometry.boundingBox!.max.z).toBeCloseTo(0.025, 6);
   });
 
-  // The H outline of this font encloses 818.158 px² at 64 px (fontTools); a pixel is 0.01 and the depth 0.05.
   it('encloses the outline area times the depth, with the faces outward', async () => {
-    expect(enclosedVolume(await brush(DEEP))).toBeCloseTo(818.158 * 0.01 ** 2 * 0.05, 7);
+    expect(enclosedVolume(await brush(DEEP_PROPERTIES))).toBeCloseTo(OUTLINE_VOLUME, 7);
   });
 
   it('winds inward with flip_faces, as Godot does', async () => {
-    expect(enclosedVolume(await brush({ ...DEEP, flipFaces: true }))).toBeCloseTo(
-      -818.158 * 0.01 ** 2 * 0.05,
+    expect(enclosedVolume(await brush({ ...DEEP_PROPERTIES, flipFaces: true }))).toBeCloseTo(
+      -OUTLINE_VOLUME,
       7
     );
   });

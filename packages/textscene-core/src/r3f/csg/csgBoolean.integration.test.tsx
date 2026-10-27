@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { enclosedVolume } from './testing/brushVolume';
 import { drawnMeshes, renderCsgScene, SUBTRACTION } from './testing/csgScene';
 
 const LONE_BOX = `[node name="Root" type="Node3D"]
@@ -36,16 +37,9 @@ function meshes(renderer: Awaited<ReturnType<typeof renderCsgScene>>) {
   return renderer.scene.findAllByType('Mesh');
 }
 
+/** The volume of a closed brush, whichever way it winds. */
 function volumeOf(geometry: THREE.BufferGeometry): number {
-  const p = (geometry.index ? geometry.toNonIndexed() : geometry).getAttribute('position');
-  let total = 0;
-  for (let i = 0; i < p.count; i += 3) {
-    const a = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
-    const b = new THREE.Vector3(p.getX(i + 1), p.getY(i + 1), p.getZ(i + 1));
-    const c = new THREE.Vector3(p.getX(i + 2), p.getY(i + 2), p.getZ(i + 2));
-    total += a.dot(new THREE.Vector3().crossVectors(b, c)) / 6;
-  }
-  return Math.abs(total);
+  return Math.abs(enclosedVolume(geometry));
 }
 
 describe('CSG boolean evaluation, end to end', () => {

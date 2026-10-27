@@ -11,7 +11,7 @@ renders_as: a solid built from an arbitrary Mesh resource
 
 The CSG shape whose solid comes from a `Mesh` resource, so any mesh can take part in a boolean. The previewer builds the solid from the triangle surfaces of an inline or `.tres` PrimitiveMesh or ArrayMesh. Each face takes the node's `material`, else its own surface's material, as in Godot.
 
-A TextMesh with a TrueType scene font builds its brush from its glyph outlines, inline or in a `.tres`, once its font file and the metrics of the font have loaded. The text draws as a solid, and it takes part in a boolean as any other mesh does. The golden `unit-csg-mesh-text-mesh` differs from Godot by a mean of 0.141/255 per channel. The gap is the glyph hinting that the TextMesh sheet lists.
+A TextMesh with a TrueType scene font builds its brush from its glyph outlines, inline or in a `.tres`. The brush builds once the font file and its metrics have loaded. The text draws as a solid and takes part in a boolean as any other mesh does. The golden `unit-csg-mesh-text-mesh` shows both. The gap to Godot is the glyph hinting that the TextMesh sheet lists.
 
 ## Linting
 

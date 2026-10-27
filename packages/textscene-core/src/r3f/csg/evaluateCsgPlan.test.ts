@@ -12,6 +12,7 @@ import { type CsgContribution, type CsgPlan } from './csgPlan';
 import { CsgOperation } from '../../godot/scene/csg';
 import type { CsgModule } from './csgModule';
 import type { CsgSolid } from './csgRegistration';
+import { enclosedVolume } from './testing/brushVolume';
 import type { TscnNode } from '../../parser/types';
 
 const csg = csgLibrary as unknown as CsgModule;
@@ -50,20 +51,9 @@ function plan(contributions: CsgContribution[]): CsgPlan {
   };
 }
 
-/**
- * Solid volume by the divergence theorem, after `toNonIndexed()`: a `BoxGeometry` is indexed, with
- * 24 positions and 36 indices, so walking positions in triples integrates eight arbitrary triangles.
- */
+/** The volume of a closed brush, whichever way it winds. */
 function volumeOf(geometry: THREE.BufferGeometry): number {
-  const p = (geometry.index ? geometry.toNonIndexed() : geometry).getAttribute('position');
-  let total = 0;
-  for (let i = 0; i < p.count; i += 3) {
-    const a = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
-    const b = new THREE.Vector3(p.getX(i + 1), p.getY(i + 1), p.getZ(i + 1));
-    const c = new THREE.Vector3(p.getX(i + 2), p.getY(i + 2), p.getZ(i + 2));
-    total += a.dot(new THREE.Vector3().crossVectors(b, c)) / 6;
-  }
-  return Math.abs(total);
+  return Math.abs(enclosedVolume(geometry));
 }
 
 // Non-indexed, matching what `applyCsgNormals` emits for every real CSG contribution.
