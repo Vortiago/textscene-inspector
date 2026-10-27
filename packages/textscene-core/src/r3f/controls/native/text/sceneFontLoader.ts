@@ -55,7 +55,11 @@ export const sceneFontSettleCount = settleCount.get;
  */
 export const onSceneFontMetricsSettled = settleCount.subscribe;
 
-/** Fires every settled listener, for a scene font load and for the bundled font registration. */
+/**
+ * Fires every settled listener, for a scene font load and for the bundled font registration. A
+ * throwing listener does not stop the later ones: the store rethrows the first error once all
+ * have run.
+ */
 export function notifySceneFontMetricsSettled(): void {
   settleCount.set(settleCount.get() + 1);
 }
@@ -196,10 +200,14 @@ async function resolveSceneFontMetrics(
   metricsCache.set(resolved.leaf, { status: 'pending', promise });
   const metrics = await promise;
   metricsCache.set(resolved.leaf, { status: 'settled', metrics });
-  // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
-  // settled cache.
-  notifySceneFontMetricsSettled();
-  endWork();
+  try {
+    // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
+    // settled cache.
+    notifySceneFontMetricsSettled();
+  } finally {
+    // A throwing listener must not leave the work counted: a capture waits on it for good.
+    endWork();
+  }
   return metrics;
 }
 

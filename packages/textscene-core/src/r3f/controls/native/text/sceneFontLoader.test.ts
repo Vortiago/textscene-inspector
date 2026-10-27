@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fontWork,
+  notifySceneFontMetricsSettled,
   onSceneFontMetricsSettled,
   peekSceneFontMetrics,
   peekSettledSceneFontMetrics,
@@ -244,6 +245,24 @@ describe('onSceneFontMetricsSettled', () => {
   });
 });
 
+describe('notifySceneFontMetricsSettled', () => {
+  it('calls every listener after one throws, then rethrows the first error', () => {
+    const failure = new Error('listener failed');
+    const later = vi.fn();
+    const offFailing = onSceneFontMetricsSettled(() => {
+      throw failure;
+    });
+    const offLater = onSceneFontMetricsSettled(later);
+    try {
+      expect(() => notifySceneFontMetricsSettled()).toThrow(failure);
+      expect(later).toHaveBeenCalledTimes(1);
+    } finally {
+      offFailing();
+      offLater();
+    }
+  });
+});
+
 describe('fontWork', () => {
   it('counts a font load from the peek that starts it until it settles, so a capture waits for it', async () => {
     const leaf = fontFile(new ArrayBuffer(4));
@@ -264,6 +283,23 @@ describe('fontWork', () => {
     await settleLoads();
 
     expect(fontWork.pending()).toBe(0);
+  });
+
+  it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
+    const off = onSceneFontMetricsSettled(() => {
+      throw new Error('listener failed');
+    });
+    // The load runs unawaited, so its rejection is the listener's error and nothing else.
+    const swallow = () => undefined;
+    process.on('unhandledRejection', swallow);
+    try {
+      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/P');
+      await settleLoads();
+      expect(fontWork.pending()).toBe(0);
+    } finally {
+      off();
+      process.off('unhandledRejection', swallow);
+    }
   });
 
   it('counts no work for a font that settles by itself on the bundled default', () => {

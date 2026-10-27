@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
@@ -40,15 +40,14 @@ import {
   viewportAspect,
   viewportMsaaMode,
 } from './offscreenViewport';
-import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
+import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
 import { viewportTargetSize } from './targetSize';
-import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
 import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
@@ -133,12 +132,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     () => (kind === '3d' ? createSceneTarget : createCanvasTarget)(width, height, node.name),
     [kind, width, height, node.name]
   );
-  // A 2D pass draws into a frame, which holds the canvas upside down for Godot's tie rule and
-  // copies it into the target (ADR-0057). The frame takes the multisampling, so the target it
-  // copies into never multisamples.
   const msaaMode = viewportMsaaMode(properties, kind);
   const target = useMultisampledTarget(kind === '3d' ? msaaMode : 0, createTarget);
-  const frame = useMultisampledTarget(kind === '2d' ? msaaMode : 0, createCanvasFrame);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.
@@ -149,18 +144,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const projectMipmapBias = useProjectTextureMipmapBias();
   const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
 
-  // A persistent camera for 2D-world content. Godot draws a viewport's canvas
-  // through its canvas transform, the identity until a Camera2D in the subtree
-  // makes itself current, so this starts at the whole target rect and the pass
-  // narrows it to the current camera's view each frame.
-  const orthoCamera = useMemo(() => createViewportCanvasCamera(), []);
+  // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
+  // the subtree makes itself current, so the pass narrows this camera to that view each frame.
+  const { camera: orthoCamera, frame } = useCanvasPass(width, height, kind === '2d' ? msaaMode : 0);
   /** Written only by the pass, through `recompileOnCurveChange`. */
   const portalCurve = useRef({ revision: -1 });
-  useEffect(() => {
-    orthoCamera.near = 0.1;
-    orthoCamera.far = 4000;
-    applyOrthoFrame(orthoCamera, orthoFrameForSize({ x: width, y: height }));
-  }, [orthoCamera, width, height]);
 
   const renderPass = useCallback(() => {
     const source = rendersInline ? mainScene : portalScene;
@@ -202,13 +190,16 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         toneMapping,
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
-          if (camera) {
-            renderWithMipmapBias(mipmapBias, () =>
-              renderWithShadowAtlas(shadowAtlas, () =>
-                kind === '2d' ? frame.render(gl, source, camera) : gl.render(source, camera)
-              )
-            );
-          }
+          // A 3D pass clears its target itself where no render will, as `CanvasFrame.render`
+          // explains. A 2D pass copies over it.
+          const rendersClear = camera !== null && gl.autoClear;
+          if (kind === '3d' && !rendersClear) gl.clear(true, true, true);
+          if (!camera) return;
+          renderWithMipmapBias(mipmapBias, () =>
+            renderWithShadowAtlas(shadowAtlas, () =>
+              kind === '2d' ? frame.render(gl, source, camera) : gl.render(source, camera)
+            )
+          );
         },
       });
     } finally {
