@@ -71,7 +71,7 @@ async function mount({ atlas, shadowmask, lightmapLines = '', exposureMultiplier
   const parsed = scene(lightmapLines, dataLines);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={parsed}>
-      <WorldEnvironmentScope world="main">
+      <WorldEnvironmentScope world="root">
         {exposureMultiplier !== undefined && <PublishedExposure multiplier={exposureMultiplier} />}
         <NodeTree node={parsed.nodes[0]!} path="Root" />
       </WorldEnvironmentScope>

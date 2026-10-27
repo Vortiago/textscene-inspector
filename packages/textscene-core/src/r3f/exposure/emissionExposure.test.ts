@@ -32,13 +32,13 @@ describe('installEmissionExposure', () => {
 
   it.each(LIT_PROGRAMS)('gives the one shared factor to the %s program', (program) => {
     installEmissionExposure();
-    expect(THREE.ShaderLib[program].uniforms.godotEmissionExposure?.value).toBe(EMISSION_EXPOSURE);
+    expect(THREE.ShaderLib[program]!.uniforms.godotEmissionExposure?.value).toBe(EMISSION_EXPOSURE);
   });
 
   it.each(LIT_PROGRAMS)(
     'declares the emission before the %s program includes the chunk that scales it',
     (program) => {
-      const fragment = THREE.ShaderLib[program].fragmentShader;
+      const fragment = THREE.ShaderLib[program]!.fragmentShader;
       expect(fragment.indexOf('vec3 totalEmissiveRadiance = emissive;')).toBeGreaterThan(-1);
       expect(fragment.indexOf('vec3 totalEmissiveRadiance = emissive;')).toBeLessThan(
         fragment.indexOf('#include <emissivemap_fragment>')
