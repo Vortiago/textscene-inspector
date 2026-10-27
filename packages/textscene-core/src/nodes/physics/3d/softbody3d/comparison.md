@@ -4,12 +4,12 @@ category: 3D
 status: unreviewed
 fixture: unit-soft-body-3d.tscn
 image: unit-soft-body-3d
-renders_as: a THREE.Mesh
+renders_as: a THREE.Mesh with a wireframe gizmo for every node
 ---
 
 # SoftBody3D
 
-A deformable physics mesh that derives from MeshInstance3D. The previewer draws its `mesh` at rest as a MeshInstance3D does, with the material overrides, and runs no simulation.
+A deformable physics mesh that derives from MeshInstance3D. The previewer draws its `mesh` at rest as a MeshInstance3D does, with the material overrides, and runs no simulation. A mesh with triangles also gets Godot's wireframe gizmo.
 
 ## Linting
 
@@ -47,4 +47,6 @@ The lenient parser reuses MeshInstance3D's parse. The scene cull measures the no
 
 ## Known limitations
 
+- **Editor only** The wireframe draws for every soft body when the Gizmos toggle is on, which a capture keeps off.
+- **Not drawn** Godot draws a wireframe for a triangle-strip surface of an ArrayMesh, but here the decoder skips that surface.
 - **Needs runtime** Godot moves, culls and smooth-shades the mesh as the simulation runs, but the previewer keeps the rest mesh, its box and its normals.
