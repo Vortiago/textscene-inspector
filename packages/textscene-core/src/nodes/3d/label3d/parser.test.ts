@@ -7,7 +7,7 @@ import { heading } from '../../../parser/testing/parserKit';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
-import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../godot/math/alignment';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -243,7 +243,7 @@ describe('a horizontal_alignment past FILL', () => {
   it('keeps the CENTER default and warns', () => {
     const props = parseLabel3D(heading('Label3D', { name: 'Text' }), { horizontal_alignment: '4' });
 
-    expect(props.horizontal_alignment).toBe(HORIZONTAL_ALIGNMENT_CENTER);
+    expect(props.horizontal_alignment).toBe(HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('horizontal_alignment'));
   });
 });

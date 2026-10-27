@@ -22,7 +22,7 @@ import {
   fitIconSize,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HORIZONTAL_ALIGNMENT_RIGHT } from '../../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
@@ -267,7 +267,12 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin
     // (`:129`), and the constructor's LEFT alignment (`:174`) swaps to RIGHT (`button.cpp:271-275`).
     const x = rtl
-      ? margin + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, HORIZONTAL_ALIGNMENT_RIGHT)
+      ? margin +
+        buttonTextAlignShiftPx(
+          textNaturalSize.x,
+          drawableWidth,
+          HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT
+        )
       : margin + reserved;
     const y = centredTextTopPx(customElementHeight, textNaturalSize.y, margin);
     textOffset = { x, y };

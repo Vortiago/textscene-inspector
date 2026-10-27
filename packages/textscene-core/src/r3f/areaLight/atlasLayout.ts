@@ -16,6 +16,7 @@
 
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
 import { fractionOfAtlas } from '../textureAtlas/atlasFraction.js';
+import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import { packCells, type CellSize } from '../textureAtlas/atlasPacking.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
 import { areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
@@ -23,8 +24,8 @@ import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLight
 
 /** Where a light finds its texture in the atlas. */
 export interface AreaTexturePlacement {
-  /** Left, top, width and height, as fractions of the atlas. */
-  rect: readonly [number, number, number, number];
+  /** As fractions of the atlas. */
+  rect: Readonly<AtlasRect>;
   /** The highest mip the shader reads (`cone_angle` in the light buffer). */
   maxMipmap: number;
 }
@@ -80,10 +81,10 @@ export function buildAreaLightAtlas(images: readonly GodotImage[]): AreaLightAtl
     width: cell.pixelWidth,
     height: cell.pixelHeight,
   }));
-  const placements = placed.map((texture): AreaTexturePlacement => {
-    const rect = fractionOfAtlas(texture, { width, height });
-    return { rect: [rect.x, rect.y, rect.width, rect.height], maxMipmap: maxMipmapOf(texture) };
-  });
+  const placements = placed.map((texture): AreaTexturePlacement => ({
+    rect: fractionOfAtlas(texture, { width, height }),
+    maxMipmap: maxMipmapOf(texture),
+  }));
   const mipmaps = areaTextureMipmaps(width, height, placed);
   return { width, height, mipmaps, placements };
 }

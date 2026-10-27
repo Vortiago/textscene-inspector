@@ -11,12 +11,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import {
-  VERTICAL_ALIGNMENT_BOTTOM,
-  VERTICAL_ALIGNMENT_CENTER,
-  lineStartOffset,
-  type VerticalAlignment,
-} from '../../../godot/math/alignment';
+import { lineStartOffset, VerticalAlignment } from '../../../godot/math/alignment';
+import type { EnumValue } from '../../../godot/classdb/enumNames';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
@@ -86,11 +82,15 @@ const FRONT_TANGENT: Tangent = [1, 0, 0, 1];
 const BACK_TANGENT: Tangent = [-1, 0, 0, 1];
 
 /** `vbegin` (`:3321-3336`): how far above the origin the first line's top sits. */
-function blockStartY(alignment: VerticalAlignment, blockHeight: number, spacing: number): number {
+function blockStartY(
+  alignment: EnumValue<typeof VerticalAlignment>,
+  blockHeight: number,
+  spacing: number
+): number {
   switch (alignment) {
-    case VERTICAL_ALIGNMENT_CENTER:
+    case VerticalAlignment.VERTICAL_ALIGNMENT_CENTER:
       return (blockHeight - spacing) / 2;
-    case VERTICAL_ALIGNMENT_BOTTOM:
+    case VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM:
       return blockHeight - spacing;
     default:
       // TOP and FILL.

@@ -1,12 +1,6 @@
 /** Where a texture lies in an atlas, as the fractions of it a shader samples by. */
 
-/** A rectangle: left, top, width and height, top row first. */
-export interface AtlasRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 
 /**
  * `rect`, in texels, as fractions of an atlas of `atlasSize`.

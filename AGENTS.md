@@ -201,8 +201,6 @@ Tag a new shared helper. Do not edit the list.
 <!-- one-way:begin -->
 - An engine enum, held as an `as const` object in `godot/`: `enumMember` in
   `godot/classdb/enumNames.ts`, and `enumOr` in `parser/valueParsers.ts`.
-- The values an alignment property can hold: `HORIZONTAL_ALIGNMENTS` and `VERTICAL_ALIGNMENTS` in
-  `godot/math/alignment.ts`.
 - A darker or lighter colour: `darkened` and `lightened` in `godot/math/color.ts`.
 - Angles: `degToRad` and `radToDeg` in `godot/math/math.ts`.
 - The signed area of a polygon: `signedPolygonArea` in `godot/math/polygonArea.ts`.
@@ -265,7 +263,8 @@ Tag a new shared helper. Do not edit the list.
 - A plan of many resource files to load: `useLoadedFiles` in `resources/useLoadedFiles.ts`.
 - A resource property that names a SubResource or an ExtResource: `useResourceResolution` in
   `resources/useSubOrExtResource.ts`.
-- A buffer of the same texel kind as some pixels: `emptyLike` in `utils/emptyLike.ts`.
+- A buffer of the same texel kind as some pixels: `emptyLike` and `isPlainPixels` in
+  `utils/emptyLike.ts`.
 - A number for an object, for a string key over objects: `identityKey` in `utils/identityKey.ts`.
 - An entry by its key in a frozen table: `firstWith`, `lastWith` and `firstIndexWith` in
   `utils/keyedLookup.ts`. They build one Map for each table.
@@ -276,6 +275,7 @@ Tag a new shared helper. Do not edit the list.
   whose contents change, as a texture's `version`.
 - In tests, the signed volume of a brush: `enclosedVolume` in `r3f/csg/testing/brushVolume.ts`.
 - In tests, a live-tree context over scenes: `contextOver` in `r3f/liveSceneTree.testkit.ts`.
+- In tests, a scene cache over scenes: `sceneCacheOver` in `r3f/liveSceneTree.testkit.ts`.
 - In tests, a three program's text: `programShader` in `r3f/testing/patchedFragment.ts`.
 - In tests, the loads a render started: `settleLoads` in `r3f/testing/settleLoads.ts`.
 - In tests, the shader globals a patch changes: `restoreShaderGlobalsAfterEach` in

@@ -22,12 +22,7 @@ import type { Label3DProperties } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
-import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-} from '../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../godot/math/alignment';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
@@ -497,10 +492,10 @@ describe('<LabelGlyphs>', () => {
   describe('horizontal_alignment', () => {
     it('FILL positions a line the same as CENTER (no per-line justification, width is unparsed)', async () => {
       const center = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER })
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER })
       );
       const fill = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_FILL })
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL })
       );
       const centerGroup = lineGroups(center)[0]!;
       const fillGroup = lineGroups(fill)[0]!;
@@ -509,10 +504,10 @@ describe('<LabelGlyphs>', () => {
 
     it('LEFT starts a line at x=0; RIGHT ends a line at x=0', async () => {
       const left = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_LEFT })
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT })
       );
       const right = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_RIGHT })
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT })
       );
       const leftGroup = lineGroups(left)[0]!;
       const rightGroup = lineGroups(right)[0]!;

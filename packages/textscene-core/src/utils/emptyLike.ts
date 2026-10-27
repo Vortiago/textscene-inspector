@@ -26,6 +26,8 @@ export function emptyLike<Source extends Pixels>(pixels: Source, length: number)
  *
  * @oneWay A buffer of the same texel kind as some pixels
  */
-export function isPlainPixels<Source extends Pixels>(pixels: Source): pixels is Source & PlainPixelsOf<Source> {
+export function isPlainPixels<Source extends Pixels>(
+  pixels: Source
+): pixels is Source & PlainPixelsOf<Source> {
   return !(pixels instanceof Uint8ClampedArray);
 }

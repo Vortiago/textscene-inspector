@@ -13,6 +13,7 @@ import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/nat
 
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { lineStartOffset, type HorizontalAlignment } from '../../../godot/math/alignment';
+import type { EnumValue } from '../../../godot/classdb/enumNames';
 
 interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
@@ -36,7 +37,7 @@ function verticalOffsetPx(layout: TextLayoutResult, lineSpacingPx: number): numb
 /** Per-line placements for an already-shaped `layout`. */
 export function layoutLabel3DLines(
   layout: TextLayoutResult,
-  horizontalAlignment: HorizontalAlignment,
+  horizontalAlignment: EnumValue<typeof HorizontalAlignment>,
   lineSpacingPx: number
 ): Label3DLinePlacement[] {
   const vbeginPx = verticalOffsetPx(layout, lineSpacingPx);

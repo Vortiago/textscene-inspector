@@ -7,8 +7,10 @@ import { parseColor, colorOr } from '../../../utils/colorParser';
 import { parseMaterialFor2dFields } from '../../../parser/materialFor2dParser';
 import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
-import { HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENTS } from '../../../godot/math/alignment';
+import { HorizontalAlignment } from '../../../godot/math/alignment';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+
+const HORIZONTAL_ALIGNMENTS = Object.values(HorizontalAlignment);
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -38,7 +40,7 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     // The setter refuses an index outside 0-3 (`label_3d.cpp:678`), so the label keeps CENTER.
     horizontal_alignment: enumOr(
       properties.horizontal_alignment,
-      HORIZONTAL_ALIGNMENT_CENTER,
+      HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
       HORIZONTAL_ALIGNMENTS,
       'horizontal_alignment'
     ),
