@@ -4,12 +4,14 @@ category: 3D
 status: done
 fixture: unit-camera3d.tscn
 image: unit-camera3d
-renders_as: a frustum gizmo for the selected node
+renders_as: Godot's editor frustum gizmo, drawn for every camera
 ---
 
 # Camera3D
 
-An authored viewpoint that draws nothing at runtime. The previewer matches that and draws only a frustum gizmo for the selected node (ADR-0056). With nothing selected, the camera is absent from both images.
+An authored viewpoint that draws nothing at runtime. The previewer matches that, so a capture with the Gizmos toggle off shows no camera in either image. With the toggle on, the previewer draws Godot's editor gizmo (`camera_3d_gizmo_plugin.cpp:139-258`) for every camera, in `Color(0.8, 0.4, 0.8)`, faint while the camera is not selected (ADR-0056).
+
+The gizmo is a pyramid for a perspective camera, two quads for an orthogonal one and a shifted pyramid for a frustum one. It sits on the node, which `h_offset` and `v_offset` do not move. It takes the aspect of the viewport that the previewer fits the camera to.
 
 ## Linting
 
@@ -47,4 +49,4 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 ## Known limitations
 
-- **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.
+- **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for every camera when the Gizmos toggle is on.

@@ -36,18 +36,17 @@ import {
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
-import { aabbEdges, centredAabb } from '../../../godot/math/aabb';
 import { clamp } from '../../../godot/math/math';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector3 } from '../../../godot/math/vector';
 import { sameElements } from '../../../utils/sameElements';
+import { decalGizmoLines } from './gizmoLines';
 
-/** Wireframe colour and colour alpha of the projection-box gizmo. */
-const BOX_COLOR = '#ff9d3b';
-const BOX_ALPHA = 0.9;
+/** `editors/3d_gizmos/gizmo_colors/decal` (`editor_settings.cpp:884`). */
+const GIZMO_COLOUR = Object.freeze({ r: 0.6, g: 0.5, b: 1 });
 
-/** The edges of a unit cube. `size` scales the gizmo group, so animating `size` stays a cheap scale write. */
-const UNIT_BOX_EDGES = new Float32Array(aabbEdges(centredAabb({ x: 1, y: 1, z: 1 })));
+/** The gizmo of a unit box. `size` scales the gizmo group, so animating `size` stays a cheap scale write. */
+const UNIT_BOX_LINES = decalGizmoLines({ x: 1, y: 1, z: 1 });
 
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
@@ -105,6 +104,7 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   // Godot stores modulate in sRGB → linear for the shaded material tint.
   const color = useGodotLinearColor(modulate);
+  const gizmoColor = useGodotLinearColor(GIZMO_COLOUR);
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it with modulate alpha into the projection's opacity.
   const opacity = clamp(properties.albedo_mix * modulate.a, 0, 1);
@@ -248,11 +248,11 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      {/* Godot's editor outlines the projector box for every decal, faint while it is not selected
+      {/* Godot's editor draws the projector box for every decal, faint while it is not selected
           (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
       <PluginGizmo drawnFor="every-node">
         <group scale={[size.x, size.y, size.z]}>
-          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} />
+          <GizmoLine positions={UNIT_BOX_LINES} color={gizmoColor} />
         </group>
       </PluginGizmo>
       {/* Projection meshes attach here imperatively, to an unscaled group, so

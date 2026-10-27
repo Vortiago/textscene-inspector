@@ -81,7 +81,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing yet, Godot applies its bone constraints each frame, the previewer does not
 - [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md): nothing yet, Godot disperses one bone's twist up its chain, the previewer does not
-- [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): a frustum gizmo for the selected node
+- [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): Godot's editor frustum gizmo, drawn for every camera
 - [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md): nothing yet, Godot solves its chain onto the target each frame, the previewer does not
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md): a transform-only Node3D group
 - [CollisionPolygon3D](../../packages/textscene-core/src/nodes/physics/3d/collisionpolygon3d/comparison.md): nothing (a transform-only group)
@@ -176,7 +176,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting
 - [XRAnchor3D](../../packages/textscene-core/src/nodes/3d/xr/xranchor3d/comparison.md): nothing (a transform-only group)
 - [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): nothing yet, Godot poses bones from an XR body tracker, the previewer does not
-- [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md): a frustum gizmo for the selected node, as Camera3D
+- [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md): a frustum gizmo for every camera, as Camera3D
 - [XRController3D](../../packages/textscene-core/src/nodes/3d/xr/xrcontroller3d/comparison.md): nothing (a transform-only group)
 - [XRFaceModifier3D](../../packages/textscene-core/src/nodes/3d/xr/xrfacemodifier3d/comparison.md): nothing yet, Godot writes tracked face poses into blend shapes, the previewer does not
 - [XRHandModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrhandmodifier3d/comparison.md): nothing yet, Godot poses bones from an XR hand tracker, the previewer does not

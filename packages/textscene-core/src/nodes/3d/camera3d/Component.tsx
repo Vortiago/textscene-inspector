@@ -1,23 +1,27 @@
 /**
- * <Camera3D>: renders a Godot Camera3D as a non-active R3F camera with a CameraHelper gizmo, so
+ * <Camera3D>: renders a Godot Camera3D as a non-active R3F camera with Godot's editor gizmo, so
  * its placement shows in the editor viewport. The active viewport camera lives on the host
  * <Canvas>. This is a passive scene-tree node.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
-import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
+import { DEFAULT_ASPECT, fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
-import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../r3f/hooks/useTHREEHelper';
+import { useGodotLinearColor } from '../../../r3f/godotColor';
+import { GizmoLine } from '../../../r3f/components/GizmoLine';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
+import { cameraGizmoLines } from './gizmoLines';
+import { useFittedAspect } from './useFittedAspect';
 
-const DEFAULT_ASPECT = 16 / 9;
+/** `editors/3d_gizmos/gizmo_colors/camera` (`editor_settings.cpp:883`). */
+const GIZMO_COLOUR = Object.freeze({ r: 0.8, g: 0.4, b: 0.8 });
 
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
@@ -63,28 +67,42 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   const CameraElement =
     properties.projection === Camera3DProjectionType.ORTHOGONAL ? 'orthographicCamera' : 'perspectiveCamera';
 
+  const cameraRef = useRef<FiberCamera>(null);
+
   // PROJECTION_FRUSTUM draws through a perspective camera with a view offset. A new three camera
-  // class remounts, through the key, the tag, the lens fit and the gizmo with it.
+  // class remounts, through the key, the tag and the lens fit with it.
   return (
-    <SceneCamera
-      key={CameraElement}
-      element={CameraElement}
-      name={node.name}
-      tscnPath={tscnPath}
-      current={properties.current}
-      position={offsetPosition}
-      rotation={rotation}
-      scale={scale}
-      lens={lens}
-      near={safeNear}
-      far={safeFar}
-    >
-      {children}
-    </SceneCamera>
+    <>
+      <SceneCamera
+        key={CameraElement}
+        cameraRef={cameraRef}
+        element={CameraElement}
+        name={node.name}
+        tscnPath={tscnPath}
+        current={properties.current}
+        position={offsetPosition}
+        rotation={rotation}
+        scale={scale}
+        lens={lens}
+        near={safeNear}
+        far={safeFar}
+      >
+        {children}
+      </SceneCamera>
+      {/* On the node, not on the camera: `h_offset` and `v_offset` move only the camera
+          (`camera_3d.cpp:253-258`), and the gizmo takes the node's global transform. The gizmo reads
+          the property `near`, which the camera clamps. */}
+      <group position={position} rotation={rotation} scale={scale}>
+        <PluginGizmo drawnFor="every-node">
+          <CameraGizmoLines cameraRef={cameraRef} lens={lens} near={properties.near} />
+        </PluginGizmo>
+      </group>
+    </>
   );
 }
 
 interface SceneCameraProps {
+  cameraRef: RefObject<FiberCamera | null>;
   element: 'perspectiveCamera' | 'orthographicCamera';
   name: string;
   tscnPath: string;
@@ -100,6 +118,7 @@ interface SceneCameraProps {
 }
 
 function SceneCamera({
+  cameraRef,
   element: CameraElement,
   name,
   tscnPath,
@@ -112,7 +131,6 @@ function SceneCamera({
   far,
   children,
 }: SceneCameraProps) {
-  const cameraRef = useRef<FiberCamera>(null);
   useEffect(() => {
     if (cameraRef.current) {
       // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it,
@@ -121,7 +139,7 @@ function SceneCamera({
       cameraRef.current.userData.tscnPath = tscnPath;
       cameraRef.current.userData.tscnCurrent = current;
     }
-  }, [tscnPath, current]);
+  }, [cameraRef, tscnPath, current]);
   // `manual` keeps R3F's resize from refitting the projection to the canvas in pixels. The viewport
   // that renders through the camera refits it to its own aspect, and a lens change keeps that aspect.
   useLayoutEffect(() => {
@@ -130,48 +148,33 @@ function SceneCamera({
     camera.manual = true;
     setLens(camera, lens);
     fitToAspect(camera, fittedAspect(camera) ?? DEFAULT_ASPECT);
-  }, [lens, near, far]);
+  }, [cameraRef, lens, near, far]);
   return (
-    <>
-      <CameraElement
-        ref={cameraRef}
-        name={name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        near={near}
-        far={far}
-      >
-        {children}
-      </CameraElement>
-      <CameraGizmo cameraRef={cameraRef} name={`${name}_helper`} />
-    </>
+    <CameraElement
+      ref={cameraRef}
+      name={name}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      near={near}
+      far={far}
+    >
+      {children}
+    </CameraElement>
   );
 }
 
-interface CameraGizmoProps {
+interface CameraGizmoLinesProps {
   cameraRef: RefObject<THREE.Camera | null>;
-  name: string;
+  lens: CameraLens;
+  /** The `near` property, which the frustum projection reads. */
+  near: number;
 }
 
-function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
-  // The gizmo shows only while this Camera3D's tree row is selected, as the light gizmos do.
-  const visible = useGizmoDrawn('selected-only');
-  // `THREE.CameraHelper` aliases `this.matrix = camera.matrixWorld` with `matrixAutoUpdate = false`,
-  // as the light helpers do. Mounted as a `<primitive>` sibling inside the node's transform group,
-  // not at the scene root, it would double-transform the frustum under a transformed ancestor
-  // without `correctHelperForParentGroup`.
-  const helper = usePrimitiveHelper<THREE.CameraHelper>(() => {
-    if (!visible) return null;
-    const camera = cameraRef.current;
-    if (!camera) return null;
-    const created = new THREE.CameraHelper(camera);
-    created.name = name;
-    // The wrapped `update()` applies the correction (`r3f/hooks/useTHREEHelper.ts`), so
-    // `tickUpdate` stays at its default (true) though the frustum is static: one Matrix4 invert a
-    // frame, paid only while this camera is selected.
-    return correctHelperForParentGroup(created, camera);
-  }, [cameraRef, name, visible]);
-
-  return helper ? <primitive object={helper} /> : null;
+/** Rebuilt for the aspect of the viewport that the camera renders, which its fit tracks. */
+function CameraGizmoLines({ cameraRef, lens, near }: CameraGizmoLinesProps) {
+  const aspect = useFittedAspect(cameraRef);
+  const positions = useMemo(() => cameraGizmoLines({ lens, near, aspect }), [lens, near, aspect]);
+  const color = useGodotLinearColor(GIZMO_COLOUR);
+  return <GizmoLine positions={positions} color={color} />;
 }

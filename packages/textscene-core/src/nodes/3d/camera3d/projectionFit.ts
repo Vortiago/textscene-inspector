@@ -9,6 +9,9 @@ import { radToDeg } from '../../../godot/math/math.js';
 import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
+/** The aspect of a camera that no viewport has fitted yet: Godot's default window, 1152 by 648. */
+export const DEFAULT_ASPECT = 16 / 9;
+
 /** The Camera3D properties that the projection takes, before the viewport aspect. */
 export interface CameraLens {
   projection: EnumValue<typeof Camera3DProjectionType>;

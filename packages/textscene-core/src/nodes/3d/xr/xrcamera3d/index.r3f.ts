@@ -1,7 +1,7 @@
 /**
  * XRCamera3D is a Camera3D, so it reuses that component rather than the coarse
  * Node3D base: the slice already parses with `parseCamera3D`, so the node
- * carries Camera3DProperties and the same frustum gizmo for the selected node draws.
+ * carries Camera3DProperties and the same frustum gizmo draws for every camera.
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';

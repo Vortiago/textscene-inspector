@@ -47,9 +47,9 @@ gizmo that is drawn for every node, sits in `<SelectedOnly>`.
 
 | Draws | Nodes |
 | --- | --- |
-| Every node, faint when unselected | CPUParticles3D box and centre axes, Path3D curve, SpringArm3D line, VehicleWheel3D, Decal box, VisibleOnScreenNotifier3D and Enabler edges and axes, FogVolume box |
+| Every node, faint when unselected | CPUParticles3D box and centre axes, Path3D curve, SpringArm3D line, VehicleWheel3D, Camera3D frustum, Decal box, VisibleOnScreenNotifier3D and Enabler edges and axes, FogVolume box |
 | Every node, full colour | Marker3D (one material with no variants, `marker_3d_gizmo_plugin.cpp:80-92,115`), Marker2D, Path2D, LightOccluder2D |
-| Selected node only | Light helpers, AudioStreamPlayer3D, GPUParticles3D box, CPUParticles3D solid box, every emission shape, ReflectionProbe, VoxelGI, Camera3D frustum, PathFollow2D and PathFollow3D handle |
+| Selected node only | Light helpers, AudioStreamPlayer3D, GPUParticles3D box, CPUParticles3D solid box, every emission shape, ReflectionProbe, VoxelGI, PathFollow2D and PathFollow3D handle |
 
 The Notifier, Enabler and FogVolume rows follow their gizmo plugins
 (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`, `fog_volume_gizmo_plugin.cpp:92-125`),
@@ -59,8 +59,12 @@ gates it on `is_selected()`.
 SpringArm3D and VehicleWheel3D draw in the collision colour at its alpha of 0.42 (`scene_tree.cpp:2028`),
 so their unselected lines draw at 0.126.
 
-The Camera3D frustum stays selected-only until its Godot pyramid lands (#908). The
-PathFollow handle is a previewer addition, since Godot draws no gizmo for a follower.
+The Camera3D and Decal gizmos draw Godot's own lines (`camera_3d_gizmo_plugin.cpp:139-258`,
+`decal_gizmo_plugin.cpp:92-128`) in the colours of `editor_settings.cpp:883-884`. The camera lines
+take the aspect of the viewport that the camera renders, which is the aspect the previewer fits the
+camera to, and they sit on the node, not on the camera that `h_offset` and `v_offset` move
+(`camera_3d.cpp:253-258`). The PathFollow handle is a previewer addition, since Godot draws no gizmo
+for a follower.
 
 ### The instantiated look
 
@@ -118,9 +122,9 @@ The editable sibling of the particles emitter draws rgb(132, 119, 85), the plain
 particles colour. The fill of the selected locked emitter draws rgb(167), two faces at alpha 0.6.
 The goldens `cpuparticles3d-instanced-unselected` and `cpuparticles3d-instanced-selected` show both cases.
 
-The Light helpers and the Camera3D helper are three.js helpers, not Godot gizmo materials, and #908
-rebuilds them through `GizmoLine`. They keep their colour until then. The audio speaker silhouette
-is a previewer shape, and it takes the look of the node's gizmo.
+The Light helpers are three.js helpers, not Godot gizmo materials, and #908 rebuilds them through
+`GizmoLine`. They keep their colour until then. The audio speaker silhouette is a previewer shape,
+and it takes the look of the node's gizmo.
 
 ### What the toggle and the selection do not change
 
@@ -141,6 +145,23 @@ no gizmo needs `tscnFrameExcluded`.
 Value check, over the 0.3 grey clear: the CPUParticles3D box draws rgb(204, 179, 102) selected and
 rgb(132, 119, 85) unselected. The runtime replica gives rgb(204, 178, 102) and rgb(132, 119, 85).
 The green channel differs by one level, where 0.7 × 255 = 178.5 rounds the other way.
+
+Value check of the Camera3D and Decal gizmos, over the same 0.3 clear. A Godot scene draws four
+quads with the gizmo material (unshaded, alpha blend), at the colour alpha 1 and at 0.3. The
+previewer draws each gizmo's lines alone, with the selection highlight on the box outline only.
+
+| Gizmo, variant | Godot, `ref:godot` | Previewer |
+| --- | --- | --- |
+| Camera3D `Color(0.8, 0.4, 0.8)`, selected | rgb(204, 102, 204) | rgb(204, 102, 204), 633 pixels |
+| Camera3D, unselected | rgb(132, 85, 132) | rgb(132, 85, 132), 522 pixels |
+| Decal `Color(0.6, 0.5, 1.0)`, selected | rgb(153, 127, 255) | rgb(153, 127, 255), 1 659 pixels |
+| Decal, unselected | rgb(107, 95, 160) | rgb(107, 95, 160), 1 911 pixels |
+
+The line geometry has no render to measure, because `ref:godot` draws the running game. A GDScript
+port of both `redraw` functions ran in Godot 4.6.3 over 28 cases (perspective, orthogonal and
+frustum cameras in landscape and portrait, `KEEP_WIDTH`, fov 1 and 179, a frustum offset, `near`
+at 0 and below, decals of size 0, flat, negative, and 1000 by 200 by 300). `cameraGizmoLines` and
+`decalGizmoLines` match every vertex to one part in 10^6.
 
 Open divergences:
 
