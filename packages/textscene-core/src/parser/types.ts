@@ -118,6 +118,22 @@ export interface RawNode {
    */
   landedByIdTrail?: true;
   /**
+   * On a node seated below the instance heading its `parent_id_path=` enters: the ids that continue in
+   * that instance's scene. Its graft follows them and places the node (`packed_scene.cpp:1947-2005`).
+   */
+  parentContentTrail?: readonly number[];
+  /**
+   * On a node seated below an instance for a `parent=` path into its content, whose `parent_id_path=`
+   * names a heading of this file: where Godot seats the node should the content lack the path.
+   * `contentTrail` holds the ids that continue inside that heading, where it is an instance.
+   */
+  parentTrailFallback?: { readonly path: string; readonly contentTrail?: readonly number[] };
+  /**
+   * On a node whose `owner_uid_path=` enters an instance: the ids that continue in the scene the node
+   * at `owner` holds. Where it is set, `owner` names the instance heading, not the owner itself.
+   */
+  ownerContentTrail?: readonly number[];
+  /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
    * path. See `isPropertyOverrideHeading`.

@@ -19,6 +19,7 @@ import {
 } from './instanceNameTable';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
 import { joinPath } from '../utils/nodePath';
+import { enteredThroughBase, followedChild } from './parentContentTrail';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
 
 /** The two scopes a graft joins. */
@@ -58,55 +59,105 @@ export function graftInstanceChildren(
   scopes: InstanceScopes,
   names: InstanceNames
 ): GraftedInstance {
-  let grafted = [...rootChildren];
-  const table = new InstanceNameTable(names);
-  const placements = new Map<string, string>();
-  const escaped: EscapedChild[] = [];
+  const graft = new Graft(rootChildren, scopes, names);
+  for (const [index, hosted] of hostChildren.entries()) {
+    // A setting lands at its heading, so only the host children written after it read it.
+    graft.landUpTo(index);
+    graft.seat(hosted);
+  }
+  return graft.finish(hostChildren.length);
+}
+
+/** One graft in progress: the instance's children, which each host child changes in turn. */
+class Graft {
+  /** Written only by `landUpTo` and the seating of a host child. */
+  private grafted: LiveNode[];
+  private readonly table: InstanceNameTable;
+  private readonly placements = new Map<string, string>();
+  private readonly escaped: EscapedChild[] = [];
   // A child that stays in the instance: an override that matches no node, as Godot's drop is not
   // modelled, and a child over a base the cache has not composed, whose next collapse seats it. Kept
   // out of `grafted` until the end, so no later sub-path, fold or setting lands on it.
-  const misplaced: LiveNode[] = [];
+  private readonly misplaced: LiveNode[] = [];
 
-  for (const [index, child] of hostChildren.entries()) {
-    // A setting lands at its heading, so only the host children written after it read it.
-    grafted = table.landUpTo(grafted, index);
+  constructor(
+    rootChildren: readonly LiveNode[],
+    private readonly scopes: InstanceScopes,
+    private readonly names: InstanceNames
+  ) {
+    this.grafted = [...rootChildren];
+    this.table = new InstanceNameTable(names);
+  }
+
+  landUpTo(settingCount: number): void {
+    this.grafted = this.table.landUpTo(this.grafted, settingCount);
+  }
+
+  finish(settingCount: number): GraftedInstance {
+    return {
+      children: [...this.table.landUpTo(this.grafted, settingCount), ...this.misplaced],
+      uniqueNames: this.table,
+      uniqueParentPlacements: this.placements,
+      escaped: this.escaped,
+    };
+  }
+
+  seat(hosted: LiveNode): void {
+    const { child, status } = followedChild(hosted, this.names.followTrail);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
-    const stamped = withFallbackScope(child, scopes.outer);
-    if (!child.instanceSubPath) {
-      const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
-      if (folded) grafted = folded;
-      else if (child.overridesExistingNode) misplaced.push(stamped);
-      else insertAtIndex(grafted, stamped);
-      continue;
-    }
+    const stamped = withFallbackScope(child, this.scopes.outer);
+    if (status === 'waiting') this.misplaced.push(stamped);
+    else if (status === 'missing') this.escaped.push({ child, scope: stamped.scope!, end: null });
+    else if (child.instanceSubPath) this.seatAtSubPath(child, stamped);
+    else this.seatDirect(child, stamped);
+  }
 
-    const segments = table.walk(child.instanceSubPath, grafted);
+  private seatDirect(child: LiveNode, stamped: LiveNode): void {
+    const folded = child.overridesExistingNode
+      ? foldOrWarn(this.grafted, stamped, this.scopes.content)
+      : null;
+    if (folded) this.grafted = folded;
+    else if (child.overridesExistingNode) this.misplaced.push(stamped);
+    else insertAtIndex(this.grafted, stamped);
+  }
+
+  private seatAtSubPath(child: LiveNode, stamped: LiveNode): void {
+    const subPath = child.instanceSubPath!;
+    const segments = this.table.walk(subPath, this.grafted);
     const inside = segments?.[0] === OUTSIDE ? null : segments;
-    const next = inside && graftAt(grafted, inside, stamped, scopes.content);
-    if (inside && next) {
-      grafted = next;
-      if (child.instanceSubPath.includes(UNIQUE_NODE_PREFIX)) {
-        placements.set(joinPath(child.instanceSubPath, child.name), joinPath(inside.join('/'), child.name));
-      }
-    } else if (child.overridesExistingNode || names.hasUnloadedBase) {
+    const next = inside && graftAt(this.grafted, inside, stamped, this.scopes.content);
+    if (!inside || !next) {
+      this.seatUnwalked(child, stamped, segments);
+      return;
+    }
+    this.grafted = next;
+    if (subPath.includes(UNIQUE_NODE_PREFIX)) {
+      this.placements.set(joinPath(subPath, child.name), joinPath(inside.join('/'), child.name));
+    }
+  }
+
+  /** A child whose `parent=` walk found nothing, so its `parent_id_path=` is tried (packed_scene.cpp:161-163). */
+  private seatUnwalked(child: LiveNode, stamped: LiveNode, segments: readonly string[] | null): void {
+    const { hasUnloadedBase } = this.names;
+    const entered = hasUnloadedBase ? undefined : enteredThroughBase(child, this.names);
+    if (entered?.status === 'waiting') this.misplaced.push(stamped);
+    else if (entered) this.seat(entered.child);
+    else if (child.overridesExistingNode || hasUnloadedBase) {
       // A base still loading seats the child at its next collapse, so only an override warns.
       if (child.overridesExistingNode) {
         warn(
           `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
         );
       }
-      misplaced.push(stamped);
+      this.misplaced.push(stamped);
     } else {
-      escaped.push({ child, scope: stamped.scope!, end: walkEnd(segments, child.instanceSubPath, table) });
+      this.escaped.push({
+        child,
+        scope: stamped.scope!,
+        end: walkEnd(segments, child.instanceSubPath!, this.table),
+      });
     }
   }
-
-  return {
-    children: [...table.landUpTo(grafted, hostChildren.length), ...misplaced],
-    uniqueNames: table,
-    uniqueParentPlacements: placements,
-    escaped,
-  };
 }
 
 /**

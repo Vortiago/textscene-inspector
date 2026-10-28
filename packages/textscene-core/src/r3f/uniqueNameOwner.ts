@@ -231,8 +231,26 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
   if (node?.owner === undefined) return owner;
   const file = fileSeating(owner, path, ADDED);
   if (node.owner === '.') return file;
-  const ownerPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, walk);
+  const walkedPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, walk);
+  const ownerPath =
+    walkedPath === undefined ? undefined : withContentTrailFollowed(walkedPath, node.ownerContentTrail, walk);
   return ownerPath === undefined ? noOwner(walk.live) : walk.to(ownerPath).into;
+}
+
+/**
+ * The live path of the owner an `owner_uid_path=` finds below the instance at `instancePath`, or
+ * undefined where no heading of its scene answers the rest of the trail, or a scene it enters is
+ * not loaded yet. Without a trail, `instancePath` itself.
+ */
+function withContentTrailFollowed(
+  instancePath: string,
+  trail: readonly number[] | undefined,
+  { live }: OwnerWalk
+): string | undefined {
+  if (trail === undefined) return instancePath;
+  const scenePath = live.tree.at(instancePath)?.step.instancePath;
+  const followed = scenePath ? live.tree.followTrail(scenePath, trail) : undefined;
+  return followed?.status === 'found' ? pathUnder(instancePath, followed.path) : undefined;
 }
 
 const NO_NAMES: UniqueNameTable = { paths: () => new Map() };

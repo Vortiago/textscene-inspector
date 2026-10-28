@@ -5,7 +5,7 @@
  */
 
 import type { LiveNode } from './liveNode';
-import { joinPath, pathBetween } from '../utils/nodePath';
+import { joinPath, pathBetween, pathUnder } from '../utils/nodePath';
 import {
   UNIQUE_NODE_PREFIX,
   nodePathNames,
@@ -14,6 +14,7 @@ import {
   type RootWalkTables,
 } from '../godot/string/nodePath';
 import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
+import type { FollowTrail } from './sceneTrail';
 
 /**
  * Each `%Name` key to the path from the instanced scene's root to the node that holds it. A node
@@ -58,6 +59,13 @@ export interface InstanceNames {
    * (node.cpp:1930-1938). Absent where the graft cannot collapse a nested instance.
    */
   readonly nested?: (node: LiveNode) => UniqueNamePaths | undefined;
+  /** Follows the rest of an id trail in the sub-scene. */
+  readonly followTrail: FollowTrail;
+  /**
+   * Whether the instance node is the root of the file that wrote the host children, which inherits
+   * the sub-scene as its base: a trail that names no heading of that file continues in it.
+   */
+  readonly isInheritedRoot?: boolean;
 }
 
 /**
@@ -70,15 +78,17 @@ export class InstanceNameTable implements UniqueNameTable {
   private readonly own: () => UniqueNamePaths;
   private readonly settings: readonly InstanceNameSetting[];
   private readonly nested?: InstanceNames['nested'];
+  private readonly followTrail: FollowTrail;
   /** Written only by `landUpTo`: how many of `settings` have landed. */
   private landed = 0;
   /** Written only by `paths`, read once the graft has landed every setting. */
   private finished?: UniqueNamePaths;
 
-  constructor({ own, settings, nested }: InstanceNames) {
+  constructor({ own, settings, nested, followTrail }: InstanceNames) {
     this.own = own;
     this.settings = settings;
     this.nested = nested;
+    this.followTrail = followTrail;
   }
 
   /**
@@ -122,7 +132,8 @@ export class InstanceNameTable implements UniqueNameTable {
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
-    const setting = withOwnerWalked(tree, authored, this.claimed);
+    const followed = withOwnerTrailFollowed(authored, this.followTrail);
+    const setting = followed && withOwnerWalked(tree, followed, this.claimed);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
       if (!setting.ownerInInstance) {
@@ -166,6 +177,22 @@ function withChanges(
     else moved.set(key, path);
   }
   return moved;
+}
+
+/**
+ * `setting` with the owner its `ownerContentTrail` finds below the instance, as the loader's lookup
+ * finds it (packed_scene.cpp:159-163). Null where no heading answers the trail, so the node has no
+ * owner, or where a scene it enters is not loaded yet, which the next collapse follows again.
+ */
+function withOwnerTrailFollowed(
+  setting: InstanceNameSetting,
+  followTrail: FollowTrail
+): InstanceNameSetting | null {
+  if (setting.ownerContentTrail === undefined) return setting;
+  const walk = followTrail(setting.ownerContentTrail);
+  if (walk.status !== 'found') return null;
+  const { ownerContentTrail: _followed, ...rest } = setting;
+  return { ...rest, ownerInInstance: pathUnder(setting.ownerInInstance ?? '', walk.path) };
 }
 
 /**

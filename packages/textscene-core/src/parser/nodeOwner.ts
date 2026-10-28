@@ -52,7 +52,7 @@ export const NO_OWNER = '';
  * (resource_format_text.cpp:2024-2025), for a node that instanced content owns.
  */
 export function hasForeignOwner(node: RawNode): boolean {
-  return node.owner !== undefined && node.owner !== '.';
+  return node.owner !== undefined && (node.owner !== '.' || node.ownerContentTrail !== undefined);
 }
 
 /**
@@ -91,6 +91,11 @@ export interface InstanceNameSetting {
   readonly isUnique: boolean;
   /** An explicit `owner=` below the instance, `''` for the instance itself. Absent: the nearest owner. */
   readonly ownerInInstance?: string;
+  /**
+   * The ids of an `owner_uid_path=` that continue inside the node `ownerInInstance` names, which the
+   * graft follows to the owner (`RawNode.ownerContentTrail`).
+   */
+  readonly ownerContentTrail?: readonly number[];
   /**
    * How many of the instance node's children the file seats before the setting lands, its own
    * heading included: a host child's `%Name` parent reads the table as of its heading.

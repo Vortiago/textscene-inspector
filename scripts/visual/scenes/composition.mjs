@@ -28,6 +28,12 @@ export const SCENE_COMPOSITION_SCENES = [
   // A host heading whose `%Lamp` walk leaves the instance. Godot seats it under Lamp, so the
   // orange box sits up and to the right, not under the instance.
   { name: 'escaped-heading-lamp', file: 'integration-escaped-heading-lamp.tscn' },
+  // An `owner_uid_path` that ends inside an instance: the trail finds the owner table of
+  // `Player/Inner`, which holds `%Lamp`, so the orange box sits under Lamp, left and up.
+  { name: 'trail-owner-in-content', file: 'integration-trail-owner-in-content.tscn' },
+  // A `parent_id_path` that ends inside an instance: the orange box is seated under `Player/Inner`
+  // beside its blue box, not re-rooted to the file root.
+  { name: 'trail-parent-in-content', file: 'integration-trail-parent-in-content.tscn' },
   // An instance of an inherited scene: its root owns the base's `%View`, which the quad's
   // ViewportTexture reads from that root.
   {

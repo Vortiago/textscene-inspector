@@ -4,6 +4,7 @@ import type { TscnNode, TscnScene } from '../parser/types';
 import {
   LiveTree,
   resolveLiveEntry,
+  walkLiveTree,
   type CachedGlbSource,
   type CachedSceneSource,
   type LiveStep,
@@ -42,6 +43,17 @@ export function contextOver(
     sceneCache: sceneCacheOver(scenes),
     ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
   };
+}
+
+/**
+ * The path of every node of `main`'s live tree, with each scene in `scenes` cached.
+ *
+ * @canonical In tests, the path of every node of a live tree
+ */
+export function livePathsOver(main: TscnScene, scenes: Readonly<Record<string, TscnScene>>): string[] {
+  const paths: string[] = [];
+  walkLiveTree(main.nodes, contextOver(main, scenes), ({ path }) => paths.push(path));
+  return paths;
 }
 
 /**

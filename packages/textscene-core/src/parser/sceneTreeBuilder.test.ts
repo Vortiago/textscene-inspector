@@ -777,6 +777,134 @@ describe('seatScene headings landed by a parent_id_path', () => {
   });
 });
 
+describe('seatScene trails that end inside instance content', () => {
+  const instance = (name: string, parent: string): TscnNode => ({
+    ...node(name, parent),
+    instance: 'ExtResource("1")',
+  });
+  const names = (parent: TscnNode | undefined) => parent?.children.map((child) => child.name);
+
+  describe('a parent_id_path', () => {
+    /** A root, `Player` (id 7) that instances a scene, and `Cap` whose `parent=` vanishes. */
+    const nodes = [node('Root'), instance('Player', '.'), node('Cap', 'Gone')];
+    const trailing = (trail: number[]) => withOrigin(originsOf(nodes, { Player: 7 }), 2, { idTrail: trail });
+
+    it('seats the heading under the instance, with the rest of the trail for the instance to follow', () => {
+      const { seated } = seatScene(trailing([7, 3, 4]));
+
+      const cap = seated.get(nodes[2]!);
+      expect(names(seated.get(nodes[1]!))).toEqual(['Cap']);
+      expect(cap?.parentContentTrail).toEqual([3, 4]);
+      expect(cap?.instanceSubPath).toBeUndefined();
+    });
+
+    it('still counts the heading among the orphans, since it is not at the path it declares', () => {
+      const origins = trailing([7, 3]);
+
+      expect(orphanedNodes(origins, seatScene(origins)).map(({ node: heading }) => heading.name)).toEqual([
+        'Cap',
+      ]);
+    });
+
+    it('names no heading as the parent, since the node the trail finds is in the content', () => {
+      const { roots, seated } = seatScene(trailing([7, 3]));
+
+      expect(seatedParents(roots).get(seated.get(nodes[2]!)!)).toBeUndefined();
+    });
+
+    it('re-roots where the first id names a heading that is no instance', () => {
+      const plain = [node('Root'), node('Player', '.'), node('Cap', 'Gone')];
+      const origins = withOrigin(originsOf(plain, { Player: 7 }), 2, { idTrail: [7, 3] });
+
+      expect(names(seatScene(origins).roots[0])).toEqual(['Player', 'Gone#Cap']);
+    });
+
+    it('seats the heading under a root that inherits a base, with the whole trail, where no heading holds the first id', () => {
+      // A missing name could still be in the base, so only a path above the root is certain to vanish.
+      const inheriting = [{ ...node('Root'), instance: 'ExtResource("1")' }, node('Cap', '..')];
+      const origins = withOrigin(originsOf(inheriting), 1, { idTrail: [99, 3] });
+
+      const { seated } = seatScene(origins);
+
+      expect(seated.get(inheriting[1]!)?.parentContentTrail).toEqual([99, 3]);
+      expect(names(seated.get(inheriting[0]!))).toEqual(['Cap']);
+    });
+  });
+
+  describe('a parent_id_path on a heading whose parent= enters an instance', () => {
+    /** A root, `Mid` (id 8), `Player` (id 7) that instances a scene, and `Cap` below a path into it. */
+    const nodes = [node('Root'), node('Mid', '.'), instance('Player', '.'), node('Cap', 'Player/Gone')];
+    const trailing = (trail: number[]) =>
+      withOrigin(originsOf(nodes, { Mid: 8, Player: 7 }), 3, { idTrail: trail });
+
+    it('keeps the heading below the instance at the sub-path it names, and the heading its trail would land on', () => {
+      const cap = seatScene(trailing([8])).seated.get(nodes[3]!);
+
+      expect(cap?.instanceSubPath).toBe('Gone');
+      expect(cap?.parentTrailFallback).toEqual({ path: 'Mid' });
+    });
+
+    it('keeps the instance its trail would enter, with the rest of the trail', () => {
+      const cap = seatScene(trailing([7, 3])).seated.get(nodes[3]!);
+
+      expect(cap?.parentTrailFallback).toEqual({ path: 'Player', contentTrail: [3] });
+    });
+
+    it('keeps no fallback where the trail names no heading', () => {
+      expect(seatScene(trailing([99])).seated.get(nodes[3]!)?.parentTrailFallback).toBeUndefined();
+    });
+
+    it('keeps no fallback for a heading with no trail', () => {
+      expect(seatScene(originsOf(nodes)).seated.get(nodes[3]!)?.parentTrailFallback).toBeUndefined();
+    });
+
+    it('keeps none for a heading whose parent= names a node of this file, which the trail never replaces', () => {
+      const placed = [node('Root'), node('Mid', '.'), node('Cap', 'Mid')];
+      const origins = withOrigin(originsOf(placed, { Mid: 8 }), 2, { idTrail: [8] });
+
+      expect(seatScene(origins).seated.get(placed[2]!)?.parentTrailFallback).toBeUndefined();
+    });
+  });
+
+  describe('an owner_uid_path', () => {
+    const lamp: TscnNode = {
+      ...node('Lamp', '.', { owner: 'Gone' }),
+      rawProperties: { unique_name_in_owner: 'true' },
+    };
+    const nodes = [node('Root'), instance('Player', '.'), lamp];
+    const trailing = (trail: number[]) =>
+      withOrigin(originsOf(nodes, { Player: 7 }), 2, { ownerIdTrail: trail });
+
+    it('gives the heading the instance as its owner, with the rest of the trail for the instance to follow', () => {
+      const seat = seatScene(trailing([7, 3])).seated.get(lamp);
+
+      expect(seat?.owner).toBe('Player');
+      expect(seat?.ownerContentTrail).toEqual([3]);
+    });
+
+    it('hands the heading name to the instance with the rest of the trail, spelt from outside it', () => {
+      const { seated } = seatScene(trailing([7, 3]));
+
+      expect(seated.get(nodes[1]!)?.instanceNameSettings).toEqual([
+        {
+          pathInInstance: '../Lamp',
+          isUnique: true,
+          ownerInInstance: '',
+          ownerContentTrail: [3],
+          hostChildrenBefore: 0,
+        },
+      ]);
+    });
+
+    it('gives the heading no owner where the first id names a heading that is no instance', () => {
+      const plain = [node('Root'), node('Player', '.'), lamp];
+      const origins = withOrigin(originsOf(plain, { Player: 7 }), 2, { ownerIdTrail: [7, 3] });
+
+      expect(seatScene(origins).seated.get(lamp)?.owner).toBe('');
+    });
+  });
+});
+
 describe('seatedParents', () => {
   const parentNames = (nodes: TscnNode[], origins = originsOf(nodes)) => {
     const { roots, seated } = seatScene(origins);
@@ -840,6 +968,41 @@ describe('sceneSeating', () => {
 
   it('refuses roots that seatScene did not return', () => {
     expect(() => sceneSeating([node('Root')])).toThrow('expected roots that seatScene returned');
+  });
+});
+
+describe('sceneSeating headings', () => {
+  const headingsOf = (nodes: TscnNode[], uniqueIds: Record<string, number> = {}) =>
+    sceneSeating(seatScene(originsOf(nodes, uniqueIds)).roots).headings;
+
+  it('keeps each heading id and authored path in file order, the root at the empty path', () => {
+    const headings = headingsOf([node('Root'), node('Body', './'), node('Arm', './Body')], { Arm: 7 });
+
+    expect(headings.map(({ uniqueId, path }) => [uniqueId, path])).toEqual([
+      [0, ''],
+      [0, 'Body'],
+      [7, 'Body/Arm'],
+    ]);
+  });
+
+  it('keeps a heading that is no node of the tree, at the path it authors', () => {
+    const headings = headingsOf([node('Root'), node('Lost', 'Gone')]);
+
+    expect(headings[1]?.path).toBe('Gone/Lost');
+  });
+
+  it('keeps which heading instances a scene, and the ref that names it', () => {
+    const headings = headingsOf([
+      node('Root'),
+      { ...node('Inst', '.'), instance: 'ExtResource("1")' },
+      { ...node('Slot', '.'), type: 'InstancePlaceholder' },
+    ]);
+
+    expect(headings.map(({ instance, instanceRef }) => [instance, instanceRef])).toEqual([
+      [undefined, undefined],
+      ['scene', 'ExtResource("1")'],
+      ['placeholder', undefined],
+    ]);
   });
 });
 

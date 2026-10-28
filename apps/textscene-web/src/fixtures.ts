@@ -2093,6 +2093,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Trail Player",
+    "file": "unit-trail-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Transform Only 3d Hidden",
     "file": "unit-transform-only-3d-hidden.tscn",
     "category": "Other"
@@ -2681,6 +2686,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Three Cubes",
     "file": "integration-three-cubes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner In Content",
+    "file": "integration-trail-owner-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Parent In Content",
+    "file": "integration-trail-parent-in-content.tscn",
     "category": "Integration - Multi-Node"
   },
   {

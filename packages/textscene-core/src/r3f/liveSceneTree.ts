@@ -8,6 +8,8 @@ import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
+import { followTrailIn } from '../resources/sceneTrail.js';
+import type { TrailWalk } from '../godot/scene/packedScene.js';
 import { holdsDeepChildren, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
@@ -94,9 +96,8 @@ function collapseOver(
   const subScene = composedSubScene(cached, content, sceneCache);
   // A composed root's nodes resolve in its base's scope, which its own `scope` carries.
   const rootContent = subScene.nodes.length === 1 ? scopeOf(subScene.nodes[0]!, content) : content;
-  return (
-    mergeInstanceRoot(node, subScene, { outer, content: rootContent }, collapserOver(sceneCache)) ?? node
-  );
+  const cache = { collapse: collapserOver(sceneCache), followTrail: followTrailIn(cached, sceneCache) };
+  return mergeInstanceRoot(node, subScene, { outer, content: rootContent }, cache) ?? node;
 }
 
 /** `collapseLiveNode` over `sceneCache`, as the seating takes it. */
@@ -504,6 +505,17 @@ export class LiveTree {
   /** The root nodes of the loaded scene at `scenePath`, or undefined while it is not loaded. */
   sceneNodes(scenePath: string): readonly TscnNode[] | undefined {
     return this.scenes.getCached(scenePath)?.nodes;
+  }
+
+  /**
+   * Follows `trail` in the loaded scene at `scenePath`, where an instance holds the owner an
+   * `owner_uid_path=` names. A scene that is not loaded yet makes the trail wait.
+   */
+  followTrail(scenePath: string, trail: readonly number[]): TrailWalk {
+    const scene = this.scenes.getCached(scenePath);
+    return scene
+      ? followTrailIn(scene, this.scenes)(trail)
+      : { status: scene === null ? 'missing' : 'pending' };
   }
 
   /** The node at the live path `path`, or null where the loaded tree stops. */

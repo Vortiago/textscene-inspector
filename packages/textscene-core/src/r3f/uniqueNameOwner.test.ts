@@ -709,6 +709,73 @@ unique_name_in_owner = true
   });
 });
 
+describe('an owner= recovered through an owner_uid_path that enters an instance', () => {
+  // The trail names the `Player` heading of this file, then the `Inner` heading of player.tscn
+  // (packed_scene.cpp:1947-2005), so the owner is the node at `Player/Inner`, which this file cannot name.
+  const parse = (text: string) => new TscnParser().parse(text);
+  const inner = parse(`[gd_scene format=3]
+
+[node name="Inner" type="Node3D" unique_id=1]
+
+[node name="A" type="Node3D" parent="." unique_id=2]
+`);
+  const player = parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
+
+[node name="Player" type="Node3D" unique_id=1]
+
+[node name="Inner" parent="." instance=ExtResource("inner") unique_id=3333]
+`);
+  const hostWith = (trail: string) =>
+    parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
+
+[node name="Lamp" type="Node3D" parent="." owner="Gone" owner_uid_path=PackedInt32Array(${trail})]
+unique_name_in_owner = true
+`);
+  const trailed = hostWith('2222, 3333');
+  const trailedCtx = contextOver(trailed, { 'res://player.tscn': player, 'res://inner.tscn': inner });
+  const tableOf = (path: string, host: TscnScene, ctx: LiveTreeContext) =>
+    ownerUniquePaths(claimOwnerOf(path, host.nodes, ctx));
+
+  it('registers the name in the table of the node the trail finds, spelt from outside it', () => {
+    expect(tableOf('Main/Player/Inner/A', trailed, trailedCtx).get('%Lamp')).toBe('Main/Lamp');
+  });
+
+  it('owns the heading itself by the node the trail finds', () => {
+    expect(claimOwnerOf('Main/Lamp', trailed.nodes, trailedCtx).path).toBe('Main/Player/Inner');
+  });
+
+  it('owns the heading by no owner where no heading answers the rest of the trail', () => {
+    const missing = hostWith('2222, 9999');
+    const ctx = contextOver(missing, { 'res://player.tscn': player, 'res://inner.tscn': inner });
+
+    expect(ownerUniquePaths(claimOwnerOf('Main/Lamp', missing.nodes, ctx)).size).toBe(0);
+  });
+
+  it('leaves the table of the instance that holds that node without the name', () => {
+    expect(tableOf('Main/Player/Inner', trailed, trailedCtx).has('%Lamp')).toBe(false);
+  });
+
+  it('registers the name in no table where no heading answers the rest of the trail', () => {
+    const missing = hostWith('2222, 9999');
+    const ctx = contextOver(missing, { 'res://player.tscn': player, 'res://inner.tscn': inner });
+
+    expect(tableOf('Main/Player/Inner/A', missing, ctx).has('%Lamp')).toBe(false);
+  });
+
+  it('registers the name once a scene the trail enters has loaded', () => {
+    const notLoaded = contextOver(trailed, { 'res://player.tscn': player });
+    expect(tableOf('Main/Player/Inner/A', trailed, notLoaded).has('%Lamp')).toBe(false);
+
+    expect(tableOf('Main/Player/Inner/A', trailed, trailedCtx).get('%Lamp')).toBe('Main/Lamp');
+  });
+});
+
 describe('the walk an owner= with a %Name takes', () => {
   const hudClaimingWidget = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
