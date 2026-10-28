@@ -10,6 +10,15 @@
  * same limit for the sheet image of the scene's fixture.
  */
 
+import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
+import { LIGHTING_SCENES } from './scenes/lighting.mjs';
+import { SCENE_COMPOSITION_SCENES } from './scenes/composition.mjs';
+import { GIZMO_SCENES } from './scenes/gizmos.mjs';
+import { PRIMITIVE_SCENES } from './scenes/primitives.mjs';
+import { CANVAS_2D_SCENES } from './scenes/canvas2d.mjs';
+import { MATERIAL_SCENES } from './scenes/materials.mjs';
+import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
+
 /** The options an entry may set. The capture reads no other, so `scenes.test.mjs` refuses one. */
 export const SCENE_OPTIONS = [
   'name',
@@ -23,15 +32,6 @@ export const SCENE_OPTIONS = [
   'canvas',
   'settleTimeout',
 ];
-
-import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
-import { LIGHTING_SCENES } from './scenes/lighting.mjs';
-import { SCENE_COMPOSITION_SCENES } from './scenes/composition.mjs';
-import { GIZMO_SCENES } from './scenes/gizmos.mjs';
-import { PRIMITIVE_SCENES } from './scenes/primitives.mjs';
-import { CANVAS_2D_SCENES } from './scenes/canvas2d.mjs';
-import { MATERIAL_SCENES } from './scenes/materials.mjs';
-import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
 
 /**
  * Not in the set until fixed: unit-label3d.tscn, whose labels render near invisible after

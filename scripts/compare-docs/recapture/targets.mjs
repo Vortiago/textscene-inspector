@@ -68,12 +68,16 @@ export function collectTargets() {
 export const godotScenePath = (fixture) => findScene(fixture) ?? join(REPO_ROOT, 'scenes/fixtures', fixture);
 
 /**
- * The limit the golden scene of `fixture` gives each screenshot, or undefined for Playwright's
- * default. A scene whose one frame outlasts the default says so in the manifest, and its sheet image
- * takes that limit, so the two need no second figure.
+ * The limit the golden scenes of `fixture` give each screenshot, the longest of them, or undefined
+ * for Playwright's default. A scene whose one frame outlasts the default says so in the manifest, and
+ * its sheet image takes that limit, so the two need no second figure.
  */
-export const settleTimeoutOf = (fixture) =>
-  GOLDEN_SCENES.find((scene) => scene.file === fixture)?.settleTimeout;
+export const settleTimeoutOf = (fixture, scenes = GOLDEN_SCENES) => {
+  const limits = scenes
+    .filter((scene) => scene.file === fixture && scene.settleTimeout !== undefined)
+    .map((scene) => scene.settleTimeout);
+  return limits.length ? Math.max(...limits) : undefined;
+};
 
 export const imgPath = (image, side) => join(IMAGES, `${image}-${side}.png`);
 

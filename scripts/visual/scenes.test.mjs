@@ -11,4 +11,10 @@ describe('GOLDEN_SCENES', () => {
     );
     expect(unknown).toEqual([]);
   });
+
+  it("gives settleTimeout as milliseconds past Playwright's default, which is no limit at 0", () => {
+    const declared = GOLDEN_SCENES.filter((scene) => 'settleTimeout' in scene);
+    expect(declared.length).toBeGreaterThan(0);
+    for (const scene of declared) expect(scene.settleTimeout).toBeGreaterThan(30000);
+  });
 });
