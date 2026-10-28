@@ -45,7 +45,7 @@ function isListedDirectionalLight(node: TscnNode): boolean {
 export interface CanvasLightPaths {
   /** The render's budget applies later, by geometry (`itemLightCap.ts`). */
   readonly positional: readonly string[];
-  /** Stopped per canvas at the eighth light (`gatherDirectional`). The render's budget applies later. */
+  /** Stopped per canvas at the eighth light (`gatherDirectional`). */
   readonly directional: readonly string[];
 }
 

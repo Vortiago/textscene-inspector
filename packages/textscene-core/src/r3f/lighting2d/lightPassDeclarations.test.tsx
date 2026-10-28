@@ -155,7 +155,7 @@ describe('useRegisterLitItem', () => {
     expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, z: 2 }, false]);
   });
 
-  it('moves when the cap hands it other positional lights', () => {
+  it('moves when the cap hands it another light list', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
     const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
       wrapper: Wrap,
@@ -186,7 +186,7 @@ describe('useCapItemLights', () => {
     expect(registerCappedItem).toHaveBeenCalledWith({ placement: PLACEMENT, geometry, take });
   });
 
-  it('stays registered while the cap hands it positional lights', () => {
+  it('stays registered while the cap hands it a light list', () => {
     const { registerCappedItem, releaseCapped, rerender } = mount();
     rerender({ placement: { ...PLACEMENT, takenLights: [0] } });
     expect(registerCappedItem).toHaveBeenCalledTimes(1);

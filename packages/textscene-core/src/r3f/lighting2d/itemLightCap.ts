@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { computeWorldBoundingBox } from '../bounds.js';
 import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
-import type { LightCullKey } from './lightCullKey.js';
+import { reachesCanvasLayer } from './lightCullKey.js';
 import {
   directionalListOrder,
   itemPositionalLights,
@@ -52,8 +52,6 @@ interface ItemLightCap {
 
 /** What one `lights` state crowds. The state is immutable, so a new one builds a new entry. */
 interface Crowding {
-  /** Whether a light can drop: more positional lights than an item takes, or than a render. */
-  readonly canDrop: boolean;
   /** Whether the lights declared can fill a render, so a placement of few can still lose one. */
   readonly canExceedBudget: boolean;
   /** The declared positional lights in list order. */
@@ -66,17 +64,18 @@ interface Crowding {
 
 /** An entry clears when its `lights` state is collected. */
 const crowdingOf = perObject((lights: ReadonlyMap<number, CanvasLightDeclaration>): Crowding => {
-  const positionalOrder = positionalListOrder(lights, lights.keys());
-  const directionalOrder = directionalListOrder(lights, lights.keys());
-  const canExceedBudget = lights.size > MAX_LIGHTS_PER_RENDER;
   return {
-    canDrop: canExceedBudget || positionalOrder.length > MAX_POSITIONAL_LIGHTS_PER_ITEM,
-    canExceedBudget,
-    positionalOrder,
-    directionalOrder,
+    canExceedBudget: lights.size > MAX_LIGHTS_PER_RENDER,
+    positionalOrder: positionalListOrder(lights),
+    directionalOrder: directionalListOrder(lights),
     candidates: new Map(),
   };
 });
+
+/** Whether a light can drop: more positional lights than an item takes, or lights than a render. */
+function canDrop({ canExceedBudget, positionalOrder }: Crowding): boolean {
+  return canExceedBudget || positionalOrder.length > MAX_POSITIONAL_LIGHTS_PER_ITEM;
+}
 
 /** The candidates at `placement` while they crowd it or the budget can drop one, else null. */
 function crowdedCandidates(
@@ -87,7 +86,7 @@ function crowdedCandidates(
   const id = placementId(placement);
   let candidates = crowding.candidates.get(id);
   if (candidates === undefined) {
-    const all = positionalCandidates(lights, placement);
+    const all = positionalCandidates(lights, crowding.positionalOrder, placement);
     candidates = all.length > MAX_POSITIONAL_LIGHTS_PER_ITEM || crowding.canExceedBudget ? all : null;
     crowding.candidates.set(id, candidates);
   }
@@ -134,10 +133,6 @@ function lightRects(passMeshes: ReadonlySet<PassMesh>, viewport: Rect2): Map<num
 
 const NOTHING_OVER_BUDGET: ReadonlySet<number> = new Set();
 
-function reachesLayer({ layerMin, layerMax }: LightCullKey, layer: number): boolean {
-  return layer >= layerMin && layer <= layerMax;
-}
-
 /** What one canvas layer lists of the render's budget. */
 interface LayerBudget {
   /** The directional lights on the layer's list: the first `MAX_LIGHTS_PER_RENDER` in list order. */
@@ -159,7 +154,7 @@ function layerBudget(
   rects: ReadonlyMap<number, Rect2>,
   layer: number
 ): LayerBudget {
-  const reached = (ordinal: number) => reachesLayer(lights.get(ordinal)!.reach, layer);
+  const reached = (ordinal: number) => reachesCanvasLayer(lights.get(ordinal)!.reach, layer);
   const reachedDirectional = directionalOrder.filter(reached);
   const directional = reachedDirectional.slice(0, MAX_LIGHTS_PER_RENDER);
   const dropsDirectional = directional.length < reachedDirectional.length;
@@ -173,52 +168,93 @@ function layerBudget(
   return { directional, dropsDirectional, overBudget };
 }
 
-/** `candidates` without the lights over budget, filtered once per placement a frame. */
-function withinBudget(
-  candidates: readonly number[],
-  overBudget: ReadonlySet<number>,
-  filtered: Map<readonly number[], readonly number[]>
-): readonly number[] {
-  if (overBudget.size === 0) return candidates;
-  let taken = filtered.get(candidates);
-  if (!taken) {
-    const kept = candidates.filter((ordinal) => !overBudget.has(ordinal));
-    taken = kept.length === candidates.length ? candidates : kept;
-    filtered.set(candidates, taken);
+/** The light list an item takes, and the world rect it covers. */
+interface CappedList {
+  readonly list: readonly number[];
+  readonly itemRect: Rect2;
+}
+
+/**
+ * What one frame works out once and shares between its items: the rect of each light, the budget
+ * of each canvas layer, and the lists the items of one placement take alike.
+ */
+class FrameBudget {
+  private readonly budgets = new Map<number, LayerBudget>();
+  private readonly withinBudgets = new Map<readonly number[], readonly number[]>();
+  private readonly wholeLists = new Map<readonly number[], readonly number[]>();
+
+  constructor(
+    private readonly lights: ReadonlyMap<number, CanvasLightDeclaration>,
+    private readonly crowding: Crowding,
+    private readonly rects: ReadonlyMap<number, Rect2>
+  ) {}
+
+  /**
+   * The list `item` takes from its `candidates`, or null where it reads its placement's list. An
+   * item's list is its whole list: the positional lights it takes and the directional lights its
+   * layer lists.
+   */
+  listOf(item: CappedItem, candidates: readonly number[]): CappedList | null {
+    const { directional, dropsDirectional, overBudget } = this.budgetAt(item.placement.layer);
+    const taken = this.withinBudget(candidates, overBudget);
+    const dropsLight = taken !== candidates || dropsDirectional;
+    if (!dropsLight && candidates.length <= MAX_POSITIONAL_LIGHTS_PER_ITEM) return null;
+    const itemRect = worldRect(item.geometry.current);
+    const positional = itemPositionalLights(taken, itemRect, this.rects) ?? (dropsLight ? taken : null);
+    if (!positional) return null;
+    const list = positional === taken ? this.wholeList(taken, directional) : [...positional, ...directional];
+    return { list, itemRect };
   }
-  return taken;
+
+  private budgetAt(layer: number): LayerBudget {
+    let budget = this.budgets.get(layer);
+    if (!budget)
+      this.budgets.set(layer, (budget = layerBudget(this.lights, this.crowding, this.rects, layer)));
+    return budget;
+  }
+
+  /** `candidates` without the lights over budget. */
+  private withinBudget(candidates: readonly number[], overBudget: ReadonlySet<number>): readonly number[] {
+    if (overBudget.size === 0) return candidates;
+    let taken = this.withinBudgets.get(candidates);
+    if (!taken) {
+      const kept = candidates.filter((ordinal) => !overBudget.has(ordinal));
+      taken = kept.length === candidates.length ? candidates : kept;
+      this.withinBudgets.set(candidates, taken);
+    }
+    return taken;
+  }
+
+  /** The same array for every item that takes the placement's `taken`, so its id is built once. */
+  private wholeList(taken: readonly number[], directional: readonly number[]): readonly number[] {
+    let list = this.wholeLists.get(taken);
+    if (!list) this.wholeLists.set(taken, (list = [...taken, ...directional]));
+    return list;
+  }
 }
 
 function sameLights(a: readonly number[] | null, b: readonly number[] | null): boolean {
-  if (a === null || b === null) return a === b;
+  if (a === b) return true;
+  if (a === null || b === null) return false;
   return sameElements(a, b);
 }
 
 /** Hands each item its light list this frame, where it changed, and records its window. */
 export function capItemLights({ lights, items, passMeshes, viewport, windows }: ItemLightCap): void {
   const crowding = crowdingOf(lights);
-  let rects: Map<number, Rect2> | null = null;
-  const budgetByLayer = new Map<number, LayerBudget>();
-  const filtered = new Map<readonly number[], readonly number[]>();
-  const budgetAt = (layer: number, lightRects: ReadonlyMap<number, Rect2>): LayerBudget => {
-    let budget = budgetByLayer.get(layer);
-    if (!budget) budgetByLayer.set(layer, (budget = layerBudget(lights, crowding, lightRects, layer)));
-    return budget;
-  };
+  const isCrowded = canDrop(crowding);
+  let frame: FrameBudget | null = null;
   windows.clear();
   for (const [item, handed] of items) {
-    const candidates = crowding.canDrop ? crowdedCandidates(lights, crowding, item.placement) : null;
+    const candidates = isCrowded ? crowdedCandidates(lights, crowding, item.placement) : null;
     let list: readonly number[] | null = null;
     if (candidates) {
-      rects ??= lightRects(passMeshes, viewport);
-      const { directional, dropsDirectional, overBudget } = budgetAt(item.placement.layer, rects);
-      const taken = withinBudget(candidates, overBudget, filtered);
-      const itemRect = worldRect(item.geometry.current);
-      const positional =
-        itemPositionalLights(taken, itemRect, rects) ??
-        (taken === candidates && !dropsDirectional ? null : taken);
-      list = positional && [...positional, ...directional];
-      if (list) recordWindow(windows, placementId({ ...item.placement, takenLights: list }), itemRect);
+      frame ??= new FrameBudget(lights, crowding, lightRects(passMeshes, viewport));
+      const capped = frame.listOf(item, candidates);
+      if (capped) {
+        list = capped.list;
+        recordWindow(windows, placementId({ ...item.placement, takenLights: list }), capped.itemRect);
+      }
     }
     if (sameLights(list, handed)) continue;
     items.set(item, list);

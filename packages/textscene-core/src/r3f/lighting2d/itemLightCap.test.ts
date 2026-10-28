@@ -201,27 +201,32 @@ describe('capItemLights, past the lights of one render', () => {
     expect(lit.take).toHaveBeenCalledWith(directionalOrdinals(MAX_LIGHTS_PER_RENDER + 1).slice(1));
   });
 
-  /** The same light, handed to the canvas layer `layer` alone (`range_layer_min` and `_max`). */
-  const onLayer = (light: CanvasLightDeclaration, layer: number): CanvasLightDeclaration => ({
+  /** The same light, handed to the canvas layers `layerMin` to `layerMax` (`range_layer_min` and `_max`). */
+  const onLayers = (light: CanvasLightDeclaration, layerMin: number, layerMax: number) => ({
     ...light,
-    reach: { ...light.reach, layerMin: layer, layerMax: layer },
+    reach: { ...light.reach, layerMin, layerMax },
   });
 
   const onLayerOnly = (declared: Map<number, CanvasLightDeclaration>, layer: number) =>
-    new Map([...declared].map(([ordinal, light]) => [ordinal, onLayer(light, layer)]));
+    new Map([...declared].map(([ordinal, light]) => [ordinal, onLayers(light, layer, layer)]));
+
+  /** The lights of `declared`, ordinal, sequence and slot all `by` further on. */
+  const shifted = (declared: Map<number, CanvasLightDeclaration>, by: number) =>
+    new Map(
+      [...declared].map(([ordinal, light]): [number, CanvasLightDeclaration] => [
+        ordinal + by,
+        light.sequence === null
+          ? { ...light, slot: (light.slot ?? 0) + by }
+          : { ...light, sequence: light.sequence + by },
+      ])
+    );
 
   // Godot hands each canvas the lights in range of its layer, and counts 256 over that list alone
   // (`renderer_viewport.cpp:667-690`).
   it('counts the lights of each canvas layer apart', () => {
     const world = item(0, 0);
     const hud = item(250 * 100, 1);
-    const declared = new Map([
-      ...onLayerOnly(lights(200), 0),
-      ...[...onLayerOnly(lights(100), 1)].map(([ordinal, light]): [number, CanvasLightDeclaration] => [
-        ordinal + 200,
-        { ...light, sequence: ordinal + 200 },
-      ]),
-    ]);
+    const declared = new Map([...onLayerOnly(lights(200), 0), ...shifted(onLayerOnly(lights(100), 1), 200)]);
     step(declared, [world, hud], spread(300));
     expect(world.take).not.toHaveBeenCalled();
     expect(hud.take).not.toHaveBeenCalled();
@@ -238,11 +243,10 @@ describe('capItemLights, past the lights of one render', () => {
   // leaves room for the lights after it (`renderer_viewport.cpp:667-690`).
   it('counts the directional lights of each canvas layer apart', () => {
     const [world, hud] = [item(0, 0), item(0, 1)];
-    const others = [...onLayerOnly(directional(200), 1)];
-    const shared = [...directional(100)].map(([ordinal, light]): [number, CanvasLightDeclaration] => [
-      ordinal + 200,
-      { ...light, slot: light.slot! + 200, reach: { ...light.reach, layerMin: 0, layerMax: 1 } },
-    ]);
+    const others = onLayerOnly(directional(200), 1);
+    const shared = new Map(
+      [...shifted(directional(100), 200)].map(([ordinal, light]) => [ordinal, onLayers(light, 0, 1)])
+    );
     step(new Map([...others, ...shared]), [world, hud], litQuads(0));
     expect(world.take).not.toHaveBeenCalled();
     expect(hud.take).toHaveBeenCalledWith([

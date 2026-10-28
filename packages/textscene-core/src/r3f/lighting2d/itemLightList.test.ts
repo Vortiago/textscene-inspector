@@ -11,6 +11,7 @@ import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import {
   itemPositionalLights,
   positionalCandidates,
+  positionalListOrder,
   drawsInPass,
   planLightLists,
   placementId,
@@ -126,7 +127,7 @@ const OVER_ITEM: Rect2 = { x: -5, y: -5, w: 10, h: 10 };
 const PAST_ITEM: Rect2 = { x: 20, y: 20, w: 10, h: 10 };
 
 /** `count` positional lights in tree order, ordinal `n` at sequence `n`. */
-function positionalLightsOf(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
+function positionalLights(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
   return lights(...Array.from({ length: count }, (_, sequence) => light({ sequence })));
 }
 
@@ -134,29 +135,31 @@ function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, Re
   return new Map([...ordinals].map((ordinal) => [ordinal, rect]));
 }
 
+function candidatesAt(declared: ReadonlyMap<number, CanvasLightDeclaration>, item: ItemPlacement): number[] {
+  return positionalCandidates(declared, positionalListOrder(declared), item);
+}
+
 describe('positionalCandidates', () => {
   it('lists every positional light that reaches the placement, past the cap too', () => {
-    expect(positionalCandidates(positionalLightsOf(CAP + 1), ITEM)).toHaveLength(CAP + 1);
+    expect(candidatesAt(positionalLights(CAP + 1), ITEM)).toHaveLength(CAP + 1);
   });
 
   it('orders by sequence, not by ordinal', () => {
-    expect(positionalCandidates(lights(light({ sequence: 1 }), light({ sequence: 0 })), ITEM)).toEqual([
-      1, 0,
-    ]);
+    expect(candidatesAt(lights(light({ sequence: 1 }), light({ sequence: 0 })), ITEM)).toEqual([1, 0]);
   });
 
   it('breaks a sequence tie by ordinal', () => {
-    expect(positionalCandidates(lights(light(), light()), ITEM)).toEqual([0, 1]);
+    expect(candidatesAt(lights(light(), light()), ITEM)).toEqual([0, 1]);
   });
 
   it('leaves out a light the cull test rejects', () => {
     const all = lights(light({ reach: key({ itemCullMask: 2 }) }), light({ sequence: 1 }));
-    expect(positionalCandidates(all, ITEM)).toEqual([1]);
+    expect(candidatesAt(all, ITEM)).toEqual([1]);
   });
 
   it('leaves out a directional light, which the cap does not count', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    expect(positionalCandidates(lights(sun), ITEM)).toEqual([]);
+    expect(candidatesAt(lights(sun), ITEM)).toEqual([]);
   });
 });
 

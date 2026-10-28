@@ -176,13 +176,13 @@ describe('useCanvasItemLighting under the per-item cap', () => {
     expect(capped.geometry).toBe(result.current.geometryRef);
   });
 
-  it('declares the positional lights the cap hands it', () => {
+  it('declares the light list the cap hands it', () => {
     const { capped, registerItem } = mountCapped(list(), PLACEMENT);
     act(() => capped.take([0, 2]));
     expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, takenLights: [0, 2] }, false);
   });
 
-  it('drops the positional lights it was handed when its placement changes', () => {
+  it('drops the light list it was handed when its placement changes', () => {
     const { wrapper, registerItem, registerCappedItem } = lighting(list());
     const hook = renderHook(({ lightMask }) => useCanvasItemLighting(null, lightMask), {
       wrapper,
