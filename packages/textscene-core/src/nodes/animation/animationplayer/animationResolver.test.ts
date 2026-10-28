@@ -455,7 +455,7 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     expect(anim.tracks[0]!.keys[0]!.transition).toBe(0.25);
   });
 
-  it('names the bone of a transform track on Skeleton3D:bone and keeps the path to the skeleton', () => {
+  it('keeps the subname of a transform track on Skeleton3D:bone and the path to the node', () => {
     const internal = [
       subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
       subResource('Animation', 'A', {
@@ -468,13 +468,13 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
       }),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
-    expect(anim.tracks.map((t) => [t.targetPath, t.bone])).toEqual([
-      ['Skeleton/Skeleton3D', 'body'],
-      ['Mesh', undefined],
+    expect(anim.tracks.map((t) => [t.targetPath, t.subnames])).toEqual([
+      ['Skeleton/Skeleton3D', ['body']],
+      ['Mesh', []],
     ]);
   });
 
-  it('skips a transform track whose path holds more than one subname, as the mixer binds no bone to it', () => {
+  it('keeps every subname of a transform track path, for the binder to decide what they name', () => {
     const internal = [
       subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
       subResource('Animation', 'A', {
@@ -483,7 +483,9 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1)',
       }),
     ];
-    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks.map((t) => t.subnames)).toEqual([
+      ['body', 'x'],
+    ]);
   });
 
   it('reads a path with an empty subname as a track on the node (edge case)', () => {
@@ -495,9 +497,9 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
         'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0)',
       }),
     ];
-    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks.map((t) => [t.targetPath, t.bone])).toEqual([
-      ['Skeleton3D', undefined],
-    ]);
+    expect(
+      resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks.map((t) => [t.targetPath, t.subnames])
+    ).toEqual([['Skeleton3D', []]]);
   });
 
   it.each([

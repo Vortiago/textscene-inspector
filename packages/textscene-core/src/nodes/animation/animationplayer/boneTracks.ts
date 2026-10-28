@@ -14,56 +14,59 @@ import {
   type TrackKey,
 } from '../../../godot/scene/animationTrackSampler.js';
 import type { AnimatedPose, BonePose } from '../../3d/skeleton3d/skeletonPose';
-import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
+import type { GodotAnimation } from './animationResolver';
+import type { GodotKeyframe, GodotTrack } from './trackParser';
 
-/** One track that writes a part of the pose of `bone` on the Skeleton3D at `skeletonPath`. */
+type Sampler<T> = (time: number) => T | null;
+
+/** The tracks of a clip that write the bone `bone` of the Skeleton3D at `skeletonPath`, in track order. */
 export interface BoneTrack {
   skeletonPath: string;
   bone: string;
-  /** The part this track writes at `time`, or null where `Animation` has no sample. */
-  sample: (time: number) => BonePose | null;
+  positions: Sampler<Vector3>[];
+  rotations: Sampler<Quaternion>[];
+  scales: Sampler<Vector3>[];
 }
 
-/**
- * The bone tracks of `animation`, each on the skeleton `scenePathOf` finds for it. A track whose
- * path leaves the scene has no skeleton to write, and a track on no bone is a track on a node.
- */
+/** A track of a clip that names one bone, with the live path of the Skeleton3D it names it on. */
+export interface BoneTrackSource {
+  track: GodotTrack;
+  skeletonPath: string;
+}
+
+/** The tracks of `sources` grouped by bone, once, so a frame only samples them. */
 export function boneTracksOf(
-  animation: GodotAnimation,
-  scenePathOf: (targetPath: string) => string | null
+  sources: readonly BoneTrackSource[],
+  animation: Pick<GodotAnimation, 'length' | 'loopMode'>
 ): BoneTrack[] {
-  const tracks: BoneTrack[] = [];
-  for (const track of animation.tracks) {
-    const skeletonPath = track.bone === undefined ? null : scenePathOf(track.targetPath);
-    if (track.bone === undefined || skeletonPath === null) continue;
+  const grouped = new Map<string, BoneTrack>();
+  for (const { track, skeletonPath } of sources) {
+    const bone = track.subnames[0]!;
+    const key = `${skeletonPath}\0${bone}`;
+    let group = grouped.get(key);
+    if (!group) {
+      group = { skeletonPath, bone, positions: [], rotations: [], scales: [] };
+      grouped.set(key, group);
+    }
     const setup: SampleSetup = {
       interp: track.interp,
       loopWrap: track.loopWrap,
       length: storedReal(animation.length),
       loopMode: animation.loopMode,
     };
-    tracks.push({ skeletonPath, bone: track.bone, sample: samplerOf(track, setup) });
+    if (track.property === 'quaternion') {
+      const keys = track.keys.map((key) => keyOf(key, quaternionOf));
+      group.rotations.push((time) => sampleQuaternionTrack(keys, time, setup));
+    } else {
+      const keys = track.keys.map((key) => keyOf(key, vector3Of));
+      const samplers = track.property === 'scale' ? group.scales : group.positions;
+      samplers.push((time) => sampleVector3Track(keys, time, setup));
+    }
   }
-  return tracks;
+  return [...grouped.values()];
 }
 
-/** The sampler of the part a track writes, over its keys as `real_t` values, which are what `Animation` holds. */
-function samplerOf(track: GodotTrack, setup: SampleSetup): BoneTrack['sample'] {
-  if (track.property === 'quaternion') {
-    const keys = track.keys.map((key) => keyOf(key, quaternionOf));
-    return (time) => {
-      const rotation = sampleQuaternionTrack(keys, time, setup);
-      return rotation && { rotation };
-    };
-  }
-  const keys = track.keys.map((key) => keyOf(key, vector3Of));
-  const part = track.property === 'scale' ? 'scale' : 'position';
-  return (time) => {
-    const value = sampleVector3Track(keys, time, setup);
-    return value && { [part]: value };
-  };
-}
-
+/** A key as `real_t` values, which are what `Animation` holds. */
 function keyOf<T>(key: GodotKeyframe, read: (components: number[]) => T): TrackKey<T> {
   return {
     time: storedReal(key.time),
@@ -83,7 +86,6 @@ function quaternionOf([x = 0, y = 0, z = 0, w = 1]: number[]): Quaternion {
 /**
  * The poses `tracks` write at `time`, by skeleton. A track with no sample at that time, as one with
  * every key past the clip, writes nothing, so the bone keeps the pose of the file for that part.
- * Where two tracks write one part of one bone, the later one wins.
  */
 export function sampleBonePoses(
   tracks: readonly BoneTrack[],
@@ -91,11 +93,23 @@ export function sampleBonePoses(
 ): ReadonlyMap<string, AnimatedPose> {
   const poses = new Map<string, Map<string, BonePose>>();
   for (const track of tracks) {
-    const sampled = track.sample(time);
-    if (sampled === null) continue;
+    const position = valuesAt(track.positions, time);
+    const rotation = valuesAt(track.rotations, time);
+    const scale = valuesAt(track.scales, time);
+    if (!position && !rotation && !scale) continue;
     const bones = poses.get(track.skeletonPath) ?? new Map<string, BonePose>();
-    bones.set(track.bone, { ...bones.get(track.bone), ...sampled });
+    bones.set(track.bone, { position, rotation, scale });
     poses.set(track.skeletonPath, bones);
   }
   return poses;
+}
+
+/** The value of each sampler that gives one at `time`, or undefined where none does. */
+function valuesAt<T>(samplers: readonly Sampler<T>[], time: number): T[] | undefined {
+  const values: T[] = [];
+  for (const sample of samplers) {
+    const value = sample(time);
+    if (value !== null) values.push(value);
+  }
+  return values.length === 0 ? undefined : values;
 }

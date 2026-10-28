@@ -7,9 +7,11 @@
 
 import {
   clamp,
+  cubicInterpolateInTimef,
   ease,
   isEqualApprox,
   isZeroApprox,
+  lerpf,
   pingpongf,
   posmod,
   round,
@@ -53,6 +55,33 @@ const QUATERNION_BLEND: ValueBlend<Quaternion> = {
   lerp: quaternionSlerp,
   cubic: quaternionSphericalCubicInterpolateInTime,
 };
+
+/** A Color or a vector of any size, as its flat components: each moves on its own, as `Animation` blends a Variant. */
+const TUPLE_BLEND: ValueBlend<readonly number[]> = {
+  lerp: (from, to, weight) => from.map((component, i) => lerpf(component, to[i] ?? component, weight)),
+  cubic: (from, to, pre, post, weight, { toT, preT, postT }) =>
+    from.map((component, i) =>
+      cubicInterpolateInTimef(
+        component,
+        to[i] ?? component,
+        pre[i] ?? component,
+        post[i] ?? component,
+        weight,
+        toT,
+        preT,
+        postT
+      )
+    ),
+};
+
+/** The value of a `value` track of Colors or vectors at `time` (`value_track_interpolate`), or null where `Animation` has none. */
+export function sampleTupleTrack(
+  keys: readonly TrackKey<readonly number[]>[],
+  time: number,
+  setup: SampleSetup
+): readonly number[] | null {
+  return sampleTrack(keys, time, setup, TUPLE_BLEND);
+}
 
 /** The value of a position or scale track at `time`, or null where `Animation` has none to give. */
 export function sampleVector3Track(
@@ -121,6 +150,13 @@ function sampleTrack<T>(
   }
 }
 
+/** `span` with the time the playhead is past `idx` and the time from `idx` to `next`, which it owns. */
+function withTimes(span: Span, delta: number, from: number): Span {
+  span.delta = delta;
+  span.from = from;
+  return span;
+}
+
 /**
  * `Animation::_find` (`animation.cpp:2404-2454`) without a limit: the index of the last key at or
  * before `time`, -1 before the first, and -2 for no key.
@@ -158,7 +194,7 @@ function spanAt<T>(keys: readonly TrackKey<T>[], count: number, time: number, se
 
   if (!isStartEdge && !isEndEdge) {
     const start = keys[span.idx]!.time;
-    return { ...span, delta: f(keys[span.next]!.time - start), from: f(time - start) };
+    return withTimes(span, f(keys[span.next]!.time - start), f(time - start));
   }
   return span;
 }
@@ -201,10 +237,10 @@ function spanAroundLoop<T>(
   const nextTime = keys[next]!.time;
   if (isStartEdge) {
     const endTime = Math.max(f(setup.length - idxTime), 0);
-    return { ...span, delta: f(endTime + nextTime), from: f(endTime + time) };
+    return withTimes(span, f(endTime + nextTime), f(endTime + time));
   }
   if (isEndEdge) {
-    return { ...span, delta: f(f(setup.length - idxTime) + nextTime), from: f(time - idxTime) };
+    return withTimes(span, f(f(setup.length - idxTime) + nextTime), f(time - idxTime));
   }
   return span;
 }
@@ -235,12 +271,16 @@ function spanAcrossPingPong<T>(
   const nextTime = keys[next]!.time;
   if (isStartEdge) {
     const endTime = Math.max(idxTime, 0);
-    return { ...span, delta: f(endTime + nextTime), from: f(endTime + time) };
+    return withTimes(span, f(endTime + nextTime), f(endTime + time));
   }
   if (isEndEdge) {
-    return { ...span, delta: f(f(f(setup.length * 2) - idxTime) - nextTime), from: f(time - idxTime) };
+    return withTimes(span, f(f(f(setup.length * 2) - idxTime) - nextTime), f(time - idxTime));
   }
   return span;
+}
+
+function timeAt<T>(keys: readonly TrackKey<T>[], index: number): number {
+  return keys[index]!.time;
 }
 
 /** The times of `next`, `pre` and `post` counted from `idx`, wrapped as the loop mode wraps them (`:2693-2714`). */
@@ -249,17 +289,21 @@ function cubicTimes<T>(
   { idx, next, pre, post }: Span,
   setup: SampleSetup
 ): KeyTimes {
-  const timeOf = (index: number) => keys[index]!.time;
-  const start = timeOf(idx);
+  const start = timeAt(keys, idx);
   if (!wrapsAround(setup)) {
-    return { preT: f(timeOf(pre) - start), toT: f(timeOf(next) - start), postT: f(timeOf(post) - start) };
+    return {
+      preT: f(timeAt(keys, pre) - start),
+      toT: f(timeAt(keys, next) - start),
+      postT: f(timeAt(keys, post) - start),
+    };
   }
   const { length } = setup;
   if (setup.loopMode === AnimationLoopMode.LINEAR) {
     return {
-      preT: pre > idx ? f(f(-length + timeOf(pre)) - start) : f(timeOf(pre) - start),
-      toT: next < idx ? f(f(length + timeOf(next)) - start) : f(timeOf(next) - start),
-      postT: next < idx || post <= idx ? f(f(length + timeOf(post)) - start) : f(timeOf(post) - start),
+      preT: pre > idx ? f(f(-length + timeAt(keys, pre)) - start) : f(timeAt(keys, pre) - start),
+      toT: next < idx ? f(f(length + timeAt(keys, next)) - start) : f(timeAt(keys, next) - start),
+      postT:
+        next < idx || post <= idx ? f(f(length + timeAt(keys, post)) - start) : f(timeAt(keys, post) - start),
     };
   }
   return pingPongCubicTimes(keys, { idx, next, pre, post }, length);
@@ -271,23 +315,23 @@ function pingPongCubicTimes<T>(
   { idx, next, pre, post }: Pick<Span, 'idx' | 'next' | 'pre' | 'post'>,
   length: number
 ): KeyTimes {
-  const timeOf = (index: number) => keys[index]!.time;
-  const start = timeOf(idx);
-  let preT = f(timeOf(pre) - start);
-  let toT = f(timeOf(next) - start);
-  let postT = f(timeOf(post) - start);
+  const start = timeAt(keys, idx);
+  let preT = f(timeAt(keys, pre) - start);
+  let toT = f(timeAt(keys, next) - start);
+  let postT = f(timeAt(keys, post) - start);
 
   if ((pre > idx && idx === next && post < next) || (pre < idx && idx === next && post > next)) {
-    preT = f(start - timeOf(pre));
+    preT = f(start - timeAt(keys, pre));
   } else if (pre === idx) {
     preT = idx < next ? f(f(-start) * 2) : f(f(length - start) * 2);
   }
 
   if (idx === next) {
     toT = pre < idx ? f(f(length - start) * 2) : f(f(-start) * 2);
-    postT = f(f(timeOf(next) - timeOf(post)) + toT);
+    postT = f(f(timeAt(keys, next) - timeAt(keys, post)) + toT);
   } else if (next === post) {
-    postT = idx < next ? f(f(f(length - timeOf(next)) * 2) + toT) : f(f(f(-timeOf(next)) * 2) + toT);
+    postT =
+      idx < next ? f(f(f(length - timeAt(keys, next)) * 2) + toT) : f(f(f(-timeAt(keys, next)) * 2) + toT);
   }
   return { preT, toT, postT };
 }

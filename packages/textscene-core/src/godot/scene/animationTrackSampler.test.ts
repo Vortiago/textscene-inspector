@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   sampleQuaternionTrack,
+  sampleTupleTrack,
   sampleVector3Track,
   type SampleSetup,
   type TrackKey,
@@ -36,6 +37,7 @@ function keysOf<T>(rows: Row[], read: (components: Row) => T): TrackKey<T>[] {
 const cases = Object.entries(measured as Record<string, MeasuredCase>);
 const vectorCases = cases.filter(([name]) => name.startsWith('vec_'));
 const rotationCases = cases.filter(([name]) => name.startsWith('rot_'));
+const colourCases = cases.filter(([name]) => name.startsWith('col_'));
 
 describe('sampleVector3Track', () => {
   it.each(vectorCases)('%s samples as Godot does', (_name, track) => {
@@ -72,5 +74,20 @@ describe('sampleQuaternionTrack', () => {
         expected.map((component) => expect.closeTo(component, SAMPLE_DIGITS))
       );
     }
+  });
+});
+
+describe('sampleTupleTrack', () => {
+  it.each(colourCases)('%s samples as Godot does', (_name, track) => {
+    const keys = keysOf(track.keys, (components) => components);
+    for (const [time, ...expected] of track.samples) {
+      expect(sampleTupleTrack(keys, time!, track)).toEqual(
+        expected.map((component) => expect.closeTo(component, SAMPLE_DIGITS))
+      );
+    }
+  });
+
+  it('has no sample for a track with no key', () => {
+    expect(sampleTupleTrack([], 0.5, { ...measured.col_linear })).toBeNull();
   });
 });

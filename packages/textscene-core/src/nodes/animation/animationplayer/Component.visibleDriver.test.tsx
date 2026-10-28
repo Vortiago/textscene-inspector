@@ -76,9 +76,9 @@ function Capture() {
 }
 
 // Stands in for the target: subscribes to the same `visible` seam the dispatcher uses.
-let probedVisible: number[] | null = null;
+let probedVisible: readonly number[] | null = null;
 function VisibleProbe() {
-  probedVisible = useAnimatedValue<number[]>('visible', (v) => v);
+  probedVisible = useAnimatedValue<readonly number[]>('visible', (v) => v);
   return null;
 }
 

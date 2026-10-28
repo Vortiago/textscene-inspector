@@ -10,6 +10,8 @@ import type { TscnScene } from '../../../parser/types';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { contextOver } from '../../../r3f/liveSceneTree.testkit';
 import { multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
+import type { Quaternion } from '../../../godot/math/quaternion';
+import type { Vector3 } from '../../../godot/math/vector';
 import * as logger from '../../../logger';
 import { bindMeshesToSkeletons, type BoundSkin } from './skeletonBindings';
 import type { AnimatedPose, BonePose } from './skeletonPose';
@@ -449,9 +451,17 @@ settings/0/relative = false
   });
 });
 
-/** The pose a clip writes on the bone `name`. */
-function posing(name: string, written: BonePose): AnimatedPose {
-  return new Map([[name, written]]);
+/** The pose a clip writes on the bone `name`, with one track for each part given. */
+function posing(
+  name: string,
+  parts: { position?: Vector3; rotation?: Quaternion; scale?: Vector3 }
+): AnimatedPose {
+  const pose: BonePose = {
+    ...(parts.position && { position: [parts.position] }),
+    ...(parts.rotation && { rotation: [parts.rotation] }),
+    ...(parts.scale && { scale: [parts.scale] }),
+  };
+  return new Map([[name, pose]]);
 }
 
 describe('the skin of a Skeleton3D under the bone poses of an animation', () => {

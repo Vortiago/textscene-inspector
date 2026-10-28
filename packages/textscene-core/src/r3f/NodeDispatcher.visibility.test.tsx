@@ -10,6 +10,7 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { SelectionProvider } from './contexts/SelectionContext';
 import {
   AnimatedValueProvider,
+  animatedValueKey,
   useAnimatedValueRegistry,
   type AnimatedValueRegistry,
 } from './contexts/AnimatedValueContext';
@@ -165,7 +166,7 @@ describe('<NodeDispatcher> a pushed visible value', () => {
       </SelectionProvider>
     );
     const push = (path: string, value: number[] | null) =>
-      ReactThreeTestRenderer.act(async () => registry.set(path, 'visible', value));
+      ReactThreeTestRenderer.act(async () => registry.set(animatedValueKey(path, 'visible'), value));
     return { renderer, push };
   }
 

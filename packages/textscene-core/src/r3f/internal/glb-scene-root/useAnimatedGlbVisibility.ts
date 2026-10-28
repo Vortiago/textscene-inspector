@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import { godotNodePaths } from '../../../resources/formats/glb/godotNodes';
 import { joinPath } from '../../../utils/nodePath';
-import { useAnimatedValueRegistry } from '../../contexts/AnimatedValueContext';
+import { animatedValueKey, useAnimatedValueRegistry } from '../../contexts/AnimatedValueContext';
 import type { GlbObjectEntry } from './glbHierarchy';
 import { glbFrames } from './glbPathLookup';
 
@@ -39,7 +39,7 @@ function visibleTargets(entries: readonly GlbObjectEntry[], rootPath: string): V
 function withValue(
   values: AnimatedVisible,
   key: THREE.Object3D | string,
-  value: number[] | null
+  value: readonly number[] | null
 ): AnimatedVisible {
   const visible = value === null ? undefined : value[0] !== 0;
   if (values.get(key) === visible) return values;
@@ -62,14 +62,12 @@ export function useAnimatedGlbVisibility(
   const [values, setValues] = useState<AnimatedVisible>(NONE);
   useEffect(() => {
     if (rootPath === null) return;
-    const registered = visibleTargets(entries, rootPath).map(({ path, key }) => {
-      const setter = (value: number[] | null) => setValues((current) => withValue(current, key, value));
-      registry.register(path, 'visible', setter);
-      return { path, setter };
-    });
-    return () => {
-      for (const { path, setter } of registered) registry.unregister(path, 'visible', setter);
-    };
+    const unsubscribes = visibleTargets(entries, rootPath).map(({ path, key }) =>
+      registry.subscribe(animatedValueKey(path, 'visible'), (value) =>
+        setValues((current) => withValue(current, key, value))
+      )
+    );
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
   }, [entries, registry, rootPath]);
   return values;
 }

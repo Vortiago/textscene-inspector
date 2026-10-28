@@ -179,3 +179,20 @@ describe('an AnimationPlayer bone track reads the keys as Godot does', () => {
     expectMatrices(boneMatrices(renderer), boneMatrices(await mounted(ribbonScene({ bones: halfway }))));
   });
 });
+
+describe('an AnimationPlayer track with one subname on a node that is not a Skeleton3D', () => {
+  it('turns the node, as Godot binds it as a transform track of the node (animation_mixer.cpp:795)', async () => {
+    const onMesh = clip(
+      rotationTrack('Mesh:b4', '0', '1', '0, 0, -0.5, 0.866025', '1', '1', '0, 0, -0.5, 0.866025')
+    );
+    const renderer = await mounted(playedScene(onMesh));
+    const mesh = instanceAs<THREE.SkinnedMesh>(renderer.scene.findByType('SkinnedMesh'));
+    const turnedBefore = mesh.getWorldQuaternion(new THREE.Quaternion()).z;
+
+    await play();
+    await renderer.advanceFrames(1, 0.5);
+
+    expect(mesh.getWorldQuaternion(new THREE.Quaternion()).z).not.toBeCloseTo(turnedBefore, 2);
+    expectMatrices(boneMatrices(renderer), boneMatrices(await mounted(ribbonScene())));
+  });
+});

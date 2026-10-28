@@ -4,7 +4,7 @@
  * component through the AnimatedValue registry (ADR-0016).
  */
 
-import type { GodotKeyframe } from './animationResolver';
+import type { GodotKeyframe } from './trackParser';
 
 /**
  * The value a stepped (discrete) value track holds at `time`: the last keyframe at or before
@@ -28,47 +28,6 @@ export function sampleSteppedValue(keys: readonly GodotKeyframe[], time: number)
 function numericValue(value: unknown): number {
   if (typeof value === 'boolean') return value ? 1 : 0;
   return typeof value === 'number' ? value : 0;
-}
-
-/**
- * The value of a continuous value track at `time` (ADR-0017): component-wise lerp between the two
- * bracketing keys, holding the endpoint key outside the track. `interp` 0 (nearest) holds the
- * earlier key and any other mode lerps: cubic (2) is approximated as linear, and keyframe
- * `transition` easing is ignored. Values are flat tuples (Color `[r,g,b,a]`, Vector3 `[x,y,z]`).
- */
-export function sampleInterpolatedValue(
-  keys: readonly GodotKeyframe[],
-  time: number,
-  interp: number
-): number[] {
-  if (keys.length === 0) return [];
-  const first = keys[0]!;
-  if (time <= first.time) return tupleValue(first.value);
-  const last = keys[keys.length - 1]!;
-  if (time >= last.time) return tupleValue(last.value);
-
-  let lo = first;
-  let hi = last;
-  for (let i = 0; i < keys.length - 1; i++) {
-    if (keys[i]!.time <= time && time < keys[i + 1]!.time) {
-      lo = keys[i]!;
-      hi = keys[i + 1]!;
-      break;
-    }
-  }
-
-  const a = tupleValue(lo.value);
-  if (interp === 0) return a; // INTERPOLATION_NEAREST → hold the earlier key
-  const b = tupleValue(hi.value);
-  const span = hi.time - lo.time;
-  const f = span > 0 ? (time - lo.time) / span : 0;
-  return a.map((av, i) => av + ((b[i] ?? av) - av) * f);
-}
-
-/** A keyframe value as a flat numeric tuple; scalars become 1-tuples. */
-function tupleValue(value: unknown): number[] {
-  if (Array.isArray(value)) return value.map((n) => (typeof n === 'number' ? n : 0));
-  return [typeof value === 'number' ? value : 0];
 }
 
 /**

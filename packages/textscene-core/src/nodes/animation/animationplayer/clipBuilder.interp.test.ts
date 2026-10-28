@@ -7,7 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { InterpolateDiscrete, InterpolateLinear, InterpolateSmooth } from 'three';
 import { buildClip } from './clipBuilder';
-import type { GodotAnimation, GodotTrack } from './animationResolver';
+import type { GodotAnimation } from './animationResolver';
+import type { GodotTrack } from './trackParser';
 
 function animation(track: Partial<GodotTrack>): GodotAnimation {
   return {

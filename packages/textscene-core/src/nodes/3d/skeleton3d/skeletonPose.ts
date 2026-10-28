@@ -14,8 +14,14 @@ import {
   transform3DFromQuaternionScale,
   type Transform3D,
 } from '../../../godot/math/transform3d.js';
-import { normalizedQuaternion, type Quaternion } from '../../../godot/math/quaternion.js';
-import { vector3Scaled, type Vector3 } from '../../../godot/math/vector.js';
+import {
+  normalizedQuaternion,
+  quaternionInverse,
+  quaternionMultiply,
+  quaternionSlerp,
+  type Quaternion,
+} from '../../../godot/math/quaternion.js';
+import { vector3Add, vector3Scaled, vector3Sub, type Vector3 } from '../../../godot/math/vector.js';
 
 /** One entry of `bones/<i>/…` (`skeleton_3d.h:105-113`). */
 export interface Bone {
@@ -42,40 +48,77 @@ export function newBone(name: string): Bone {
   };
 }
 
-/** The parts of a bone pose that a clip writes: a part it does not key stays undefined and keeps the file pose. */
+/**
+ * The parts of a bone pose that clips write. A part holds the value of each track that keys it, in
+ * track order, and a part no track keys is undefined and keeps the file pose.
+ */
 export interface BonePose {
-  position?: Vector3;
-  rotation?: Quaternion;
-  scale?: Vector3;
+  position?: readonly Vector3[];
+  rotation?: readonly Quaternion[];
+  scale?: readonly Vector3[];
 }
 
 /** The poses a clip writes to a skeleton, by bone name. */
 export type AnimatedPose = ReadonlyMap<string, BonePose>;
 
+const IDENTITY_ROTATION: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
+
 /**
- * The bones with the poses of a clip over their file pose, as `AnimationMixer` applies a bone track
- * (`animation_mixer.cpp:1878-1891`). A name finds the first bone of that name, as `find_bone` does, and
- * a name no bone carries writes nothing. A position takes the `motion_scale` of the skeleton
- * (`:1016-1024`), and a rotation comes out of the blend normalised.
+ * The bone tracks of a clip as the mixer applies them (`animation_mixer.cpp:1375, 1463, 1551`): a
+ * part starts at the rest of the bone and each track adds its offset from the rest (a rotation
+ * turns by it), then `set_bone_pose_*` writes the sum (`:1878-1891`). A name finds the first bone of
+ * that name, as `find_bone` does, and a name no bone carries goes to `onUnknownBone`. A position
+ * takes the `motion_scale` of the skeleton (`:1016-1024`). Runs before the modifiers, as the
+ * mixer writes the pose before `_process_modifiers`.
  */
-export function animatedBones(bones: readonly Bone[], animated: AnimatedPose, motionScale: number): Bone[] {
-  const written = new Set<string>();
-  return bones.map((bone) => {
-    const pose = animated.get(bone.name);
-    if (!pose || written.has(bone.name)) return bone;
-    written.add(bone.name);
-    return {
-      ...bone,
-      ...(pose.position && { position: vector3Scaled(pose.position, motionScale) }),
-      ...(pose.rotation && { rotation: normalizedQuaternion(pose.rotation) }),
-      ...(pose.scale && { scale: pose.scale }),
-    };
-  });
+export function animationPass(
+  animated: AnimatedPose,
+  motionScale: number,
+  onUnknownBone: (name: string) => void
+): PoseModifier {
+  return {
+    influence: 1,
+    edit: (poses) => {
+      animated.forEach((written, name) => {
+        const index = poses.findBone(name);
+        if (index < 0) {
+          onUnknownBone(name);
+          return;
+        }
+        const { origin, rotation, scale } = decomposedRest(poses.rest(index));
+        if (written.position) {
+          const scaled = written.position.map((position) => vector3Scaled(position, motionScale));
+          poses.setPosePosition(index, summedOffsets(origin, scaled));
+        }
+        if (written.rotation) poses.setPoseRotation(index, composedTurns(rotation, written.rotation));
+        if (written.scale) poses.setPoseScale(index, summedOffsets(scale, written.scale));
+      });
+    },
+  };
 }
 
-/** The names of `animated` that are not in `boneNames`, the names of the bones of a skeleton. */
-export function unknownBoneNames(boneNames: ReadonlySet<string>, animated: AnimatedPose): string[] {
-  return [...animated.keys()].filter((name) => !boneNames.has(name));
+function decomposedRest(rest: Transform3D): { origin: Vector3; rotation: Quaternion; scale: Vector3 } {
+  return { origin: rest.origin, ...decomposeTransform3D(rest) };
+}
+
+/** `init + (value - init) * 1` for each track in turn, which is `t->loc += (loc - init) * blend`. */
+function summedOffsets(init: Vector3, values: readonly Vector3[]): Vector3 {
+  return values.reduce((sum, value) => vector3Add(sum, vector3Sub(value, init)), init);
+}
+
+/** `interpolate_via_rest(rotation, value, 1, init)` for each track in turn (`animation.cpp:5700-5707`). */
+function composedTurns(init: Quaternion, values: readonly Quaternion[]): Quaternion {
+  const initInverse = quaternionInverse(init);
+  return values.reduce(
+    (rotation, value) =>
+      normalizedQuaternion(
+        quaternionMultiply(
+          rotation,
+          quaternionSlerp(IDENTITY_ROTATION, quaternionMultiply(initInverse, value), 1)
+        )
+      ),
+    init
+  );
 }
 
 /**

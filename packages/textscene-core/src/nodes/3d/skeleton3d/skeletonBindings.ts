@@ -20,9 +20,8 @@ import { perObject } from '../../../utils/perObject.js';
 import { warnOnce } from '../../../utils/warnOnce.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
 import {
-  animatedBones,
+  animationPass,
   automaticSkinMatrices,
-  unknownBoneNames,
   type AnimatedPose,
   type PoseModifier,
 } from './skeletonPose.js';
@@ -206,7 +205,6 @@ function skinOf(skeleton: LiveLink, tree: LiveTree): BoundSkin {
 
 function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): BoundSkin {
   const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
-  const boneNames = new Set(bones.map((bone) => bone.name));
   let lastPose: AnimatedPose | undefined;
   let lastMatrices: readonly Transform3D[] = [];
   const skin: BoundSkin = {
@@ -217,15 +215,17 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Boun
         : automaticSkinMatrices(bones, showRestOnly, modifiers),
     matricesUnder: (pose) => {
       if (pose === lastPose) return lastMatrices;
-      for (const name of unknownBoneNames(boneNames, pose)) {
+      const warnUnknownBone = (name: string) =>
         warnOnce(
           skin,
           name,
           `[AnimationPlayer] the Skeleton3D at ${skeleton.path} has no bone "${name}", so its track binds nothing`
         );
-      }
       lastPose = pose;
-      lastMatrices = automaticSkinMatrices(animatedBones(bones, pose, motionScale), showRestOnly, modifiers);
+      lastMatrices = automaticSkinMatrices(bones, showRestOnly, [
+        animationPass(pose, motionScale, warnUnknownBone),
+        ...modifiers,
+      ]);
       return lastMatrices;
     },
   };

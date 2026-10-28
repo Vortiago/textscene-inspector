@@ -6,14 +6,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { Quaternion } from '../../../godot/math/quaternion';
 import { identityTransform3D, multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
 import {
-  animatedBones,
+  animationPass,
   automaticSkinMatrices,
+  BonePoses,
   newBone,
-  unknownBoneNames,
   type Bone,
-  type BonePoses,
+  type BonePose,
   type PoseModifier,
 } from './skeletonPose';
 
@@ -303,64 +304,126 @@ function quarterTurnZ(): Transform3D {
   };
 }
 
-describe('animatedBones', () => {
+describe('animationPass', () => {
   const FILE_POSE = [
     bone('b0', -1, [0, 0.5, 0], { rotation: QUARTER_TURN_Z, scale: { x: 2, y: 2, z: 2 } }),
     bone('b1', 0, [0, -0.2, 0]),
   ];
 
-  it('lays the parts a clip writes over the file pose of the bone it names, and leaves the other parts', () => {
-    const [first, second] = animatedBones(
-      FILE_POSE,
-      new Map([['b0', { position: { x: 1, y: 2, z: 3 } }]]),
-      1
-    );
+  /** The bones of `FILE_POSE` after the pass for `animated` ran on them, and the names it found no bone for. */
+  function passOver(
+    animated: ReadonlyMap<string, BonePose>,
+    motionScale = 1,
+    bones: readonly Bone[] = FILE_POSE
+  ): { poses: BonePoses; unknown: string[] } {
+    const poses = new BonePoses(bones, false);
+    const unknown: string[] = [];
+    animationPass(animated, motionScale, (name) => unknown.push(name)).edit(poses);
+    return { poses, unknown };
+  }
 
-    expect(first).toEqual({ ...FILE_POSE[0], position: { x: 1, y: 2, z: 3 } });
-    expect(second).toBe(FILE_POSE[1]);
+  it('lays the parts a clip writes over the file pose of the bone it names, and leaves the other parts', () => {
+    const { poses } = passOver(new Map([['b0', { position: [{ x: 1, y: 2, z: 3 }] }]]));
+
+    expect(poses.posePosition(0)).toEqual({ x: 1, y: 2, z: 3 });
+    expect(poses.poseRotation(0)).toEqual(QUARTER_TURN_Z);
+    expect(poses.poseScale(0)).toEqual({ x: 2, y: 2, z: 2 });
+    expect(poses.posePosition(1)).toEqual(FILE_POSE[1]!.position);
   });
 
   it('multiplies a position by the motion scale and nothing else, as the mixer does', () => {
-    const [first] = animatedBones(
-      FILE_POSE,
-      new Map([['b0', { position: { x: 1, y: 2, z: 3 }, scale: { x: 4, y: 5, z: 6 } }]]),
+    const { poses } = passOver(
+      new Map([['b0', { position: [{ x: 1, y: 2, z: 3 }], scale: [{ x: 4, y: 5, z: 6 }] }]]),
       2
     );
 
-    expect(first!.position).toEqual({ x: 2, y: 4, z: 6 });
-    expect(first!.scale).toEqual({ x: 4, y: 5, z: 6 });
+    expect(poses.posePosition(0)).toEqual({ x: 2, y: 4, z: 6 });
+    expect(poses.poseScale(0)).toEqual({ x: 4, y: 5, z: 6 });
   });
 
   it('normalises a rotation, as the blend of the mixer returns it', () => {
-    const [first] = animatedBones(FILE_POSE, new Map([['b0', { rotation: { x: 0, y: 0, z: 2, w: 0 } }]]), 1);
+    const { poses } = passOver(new Map([['b0', { rotation: [{ x: 0, y: 0, z: 2, w: 0 }] }]]));
 
-    expect(first!.rotation).toEqual({ x: 0, y: 0, z: 1, w: 0 });
+    expectQuaternionClose(poses.poseRotation(0), { x: 0, y: 0, z: 1, w: 0 });
+  });
+
+  it('writes a rotation relative to the rest rotation, so one track gives the keyed value (edge case)', () => {
+    const rotated = [bone('b0', -1, [0, 0, 0], { rotation: QUARTER_TURN_Z, rest: quarterTurnZ() })];
+    const keyed = { x: 0.5, y: 0.5, z: 0.5, w: 0.5 };
+
+    const { poses } = passOver(new Map([['b0', { rotation: [keyed] }]]), 1, rotated);
+
+    expectQuaternionClose(poses.poseRotation(0), keyed);
+  });
+
+  it('adds up the offsets from the rest of two position tracks on one bone, as the mixer does', () => {
+    const { poses } = passOver(
+      new Map([
+        [
+          'b0',
+          {
+            position: [
+              { x: 1, y: 0.5, z: 0 },
+              { x: 0, y: 1.5, z: 0 },
+            ],
+          },
+        ],
+      ])
+    );
+
+    expect(poses.posePosition(0)).toEqual({ x: 1, y: 1.5, z: 0 });
+  });
+
+  it('adds up the offsets from the rest of two scale tracks on one bone', () => {
+    const { poses } = passOver(
+      new Map([
+        [
+          'b1',
+          {
+            scale: [
+              { x: 2, y: 1, z: 1 },
+              { x: 3, y: 1, z: 1 },
+            ],
+          },
+        ],
+      ])
+    );
+
+    expect(poses.poseScale(1)).toEqual({ x: 4, y: 1, z: 1 });
+  });
+
+  it('composes two rotation tracks on one bone, the later one turning after the earlier', () => {
+    const { poses } = passOver(new Map([['b1', { rotation: [QUARTER_TURN_Z, QUARTER_TURN_Z] }]]));
+
+    expectQuaternionClose(poses.poseRotation(1), { x: 0, y: 0, z: 1, w: 0 });
   });
 
   it('writes the first bone of a name, which is the one find_bone answers', () => {
     const twins = [bone('twin', -1, [0, 0, 0]), bone('twin', -1, [0, 0, 0])];
 
-    const [first, second] = animatedBones(twins, new Map([['twin', { position: { x: 1, y: 1, z: 1 } }]]), 1);
+    const { poses } = passOver(new Map([['twin', { position: [{ x: 1, y: 1, z: 1 }] }]]), 1, twins);
 
-    expect(first!.position).toEqual({ x: 1, y: 1, z: 1 });
-    expect(second).toBe(twins[1]);
+    expect(poses.posePosition(0)).toEqual({ x: 1, y: 1, z: 1 });
+    expect(poses.posePosition(1)).toEqual({ x: 0, y: 0, z: 0 });
   });
 
-  it('changes nothing for a name the skeleton lacks', () => {
-    expect(animatedBones(FILE_POSE, new Map([['ghost', { position: { x: 9, y: 9, z: 9 } }]]), 1)).toEqual(
-      FILE_POSE
+  it('reports each name the skeleton lacks, and writes the others', () => {
+    const { poses, unknown } = passOver(
+      new Map<string, BonePose>([
+        ['ghost', { position: [{ x: 9, y: 9, z: 9 }] }],
+        ['b1', { position: [{ x: 1, y: 1, z: 1 }] }],
+        ['other', {}],
+      ])
     );
+
+    expect(unknown).toEqual(['ghost', 'other']);
+    expect(poses.posePosition(1)).toEqual({ x: 1, y: 1, z: 1 });
   });
 });
 
-describe('unknownBoneNames', () => {
-  it('lists the names of a pose that no bone of the skeleton carries', () => {
-    const pose = new Map([
-      ['b0', {}],
-      ['ghost', {}],
-      ['other', {}],
-    ]);
-
-    expect(unknownBoneNames(new Set(CHAIN.map((bone) => bone.name)), pose)).toEqual(['ghost', 'other']);
-  });
-});
+function expectQuaternionClose(actual: Quaternion, expected: Quaternion): void {
+  expect(actual.x).toBeCloseTo(expected.x, 6);
+  expect(actual.y).toBeCloseTo(expected.y, 6);
+  expect(actual.z).toBeCloseTo(expected.z, 6);
+  expect(actual.w).toBeCloseTo(expected.w, 6);
+}

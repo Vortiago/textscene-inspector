@@ -6,7 +6,7 @@
  */
 
 import { resolveRelativePath } from '../../../godot/string/nodePath';
-import { extractNodePathInner } from './animationResolver';
+import { extractNodePathInner } from './trackParser';
 
 /**
  * The Animation root's scene path, or `null` when `root_node` reaches nothing. An empty path does:
