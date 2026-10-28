@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { centredAabb } from '../../../godot/math/aabb';
 import type { Vector3 } from '../../../godot/math/vector';
-import { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
+import { fogVolumeHasGizmo } from '../../../godot/rendering/environment/fogVolume';
 import { AabbGizmo } from '../../../r3f/components/AabbGizmo';
 import type { FogVolumeProperties } from './types';
 
@@ -20,6 +20,6 @@ interface FogVolumeGizmoProps {
 
 export function FogVolumeGizmo({ size, shape }: FogVolumeGizmoProps) {
   const box = useMemo(() => centredAabb(size), [size]);
-  if (shape === FogVolumeShape.WORLD) return null;
+  if (!fogVolumeHasGizmo(shape)) return null;
   return <AabbGizmo aabb={box} color={GIZMO_COLOR} />;
 }

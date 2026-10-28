@@ -31,7 +31,11 @@ ${lights}`;
   const renderer = await ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
       <SelectionProvider>
-        <ViewportModeProvider initialShowPreviewSun={false} initialShowPreviewEnvironment={false}>
+        <ViewportModeProvider
+          initialShowPreviewSun={false}
+          initialShowPreviewEnvironment={false}
+          initialShowGizmos={false}
+        >
           <TscnSceneContents />
         </ViewportModeProvider>
       </SelectionProvider>

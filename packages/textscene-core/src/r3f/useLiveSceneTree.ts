@@ -3,33 +3,39 @@
  * loader's scene and GLB cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
-import { useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import {
   collectLiveNodes,
   liveTreeOf,
   resolveLiveEntry,
-  singlePathCache,
-  type CachedSceneSource,
+  type LiveStep,
+  type LiveTree,
   type LiveTreeContext,
   type LiveTreeEntry,
   type ResolvedLiveNode,
 } from './liveSceneTree.js';
-import type { TscnNode } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
+import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
+import { glbPathOf } from '../resources/glbSceneRoot.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
-import { holdsDeepChildren } from '../resources/seatEscaped.js';
 import { perObject } from '../utils/perObject.js';
 import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
-import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
+import { NOTHING_CACHED } from './cacheSources.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
   roots: readonly TscnNode[];
   ctx: LiveTreeContext;
+}
+
+/** The caches of `loader` that a live-tree context reads. With no loader, every path reads as never requested. */
+function loaderCaches(loader: ResourceLoader | null | undefined) {
+  return { sceneCache: loader?.scenes ?? NOTHING_CACHED, glbCache: loader?.glbMeshes };
 }
 
 /**
@@ -50,8 +56,7 @@ function liveTreeContext(
     ctx: {
       externalResources: root.externalResources,
       internalResources: root.internalResources,
-      sceneCache: loader?.scenes ?? NOTHING_CACHED,
-      glbCache: loader?.glbMeshes,
+      ...loaderCaches(loader),
     },
   };
 }
@@ -169,6 +174,31 @@ function sameSelection<T>(a: T | undefined, b: T | undefined, isSame: (a: T, b: 
 }
 
 /**
+ * A value read at each load tick of `watched`. A load tick re-reads it, and the reader re-renders
+ * only where `isSame` says the value changed. A reader that watches no loader reads at tick 0 once.
+ * `readAt` and `isSame` must be stable.
+ */
+function useReadAtLoadTick<T>(
+  watched: ResourceLoader | null | undefined,
+  readAt: (version: number) => T,
+  isSame: (a: T, b: T) => boolean
+): T {
+  const ticks = loadTicksOf(watched);
+  const getSnapshot = useMemo(() => {
+    let known: { version: number; value: T } | undefined;
+    return () => {
+      const version = ticks.getVersion();
+      if (known?.version === version) return known.value;
+      const read = readAt(version);
+      const value = known && isSame(known.value, read) ? known.value : read;
+      known = { version, value };
+      return value;
+    };
+  }, [ticks, readAt, isSame]);
+  return useSyncExternalStore(ticks.subscribe, getSnapshot);
+}
+
+/**
  * A value read from the shared live tree, undefined with no tree. A load tick re-reads it, and the
  * reader re-renders only where `isSame` says the value changed, so a reader whose answer a load
  * leaves alone costs no render. `select` and `isSame` must be stable.
@@ -178,20 +208,18 @@ export function useLiveTreeSelection<T>(
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
   const { sceneGraph, loader } = useSceneGraphAndLoader();
-  const ticks = loadTicksOf(loader);
-  const getSnapshot = useMemo(() => {
-    let known: { version: number; value: T | undefined } | undefined;
-    return () => {
-      const version = ticks.getVersion();
-      if (known?.version === version) return known.value;
+  const readAt = useCallback(
+    (version: number) => {
       const tree = sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null;
-      const read = tree ? select(tree) : undefined;
-      const value = known && sameSelection(known.value, read, isSame) ? known.value : read;
-      known = { version, value };
-      return value;
-    };
-  }, [ticks, sceneGraph, loader, select, isSame]);
-  return useSyncExternalStore(ticks.subscribe, getSnapshot);
+      return tree ? select(tree) : undefined;
+    },
+    [sceneGraph, loader, select]
+  );
+  const isSameSelection = useCallback(
+    (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),
+    [isSame]
+  );
+  return useReadAtLoadTick(loader, readAt, isSameSelection);
 }
 
 function seatedRootsOf({ roots, ctx }: SharedLiveTree): readonly TscnNode[] {
@@ -209,55 +237,49 @@ export function useSeatedRoots(): readonly TscnNode[] | undefined {
   return useLiveTreeSelection(seatedRootsOf, sameElements);
 }
 
-/** A view of a loader's scene cache that remembers each answer it gave, to tell when one is stale. */
-interface RecordedScenes extends CachedSceneSource {
-  /** Written only by `isCurrent`: the load tick at which every answer was last found current. */
-  checkedAt: number;
-  readonly isCurrent: () => boolean;
+/** The tree of a loader built for one load tick. */
+interface LoaderTree {
+  version: number;
+  tree: LiveTree;
 }
 
-/** Written only by {@link recordedScenesOf}: the view every mount of a loader shares while it is current. */
-const recordedScenes = new WeakMap<ResourceLoader, RecordedScenes>();
+const NO_ROOTS: readonly TscnNode[] = [];
+
+/** Written only by {@link loaderTreeAt}: the tree of each loader for the load tick it was built at. */
+const loaderTrees = new WeakMap<object, LoaderTree>();
 
 /**
- * The one scene cache view of `loader` that every mount shares until a scene it read loads, changes
- * or fails. A mount that reads it again gets the same object, so what collapsed over it stays valid.
- * The answers are re-read only after a load tick.
+ * The tree over the caches of `loader` at load tick `version`, with no roots: a question about one
+ * node needs only the caches. Every step question of the tick shares it.
  */
-function recordedScenesOf(loader: ResourceLoader): RecordedScenes {
-  const tick = loadTicksOf(loader).getVersion();
-  const known = recordedScenes.get(loader);
-  if (known?.checkedAt === tick) return known;
-  if (known?.isCurrent()) {
-    known.checkedAt = tick;
-    return known;
-  }
-  const answers = new Map<string, ReturnType<CachedSceneSource['getCached']>>();
-  const view: RecordedScenes = {
-    ...recordingReads(loader.scenes, (path, answer) => answers.set(path, answer)),
-    checkedAt: tick,
-    isCurrent: () => [...answers].every(([path, answer]) => loader.scenes.getCached(path) === answer),
-  };
-  recordedScenes.set(loader, view);
-  return view;
+function loaderTreeAt(loader: ResourceLoader | null | undefined, version: number): LiveTree {
+  const known = loaderTrees.get(loader ?? NO_LOADER);
+  if (known?.version === version) return known.tree;
+  const tree = liveTreeOf(NO_ROOTS, {
+    externalResources: [],
+    internalResources: [],
+    ...loaderCaches(loader),
+  });
+  loaderTrees.set(loader ?? NO_LOADER, { version, tree });
+  return tree;
 }
 
 /**
- * The scene cache a node collapses over. A node whose instance, or whose scene's root, may hand a host
- * heading back reads the loader's whole cache, since the heading seats in scenes the node does not load.
- * Any other node reads its own scene only, which keeps each mount's scope to itself (ADR-0009).
+ * The step of `node` where it sits in `scope`, over the loader's caches. A reader re-renders only for
+ * a load that changes its step, since the tree hands the same step back while every answer it read is
+ * unchanged. A node that instances nothing reads no cache, so it watches no load. `scope` must be stable.
+ *
+ * @canonical The step of a node of the Live scene tree in a React reader
  */
-export function useCollapseCache(
-  node: TscnNode,
-  scenePath: string | null,
-  loaded: { nodes: readonly TscnNode[] } | null | undefined
-): CachedSceneSource {
+export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   const loader = useResourceLoader();
-  const root = loaded?.nodes[0];
-  const handsBack = holdsDeepChildren(node) || (root !== undefined && holdsDeepChildren(root));
-  useLiveTreeVersion(handsBack ? loader : null);
-  const ownScene = useMemo(() => singlePathCache(scenePath, loaded), [scenePath, loaded]);
-  return handsBack && loader ? recordedScenesOf(loader) : ownScene;
+  const readsCaches = liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined;
+  const watched = readsCaches ? loader : null;
+  const readAt = useCallback(
+    (version: number) => loaderTreeAt(watched, version).stepOf(node, scope),
+    [watched, node, scope]
+  );
+  return useReadAtLoadTick(watched, readAt, Object.is);
 }
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */

@@ -8,8 +8,8 @@ import * as logger from '../logger';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { scopeOf } from '../resources/liveNode';
-import { collapseLiveNode, liveStep, rootScope, singlePathCache } from './liveSceneTree';
-import { contextOver } from './liveSceneTree.testkit';
+import { rootScope } from './liveSceneTree';
+import { contextOver, sceneCacheOver, stepOver } from './liveSceneTree.testkit';
 
 const host = new TscnParser().parse(`[gd_scene format=3]
 
@@ -43,7 +43,7 @@ const unclaimed = new TscnParser().parse(`[gd_scene format=3]
 function composedPlayer(host: TscnScene, scenes: Record<string, TscnScene>): TscnNode {
   const ctx = contextOver(host, scenes);
   const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
-  return liveStep(instance, rootScope(ctx), ctx.sceneCache).node;
+  return stepOver(instance, rootScope(ctx), ctx.sceneCache).node;
 }
 
 function childNames(node: TscnNode, name: string): string[] {
@@ -257,12 +257,12 @@ unique_name_in_owner = true
 `);
     const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
     const outer = { externalResources: host.externalResources, internalResources: [] };
-    const overInherited = collapseLiveNode(instance, outer, singlePathCache('res://player.tscn', inherited));
-    const overBase = collapseLiveNode(
+    const overInherited = stepOver(instance, outer, sceneCacheOver({ 'res://player.tscn': inherited })).node;
+    const overBase = stepOver(
       overInherited,
       scopeOf(overInherited, outer),
-      singlePathCache('res://base.tscn', base)
-    );
+      sceneCacheOver({ 'res://base.tscn': base })
+    ).node;
 
     expect(
       childNames(

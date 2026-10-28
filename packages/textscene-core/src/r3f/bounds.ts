@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { godotMatrixWorld } from '../resources/formats/glb/skinnedMeshSpace';
+import { isNodeIcon } from './editorHelpers';
 
 const _box = /*@__PURE__*/ new THREE.Box3();
 const _matrix = /*@__PURE__*/ new THREE.Matrix4();
@@ -24,7 +25,8 @@ interface BoundsBearing extends THREE.Object3D {
 
 /**
  * Union of every descendant's world-space box, after a refresh of the world
- * matrices. Returns an empty box when no descendant has geometry.
+ * matrices. Returns an empty box when no descendant has geometry. A node icon adds nothing: its size
+ * follows the camera, so it has no place in the scene.
  */
 export function computeWorldBoundingBox(
   object: THREE.Object3D,
@@ -35,7 +37,7 @@ export function computeWorldBoundingBox(
   object.traverse((child) => {
     const bearing = child as BoundsBearing;
     const geometry = bearing.geometry;
-    if (!geometry) return;
+    if (!geometry || isNodeIcon(child)) return;
 
     // An InstancedMesh or BatchedMesh box unions every instance matrix and is not
     // posed. Without it a GridMap frames one tile. Any other mesh uses the

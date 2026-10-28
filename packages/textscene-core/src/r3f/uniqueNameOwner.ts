@@ -21,7 +21,6 @@ import {
   LiveTree,
   holdsInstanceContent,
   liveTreeOf,
-  snapshotScenes,
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
@@ -190,7 +189,7 @@ class OwnerWalk {
     const node = link.raw;
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
-    const subRoots = cachedSubRoots(link.step.instancePath, live.tree.ctx);
+    const subRoots = link.step.instancePath ? live.tree.sceneNodes(link.step.instancePath) : undefined;
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: livePath, roots: found.rootOf, parent: owner, live }
       : owner;
@@ -281,10 +280,6 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
   const own = ownerUniquePaths(scene);
   if (!scene.parent) return own;
   return new Map([...ownerUniquePaths(scene.parent), ...own]);
-}
-
-function cachedSubRoots(scenePath: string | null, ctx: LiveTreeContext): readonly TscnNode[] | undefined {
-  return scenePath ? snapshotScenes(ctx).getCached(scenePath)?.nodes : undefined;
 }
 
 /** `paths` with each live path placed, the same object where none passes through a `%Name`. */

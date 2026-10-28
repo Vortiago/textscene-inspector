@@ -9,7 +9,7 @@ renders_as: Godot's editor frustum gizmo, drawn for every camera
 
 # Camera3D
 
-An authored viewpoint that draws nothing at runtime. The previewer matches that, so a capture with the Gizmos toggle off shows no camera in either image. With the toggle on, the previewer draws Godot's editor gizmo (`camera_3d_gizmo_plugin.cpp`) for every camera, faint while the camera is not selected (ADR-0056). The gizmo sits on the node, and it takes the aspect of the viewport that holds the camera.
+An authored viewpoint that draws nothing at runtime. The previewer matches that, so a capture with the Gizmos toggle off shows no camera in either image. With the toggle on, the previewer draws Godot's editor gizmo (`camera_3d_gizmo_plugin.cpp`) for every camera, faint while the camera is not selected (ADR-0056). Godot's billboard icon marks the origin. The gizmo sits on the node, and it takes the aspect of the viewport that holds the camera.
 
 ## Linting
 
@@ -53,4 +53,4 @@ The exposure of a valid `attributes` replaces the world's while the world render
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.
 - **Not drawn** A Camera3D in a SubViewport that shares the root world leaves that SubViewport at the exposure of the root world.
-- **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for every camera when the Gizmos toggle is on.
+- **Editor only** The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.

@@ -7,9 +7,7 @@
 
 // Licence: Godot Engine, MIT: see THIRD-PARTY-NOTICES.md.
 
-function svgDataUrl(base64: string): string {
-  return `data:image/svg+xml;base64,${base64}`;
-}
+import { svgDataUrl } from '../../../../r3f/controls/native/themeIcons';
 
 /** `scene/theme/icons/resizer_se.svg` (16x16). */
 const RESIZER_SE_B64 =

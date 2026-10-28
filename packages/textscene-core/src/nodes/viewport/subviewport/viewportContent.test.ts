@@ -351,7 +351,7 @@ ${extra}`);
 
   /**
    * Each group carries the scope its children resolve their own refs against,
-   * so the resolver goes through `liveStep`: this inner ref exists only in
+   * so the resolver goes through `LiveTree.stepOf`: this inner ref exists only in
    * the sub-scene's pool.
    */
   it('resolves a sub-scene’s own nested instance against the SUB-SCENE’s resources', () => {
