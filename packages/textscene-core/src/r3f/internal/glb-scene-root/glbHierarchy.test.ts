@@ -10,6 +10,7 @@ import {
   glbChildrenBelow,
   glbHostChildrenInOrder,
   glbSceneRootChildren,
+  glbSubtreeEnd,
   GLB_ANIMATION_PLAYER_NAME,
 } from './glbHierarchy';
 import { tagAsLoadedGlb } from '../../../resources/formats/glb/testing/loadedGlbTags';
@@ -323,13 +324,38 @@ describe('glbSceneRootChildren per GLB', () => {
 
 describe('flattenGlbObjects', () => {
   it('lists a node, then everything below it, before its next sibling', () => {
-    // `GlbAttachedChildren` finds the end of a node's subtree by scanning on from it.
+    // `glbSubtreeEnd` finds the end of a node's subtree by scanning on from it.
     const root = new THREE.Group();
     const first = named(new THREE.Group(), 'first');
     first.add(named(new THREE.Group(), 'inner'));
     root.add(first, named(new THREE.Group(), 'second'));
 
     expect(flattenGlbObjects(root).map((entry) => entry.relPath)).toEqual(['first', 'first/inner', 'second']);
+  });
+});
+
+describe('glbSubtreeEnd', () => {
+  /** The entries of `first` (holding `inner`, which holds `deep`), then `second`. */
+  function nestedEntries() {
+    const root = new THREE.Group();
+    const first = named(new THREE.Group(), 'first');
+    const inner = named(new THREE.Group(), 'inner');
+    inner.add(named(new THREE.Group(), 'deep'));
+    first.add(inner);
+    root.add(first, named(new THREE.Group(), 'second'));
+    return flattenGlbObjects(root);
+  }
+
+  it('ends a subtree at the next entry outside it', () => {
+    expect(glbSubtreeEnd(nestedEntries(), 0)).toBe(3);
+  });
+
+  it('ends a nested subtree where its parent ends too', () => {
+    expect(glbSubtreeEnd(nestedEntries(), 1)).toBe(3);
+  });
+
+  it('ends a leaf just after it', () => {
+    expect(glbSubtreeEnd(nestedEntries(), 3)).toBe(4);
   });
 });
 

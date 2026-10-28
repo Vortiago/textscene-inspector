@@ -12,6 +12,7 @@ import {
   GODOT_ALPHA_ANTIALIASING,
 } from './materials/godotAlphaAntialiasing';
 import { mipmapBiasInjection, viewportSamplersUserData } from './materials/godotMipmapBias';
+import { perObject } from '../utils/perObject';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -264,7 +265,7 @@ export function composeInjections(
 ): ProgramInjection | undefined {
   let composed: ProgramInjection | undefined;
   for (const part of parts) {
-    if (part) composed = composed ? composedPair(composed, part) : part;
+    if (part) composed = composed ? pairsWith(composed)(part) : part;
   }
   return composed;
 }
@@ -272,30 +273,21 @@ export function composeInjections(
 /**
  * Each pair composed so far, keyed by its parts' identity rather than their cache keys, since
  * `useCanvasItemLighting` gives each instance its own patch under one key. Stable parts then
- * compose to a stable injection on every render. Written only by `composedPair`, and collected
- * with the first part.
+ * compose to a stable injection on every render. Collected with the first part.
  */
-const composedPairs = new WeakMap<ProgramInjection, WeakMap<ProgramInjection, ProgramInjection>>();
+const pairsWith = perObject((first: ProgramInjection) =>
+  perObject((second: ProgramInjection) => pairOf(first, second))
+);
 
-function composedPair(first: ProgramInjection, second: ProgramInjection): ProgramInjection {
-  let pairs = composedPairs.get(first);
-  if (!pairs) {
-    pairs = new WeakMap();
-    composedPairs.set(first, pairs);
-  }
-  let composed = pairs.get(second);
-  if (!composed) {
-    // A method, so each part reads the material three compiles.
-    composed = {
-      cacheKey: `${first.cacheKey}+${second.cacheKey}`,
-      onBeforeCompile(shader) {
-        first.onBeforeCompile.call(this, shader);
-        second.onBeforeCompile.call(this, shader);
-      },
-    };
-    pairs.set(second, composed);
-  }
-  return composed;
+function pairOf(first: ProgramInjection, second: ProgramInjection): ProgramInjection {
+  // A method, so each part reads the material three compiles.
+  return {
+    cacheKey: `${first.cacheKey}+${second.cacheKey}`,
+    onBeforeCompile(shader) {
+      first.onBeforeCompile.call(this, shader);
+      second.onBeforeCompile.call(this, shader);
+    },
+  };
 }
 
 /**

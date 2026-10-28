@@ -10,8 +10,8 @@ import { holdsDeepChildren, seatInInstance, type CollapseInstance } from './seat
 import { rehomeOverride } from './rehomeOverride.js';
 import { layerRawOverride } from './layerRawOverride.js';
 import { GLB_SCENE_ROOT_TYPE } from './glbSceneRoot.js';
-import type { UniqueNamePaths } from './instanceNameTable.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
+import { perObject } from '../utils/perObject.js';
 
 /**
  * The instance node's keys were written against the outer scope, the root's against the
@@ -55,11 +55,7 @@ export function mergeInstanceRoot(
   const own = composed ? () => composed.paths() : () => cachedUniqueNamesBelowRoot(loadedScene.nodes);
   // A host child whose parent path descends into this instance is grafted at
   // the sub-path it names (`graftInstanceChildren`). Direct children append.
-  const nestedTables = new Map<LiveNode, UniqueNamePaths | undefined>();
-  const nested = (node: LiveNode) => {
-    if (!nestedTables.has(node)) nestedTables.set(node, collapse(node, scopes.content).uniqueNames?.paths());
-    return nestedTables.get(node);
-  };
+  const nested = perObject((node: LiveNode) => collapse(node, scopes.content).uniqueNames?.paths());
   const hasUnloadedBase = Boolean(root.instance) && composed === undefined;
   const graft = graftInstanceChildren(root.children, instanceNode.children, scopes, {
     own,

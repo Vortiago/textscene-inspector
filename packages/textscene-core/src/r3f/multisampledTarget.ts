@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { msaaSampleCount, supportedSampleCount } from '../godot/rendering/msaa';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
+import { perObject } from '../utils/perObject';
 
 /** What decides a target's colour storage, which a texture carries. */
 type TargetTexture = Pick<THREE.Texture, 'type' | 'colorSpace' | 'internalFormat'>;
@@ -61,11 +62,13 @@ function colourStorage(texture: TargetTexture): ColourStorage {
 }
 
 /**
- * The counts colour and depth share, per context and colour storage. Written only by
+ * The counts colour and depth share, per context and colour storage. Filled only by
  * `sharedSampleCounts`. A context lists the same counts for its life, and the entry goes with the
  * context.
  */
-const sharedCounts = new WeakMap<WebGL2RenderingContext, Map<ColourStorage, readonly number[]>>();
+const sharedCountsOf = perObject<WebGL2RenderingContext, Map<ColourStorage, readonly number[]>>(
+  () => new Map()
+);
 
 /** 0, one sample per pixel, where the context lists no counts: WebGL 1 has no multisampled target. */
 function deviceSampleCount(gl: THREE.WebGLRenderer, mode: number, storage: ColourStorage): number {
@@ -76,7 +79,7 @@ function deviceSampleCount(gl: THREE.WebGLRenderer, mode: number, storage: Colou
 }
 
 function sharedSampleCounts(context: WebGL2RenderingContext, storage: ColourStorage): readonly number[] {
-  const perStorage = sharedCounts.get(context) ?? new Map<ColourStorage, readonly number[]>();
+  const perStorage = sharedCountsOf(context);
   const cached = perStorage.get(storage);
   if (cached) return cached;
   const depthCounts = renderbufferSampleCounts(context, context.DEPTH_COMPONENT24);
@@ -85,7 +88,7 @@ function sharedSampleCounts(context: WebGL2RenderingContext, storage: ColourStor
     depthCounts.includes(count)
   );
   // A lost context lists no counts, and would keep MSAA off after the browser restores it.
-  if (!context.isContextLost()) sharedCounts.set(context, perStorage.set(storage, shared));
+  if (!context.isContextLost()) perStorage.set(storage, shared);
   return shared;
 }
 
