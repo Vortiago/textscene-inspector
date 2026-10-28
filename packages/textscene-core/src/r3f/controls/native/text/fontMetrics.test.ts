@@ -109,6 +109,14 @@ describe('getFontKerningAdjustmentPx', () => {
 });
 
 describe('withVariation', () => {
+  it('keeps the outlines of each font apart for one face and one variation', () => {
+    const a = { glyphIndex: () => 1, glyphContours: () => null };
+    const b = { glyphIndex: () => 2, glyphContours: () => null };
+
+    expect(withVariation(METRICS, { embolden: 1, outlines: a }).outlines).toBe(a);
+    expect(withVariation(METRICS, { embolden: 1, outlines: b }).outlines).toBe(b);
+  });
+
   it('is the face itself with no embolden and no skew', () => {
     expect(withVariation(METRICS, {})).toBe(METRICS);
     expect(withVariation(METRICS, { embolden: 0, skew: 0 })).toBe(METRICS);

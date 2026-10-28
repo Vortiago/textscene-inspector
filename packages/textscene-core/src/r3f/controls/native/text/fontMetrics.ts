@@ -209,8 +209,8 @@ const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetri
 /**
  * `metrics` with a `FontVariation`'s `embolden` and `skew` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With neither
- * embolden nor skew, it is the face itself. One face has one set of outlines, so the first wrapper
- * of a variation keeps the `outlines` it was made with.
+ * embolden nor skew, it is the face itself. A wrapper made with other `outlines` replaces the
+ * cached one, so two fonts that share a face and a variation never share each other's outlines.
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
@@ -220,7 +220,7 @@ export function withVariation<Metrics extends FontMetrics>(
   const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew });
   let wrapped = byVariation.get(key);
-  if (!wrapped)
+  if (!wrapped || (outlines !== undefined && wrapped.outlines !== outlines))
     byVariation.set(
       key,
       (wrapped = Object.create(metrics, {

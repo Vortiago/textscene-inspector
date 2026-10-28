@@ -47,23 +47,28 @@ const readContours = perObject(
   (_outlines: SfntOutlines) => new Map<string, Map<number, GlyphContours | null>>()
 );
 
-/** The outline of `char` as the font variation leaves it, or null for a glyph the font has no outline for. */
-export function variedGlyphContours(
+/**
+ * Reads the outline of a character as the font variation leaves it at `fontSizePx`: null for a
+ * glyph the font has no outline for. The face's cache is found once, so a glyph costs one lookup.
+ */
+export function variedContoursReader(
   outlines: SfntOutlines,
-  char: string,
   fontSizePx: number,
   variation: GlyphVariation
-): GlyphContours | null {
-  const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
-  if (glyphIndex === 0) return null;
+): (char: string) => GlyphContours | null {
   const byFace = readContours(outlines);
   const faceKey = `${fontSizePx}/${variationKey(variation)}`;
   let glyphs = byFace.get(faceKey);
   if (!glyphs) byFace.set(faceKey, (glyphs = new Map()));
-  let contours = glyphs.get(glyphIndex);
-  if (contours === undefined)
-    glyphs.set(glyphIndex, (contours = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
-  return contours;
+  const read = glyphs;
+  return (char) => {
+    const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
+    if (glyphIndex === 0) return null;
+    let contours = read.get(glyphIndex);
+    if (contours === undefined)
+      read.set(glyphIndex, (contours = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
+    return contours;
+  };
 }
 
 /** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY), the MSDF path's per-vertex shear (TextRun.tsx's `dx`). */

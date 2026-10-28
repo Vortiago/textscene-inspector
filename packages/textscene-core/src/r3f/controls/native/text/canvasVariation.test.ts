@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { variedGlyphContours } from './canvasVariation';
+import { variedContoursReader } from './canvasVariation';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
 
@@ -11,13 +11,13 @@ function countingOutlines() {
   return { outlines, glyphContours };
 }
 
-describe('variedGlyphContours', () => {
+describe('variedContoursReader', () => {
   // A paint at a new tint, such as a modulate animation, asks for every glyph again.
   it('reads the contours of a glyph once across paints', () => {
     const { outlines, glyphContours } = countingOutlines();
 
-    variedGlyphContours(outlines, 'A', 16, { embolden: 1.2, skew: 0 });
-    variedGlyphContours(outlines, 'A', 16, { embolden: 1.2, skew: 0 });
+    variedContoursReader(outlines, 16, { embolden: 1.2, skew: 0 })('A');
+    variedContoursReader(outlines, 16, { embolden: 1.2, skew: 0 })('A');
 
     expect(glyphContours).toHaveBeenCalledTimes(1);
   });
@@ -29,8 +29,8 @@ describe('variedGlyphContours', () => {
   ])('reads a glyph again for another %s', (_what, fontSizePx, variation) => {
     const { outlines, glyphContours } = countingOutlines();
 
-    variedGlyphContours(outlines, 'A', 16, { embolden: 1.2, skew: 0 });
-    variedGlyphContours(outlines, 'A', fontSizePx, variation);
+    variedContoursReader(outlines, 16, { embolden: 1.2, skew: 0 })('A');
+    variedContoursReader(outlines, fontSizePx, variation)('A');
 
     expect(glyphContours).toHaveBeenCalledTimes(2);
   });
@@ -38,7 +38,7 @@ describe('variedGlyphContours', () => {
   it('answers null for a character the font lacks, and reads no contours', () => {
     const { outlines, glyphContours } = countingOutlines();
 
-    expect(variedGlyphContours(outlines, '@', 16, { embolden: 1.2, skew: 0 })).toBeNull();
+    expect(variedContoursReader(outlines, 16, { embolden: 1.2, skew: 0 })('@')).toBeNull();
     expect(glyphContours).not.toHaveBeenCalled();
   });
 });

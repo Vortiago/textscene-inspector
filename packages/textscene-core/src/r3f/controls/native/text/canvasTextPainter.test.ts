@@ -79,6 +79,13 @@ describe('computeCanvasTextCanvasLayout', () => {
   });
 });
 
+/** `layout` shaped against a face that carries `outlines`, as the font loader hands it to a run. */
+function carrying(layout: ReturnType<typeof layoutFor>, skew: number, outlines: SfntOutlines | null) {
+  if (!outlines) return layout;
+  const { embolden } = layout.fontMetrics;
+  return { ...layout, fontMetrics: withVariation(layout.fontMetrics, { embolden, skew, outlines }) };
+}
+
 function boldLayoutFor(text: string, embolden: number) {
   return shapeText(text, {
     fontSizePx: 16,
@@ -196,7 +203,13 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     };
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew);
-    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, 0, outlines);
+    paintSceneFontCanvas(
+      carrying(layout, skew, outlines),
+      16,
+      { r: 1, g: 1, b: 1, a: 1 },
+      skew,
+      canvasLayout
+    );
     return { calls, canvasLayout };
   }
 
@@ -313,7 +326,14 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     };
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
-    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, strokeWidthPx, outlines);
+    paintSceneFontCanvas(
+      carrying(layout, skew, outlines),
+      16,
+      { r: 1, g: 1, b: 1, a: 1 },
+      skew,
+      canvasLayout,
+      strokeWidthPx
+    );
     return { calls, canvasLayout };
   }
 

@@ -182,15 +182,7 @@ function buildTextRun(
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-    const canvas = paintSceneFontCanvas(
-      layout,
-      fontSizePx,
-      tint,
-      skew,
-      canvasLayout,
-      strokeWidthPx,
-      layout.fontMetrics.outlines ?? null
-    );
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`

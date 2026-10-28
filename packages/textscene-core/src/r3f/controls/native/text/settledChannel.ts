@@ -16,7 +16,7 @@ const settleCount = createExternalStore(0);
 export const sceneFontSettleCount = settleCount.get;
 
 /**
- * Subscribes to a font metrics load settling, and returns an unsubscribe function. It fires once per
+ * Subscribes to a font load settling, metrics or outlines, and returns an unsubscribe function. It fires once per
  * resource on its first settle and once for the bundled font, never for a font that short-circuits
  * synchronously.
  */

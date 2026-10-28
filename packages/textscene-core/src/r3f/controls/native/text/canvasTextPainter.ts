@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import {
   fillContours,
-  variedGlyphContours,
+  variedContoursReader,
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
   shearAboutBaseline,
@@ -19,7 +19,6 @@ import {
   strokeShearedText,
 } from './canvasVariation';
 import { isGlyphVaried, type GlyphVariation } from './fontMetrics';
-import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -125,7 +124,7 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`. A positive `strokeWidthPx` paints the outline ring
  * instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`).
- * `skew` shears each line's ink about its own baseline. With the `outlines` of the font, the ring of
+ * `skew` shears each line's ink about its own baseline. With the `outlines` its metrics carry, the ring of
  * an emboldened or sheared glyph strokes the changed contour, so a shear does not shear its width,
  * and the fill of an emboldened glyph fills it.
  */
@@ -137,8 +136,7 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  strokeWidthPx = 0,
-  outlines: SfntOutlines | null = null
+  strokeWidthPx = 0
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -177,7 +175,8 @@ export function paintSceneFontCanvas(
   const variation: GlyphVariation = { embolden, skew };
   // The ring of a varied face strokes the contours, and the fill of an emboldened one fills them. They carry their own shear.
   const followsContours = stroked ? isGlyphVaried(variation) : embolden !== 0;
-  const contourOutlines = followsContours ? outlines : null;
+  const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
+  const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
 
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
@@ -190,10 +189,8 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
-      const hasVariedOutline = contourOutlines && (skew !== 0 || gp.emboldenGrowthPx);
-      const contours = hasVariedOutline
-        ? variedGlyphContours(contourOutlines, gp.char, fontSizePx, variation)
-        : null;
+      const hasVariedOutline = skew !== 0 || gp.emboldenGrowthPx;
+      const contours = contoursOf && hasVariedOutline ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
       else if (contourOutlines && skew !== 0) strokeShearedText(ctx, gp.char, penX, baselineY, skew);
       else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
