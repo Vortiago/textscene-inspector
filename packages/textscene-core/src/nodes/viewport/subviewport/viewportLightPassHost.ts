@@ -7,28 +7,30 @@
 import type * as THREE from 'three';
 import type { CanvasClip, LightPassHost } from '../../../r3f/lighting2d/lightPassHost';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { orthoViewRect } from './offscreenViewport';
 
 /**
  * Godot's `clip_rect`, `Rect2(0, 0, size)` in screen pixels (`renderer_viewport.cpp:390`), seen
  * from the canvas: the part of it the camera frames, and the pixels the camera gives each unit.
  */
 function clipOfCamera(camera: THREE.OrthographicCamera, size: Vector2): CanvasClip {
-  const width = camera.right - camera.left;
-  const height = camera.top - camera.bottom;
-  return {
-    rect: { x: camera.position.x + camera.left, y: camera.position.y + camera.bottom, w: width, h: height },
-    scale: { x: size.x / width, y: size.y / height },
-  };
+  const rect = orthoViewRect(camera, { x: 0, y: 0, w: 0, h: 0 });
+  return { rect, scale: { x: size.x / rect.w, y: size.y / rect.h } };
 }
+
+/** Read by {@link isCurrent} alone, which compares it before the next call writes it. */
+const viewScratch: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 /** Whether `clip` still answers for `camera` and `size`, read without allocating. */
 function isCurrent(clip: CanvasClip, camera: THREE.OrthographicCamera, size: Vector2): boolean {
   const { rect, scale } = clip;
+  const view = orthoViewRect(camera, viewScratch);
   return (
-    rect.x === camera.position.x + camera.left &&
-    rect.y === camera.position.y + camera.bottom &&
-    rect.w === camera.right - camera.left &&
-    rect.h === camera.top - camera.bottom &&
+    rect.x === view.x &&
+    rect.y === view.y &&
+    rect.w === view.w &&
+    rect.h === view.h &&
     scale.x === size.x / rect.w &&
     scale.y === size.y / rect.h
   );

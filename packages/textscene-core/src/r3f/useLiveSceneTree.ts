@@ -11,7 +11,6 @@ import {
   liveTreeOf,
   resolveLiveEntry,
   type LiveStep,
-  type LiveTree,
   type LiveTreeContext,
   type LiveTreeEntry,
   type ResolvedLiveNode,
@@ -120,32 +119,33 @@ export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): n
   return useSyncExternalStore(ticks.subscribe, ticks.getVersion);
 }
 
-/** A shared tree and the load tick it was built at. */
-interface BuiltTree {
-  version: number;
-  tree: SharedLiveTree | null;
-}
-
-/** Written only by {@link sharedTreeAt}: the tree for a graph and loader. */
-const sharedTrees = new WeakMap<SceneGraph, WeakMap<object, BuiltTree>>();
-
 /** The key of a reader with no loader, which a WeakMap cannot take as null. */
 const NO_LOADER = {};
 
-/** The one tree every reader of `sceneGraph` over `loader` shares for the load tick `version`. */
-function sharedTreeAt(
-  sceneGraph: SceneGraph,
-  loader: ResourceLoader | null | undefined,
-  version: number
-): SharedLiveTree | null {
-  const byLoader = sharedTrees.get(sceneGraph) ?? new WeakMap();
-  sharedTrees.set(sceneGraph, byLoader);
-  const known = byLoader.get(loader ?? NO_LOADER);
-  if (known?.version === version) return known.tree;
-  const tree = liveTreeContext(sceneGraph, loader);
-  byLoader.set(loader ?? NO_LOADER, { version, tree });
-  return tree;
+/**
+ * A reader of the value that `build` makes for a loader. It builds again once the loader's load tick
+ * has moved, and keeps the last value when `isSame` says the new one matches it. A reader with no
+ * loader builds once, at tick 0.
+ */
+function valueAtLoadTick<T>(
+  build: (loader: ResourceLoader | null | undefined, version: number) => T,
+  isSame: (a: T, b: T) => boolean = Object.is
+): (loader: ResourceLoader | null | undefined, version: number) => T {
+  const built = new WeakMap<object, { version: number; value: T }>();
+  return (loader, version) => {
+    const known = built.get(loader ?? NO_LOADER);
+    if (known?.version === version) return known.value;
+    const next = build(loader, version);
+    const value = known && isSame(known.value, next) ? known.value : next;
+    built.set(loader ?? NO_LOADER, { version, value });
+    return value;
+  };
 }
+
+/** The one tree every reader of a scene graph over a loader shares for a load tick. */
+const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
+  valueAtLoadTick((loader) => liveTreeContext(sceneGraph, loader))
+);
 
 /** The scene graph in context, or null with none, and the loader. */
 function useSceneGraphAndLoader() {
@@ -164,7 +164,7 @@ export function useSharedLiveTree(): SharedLiveTree | null {
   const { sceneGraph, loader } = useSceneGraphAndLoader();
   const version = useLiveTreeVersion(loader);
   return useMemo(
-    () => (sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null),
+    () => (sceneGraph ? sharedTreesOf(sceneGraph)(loader, version) : null),
     [sceneGraph, loader, version]
   );
 }
@@ -185,16 +185,9 @@ function useReadAtLoadTick<T>(
 ): T {
   const ticks = loadTicksOf(watched);
   const getSnapshot = useMemo(() => {
-    let known: { version: number; value: T } | undefined;
-    return () => {
-      const version = ticks.getVersion();
-      if (known?.version === version) return known.value;
-      const read = readAt(version);
-      const value = known && isSame(known.value, read) ? known.value : read;
-      known = { version, value };
-      return value;
-    };
-  }, [ticks, readAt, isSame]);
+    const at = valueAtLoadTick((_loader, version) => readAt(version), isSame);
+    return () => at(watched, ticks.getVersion());
+  }, [watched, ticks, readAt, isSame]);
   return useSyncExternalStore(ticks.subscribe, getSnapshot);
 }
 
@@ -210,7 +203,7 @@ export function useLiveTreeSelection<T>(
   const { sceneGraph, loader } = useSceneGraphAndLoader();
   const readAt = useCallback(
     (version: number) => {
-      const tree = sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null;
+      const tree = sceneGraph ? sharedTreesOf(sceneGraph)(loader, version) : null;
       return tree ? select(tree) : undefined;
     },
     [sceneGraph, loader, select]
@@ -237,32 +230,15 @@ export function useSeatedRoots(): readonly TscnNode[] | undefined {
   return useLiveTreeSelection(seatedRootsOf, sameElements);
 }
 
-/** The tree of a loader built for one load tick. */
-interface LoaderTree {
-  version: number;
-  tree: LiveTree;
-}
-
 const NO_ROOTS: readonly TscnNode[] = [];
 
-/** Written only by {@link loaderTreeAt}: the tree of each loader for the load tick it was built at. */
-const loaderTrees = new WeakMap<object, LoaderTree>();
-
 /**
- * The tree over the caches of `loader` at load tick `version`, with no roots: a question about one
- * node needs only the caches. Every step question of the tick shares it.
+ * The tree over the caches of a loader, with no roots: a question about one node needs only the
+ * caches. Every step question of a load tick shares it.
  */
-function loaderTreeAt(loader: ResourceLoader | null | undefined, version: number): LiveTree {
-  const known = loaderTrees.get(loader ?? NO_LOADER);
-  if (known?.version === version) return known.tree;
-  const tree = liveTreeOf(NO_ROOTS, {
-    externalResources: [],
-    internalResources: [],
-    ...loaderCaches(loader),
-  });
-  loaderTrees.set(loader ?? NO_LOADER, { version, tree });
-  return tree;
-}
+const loaderTreeAt = valueAtLoadTick((loader) =>
+  liveTreeOf(NO_ROOTS, { externalResources: [], internalResources: [], ...loaderCaches(loader) })
+);
 
 /**
  * The step of `node` where it sits in `scope`, over the loader's caches. A reader re-renders only for

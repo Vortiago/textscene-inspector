@@ -5,6 +5,11 @@
  */
 
 import * as THREE from 'three';
+import { orthoViewRect } from '../nodes/viewport/subviewport/offscreenViewport.js';
+import type { Rect2 } from '../godot/math/rect2.js';
+
+/** Written only by {@link viewportLayerMatrix}, which reads it before returning. */
+const view: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 /** How a CanvasLayer follows the viewport's canvas transform. */
 export interface ViewportLayerFollow {
@@ -30,7 +35,6 @@ export function viewportLayerMatrix(
     const s = follow.scale;
     return target.makeScale(s, s, 1).setPosition(x * (1 - s), y * (1 - s), 0);
   }
-  const scaleX = (camera.right - camera.left) / size.x;
-  const scaleY = (camera.top - camera.bottom) / size.y;
-  return target.makeScale(scaleX, scaleY, 1).setPosition(x + camera.left, y + camera.top, 0);
+  const { x: left, y: bottom, w, h } = orthoViewRect(camera, view);
+  return target.makeScale(w / size.x, h / size.y, 1).setPosition(left, bottom + h, 0);
 }
