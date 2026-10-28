@@ -5,6 +5,7 @@
 
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import { identityKey } from '../../../utils/identityKey';
 import { perObject } from '../../../utils/perObject';
 import { resolveFontReference } from '../../fonts/font/resolveFontReference';
@@ -39,7 +40,7 @@ function readTextMeshFont({
   if (outlines === null) return UNREADABLE;
   // The settled metrics are keyed by the resolved font file, and the name only labels a failure.
   const metrics = peekSettledSceneFontMetrics(font, `TextMesh ${resource.id}`);
-  return outlines && metrics ? { status: 'ready', face: { outlines, metrics } } : AWAITING_FONT;
+  return outlines && metrics ? { status: 'ready', face: withOutlines(metrics, outlines) } : AWAITING_FONT;
 }
 
 /** The font files the `font` of `scoped` names, which the build reads once they load. */
@@ -53,5 +54,5 @@ export function textMeshFontFiles({ resource, resources }: ScopedResource, loade
  */
 export function textMeshFontKey(font: TextMeshFont): string {
   if (font.status !== 'ready') return font.status;
-  return `${identityKey(font.face.outlines)}/${identityKey(font.face.metrics)}`;
+  return String(identityKey(font.face));
 }

@@ -211,14 +211,14 @@ const variationsOf = perObject(
 /**
  * `metrics` with a `FontVariation`'s `embolden` and `skew` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With neither
- * embolden nor skew, it is the face itself. Two fonts that share a face and a variation keep
+ * embolden nor skew and no outlines, it is the face itself. Two fonts that share a face and a variation keep
  * their own outlines, each on its own wrapper.
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
   { embolden = 0, skew = 0, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!isGlyphVaried({ embolden, skew })) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew })) return metrics;
   const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew });
   let byOutlines = byVariation.get(key);
@@ -234,6 +234,18 @@ export function withVariation<Metrics extends FontMetrics>(
       }))
     );
   return wrapped as Metrics;
+}
+
+/** `metrics` carrying `outlines`, keeping its own embolden and skew. */
+export function withOutlines<Metrics extends FontMetrics>(
+  metrics: Metrics,
+  outlines: SfntOutlines
+): Metrics & { readonly outlines: SfntOutlines } {
+  return (
+    metrics.outlines === outlines
+      ? metrics
+      : withVariation(metrics, { embolden: metrics.embolden, skew: metrics.skew, outlines })
+  ) as Metrics & { readonly outlines: SfntOutlines };
 }
 
 /**

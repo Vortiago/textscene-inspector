@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
-import { withVariation, type GlyphVariation } from '../../../r3f/controls/native/text/fontMetrics';
+import {
+  withOutlines,
+  withVariation,
+  type GlyphVariation,
+} from '../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
@@ -23,7 +27,7 @@ const BOTTOM = '2';
 const HALF_DEPTH = Math.fround(0.025);
 
 const outlines = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
-const face: TextMeshFace = { outlines, metrics: OPEN_SANS_FONT_METRICS };
+const face: TextMeshFace = withOutlines(OPEN_SANS_FONT_METRICS, outlines);
 
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */
 function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface {
@@ -313,10 +317,8 @@ describe('buildTextMeshSurface missing glyph', () => {
 describe('buildTextMeshSurface font variation', () => {
   const EMBOLDENED = { embolden: 0.6 };
   const SHEARED = { skew: 0.3 };
-  const faceOf = (variation: GlyphVariation): TextMeshFace => ({
-    outlines,
-    metrics: withVariation(OPEN_SANS_FONT_METRICS, variation),
-  });
+  const faceOf = (variation: GlyphVariation): TextMeshFace =>
+    withVariation(OPEN_SANS_FONT_METRICS, { ...variation, outlines });
   const maxX = (variation: GlyphVariation): number => {
     const properties = decodeTextMesh({
       text: '"H"',
@@ -351,7 +353,7 @@ describe('buildTextMeshSurface glyph reuse', () => {
         return outlines.glyphContours(...args);
       },
     };
-    return { face: { outlines: counting, metrics: OPEN_SANS_FONT_METRICS }, contoursRead: () => reads };
+    return { face: withOutlines(OPEN_SANS_FONT_METRICS, counting), contoursRead: () => reads };
   }
 
   const build = (text: string, face: TextMeshFace, raw: Record<string, string> = {}) =>

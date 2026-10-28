@@ -30,11 +30,8 @@ import { buildGlyphMeshData, type ContourInfo, type ContourVertex, type GlyphMes
 import { shapeTextMeshLines, type TextMeshLines } from './textMeshLines';
 import type { TextMeshProperties } from './types';
 
-/** What a TextMesh reads of its font: the outlines to extrude and the metrics that shape the lines. */
-export interface TextMeshFace {
-  outlines: SfntOutlines;
-  metrics: FontMetrics;
-}
+/** What a TextMesh reads of its font: the metrics that shape the lines, carrying the outlines to extrude. */
+export type TextMeshFace = FontMetrics & { readonly outlines: SfntOutlines };
 
 /** U+200B has no glyph to draw: the shaper gives it an advance of 0 (`textLayout.ts`). */
 const ZERO_WIDTH_SPACE = 0x200b;
@@ -128,9 +125,10 @@ function cachedGlyphMeshes(outlines: SfntOutlines, settings: string): GlyphMeshe
 /** Each glyph's mesh data, built once per font and settings, so a keystroke in `text` triangulates only the glyphs it adds. */
 function glyphMeshes(
   properties: TextMeshProperties,
-  { outlines, metrics }: TextMeshFace
+  face: TextMeshFace
 ): (codepoint: number) => GlyphMeshData | null {
-  const variation: GlyphVariation = { embolden: metrics.embolden, skew: metrics.skew };
+  const { outlines } = face;
+  const variation: GlyphVariation = { embolden: face.embolden, skew: face.skew };
   const meshes = cachedGlyphMeshes(
     outlines,
     `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${variationKey(variation)}`
@@ -319,7 +317,7 @@ class TextMeshWriter {
 }
 
 export function buildTextMeshSurface(properties: TextMeshProperties, face: TextMeshFace): GodotSurface {
-  const lines = shapeTextMeshLines(properties, face.metrics);
+  const lines = shapeTextMeshLines(properties, face);
   const placed = placeGlyphs(properties, lines, glyphMeshes(properties, face));
   const writer = new TextMeshWriter(properties.depth, inkBounds(placed));
   for (const glyph of placed) {
