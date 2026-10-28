@@ -24,6 +24,7 @@ import { frameAtTime, clipDuration } from '../../../resources/textures/spritefra
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
 const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
@@ -145,7 +146,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
     resolved?.subResources ?? NO_INTERNAL_RESOURCES,
     'plain',
-    resolved ? [resolved.resource] : undefined
+    resolved ? isLocalToScene(resolved.resource) : undefined
   );
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone

@@ -50,7 +50,7 @@ describe('tileSetFromScene', () => {
       ref: 'ExtResource("2")',
       externalResources: externals,
       internalResources: internals,
-      holders: [internals[1], internals[0]],
+      isHeldLocally: false,
     });
     expect(source!.textureRegionSize).toEqual({ x: 32, y: 24 });
     expect(source!.margins).toEqual({ x: 0, y: 0 });

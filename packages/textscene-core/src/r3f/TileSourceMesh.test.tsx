@@ -21,6 +21,7 @@ import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
 import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { isLocalToScene } from '../resources/textures/viewporttexture/localToScene';
 
 const TEXTURE = 'res://tiles.png';
 const grid: TileGrid = {
@@ -193,7 +194,11 @@ function viewportWindowSource(
   const tileSet = { id: 'TileSet_1', type: 'TileSet', data: { resource_local_to_scene: isTileSetLocal } };
   return {
     ...sourceOf(usesTexturePadding),
-    texture: { ...tileTextureAt('SubResource("Window")'), internalResources: tables, holders: [tileSet] },
+    texture: {
+      ...tileTextureAt('SubResource("Window")'),
+      internalResources: tables,
+      isHeldLocally: isLocalToScene(tileSet),
+    },
   };
 }
 

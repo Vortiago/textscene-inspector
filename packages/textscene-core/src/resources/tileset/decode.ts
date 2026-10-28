@@ -5,7 +5,7 @@
  * absent properties, warn-then-skip on malformed ones, never throws.
  */
 
-import { inlineViewportTexture } from '../textures/viewporttexture/localToScene.js';
+import { inlineViewportTexture, isLocalToScene } from '../textures/viewporttexture/localToScene.js';
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { slotInt } from '../../godot/variant/intSlots.js';
@@ -212,7 +212,7 @@ function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileS
     ref,
     externalResources: data.externalResources,
     internalResources: data.internalResources,
-    holders: [data.tileSet, atlasSource],
+    isHeldLocally: isLocalToScene(data.tileSet) && isLocalToScene(atlasSource),
   };
 }
 

@@ -13,6 +13,7 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { spriteQuadAabb, spriteQuadRect } from '../sprite3d/quad';
 import { selectedFrameTexture } from './frameSelection';
 import type { AnimatedSprite3DProperties } from './types';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 /** Stable empty pools, so the frame texture's memo holds between renders. */
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
@@ -28,7 +29,7 @@ export function useAnimatedSprite3DAabb(node: TscnNode): Aabb | null {
     spriteFrames?.externalResources ?? NO_EXTERNAL_RESOURCES,
     spriteFrames?.subResources ?? NO_INTERNAL_RESOURCES,
     'plain',
-    spriteFrames ? [spriteFrames.resource] : undefined
+    spriteFrames ? isLocalToScene(spriteFrames.resource) : undefined
   );
   const isPending = status === 'pending' || (frameRef !== null && !missing && !texture);
 

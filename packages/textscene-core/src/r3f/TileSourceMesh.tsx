@@ -54,7 +54,7 @@ export function TileSourceMesh({
     slot?.externalResources ?? NO_RESOURCES.externalResources,
     slot?.internalResources ?? NO_RESOURCES.internalResources,
     'plain',
-    slot?.holders
+    slot?.isHeldLocally
   );
   const standIn = usePaddedAtlasStandIn(texResult, source);
   const isStandIn = standIn !== null;

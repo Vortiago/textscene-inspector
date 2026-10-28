@@ -170,8 +170,7 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
   });
 
   it('draws the placeholder for a holder the caller names as not local to scene', () => {
-    const material = { id: 'Material_shared', type: 'StandardMaterial3D', data: {} };
-    const { result } = renderHook(() => useTexture2DRid(VIEWPORT_REF, [], RESOURCES, 'plain', [material]), {
+    const { result } = renderHook(() => useTexture2DRid(VIEWPORT_REF, [], RESOURCES, 'plain', false), {
       wrapper: wrapper(),
     });
     expect(result.current.texture).toBe(unconfiguredViewportTexture());

@@ -35,11 +35,8 @@ import {
   inlineTexture2DSize,
   NODE_PROPERTY,
 } from '../../../resources/useTexture2D';
-import { themeHolder } from '../../../resources/styles/theme/themeHolder';
-import {
-  inlineViewportTexture,
-  isLocalToScene,
-} from '../../../resources/textures/viewporttexture/localToScene';
+import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
+import { inlineViewportTexture } from '../../../resources/textures/viewporttexture/localToScene';
 import {
   recordingSizes,
   sizesStillAnswered,
@@ -130,7 +127,7 @@ const resolvedStylesOfTheme = perObject(
     const out: Record<string, Record<string, ResolvedStyleBox>> = {};
     for (const [type, byName] of Object.entries(theme.styles ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        const resolved = parseStyleBox(ref, externalResources, internalResources, [themeHolder(theme)]);
+        const resolved = parseStyleBox(ref, externalResources, internalResources, isThemeLocalToScene(theme));
         if (resolved) (out[type] ??= {})[name] = resolved;
       }
     }
@@ -196,7 +193,7 @@ const iconRefsOfTheme = perObject(
     const out: Record<string, Record<string, ThemedIconRef>> = {};
     for (const [type, byName] of Object.entries(theme.icons ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        (out[type] ??= {})[name] = { ref, resources, holders: [themeHolder(theme)] };
+        (out[type] ??= {})[name] = { ref, resources, isHeldLocally: isThemeLocalToScene(theme) };
       }
     }
     return out;
@@ -217,7 +214,7 @@ function resolveThemedIcons(
   const local: Record<string, ThemedIconRef> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope, holders: NODE_PROPERTY };
+      local[key] = { ref, resources: scope, isHeldLocally: NODE_PROPERTY };
     }
   }
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
@@ -548,11 +545,11 @@ function buildForest(
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     consumerPath: string,
-    holders: readonly TscnInternalResource[]
+    isHeldLocally: boolean
   ): Vector2 | null {
     const viewport = inlineViewportTexture(ref, int);
     if (viewport) {
-      const isSetUp = viewport.isSetUp && holders.every(isLocalToScene);
+      const isSetUp = viewport.isSetUp && isHeldLocally;
       return isSetUp ? readViewportSize(consumerPath, viewport.resource) : NO_SIZE;
     }
 
@@ -609,14 +606,14 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope, holders = NODE_PROPERTY } of requests) {
+      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(
               ref,
               scope?.externalResources ?? ext,
               scope?.internalResources ?? int,
               path,
-              holders
+              isHeldLocally
             )
           : null;
       }

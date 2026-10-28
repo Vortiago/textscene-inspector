@@ -36,6 +36,7 @@ import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScal
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource } from './materialSource';
+import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene.js';
 
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
@@ -63,11 +64,10 @@ export function useSurfaceTextures(
   const references = scalars?.textureSlots;
 
   // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
-  const holders = useMemo(
-    () => (material ? [...(material.holders ?? []), material.resource] : NODE_PROPERTY),
-    [material]
-  );
-  const sources = useEachSlot(useSlotTexture, references, material, holders);
+  const isHeldLocally = material
+    ? (material.isHeldLocally ?? true) && isLocalToScene(material.resource)
+    : NODE_PROPERTY;
+  const sources = useEachSlot(useSlotTexture, references, material, isHeldLocally);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -121,7 +121,7 @@ function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
   material: MaterialResource | null,
-  holders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
   const result = useTexture2DRid(
@@ -129,7 +129,7 @@ function useSlotTexture(
     material?.externalResources ?? NO_RESOURCES.externalResources,
     material?.internalResources ?? NO_RESOURCES.internalResources,
     view,
-    holders
+    isHeldLocally
   );
   return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }

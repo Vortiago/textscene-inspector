@@ -61,22 +61,25 @@ export interface Texture2DResult {
   hasNoImage?: true;
 }
 
-/** The holders of a node's own slot: none, since `make_local_resource` sets the property up itself. */
-export const NODE_PROPERTY: readonly TscnInternalResource[] = [];
+/**
+ * `isHeldLocally` for a node's own slot: `make_local_resource` sets the property up itself, as if
+ * every resource between were local to scene.
+ */
+export const NODE_PROPERTY = true;
 
 /**
  * The texture a slot draws. `view` is the ViewportTexture view the slot samples: a canvas item
- * samples the plain one. `holders` are the resources between the node and `ref`, the node's
- * property first: the SpriteFrames that holds a frame.
+ * samples the plain one. `isHeldLocally` is false when a resource between the node and `ref`, such
+ * as the SpriteFrames that holds a frame, is not local to scene.
  */
 export function useTexture2D(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   view: ViewportTextureView = 'plain',
-  holders: readonly TscnInternalResource[] = NODE_PROPERTY
+  isHeldLocally: boolean = NODE_PROPERTY
 ): Texture2DResult {
-  const slot = useTexture2DSlot(ref, externalResources, internalResources, view, holders);
+  const slot = useTexture2DSlot(ref, externalResources, internalResources, view, isHeldLocally);
 
   // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
   // tables the atlas sits in, so a re-parse of the scene or of its resource file invalidates it.
@@ -123,21 +126,21 @@ export interface Texture2DRidResult extends Texture2DResult {
 /**
  * The texture Godot's `get_rid()` names, for a slot the rendering server reads by RID. An
  * AtlasTexture names its whole sheet there (`scene/resources/atlas_texture.cpp:55-61`).
- * `holders` are as `useTexture2D` names them: the mesh and the material for a material slot.
+ * `isHeldLocally` is as `useTexture2D` names it: the mesh's and the material's for a material slot.
  */
 export function useTexture2DRid(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   view: ViewportTextureView,
-  holders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): Texture2DRidResult {
   const { result, namesCanvasTexture } = useTexture2DSlot(
     ref,
     externalResources,
     internalResources,
     view,
-    holders
+    isHeldLocally
   );
   return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
@@ -164,7 +167,7 @@ function useTexture2DSlot(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   view: ViewportTextureView,
-  outerHolders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): Texture2DSlot {
   // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
   // ref loses the window. A resource file may hold either, so its `[resource]` peels again.
@@ -195,7 +198,7 @@ function useTexture2DSlot(
     [isViewport, ref, internalResources, slot.ref, slot.internalResources, atlas, sourceRef]
   );
   // Godot sets the ViewportTexture up only when every holder down to it is local to scene.
-  const isSetUp = outerHolders.every(isLocalToScene) && holders.every(isLocalToScene);
+  const isSetUp = isHeldLocally && holders.every(isLocalToScene);
   const viewport = useViewportTextureSlot(
     isViewport && isSetUp ? sourceRef : undefined,
     slot.internalResources,
