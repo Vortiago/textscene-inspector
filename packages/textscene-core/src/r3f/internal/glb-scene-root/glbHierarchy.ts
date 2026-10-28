@@ -180,14 +180,25 @@ export function glbChildrenBelow(
   return childrenOf;
 }
 
-/** The indices of the entries directly below the one at `index`, which `flattenGlbObjects` lists in pre-order. */
+/** The indices of the entries directly below the one at `index`: each child's subtree starts the next. */
 function childEntryIndices(entries: readonly GlbObjectEntry[], index: number): number[] {
-  const prefix = `${entries[index]!.relPath}/`;
   const children: number[] = [];
-  for (let k = index + 1; entries[k]?.relPath.startsWith(prefix); k++) {
-    if (!entries[k]!.relPath.includes('/', prefix.length)) children.push(k);
-  }
+  const end = glbSubtreeEnd(entries, index);
+  for (let k = index + 1; k < end; k = glbSubtreeEnd(entries, k)) children.push(k);
   return children;
+}
+
+/**
+ * The index just past the last entry at or below the one at `index`. `flattenGlbObjects` lists the
+ * entries in pre-order, so a subtree is the run of entries whose relPath starts with its own.
+ *
+ * @canonical The end of a GLB object's subtree among its flattened entries
+ */
+export function glbSubtreeEnd(entries: readonly GlbObjectEntry[], index: number): number {
+  const prefix = `${entries[index]!.relPath}/`;
+  let end = index + 1;
+  while (entries[end]?.relPath.startsWith(prefix)) end++;
+  return end;
 }
 
 /**
