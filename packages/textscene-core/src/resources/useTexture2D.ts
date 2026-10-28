@@ -118,7 +118,8 @@ function useReportedSize(
   );
 }
 
-export interface Texture2DRidResult extends Texture2DResult {
+/** No `size`: a slot read by RID samples the texture and lays nothing out by it. */
+export interface Texture2DRidResult extends Omit<Texture2DResult, 'size'> {
   /**
    * False when the RID names a CanvasTexture, a canvas object no texture owner holds
    * (`scene/main/canvas_item.cpp:1919-1921`). A sampler bound to it reads Godot's white default
@@ -146,8 +147,7 @@ export function useTexture2DRid(
     view,
     isHeldLocally
   );
-  const size = useReportedSize(result.texture, null, result);
-  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, size, namesTexture: true };
+  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
 
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };

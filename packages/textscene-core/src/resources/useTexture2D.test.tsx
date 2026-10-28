@@ -693,7 +693,6 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
     expect(result.current).toEqual({
       texture: whole,
-      size: { width: 128, height: 128 },
       missing: false,
       isArriving: false,
       namesTexture: true,
@@ -711,7 +710,6 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
     expect(result.current).toEqual({
       texture: image,
-      size: { width: 128, height: 128 },
       missing: false,
       isArriving: false,
       namesTexture: true,
