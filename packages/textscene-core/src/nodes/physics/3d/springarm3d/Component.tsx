@@ -7,17 +7,14 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
-import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
+import { CollisionDebugLines } from '../../shared/CollisionDebugLines';
 import { DEFAULT_SPRING_LENGTH } from './types';
 import type { SpringArm3DProperties } from './types';
 
 function LengthGizmo({ length }: { length: number }) {
   const positions = useMemo(() => new Float32Array([0, 0, 0, 0, 0, length]), [length]);
-  const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
-  return <GizmoLine positions={positions} color={color} opacity={DEFAULT_COLLISION_DEBUG_COLOR.a} />;
+  return <CollisionDebugLines positions={positions} />;
 }
 
 export function SpringArm3D({ node, children }: NodeComponentProps) {

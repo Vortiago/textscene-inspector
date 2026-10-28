@@ -4,15 +4,11 @@
  * not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
-import { useMemo, useSyncExternalStore, type RefObject } from 'react';
+import { useMemo, type RefObject } from 'react';
 import * as THREE from 'three';
 import { shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
-import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
-import { onSceneFontMetricsSettled } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSettingsParser';
-import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
@@ -21,6 +17,7 @@ import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placem
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { type Label3DProperties } from './types';
+import { useLabel3DFont } from './useLabel3DFont';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
@@ -31,13 +28,16 @@ export interface LabelGlyphsProps {
 }
 
 export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
-  // `undefined` until `document.fonts` has the bundled family; the
-  // subscription is what re-renders once it does.
-  const fontMetrics = useSyncExternalStore(
-    onSceneFontMetricsSettled,
-    peekBundledCanvasFontMetrics,
-    peekBundledCanvasFontMetrics
-  );
+  // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
+  // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
+  // `blend_mix, depth_draw_opaque` (`material.cpp:775-812`), sorted ascending by
+  // `material_set_render_priority` (`:402`), which three's `renderOrder` matches.
+  const drawOutline = properties.outline_size > 0 && properties.outline_modulate.a !== 0;
+  const strokeWidthPx = drawOutline ? outlineStrokeWidthPx(properties.outline_size) : 0;
+
+  // `undefined` until `document.fonts` has the family of the font; the hook re-renders once it does.
+  const font = useLabel3DFont(properties.font, drawOutline);
+  const fontMetrics = font?.metrics;
   usePendingWhile(!fontMetrics);
 
   const layout = useMemo(
@@ -103,16 +103,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   });
   // The glyph pages carry a mip chain only for a font with `generate_mipmaps`; the filter row
   // says whether a mipmapped sampler reads it.
-  const { settings } = useProjectSettings();
-  const mipmapped = projectDefaultFontGeneratesMipmaps(settings);
+  const mipmapped = font?.generatesMipmaps ?? false;
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
-
-  // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
-  // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
-  // `blend_mix, depth_draw_opaque` (`material.cpp:775-812`), sorted ascending by
-  // `material_set_render_priority` (`:402`), which three's `renderOrder` matches.
-  const drawOutline = properties.outline_size > 0 && properties.outline_modulate.a !== 0;
-  const strokeWidthPx = drawOutline ? outlineStrokeWidthPx(properties.outline_size) : 0;
 
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
   // material's render priority. Any other mode bakes `priority * pixel_size` into
@@ -146,6 +138,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   fontSizePx={properties.font_size}
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
+                  glyphOutlines={font?.outlines}
                   depthTest={depthTest}
                   side={side}
                   renderOrder={outlineSurface.renderOrder}

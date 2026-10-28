@@ -124,7 +124,7 @@ describe('buildGlyphQuadArrays', () => {
 });
 
 // `FT_Outline_Embolden` keeps the left and bottom edges of the ink and grows it right and up by
-// `embolden * size / 16` px (`text_server_adv.cpp:1313-1314`). The MSDF bias grows it on every
+// `embolden * size / 16` px (`text_server_adv.cpp:1314-1315`). The MSDF bias grows it on every
 // side, so the quad moves half the growth right and up to land the same ink.
 describe('buildGlyphQuadArrays — embolden', () => {
   function boldLayoutFor(text: string, embolden: number) {

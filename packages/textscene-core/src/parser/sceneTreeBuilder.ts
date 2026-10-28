@@ -72,6 +72,7 @@ export const UNKNOWABLE = { status: 'unknowable' } as const;
  * goes stale. It keeps the walk, the claims and the trail headings, not `seated`, so the heading
  * nodes die with the parse.
  */
+// eslint-disable-next-line no-restricted-syntax -- seatScene writes each entry from outside, and sceneSeating only reads it back
 const seatings = new WeakMap<readonly RawNode[], SeatedPaths<RawNode>>();
 
 export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneSeating<N> {

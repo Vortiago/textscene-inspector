@@ -18,6 +18,16 @@ describe('ByteReader', () => {
     expect(reader.u32()).toBe(2);
   });
 
+  it('reads big endian from a reader made with bigEndian', () => {
+    expect(ByteReader.bigEndian(bytes(0, 0, 1, 2)).u32()).toBe(258);
+  });
+
+  it('reads a signed 16-bit value in the byte order of the header', () => {
+    const reader = new ByteReader(bytes(0xff, 0xfe, 0x7f, 0xff));
+    reader.isLittleEndian = false;
+    expect([reader.i16(), reader.i16()]).toEqual([-2, 32767]);
+  });
+
   it('reads a real as a double once the header flags it, and as a float otherwise', () => {
     const view = new DataView(new ArrayBuffer(12));
     view.setFloat64(0, 0.1, true);

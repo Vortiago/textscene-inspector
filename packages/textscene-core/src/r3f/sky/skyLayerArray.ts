@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { leaveSlot, sharedTexture, showInSlot } from '../sharedTexture.js';
+import { installedSlot, leaveSlot, showInSlot } from '../sharedTexture.js';
 import type { SkyLayers } from '../../resources/sky/skyLayers.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 
@@ -22,18 +22,7 @@ export const SKY_UNIFORMS = {
  * 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds on a renderer: the array
  * of the sky shown last, or three's empty array.
  */
-class SkyLayersSlot extends sharedTexture(THREE.DataArrayTexture) {}
-
-/**
- * The slot the shown sky's layers sit in, which every lit material samples. After a dev server
- * reloads this module, it is the slot the earlier evaluation installed, which every program compiled
- * since samples.
- */
-export const skyLayersSlot = installedOr(
-  SKY_UNIFORMS.layers,
-  THREE.DataArrayTexture,
-  () => new SkyLayersSlot()
-);
+export const skyLayersSlot = installedSlot(SKY_UNIFORMS.layers, THREE.DataArrayTexture);
 
 /**
  * The shown sky's `ambient_light_sky_contribution`, its layers' border size, the scale from a

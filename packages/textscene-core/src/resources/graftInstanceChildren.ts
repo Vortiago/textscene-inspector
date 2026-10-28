@@ -131,9 +131,8 @@ class Graft {
       return;
     }
     this.grafted = next;
-    if (subPath.includes(UNIQUE_NODE_PREFIX)) {
-      this.placements.set(joinPath(subPath, child.name), joinPath(inside.join('/'), child.name));
-    }
+    const key = placementKey(child);
+    if (key) this.placements.set(key, joinPath(inside.join('/'), child.name));
   }
 
   /** A child whose `parent=` walk found nothing, so its `parent_id_path=` is tried (packed_scene.cpp:161-163). */
@@ -158,6 +157,17 @@ class Graft {
       });
     }
   }
+}
+
+/**
+ * The key a placement records `hostChild` under: its sub-path and its name, as authored. Undefined
+ * where the sub-path passes through no `%Name`, as the path as written then needs no record.
+ *
+ * @canonical The key of a host child's placement, as `uniqueParentPlacements` keys it
+ */
+export function placementKey(hostChild: LiveNode): string | undefined {
+  const { instanceSubPath, name } = hostChild;
+  return instanceSubPath?.includes(UNIQUE_NODE_PREFIX) ? joinPath(instanceSubPath, name) : undefined;
 }
 
 /**

@@ -5,10 +5,11 @@
  * `skeleton.glsl:248-291` does.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { Transform3D } from '../../godot/math/transform3d.js';
 import { transform3DToMatrix } from '../nodeTreeTransforms.js';
+import { useByValue } from '../hooks/useByValue.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 /**
@@ -51,18 +52,8 @@ class FrozenSkeleton extends THREE.Skeleton {
   override update(): void {}
 }
 
-/**
- * `matrices` itself while its values are those of the previous call, so a re-parse that writes a
- * new array of the same matrices does not rebuild the skeleton.
- */
-function useMatricesByValue(
-  matrices: readonly Transform3D[] | undefined
-): readonly Transform3D[] | undefined {
-  const previous = useRef(matrices);
-  if (matrices !== previous.current && JSON.stringify(matrices) !== JSON.stringify(previous.current)) {
-    previous.current = matrices;
-  }
-  return previous.current;
+function sameMatrices(a: readonly Transform3D[] | undefined, b: readonly Transform3D[] | undefined): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 /**
@@ -75,7 +66,8 @@ export function useSkinSkeleton(
   geometry: THREE.BufferGeometry | undefined,
   skinMatrices: readonly Transform3D[] | undefined
 ): THREE.Skeleton | null {
-  const stableMatrices = useMatricesByValue(skinMatrices);
+  // By value, so a re-parse that writes a new array of the same matrices does not rebuild the skeleton.
+  const stableMatrices = useByValue(skinMatrices, sameMatrices);
   const skeleton = useMemo(() => {
     if (!geometry?.getAttribute('skinIndex') || !stableMatrices) return null;
     const bones = Array.from({ length: boneCountOf(geometry) }, (_unused, i) => boneOf(stableMatrices[i]));

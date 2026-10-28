@@ -14,11 +14,7 @@ import {
 import type { CanvasItemTextureDefaults } from '../godot/scene/viewport';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
 import { projectCanvasTextureDefaults } from '../parser/projectSettingsParser';
-import {
-  godotTextureFilterState,
-  applyTextureFilterState,
-  type TextureFilterState,
-} from '../resources/textures/godotTextureFilter';
+import { godotTextureFilterState, type TextureFilterState } from '../resources/textures/godotTextureFilter';
 import { useProjectSettings } from './contexts/ProjectSettingsContext';
 import type { ViewSampler } from '../resources/textures/textureView';
 
@@ -42,12 +38,6 @@ export function canvasItemFilterState(filter: number): TextureFilterState {
 
 function canvasItemWrap(repeat: number): THREE.Wrapping {
   return WRAP[canvasItemSamplerRepeat(repeat)];
-}
-
-/** Writes a resolved sampler's filter and wrap onto a texture the caller owns, before it first uploads. */
-export function applyCanvasItemSampler(texture: THREE.Texture, sampler: CanvasItemTextureSampler): void {
-  applyTextureFilterState(texture, canvasItemFilterState(sampler.filter));
-  texture.wrapS = texture.wrapT = canvasItemWrap(sampler.repeat);
 }
 
 /**

@@ -42,7 +42,10 @@ describe('<GridMap> placeholder under cell_scale', () => {
       gridMapProperties: { cell_scale: '0.5' },
       library: `[gd_resource type="MeshLibrary" format=3]
 
+[sub_resource type="SystemFont" id="SystemFont_item"]
+
 [sub_resource type="TextMesh" id="TextMesh_item"]
+font = SubResource("SystemFont_item")
 
 [resource]
 item/0/mesh = SubResource("TextMesh_item")

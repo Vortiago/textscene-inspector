@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren';
+import { graftInstanceChildren, placementKey, type InstanceScopes } from './graftInstanceChildren';
 import type { InstanceNames, UniqueNamePaths } from './instanceNameTable';
 import type { SceneScope, TscnNode } from '../parser/types';
 import { scopeOf, type LiveNode } from './liveNode';
@@ -567,5 +567,19 @@ describe('graftInstanceChildren: index=', () => {
     const grafted = graft(deep, [node('Ring', { instanceSubPath: 'Arm', index: 1 })]);
 
     expect(namesOf(grafted[0]!.children)).toEqual(['Hand', 'Ring', 'Glove']);
+  });
+});
+
+describe('placementKey', () => {
+  it('keys a host child by its sub-path and its name', () => {
+    expect(placementKey(node('Ring', { instanceSubPath: '%Arm/Hand' }))).toBe('%Arm/Hand/Ring');
+  });
+
+  it('keys nothing for a sub-path that passes through no %Name', () => {
+    expect(placementKey(node('Ring', { instanceSubPath: 'Arm/Hand' }))).toBeUndefined();
+  });
+
+  it('keys nothing for a child with no sub-path', () => {
+    expect(placementKey(node('Ring'))).toBeUndefined();
   });
 });

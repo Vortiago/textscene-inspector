@@ -303,6 +303,32 @@ export function nodeAt(tree: readonly LiveNode[], path: readonly string[]): Live
   return found;
 }
 
+/**
+ * `tree` with the node at `path` swapped for what `replace` returns for it, as a copy along that
+ * spine that shares every other node. The caller passes a path that names a node.
+ *
+ * @canonical A Live tree with the node at a name path replaced
+ */
+export function replacedAt(
+  tree: readonly LiveNode[],
+  path: readonly string[],
+  replace: (node: LiveNode) => LiveNode
+): LiveNode[] {
+  const replacedBelow = (siblings: readonly LiveNode[], depth: number): LiveNode[] => {
+    const name = path[depth];
+    const index = siblings.findIndex((n) => n.name === name);
+    if (index === -1) throw new Error(`expected a node at "${path.join('/')}", found none named "${name}"`);
+    const target = siblings[index]!;
+    const copy = [...siblings];
+    copy[index] =
+      depth === path.length - 1
+        ? replace(target)
+        : { ...target, children: replacedBelow(target.children, depth + 1) };
+    return copy;
+  };
+  return replacedBelow(tree, 0);
+}
+
 /** `setting` spelt below the nested instance at depth `at` of `segments`, its expanded path. */
 function rebased(setting: InstanceNameSetting, segments: readonly string[], at: number): InstanceNameSetting {
   const pathInInstance = segments.slice(at + 1).join('/');
@@ -319,24 +345,17 @@ function rebased(setting: InstanceNameSetting, segments: readonly string[], at: 
 }
 
 /**
- * `siblings` with `setting` appended to the nested instance at `at`, copied along that spine. It
- * lands after the children that instance holds now, as file order places it for that instance's graft.
+ * `tree` with `setting` appended to the nested instance at `at`. It lands after the children that
+ * instance holds now, as file order places it for that instance's graft.
  */
-function handTo(
-  siblings: readonly LiveNode[],
-  at: readonly string[],
-  setting: InstanceNameSetting
-): LiveNode[] {
-  const [head, ...rest] = at;
-  const index = siblings.findIndex((n) => n.name === head);
-  const target = siblings[index]!;
-  const handed = { ...setting, hostChildrenBefore: target.children.length };
-  const copy = [...siblings];
-  copy[index] =
-    rest.length > 0
-      ? { ...target, children: handTo(target.children, rest, setting) }
-      : { ...target, instanceNameSettings: [...(target.instanceNameSettings ?? []), handed] };
-  return copy;
+function handTo(tree: readonly LiveNode[], at: readonly string[], setting: InstanceNameSetting): LiveNode[] {
+  return replacedAt(tree, at, (target) => ({
+    ...target,
+    instanceNameSettings: [
+      ...(target.instanceNameSettings ?? []),
+      { ...setting, hostChildrenBefore: target.children.length },
+    ],
+  }));
 }
 
 /**

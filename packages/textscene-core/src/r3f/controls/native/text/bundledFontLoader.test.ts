@@ -47,9 +47,9 @@ async function freshModule() {
   vi.resetModules();
   const logger = await import('../../../../logger');
   vi.spyOn(logger, 'warn').mockImplementation(() => {});
-  const { onSceneFontMetricsSettled } = await import('./sceneFontLoader');
+  const { onSceneFontSettled } = await import('./sceneFontLoader');
   const { peekBundledCanvasFontMetrics } = await import('./bundledFontLoader');
-  return { peekBundledCanvasFontMetrics, onSceneFontMetricsSettled, logger };
+  return { peekBundledCanvasFontMetrics, onSceneFontSettled, logger };
 }
 
 describe('bundled font registration gate', () => {
@@ -104,10 +104,10 @@ describe('bundled font registration gate', () => {
 
   it('notifies the settled channel once registration resolves, so a peek-then-settle consumer re-renders', async () => {
     installFontFace();
-    const { peekBundledCanvasFontMetrics, onSceneFontMetricsSettled } = await freshModule();
+    const { peekBundledCanvasFontMetrics, onSceneFontSettled } = await freshModule();
 
     const listener = vi.fn();
-    const off = onSceneFontMetricsSettled(listener);
+    const off = onSceneFontSettled(listener);
     try {
       peekBundledCanvasFontMetrics();
       await settleLoads();
@@ -131,10 +131,10 @@ describe('bundled font registration gate', () => {
   it('notifies the settled channel even when registration fails, exactly as the scene arm notifies after its own fallback', async () => {
     installFontFace();
     FakeFontFace.loadResult = 'reject';
-    const { peekBundledCanvasFontMetrics, onSceneFontMetricsSettled } = await freshModule();
+    const { peekBundledCanvasFontMetrics, onSceneFontSettled } = await freshModule();
 
     const listener = vi.fn();
-    const off = onSceneFontMetricsSettled(listener);
+    const off = onSceneFontSettled(listener);
     try {
       peekBundledCanvasFontMetrics();
       await settleLoads();
