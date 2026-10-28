@@ -104,7 +104,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
-  // A mesh that cannot bind asks with no path, so the pass never runs for a scene without one.
+  // A mesh that cannot bind asks with no path, so it watches no load and the pass never runs for it.
   const bindingPath = useNodePath();
   const skinMatrices = useLiveScenePass(
     bindMeshesToSkeletons,

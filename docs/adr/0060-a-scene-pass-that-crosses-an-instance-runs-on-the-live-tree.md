@@ -21,8 +21,8 @@ that returns a result per live node path.
   load builds a new tree, so a sub-scene that arrives after the root binds then.
 - A component reads its result by the pass and its own node path (`useLiveScenePass`). It
   re-renders only where its result changes identity, so a pass hands back the same result for an
-  input that a load leaves as it is. A component that cannot be bound asks with no path, so the
-  pass never runs for a scene where nothing binds.
+  input that a load leaves as it is. A component that cannot be bound asks with no path, so it
+  watches no load, and the pass never runs for a scene where nothing binds.
 - A NodePath resolves from the live path of the node that writes it. A `%Name` reads the table of
   that node where it is an instance root, then its owner's (`nodePathUniquePaths`, `node.cpp:1930-1938`).
 - The parse stages (`transforms`, `paths`) stay for a pass that has not moved. A pass runs on one

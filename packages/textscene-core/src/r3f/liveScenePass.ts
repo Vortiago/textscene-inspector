@@ -4,7 +4,7 @@
  * nodes are shared by every instance of it, so a result is keyed by the path, never written into a node.
  */
 
-import { useCallback } from 'react';
+import { useMemo } from 'react';
 import { liveTreeOf, type LiveTree } from './liveSceneTree.js';
 import { useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
 import { perObject } from '../utils/perObject.js';
@@ -24,17 +24,19 @@ function liveScenePassResults<Result>(
 }
 
 /**
- * What `pass` binds at the live path `path` of the shared live tree, or undefined. A load runs the
- * pass again, and the reader re-renders only where its own result changed identity, so `pass` and
- * a result it keeps for an unchanged input must be stable.
+ * What `pass` binds at the live path `path` of the shared live tree, or undefined. A null path
+ * watches no load. A load runs the pass again, and the reader re-renders only where its own result
+ * changed identity, so `pass` and a result it keeps for an unchanged input must be stable.
  */
 export function useLiveScenePass<Result>(
   pass: LiveScenePass<Result>,
   path: string | null
 ): Result | undefined {
-  const select = useCallback(
-    (live: SharedLiveTree) =>
-      path === null ? undefined : liveScenePassResults(pass, liveTreeOf(live.roots, live.ctx)).get(path),
+  const select = useMemo(
+    () =>
+      path === null
+        ? null
+        : (live: SharedLiveTree) => liveScenePassResults(pass, liveTreeOf(live.roots, live.ctx)).get(path),
     [pass, path]
   );
   return useLiveTreeSelection(select, Object.is);
