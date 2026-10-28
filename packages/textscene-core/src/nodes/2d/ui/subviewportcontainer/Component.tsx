@@ -24,6 +24,8 @@ import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
+import { useCanvasModulateColor } from '../../../../r3f/canvasModulate.js';
+import { World2DLightingBoundary } from '../../../../r3f/lighting2d/World2DLightingBoundary.js';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -103,6 +105,8 @@ function ViewportSurfaceNative({
   const { x: viewportWidth, y: viewportHeight } = viewportSize(authoredSize, forcedSize);
 
   const contentKind = useViewportContentKind(viewport);
+  // The viewport's own world: its Controls take its CanvasModulate, never the canvas around it.
+  const canvasModulate = useCanvasModulateColor(viewport.children);
   const { tree, generation } = useBuildSolveTree(
     viewport.children,
     externalResources,
@@ -202,17 +206,19 @@ function ViewportSurfaceNative({
             the quad carries the tint, so a live draw would composite it twice. This arm serves a
             mixed viewport, whose offscreen pass renders the non-Control half (`viewportContent.ts`). */}
         {contentKind === 'dom' ? null : (
-          <ControlCanvasWalker
-            tree={tree}
-            generation={generation}
-            viewport={viewportRect}
-            theme={theme}
-            measurer={measureText}
-            // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and
-            // only the root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so
-            // the project's opt-out never reaches the sub-viewport's Controls.
-            snapToPixels
-          />
+          <World2DLightingBoundary canvasModulate={canvasModulate}>
+            <ControlCanvasWalker
+              tree={tree}
+              generation={generation}
+              viewport={viewportRect}
+              theme={theme}
+              measurer={measureText}
+              // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and
+              // only the root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so
+              // the project's opt-out never reaches the sub-viewport's Controls.
+              snapToPixels
+            />
+          </World2DLightingBoundary>
         )}
       </ControlClipProvider>
     </CanvasItemGroup>

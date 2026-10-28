@@ -10,6 +10,8 @@
 // `rasterize_bitmap`/`rasterize_msdf`).
 import * as THREE from 'three';
 import { canvasItemFacing } from '../../../canvasItemFacing';
+import { injectProgram } from '../../../materialProgramInputs';
+import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
 
 // The `clipping_planes_*` chunks hold the `discard`. A `ShaderMaterial` needs them and
 // `clipping: true`, or it accepts the planes and ignores them without an error.
@@ -110,6 +112,11 @@ interface MsdfMaterialOptions {
    * Label3D with `double_sided` off needs `FrontSide`. Either way the run draws in one pass.
    */
   side?: THREE.Side;
+  /**
+   * The lit Control's blend state and light-list sampling. Omitted, the run stays unlit, as
+   * Label3D's does. The injection patches the `main` and `colorspace_fragment` anchors below.
+   */
+  pixelMaterial?: CanvasItemPixelMaterial;
   // Godot's MSDF outline (`servers/rendering/renderer_rd/shaders/canvas.glsl:606-623`)
   // reads an MTSDF alpha channel (`msdf_sample.a`) this `"msdf"` atlas lacks, so this
   // uses two median thresholds of one field, msdfgen's technique. For an opaque
@@ -138,9 +145,11 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     clippingPlanes = [],
     depthTest = false,
     side,
+    pixelMaterial,
     outline,
   } = options;
-  return new THREE.ShaderMaterial({
+  const { injection, ...pixelState } = pixelMaterial ?? {};
+  const material = new THREE.ShaderMaterial({
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
     uniforms: {
@@ -159,10 +168,13 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     depthWrite: false,
     depthTest,
     ...canvasItemFacing(side),
+    ...pixelState,
     // `WebGLRenderer` binds `clippingPlanes` only when `( !material.isShaderMaterial &&
     // !material.isRawShaderMaterial ) || material.clipping === true`, and otherwise
     // ignores the planes.
     clipping: true,
     clippingPlanes: [...clippingPlanes],
   });
+  injectProgram(material, injection);
+  return material;
 }

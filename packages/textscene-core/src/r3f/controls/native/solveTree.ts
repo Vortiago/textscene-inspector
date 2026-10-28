@@ -34,8 +34,8 @@ export interface ThemedIconRef {
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
  * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}.
  */
-// One facet is missing, so a skipped ancestor that sets it diverges: the material owner (no
-// native painter reads `CanvasItemMaterialContext`).
+// One facet is missing, so a skipped ancestor that sets it diverges: the material owner. A Control
+// with `use_parent_material` under a skipped Node2D reads the material of the Control above it.
 export interface SkippedAncestors {
   /**
    * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:

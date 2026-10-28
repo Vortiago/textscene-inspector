@@ -15,6 +15,10 @@ import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
 import { createMsdfMaterial } from './msdfMaterial';
+import {
+  useCanvasItemPixelMaterial,
+  type CanvasItemPixelMaterial,
+} from '../../../components/LitCanvasItemPixels';
 import { msdfDistanceBias } from './msdfEmbolden';
 import {
   computeCanvasTextCanvasLayout,
@@ -162,6 +166,8 @@ interface TextRunLook {
   clippingPlanes: readonly THREE.Plane[] | undefined;
   depthTest: boolean | undefined;
   side: THREE.Side | undefined;
+  /** The lit Control around the run, or undefined for a run drawn unlit such as Label3D's. */
+  pixelMaterial: CanvasItemPixelMaterial | undefined;
 }
 
 /**
@@ -180,7 +186,7 @@ function buildTextRun(
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side } = look;
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -219,6 +225,7 @@ function buildTextRun(
         clippingPlanes,
         depthTest,
         side,
+        pixelMaterial,
         mipmapped,
         ...blend,
       });
@@ -246,6 +253,7 @@ function buildTextRun(
     clippingPlanes,
     depthTest,
     side,
+    pixelMaterial,
     outline,
   };
   // The atlas painter has no blend modes: only a canvas run takes `blends`.
@@ -272,6 +280,7 @@ export function TextRun({
   outlineWidthPx = 0,
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
+  const pixelMaterial = useCanvasItemPixelMaterial();
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -280,7 +289,7 @@ export function TextRun({
       buildTextRun(
         layout,
         fontSizePx,
-        { tint, clippingPlanes, depthTest, side },
+        { tint, clippingPlanes, depthTest, side, pixelMaterial },
         strokeWidthPx,
         glyphOutlines,
         textureFilter,
@@ -301,6 +310,7 @@ export function TextRun({
       clippingPlanes,
       depthTest,
       side,
+      pixelMaterial,
       strokeWidthPx,
       glyphOutlines,
       textureFilter,

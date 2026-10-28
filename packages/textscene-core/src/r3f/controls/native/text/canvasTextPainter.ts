@@ -23,6 +23,7 @@ import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
+import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
 import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
 import { NO_OPAQUE_PREPASS } from '../../../materials/opaquePrepass';
 import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/surfaceBlend';
@@ -219,6 +220,8 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
+  /** The lit Control's blend state and light-list sampling, or omitted for an unlit run. */
+  pixelMaterial?: CanvasItemPixelMaterial;
   /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
   mipmapped?: boolean;
 }
@@ -249,8 +252,10 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     blending = THREE.NormalBlending,
     antialiasing = null,
     injection,
+    pixelMaterial,
     mipmapped = false,
   } = options;
+  const { injection: pixelInjection, ...pixelState } = pixelMaterial ?? {};
   const material = new THREE.MeshBasicMaterial({
     map,
     opacity,
@@ -273,7 +278,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
-  if (mipmapped) injectViewportProgram(material, injection);
-  else injectProgram(material, injection);
+  material.setValues(pixelState);
+  if (mipmapped) injectViewportProgram(material, injection ?? pixelInjection);
+  else injectProgram(material, injection ?? pixelInjection);
   return material;
 }

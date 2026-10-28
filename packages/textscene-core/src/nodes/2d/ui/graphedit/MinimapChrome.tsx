@@ -18,6 +18,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { useCanvasItemPixelMaterial } from '../../../../r3f/components/LitCanvasItemPixels';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
@@ -80,6 +81,7 @@ function MinimapConnections({
   renderOrder,
 }: MinimapConnectionsProps) {
   const clippingPlanes = useControlClipPlanes();
+  const pixelMaterial = useCanvasItemPixelMaterial();
   const geometry = useMemo(() => {
     const positions: number[] = [];
     const indices: number[] = [];
@@ -116,7 +118,7 @@ function MinimapConnections({
       defines: CANVAS_SRGB_DEFINES,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
-    merge: [canvasItemFacing()],
+    merge: [canvasItemFacing(), pixelMaterial],
   });
 
   return (

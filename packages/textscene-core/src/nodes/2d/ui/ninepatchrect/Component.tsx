@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFilterState, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useCanvasItemPixelMaterial } from '../../../../r3f/components/LitCanvasItemPixels';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -39,6 +40,7 @@ function buildGeometry(buffers: NinePatchGeometryBuffers): THREE.BufferGeometry 
 
 export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<NinePatchRectProperties>(solveNode);
+  const pixelMaterial = useCanvasItemPixelMaterial();
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
   // The node's own scope, not the ambient provider's: a NinePatchRect from an instanced sub-scene
@@ -112,7 +114,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
       depthWrite: false,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
-    merge: [canvasItemFacing()],
+    merge: [canvasItemFacing(), pixelMaterial],
   });
 
   return (

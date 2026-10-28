@@ -18,6 +18,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { useCanvasItemPixelMaterial } from '../../../../r3f/components/LitCanvasItemPixels';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
@@ -138,6 +139,7 @@ interface GradientMeshProps {
 
 /** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
 function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: GradientMeshProps) {
+  const pixelMaterial = useCanvasItemPixelMaterial();
   useDisposeOnRelease(geometry);
   const program = materialProgramInputs({
     props: {
@@ -147,7 +149,7 @@ function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: Gradien
       clippingPlanes,
       defines: linear ? undefined : CANVAS_SRGB_DEFINES,
     },
-    merge: [canvasItemFacing()],
+    merge: [canvasItemFacing(), pixelMaterial],
   });
   return (
     <mesh renderOrder={renderOrder}>
