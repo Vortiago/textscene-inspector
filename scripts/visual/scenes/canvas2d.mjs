@@ -424,9 +424,17 @@ export const CANVAS_2D_SCENES = [
     mode: '2d',
   },
   // A viewport lists its own canvas first, then each CanvasLayer, whatever the tree order, and a
-  // MIX light after an ADD light differs from the reverse. Godot 4.6.3 `--mode 2d`: (575,325)
-  // rgb(52,68,126), (500,325) rgb(112,105,125) and (650,325) rgb(37,58,126), as Add then Mix.
+  // MIX light after an ADD light differs from the reverse. Godot 4.6.3 `--mode 2d`, as Add then
+  // Mix: rgb(52,68,126) between the lights at (575,325), rgb(112,105,125) under the Add light at
+  // (500,325), and rgb(37,58,126) under the Mix light at (650,325).
   { name: 'canvas-layer-light-order', file: 'unit-canvas-layer-light-order.tscn', mode: '2d' },
+  // The CanvasLayers list in tree order, not by `layer`: layer 5 holds the ADD light and comes
+  // first. Godot 4.6.3 `--mode 2d` gives the same three readings as the scene above.
+  {
+    name: 'canvas-layer-light-order-by-tree',
+    file: 'unit-canvas-layer-light-order-by-tree.tscn',
+    mode: '2d',
+  },
   // The eight-light cap leaves its canvas's loop only, so a CanvasLayer's sun is the ninth.
   // Godot 4.6.3 `--mode 2d`: rgb(178,168,221) everywhere, 64 more blue than the eight alone.
   {

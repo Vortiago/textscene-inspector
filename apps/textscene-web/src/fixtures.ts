@@ -3129,6 +3129,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Canvas Layer Light Order By Tree",
+    "file": "unit-canvas-layer-light-order-by-tree.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Canvas Layer Light Order",
     "file": "unit-canvas-layer-light-order.tscn",
     "category": "Unit - 2D UI Controls"

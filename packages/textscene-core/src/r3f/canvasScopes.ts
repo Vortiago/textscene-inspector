@@ -96,11 +96,9 @@ interface CanvasScope {
 const OWN_CANVAS: CanvasScope = { viewportPath: null, isHidden: false, canvas: 0 };
 
 /**
- * The directional lights a viewport lists, from the lights of each canvas in attach order. Godot stops
- * at the eighth light with a `break` that leaves only the loop of the canvas it is in
- * (`renderer_viewport.cpp:511`), so a later canvas lists all its lights past the cap.
- * The canvases attach in this order: the viewport's own, then each CanvasLayer in tree order
- * (`renderer_viewport.cpp:441`).
+ * The directional lights a viewport lists, canvas by canvas: its own, then each CanvasLayer in tree
+ * order (`renderer_viewport.cpp:441`). Godot stops at the eighth light with a `break` that leaves
+ * only the loop of its canvas (`renderer_viewport.cpp:511`), so a later canvas lists past the cap.
  */
 function gatherDirectional(canvases: readonly CanvasLights[]): string[] {
   const listed: string[] = [];
