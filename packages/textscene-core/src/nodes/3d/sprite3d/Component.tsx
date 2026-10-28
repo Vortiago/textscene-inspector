@@ -1,7 +1,7 @@
 /**
  * <Sprite3D>: a 2D texture drawn as a quad in 3D space, sized by `pixel_size` × the active region
- * (full image, sheet tile or `region_rect`). `useTexture2D` resolves an image file, an inline
- * procedural texture or a CanvasTexture. `meshStandardMaterial` when `shaded`, else
+ * (full image, sheet tile or `region_rect`). `useTexture2D` resolves the texture, whatever its
+ * source. `meshStandardMaterial` when `shaded`, else
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
@@ -58,13 +58,13 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // hook applies the same modes Label3D uses.
   useBillboard(spriteRef, properties.billboard);
 
-  // `texture` may be an image file, or a procedural texture described entirely
-  // inside the scene; `useTexture2D` resolves either and reports a reference it
-  // cannot resolve as `missing`.
+  // The sprite's material samples `texture_albedo` as `source_color` (`material.cpp:969`), so a
+  // ViewportTexture gives its decoding view.
   const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
     properties.texture,
     externalResources,
-    internalResources
+    internalResources,
+    'decoding'
   );
 
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV

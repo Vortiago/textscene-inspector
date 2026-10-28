@@ -10,10 +10,6 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
 import type { TscnInternalResource } from '../../parser/types';
-import {
-  isViewportTextureRef,
-  useViewportTextureSlot,
-} from '../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
 import { useTextureView } from '../useTextureView';
 import type {
@@ -56,8 +52,8 @@ export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
 /**
  * Every texture slot of one StandardMaterial3D, resolved in `tables`, the material's own file. A
  * triplanar material tiles per world unit: a PlaneMesh `surface` folds in its size, and CSG or an
- * ArrayMesh passes none and gets `uv1_scale`. Null when a slot's file cannot load or a
- * ViewportTexture albedo is cyclic: the surface takes `MISSING_TEXTURE_MATERIAL`.
+ * ArrayMesh passes none and gets `uv1_scale`. Null when a slot never draws, a file that cannot load
+ * or a ViewportTexture in a pass cycle: the surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
@@ -93,7 +89,7 @@ export function useSurfaceTextures(
     [...maps, albedoTargetUv]
   );
 
-  const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing || sources[slot].cyclic);
+  const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing);
   return isUnresolved ? null : textures;
 }
 
@@ -114,34 +110,27 @@ function useEachSlot<Args extends unknown[], T>(
   return results as Record<TextureSlot, T>;
 }
 
-interface SlotTexture extends Texture2DResult {
-  /** The slot names a ViewportTexture whose target sits in a pass cycle, so it is never written. */
-  cyclic: boolean;
-}
-
 /** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
-type SlotMap = Pick<SlotTexture, 'texture' | 'isArriving'>;
+type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 
 /**
  * One slot's texture in every form a Texture2D slot takes, null while it arrives. A material binds
  * a texture by RID: an AtlasTexture's is its whole sheet (`scene/resources/atlas_texture.cpp:55-58`),
- * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target, from the
- * live registry.
+ * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target.
  */
 function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
   { externalResources, internalResources }: MaterialTables
-): SlotTexture {
-  const ref = textureSlotReference(references, slot);
-  const isViewport = isViewportTextureRef(ref, internalResources);
+): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
-  const viewport = useViewportTextureSlot(isViewport ? ref : undefined, internalResources, view);
-  const result = useTexture2DRid(isViewport ? undefined : ref, externalResources, internalResources);
-  if (isViewport)
-    return { texture: viewport.texture, missing: false, isArriving: false, cyclic: viewport.cyclic };
-  const texture = result.namesTexture ? result.texture : defaultWhiteTexture();
-  return { texture, missing: result.missing, isArriving: result.isArriving, cyclic: false };
+  const result = useTexture2DRid(
+    textureSlotReference(references, slot),
+    externalResources,
+    internalResources,
+    view
+  );
+  return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }
 
 function textureSlotReference(
@@ -157,7 +146,7 @@ function textureSlotReference(
  * samples it, so only that one repacks (a canvas readback, a buffer copy and a GPU re-upload) and
  * waits for an arriving map. The memo depends on the two values the repack reads, not their wrapper.
  */
-function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
+function useRepackedFlowmap(flowmap: SlotMap, isSampled: boolean): SlotMap {
   const { texture } = flowmap;
   const repacked = useMemo(
     () => (isSampled && texture ? repackAnisotropyFlowmap(texture) : undefined),

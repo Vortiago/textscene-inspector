@@ -1,7 +1,8 @@
 /**
- * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, or an
- * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own resource file.
- * Wrappers peel to a fixed point, and the texture's size is Godot's size for the slot.
+ * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, an
+ * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own resource file,
+ * or a `ViewportTexture`'s live target. Wrappers peel to a fixed point, and the texture's size is
+ * Godot's size for the slot.
  * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sits
  * here so the size cannot drift.
  */
@@ -25,36 +26,55 @@ import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js'
 import { imageRefSize } from './textures/image/decode.js';
 import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
 import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
+import {
+  isViewportTextureRef,
+  useViewportTextureSlot,
+  type ViewportTextureView,
+} from './textures/viewporttexture/useViewportTextureSlot.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
 
 export interface Texture2DResult {
-  /** The resolved texture, or null while loading / when there is nothing to show. */
+  /**
+   * The resolved texture, or null while loading / when there is nothing to show. A ViewportTexture
+   * gives its target's view, which every reader shares: a caller never clones or disposes it.
+   */
   texture: THREE.Texture | null;
-  /** True when the reference names something this renderer cannot resolve. */
+  /**
+   * True when the slot never draws: the reference names something this renderer cannot resolve, or
+   * a ViewportTexture whose target sits in an unrenderable pass cycle.
+   */
   missing: boolean;
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
 }
 
+/**
+ * The texture a slot draws. `view` is the ViewportTexture view the slot samples: a canvas item
+ * samples the plain one.
+ */
 export function useTexture2D(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[]
+  internalResources: readonly TscnInternalResource[],
+  view: ViewportTextureView = 'plain'
 ): Texture2DResult {
-  const slot = useTexture2DSlot(ref, externalResources, internalResources);
+  const slot = useTexture2DSlot(ref, externalResources, internalResources, view);
 
   // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
   // tables the atlas sits in, so a re-parse of the scene or of its resource file invalidates it.
   const { atlas, source, atlasResources } = slot;
+  // The crop copies the sheet's pixels, and a ViewportTexture's live target has none to copy.
+  const isLiveSheet = source?.isRenderTargetTexture === true;
   const cropped = useMemo(
-    () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
-    [atlas, source, atlasResources]
+    () => (atlas && !isLiveSheet ? resolveAtlasTexture(atlas, source, atlasResources) : null),
+    [atlas, isLiveSheet, source, atlasResources]
   );
   useProceduralTexturePins(cropped ? [cropped.key] : []);
 
   if (!atlas) return slot.result;
+  if (isLiveSheet) return LIVE_SHEET_CELL;
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
   return { ...slot.result, texture: cropped?.texture ?? null };
@@ -76,13 +96,16 @@ export interface Texture2DRidResult extends Texture2DResult {
 export function useTexture2DRid(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[]
+  internalResources: readonly TscnInternalResource[],
+  view: ViewportTextureView
 ): Texture2DRidResult {
-  const { result, namesCanvasTexture } = useTexture2DSlot(ref, externalResources, internalResources);
+  const { result, namesCanvasTexture } = useTexture2DSlot(ref, externalResources, internalResources, view);
   return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
 
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
+
+const LIVE_SHEET_CELL: Texture2DResult = { ...NOTHING, missing: true };
 
 const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
 
@@ -102,7 +125,8 @@ interface Texture2DSlot {
 function useTexture2DSlot(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[]
+  internalResources: readonly TscnInternalResource[],
+  view: ViewportTextureView
 ): Texture2DSlot {
   // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
   // ref loses the window. A resource file may hold either, so its `[resource]` peels again.
@@ -122,6 +146,11 @@ function useTexture2DSlot(
     [atlas, slot.internalResources, slotRef]
   );
 
+  // A ViewportTexture names a node, not a file, so it comes from the live registry. The hook runs
+  // for every slot, as the rules of hooks ask, and idles on an undefined reference.
+  const isViewport = isViewportTextureRef(sourceRef, slot.internalResources);
+  const viewport = useViewportTextureSlot(isViewport ? sourceRef : undefined, slot.internalResources, view);
+
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
@@ -130,11 +159,12 @@ function useTexture2DSlot(
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.
   const path = useMemo(
-    () => (procedural.claimed ? null : resolveExtResourcePath(sourceRef, slot.externalResources)),
-    [procedural.claimed, sourceRef, slot.externalResources]
+    () =>
+      procedural.claimed || isViewport ? null : resolveExtResourcePath(sourceRef, slot.externalResources),
+    [procedural.claimed, isViewport, sourceRef, slot.externalResources]
   );
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
-  const source = procedural.texture ?? loaded.value ?? null;
+  const source = viewport.texture ?? procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
   // The peel returns any other reference as it is, so a changed reference names a CanvasTexture.
   const atlasSheet = atlas?.texture.atlas;
@@ -153,6 +183,9 @@ function useTexture2DSlot(
     return { ...peeled, result };
   }
 
+  // A target arrives after first paint and is no file on its way, so only a cycle stops it.
+  if (isViewport)
+    return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
   const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };

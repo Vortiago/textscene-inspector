@@ -19,7 +19,7 @@ const hold = vi.fn();
 const release = vi.fn();
 
 function Holder() {
-  useHeldTexture('ExtResource("1")', hold, release);
+  useHeldTexture('ExtResource("1")', 'plain', hold, release);
   return null;
 }
 
