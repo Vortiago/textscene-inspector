@@ -1,6 +1,6 @@
 /**
  * The compositor's tone pass for one canvas: whether it mounts, with what glow and how many samples.
- * Glow, blending, the adjustments, the auto exposure and MSAA all run in that pass, so it owns the
+ * Glow, blending, the adjustments, the auto exposure, MSAA and debanding all run in that pass, so it owns the
  * tone curve when any is live. The pass needs a real 3D GL context, so a 2D canvas, test-renderer and
  * a headless DOM get none.
  */
@@ -17,6 +17,7 @@ import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContex
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { projectUsesDebanding } from '../../parser/projectSettingsParser';
 import { useSampleCount } from '../multisampledTarget';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 
@@ -30,6 +31,8 @@ export interface CompositorPass {
   samples: number;
   /** Null when the camera attributes hold no auto exposure. */
   autoExposure: AutoExposure | null;
+  /** The project's `use_debanding`, which the root viewport takes. */
+  usesDebanding: boolean;
 }
 
 /**
@@ -38,20 +41,23 @@ export interface CompositorPass {
  * chain runs (`renderer_scene_render_rd.cpp:575`, `:686`). MSAA mounts it too: Godot resolves the 3D
  * buffer in linear HDR (`render_forward_clustered.cpp:2402`) before the tonemap pass reads it (`:2514`).
  * An auto exposure mounts it too: Godot reduces the luminance of the finished frame for the tonemap to
- * read (`renderer_scene_render_rd.cpp:551-570`).
+ * read (`renderer_scene_render_rd.cpp:551-570`). Debanding mounts it too: Godot dithers in the tonemap
+ * pass (`renderer_scene_render_rd.cpp:784-797`).
  */
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
   const autoExposure = useAutoExposure();
   const hasBlended = useBlendedSurfaceLatch();
   const draws3D = useDraws3D();
-  const msaa3D = useSampleCount(useProjectSettings().msaaModes.msaa3D, SCENE_BUFFER_TYPE);
+  const project = useProjectSettings();
+  const msaa3D = useSampleCount(project.msaaModes.msaa3D, SCENE_BUFFER_TYPE);
+  const usesDebanding = projectUsesDebanding(project.settings);
   // Memoised, since a new glow object rebuilds the compositor's effect.
   return useMemo(() => {
     if (!draws3D) return null;
     const glow = settings && glowParamsFor(settings);
-    const needed = glow || hasBlended || settings?.adjustments || autoExposure || msaa3D > 0;
-    return needed ? { glow, samples: msaa3D, autoExposure } : null;
-  }, [draws3D, settings, hasBlended, autoExposure, msaa3D]);
+    const needed = glow || hasBlended || settings?.adjustments || autoExposure || msaa3D > 0 || usesDebanding;
+    return needed ? { glow, samples: msaa3D, autoExposure, usesDebanding } : null;
+  }, [draws3D, settings, hasBlended, autoExposure, msaa3D, usesDebanding]);
 }
 
 /**

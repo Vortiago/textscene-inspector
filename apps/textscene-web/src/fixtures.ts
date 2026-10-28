@@ -463,6 +463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Emission Map",
+    "file": "unit-decal-emission-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -470,6 +475,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Mipmap Import",
     "file": "unit-decal-mipmap-import.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Normal Map",
+    "file": "unit-decal-normal-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Orm Map",
+    "file": "unit-decal-orm-map.tscn",
     "category": "Other"
   },
   {
@@ -670,16 +685,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance Child",
-    "file": "unit-gizmo-instance-child.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance",
-    "file": "unit-gizmo-instance.tscn",
     "category": "Other"
   },
   {
@@ -1025,6 +1030,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Environment",
     "file": "unit-instanced-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey Child",
+    "file": "unit-instanced-gizmo-grey-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey",
+    "file": "unit-instanced-gizmo-grey.tscn",
     "category": "Other"
   },
   {
@@ -1943,6 +1958,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Shared World Content",
+    "file": "unit-sprite-2d-shared-world-content.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World Environment",
+    "file": "unit-sprite-2d-shared-world-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World First Environment",
+    "file": "unit-sprite-2d-shared-world-first-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Soft Alpha Border",
     "file": "unit-sprite-2d-soft-alpha-border.tscn",
     "category": "Other"
@@ -2120,6 +2150,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tonemap Agx Shadow",
     "file": "unit-tonemap-agx-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Trail Player",
+    "file": "unit-trail-player.tscn",
     "category": "Other"
   },
   {
@@ -2359,6 +2394,12 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Debanding",
+    "file": "debanding/unit-debanding.tscn",
+    "category": "Other",
+    "root": "debanding"
+  },
+  {
     "name": "Decal Filter",
     "file": "decal-filter/unit-decal-filter.tscn",
     "category": "Other",
@@ -2475,6 +2516,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Out Of Range",
     "file": "edge-csg-out-of-range.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Editable Missing Path",
+    "file": "edge-editable-missing-path.tscn",
     "category": "Edge Cases"
   },
   {
@@ -2711,6 +2757,26 @@ export const fixtures: Fixture[] = [
   {
     "name": "Three Cubes",
     "file": "integration-three-cubes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Name In Content",
+    "file": "integration-trail-name-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Fallback",
+    "file": "integration-trail-owner-fallback.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner In Content",
+    "file": "integration-trail-owner-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Parent In Content",
+    "file": "integration-trail-parent-in-content.tscn",
     "category": "Integration - Multi-Node"
   },
   {
@@ -4030,6 +4096,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Camera Environment",
+    "file": "unit-sub-viewport-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container 2d Content",
     "file": "unit-sub-viewport-container-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -4100,6 +4171,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Debanding",
+    "file": "unit-sub-viewport-debanding.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Inherited Rtl",
     "file": "unit-sub-viewport-inherited-rtl.tscn",
     "category": "Unit - Viewports"
@@ -4127,6 +4203,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Shared World Exposure",
     "file": "unit-sub-viewport-shared-world-exposure.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Glow",
+    "file": "unit-sub-viewport-shared-world-glow.tscn",
     "category": "Unit - Viewports"
   },
   {

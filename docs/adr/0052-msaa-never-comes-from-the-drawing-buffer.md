@@ -32,16 +32,15 @@ own texture, as three allocates it. The MSAA paths are these:
 - A 3D root with no valid Environment (ADR-0025) mounts `NoEnvironmentLayer`: the project's clear
   colour (`renderer_viewport.cpp:371`), and a compositor for `msaa_3d` with Godot's default LINEAR
   curve (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
-- A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples. Godot takes `msaa_3d` for
-  the 3D buffers (`renderer_viewport.cpp:173`, `:278`) and `msaa_2d` for the render target
-  (`:1362`).
+- A SubViewport's `msaa_3d` multisamples the linear HDR buffer its 3D pass draws into, which
+  resolves before its own tonemap pass writes the target (`r3f/environment/offscreenToneMap.ts`).
+  Its `msaa_2d` multisamples the frame its canvas draws through. Godot takes `msaa_3d` for the 3D
+  buffers (`renderer_viewport.cpp:173`, `:278`) and `msaa_2d` for the render target (`:1362`).
 - The compositor draws only the root world, because it draws to the canvas. A WorldEnvironment in
-  a SubViewport's own world mounts none, and its tone curve stays off the shared renderer.
+  a SubViewport's own world mounts none, and its tone curve stays off the shared renderer. The
+  SubViewport's tonemap pass reads that Environment instead.
 
 ## Consequences
 
 The screenshot renders one frame of the canvas's loop, because a pass that owns the render draws
 what the canvas shows.
-
-A multisampled SubViewport target resolves after three's inline tone curve, where Godot resolves
-before it (#773). The difference shows only on an edge between a bright and a dark surface.

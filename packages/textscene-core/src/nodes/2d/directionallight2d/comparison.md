@@ -42,6 +42,13 @@ Godot stops listing at the eighth light with a `break` that leaves the loop of o
 (`renderer_viewport.cpp:511`). A CanvasLayer's light after eight root lights is the ninth, and it
 lights the world as the first eight do.
 
+## At most 256 lights in one render
+<!-- compare: image=unit-directionallight2d-render-budget status=done fixture=unit-directionallight2d-render-budget.tscn -->
+
+One render takes 256 lights, the directional lights first (`renderer_canvas_render_rd.cpp:525-530`).
+A directional light past them lights nothing. Here the red and green lights past the 256th leave
+the square untinted by them.
+
 ## Linting
 
 <!-- lint:begin DirectionalLight2D -->

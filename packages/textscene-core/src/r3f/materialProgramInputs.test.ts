@@ -317,10 +317,10 @@ describe('materialProgramInputs', () => {
       /** The material's program key under FILMIC, then under AGX after FILMIC is undone. */
       function keysAcrossSwap(material: THREE.Material): { filmic: string; agx: string } {
         const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
-        const restoreFilmic = installToneMapping(gl, { mode: FILMIC }, 'material');
+        const restoreFilmic = installToneMapping(gl, { mode: FILMIC });
         const filmic = material.customProgramCacheKey();
         restoreFilmic();
-        installToneMapping(gl, { mode: AGX }, 'material');
+        installToneMapping(gl, { mode: AGX });
         return { filmic, agx: material.customProgramCacheKey() };
       }
 

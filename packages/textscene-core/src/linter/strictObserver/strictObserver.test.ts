@@ -86,6 +86,7 @@ describe('strictObserver', () => {
           toIdTrail: undefined,
         },
       ],
+      pathlessEditableLines: [],
       instancesOutsideNodeBody: ['ExtResource("1")'],
     });
   });

@@ -96,16 +96,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Camera3D: {
-    renderGap: [
-      // Per-camera override of the world's environment, and the Compositor stack.
-      // The previewer draws through the editor camera, which holds neither, so a
-      // scene's Camera3D overrides nothing there. `attributes` is read: the camera
-      // the viewer looks through replaces the world's exposure.
-      'environment',
-      'compositor',
-    ],
-    reason:
-      'A camera can override the environment and run a compositor stack; the editor camera the previewer draws through holds neither.',
+    renderGap: ['compositor'],
+    reason: 'A camera can run a Compositor stack, and the previewer runs none.',
   },
 
   WorldEnvironment: {

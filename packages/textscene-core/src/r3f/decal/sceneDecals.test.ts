@@ -15,7 +15,7 @@ import { GODOT_DEFAULT_VISUAL_LAYERS, GODOT_EDITOR_GIZMO_LAYERS } from '../../go
 import { DecalObject } from './decalObject';
 import { DecalRows } from './decalRows';
 import { SceneDecals } from './sceneDecals';
-import { SHOWN_COUNT, SHOWN_GRADIENT_SCALE, shownDecals } from './decalSlots';
+import { SHOWN_COUNT, SHOWN_GRADIENT_SCALE, SHOWN_LINEAR_MAGNIFICATION, shownDecals } from './decalSlots';
 
 const held: THREE.Texture[] = [];
 
@@ -38,7 +38,7 @@ function texture(): THREE.Texture {
 function decalObject(properties: Record<string, string> = {}, treeOrder = [0]): DecalObject {
   const object = new DecalObject();
   object.look = parseDecal(heading('Decal', { name: 'Decal' }), properties);
-  object.albedo = texture();
+  object.textures.albedo = texture();
   object.treeOrder = treeOrder;
   return object;
 }
@@ -96,7 +96,7 @@ describe('SceneDecals', () => {
 
   it('shows no decal whose texture has not loaded', async () => {
     const unloaded = decalObject();
-    unloaded.albedo = null;
+    unloaded.textures.albedo = null;
     const { render } = await sceneWith(unloaded);
 
     render();
@@ -136,7 +136,7 @@ describe('SceneDecals', () => {
 
     render();
 
-    expect(pack.mock.calls[0]![0][0]!.albedoRect).toMatchObject({ width: expect.any(Number) });
+    expect(pack.mock.calls[0]![0][0]!.mapRect('albedo')).toMatchObject({ width: expect.any(Number) });
   });
 
   it('packs the view of the camera that renders the scene', async () => {
@@ -156,6 +156,24 @@ describe('SceneDecals', () => {
     renderWithMipmapBias(-1.5, render);
 
     expect(shownDecals[SHOWN_GRADIENT_SCALE]).toBeCloseTo(2 ** -1.5, 6);
+  });
+
+  it('shows a linear magnification when the filter magnifies linearly', async () => {
+    const { render, sceneDecals } = await sceneWith(decalObject());
+    sceneDecals.setFilter(godotTextureFilterState(1));
+
+    render();
+
+    expect(shownDecals[SHOWN_LINEAR_MAGNIFICATION]).toBe(1);
+  });
+
+  it('shows no linear magnification when the filter magnifies to the nearest texel', async () => {
+    const { render, sceneDecals } = await sceneWith(decalObject());
+    sceneDecals.setFilter(godotTextureFilterState(0));
+
+    render();
+
+    expect(shownDecals[SHOWN_LINEAR_MAGNIFICATION]).toBe(0);
   });
 
   it('samples the atlas with the filter it is given', async () => {

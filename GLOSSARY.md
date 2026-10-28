@@ -215,9 +215,14 @@ A node below it re-roots on its own, since the old path no longer exists. Godot 
 _Avoid_: "dropped node", which names a node left out of the tree.
 
 **Landed node** (`seatLanded` in `parser/sceneTreeBuilder.ts`):
-A node whose `parent=` path names nothing and whose `parent_id_path=` finds a heading of this file. Godot seats it under that heading and keeps its name (`packed_scene.cpp:161-163`).
+A node whose `parent=` path names nothing and whose `parent_id_path=` finds a heading of this file or a node in the content of an instance. Godot seats it under that node and keeps its name (`packed_scene.cpp:161-163`).
 The **Seating** does the same, and still counts the node among the orphans, since it is not at the path it declares.
 _Avoid_: "re-rooted node" for a node that keeps its name.
+
+**Content trail** (`followContentTrail` in `godot/scene/packedScene.ts`):
+The ids of an `owner_uid_path=` or `parent_id_path=` that follow the id of an instance heading. The trail continues in that instance's scene, and in its base scene where its own headings lack the id (`packed_scene.cpp:1947-2005`).
+The **Seating** seats the node under the instance heading with the rest of the trail, and the instance's graft follows it over the cached scene. A trail that finds nothing there re-roots the node and gives it no owner. A `parent=` or `owner=` walk that enters an instance and finds nothing takes the trail the same way.
+_Avoid_: resolving the ids of a trail against the headings of one file alone.
 
 **Rule arm** (`linter/ruleArms.ts`):
 One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
@@ -559,7 +564,7 @@ A surface reads the mip its distance to the light asks for, so a far surface see
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
 **Decal term** (`r3f/decal/`):
-The part of every 3D program's fragment shader that mixes the decals into the albedo, as Godot's clustered shader does. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+The part of every 3D program's fragment shader that mixes the decals into the surface, as Godot's clustered shader does: the albedo of every program, and the normal, roughness, metallic, occlusion and emission of a lit one. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
 _Avoid_: "decal projection", which names the baked mesh the term replaced.
 
 **Scene rows** (`r3f/sceneRows/`):
@@ -568,8 +573,8 @@ Both share it because a fragment shader has 16 texture units.
 _Avoid_: "probe rows" and "decal rows", which name one band of it.
 
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
-The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-The Decal term reads each Decal's rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The one texture that holds the albedo, normal, ORM and emission textures of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
+The Decal term reads each Decal's rectangle of each map, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:

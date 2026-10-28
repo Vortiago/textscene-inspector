@@ -39,6 +39,14 @@ export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleM
 }
 
 /**
+ * The stand-in subject for a heading that is no node, such as `[connection]` or `[editable]`: a diagnostic
+ * names a subject, and such a heading belongs to none.
+ */
+export function headingSubject(type: string): { name: string; type: string } {
+  return { name: `<${type}>`, type };
+}
+
+/**
  * `arm`'s diagnostic for `node`, the one conversion from arm to report. Fields
  * are named, not spread, or the compiler lets `grounding` ship to every caller.
  * A rule passes no `location`: it reaches its subject through the tree, which

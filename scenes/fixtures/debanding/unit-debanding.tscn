@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; The root viewport's `use_debanding`, from the project: Godot adds its screen-space dither to the
+; sRGB value before the 8-bit store (`tonemap.glsl:950-957`), so the dark sky gradient, which
+; bands without it, carries a fixed per-pixel pattern of one 8-bit level.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
+sky_top_color = Color(0.02, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.08, 0.08, 0.12, 1)
+ground_bottom_color = Color(0.02, 0.02, 0.02, 1)
+ground_horizon_color = Color(0.08, 0.08, 0.12, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dark")
+
+[sub_resource type="Environment" id="Env_sky"]
+background_mode = 2
+sky = SubResource("Sky_1")
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_sky")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")

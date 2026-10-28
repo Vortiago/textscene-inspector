@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { ReflectionProbeAmbientMode } from '../../godot/rendering/environment/reflectionProbe';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
+import { texelOfRow } from '../rowTexture/rowTexture.testkit';
 import { ProbeRows, type DrawnProbe } from './probeRows';
 
 const PROBE: DrawnProbe = {
@@ -26,11 +27,7 @@ function packed(...probes: DrawnProbe[]): ProbeRows {
   return rows;
 }
 
-/** Texel `texel` of probe `index` in `rows`. */
-function texel(rows: ProbeRows, index: number, texel: number): number[] {
-  const start = (index * SCENE_ROW_TEXELS + texel) * 4;
-  return Array.from(rows.data.subarray(start, start + 4));
-}
+const texel = texelOfRow(SCENE_ROW_TEXELS);
 
 describe('ProbeRows.pack', () => {
   it("packs the world-to-local matrix's three rows first", () => {

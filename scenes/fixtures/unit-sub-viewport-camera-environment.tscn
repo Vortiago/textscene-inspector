@@ -1,0 +1,54 @@
+; One variable: a Camera3D's `environment` in a SubViewport with no WorldEnvironment. The camera's
+; Environment replaces the world's (`renderer_scene_cull.cpp:3594-3597`), so the viewport's pass
+; glows around the emissive sphere. `sub-viewport-shared-world-glow` sets the same Environment on a
+; WorldEnvironment instead.
+
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 1
+background_color = Color(0.05, 0.06, 0.09, 1)
+glow_enabled = true
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_1")
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.3
+height = 0.6
+
+; Emission far above the glow's HDR threshold of 1, so the bloom reaches well past the sphere.
+[sub_resource type="StandardMaterial3D" id="Mat_emissive"]
+albedo_color = Color(0, 0, 0, 1)
+emission_enabled = true
+emission = Color(1, 0.6, 0.2, 1)
+emission_energy_multiplier = 4.0
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(256, 256)
+own_world_3d = true
+render_target_update_mode = 4
+
+[node name="Subject" type="MeshInstance3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+environment = SubResource("Env_glow")
+fov = 75.0
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
