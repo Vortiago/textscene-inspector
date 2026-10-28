@@ -205,7 +205,7 @@ function OffscreenViewport({
   useDrawCanvasWorld(drawnCanvasWorld);
   // The scene the pass draws: the parent's for an inline pass, else the one the portal fills.
   const passScene = useMemo(
-    () => (rendersInline ? mainScene : (drawnCanvasWorld?.scene ?? createOwnScene(node.name))),
+    () => (rendersInline ? mainScene : (drawnCanvasWorld?.scene ?? createPassScene(node.name, 'offscreen'))),
     [rendersInline, mainScene, drawnCanvasWorld, node.name]
   );
 
@@ -254,7 +254,7 @@ function OffscreenViewport({
   );
   // The scene the Controls of a 3D pass draw into, apart from the world's.
   const controlsScene = useMemo(
-    () => (drawsControlsOverWorld ? createControlsScene(node.name) : null),
+    () => (drawsControlsOverWorld ? createPassScene(node.name, 'controls') : null),
     [drawsControlsOverWorld, node.name]
   );
   // This viewport's own World2D is lit by its own pass, run below once the camera is framed.
@@ -453,17 +453,10 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
   return atlas;
 }
 
-/** The scene the Controls of a 3D pass fill. */
-function createControlsScene(name: string): THREE.Scene {
+/** A detached scene a pass fills through a portal: the world's (`offscreen`) or the Controls' (`controls`). */
+function createPassScene(name: string, role: 'offscreen' | 'controls'): THREE.Scene {
   const scene = new THREE.Scene();
-  scene.name = `${name}::controls`;
-  return scene;
-}
-
-/** The scene a portal of its own fills. */
-function createOwnScene(name: string): THREE.Scene {
-  const scene = new THREE.Scene();
-  scene.name = `${name}::offscreen`;
+  scene.name = `${name}::${role}`;
   return scene;
 }
 
