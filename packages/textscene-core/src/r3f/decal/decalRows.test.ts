@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
+import { texelOfRow } from '../rowTexture/rowTexture.testkit';
 import { DecalRows, MAX_DECALS, type DecalLook, type DrawnDecal } from './decalRows';
 import { DECAL_TEXEL, type DecalMap } from './decalRowLayout';
 
@@ -45,11 +46,7 @@ function packed(decals: DrawnDecal[], camera = AT_ORIGIN): DecalRows {
   return rows;
 }
 
-/** Texel `texel` of decal `index` in `rows`. */
-function texel(rows: DecalRows, index: number, texel: number): number[] {
-  const start = (index * SCENE_ROW_TEXELS + texel) * 4;
-  return Array.from(rows.data.subarray(start, start + 4));
-}
+const texel = texelOfRow(SCENE_ROW_TEXELS);
 
 /** The decal-box coordinates `rows` map the view-space `point` to, as the shader computes them, to 5 places. */
 function boxCoordinates(rows: DecalRows, index: number, point: [number, number, number]): number[] {
