@@ -6,8 +6,7 @@
 import { afterEach } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { NodeDispatcher } from '../NodeDispatcher';
-import { SceneStack } from './SceneStack';
+import { DispatchedScene } from './DispatchedScene';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -19,7 +18,6 @@ import {
 } from '../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../parser/TscnParser';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
-import { HierarchyProvider } from '../contexts/HierarchyContext';
 
 import '../nodes/index';
 
@@ -62,16 +60,16 @@ export const PLAYER_BODY = 'libraries/ = SubResource("Lib")';
 export async function mountWithPlayer(tscn: string, playerPath: string) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
-  // The scene graph gives the `%Name` table a track resolves through.
   const renderer = await ReactThreeTestRenderer.create(
-    <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-      <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath={playerPath}>
-        <AnimationTransportProvider>
-          <Capture />
-          <NodeDispatcher nodes={parsed.nodes} />
-        </AnimationTransportProvider>
-      </SceneStack>
-    </HierarchyProvider>
+    <AnimationTransportProvider>
+      <Capture />
+      <DispatchedScene
+        sceneGraph={createSceneGraphFromTscnScene(parsed)}
+        loader={fake.loader}
+        workspace="3d"
+        selectedPath={playerPath}
+      />
+    </AnimationTransportProvider>
   );
   mounted.push(renderer);
   return { renderer, fake };

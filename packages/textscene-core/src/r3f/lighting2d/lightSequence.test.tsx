@@ -10,16 +10,15 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
-import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
 import { lightDrawSequence } from './lightSequence';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
-import { SceneStack } from '../testing/SceneStack';
+import { DispatchedScene } from '../testing/DispatchedScene';
+import { underWhiteCanvasLighting } from './testing/whiteCanvasLighting';
 import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
 
@@ -35,13 +34,12 @@ ${body}`;
   fake.textures.seed(COOKIE, cookieTexture());
 
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-        <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-          <NodeDispatcher nodes={parsed.nodes} />
-        </CanvasLighting2DProvider>
-      </HierarchyProvider>
-    </SceneStack>
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      loader={fake.loader}
+      workspace="2d"
+      around={underWhiteCanvasLighting}
+    />
   );
   await settleLoads();
   return renderer;
