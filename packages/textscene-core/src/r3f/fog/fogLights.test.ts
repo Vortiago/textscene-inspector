@@ -8,6 +8,7 @@ import { holdPositionalShadowAtlas } from '../positionalShadow/shadowAtlasTarget
 import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows, FogLightTexel } from './fogLights';
 import { fogLightUserData } from './fogLightDeclaration';
 import { areaLightUserData } from '../areaLight/areaLightFalloff';
+import { texelOfRow } from '../rowTexture/rowTexture.testkit';
 import {
   areaTextureUserData,
   holdAreaTexture,
@@ -44,11 +45,7 @@ function packed(lights: THREE.Light[]): FogLightRows {
   return rows;
 }
 
-/** Texel `texel` of light row `row`. */
-function texel(rows: FogLightRows, row: number, texel: number): number[] {
-  const start = (row * FOG_LIGHT_TEXELS + texel) * 4;
-  return Array.from(rows.data.subarray(start, start + 4));
-}
+const texel = texelOfRow(FOG_LIGHT_TEXELS);
 
 /** A vector's components to six places, so a negative zero matches a zero. */
 function expectDirection(actual: number[], expected: number[]): void {
