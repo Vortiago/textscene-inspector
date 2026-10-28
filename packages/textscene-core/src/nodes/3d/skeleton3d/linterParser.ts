@@ -40,7 +40,7 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
 
   // The index lands in a `uint32_t which` (:82), so `-1` is stored as 4294967295 and
   // `4294967296` as 0.
-  const { indexText, which, leaf: what } = boneKey;
+  const { indexText, which, leaf } = boneKey;
   if (which >= UNREACHABLE_BONE_SLOT) {
     return {
       severity: 'error',
@@ -55,23 +55,23 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   // `bones/0/bone_meta/<key>` reaches the `bone_meta` arm with the key read separately at :105.
   // skeleton_3d.cpp:135: the chain closes `} else { return false; }`, so a leaf
   // with no arm is a write Godot silently drops.
-  if (!Object.prototype.hasOwnProperty.call(BONE_LEAVES, what)) {
+  if (!Object.prototype.hasOwnProperty.call(BONE_LEAVES, leaf)) {
     return keyShapeError(
       key,
       line,
-      `Unknown bone property: "${key}". Skeleton3D has no "${what}" bone property, so Godot drops the write.`,
+      `Unknown bone property: "${key}". Skeleton3D has no "${leaf}" bone property, so Godot drops the write.`,
       'UNKNOWN_BONE_PROPERTY'
     );
   }
 
-  const leaf = BONE_LEAVES[what]!;
-  const verdict = leaf(key, value, line);
+  const validateLeaf = BONE_LEAVES[leaf]!;
+  const verdict = validateLeaf(key, value, line);
   if (verdict) return verdict;
 
   // skeleton_3d.cpp:722: `ERR_FAIL_COND(p_bone == p_parent)`. Both halves come off this one key
   // (`which` from the path, the parent from the value), so the dispatcher can answer it. Compared
   // as numbers, because `bones/03/parent = 3` names bone 3 twice.
-  if (what === 'parent') {
+  if (leaf === 'parent') {
     const parent = ruleInt(value);
     if (parent !== null && parent === which) {
       return propertyError(
