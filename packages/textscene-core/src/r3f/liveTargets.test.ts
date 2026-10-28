@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { liveTargetCrop, publishLiveTarget, unrenderedTexel } from './liveTargets';
+import { liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom } from './liveTargets.testkit';
@@ -23,7 +23,7 @@ afterEach(() => {
 /** A canvas target its pass publishes, as a SubViewport does. */
 function liveCanvasTarget(): THREE.WebGLRenderTarget {
   const target = createCanvasTarget(32, 16, 'SubViewport');
-  withdrawals.push(publishLiveTarget(target.texture, null, false));
+  withdrawals.push(publishLiveTargets([target.texture], null, false));
   return target;
 }
 
@@ -157,7 +157,7 @@ describe('unrenderedTexel', () => {
 
   it("is clear for a crop of a transparent target, which keeps its source's alpha", () => {
     const target = createCanvasTarget(32, 16, 'SubViewport');
-    withdrawals.push(publishLiveTarget(target.texture, null, true));
+    withdrawals.push(publishLiveTargets([target.texture], null, true));
     const crop = liveTargetCrop(target.texture, CORNER_CELL);
     expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
     crop.dispose();

@@ -6,12 +6,13 @@
  */
 
 import { useMemo } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { isLiveTarget, unrenderedTexel } from './liveTargets';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import { paddedAtlasSize } from '../resources/tileset/paddedAtlas';
 import type { AtlasSourceModel } from '../resources/tileset/types';
-import { textureSize } from '../resources/textures/textureSize';
+import { imageSize } from '../resources/formats/image/imagePixels';
+import { colourDataTexture } from '../resources/textures/colourDataTexture';
 import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import type { Texture2DResult } from '../resources/useTexture2D';
 
@@ -34,13 +35,11 @@ export function usePaddedAtlasStandIn(slot: Texture2DResult, source: AtlasSource
 
 /** The padded atlas Godot builds from `target`'s image before the target's first render. */
 function unrenderedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.DataTexture {
-  const size = paddedAtlasSize(source, textureSize(target) ?? { width: 0, height: 0 });
-  const texel = unrenderedTexel(target);
+  const size = paddedAtlasSize(source, imageSize(target.image) ?? { width: 0, height: 0 });
   const data = new Uint8Array(size.x * size.y * 4);
-  for (let offset = 0; offset < data.length; offset += 4) data.set(texel, offset);
-  const snapshot = new THREE.DataTexture(data, size.x, size.y);
+  // The texel's four bytes as one word, so the fill writes each texel once.
+  new Uint32Array(data.buffer).fill(new Uint32Array(Uint8Array.from(unrenderedTexel(target)).buffer)[0]!);
+  const snapshot = colourDataTexture(data, size.x, size.y, 'RGBA8');
   snapshot.name = `${target.name}::unrendered`;
-  snapshot.colorSpace = THREE.SRGBColorSpace;
-  snapshot.needsUpdate = true;
   return snapshot;
 }

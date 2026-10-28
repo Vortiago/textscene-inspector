@@ -3,7 +3,7 @@
  * a target whose renderer answers a readback.
  */
 import * as THREE from 'three';
-import { fillLiveTarget, publishLiveTarget } from './liveTargets';
+import { fillLiveTarget, publishLiveTargets } from './liveTargets';
 
 /** A renderer that records the target bound for each draw. */
 export function recordingRenderer() {
@@ -52,7 +52,7 @@ export function readableLiveTarget(size: number, bottom: readonly number[], top:
       }
     },
   } as unknown as THREE.WebGLRenderer;
-  const withdraw = publishLiveTarget(target.texture, renderer, false);
+  const withdraw = publishLiveTargets([target.texture], renderer, false);
   return {
     texture: target.texture,
     paint: (bottomRow: readonly number[], topRow: readonly number[]) => {

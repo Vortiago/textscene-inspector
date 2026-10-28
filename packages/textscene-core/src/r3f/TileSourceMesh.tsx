@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useTexture2D } from '../resources/useTexture2D';
+import { NO_RESOURCES } from './SceneResourcesContext';
 import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
@@ -18,7 +19,6 @@ import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePad
 import { materialProgramInputs } from './materialProgramInputs';
 import { usePaddedAtlasStandIn } from './paddedAtlasStandIn';
 import type { CanvasItemPixelMaterial } from './components/LitCanvasItemPixels';
-import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 interface TileSourceMeshProps {
   source: AtlasSourceModel;
@@ -37,9 +37,6 @@ interface TileSourceMeshProps {
   sampler: CanvasItemTextureSampler;
 }
 
-const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
-const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
-
 export function TileSourceMesh({
   source,
   cells,
@@ -54,8 +51,8 @@ export function TileSourceMesh({
   const slot = source.texture;
   const texResult = useTexture2D(
     slot?.ref,
-    slot?.externalResources ?? NO_EXTERNAL_RESOURCES,
-    slot?.internalResources ?? NO_INTERNAL_RESOURCES,
+    slot?.externalResources ?? NO_RESOURCES.externalResources,
+    slot?.internalResources ?? NO_RESOURCES.internalResources,
     'plain',
     slot?.holders
   );

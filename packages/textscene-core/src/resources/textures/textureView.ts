@@ -7,9 +7,8 @@
 
 import * as THREE from 'three';
 import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
-import { isLiveTarget, liveTargetCopy } from '../../r3f/liveTargets';
+import { isLiveTarget, liveTargetCopy, wholeLiveCopies } from '../../r3f/liveTargets';
 import { isHeld } from '../../r3f/useDisposeOnRelease';
-import { perObject } from '../../utils/perObject';
 import { applyTextureFilterState, textureFilterMatches, type TextureFilterState } from './godotTextureFilter';
 
 /** Below this, a repeat or offset is indistinguishable from the one a texture shows. */
@@ -181,9 +180,6 @@ function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture 
   return clone;
 }
 
-/** Each live target's whole copies, written only by `liveCopyView`. A copy leaves its set when disposed. */
-const copiesOf = perObject<THREE.Texture, Set<THREE.Texture>>(() => new Set());
-
 /**
  * A copy of a live target, filled after each render of the target, shared by every reader that
  * samples it alike, as Godot's readers sample one RID. It keeps the target's tag: the copy's
@@ -191,15 +187,13 @@ const copiesOf = perObject<THREE.Texture, Set<THREE.Texture>>(() => new Set());
  * bytes were encoded. Each reader holds the copy, and the last to let go frees it.
  */
 function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  const copies = copiesOf(source);
-  for (const copy of copies) if (samplesAlike(copy, source, sampler)) return copy;
+  const shared = wholeLiveCopies(source).find((copy) => samplesAlike(copy, source, sampler));
+  if (shared) return shared;
   const copy = applyViewSampler(liveTargetCopy(source), {
     ...sampler,
     colorSpace: source.colorSpace as THREE.ColorSpace,
   });
   ownedViews.add(copy);
-  copies.add(copy);
-  copy.addEventListener('dispose', () => copies.delete(copy));
   return copy;
 }
 

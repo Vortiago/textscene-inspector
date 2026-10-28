@@ -10,7 +10,7 @@ import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { copyTexels, wholeTexels, type TexelTransfer } from '../../../r3f/texelCopy.js';
-import { fillLiveTarget, publishLiveTarget } from '../../../r3f/liveTargets';
+import { fillLiveTarget, publishLiveTargets } from '../../../r3f/liveTargets';
 import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
@@ -52,13 +52,10 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     };
   }, [gl, target]);
   useDisposeOnRelease(views);
-  useEffect(() => {
-    const withdrawals = [
-      publishLiveTarget(views.plain.texture, gl, isTransparent),
-      publishLiveTarget(views.decoding.texture, gl, isTransparent),
-    ];
-    return () => withdrawals.forEach((withdraw) => withdraw());
-  }, [views, gl, isTransparent]);
+  useEffect(
+    () => publishLiveTargets([views.plain.texture, views.decoding.texture], gl, isTransparent),
+    [views, gl, isTransparent]
+  );
   return views;
 }
 

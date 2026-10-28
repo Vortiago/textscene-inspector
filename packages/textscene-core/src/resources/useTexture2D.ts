@@ -19,6 +19,7 @@ import {
 import { isLocalToScene, viewportTextureHolders } from './textures/viewporttexture/localToScene.js';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
 import { atlasTextureLayout } from './textures/atlastexture/decode.js';
+import { imageSize } from './formats/image/imagePixels.js';
 import {
   resolveAtlasTexture,
   resolveAtlasTextureRef,
@@ -100,8 +101,9 @@ export function useTexture2D(
  */
 function useLiveCrop(atlas: AtlasTextureReference | null, sheet: THREE.Texture | null): THREE.Texture | null {
   const crop = useMemo(() => {
-    if (!atlas || !sheet) return null;
-    const layout = atlasTextureLayout(atlas.texture, sheet.image as { width: number; height: number });
+    const sheetSize = sheet && imageSize(sheet.image);
+    if (!atlas || !sheet || !sheetSize) return null;
+    const layout = atlasTextureLayout(atlas.texture, sheetSize);
     // Pinned, as the sheet is: R3F reasserts `SRGBColorSpace` on a `map` every commit.
     return layout && pinColorSpace(liveTargetCrop(sheet, layout), sheet.colorSpace as THREE.ColorSpace);
   }, [atlas, sheet]);

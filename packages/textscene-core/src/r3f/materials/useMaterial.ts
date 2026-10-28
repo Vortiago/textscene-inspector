@@ -12,7 +12,8 @@ import { fileResources, findSectionResource } from '../../resources/resourceSect
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
-import type { MaterialResource, MaterialSource } from './materialSource';
+import { held, type MaterialResource, type MaterialSource } from './materialSource';
+import { NODE_PROPERTY } from '../../resources/useTexture2D';
 
 /** What a material source loads to. */
 type LoadedMaterial =
@@ -48,7 +49,7 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   const inlineExternal = inline?.externalResources;
   const holders = source?.holders;
   const loaded = useMemo((): LoadedMaterial => {
-    const holding = holders ? { holders } : {};
+    const holding = held(holders ?? NODE_PROPERTY);
     if (inlineResource && inlineInternal && inlineExternal) {
       return ready({
         resource: inlineResource,

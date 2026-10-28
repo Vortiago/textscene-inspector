@@ -16,12 +16,7 @@ import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';
 import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-// Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
-import {
-  findSubResource as findSubResourceById,
-  parseResourceReference,
-  resolveExtResourcePath,
-} from '../SubResourceResolver';
+import { findSubResource, parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
 import { defaultTileData } from './types';
 import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 import type {
@@ -43,9 +38,6 @@ interface TileSetSourceData {
   /** The tables the TileSet's references resolve in. */
   externalResources: readonly TscnExternalResource[];
   internalResources: readonly TscnInternalResource[];
-  findSubResource(id: string): TscnInternalResource | undefined;
-  /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
-  resolveResourcePath(ref: string): string | null;
 }
 
 /**
@@ -74,7 +66,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     }
 
     const ref = parseResourceReference(value);
-    const sub = ref?.type === 'SubResource' ? data.findSubResource(ref.id) : undefined;
+    const sub = ref?.type === 'SubResource' ? findSubResource(data.internalResources, ref.id) : undefined;
     if (!sub) {
       warn(`[TileSet] source ${key}: unresolvable reference "${value}" — skipped`);
       continue;
@@ -126,8 +118,6 @@ export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
     tileSet: { id: '', type: parsed.resourceType, data: parsed.properties },
     externalResources: parsed.extResources,
     internalResources: parsed.subResources,
-    findSubResource: (id) => findSubResourceById(parsed.subResources, id),
-    resolveResourcePath: (ref) => resolveExtResourcePath(ref, parsed.extResources),
   });
 }
 
@@ -142,15 +132,13 @@ export function tileSetFromScene(
 ): TileSetModel | null {
   const ref = parseResourceReference(tileSetRef);
   if (!ref || ref.type !== 'SubResource') return null;
-  const tileSet = findSubResourceById(internalResources, ref.id);
+  const tileSet = findSubResource(internalResources, ref.id);
   if (!tileSet || tileSet.type !== 'TileSet') return null;
 
   return resolveTileSetModel({
     tileSet,
     externalResources,
     internalResources,
-    findSubResource: (id) => findSubResourceById(internalResources, id),
-    resolveResourcePath: (ref) => resolveExtResourcePath(ref, externalResources),
   });
 }
 
@@ -182,10 +170,10 @@ function loadTileMaterial(
   data: TileSetSourceData
 ): TileMaterial | null {
   if (parsed?.type !== 'SubResource') {
-    const path = data.resolveResourcePath(ref);
+    const path = resolveExtResourcePath(ref, data.externalResources);
     return path ? { path } : null;
   }
-  const sub = data.findSubResource(parsed.id);
+  const sub = findSubResource(data.internalResources, parsed.id);
   if (!sub) {
     warn(`[TileSet] material ${ref} names nothing — no material`);
     return null;

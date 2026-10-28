@@ -5,7 +5,7 @@
  * `children` and the transform.
  */
 import { useMemo } from 'react';
-import { buttonIconSize } from '../button/buttonIconSize';
+import { reportedArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -55,7 +55,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const iconNaturalSize = useMemo(
-    () => (props.icon ? buttonIconSize(iconTexture) : null),
+    () => (props.icon ? reportedArea(iconTexture) : null),
     [props.icon, iconTexture]
   );
 

@@ -4,6 +4,7 @@
  * the "normal" StyleBox is a `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the
  * children and the transform.
  */
+import type { Vector2 } from '../../../../godot/math/vector';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -49,14 +50,15 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]],
     CHECK_BOX_ICONS[iconKey]
   );
-  const iconSize = useMemo(() => {
-    const fitted = fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants));
-    return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
-  }, [solveNode]);
-  const drawnIconSize = useMemo(() => {
-    const fitted = checkBoxDrawnIconSize(solveNode, iconKey);
-    return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
-  }, [solveNode, iconKey]);
+  const iconSize = useMemo(
+    () =>
+      roundedSize(fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants))),
+    [solveNode]
+  );
+  const drawnIconSize = useMemo(
+    () => roundedSize(checkBoxDrawnIconSize(solveNode, iconKey)),
+    [solveNode, iconKey]
+  );
 
   const text = props.text ?? '';
   const hasText = text.length > 0;
@@ -118,4 +120,8 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       )}
     </>
   );
+}
+
+function roundedSize({ x, y }: Vector2): Vector2 {
+  return { x: Math.round(x), y: Math.round(y) };
 }

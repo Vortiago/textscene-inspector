@@ -4,8 +4,9 @@
  * its top-left texel (`viewport.cpp:168-173`, `drivers/gles3/storage/texture_storage.cpp:259-267`).
  */
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { releasedOnUnmount } from '../../../r3f/sharedTexture';
+import { colourDataTexture } from '../colourDataTexture';
 
 const SIZE = 4;
 const MAGENTA = [255, 0, 255, 255];
@@ -23,12 +24,8 @@ export function unconfiguredViewportTexture(): THREE.DataTexture {
     const isMagenta = ((texel % SIZE) + godotRow) % 2 === 0;
     data.set(isMagenta ? MAGENTA : BLACK, texel * 4);
   }
-  placeholder = releasedOnUnmount(new THREE.DataTexture(data, SIZE, SIZE));
+  placeholder = releasedOnUnmount(colourDataTexture(data, SIZE, SIZE, 'RGBA8'));
   placeholder.name = 'ViewportTexture placeholder';
-  placeholder.colorSpace = THREE.SRGBColorSpace;
-  placeholder.magFilter = THREE.LinearFilter;
-  placeholder.minFilter = THREE.LinearFilter;
-  placeholder.needsUpdate = true;
   return placeholder;
 }
 

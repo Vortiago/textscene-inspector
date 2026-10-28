@@ -16,6 +16,7 @@ import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMat
 import { RES_SCHEME } from '../../resources/resPath';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource, type SceneResources } from '../SceneResourcesContext';
+import { NODE_PROPERTY } from '../../resources/useTexture2D';
 
 /** A material body and the resource tables its references resolve in: its owning file's. */
 export interface MaterialResource {
@@ -49,7 +50,7 @@ export type MaterialSource =
 export function resolveMaterialSource(
   ref: string | undefined,
   { internalResources, externalResources }: SceneResources,
-  holders: readonly TscnInternalResource[] = []
+  holders: readonly TscnInternalResource[] = NODE_PROPERTY
 ): MaterialSource | undefined {
   if (!ref) return undefined;
   if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref, holders);
@@ -76,7 +77,7 @@ export function resolveMaterialSource(
  */
 export function fileMaterialSources(
   materialPaths: readonly (string | null)[],
-  holders: readonly TscnInternalResource[] = []
+  holders: readonly TscnInternalResource[] = NODE_PROPERTY
 ): (MaterialSource | undefined)[] {
   return materialPaths.map((path) => (path ? fileMaterialSource(path, holders) : undefined));
 }
@@ -92,6 +93,6 @@ function fileMaterialSource(
   return isResourceFilePath(resourceFilePath(path)) ? { kind: 'file', path, ...held(holders) } : undefined;
 }
 
-function held(holders: readonly TscnInternalResource[]): Held {
+export function held(holders: readonly TscnInternalResource[]): Held {
   return holders.length > 0 ? { holders } : {};
 }

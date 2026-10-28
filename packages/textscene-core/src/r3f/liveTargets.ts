@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { AtlasTextureLayout } from '../resources/textures/atlastexture/types';
 import { copySampling } from '../resources/textures/copySampling';
-import { readRenderTargetPixels, type ImagePixels } from '../resources/formats/image/imagePixels';
+import { imageSize, readRenderTargetPixels, type ImagePixels } from '../resources/formats/image/imagePixels';
 import { perObject } from '../utils/perObject';
 import { drawOffscreen } from './offscreen';
 import { holdsSrgbBytes, markSrgbBytes } from './srgbByteTextures';
@@ -17,6 +17,8 @@ import { copyTexels, wholeTexels, type TexelPlacement } from './texelCopy';
 /** A copy that one live target fills. */
 interface LiveCopy {
   readonly texture: THREE.Texture;
+  /** Whether it copies the whole target, which readers that sample it alike share. */
+  readonly isWhole: boolean;
   fill(gl: THREE.WebGLRenderer): void;
 }
 
@@ -39,10 +41,20 @@ const liveTargetOf = perObject<THREE.Texture, LiveTarget>(() => ({
 }));
 
 /**
- * Marks `texture` live while `renderer` redraws it, and answers the withdrawal. Two publishers of one
- * texture keep it live until both withdraw. `isTransparent` is the viewport's `transparent_bg`.
+ * Marks each of `textures` live while `renderer` redraws it, and answers one withdrawal for all. Two
+ * publishers of one texture keep it live until both withdraw. `isTransparent` is the viewport's
+ * `transparent_bg`.
  */
-export function publishLiveTarget(
+export function publishLiveTargets(
+  textures: readonly THREE.Texture[],
+  renderer: THREE.WebGLRenderer | null,
+  isTransparent: boolean
+): () => void {
+  const withdrawals = textures.map((texture) => publishLiveTarget(texture, renderer, isTransparent));
+  return () => withdrawals.forEach((withdraw) => withdraw());
+}
+
+function publishLiveTarget(
   texture: THREE.Texture,
   renderer: THREE.WebGLRenderer | null,
   isTransparent: boolean
@@ -109,8 +121,13 @@ export function fillLiveTarget(texture: THREE.Texture, gl: THREE.WebGLRenderer):
  * its own sampler and frees with `dispose()`.
  */
 export function liveTargetCopy(source: THREE.Texture): THREE.Texture {
-  const { width, height } = textureSize(source);
-  return addCopy(source, width, height, wholeTexels(width, height));
+  const { width, height } = targetSize(source);
+  return addCopy(source, width, height, wholeTexels(width, height), true);
+}
+
+/** The whole copies of `source` that are still filled, in the order they were made. */
+export function wholeLiveCopies(source: THREE.Texture): THREE.Texture[] {
+  return [...liveTargetOf(source).copies].filter((copy) => copy.isWhole).map((copy) => copy.texture);
 }
 
 /**
@@ -118,7 +135,13 @@ export function liveTargetCopy(source: THREE.Texture): THREE.Texture {
  * margin offset inside the reported box, transparent elsewhere. The caller frees it with `dispose()`.
  */
 export function liveTargetCrop(source: THREE.Texture, layout: AtlasTextureLayout): THREE.Texture {
-  return addCopy(source, layout.width, layout.height, cropPlacement(textureSize(source).height, layout));
+  return addCopy(
+    source,
+    layout.width,
+    layout.height,
+    cropPlacement(targetSize(source).height, layout),
+    false
+  );
 }
 
 /**
@@ -150,7 +173,8 @@ function addCopy(
   source: THREE.Texture,
   width: number,
   height: number,
-  placement: TexelPlacement
+  placement: TexelPlacement,
+  isWhole: boolean
 ): THREE.Texture {
   const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, type: source.type });
   const texture = copySampling(target.texture, source);
@@ -162,6 +186,7 @@ function addCopy(
   const { copies, renderer, isTransparent } = liveTargetOf(source);
   const copy: LiveCopy = {
     texture,
+    isWhole,
     fill: (gl) => copyTexels(gl, source, target, placement),
   };
   copies.add(copy);
@@ -174,7 +199,7 @@ function addCopy(
   return texture;
 }
 
-function textureSize(texture: THREE.Texture): { width: number; height: number } {
-  const image = texture.image as { width: number; height: number };
-  return { width: image.width, height: image.height };
+/** A render target's size, which its `image` always reports. */
+function targetSize(texture: THREE.Texture): { width: number; height: number } {
+  return imageSize(texture.image) ?? { width: 0, height: 0 };
 }

@@ -1,7 +1,7 @@
 /** The size Godot reports for a drawn texture, which a sized canvas consumer lays out by. */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { textureSize } from './textureSize';
+import { reportedArea, textureSize } from './textureSize';
 import { unconfiguredViewportTexture } from './viewporttexture/unconfiguredViewportTexture';
 
 describe('textureSize', () => {
@@ -21,5 +21,21 @@ describe('textureSize', () => {
 
   it('reports nothing for no texture', () => {
     expect(textureSize(null)).toBeUndefined();
+  });
+});
+
+describe('reportedArea', () => {
+  it("is the texture's image size", () => {
+    const icon = new THREE.DataTexture(new Uint8Array(24 * 12 * 4), 24, 12);
+    expect(reportedArea(icon)).toEqual({ x: 24, y: 12 });
+  });
+
+  /** An icon of width 0 draws nothing (`button.cpp:369`). */
+  it('is null for a ViewportTexture its scene never sets up, which reports size 0', () => {
+    expect(reportedArea(unconfiguredViewportTexture().clone())).toBeNull();
+  });
+
+  it('is null for no texture', () => {
+    expect(reportedArea(null)).toBeNull();
   });
 });

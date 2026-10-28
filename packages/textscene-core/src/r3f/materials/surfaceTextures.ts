@@ -10,7 +10,8 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
 import type { TscnInternalResource } from '../../parser/types';
-import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
+import { NODE_PROPERTY, useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 import { useTextureView } from '../useTextureView';
 import type {
   ResolvedTextures,
@@ -63,7 +64,7 @@ export function useSurfaceTextures(
 
   // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
   const holders = useMemo(
-    () => (material ? [...(material.holders ?? []), material.resource] : NO_RESOURCES),
+    () => (material ? [...(material.holders ?? []), material.resource] : NODE_PROPERTY),
     [material]
   );
   const sources = useEachSlot(useSlotTexture, references, material, holders);
@@ -108,8 +109,6 @@ function useEachSlot<Args extends unknown[], T>(
   return results as Record<TextureSlot, T>;
 }
 
-const NO_RESOURCES: readonly never[] = [];
-
 /** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
 type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 
@@ -127,8 +126,8 @@ function useSlotTexture(
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
   const result = useTexture2DRid(
     textureSlotReference(references, slot),
-    material?.externalResources ?? NO_RESOURCES,
-    material?.internalResources ?? NO_RESOURCES,
+    material?.externalResources ?? NO_RESOURCES.externalResources,
+    material?.internalResources ?? NO_RESOURCES.internalResources,
     view,
     holders
   );
@@ -185,17 +184,9 @@ function surfaceTextureStates(
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars, anisotropicFilteringLevel);
   if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
-  if (scalars.triplanar)
-    return {
-      ...states,
-      uv1: surface ? planeTiled(states.uv1, surface) : states.uv1,
-      uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
-    };
-  return {
-    ...states,
-    uv1: fromTopEdge(states.uv1),
-    uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
-  };
+  const uv2 = surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2;
+  if (!scalars.triplanar) return { ...states, uv1: fromTopEdge(states.uv1), uv2 };
+  return { ...states, uv1: surface ? planeTiled(states.uv1, surface) : states.uv1, uv2 };
 }
 
 /**

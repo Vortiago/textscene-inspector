@@ -22,6 +22,7 @@ import { useResolvableMesh } from '../../resources/meshes/useResolvableMesh';
 import type { ScopedResource } from '../../resources/scopedResource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
 import { useResource } from '../../resources/useResource';
+import { NODE_PROPERTY } from '../../resources/useTexture2D';
 import type { ResourceResolution } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
@@ -82,8 +83,6 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
   return resourcePath && scoped && meshKind(scoped.resource.type) === 'arrayMesh' ? resourcePath : null;
 }
 
-const NO_HOLDERS: readonly TscnInternalResource[] = [];
-
 /**
  * `holders` are the resources between the node and the mesh, the node's property first: a
  * GridMap's MeshLibrary. A mesh that is a node's property has none. The caller keeps the list
@@ -93,7 +92,7 @@ const NO_HOLDERS: readonly TscnInternalResource[] = [];
  */
 export function useMeshContent(
   resolution: ResourceResolution,
-  holders: readonly TscnInternalResource[] = NO_HOLDERS
+  holders: readonly TscnInternalResource[] = NODE_PROPERTY
 ): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;

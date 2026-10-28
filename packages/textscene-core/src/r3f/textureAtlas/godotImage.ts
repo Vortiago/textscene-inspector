@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { readImagePixels, type ImagePixels } from '../../resources/formats/image/imagePixels.js';
 import { isLiveTarget, liveTargetPixels } from '../liveTargets.js';
 import { perObject } from '../../utils/perObject.js';
-import { isBottomUp, reversedRows } from '../../utils/reversedRows.js';
+import { isBottomUp, reverseRowsInPlace, reversedRows } from '../../utils/reversedRows.js';
 
 export interface GodotImage {
   width: number;
@@ -34,7 +34,9 @@ function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
 function readLiveTargetImage(texture: THREE.Texture): GodotImage | undefined {
   if (!readsAsBytes(texture)) return undefined;
   const pixels = liveTargetPixels(texture);
-  return pixels && topRowFirst(pixels);
+  // In place: the readback is this call's own buffer.
+  if (pixels) reverseRowsInPlace(pixels.data, pixels.width, pixels.height);
+  return pixels;
 }
 
 function topRowFirst({ width, height, data }: ImagePixels): GodotImage {

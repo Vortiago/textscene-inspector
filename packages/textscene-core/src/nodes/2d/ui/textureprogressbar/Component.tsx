@@ -36,24 +36,15 @@ import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import type { TextureProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
-import { textureSize } from '../../../../resources/textures/textureSize';
+import { imageSize } from '../../../../resources/formats/image/imagePixels';
+import { reportedArea, sizeWithArea } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
-/** The size a plain or radial layer draws at: the size Godot reports for its texture. */
-function reportedSize(texture: THREE.Texture | null): Vector2 | null {
-  return areaOf(textureSize(texture));
-}
-
 /** The size a nine-patch layer cuts its margins from: the sampled image's. */
 function sampledSize(texture: THREE.Texture | null): Vector2 | null {
-  return areaOf(imageSize(texture?.image));
-}
-
-function areaOf(size: ImageSize | undefined): Vector2 | null {
-  return size && size.width > 0 && size.height > 0 ? { x: size.width, y: size.height } : null;
+  return sizeWithArea(imageSize(texture?.image));
 }
 
 /** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
@@ -101,7 +92,7 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   // Memoised, so the geometry and crop memos that read a size rebuild only when its texture changes.
   const ninePatchStretch = props.ninePatchStretch === true;
   // An unset ViewportTexture reports size 0 yet samples the placeholder, which a nine patch stretches.
-  const layerSize = ninePatchStretch ? sampledSize : reportedSize;
+  const layerSize = ninePatchStretch ? sampledSize : reportedArea;
   const underSize = useMemo(() => layerSize(underTexture), [layerSize, underTexture]);
   const progressSize = useMemo(() => layerSize(progressTexture), [layerSize, progressTexture]);
   const overSize = useMemo(() => layerSize(overTexture), [layerSize, overTexture]);
