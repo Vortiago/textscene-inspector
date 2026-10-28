@@ -45,6 +45,7 @@
     "build:pages": "node scripts/build-pages.mjs",
     "check:public-site": "node scripts/check-public-site.mjs",
     "new:node": "node scripts/new-node-slice.mjs",
+    "playwright:install": "playwright install chromium",
     "test:visual": "node scripts/visual/run.mjs",
     "test:visual:update": "node scripts/visual/run.mjs --update",
     "test:visual:measure": "node scripts/visual/shards/measure.mjs",
