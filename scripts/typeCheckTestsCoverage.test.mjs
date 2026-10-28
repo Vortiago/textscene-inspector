@@ -13,10 +13,10 @@ const scriptsOf = (dir) => JSON.parse(readFileSync(join(dir, 'package.json'), 'u
 
 /** Packages shipping at least one test file, so a type-check of them means something. */
 function hasTests(dir) {
-  const walk = (dir) => {
-    if (!existsSync(dir)) return false;
-    return readdirSync(dir, { withFileTypes: true }).some((entry) => {
-      const child = join(dir, entry.name);
+  const walk = (folder) => {
+    if (!existsSync(folder)) return false;
+    return readdirSync(folder, { withFileTypes: true }).some((entry) => {
+      const child = join(folder, entry.name);
       if (entry.isDirectory()) return entry.name !== 'node_modules' && walk(child);
       return /\.test\.(ts|tsx|mts)$/.test(entry.name);
     });
