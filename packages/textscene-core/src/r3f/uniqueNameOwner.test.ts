@@ -476,6 +476,39 @@ unique_name_in_owner = true
   });
 });
 
+describe('a node of an inherited scene whose owner_uid_path= enters an instance of its base', () => {
+  // The owner= walk leaves the root, so the trail decides. No heading of the inheriting file holds
+  // its first id, so it continues in the base (packed_scene.cpp:1960-1979) and ends in `Inner`.
+  const inner = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Inner" type="Node2D"]
+
+[node name="Seat" type="Node2D" parent="." unique_id=5]
+`);
+  const base = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://inner.tscn" id="1"]
+
+[node name="Base" type="Node2D"]
+
+[node name="Inner" parent="." instance=ExtResource("1") unique_id=77]
+`);
+  const inheriting = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Tool" instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="." owner="../Gone" owner_uid_path=PackedInt32Array(77, 5)]
+unique_name_in_owner = true
+`);
+  const scenes = { 'res://base.tscn': base, 'res://inner.tscn': inner };
+
+  it('registers the name with the instance the trail ends in', () => {
+    const owner = claimOwnerOf('Tool/Lamp', inheriting.nodes, contextOver(inheriting, scenes));
+
+    expect(owner.path).toBe('Tool/Inner');
+  });
+});
+
 describe('a node outside an instance whose owner= names that instance', () => {
   // The loader sets the owner from the NodePath (resource_format_text.cpp:257-262), and
   // instantiate registers the name on that owner (packed_scene.cpp:565-570).

@@ -230,7 +230,8 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
   const { owner, node } = walk.to(path);
   if (node?.owner === undefined) return owner;
   const file = fileSeating(owner, path, ADDED);
-  if (node.owner === '.') return file;
+  // `.` with a trail is the inherited root, whose base holds the owner the trail names.
+  if (node.owner === '.' && node.ownerContentTrail === undefined) return file;
   const ownerPath = explicitOwnerPath(node.owner, node, file.path, walk);
   return ownerPath === undefined ? noOwner(walk.live) : walk.to(ownerPath).into;
 }
