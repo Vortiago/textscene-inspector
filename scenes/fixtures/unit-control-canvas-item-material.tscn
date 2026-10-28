@@ -1,0 +1,65 @@
+; One variable: a CanvasItemMaterial on a Control. The material sets `light_mode` and `blend_mode`
+; on any CanvasItem. Under one light the unshaded ColorRect keeps its colour, the Light Only one
+; draws the light alone, and the Add and Mul ones blend onto the backdrop. No other golden gives a
+; Control a CanvasItemMaterial.
+
+[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_unshaded"]
+light_mode = 1
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_light_only"]
+light_mode = 2
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_add"]
+blend_mode = 1
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_mul"]
+blend_mode = 3
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.25, 0.25, 0.25, 1)
+
+[node name="Unshaded" type="ColorRect" parent="."]
+material = SubResource("CanvasItemMaterial_unshaded")
+offset_left = 60.0
+offset_top = 60.0
+offset_right = 260.0
+offset_bottom = 200.0
+color = Color(0.8, 0.4, 0.2, 1)
+
+[node name="LightOnly" type="ColorRect" parent="."]
+material = SubResource("CanvasItemMaterial_light_only")
+offset_left = 300.0
+offset_top = 60.0
+offset_right = 500.0
+offset_bottom = 200.0
+color = Color(0.8, 0.4, 0.2, 1)
+
+[node name="Add" type="ColorRect" parent="."]
+material = SubResource("CanvasItemMaterial_add")
+offset_left = 540.0
+offset_top = 60.0
+offset_right = 740.0
+offset_bottom = 200.0
+color = Color(0.4, 0.2, 0.1, 1)
+
+[node name="Mul" type="ColorRect" parent="."]
+material = SubResource("CanvasItemMaterial_mul")
+offset_left = 780.0
+offset_top = 60.0
+offset_right = 980.0
+offset_bottom = 200.0
+color = Color(0.8, 0.4, 0.2, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+color = Color(1, 0.8, 0.5, 1)
+energy = 0.5

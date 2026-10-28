@@ -76,6 +76,19 @@ describe('computeWorldBoundingBox', () => {
     expect(box.max.x).toBeCloseTo(6, 5); //  5 + 1
   });
 
+  it('leaves out the subtree of a descendant the caller skips', () => {
+    const parent = new THREE.Group();
+    parent.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
+    const skipped = new THREE.Group();
+    skipped.position.set(50, 0, 0);
+    skipped.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
+    parent.add(skipped);
+
+    const box = computeWorldBoundingBox(parent, new THREE.Box3(), (child) => child === skipped);
+
+    expect(box.max.x).toBeCloseTo(1, 5);
+  });
+
   it('returns an empty box when no descendant has geometry', () => {
     const parent = new THREE.Group();
     parent.add(new THREE.Object3D(), new THREE.Group());

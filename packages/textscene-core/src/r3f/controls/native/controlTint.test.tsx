@@ -53,7 +53,7 @@ describe('useControlOwnTint', () => {
   const OPAQUE_WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
   it('defaults to opaque white when self_modulate is unset', () => {
-    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, control({})));
+    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, control({}), OPAQUE_WHITE));
     expect(result.current.own).toEqual({ r: 1, g: 1, b: 1, a: 1 });
     expect(result.current.opacity).toBe(1);
   });
@@ -65,22 +65,34 @@ describe('useControlOwnTint', () => {
     });
     // The argument stands for `useInheritedModulate`'s result, which already
     // carries this node's `modulate`; reading it a second time would give 0.125.
-    const { result } = renderHook(() => useControlOwnTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }, node));
+    const { result } = renderHook(() =>
+      useControlOwnTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }, node, OPAQUE_WHITE)
+    );
     expect(result.current.own.r).toBeCloseTo(0.25, 5);
     expect(result.current.opacity).toBeCloseTo(0.25, 5);
   });
 
   it('ignores the ambient context entirely — the walker states the inherited value', () => {
     const node = control({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } });
-    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, node), {
+    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, node, OPAQUE_WHITE), {
       wrapper: ambient({ r: 0.5, g: 0.5, b: 0.5, a: 1 }),
     });
     expect(result.current.own.r).toBeCloseTo(0.5, 5);
   });
 
+  it('multiplies the canvas tint into the own pixels, before the one conversion to linear', () => {
+    const node = control({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } });
+    const { result } = renderHook(() =>
+      useControlOwnTint(OPAQUE_WHITE, node, { r: 0.5, g: 0.2, b: 1, a: 1 })
+    );
+    expect(result.current.own.r).toBeCloseTo(0.25, 5);
+    expect(result.current.own.g).toBeCloseTo(0.1, 5);
+    expect(result.current.own.b).toBeCloseTo(0.5, 5);
+  });
+
   it('converts the sRGB product to linear exactly once', () => {
     const node = control({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } });
-    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, node));
+    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, node, OPAQUE_WHITE));
     const expected = new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace);
     expect(result.current.color.r).toBeCloseTo(expected.r, 6);
   });

@@ -7,6 +7,8 @@
 import { useMemo } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { controlProps, type SolveNode } from './solveTree';
+import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
@@ -16,7 +18,13 @@ import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext } from '../../canvasItemModulate';
 import { TextureSampler2DContext, useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { useControlOwnTint, useInheritedModulate } from './controlTint';
-import { canvasRenderOrder } from '../../canvasPaintOrder';
+import { useCanvasModulateFor } from '../../canvasModulate';
+import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
+import {
+  CanvasItemMaterialProvider,
+  useResolvedCanvasItemMaterial,
+} from '../../components/canvasItemMaterialContext';
+import { canvasRenderOrder, isCanvasLayerType } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { useLayerRank } from '../../contexts/PaintOrderContext';
@@ -96,6 +104,30 @@ interface ControlNodeGroupProps {
   snapToPixels: boolean;
 }
 
+/**
+ * A Control's `CanvasItemMaterial`: its own, or with `use_parent_material` the parent item's. A
+ * skipped Node2D chain above a promoted Control is that parent item, so it decides unless every
+ * skipped ancestor defers to the Control above. Each reference resolves in the scope of the node
+ * that names it: an instanced sub-scene names its materials in its file.
+ */
+function useControlMaterial(
+  solveNode: SolveNode,
+  props: ControlProperties
+): CanvasItemMaterialProperties | null {
+  const useParentMaterial = props.useParentMaterial === true;
+  const skipped = solveNode.skippedAncestors?.material;
+  const ownOrAmbient = useResolvedCanvasItemMaterial(
+    { ref: props.materialPath, useParentMaterial },
+    solveNode.resources
+  );
+  const fromSkippedAncestor = useResolvedCanvasItemMaterial(
+    { ref: skipped?.kind === 'own' ? skipped.ref : undefined, useParentMaterial: false },
+    skipped?.kind === 'own' ? skipped.resources : solveNode.resources
+  );
+  if (!useParentMaterial || !skipped || skipped.kind === 'inherit') return ownOrAmbient;
+  return skipped.kind === 'own' ? fromSkippedAncestor : null;
+}
+
 function ControlNodeGroup({
   solveNode,
   solved,
@@ -105,11 +137,12 @@ function ControlNodeGroup({
   snapToPixels,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
+  const material = useControlMaterial(solveNode, props);
   const inheritedModulate = useInheritedModulate(props.modulate, solveNode.skippedAncestors?.modulate);
-  // The painter's pixels continue the chain one `self_modulate` further. Resolved
-  // here, so no painter re-enters the composition from the provider
-  // (`NativeControlComponentProps.tint`).
-  const tint = useControlOwnTint(inheritedModulate, solveNode);
+  // The painter's pixels continue the chain one `self_modulate` further, and take the canvas tint
+  // when the light mode admits it (the light injection divides it back out). Resolved here, so no
+  // painter re-enters the composition from the provider (`NativeControlComponentProps.tint`).
+  const tint = useControlOwnTint(inheritedModulate, solveNode, useCanvasModulateFor(material));
   // Own-or-ambient, not multiplicative: neither property has a self-only layer,
   // so one fold serves this painter and the descendants.
   const sampler = useInheritedTextureSampler(
@@ -216,24 +249,8 @@ function ControlNodeGroup({
   const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
   // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
   // counts from the painter's local scene.
-  const painted = wrapsChildren ? (
-    <Painter
-      solveNode={solveNode}
-      rect={rect}
-      renderOrder={renderOrder}
-      tint={tint}
-      subtreeChromeRenderOrder={subtreeChromeRenderOrder}
-      effectiveZ={effectiveZ}
-      theme={theme}
-      measureText={measureText}
-      snapToPixels={snapToPixels}
-      childRects={childRects}
-      meta={solvedEntry?.meta}
-    >
-      {childElements}
-    </Painter>
-  ) : (
-    <>
+  const painter = (
+    <NodePathProvider path={solveNode.path}>
       <Painter
         solveNode={solveNode}
         rect={rect}
@@ -246,11 +263,28 @@ function ControlNodeGroup({
         snapToPixels={snapToPixels}
         childRects={childRects}
         meta={solvedEntry?.meta}
-      />
+      >
+        {wrapsChildren ? childElements : undefined}
+      </Painter>
+    </NodePathProvider>
+  );
+  // The leaf meshes of a painter read the lit pixel material through context. A CanvasLayer is no
+  // CanvasItem, so it declares no item: one would add a light list to the layer's placement.
+  const litPainter = isCanvasLayerType(solveNode.node.type) ? (
+    painter
+  ) : (
+    <LitCanvasItemPixels material={material} lightMask={props.lightMask} zFinal={effectiveZ}>
+      {painter}
+    </LitCanvasItemPixels>
+  );
+  const content = wrapsChildren ? (
+    litPainter
+  ) : (
+    <>
+      {litPainter}
       {childElements}
     </>
   );
-  const content = <NodePathProvider path={solveNode.path}>{painted}</NodePathProvider>;
 
   const ownGroup = (
     // Every group here carries the key: three takes `groupOrder` from the nearest
@@ -263,19 +297,21 @@ function ControlNodeGroup({
     >
       <CanvasItemKeyProvider value={renderOrder}>
         <Modulate2DContext.Provider value={inheritedModulate}>
-          <TextureSampler2DContext.Provider value={sampler}>
-            {hasOwnTransform ? (
-              <CanvasItemGroup
-                position={[pivotX, -pivotY, 0]}
-                rotation={[0, 0, 0 - rotation]}
-                scale={[scaleX, scaleY, 1]}
-              >
-                <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
-              </CanvasItemGroup>
-            ) : (
-              content
-            )}
-          </TextureSampler2DContext.Provider>
+          <CanvasItemMaterialProvider value={material}>
+            <TextureSampler2DContext.Provider value={sampler}>
+              {hasOwnTransform ? (
+                <CanvasItemGroup
+                  position={[pivotX, -pivotY, 0]}
+                  rotation={[0, 0, 0 - rotation]}
+                  scale={[scaleX, scaleY, 1]}
+                >
+                  <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
+                </CanvasItemGroup>
+              ) : (
+                content
+              )}
+            </TextureSampler2DContext.Provider>
+          </CanvasItemMaterialProvider>
         </Modulate2DContext.Provider>
       </CanvasItemKeyProvider>
     </group>

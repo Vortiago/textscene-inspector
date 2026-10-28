@@ -36,8 +36,6 @@ export interface ThemedIconRef {
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
  * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}.
  */
-// One facet is missing, so a skipped ancestor that sets it diverges: the material owner (no
-// native painter reads `CanvasItemMaterialContext`).
 export interface SkippedAncestors {
   /**
    * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
@@ -58,7 +56,17 @@ export interface SkippedAncestors {
    * and the viewport default under them.
    */
   sampler: AmbientTextureSampler;
+  /** What a `use_parent_material` Control under the skipped ancestors takes (`canvas_item.cpp`). */
+  material: SkippedMaterial;
 }
+
+/**
+ * The material of a promoted Control's parent item: the innermost skipped ancestor that names one,
+ * a chain that names none, or the Control above the chain where every skipped ancestor defers.
+ * `own` carries the scope of that ancestor, since an instanced sub-scene names its materials in its file.
+ */
+export type SkippedMaterial =
+  { kind: 'own'; ref: string; resources: SceneScope } | { kind: 'inherit' } | { kind: 'none' };
 
 /** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
 interface CanvasItemZStep {
