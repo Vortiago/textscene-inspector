@@ -45,12 +45,12 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Depth fog
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
 
-`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. `fog_sky_affect` sets how far the fog covers the background.
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. `fog_sky_affect` sets how far the fog covers the background.
 
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
-`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. `volumetric_fog_ambient_inject` lights the fog with the sky's radiance layers, as Godot does. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 
