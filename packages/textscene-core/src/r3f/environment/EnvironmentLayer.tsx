@@ -23,7 +23,6 @@ import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 import { registerExposureStage } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
 import { scaledRgb } from '../../utils/colorParser';
-import { usePublishWorldToneMap } from './worldToneMap';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -44,7 +43,6 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
   const draws3D = useDraws3D();
-  usePublishWorldToneMap(settings, resources);
   // Only the root world tonemaps the canvas. `THREE.ShaderChunk` is module-global, so a sub-viewport
   // world's curve would replace the root's, and a portal store shares the root's internal state, so
   // its compositor would draw the portal scene onto the canvas, not into the target.

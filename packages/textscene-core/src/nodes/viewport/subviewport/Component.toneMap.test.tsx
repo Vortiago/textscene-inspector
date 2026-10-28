@@ -10,14 +10,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { waitFor } from '@testing-library/react';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import {
-  ViewportPassOrchestrator,
-  ViewportPassProvider,
-} from '../../../r3f/contexts/ViewportPassRegistryContext';
-import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
-import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { ViewportPassStack } from './viewportPasses.testkit';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 
@@ -53,15 +48,11 @@ async function mount(source: string): Promise<() => Promise<THREE.WebGLRenderTar
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace="3d">
-      <ViewportTextureProvider>
-        <ViewportPassProvider>
-          <WorldEnvironmentScope world="root">
-            <NodeDispatcher nodes={parsed.nodes} />
-          </WorldEnvironmentScope>
-          <CaptureRenderer captured={captured} />
-          <ViewportPassOrchestrator />
-        </ViewportPassProvider>
-      </ViewportTextureProvider>
+      <ViewportPassStack captured={captured}>
+        <WorldEnvironmentScope world="root">
+          <NodeDispatcher nodes={parsed.nodes} />
+        </WorldEnvironmentScope>
+      </ViewportPassStack>
     </SceneStack>
   );
   return async () => {

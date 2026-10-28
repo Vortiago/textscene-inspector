@@ -4,7 +4,7 @@
  * writes the target (`:2514`). The root canvas's compositor does the same on the drawing buffer.
  */
 
-import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import { EffectPass } from 'postprocessing';
 import { useThree } from '@react-three/fiber';
@@ -17,18 +17,16 @@ import { createPassTarget } from './passTarget';
 import { SCENE_BUFFER_TYPE } from './useCompositorPass';
 import { useGodotToneMapEffect } from './useGodotToneMapEffect';
 import type { GodotToneMapEffect } from './GodotToneMapEffect';
-import type { WorldToneMap } from './worldToneMap';
+import { useWorldToneMap } from './worldToneMap';
 
 export interface OffscreenToneMap {
   /** The buffer the world draws into, at the viewport's `msaa_3d` samples. */
   worldBuffer: THREE.WebGLRenderTarget;
   /** Tonemaps what `worldBuffer` holds into `target`, and leaves the renderer as it found it. */
-  toneMap: (gl: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget) => void;
+  toneMap: (target: THREE.WebGLRenderTarget) => void;
 }
 
 interface OffscreenToneMapOptions {
-  /** The world's Environment and auto exposure. */
-  world: WorldToneMap;
   /** Godot's `msaa_3d` mode. */
   msaaMode: number;
   width: number;
@@ -40,12 +38,29 @@ interface OffscreenToneMapOptions {
 }
 
 /**
- * The world buffer and the tonemap pass of one offscreen viewport. The hook owns both.
+ * Mounts the world buffer and the tonemap pass of one offscreen viewport in the world it sits in,
+ * and hands them to `stage` while it stays mounted. A pass in a portal of its own world mounts it
+ * inside the portal, so it reads that world's Environment.
  *
  * @canonical Godot's tonemap pass into a render target
  */
-export function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap {
-  const { world, msaaMode, width, height, transparentBackground, name } = options;
+export function OffscreenToneMapStage({
+  stage,
+  ...options
+}: OffscreenToneMapOptions & { stage: MutableRefObject<OffscreenToneMap | null> }): null {
+  const toneMap = useOffscreenToneMap(options);
+  useLayoutEffect(() => {
+    stage.current = toneMap;
+    return () => {
+      if (stage.current === toneMap) stage.current = null;
+    };
+  }, [stage, toneMap]);
+  return null;
+}
+
+function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap {
+  const { msaaMode, width, height, transparentBackground, name } = options;
+  const world = useWorldToneMap();
   const { settings } = world;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
   const effect = useGodotToneMapEffect({
@@ -58,13 +73,12 @@ export function useOffscreenToneMap(options: OffscreenToneMapOptions): Offscreen
   });
   const createWorldBuffer = useCallback(() => worldBufferOf(width, height, name), [width, height, name]);
   const worldBuffer = useMultisampledTarget(msaaMode, createWorldBuffer);
+  const gl = useThree((state) => state.gl);
   const pass = useEffectPass(effect, width, height);
-  const toneMap = useCallback(
-    (gl: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget) =>
-      drawOffscreen(gl, () => pass.render(gl, worldBuffer, target, 0)),
-    [pass, worldBuffer]
-  );
-  return { worldBuffer, toneMap };
+  return useMemo(() => {
+    const draw = (target: THREE.WebGLRenderTarget) => pass.render(gl, worldBuffer, target, 0);
+    return { worldBuffer, toneMap: (target) => drawOffscreen(gl, () => draw(target)) };
+  }, [gl, pass, worldBuffer]);
 }
 
 function worldBufferOf(width: number, height: number, name: string): THREE.WebGLRenderTarget {

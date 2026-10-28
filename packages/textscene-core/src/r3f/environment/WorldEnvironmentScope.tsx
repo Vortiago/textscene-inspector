@@ -14,7 +14,9 @@ import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import { WorldExposureScope } from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
-import { WorldToneMapScope } from './worldToneMap';
+import { WorldToneMapProvider } from './worldToneMap';
+import { previewEnvironment } from '../preview/godotPreviewLighting';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
@@ -31,18 +33,13 @@ export function WorldEnvironmentScope({ world, children }: { world: WorldKind; c
   return (
     <WorldKindProvider world={world}>
       <environments.Provider>
-        <WorldToneMapScope>
-          <WorldExposureScope>
-            {world === 'root' ? (
-              <RootEnvironment>{children}</RootEnvironment>
-            ) : (
-              <>
-                <SubViewportEnvironment />
-                {children}
-              </>
-            )}
-          </WorldExposureScope>
-        </WorldToneMapScope>
+        <WorldExposureScope>
+          {world === 'root' ? (
+            <RootEnvironment>{children}</RootEnvironment>
+          ) : (
+            <SubViewportEnvironment>{children}</SubViewportEnvironment>
+          )}
+        </WorldExposureScope>
       </environments.Provider>
     </WorldKindProvider>
   );
@@ -56,13 +53,22 @@ export function WorldEnvironmentScope({ world, children }: { world: WorldKind; c
 function RootEnvironment({ children }: { children: ReactNode }) {
   const authored = environments.useChosen();
   const preview = usePreviewYield();
+  // A publication proves a WorldEnvironment node, which takes the preview away by type.
+  const showsPreview = !authored && preview.environment;
+  const applied = showsPreview ? previewEnvironment().settings : resolvedSettings(authored);
+  const resources = authored?.status === 'resolved' ? authored.environment.resources : NO_RESOURCES;
   return (
-    <>
-      <RootEnvironmentLayer authored={authored} showsPreview={preview.environment} />
+    <WorldToneMapProvider settings={applied} resources={resources}>
+      <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
       {children}
       {preview.sun && <PreviewSun />}
-    </>
+    </WorldToneMapProvider>
   );
+}
+
+/** The settings of a resolved Environment, else null. */
+function resolvedSettings(authored: EnvironmentResolution | null) {
+  return authored?.status === 'resolved' ? authored.environment.settings : null;
 }
 
 function RootEnvironmentLayer({
@@ -74,15 +80,26 @@ function RootEnvironmentLayer({
 }) {
   if (authored?.status === 'resolved') return <EnvironmentLayer {...authored.environment} />;
   if (authored?.status === 'pending') return null;
-  // A publication proves a WorldEnvironment node, which takes the preview away by type.
-  return !authored && showsPreview ? <PreviewEnvironment /> : <NoEnvironmentLayer />;
+  return showsPreview ? <PreviewEnvironment /> : <NoEnvironmentLayer />;
 }
 
 /**
  * A sub-viewport's portal world. Its pass sets its own clear colour, so only a resolved Environment
  * adds a layer here, and a missing one leaves the root's clear colour alone.
  */
-function SubViewportEnvironment() {
+function SubViewportEnvironment({ children }: { children: ReactNode }) {
   const authored = environments.useChosen();
-  return authored?.status === 'resolved' ? <EnvironmentLayer {...authored.environment} /> : null;
+  if (authored?.status !== 'resolved') {
+    return (
+      <WorldToneMapProvider settings={null} resources={NO_RESOURCES}>
+        {children}
+      </WorldToneMapProvider>
+    );
+  }
+  return (
+    <WorldToneMapProvider settings={authored.environment.settings} resources={authored.environment.resources}>
+      <EnvironmentLayer {...authored.environment} />
+      {children}
+    </WorldToneMapProvider>
+  );
 }

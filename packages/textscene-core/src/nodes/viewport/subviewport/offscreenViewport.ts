@@ -14,14 +14,14 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 
 /**
- * The target of a pass that draws the 3D world. Godot tonemaps each viewport into its own target as
+ * The target the tonemap pass of a 3D world writes, which holds no depth: the world draws into its
+ * own buffer (`r3f/environment/offscreenToneMap.ts`). Godot tonemaps each viewport into its own target as
  * sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
  * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from encoding
  * too: an sRGB tag would stack a shader encode on the hardware encode.
  */
 export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   const target = createTarget(width, height, name);
-  target.depthBuffer = true;
   // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
   // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
   pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);

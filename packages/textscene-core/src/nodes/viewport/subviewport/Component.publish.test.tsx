@@ -12,22 +12,14 @@ import type { ReactNode } from 'react';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
-import {
-  ViewportTextureProvider,
-  useViewportTexture,
-  type ViewportTextureEntry,
-} from '../../../r3f/contexts/ViewportTextureContext';
-import {
-  ViewportPassProvider,
-  ViewportPassOrchestrator,
-} from '../../../r3f/contexts/ViewportPassRegistryContext';
+import { useViewportTexture, type ViewportTextureEntry } from '../../../r3f/contexts/ViewportTextureContext';
 import { SubViewport } from './Component';
+import { ViewportPassStack } from './viewportPasses.testkit';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { InWorld } from '../../../r3f/testing/InWorld';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
-import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
@@ -98,15 +90,11 @@ async function renderScene(
   const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
   const wrap = (nodes: ReactNode) => (
     <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
-      <ViewportTextureProvider>
-        <ViewportPassProvider>
-          <InWorld>{nodes}</InWorld>
-          <Probe path={viewportPath} seen={seen} />
-          {canvasCamera}
-          <CaptureRenderer captured={capturedGl} />
-          <ViewportPassOrchestrator />
-        </ViewportPassProvider>
-      </ViewportTextureProvider>
+      <ViewportPassStack captured={capturedGl}>
+        <InWorld>{nodes}</InWorld>
+        <Probe path={viewportPath} seen={seen} />
+        {canvasCamera}
+      </ViewportPassStack>
     </SceneStack>
   );
   const renderer = await ReactThreeTestRenderer.create(wrap(<NodeDispatcher nodes={parsed.nodes} />));
