@@ -2364,6 +2364,12 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Debanding",
+    "file": "debanding/unit-debanding.tscn",
+    "category": "Other",
+    "root": "debanding"
+  },
+  {
     "name": "Decal Filter",
     "file": "decal-filter/unit-decal-filter.tscn",
     "category": "Other",
@@ -4107,6 +4113,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Control Texture",
     "file": "unit-sub-viewport-control-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Debanding",
+    "file": "unit-sub-viewport-debanding.tscn",
     "category": "Unit - Viewports"
   },
   {

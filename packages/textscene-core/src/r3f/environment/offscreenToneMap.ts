@@ -35,6 +35,8 @@ interface OffscreenToneMapOptions {
   height: number;
   /** Whether the target keeps the buffer's alpha: a SubViewport's `transparent_bg`. */
   transparentBackground: boolean;
+  /** A SubViewport's `use_debanding`. */
+  usesDebanding: boolean;
   /** The name the buffer's texture carries. */
   name: string;
 }
@@ -64,7 +66,7 @@ export function OffscreenToneMapStage({
 }
 
 function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap {
-  const { target, msaaMode, width, height, transparentBackground, name } = options;
+  const { target, msaaMode, width, height, transparentBackground, usesDebanding, name } = options;
   const world = useWorldToneMap();
   const { settings } = world;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
@@ -74,6 +76,7 @@ function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap
     toneMapping: settings?.toneMapping ?? NO_ENVIRONMENT_TONE_MAPPING,
     autoExposure: world.autoExposure,
     transparentBackground,
+    usesDebanding,
     resources: world.resources,
   });
   const createWorldBuffer = useCallback(() => worldBufferOf(width, height, name), [width, height, name]);

@@ -54,6 +54,11 @@ export interface CompositeOptions {
   autoExposure: AutoExposure | null;
   /** Godot `tonemap_exposure`, the starting value of the exposure uniform. */
   exposure: number;
+  /**
+   * The viewport's `use_debanding`: `FLAG_USE_8_BIT_DEBANDING`, since every target here stores
+   * 8-bit values (`renderer_scene_render_rd.cpp:784-797`).
+   */
+  usesDebanding: boolean;
 }
 
 interface UniformDeclaration {
@@ -85,6 +90,7 @@ export function compositeProgram({
   exposure,
   transparentBackground,
   usesBicubicGlowUpscale,
+  usesDebanding,
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
@@ -110,11 +116,13 @@ ${declarationsGlsl(declarations)}
 ${autoExposure ? AUTO_EXPOSURE_GAIN_GLSL : NO_AUTO_EXPOSURE_GAIN_GLSL}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
 ${glow ? glowGatherGlsl(glow, usesBicubicGlowUpscale) + blendGlsl(glow, flooredWhite) : ''}
-${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
+${adjustments || usesDebanding ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
+${usesDebanding ? DITHER_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${FRAME_EXPOSURE_GLSL}
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
 ${adjustments ? adjustmentsGlsl(adjustments) : ''}
+${usesDebanding ? DEBANDING_GLSL : ''}
   outputColor = vec4(color, ${transparentBackground ? 'inputColor.a' : '1.0'});
 }
 `;
@@ -160,6 +168,30 @@ ${map}${blend}`;
  * scene colour before the blend: every curve but LINEAR clamps for itself (`:258`).
  */
 const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${FRAME_EXPOSURE});`;
+
+/**
+ * Godot's `screen_space_dither` (`tonemap.glsl:848-856`), one channel at a time: `coord` is the
+ * dot product of (171, 231) and the fragment centre, and each channel has its own period. The
+ * result spans one 8-bit level, centred on zero.
+ */
+const DITHER_GLSL = /* glsl */ `
+float godotDither(float coord, float period) {
+  return (fract(coord / period) - 0.5) / 255.0;
+}
+
+vec3 godotDither3(vec2 fragCoord) {
+  float coord = dot(vec2(171.0, 231.0), fragCoord);
+  return vec3(godotDither(coord, 103.0), godotDither(coord, 71.0), godotDither(coord, 97.0));
+}
+`;
+
+/**
+ * `tonemap.glsl:950-957`: the dither lands on the sRGB value just before the 8-bit store. The
+ * fragment counts from the top-left corner, as in Godot. The colour goes back to linear for the
+ * composer's encode, clamped at 0 as the 8-bit store clamps, since three's encode takes `pow`.
+ */
+const DEBANDING_GLSL = /* glsl */ `  vec2 godotFragCoord = vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
+  color = godotToLinear(max(godotToSrgb(color) + godotDither3(godotFragCoord), vec3(0.0)));`;
 
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on

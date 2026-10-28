@@ -179,6 +179,7 @@ function OffscreenViewport({
         width={width}
         height={height}
         transparentBackground={transparentBg}
+        usesDebanding={properties.use_debanding}
         name={node.name}
       />
     ) : null;

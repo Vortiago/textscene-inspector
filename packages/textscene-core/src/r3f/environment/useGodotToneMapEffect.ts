@@ -27,13 +27,16 @@ export interface ToneMapEffectInputs {
   autoExposure: AutoExposure | null;
   /** Whether the pass writes the buffer's alpha through, which only a transparent viewport shows. */
   transparentBackground: boolean;
+  /** The viewport's `use_debanding`. */
+  usesDebanding: boolean;
   /** The pools `glow_map` resolves in: those of the Environment that names it. */
   resources: SceneResources;
 }
 
 /** The effect for `inputs`, rebuilt when one changes. The hook owns the effect and disposes it. */
 export function useGodotToneMapEffect(inputs: ToneMapEffectInputs): GodotToneMapEffect {
-  const { glow, adjustments, toneMapping, autoExposure, transparentBackground, resources } = inputs;
+  const { glow, adjustments, toneMapping, autoExposure, transparentBackground, usesDebanding, resources } =
+    inputs;
   const { mode, white, exposure, agxContrast } = toneMapping;
   const glowMap = useGlowMap(glow, resources);
   const usesBicubicGlowUpscale = projectGlowUsesBicubicUpscale(useProjectSettings().settings);
@@ -48,6 +51,7 @@ export function useGodotToneMapEffect(inputs: ToneMapEffectInputs): GodotToneMap
         exposure,
         transparentBackground,
         usesBicubicGlowUpscale,
+        usesDebanding,
       }),
     [
       glow,
@@ -59,6 +63,7 @@ export function useGodotToneMapEffect(inputs: ToneMapEffectInputs): GodotToneMap
       agxContrast,
       transparentBackground,
       usesBicubicGlowUpscale,
+      usesDebanding,
     ]
   );
   useDisposeOnRelease(effect);

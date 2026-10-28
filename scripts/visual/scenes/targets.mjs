@@ -80,6 +80,8 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'sub-viewport-shared-world-glow', file: 'unit-sub-viewport-shared-world-glow.tscn' },
   // A Camera3D's own Environment glows its own-world target, with no WorldEnvironment in the world.
   { name: 'sub-viewport-camera-environment', file: 'unit-sub-viewport-camera-environment.tscn' },
+  // A SubViewport's `use_debanding` dithers the bloom its camera's Environment adds.
+  { name: 'sub-viewport-debanding', file: 'unit-sub-viewport-debanding.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },

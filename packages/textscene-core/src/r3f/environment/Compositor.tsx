@@ -28,7 +28,7 @@ interface CompositorProps {
 }
 
 export function Compositor({ pass, adjustments, toneMapping, resources }: CompositorProps) {
-  const { glow, samples, autoExposure } = pass;
+  const { glow, samples, autoExposure, usesDebanding } = pass;
   // The composer draws the canvas, which is the root window's surface.
   const transparentBackground = projectTransparentBackground(useProjectSettings().settings);
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
@@ -41,6 +41,7 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
     toneMapping,
     autoExposure,
     transparentBackground,
+    usesDebanding,
     resources,
   });
 
