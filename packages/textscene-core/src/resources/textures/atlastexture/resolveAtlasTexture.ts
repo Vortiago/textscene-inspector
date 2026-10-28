@@ -11,6 +11,8 @@ import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCac
 import { imageSize } from '../../formats/image/imagePixels';
 import { atlasTextureLayout, decodeAtlasTexture } from './decode';
 import { rasterizeAtlasTexture } from './build';
+import { isLiveTarget, liveTargetCrop } from '../../../r3f/liveTargets';
+import { pinColorSpace } from '../textureView';
 import type { AtlasTextureData } from './types';
 
 /** An AtlasTexture reference: its sub-resource id and its decoded properties. */
@@ -35,20 +37,20 @@ export function resolveAtlasTextureRef(
 }
 
 /**
- * A cropped cell and the procedural-cache key that keeps it resident. The crop is
- * shared: a caller must not dispose it, and pins `key` while it holds `texture`.
- * `useTexture2D` does both for React consumers.
+ * A cropped cell, shared between the readers that cut it alike: a caller never disposes it. A cell
+ * of a loaded sheet stays while a reader pins `key`, and a cell of a live target while a reader
+ * holds `texture` (`holdUntilReleased`), where `key` is null. `useTexture2D` does both.
  */
 interface AtlasTextureResolution {
   texture: THREE.Texture;
-  /** Pinned for as long as a consumer holds `texture`. */
-  key: string;
+  key: string | null;
 }
 
 /**
- * `atlas`'s cell cut out of the loaded `sheet`, or null: an undecoded sheet, an
- * empty region, or no canvas. `proceduralTexture` does not cache a null, so the
- * next render retries. The key includes the sheet's identity, so a reloaded sheet re-cuts.
+ * `atlas`'s cell cut out of `sheet`, or null: an undecoded sheet, an empty region, or no canvas. A
+ * loaded sheet is cut once, and `proceduralTexture` does not cache a null, so the next render
+ * retries. The key includes the sheet's identity, so a reloaded sheet re-cuts. A live target is
+ * cut after each of its renders, as Godot's AtlasTexture draws from the live RID.
  */
 export function resolveAtlasTexture(
   atlas: AtlasTextureReference,
@@ -58,6 +60,11 @@ export function resolveAtlasTexture(
   if (!sheet) return null;
   const layout = atlasTextureLayout(atlas.texture, imageSize(sheet.image) ?? null);
   if (!layout) return null;
+  if (isLiveTarget(sheet)) {
+    // Pinned, as the sheet is: R3F reasserts `SRGBColorSpace` on a `map` every commit.
+    const crop = pinColorSpace(liveTargetCrop(sheet, layout), sheet.colorSpace as THREE.ColorSpace);
+    return { texture: crop, key: null };
+  }
 
   const cacheId = `${atlas.id}@${sheet.uuid}`;
   const texture = proceduralTexture(internalResources, cacheId, () => rasterizeAtlasTexture(sheet, layout));

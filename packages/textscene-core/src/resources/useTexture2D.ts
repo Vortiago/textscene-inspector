@@ -18,7 +18,7 @@ import {
 } from './SubResourceResolver.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
-import { atlasTextureLayout, atlasTextureSize } from './textures/atlastexture/decode.js';
+import { atlasTextureSize } from './textures/atlastexture/decode.js';
 import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
   resolveAtlasTexture,
@@ -33,9 +33,7 @@ import {
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
-import { isLiveTarget, liveTargetCrop } from '../r3f/liveTargets.js';
 import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
-import { pinColorSpace } from './textures/textureView.js';
 
 export interface Texture2DResult {
   /**
@@ -83,20 +81,20 @@ export function useTexture2D(
 ): Texture2DResult {
   const slot = useTexture2DSlot(ref, externalResources, internalResources, view, isHeldLocally);
 
-  // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
-  // tables the atlas sits in, so a re-parse of the scene or of its resource file invalidates it.
+  // A loaded sheet's crop is cache-owned and pinned while mounted, like the procedural texture, and
+  // a live target's is held. Keyed on the tables the atlas sits in, so a re-parse of the scene or of
+  // its resource file invalidates it.
   const { atlas, source, atlasResources } = slot;
-  const isLiveSheet = source !== null && isLiveTarget(source);
   const cropped = useMemo(
-    () => (atlas && !isLiveSheet ? resolveAtlasTexture(atlas, source, atlasResources) : null),
-    [atlas, isLiveSheet, source, atlasResources]
+    () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
+    [atlas, source, atlasResources]
   );
-  useProceduralTexturePins(cropped ? [cropped.key] : []);
-  const liveCrop = useLiveCrop(atlas, isLiveSheet ? source : null);
+  useProceduralTexturePins(cropped?.key ? [cropped.key] : []);
+  useDisposeOnRelease(cropped?.key === null ? cropped.texture : null);
 
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
-  const texture = atlas ? (liveCrop ?? cropped?.texture ?? null) : slot.result.texture;
+  const texture = atlas ? (cropped?.texture ?? null) : slot.result.texture;
   const size = useReportedSize(texture, atlas, slot.result);
   return { ...slot.result, texture, size };
 }
@@ -118,22 +116,6 @@ function useReportedSize(
     () => (width === undefined || height === undefined ? undefined : { width, height }),
     [width, height]
   );
-}
-
-/**
- * The cell `atlas` cuts out of a live target, refilled after each render of the target as Godot's
- * AtlasTexture draws from the live RID. This slot owns it and frees it once it stops drawing it.
- */
-function useLiveCrop(atlas: AtlasTextureReference | null, sheet: THREE.Texture | null): THREE.Texture | null {
-  const crop = useMemo(() => {
-    const sheetSize = sheet && imageSize(sheet.image);
-    if (!atlas || !sheet || !sheetSize) return null;
-    const layout = atlasTextureLayout(atlas.texture, sheetSize);
-    // Pinned, as the sheet is: R3F reasserts `SRGBColorSpace` on a `map` every commit.
-    return layout && pinColorSpace(liveTargetCrop(sheet, layout), sheet.colorSpace as THREE.ColorSpace);
-  }, [atlas, sheet]);
-  useDisposeOnRelease(crop);
-  return crop;
 }
 
 export interface Texture2DRidResult extends Texture2DResult {
