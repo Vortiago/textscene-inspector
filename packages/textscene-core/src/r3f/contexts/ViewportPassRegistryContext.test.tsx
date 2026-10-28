@@ -182,6 +182,29 @@ describe('<ViewportPassOrchestrator>', () => {
  * (`renderer_rd/storage_rd/utilities.cpp:256-258`, `rendering_server_default.cpp:102`), so an atlas
  * copies a target as it stood before this frame's passes.
  */
+/** Counts its renders into `renders`, as a texture slot that names no ViewportTexture reads the cycle. */
+function NoCycleWatch({ renders }: { renders: number[] }) {
+  useViewportPassCycle(null);
+  renders[0]!++;
+  return null;
+}
+
+describe('useViewportPassCycle', () => {
+  it('leaves a reader of no path alone when a pass registers', async () => {
+    const renders = [0];
+    const watch = <NoCycleWatch renders={renders} />;
+    const renderer = await mount(watch);
+    await renderer.update(
+      <ViewportPassProvider>
+        {watch}
+        <Registrar path="a" pass={{ dependsOn: [], render: () => {} }} />
+        <ViewportPassOrchestrator />
+      </ViewportPassProvider>
+    );
+    expect(renders[0]).toBe(1);
+  });
+});
+
 describe('<ViewportPassOrchestrator> and the texture atlases', () => {
   const BLUE = [0, 0, 255, 255];
   const GREEN = [0, 255, 0, 255];
