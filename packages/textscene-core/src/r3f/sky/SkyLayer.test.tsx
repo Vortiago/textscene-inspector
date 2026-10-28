@@ -12,7 +12,8 @@ import { decodeSkyMaterial } from '../../resources/sky/decode';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { shownSky, skyLayersSlot } from './skyLayerArray';
+import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
+import { skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
@@ -73,7 +74,7 @@ function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRendere
     const target = new THREE.WebGLArrayRenderTarget(1, 1, 8);
     gl.initRenderTarget(target);
     const layers = { layout: skyOctmapLayout(32, 8), target };
-    return { background: new THREE.Texture(), environment: new THREE.Texture(), layers, dispose };
+    return { background: new THREE.Texture(), layers, dispose };
   };
 }
 
@@ -247,6 +248,34 @@ describe('SkyLayer', () => {
     expect(shownSky[0]).toBe(0.25);
   });
 
+  it('shows the energy and the rotation of its radiance, which the fogs read', async () => {
+    built.next = skyEnvironment();
+    const { scene, gl } = await mount(
+      <SkyLayer
+        sky={SKY}
+        rotation={{ x: 0, y: Math.PI / 2, z: 0 }}
+        resources={NO_RESOURCES}
+        intensity={1.5}
+      />
+    );
+
+    sampledInRender(gl, scene);
+
+    // A quarter turn about Y takes the sky's +X to the world's -Z.
+    const skyForward = new THREE.Vector3(0, 0, -1).applyMatrix3(new THREE.Matrix3().fromArray(skyRotation));
+    expect([shownSky[SHOWN_ENERGY], Math.round(skyForward.x)]).toEqual([1.5, 1]);
+  });
+
+  it('leaves the renders after its scene reading a black radiance', async () => {
+    built.next = skyEnvironment();
+    const { scene, gl } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />);
+    sampledInRender(gl, scene);
+
+    fireSceneRenderEnd(scene, new THREE.PerspectiveCamera());
+
+    expect(shownSky[SHOWN_ENERGY]).toBe(0);
+  });
+
   it('shows a new share of the ambient without a new bake', async () => {
     built.next = skyEnvironment();
     const { scene, gl, update } = await mount(
@@ -270,6 +299,19 @@ describe('SkyLayer', () => {
     stopObserving();
 
     expect(observer).toHaveBeenCalled();
+  });
+
+  it('gives the scene a new environment on each bake, which tells the reflection probes the sky changed', async () => {
+    built.next = skyEnvironment();
+    const { scene, update } = await mount(
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+    const firstBake = scene.environment;
+
+    built.next = skyEnvironment();
+    await update(<SkyLayer sky={SKY} rotation={{ x: 0, y: 1, z: 0 }} resources={NO_RESOURCES} />);
+
+    expect(scene.environment).not.toBe(firstBake);
   });
 
   it('frees its environment when it unmounts', async () => {

@@ -508,6 +508,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Depth Fog Aerial Sky",
+    "file": "unit-depth-fog-aerial-sky.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Depth Fog Orthographic",
     "file": "unit-depth-fog-orthographic.tscn",
     "category": "Other"
@@ -2290,6 +2295,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Volumetric Fog Shadow",
     "file": "unit-volumetric-fog-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Volumetric Fog Sky Ambient",
+    "file": "unit-volumetric-fog-sky-ambient.tscn",
     "category": "Other"
   },
   {

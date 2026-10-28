@@ -14,14 +14,13 @@ import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
-import { acquireFogPasses } from './fogPasses.js';
+import { acquireVolumetricFogPass } from './sharedVolumetricFogPass.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 
 interface FogLayerProps {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
-  skyEnergy: number;
 }
 
 function isLight(object: THREE.Object3D): object is THREE.Light {
@@ -36,15 +35,15 @@ function isMesh(object: THREE.Object3D): object is THREE.Mesh {
 const NO_CASTERS: readonly THREE.Mesh[] = [];
 const NO_VOLUMES: readonly FogVolumeObject[] = [];
 
-export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
+export function FogLayer({ depth, volumetric }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
   const { settings: projectSettings } = useProjectSettings();
   const project = useMemo(() => projectVolumetricFogSettings(projectSettings), [projectSettings]);
-  // Read at each render, so a new setting reaches the next render with the passes and the
+  // Read at each render, so a new setting reaches the next render with the pass and the
   // volume's history kept.
-  const current: FogSettings = { depth, volumetric, project, skyEnergy };
+  const current: FogSettings = { depth, volumetric, project };
   const settings = useRef(current);
   settings.current = current;
 
@@ -59,7 +58,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   }, [scene]);
 
   useEffect(() => {
-    const { passes, release } = acquireFogPasses(gl);
+    const { pass, release } = acquireVolumetricFogPass(gl);
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
     const volumes = new TrackedObjects(scene, isFogVolume);
@@ -75,7 +74,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
         casters: isVolumetric ? casters.current() : NO_CASTERS,
         volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
       };
-      if (prepareFog(gl, scene, camera, fog, passes, objects)) invalidate();
+      if (prepareFog(gl, scene, camera, fog, pass, objects)) invalidate();
     });
     const stopFinishing = observeSceneRenderEnd(scene, finishFog);
     return () => {
@@ -84,7 +83,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
       lights.dispose();
       casters.dispose();
       volumes.dispose();
-      passes.volume.forget(scene);
+      pass.forget(scene);
       release();
     };
   }, [gl, scene, invalidate]);
