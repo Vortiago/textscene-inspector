@@ -2228,6 +2228,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Viewport Texture Local To Scene",
+    "file": "unit-viewport-texture-local-to-scene.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visibility Parent",
     "file": "unit-visibility-parent.tscn",
     "category": "Other"
@@ -2907,6 +2912,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Atlas Viewport Padding",
+    "file": "unit-tile-atlas-viewport-padding.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

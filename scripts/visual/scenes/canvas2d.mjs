@@ -422,6 +422,22 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-texture-rect-viewport-texture-flip.tscn',
     mode: '2d',
   },
+  // A ViewportTexture under a CanvasTexture that is not local to scene draws the placeholder, and
+  // one under a local CanvasTexture the target. Godot 4.6.3 `--mode 2d`: (110,110) rgb(255,0,255),
+  // (150,110) rgb(125,0,125), (500,150) rgb(255,0,0) and (405,200) rgb(0,255,0).
+  {
+    name: 'viewport-texture-local-to-scene',
+    file: 'unit-viewport-texture-local-to-scene.tscn',
+    mode: '2d',
+  },
+  // A padded TileSet over a ViewportTexture: the placeholder at the padded regions when it is not
+  // local to scene, the unrendered target when it is. Godot 4.6.3 `--mode 2d`: (101,101)
+  // rgb(199,0,199), (150,150) rgb(255,0,255) and (450,150) rgb(0,0,0).
+  {
+    name: 'tile-atlas-viewport-padding',
+    file: 'unit-tile-atlas-viewport-padding.tscn',
+    mode: '2d',
+  },
   // A WorldEnvironment inside a shared-world viewport glows its target. Godot 4.6.3 `--mode 2d`:
   // (400,370) rgb(106,63,30) in the bloom below the sphere, and (400,420) rgb(31,22,24).
   {
