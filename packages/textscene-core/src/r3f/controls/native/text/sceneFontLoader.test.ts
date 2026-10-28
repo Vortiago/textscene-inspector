@@ -4,21 +4,18 @@
  * peek contract. `bundledFontLoader.test.ts` reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fontFile } from './sfntOutlines.testkit';
 import {
   fontWork,
-  notifySceneFontMetricsSettled,
-  onSceneFontMetricsSettled,
+  notifySceneFontSettled,
+  onSceneFontSettled,
   peekSceneFontMetrics,
   peekSettledSceneFontMetrics,
   sceneFontSettleCount,
 } from './sceneFontLoader';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
-
-function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
-  return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
-}
+import type { FontResource } from '../../../../resources/fonts/font/types';
 
 /** Lets every load a peek started settle: each one resolves within a macrotask here. */
 function settleLoads(): Promise<void> {
@@ -193,10 +190,10 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   });
 });
 
-describe('onSceneFontMetricsSettled', () => {
+describe('onSceneFontSettled', () => {
   it('(happy) fires once the load a peek starts for a resolvable resource settles', async () => {
     const listener = vi.fn();
-    const off = onSceneFontMetricsSettled(listener);
+    const off = onSceneFontSettled(listener);
     try {
       peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/E');
       await settleLoads();
@@ -208,7 +205,7 @@ describe('onSceneFontMetricsSettled', () => {
 
   it('(edge) does NOT fire for a font that short-circuits synchronously (nothing to later change value)', async () => {
     const listener = vi.fn();
-    const off = onSceneFontMetricsSettled(listener);
+    const off = onSceneFontSettled(listener);
     try {
       peekSceneFontMetrics(undefined, 'Root/F');
       peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/G');
@@ -221,7 +218,7 @@ describe('onSceneFontMetricsSettled', () => {
 
   it('(edge) an unsubscribed listener is never called again', async () => {
     const listener = vi.fn();
-    const off = onSceneFontMetricsSettled(listener);
+    const off = onSceneFontSettled(listener);
     off();
     peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/H');
     await settleLoads();
@@ -231,8 +228,8 @@ describe('onSceneFontMetricsSettled', () => {
   it('notifies every subscribed listener, not just the first', async () => {
     const a = vi.fn();
     const b = vi.fn();
-    const offA = onSceneFontMetricsSettled(a);
-    const offB = onSceneFontMetricsSettled(b);
+    const offA = onSceneFontSettled(a);
+    const offB = onSceneFontSettled(b);
     try {
       peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/I');
       await settleLoads();
@@ -245,16 +242,16 @@ describe('onSceneFontMetricsSettled', () => {
   });
 });
 
-describe('notifySceneFontMetricsSettled', () => {
+describe('notifySceneFontSettled', () => {
   it('calls every listener after one throws, then rethrows the first error', () => {
     const failure = new Error('listener failed');
     const later = vi.fn();
-    const offFailing = onSceneFontMetricsSettled(() => {
+    const offFailing = onSceneFontSettled(() => {
       throw failure;
     });
-    const offLater = onSceneFontMetricsSettled(later);
+    const offLater = onSceneFontSettled(later);
     try {
-      expect(() => notifySceneFontMetricsSettled()).toThrow(failure);
+      expect(() => notifySceneFontSettled()).toThrow(failure);
       expect(later).toHaveBeenCalledTimes(1);
     } finally {
       offFailing();
@@ -286,7 +283,7 @@ describe('fontWork', () => {
   });
 
   it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
-    const off = onSceneFontMetricsSettled(() => {
+    const off = onSceneFontSettled(() => {
       throw new Error('listener failed');
     });
     // The load runs unawaited, so its rejection is the listener's error and nothing else.

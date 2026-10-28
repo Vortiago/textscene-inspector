@@ -23,6 +23,7 @@ import type { SubViewportProperties } from '../../../viewport/subviewport/types.
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
+import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -141,8 +142,7 @@ function ViewportSurfaceNative({
       fontOverrides: {},
       labelSettings: null,
       themeChain: [],
-      projectTheme: null,
-      projectDefaultFont: null,
+      projectFonts: NO_PROJECT_FONTS,
       colors: {},
       constants: {},
       icons: {},

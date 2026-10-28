@@ -1343,7 +1343,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(result.current.tree[0]?.projectTheme?.defaultFontSize).toBe(30);
+    expect(result.current.tree[0]?.projectFonts.projectTheme?.defaultFontSize).toBe(30);
   });
 
   describe("the project's default font (gui/theme/custom_font)", () => {
@@ -1378,7 +1378,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toEqual({
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toEqual({
         kind: 'variation',
         baseFont: null,
         properties: { spacing_glyph: '3' },
@@ -1392,7 +1392,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toBeNull();
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toBeNull();
     });
 
     it('is null for a path that does not load, so the Control draws the bundled font', async () => {
@@ -1400,7 +1400,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toBeNull();
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toBeNull();
     });
 
     it('follows the font file when it changes', async () => {
@@ -1417,7 +1417,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       loader.provideFile('res://body_font.tres');
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toMatchObject({
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toMatchObject({
         properties: { spacing_glyph: '2' },
       });
     });
@@ -1437,7 +1437,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       loader.fileEventBus!.invalidate('res://project.godot');
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toMatchObject({
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toMatchObject({
         properties: { spacing_glyph: '2' },
       });
     });
