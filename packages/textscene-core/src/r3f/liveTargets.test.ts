@@ -16,6 +16,7 @@ import { ownedTextureView, releaseView, textureView } from '../resources/texture
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
 import { holdUntilReleased } from './useDisposeOnRelease';
+import { flippedUvWindow } from './uvWindow';
 
 const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
 const UPRIGHT = { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
@@ -157,6 +158,79 @@ const CORNER_CELL = {
   source: { x: 0, y: 0, width: 8, height: 8 },
   dest: { x: 0, y: 0 },
 };
+
+/** The 8 by 8 cell at x 8 of a 32 by 16 target's top row, as a sprite's frame window shows it. */
+const SECOND_CELL_WINDOW = { repeat: { x: 0.25, y: 0.5 }, offset: { x: 0.25, y: 0.5 } };
+
+/** A sprite steps its window over a target's cells, so a reader copies only the cell it shows. */
+describe('a reader that windows a live target', () => {
+  it('copies its cell with a texel of apron for the filter, not the whole target', () => {
+    const target = liveCanvasTarget();
+    const view = textureView(target.texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      window: SECOND_CELL_WINDOW,
+    });
+    expect(view.image).toMatchObject({ width: 10, height: 9 });
+  });
+
+  it('samples the cell inside its apron', () => {
+    const target = liveCanvasTarget();
+    const view = textureView(target.texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      window: SECOND_CELL_WINDOW,
+    });
+    expect([view.repeat.x, view.repeat.y]).toEqual([0.8, 8 / 9]);
+    expect([view.offset.x, view.offset.y]).toEqual([0.1, 1 / 9]);
+  });
+
+  it('mirrors the cell by its sampler when its window flips', () => {
+    const target = liveCanvasTarget();
+    const flipped = flippedUvWindow(SECOND_CELL_WINDOW, true, false);
+    const view = textureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: flipped });
+    expect(view.image).toMatchObject({ width: 10, height: 9 });
+    expect([view.repeat.x, view.offset.x]).toEqual([-0.8, 0.9]);
+  });
+
+  it('shares one copy with a reader that shows the same cell alike', () => {
+    const target = liveCanvasTarget();
+    const sampler = { colorSpace: THREE.SRGBColorSpace, window: SECOND_CELL_WINDOW };
+    expect(textureView(target.texture, sampler)).toBe(held(textureView(target.texture, sampler)));
+  });
+
+  it("keeps apart from an AtlasTexture's crop of the same texels", () => {
+    const target = liveCanvasTarget();
+    const crop = held(
+      liveTargetCrop(target.texture, {
+        width: 10,
+        height: 9,
+        source: { x: 7, y: 0, width: 10, height: 9 },
+        dest: { x: 0, y: 0 },
+      })
+    );
+    expect(
+      textureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: SECOND_CELL_WINDOW })
+    ).not.toBe(crop);
+  });
+
+  it('copies the whole target when its cell touches an edge the sampler wraps over', () => {
+    const target = liveCanvasTarget();
+    const view = textureView(target.texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      wrap: THREE.RepeatWrapping,
+      window: SECOND_CELL_WINDOW,
+    });
+    expect(view.image).toMatchObject({ width: 32, height: 16 });
+  });
+
+  it('copies the whole target when its window tiles past the target', () => {
+    const target = liveCanvasTarget();
+    const view = textureView(target.texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      window: { repeat: { x: 2, y: 1 }, offset: { x: 0, y: 0 } },
+    });
+    expect(view.image).toMatchObject({ width: 32, height: 16 });
+  });
+});
 
 /** A copy lives while a reader holds it. React can discard the render that made one. */
 describe('a copy no reader holds', () => {

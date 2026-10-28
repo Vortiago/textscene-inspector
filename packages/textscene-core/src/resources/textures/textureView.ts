@@ -7,9 +7,16 @@
 
 import * as THREE from 'three';
 import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
-import { isLiveTarget, liveTargetCopy, wholeLiveCopies } from '../../r3f/liveTargets';
+import { isLiveTarget, liveTargetCopies, liveTargetCopy } from '../../r3f/liveTargets';
+import { windowCell } from '../../r3f/windowCell';
+import { imageSize } from '../formats/image/imagePixels';
 import { isHeld } from '../../r3f/useDisposeOnRelease';
-import { applyTextureFilterState, textureFilterMatches, type TextureFilterState } from './godotTextureFilter';
+import {
+  applyTextureFilterState,
+  hasMipChain,
+  textureFilterMatches,
+  type TextureFilterState,
+} from './godotTextureFilter';
 
 /** Below this, a repeat or offset is indistinguishable from the one a texture shows. */
 const WINDOW_EPSILON = 1e-6;
@@ -182,19 +189,36 @@ function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture 
 
 /**
  * A copy of a live target, filled after each render of the target, shared by every reader that
- * samples it alike, as Godot's readers sample one RID. It keeps the target's tag: the copy's
- * storage, not the tag, decides what a sample decodes, and the tag tells a canvas consumer how the
- * bytes were encoded. Each reader holds the copy, and the last to let go frees it.
+ * samples it alike, as Godot's readers sample one RID. A reader that windows a cell copies only
+ * that cell, so a sprite that steps its frames copies a frame, not the target. The copy keeps the
+ * target's tag: the copy's storage, not the tag, decides what a sample decodes, and the tag tells a
+ * canvas consumer how the bytes were encoded. Each reader holds the copy, and the last to let go
+ * frees it.
  */
 function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  const shared = wholeLiveCopies(source).find((copy) => samplesAlike(copy, source, sampler));
+  const size = imageSize(source.image);
+  const cell = sampler.window && size && windowCell(sampler.window, size, samplesClamped(source, sampler));
+  const cellSampler = cell ? { ...sampler, window: cell.window } : sampler;
+  const shared = liveTargetCopies(source, cell?.layout).find((copy) =>
+    samplesAlike(copy, source, cellSampler)
+  );
   if (shared) return shared;
-  const copy = applyViewSampler(liveTargetCopy(source), {
-    ...sampler,
+  const copy = applyViewSampler(liveTargetCopy(source, cell?.layout), {
+    ...cellSampler,
     colorSpace: source.colorSpace as THREE.ColorSpace,
   });
   ownedViews.add(copy);
   return copy;
+}
+
+/**
+ * Whether `sampler` reads `source` clamped at every edge and from one level, so a cell of it with
+ * an apron samples as the whole does.
+ */
+function samplesClamped(source: THREE.Texture, sampler: ViewSampler): boolean {
+  const wraps = sampler.wrap === undefined ? [source.wrapS, source.wrapT] : [sampler.wrap];
+  const readsMipChain = hasMipChain(source) && (sampler.filter?.generateMipmaps ?? true);
+  return !readsMipChain && wraps.every((wrap) => wrap === THREE.ClampToEdgeWrapping);
 }
 
 /** Whether `copy` samples as `sampler` reads `source`, where a field left out keeps the source's value. */

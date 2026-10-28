@@ -1993,6 +1993,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Viewport Texture Frame",
+    "file": "unit-sprite-2d-viewport-texture-frame.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Viewport Texture",
     "file": "unit-sprite-2d-viewport-texture.tscn",
     "category": "Other"

@@ -9,7 +9,9 @@ import { act, renderHook } from '@testing-library/react';
 import { godotTextureFilterState } from '../resources/textures/godotTextureFilter';
 import type { ViewSampler } from '../resources/textures/textureView';
 import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
-import { useOwnedTextureView, useTextureView } from './useTextureView';
+import { useOwnedTextureView, useTextureView, useWindowedTextureView } from './useTextureView';
+import { publishLiveTargets } from './liveTargets';
+import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 
 const RAW_REPEAT: ViewSampler = { colorSpace: THREE.NoColorSpace, wrap: THREE.RepeatWrapping };
 
@@ -177,5 +179,18 @@ describe('useOwnedTextureView', () => {
 
   it('draws nothing without a source', () => {
     expect(renderHook(() => useOwnedTextureView(null, RAW_REPEAT)).result.current).toBeNull();
+  });
+});
+
+describe('useWindowedTextureView', () => {
+  it("shows a live target's cell through the window inside the cell's copy", () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const withdraw = publishLiveTargets([target.texture], null, false);
+    const window = { repeat: { x: 0.25, y: 0.5 }, offset: { x: 0.25, y: 0.5 } };
+    const { result } = renderHook(() =>
+      useWindowedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace }, window)
+    );
+    expect([result.current?.repeat.x, result.current?.offset.x]).toEqual([0.8, 0.1]);
+    withdraw();
   });
 });

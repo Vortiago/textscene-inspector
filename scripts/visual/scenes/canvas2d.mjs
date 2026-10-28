@@ -413,6 +413,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
+  // A Sprite2D draws one frame of a ViewportTexture, upright and flipped. Godot 4.6.3 `--mode 2d`:
+  // the left frame's edge pixels blend into rgb(120, 0, 0) and rgb(0, 0, 120), its neighbours' texels.
+  {
+    name: 'sprite-2d-viewport-texture-frame',
+    file: 'unit-sprite-2d-viewport-texture-frame.tscn',
+    mode: '2d',
+  },
   // A TextureRect samples a ViewportTexture through the Control walker. Godot 4.6.3 `--mode 2d`:
   // (200,150) rgb(255,0,0) and (200,250) rgb(0,0,255), the target's two halves upright.
   {

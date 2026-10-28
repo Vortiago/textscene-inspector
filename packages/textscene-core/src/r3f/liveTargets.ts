@@ -18,8 +18,11 @@ import { copyTexels, wholeTexels, type TexelPlacement } from './texelCopy';
 /** A copy that one live target fills. */
 interface LiveCopy {
   readonly texture: THREE.Texture;
-  /** The region a crop cuts, which readers that cut it alike share. Null for a copy of the whole target. */
-  readonly cropKey: string | null;
+  /**
+   * What the copy shares by: a crop by the region it cuts, a reader's view by its region too,
+   * and the reader then matches the view's sampler. The two never share with each other.
+   */
+  readonly sharing: string;
   fill(gl: THREE.WebGLRenderer): void;
 }
 
@@ -167,17 +170,21 @@ function fillCopies(
 }
 
 /**
- * A copy of the whole of `source`, with its storage and sampler, which the caller samples through
- * its own sampler and frees with `dispose()`.
+ * A copy of `source`'s storage and sampler, of the whole or of the region `layout` cuts, which the
+ * caller samples through its own sampler and frees with `dispose()`.
  */
-export function liveTargetCopy(source: THREE.Texture): THREE.Texture {
-  const { width, height } = targetSize(source);
-  return addCopy(source, width, height, wholeTexels(width, height), null);
+export function liveTargetCopy(source: THREE.Texture, layout?: AtlasTextureLayout): THREE.Texture {
+  const { width, height, placement } = copyRegion(source, layout);
+  return addCopy(source, width, height, placement, viewSharing(width, height, placement));
 }
 
-/** The whole copies of `source` that are not freed, in the order they were made. */
-export function wholeLiveCopies(source: THREE.Texture): THREE.Texture[] {
-  return [...liveTargetOf(source).copies].filter((copy) => copy.cropKey === null).map((copy) => copy.texture);
+/** The copies `liveTargetCopy` made of the same region of `source`, not freed, in the order they were made. */
+export function liveTargetCopies(source: THREE.Texture, layout?: AtlasTextureLayout): THREE.Texture[] {
+  const { width, height, placement } = copyRegion(source, layout);
+  const sharing = viewSharing(width, height, placement);
+  return [...liveTargetOf(source).copies]
+    .filter((copy) => copy.sharing === sharing)
+    .map((copy) => copy.texture);
 }
 
 /**
@@ -187,10 +194,28 @@ export function wholeLiveCopies(source: THREE.Texture): THREE.Texture[] {
  * frees it.
  */
 export function liveTargetCrop(source: THREE.Texture, layout: AtlasTextureLayout): THREE.Texture {
-  const placement = cropPlacement(targetSize(source).height, layout);
-  const cropKey = JSON.stringify([layout.width, layout.height, placement]);
-  const shared = [...liveTargetOf(source).copies].find((copy) => copy.cropKey === cropKey);
-  return shared?.texture ?? addCopy(source, layout.width, layout.height, placement, cropKey);
+  const { width, height, placement } = copyRegion(source, layout);
+  const sharing = `crop ${regionKey(width, height, placement)}`;
+  const shared = [...liveTargetOf(source).copies].find((copy) => copy.sharing === sharing);
+  return shared?.texture ?? addCopy(source, width, height, placement, sharing);
+}
+
+function viewSharing(width: number, height: number, placement: TexelPlacement): string {
+  return `view ${regionKey(width, height, placement)}`;
+}
+
+function regionKey(width: number, height: number, placement: TexelPlacement): string {
+  return JSON.stringify([width, height, placement]);
+}
+
+/** The size and placement of a copy of `source`: the region `layout` cuts, or the whole. */
+function copyRegion(
+  source: THREE.Texture,
+  layout: AtlasTextureLayout | undefined
+): { width: number; height: number; placement: TexelPlacement } {
+  const size = targetSize(source);
+  if (!layout) return { ...size, placement: wholeTexels(size.width, size.height) };
+  return { width: layout.width, height: layout.height, placement: cropPlacement(size.height, layout) };
 }
 
 /**
@@ -223,7 +248,7 @@ function addCopy(
   width: number,
   height: number,
   placement: TexelPlacement,
-  cropKey: string | null
+  sharing: string
 ): THREE.Texture {
   const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, type: source.type });
   const texture = copySampling(target.texture, source);
@@ -235,7 +260,7 @@ function addCopy(
   const { copies, renderer, isTransparent } = liveTargetOf(source);
   const copy: LiveCopy = {
     texture,
-    cropKey,
+    sharing,
     fill: (gl) => copyTexels(gl, source, target, placement),
   };
   copies.add(copy);
