@@ -383,6 +383,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Copy Transform Modifier 3d Ribbon",
+    "file": "unit-copy-transform-modifier-3d-ribbon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Copy Transform Modifier 3d",
     "file": "unit-copy-transform-modifier-3d.tscn",
     "category": "Other"
@@ -3092,6 +3097,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Ribbon Instanced",
+    "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

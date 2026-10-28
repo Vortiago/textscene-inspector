@@ -25,6 +25,9 @@ import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materia
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
+import { useLiveScenePass } from '../../../r3f/liveScenePass';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { bindMeshesToSkeletons, namesSkeletonToBind } from '../skeleton3d/skeletonBindings';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
@@ -101,8 +104,14 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
+  // A mesh that cannot bind asks with no path, so it watches no load and the pass never runs for it.
+  const bindingPath = useNodePath();
+  const skinMatrices = useLiveScenePass(
+    bindMeshesToSkeletons,
+    namesSkeletonToBind(properties) ? bindingPath : null
+  );
   // A surface with no bone arrays stays unskinned even when the node is bound.
-  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, properties.skinMatrices);
+  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, skinMatrices);
 
   const shellProps = {
     name: node.name,
