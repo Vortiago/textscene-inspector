@@ -8,6 +8,7 @@ import { useLayoutEffect } from 'react';
 import type * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../../lightConstants';
 import { useExposureFactor } from '../../environment/worldExposure';
+import { scaleLightIntensities } from '../../exposure/scaleLightIntensities';
 import { skyLightUserData } from '../../sky/skyLight';
 
 function lightsOf(object: THREE.Object3D): THREE.Light[] {
@@ -23,17 +24,21 @@ export function useGlbLightExposure(object: THREE.Object3D | null | undefined): 
   const exposure = useExposureFactor();
   useLayoutEffect(() => {
     if (!object) return;
-    const authored = lightsOf(object).map((light) => ({ light, intensity: light.intensity }));
-    const declarations = authored
-      .filter(({ light }) => (light as THREE.DirectionalLight).isDirectionalLight)
-      .map(({ light, intensity }) => ({
+    const lights = lightsOf(object);
+    const declarations = lights
+      .filter((light) => (light as THREE.DirectionalLight).isDirectionalLight)
+      .map((light) => ({
         light,
-        entries: skyLightUserData({ drawsInSky: true, energy: intensity / LIGHT_INTENSITY_SCALE, size: 0 }),
+        entries: skyLightUserData({
+          drawsInSky: true,
+          energy: light.intensity / LIGHT_INTENSITY_SCALE,
+          size: 0,
+        }),
       }));
     for (const { light, entries } of declarations) Object.assign(light.userData, entries);
-    for (const { light, intensity } of authored) light.intensity = intensity * exposure;
+    const restoreIntensities = scaleLightIntensities(lights, exposure);
     return () => {
-      for (const { light, intensity } of authored) light.intensity = intensity;
+      restoreIntensities();
       for (const { light, entries } of declarations) {
         for (const key of Object.keys(entries)) delete light.userData[key];
       }

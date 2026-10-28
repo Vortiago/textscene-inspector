@@ -4,13 +4,11 @@
  * any other key sets a leaf of a bone that is already there.
  */
 
-import { firstSegment } from '../../../godot/classdb/indexedKey.js';
-import { stringToInt } from '../../../godot/string/string.js';
 import { warn } from '../../../logger.js';
 import { boolOr, intOr, realVec3Or } from '../../../parser/valueParsers.js';
 import { parseQuaternion } from '../../../parser/vectors.js';
 import { parseTransform3D } from '../../../utils/transform.js';
-import { BONE_KEY_RE, BoneAdder } from './boneTable.js';
+import { boneKeyOf, BoneAdder } from './boneTable.js';
 import { newBone, type Bone } from './skeletonPose.js';
 
 /** Writes `value` to a leaf of `bone`, which is slot `which`. Only `parent` reads the slot. */
@@ -71,12 +69,10 @@ export function readBones(properties: Record<string, string>): Bone[] {
 
 /** A leaf key of a bone that exists. `which` is a `uint32_t`, so an index past the table drops the write (:90). */
 function setLeaf(bones: Bone[], key: string, value: string): void {
-  const match = BONE_KEY_RE.exec(key);
-  if (!match) return;
-  const which = stringToInt(match[1]!, 'uint32');
+  const boneKey = boneKeyOf(key);
+  if (!boneKey) return;
+  const { which, leaf } = boneKey;
   const bone = bones[which];
-  // Slice 2 alone decides the arm (:83), so `bones/0/position/x` sets the position.
-  const leaf = firstSegment(match[2]!);
   const setter = Object.hasOwn(LEAF_SETTERS, leaf) ? LEAF_SETTERS[leaf] : undefined;
   if (bone && setter) setter(bone, value, `Skeleton3D ${key}`, which);
 }

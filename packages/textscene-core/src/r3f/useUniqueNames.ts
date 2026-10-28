@@ -7,20 +7,14 @@
 import { useCallback, useMemo } from 'react';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { sameEntries } from '../utils/sameEntries.js';
+import { useByValue } from './hooks/useByValue.js';
 import { useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
 
-/**
- * `paths` under one identity while its entries stay the same, since a sub-scene owner's
- * table is rebuilt on every load.
- */
-function useStablePaths(
-  paths: ReadonlyMap<string, string> | undefined
-): ReadonlyMap<string, string> | undefined {
-  const signature = useMemo(() => (paths ? JSON.stringify([...paths]) : null), [paths]);
-  return useMemo(
-    () => (signature === null ? undefined : new Map<string, string>(JSON.parse(signature))),
-    [signature]
-  );
+type UniquePaths = ReadonlyMap<string, string> | undefined;
+
+/** Whether two tables hold the same entries. A sub-scene owner's table is rebuilt on every load. */
+function samePaths(a: UniquePaths, b: UniquePaths): boolean {
+  return a === undefined || b === undefined ? a === b : sameEntries(a, b);
 }
 
 /**
@@ -37,7 +31,9 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
       ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx)),
     [path]
   );
-  return useStablePaths(useLiveTreeSelection(tableOf, sameEntries));
+  // The outer useByValue keeps the identity across a new `path`, which rebuilds the selection's
+  // snapshot with no earlier value to compare.
+  return useByValue(useLiveTreeSelection(tableOf, sameEntries), samePaths);
 }
 
 /**
@@ -75,7 +71,7 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
     [path]
   );
   const owner = useLiveTreeSelection(ownerOf, sameLocalSceneOwner);
-  const uniquePaths = useStablePaths(owner?.uniquePaths);
+  const uniquePaths = useByValue(owner?.uniquePaths, samePaths);
   const rootPath = owner?.path ?? path?.split('/')[0];
   return useMemo(() => (rootPath ? { path: rootPath, uniquePaths } : undefined), [rootPath, uniquePaths]);
 }

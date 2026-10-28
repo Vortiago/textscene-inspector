@@ -6,6 +6,7 @@
 
 import { useEffect } from 'react';
 import type * as THREE from 'three';
+import { installedOr } from './shaderPatch/litUniform.js';
 
 // A mixin's constructor must take `...args: any[]` (TypeScript error 2545).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +26,17 @@ export function sharedTexture<T extends TextureClass>(Base: T) {
     }
   }
   return SharedTexture;
+}
+
+/**
+ * The shared `Base` texture a lit uniform `name` samples through, or the one installed under `name`,
+ * as after a dev server reloads its module: every program compiled since samples that one.
+ *
+ * @canonical A texture every material samples as one object
+ */
+export function installedSlot<T extends new () => THREE.Texture>(name: string, Base: T): InstanceType<T> {
+  const Slot = class extends sharedTexture(Base) {};
+  return installedOr(name, Base, () => new Slot()) as InstanceType<T>;
 }
 
 /** The part of three's per-renderer state of a texture that holds its GL handle. */

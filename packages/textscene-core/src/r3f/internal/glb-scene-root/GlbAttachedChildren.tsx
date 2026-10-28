@@ -20,7 +20,7 @@ import {
   type TreeOrder,
 } from '../../contexts/TreeOrderContext';
 import type { GlbRoot } from './GlbInstanceContext';
-import { glbChildrenBelow, type GlbObjectEntry } from './glbHierarchy';
+import { glbChildrenBelow, glbSubtreeEnd, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
 import { isApplicableGlbOverride, resolveGlbAttachments, type GlbAttachment } from './glbNodeOverrides';
 import { warn } from '../../../logger';
@@ -117,7 +117,7 @@ function attachedOrders(
     let sinceObject = 0;
     for (const child of children) {
       if ('entry' in child) {
-        after = lastDescendantIndex(entries, child.entry);
+        after = glbSubtreeEnd(entries, child.entry) - 1;
         sinceObject = 0;
       } else {
         orders.set(child, [...entryOrders[after]!, sinceObject++]);
@@ -125,12 +125,4 @@ function attachedOrders(
     }
   }
   return orders;
-}
-
-/** The index of the last entry at or below the one at `index`, which `flattenGlbObjects` lists in pre-order. */
-function lastDescendantIndex(entries: readonly GlbObjectEntry[], index: number): number {
-  const prefix = `${entries[index]!.relPath}/`;
-  let last = index;
-  while (entries[last + 1]?.relPath.startsWith(prefix)) last++;
-  return last;
 }

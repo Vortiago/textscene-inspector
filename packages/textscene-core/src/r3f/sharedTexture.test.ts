@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { leaveSlot, sharedTexture, showInSlot } from './sharedTexture';
+import { installedSlot, leaveSlot, sharedTexture, showInSlot } from './sharedTexture';
 
 class SharedDataTexture extends sharedTexture(THREE.DataTexture) {}
 
@@ -108,5 +108,26 @@ describe('leaveSlot', () => {
     leaveSlot(renderer, slot, new THREE.Texture());
 
     expect(handleOf(renderer, slot)).toBeUndefined();
+  });
+});
+
+describe('installedSlot', () => {
+  const UNIFORM = 'installedSlotTest';
+
+  afterEach(() => {
+    delete THREE.ShaderLib.standard.uniforms[UNIFORM];
+  });
+
+  it('makes a texture of the base class whose clone is itself', () => {
+    const slot = installedSlot(UNIFORM, THREE.DataArrayTexture);
+
+    expect([slot instanceof THREE.DataArrayTexture, slot.clone() === slot]).toEqual([true, true]);
+  });
+
+  it('answers the slot installed under the name, as after a reload', () => {
+    const installed = new THREE.DataTexture();
+    THREE.ShaderLib.standard.uniforms[UNIFORM] = { value: installed };
+
+    expect(installedSlot(UNIFORM, THREE.DataTexture)).toBe(installed);
   });
 });

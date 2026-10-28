@@ -85,9 +85,8 @@ export function graftInstanceChildren(
     const next = inside && graftAt(grafted, inside, stamped, scopes.content);
     if (inside && next) {
       grafted = next;
-      if (child.instanceSubPath.includes(UNIQUE_NODE_PREFIX)) {
-        placements.set(joinPath(child.instanceSubPath, child.name), joinPath(inside.join('/'), child.name));
-      }
+      const key = placementKey(child);
+      if (key) placements.set(key, joinPath(inside.join('/'), child.name));
     } else if (child.overridesExistingNode || names.hasUnloadedBase) {
       // A base still loading seats the child at its next collapse, so only an override warns.
       if (child.overridesExistingNode) {
@@ -107,6 +106,17 @@ export function graftInstanceChildren(
     uniqueParentPlacements: placements,
     escaped,
   };
+}
+
+/**
+ * The key a placement records `hostChild` under: its sub-path and its name, as authored. Undefined
+ * where the sub-path passes through no `%Name`, as the path as written then needs no record.
+ *
+ * @canonical The key of a host child's placement, as `uniqueParentPlacements` keys it
+ */
+export function placementKey(hostChild: LiveNode): string | undefined {
+  const { instanceSubPath, name } = hostChild;
+  return instanceSubPath?.includes(UNIQUE_NODE_PREFIX) ? joinPath(instanceSubPath, name) : undefined;
 }
 
 /**

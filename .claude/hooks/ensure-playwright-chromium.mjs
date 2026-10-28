@@ -8,11 +8,10 @@
 import { spawnSync } from 'node:child_process';
 
 import { playwrightInstallEnv } from '../../scripts/ci/playwrightInstallEnv.mjs';
-
-const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+import { REPO_ROOT } from '../../scripts/repoRoot.mjs';
 
 const install = spawnSync('pnpm', ['playwright:install'], {
-  cwd: projectDir,
+  cwd: REPO_ROOT,
   env: playwrightInstallEnv(process.env),
   stdio: ['ignore', 'ignore', 'inherit'],
 });
