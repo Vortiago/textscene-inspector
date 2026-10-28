@@ -11,7 +11,7 @@ import { playwrightInstallEnv } from '../../scripts/ci/playwrightInstallEnv.mjs'
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
-const install = spawnSync('pnpm', ['exec', 'playwright', 'install', 'chromium'], {
+const install = spawnSync('pnpm', ['playwright:install'], {
   cwd: projectDir,
   env: playwrightInstallEnv(process.env),
   stdio: ['ignore', 'ignore', 'inherit'],
