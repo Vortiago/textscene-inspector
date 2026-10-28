@@ -244,6 +244,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
   // A ProgressBar percentage with an outline, over a plain, an emboldened, a sheared and an emboldened and sheared face.
   { name: 'progress-bar-outline-variation', file: 'unit-progress-bar-outline-variation.tscn', mode: '2d' },
+  // The one variable: the FontVariation of a ProgressBar percentage with no outline, so the fill alone draws.
+  { name: 'progress-bar-embolden-fill', file: 'unit-progress-bar-embolden-fill.tscn', mode: '2d' },
   // The one variable: the font of each RichTextLabel style. The default theme's bold, italics and bold
   // italics over the default font, a node's own `bold_font` and `italics_font`, and bare variations
   // that draw the default font itself.
@@ -406,6 +408,36 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
+  // A TextureRect samples a ViewportTexture through the Control walker. Godot 4.6.3 `--mode 2d`:
+  // (200,150) rgb(255,0,0) and (200,250) rgb(0,0,255), the target's two halves upright.
+  {
+    name: 'texture-rect-viewport-texture',
+    file: 'unit-texture-rect-viewport-texture.tscn',
+    mode: '2d',
+  },
+  // A flipped TextureRect samples its own copy of the target through a mirrored window. Godot
+  // 4.6.3 `--mode 2d`: (150,150) rgb(0,0,255) and (290,150) rgb(0,255,0).
+  {
+    name: 'texture-rect-viewport-texture-flip',
+    file: 'unit-texture-rect-viewport-texture-flip.tscn',
+    mode: '2d',
+  },
+  // A ViewportTexture under a CanvasTexture that is not local to scene draws the placeholder, and
+  // one under a local CanvasTexture the target. Godot 4.6.3 `--mode 2d`: (110,110) rgb(255,0,255),
+  // (150,110) rgb(125,0,125), (500,150) rgb(255,0,0) and (405,200) rgb(0,255,0).
+  {
+    name: 'viewport-texture-local-to-scene',
+    file: 'unit-viewport-texture-local-to-scene.tscn',
+    mode: '2d',
+  },
+  // A padded TileSet over a ViewportTexture: the placeholder at the padded regions when it is not
+  // local to scene, the unrendered target when it is. Godot 4.6.3 `--mode 2d`: (101,101)
+  // rgb(199,0,199), (150,150) rgb(255,0,255) and (450,150) rgb(0,0,0).
+  {
+    name: 'tile-atlas-viewport-padding',
+    file: 'unit-tile-atlas-viewport-padding.tscn',
+    mode: '2d',
+  },
   // A WorldEnvironment inside a shared-world viewport glows its target. Godot 4.6.3 `--mode 2d`:
   // (400,370) rgb(106,63,30) in the bloom below the sphere, and (400,420) rgb(31,22,24).
   {
@@ -434,13 +466,34 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-stretch-shrink-odd.tscn',
     mode: '2d',
   },
+  // A PointLight2D lights native Controls like any CanvasItem. Godot 4.6.3 `--mode 2d`: (100,100)
+  // rgb(168,120,81) the ColorRect, (500,100) rgb(67,120,81) the Panel, (300,140) rgb(255,159,92)
+  // under the Torch.
+  { name: 'control-light2d', file: 'unit-control-light2d.tscn', mode: '2d' },
+  // `light_mask` on a Control. Godot 4.6.3 `--mode 2d`: (200,200) rgb(153,107,61) lit, (600,200)
+  // rgb(102,76,51) the Masked ColorRect at its authored colour.
+  { name: 'control-light-mask', file: 'unit-control-light-mask.tscn', mode: '2d' },
+  // A CanvasModulate tints native Controls. Godot 4.6.3 `--mode 2d`: (100,100) rgb(82,92,92).
+  { name: 'control-canvas-modulate', file: 'unit-control-canvas-modulate.tscn', mode: '2d' },
+  // A CanvasItemMaterial on a Control. Godot 4.6.3 `--mode 2d`: (100,100) rgb(204,102,51) unshaded,
+  // (400,100) rgb(176,116,72) Light Only, (640,100) rgb(249,160,112) Add, (880,100) rgb(96,50,20) Mul.
+  { name: 'control-canvas-item-material', file: 'unit-control-canvas-item-material.tscn', mode: '2d' },
+  // An outer light and tint over a Control-only SubViewport. Godot 4.6.3 `--mode 2d`: (150,120)
+  // rgb(82,133,102), lit once by the outer canvas, not twice.
+  {
+    name: 'sub-viewport-control-outer-light',
+    file: 'unit-sub-viewport-control-outer-light.tscn',
+    mode: '2d',
+  },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
   { name: 'sub-viewport-2d-light', file: 'unit-sub-viewport-2d-light.tscn', mode: '2d' },
   // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
   // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
-  // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone.
+  // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone. The outside sun
+  // lights the Backdrop and the container's surface too: (350,150) rgb(0,0,112), (150,150)
+  // rgb(69,94,69) the Wall's shadow on the lit surface.
   {
     name: 'sub-viewport-2d-directional-shadow',
     file: 'unit-sub-viewport-2d-directional-shadow.tscn',

@@ -19,6 +19,7 @@ import { TextureProgressBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TextureProgressBarProperties } from './types';
+import { unconfiguredViewportTexture } from '../../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 
 const UNDER = 'res://under.png';
 const PROGRESS = 'res://progress.png';
@@ -194,5 +195,46 @@ describe('<TextureProgressBar>', () => {
       (r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(colorOf(untinted).color.r).toBeCloseTo(1, 6);
     expect(colorOf(tinted).color.g).toBeLessThan(colorOf(untinted).color.g);
+  });
+});
+
+/**
+ * An unset ViewportTexture reports size 0 (`viewport.cpp:156-160`) yet samples the 4x4 placeholder.
+ * Godot 4.6.3 draws no plain or radial layer for it, and stretches a nine-patch layer from the
+ * placeholder's texels.
+ */
+describe('<TextureProgressBar> with layers that report size 0', () => {
+  function sizelessLoader() {
+    const fake = createFakeResourceLoader();
+    for (const path of [UNDER, PROGRESS, OVER]) fake.textures.seed(path, unconfiguredViewportTexture());
+    return fake.loader;
+  }
+
+  const ALL_LAYERS = {
+    textureUnder: 'ExtResource("1")',
+    textureProgress: 'ExtResource("2")',
+    textureOver: 'ExtResource("3")',
+    value: 50,
+  };
+
+  it('draws no plain layer', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      bar(sizelessLoader(), { ...ALL_LAYERS, fillMode: 0 })
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws no radial progress layer', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      bar(sizelessLoader(), { ...ALL_LAYERS, fillMode: 4 })
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('stretches each nine-patch layer from the placeholder', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      bar(sizelessLoader(), { ...ALL_LAYERS, fillMode: 0, ninePatchStretch: true })
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3);
   });
 });

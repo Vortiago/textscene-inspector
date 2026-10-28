@@ -55,7 +55,9 @@ export function useNodeIcon(
   const themedResult = useTexture2D(
     themed?.ref,
     themed?.resources.externalResources ?? NO_EXT_RESOURCES,
-    themed?.resources.internalResources ?? NO_INT_RESOURCES
+    themed?.resources.internalResources ?? NO_INT_RESOURCES,
+    'plain',
+    themed?.holders
   );
   const themedTexture = useOwnerCanvas2DTexture(themed ? themedResult.texture : null);
   const themedWins = themed !== undefined && !themedResult.missing;

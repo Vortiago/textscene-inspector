@@ -18,6 +18,7 @@ import { useFrame } from '@react-three/fiber';
 import * as logger from '../../logger.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { updateTextureAtlases } from '../textureAtlas/updateTextureAtlases.js';
 
 export interface ViewportPass {
   /** ids (dispatcher-absolute node paths) of the OTHER passes this pass's content samples. */
@@ -122,13 +123,15 @@ export function ViewportPassProvider({ children }: { children: ReactNode }) {
  * Mounted in each `<Canvas>` that hosts offscreen passes, under one provider,
  * so a pass drives from whichever canvas is mounted. Default priority runs
  * before R3F's automatic main render, which fills every target first. Another
- * priority would turn that render off.
+ * priority would turn that render off. The texture atlases rebuild before the
+ * passes, as Godot's do (`updateTextureAtlases`).
  */
 export function ViewportPassOrchestrator(): null {
   const { passes, order, cycles } = useContext(StateContext);
 
   useFrame(({ gl }) => {
     if (order.length === 0) return;
+    updateTextureAtlases(gl);
     beginStep(gl, 'SubViewports');
     for (const id of order) {
       if (cycles.has(id)) continue;

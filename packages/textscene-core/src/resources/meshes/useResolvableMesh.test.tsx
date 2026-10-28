@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
-import { notifySceneFontSettled } from '../../r3f/controls/native/text/sceneFontLoader';
+import { notifySceneFontSettled } from '../../r3f/controls/native/text/settledChannel';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';

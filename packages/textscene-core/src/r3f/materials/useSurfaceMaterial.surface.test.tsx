@@ -11,10 +11,10 @@ import type { TscnInternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
-import type { UvWindow } from '../uvWindow';
 import { GLTF_SURFACE, type TexturedSurface } from './surfaceTextures';
 import { NodePathProvider } from '../contexts/NodePathContext';
-import { renderTargetMapUserData } from './renderTargetMap';
+import { copiesFilledFrom } from '../liveTargets.testkit';
+import { unconfiguredViewportTexture } from '../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
@@ -89,6 +89,18 @@ describe('useSurfaceMaterial on a glTF surface', () => {
     expect([map.repeat.y, map.offset.y]).toEqual([1, 0]);
   });
 
+  it("scales a Godot mesh's map from its top edge, as Godot's top-down V does", () => {
+    const map = emissionMap({ uv1_scale: 'Vector3(2, 1.5, 1)' });
+
+    expect([map.repeat.y, map.offset.y]).toEqual([1.5, -0.5]);
+  });
+
+  it("moves a Godot mesh's map down the image for a positive V offset", () => {
+    const map = emissionMap({ uv1_offset: 'Vector3(0.5, 0.25, 0)' });
+
+    expect([map.offset.x, map.offset.y]).toEqual([0.5, -0.25]);
+  });
+
   it("flips a Godot mesh's UV2 map, as its UV2 keeps the top-down V", () => {
     const map = emissionMap({ emission_on_uv2: 'true' });
 
@@ -105,28 +117,7 @@ function viewportProps(properties: Record<string, string>, surface?: TexturedSur
   return targetProps({ albedo_texture: 'SubResource("ViewportTexture_a")', ...properties }, surface);
 }
 
-const TARGET_SAMPLER_KEYS = Object.keys(
-  renderTargetMapUserData({
-    uv: { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } },
-    repeats: true,
-    isNearest: false,
-  })
-);
-
-/** Whether the material records a render-target albedo sampler, which only an albedo target earns. */
-function recordsTargetSampler({ userData }: THREE.MeshPhysicalMaterialParameters): boolean {
-  return TARGET_SAMPLER_KEYS.every((key) => key in (userData ?? {}));
-}
-
-/** The sampler a render-target albedo with this transform records on its material. */
-function targetSampler(uv: UvWindow) {
-  return renderTargetMapUserData({ uv, repeats: true, isNearest: false });
-}
-
-/**
- * A render target's texture: `isRenderTargetTexture` gates `albedoTargetUv`, and a bare
- * `THREE.Texture` leaves it false.
- */
+/** A render target's texture, which the publisher marks live. */
 function renderTargetTexture(): THREE.Texture {
   return new THREE.WebGLRenderTarget(4, 4).texture;
 }
@@ -139,48 +130,85 @@ function targetProps(properties: Record<string, string>, surface?: TexturedSurfa
   const target = renderTargetTexture();
   const decoding = renderTargetTexture();
   const { view, retainers } = countingView(decoding);
-  const props = materialProps(properties, VIEWPORT, surface, (children) => (
-    <ViewportTextureProvider>
-      <ViewportTexturePublisher
-        path="Root/SubViewport"
-        entry={viewportEntry(target, { x: 4, y: 4 }, { decoding: view })}
-      />
-      <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
-    </ViewportTextureProvider>
-  ));
+  const props = materialProps(
+    { resource_local_to_scene: 'true', ...properties },
+    VIEWPORT,
+    surface,
+    (children) => (
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher
+          path="Root/SubViewport"
+          entry={viewportEntry(target, { x: 4, y: 4 }, { decoding: view })}
+        />
+        <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
+      </ViewportTextureProvider>
+    )
+  );
   return { props, target, decoding, retainers };
 }
 
 describe('useSurfaceMaterial with a render-target albedo', () => {
   /** A `source_color` sampler reads the sRGB view (`material_storage.cpp:1067,1073`). */
-  it('binds the decoding view and hands its UV transform to the material', () => {
-    const { props, decoding } = viewportProps({ uv1_scale: 'Vector3(2, 3, 1)' });
+  it('binds its own copy of the decoding view, which the pass fills', () => {
+    const { props, decoding } = viewportProps({});
 
-    expect(props.map).toBe(decoding);
-    expect(props.userData).toMatchObject(targetSampler({ repeat: { x: 2, y: 3 }, offset: { x: 0, y: 0 } }));
+    expect(copiesFilledFrom(decoding)).toEqual([props.map]);
   });
 
-  it("flips the target's V on a glTF surface, as for any other map", () => {
+  it('samples its copy through the UV1 transform', () => {
+    const { props } = viewportProps({ uv1_scale: 'Vector3(2, 3, 1)' });
+
+    expect([props.map!.repeat.x, props.map!.repeat.y]).toEqual([2, 3]);
+  });
+
+  it("flips the copy's V on a glTF surface, as for any other map", () => {
     const { props } = viewportProps({}, GLTF_SURFACE);
 
-    expect(props.userData).toMatchObject(targetSampler({ repeat: { x: 1, y: -1 }, offset: { x: 0, y: 1 } }));
+    expect([props.map!.repeat.y, props.map!.offset.y]).toEqual([-1, 1]);
   });
 
-  it('hands no UV transform for a file albedo, which carries its own (edge case)', () => {
-    const props = materialProps({ albedo_texture: 'SubResource("GradientTexture2D_a")' }, GRADIENT);
+  it('samples its copy with the nearest filter that `texture_filter` names', () => {
+    const { props } = viewportProps({ texture_filter: '0' });
 
-    expect(recordsTargetSampler(props)).toBe(false);
+    expect(props.map!.magFilter).toBe(THREE.NearestFilter);
+  });
+
+  it('clamps its copy when `texture_repeat` is off (edge case)', () => {
+    const { props } = viewportProps({ texture_repeat: 'false' });
+
+    expect(props.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('patches no program to sample the target, as each slot reads its own copy', () => {
+    const { props } = viewportProps({ uv1_scale: 'Vector3(2, 3, 1)' });
+
+    expect(Object.keys(props.userData ?? {}).some((key) => key.includes('Target'))).toBe(false);
+  });
+});
+
+describe('useSurfaceMaterial with a ViewportTexture Godot never sets up', () => {
+  /**
+   * `make_local_resource` sets up a material only when it is local to scene, and only then its
+   * ViewportTexture (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`).
+   */
+  it('binds the placeholder in a material that is not local to scene', () => {
+    const { props } = targetProps({
+      resource_local_to_scene: 'false',
+      albedo_texture: 'SubResource("ViewportTexture_a")',
+    });
+
+    expect(props.map!.image).toBe(unconfiguredViewportTexture().image);
   });
 });
 
 describe('useSurfaceMaterial with a render target in another slot', () => {
-  it('binds the decoding view in an emission slot, a `source_color` sampler too', () => {
+  it('binds its own copy of the decoding view in an emission slot, a `source_color` sampler too', () => {
     const { props, decoding } = targetProps({
       emission_enabled: 'true',
       emission_texture: 'SubResource("ViewportTexture_a")',
     });
 
-    expect(props.emissiveMap).toBe(decoding);
+    expect(copiesFilledFrom(decoding)).toEqual([props.emissiveMap]);
   });
 
   it('keeps the decoding view filled while a `source_color` slot binds it', () => {
@@ -189,13 +217,13 @@ describe('useSurfaceMaterial with a render target in another slot', () => {
     expect(retainers.count).toBe(1);
   });
 
-  it('binds the plain view in a normal slot, which reads raw', () => {
+  it('binds its own copy of the plain view in a normal slot, which reads raw', () => {
     const { props, target } = targetProps({
       normal_enabled: 'true',
       normal_texture: 'SubResource("ViewportTexture_a")',
     });
 
-    expect(props.normalMap).toBe(target);
+    expect(copiesFilledFrom(target)).toEqual([props.normalMap]);
   });
 
   it('fills no decoding view for a slot that reads raw (edge case)', () => {
@@ -207,13 +235,13 @@ describe('useSurfaceMaterial with a render target in another slot', () => {
     expect(retainers.count).toBe(0);
   });
 
-  it('hands the albedo UV transform to no other slot (edge case)', () => {
+  it('samples an emission copy through the UV1 transform, as the albedo does', () => {
     const { props } = targetProps({
       emission_enabled: 'true',
       emission_texture: 'SubResource("ViewportTexture_a")',
       uv1_scale: 'Vector3(2, 3, 1)',
     });
 
-    expect(recordsTargetSampler(props)).toBe(false);
+    expect([props.emissiveMap!.repeat.x, props.emissiveMap!.repeat.y]).toEqual([2, 3]);
   });
 });

@@ -7,9 +7,10 @@
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import { isGlyphVaried, type GlyphVariation } from './fontMetrics';
+import { isGlyphVaried, type FontMetrics, type GlyphVariation } from './fontMetrics';
+import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { resolveFontFileBytes } from './sceneFontResolution';
-import { createSettledPeek } from './sceneFontLoader';
+import { createSettledPeek } from './settledChannel';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
@@ -57,15 +58,16 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
 }
 
 /**
- * The outlines that a stroked outline of `font` follows. Only an emboldened or sheared face with an
- * outline needs them, as the stroke follows the changed glyph: the rest answers null and loads nothing.
+ * The outlines that the text of the `metrics` face under `variation` follows. Only an emboldened or
+ * sheared canvas face needs them, as its fill and its stroke follow the changed glyph: the rest
+ * answers null and loads nothing. An atlas face has no contour to follow.
  *
- * @canonical Glyph outlines that the stroked outline of an emboldened or sheared face follows
+ * @canonical Glyph outlines that the text of an emboldened or sheared canvas face follows
  */
-export function peekVariedStrokeOutlines(
+export function peekGlyphOutlines(
   font: FontResource | null | undefined,
-  metrics: GlyphVariation,
-  hasOutline: boolean
+  metrics: FontMetrics,
+  variation: GlyphVariation
 ): PeekedOutlines {
-  return hasOutline && isGlyphVaried(metrics) ? peekSceneFontOutlines(font) : null;
+  return isCanvasFontMetrics(metrics) && isGlyphVaried(variation) ? peekSceneFontOutlines(font) : null;
 }

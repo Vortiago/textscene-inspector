@@ -39,8 +39,12 @@ function useAreaLightIntensity(properties: AreaLight3DProperties): number {
   return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
 }
 
-/** The `area_texture`, held in the area light atlas while the light shows it. */
-const useAreaTexture = (ref: string | undefined) => useHeldTexture(ref, holdAreaTexture, releaseAreaTexture);
+/**
+ * The `area_texture`, held in the area light atlas while the light shows it. The atlas copies its
+ * sRGB view (4.7.2 `texture_storage.cpp:3524`).
+ */
+const useAreaTexture = (ref: string | undefined) =>
+  useHeldTexture(ref, 'decoding', holdAreaTexture, releaseAreaTexture);
 
 /**
  * The falloff and texture the shader reads, the shadow the fitter reads and the energy the fog

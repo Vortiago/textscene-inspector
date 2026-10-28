@@ -16,6 +16,7 @@ import {
 } from '../../resources/SubResourceResolver';
 import { useResource } from '../../resources/useResource';
 import { useSceneResources } from '../SceneResourcesContext';
+import type { SceneScope } from '../../parser/types';
 
 const CanvasItemMaterialContext = createContext<CanvasItemMaterialProperties | null>(null);
 CanvasItemMaterialContext.displayName = 'CanvasItemMaterialContext';
@@ -35,6 +36,13 @@ function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties | null {
   return useContext(CanvasItemMaterialContext);
 }
 
+/** What decides a CanvasItem's material: its own reference, or the ancestor chain's by `use_parent_material`. */
+interface CanvasItemMaterialSource {
+  /** The raw `material` reference, a SubResource or an ExtResource. */
+  readonly ref: string | undefined;
+  readonly useParentMaterial: boolean;
+}
+
 /**
  * `use_parent_material` gives the ancestor chain's material, an own
  * `materialPath` gives that resource, a SubResource or a `.tres` file, when it
@@ -42,9 +50,19 @@ function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties | null {
  * resolves to null, since invented blend state is worse than Godot's plain default.
  */
 export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMaterialProperties | null {
+  return useResolvedCanvasItemMaterial(
+    { ref: props.materialPath, useParentMaterial: props.use_parent_material },
+    useSceneResources()
+  );
+}
+
+/** `useCanvasItemMaterial` for a node that names the scope its `material` reference resolves in. */
+export function useResolvedCanvasItemMaterial(
+  { ref, useParentMaterial }: CanvasItemMaterialSource,
+  { internalResources, externalResources }: SceneScope
+): CanvasItemMaterialProperties | null {
   const inherited = useInheritedCanvasItemMaterial();
-  const { internalResources, externalResources } = useSceneResources();
-  const ownRef = props.use_parent_material ? undefined : props.materialPath;
+  const ownRef = useParentMaterial ? undefined : ref;
   const sub = useMemo(() => resolveSubResourceRef(ownRef, internalResources), [ownRef, internalResources]);
   const filePath = useMemo(
     () => (sub ? null : resolveExtResourcePath(ownRef, externalResources)),
@@ -52,7 +70,7 @@ export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMateri
   );
   const fromSub = useMemo(() => (sub ? canvasItemMaterialOf(sub) : null), [sub]);
   const fromFile = useCanvasItemMaterialFile(filePath);
-  if (props.use_parent_material) return inherited;
+  if (useParentMaterial) return inherited;
   return sub ? fromSub : fromFile;
 }
 

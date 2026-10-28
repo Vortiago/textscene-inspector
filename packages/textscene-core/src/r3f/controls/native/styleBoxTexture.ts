@@ -28,6 +28,8 @@ export interface StyleBoxTextureData {
   texture: string | undefined;
   /** The node's own scope that `texture` resolves ids against, not the top-level scene's. */
   resources: SceneScope;
+  /** The resources between the node and `texture`: a Theme that holds the StyleBoxTexture, then the StyleBoxTexture. */
+  holders: readonly TscnInternalResource[];
   /**
    * `texture_margin_*` (`style_box_texture.h`), default `0`: the raw margin the
    * nine-patch samples with (`style_box_texture.cpp:178-179`). It never moves
@@ -63,7 +65,8 @@ const DEFAULT_MODULATE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 export function parseStyleBoxTexture(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[]
+  internalResources: readonly TscnInternalResource[],
+  outerHolders: readonly TscnInternalResource[]
 ): StyleBoxTextureData | null {
   if (!ref) return null;
   const parsed = parseResourceReference(ref);
@@ -82,6 +85,7 @@ export function parseStyleBoxTexture(
   return {
     texture: data.texture,
     resources: { externalResources, internalResources },
+    holders: [...outerHolders, resource],
     margin,
     contentMargin: {
       left: contentMarginOr(data.content_margin_left, margin.left, CONTEXT),

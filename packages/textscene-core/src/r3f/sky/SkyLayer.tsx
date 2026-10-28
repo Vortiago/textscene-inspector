@@ -74,15 +74,14 @@ export function SkyLayer({
   const scene = useThree((state) => state.scene);
   const exposure = useExposureFactor();
 
-  // `useTexture2D`, not the path-only resolver: a PanoramaSkyMaterial's
-  // equirectangular texture may be an inline procedural one (a
-  // GradientTexture2D sub-resource), which has no path to load from. Every
-  // other sky kind passes `undefined` and the hook idles.
+  // The panorama sky samples `source_panorama` as `source_color` (`sky_material.cpp:498`).
+  // Every other sky kind passes `undefined` and the hook idles.
   const panorama =
     useTexture2D(
       sky.material.kind === 'panorama' ? sky.material.panorama : undefined,
       resources.externalResources,
-      resources.internalResources
+      resources.internalResources,
+      'decoding'
     ).texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
   const contextRestores = useContextRestores(gl);

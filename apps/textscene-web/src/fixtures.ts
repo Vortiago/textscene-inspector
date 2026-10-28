@@ -383,6 +383,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Copy Transform Modifier 3d Ribbon",
+    "file": "unit-copy-transform-modifier-3d-ribbon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Copy Transform Modifier 3d",
     "file": "unit-copy-transform-modifier-3d.tscn",
     "category": "Other"
@@ -1663,6 +1668,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Embolden Fill",
+    "file": "unit-progress-bar-embolden-fill.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Outline Variation",
     "file": "unit-progress-bar-outline-variation.tscn",
     "category": "Other"
@@ -2225,6 +2235,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Video Stream Player",
     "file": "unit-video-stream-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Viewport Texture Local To Scene",
+    "file": "unit-viewport-texture-local-to-scene.tscn",
     "category": "Other"
   },
   {
@@ -2915,6 +2930,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Atlas Viewport Padding",
+    "file": "unit-tile-atlas-viewport-padding.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Flips",
     "file": "unit-tile-map-layer-flips.tscn",
     "category": "Unit - 2D Canvas"
@@ -3097,6 +3117,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Ribbon Instanced",
+    "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -3331,6 +3356,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Canvas Item Material",
+    "file": "unit-control-canvas-item-material.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Canvas Modulate",
+    "file": "unit-control-canvas-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Containers",
     "file": "unit-control-containers.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3368,6 +3403,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Layout Direction Rtl",
     "file": "unit-control-layout-direction-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Light Mask",
+    "file": "unit-control-light-mask.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Light2d",
+    "file": "unit-control-light2d.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -3598,6 +3643,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Rect Filter Inherit",
     "file": "unit-texture-rect-filter-inherit.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture Flip",
+    "file": "unit-texture-rect-viewport-texture-flip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture",
+    "file": "unit-texture-rect-viewport-texture.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -4034,6 +4089,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Uv1 Top Edge",
+    "file": "unit-material-uv1-top-edge.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Mipmap Bias Normal",
     "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
     "category": "Unit - Materials",
@@ -4168,6 +4228,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Control Msaa",
     "file": "unit-sub-viewport-control-msaa.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Control Outer Light",
+    "file": "unit-sub-viewport-control-outer-light.tscn",
     "category": "Unit - Viewports"
   },
   {

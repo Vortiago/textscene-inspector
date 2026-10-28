@@ -6,7 +6,8 @@
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { bundledFontBytes } from './bundledFontBytes';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
-import { notifySceneFontSettled, registerFontFace } from './sceneFontLoader';
+import { registerFontFace } from './sceneFontLoader';
+import { notifySceneFontSettled } from './settledChannel';
 import * as logger from '../../../../logger';
 
 /** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */

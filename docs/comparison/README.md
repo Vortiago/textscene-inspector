@@ -55,15 +55,21 @@ reproduced:
 ## Why a 2D background reads 77 here and 76 in Godot
 
 Both sides clear a 2D scene to `default_clear_color`, 0.3 grey. Godot hands that
-float to the driver as the clear colour (`renderer_canvas_render_rd.cpp:2278,2294`),
+float to the driver as the clear colour (`renderer_canvas_render_rd.cpp`),
 so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 `pnpm ref:godot` renders on Vulkan through lavapipe, which gives 76.
 `--rendering-driver opengl3` gives 77, and so does the previewer's WebGL clear. This
 1/255 gap is not a parity defect.
 
+## Why a sampled sRGB texture can read one step off in Godot
+
+Godot defines no sRGB decode on this path. A `source_color` sampler reads the texture's sRGB view (`rd_texture_srgb` in `material_storage.cpp`), which is `DATA_FORMAT_R8G8B8A8_SRGB` for an RGB8 or RGBA8 image and for a ViewportTexture's render target (`texture_storage.cpp`). The driver decodes the texel.
+
+`pnpm ref:godot` runs on lavapipe, which decodes with a cubic polynomial (`lp_bld_format_srgb.c`, called from `lp_bld_format_soa.c`, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. The previewer keeps the exact decode. This gap is not a parity defect.
+
 ## Why anisotropic filtering differs from the Godot reference
 
-`pnpm ref:godot` samples on lavapipe, which implements the anisotropic algorithm that the Vulkan specification suggests. It takes `ceil(rho_max / rho_min)` taps, capped at `1 << anisotropic_filtering_level`, spaced `1 / (N + 1)` of the longer screen-space gradient apart. Each tap is trilinear at the level of `rho_max / N` (`lp_bld_sample.c:266-358`, `lp_bld_sample_soa.c:2186-2330`, Mesa 25.2.8).
+`pnpm ref:godot` samples on lavapipe, which implements the anisotropic algorithm that the Vulkan specification suggests. It takes `ceil(rho_max / rho_min)` taps, capped at `1 << anisotropic_filtering_level`, spaced `1 / (N + 1)` of the longer screen-space gradient apart. Each tap is trilinear at the level of `rho_max / N` (`lp_bld_sample.c`, `lp_bld_sample_soa.c`, Mesa 25.2.8).
 
 The previewer asks the browser's driver for the same maximum and takes that driver's own tap pattern, so `texture_filter` 4 and 5 read 1.6 to 2.2 per channel (/255) from Godot at level 1 and above. A shader that ports the lavapipe taps into the previewer measures 0.563, 0.544, 0.548 and 0.550 at levels 1 to 4, against 2.179, 1.899, 1.625 and 1.605 for the browser's own taps. Level 0 measures 0.525. The port is an experiment and is not shipped. Godot asks the driver for a maximum and names no pattern, so a GPU's pattern differs from lavapipe's as well. This gap is not a parity defect.
 
@@ -79,7 +85,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md): a billboard icon on a transform-only group
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md): a billboard icon, and a range and cone gizmo for the selected node
 - [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
-- [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing yet, Godot applies its bone constraints each frame, the previewer does not
+- [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing (the base class makes no edit to the pose)
 - [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md): nothing yet, Godot disperses one bone's twist up its chain, the previewer does not
 - [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): Godot's editor frustum gizmo, drawn for every camera
 - [CCDIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/ccdik3d/comparison.md): nothing yet, Godot solves its chain onto the target each frame, the previewer does not
@@ -88,7 +94,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md): a toggle-gated collision wireframe
 - [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): nothing (a transform-only group)
 - [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md): nothing yet, Godot remaps a reference value onto an apply bone, the previewer does not
-- [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): nothing yet, Godot copies a reference transform onto an apply bone, the previewer does not
+- [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): nothing (a transform-only modifier that edits the pose of the Skeleton3D above it)
 - [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md): nothing yet, not implemented
 - [CSGBox3D](../../packages/textscene-core/src/nodes/3d/csg/csgbox3d/comparison.md): a solid box mesh
 - [CSGCombiner3D](../../packages/textscene-core/src/nodes/3d/csg/csgcombiner3d/comparison.md): a grouping node whose children fold into one solid
@@ -152,7 +158,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md): nothing (a transform-only group)
 - [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): nothing (a transform-only group that poses the meshes bound to it)
 - [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
-- [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
+- [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing (the base class makes no edit to the pose)
 - [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): nothing (a transform-only group)
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): a THREE.Mesh with a wireframe gizmo for every node
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
@@ -175,11 +181,11 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): nothing yet, Godot lights the scene from its voxel bake, the previewer does not
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting
 - [XRAnchor3D](../../packages/textscene-core/src/nodes/3d/xr/xranchor3d/comparison.md): nothing (a transform-only group)
-- [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): nothing yet, Godot poses bones from an XR body tracker, the previewer does not
+- [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): nothing (a transform-only modifier that has no XR tracker to read)
 - [XRCamera3D](../../packages/textscene-core/src/nodes/3d/xr/xrcamera3d/comparison.md): a frustum gizmo for every camera, as Camera3D
 - [XRController3D](../../packages/textscene-core/src/nodes/3d/xr/xrcontroller3d/comparison.md): nothing (a transform-only group)
 - [XRFaceModifier3D](../../packages/textscene-core/src/nodes/3d/xr/xrfacemodifier3d/comparison.md): nothing yet, Godot writes tracked face poses into blend shapes, the previewer does not
-- [XRHandModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrhandmodifier3d/comparison.md): nothing yet, Godot poses bones from an XR hand tracker, the previewer does not
+- [XRHandModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrhandmodifier3d/comparison.md): nothing (a transform-only modifier that has no XR tracker to read)
 - [XRNode3D](../../packages/textscene-core/src/nodes/3d/xr/xrnode3d/comparison.md): nothing (a transform-only group)
 - [XROrigin3D](../../packages/textscene-core/src/nodes/3d/xr/xrorigin3d/comparison.md): nothing (a transform-only group)
 

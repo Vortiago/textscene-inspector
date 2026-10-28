@@ -14,7 +14,7 @@ type Target = THREE.WebGLRenderTarget | null;
 /** The texture a copy pass samples, read at its draw: the pass holds none after it. */
 function sampledFrame(drawn: THREE.Object3D): THREE.Texture | undefined {
   const material = (drawn as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
-  return material?.uniforms?.frame?.value;
+  return material?.uniforms?.source?.value;
 }
 
 /**

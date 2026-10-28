@@ -53,7 +53,7 @@ const ALBEDO_TARGET = { albedo_texture: 'SubResource("ViewportTexture_1")' };
 function resources(material: Record<string, string>): TscnInternalResource[] {
   return [
     { id: 'box', type: 'BoxMesh', data: {} },
-    { id: 'mat', type: 'StandardMaterial3D', data: material },
+    { id: 'mat', type: 'StandardMaterial3D', data: { resource_local_to_scene: 'true', ...material } },
     VIEWPORT_TEXTURE,
   ];
 }

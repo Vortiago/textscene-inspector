@@ -1,14 +1,6 @@
-/**
- * XRBodyModifier3D writes tracked body poses into the bones of its parent Skeleton3D, through a
- * live XR session. That drive is a gap here (ADR-0045), so it registers `pending` on the Node3D
- * component and its children still land in the right transform space.
- */
+/** XRBodyModifier3D is a modifier that writes tracked body poses. With no XR tracker it makes no edit. */
 
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { registerSkeletonModifier } from '../shared/registerSkeletonModifier';
+import { noPoseEdit } from '../../skeleton3d/poseModifier';
 
-nodeComponentRegistry.register({
-  typeName: 'XRBodyModifier3D',
-  Component: Node3D,
-  renderIntent: 'pending',
-});
+registerSkeletonModifier('XRBodyModifier3D', noPoseEdit);

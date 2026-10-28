@@ -49,10 +49,10 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
 }
 
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
-  // Every registered `NodeComponentRegistration.scenePass`, transforms before paths, rewrites the
-  // parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
+  // Every registered parse stage `NodeComponentRegistration.scenePass`, transforms before paths,
+  // rewrites the parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
   let nodes = tscnScene.nodes;
-  for (const { run } of nodeComponentRegistry.scenePasses()) {
+  for (const { run } of nodeComponentRegistry.parseScenePasses()) {
     nodes = run(nodes, tscnScene.internalResources);
   }
   const parsedScene = tscnSceneToParsedScene(

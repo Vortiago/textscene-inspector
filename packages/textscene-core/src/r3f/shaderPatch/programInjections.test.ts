@@ -27,7 +27,6 @@ import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRou
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw } from '../materials/godotPoint';
-import { renderTargetMapInjection, renderTargetMapUserData } from '../materials/renderTargetMap';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
@@ -41,7 +40,7 @@ import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
 import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
 import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
-import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
+import { lightUniforms } from '../lighting2d/testing/lightUniforms';
 
 /** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
 const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
@@ -115,9 +114,6 @@ type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
-const targetMapOf = (repeats: boolean, isNearest: boolean) =>
-  renderTargetMapUserData({ uv: { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
-
 const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
@@ -129,15 +125,6 @@ const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
   surface.userData = userData;
   return surface;
 };
-
-const lightUniforms = () => ({
-  lightBuffer: { value: new THREE.Texture() },
-  shadowTintBuffer: { value: new THREE.Texture() },
-  isLit: { value: 0 },
-  resolution: { value: new THREE.Vector2(2, 2) },
-  canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-  lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
-});
 
 const INJECTIONS: readonly InjectionCase[] = [
   injected('materials/godotAlphaHash.ts', 'alpha hash', SURFACE_AND_DEPTH, () => GODOT_ALPHA_HASH),
@@ -168,12 +155,6 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
-  injected('materials/renderTargetMap.ts', 'render target map transform', SURFACE_AND_DEPTH, () =>
-    renderTargetMapInjection(targetMapOf(false, false))
-  ),
-  injected('materials/renderTargetMap.ts', 'render target map sampler', SURFACE_AND_DEPTH, () =>
-    renderTargetMapInjection(targetMapOf(true, true))
-  ),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
   ),

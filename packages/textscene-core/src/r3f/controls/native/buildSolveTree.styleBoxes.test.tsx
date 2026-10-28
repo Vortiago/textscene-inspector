@@ -8,6 +8,8 @@ import { renderHook } from '@testing-library/react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { useBuildSolveTree } from './buildSolveTree';
 import { controlNode } from './testing/solveNode';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
+import type { StyleBoxTextureData } from './styleBoxTexture';
 
 const internalResources: TscnInternalResource[] = [
   { id: 'Flat_x', type: 'StyleBoxFlat', data: { bg_color: 'Color(1, 0, 0, 1)' } },
@@ -20,6 +22,17 @@ const internalResources: TscnInternalResource[] = [
     id: 'Texture_x',
     type: 'StyleBoxTexture',
     data: { texture: 'ExtResource("1_tex")', texture_margin_left: '3' },
+  },
+  {
+    id: 'Texture_local',
+    type: 'StyleBoxTexture',
+    data: { texture: 'ExtResource("1_tex")', resource_local_to_scene: 'true' },
+  },
+  { id: 'Theme_shared', type: 'Theme', data: { 'Panel/styles/panel': 'SubResource("Texture_local")' } },
+  {
+    id: 'Theme_local',
+    type: 'Theme',
+    data: { 'Panel/styles/panel': 'SubResource("Texture_local")', resource_local_to_scene: 'true' },
   },
 ];
 
@@ -70,4 +83,25 @@ describe('useBuildSolveTree style boxes', () => {
   it('omits a slot whose ref names an unknown id', () => {
     expect(styleBoxesOf(panelWith({ panel: 'SubResource("nope")' })).panel).toBeUndefined();
   });
+
+  /** A ViewportTexture in a StyleBoxTexture is set up only when every holder is local to scene (`core/io/resource.cpp:497-503`). */
+  it('holds an override StyleBoxTexture texture through the StyleBoxTexture', () => {
+    const boxes = styleBoxesOf(panelWith({ panel: 'SubResource("Texture_x")' }));
+    expect(textureOf(boxes.panel)?.holders).toEqual([internalResources[2]]);
+  });
+
+  it('holds a Theme StyleBoxTexture texture through the Theme too, local to scene as the Theme says', () => {
+    const holders = ['Theme_shared', 'Theme_local'].map((id) => {
+      const boxes = styleBoxesOf(controlNode('N', 'Panel', { theme: `SubResource("${id}")` }));
+      return textureOf(boxes.panel)?.holders.map(isLocalToScene);
+    });
+    expect(holders).toEqual([
+      [false, true],
+      [true, true],
+    ]);
+  });
 });
+
+function textureOf(box: unknown): StyleBoxTextureData | undefined {
+  return (box as { texture?: StyleBoxTextureData } | undefined)?.texture;
+}

@@ -10,15 +10,14 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
-import { withVariation } from '../../../r3f/controls/native/text/fontMetrics';
+import { withOutlines, withVariation } from '../../../r3f/controls/native/text/fontMetrics';
 import {
   isCanvasFontMetrics,
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { peekVariedStrokeOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { peekGlyphOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
-import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
 import { fontForNode } from '../../../resources/styles/theme/lookup';
@@ -30,18 +29,16 @@ const noFiles = () => [];
 
 export interface Label3DFont {
   metrics: CanvasFontMetrics;
-  /** The glyph outlines that the outline ring of an emboldened or sheared face follows. Null where the label needs none, or the font has none to read. */
-  outlines: SfntOutlines | null;
   /** Whether the glyph raster carries a mip chain: the font's own setting, or the project's for the bundled font. */
   generatesMipmaps: boolean;
 }
 
 /**
  * Undefined while the bundled font registers, or while the font file, the project font, the metrics
- * or, for an emboldened or sheared label with an outline, the outlines of the font load: nothing draws against
+ * or, for an emboldened or sheared label, the outlines of the font load: nothing draws against
  * the wrong face meanwhile.
  */
-export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean): Label3DFont | undefined {
+export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undefined {
   const resources = useSceneResources();
   const nodePath = useNodePath() ?? 'Label3D';
   const fontsPlan = useCallback(
@@ -57,12 +54,16 @@ export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean)
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
-    const metrics = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);
-    const outlines = peekVariedStrokeOutlines(font, metrics, hasOutline);
+    // A canvas face carries its outlines already, or none when unvaried (null, not the undefined of a load in flight).
+    // An atlas face draws as the bundled canvas face.
+    const outlines = isCanvasFontMetrics(settled)
+      ? (settled.outlines ?? null)
+      : peekGlyphOutlines(font, bundled, settled);
     if (outlines === undefined) return undefined;
+    const varied = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);
+    const metrics = outlines ? withOutlines(varied, outlines) : varied;
     return {
       metrics,
-      outlines,
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
     };
   };

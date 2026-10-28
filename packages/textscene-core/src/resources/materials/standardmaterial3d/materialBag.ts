@@ -50,12 +50,6 @@ import {
   opaquePrepassUserData,
   type OpaquePrepass,
 } from '../../../r3f/materials/opaquePrepass';
-import {
-  renderTargetMapInjection,
-  renderTargetMapUserData,
-  type TargetMapSampler,
-} from '../../../r3f/materials/renderTargetMap';
-import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 import { resolveEmission } from './emission';
 import type { MaterialBlendState, ResolvedTextures, StandardMaterial3DScalars, TextureSlot } from './types';
 
@@ -301,24 +295,10 @@ function withSurfaceAlpha(
   return { ...bag, props, injection: composeInjections([bag.injection, injection]) };
 }
 
-/** How the albedo samples when it is a render target, which carries no sampler state of its own. */
-function targetMapSampler(
-  { textureRepeat, textureFilter }: StandardMaterial3DScalars,
-  { albedoTargetUv }: ResolvedTextures
-): TargetMapSampler | undefined {
-  if (!albedoTargetUv) return undefined;
-  const isNearest = godotTextureFilterState(textureFilter).magFilter === THREE.NearestFilter;
-  return { uv: albedoTargetUv, repeats: textureRepeat, isNearest };
-}
-
 /** The class `scalars` need, and its props. */
 function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
-  const userData = {
-    ...surfaceUserData(scalars),
-    ...renderTargetMapUserData(targetMapSampler(scalars, textures)),
-  };
-  const targetMap = renderTargetMapInjection(userData);
+  const userData = surfaceUserData(scalars);
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
   // Alpha antialiasing replaces the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
@@ -348,7 +328,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         userData,
         ...blend,
       },
-      injection: composeInjections([heightmap ? unshadedParallaxInjection(heightmap) : undefined, targetMap]),
+      injection: heightmap ? unshadedParallaxInjection(heightmap) : undefined,
       heightmapTexture,
     };
   }
@@ -396,7 +376,6 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),
-    targetMap,
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

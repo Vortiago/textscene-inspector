@@ -30,6 +30,7 @@ import { WHITE_MODULATE } from './canvasItemModulate';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import type { Rgba } from '../godot/math/math';
 import { CanvasItemMaterialBlendMode, CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
+import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
   return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };
@@ -60,7 +61,7 @@ const BASE_TILE: AtlasTileModel = {
 
 function atlasSource(id: number): AtlasSourceModel {
   return {
-    texturePath: `res://source${id}.png`,
+    texture: tileTextureAt(`res://source${id}.png`),
     margins: { x: 0, y: 0 },
     separation: { x: 0, y: 0 },
     textureRegionSize: { x: 16, y: 16 },

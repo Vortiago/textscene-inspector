@@ -134,13 +134,29 @@ describe('textureButtonTextureSlots (texture_button.cpp:38-55)', () => {
   });
 });
 
-describe('textureButtonDraw — degenerate texture size', () => {
-  it('returns a zero draw for a non-positive texture size', () => {
-    expect(textureButtonDraw({ x: 50, y: 50 }, { x: 0, y: 0 }, 0)).toEqual({
+/** The size an unset ViewportTexture reports (`viewport.cpp:156-160`), which still samples its placeholder. */
+describe('textureButtonDraw — a texture that reports size 0', () => {
+  const ZERO = { x: 0, y: 0 };
+
+  it('draws nothing under STRETCH_KEEP, whose size is the texture size (texture_button.cpp:184-186)', () => {
+    expect(textureButtonDraw({ x: 50, y: 50 }, ZERO, 2).size).toEqual(ZERO);
+  });
+
+  it('fills the rect from its empty region under STRETCH_SCALE (:181-182, :234)', () => {
+    expect(textureButtonDraw({ x: 50, y: 30 }, ZERO, 0)).toEqual({
       offset: { x: 0, y: 0 },
-      size: { x: 0, y: 0 },
-      region: undefined,
+      size: { x: 50, y: 30 },
+      region: { x: 0, y: 0, w: 0, h: 0 },
       tile: false,
+    });
+  });
+
+  it('tiles the whole texture over the rect under STRETCH_TILE (:190-193, :232)', () => {
+    expect(textureButtonDraw({ x: 50, y: 30 }, ZERO, 1)).toEqual({
+      offset: { x: 0, y: 0 },
+      size: { x: 50, y: 30 },
+      region: undefined,
+      tile: true,
     });
   });
 });

@@ -56,6 +56,9 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // the whole GraphElement one.
   TextEdit: '2d/ui/textedit/parser.ts',
   GraphElement: '2d/ui/graphelement/parser.ts',
+  // Every modifier reads `active` and `influence`, and a constraint reads the base `settings/<i>/` leaves.
+  SkeletonModifier3D: '3d/skeleton/skeletonmodifier3d/parser.ts',
+  BoneConstraint3D: '3d/skeleton/boneconstraint3d/parser.ts',
 };
 
 /**

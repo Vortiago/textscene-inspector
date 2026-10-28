@@ -10,10 +10,6 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
 import type { TscnInternalResource } from '../../parser/types';
-import {
-  isViewportTextureRef,
-  useViewportTextureSlot,
-} from '../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
 import { useTextureView } from '../useTextureView';
 import type {
@@ -29,6 +25,7 @@ import {
   slotReadsSourceColor,
   slotViewSampler,
   topDownV,
+  fromTopEdge,
   type MaterialTextureStates,
   type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
@@ -38,11 +35,6 @@ import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScal
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource } from './materialSource';
-
-/** The resource tables a material's references resolve in: its owning file's. */
-type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
-
-const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
 
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
@@ -54,24 +46,27 @@ export const GLTF_SURFACE = 'gltf';
 export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
 
 /**
- * Every texture slot of one StandardMaterial3D, resolved in `tables`, the material's own file. A
+ * Every texture slot of one StandardMaterial3D, resolved in `material`'s own file's tables. A
  * triplanar material tiles per world unit: a PlaneMesh `surface` folds in its size, and CSG or an
- * ArrayMesh passes none and gets `uv1_scale`. Null when a slot's file cannot load or a
- * ViewportTexture albedo is cyclic: the surface takes `MISSING_TEXTURE_MATERIAL`.
+ * ArrayMesh passes none and gets `uv1_scale`. Null when a slot never draws, a file that cannot load
+ * or a ViewportTexture in a pass cycle: the surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
-  tables: MaterialTables | null,
+  material: MaterialResource | null,
   surface?: TexturedSurface
 ): ResolvedTextures | null {
-  const resourceTables = tables ?? NO_TABLES;
-
   // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
   // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`), so a
   // `normal_texture` without `normal_enabled` reaches no shader.
   const references = scalars?.textureSlots;
 
-  const sources = useEachSlot(useSlotTexture, references, resourceTables);
+  // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
+  const holders = useMemo(
+    () => (material ? [...(material.holders ?? []), material.resource] : NO_RESOURCES),
+    [material]
+  );
+  const sources = useEachSlot(useSlotTexture, references, material, holders);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -84,16 +79,15 @@ export function useSurfaceTextures(
   const flowmap = useRepackedFlowmap(sources.anisotropy_flowmap, scalars !== null && isAnisotropic(scalars));
   const drawn = useEachSlot(useDrawnSlot, { ...sources, anisotropy_flowmap: flowmap }, states);
 
-  const albedoTargetUv = drawn.albedo_texture?.isRenderTargetTexture ? states?.uv1.uv : undefined;
   const maps = TEXTURE_SLOTS.map((slot) => drawn[slot]);
   const textures = useMemo(
-    (): ResolvedTextures => ({ ...drawn, albedoTargetUv }),
+    (): ResolvedTextures => ({ ...drawn }),
     // `maps` has one entry per slot, a fixed length, and stands for `drawn`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [...maps, albedoTargetUv]
+    maps
   );
 
-  const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing || sources[slot].cyclic);
+  const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing);
   return isUnresolved ? null : textures;
 }
 
@@ -114,34 +108,31 @@ function useEachSlot<Args extends unknown[], T>(
   return results as Record<TextureSlot, T>;
 }
 
-interface SlotTexture extends Texture2DResult {
-  /** The slot names a ViewportTexture whose target sits in a pass cycle, so it is never written. */
-  cyclic: boolean;
-}
+const NO_RESOURCES: readonly never[] = [];
 
 /** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
-type SlotMap = Pick<SlotTexture, 'texture' | 'isArriving'>;
+type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 
 /**
  * One slot's texture in every form a Texture2D slot takes, null while it arrives. A material binds
  * a texture by RID: an AtlasTexture's is its whole sheet (`scene/resources/atlas_texture.cpp:55-58`),
- * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target, from the
- * live registry.
+ * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target.
  */
 function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
-  { externalResources, internalResources }: MaterialTables
-): SlotTexture {
-  const ref = textureSlotReference(references, slot);
-  const isViewport = isViewportTextureRef(ref, internalResources);
+  material: MaterialResource | null,
+  holders: readonly TscnInternalResource[]
+): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
-  const viewport = useViewportTextureSlot(isViewport ? ref : undefined, internalResources, view);
-  const result = useTexture2DRid(isViewport ? undefined : ref, externalResources, internalResources);
-  if (isViewport)
-    return { texture: viewport.texture, missing: false, isArriving: false, cyclic: viewport.cyclic };
-  const texture = result.namesTexture ? result.texture : defaultWhiteTexture();
-  return { texture, missing: result.missing, isArriving: result.isArriving, cyclic: false };
+  const result = useTexture2DRid(
+    textureSlotReference(references, slot),
+    material?.externalResources ?? NO_RESOURCES,
+    material?.internalResources ?? NO_RESOURCES,
+    view,
+    holders
+  );
+  return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }
 
 function textureSlotReference(
@@ -157,7 +148,7 @@ function textureSlotReference(
  * samples it, so only that one repacks (a canvas readback, a buffer copy and a GPU re-upload) and
  * waits for an arriving map. The memo depends on the two values the repack reads, not their wrapper.
  */
-function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
+function useRepackedFlowmap(flowmap: SlotMap, isSampled: boolean): SlotMap {
   const { texture } = flowmap;
   const repacked = useMemo(
     () => (isSampled && texture ? repackAnisotropyFlowmap(texture) : undefined),
@@ -194,11 +185,16 @@ function surfaceTextureStates(
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars, anisotropicFilteringLevel);
   if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
-  if (!surface) return states;
+  if (scalars.triplanar)
+    return {
+      ...states,
+      uv1: surface ? planeTiled(states.uv1, surface) : states.uv1,
+      uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
+    };
   return {
     ...states,
-    uv1: scalars.triplanar ? planeTiled(states.uv1, surface) : states.uv1,
-    uv2: scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
+    uv1: fromTopEdge(states.uv1),
+    uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
   };
 }
 

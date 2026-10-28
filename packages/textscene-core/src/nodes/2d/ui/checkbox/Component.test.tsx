@@ -184,6 +184,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
               },
             ],
           },
+          holders: [],
         },
       },
     };

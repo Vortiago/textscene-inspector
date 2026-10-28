@@ -36,6 +36,8 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { CanvasLighting2DContext } from '../../../../r3f/lighting2d/lightPassContext';
+import { recordedItems } from '../../../../r3f/lighting2d/testing/recordedItems';
 import {
   ViewportTextureProvider,
   type ViewportTextureEntry,
@@ -276,6 +278,26 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
       </>
     );
     expect(groupNames(renderer).filter((n) => n.includes('Backdrop')).length).toBeGreaterThan(0);
+  });
+
+  it('keeps the light pass of the canvas around the container off a MIXED viewport’s live Controls', async () => {
+    const { placements, lighting } = recordedItems();
+    await mount(
+      <CanvasLighting2DContext.Provider value={lighting}>
+        <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [
+            node('Mesh', 'MeshInstance3D', {}),
+            node('Backdrop', 'ColorRect', {}),
+          ])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </CanvasLighting2DContext.Provider>
+    );
+    // The painter mounts outside the walker, so the container's quad declares nothing and any item is the live Control's.
+    expect(placements).toHaveLength(0);
   });
 });
 

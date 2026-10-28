@@ -14,7 +14,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -281,7 +281,7 @@ const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   });
   for (const name of TAB_BAR_THEME_ICON_NAMES) {
     const themed = themedIcons[name];
-    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+    if (themed) requests.push(themedSlotRequest(name, themed));
   }
   return requests;
 };

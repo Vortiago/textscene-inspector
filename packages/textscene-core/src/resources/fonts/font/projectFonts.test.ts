@@ -134,8 +134,15 @@ describe('resolveProjectFonts', () => {
       resolveProjectFonts({ 'gui/theme/custom': 'res://ui.tres' }, caches(cache, NOTHING_CACHED), pending)
         .projectTheme;
 
-    it('is the cached theme the setting names', () => {
-      expect(themeOf({ getCached: (path) => (path === 'res://ui.tres' ? THEME : undefined) })).toBe(THEME);
+    /** `ThemeDB::initialize_theme` loads it outside every scene (`theme_db.cpp:53-80`). */
+    it('is a copy of the cached theme the setting names, marked as outside every scene', () => {
+      const cache = { getCached: (path: string) => (path === 'res://ui.tres' ? THEME : undefined) };
+      expect(themeOf(cache)).toEqual({ ...THEME, isOutsideScenes: true });
+    });
+
+    it('is one copy however many solves ask for it', () => {
+      const cache = { getCached: (path: string) => (path === 'res://ui.tres' ? THEME : undefined) };
+      expect(themeOf(cache)).toBe(themeOf(cache));
     });
 
     it('is null and requests the theme while the cache has not seen it', () => {

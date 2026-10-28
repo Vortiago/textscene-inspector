@@ -29,7 +29,8 @@ interface SurfaceMaterialSlotProps {
  * One surface's material slot, textures and all, whichever file the material came from.
  * A surface with no usable material draws Godot's default one, which
  * `useSurfaceMaterial` derives from null scalars (ADR-0041). A surface whose texture
- * cannot load, or whose ViewportTexture albedo is cyclic, draws the magenta placeholder.
+ * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
+ * magenta placeholder.
  */
 export function SurfaceMaterialSlot({
   source,

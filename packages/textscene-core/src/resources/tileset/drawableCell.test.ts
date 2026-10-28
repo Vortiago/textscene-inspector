@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { drawableCells } from './drawableCell';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { defaultTileData, type AtlasSourceModel } from './types';
+import { tileTextureAt } from './testing/tileTexture';
 
 /** Source 1 holds tile (0, 0) with alternatives 0 and 1, alternative 1 at z_index 5. */
 const SOURCE: AtlasSourceModel = {
-  texturePath: 'res://tiles.png',
+  texture: tileTextureAt('res://tiles.png'),
   margins: { x: 0, y: 0 },
   separation: { x: 0, y: 0 },
   textureRegionSize: { x: 16, y: 16 },

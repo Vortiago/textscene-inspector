@@ -15,6 +15,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   buttonTextAlignShiftPx,
@@ -129,7 +130,7 @@ export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {})
   const requests: TextureSlotRequest[] = [];
   for (const name of CHECK_BUTTON_ICON_THEME_NAMES) {
     const themed = themedIcons[name];
-    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+    if (themed) requests.push(themedSlotRequest(name, themed));
   }
   return requests;
 };
@@ -159,6 +160,18 @@ export function checkButtonIconNaturalSize(
     h = Math.max(h, size.y);
   }
   return { x: w, y: h };
+}
+
+/**
+ * The size Godot draws the current icon at: its own, fitted, at the offset the larger icon sets
+ * (`check_button.cpp:133-145`). An icon that reports size 0 draws nothing.
+ */
+export function checkButtonDrawnIconSize(
+  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
+  key: CheckButtonIconKey
+): Vector2 {
+  const own = n.textureSlots[CHECK_BUTTON_ICON_THEME_NAME[key]] ?? CHECK_BUTTON_ICON_NATURAL_SIZE;
+  return fitIconSize(own, checkButtonIconMaxWidth(n.constants));
 }
 
 /** `button_checked_color` and `button_unchecked_color`, both `Color(1, 1, 1)` (`default_theme.cpp:352-353`) and overridable. Read whatever `disabled` says: the `_disabled` icons carry the dimming (`check_button.cpp:139-141`). */

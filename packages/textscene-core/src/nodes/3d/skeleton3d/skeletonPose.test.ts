@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { identityTransform3D, multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
-import { automaticSkinMatrices, newBone, type Bone } from './skeletonPose';
+import { automaticSkinMatrices, newBone, type Bone, type BonePoses, type PoseModifier } from './skeletonPose';
 
 const QUARTER_TURN_Z = { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 };
 
@@ -194,6 +194,95 @@ describe('automaticSkinMatrices: global pose', () => {
 
   it('gives a skeleton with no bone no skin (edge case)', () => {
     expect(automaticSkinMatrices([], false)).toEqual([]);
+  });
+});
+
+/** A modifier that turns the bone `index` a quarter about Z at the given influence. */
+function quarterTurner(index: number, influence = 1): PoseModifier {
+  return { influence, edit: (poses) => poses.setPoseRotation(index, QUARTER_TURN_Z) };
+}
+
+describe('automaticSkinMatrices: modifiers', () => {
+  it('makes the skin from the pose a modifier edits', () => {
+    const skin = automaticSkinMatrices(CHAIN, false, [quarterTurner(2)]);
+
+    // The vertex 0.2 below the lowest joint, (0, 0.1, 0), swings 0.2 beside it.
+    expectOrigin(moved(skin[2], [0, -0.1, 0]), 0.2, 0.1, 0);
+    expectIdentity(skin[0]);
+    expectIdentity(skin[1]);
+  });
+
+  it('blends the edited pose back toward the old one by the influence (`skeleton_3d.cpp:1182-1196`)', () => {
+    const skin = automaticSkinMatrices(CHAIN, false, [quarterTurner(2, 0.5)]);
+
+    // Half the quarter turn is 45 degrees: (0, -0.2) from the joint goes to (0.1414, -0.1414).
+    expectOrigin(moved(skin[2], [0, -0.1, 0]), Math.SQRT1_2 * 0.2, 0.1 - Math.SQRT1_2 * 0.2, 0);
+  });
+
+  it('applies an influence above one in full, as `influence < 1.0` gates the blend', () => {
+    const skin = automaticSkinMatrices(CHAIN, false, [quarterTurner(2, 2)]);
+
+    expectOrigin(moved(skin[2], [0, -0.1, 0]), 0.2, 0.1, 0);
+  });
+
+  it('leaves the skin of an influence of zero at the file pose', () => {
+    automaticSkinMatrices(CHAIN, false, [quarterTurner(2, 0)]).forEach(expectIdentity);
+  });
+
+  it('lets the next modifier read the global poses the previous one wrote (`:1201`)', () => {
+    let seenByNext: Transform3D | undefined;
+    const reader: PoseModifier = {
+      influence: 1,
+      edit: (poses: BonePoses) => {
+        seenByNext = poses.globalPose(2);
+      },
+    };
+
+    automaticSkinMatrices(CHAIN, false, [quarterTurner(1), reader]);
+
+    // The turn of b1 about its joint (0, 0.3, 0) takes b2 from (0, 0.1, 0) to (0.2, 0.3, 0).
+    expectOrigin(seenByNext, 0.2, 0.3, 0);
+  });
+
+  it('runs the modifiers in order, so a later edit of the same bone wins', () => {
+    const undo: PoseModifier = {
+      influence: 1,
+      edit: (poses) => poses.setPoseRotation(2, { x: 0, y: 0, z: 0, w: 1 }),
+    };
+
+    automaticSkinMatrices(CHAIN, false, [quarterTurner(2), undo]).forEach(expectIdentity);
+  });
+
+  it('keeps the file pose for the next run, since the modified pose feeds only the skin (`:405-412`)', () => {
+    const before = structuredClone(CHAIN);
+
+    automaticSkinMatrices(CHAIN, false, [quarterTurner(2)]);
+
+    expect(CHAIN).toEqual(before);
+    automaticSkinMatrices(CHAIN, false).forEach(expectIdentity);
+  });
+
+  it('still poses a skeleton under show_rest_only at its rest (`:1104`)', () => {
+    automaticSkinMatrices(CHAIN, true, [quarterTurner(2)]).forEach(expectIdentity);
+  });
+
+  it('still poses a disabled bone at its rest', () => {
+    const bones = [...CHAIN];
+    bones[2] = { ...CHAIN[2]!, enabled: false };
+
+    automaticSkinMatrices(bones, false, [quarterTurner(2)]).forEach(expectIdentity);
+  });
+
+  it('finds a bone by name, and gives -1 for a name the skeleton lacks', () => {
+    const found: number[] = [];
+    const finder: PoseModifier = {
+      influence: 1,
+      edit: (poses) => found.push(poses.findBone('b2'), poses.findBone('nope')),
+    };
+
+    automaticSkinMatrices(CHAIN, false, [finder]);
+
+    expect(found).toEqual([2, -1]);
   });
 });
 
