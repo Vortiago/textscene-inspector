@@ -43,7 +43,7 @@ interface KeptValue<V, T> {
 }
 
 /** How {@link keptWhileAnswered} tells two variants of a key apart, and how many of one it keeps. */
-export interface KeptWhileAnsweredOptions<V> {
+interface KeptWhileAnsweredOptions<V> {
   readonly sameVariant: (a: V, b: V) => boolean;
   /** The values one variant keeps, the oldest dropped first, for asks that alternate between sources. */
   readonly perVariant: number;
@@ -64,10 +64,12 @@ export function keptWhileAnswered<K extends object, V, S extends Sources, T>({
   const kept = new WeakMap<K, KeptValue<V, T>[]>();
   return (key, variant, sources, build) => {
     const stored = kept.get(key) ?? [];
-    const same = stored.filter((entry) => sameVariant(entry.variant, variant));
-    const known = same.find((entry) => stillAnswered(entry.reads, sources));
+    const known = stored.find(
+      (entry) => sameVariant(entry.variant, variant) && stillAnswered(entry.reads, sources)
+    );
     if (known) return known.value;
 
+    const same = stored.filter((entry) => sameVariant(entry.variant, variant));
     const reads = new Map<string, Map<string, unknown>>();
     const recording = Object.fromEntries(
       Object.entries(sources).map(([name, source]) => {
