@@ -138,7 +138,7 @@ void godotMixDecal( int index, inout GodotDecalSurface surface, vec3 position, v
 	vec3 local = vec3( dot( toLocalX, point ), dot( toLocalY, point ), dot( toLocalZ, point ) );
 	if ( any( lessThan( local, vec3( 0.0, - 1.0, 0.0 ) ) ) || any( greaterThan( local, vec3( 1.0 ) ) ) ) return;
 	vec4 maskAndFades = godotDecalTexel( index, ${DECAL_TEXEL.maskAndFades} );
-	if ( ( ( uint( maskAndFades.x ) | ( uint( maskAndFades.y ) << 16u ) ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u ) return;
+	if ( ( godotSceneRowMask( maskAndFades ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u ) return;
 	float fade = pow( 1.0 - abs( local.y ), local.y > 0.0 ? maskAndFades.z : maskAndFades.w );
 	vec4 upAndFade = godotDecalTexel( index, ${DECAL_TEXEL.up} );
 	if ( upAndFade.w > 0.0 ) fade *= smoothstep( upAndFade.w, 1.0, dot( geometryNormal, upAndFade.xyz ) * 0.5 + 0.5 );

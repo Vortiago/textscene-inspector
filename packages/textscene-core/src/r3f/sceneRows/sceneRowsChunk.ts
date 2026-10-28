@@ -24,6 +24,10 @@ uniform highp sampler2D ${SCENE_ROWS_UNIFORM};
 vec4 godotSceneRowTexel( int row, int texel ) {
 	return texelFetch( ${SCENE_ROWS_UNIFORM}, ivec2( texel, row ), 0 );
 }
+
+uint godotSceneRowMask( vec4 halves ) {
+	return uint( halves.x ) | ( uint( halves.y ) << 16u );
+}
 #endif
 `;
 

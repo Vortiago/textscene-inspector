@@ -24,10 +24,10 @@ export type BasisComponents = readonly [
   number,
 ];
 
-type Triple = [number, number, number];
+export type Triple = [number, number, number];
 
 /** Column `index` of the basis, the vector `Basis::get_column` returns. */
-function column(n: BasisComponents, index: number): Triple {
+export function basisColumn(n: BasisComponents, index: number): Triple {
   return [n[index]!, n[index + 3]!, n[index + 6]!];
 }
 
@@ -45,10 +45,10 @@ function subtract(a: Triple, b: Triple): Triple {
  * @canonical A basis made orthonormal, column by column
  */
 export function basisOrthonormalized(n: BasisComponents): BasisComponents {
-  const x = normalizedVector3(...column(n, 0));
-  const yColumn = column(n, 1);
+  const x = normalizedVector3(...basisColumn(n, 0));
+  const yColumn = basisColumn(n, 1);
   const y = normalizedVector3(...subtract(yColumn, scaled(x, vector3Dot(x, yColumn))));
-  const zColumn = column(n, 2);
+  const zColumn = basisColumn(n, 2);
   const z = normalizedVector3(
     ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
   );
@@ -86,9 +86,9 @@ export function basisHasUnitScale(n: BasisComponents): boolean {
  * perpendicular. The square, not the length: the two differ once a tolerance is involved.
  */
 export function basisIsOrthonormal(n: BasisComponents): boolean {
-  const x = column(n, 0);
-  const y = column(n, 1);
-  const z = column(n, 2);
+  const x = basisColumn(n, 0);
+  const y = basisColumn(n, 1);
+  const z = basisColumn(n, 2);
   return (
     isEqualApprox(vector3Dot(x, x), 1) &&
     isEqualApprox(vector3Dot(y, y), 1) &&

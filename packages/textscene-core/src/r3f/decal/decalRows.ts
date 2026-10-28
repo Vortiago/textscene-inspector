@@ -12,7 +12,13 @@ import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import type { DecalProperties } from '../../nodes/3d/decal/types.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
 import { DECAL_MAPS, DECAL_TEXEL, RECT_TEXEL, type DecalMap } from './decalRowLayout.js';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels.js';
+import {
+  highMaskHalf,
+  lowMaskHalf,
+  SCENE_ROW_TEXELS,
+  setMatrixRows,
+  setTexel,
+} from '../sceneRows/sceneRowTexels.js';
 
 /** What a decal reads of its node. */
 export type DecalLook = Pick<
@@ -140,41 +146,33 @@ function fadeAt(look: DecalLook, distance: number): number {
 /** The texels of the decal being packed, overwritten by each `decalTexels`. */
 const row = new Float32Array(SCENE_ROW_TEXELS * 4);
 
-function setTexel(texel: number, x: number, y: number, z: number, w: number): void {
-  const at = texel * 4;
-  row[at] = x;
-  row[at + 1] = y;
-  row[at + 2] = z;
-  row[at + 3] = w;
-}
-
 /** Packs `decal` and its `rects` into the row. `fade` is the distance fade, which scales the alpha and the emission energy. */
 function decalTexels(decal: DrawnDecal, fade: number): Float32Array {
   const { look } = decal;
-  const m = toDecalMatrix(decal).elements;
-  for (let i = 0; i < 3; i++) setTexel(DECAL_TEXEL.toDecal + i, m[i]!, m[4 + i]!, m[8 + i]!, m[12 + i]!);
+  setMatrixRows(row, DECAL_TEXEL.toDecal, toDecalMatrix(decal).elements);
   const up = normal.setFromMatrixColumn(decal.matrixWorld, 1).normalize().transformDirection(viewInverse);
-  setTexel(DECAL_TEXEL.up, up.x, up.y, up.z, look.normal_fade);
+  setTexel(row, DECAL_TEXEL.up, up.x, up.y, up.z, look.normal_fade);
   for (const map of DECAL_MAPS) setRect(map, rects[map]);
   // Godot's modulate is a linear colour, its alpha untouched (`texture_storage.cpp:3470-3474`).
   const [r, g, b] = sRGBToLinearRGB(look.modulate.r, look.modulate.g, look.modulate.b);
-  setTexel(DECAL_TEXEL.modulate, r, g, b, look.modulate.a * fade);
+  setTexel(row, DECAL_TEXEL.modulate, r, g, b, look.modulate.a * fade);
   setTexel(
+    row,
     DECAL_TEXEL.maskAndFades,
-    look.cull_mask & 0xffff,
-    look.cull_mask >>> 16,
+    lowMaskHalf(look.cull_mask),
+    highMaskHalf(look.cull_mask),
     look.upper_fade,
     look.lower_fade
   );
-  setTexel(DECAL_TEXEL.energyAndMix, look.emission_energy * fade, look.albedo_mix, 0, 0);
+  setTexel(row, DECAL_TEXEL.energyAndMix, look.emission_energy * fade, look.albedo_mix, 0, 0);
   setNormalBasis(decal);
   return row;
 }
 
 function setRect(map: DecalMap, rect: AtlasRect | null): void {
   const at = RECT_TEXEL[map];
-  if (rect) setTexel(at, rect.x, rect.y, rect.width, rect.height);
-  else setTexel(at, 0, 0, 0, 0);
+  if (rect) setTexel(row, at, rect.x, rect.y, rect.width, rect.height);
+  else setTexel(row, at, 0, 0, 0, 0);
 }
 
 /**
@@ -184,14 +182,14 @@ function setRect(map: DecalMap, rect: AtlasRect | null): void {
  */
 function setNormalBasis({ matrixWorld }: DrawnDecal): void {
   if (rects.normal === null) {
-    for (let i = 0; i < 3; i++) setTexel(DECAL_TEXEL.normalBasis + i, 0, 0, 0, 0);
+    for (let i = 0; i < 3; i++) setTexel(row, DECAL_TEXEL.normalBasis + i, 0, 0, 0, 0);
     return;
   }
   const e = matrixWorld.elements;
   const basis = basisOrthonormalized([e[0]!, e[4]!, e[8]!, e[1]!, e[5]!, e[9]!, e[2]!, e[6]!, e[10]!]);
   for (let i = 0; i < 3; i++) {
     const column = normal.set(basis[i]!, basis[i + 3]!, basis[i + 6]!).transformDirection(viewInverse);
-    setTexel(DECAL_TEXEL.normalBasis + i, column.x, column.y, column.z, 0);
+    setTexel(row, DECAL_TEXEL.normalBasis + i, column.x, column.y, column.z, 0);
   }
 }
 

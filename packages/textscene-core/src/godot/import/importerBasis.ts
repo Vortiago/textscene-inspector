@@ -7,8 +7,9 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from '../math/real.js';
-import { normalizedVector3, vector3Dot } from '../math/vector.js';
+import { normalizedVector3, vector3Length } from '../math/vector.js';
 import {
+  basisColumn,
   basisDiagonal,
   basisFrom,
   basisFromQuaternion,
@@ -16,6 +17,7 @@ import {
   basisMultiply,
   basisOrthonormalized,
   type BasisComponents,
+  type Triple,
 } from '../math/basis.js';
 
 /** The transform fields of a glTF node. */
@@ -24,8 +26,6 @@ export interface GltfNodeTransform {
   rotation?: readonly number[];
   scale?: readonly number[];
 }
-
-type Triple = [number, number, number];
 
 export const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
@@ -53,7 +53,7 @@ export function rowScaledBasis(basis: BasisComponents, rowScales: readonly numbe
  */
 export function transformChainScale(chain: readonly BasisComponents[]): Triple {
   const basis = chain.reduce<BasisComponents>((xf, node) => basisMultiply(node, xf), IDENTITY_BASIS);
-  return [0, 1, 2].map((axis) => length(column(basis, axis))) as Triple;
+  return [0, 1, 2].map((axis) => vector3Length(...basisColumn(basis, axis))) as Triple;
 }
 
 /**
@@ -109,13 +109,4 @@ function quaternionBasis([x = 0, y = 0, z = 0, w = 1]: readonly number[]): Basis
 
 function diagonal([x = 1, y = 1, z = 1]: readonly number[]): BasisComponents {
   return basisDiagonal(x, y, z);
-}
-
-function column(basis: BasisComponents, axis: number): Triple {
-  return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
-}
-
-/** `Vector3::length` (`vector3.h:532-538`). */
-function length(v: Triple): number {
-  return f(Math.sqrt(vector3Dot(v, v)));
 }
