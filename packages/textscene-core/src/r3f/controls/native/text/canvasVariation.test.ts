@@ -41,4 +41,16 @@ describe('variedContoursReader', () => {
     expect(variedContoursReader(outlines, 16, { embolden: 1.2, skew: 0 })('@')).toBeNull();
     expect(glyphContours).not.toHaveBeenCalled();
   });
+
+  it('keeps the contours of the latest sizes, so a size animation holds a bounded cache', () => {
+    const { outlines, glyphContours } = countingOutlines();
+    const variation = { embolden: 1.2, skew: 0 };
+
+    for (let size = 10; size < 30; size++) variedContoursReader(outlines, size, variation)('A');
+    glyphContours.mockClear();
+    variedContoursReader(outlines, 29, variation)('A');
+    variedContoursReader(outlines, 10, variation)('A');
+
+    expect(glyphContours).toHaveBeenCalledTimes(1);
+  });
 });

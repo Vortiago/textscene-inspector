@@ -251,6 +251,14 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 
+  it('shears the text of a bold and sheared glyph that the font has no contour for', () => {
+    const empty: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
+    const { calls } = paintFilledRecording(boldLayoutFor('A', 1.2), 0.3, empty);
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText', 'strokeText']);
+    expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
+  });
+
   it('fills the text of a plain glyph, which has no grown outline to follow', () => {
     const { outlines } = outlinesStub();
     const { calls } = paintFilledRecording(layoutFor('A', 0), 0, outlines);

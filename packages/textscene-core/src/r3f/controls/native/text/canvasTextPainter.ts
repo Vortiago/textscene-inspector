@@ -16,7 +16,6 @@ import {
   paintEmboldenedFill,
   shearAboutBaseline,
   strokeContours,
-  strokeShearedText,
 } from './canvasVariation';
 import { isGlyphVaried, type GlyphVariation } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -178,6 +177,12 @@ export function paintSceneFontCanvas(
   const contourOutlines = followsContours ? (metrics.outlines ?? null) : null;
   const contoursOf = contourOutlines && variedContoursReader(contourOutlines, fontSizePx, variation);
 
+  const paintGlyphText = (char: string, penX: number, baselineY: number, growthPx: number | undefined) => {
+    if (stroked) ctx.strokeText(char, penX, baselineY);
+    else if (growthPx) paintEmboldenedFill(ctx, char, penX, baselineY, growthPx);
+    else ctx.fillText(char, penX, baselineY);
+  };
+
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
     const baselineY = canvasLayout.offsetYPx + lineTopPx + baselineOffsetPx;
@@ -192,10 +197,13 @@ export function paintSceneFontCanvas(
       const hasVariedOutline = skew !== 0 || gp.emboldenGrowthPx;
       const contours = contoursOf && hasVariedOutline ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
-      else if (contourOutlines && skew !== 0) strokeShearedText(ctx, gp.char, penX, baselineY, skew);
-      else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
-      else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
-      else ctx.fillText(gp.char, penX, baselineY);
+      else if (contourOutlines && skew !== 0) {
+        // The line is unsheared here, so a glyph with no contour shears itself.
+        ctx.save();
+        shearAboutBaseline(ctx, skew, baselineY);
+        paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
+        ctx.restore();
+      } else paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
     }
     ctx.restore();
   });

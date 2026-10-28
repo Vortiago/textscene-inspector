@@ -39,6 +39,9 @@ export function paintEmboldenedFill(
   ctx.strokeText(char, x, y);
 }
 
+/** A font size animation adds a face for each size it passes, so the oldest face goes at this count. */
+const MAX_CACHED_FACES = 8;
+
 /**
  * The contours read so far, by font, then by size and variation, then by glyph. A repaint at a new
  * tint, such as a modulate animation, reads none again.
@@ -59,7 +62,10 @@ export function variedContoursReader(
   const byFace = readContours(outlines);
   const faceKey = `${fontSizePx}/${variationKey(variation)}`;
   let glyphs = byFace.get(faceKey);
-  if (!glyphs) byFace.set(faceKey, (glyphs = new Map()));
+  if (!glyphs) {
+    if (byFace.size >= MAX_CACHED_FACES) byFace.delete(byFace.keys().next().value!);
+    byFace.set(faceKey, (glyphs = new Map()));
+  }
   const read = glyphs;
   return (char) => {
     const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
@@ -117,18 +123,4 @@ export function fillContours(
 ): void {
   traceContoursFromPen(ctx, contours, penX, baselineY);
   ctx.fill();
-}
-
-/** Strokes the glyph of a font with no outline for it as it stands, so a shear shears its width. */
-export function strokeShearedText(
-  ctx: CanvasRenderingContext2D,
-  char: string,
-  penX: number,
-  baselineY: number,
-  skew: number
-): void {
-  ctx.save();
-  shearAboutBaseline(ctx, skew, baselineY);
-  ctx.strokeText(char, penX, baselineY);
-  ctx.restore();
 }

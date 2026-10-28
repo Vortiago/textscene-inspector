@@ -1,7 +1,7 @@
 /**
  * Turns a resolved `FontResource` into `FontMetrics`, or into the bundled default when that fails.
- * It owns the `FontFace` door and the settled channel, which `bundledFontLoader.ts` shares. It is the
- * one DOM-touching module of the font pipeline, and it never throws.
+ * It owns the `FontFace` door, which `bundledFontLoader.ts` shares. It is the one DOM-touching
+ * module of the font pipeline, and it never throws.
  */
 import { withVariation, type FontMetrics, type GlyphVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';

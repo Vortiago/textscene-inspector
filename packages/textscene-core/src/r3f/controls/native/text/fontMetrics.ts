@@ -201,16 +201,18 @@ export function variationKey({ embolden = 0, skew = 0 }: GlyphVariation): string
 }
 
 /**
- * The wrappers of one face, by embolden and skew: one each, so a layout memoised on `FontMetrics`
- * identity keeps its hits.
+ * The wrappers of one face, by embolden and skew, then by outlines: one each, so a layout memoised on
+ * `FontMetrics` identity keeps its hits.
  */
-const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
+const variationsOf = perObject(
+  (_face: FontMetrics) => new Map<string, Map<FontMetrics['outlines'], FontMetrics>>()
+);
 
 /**
  * `metrics` with a `FontVariation`'s `embolden` and `skew` set, and the `outlines` its text follows.
  * The wrapper reads every other field through the face, so a live getter stays live. With neither
- * embolden nor skew, it is the face itself. A wrapper made with other `outlines` replaces the
- * cached one, so two fonts that share a face and a variation never share each other's outlines.
+ * embolden nor skew, it is the face itself. Two fonts that share a face and a variation keep
+ * their own outlines, each on its own wrapper.
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
@@ -219,10 +221,12 @@ export function withVariation<Metrics extends FontMetrics>(
   if (!isGlyphVaried({ embolden, skew })) return metrics;
   const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew });
-  let wrapped = byVariation.get(key);
-  if (!wrapped || (outlines !== undefined && wrapped.outlines !== outlines))
-    byVariation.set(
-      key,
+  let byOutlines = byVariation.get(key);
+  if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
+  let wrapped = byOutlines.get(outlines);
+  if (!wrapped)
+    byOutlines.set(
+      outlines,
       (wrapped = Object.create(metrics, {
         embolden: { value: embolden },
         skew: { value: skew },
