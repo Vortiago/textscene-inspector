@@ -4,7 +4,6 @@
  * the "normal" StyleBox is a `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the
  * children and the transform.
  */
-import type { Vector2 } from '../../../../godot/math/vector';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -50,15 +49,12 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]],
     CHECK_BOX_ICONS[iconKey]
   );
+  // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
   const iconSize = useMemo(
-    () =>
-      roundedSize(fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants))),
+    () => fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants)),
     [solveNode]
   );
-  const drawnIconSize = useMemo(
-    () => roundedSize(checkBoxDrawnIconSize(solveNode, iconKey)),
-    [solveNode, iconKey]
-  );
+  const drawnIconSize = useMemo(() => checkBoxDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
 
   const text = props.text ?? '';
   const hasText = text.length > 0;
@@ -97,7 +93,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
-      <CanvasItemGroup position={[content.iconRect.x, -content.iconRect.y, 0]}>
+      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={drawnIconSize.x}
@@ -120,8 +116,4 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       )}
     </>
   );
-}
-
-function roundedSize({ x, y }: Vector2): Vector2 {
-  return { x: Math.round(x), y: Math.round(y) };
 }

@@ -302,6 +302,11 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-checkbox-icon-magnified.tscn',
     mode: '2d',
   },
+  // The one variable: where a check icon lands off the whole pixel. A fitted
+  // CheckBox icon keeps its fractional size, and a CheckButton centres on the
+  // half pixel an odd height leaves. Rounding either moves its edge rows.
+  { name: 'check-box-fitted-icon', file: 'unit-check-box-fitted-icon.tscn', mode: '2d' },
+  { name: 'check-button-half-pixel-icon', file: 'unit-check-button-half-pixel-icon.tscn', mode: '2d' },
   // A TextureRect and a Button icon fed by an inline GradientTexture2D. The
   // texture drives each node's minimum size as well as its pixels, so the
   // sibling below moves too: these report a layout regression as well.

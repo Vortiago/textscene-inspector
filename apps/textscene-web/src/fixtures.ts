@@ -308,6 +308,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Box Fitted Icon",
+    "file": "unit-check-box-fitted-icon.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Check Button Half Pixel Icon",
+    "file": "unit-check-button-half-pixel-icon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Check Button Rtl",
     "file": "unit-check-button-rtl.tscn",
     "category": "Other"

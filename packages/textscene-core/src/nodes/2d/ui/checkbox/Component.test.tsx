@@ -163,6 +163,19 @@ describe('<CheckBox> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
   });
 
+  it('draws a fitted icon at its fractional size, unrounded (check_box.cpp:140-142)', async () => {
+    const fitted: SolveNode = {
+      ...solveNode({}),
+      textureSlots: { unchecked: { x: 20, y: 15 } },
+      constants: { icon_max_width: 10 },
+    };
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckBox {...painterEnv()} solveNode={fitted} rect={RECT} renderOrder={0} />
+    );
+    const { parameters } = findIconMesh(renderer.scene)!.geometry as THREE.PlaneGeometry;
+    expect([parameters.width, parameters.height]).toEqual([10, 7.5]);
+  });
+
   it('draws the themed "unchecked" icon instead of the vendored default when a theme resolved it', async () => {
     const themedIconNode: SolveNode = {
       ...solveNode({}),
