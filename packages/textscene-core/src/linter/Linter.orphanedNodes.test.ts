@@ -348,6 +348,15 @@ describe('a parent path this file never defines', () => {
       expect(message).not.toContain('Gone#Body');
     });
 
+    it('runs the semantic rules on a node whose trail enters an instance, and does not say they were skipped', () => {
+      const source = trailScene(
+        '[node name="Mid" parent="." unique_id=20 instance=ExtResource("1_body")]',
+        '[node name="Body" type="StaticBody2D" parent="Gone" parent_id_path=PackedInt32Array(20, 5)]'
+      );
+      expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+      expect(orphansIn(source)[0]?.message).not.toContain('No semantic rule ran');
+    });
+
     it('keeps the refusal outcome when Godot refuses the instantiate', () => {
       const message = messageOf(
         '[node name="Mid" type="Node2D" parent="." unique_id=20]',

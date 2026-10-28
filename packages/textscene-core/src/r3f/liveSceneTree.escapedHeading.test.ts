@@ -6,19 +6,12 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
-import { resolveLiveEntry, walkLiveTree } from './liveSceneTree';
-import { contextOver } from './liveSceneTree.testkit';
+import { resolveLiveEntry } from './liveSceneTree';
+import { contextOver, livePathsOver } from './liveSceneTree.testkit';
 import '../nodes/node/index';
 import '../nodes/base/node3d/index';
 
 const parse = (text: string): TscnScene => new TscnParser().parse(text);
-
-/** The path of every node of `main`'s live tree, with each scene in `scenes` cached. */
-function livePaths(main: TscnScene, scenes: Record<string, TscnScene>): string[] {
-  const paths: string[] = [];
-  walkLiveTree(main.nodes, contextOver(main, scenes), ({ path }) => paths.push(path));
-  return paths;
-}
 
 const HUD = parse(`[gd_scene format=3]
 
@@ -45,7 +38,7 @@ const LAMP_HOST = parse(LAMP_HOST_TEXT);
 
 describe('a host heading whose `%Name` the instance holds for a node outside it', () => {
   it('seats under that node, not under the instance', () => {
-    const paths = livePaths(LAMP_HOST, { 'res://hud.tscn': HUD });
+    const paths = livePathsOver(LAMP_HOST, { 'res://hud.tscn': HUD });
 
     expect(paths).toContain('Main/Lamp/Shade');
     expect(paths.filter((path) => path.endsWith('Shade'))).toEqual(['Main/Lamp/Shade']);
@@ -66,7 +59,7 @@ describe('a host heading whose `%Name` the file claims for a node it owns', () =
   const ownedLamp = parse(LAMP_HOST_TEXT.replace(' owner="HudInstance"', ''));
 
   it('seats under that node, as Godot reads the name from the owner of the instance', () => {
-    const paths = livePaths(ownedLamp, { 'res://hud.tscn': HUD });
+    const paths = livePathsOver(ownedLamp, { 'res://hud.tscn': HUD });
 
     expect(paths.filter((path) => path.endsWith('Shade'))).toEqual(['Main/Lamp/Shade']);
   });
@@ -121,14 +114,14 @@ describe('a host heading whose `%Name` the nested instance lacks', () => {
   const hat = playerHost('[node name="Hat" type="Node3D" parent="Player/Inner/%Q"]');
 
   it('seats under the node its owner claims the name for', () => {
-    const paths = livePaths(hat, { ...SCENES, 'res://player.tscn': PLAYER_Q });
+    const paths = livePathsOver(hat, { ...SCENES, 'res://player.tscn': PLAYER_Q });
 
     expect(paths).toContain('Main/Player/Q/Hat');
     expect(paths.filter((path) => path.endsWith('Hat'))).toEqual(['Main/Player/Q/Hat']);
   });
 
   it('re-roots under the file root where nothing claims the name', () => {
-    const paths = livePaths(hat, SCENES);
+    const paths = livePathsOver(hat, SCENES);
 
     expect(paths).toContain('Main/Player_Inner__Q#Hat');
     expect(paths.filter((path) => path.endsWith('Hat'))).toEqual(['Main/Player_Inner__Q#Hat']);
@@ -145,13 +138,13 @@ describe('a host heading whose plain name the instance lacks', () => {
   it('re-roots under the file root, renamed from the vanished parent', () => {
     const cap = playerHost('[node name="Cap" type="Node3D" parent="Player/Missing"]');
 
-    expect(livePaths(cap, SCENES)).toContain('Main/Player_Missing#Cap');
+    expect(livePathsOver(cap, SCENES)).toContain('Main/Player_Missing#Cap');
   });
 
   it('re-roots from inside a nested instance too', () => {
     const hat = playerHost('[node name="Hat" type="Node3D" parent="Player/Inner/Missing"]');
 
-    expect(livePaths(hat, SCENES)).toContain('Main/Player_Inner_Missing#Hat');
+    expect(livePathsOver(hat, SCENES)).toContain('Main/Player_Inner_Missing#Hat');
   });
 
   it('numbers a second heading with the same name past the first', () => {
@@ -159,7 +152,7 @@ describe('a host heading whose plain name the instance lacks', () => {
 
 [node name="Hat" type="Node3D" parent="Player/Inner/%Q"]`);
 
-    const hats = livePaths(twice, SCENES).filter((path) => path.includes('#'));
+    const hats = livePathsOver(twice, SCENES).filter((path) => path.includes('#'));
 
     expect(hats).toEqual(['Main/Player_Inner__Q#Hat', 'Main/Player_Inner__Q#Hat2']);
   });
@@ -171,7 +164,7 @@ describe('a host heading below an escaped heading', () => {
 [node name="Bulb" type="Node3D" parent="HudInstance/%Lamp/Shade"]
 `);
 
-    expect(livePaths(bulb, { 'res://hud.tscn': HUD })).toContain('Main/Lamp/Shade/Bulb');
+    expect(livePathsOver(bulb, { 'res://hud.tscn': HUD })).toContain('Main/Lamp/Shade/Bulb');
   });
 
   it('re-roots on its own where the walk through the vanished parent fails again', () => {
@@ -179,7 +172,7 @@ describe('a host heading below an escaped heading', () => {
 
 [node name="Feather" type="Node3D" parent="Player/Inner/%Q/Hat"]`);
 
-    const paths = livePaths(feather, SCENES);
+    const paths = livePathsOver(feather, SCENES);
 
     expect(paths).toContain('Main/Player_Inner__Q#Hat');
     expect(paths).toContain('Main/Player_Inner__Q_Hat#Feather');
@@ -199,7 +192,7 @@ describe('an escaped heading of an instanced file', () => {
 `);
 
   it('seats under the file root the instance merges into, outside the instance it walked', () => {
-    const paths = livePaths(OUTER, { 'res://main1.tscn': LAMP_HOST, 'res://hud.tscn': HUD });
+    const paths = livePathsOver(OUTER, { 'res://main1.tscn': LAMP_HOST, 'res://hud.tscn': HUD });
 
     expect(paths).toContain('Outer/Stage/Lamp/Shade');
     expect(paths.filter((path) => path.endsWith('Shade'))).toEqual(['Outer/Stage/Lamp/Shade']);
@@ -208,7 +201,7 @@ describe('an escaped heading of an instanced file', () => {
   it('re-roots under the instance the file merges into', () => {
     const hat = playerHost('[node name="Hat" type="Node3D" parent="Player/Inner/%Q"]');
 
-    const paths = livePaths(OUTER, { 'res://main1.tscn': hat, ...SCENES });
+    const paths = livePathsOver(OUTER, { 'res://main1.tscn': hat, ...SCENES });
 
     expect(paths).toContain('Outer/Stage/Player_Inner__Q#Hat');
     expect(paths.filter((path) => path.endsWith('Hat'))).toEqual(['Outer/Stage/Player_Inner__Q#Hat']);
@@ -236,26 +229,26 @@ ${heading}`);
   it('re-roots a heading whose walk through the base finds nothing', () => {
     const main = inheriting('[node name="Z" type="Node3D" parent="Nope/Deeper"]');
 
-    expect(livePaths(main, { 'res://base.tscn': BASE })).toContain('Main/Nope_Deeper#Z');
+    expect(livePathsOver(main, { 'res://base.tscn': BASE })).toContain('Main/Nope_Deeper#Z');
   });
 
   it('re-roots a heading whose %Name the base does not claim', () => {
     const main = inheriting('[node name="Y" type="Node3D" parent="%Q"]');
 
-    expect(livePaths(main, { 'res://base.tscn': BASE })).toContain('Main/_Q#Y');
+    expect(livePathsOver(main, { 'res://base.tscn': BASE })).toContain('Main/_Q#Y');
   });
 
   it('seats a heading at the base node its walk names', () => {
     const main = inheriting('[node name="X" type="Node3D" parent="Deep"]');
 
-    expect(livePaths(main, { 'res://base.tscn': BASE })).toContain('Main/Deep/X');
+    expect(livePathsOver(main, { 'res://base.tscn': BASE })).toContain('Main/Deep/X');
   });
 
   it('shows a heading under the root while the base is not loaded, and seats it once the base loads', () => {
     const main = inheriting('[node name="Z" type="Node3D" parent="Nope/Deeper"]');
 
-    expect(livePaths(main, {})).toContain('Main/Z');
-    expect(livePaths(main, { 'res://base.tscn': BASE })).not.toContain('Main/Z');
-    expect(livePaths(main, { 'res://base.tscn': BASE })).toContain('Main/Nope_Deeper#Z');
+    expect(livePathsOver(main, {})).toContain('Main/Z');
+    expect(livePathsOver(main, { 'res://base.tscn': BASE })).not.toContain('Main/Z');
+    expect(livePathsOver(main, { 'res://base.tscn': BASE })).toContain('Main/Nope_Deeper#Z');
   });
 });

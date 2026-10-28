@@ -43,8 +43,8 @@ describe('idTrailEnd', () => {
     const origins = [
       origin('Root'),
       origin('Inst', { uniqueId: 20, instance: 'ExtResource("1")' }),
-      origin('Orphan', { idTrail: [20, 5] }),
+      origin('Orphan', { idTrail: [20, 5, 6] }),
     ];
-    expect(idTrailEnd(origins, 2, placed)).toEqual({ kind: 'inBase', heading: 1 });
+    expect(idTrailEnd(origins, 2, placed)).toEqual({ kind: 'inBase', heading: 1, rest: [5, 6] });
   });
 });
