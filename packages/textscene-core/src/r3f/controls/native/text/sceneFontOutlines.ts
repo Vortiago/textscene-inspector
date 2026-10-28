@@ -7,7 +7,7 @@
 import { endsWithoutBase } from '../../../../resources/fonts/font/defaultBaseFont';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import type { GlyphVariation } from './fontMetrics';
+import { isGlyphVaried, type GlyphVariation } from './fontMetrics';
 import { resolveFontFileBytes } from './sceneFontResolution';
 import { notifySceneFontSettled } from './sceneFontLoader';
 import { openFontOutlines, type SfntOutlines } from './sfntOutlines';
@@ -76,5 +76,5 @@ export function peekVariedStrokeOutlines(
   metrics: GlyphVariation,
   hasOutline: boolean
 ): PeekedOutlines {
-  return hasOutline && (metrics.embolden || metrics.skew) ? peekSceneFontOutlines(font) : null;
+  return hasOutline && isGlyphVaried(metrics) ? peekSceneFontOutlines(font) : null;
 }

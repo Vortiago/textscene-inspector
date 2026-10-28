@@ -180,6 +180,11 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
 /** The embolden and the shear of a `FontVariation`: absent is none. */
 export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew'>;
 
+/** Whether the variation changes the glyph outline at all. */
+export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
+  return embolden !== 0 || skew !== 0;
+}
+
 /** One string for a variation, with an absent embolden and skew equal to 0: the key of every cache that varies by it. */
 export function variationKey({ embolden = 0, skew = 0 }: GlyphVariation): string {
   return `${embolden}/${skew}`;
@@ -199,7 +204,7 @@ export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
   { embolden = 0, skew = 0 }: GlyphVariation
 ): Metrics {
-  if (embolden === 0 && skew === 0) return metrics;
+  if (!isGlyphVaried({ embolden, skew })) return metrics;
   const byVariation = variationsOf(metrics);
   const key = variationKey({ embolden, skew });
   let wrapped = byVariation.get(key);

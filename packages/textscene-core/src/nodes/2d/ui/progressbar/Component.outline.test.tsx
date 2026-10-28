@@ -71,22 +71,20 @@ beforeEach(() => {
 });
 
 describe('<ProgressBar> canvas outline', () => {
-  it('strokes the contours of the emboldened face, and never strokes the plain ring while they load', async () => {
-    await renderBar();
+  it.each([
+    ['emboldened', { embolden: 0.6 }],
+    ['sheared', { skew: 0.3 }],
+  ])(
+    'strokes the contours of a %s face, and never strokes the plain ring while they load',
+    async (name, variation) => {
+      scene.metrics = withVariation(createOpenSansCanvasFontMetrics(`progress-bar-${name}-test`), variation);
 
-    await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
-    expect(strokeRuns().every((run) => run.glyphOutlines)).toBe(true);
-  });
+      await renderBar();
 
-  it('strokes the contours of a sheared face as well', async () => {
-    scene.metrics = withVariation(createOpenSansCanvasFontMetrics('progress-bar-sheared-test'), {
-      skew: 0.3,
-    });
-
-    await renderBar();
-
-    await vi.waitFor(() => expect(strokeRuns().at(-1)?.glyphOutlines).toBeTruthy());
-  });
+      await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
+      expect(strokeRuns().every((run) => run.glyphOutlines)).toBe(true);
+    }
+  );
 
   it('draws the percentage above its outline', async () => {
     await renderBar();

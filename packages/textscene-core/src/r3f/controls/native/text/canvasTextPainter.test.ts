@@ -192,9 +192,6 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
       restore: () => {
         matrix = saved.pop()!;
       },
-      resetTransform: () => {
-        matrix = new DOMMatrix();
-      },
       transform: (a: number, b: number, c: number, d: number, e: number, f: number) => {
         matrix = matrix.multiply(new DOMMatrix([a, b, c, d, e, f]));
       },

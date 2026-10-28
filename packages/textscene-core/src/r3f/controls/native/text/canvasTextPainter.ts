@@ -14,8 +14,9 @@ import {
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
   strokeContours,
-} from './canvasEmbolden';
-import type { GlyphVariation } from './fontMetrics';
+  strokeShearedText,
+} from './canvasVariation';
+import { isGlyphVaried, type GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
@@ -172,34 +173,34 @@ export function paintSceneFontCanvas(
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
-  const embolden = metrics.embolden ?? 0;
-  const variation: GlyphVariation = { embolden, skew };
-  const isVaried = embolden !== 0 || skew !== 0;
+  const variation: GlyphVariation = { embolden: metrics.embolden ?? 0, skew };
+  // The ring of a varied face strokes the contours, which carry their own shear.
+  const contourOutlines = stroked && isGlyphVaried(variation) ? outlines : null;
   // A repeated character reads its outline once for the whole paint.
-  const variedContours = new Map<string, GlyphContours | null>();
-  const variedContoursOf = (char: string, glyphOutlines: SfntOutlines): GlyphContours | null => {
-    const known = variedContours.get(char);
+  const contoursByChar = new Map<string, GlyphContours | null>();
+  const contoursOf = (char: string, glyphOutlines: SfntOutlines): GlyphContours | null => {
+    const known = contoursByChar.get(char);
     if (known !== undefined) return known;
     const varied = variedGlyphContours(glyphOutlines, char, fontSizePx, variation);
-    variedContours.set(char, varied);
+    contoursByChar.set(char, varied);
     return varied;
   };
+  // x' = x - skew * (y - baselineY), y' = y: the MSDF path's per-vertex shear (TextRun.tsx's `dx`).
+  const shear = (baselineY: number) => ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
 
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
     const baselineY = canvasLayout.offsetYPx + lineTopPx + baselineOffsetPx;
 
     ctx.save();
-    if (skew !== 0) {
-      // x' = x - skew * (y - baselineY), y' = y: the MSDF path's per-vertex
-      // shear (TextRun.tsx's `dx`).
-      ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
-    }
+    // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
+    if (skew !== 0 && !contourOutlines) shear(baselineY);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
-      const varied = stroked && outlines && isVaried ? variedContoursOf(gp.char, outlines) : null;
-      if (varied) strokeContours(ctx, varied, penX, baselineY);
+      const contours = contourOutlines ? contoursOf(gp.char, contourOutlines) : null;
+      if (contours) strokeContours(ctx, contours, penX, baselineY);
+      else if (contourOutlines && skew !== 0) strokeShearedText(ctx, gp.char, penX, baselineY, shear);
       else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
       else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else ctx.fillText(gp.char, penX, baselineY);

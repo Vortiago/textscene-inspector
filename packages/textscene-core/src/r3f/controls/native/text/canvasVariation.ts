@@ -1,10 +1,9 @@
 /**
- * The embolden half of `canvasTextPainter.ts`: how far an embolden pads the raster, how an
+ * The font-variation half of `canvasTextPainter.ts`: how far an embolden pads the raster, how an
  * emboldened fill is drawn with canvas-2D calls, and how the outline ring of an emboldened or
- * sheared glyph is stroked. `FT_Outline_Embolden`
- * grows the contour and shifts it right and up by half the growth (`text_server_adv.cpp:1314-1315`);
- * `FT_Outline_Transform` then shears it (`:1318-1320`), and the stroker strokes the result
- * (`:1383-1390`).
+ * sheared glyph is stroked. `FT_Outline_Embolden` grows the contour and shifts it right and up by
+ * half the growth (`text_server_adv.cpp:1314-1315`). `FT_Outline_Transform` then shears it
+ * (`:1318-1320`), and the stroker strokes the result (`:1383-1390`).
  */
 import type { GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
@@ -53,7 +52,8 @@ export function variedGlyphContours(
 
 /**
  * Strokes `contours` from the pen, with the stroke state of `ctx`. The contours carry their own
- * shear, so the line draws under the identity transform and keeps its width in every direction.
+ * shear, so the caller draws them under no shear transform and the line keeps its width in every
+ * direction.
  */
 export function strokeContours(
   ctx: CanvasRenderingContext2D,
@@ -61,10 +61,21 @@ export function strokeContours(
   penX: number,
   baselineY: number
 ): void {
-  ctx.save();
-  ctx.resetTransform();
   ctx.beginPath();
   traceGlyphContours(ctx, contours, penX, baselineY);
   ctx.stroke();
+}
+
+/** Strokes the glyph of a font with no outline for it as it stands, so a shear shears its width. */
+export function strokeShearedText(
+  ctx: CanvasRenderingContext2D,
+  char: string,
+  penX: number,
+  baselineY: number,
+  shear: (baselineY: number) => void
+): void {
+  ctx.save();
+  shear(baselineY);
+  ctx.strokeText(char, penX, baselineY);
   ctx.restore();
 }
