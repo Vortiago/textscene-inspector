@@ -5,15 +5,13 @@ import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/rendering/environment/volum
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { skyLightUserData } from '../sky/skyLight';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame';
-import type { FogPasses } from './fogPasses';
+import type { VolumetricFogPass } from './volumetricFogPass';
 import { fogUniforms } from './fogUniforms';
 
 const renderer = {} as THREE.WebGLRenderer;
 
-function passes(): FogPasses {
-  return {
-    volume: { prepare: vi.fn(() => true) },
-  } as unknown as FogPasses;
+function volumePass(): VolumetricFogPass {
+  return { prepare: vi.fn(() => true) } as unknown as VolumetricFogPass;
 }
 
 function settings(properties: Record<string, string>): FogSettings {
@@ -52,7 +50,7 @@ describe('prepareFog', () => {
         fog_light_energy: '2',
         fog_density: '0.3',
       }),
-      passes(),
+      volumePass(),
       NO_OBJECTS
     );
 
@@ -66,7 +64,7 @@ describe('prepareFog', () => {
       new THREE.Scene(),
       camera,
       settings({ fog_enabled: 'true', fog_mode: '1', fog_depth_end: '0' }),
-      passes(),
+      volumePass(),
       NO_OBJECTS
     );
 
@@ -76,7 +74,7 @@ describe('prepareFog', () => {
   it('writes each sun for the surfaces and for the sky apart', () => {
     const lightOnly = sun(2);
     lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI, size: 0 });
-    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), {
+    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), volumePass(), {
       lights: [sun(Math.PI), lightOnly],
       casters: [],
       volumes: [],
@@ -90,7 +88,7 @@ describe('prepareFog', () => {
   });
 
   it('prepares the volume only for a volumetric fog, and answers whether it settles', () => {
-    const depthOnly = passes();
+    const depthOnly = volumePass();
     expect(
       prepareFog(
         renderer,
@@ -101,7 +99,7 @@ describe('prepareFog', () => {
         NO_OBJECTS
       )
     ).toBe(false);
-    const volumetric = passes();
+    const volumetric = volumePass();
     expect(
       prepareFog(
         renderer,
@@ -113,14 +111,21 @@ describe('prepareFog', () => {
       )
     ).toBe(true);
 
-    expect(depthOnly.volume.prepare).not.toHaveBeenCalled();
-    expect(volumetric.volume.prepare).toHaveBeenCalledOnce();
+    expect(depthOnly.prepare).not.toHaveBeenCalled();
+    expect(volumetric.prepare).toHaveBeenCalledOnce();
   });
 });
 
 describe('finishFog', () => {
   it('leaves the next render without fog', () => {
-    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), NO_OBJECTS);
+    prepareFog(
+      renderer,
+      new THREE.Scene(),
+      camera,
+      settings({ fog_enabled: 'true' }),
+      volumePass(),
+      NO_OBJECTS
+    );
     fogUniforms.volumeLookup[0] = 1;
 
     finishFog();

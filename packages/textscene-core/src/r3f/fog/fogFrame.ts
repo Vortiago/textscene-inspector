@@ -13,7 +13,7 @@ import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { skyLightEnergy } from '../sky/skyLight.js';
 import { visibleInTree } from '../visibleInTree.js';
-import type { FogPasses } from './fogPasses.js';
+import type { VolumetricFogPass } from './volumetricFogPass.js';
 import { shineDirection } from './fogLights.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { fogUniforms } from './fogUniforms.js';
@@ -57,13 +57,13 @@ export function prepareFog(
   scene: THREE.Scene,
   camera: THREE.Camera,
   settings: FogSettings,
-  passes: FogPasses,
+  volumePass: VolumetricFogPass,
   { lights, casters, volumes }: FogObjects
 ): boolean {
   writeDepthFog(settings.depth, camera);
   writeSuns(lights);
   if (!settings.volumetric) return false;
-  return passes.volume.prepare(renderer, scene, camera, {
+  return volumePass.prepare(renderer, scene, camera, {
     fog: settings.volumetric,
     project: settings.project,
     lights,

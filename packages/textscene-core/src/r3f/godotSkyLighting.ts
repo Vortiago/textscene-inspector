@@ -8,13 +8,7 @@ import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { MAX_ROUGHNESS_LOD } from '../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../utils/glslLiterals.js';
-import {
-  SKY_RADIANCE_GLSL,
-  SKY_RADIANCE_UNIFORMS,
-  shownSky,
-  skyLayersSlot,
-  skyRotation,
-} from './sky/skyRadiance.js';
+import { SKY_RADIANCE_GLSL, SKY_RADIANCE_UNIFORMS, skyRadianceUniforms } from './sky/skyRadiance.js';
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 
@@ -22,7 +16,7 @@ type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 export const THREE_IBL_RADIANCE_FUNCTION =
   'vec3 getIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {';
 
-const { layers, shown, rotation } = SKY_RADIANCE_UNIFORMS;
+const { rotation } = SKY_RADIANCE_UNIFORMS;
 const LAST_LAYER = glslFloat(MAX_ROUGHNESS_LOD);
 
 /**
@@ -45,13 +39,7 @@ const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 
  */
 const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec, const in float roughness ) {
 
-		float roughnessLod;
-		float blend = modf( sqrt( roughness ) * ${LAST_LAYER}, roughnessLod );
-		vec2 uv = vec3ToOctWithBorder( reflectVec, GODOT_SKY_BORDER_SIZE );
-		float lod = godotSkyLod( reflectVec );
-		vec3 sharper = godotSkyRead( uv, roughnessLod, lod );
-		vec3 rougher = godotSkyRead( uv, roughnessLod + 1.0, lod );
-		return mix( sharper, rougher, blend ) * envMapIntensity;
+		return godotSkyBlend( reflectVec, sqrt( roughness ) * ${LAST_LAYER} ) * envMapIntensity;
 
 	}
 
@@ -120,8 +108,6 @@ export function installGodotSkyLighting(): boolean {
     patch: 'sky lighting',
   });
   if (!isPatched) return false;
-  installLitUniform(layers, skyLayersSlot);
-  installLitUniform(shown, shownSky);
-  installLitUniform(rotation, skyRotation);
+  for (const [name, { value }] of Object.entries(skyRadianceUniforms())) installLitUniform(name, value);
   return true;
 }

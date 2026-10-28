@@ -21,7 +21,7 @@ import {
   SkyRadiance,
   SKY_RADIANCE_UNIFORMS,
   skyLayersSlot,
-  type ShownSky,
+  type SkyBake,
 } from '../sky/skyRadiance';
 
 type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
@@ -142,15 +142,10 @@ function settle(
   }
 }
 
-/** Shows a sky on `renderer` at `shown`, as `<SkyLayer>` does before each render of its scene. */
-function showSky(renderer: RecordingRenderer, shown: Partial<ShownSky>): void {
+/** Shows a sky baked at `bake` on `renderer`, as `<SkyLayer>` does before each render of its scene. */
+function showSky(renderer: RecordingRenderer, bake: Partial<SkyBake>): void {
   const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
-  new SkyRadiance(renderer.asWebGL, layers).show({
-    contribution: 1,
-    energy: 1,
-    rotation: new THREE.Euler(),
-    ...shown,
-  });
+  new SkyRadiance(renderer.asWebGL, layers, { energy: 1, rotation: new THREE.Euler(), ...bake }).show(1);
 }
 
 afterEach(hideShownSky);
@@ -342,7 +337,7 @@ describe('VolumetricFogPass.prepare', () => {
   it.each([
     ['turns', { rotation: new THREE.Euler(0, 0.5, 0) }],
     ['takes another energy', { energy: 2 }],
-  ])('draws again when the sky %s', (_change, shown: Partial<ShownSky>) => {
+  ])('draws again when the sky %s', (_change, bake: Partial<SkyBake>) => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
@@ -352,9 +347,26 @@ describe('VolumetricFogPass.prepare', () => {
     pass.prepare(renderer.asWebGL, scene, view, fog);
     renderer.take();
 
-    showSky(renderer, shown);
+    showSky(renderer, bake);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
+  });
+
+  it("keeps the volume when only the sky's share of the surfaces' ambient changes (edge case)", () => {
+    const renderer = new RecordingRenderer();
+    const pass = new VolumetricFogPass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const fog = inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' });
+    const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
+    const sky = new SkyRadiance(renderer.asWebGL, layers, { energy: 1, rotation: new THREE.Euler() });
+    sky.show(1);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    sky.show(0.25);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    expect(renderer.take().lightDraws).toHaveLength(0);
   });
 
   it('spans one section at both ends for an orthographic camera (edge case)', () => {

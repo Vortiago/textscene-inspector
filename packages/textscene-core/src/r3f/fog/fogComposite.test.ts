@@ -105,8 +105,7 @@ describe('installFogComposite', () => {
     const pars = THREE.ShaderChunk[GODOT_FOG_PARS_CHUNK as keyof typeof THREE.ShaderChunk];
     expect(pars).toContain('uniform highp sampler2DArray godotSkyLayers;');
     const aerial = functionBody(pars, 'fogAerialRadiance');
-    expect(aerial).toContain('vec3 sharper = godotSkyRead( uv, roughnessLayer, lod );');
-    expect(aerial).toContain('return mix( sharper, rougher, blend ) * GODOT_SKY_ENERGY;');
+    expect(aerial).toContain('return godotSkyBlend( skyView, mipLevel * 7.0 ) * GODOT_SKY_ENERGY;');
   });
 
   it('gives no uniform to a shader without fog (edge case)', () => {

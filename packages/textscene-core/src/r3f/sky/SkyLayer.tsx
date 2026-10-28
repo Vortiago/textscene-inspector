@@ -119,15 +119,12 @@ export function SkyLayer({
       if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
     };
     scene.environment = environmentSwitch();
-    const radiance = new SkyRadiance(gl, built.layers);
+    const radiance = new SkyRadiance(gl, built.layers, {
+      energy: intensity * exposure,
+      rotation: skyRotation,
+    });
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingRadiance = observeSceneCamera(scene, () =>
-      radiance.show({
-        contribution: contributionRef.current,
-        energy: intensity * exposure,
-        rotation: skyRotation,
-      })
-    );
+    const stopShowingRadiance = observeSceneCamera(scene, () => radiance.show(contributionRef.current));
     const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
     if (asBackground) {
       scene.background = built.background;

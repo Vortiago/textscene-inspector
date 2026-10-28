@@ -87,23 +87,24 @@ describe('installGodotSkyLighting', () => {
     );
   });
 
-  it("picks Godot's two layers around sqrt( roughness ) times the last layer's index", () => {
+  it("blends Godot's two layers around sqrt( roughness ) times the last layer's index", () => {
     expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      'float blend = modf( sqrt( roughness ) * 7.0, roughnessLod );'
+      'return godotSkyBlend( reflectVec, sqrt( roughness ) * 7.0 ) * envMapIntensity;'
     );
   });
 
-  it("reads both layers at the mip of the reflection's screen derivatives, and blends them", () => {
-    const body = functionBody(patchedChunks().envmap, 'godotSkyLayer');
-    expect(body).toContain('float lod = godotSkyLod( reflectVec );');
-    expect(body).toContain('vec3 sharper = godotSkyRead( uv, roughnessLod, lod );');
-    expect(body).toContain('vec3 rougher = godotSkyRead( uv, roughnessLod + 1.0, lod );');
-    expect(body).toContain('return mix( sharper, rougher, blend ) * envMapIntensity;');
+  it("blends the two layers around a layer position by its fraction, at the direction's mip", () => {
+    const body = functionBody(patchedChunks().envmap, 'godotSkyBlend');
+    expect(body).toContain('float blend = modf( layerPosition, layer );');
+    expect(body).toContain('float lod = godotSkyLod( direction );');
+    expect(body).toContain(
+      'return mix( godotSkyRead( uv, layer, lod ), godotSkyRead( uv, layer + 1.0, lod ), blend );'
+    );
   });
 
-  it("reads both layers at the reflection's one octmap texel", () => {
-    expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      'vec2 uv = vec3ToOctWithBorder( reflectVec, GODOT_SKY_BORDER_SIZE );'
+  it("reads both layers at the direction's one octmap texel", () => {
+    expect(functionBody(patchedChunks().envmap, 'godotSkyBlend')).toContain(
+      'vec2 uv = vec3ToOctWithBorder( direction, GODOT_SKY_BORDER_SIZE );'
     );
   });
 

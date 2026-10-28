@@ -12,7 +12,7 @@ import { decodeSkyMaterial } from '../../resources/sky/decode';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { shownSky, skyLayersSlot, skyRotation } from './skyRadiance';
+import { SHOWN_ENERGY, shownSky, skyLayersSlot, skyRotation } from './skyRadiance';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
@@ -262,7 +262,7 @@ describe('SkyLayer', () => {
 
     // A quarter turn about Y takes the sky's +X to the world's -Z.
     const skyForward = new THREE.Vector3(0, 0, -1).applyMatrix3(new THREE.Matrix3().fromArray(skyRotation));
-    expect([shownSky[4], Math.round(skyForward.x)]).toEqual([1.5, 1]);
+    expect([shownSky[SHOWN_ENERGY], Math.round(skyForward.x)]).toEqual([1.5, 1]);
   });
 
   it('leaves the renders after its scene reading a black radiance', async () => {
@@ -272,7 +272,7 @@ describe('SkyLayer', () => {
 
     fireSceneRenderEnd(scene, new THREE.PerspectiveCamera());
 
-    expect(shownSky[4]).toBe(0);
+    expect(shownSky[SHOWN_ENERGY]).toBe(0);
   });
 
   it('shows a new share of the ambient without a new bake', async () => {
