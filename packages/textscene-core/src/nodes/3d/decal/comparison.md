@@ -46,7 +46,7 @@ A decal replaces the receiver's albedo (`scene_forward_clustered.glsl:1610`). Wi
 
 <!-- compare: image=unit-decal-triangulation status=done fixture=unit-decal-triangulation.tscn -->
 
-The decals sort by distance minus `sorting_offset`, nearest first, and the first 512 that the distance fade keeps are drawn (`texture_storage.cpp:3316-3486`). The shader applies them in groups of 32, the highest index of a group first (`scene_forward_clustered.glsl:1535-1654`), so the nearest decal of a group draws last. `decal-gpu` (`pnpm test:gpu`) checks the order and the cap on the real shaders.
+The decals sort by distance minus `sorting_offset`, nearest first, and the first 512 that the distance fade keeps are drawn (`texture_storage.cpp:3316-3486`). The shader applies them in groups of 32, the highest index of a group first (`scene_forward_clustered.glsl:1535-1654`), so the nearest decal of a group draws last. `decal-gpu` (`pnpm test:gpu`) checks the order and the cap on the real shaders. A decal with no albedo and no emission texture counts among the 512 and draws nothing (`:3353-3356,3420`).
 
 ## Texture wrappers
 
@@ -112,7 +112,3 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 The linter warns (`resource-type-excluded-by-hint`) when one of the four `texture_*` slots holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`decal.cpp:49-58`).
 
 `size` falls back to Godot's default `Vector3(2, 2, 2)` with a warning when malformed. `albedo_mix`, `emission_energy`, `normal_fade`, `upper_fade`, `lower_fade` and `cull_mask` fall back the same way to `1`, `1`, `0`, `0.3`, `0.3` and `1048575`. The two fade exponents are also clamped at zero, as Godot's setters clamp them. `modulate` falls back silently to opaque white, and the four `texture_*` references are copied through unvalidated.
-
-## Known limitations
-
-- **Approximated** A decal with no albedo and no emission texture takes a place among the 512 and draws nothing, where Godot leaves its row unwritten (`texture_storage.cpp:3420`).

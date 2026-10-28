@@ -1,3 +1,5 @@
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels.js';
+
 /**
  * Where each part of a decal sits in its row of the scene rows, in texels. `decalRows.ts` writes the
  * row and `decalShaderChunk.ts` reads it, both through this table.
@@ -17,7 +19,8 @@ export const DECAL_MAPS = Object.keys(RECT_TEXEL) as readonly DecalMap[];
  * is the map's place in the atlas, all zero for a map the decal lacks. `modulate` is linear, its alpha
  * times the distance fade. `maskAndFades` holds the two 16-bit halves of `cull_mask`, then
  * `upper_fade` and `lower_fade`. `energyAndMix` holds `emission_energy` times the distance fade, then
- * `albedo_mix`. `normalBasis` holds the columns of the decal's orthonormalised basis in view space.
+ * `albedo_mix`. `normalBasis` holds the columns of the decal's orthonormalised basis in view space: its last three
+ * texels, so it ends the row.
  */
 export const DECAL_TEXEL = {
   toDecal: 0,
@@ -29,8 +32,5 @@ export const DECAL_TEXEL = {
   modulate: 8,
   maskAndFades: 9,
   energyAndMix: 10,
-  normalBasis: 11,
+  normalBasis: SCENE_ROW_TEXELS - 3,
 } as const;
-
-/** The texels of a decal's row: its last part, the three columns of the normal basis, ends it. */
-export const DECAL_ROW_TEXELS = DECAL_TEXEL.normalBasis + 3;

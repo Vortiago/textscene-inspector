@@ -8,7 +8,7 @@
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from '../math/real.js';
 import { normalizedVector3, vector3Dot } from '../math/vector.js';
-import { basisInvert, type BasisComponents } from '../math/basis.js';
+import { basisInvert, basisOrthonormalized, type BasisComponents } from '../math/basis.js';
 
 /** The transform fields of a glTF node. */
 export interface GltfNodeTransform {
@@ -30,7 +30,7 @@ export function gltfNodeBasis(node: GltfNodeTransform): BasisComponents {
   let basis = IDENTITY_BASIS;
   // `set_quaternion_scale(q, get_scale())`, and the identity's scale is exactly one.
   if (node.rotation) basis = multiply(quaternionBasis(node.rotation), IDENTITY_BASIS);
-  if (node.scale) basis = multiply(orthonormalized(basis), diagonal(node.scale));
+  if (node.scale) basis = multiply(basisOrthonormalized(basis), diagonal(node.scale));
   return basis;
 }
 
@@ -148,27 +148,8 @@ function basisFrom(component: (i: number) => number): BasisComponents {
   ];
 }
 
-/** `Basis::orthonormalize` (`basis.cpp:56-72`), Gram-Schmidt over the columns. */
-function orthonormalized(basis: BasisComponents): BasisComponents {
-  const x = normalizedVector3(...column(basis, 0));
-  const y = normalizedVector3(...subtract(column(basis, 1), scaled(x, vector3Dot(x, column(basis, 1)))));
-  const zColumn = column(basis, 2);
-  const z = normalizedVector3(
-    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
-  );
-  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
-}
-
 function column(basis: BasisComponents, axis: number): Triple {
   return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
-}
-
-function scaled(v: Triple, s: number): Triple {
-  return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
-}
-
-function subtract(a: Triple, b: Triple): Triple {
-  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
 }
 
 /** `Vector3::length` (`vector3.h:532-538`). */

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import { DecalRows, MAX_DECALS, type DecalLook, type DrawnDecal } from './decalRows';
-import { DECAL_ROW_TEXELS, DECAL_TEXEL, type DecalMap } from './decalRowLayout';
+import { DECAL_TEXEL, type DecalMap } from './decalRowLayout';
 
 const LOOK: DecalLook = {
   size: { x: 2, y: 2, z: 2 },
@@ -162,6 +162,18 @@ describe('DecalRows.pack', () => {
     expect(columns[2]).toEqual([expect.closeTo(0), expect.closeTo(0), expect.closeTo(1)]);
   });
 
+  it('leaves the basis texels zero for a decal with no normal map, which Godot does not compute (:3430-3437)', () => {
+    const turned = new THREE.Matrix4().makeRotationZ(Math.PI / 2);
+    const rows = packed([{ ...decalAt([0, 0, 0], {}, { albedo: RECT }), matrixWorld: turned }]);
+
+    const basis = [0, 1, 2].map((i) => texel(rows, 0, DECAL_TEXEL.normalBasis + i));
+    expect(basis).toEqual([
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+  });
+
   it('orthonormalises a sheared basis column by column, as Basis::orthonormalized does', () => {
     const sheared = new THREE.Matrix4().set(1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     const rows = packed([
@@ -172,11 +184,6 @@ describe('DecalRows.pack', () => {
     expect(x).toEqual([expect.closeTo(1), expect.closeTo(0), expect.closeTo(0)]);
     expect(y).toEqual([expect.closeTo(0), expect.closeTo(1), expect.closeTo(0)]);
     expect(z).toEqual([expect.closeTo(0), expect.closeTo(0), expect.closeTo(1)]);
-  });
-
-  it('keeps the row inside the width of the scene rows', () => {
-    expect(DECAL_ROW_TEXELS).toBe(SCENE_ROW_TEXELS);
-    expect(DECAL_TEXEL.normalBasis + 3).toBe(DECAL_ROW_TEXELS);
   });
 
   it('packs the two fade exponents beside the mask', () => {

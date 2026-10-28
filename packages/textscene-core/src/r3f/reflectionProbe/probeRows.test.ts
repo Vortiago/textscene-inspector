@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { ReflectionProbeAmbientMode } from '../../godot/rendering/environment/reflectionProbe';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import { ProbeRows, type DrawnProbe } from './probeRows';
 
 const PROBE: DrawnProbe = {

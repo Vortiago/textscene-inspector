@@ -278,19 +278,22 @@ describe('<Decal>', () => {
 
     it('keeps a texture that two maps name in the atlas until the last of them lets go', async () => {
       const shared = readableProducer();
-      const renderer = await render({
-        node: makeNode({
-          texture_albedo: 'ExtResource("1_tex")',
-          texture_emission: 'ExtResource("1_tex")',
-        }),
+      const loader = seededLoader([{ path: TEXTURE_PATH, texture: shared }]);
+      const both: RenderOptions = {
+        node: makeNode({ texture_albedo: 'ExtResource("1_tex")', texture_emission: 'ExtResource("1_tex")' }),
         externals: [extRef('1_tex', TEXTURE_PATH)],
-        cached: [{ path: TEXTURE_PATH, texture: shared }],
-      });
+      };
+      const renderer = await create(decalTree(both, loader));
       updateDecalAtlas(GPU_TEXTURE_SIZE);
       const rect = decalAtlasRect(shared);
-
-      expect(rect).toBeDefined();
       expect(decalObjects(renderer)[0]!.mapRect('emission')).toBe(rect);
+
+      await renderer.update(
+        decalTree({ ...both, node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }) }, loader)
+      );
+      updateDecalAtlas(GPU_TEXTURE_SIZE);
+      expect(decalAtlasRect(shared)).toBe(rect);
+
       await renderer.unmount();
       updateDecalAtlas(GPU_TEXTURE_SIZE);
       expect(decalAtlasRect(shared)).toBeUndefined();

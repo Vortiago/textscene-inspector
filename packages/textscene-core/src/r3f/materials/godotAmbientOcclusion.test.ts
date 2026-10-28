@@ -136,9 +136,9 @@ describe('installGodotOcclusion', () => {
     installGodotOcclusion();
     const chunk = THREE.ShaderChunk.aomap_fragment;
 
-    expect(chunk.indexOf(`ambientOcclusion * ${OCCLUSION_MIX}.x + ${OCCLUSION_MIX}.y`)).toBeLessThan(
-      chunk.indexOf('reflectedLight.indirectDiffuse *= ambientOcclusion;')
-    );
+    const mixAt = chunk.indexOf(`ambientOcclusion * ${OCCLUSION_MIX}.x + ${OCCLUSION_MIX}.y`);
+    expect(mixAt).toBeGreaterThan(-1);
+    expect(mixAt).toBeLessThan(chunk.indexOf('reflectedLight.indirectDiffuse *= ambientOcclusion;'));
   });
 
   it.each(

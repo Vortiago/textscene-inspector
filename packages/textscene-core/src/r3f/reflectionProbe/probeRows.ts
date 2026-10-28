@@ -10,7 +10,7 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk.js';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {

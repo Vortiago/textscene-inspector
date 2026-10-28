@@ -5,12 +5,14 @@
  */
 
 import * as THREE from 'three';
+import { basisOrthonormalized } from '../../godot/math/basis.js';
 import { distanceFade } from '../../godot/rendering/distanceFade.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import type { DecalProperties } from '../../nodes/3d/decal/types.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
-import { DECAL_MAPS, DECAL_ROW_TEXELS, DECAL_TEXEL, RECT_TEXEL, type DecalMap } from './decalRowLayout.js';
+import { DECAL_MAPS, DECAL_TEXEL, RECT_TEXEL, type DecalMap } from './decalRowLayout.js';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels.js';
 
 /** What a decal reads of its node. */
 export type DecalLook = Pick<
@@ -53,7 +55,8 @@ const boxScale = new THREE.Matrix4();
 const decalOrigin = new THREE.Vector3();
 const cameraOrigin = new THREE.Vector3();
 const normal = new THREE.Vector3();
-const basisColumns = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] as const;
+/** The atlas rectangle of each map of the decal being packed, set by `readRects`. */
+const rects: Record<DecalMap, AtlasRect | null> = { albedo: null, normal: null, orm: null, emission: null };
 
 /**
  * The rows of the drawn decals, rewritten in place by each `pack`. The mask goes in two 16-bit
@@ -69,7 +72,7 @@ export class DecalRows extends RowBuffer {
   private readonly byDepth = (a: number, b: number): number => this.depths[a]! - this.depths[b]!;
 
   constructor() {
-    super(DECAL_ROW_TEXELS * 4);
+    super(SCENE_ROW_TEXELS * 4);
   }
 
   /**
@@ -94,7 +97,8 @@ export class DecalRows extends RowBuffer {
     this.order.sort(this.byDepth);
     for (const index of this.order) {
       const decal = this.candidates[index]!;
-      if (drawsNothing(decal)) continue;
+      readRects(decal);
+      if (drawsNothing()) continue;
       this.append(decalTexels(decal, fadeAt(decal.look, this.distances[index]!)));
     }
     this.candidates.length = 0;
@@ -107,13 +111,18 @@ function isFlat({ matrixWorld }: DrawnDecal): boolean {
   return matrixWorld.determinant() === 0;
 }
 
+function readRects(decal: DrawnDecal): void {
+  for (const map of DECAL_MAPS) rects[map] = decal.mapRect(map);
+}
+
 /**
- * Whether the decal has neither an albedo nor an emission texture, which Godot leaves out (`:3420`).
- * A normal or an ORM map without an albedo changes nothing (`scene_forward_clustered.glsl:1612`,
- * `:1627`), so it keeps the decal out as well.
+ * Whether the decal in `rects` has neither an albedo nor an emission texture. Godot counts it among
+ * the 512 and leaves its row unwritten (`texture_storage.cpp:3353-3356,3420`), so it takes a place
+ * and draws nothing. A normal or an ORM map without an albedo changes nothing
+ * (`scene_forward_clustered.glsl:1612,1627`), so it keeps the decal out as well.
  */
-function drawsNothing(decal: DrawnDecal): boolean {
-  return decal.mapRect('albedo') === null && decal.mapRect('emission') === null;
+function drawsNothing(): boolean {
+  return rects.albedo === null && rects.emission === null;
 }
 
 /** Whether `distance` lies past the end of the decal's fade, where Godot leaves the decal out. */
@@ -129,7 +138,7 @@ function fadeAt(look: DecalLook, distance: number): number {
 }
 
 /** The texels of the decal being packed, overwritten by each `decalTexels`. */
-const row = new Float32Array(DECAL_ROW_TEXELS * 4);
+const row = new Float32Array(SCENE_ROW_TEXELS * 4);
 
 function setTexel(texel: number, x: number, y: number, z: number, w: number): void {
   const at = texel * 4;
@@ -139,14 +148,14 @@ function setTexel(texel: number, x: number, y: number, z: number, w: number): vo
   row[at + 3] = w;
 }
 
-/** Packs `decal` into the row. `fade` is the distance fade, which scales the alpha and the emission energy. */
+/** Packs `decal` and its `rects` into the row. `fade` is the distance fade, which scales the alpha and the emission energy. */
 function decalTexels(decal: DrawnDecal, fade: number): Float32Array {
   const { look } = decal;
   const m = toDecalMatrix(decal).elements;
   for (let i = 0; i < 3; i++) setTexel(DECAL_TEXEL.toDecal + i, m[i]!, m[4 + i]!, m[8 + i]!, m[12 + i]!);
   const up = normal.setFromMatrixColumn(decal.matrixWorld, 1).normalize().transformDirection(viewInverse);
   setTexel(DECAL_TEXEL.up, up.x, up.y, up.z, look.normal_fade);
-  for (const map of DECAL_MAPS) setRect(map, decal.mapRect(map));
+  for (const map of DECAL_MAPS) setRect(map, rects[map]);
   // Godot's modulate is a linear colour, its alpha untouched (`texture_storage.cpp:3470-3474`).
   const [r, g, b] = sRGBToLinearRGB(look.modulate.r, look.modulate.g, look.modulate.b);
   setTexel(DECAL_TEXEL.modulate, r, g, b, look.modulate.a * fade);
@@ -169,19 +178,19 @@ function setRect(map: DecalMap, rect: AtlasRect | null): void {
 }
 
 /**
- * The columns of the decal's basis, orthonormalised column by column as `Basis::orthonormalized` does
- * (`texture_storage.cpp:3437`), in view space. The scale drops, so the decal's normal map tilts the
- * normal and does not stretch it.
+ * The columns of the decal's basis, orthonormalised as `Basis::orthonormalized` does, in view space.
+ * The scale drops, so the decal's normal map tilts the normal and does not stretch it. Godot computes
+ * it only for a decal with a normal map (`texture_storage.cpp:3430-3437`), and the rest keep zero.
  */
 function setNormalBasis({ matrixWorld }: DrawnDecal): void {
-  const [x, y, z] = basisColumns;
-  x.setFromMatrixColumn(matrixWorld, 0).normalize();
-  y.setFromMatrixColumn(matrixWorld, 1);
-  y.addScaledVector(x, -x.dot(y)).normalize();
-  z.setFromMatrixColumn(matrixWorld, 2);
-  z.addScaledVector(x, -x.dot(z)).addScaledVector(y, -y.dot(z)).normalize();
-  for (let i = 0; i < basisColumns.length; i++) {
-    const column = basisColumns[i]!.transformDirection(viewInverse);
+  if (rects.normal === null) {
+    for (let i = 0; i < 3; i++) setTexel(DECAL_TEXEL.normalBasis + i, 0, 0, 0, 0);
+    return;
+  }
+  const e = matrixWorld.elements;
+  const basis = basisOrthonormalized([e[0]!, e[4]!, e[8]!, e[1]!, e[5]!, e[9]!, e[2]!, e[6]!, e[10]!]);
+  for (let i = 0; i < 3; i++) {
+    const column = normal.set(basis[i]!, basis[i + 3]!, basis[i + 6]!).transformDirection(viewInverse);
     setTexel(DECAL_TEXEL.normalBasis + i, column.x, column.y, column.z, 0);
   }
 }
