@@ -183,6 +183,19 @@ export function paintSceneFontCanvas(
     else ctx.fillText(char, penX, baselineY);
   };
 
+  // The line of a contour face is unsheared, so a glyph with no contour shears itself.
+  const paintShearedGlyphText = (
+    char: string,
+    penX: number,
+    baselineY: number,
+    growthPx: number | undefined
+  ) => {
+    ctx.save();
+    shearAboutBaseline(ctx, skew, baselineY);
+    paintGlyphText(char, penX, baselineY, growthPx);
+    ctx.restore();
+  };
+
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
     const baselineY = canvasLayout.offsetYPx + lineTopPx + baselineOffsetPx;
@@ -194,16 +207,12 @@ export function paintSceneFontCanvas(
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
       // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
-      const hasVariedOutline = skew !== 0 || gp.emboldenGrowthPx;
-      const contours = contoursOf && hasVariedOutline ? contoursOf(gp.char) : null;
+      const hasVariedGlyph = skew !== 0 || gp.emboldenGrowthPx;
+      const contours = contoursOf && hasVariedGlyph ? contoursOf(gp.char) : null;
       if (contours) (stroked ? strokeContours : fillContours)(ctx, contours, penX, baselineY);
-      else if (contourOutlines && skew !== 0) {
-        // The line is unsheared here, so a glyph with no contour shears itself.
-        ctx.save();
-        shearAboutBaseline(ctx, skew, baselineY);
-        paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
-        ctx.restore();
-      } else paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
+      else if (contourOutlines && skew !== 0)
+        paintShearedGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
+      else paintGlyphText(gp.char, penX, baselineY, gp.emboldenGrowthPx);
     }
     ctx.restore();
   });

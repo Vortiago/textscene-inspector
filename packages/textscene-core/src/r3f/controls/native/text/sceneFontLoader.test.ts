@@ -370,22 +370,6 @@ describe('scene font in an environment with no font door', () => {
   });
 });
 
-/** A browser with a `FontFace` door and a 2D canvas that measures every glyph 500 design units wide. */
-function stubFontDoor() {
-  vi.stubGlobal(
-    'FontFace',
-    class {
-      load() {
-        return Promise.resolve(this);
-      }
-    }
-  );
-  vi.stubGlobal('document', {
-    fonts: { add: () => {} },
-    createElement: () => ({ getContext: () => ({ measureText: () => ({ width: 500 }) }) }),
-  });
-}
-
 describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canvas face follows', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -396,7 +380,19 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   async function loaderWithFontDoor() {
     vi.stubEnv('VITEST', 'false');
     vi.resetModules();
-    stubFontDoor();
+    // A browser with a `FontFace` door and a 2D canvas that measures every glyph 500 design units wide.
+    vi.stubGlobal(
+      'FontFace',
+      class {
+        load() {
+          return Promise.resolve(this);
+        }
+      }
+    );
+    vi.stubGlobal('document', {
+      fonts: { add: () => {} },
+      createElement: () => ({ getContext: () => ({ measureText: () => ({ width: 500 }) }) }),
+    });
     const { fontFile: freshFontFile, fixtureFontBytes } = await import('./sfntOutlines.testkit');
     const mod = await import('./sceneFontLoader');
     return { ...mod, ttf: () => freshFontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')) };

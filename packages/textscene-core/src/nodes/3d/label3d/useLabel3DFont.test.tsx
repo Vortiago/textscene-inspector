@@ -86,6 +86,14 @@ function renderMetrics(
   });
 }
 
+/** An emboldened face waits for the bundled font's bytes, which load as their own chunk. */
+function settledMetrics(
+  result: { current: ReturnType<typeof modules.useLabel3DFont> },
+  expected: Record<string, unknown>
+) {
+  return vi.waitFor(() => expect(result.current?.metrics).toMatchObject(expected));
+}
+
 async function settle() {
   await act(async () => {
     for (let pass = 0; pass < 6; pass++) await new Promise((resolve) => setTimeout(resolve, 0));
@@ -118,22 +126,19 @@ describe('useLabel3DFont metrics', () => {
   it('takes the embolden of the label font over the bundled font', async () => {
     const { result } = renderMetrics('SubResource("own")');
 
-    // An emboldened face waits for the bundled font's bytes, which load as their own chunk.
-    await vi.waitFor(() => expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 }));
+    await settledMetrics(result, { kind: 'canvas', embolden: 1 });
   });
 
   it('takes the embolden of the project default font when the label has no font', async () => {
     const { result } = renderMetrics(undefined, PROJECT_FONT_FILES);
 
-    // An emboldened face waits for the bundled font's bytes, which load as their own chunk.
-    await vi.waitFor(() => expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 2 }));
+    await settledMetrics(result, { kind: 'canvas', embolden: 2 });
   });
 
   it('prefers the label font to the project default font', async () => {
     const { result } = renderMetrics('SubResource("own")', PROJECT_FONT_FILES);
 
-    // An emboldened face waits for the bundled font's bytes, which load as their own chunk.
-    await vi.waitFor(() => expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 }));
+    await settledMetrics(result, { kind: 'canvas', embolden: 1 });
   });
 
   it('is undefined while the project font loads', async () => {
@@ -151,6 +156,7 @@ describe('useLabel3DFont outlines', () => {
 
     await settle();
 
+    expect(result.current?.metrics).toBeDefined();
     expect(result.current?.metrics.outlines).toBeUndefined();
   });
 

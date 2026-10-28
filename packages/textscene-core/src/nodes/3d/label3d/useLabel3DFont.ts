@@ -10,7 +10,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { peekBundledCanvasFontMetrics } from '../../../r3f/controls/native/text/bundledFontLoader';
-import { withVariation } from '../../../r3f/controls/native/text/fontMetrics';
+import { withOutlines, withVariation } from '../../../r3f/controls/native/text/fontMetrics';
 import {
   isCanvasFontMetrics,
   type CanvasFontMetrics,
@@ -54,11 +54,13 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
-    const outlines = peekGlyphOutlines(font, bundled, settled);
+    // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
+    const outlines = isCanvasFontMetrics(settled)
+      ? settled.outlines
+      : peekGlyphOutlines(font, bundled, settled);
     if (outlines === undefined) return undefined;
-    const metrics = isCanvasFontMetrics(settled)
-      ? settled
-      : withVariation(bundled, { embolden: settled.embolden, skew: settled.skew, outlines });
+    const varied = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);
+    const metrics = outlines ? withOutlines(varied, outlines) : varied;
     return {
       metrics,
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),

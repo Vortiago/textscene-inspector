@@ -54,5 +54,5 @@ export function textMeshFontFiles({ resource, resources }: ScopedResource, loade
  */
 export function textMeshFontKey(font: TextMeshFont): string {
   if (font.status !== 'ready') return font.status;
-  return String(identityKey(font.face));
+  return `${identityKey(font.face)}`;
 }

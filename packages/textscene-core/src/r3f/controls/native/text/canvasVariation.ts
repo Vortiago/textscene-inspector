@@ -39,7 +39,7 @@ export function paintEmboldenedFill(
   ctx.strokeText(char, x, y);
 }
 
-/** A font size animation adds a face for each size it passes, so the oldest face goes at this count. */
+/** A font size animation adds a face for each size it passes, so the least recently read face goes at this count. */
 const MAX_CACHED_FACES = 8;
 
 /**
@@ -61,18 +61,28 @@ export function variedContoursReader(
 ): (char: string) => GlyphContours | null {
   const byFace = readContours(outlines);
   const faceKey = `${fontSizePx}/${variationKey(variation)}`;
+  // A hit moves the face to the newest place, so the face dropped at the cap is the least recently read.
   let glyphs = byFace.get(faceKey);
+  byFace.delete(faceKey);
   if (!glyphs) {
     if (byFace.size >= MAX_CACHED_FACES) byFace.delete(byFace.keys().next().value!);
-    byFace.set(faceKey, (glyphs = new Map()));
+    glyphs = new Map();
   }
+  byFace.set(faceKey, glyphs);
   const read = glyphs;
+  const byChar = new Map<string, GlyphContours | null>();
   return (char) => {
+    const known = byChar.get(char);
+    if (known !== undefined) return known;
     const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
-    if (glyphIndex === 0) return null;
-    let contours = read.get(glyphIndex);
-    if (contours === undefined)
-      read.set(glyphIndex, (contours = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
+    let contours: GlyphContours | null = null;
+    if (glyphIndex !== 0) {
+      let cached = read.get(glyphIndex);
+      if (cached === undefined)
+        read.set(glyphIndex, (cached = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
+      contours = cached;
+    }
+    byChar.set(char, contours);
     return contours;
   };
 }
