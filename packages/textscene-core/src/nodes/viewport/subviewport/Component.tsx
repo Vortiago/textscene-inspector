@@ -302,6 +302,7 @@ function OffscreenViewport({
     target,
     width,
     height,
+    isTransparent: transparentBg,
     render: renderPass,
   });
 

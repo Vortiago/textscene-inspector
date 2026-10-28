@@ -27,7 +27,6 @@ import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRou
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw } from '../materials/godotPoint';
-import { renderTargetMapInjection, renderTargetMapUserData } from '../materials/renderTargetMap';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
@@ -115,9 +114,6 @@ type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
-const targetMapOf = (repeats: boolean, isNearest: boolean) =>
-  renderTargetMapUserData({ uv: { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
-
 const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
@@ -159,12 +155,6 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
-  injected('materials/renderTargetMap.ts', 'render target map transform', SURFACE_AND_DEPTH, () =>
-    renderTargetMapInjection(targetMapOf(false, false))
-  ),
-  injected('materials/renderTargetMap.ts', 'render target map sampler', SURFACE_AND_DEPTH, () =>
-    renderTargetMapInjection(targetMapOf(true, true))
-  ),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
   ),

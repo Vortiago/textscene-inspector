@@ -5,6 +5,7 @@
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
 import { useMemo } from 'react';
+import { buttonIconSize } from './buttonIconSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -36,11 +37,6 @@ import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconCol
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
-
-interface IconImageLike {
-  width?: number;
-  height?: number;
-}
 
 export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<ButtonProperties>(solveNode);
@@ -76,13 +72,10 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // already-filtered sample once it sees this tag.
   const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
-  const iconNaturalSize: Vector2 | null = useMemo(() => {
-    if (!props.icon || !iconTexture) return null;
-    const image = iconTexture.image as IconImageLike | undefined;
-    const w = image?.width ?? 0;
-    const h = image?.height ?? 0;
-    return w > 0 && h > 0 ? { x: w, y: h } : null;
-  }, [props.icon, iconTexture]);
+  const iconNaturalSize = useMemo(
+    () => (props.icon ? buttonIconSize(iconTexture) : null),
+    [props.icon, iconTexture]
+  );
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);

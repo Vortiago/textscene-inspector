@@ -14,6 +14,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -71,7 +72,7 @@ export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => 
   const requests: TextureSlotRequest[] = [];
   for (const name of SPIN_BOX_ICON_NAMES) {
     const themed = themedIcons[name];
-    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+    if (themed) requests.push(themedSlotRequest(name, themed));
   }
   return requests;
 };

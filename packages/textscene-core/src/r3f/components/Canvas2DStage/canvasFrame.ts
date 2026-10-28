@@ -6,43 +6,29 @@
  */
 
 import * as THREE from 'three';
-import { drawFullScreen, fullScreenPass } from '../../fullScreenPass';
+import { copyTexels } from '../../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
-import { perObject } from '../../../utils/perObject';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 
 /**
- * Each texel to the pixel under it, from the frame's row `height - 1 - y`, so the copy neither
- * filters nor converts and the drawing buffer's row 0 is the canvas bottom again.
+ * Copies `frame` to the target, each texel to the pixel under it from the frame's row
+ * `height - 1 - y`, so the copy neither filters nor converts and the drawing buffer's row 0 is the
+ * canvas bottom again.
  */
-const COPY_FRAGMENT = /* glsl */ `
-uniform sampler2D frame;
-void main() {
-  ivec2 pixel = ivec2(gl_FragCoord.xy);
-  gl_FragColor = texelFetch(frame, ivec2(pixel.x, textureSize(frame, 0).y - 1 - pixel.y), 0);
-}`;
-
-/**
- * A pass per renderer, not per frame: `setSize` calls `dispose`, so a frame's own pass would
- * recompile on each resize.
- */
-const copyPassFor = perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
-  fullScreenPass('Canvas2D::frameCopy', COPY_FRAGMENT, { frame: { value: null } })
-);
-
-/** Copies `frame` through `gl`'s pass, which holds no frame once the draw ends. */
 function copyToTarget(
   gl: THREE.WebGLRenderer,
   frame: CanvasFrame,
   target: THREE.WebGLRenderTarget | null
 ): void {
-  const pass = copyPassFor(gl);
-  pass.uniforms.frame!.value = frame.texture;
   beginStep(gl, 'Canvas copy');
   try {
-    drawFullScreen(gl, pass, target);
+    copyTexels(gl, frame.texture, target, {
+      offsetX: 0,
+      offsetY: frame.height - 1,
+      rowStep: -1,
+      bounds: [0, 0, frame.width, frame.height],
+    });
   } finally {
-    pass.uniforms.frame!.value = null;
     endStep(gl, 'Canvas copy');
   }
 }

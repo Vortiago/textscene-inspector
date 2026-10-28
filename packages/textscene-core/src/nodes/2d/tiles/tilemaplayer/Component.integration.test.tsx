@@ -24,6 +24,7 @@ import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';
 import type { CappedItem } from '../../../../r3f/lighting2d/itemLightCap';
 import type { TileMapLayerProperties } from './types';
+import { resolveExtResourcePath } from '../../../../resources/SubResourceResolver';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const isoRoot = resolve(here, '../../../../../../../scenes/isometric');
@@ -51,7 +52,9 @@ describe('isometric dungeon integration', () => {
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
     expect(model!.sources.size).toBe(5);
     for (const source of model!.sources.values()) {
-      expect(source.texturePath).toBe('res://tileset/isotiles.png');
+      expect(resolveExtResourcePath(source.texture!.ref, source.texture!.externalResources)).toBe(
+        'res://tileset/isotiles.png'
+      );
     }
   });
 

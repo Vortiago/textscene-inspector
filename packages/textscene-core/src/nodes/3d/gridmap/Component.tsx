@@ -89,6 +89,7 @@ function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3
 export function GridMap({ node, children }: NodeComponentProps) {
   const properties = node.properties as GridMapProperties;
   const library = useMeshLibraryModel(properties.meshLibrary);
+  const meshHolders = useMemo(() => (library.resource ? [library.resource] : []), [library.resource]);
 
   const cellsByItem = useMemo(() => {
     const grouped = new Map<number, GridMapCell[]>();
@@ -117,7 +118,9 @@ export function GridMap({ node, children }: NodeComponentProps) {
         const item = library.model.get(itemId);
         // Godot draws a cell only for an item the library holds with a mesh (`:676-678,689`).
         if (!item?.meshPath) return null;
-        return <GridMapItem key={itemId} item={item} cells={cells} {...gridProps} />;
+        return (
+          <GridMapItem key={itemId} item={item} meshHolders={meshHolders} cells={cells} {...gridProps} />
+        );
       })}
       {children}
     </Node3D>
@@ -156,6 +159,8 @@ function bakedMeshNode(ref: string, index: number): TscnNode {
 
 interface GridMapItemProps extends CellGrid {
   item: MeshLibraryItem;
+  /** The library, which holds the item's mesh for its materials' local-to-scene setup. */
+  meshHolders: readonly TscnInternalResource[];
   cells: GridMapCell[];
 }
 
@@ -163,8 +168,8 @@ interface GridMapItemProps extends CellGrid {
  * All cells sharing one MeshLibrary item. Each surface decides on its own whether it batches,
  * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
  */
-function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
-  const content = useMeshContent(usePathResolution(item.meshPath));
+function GridMapItem({ item, meshHolders, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
+  const content = useMeshContent(usePathResolution(item.meshPath), meshHolders);
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged

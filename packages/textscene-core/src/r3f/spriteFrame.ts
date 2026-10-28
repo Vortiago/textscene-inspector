@@ -12,6 +12,7 @@
 import type * as THREE from 'three';
 import { FULL_UV_WINDOW, regionUvWindow, type UvWindow } from './uvWindow';
 import { frameCoords } from '../godot/scene/spriteFrames';
+import { textureSize } from '../resources/textures/textureSize';
 
 /**
  * What shows where a frame's UVs fall outside the texture, which only a
@@ -59,8 +60,8 @@ export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteF
 
 /**
  * Frame size in texture pixels: the base rect (region when enabled, else the
- * full image), subdivided by the frame grid. Falls back to 1×1 without a
- * loaded image so placeholders keep a sensible scale.
+ * size Godot reports for the texture), subdivided by the frame grid. Falls back
+ * to 1×1 without a loaded image so placeholders keep a sensible scale.
  */
 export function frameSizePx(
   texture: THREE.Texture | undefined,
@@ -70,8 +71,9 @@ export function frameSizePx(
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
 
-  let pxW = image?.width ?? 1;
-  let pxH = image?.height ?? 1;
+  const size = textureSize(texture);
+  let pxW = size?.width ?? 1;
+  let pxH = size?.height ?? 1;
   if (props.region_enabled && props.region_rect && image?.width && image.height) {
     pxW = props.region_rect.width;
     pxH = props.region_rect.height;

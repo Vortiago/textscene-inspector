@@ -30,7 +30,7 @@ import { bindSlotTexture } from './textureBinding.testkit';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { mapSampledBy, programShader } from '../../../r3f/testing/patchedFragment';
-import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
+import { TEXTURE_SLOTS, type ResolvedTextures, type TextureSlot } from './types';
 
 interface ParityCase {
   name: string;
@@ -400,10 +400,10 @@ function meshTresCarryingIt(testCase: ParityCase): string {
  * `[ext_resource]` table, then bound to their slots, as the node component does, through
  * the interface the imperative adapter crosses.
  */
-function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
+function inlineTextures(testCase: ParityCase): ResolvedTextures {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
   const states = materialTextureStates(scalars, DEFAULT_ANISOTROPIC_FILTERING_LEVEL);
-  const resolved: ResolvedTextureSlots = {};
+  const resolved: ResolvedTextures = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = scalars.textureSlots[slot];
     if (reference === undefined) continue;
@@ -415,9 +415,9 @@ function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
 }
 
 /** The loader's shared textures per slot, unbound, as the imperative adapter receives them. */
-function rawTextures(testCase: ParityCase): ResolvedTextureSlots {
+function rawTextures(testCase: ParityCase): ResolvedTextures {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
-  const raw: ResolvedTextureSlots = {};
+  const raw: ResolvedTextures = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = scalars.textureSlots[slot];
     if (reference === undefined) continue;
@@ -544,7 +544,7 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
 }
 
 /** The bags the reactive adapter mounts for `testCase` with its slots bound. */
-function slotBags(testCase: ParityCase, textures: ResolvedTextureSlots) {
+function slotBags(testCase: ParityCase, textures: ResolvedTextures) {
   return standardMaterialBags(parseStandardMaterial3DScalars(testCase.properties), textures);
 }
 

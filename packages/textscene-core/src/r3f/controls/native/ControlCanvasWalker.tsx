@@ -26,6 +26,7 @@ import {
 } from '../../components/canvasItemMaterialContext';
 import { canvasRenderOrder, isCanvasLayerType } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
+import { NodePathProvider } from '../../contexts/NodePathContext';
 import { useLayerRank } from '../../contexts/PaintOrderContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
@@ -246,22 +247,26 @@ function ControlNodeGroup({
   // context, so they must be its React children. The registration declares it,
   // so a second such type adds no branch here.
   const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
+  // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
+  // counts from the painter's local scene.
   const painter = (
-    <Painter
-      solveNode={solveNode}
-      rect={rect}
-      renderOrder={renderOrder}
-      tint={tint}
-      subtreeChromeRenderOrder={subtreeChromeRenderOrder}
-      effectiveZ={effectiveZ}
-      theme={theme}
-      measureText={measureText}
-      snapToPixels={snapToPixels}
-      childRects={childRects}
-      meta={solvedEntry?.meta}
-    >
-      {wrapsChildren ? childElements : undefined}
-    </Painter>
+    <NodePathProvider path={solveNode.path}>
+      <Painter
+        solveNode={solveNode}
+        rect={rect}
+        renderOrder={renderOrder}
+        tint={tint}
+        subtreeChromeRenderOrder={subtreeChromeRenderOrder}
+        effectiveZ={effectiveZ}
+        theme={theme}
+        measureText={measureText}
+        snapToPixels={snapToPixels}
+        childRects={childRects}
+        meta={solvedEntry?.meta}
+      >
+        {wrapsChildren ? childElements : undefined}
+      </Painter>
+    </NodePathProvider>
   );
   // The leaf meshes of a painter read the lit pixel material through context. A CanvasLayer is no
   // CanvasItem, so it declares no item: one would add a light list to the layer's placement.

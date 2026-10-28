@@ -12,15 +12,10 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { useUvWindow } from '../../../r3f/useUvWindow';
-import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
+import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import {
-  isViewportTextureRef,
-  useViewportTextureSlot,
-} from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
@@ -33,22 +28,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // means none does. The registry carries a numeric tuple (ADR-0017), here a 1-tuple.
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
-  // `texture = SubResource(ViewportTexture)` names a `<SubViewport>`'s live
-  // target. It bypasses the loader and the frame compositor: the target owns its
-  // GPU texture, so disposing a per-frame clone would tear down the publisher's
-  // render target.
-  const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
-  const { texture: viewportTexture, cyclic: viewportCyclic } = useViewportTextureSlot(
-    props.texture,
-    internalResources,
-    'plain'
-  );
-
-  // `useTexture2D`, not the path-only resolver: `texture` may name an inline
-  // procedural texture (a GradientTexture2D), which has no path to resolve to
-  // and rasterises straight out of the scene.
   const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
-    isViewportSlot ? undefined : props.texture,
+    props.texture,
     externalResources,
     internalResources
   );
@@ -56,7 +37,6 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles.
   const sampler = useNode2DTextureSampler(props);
-  const drawnTexture = useCanvas2DTexture(sourceTexture, sampler);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {
@@ -64,33 +44,28 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
     return frameUvWindow(sourceTexture ?? undefined, frameProps);
   }, [sourceTexture, props, animatedFrame]);
-  useUvWindow(drawnTexture, frameWindow);
+  const drawnTexture = useWindowedCanvas2DTexture(sourceTexture, sampler, frameWindow);
 
-  const displayedTexture = viewportTexture ?? drawnTexture;
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
   const { width, height } = useMemo(
-    () => frameSizePx(viewportTexture ?? sourceTexture ?? undefined, props),
-    [viewportTexture, sourceTexture, props]
+    () => frameSizePx(sourceTexture ?? undefined, props),
+    [sourceTexture, props]
   );
-
-  // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The placeholder is
-  // for a texture that is set but failed to load. An unpublished ViewportTexture is not missing, so
-  // the sprite draws nothing until it renders. One in an unrenderable pass cycle (`cyclic`) never
-  // will, so it gets the placeholder.
-  const showPlaceholder = isViewportSlot ? viewportCyclic : textureMissing;
 
   return (
     <CanvasItem2D
       node={node}
       props={props}
       body={({ color, opacity }, _material, pixelMaterial) =>
-        showPlaceholder ? (
+        // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
+        // placeholder is for a texture that is set but never draws.
+        textureMissing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
-        ) : displayedTexture ? (
+        ) : drawnTexture ? (
           <QuadMesh
-            texture={displayedTexture}
+            texture={drawnTexture}
             color={color}
             opacity={opacity}
             width={width}

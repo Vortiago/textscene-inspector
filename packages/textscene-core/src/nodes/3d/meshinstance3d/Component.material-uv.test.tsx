@@ -106,13 +106,13 @@ describe('StandardMaterial3D UV transforms (assertions 40–47)', () => {
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
   });
 
-  it('#44 uv1_offset.y=0.5 → material.map.offset.y === 0.5', async () => {
+  it('#44 uv1_offset.y=0.25 moves the map down from the top edge → material.map.offset.y === -0.25', async () => {
     const mat = await renderUV({
-      matData: { albedo_texture: 'ExtResource("1")', uv1_offset: 'Vector3(0, 0.5, 0)' },
+      matData: { albedo_texture: 'ExtResource("1")', uv1_offset: 'Vector3(0, 0.25, 0)' },
       externals: [ext('1', A_PATH)],
       cached: [{ path: A_PATH, texture: tex() }],
     });
-    expect(mat.map?.offset.y).toBeCloseTo(0.5, 5);
+    expect(mat.map?.offset.y).toBeCloseTo(-0.25, 5);
   });
 
   it('#45 uv1_scale = 0 → repeat is 0 (not default 1) and no divide-by-zero', async () => {

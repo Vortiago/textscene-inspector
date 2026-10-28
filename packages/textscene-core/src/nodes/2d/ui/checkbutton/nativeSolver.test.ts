@@ -19,6 +19,7 @@ import {
   layoutCheckButtonContent,
   checkButtonMarginX,
   checkButtonMarginY,
+  checkButtonDrawnIconSize,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -370,5 +371,20 @@ describe('checkButtonMinimumSize — RTL sizes off the mirrored icon pair', () =
   it('ignores a themed plain unchecked under RTL', () => {
     const slots = { textureSlots: { unchecked: { x: 40, y: 20 } } };
     expect(checkButtonMinimumSize({ ...node({}), ...slots, rtl: true }, ctx())).toEqual({ x: 44, y: 24 });
+  });
+});
+
+/** Godot draws the current icon at its own fitted size, placed by the larger (`check_button.cpp:133-145`). */
+describe('checkButtonDrawnIconSize', () => {
+  it("is the current icon's own size, not the larger icon's", () => {
+    const n = { textureSlots: { checked: { x: 64, y: 40 } }, constants: {} };
+    expect(checkButtonDrawnIconSize(n, 'unchecked')).toEqual(
+      checkButtonDrawnIconSize({ textureSlots: {}, constants: {} }, 'unchecked')
+    );
+  });
+
+  it('is 0 for an icon that reports size 0, as an unset ViewportTexture does', () => {
+    const n = { textureSlots: { unchecked: { x: 0, y: 0 } }, constants: {} };
+    expect(checkButtonDrawnIconSize(n, 'unchecked')).toEqual({ x: 0, y: 0 });
   });
 });

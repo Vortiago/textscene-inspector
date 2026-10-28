@@ -22,51 +22,76 @@ export interface MaterialResource {
   resource: TscnInternalResource;
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
+  /**
+   * The resources between the node and the material, the node's property first: the mesh that holds
+   * a surface's material. Absent for a material that is the node's property.
+   */
+  holders?: readonly TscnInternalResource[];
 }
+
+/** The material's `holders`, present only when it has any. */
+type Held = Pick<MaterialResource, 'holders'>;
 
 export type MaterialSource =
   /** A material the scene already holds, with the scene's tables. */
-  | { kind: 'inline'; material: MaterialResource }
+  | ({ kind: 'inline'; material: MaterialResource } & Held)
   /** A resource file, or a `file.res::SubId` address into one, that `useMaterial` loads. */
-  | { kind: 'file'; path: string };
+  | ({ kind: 'file'; path: string } & Held);
 
 /**
  * The source `ref` names, or undefined when it names no material. `ref` is a reference in the
  * scene's tables, or a `res://` path such as a material inside a mesh resource file. Undefined leaves the
  * slot empty, as Godot's invalid RID does, so an override that names nothing keeps what
  * the surface had. A material this previewer cannot build still fills the slot, and
- * `useMaterial` answers with Godot's default surface for it (ADR-0041).
+ * `useMaterial` answers with Godot's default surface for it (ADR-0041). `holders` are the
+ * material's, as `MaterialResource` names them.
  */
 export function resolveMaterialSource(
   ref: string | undefined,
-  { internalResources, externalResources }: SceneResources
+  { internalResources, externalResources }: SceneResources,
+  holders: readonly TscnInternalResource[] = []
 ): MaterialSource | undefined {
   if (!ref) return undefined;
-  if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref);
+  if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref, holders);
   const parsed = parseResourceReference(ref);
   if (!parsed) return undefined;
 
   if (parsed.type === 'SubResource') {
     const resource = findSubResource(internalResources, parsed.id);
     if (!resource || !BUILDABLE_MATERIAL_TYPES.has(resource.type)) return undefined;
-    return { kind: 'inline', material: { resource, internalResources, externalResources } };
+    return {
+      kind: 'inline',
+      material: { resource, internalResources, externalResources },
+      ...held(holders),
+    };
   }
 
   const ext = findExtResource(externalResources, parsed.id);
-  return ext?.path ? fileMaterialSource(ext.path) : undefined;
+  return ext?.path ? fileMaterialSource(ext.path, holders) : undefined;
 }
 
-/** One source per entry of an ArrayMesh's `materialPaths`. A null path is Godot's default surface. */
+/**
+ * One source per entry of an ArrayMesh's `materialPaths`, held by `holders` as in
+ * `resolveMaterialSource`. A null path is Godot's default surface.
+ */
 export function fileMaterialSources(
-  materialPaths: readonly (string | null)[]
+  materialPaths: readonly (string | null)[],
+  holders: readonly TscnInternalResource[] = []
 ): (MaterialSource | undefined)[] {
-  return materialPaths.map((path) => (path ? fileMaterialSource(path) : undefined));
+  return materialPaths.map((path) => (path ? fileMaterialSource(path, holders) : undefined));
 }
 
 /**
  * The source for a material file, or undefined for a path that is no resource file.
  * Minting an address the loader must refuse buys a failed load and the same default surface.
  */
-function fileMaterialSource(path: string): MaterialSource | undefined {
-  return isResourceFilePath(resourceFilePath(path)) ? { kind: 'file', path } : undefined;
+function fileMaterialSource(
+  path: string,
+  holders: readonly TscnInternalResource[]
+): MaterialSource | undefined {
+  return isResourceFilePath(resourceFilePath(path)) ? { kind: 'file', path, ...held(holders) } : undefined;
+}
+
+function held(holders: readonly TscnInternalResource[]): Held {
+  return holders.length > 0 ? { holders } : {};
 }

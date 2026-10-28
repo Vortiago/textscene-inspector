@@ -18,6 +18,7 @@ import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { textureSize } from '../../../resources/textures/textureSize';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
@@ -26,6 +27,9 @@ import { particleFiles, resolveParticleCurves, resolveParticleGradient } from '.
 import { simulateFrozenPose } from './simulate';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+
+/** The quad of an emitter with no texture (`cpu_particles_2d.cpp:186-192`). */
+const UNTEXTURED_QUAD = { width: 1, height: 1 };
 
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
@@ -117,11 +121,10 @@ function ParticleField({
     [props, curves, colorRamp, colorInitialRamp, emissionTransform]
   );
 
-  // Godot's quad is the texture's pixel size, falling back to 1x1 when the
-  // emitter has none (`cpu_particles_2d.cpp:186-192`).
-  const image = texture?.image as { width?: number; height?: number } | null | undefined;
-  const width = image?.width ?? 1;
-  const height = image?.height ?? 1;
+  // Godot's quad is the texture's size, falling back to 1x1 when the emitter has none
+  // (`cpu_particles_2d.cpp:186-192`).
+  // An unset ViewportTexture reports size 0, so its quads have no area (`viewport.cpp:156-160`).
+  const { width, height } = textureSize(texture) ?? UNTEXTURED_QUAD;
 
   const geometry = useMemo(
     () => buildParticleGeometry(pose, width, height, flipbook),

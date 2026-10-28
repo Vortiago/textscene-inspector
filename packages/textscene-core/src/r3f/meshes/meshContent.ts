@@ -82,27 +82,44 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
   return resourcePath && scoped && meshKind(scoped.resource.type) === 'arrayMesh' ? resourcePath : null;
 }
 
+const NO_HOLDERS: readonly TscnInternalResource[] = [];
+
 /**
+ * `holders` are the resources between the node and the mesh, the node's property first: a
+ * GridMap's MeshLibrary. A mesh that is a node's property has none. The caller keeps the list
+ * stable across renders.
+ *
  * @canonical Mesh content and its disposal
  */
-export function useMeshContent(resolution: ResourceResolution): MeshContent {
+export function useMeshContent(
+  resolution: ResourceResolution,
+  holders: readonly TscnInternalResource[] = NO_HOLDERS
+): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
+  const materialHolders = useMemo(
+    () => (scoped ? [...holders, scoped.resource] : holders),
+    [holders, scoped]
+  );
   const processorPath = arrayMeshPath(resolution);
   // `''` requests nothing.
   const fileArrayMesh = useResource<ArrayMeshResource>(processorPath ?? '', 'arraymesh');
   const fileSurfaced = useMemo(
-    () => fileArrayMesh.value && withFileMaterials(fileArrayMesh.value),
-    [fileArrayMesh.value]
+    () => fileArrayMesh.value && withFileMaterials(fileArrayMesh.value, materialHolders),
+    [fileArrayMesh.value, materialHolders]
   );
-  const sceneSurfaced = useSceneArrayMesh(kind === 'arrayMesh' && !processorPath ? scoped : null);
+  const sceneSurfaced = useSceneArrayMesh(
+    kind === 'arrayMesh' && !processorPath ? scoped : null,
+    materialHolders
+  );
   const { mesh: resolvable, isLoading: isLoadingReferences } = useResolvableMesh(
     kind === 'primitive' ? scoped : null
   );
   const undrawnType = scoped ? undrawnMeshType(scoped, resolvable) : null;
   useUndrawnMeshReport(undrawnType);
   const primitiveSurfaced = usePrimitiveMesh(
-    useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath])
+    useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath]),
+    materialHolders
   );
 
   if (resolution.isNone) return NONE;
@@ -120,27 +137,39 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
   return fileSurfaced ? { kind: 'surfaced', mesh: fileSurfaced } : EMPTY;
 }
 
-/** An ArrayMesh the processor decoded, each material a file the loader fetches. Null for one with no surface. */
-function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh | null {
+/**
+ * An ArrayMesh the processor decoded, each material a file the loader fetches, held by `holders`.
+ * Null for one with no surface.
+ */
+function withFileMaterials(
+  mesh: ArrayMeshResource,
+  holders: readonly TscnInternalResource[]
+): SurfacedMesh | null {
   const parts = nonEmpty(
     mesh.parts.map(({ geometry, surfaceIndices, materialPaths }) => ({
       geometry,
       surfaceIndices,
-      materials: fileMaterialSources(materialPaths),
+      materials: fileMaterialSources(materialPaths, holders),
     }))
   );
   return parts && { parts };
 }
 
-/** A PrimitiveMesh's one surface under its own material, or null for a mesh Godot builds no surface for. */
-function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
+/**
+ * A PrimitiveMesh's one surface under its own material, held by `holders`, or null for a mesh Godot
+ * builds no surface for.
+ */
+function usePrimitiveMesh(
+  source: MeshSource | null,
+  holders: readonly TscnInternalResource[]
+): SurfacedMesh | null {
   const geometry = usePrimitiveMeshGeometry(source);
   const material = useMemo(
     () =>
       source
-        ? resolveMaterialSource(primitiveMaterialAddress(source, source.path), source.resources)
+        ? resolveMaterialSource(primitiveMaterialAddress(source, source.path), source.resources, holders)
         : undefined,
-    [source]
+    [source, holders]
   );
   return useMemo(
     () =>
@@ -167,9 +196,12 @@ function usePrimitiveMeshGeometry(source: MeshSource | null): THREE.BufferGeomet
 
 /**
  * An ArrayMesh in the scene's tables, with each surface's material resolved against the tables
- * that hold the mesh. Null for no mesh or for unreadable surfaces.
+ * that hold the mesh and held by `holders`. Null for no mesh or for unreadable surfaces.
  */
-function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
+function useSceneArrayMesh(
+  mesh: ScopedResource | null,
+  holders: readonly TscnInternalResource[]
+): SurfacedMesh | null {
   const decoded = useSceneArrayMeshGeometry(mesh?.resource);
   const resources = mesh?.resources;
   // Apart from the decode: an edit to a material's body or to an `ext_resource`
@@ -180,11 +212,11 @@ function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
       decoded.parts.map(({ geometry, surfaceIndices, materialRefs }) => ({
         geometry,
         surfaceIndices,
-        materials: materialRefs.map((ref) => resolveMaterialSource(ref, resources)),
+        materials: materialRefs.map((ref) => resolveMaterialSource(ref, resources, holders)),
       }))
     );
     return parts && { parts };
-  }, [decoded, resources]);
+  }, [decoded, resources, holders]);
 }
 
 interface DecodedSceneArrayMesh {

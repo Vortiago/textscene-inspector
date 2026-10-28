@@ -2233,6 +2233,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Viewport Texture Local To Scene",
+    "file": "unit-viewport-texture-local-to-scene.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visibility Parent",
     "file": "unit-visibility-parent.tscn",
     "category": "Other"
@@ -2912,6 +2917,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Atlas Viewport Padding",
+    "file": "unit-tile-atlas-viewport-padding.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -3626,6 +3636,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Texture Rect Viewport Texture Flip",
+    "file": "unit-texture-rect-viewport-texture-flip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture",
+    "file": "unit-texture-rect-viewport-texture.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
     "category": "Unit - 2D UI Controls"
@@ -4056,6 +4076,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Uv1 Top Edge",
+    "file": "unit-material-uv1-top-edge.tscn",
     "category": "Unit - Materials"
   },
   {

@@ -79,8 +79,8 @@ export function Decal({ node, children }: NodeComponentProps) {
  * (`decal_set_texture`, `texture_storage.cpp:2944-2950`). Two decals with one texture share one
  * rectangle, and so do two maps of one decal. It resolves by RID, as `Decal::set_texture` passes it
  * (`scene/3d/decal.cpp:46`): an AtlasTexture projects its whole sheet, and a CanvasTexture, a RID
- * the atlas refuses (`texture_storage.cpp:2941`), projects nothing. The atlas copies the texture, so
- * the shared cache entry is never bound or disposed.
+ * the atlas refuses (`texture_storage.cpp:2941`), projects nothing. The atlas copies the texture's
+ * plain view (`texture_storage.cpp:3216`), so the shared cache entry is never bound or disposed.
  */
 const useDecalTexture = (reference: string | undefined) =>
-  useHeldTexture(reference, holdDecalTexture, releaseDecalTexture);
+  useHeldTexture(reference, 'plain', holdDecalTexture, releaseDecalTexture);
