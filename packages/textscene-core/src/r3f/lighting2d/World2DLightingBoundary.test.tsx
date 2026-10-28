@@ -14,7 +14,12 @@ import { useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster, type ShadowCaster } from './shadowCasterRegistry';
 
 import { World2DLightingBoundary } from './World2DLightingBoundary';
+import { CanvasModulateContext, useCanvasModulate } from '../canvasModulate';
+import type { Rgba } from '../../godot/math/math';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+
+const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const NIGHT: Rgba = { r: 0.2, g: 0.3, b: 0.6, a: 1 };
 
 const SUN = {
   reach: directionalLightCullKey(0, 0),
@@ -63,7 +68,7 @@ async function readInside(): Promise<Seen> {
   await ReactThreeTestRenderer.create(
     <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
       <Outer seen={seen} />
-      <World2DLightingBoundary>
+      <World2DLightingBoundary canvasModulate={WHITE}>
         <Read seen={seen} />
       </World2DLightingBoundary>
     </CanvasLighting2DProvider>
@@ -83,5 +88,21 @@ describe('World2DLightingBoundary', () => {
 
   it("hands a light inside none of the outer canvas's occluders", async () => {
     expect((await readInside()).casterCount).toBe(0);
+  });
+
+  it("publishes the canvas modulate of its own world, not the outer canvas's", async () => {
+    let seen: Rgba | undefined;
+    function ReadModulate() {
+      seen = useCanvasModulate();
+      return null;
+    }
+    await ReactThreeTestRenderer.create(
+      <CanvasModulateContext.Provider value={NIGHT}>
+        <World2DLightingBoundary canvasModulate={WHITE}>
+          <ReadModulate />
+        </World2DLightingBoundary>
+      </CanvasModulateContext.Provider>
+    );
+    expect(seen).toEqual(WHITE);
   });
 });

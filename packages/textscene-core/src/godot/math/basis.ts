@@ -55,6 +55,11 @@ export function basisOrthonormalized(n: BasisComponents): BasisComponents {
   return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
+/** The determinant of `n`, with the nine components `basisDeterminant` takes. */
+function determinantOf(n: BasisComponents): number {
+  return basisDeterminant(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8]);
+}
+
 /** `Basis::get_scale_abs()` (basis.cpp:287-292): the three column magnitudes, unsigned. */
 export function basisGetScaleAbs(n: BasisComponents): [number, number, number] {
   return [Math.hypot(n[0], n[3], n[6]), Math.hypot(n[1], n[4], n[7]), Math.hypot(n[2], n[5], n[8])];
@@ -67,7 +72,7 @@ export function basisGetScaleAbs(n: BasisComponents): [number, number, number] {
  * signs as 0, which leaves the NaN axis NaN and the others exact 0.
  */
 export function basisGetScale(n: BasisComponents): [number, number, number] {
-  const detSign = sign(basisDeterminant(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8]));
+  const detSign = sign(determinantOf(n));
   const abs = basisGetScaleAbs(n);
   return [detSign * abs[0], detSign * abs[1], detSign * abs[2]];
 }
@@ -193,4 +198,48 @@ export function basisFromQuaternion({ x: qx, y: qy, z: qz, w: qw }: Quaternion):
  */
 export function basisFromQuaternionScale(rotation: Quaternion, scale: Vector3): BasisComponents {
   return basisMultiply(basisFromQuaternion(rotation), basisDiagonal(scale.x, scale.y, scale.z));
+}
+
+/**
+ * `Basis::get_quaternion` (`basis.cpp:714-748`): the quaternion of a basis that is a rotation, by
+ * the largest of the trace and the diagonal.
+ */
+function basisGetQuaternion(n: BasisComponents): Quaternion {
+  const at = (row: number, col: number): number => n[row * 3 + col]!;
+  const trace = f(f(at(0, 0) + at(1, 1)) + at(2, 2));
+  if (trace > 0) {
+    const root = f(Math.sqrt(f(trace + 1)));
+    const scale = f(0.5 / root);
+    return {
+      x: f(f(at(2, 1) - at(1, 2)) * scale),
+      y: f(f(at(0, 2) - at(2, 0)) * scale),
+      z: f(f(at(1, 0) - at(0, 1)) * scale),
+      w: f(root * 0.5),
+    };
+  }
+  const i = at(0, 0) < at(1, 1) ? (at(1, 1) < at(2, 2) ? 2 : 1) : at(0, 0) < at(2, 2) ? 2 : 0;
+  const j = (i + 1) % 3;
+  const k = (i + 2) % 3;
+  const root = f(Math.sqrt(f(f(f(at(i, i) - at(j, j)) - at(k, k)) + 1)));
+  const scale = f(0.5 / root);
+  const result = [0, 0, 0, 0];
+  result[i] = f(root * 0.5);
+  result[3] = f(f(at(k, j) - at(j, k)) * scale);
+  result[j] = f(f(at(j, i) + at(i, j)) * scale);
+  result[k] = f(f(at(k, i) + at(i, k)) * scale);
+  return { x: result[0]!, y: result[1]!, z: result[2]!, w: result[3]! };
+}
+
+/**
+ * `Basis::get_rotation_quaternion` (`basis.cpp:399-411`): the rotation of a basis that also scales.
+ * The basis is made orthonormal, and a mirrored one is negated into a proper rotation.
+ *
+ * @canonical The rotation quaternion of a basis
+ */
+export function basisGetRotationQuaternion(n: BasisComponents): Quaternion {
+  const orthonormal = basisOrthonormalized(n);
+  const [a, b, c, d, e, g, h, i, j] = orthonormal;
+  return basisGetQuaternion(
+    determinantOf(orthonormal) < 0 ? [-a, -b, -c, -d, -e, -g, -h, -i, -j] : orthonormal
+  );
 }

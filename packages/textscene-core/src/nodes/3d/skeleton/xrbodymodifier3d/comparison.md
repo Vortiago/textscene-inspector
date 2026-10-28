@@ -1,16 +1,16 @@
 ---
 type: XRBodyModifier3D
 category: 3D
-status: unimplemented
+status: limitation
 fixture: unit-xr-body-modifier-3d.tscn
 # image: unit-xr-body-modifier-3d
 visual: false
-renders_as: nothing yet, Godot poses bones from an XR body tracker, the previewer does not
+renders_as: nothing (a transform-only modifier that has no XR tracker to read)
 ---
 
 # XRBodyModifier3D
 
-Poses the bones of its parent Skeleton3D from an XRBodyTracker registered with XRServer. With no headset there is no tracker to read, so the drive is a gap here (ADR-0045).
+Poses the bones of its parent Skeleton3D from an XRBodyTracker registered with XRServer. With no headset there is no tracker to read, so Godot changes no bone, and nor does the previewer. The Skeleton3D pass reads `active` and `influence` from it and makes no edit.
 
 ## Linting
 
@@ -30,8 +30,8 @@ Strict parsing format-checks these `XRBodyModifier3D` properties, plus 2 inherit
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-XRBodyModifier3D registers `parseNode3D` directly, so `body_tracker`, `body_update` and `bone_update` are never read by the lenient parser and a malformed value is dropped with no fallback. Strict errors on `bone_update = 2`, which Godot's setter refuses, and only warns on an unlisted `body_update` bit.
+The parser reads `active` and `influence`, and leaves `body_tracker`, `body_update` and `bone_update` unread, as no tracker feeds them. Strict errors on `bone_update = 2`, which Godot's setter refuses, and only warns on an unlisted `body_update` bit.
 
 ## Known limitations
 
-- **Needs runtime** Godot poses the skeleton from a live XR body tracker, but here nothing moves.
+- **Needs runtime** Godot poses the skeleton from a live XR body tracker, but here no tracker exists, so no bone moves.

@@ -1,6 +1,7 @@
 /** Godot's vector types as plain components, for engine facts that import nothing. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { lerpf } from './math.js';
 import { storedReal as f } from './real.js';
 
 /** A point, a size or a direction: two components, as Godot's `Vector2` and `Vector2i` hold them. */
@@ -79,4 +80,37 @@ export function vector3Length(x: number, y: number, z: number): number {
 /** The squares summed in order, so a permuted vector can round to another length, as in Godot. */
 function vector3LengthSquared(x: number, y: number, z: number): number {
   return f(f(f(x * x) + f(y * y)) + f(z * z));
+}
+
+/** `Vector3::operator+` (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Add(a: Vector3, b: Vector3): Vector3 {
+  return { x: f(a.x + b.x), y: f(a.y + b.y), z: f(a.z + b.z) };
+}
+
+/** `Vector3::operator-` (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Sub(a: Vector3, b: Vector3): Vector3 {
+  return { x: f(a.x - b.x), y: f(a.y - b.y), z: f(a.z - b.z) };
+}
+
+/** `Vector3::operator*` by a vector (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Mul(a: Vector3, b: Vector3): Vector3 {
+  return { x: f(a.x * b.x), y: f(a.y * b.y), z: f(a.z * b.z) };
+}
+
+/** `Vector3::operator/` by a vector (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Div(a: Vector3, b: Vector3): Vector3 {
+  return { x: f(a.x / b.x), y: f(a.y / b.y), z: f(a.z / b.z) };
+}
+
+/**
+ * `Vector3::lerp` (`core/math/vector3.h`) in `real_t` float: each component moves `weight` of the way.
+ *
+ * @canonical A Vector3 between two others
+ */
+export function vector3Lerp(from: Vector3, to: Vector3, weight: number): Vector3 {
+  return {
+    x: lerpf(from.x, to.x, weight),
+    y: lerpf(from.y, to.y, weight),
+    z: lerpf(from.z, to.z, weight),
+  };
 }

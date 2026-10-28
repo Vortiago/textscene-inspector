@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
+import { CanvasModulateContext } from '../canvasModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import { planLightLists, type LightListPlan, type PassMeshRole } from './itemLightList.js';
@@ -38,7 +39,7 @@ interface CanvasLightPassProps {
   host: LightPassHost;
   /**
    * The canvas tint, where `S` starts for an ordinary item. It is the `useCanvasModulateColor(nodes)`
-   * the dispatcher publishes to the items, so the seed and the tint they divide out agree.
+   * of this canvas, which the pass publishes to the items, so the seed and the tint they divide out agree.
    */
   canvasModulate: Rgba;
   children: ReactNode;
@@ -212,7 +213,9 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
       {/* Occluders matter only to lights, so their registry lives with this pass. The light
           list's order is a canvas-wide fact too, derived once here, not by each light. */}
       <CanvasLightSequenceProvider viewportPath={host.canvasPath}>
-        <ShadowCasterStage>{children}</ShadowCasterStage>
+        <CanvasModulateContext.Provider value={canvasModulate}>
+          <ShadowCasterStage>{children}</ShadowCasterStage>
+        </CanvasModulateContext.Provider>
       </CanvasLightSequenceProvider>
     </CanvasLighting2DContext.Provider>
   );

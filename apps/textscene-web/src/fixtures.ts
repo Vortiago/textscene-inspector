@@ -383,6 +383,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Copy Transform Modifier 3d Ribbon",
+    "file": "unit-copy-transform-modifier-3d-ribbon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Copy Transform Modifier 3d",
     "file": "unit-copy-transform-modifier-3d.tscn",
     "category": "Other"
@@ -3095,6 +3100,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Mesh Instance 3d Skinned Ribbon Instanced",
+    "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Mesh Instance 3d Skinned Ribbon",
     "file": "unit-mesh-instance-3d-skinned-ribbon.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3326,6 +3336,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Canvas Item Material",
+    "file": "unit-control-canvas-item-material.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Canvas Modulate",
+    "file": "unit-control-canvas-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Containers",
     "file": "unit-control-containers.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3363,6 +3383,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Layout Direction Rtl",
     "file": "unit-control-layout-direction-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Light Mask",
+    "file": "unit-control-light-mask.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Light2d",
+    "file": "unit-control-light2d.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -4163,6 +4193,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Control Msaa",
     "file": "unit-sub-viewport-control-msaa.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Control Outer Light",
+    "file": "unit-sub-viewport-control-outer-light.tscn",
     "category": "Unit - Viewports"
   },
   {

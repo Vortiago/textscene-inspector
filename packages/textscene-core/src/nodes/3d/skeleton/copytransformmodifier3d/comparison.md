@@ -1,16 +1,15 @@
 ---
 type: CopyTransformModifier3D
 category: 3D
-status: unimplemented
-fixture: unit-copy-transform-modifier-3d.tscn
-# image: unit-copy-transform-modifier-3d
-visual: false
-renders_as: nothing yet, Godot copies a reference transform onto an apply bone, the previewer does not
+status: limitation
+fixture: unit-copy-transform-modifier-3d-ribbon.tscn
+image: unit-copy-transform-modifier-3d-ribbon
+renders_as: nothing (a transform-only modifier that edits the pose of the Skeleton3D above it)
 ---
 
 # CopyTransformModifier3D
 
-Copies a reference bone's or node's transform onto an apply bone each frame, masked per component and per axis by its `settings/<i>/` entries. Godot runs that copy, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+Copies a reference bone's or node's transform onto an apply bone, masked per component and per axis by its `settings/<i>/` entries. The Skeleton3D pass runs the copy on the file pose, in child order, and the result feeds the skin only. `active`, `influence`, `amount`, `relative`, `additive`, `invert` and a reference node act as `_process_copy` reads them. The fixture's ribbon bends a second time where b4 takes the turn of b2.
 
 ## Linting
 
@@ -29,4 +28,9 @@ Strict parsing format-checks these `CopyTransformModifier3D` properties, plus 2 
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-CopyTransformModifier3D registers `parseNode3D` directly, so `setting_count` and every `settings/<i>/` leaf is validated but never read into the scene tree. A `copy`, `axes` or `invert` bit outside the three-bit flag list is a warning strict reports and lenient drops.
+The parser reads `active`, `influence`, `setting_count` and every `settings/<i>/` leaf. A `copy`, `axes` or `invert` bit outside the three-bit flag list is a warning strict reports and lenient keeps, as Godot keeps the integer.
+
+## Known limitations
+
+- **Not drawn** A CopyTransformModifier3D under a Skeleton3D inside an instanced GLB changes nothing, where Godot runs it.
+- **Not drawn** A reference node that is a BoneAttachment3D, or sits below one, reads the authored transform, where Godot reads the transform of the bone.

@@ -13,7 +13,8 @@ SubViewportContainer shows its SubViewport children's render targets, drawn as a
 surface in the canvas (ADR-0033). It samples each target's plain view, as Godot draws it
 (`subviewport_container.cpp:142,144`). It filters the stored sRGB bytes of a canvas-content
 target and multiplies them by its modulate in sRGB. The content inside is lit by the lights
-inside its sub-viewport and by none on the canvas around it.
+inside its sub-viewport and by none on the canvas around it. The surface is a canvas item of the
+canvas around the container, so that canvas's lights and CanvasModulate reach it once.
 
 ## Linting
 
@@ -47,4 +48,3 @@ class the pinned catalog does not list.
 
 - **Needs runtime** A sub-viewport a script fills when the game starts shows only what the
   scene file holds, so a shared-world split screen differs from Godot.
-- **Approximated** A Light2D on the container's canvas does not light the surface it draws, since the previewer draws every native Control unlit.
