@@ -15,16 +15,6 @@ export function cachedUniqueNameOwnership(roots: readonly RawNode[]): UniqueName
   return sceneSeating(roots).ownership;
 }
 
-/**
- * The root's claim table reduced to `%Name` -> path, for a caller finishing a NodePath walk over a
- * path-keyed node map.
- */
-export function uniqueNamePaths(roots: readonly RawNode[]): Map<string, string> {
-  const paths = new Map<string, string>();
-  for (const [key, claim] of cachedUniqueNameOwnership(roots).claims) paths.set(key, claim.path);
-  return paths;
-}
-
 /** The same reduction onto `livePath`, for the composed render tree. One object per tree. */
 export const cachedUniqueNameLivePaths = perObject(
   (roots: readonly RawNode[]): ReadonlyMap<string, string> =>

@@ -40,6 +40,7 @@ import {
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
+import { useLivePatchedNode } from './liveNodePatches.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
@@ -238,7 +239,15 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * component, with its inline children and the `extraChildren` of the instance
  * fallback. A merged instance root renders here like an authored node.
  */
-function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }: PlainNodeProps): ReactNode {
+function PlainNode({
+  node: authored,
+  path,
+  children: extraChildren,
+  inlineChildrenOrder,
+}: PlainNodeProps): ReactNode {
+  // A RemoteTransform target and a path-mode CSGPolygon3D read what the live scene passes bind
+  // at their path, since a sub-scene's node is shared by every instance of it (ADR-0060).
+  const node = useLivePatchedNode(authored, path);
   const ownOrder = useTreeOrder();
   const inlineBase = inlineChildrenOrder ?? ownOrder;
   const inlineOrders = useMemo(

@@ -13,23 +13,6 @@ export function joinPath(parentPath: string, childName: string): string {
 }
 
 /**
- * Every node of the authored trees `roots`, keyed by its path from the root, each parent before its
- * children. The scene passes read paths through it.
- *
- * @canonical The authored nodes of a scene by their path from the root
- */
-export function nodesByPath<N extends { name: string; children: N[] }>(roots: readonly N[]): Map<string, N> {
-  const nodes = new Map<string, N>();
-  const walk = (node: N, parentPath: string): void => {
-    const path = joinPath(parentPath, node.name);
-    nodes.set(path, node);
-    for (const child of node.children) walk(child, path);
-  };
-  for (const root of roots) walk(root, '');
-  return nodes;
-}
-
-/**
  * The path of the node that holds the one at `path`, or null where `path` names a single segment.
  *
  * @canonical The parent of a node path

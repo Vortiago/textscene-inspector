@@ -68,6 +68,9 @@ import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry'
 import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
 import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
 import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
+import { liveNodePatches } from '../../liveNodePatches';
+import { liveScenePassResults } from '../../liveScenePass';
+import { patchedNode, type NodePatches } from '../../nodePatch';
 import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
@@ -401,6 +404,9 @@ function buildForest(
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
   const tree = liveTreeOf(nodes, ctx);
+  // Read for the first Node2D above a Control, so a scene of Controls alone never runs the passes.
+  let patches: NodePatches | undefined;
+  const patchesOfTree = () => (patches ??= liveScenePassResults(liveNodePatches, tree));
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
@@ -679,7 +685,10 @@ function buildForest(
 
     // A real Control's descendants start a fresh accumulation. A skipped node
     // folds its own CanvasItem transform into what they inherit.
-    const childSkippedAncestors = isControl ? null : nextSkippedAncestors(collapsed, skippedAncestors);
+    // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
+    const placed =
+      !isControl && isCanvasItem(collapsed) ? patchedNode(collapsed, patchesOfTree().get(path)) : collapsed;
+    const childSkippedAncestors = isControl ? null : nextSkippedAncestors(placed, skippedAncestors);
     // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
     // so the flag ends it on the Control itself or on any CanvasItem above.
     const topLevel = isTopLevelItem(collapsed);

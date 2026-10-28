@@ -3,7 +3,6 @@ import {
   belowRoot,
   joinPath,
   getAncestorPaths,
-  nodesByPath,
   pathBetween,
   pathUnder,
   spelledLiveNodePath,
@@ -91,30 +90,5 @@ describe('nodePath utilities', () => {
     it('should handle three-level path', () => {
       expect(getAncestorPaths('A/B/C')).toEqual(['A', 'A/B']);
     });
-  });
-});
-
-describe('nodesByPath', () => {
-  interface Tree {
-    name: string;
-    children: Tree[];
-  }
-  const leaf = (name: string): Tree => ({ name, children: [] });
-
-  it('keys every node by its path from the root, parents before their children', () => {
-    const roots = [{ name: 'Root', children: [{ name: 'A', children: [leaf('B')] }, leaf('C')] }];
-
-    expect([...nodesByPath(roots).keys()]).toEqual(['Root', 'Root/A', 'Root/A/B', 'Root/C']);
-  });
-
-  it('holds the node itself under its path', () => {
-    const child = leaf('A');
-    const root = { name: 'Root', children: [child] };
-
-    expect(nodesByPath([root]).get('Root/A')).toBe(child);
-  });
-
-  it('holds nothing for no roots (edge case)', () => {
-    expect(nodesByPath([]).size).toBe(0);
   });
 });

@@ -52,7 +52,7 @@ export interface CSGPolygon3DProperties extends CSGShape3DProperties {
   smoothFaces: boolean;
   /** Reverse winding and negate normals (CSGPrimitive3D). Godot default false. */
   flipFaces: boolean;
-  /** Filled in by the scene-wide `path_node` pass, not by the parser. */
+  /** Laid over the node by the `path_node` pass over the Live scene tree, never by the parser. */
   resolvedPath?: CSGPolygon3DResolvedPath;
   /** `material` path (SubResource/ExtResource); StandardMaterial3D in practice. */
   materialPath?: string;

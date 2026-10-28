@@ -16,7 +16,7 @@ export type LiveScenePass<Result> = (tree: LiveTree) => ReadonlyMap<string, Resu
 const resultsByPass = perObject((pass: LiveScenePass<unknown>) => perObject((tree: LiveTree) => pass(tree)));
 
 /** What `pass` binds in `tree`, run once however many readers ask. */
-function liveScenePassResults<Result>(
+export function liveScenePassResults<Result>(
   pass: LiveScenePass<Result>,
   tree: LiveTree
 ): ReadonlyMap<string, Result> {
@@ -33,11 +33,28 @@ export function useLiveScenePass<Result>(
   path: string | null
 ): Result | undefined {
   const select = useMemo(
-    () =>
-      path === null
-        ? null
-        : (live: SharedLiveTree) => liveScenePassResults(pass, liveTreeOf(live.roots, live.ctx)).get(path),
-    [pass, path]
+    () => (path === null ? null : (results: ReadonlyMap<string, Result>) => results.get(path)),
+    [path]
   );
-  return useLiveTreeSelection(select, Object.is);
+  return useLiveScenePassSelection(pass, select, Object.is);
+}
+
+/**
+ * A value `select` reads from everything `pass` binds in the shared live tree, undefined with no
+ * tree. The reader re-renders only where `isSame` says a load changed the value. A null `select` asks
+ * nothing, so it watches no load. `pass`, `select` and `isSame` must be stable.
+ */
+export function useLiveScenePassSelection<Result, T>(
+  pass: LiveScenePass<Result>,
+  select: ((results: ReadonlyMap<string, Result>) => T) | null,
+  isSame: (a: T, b: T) => boolean
+): T | undefined {
+  const selectFromTree = useMemo(
+    () =>
+      select === null
+        ? null
+        : (live: SharedLiveTree) => select(liveScenePassResults(pass, liveTreeOf(live.roots, live.ctx))),
+    [pass, select]
+  );
+  return useLiveTreeSelection(selectFromTree, isSame);
 }

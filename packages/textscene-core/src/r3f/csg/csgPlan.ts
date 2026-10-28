@@ -9,6 +9,7 @@ import type { TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import { joinPath } from '../../utils/nodePath';
 import { localMatrix3D } from '../nodeTreeTransforms';
+import { patchedNode, type NodePatches } from '../nodePatch';
 
 import { CsgOperation } from '../../godot/scene/csg.js';
 
@@ -57,6 +58,8 @@ interface CsgPlanShape {
 interface BuildOptions {
   /** Paths hidden with the scene-tree eye toggle, treated like `visible = false`. */
   hiddenPaths?: ReadonlySet<string>;
+  /** What the live scene passes bind into the nodes below the root, by live path. */
+  patches?: NodePatches;
   /**
    * The one thing the plan asks about a node type; null means "not a CSG shape". Injected
    * as a single lookup so the builder stays testable without the r3f registry, and so a
@@ -71,13 +74,19 @@ function isVisible(node: TscnNode, path: string, hidden?: ReadonlySet<string>): 
 }
 
 /**
- * The CSG children of `node`, with their paths. Descending ONLY into CSG-typed children is
- * the rule the header explains, so both walks below read it from here.
+ * The CSG children of `node`, with their paths, each as the live scene passes bind it. Descending
+ * ONLY into CSG-typed children is the rule the header explains, so both walks below read it from here.
  */
-function csgChildren(node: TscnNode, path: string, lookup: BuildOptions['lookup']): [TscnNode, string][] {
+function csgChildren(
+  node: TscnNode,
+  path: string,
+  { lookup, patches }: Pick<BuildOptions, 'lookup' | 'patches'>
+): [TscnNode, string][] {
   const out: [TscnNode, string][] = [];
   for (const child of node.children) {
-    if (lookup(child.type) !== null) out.push([child, joinPath(path, child.name)]);
+    if (lookup(child.type) === null) continue;
+    const childPath = joinPath(path, child.name);
+    out.push([patchedNode(child, patches?.get(childPath)), childPath]);
   }
   return out;
 }
@@ -104,7 +113,7 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
   /** The skipped node and every CSG node under it, where the recursion stopped. */
   const markInvisible = (node: TscnNode, path: string): void => {
     invisiblePaths.add(path);
-    for (const [child, childPath] of csgChildren(node, path, lookup)) markInvisible(child, childPath);
+    for (const [child, childPath] of csgChildren(node, path, options)) markInvisible(child, childPath);
   };
   const keyParts: string[] = [`root:${root.type}`];
 
@@ -155,7 +164,7 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
     }
 
     const children: CsgContribution[] = [];
-    for (const [child, childPath] of csgChildren(node, path, lookup)) {
+    for (const [child, childPath] of csgChildren(node, path, options)) {
       const folded = visit(child, childPath, matrix, false);
       if (folded) children.push(folded);
     }

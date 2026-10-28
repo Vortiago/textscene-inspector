@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitremotetransform3dinst"]
+
+; The one variable: the relay and its target sit in an instanced scene. The host instances
+; unit-remote-transform-3d.tscn, whose RemoteTransform3D pushes its transform onto the cube, so the
+; cube must stand where it does in that scene. No other scene moves a target inside an instance, so
+; no other golden shows a regression in it.
+
+[ext_resource type="PackedScene" path="res://unit-remote-transform-3d.tscn" id="1_relay"]
+
+[node name="Host" type="Node3D"]
+
+[node name="Relay" parent="." instance=ExtResource("1_relay")]

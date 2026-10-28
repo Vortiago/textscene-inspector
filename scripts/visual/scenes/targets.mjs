@@ -49,7 +49,7 @@ export const TILE_AND_TARGET_SCENES = [
   },
 
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
-  // remote_path names, resolved once at parse time (r3f/remoteTransforms.ts).
+  // remote_path names, resolved over the Live scene tree (remoteTransforms.ts).
   // Each target is authored away from its relay. Verified against Godot 4.6.3.
 
   // The cube is authored at -2 X and driven to the relay's +2.
@@ -57,6 +57,9 @@ export const TILE_AND_TARGET_SCENES = [
   // The pentagon is authored at the grey ghost and driven to the relay's
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
+  // The same relays and targets inside an instanced scene stand where they do in their own files.
+  { name: 'remote-transform-3d-instanced', file: 'unit-remote-transform-3d-instanced.tscn' },
+  { name: 'remote-transform-2d-instanced', file: 'unit-remote-transform-2d-instanced.tscn', mode: '2d' },
 
   // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
   // environment applies inside the target and again on the consuming quad (curve squared). The

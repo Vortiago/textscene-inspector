@@ -1733,8 +1733,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform 2d Instanced",
+    "file": "unit-remote-transform-2d-instanced.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Instanced",
+    "file": "unit-remote-transform-3d-instanced.tscn",
     "category": "Other"
   },
   {
@@ -3826,6 +3836,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Polygon Depth",
     "file": "unit-csg-polygon-depth.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Polygon Path Instanced",
+    "file": "unit-csg-polygon-path-instanced.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

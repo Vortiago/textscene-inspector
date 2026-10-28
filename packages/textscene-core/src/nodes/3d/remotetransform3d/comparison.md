@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that drives its target)
 
 # RemoteTransform3D
 
-Pushes its own transform onto the node its `remote_path` names and has no visual of its own. The previewer applies the drive once at load, so the visible cube is the driven target sitting at the relay's position.
+Pushes its own transform onto the node its `remote_path` names and has no visual of its own. The previewer applies the drive over the live scene tree. The visible cube is the driven target sitting at the relay's position, also across an instanced scene boundary.
 
 ## Linting
 
@@ -35,4 +35,4 @@ Strict parsing format-checks these `RemoteTransform3D` properties, plus 17 inher
 
 ## Known limitations
 
-- **Approximated** The target sits apart from Godot's when the relay is inside an instanced scene, drives its own ancestor, or the target's parent rotates or scales.
+- **Approximated** The target sits apart from Godot's when the relay drives its own ancestor, or the target's parent rotates or scales.

@@ -10,6 +10,7 @@ import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
+import { useLivePatchedNode } from '../../liveNodePatches.js';
 import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
 import { useIsEmptyShape } from '../../contexts/EmptyShapesContext.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
@@ -31,8 +32,10 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   // The merged node and its originating instance ref. It re-derives when a
   // lazily loaded sub-scene lands.
   const entry = useLiveNode(selectedNodePath);
+  // The properties the live scene passes bind, such as the transform a RemoteTransform pushes.
+  const node = useLivePatchedNode(entry?.node ?? null, selectedNodePath);
 
-  if (!entry || !selectedNodePath) {
+  if (!entry || !node || !selectedNodePath) {
     return (
       <div className={styles.root}>
         <div className={styles.empty}>Select a node to see its properties.</div>
@@ -40,7 +43,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
     );
   }
 
-  const { node, instanceRef } = entry;
+  const { instanceRef } = entry;
   const path = selectedNodePath;
   const registration = nodeRegistry.getRegistration(node.type);
   // See TreeNode: a parser registration does not mean the node renders.

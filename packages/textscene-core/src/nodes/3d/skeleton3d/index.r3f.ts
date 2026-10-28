@@ -12,5 +12,5 @@ nodeComponentRegistry.register({
   typeName: 'Skeleton3D',
   Component: Node3D,
   renderIntent: 'transform-only',
-  scenePass: { stage: 'live' },
+  scenePass: true,
 });

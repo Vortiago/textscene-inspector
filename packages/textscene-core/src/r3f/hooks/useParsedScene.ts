@@ -9,7 +9,6 @@ import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { TscnScene } from '../../parser/types.js';
 import { isGltfPath } from '../../godot/import/gltf.js';
 import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
-import { nodeComponentRegistry } from '../NodeComponentRegistry.js';
 
 export interface ParseResult {
   sceneGraph: SceneGraph | null;
@@ -49,15 +48,9 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
 }
 
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
-  // Every registered parse stage `NodeComponentRegistration.scenePass`, transforms before paths,
-  // rewrites the parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
-  let nodes = tscnScene.nodes;
-  for (const { run } of nodeComponentRegistry.parseScenePasses()) {
-    nodes = run(nodes, tscnScene.internalResources);
-  }
   const parsedScene = tscnSceneToParsedScene(
     rootScenePath,
-    nodes,
+    tscnScene.nodes,
     tscnScene.externalResources,
     tscnScene.internalResources,
     tscnScene.editableInstances

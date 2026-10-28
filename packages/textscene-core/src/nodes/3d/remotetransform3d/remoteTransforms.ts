@@ -2,18 +2,23 @@
  * The RemoteTransform pass. A RemoteTransform3D or RemoteTransform2D copies its own transform onto
  * the node its `remote_path` names on enter-tree (Godot's `_update_remote()`), so a static render
  * shows the target at the relay's transform. It is a description-level effect, not simulation, so
- * ADR-0008 (what a node draws) does not govern it. Semantics are measured on Godot 4.6.3.
+ * ADR-0008 (what a node draws) does not govern it. It runs on the live stage (ADR-0060), as Godot
+ * resolves the path with `get_node` on the live tree (`remote_transform_3d.cpp:35-36`), across an
+ * instance border too. Semantics are measured on Godot 4.6.3.
  */
 
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
-import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
-import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
-import { nodesByPath, parentPathOf } from '../../../utils/nodePath.js';
-import { uniqueNamePaths } from '../../../utils/uniqueNames.js';
-import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
+import { parentPathOf } from '../../../utils/nodePath.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../../../godot/string/nodePath.js';
+import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
+import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
+import { nodePathUniquePaths } from '../../../r3f/nodePathUniqueNames.js';
+import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
+import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -23,8 +28,6 @@ import {
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
-
-const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
 
 interface RemoteFlags {
   updatePosition: boolean;
@@ -42,29 +45,33 @@ interface RelayProps {
 }
 
 /**
- * Resolve every RemoteTransform in `nodes`, mutating each target's transform in place, and return
- * the same array. It runs once, after parse and before the SceneGraph (`useParsedScene.toParseResult`),
- * so every consumer reads the moved target. The parse is memoized per content, so a re-run is idempotent.
+ * The properties every RemoteTransform of `tree` pushes onto its target, by the target's live path.
+ * A relay reads the transforms the relays before it, in tree order, have already pushed, as Godot's
+ * enter-tree order applies a one-direction chain. A relay that drives its own ancestor is not
+ * iterated to a fixed point. A target that is not a Node3D (for a RemoteTransform3D) or a Node2D
+ * (for a RemoteTransform2D) takes nothing, as the cast fails (`remote_transform_3d.cpp:54`).
  */
-export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
-  // Only the authored root scene. The live scene tree (ADR-0013) composes instanced sub-scenes
-  // later, so a relay inside an instance, or a `remote_path` that crosses one, is not resolved.
-  const nodeByPath = nodesByPath(nodes);
-  const relays: { node: TscnNode; path: string }[] = [];
-  for (const [path, node] of nodeByPath) {
-    if (REMOTE_TRANSFORM_TYPES.has(node.type)) relays.push({ node, path });
-  }
+export function applyRemoteTransforms(tree: LiveTree): NodePatches {
+  const placed = new Map<string, NodePatch>();
+  tree.fold<void, void>(undefined, (relay, _, descend) => {
+    const { type } = relay.step.node;
+    if (type === 'RemoteTransform3D') placeTarget3D(relay, tree, placed);
+    else if (type === 'RemoteTransform2D') placeTarget2D(relay, tree, placed);
+    descend();
+  });
+  return placed;
+}
 
-  if (relays.length === 0) return nodes;
-  const uniquePaths = uniqueNamePaths(nodes);
-
-  // Document (pre-order) order, as Godot's enter-tree order applies a one-direction chain. A relay
-  // that drives its own ancestor is not iterated to a fixed point.
-  for (const { node, path } of relays) {
-    if (node.type === 'RemoteTransform3D') applyRelay3D(node, path, nodeByPath, uniquePaths);
-    else applyRelay2D(node, path, nodeByPath, uniquePaths);
-  }
-  return nodes;
+/** The node `relay`'s `remote_path` names, when it descends from `targetClass`, else null. */
+function remoteTargetOf(relay: LiveLink, tree: LiveTree, targetClass: 'Node3D' | 'Node2D'): LiveLink | null {
+  const remotePath = (relay.step.node.properties as RelayProps).remote_path;
+  // Only a `%Name` segment reads the table, which allocates for each relay on each load.
+  const uniquePaths = remotePath?.includes(UNIQUE_NODE_PREFIX)
+    ? nodePathUniquePaths(relay.path, tree.roots, tree.ctx)
+    : undefined;
+  const targetPath = resolveNodePathLiteral(relay.path, remotePath, uniquePaths);
+  const target = targetPath === null ? null : tree.at(targetPath);
+  return target && descendsFromClass(target.step.node.type, targetClass) ? target : null;
 }
 
 /** Parse a relay's flags, each defaulting to Godot's `true`. */
@@ -77,32 +84,24 @@ function readFlags(props: RelayProps): RemoteFlags {
   };
 }
 
-function applyRelay3D(
-  relay: TscnNode,
-  relayPath: string,
-  nodeByPath: Map<string, TscnNode>,
-  uniquePaths: ReadonlyMap<string, string>
-): void {
-  const props = relay.properties as RelayProps;
-  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path, uniquePaths);
-  if (!targetPath) return;
-  const target = nodeByPath.get(targetPath);
+function placeTarget3D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
+  const target = remoteTargetOf(relay, tree, 'Node3D');
   if (!target) return;
 
-  const flags = readFlags(props);
+  const flags = readFlags(relay.step.node.properties as RelayProps);
   // Local mode leaves the target at its authored transform in a static render (a matched pair,
   // measured). `_update_remote` keys off the relay's transform-changed notification, which the
   // global path satisfies on load and the local path does not.
   if (!flags.useGlobal) return;
 
-  const relayGlobal = globalMatrix3D(relayPath, nodeByPath);
-  const targetGlobal = globalMatrix3D(targetPath, nodeByPath);
-  const desired = composeSelected3D(targetGlobal, relayGlobal, flags);
-  const parentPath = parentPathOf(targetPath);
-  const parentGlobal = parentPath ? globalMatrix3D(parentPath, nodeByPath) : new THREE.Matrix4();
+  const relayGlobal = globalMatrix3D(relay.path, nodesOnTheWayTo(tree, relay.path, placed));
+  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
+  const desired = composeSelected3D(globalMatrix3D(target.path, targetChain), relayGlobal, flags);
+  const parentPath = parentPathOf(target.path);
+  const parentGlobal = parentPath ? globalMatrix3D(parentPath, targetChain) : new THREE.Matrix4();
   const newLocal = parentGlobal.clone().invert().multiply(desired);
 
-  (target.properties as Node3DProperties).transform = matrixToTransform3D(newLocal);
+  placed.set(target.path, { transform: matrixToTransform3D(newLocal) });
 }
 
 /**
@@ -129,35 +128,24 @@ function composeSelected3D(base: THREE.Matrix4, source: THREE.Matrix4, flags: Re
   );
 }
 
-function applyRelay2D(
-  relay: TscnNode,
-  relayPath: string,
-  nodeByPath: Map<string, TscnNode>,
-  uniquePaths: ReadonlyMap<string, string>
-): void {
-  const props = relay.properties as RelayProps;
-  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path, uniquePaths);
-  if (!targetPath) return;
-  const target = nodeByPath.get(targetPath);
+function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
+  const target = remoteTargetOf(relay, tree, 'Node2D');
   if (!target) return;
 
-  const flags = readFlags(props);
-  // Local mode leaves the target in place, as in `applyRelay3D`.
+  const flags = readFlags(relay.step.node.properties as RelayProps);
+  // Local mode leaves the target in place, as in `placeTarget3D`.
   if (!flags.useGlobal) return;
 
-  const relayGlobal = globalTransform2D(relayPath, nodeByPath);
-  const targetGlobal = globalTransform2D(targetPath, nodeByPath);
-  const desired = composeSelected2D(targetGlobal, relayGlobal, flags);
-  const parentPath = parentPathOf(targetPath);
-  const parentGlobal = parentPath ? globalTransform2D(parentPath, nodeByPath) : TRANSFORM2D_IDENTITY;
+  const relayGlobal = globalTransform2D(relay.path, nodesOnTheWayTo(tree, relay.path, placed));
+  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
+  const desired = composeSelected2D(globalTransform2D(target.path, targetChain), relayGlobal, flags);
+  const parentPath = parentPathOf(target.path);
+  const parentGlobal = parentPath ? globalTransform2D(parentPath, targetChain) : TRANSFORM2D_IDENTITY;
   const newLocal = multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
 
   // Godot's RemoteTransform2D pushes position, rotation and scale only. The target keeps its `skew`.
-  const dec = decomposeTransform2D(newLocal);
-  const tp = target.properties as Node2DProperties;
-  tp.position = dec.position;
-  tp.rotation = dec.rotation;
-  tp.scale = dec.scale;
+  const { position, rotation, scale } = decomposeTransform2D(newLocal);
+  placed.set(target.path, { position, rotation, scale });
 }
 
 function localTransform2D(node: TscnNode): Transform2DColumns {

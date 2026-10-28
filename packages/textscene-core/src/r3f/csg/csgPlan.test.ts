@@ -256,6 +256,36 @@ describe('buildCsgPlan', () => {
     });
   });
 
+  describe('patches', () => {
+    it('plans a descendant as the live scene passes bind it, in its place and its matrix', () => {
+      const root = node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', translated(1, 0, 0))]);
+      const patches = new Map([['R/A', translated(5, 0, 0)]]);
+      const plan = buildCsgPlan(root, 'R', { ...OPTS, patches })!;
+
+      const [, sphere] = solids(plan);
+      expect(sphere!.matrix.elements[12]).toBe(5);
+      expect((sphere!.node.properties as ReturnType<typeof translated>).transform.origin.x).toBe(5);
+    });
+
+    it('leaves the authored node in place for a path with no patch', () => {
+      const authored = node('CSGSphere3D', 'A', translated(1, 0, 0));
+      const plan = buildCsgPlan(node('CSGBox3D', 'R', {}, [authored]), 'R', {
+        ...OPTS,
+        patches: new Map([['R/Other', translated(5, 0, 0)]]),
+      })!;
+
+      expect(solids(plan)[1]!.node).toBe(authored);
+    });
+
+    it('changes the cache key with the patched transform', () => {
+      const root = () => node('CSGBox3D', 'R', {}, [node('CSGSphere3D', 'A', translated(1, 0, 0))]);
+      const keyAt = (x: number) =>
+        buildCsgPlan(root(), 'R', { ...OPTS, patches: new Map([['R/A', translated(x, 0, 0)]]) })!.cacheKey;
+
+      expect(keyAt(5)).not.toBe(keyAt(6));
+    });
+  });
+
   it('drops a contribution whose matrix is not finite', () => {
     const root = node('CSGBox3D', 'Root', {}, [
       node('CSGSphere3D', 'Bad', {

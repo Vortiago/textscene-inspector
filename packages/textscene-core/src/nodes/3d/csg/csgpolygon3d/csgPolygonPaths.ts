@@ -1,19 +1,24 @@
 /**
  * CSGPolygon3D `path_node` resolution pass (Godot MODE_PATH). In PATH mode the outline sweeps
- * along a curve on a different node, reached by a relative NodePath (a sibling or a child) that a
- * render component cannot reach. So this runs once over the parsed tree, after
- * `applyRemoteTransforms` and before the SceneGraph is assembled, as that pass does.
+ * along a curve on a different node, reached by a NodePath that a render component cannot reach.
+ * It runs on the live stage (ADR-0060), as Godot resolves `path_node` with `get_node_or_null` on the
+ * live tree (`csg_shape.cpp:2176`), across an instance border too. It reads where the RemoteTransform
+ * pass left the nodes, so it takes that pass's result.
  */
 
-import type { TscnNode, TscnInternalResource } from '../../../../parser/types.js';
+import type { LiveLink, LiveTree } from '../../../../r3f/liveSceneTree.js';
 import type { CSGPolygon3DProperties } from './types.js';
 import type { Path3DProperties } from '../../../../nodes/paths/path3d/types.js';
-import { nodesByPath } from '../../../../utils/nodePath.js';
-import { uniqueNamePaths } from '../../../../utils/uniqueNames.js';
-import { resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../godot/string/nodePath.js';
+import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform.js';
+import { nodePathUniquePaths } from '../../../../r3f/nodePathUniqueNames.js';
+import type { NodePatch, NodePatches } from '../../../../r3f/nodePatch.js';
+import {
+  resolveNodePathLiteral,
+  unclaimedUniqueNames,
+  UNIQUE_NODE_PREFIX,
+} from '../../../../godot/string/nodePath.js';
 import { resolveCurve3D } from '../../../../resources/curves/curve3d/index.js';
-import { globalMatrix3D, matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms.js';
-import { warn } from '../../../../logger.js';
+import { warnOnce } from '../../../../utils/warnOnce.js';
 
 /** Godot's MODE_PATH. */
 const MODE_PATH = 2;
@@ -21,75 +26,82 @@ const MODE_PATH = 2;
 const MIN_CURVE_POINTS = 2;
 
 /**
- * Resolve every PATH-mode CSGPolygon3D's `path_node` in place, so render, bounds, selection, the
- * tree viewer, the inspector and the evaluator read one answer, testable without a renderer.
- * Returns the same array. Idempotent: a re-run writes the same `resolvedPath`, and the parse it
- * consumes is memoized per content.
+ * The `resolvedPath` of every PATH-mode CSGPolygon3D of `tree` whose `path_node` names a Path3D with
+ * a curve, by the polygon's live path, so render, bounds, selection, the tree viewer, the inspector
+ * and the evaluator read one answer, testable without a renderer. `placed` holds what the
+ * RemoteTransform pass moved, which the Path3D's global transform reads.
  */
-export function resolveCsgPolygonPaths(
-  nodes: TscnNode[],
-  internalResources: readonly TscnInternalResource[]
-): TscnNode[] {
-  const nodeByPath = nodesByPath(nodes);
-  const polygons: { node: TscnNode; path: string }[] = [];
-  for (const [path, node] of nodeByPath) {
-    if (node.type === 'CSGPolygon3D' && (node.properties as CSGPolygon3DProperties).mode === MODE_PATH) {
-      polygons.push({ node, path });
+export function resolveCsgPolygonPaths(tree: LiveTree, placed: NodePatches): NodePatches {
+  const patches = new Map<string, NodePatch>();
+  tree.fold<void, void>(undefined, (polygon, _, descend) => {
+    const resolvedPath = resolvedPathOf(polygon, tree, placed);
+    if (resolvedPath) patches.set(polygon.path, { resolvedPath });
+    descend();
+  });
+  return patches;
+}
+
+/** The curve and base of the Path3D that `polygon` sweeps along, or undefined where it sweeps none. */
+function resolvedPathOf(
+  polygon: LiveLink,
+  tree: LiveTree,
+  placed: NodePatches
+): CSGPolygon3DProperties['resolvedPath'] {
+  const { node } = polygon.step;
+  const props = node.properties as CSGPolygon3DProperties;
+  if (node.type !== 'CSGPolygon3D' || props.mode !== MODE_PATH) return undefined;
+
+  // `path_node = NodePath("%Track")` addresses the owner's claim table, not a child. Only a
+  // `%Name` segment reads the table, which allocates for each polygon on each load.
+  const uniquePaths = props.pathNode?.includes(UNIQUE_NODE_PREFIX)
+    ? nodePathUniquePaths(polygon.path, tree.roots, tree.ctx)
+    : undefined;
+  const targetPath = resolveNodePathLiteral(polygon.path, props.pathNode, uniquePaths);
+  if (!targetPath) {
+    // A unique name nothing claims is a dangling reference, not a path that deliberately
+    // addresses no node. Report it against the literal, since there is no resolved path to quote.
+    const unclaimed = unclaimedUniqueNames(props.pathNode, uniquePaths);
+    if (unclaimed.length > 0) {
+      warnOnce(
+        node,
+        `${polygon.path}:unclaimed`,
+        `[CSGPolygon3D] ${polygon.path}: path_node names ${unclaimed.join(', ')}, which no node in this scene claims.`
+      );
     }
+    return undefined;
   }
 
-  if (polygons.length === 0) return nodes;
-
-  // `path_node = NodePath("%Track")` addresses the owner's claim table, not a child.
-  const uniquePaths = uniqueNamePaths(nodes);
-
-  for (const { node, path } of polygons) {
-    const props = node.properties as CSGPolygon3DProperties;
-    delete props.resolvedPath;
-
-    // As in `applyRemoteTransforms`, an absolute path (`/root/…`, the live tree) and a `path_node`
-    // across an instanced sub-scene boundary (composed later by the live tree, ADR-0013) stay
-    // unresolved.
-    const targetPath = resolveNodePathLiteral(path, props.pathNode, uniquePaths);
-    if (!targetPath) {
-      // A unique name nothing claims is a dangling reference, not a path that deliberately
-      // addresses no node. Report it against the literal, since there is no resolved path to quote.
-      const unclaimed = unclaimedUniqueNames(props.pathNode, uniquePaths);
-      if (unclaimed.length > 0) {
-        warn(
-          `[CSGPolygon3D] ${path}: path_node names ${unclaimed.join(', ')}, which no node in this scene claims.`
-        );
-      }
-      continue;
-    }
-
-    const target = nodeByPath.get(targetPath);
-    if (!target) {
-      warn(`[CSGPolygon3D] ${path}: path_node "${targetPath}" does not resolve to a node.`);
-      continue;
-    }
-    // Godot casts to Path3D and bails on failure rather than duck-typing.
-    if (target.type !== 'Path3D') {
-      warn(`[CSGPolygon3D] ${path}: path_node "${targetPath}" is a ${target.type}, not a Path3D.`);
-      continue;
-    }
-
-    const curveRef = (target.properties as Path3DProperties).curve;
-    const curvePoints = resolveCurve3D(curveRef, internalResources);
-    if (curvePoints.length < MIN_CURVE_POINTS) continue;
-
-    // `path_local` builds the sweep in the polygon's own space. Otherwise Godot uses the Path3D's
-    // global transform as the base, builds the brush there and consumes it as local geometry, so a
-    // non-local sweep lands doubly transformed. That Godot quirk is kept for parity. Scenes in
-    // practice set path_local = true.
-    const baseTransform = props.pathLocal
-      ? null
-      : matrixToTransform3D(globalMatrix3D(targetPath, nodeByPath));
-
-    // Plain serialisable data, no closures or `THREE.Matrix4`, because the inspector walks
-    // `node.properties` directly. The component turns it into a sampler and a matrix.
-    props.resolvedPath = { curvePoints, baseTransform };
+  const target = tree.at(targetPath);
+  if (!target) {
+    warnOnce(
+      node,
+      `${polygon.path}:missing`,
+      `[CSGPolygon3D] ${polygon.path}: path_node "${targetPath}" does not resolve to a node.`
+    );
+    return undefined;
+  }
+  // Godot casts to Path3D and bails on failure rather than duck-typing.
+  if (target.step.node.type !== 'Path3D') {
+    warnOnce(
+      node,
+      `${polygon.path}:type`,
+      `[CSGPolygon3D] ${polygon.path}: path_node "${targetPath}" is a ${target.step.node.type}, not a Path3D.`
+    );
+    return undefined;
   }
 
-  return nodes;
+  // The Path3D's `curve` names a SubResource of the file that wrote the Path3D.
+  const curveRef = (target.step.node.properties as Path3DProperties).curve;
+  const curvePoints = resolveCurve3D(curveRef, target.step.scope.internalResources);
+  if (curvePoints.length < MIN_CURVE_POINTS) return undefined;
+
+  // `path_local` builds the sweep in the polygon's own space. Otherwise Godot uses the Path3D's
+  // global transform as the base, builds the brush there and consumes it as local geometry, so a
+  // non-local sweep lands doubly transformed. That Godot quirk is kept for parity. Scenes in
+  // practice set path_local = true.
+  const baseTransform = props.pathLocal ? null : liveGlobalTransform3D(tree, targetPath, placed);
+
+  // Plain serialisable data, no closures or `THREE.Matrix4`, because the inspector walks
+  // `node.properties` directly. The component turns it into a sampler and a matrix.
+  return { curvePoints, baseTransform };
 }

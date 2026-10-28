@@ -1,9 +1,10 @@
 [gd_scene load_steps=3 format=3 uid="uid://unitcsgpolypath"]
 
 ; CSGPolygon3D MODE_PATH sweeps the outline along a Curve3D owned by a different node, which a
-; render component cannot reach. The scene-wide pass in r3f/csgPolygonPaths.ts resolves
-; `path_node` after parse. Both corpus shapes appear: a sibling (csg.tscn:365, the Road) and a
-; child (racetrack_csg.tscn:60). A resolver that assumed either one drops the other's geometry.
+; render component cannot reach. The pass in csgPolygonPaths.ts resolves `path_node` over the Live
+; scene tree. Both corpus shapes appear: a sibling (csg.tscn:365, the Road) and a child
+; (racetrack_csg.tscn:60). A resolver that assumed either one drops the other's geometry.
+; unit-csg-polygon-path-instanced.tscn instances this scene.
 
 [sub_resource type="Curve3D" id="Curve3D_road"]
 ; `_data.points` packs nine floats per control point: in.xyz, out.xyz, position.xyz. Every

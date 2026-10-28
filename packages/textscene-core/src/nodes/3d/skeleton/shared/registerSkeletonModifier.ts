@@ -12,7 +12,7 @@ export function registerSkeletonModifier(typeName: string, poseModifier: PoseMod
     typeName,
     Component: Node3D,
     renderIntent: 'transform-only',
-    scenePass: { stage: 'live' },
+    scenePass: true,
     poseModifier,
   });
 }
