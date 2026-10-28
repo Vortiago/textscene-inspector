@@ -13,6 +13,7 @@ import { sceneLights } from '../directionalShadow/lightLists.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { EMISSION_EXPOSURE } from './emissionExposure.js';
 import { scaleLightIntensities } from './scaleLightIntensities.js';
+import { perObject } from '../../utils/perObject.js';
 
 /**
  * What a consumer draws for `exposure`, in place of what it draws for the exposure the scene holds.
@@ -24,12 +25,15 @@ export type ExposureStage = (exposure: number | null) => () => void;
  * What a scene's world holds: the factor its scene renders with, and the factor of the world's own
  * attributes. Written only by `useSceneExposure`, and cleared when that scene's world unmounts.
  */
+// eslint-disable-next-line no-restricted-syntax -- useSceneExposure writes each entry and deletes it on unmount
 const held = new WeakMap<THREE.Scene, { view: number | null; world: number | null }>();
 
 /** The exposure `drawAtExposure` draws a scene at, written only by it and cleared when the draw ends. */
+// eslint-disable-next-line no-restricted-syntax -- drawAtExposure writes an entry for one draw and deletes it after the draw
 const drawnExposures = new WeakMap<THREE.Scene, number>();
 
-const stages = new WeakMap<THREE.Scene, Set<ExposureStage>>();
+/** Each scene's exposure stages, filled only by `registerExposureStage`. */
+const stagesOf = perObject<THREE.Scene, Set<ExposureStage>>(() => new Set());
 
 /**
  * The factor `scene` renders with, or null without a world that holds an exposure.
@@ -57,8 +61,7 @@ export function worldExposureOfScene(scene: THREE.Scene): number | null {
  * @canonical The state a scene draws for another exposure
  */
 export function registerExposureStage(scene: THREE.Scene, stage: ExposureStage): () => void {
-  const registered = stages.get(scene) ?? new Set<ExposureStage>();
-  stages.set(scene, registered);
+  const registered = stagesOf(scene);
   registered.add(stage);
   return () => {
     registered.delete(stage);
@@ -80,7 +83,7 @@ export function drawAtExposure<T>(scene: THREE.Scene, exposure: number | null, d
     drawnExposures.set(scene, factor);
     EMISSION_EXPOSURE[0] = factor;
     restores.push(scaleLights(scene, drawnExposureRatio(scene)));
-    for (const stage of stages.get(scene) ?? []) restores.push(stage(exposure));
+    for (const stage of stagesOf(scene)) restores.push(stage(exposure));
     return draw();
   } finally {
     for (const restore of restores.reverse()) restore();
