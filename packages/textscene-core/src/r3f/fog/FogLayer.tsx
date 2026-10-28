@@ -21,7 +21,6 @@ import type { DepthFog, VolumetricFog } from '../../resources/environment/types.
 interface FogLayerProps {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
-  skyEnergy: number;
 }
 
 function isLight(object: THREE.Object3D): object is THREE.Light {
@@ -36,7 +35,7 @@ function isMesh(object: THREE.Object3D): object is THREE.Mesh {
 const NO_CASTERS: readonly THREE.Mesh[] = [];
 const NO_VOLUMES: readonly FogVolumeObject[] = [];
 
-export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
+export function FogLayer({ depth, volumetric }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
@@ -44,7 +43,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   const project = useMemo(() => projectVolumetricFogSettings(projectSettings), [projectSettings]);
   // Read at each render, so a new setting reaches the next render with the passes and the
   // volume's history kept.
-  const current: FogSettings = { depth, volumetric, project, skyEnergy };
+  const current: FogSettings = { depth, volumetric, project };
   const settings = useRef(current);
   settings.current = current;
 

@@ -9,7 +9,9 @@ import { installFogComposite } from './fogComposite';
 import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
+import { shownSky, SKY_RADIANCE_UNIFORMS, skyLayersSlot, skyRotation } from '../sky/skyRadiance';
 import { warningsOf } from '../testing/logWarnings';
+import { functionBody } from '../testing/glslSource';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const threeChunks = { ...THREE.ShaderChunk };
@@ -81,10 +83,30 @@ describe('installFogComposite', () => {
     for (const shader of fogShaders) {
       const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
       expect(uniforms.volumetricFogVolume!.value).toBe(fogUniforms.volume);
-      expect(uniforms.fogRadiance!.value).toBe(fogUniforms.radiance);
       expect(uniforms.depthFogShape!.value).toBe(fogUniforms.depthShape);
-      expect(uniforms.fogSkyRotation!.value).toBe(fogUniforms.skyRotation);
     }
+  });
+
+  it("gives every fog material and the background the shown sky's radiance, which the surfaces read", () => {
+    installFogComposite();
+
+    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundCube, backgroundPlane];
+    for (const shader of fogShaders) {
+      const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
+      expect(uniforms[SKY_RADIANCE_UNIFORMS.layers]!.value).toBe(skyLayersSlot);
+      expect(uniforms[SKY_RADIANCE_UNIFORMS.shown]!.value).toBe(shownSky);
+      expect(uniforms[SKY_RADIANCE_UNIFORMS.rotation]!.value).toBe(skyRotation);
+    }
+  });
+
+  it("reads the aerial perspective from the sky's radiance layers at the sky's energy", () => {
+    installFogComposite();
+
+    const pars = THREE.ShaderChunk[GODOT_FOG_PARS_CHUNK as keyof typeof THREE.ShaderChunk];
+    expect(pars).toContain('uniform highp sampler2DArray godotSkyLayers;');
+    const aerial = functionBody(pars, 'fogAerialRadiance');
+    expect(aerial).toContain('vec3 sharper = godotSkyRead( uv, roughnessLayer, lod );');
+    expect(aerial).toContain('return mix( sharper, rougher, blend ) * GODOT_SKY_ENERGY;');
   });
 
   it('gives no uniform to a shader without fog (edge case)', () => {

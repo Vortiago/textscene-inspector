@@ -10,6 +10,7 @@ import { installChunkEdits } from '../shaderPatch/chunkPatch.js';
 import { installMergedUniform, FOG_UNIFORMS_MERGE } from '../shaderPatch/litUniform.js';
 import { GODOT_FOG_PARS, GODOT_FOG_PARS_CHUNK } from './fogChunks.js';
 import { fogUniformRecord } from './fogUniforms.js';
+import { skyRadianceUniforms } from '../sky/skyRadiance.js';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection.js';
 import { backgroundCube, backgroundPlane } from '../shaderPatch/backgroundPrograms.js';
 
@@ -109,7 +110,7 @@ function installPlaneBackgroundFog(): void {
 
 /**
  * Patches three's fog chunks and both backgrounds for every program compiled after the call, and
- * gives them the shared uniforms. three reads `ShaderLib.backgroundCube` when a renderer first
+ * gives them the shared fog uniforms and the shown sky's radiance. three reads `ShaderLib.backgroundCube` when a renderer first
  * draws a cube background. A three release that rewrites a replaced line keeps its own chunks, and
  * `fogComposite.test.ts` fails on that release. True when the cube background holds the fog after
  * the call. A second call changes nothing.
@@ -119,7 +120,7 @@ export function installFogComposite(): boolean {
   installGodotFog();
   const isCubeFogged = installCubeBackgroundFog();
   installPlaneBackgroundFog();
-  for (const [name, uniform] of Object.entries(fogUniformRecord())) {
+  for (const [name, uniform] of Object.entries({ ...fogUniformRecord(), ...skyRadianceUniforms() })) {
     installMergedUniform(FOG_UNIFORMS_MERGE, name, uniform.value);
     backgroundCube().uniforms[name] = { value: uniform.value };
     backgroundPlane().uniforms[name] = { value: uniform.value };

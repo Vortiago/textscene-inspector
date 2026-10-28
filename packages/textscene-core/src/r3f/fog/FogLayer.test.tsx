@@ -29,7 +29,7 @@ async function mountedFog() {
   await ReactThreeTestRenderer.create(
     <>
       <Capture />
-      <FogLayer depth={null} volumetric={volumetric} skyEnergy={1} />
+      <FogLayer depth={null} volumetric={volumetric} />
     </>
   );
   const { gl, scene, camera } = state!;

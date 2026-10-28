@@ -11,6 +11,7 @@ import {
 } from '../../godot/rendering/environment/volumetricFog.js';
 import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
+import { SKY_RADIANCE_GLSL } from '../sky/skyRadiance.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
 import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/rendering/environment/fogVolume.js';
@@ -29,7 +30,7 @@ import { clampedBilinearDepthGlsl } from '../shadowFilter/clampedBilinearDepth.j
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
-#include <cube_uv_reflection_fragment>
+${SKY_RADIANCE_GLSL}
 
 uniform vec3 gridSize;
 uniform float slice;
@@ -45,7 +46,6 @@ uniform float phaseG;
 uniform vec3 ambientColor;
 uniform float ambientInject;
 uniform float skyContribution;
-uniform float skyEnergy;
 uniform mat3 viewToSky;
 uniform highp sampler2D fogLights;
 uniform int lightCount;
@@ -55,10 +55,6 @@ uniform vec3 sampleOffset;
 uniform highp sampler3D history;
 uniform mat4 toPreviousView;
 uniform float historyAmount;
-
-#ifdef ENVMAP_TYPE_CUBE_UV
-	uniform sampler2D envMap;
-#endif
 
 ${HENYEY_GREENSTEIN_GLSL}
 ${FOG_VOLUME_GLSL}
@@ -251,27 +247,24 @@ vec3 lightsAt( vec3 view ) {
 	return total;
 }
 
-// .glsl:434: the radiance mip a froxel of this density reads, as a fraction of the coarsest,
-// \`MAX_SKY_LOD\` (\`environment/fog.cpp:304\`). A denser froxel reads a blurrier sky.
-float skyRoughness( float density ) {
-	return min( ( 2.0 + density * ${glslFloat(MAX_ROUGHNESS_LOD - 2)} ) / ${glslFloat(MAX_ROUGHNESS_LOD)}, 1.0 );
+// .glsl:434-438: the radiance layer a froxel of this density reads, from the third to the last,
+// \`MAX_SKY_LOD\` (\`environment/fog.cpp:304\`). Godot passes it as an array layer, which rounds to the
+// nearest, read at mip 0 as a compute shader reads. A denser froxel reads a blurrier sky.
+float skyLayer( float density ) {
+	return clamp( floor( 2.0 + density * ${glslFloat(MAX_ROUGHNESS_LOD - 2)} + 0.5 ), 0.0, ${glslFloat(MAX_ROUGHNESS_LOD)} );
 }
 
-// .glsl:430-445: the isotropic sample reads the sky straight up, the anisotropic one along the view.
+// .glsl:430-445: the isotropic sample reads the sky straight up in its own space, the anisotropic
+// one along the view. The radiance holds the sky's energy, which the layers leave to the reader.
 vec3 ambientAt( vec3 view, float density ) {
-	float roughness = skyRoughness( density );
 	vec3 isotropic = vec3( 0.0 );
 	vec3 anisotropic = vec3( 0.0 );
-	#ifdef ENVMAP_TYPE_CUBE_UV
-		if ( skyContribution > 0.0 ) {
-			isotropic = textureCubeUV( envMap, vec3( 0.0, 1.0, 0.0 ), roughness ).rgb;
-			if ( phaseG != 0.0 ) {
-				vec3 scatter = viewToSky * normalize( view ) * sign( phaseG );
-				anisotropic = textureCubeUV( envMap, scatter, roughness ).rgb;
-			}
-		}
-	#endif
-	vec3 sky = mix( isotropic, anisotropic, abs( phaseG ) ) * skyEnergy;
+	if ( skyContribution > 0.0 ) {
+		float layer = skyLayer( density );
+		isotropic = godotSkyReadAlong( vec3( 0.0, 1.0, 0.0 ), layer, 0.0 );
+		if ( phaseG != 0.0 ) anisotropic = godotSkyReadAlong( viewToSky * normalize( view ) * sign( phaseG ), layer, 0.0 );
+	}
+	vec3 sky = mix( isotropic, anisotropic, abs( phaseG ) ) * GODOT_SKY_ENERGY;
 	return mix( ambientColor, sky, skyContribution ) * ambientInject;
 }
 

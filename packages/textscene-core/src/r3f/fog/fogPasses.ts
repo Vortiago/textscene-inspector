@@ -1,12 +1,10 @@
 /** The fog passes one renderer shares between every scene it draws with fog. */
 
 import type * as THREE from 'three';
-import { FogRadiancePass } from './fogRadiancePass.js';
 import { VolumetricFogPass } from './volumetricFogPass.js';
 
 export interface FogPasses {
   volume: VolumetricFogPass;
-  radiance: FogRadiancePass;
 }
 
 /** Written only by `acquireFogPasses` and the release it returns. */
@@ -14,13 +12,13 @@ export interface FogPasses {
 const shared = new WeakMap<THREE.WebGLRenderer, { passes: FogPasses; users: number }>();
 
 /**
- * The renderer's fog passes. Every fog program reads one volume and one radiance atlas, so the
+ * The renderer's fog passes. Every fog program reads one volume, so the
  * scenes one renderer draws share the passes, each preparing them before its own render. The last
  * release disposes them.
  */
 export function acquireFogPasses(renderer: THREE.WebGLRenderer): { passes: FogPasses; release: () => void } {
   const entry = shared.get(renderer) ?? {
-    passes: { volume: new VolumetricFogPass(), radiance: new FogRadiancePass() },
+    passes: { volume: new VolumetricFogPass() },
     users: 0,
   };
   shared.set(renderer, entry);
@@ -34,7 +32,6 @@ export function acquireFogPasses(renderer: THREE.WebGLRenderer): { passes: FogPa
       entry.users--;
       if (entry.users > 0) return;
       entry.passes.volume.dispose();
-      entry.passes.radiance.dispose();
       shared.delete(renderer);
     },
   };

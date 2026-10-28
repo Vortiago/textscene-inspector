@@ -2,7 +2,7 @@
  * What the volume pass draws for each render: the light pass's sampling and history blend, and the
  * copy into the volume every fog program reads. A recording renderer stands in for WebGL.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/rendering/environment/volumetricFog';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
@@ -15,6 +15,14 @@ import { FogVolumeObject } from './fogVolumeObject';
 import { VolumetricFogPass } from './volumetricFogPass';
 import { areaLightAtlasTexture } from '../areaLight/areaLightAtlas';
 import { AREA_LIGHT_ATLAS_UNIFORM } from '../areaLight/areaTextureFetch';
+import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
+import {
+  hideShownSky,
+  SkyRadiance,
+  SKY_RADIANCE_UNIFORMS,
+  skyLayersSlot,
+  type ShownSky,
+} from '../sky/skyRadiance';
 
 type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
 
@@ -26,6 +34,7 @@ interface LightDraw {
   frustumEnd: THREE.Vector2;
   directionalShadowAtlas: THREE.Texture | null;
   areaLightAtlas: THREE.Texture | null;
+  skyLayers: THREE.Texture | null;
 }
 
 /** A renderer that records each draw instead of drawing it. */
@@ -64,6 +73,7 @@ class RecordingRenderer {
       frustumEnd: (uniforms['frustumEnd']!.value as THREE.Vector2).clone(),
       directionalShadowAtlas: uniforms['directionalShadowAtlas']!.value as THREE.Texture | null,
       areaLightAtlas: uniforms[AREA_LIGHT_ATLAS_UNIFORM]!.value as THREE.Texture | null,
+      skyLayers: uniforms[SKY_RADIANCE_UNIFORMS.layers]!.value as THREE.Texture | null,
     });
   }
 
@@ -94,8 +104,6 @@ function inputs(properties: Record<string, string> = {}): VolumetricFogInputs {
   return {
     fog: createEnvironmentSettings(environment, DEFAULT_CLEAR_COLOR).volumetricFog!,
     project: PROJECT,
-    worldToSky: new THREE.Matrix3(),
-    skyEnergy: 1,
     lights: [],
     casters: [],
     volumes: [],
@@ -133,6 +141,19 @@ function settle(
     if (!pass.prepare(renderer.asWebGL, scene, view, fog)) return;
   }
 }
+
+/** Shows a sky on `renderer` at `shown`, as `<SkyLayer>` does before each render of its scene. */
+function showSky(renderer: RecordingRenderer, shown: Partial<ShownSky>): void {
+  const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
+  new SkyRadiance(renderer.asWebGL, layers).show({
+    contribution: 1,
+    energy: 1,
+    rotation: new THREE.Euler(),
+    ...shown,
+  });
+}
+
+afterEach(hideShownSky);
 
 describe('VolumetricFogPass.prepare', () => {
   it('samples each cell centre with no history on the first render', () => {
@@ -311,17 +332,27 @@ describe('VolumetricFogPass.prepare', () => {
     dispose.mockRestore();
   });
 
-  it('draws again when the sky turns', () => {
+  it("reads the ambient from the shown sky's radiance layers, which the surfaces read", () => {
+    const renderer = new RecordingRenderer();
+    new VolumetricFogPass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+
+    expect(renderer.take().lightDraws[0]!.skyLayers).toBe(skyLayersSlot);
+  });
+
+  it.each([
+    ['turns', { rotation: new THREE.Euler(0, 0.5, 0) }],
+    ['takes another energy', { energy: 2 }],
+  ])('draws again when the sky %s', (_change, shown: Partial<ShownSky>) => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
-    const toSky = new THREE.Matrix3();
-    const fog = { ...inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' }), worldToSky: toSky };
+    const fog = inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' });
+    showSky(renderer, {});
     pass.prepare(renderer.asWebGL, scene, view, fog);
     renderer.take();
 
-    toSky.makeRotation(0.5);
+    showSky(renderer, shown);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
   });

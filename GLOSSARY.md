@@ -526,6 +526,10 @@ _Avoid_: "brightness", "average colour". The mean of the whole frame, which Godo
 One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
 _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
 
+**Sky radiance** (`r3f/sky/skyRadiance.ts`):
+The **Radiance layers** of the sky a scene shows, with the energy and the rotation it was baked at, which the surfaces, the depth fog's aerial perspective and the volumetric fog's ambient all read. A scene without a sky reads black.
+_Avoid_: "environment map", "fog radiance". A second filtered copy for one reader.
+
 **Fast filter**:
 Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
 _Avoid_: "real-time filter", "low-quality filter".

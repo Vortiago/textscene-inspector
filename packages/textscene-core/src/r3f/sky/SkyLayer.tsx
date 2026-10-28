@@ -1,7 +1,6 @@
 /**
- * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its baked layers and
- * its share of the ambient to every lit material before each render of the scene
- * (`skyLayerArray.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
+ * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its radiance to every
+ * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
  * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
  * instanced or GLB light has its real world transform. The world's exposure scales the sky as Godot
  * does: the background and each disc once, and the ambient and the reflection twice, since Godot
@@ -19,8 +18,9 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
-import { SkyLayerArray } from './skyLayerArray';
-import { observeSceneCamera } from '../sceneRenderCamera';
+import { hideShownSky, SkyRadiance } from './skyRadiance';
+import { environmentSwitch } from './environmentSwitch';
+import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
 import { registerExposureStage } from '../exposure/sceneExposure';
 import { debandSky } from './skyDebanding';
@@ -92,8 +92,7 @@ export function SkyLayer({
 
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
-    // is seen, and each bake costs a six-face cube render, the layer passes and a
-    // PMREM prefilter.
+    // is seen, and each bake costs a six-face cube render and the layer passes.
     if (lightsKey === null) return undefined;
 
     const built = buildSkyEnvironment(gl, {
@@ -109,7 +108,6 @@ export function SkyLayer({
     const previousIntensity = scene.environmentIntensity;
     const previousBackground = scene.background;
     const previousBackgroundIntensity = scene.backgroundIntensity;
-    const previousEnvironmentRotation = scene.environmentRotation.clone();
     const previousBackgroundRotation = scene.backgroundRotation.clone();
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
 
@@ -120,11 +118,17 @@ export function SkyLayer({
       scene.environmentIntensity = intensity * exposure * factor;
       if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
     };
-    scene.environment = built.environment;
-    scene.environmentRotation.copy(skyRotation);
-    const layerArray = new SkyLayerArray(gl, built.layers);
+    scene.environment = environmentSwitch();
+    const radiance = new SkyRadiance(gl, built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingLayers = observeSceneCamera(scene, () => layerArray.show(contributionRef.current));
+    const stopShowingRadiance = observeSceneCamera(scene, () =>
+      radiance.show({
+        contribution: contributionRef.current,
+        energy: intensity * exposure,
+        rotation: skyRotation,
+      })
+    );
+    const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundRotation.copy(skyRotation);
@@ -138,17 +142,17 @@ export function SkyLayer({
 
     return () => {
       stopStaging();
-      stopShowingLayers();
+      stopShowingRadiance();
+      stopHidingRadiance();
       stopDebanding?.();
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
-      scene.environmentRotation.copy(previousEnvironmentRotation);
       if (asBackground) {
         scene.background = previousBackground;
         scene.backgroundIntensity = previousBackgroundIntensity;
         scene.backgroundRotation.copy(previousBackgroundRotation);
       }
-      layerArray.hide();
+      radiance.hide();
       built.dispose();
     };
   }, [
