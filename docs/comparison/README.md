@@ -63,9 +63,9 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 
 ## Why a sampled sRGB texture can read one step off in Godot
 
-Godot defines no sRGB decode on this path. A `source_color` sampler reads the texture's sRGB view (`material_storage.cpp:1073`), which is `DATA_FORMAT_R8G8B8A8_SRGB` for an RGB8 or RGBA8 image (`texture_storage.cpp:1874-1893`, `:895-897`) and for a ViewportTexture's render target (`texture_storage.cpp:3645-3647`). The driver decodes the texel.
+Godot defines no sRGB decode on this path. A `source_color` sampler reads the texture's sRGB view (`material_storage.cpp`), which is `DATA_FORMAT_R8G8B8A8_SRGB` for an RGB8 or RGBA8 image and for a ViewportTexture's render target (`texture_storage.cpp`). The driver decodes the texel.
 
-`pnpm ref:godot` runs on lavapipe, which decodes with a cubic polynomial (`lp_bld_format_srgb.c:95-144`, called from `lp_bld_format_soa.c:164-166`, Mesa 25.2.8). It is at most 0.342 of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. The previewer keeps the exact decode. This gap is not a parity defect.
+`pnpm ref:godot` runs on lavapipe, which decodes with a cubic polynomial (`lp_bld_format_srgb.c`, called from `lp_bld_format_soa.c`, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. The previewer keeps the exact decode. This gap is not a parity defect.
 
 ## Why anisotropic filtering differs from the Godot reference
 
