@@ -183,8 +183,10 @@ export function glbChildrenBelow(
 /** The indices of the entries directly below the one at `index`: each child's subtree starts the next. */
 function childEntryIndices(entries: readonly GlbObjectEntry[], index: number): number[] {
   const children: number[] = [];
-  const end = glbSubtreeEnd(entries, index);
-  for (let k = index + 1; k < end; k = glbSubtreeEnd(entries, k)) children.push(k);
+  const prefix = `${entries[index]!.relPath}/`;
+  for (let k = index + 1; entries[k]?.relPath.startsWith(prefix); k = glbSubtreeEnd(entries, k)) {
+    children.push(k);
+  }
   return children;
 }
 
