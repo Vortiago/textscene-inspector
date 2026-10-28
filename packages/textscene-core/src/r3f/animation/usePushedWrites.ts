@@ -25,9 +25,9 @@ export function usePushedWrites<T>(
   isPlaying: boolean,
   actionsRef: MutableRefObject<Map<string, AnimationAction>>
 ): void {
-  /** Written only by the frame and `release`: the keys this clip writes now. */
-  const written = useRef<Set<string>>(new Set());
-  /** Written only by the frame and `release`: the sample of this frame, reused so a frame allocates no map. */
+  /** Written only by the frame and `release`: what this clip writes now. */
+  const written = useRef<Map<string, T>>(new Map());
+  /** Written only by the frame: the next sample. It swaps with `written`, so a frame allocates no map. */
   const sampled = useRef<Map<string, T>>(new Map());
   /** Written only by the frame and `release`: the playhead the values were sampled at. */
   const sampledAt = useRef<number | null>(null);
@@ -35,7 +35,7 @@ export function usePushedWrites<T>(
   const release = useCallback(() => {
     // The frame calls this while nothing plays, so an idle player allocates nothing.
     if (written.current.size === 0 && sampledAt.current === null) return;
-    written.current.forEach((key) => store.set(key, null));
+    for (const key of written.current.keys()) store.set(key, null);
     written.current.clear();
     sampledAt.current = null;
   }, [store]);
@@ -53,12 +53,12 @@ export function usePushedWrites<T>(
     const now = sampled.current;
     now.clear();
     clip.sample(action.time, now);
-    now.forEach((value, key) => store.set(key, value));
-    written.current.forEach((key) => {
+    for (const [key, value] of now) store.set(key, value);
+    for (const key of written.current.keys()) {
       if (!now.has(key)) store.set(key, null);
-    });
-    written.current.clear();
-    now.forEach((_, key) => written.current.add(key));
+    }
+    sampled.current = written.current;
+    written.current = now;
   });
 
   // A stop, a deselect or a switch of clip releases at once, not on the next frame.

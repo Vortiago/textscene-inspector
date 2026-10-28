@@ -5,24 +5,36 @@
  * mixer's clip builder, which warns and drops it.
  */
 
-import { storedReal } from '../../../godot/math/real.js';
-import {
-  sampleTupleTrack,
-  type SampleSetup,
-  type TrackKey,
-} from '../../../godot/scene/animationTrackSampler.js';
+import { sampleTupleTrack } from '../../../godot/scene/animationTrackSampler.js';
 import type { GodotAnimation } from './animationResolver';
 import type { PushedClip } from '../../../r3f/animation/usePushedWrites';
 import { animatedValueKey } from '../../../r3f/contexts/AnimatedValueContext';
 import type { AnimatedPose } from '../../3d/skeleton3d/skeletonPose';
 import { boneTracksOf, sampleBonePoses, type BoneTrack, type BoneTrackSource } from './boneTracks';
 import type { GodotTrack } from './trackParser';
-import { VALUE_PUSH_PROPERTIES, sampleSteppedValue } from './valueTracks';
+import { componentsOf, sampleSetupOf, trackKeyOf } from './trackSampling';
+
+/**
+ * The non-transform properties the AnimationPlayer pushes through the AnimatedValue registry
+ * (ADR-0016, ADR-0017), mapped to whether they interpolate: `frame` and `visible` are stepped (a
+ * flipbook, a bool), `modulate` and `size` follow the `interp` of the track.
+ */
+const VALUE_PUSH_PROPERTIES: Record<string, boolean> = {
+  frame: false,
+  visible: false,
+  modulate: true,
+  size: true,
+};
+
+/** A track with no value to give pushes this tuple, which every reader decodes as no value. */
+const NO_VALUE: readonly number[] = [];
 
 /** A property of a node that a clip pushes through the AnimatedValue registry. */
 export interface ValueTarget {
   path: string;
   property: string;
+  /** Where the value is pushed: the key of the property of the node. */
+  key: string;
   /** The components of the value at `time`; empty where the track has none. */
   sample: (time: number) => readonly number[];
 }
@@ -93,24 +105,16 @@ export function boneCandidatePaths(
 
 function valueTargetOf(track: GodotTrack, path: string, animation: GodotAnimation): ValueTarget {
   const { property } = track;
-  if (!VALUE_PUSH_PROPERTIES[property]) {
-    return { path, property, sample: (time) => [sampleSteppedValue(track.keys, time)] };
-  }
-  const keys: TrackKey<readonly number[]>[] = track.keys.map((key) => ({
-    time: storedReal(key.time),
-    transition: storedReal(key.transition),
-    value: (Array.isArray(key.value) ? (key.value as unknown[]) : [key.value]).map((component) =>
-      storedReal(typeof component === 'number' ? component : 0)
-    ),
-  }));
-  // A DISCRETE update mode holds the key whatever `interp` says (`animation.cpp`).
-  const setup: SampleSetup = {
-    interp: track.updateMode === 1 ? 0 : track.interp,
-    loopWrap: track.loopWrap,
-    length: storedReal(animation.length),
-    loopMode: animation.loopMode,
+  const keys = track.keys.map((key) => trackKeyOf(key, componentsOf));
+  // `frame` and `visible` hold a key until the next one, whatever `interp` says.
+  const setup = sampleSetupOf(track, animation);
+  if (!VALUE_PUSH_PROPERTIES[property]) setup.interp = 0;
+  return {
+    path,
+    property,
+    key: animatedValueKey(path, property),
+    sample: (time) => sampleTupleTrack(keys, time, setup) ?? NO_VALUE,
   };
-  return { path, property, sample: (time) => sampleTupleTrack(keys, time, setup) ?? [] };
 }
 
 /** The value tracks of `clip` as a clip for the value registry. */
@@ -118,8 +122,7 @@ export function valuesPushedBy(clip: DrivenClip): PushedClip<readonly number[]> 
   return {
     name: clip.name,
     sample: (time, out) => {
-      for (const { path, property, sample } of clip.values)
-        out.set(animatedValueKey(path, property), sample(time));
+      for (const { key, sample } of clip.values) out.set(key, sample(time));
     },
   };
 }

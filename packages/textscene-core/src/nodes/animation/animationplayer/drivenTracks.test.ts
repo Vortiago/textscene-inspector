@@ -161,4 +161,28 @@ describe('splitTracks', () => {
 
     expect(target!.sample(1)).toEqual([]);
   });
+
+  it('holds a frame or visible key until the next, whatever interp says, and reads a bool as 1 or 0', () => {
+    const flips = (property: string) =>
+      track({
+        type: 'value',
+        targetPath: 'Decal',
+        subnames: [],
+        property,
+        interp: 1,
+        keys: [
+          { time: 0, transition: 1, value: false },
+          { time: 2, transition: 1, value: true },
+        ],
+      });
+    const [visible] = splitTracks(clip(flips('visible')), SCENE).values;
+
+    expect([visible!.sample(0), visible!.sample(1.9), visible!.sample(2)]).toEqual([[0], [0], [1]]);
+  });
+
+  it('keys each value by its node and property, once', () => {
+    const [fade] = splitTracks(clip(FADE()), SCENE).values;
+
+    expect(fade!.key).toBe('Root/Decal:modulate');
+  });
 });

@@ -30,6 +30,7 @@ import { GODOT_EULER_ORDER } from '../../../r3f/animation/restPoseTracks';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { useAnimatedBonePoses } from '../../../r3f/contexts/AnimatedBonePosesContext';
 import { usePushedWrites } from '../../../r3f/animation/usePushedWrites';
+import { useByValue } from '../../../r3f/hooks/useByValue';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveLiveEntry } from '../../../r3f/liveSceneTree';
 import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree';
@@ -95,21 +96,22 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // Without a scene graph a path with one subname is taken for a bone. The split keys on the
   // answer, not the tree, so a scene that loads elsewhere does not rebuild the mixer.
   const liveTree = useSharedLiveTree();
-  const skeletonKey = useMemo(
-    () =>
-      boneCandidatePaths(animations, scenePathOf)
-        .filter(
+  const skeletonPaths = useByValue(
+    useMemo(
+      () =>
+        boneCandidatePaths(animations, scenePathOf).filter(
           (scenePath) =>
             liveTree === null ||
             resolveLiveEntry(scenePath, liveTree.roots, liveTree.ctx)?.node.type === 'Skeleton3D'
-        )
-        .join('\0'),
-    [animations, scenePathOf, liveTree]
+        ),
+      [animations, scenePathOf, liveTree]
+    ),
+    (a, b) => a.length === b.length && a.every((path, i) => path === b[i])
   );
   const trackScene = useMemo<TrackScene>(() => {
-    const skeletons = new Set(skeletonKey.split('\0'));
+    const skeletons = new Set(skeletonPaths);
     return { scenePathOf, isSkeleton: (scenePath) => skeletons.has(scenePath) };
-  }, [scenePathOf, skeletonKey]);
+  }, [scenePathOf, skeletonPaths]);
   const driven = useMemo(() => animations.map((a) => splitTracks(a, trackScene)), [animations, trackScene]);
 
   // Clip templates, each track named by its target's scene path. `bind` turns them into clips that

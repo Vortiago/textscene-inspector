@@ -207,6 +207,12 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Boun
   const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
   let lastPose: AnimatedPose | undefined;
   let lastMatrices: readonly Transform3D[] = [];
+  const warnUnknownBone = (name: string) =>
+    warnOnce(
+      skin,
+      name,
+      `[AnimationPlayer] the Skeleton3D at ${skeleton.path} has no bone "${name}", so its track binds nothing`
+    );
   const skin: BoundSkin = {
     skeletonPath: skeleton.path,
     matrices:
@@ -215,12 +221,6 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Boun
         : automaticSkinMatrices(bones, showRestOnly, modifiers),
     matricesUnder: (pose) => {
       if (pose === lastPose) return lastMatrices;
-      const warnUnknownBone = (name: string) =>
-        warnOnce(
-          skin,
-          name,
-          `[AnimationPlayer] the Skeleton3D at ${skeleton.path} has no bone "${name}", so its track binds nothing`
-        );
       lastPose = pose;
       lastMatrices = automaticSkinMatrices(bones, showRestOnly, [
         animationPass(pose, motionScale, warnUnknownBone),

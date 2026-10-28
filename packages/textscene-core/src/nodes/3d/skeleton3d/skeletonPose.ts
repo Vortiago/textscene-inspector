@@ -16,6 +16,7 @@ import {
 } from '../../../godot/math/transform3d.js';
 import {
   normalizedQuaternion,
+  QUATERNION_IDENTITY,
   quaternionInverse,
   quaternionMultiply,
   quaternionSlerp,
@@ -43,7 +44,7 @@ export function newBone(name: string): Bone {
     rest: identityTransform3D(),
     enabled: true,
     position: { x: 0, y: 0, z: 0 },
-    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    rotation: QUATERNION_IDENTITY,
     scale: { x: 1, y: 1, z: 1 },
   };
 }
@@ -60,8 +61,6 @@ export interface BonePose {
 
 /** The poses a clip writes to a skeleton, by bone name. */
 export type AnimatedPose = ReadonlyMap<string, BonePose>;
-
-const IDENTITY_ROTATION: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
 
 /**
  * The bone tracks of a clip as the mixer applies them (`animation_mixer.cpp:1375, 1463, 1551`): a
@@ -87,7 +86,10 @@ export function animationPass(
         }
         const { origin, rotation, scale } = decomposedRest(poses.rest(index));
         if (written.position) {
-          const scaled = written.position.map((position) => vector3Scaled(position, motionScale));
+          const scaled =
+            motionScale === 1
+              ? written.position
+              : written.position.map((position) => vector3Scaled(position, motionScale));
           poses.setPosePosition(index, summedOffsets(origin, scaled));
         }
         if (written.rotation) poses.setPoseRotation(index, composedTurns(rotation, written.rotation));
@@ -114,7 +116,7 @@ function composedTurns(init: Quaternion, values: readonly Quaternion[]): Quatern
       normalizedQuaternion(
         quaternionMultiply(
           rotation,
-          quaternionSlerp(IDENTITY_ROTATION, quaternionMultiply(initInverse, value), 1)
+          quaternionSlerp(QUATERNION_IDENTITY, quaternionMultiply(initInverse, value), 1)
         )
       ),
     init
@@ -222,7 +224,7 @@ export class BonePoses {
 
   /** `Skeleton3D::get_bone_pose_rotation`. */
   poseRotation(index: number): Quaternion {
-    return this.bones[index]?.rotation ?? { x: 0, y: 0, z: 0, w: 1 };
+    return this.bones[index]?.rotation ?? QUATERNION_IDENTITY;
   }
 
   /** `Skeleton3D::get_bone_pose_scale`. */

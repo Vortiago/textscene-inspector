@@ -7,15 +7,11 @@
 import type { Quaternion } from '../../../godot/math/quaternion.js';
 import { storedReal } from '../../../godot/math/real.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
-import {
-  sampleQuaternionTrack,
-  sampleVector3Track,
-  type SampleSetup,
-  type TrackKey,
-} from '../../../godot/scene/animationTrackSampler.js';
+import { sampleQuaternionTrack, sampleVector3Track } from '../../../godot/scene/animationTrackSampler.js';
 import type { AnimatedPose, BonePose } from '../../3d/skeleton3d/skeletonPose';
 import type { GodotAnimation } from './animationResolver';
-import type { GodotKeyframe, GodotTrack } from './trackParser';
+import type { GodotTrack } from './trackParser';
+import { componentsOf, sampleSetupOf, trackKeyOf } from './trackSampling';
 
 type Sampler<T> = (time: number) => T | null;
 
@@ -48,17 +44,12 @@ export function boneTracksOf(
       group = { skeletonPath, bone, positions: [], rotations: [], scales: [] };
       grouped.set(key, group);
     }
-    const setup: SampleSetup = {
-      interp: track.interp,
-      loopWrap: track.loopWrap,
-      length: storedReal(animation.length),
-      loopMode: animation.loopMode,
-    };
+    const setup = sampleSetupOf(track, animation);
     if (track.property === 'quaternion') {
-      const keys = track.keys.map((key) => keyOf(key, quaternionOf));
+      const keys = track.keys.map((key) => trackKeyOf(key, quaternionOf));
       group.rotations.push((time) => sampleQuaternionTrack(keys, time, setup));
     } else {
-      const keys = track.keys.map((key) => keyOf(key, vector3Of));
+      const keys = track.keys.map((key) => trackKeyOf(key, vector3Of));
       const samplers = track.property === 'scale' ? group.scales : group.positions;
       samplers.push((time) => sampleVector3Track(keys, time, setup));
     }
@@ -66,20 +57,13 @@ export function boneTracksOf(
   return [...grouped.values()];
 }
 
-/** A key as `real_t` values, which are what `Animation` holds. */
-function keyOf<T>(key: GodotKeyframe, read: (components: number[]) => T): TrackKey<T> {
-  return {
-    time: storedReal(key.time),
-    transition: storedReal(key.transition),
-    value: read(Array.isArray(key.value) ? (key.value as number[]) : []),
-  };
-}
-
-function vector3Of([x = 0, y = 0, z = 0]: number[]): Vector3 {
+function vector3Of(value: unknown): Vector3 {
+  const [x = 0, y = 0, z = 0] = componentsOf(value);
   return { x: storedReal(x), y: storedReal(y), z: storedReal(z) };
 }
 
-function quaternionOf([x = 0, y = 0, z = 0, w = 1]: number[]): Quaternion {
+function quaternionOf(value: unknown): Quaternion {
+  const [x = 0, y = 0, z = 0, w = 1] = componentsOf(value);
   return { x: storedReal(x), y: storedReal(y), z: storedReal(z), w: storedReal(w) };
 }
 

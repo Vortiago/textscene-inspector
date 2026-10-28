@@ -4,6 +4,7 @@
 import { basisFromQuaternion, basisGetRotationQuaternion } from './basis.js';
 import { CMP_EPSILON, UNIT_EPSILON, type KeyTimes } from './math.js';
 import {
+  QUATERNION_IDENTITY,
   quaternionDot,
   quaternionFromAxisAngle,
   quaternionInverse,
@@ -44,7 +45,7 @@ function quaternionExp({ x, y, z }: Vector3): Quaternion {
   const theta = vector3Length(x, y, z);
   const axis = normalizedVector3(x, y, z);
   const isUnitAxis = Math.abs(vector3Dot(axis, axis) - 1) < UNIT_EPSILON;
-  if (theta < CMP_EPSILON || !isUnitAxis) return { x: 0, y: 0, z: 0, w: 1 };
+  if (theta < CMP_EPSILON || !isUnitAxis) return QUATERNION_IDENTITY;
   return quaternionFromAxisAngle({ x: axis[0], y: axis[1], z: axis[2] }, theta);
 }
 
