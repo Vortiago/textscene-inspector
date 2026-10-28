@@ -83,41 +83,37 @@ describe('buildSkyEnvironment radiance size', () => {
     vi.restoreAllMocks();
   });
 
-  /** The face size of each cube the build renders, and of the cube the PMREM prefilters. */
+  /** The face size of each cube the build renders, and whether it filters a PMREM besides the layers. */
   async function cubeSizes(radianceSize: number, asBackground = true) {
     const { renderer } = await testRenderer();
     const rendered: number[] = [];
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
       rendered.push(this.renderTarget.width);
     });
-    let prefiltered = 0;
-    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockImplementation((cubemap) => {
-      prefiltered = (cubemap.image as { width: number }[])[0]!.width;
-      return new THREE.WebGLRenderTarget(1, 1);
-    });
+    const pmrem = vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap');
     const sky: Sky = {
       material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
       radianceFilter: 'importance-sample',
       radianceSize,
     };
     const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground, energy: 1 });
-    return { rendered, prefiltered, hasBackground: env!.background !== null };
+    return { rendered, hasPmrem: pmrem.mock.calls.length > 0, hasBackground: env!.background !== null };
   }
 
   it('renders one cube for the background and the radiance at the default size', async () => {
-    expect(await cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+    expect(await cubeSizes(256)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });
   });
 
   it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', async () => {
-    expect(await cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32, hasBackground: true });
+    expect(await cubeSizes(32)).toEqual({ rendered: [256, 32], hasPmrem: false, hasBackground: true });
   });
 
   it('bakes a size above 256 at 256 (edge case)', async () => {
-    expect(await cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+    expect(await cubeSizes(1024)).toEqual({ rendered: [256], hasPmrem: false, hasBackground: true });
   });
 
   it('renders only the radiance cube for a sky that is not the background', async () => {
-    expect(await cubeSizes(32, false)).toEqual({ rendered: [32], prefiltered: 32, hasBackground: false });
+    expect(await cubeSizes(32, false)).toEqual({ rendered: [32], hasPmrem: false, hasBackground: false });
   });
 });
 

@@ -23,7 +23,7 @@ const FREED_OTHERWISE: Record<string, string> = {
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/reflectionProbe/probeSlots.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
-  'r3f/sky/skyLayerArray.ts':
+  'r3f/sky/skyRadiance.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
 };
 

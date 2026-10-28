@@ -12,7 +12,7 @@ const fogShadow = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadow');
 const fogShadowFade = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowFade');
 const fogShadowAttenuation = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowAttenuation');
 const spotCellDepth = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'spotCellDepth');
-const skyRoughness = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'skyRoughness');
+const skyLayer = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'skyLayer');
 
 describe('the fog shadow term', () => {
   it('darkens a cell a tenth of a unit behind the caster to 1/e', () => {
@@ -67,17 +67,21 @@ describe('the spot fog cell depth', () => {
   });
 });
 
-describe('the sky roughness the ambient reads the sky at', () => {
-  it('reads a clear froxel at mip 2 of 7', () => {
-    expect(skyRoughness(0)).toBeCloseTo(2 / 7, 6);
+describe('the radiance layer the ambient reads the sky at', () => {
+  it('reads a clear froxel at layer 2 of 7', () => {
+    expect(skyLayer(0)).toBe(2);
   });
 
-  it('reads a denser froxel at a blurrier mip', () => {
-    expect(skyRoughness(0.05)).toBeCloseTo(2.25 / 7, 6);
+  it("rounds a froxel's layer to the nearest, as an array texture's layer coordinate does", () => {
+    expect([skyLayer(0.05), skyLayer(0.1)]).toEqual([2, 3]);
   });
 
-  it('stops at the coarsest mip (edge case)', () => {
-    expect(skyRoughness(4)).toBe(1);
+  it('stops at the last layer (edge case)', () => {
+    expect(skyLayer(4)).toBe(7);
+  });
+
+  it('stops at the first layer under a negative density (edge case)', () => {
+    expect(skyLayer(-1)).toBe(0);
   });
 });
 
