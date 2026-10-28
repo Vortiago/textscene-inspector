@@ -1,16 +1,16 @@
 ---
 type: BoneConstraint3D
 category: 3D
-status: unimplemented
+status: done
 fixture: unit-bone-constraint-3d.tscn
 # image: unit-bone-constraint-3d
 visual: false
-renders_as: nothing yet, Godot applies its bone constraints each frame, the previewer does not
+renders_as: nothing (the base class makes no edit to the pose)
 ---
 
 # BoneConstraint3D
 
-The base class of the bone constraint modifiers, holding the `settings/<i>/` entries that name an apply bone and a reference bone or node. Godot applies those constraints to its Skeleton3D each frame, and the previewer does not yet (ADR-0045): the bones hold their rest pose.
+The base class of the bone constraint modifiers, holding the `settings/<i>/` entries that name an apply bone and a reference bone or node. The base class makes no edit to the pose, as `_process_modification` is empty in Godot. A derived type reads the entries and applies them.
 
 ## Linting
 
@@ -28,4 +28,4 @@ Strict parsing format-checks these `BoneConstraint3D` properties, plus 2 inherit
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. Every `settings/<i>/` leaf is dropped rather than substituted, and only strict reports a bad one.
+The parser reads `active`, `influence`, `setting_count` and the base `settings/<i>/` leaves: `amount`, the apply bone, and the reference bone or node. A bone name wins over a bone index, as `_validate_bone_names` reads them.
