@@ -8,6 +8,7 @@ import { useHeldTexture } from './useHeldTexture';
 const named = vi.hoisted(() => ({ texture: null as THREE.Texture | null }));
 
 vi.mock('../../resources/useTexture2D', () => ({
+  NODE_PROPERTY: [],
   useTexture2DRid: () => ({ texture: named.texture }),
 }));
 
@@ -19,7 +20,7 @@ const hold = vi.fn();
 const release = vi.fn();
 
 function Holder() {
-  useHeldTexture('ExtResource("1")', hold, release);
+  useHeldTexture('ExtResource("1")', 'plain', hold, release);
   return null;
 }
 

@@ -44,10 +44,35 @@ describe('tileSetFromScene', () => {
     expect(model!.tileSize).toEqual({ x: 16, y: 16 }); // Godot default
     const source = model!.sources.get(0);
     expect(source).toBeDefined();
-    expect(source!.texturePath).toBe('res://tiles.png');
+    expect(source!.texture).toEqual({
+      ref: 'ExtResource("2")',
+      externalResources: externals,
+      internalResources: internals,
+      holders: [internals[1], internals[0]],
+    });
     expect(source!.textureRegionSize).toEqual({ x: 32, y: 24 });
     expect(source!.margins).toEqual({ x: 0, y: 0 });
     expect(source!.separation).toEqual({ x: 0, y: 0 });
+  });
+
+  /**
+   * `create_tile` needs room in the atlas grid of the texture's size (`tile_set.cpp:4985`, `:5200-5211`),
+   * and a ViewportTexture reports size 0 while the scene loads (`viewport.cpp:156-160`).
+   */
+  it('creates no tile in an atlas whose texture is a ViewportTexture, through a CanvasTexture too', () => {
+    const viewportAtlas: TscnInternalResource[] = [
+      { id: 'vt', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+      { id: 'ct', type: 'CanvasTexture', data: { diffuse_texture: 'SubResource("vt")' } },
+      { id: 'direct', type: 'TileSetAtlasSource', data: { texture: 'SubResource("vt")', '0:0/0': '0' } },
+      { id: 'wrapped', type: 'TileSetAtlasSource', data: { texture: 'SubResource("ct")', '0:0/0': '0' } },
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: { 'sources/0': 'SubResource("direct")', 'sources/1': 'SubResource("wrapped")' },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', viewportAtlas, externals)!;
+    expect([model.sources.get(0)!.tiles.size, model.sources.get(1)!.tiles.size]).toEqual([0, 0]);
   });
 
   it('pads the atlas by default, as TileSetAtlasSource does (tile_set.h use_texture_padding = true)', () => {
@@ -330,7 +355,7 @@ sources/0 = SubResource("TileSetAtlasSource_a")
     expect(model!.shape).toBe(1);
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
     const source = model!.sources.get(0)!;
-    expect(source.texturePath).toBe('res://tileset/isotiles.png');
+    expect(source.texture?.ref).toBe('ExtResource("1")');
     expect(source.margins).toEqual({ x: 28, y: 75 });
     expect(source.textureRegionSize).toEqual({ x: 135, y: 105 });
     expect(source.tiles.get('0:0')!.alternatives.get(1)!.flipH).toBe(true);

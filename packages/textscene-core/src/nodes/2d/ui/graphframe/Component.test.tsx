@@ -13,6 +13,7 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphFrame } from './Component';
 import type { GraphFrameProperties } from './types';
+import { NODE_PROPERTY } from '../../../../resources/useTexture2D';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
@@ -69,7 +70,8 @@ function texturePanel(properties: Partial<GraphFrameProperties> = {}): SolveNode
               texture_margin_bottom: '4',
             },
           },
-        ]
+        ],
+        NODE_PROPERTY
       )!,
     },
   };

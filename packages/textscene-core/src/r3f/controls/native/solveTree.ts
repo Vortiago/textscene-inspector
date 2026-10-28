@@ -4,7 +4,7 @@
  * each other. Pure data: no React, no THREE.
  */
 
-import type { SceneScope, TscnNode } from '../../../parser/types';
+import type { SceneScope, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { perObject } from '../../../utils/perObject';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
@@ -26,6 +26,8 @@ import type { Vector2 } from '../../../godot/math/vector.js';
 export interface ThemedIconRef {
   ref: string;
   resources: SceneScope;
+  /** The resources between the node and `ref`: none for an override, the Theme for a theme item. */
+  holders: readonly TscnInternalResource[];
 }
 
 /**

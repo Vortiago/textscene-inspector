@@ -482,20 +482,38 @@ describe('splitContainerTextureSlots', () => {
   it('requests "grabber" for HSplitContainer/VSplitContainer when themed, ignoring any authored `vertical`', () => {
     const node: TscnNode = controlNode('S', 'HSplitContainer');
     const themed = {
-      grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } },
+      grabber: {
+        ref: 'ExtResource("1")',
+        resources: { externalResources: [], internalResources: [] },
+        holders: [],
+      },
     };
     expect(splitContainerTextureSlots(node, themed)).toEqual([
-      { key: 'grabber', ref: 'ExtResource("1")', scope: themed.grabber.resources },
+      {
+        key: 'grabber',
+        ref: 'ExtResource("1")',
+        scope: themed.grabber.resources,
+        holders: themed.grabber.holders,
+      },
     ]);
   });
 
   it('requests "v_grabber" for a base SplitContainer authored vertical=true', () => {
     const node: TscnNode = controlNode('S', 'SplitContainer', { vertical: true });
     const themed = {
-      v_grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } },
+      v_grabber: {
+        ref: 'ExtResource("1")',
+        resources: { externalResources: [], internalResources: [] },
+        holders: [],
+      },
     };
     expect(splitContainerTextureSlots(node, themed)).toEqual([
-      { key: 'v_grabber', ref: 'ExtResource("1")', scope: themed.v_grabber.resources },
+      {
+        key: 'v_grabber',
+        ref: 'ExtResource("1")',
+        scope: themed.v_grabber.resources,
+        holders: themed.v_grabber.holders,
+      },
     ]);
   });
 

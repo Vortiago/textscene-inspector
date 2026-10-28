@@ -18,6 +18,7 @@ import type {
   SolveContext,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
 import { fitChildInRect, hasFlag, isSortableControl } from './fitChildInRect';
@@ -376,7 +377,7 @@ function verticalOfNode(node: TscnNode): boolean {
 export const splitContainerTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const key = splitGrabberThemeKey(node.type, verticalOfNode(node));
   const themed = themedIcons[key];
-  return themed ? [{ key, ref: themed.ref, scope: themed.resources }] : [];
+  return themed ? [themedSlotRequest(key, themed)] : [];
 };
 
 function toChildInput(node: SolveNode, minSize: Vector2): SplitChildInput {

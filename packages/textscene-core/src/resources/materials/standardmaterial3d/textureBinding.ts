@@ -111,6 +111,15 @@ export function topDownV(state: UVSetState): UVSetState {
   };
 }
 
+/**
+ * A state on a bottom-up UV set, as a Godot mesh's first set: Godot scales and offsets V from the
+ * image's top edge, so the window samples `1 - ((1 - v) * scale + offset)`.
+ */
+export function fromTopEdge(state: UVSetState): UVSetState {
+  const { repeat, offset } = state.uv;
+  return { ...state, uv: { repeat, offset: { x: offset.x, y: bottomUpV(repeat.y + offset.y) } } };
+}
+
 /** What `slot` samples of `texture`: the sampler and window of the slot's UV set, in the slot's colour space. */
 export function slotViewSampler(
   texture: THREE.Texture,

@@ -3,7 +3,7 @@
  * `vertical = true`. The algorithm lives in `../shared/sliderSolver.ts` for both sliders.
  */
 
-import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type {
   MinimumSizeFn,
   TextureSlotRequest,
@@ -15,7 +15,7 @@ import { sliderGrabberIconSize, sliderMinimumSize } from '../shared/sliderSolver
 const vSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   const themed = themedIcons.grabber;
   const requests: TextureSlotRequest[] = [];
-  if (themed) requests.push({ key: 'grabber', ref: themed.ref, scope: themed.resources });
+  if (themed) requests.push(themedSlotRequest('grabber', themed));
   return requests;
 };
 

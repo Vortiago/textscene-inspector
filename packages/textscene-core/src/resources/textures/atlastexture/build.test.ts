@@ -69,22 +69,24 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
     expect(alpha).toEqual([0, 0, 0, 0, 255, 0, 0, 0, 0]);
   });
 
-  it('clips a region that overhangs the sheet, keeping the covered part', () => {
-    // Godot intersects the sampled rect with the atlas (`atlas_texture.cpp:208`)
-    // and draws nothing when the result is empty.
+  it("reads the sheet's edge texel where a region overhangs the sheet", () => {
+    // Godot clips the drawn rect to the region, not to the atlas (`atlas_texture.cpp:208`), and
+    // the clamped sampler reads the edge texel past the atlas. Texel 3 is the bottom-right one.
     const texture = rasterizeAtlasTexture(
       sheet(2, 2),
       layout({ source: { x: 1, y: 1, width: 2, height: 2 } })
     );
-    const alpha = bytes(texture).filter((_, i) => i % 4 === 3);
-    expect(alpha).toEqual([255, 0, 0, 0]);
-    expect(bytes(texture)[0]).toBe(3);
+    expect(bytes(texture).filter((_, i) => i % 4 === 0)).toEqual([3, 3, 3, 3]);
+    expect(bytes(texture).filter((_, i) => i % 4 === 3)).toEqual([255, 255, 255, 255]);
   });
 
-  it('returns null for a region entirely off the sheet', () => {
-    expect(
-      rasterizeAtlasTexture(sheet(2, 2), layout({ source: { x: 8, y: 8, width: 2, height: 2 } }))
-    ).toBeNull();
+  it('reads the nearest edge texels for a region entirely off the sheet (edge case)', () => {
+    // Columns 0 and 1 of the bottom row, texels 2 and 3, stretched down the region.
+    const texture = rasterizeAtlasTexture(
+      sheet(2, 2),
+      layout({ source: { x: 0, y: 8, width: 2, height: 2 } })
+    );
+    expect(bytes(texture).filter((_, i) => i % 4 === 0)).toEqual([2, 3, 2, 3]);
   });
 
   it("keeps a top-down sheet's orientation and its flipY", () => {

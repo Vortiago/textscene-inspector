@@ -48,11 +48,7 @@ import {
 import type { GraphNodeProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
-
-interface ImageLike {
-  width?: number;
-  height?: number;
-}
+import { textureSize } from '../../../../resources/textures/textureSize';
 
 /** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
 function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: number } {
@@ -78,11 +74,8 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
   const custom = useTexture2D(iconRef, externalResources, internalResources);
   const defaultTexture = useNodeIcon(solveNode.icons.port, GRAPH_PORT_ICON);
   const texture = custom.texture ?? defaultTexture;
-  const image = custom.texture?.image as ImageLike | undefined;
-  const size =
-    custom.texture && image?.width && image?.height
-      ? { x: image.width, y: image.height }
-      : GRAPH_PORT_ICON_SIZE;
+  const reported = textureSize(custom.texture);
+  const size = reported ? { x: reported.width, y: reported.height } : GRAPH_PORT_ICON_SIZE;
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (

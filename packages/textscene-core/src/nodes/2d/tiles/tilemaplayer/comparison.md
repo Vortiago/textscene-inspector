@@ -1,9 +1,6 @@
 ---
 type: TileMapLayer
 category: 2D
-status: limitation
-fixture: unit-tile-map-layer.tscn
-image: unit-tile-map-layer
 renders_as: batched textured tile quads
 ---
 
@@ -15,12 +12,21 @@ of tile material or `z_index`. The quadrant's cells draw
 in Godot's order, x then y (`tile_map_layer.cpp:306-311`), with each run of cells from one atlas
 source batched into one quad mesh. Under `use_texture_padding` (the default), a tile samples
 only its own texels and repeats its edge texels outward, as Godot's padded atlas copy does.
-A filtered tile then shows no seam from its neighbour. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`.
+A filtered tile then shows no seam from its neighbour. Godot builds that copy once, from the texture's image at load (`tile_set.cpp:5622-5654`). So a padded `ViewportTexture` source draws its target as it stands before its first render: black when opaque and clear when transparent. One that Godot never sets up draws the placeholder. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`.
 A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`). A texture that is set but fails to load draws a placeholder.
+
+## Tile grid
+
+<!-- compare: image=unit-tile-map-layer status=limitation fixture=unit-tile-map-layer.tscn -->
 
 A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile row of a
 y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15
 positional lights in total.
+
+## Padded atlas from a ViewportTexture
+<!-- compare: image=unit-tile-atlas-viewport-padding status=done fixture=unit-tile-atlas-viewport-padding.tscn -->
+
+Two padded layers draw tiles from an AtlasTexture over one ViewportTexture. Only the right TileSet is local to scene. The left samples the placeholder at its padded regions, and the right draws the opaque target as it stands before its first render: black.
 
 ## Linting
 
