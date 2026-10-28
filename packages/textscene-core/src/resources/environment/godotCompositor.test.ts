@@ -16,6 +16,7 @@ import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments } from './types';
 import type { CompositeOptions, CompositeToneMapping } from './godotCompositor';
 import { glowOn } from './testing/glowParams';
+import { scalarGlslFunction } from '../../r3f/testing/glslScalar';
 
 /** The levels the default weights `[0, 0.8, 0.4, 0.1, 0, 0, 0]` gather. */
 const DEFAULT_GATHERED_LEVELS = [1, 2, 3];
@@ -32,6 +33,7 @@ function linearOptions(): CompositeOptions {
     exposure: 1,
     transparentBackground: false,
     usesBicubicGlowUpscale: false,
+    usesDebanding: false,
   };
 }
 
@@ -53,6 +55,7 @@ function shaderOf(
     exposure: 1,
     transparentBackground: false,
     usesBicubicGlowUpscale: true,
+    usesDebanding: false,
   }).fragmentShader;
 }
 
@@ -108,6 +111,7 @@ describe('compositeProgram — the shader it emits', () => {
       exposure: 1,
       transparentBackground: true,
       usesBicubicGlowUpscale: true,
+      usesDebanding: false,
     });
     expect(fragmentShader).toContain('outputColor = vec4(color, inputColor.a);');
   });
@@ -190,6 +194,7 @@ function autoBody(glow: GlowParams | null, tonemapExposure = 1): string {
     exposure: tonemapExposure,
     transparentBackground: false,
     usesBicubicGlowUpscale: true,
+    usesDebanding: false,
   });
   return fragmentShader.slice(fragmentShader.indexOf('void mainImage'));
 }
@@ -237,6 +242,7 @@ describe('compositeProgram — texture units', () => {
       exposure: 1,
       transparentBackground: false,
       usesBicubicGlowUpscale: true,
+      usesDebanding: false,
     });
     const samplers = fragmentShader.match(/^\s*uniform\s+sampler2D\s/gm) ?? [];
     const frame = 1;
@@ -442,6 +448,7 @@ describe('compositeProgram — the uniforms it returns', () => {
       exposure,
       transparentBackground: false,
       usesBicubicGlowUpscale: true,
+      usesDebanding: false,
     });
   }
 
@@ -486,6 +493,7 @@ describe('compositeProgram — the uniforms it returns', () => {
       exposure: 1,
       transparentBackground: false,
       usesBicubicGlowUpscale: true,
+      usesDebanding: false,
     });
     expect(uniforms[LUMINANCE_UNIFORM]).toBeNull();
     expect(uniforms[AUTO_EXPOSURE_SCALE_UNIFORM]).toBe(0.7);
@@ -497,5 +505,37 @@ describe('compositeProgram — the uniforms it returns', () => {
     expect(uniforms['godotExposure']).toBe(2.5);
     expect(uniforms[glowLevelUniform(1)]).toBeNull();
     expect(uniforms[GLOW_MAP_UNIFORM]).toBeNull();
+  });
+});
+
+/** The shader of a viewport with `use_debanding`, and the adjustments when given. */
+function debandedShader(adjustments: EnvironmentAdjustments | null = null): string {
+  return compositeProgram({ ...linearOptions(), adjustments, usesDebanding: true }).fragmentShader;
+}
+
+describe('compositeProgram — debanding', () => {
+  it('adds no dither without use_debanding', () => {
+    expect(composite(glowOn())).not.toContain('godotDither');
+  });
+
+  /** `screen_space_dither` (`tonemap.glsl:848-856`): one period per channel, centred on zero. */
+  it("offsets a channel by Godot's screen-space dither, in steps of one 8-bit level", () => {
+    const dither = scalarGlslFunction(debandedShader(), 'godotDither');
+    // The pixel at (0, 0) has its centre at (0.5, 0.5), so the dot product is 201.
+    expect(dither(201, 103)).toBeCloseTo((201 / 103 - 1 - 0.5) / 255, 9);
+    expect(dither(201, 71)).toBeCloseTo((201 / 71 - 2 - 0.5) / 255, 9);
+    expect(dither(201, 97)).toBeCloseTo((201 / 97 - 2 - 0.5) / 255, 9);
+  });
+
+  it('reads the fragment from the top-left corner, where Godot puts the origin', () => {
+    expect(debandedShader()).toMatch(/resolution\.y\s*-\s*gl_FragCoord\.y/);
+  });
+
+  /** `tonemap.glsl:950-957`: the dither lands on the sRGB value, after the adjustments. */
+  it('dithers the sRGB value after the adjustments', () => {
+    const shader = debandedShader({ brightness: 1.2, contrast: 1, saturation: 1 });
+    const main = shader.slice(shader.indexOf('void mainImage'));
+    expect(main).toMatch(/godotToLinear\(max\(godotToSrgb\(color\) \+ godotDither3\(/);
+    expect(main.indexOf('godotDither3(')).toBeGreaterThan(main.indexOf('color = godotToLinear(max(color'));
   });
 });

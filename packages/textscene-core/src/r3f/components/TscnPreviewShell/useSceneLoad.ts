@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react';
 import { usePendingResourceCount } from '../../../resources/usePendingResourceCount.js';
 import { usePendingWork } from '../../../resources/usePendingWork.js';
 import { textureWork } from '../../../resources/textures/textureWork.js';
-import { fontWork } from '../../controls/native/text/sceneFontLoader.js';
+import { fontWork } from '../../controls/native/text/settledChannel.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { subscribeToNothing } from '../../../utils/subscribeToNothing.js';

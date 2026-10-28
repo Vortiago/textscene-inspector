@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
+import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import type { GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
 import measured from './build.godot.json';
 import { buildTextMeshSurface, type TextMeshFace } from './build';
@@ -41,13 +42,10 @@ function measuredFace({ glyphs }: MeasuredMesh): TextMeshFace {
       isFillRight: glyph.isFillRight,
     };
   };
-  return {
-    outlines: {
-      glyphIndex: (codepoint) => (glyphs[String.fromCodePoint(codepoint)] ? codepoint : 0),
-      glyphContours: (index) => contoursOf(index),
-    },
-    metrics: OPEN_SANS_FONT_METRICS,
-  };
+  return withOutlines(OPEN_SANS_FONT_METRICS, {
+    glyphIndex: (codepoint) => (glyphs[String.fromCodePoint(codepoint)] ? codepoint : 0),
+    glyphContours: (index) => contoursOf(index),
+  });
 }
 
 /** How far the position of `from` that lies farthest from every position of `to` is from its nearest. */

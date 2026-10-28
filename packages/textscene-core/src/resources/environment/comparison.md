@@ -18,6 +18,8 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 
 `tonemap_mode = AGX`. The lit grass and the crushed shadow match Godot.
 
+A viewport's `use_debanding`, which the root takes from `rendering/anti_aliasing/quality/use_debanding`, adds Godot's screen-space dither to the sRGB value the tone-map pass writes (`tonemap.glsl:950-957`). The pattern matches Godot's pixel for pixel.
+
 ## Tone mapping exposure
 <!-- compare: image=unit-environment-linear-exposure status=done fixture=unit-environment-linear-exposure.tscn -->
 

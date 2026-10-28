@@ -84,6 +84,17 @@ describe('useSceneExposure', () => {
     const { scene } = await mount(null);
     expect(exposureOfScene(scene)).toBeNull();
   });
+
+  it('keeps the factor of a world that still holds the scene when another unmounts', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <Exposed key="kept" factor={3} />
+        <Exposed key="removed" factor={5} />
+      </>
+    );
+    await renderer.update(<Exposed key="kept" factor={3} />);
+    expect(exposureOfScene(sceneOf(renderer))).toBe(3);
+  });
 });
 
 describe('worldExposureOfScene', () => {

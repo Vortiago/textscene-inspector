@@ -12,24 +12,14 @@ import type { ReactNode } from 'react';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
-import {
-  ViewportTextureProvider,
-  useViewportTexture,
-  type ViewportTextureEntry,
-} from '../../../r3f/contexts/ViewportTextureContext';
-import {
-  ViewportPassProvider,
-  ViewportPassOrchestrator,
-} from '../../../r3f/contexts/ViewportPassRegistryContext';
+import { useViewportTexture, type ViewportTextureEntry } from '../../../r3f/contexts/ViewportTextureContext';
 import { SubViewport } from './Component';
-import { installToneMapping } from '../../../resources/environment/toneMapping';
-import { ToneMapper } from '../../../godot/rendering/environment/toneMapping.js';
+import { ViewportPassStack } from './viewportPasses.testkit';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { InWorld } from '../../../r3f/testing/InWorld';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
-import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
@@ -100,15 +90,11 @@ async function renderScene(
   const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
   const wrap = (nodes: ReactNode) => (
     <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
-      <ViewportTextureProvider>
-        <ViewportPassProvider>
-          <InWorld>{nodes}</InWorld>
-          <Probe path={viewportPath} seen={seen} />
-          {canvasCamera}
-          <CaptureRenderer captured={capturedGl} />
-          <ViewportPassOrchestrator />
-        </ViewportPassProvider>
-      </ViewportTextureProvider>
+      <ViewportPassStack captured={capturedGl}>
+        <InWorld>{nodes}</InWorld>
+        <Probe path={viewportPath} seen={seen} />
+        {canvasCamera}
+      </ViewportPassStack>
     </SceneStack>
   );
   const renderer = await ReactThreeTestRenderer.create(wrap(<NodeDispatcher nodes={parsed.nodes} />));
@@ -305,75 +291,12 @@ describe('<SubViewport> offscreen publisher', () => {
     expect(published()).not.toBeNull();
   });
 
-  /** The 2D workspace's portal after one frame, and the version of the mesh material inside it. */
-  async function renderedPortal() {
-    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
-    const [portal] = await scenesRenderedNextFrame(renderer, gl());
-    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
-    return { renderer, gl, material, versionBefore: material.version };
-  }
-
   /**
-   * A portal scene is one the root's install never walks, so the pass recompiles it itself when
-   * the curve changes: three keys a compiled program on the chunk only when a material is dirty.
+   * A 3D pass draws its world in linear HDR, and its own tonemap pass applies the curve after
+   * (`Component.toneMap.test.tsx`), so the pass suspends the canvas's curve.
    */
-  it('2D workspace: recompiles the portal when a new curve installs', async () => {
-    const { renderer, gl, material, versionBefore } = await renderedPortal();
-
-    const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC }, 'material');
-    try {
-      await scenesRenderedNextFrame(renderer, gl());
-      expect(material.version).toBe(versionBefore + 1);
-    } finally {
-      restore();
-    }
-  });
-
-  it('2D workspace: leaves the portal compiled while the curve stays the same', async () => {
-    const { renderer, gl, material, versionBefore } = await renderedPortal();
-
-    await scenesRenderedNextFrame(renderer, gl());
-
-    expect(material.version).toBe(versionBefore);
-  });
-
-  /**
-   * `_render_buffers_post_process_and_tonemap` (renderer_scene_render_rd.cpp) reads
-   * the environment of the viewport's `find_world_3d()`. A shared world resolves to
-   * the parent's (`viewport.cpp`), so its curve, the ADR-0025 preview FILMIC here,
-   * applies in the target too, and the pass leaves the renderer's tonemap in force.
-   */
-  it('shared world: the offscreen pass keeps the shared environment tonemap', async () => {
+  it('3D content: the offscreen pass draws without the canvas tonemap', async () => {
     const { renderer, gl } = await renderScene(scene3D());
-    gl().toneMapping = THREE.CustomToneMapping;
-    expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
-  });
-
-  /**
-   * The glow compositor holds `gl.toneMapping` at `NoToneMapping` and tonemaps the main view in
-   * its own pass, which never reaches the target. A shared world's curve still applies inside the
-   * target, as above.
-   */
-  it('shared world: the offscreen pass applies the environment curve the compositor suspends', async () => {
-    const { renderer, gl } = await renderScene(scene3D());
-    const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC, exposure: 1 }, 'compositor');
-    try {
-      gl().toneMapping = THREE.NoToneMapping;
-      expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
-      expect(gl().toneMapping).toBe(THREE.NoToneMapping);
-    } finally {
-      restore();
-    }
-  });
-
-  /**
-   * With `own_world_3d`, `find_world_3d()` returns a fresh `World3D` with no
-   * Environment, and the default `tonemap_mode` is `0` LINEAR
-   * (`doc/classes/Environment.xml`). The renderer's tonemap belongs to the main
-   * scene's environment, so the pass suspends it.
-   */
-  it('own world: the offscreen pass renders without the shared environment tonemap', async () => {
-    const { renderer, gl } = await renderScene(scene3D('own_world_3d = true'));
     gl().toneMapping = THREE.CustomToneMapping;
     expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.NoToneMapping);
     // Restored after the pass: the main render still owns the live curve.

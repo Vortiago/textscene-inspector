@@ -127,17 +127,16 @@ export function rewrittenShader(
 
 /**
  * Puts `text` in three's chunk `name`, for a chunk whose whole text a caller swaps at runtime, as
- * the tone curve is. True when the chunk changed. A null `text`, an edit whose anchor three lacks
- * as `applyEdits` gives it, keeps the chunk and warns that three's `missing`.
+ * the tone curve is. A null `text`, an edit whose anchor three lacks as `applyEdits` gives it,
+ * keeps the chunk and warns that three's `missing`.
  */
-export function swappedChunk(name: ChunkName, text: string | null, missing: string): boolean {
-  if (THREE.ShaderChunk[name] === text) return false;
+export function swapChunk(name: ChunkName, text: string | null, missing: string): void {
+  if (THREE.ShaderChunk[name] === text) return;
   if (text === null) {
     warn(`[Shading] three's ${missing}`);
-    return false;
+    return;
   }
   THREE.ShaderChunk[name] = text;
-  return true;
 }
 
 /**
