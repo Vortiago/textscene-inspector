@@ -3540,6 +3540,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Texture Rect Viewport Texture Flip",
+    "file": "unit-texture-rect-viewport-texture-flip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Texture Rect Viewport Texture",
     "file": "unit-texture-rect-viewport-texture.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3975,6 +3980,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Uv1 Top Edge",
+    "file": "unit-material-uv1-top-edge.tscn",
     "category": "Unit - Materials"
   },
   {

@@ -413,6 +413,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-texture-rect-viewport-texture.tscn',
     mode: '2d',
   },
+  // A flipped TextureRect samples its own copy of the target through a mirrored window. Godot
+  // 4.6.3 `--mode 2d`: (150,150) rgb(0,0,255) and (290,150) rgb(0,255,0).
+  {
+    name: 'texture-rect-viewport-texture-flip',
+    file: 'unit-texture-rect-viewport-texture-flip.tscn',
+    mode: '2d',
+  },
   // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3
   // `--mode 2d`: (400,150) rgb(127,127,127) and (200,280) rgb(76,76,76), the last column and row.
   {
