@@ -17,6 +17,7 @@ import {
 } from './directionalShadowMap';
 import { createDirectionalShadowTexture, writeDirectionalShadowMap } from './directionalLightQuad';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { perObject } from '../../utils/perObject.js';
 import type { Quad2, ShadowCasterEdges } from './shadowVolumes';
 import { useCanvasLighting2D, type LightPassStep } from './lightPassContext';
 import type { CanvasClip } from './lightPassHost';
@@ -45,13 +46,7 @@ function readLightDirection(anchor: THREE.Object3D): THREE.Vector3 {
 }
 
 /** The quad of each clip a host hands out, so a still canvas hands the map build the same quad. */
-const clipQuads = new WeakMap<CanvasClip, Quad2>();
-
-function quadOfClip(clip: CanvasClip): Quad2 {
-  let quad = clipQuads.get(clip);
-  if (!quad) clipQuads.set(clip, (quad = rectQuad(clip.rect)));
-  return quad;
-}
+const quadOfClip = perObject((clip: CanvasClip): Quad2 => rectQuad(clip.rect));
 
 /**
  * The view for the light whose node is `anchor`, over `clip`. It returns `previous` itself while

@@ -169,7 +169,17 @@ export function useSharedLiveTree(): SharedLiveTree | null {
   );
 }
 
-function sameSelection<T>(a: T | undefined, b: T | undefined, isSame: (a: T, b: T) => boolean): boolean {
+/**
+ * Whether two values that may be undefined are the same: undefined equals only undefined, and two
+ * values go to `isSame`.
+ *
+ * @canonical Compare two values that may be undefined
+ */
+export function sameSelection<T>(
+  a: T | undefined,
+  b: T | undefined,
+  isSame: (a: T, b: T) => boolean
+): boolean {
   return a === undefined || b === undefined ? a === b : isSame(a, b);
 }
 
