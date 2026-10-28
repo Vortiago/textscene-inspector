@@ -28,7 +28,7 @@ import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
-import { canvasModulateColor, CanvasModulateContext } from '../../../r3f/canvasModulate';
+import { useCanvasModulateColor, CanvasModulateContext } from '../../../r3f/canvasModulate';
 import { createViewportLightPassHost } from './viewportLightPassHost';
 import type { Rgba } from '../../../godot/math/math';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
@@ -94,7 +94,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const targetSize = viewportTargetSize(properties.size, useViewportRect(path));
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
-  const canvasModulate = useMemo(() => canvasModulateColor(node.children), [node.children]);
+  const canvasModulate = useCanvasModulateColor(node.children);
   const contents = (
     <ViewportSizeProvider size={size}>
       <CanvasModulateContext.Provider value={canvasModulate}>

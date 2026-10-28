@@ -7,6 +7,8 @@
 
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
+import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
+import { useSharedLiveTree } from './useLiveSceneTree.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
@@ -20,25 +22,38 @@ interface CanvasModulateLike {
 }
 
 /**
- * The canvas-wide tint for the nodes of one canvas, white with no visible
- * CanvasModulate. A CanvasModulate inside an instanced sub-scene is not found,
- * though Godot applies it.
+ * The canvas-wide tint for the nodes of one canvas, white with no visible CanvasModulate. It reads
+ * the live tree over `ctx`, so a CanvasModulate inside an instanced sub-scene counts the moment
+ * that sub-scene is loaded: it joins the group of the canvas it sits in, whichever file declares
+ * it (`canvas_modulate.cpp:33-45`).
  */
-export function canvasModulateColor(nodes: readonly TscnNode[]): Rgba {
+export function canvasModulateColor(nodes: readonly TscnNode[], ctx: LiveTreeContext): Rgba {
   let found: Rgba | null = null;
 
-  const walk = (node: TscnNode, visible: boolean): void => {
-    const props = node.properties as CanvasModulateLike;
-    const shown = visible && props.visible !== false;
+  liveTreeOf(nodes, ctx).fold<boolean, void>(true, ({ step }, visible, descend) => {
+    const { node } = step;
     // A CanvasLayer and a SubViewport are canvases of their own (`viewport.cpp:5345`): a
     // CanvasModulate inside tints that canvas, not this one.
     if (node.type === 'CanvasLayer' || isViewportBoundary(node.type)) return;
+    const props = node.properties as CanvasModulateLike;
+    const shown = visible && props.visible !== false;
     if (node.type === 'CanvasModulate' && shown && props.color) found = props.color;
-    for (const child of node.children) walk(child, shown);
-  };
-
-  for (const node of nodes) walk(node, true);
+    descend(shown);
+  });
   return found ?? WHITE_MODULATE;
+}
+
+/** The sub-scenes the loader holds, which is none before a scene graph exists. */
+const NO_SCENES: LiveTreeContext = {
+  externalResources: [],
+  internalResources: [],
+  sceneCache: { getCached: () => null },
+};
+
+/** {@link canvasModulateColor} over the scenes the loader holds now. */
+export function useCanvasModulateColor(nodes: readonly TscnNode[]): Rgba {
+  const ctx = useSharedLiveTree()?.ctx ?? NO_SCENES;
+  return useMemo(() => canvasModulateColor(nodes, ctx), [nodes, ctx]);
 }
 
 /**

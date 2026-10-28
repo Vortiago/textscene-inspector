@@ -19,7 +19,7 @@ import {
   type Quad2,
   type ShadowCasterEdges,
 } from './shadowVolumes';
-import type { Vector2 } from '../../godot/math/vector.js';
+import { normalizedVector2, type Vector2 } from '../../godot/math/vector.js';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /** What the map is built from, all in the previewer's 2D world space (Y up). */
@@ -63,12 +63,9 @@ function inScreenPixels({ clip, direction, scale }: DirectionalShadowView): {
   corners: Vector2[];
   direction: Vector2;
 } {
-  const scaled = { x: direction.x * scale.x, y: direction.y * scale.y };
-  // Not `normalizedVector2`: its float32 rounding moves a PCF5 shadow edge by one pixel.
-  const length = Math.hypot(scaled.x, scaled.y);
   return {
     corners: clip.map(({ x, y }) => ({ x: x * scale.x, y: y * scale.y })),
-    direction: { x: scaled.x / length, y: scaled.y / length },
+    direction: normalizedVector2({ x: direction.x * scale.x, y: direction.y * scale.y }),
   };
 }
 

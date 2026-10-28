@@ -47,7 +47,7 @@ import { SceneResourcesProvider, useSceneResources } from './SceneResourcesConte
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { GuardedNodeComponent } from './components/GuardedNodeComponent.js';
-import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
+import { useCanvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
 import { CanvasRootScope } from './canvasRootScope.js';
@@ -102,7 +102,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
     if (nodes.some(containsCsgShape)) prefetchCsgModule();
   }, [nodes]);
 
-  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+  const canvasModulate = useCanvasModulateColor(nodes);
   // Pure functions of the tree, so the Control walk derives the same numbers on its own.
   const ranks = useMemo(() => layerRanks(declaredCanvasLayers(nodes)), [nodes]);
   const rootRanges = useMemo(() => allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children, [nodes]);

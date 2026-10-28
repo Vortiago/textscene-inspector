@@ -6,9 +6,14 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import { canvasModulateColor } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
+import { contextOver } from './liveSceneTree.testkit';
+import type { TscnScene } from '../parser/types';
 
-function colorOf(tscn: string) {
-  return canvasModulateColor(new TscnParser().parse(tscn).nodes);
+const parse = (tscn: string): TscnScene => new TscnParser().parse(tscn);
+
+function colorOf(tscn: string, scenes: Record<string, TscnScene> = {}) {
+  const scene = parse(tscn);
+  return canvasModulateColor(scene.nodes, contextOver(scene, scenes));
 }
 
 describe('canvasModulateColor', () => {
@@ -105,7 +110,7 @@ color = Color(1, 0, 0, 1)
   });
 
   it("serves a SubViewport's own subtree, leaving a nested SubViewport out", () => {
-    const view = new TscnParser().parse(`[gd_scene format=3]
+    const scene = parse(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -118,7 +123,44 @@ color = Color(1, 0, 0, 1)
 
 [node name="InnerTint" type="CanvasModulate" parent="View/Inner"]
 color = Color(0, 0, 1, 1)
-`).nodes[0]!.children[0]!;
-    expect(canvasModulateColor(view.children)).toMatchObject({ r: 1, g: 0, b: 0 });
+`);
+    const view = scene.nodes[0]!.children[0]!;
+    expect(canvasModulateColor(view.children, contextOver(scene, {}))).toMatchObject({ r: 1, g: 0, b: 0 });
+  });
+
+  /**
+   * An instanced scene's nodes are nodes of the canvas they sit in. `CanvasModulate` reads
+   * `get_canvas()` and joins the group of that canvas alone (`canvas_modulate.cpp:33-45`), so it
+   * does not matter which file declares it.
+   */
+  describe('through an instanced sub-scene', () => {
+    const TINTED = 'res://tinted.tscn';
+    const tinted = parse(`[gd_scene format=3]
+
+[node name="TintedRoot" type="Node2D"]
+
+[node name="Tint" type="CanvasModulate" parent="."]
+color = Color(1, 0, 0, 1)
+`);
+    const host = (instanceProperties = '') => `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="${TINTED}" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Tinted" parent="." instance=ExtResource("1")]
+${instanceProperties}`;
+
+    it('finds the CanvasModulate the sub-scene declares', () => {
+      expect(colorOf(host(), { [TINTED]: tinted })).toMatchObject({ r: 1, g: 0, b: 0 });
+    });
+
+    it('leaves it out while the sub-scene is hidden', () => {
+      expect(colorOf(host('visible = false'), { [TINTED]: tinted })).toEqual(WHITE_MODULATE);
+    });
+
+    it('is white until the sub-scene is loaded', () => {
+      expect(colorOf(host())).toEqual(WHITE_MODULATE);
+    });
   });
 });

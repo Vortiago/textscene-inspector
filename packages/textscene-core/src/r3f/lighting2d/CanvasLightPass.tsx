@@ -37,7 +37,7 @@ interface CanvasLightPassProps {
   /** The canvas the pass lights, and the caller that runs it. */
   host: LightPassHost;
   /**
-   * The canvas tint, where `S` starts for an ordinary item. It is the `canvasModulateColor(nodes)`
+   * The canvas tint, where `S` starts for an ordinary item. It is the `useCanvasModulateColor(nodes)`
    * the dispatcher publishes to the items, so the seed and the tint they divide out agree.
    */
   canvasModulate: Rgba;

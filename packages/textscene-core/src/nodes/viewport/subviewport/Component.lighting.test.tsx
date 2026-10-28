@@ -23,6 +23,7 @@ import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { canvasModulateColor } from '../../../r3f/canvasModulate';
+import { contextOver } from '../../../r3f/liveSceneTree.testkit';
 
 import '../../../r3f/nodes/index';
 
@@ -95,7 +96,9 @@ async function frameOf(): Promise<Frame> {
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
       <ViewportTextureProvider>
         <ViewportPassProvider>
-          <CanvasLighting2DProvider canvasModulate={canvasModulateColor(parsed.nodes)}>
+          <CanvasLighting2DProvider
+            canvasModulate={canvasModulateColor(parsed.nodes, contextOver(parsed, {}))}
+          >
             <NodeDispatcher nodes={parsed.nodes} />
           </CanvasLighting2DProvider>
           <CaptureRenderer captured={captured} />
