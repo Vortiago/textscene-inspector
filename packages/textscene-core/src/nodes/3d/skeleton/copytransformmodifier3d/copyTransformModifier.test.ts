@@ -15,10 +15,11 @@ import {
 } from '../../../../godot/math/transform3d';
 import type { Vector3 } from '../../../../godot/math/vector';
 import { BonePoses, newBone, type Bone, type PoseModifier } from '../../skeleton3d/skeletonPose';
-import type { TscnNode } from '../../../../parser/types';
+import { makeNode } from '../../../../parser/testing/parserKit';
 import type { ModifierWorld } from '../../skeleton3d/poseModifier';
 import { newConstraintSetting } from '../boneconstraint3d/settings';
 import { readCopyTransformModifier } from './copyTransformModifier';
+import './index';
 import type { CopyTransformModifier3DProperties, CopyTransformSetting } from './types';
 
 const UP = { x: 0, y: 1, z: 0 };
@@ -80,8 +81,8 @@ function readModifier(
   extra: Partial<CopyTransformModifier3DProperties>,
   world: ModifierWorld
 ): PoseModifier | null {
-  const node = { type: 'CopyTransformModifier3D', name: 'Mod', properties: properties(settings, extra) };
-  return readCopyTransformModifier(node as TscnNode, world);
+  const node = makeNode('Mod', 'CopyTransformModifier3D', { properties: properties(settings, extra) });
+  return readCopyTransformModifier(node, world);
 }
 
 /** The poses after the modifier edits `bones`. */
