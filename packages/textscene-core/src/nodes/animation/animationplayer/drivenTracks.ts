@@ -26,17 +26,14 @@ const VALUE_PUSH_PROPERTIES: Record<string, boolean> = {
   size: true,
 };
 
-/** A track with no value to give pushes this tuple, which every reader decodes as no value. */
-const NO_VALUE: readonly number[] = [];
-
 /** A property of a node that a clip pushes through the AnimatedValue registry. */
 export interface ValueTarget {
   path: string;
   property: string;
   /** Where the value is pushed: the key of the property of the node. */
   key: string;
-  /** The components of the value at `time`; empty where the track has none. */
-  sample: (time: number) => readonly number[];
+  /** The components of the value at `time`, or null where the track has none. */
+  sample: (time: number) => readonly number[] | null;
 }
 
 export interface DrivenClip {
@@ -113,16 +110,23 @@ function valueTargetOf(track: GodotTrack, path: string, animation: GodotAnimatio
     path,
     property,
     key: animatedValueKey(path, property),
-    sample: (time) => sampleTupleTrack(keys, time, setup) ?? NO_VALUE,
+    sample: (time) => sampleTupleTrack(keys, time, setup),
   };
 }
 
-/** The value tracks of `clip` as a clip for the value registry. */
+/**
+ * The value tracks of `clip` as a clip for the value registry. A track with no value at `time`
+ * writes nothing, so the registry releases its key and the authored value shows: a reader would
+ * decode an empty tuple as a value (`visible` as true).
+ */
 export function valuesPushedBy(clip: DrivenClip): PushedClip<readonly number[]> {
   return {
     name: clip.name,
     sample: (time, out) => {
-      for (const { key, sample } of clip.values) out.set(key, sample(time));
+      for (const { key, sample } of clip.values) {
+        const value = sample(time);
+        if (value !== null) out.set(key, value);
+      }
     },
   };
 }

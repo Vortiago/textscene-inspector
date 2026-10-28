@@ -27,7 +27,7 @@ export function usePushedWrites<T>(
 ): void {
   /** Written only by the frame and `release`: what this clip writes now. */
   const written = useRef<Map<string, T>>(new Map());
-  /** Written only by the frame: the next sample. It swaps with `written`, so a frame allocates no map. */
+  /** Written only by the frame: the next sample. It swaps with `written`, so the hook allocates no map for a frame; the sample of a clip may. */
   const sampled = useRef<Map<string, T>>(new Map());
   /** Written only by the frame and `release`: the playhead the values were sampled at. */
   const sampledAt = useRef<number | null>(null);

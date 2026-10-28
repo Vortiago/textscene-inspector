@@ -136,7 +136,7 @@ describe('splitTracks', () => {
     });
     const [target] = splitTracks(clip(eased), SCENE).values;
 
-    expect(target!.sample(1)[0]).not.toBeCloseTo(0.5, 2);
+    expect(target!.sample(1)![0]).not.toBeCloseTo(0.5, 2);
   });
 
   it('steps a frame track and gives the stepped key as a one-tuple', () => {
@@ -156,10 +156,10 @@ describe('splitTracks', () => {
     expect(target!.sample(1.5)).toEqual([3]);
   });
 
-  it('returns an empty tuple for a value track with no key to give', () => {
+  it('returns null for a value track with no key to give', () => {
     const [target] = splitTracks(clip(FADE({ keys: [] })), SCENE).values;
 
-    expect(target!.sample(1)).toEqual([]);
+    expect(target!.sample(1)).toBeNull();
   });
 
   it('holds a frame or visible key until the next, whatever interp says, and reads a bool as 1 or 0', () => {
