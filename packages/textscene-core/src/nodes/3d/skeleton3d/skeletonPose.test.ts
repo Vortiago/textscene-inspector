@@ -361,6 +361,6 @@ describe('unknownBoneNames', () => {
       ['other', {}],
     ]);
 
-    expect(unknownBoneNames(CHAIN, pose)).toEqual(['ghost', 'other']);
+    expect(unknownBoneNames(new Set(CHAIN.map((bone) => bone.name)), pose)).toEqual(['ghost', 'other']);
   });
 });

@@ -73,10 +73,9 @@ export function animatedBones(bones: readonly Bone[], animated: AnimatedPose, mo
   });
 }
 
-/** The names of `animated` that no bone of `bones` carries. */
-export function unknownBoneNames(bones: readonly Bone[], animated: AnimatedPose): string[] {
-  const names = new Set(bones.map((bone) => bone.name));
-  return [...animated.keys()].filter((name) => !names.has(name));
+/** The names of `animated` that are not in `boneNames`, the names of the bones of a skeleton. */
+export function unknownBoneNames(boneNames: ReadonlySet<string>, animated: AnimatedPose): string[] {
+  return [...animated.keys()].filter((name) => !boneNames.has(name));
 }
 
 /**

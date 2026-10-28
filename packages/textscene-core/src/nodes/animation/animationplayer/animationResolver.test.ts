@@ -486,6 +486,20 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
   });
 
+  it('reads a path with an empty subname as a track on the node (edge case)', () => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Skeleton3D:")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks.map((t) => [t.targetPath, t.bone])).toEqual([
+      ['Skeleton3D', undefined],
+    ]);
+  });
+
   it.each([
     ['wraps when loop_wrap is absent', undefined, true],
     ['wraps when loop_wrap is true', 'true', true],

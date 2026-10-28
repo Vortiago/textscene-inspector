@@ -2,8 +2,8 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { CMP_EPSILON } from './math.js';
-import type { Vector3 } from './vector.js';
 import { storedReal as f } from './real.js';
+import type { Vector3 } from './vector.js';
 
 export interface Quaternion {
   x: number;

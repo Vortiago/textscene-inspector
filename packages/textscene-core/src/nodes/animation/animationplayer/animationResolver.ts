@@ -263,7 +263,9 @@ function parseBoneNodePath(inner: string): { targetPath: string; bone?: string }
   const colon = inner.indexOf(':');
   if (colon === -1) return { targetPath: inner };
   const bone = inner.slice(colon + 1);
-  return bone.includes(':') ? null : { targetPath: inner.slice(0, colon), bone };
+  const targetPath = inner.slice(0, colon);
+  if (bone === '') return { targetPath };
+  return bone.includes(':') ? null : { targetPath, bone };
 }
 
 function parseNodePath(raw: string): { targetPath: string; property: string } | null {

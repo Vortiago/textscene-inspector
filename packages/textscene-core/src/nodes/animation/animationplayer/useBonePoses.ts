@@ -32,6 +32,8 @@ export function useBonePoses(
   const sampledAt = useRef<number | null>(null);
 
   const release = useCallback(() => {
+    // The frame calls this while nothing plays, so an idle player allocates nothing.
+    if (written.current.size === 0 && sampledAt.current === null) return;
     written.current.forEach((skeletonPath) => registry.set(skeletonPath, null));
     written.current = new Set();
     sampledAt.current = null;

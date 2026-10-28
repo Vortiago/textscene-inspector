@@ -90,33 +90,43 @@ function boundSkinOf(
   return skin;
 }
 
+/** The global transform of the node that `target` names from the modifier at `modifierPath`, as a modifier read it. */
+interface NodeRead {
+  modifierPath: string;
+  target: string;
+  global: Transform3D | null;
+}
+
 /**
  * The pose edit of each SkeletonModifier3D child of a skeleton that makes one, in child order, and
- * what the edits read: the modifier nodes, and the global transform of each node of the scene they ask for.
+ * what the edits read: the modifier nodes, the global transform of the skeleton, and each node of
+ * the scene they ask for. An edit asks when it runs, so `reads` fills after the edits are made, and
+ * a node asked for again answers what it answered first: the edits of a skin always see one scene.
  */
 interface Modifiers {
   edits: PoseModifier[];
   nodes: TscnNode[];
-  worlds: (Transform3D | null)[];
+  skeletonGlobal: Transform3D | null;
+  reads: NodeRead[];
 }
 
 function modifiersOf(skeleton: LiveLink, tree: LiveTree): Modifiers {
-  const modifiers: Modifiers = { edits: [], nodes: [], worlds: [] };
-  let skeletonGlobal: Transform3D | undefined;
+  const modifiers: Modifiers = { edits: [], nodes: [], skeletonGlobal: null, reads: [] };
   tree.fold<void, void>(
     undefined,
-    ({ step, path }) => {
+    ({ step, path: modifierPath }) => {
       const reader = nodeComponentRegistry.poseModifierOf(step.node.type);
       if (!reader) return;
-      if (!skeletonGlobal) {
-        skeletonGlobal = liveGlobalTransform3D(tree, skeleton.path) ?? identityTransform3D();
-        modifiers.worlds.push(skeletonGlobal);
-      }
+      modifiers.skeletonGlobal ??= liveGlobalTransform3D(tree, skeleton.path) ?? identityTransform3D();
       const edit = reader(step.node, {
-        skeletonGlobal,
+        skeletonGlobal: modifiers.skeletonGlobal,
         nodeGlobal: (target) => {
-          const global = referenceNodeGlobal(tree, path, target);
-          modifiers.worlds.push(global);
+          const earlier = modifiers.reads.find(
+            (read) => read.modifierPath === modifierPath && read.target === target
+          );
+          if (earlier) return earlier.global;
+          const global = referenceNodeGlobal(tree, modifierPath, target);
+          modifiers.reads.push({ modifierPath, target, global });
           return global;
         },
       });
@@ -126,6 +136,16 @@ function modifiersOf(skeleton: LiveLink, tree: LiveTree): Modifiers {
     skeleton
   );
   return modifiers;
+}
+
+/** Whether the scene `tree` holds answers each read of `previous` as it did, so its edits would make the same pose. */
+function readsHold(previous: Modifiers, current: Modifiers, tree: LiveTree): boolean {
+  return (
+    sameWorld(previous.skeletonGlobal, current.skeletonGlobal) &&
+    previous.reads.every((read) =>
+      sameWorld(read.global, referenceNodeGlobal(tree, read.modifierPath, read.target))
+    )
+  );
 }
 
 /** The global transform of the Node3D that `target` names from the modifier at `modifierPath`. */
@@ -175,7 +195,7 @@ function skinOf(skeleton: LiveLink, tree: LiveTree): BoundSkin {
   if (
     previous &&
     sameElements(previous.modifiers.nodes, modifiers.nodes) &&
-    sameElements(previous.modifiers.worlds, modifiers.worlds, sameWorld)
+    readsHold(previous.modifiers, modifiers, tree)
   ) {
     return previous.skin;
   }
@@ -186,6 +206,7 @@ function skinOf(skeleton: LiveLink, tree: LiveTree): BoundSkin {
 
 function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): BoundSkin {
   const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
+  const boneNames = new Set(bones.map((bone) => bone.name));
   let lastPose: AnimatedPose | undefined;
   let lastMatrices: readonly Transform3D[] = [];
   const skin: BoundSkin = {
@@ -196,7 +217,7 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Boun
         : automaticSkinMatrices(bones, showRestOnly, modifiers),
     matricesUnder: (pose) => {
       if (pose === lastPose) return lastMatrices;
-      for (const name of unknownBoneNames(bones, pose)) {
+      for (const name of unknownBoneNames(boneNames, pose)) {
         warnOnce(
           skin,
           name,

@@ -411,6 +411,24 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
     expect(skinOfLoad()).toBe(skinOfLoad());
   });
 
+  it('hands back the same skin where a later load leaves the node a modifier reads as it is', () => {
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 1
+settings/0/relative = false
+`;
+    const target = `[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+`;
+    const main = parse(modified(copyNodePosition, BONES, target));
+    const skinOfLoad = () =>
+      bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
+
+    expect(skinOfLoad()).toBe(skinOfLoad());
+  });
+
   it('hands back a new skin where a node a modifier reads has moved, though the file pose skins the same', () => {
     // Copying a position the bone already has leaves the file pose as it is, whatever the Target does.
     const copyNodePosition = `setting_count = 1
