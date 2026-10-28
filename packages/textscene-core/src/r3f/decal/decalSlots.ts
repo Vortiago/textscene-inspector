@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { sharedTexture } from '../sharedTexture.js';
+import { installedSlot } from '../sharedTexture.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 
 export const DECAL_UNIFORMS = {
@@ -13,24 +13,15 @@ export const DECAL_UNIFORMS = {
   shown: 'godotDecals',
 } as const;
 
-/**
- * The texture a program samples the atlas through. three never uploads it, as its version stays 0
- * (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds: the shown scene's, or
- * three's empty texture.
- */
-class DecalAtlasSlot extends sharedTexture(THREE.DataTexture) {}
-
-// After a dev server reloads this module, the value is the one the earlier evaluation installed.
-export const decalAtlasSlot = installedOr(
-  DECAL_UNIFORMS.atlas,
-  THREE.DataTexture,
-  () => new DecalAtlasSlot()
-);
+/** The texture a program samples the atlas through. The shown scene's atlas takes its place before each render. */
+export const decalAtlasSlot = installedSlot(DECAL_UNIFORMS.atlas, THREE.DataTexture);
 
 /** The `shownDecals` slot that holds the number of shown decals. */
 export const SHOWN_COUNT = 0;
 /** The `shownDecals` slot that holds the factor `2 ^ texture_mipmap_bias` that scales the sample's gradients. */
 export const SHOWN_GRADIENT_SCALE = 1;
+/** The `shownDecals` slot that is 1 when the atlas magnifies by a linear filter, 0 when by a nearest one. */
+export const SHOWN_LINEAR_MAGNIFICATION = 2;
 
 /**
  * The shown decals' count and the mipmap bias of the render. An array, not scalars: three caches a

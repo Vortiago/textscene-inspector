@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitdecalemissionmap"]
+
+; One variable: `texture_emission` on a decal with no albedo. Godot adds the emission beside the
+; albedo branch, so the footprint glows in the checkerboard's pattern at twice its energy. A decal
+; with an emission alone draws, where one with a normal or ORM map alone does not. `unit-decal`
+; and the other decal scenes carry an albedo alone, so none of them shows an emission.
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="2_map"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 0.6
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.5)
+light_energy = 3.0
+omni_range = 6.0
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")
+surface_material_override/0 = SubResource("Material_floor")
+
+[node name="Decal" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+size = Vector3(4, 2, 4)
+texture_emission = ExtResource("2_map")
+emission_energy = 2.0

@@ -386,10 +386,11 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   };
 
   // Godot's AO sampler is `hint_default_white` (`material.cpp:1128`), so a surface with no map
-  // occludes nothing.
+  // occludes nothing itself. A decal's ORM map can still occlude it, in the direct light too once
+  // `ao_light_affect` is set.
   const injection = composeInjections([
     lightModesInjection(scalars),
-    aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    aoMap || scalars.aoLightAffect > 0 ? GODOT_AMBIENT_OCCLUSION : undefined,
     pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,

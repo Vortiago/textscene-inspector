@@ -463,6 +463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Emission Map",
+    "file": "unit-decal-emission-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -470,6 +475,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Mipmap Import",
     "file": "unit-decal-mipmap-import.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Normal Map",
+    "file": "unit-decal-normal-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Orm Map",
+    "file": "unit-decal-orm-map.tscn",
     "category": "Other"
   },
   {

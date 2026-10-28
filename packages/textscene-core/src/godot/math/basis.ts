@@ -9,7 +9,7 @@
 import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import type { Quaternion } from './quaternion.js';
-import { vector3Dot, type Vector3 } from './vector.js';
+import { normalizedVector3, vector3Dot, type Vector3 } from './vector.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
@@ -24,9 +24,35 @@ export type BasisComponents = readonly [
   number,
 ];
 
+export type Triple = [number, number, number];
+
 /** Column `index` of the basis, the vector `Basis::get_column` returns. */
-function column(n: BasisComponents, index: number): [number, number, number] {
+export function basisColumn(n: BasisComponents, index: number): Triple {
   return [n[index]!, n[index + 3]!, n[index + 6]!];
+}
+
+function scaled(v: Triple, s: number): Triple {
+  return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
+}
+
+function subtract(a: Triple, b: Triple): Triple {
+  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
+}
+
+/**
+ * `Basis::orthonormalize` (`basis.cpp:56-72`): Gram-Schmidt over the columns, which drops the scale and
+ * the shear.
+ * @canonical A basis made orthonormal, column by column
+ */
+export function basisOrthonormalized(n: BasisComponents): BasisComponents {
+  const x = normalizedVector3(...basisColumn(n, 0));
+  const yColumn = basisColumn(n, 1);
+  const y = normalizedVector3(...subtract(yColumn, scaled(x, vector3Dot(x, yColumn))));
+  const zColumn = basisColumn(n, 2);
+  const z = normalizedVector3(
+    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
+  );
+  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
 /** `Basis::get_scale_abs()` (basis.cpp:287-292): the three column magnitudes, unsigned. */
@@ -60,9 +86,9 @@ export function basisHasUnitScale(n: BasisComponents): boolean {
  * perpendicular. The square, not the length: the two differ once a tolerance is involved.
  */
 export function basisIsOrthonormal(n: BasisComponents): boolean {
-  const x = column(n, 0);
-  const y = column(n, 1);
-  const z = column(n, 2);
+  const x = basisColumn(n, 0);
+  const y = basisColumn(n, 1);
+  const z = basisColumn(n, 2);
   return (
     isEqualApprox(vector3Dot(x, x), 1) &&
     isEqualApprox(vector3Dot(y, y), 1) &&

@@ -9,7 +9,7 @@ import { captureCameras } from './captureCameras';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { shownProbes } from './probeSlots';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk';
+import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { observeSceneCamera } from '../sceneRenderCamera';

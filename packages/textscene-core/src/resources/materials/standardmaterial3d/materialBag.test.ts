@@ -325,9 +325,13 @@ describe('standardMaterialBags — AO on direct light', () => {
     expect(patchedFragment(materialFromBag(physical))).toContain(OCCLUDES_DIRECT_LIGHT);
   });
 
-  it('patches nothing on a surface with no AO map, whose sampler reads white', () => {
+  it('patches nothing on a surface with no AO map and no light affect, whose sampler reads white', () => {
     // `material.cpp:1128`: `hint_default_white`, so AO is 1.
-    expect(bag(AO).injection).toBeUndefined();
+    expect(bag({ ao_enabled: 'true' }).injection).toBeUndefined();
+  });
+
+  it('occludes the direct light of a surface with no AO map, as a decal ORM map can occlude it', () => {
+    expect(patchedFragment(materialFromBag(bag(AO)))).toContain(OCCLUDES_DIRECT_LIGHT);
   });
 
   it('patches nothing on an unshaded surface, which has no lighting', () => {
