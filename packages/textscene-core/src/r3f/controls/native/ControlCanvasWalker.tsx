@@ -7,6 +7,8 @@
 import { useMemo } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { controlProps, type SolveNode } from './solveTree';
+import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
@@ -101,6 +103,30 @@ interface ControlNodeGroupProps {
   snapToPixels: boolean;
 }
 
+/**
+ * A Control's `CanvasItemMaterial`: its own, or with `use_parent_material` the parent item's. A
+ * skipped Node2D chain above a promoted Control is that parent item, so it decides unless every
+ * skipped ancestor defers to the Control above. Each reference resolves in the scope of the node
+ * that names it: an instanced sub-scene names its materials in its file.
+ */
+function useControlMaterial(
+  solveNode: SolveNode,
+  props: ControlProperties
+): CanvasItemMaterialProperties | null {
+  const useParentMaterial = props.useParentMaterial === true;
+  const skipped = solveNode.skippedAncestors?.material;
+  const ownOrAmbient = useResolvedCanvasItemMaterial(
+    { ref: props.materialPath, useParentMaterial },
+    solveNode.resources
+  );
+  const fromSkippedAncestor = useResolvedCanvasItemMaterial(
+    { ref: skipped?.kind === 'own' ? skipped.ref : undefined, useParentMaterial: false },
+    skipped?.kind === 'own' ? skipped.resources : solveNode.resources
+  );
+  if (!useParentMaterial || !skipped || skipped.kind === 'inherit') return ownOrAmbient;
+  return skipped.kind === 'own' ? fromSkippedAncestor : null;
+}
+
 function ControlNodeGroup({
   solveNode,
   solved,
@@ -110,11 +136,7 @@ function ControlNodeGroup({
   snapToPixels,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
-  // The node's own scope, as for its icons: an instanced sub-scene names its materials in its file.
-  const material = useResolvedCanvasItemMaterial(
-    { ref: props.materialPath, useParentMaterial: props.useParentMaterial === true },
-    solveNode.resources
-  );
+  const material = useControlMaterial(solveNode, props);
   const inheritedModulate = useInheritedModulate(props.modulate, solveNode.skippedAncestors?.modulate);
   // The painter's pixels continue the chain one `self_modulate` further, and take the canvas tint
   // when the light mode admits it (the light injection divides it back out). Resolved here, so no

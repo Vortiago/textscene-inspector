@@ -112,6 +112,7 @@ describe('deriveTabContainerTabs', () => {
         modulate: { r: 1, g: 1, b: 1, a: 1 },
         z: [],
         sampler: ROOT_TEXTURE_SAMPLER,
+        material: { kind: 'none' },
       },
     };
     const tabs = deriveTabContainerTabs(

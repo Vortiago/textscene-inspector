@@ -104,11 +104,16 @@ describe('canvasItemLightingProps', () => {
   it('leaves an Unshaded fragment untouched: no canvas tint, no light loop', () => {
     // canvas.glsl:715, :719: MODE_UNSHADED skips both.
     const { shader } = compile(CanvasItemMaterialLightMode.UNSHADED);
-    const guard = shader.fragmentShader.indexOf('if (!unshaded) {');
+    const guard = shader.fragmentShader.indexOf('if (!unshaded &&');
     expect(guard).toBeGreaterThan(-1);
     // Every write the injection makes is inside that guard.
     expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = godotToLinear')).toBeGreaterThan(guard);
     expect(shader.fragmentShader.indexOf('gl_FragColor.a = clamp')).toBeGreaterThan(guard);
+  });
+
+  it('leaves the fragment as it arrived while no light reaches the item', () => {
+    const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
+    expect(shader.fragmentShader).toContain('if (!unshaded && (uLit > 0.5 || lightOnly)) {');
   });
 
   it('masks a Light Only item by the summed cookie coverage', () => {

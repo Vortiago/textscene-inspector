@@ -776,6 +776,58 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     });
   });
 
+  it('names the material of the innermost skipped ancestor that sets one, for a `use_parent_material` Control under it', async () => {
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { materialPath: 'SubResource("outer")' },
+        children: [
+          node2D(
+            'Inner',
+            {},
+            { properties: { materialPath: 'SubResource("inner")' }, children: [label('L')] }
+          ),
+        ],
+      }
+    );
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toMatchObject({
+      kind: 'own',
+      ref: 'SubResource("inner")',
+    });
+  });
+
+  it("hands a skipped ancestor's `use_parent_material` to the ancestor above it", async () => {
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { materialPath: 'SubResource("outer")' },
+        children: [
+          node2D('Inner', {}, { properties: { use_parent_material: true }, children: [label('L')] }),
+        ],
+      }
+    );
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toMatchObject({
+      kind: 'own',
+      ref: 'SubResource("outer")',
+    });
+  });
+
+  it('leaves the material to the Control above a skipped ancestor that uses its parent material', async () => {
+    const nodes = [node2D('N', {}, { properties: { use_parent_material: true }, children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toEqual({ kind: 'inherit' });
+  });
+
+  it('gives no material where no skipped ancestor sets one', async () => {
+    const nodes = [node2D('N', {}, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toEqual({ kind: 'none' });
+  });
+
   it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
     const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
     expect(result.current.tree[0]!.skippedAncestors).toBeNull();

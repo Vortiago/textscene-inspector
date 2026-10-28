@@ -22,7 +22,8 @@ non-canvas-item ancestor between them releases it again.
 
 A Control draws as a canvas item. A Light2D reaches it through `light_mask`, a CanvasModulate
 tints it, and a `CanvasItemMaterial` sets its `light_mode` and `blend_mode`. With
-`use_parent_material` it takes the material of the Control above it.
+`use_parent_material` it takes the material of its parent item: the Control above it, or the
+Node2D between them.
 
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
 the value alone. INHERITED climbs to the nearest ancestor Control or Window and steps
