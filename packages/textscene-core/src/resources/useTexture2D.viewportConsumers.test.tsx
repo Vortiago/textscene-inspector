@@ -112,9 +112,9 @@ function textureRect(properties: Record<string, string> = {}): ReactNode {
 }
 
 describe('a ViewportTexture reaches every Texture2D slot', () => {
-  it('TextureRect draws its own copy of the live target', async () => {
+  it("TextureRect draws the live target itself when it samples the target's own state", async () => {
     const renderer = await provide(textureRect(), '2d');
-    expect(mapsIn(renderer)).toEqual(copiesFilledFrom(target.texture));
+    expect([mapsIn(renderer), copiesFilledFrom(target.texture)]).toEqual([[target.texture], []]);
   });
 
   it('TextureRect mirrors its copy for flip_h, and leaves the shared target unmirrored', async () => {
@@ -124,15 +124,15 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
   });
 
   it('TextureRect frees its copy and leaves the shared target undisposed once it unmounts', async () => {
-    const renderer = await provide(textureRect(), '2d');
+    const renderer = await provide(textureRect({ flip_h: 'true' }), '2d');
     await renderer.unmount();
     expect([disposals, copiesFilledFrom(target.texture)]).toEqual([0, []]);
   });
 
-  it('Sprite2D draws its own copy of the live target and leaves the target undisposed once it unmounts', async () => {
+  it('Sprite2D draws the live target itself and leaves it undisposed once it unmounts', async () => {
     const sprite = node('Sprite2D', parseSprite2D(heading('Sprite2D'), { texture: VIEWPORT_REF }));
     const renderer = await provide(<Sprite2D node={sprite} />, '2d');
-    expect(mapsIn(renderer)).toEqual(copiesFilledFrom(target.texture));
+    expect(mapsIn(renderer)).toEqual([target.texture]);
     await renderer.unmount();
     expect(disposals).toBe(0);
   });
@@ -165,7 +165,7 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
     expect(mapsIn(renderer).map((map) => map.repeat.x)).toContain(-1);
   });
 
-  it('TextureRect draws its own copy of the live target when the Control walker paints it', async () => {
+  it('TextureRect draws the live target when the Control walker paints it', async () => {
     controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
     controlSolverRegistry.clear();
     const n = controlNode('TextureRect', 'TextureRect', {
@@ -199,7 +199,7 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
       </SceneStack>
     );
     mounted.push(renderer);
-    expect(mapsIn(renderer)).toEqual(copiesFilledFrom(target.texture));
+    expect(mapsIn(renderer)).toEqual([target.texture]);
     controlComponentRegistry.clear();
   });
 });
