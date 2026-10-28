@@ -57,13 +57,13 @@ export function prepareFog(
   scene: THREE.Scene,
   camera: THREE.Camera,
   settings: FogSettings,
-  volumePass: VolumetricFogPass,
+  pass: VolumetricFogPass,
   { lights, casters, volumes }: FogObjects
 ): boolean {
   writeDepthFog(settings.depth, camera);
   writeSuns(lights);
   if (!settings.volumetric) return false;
-  return volumePass.prepare(renderer, scene, camera, {
+  return pass.prepare(renderer, scene, camera, {
     fog: settings.volumetric,
     project: settings.project,
     lights,

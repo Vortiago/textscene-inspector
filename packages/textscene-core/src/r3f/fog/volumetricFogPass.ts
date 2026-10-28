@@ -142,7 +142,10 @@ class VolumeKey {
   private inputs: Omit<VolumetricFogInputs, 'lights' | 'casters' | 'volumes'> | null = null;
   private sky: WebGLTexture | undefined;
 
-  /** Takes the render's values and the shown sky's `layers`, and answers whether any differs from the last ones. */
+  /**
+   * Takes the render's values and the shown sky's `layers`, and answers whether any differs from
+   * the last ones.
+   */
   update(
     camera: THREE.Camera,
     viewport: THREE.Vector4,

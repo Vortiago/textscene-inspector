@@ -110,10 +110,10 @@ function installPlaneBackgroundFog(): void {
 
 /**
  * Patches three's fog chunks and both backgrounds for every program compiled after the call, and
- * gives them the shared fog uniforms and the shown sky's radiance. three reads `ShaderLib.backgroundCube` when a renderer first
- * draws a cube background. A three release that rewrites a replaced line keeps its own chunks, and
- * `fogComposite.test.ts` fails on that release. True when the cube background holds the fog after
- * the call. A second call changes nothing.
+ * gives them the shared fog uniforms and the shown sky's radiance. three reads
+ * `ShaderLib.backgroundCube` when a renderer first draws a cube background. A three release that
+ * rewrites a replaced line keeps its own chunks, and `fogComposite.test.ts` fails on that release.
+ * True when the cube background holds the fog after the call. A second call changes nothing.
  */
 export function installFogComposite(): boolean {
   Object.assign(THREE.ShaderChunk, { [GODOT_FOG_PARS_CHUNK]: GODOT_FOG_PARS });

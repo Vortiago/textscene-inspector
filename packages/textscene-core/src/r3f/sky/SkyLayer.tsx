@@ -1,10 +1,11 @@
 /**
  * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its radiance to every
- * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
- * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
- * instanced or GLB light has its real world transform. The world's exposure scales the sky as Godot
- * does: the background and each disc once, and the ambient and the reflection twice, since Godot
- * bakes the radiance at the exposure and a surface reads it at the exposure again
+ * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`).
+ * Godot's sky shader draws the discs of the first four DirectionalLights that are not Light Only as
+ * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced or GLB light
+ * has its real world transform. The world's exposure scales the sky as Godot does: the background
+ * and each disc once, and the ambient and the reflection twice, since Godot bakes the radiance at
+ * the exposure and a surface reads it at the exposure again
  * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:241-246`, `sky.cpp:1086`).
  */
 
@@ -19,7 +20,7 @@ import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky, SkyRadiance } from './skyRadiance';
-import { environmentSwitch } from './environmentSwitch';
+import { createEnvironmentSwitch } from './environmentSwitch';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
 import { registerExposureStage } from '../exposure/sceneExposure';
@@ -118,7 +119,8 @@ export function SkyLayer({
       scene.environmentIntensity = intensity * exposure * factor;
       if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
     };
-    scene.environment = environmentSwitch();
+    const environment = createEnvironmentSwitch();
+    scene.environment = environment;
     const radiance = new SkyRadiance(gl, built.layers, {
       energy: intensity * exposure,
       rotation: skyRotation,
@@ -150,6 +152,7 @@ export function SkyLayer({
         scene.backgroundRotation.copy(previousBackgroundRotation);
       }
       radiance.hide();
+      environment.dispose();
       built.dispose();
     };
   }, [
