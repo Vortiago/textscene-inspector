@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
 import { isLiveTarget, liveTargetCopies, liveTargetCopy } from '../../r3f/liveTargets';
-import { windowCell } from '../../r3f/windowCell';
+import { windowCell, type WindowCell } from '../../r3f/windowCell';
 import { imageSize } from '../formats/image/imagePixels';
 import { isHeld } from '../../r3f/useDisposeOnRelease';
 import {
@@ -196,8 +196,7 @@ function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture 
  * frees it.
  */
 function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  const size = imageSize(source.image);
-  const cell = sampler.window && size && windowCell(sampler.window, size, samplesClamped(source, sampler));
+  const cell = copiedCell(source, sampler);
   const cellSampler = cell ? { ...sampler, window: cell.window } : sampler;
   const shared = liveTargetCopies(source, cell?.layout).find((copy) =>
     samplesAlike(copy, source, cellSampler)
@@ -212,13 +211,23 @@ function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Textur
 }
 
 /**
- * Whether `sampler` reads `source` clamped at every edge and from one level, so a cell of it with
- * an apron samples as the whole does.
+ * The cell of `source` that `sampler`'s window shows, or null to copy the whole. A mip chain reads
+ * past any apron, so a sampler that reads one copies the whole.
  */
-function samplesClamped(source: THREE.Texture, sampler: ViewSampler): boolean {
+function copiedCell(source: THREE.Texture, sampler: ViewSampler): WindowCell | null {
+  const size = imageSize(source.image);
+  if (!sampler.window || !size || readsMipChain(source, sampler)) return null;
+  return windowCell(sampler.window, size, isClampedAtEdges(source, sampler));
+}
+
+function readsMipChain(source: THREE.Texture, sampler: ViewSampler): boolean {
+  return hasMipChain(source) && (sampler.filter?.generateMipmaps ?? true);
+}
+
+/** Whether `sampler` clamps `source` at every edge, so a cell's apron stops where the whole's edge does. */
+function isClampedAtEdges(source: THREE.Texture, sampler: ViewSampler): boolean {
   const wraps = sampler.wrap === undefined ? [source.wrapS, source.wrapT] : [sampler.wrap];
-  const readsMipChain = hasMipChain(source) && (sampler.filter?.generateMipmaps ?? true);
-  return !readsMipChain && wraps.every((wrap) => wrap === THREE.ClampToEdgeWrapping);
+  return wraps.every((wrap) => wrap === THREE.ClampToEdgeWrapping);
 }
 
 /** Whether `copy` samples as `sampler` reads `source`, where a field left out keeps the source's value. */

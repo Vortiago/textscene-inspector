@@ -144,6 +144,9 @@ const CORNER_CELL = {
 /** The 8 by 8 cell at x 8 of a 32 by 16 target's top row, as a sprite's frame window shows it. */
 const SECOND_CELL_WINDOW = { repeat: { x: 0.25, y: 0.5 }, offset: { x: 0.25, y: 0.5 } };
 
+/** The 8 by 4 cell at x 8, y 4 of a 32 by 16 target, a texel or more from every edge. */
+const INNER_CELL_WINDOW = { repeat: { x: 0.25, y: 0.25 }, offset: { x: 0.25, y: 0.25 } };
+
 /** A sprite steps its window over a target's cells, so a reader copies only the cell it shows. */
 describe('a reader that windows a live target', () => {
   it('copies its cell with a texel of apron for the filter, not the whole target', () => {
@@ -200,6 +203,16 @@ describe('a reader that windows a live target', () => {
       colorSpace: THREE.SRGBColorSpace,
       wrap: THREE.RepeatWrapping,
       window: SECOND_CELL_WINDOW,
+    });
+    expect(view.image).toMatchObject({ width: 32, height: 16 });
+  });
+
+  it('copies the whole target when its sampler reads a mip chain, which reads past any apron', () => {
+    const target = liveCanvasTarget();
+    target.texture.generateMipmaps = true;
+    const view = textureView(target.texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      window: INNER_CELL_WINDOW,
     });
     expect(view.image).toMatchObject({ width: 32, height: 16 });
   });
