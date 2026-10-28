@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { localSceneUniquePaths, localSceneOf, nodePathUniquePaths } from './uniqueNameOwner.js';
+import { localSceneUniquePaths, localSceneOf } from './uniqueNameOwner.js';
+import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { sameEntries } from '../utils/sameEntries.js';
 import { useByValue } from './hooks/useByValue.js';
 import { sameSelection, useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';

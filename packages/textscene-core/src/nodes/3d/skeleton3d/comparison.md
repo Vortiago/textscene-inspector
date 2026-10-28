@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that poses the meshes bound to it)
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones once at load and binds each MeshInstance3D that names it through `skeleton`, with `skin` unset, to Godot's automatic skin, inside an instanced scene and across its border too. The fixture's ribbon bends where its third bone turns.
+Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones once at load and binds each MeshInstance3D that names it through `skeleton`, with `skin` unset, to Godot's automatic skin. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
 
 ## Linting
 

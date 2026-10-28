@@ -16,7 +16,7 @@ export type LiveScenePass<Result> = (tree: LiveTree) => ReadonlyMap<string, Resu
 const resultsByPass = perObject((pass: LiveScenePass<unknown>) => perObject((tree: LiveTree) => pass(tree)));
 
 /** What `pass` binds in `tree`, run once however many readers ask. */
-export function liveScenePassResults<Result>(
+function liveScenePassResults<Result>(
   pass: LiveScenePass<Result>,
   tree: LiveTree
 ): ReadonlyMap<string, Result> {

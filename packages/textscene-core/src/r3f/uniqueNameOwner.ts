@@ -287,26 +287,6 @@ function withContentTrailFollowed(
 
 const NO_NAMES: UniqueNameTable = { paths: () => new Map() };
 
-/**
- * The `%Name` table a NodePath on the node at `path` reads: the node's own table where it is an
- * instance root, then its owner's, name by name (node.cpp:1930-1938). Without a path, the outer
- * root's table.
- *
- * @canonical The %Name table a NodePath on a live node reads
- */
-export function nodePathUniquePaths(
-  path: string | null,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): UniqueNamePaths {
-  const nodePath = path || (roots[0]?.name ?? '');
-  const callers = ownerUniquePaths(claimOwnerOf(nodePath, roots, ctx));
-  const walk = ownerWalkOf(roots, ctx).to(nodePath);
-  if (walk.into === walk.owner) return callers;
-  const own = ownerUniquePaths(walk.into);
-  return own.size === 0 ? callers : new Map([...callers, ...own]);
-}
-
 /** The claim owner of a node with no owner, whose table is empty. */
 function noOwner(live: PlacedLiveTree): ClaimOwner {
   return { path: '', roots: [], live, composed: NO_NAMES };

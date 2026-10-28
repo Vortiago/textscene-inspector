@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
-import { nodePathUniquePaths } from '../../../r3f/uniqueNameOwner.js';
+import { nodePathUniquePaths } from '../../../r3f/nodePathUniqueNames.js';
 import { perObject } from '../../../utils/perObject.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
 import { automaticSkinMatrices } from './skeletonPose.js';
