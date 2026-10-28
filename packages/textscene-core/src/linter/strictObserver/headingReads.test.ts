@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { headingResourceReads } from './headingResourceReads.js';
+import { headingReads } from './headingReads.js';
 import { parseHeading } from '../../parser/utils.js';
 
 function readsOf(...headings: string[]) {
-  const collector = headingResourceReads();
+  const collector = headingReads();
   headings.forEach((heading, index) => collector.read(parseHeading(heading)!, index + 1));
   return collector.reads;
 }
 
-describe('headingResourceReads', () => {
+describe('headingReads', () => {
   it('collects the binds of each connection heading as written', () => {
     expect(
       readsOf('[connection signal="ready" from="." to="." method="go" binds=[ExtResource("1")]]')
@@ -51,6 +51,16 @@ describe('headingResourceReads', () => {
     expect(readsOf('[node name="Root" instance=ExtResource("1")]').instancesOutsideNodeBody).toEqual([
       'ExtResource("1")',
     ]);
+  });
+
+  it('collects the line of each editable heading that has no path', () => {
+    const reads = readsOf(
+      '[node name="Root" type="Node3D"]',
+      '[editable]',
+      '[editable path="Inner"]',
+      '[editable]'
+    );
+    expect(reads.pathlessEditableLines).toEqual([2, 4]);
   });
 
   it('leaves binds undefined on a connection without binds', () => {

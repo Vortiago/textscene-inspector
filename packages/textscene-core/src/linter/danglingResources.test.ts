@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { lint, node, scene, subResource } from './testing/testkit.js';
+import { lint, lintRule, node, scene, subResource } from './testing/testkit.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import './index.js';
 
@@ -15,7 +15,7 @@ const texture = '[ext_resource type="Texture2D" path="res://t.png" id="1_tex"]';
 
 /** Every diagnostic the generic pass reported, and nothing another arm did. */
 function dangling(content: string) {
-  return lint(content).filter((d) => d.ruleName === RULE);
+  return lintRule(content, RULE);
 }
 
 describe('dangling-resource-reference', () => {

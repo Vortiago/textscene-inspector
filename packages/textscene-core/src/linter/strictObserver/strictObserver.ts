@@ -6,7 +6,7 @@
 import type { ParseObserver } from '../../parser/TscnParserCore.js';
 import type { BuiltSection } from '../../parser/types.js';
 import type { ParseError, SectionLines } from '../types.js';
-import { headingResourceReads, type HeadingResourceReads } from './headingResourceReads.js';
+import { headingReads, type HeadingReads } from './headingReads.js';
 import { instancedPaths } from './instancedPaths.js';
 import { nodeHeadingErrors } from './nodeHeadingChecks.js';
 import { propertyRefusal } from './propertyCheck.js';
@@ -19,13 +19,13 @@ interface StrictObserver {
   /** Filled while the scan runs. */
   errors: ParseError[];
   lines: Map<BuiltSection, SectionLines>;
-  headingReads: HeadingResourceReads;
+  headingReads: HeadingReads;
 }
 
 export function strictObserver(): StrictObserver {
   const errors: ParseError[] = [];
   const lines = sectionLines();
-  const reads = headingResourceReads();
+  const reads = headingReads();
   const instanced = instancedPaths();
   const isRootHeading = rootHeadingCounter();
   // Written on each heading. Every refusal raised while it is set is about that section.

@@ -688,16 +688,6 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Gizmo Instance Child",
-    "file": "unit-gizmo-instance-child.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance",
-    "file": "unit-gizmo-instance.tscn",
-    "category": "Other"
-  },
-  {
     "name": "Glb Default Material",
     "file": "unit-glb-default-material.tscn",
     "category": "Other"
@@ -1040,6 +1030,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Environment",
     "file": "unit-instanced-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey Child",
+    "file": "unit-instanced-gizmo-grey-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey",
+    "file": "unit-instanced-gizmo-grey.tscn",
     "category": "Other"
   },
   {
@@ -2485,6 +2485,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Out Of Range",
     "file": "edge-csg-out-of-range.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Editable Missing Path",
+    "file": "edge-editable-missing-path.tscn",
     "category": "Edge Cases"
   },
   {
