@@ -1,6 +1,7 @@
 /**
  * The kind of content a sub-viewport holds, which decides its one publisher: the
- * 3D/2D offscreen pass owns `'3d'` and `'2d'`, `ControlRasterPass.tsx` owns `'dom'`,
+ * 3D/2D offscreen pass owns `'3d'` and `'2d'` (with the Controls beside 2D content),
+ * `ControlRasterPass.tsx` owns `'dom'`,
  * and nothing publishes `'empty'`. Both write the same `ViewportTextureRegistry`
  * key, so the split is decided here alone.
  */
@@ -88,9 +89,10 @@ export interface ViewportContent {
 }
 
 /**
- * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and one kind is
- * drawn where Godot composites all (`comparison.md`). A nested sub-viewport draws
- * into its own target, so it is not descended into.
+ * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and the pass draws one kind
+ * where Godot composites all (`comparison.md`). Controls beside 2D content are the exception:
+ * `holdsControls` sends them into the 2D pass. A nested sub-viewport draws into its own target,
+ * so it is not descended into.
  */
 export function viewportContent(node: TscnNode): ViewportContent {
   let sawCanvasItem = false;

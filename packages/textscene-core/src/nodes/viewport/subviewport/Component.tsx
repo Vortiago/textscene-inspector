@@ -87,7 +87,8 @@ function MixedViewportControls({
   nodes: readonly TscnNode[];
   size: Vector2;
 }) {
-  return <ViewportControls nodes={nodes} size={size} inheritedRtl={useInheritedRtl(path)} />;
+  const inheritedRtl = useInheritedRtl(path);
+  return <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} />;
 }
 
 /**
@@ -106,9 +107,9 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // untouched 3D one are indistinguishable until the sub-scene lands.
   const { kind, holdsControls } = useViewportContent(node);
 
-  // Only content this subsystem can rasterise gets an offscreen pass; Controls
-  // are the native Control-raster pass's (`ControlRasterPass.tsx`), and an
-  // empty viewport has nothing to draw.
+  // Only content this subsystem can rasterise gets an offscreen pass. A Control-only viewport
+  // is the native Control-raster pass's (`ControlRasterPass.tsx`), and an empty one has nothing
+  // to draw.
   const rasterizes = kind === '3d' || kind === '2d';
 
   // The subtree draws inline only for 3D content in a shared world in a 3D

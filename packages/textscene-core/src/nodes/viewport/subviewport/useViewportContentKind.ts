@@ -1,5 +1,5 @@
 /**
- * The reactive half of content classification: `viewportContentKind` over the
+ * The reactive half of content classification: `viewportContent` over the
  * resolved subtree, re-derived on each live-tree tick. The kind picks which
  * publisher owns the registry key, so a change renders normally and each
  * publisher's effects tear down and re-register in order.
