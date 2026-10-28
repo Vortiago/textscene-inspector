@@ -23,6 +23,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'text-mesh-cff', file: 'unit-text-mesh-cff.tscn' },
   // The same scene with a FontVariation embolden on the font, which grows each outline before it is extruded.
   { name: 'text-mesh-embolden', file: 'unit-text-mesh-embolden.tscn' },
+  // The same font at an embolden where Godot fails to triangulate the a and draws no face for it.
+  { name: 'text-mesh-triangulation-failure', file: 'unit-text-mesh-triangulation-failure.tscn' },
   // The same scene under a variable `.woff2`, whose transformed `glyf` the reader rebuilds.
   { name: 'text-mesh-woff2', file: 'unit-text-mesh-woff2.tscn' },
   // The same scene with no `font`, which draws Godot's default font, and again in a project whose
