@@ -21,6 +21,7 @@ import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
 
+import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
@@ -76,6 +77,19 @@ const ViewportControls = lazy(() =>
   import('./ViewportControls.js').then((m) => ({ default: m.ViewportControls }))
 );
 
+/** The Controls of a viewport beside its 2D items; the direction climb runs only for such a viewport. */
+function MixedViewportControls({
+  path,
+  nodes,
+  size,
+}: {
+  path: string;
+  nodes: readonly TscnNode[];
+  size: Vector2;
+}) {
+  return <ViewportControls nodes={nodes} size={size} inheritedRtl={useInheritedRtl(path)} />;
+}
+
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
  * through in the 3D workspace and drops its subtree in the 2D one. `disable_3d` is
@@ -91,7 +105,6 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // child is a typeless, childless node, so an untouched 2D sub-scene and an
   // untouched 3D one are indistinguishable until the sub-scene lands.
   const { kind, holdsControls } = useViewportContent(node);
-  const inheritedRtl = useInheritedRtl(path);
 
   // Only content this subsystem can rasterise gets an offscreen pass; Controls
   // are the native Control-raster pass's (`ControlRasterPass.tsx`), and an
@@ -118,7 +131,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
         {children}
         {drawsControls ? (
           <PendingSuspense>
-            <ViewportControls nodes={node.children} size={size} inheritedRtl={inheritedRtl} />
+            <MixedViewportControls path={path} nodes={node.children} size={size} />
           </PendingSuspense>
         ) : null}
       </SubViewportSamplerScope>
