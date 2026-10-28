@@ -26,12 +26,21 @@ CanvasItemPixelMaterialContext.displayName = 'CanvasItemPixelMaterialContext';
 
 /**
  * The pixel material of the enclosing lit canvas item, for a leaf mesh deep inside a painter that
- * the item's `children` render prop does not reach. A mesh merges it after `canvasItemFacing()`.
+ * the item's `children` render prop does not reach.
  *
  * @canonical The lit pixel material of the enclosing canvas item
  */
 export function useCanvasItemPixelMaterial(): CanvasItemPixelMaterial | undefined {
   return useContext(CanvasItemPixelMaterialContext);
+}
+
+/**
+ * The `materialProgramInputs` `merge` of a leaf mesh in a canvas item: the facing, then the lit
+ * pixel material of the enclosing item. A leaf outside one stays unlit.
+ */
+export function useCanvasItemMerge(): [CanvasItemFacing, CanvasItemPixelMaterial | undefined] {
+  const pixelMaterial = useCanvasItemPixelMaterial();
+  return useMemo(() => [canvasItemFacing(), pixelMaterial], [pixelMaterial]);
 }
 
 interface LitCanvasItemPixelsProps {
@@ -40,7 +49,8 @@ interface LitCanvasItemPixelsProps {
   lightMask: number | undefined;
   /** The item's `z_final`, which a light's z window tests. */
   zFinal: number;
-  children: (pixelMaterial: CanvasItemPixelMaterial) => ReactNode;
+  /** A render prop for a mesh that merges the pixel material itself, else leaves read the context. */
+  children: ReactNode | ((pixelMaterial: CanvasItemPixelMaterial) => ReactNode);
 }
 
 export function LitCanvasItemPixels({ material, lightMask, zFinal, children }: LitCanvasItemPixelsProps) {
@@ -54,7 +64,7 @@ export function LitCanvasItemPixels({ material, lightMask, zFinal, children }: L
   return (
     <object3D ref={geometryRef}>
       <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
-        {children(pixelMaterial)}
+        {typeof children === 'function' ? children(pixelMaterial) : children}
       </CanvasItemPixelMaterialContext.Provider>
     </object3D>
   );

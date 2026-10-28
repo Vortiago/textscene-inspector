@@ -7,12 +7,9 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 
-import {
-  canvasItemLightingProps,
-  CANVAS_MODULATE_FLOOR,
-  type CanvasItemLightingUniforms,
-} from './canvasItemLighting';
+import { canvasItemLightingProps, CANVAS_MODULATE_FLOOR } from './canvasItemLighting';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
+import { lightUniforms } from './testing/lightUniforms';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** A stand-in for the three fragments the injection rewrites around. */
@@ -24,19 +21,8 @@ void main() {
 }
 `;
 
-function uniforms(): CanvasItemLightingUniforms {
-  return {
-    lightBuffer: { value: new THREE.Texture() },
-    shadowTintBuffer: { value: new THREE.Texture() },
-    isLit: { value: 0 },
-    resolution: { value: new THREE.Vector2(2, 2) },
-    canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-    lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
-  };
-}
-
 function compile(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>) {
-  const shared = uniforms();
+  const shared = lightUniforms();
   shared.lightMode.value = lightMode;
   const props = canvasItemLightingProps(shared);
   const shader = {
@@ -141,7 +127,7 @@ describe('canvasItemLightingProps', () => {
   });
 
   it('throws, naming the hook, for a shader with no colorspace hook (error case)', () => {
-    const props = canvasItemLightingProps(uniforms());
+    const props = canvasItemLightingProps(lightUniforms());
     const shader = {
       vertexShader: '',
       fragmentShader: 'void other() {}',

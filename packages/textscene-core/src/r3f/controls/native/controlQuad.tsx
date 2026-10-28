@@ -2,15 +2,14 @@
  * The quad every native Control painter draws its chrome with. A Control's rect is
  * measured from its top-left, so the quad centres at `[w/2, -h/2, 0]` (Y negated
  * once, as in `rect.ts`). Transparent and depth-free like a CanvasItem2D quad, it samples the
- * light list of the lit item around it (`useCanvasItemPixelMaterial`), and every leaf material
+ * light list of the lit item around it (`useCanvasItemMerge`), and every leaf material
  * carries the clip planes (`controlClipping.tsx`).
  */
 import * as THREE from 'three';
 import type { SurfaceDrawHooks } from '../../surfaceDrawHooks';
 import { useControlClipPlanes } from './controlClipping';
 import { canvasMapProps } from '../../canvas2DTextureDecode';
-import { useCanvasItemPixelMaterial } from '../../components/LitCanvasItemPixels';
-import { canvasItemFacing } from '../../canvasItemFacing';
+import { useCanvasItemMerge } from '../../components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import type { MaterialAttach } from '../../materials/swappedMaterials';
 import { FadedMaterials } from '../../materials/FadedMaterials';
@@ -41,7 +40,7 @@ export function ControlQuad({
   drawHooks,
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
-  const pixelMaterial = useCanvasItemPixelMaterial();
+  const canvasItemMerge = useCanvasItemMerge();
   // A `map` is often null on the first render and a texture later, while the quad
   // draws throughout, so the material is replaced, not mutated
   // (`materialProgramInputs.ts`).
@@ -58,8 +57,8 @@ export function ControlQuad({
         depthWrite: false,
         clippingPlanes: clippingPlanes as THREE.Plane[],
       },
-      // The double-sided, single-pass pair every flat canvas painter shares.
-      merge: [canvasItemFacing(), pixelMaterial],
+      // The double-sided, single-pass facing and the lit pixel material of the item around it.
+      merge: canvasItemMerge,
     });
     return <meshBasicMaterial key={program.key} {...program.props} />;
   };

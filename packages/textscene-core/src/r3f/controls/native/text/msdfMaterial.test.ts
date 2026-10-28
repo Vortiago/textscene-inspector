@@ -115,38 +115,34 @@ describe('createMsdfMaterial', () => {
   });
 
   describe('inside a lit Control', () => {
-    const patchedFragment = (material: THREE.ShaderMaterial) =>
+    const fragmentOf = (material: THREE.ShaderMaterial) =>
       patchedShader(
         (shader) => material.onBeforeCompile(shader as never, undefined as never),
         material.fragmentShader
       );
-
-    it('samples the light list before the colour encode', () => {
-      const lit = createMsdfMaterial({
+    const lit = () =>
+      createMsdfMaterial({
         map: new THREE.Texture(),
         color: RED,
         opacity: 1,
         pxRange: 4,
         pixelMaterial: litPixelMaterial(),
       });
-      expect(patchedFragment(lit)).toContain('uLightList');
+
+    it('samples the light list before the colour encode', () => {
+      expect(fragmentOf(lit())).toContain('uLightList');
     });
 
     it('takes the blend state of the Control material', () => {
-      const lit = createMsdfMaterial({
-        map: new THREE.Texture(),
-        color: RED,
-        opacity: 1,
-        pxRange: 4,
-        pixelMaterial: litPixelMaterial(),
-      });
-      expect(lit.blending).toBe(THREE.CustomBlending);
-      expect(lit.blendDst).toBe(THREE.OneFactor);
+      const material = lit();
+
+      expect(material.blending).toBe(THREE.CustomBlending);
+      expect(material.blendDst).toBe(THREE.OneFactor);
     });
 
     it('stays unlit without a pixel material', () => {
       const plain = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
-      expect(patchedFragment(plain)).not.toContain('uLightList');
+      expect(fragmentOf(plain)).not.toContain('uLightList');
     });
   });
 });

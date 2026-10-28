@@ -36,12 +36,8 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import {
-  CanvasLighting2DContext,
-  INERT_CANVAS_LIGHTING,
-  type CanvasLighting2D,
-} from '../../../../r3f/lighting2d/lightPassContext';
-import type { ItemPlacement } from '../../../../r3f/lighting2d/itemLightList';
+import { CanvasLighting2DContext } from '../../../../r3f/lighting2d/lightPassContext';
+import { recordedItems } from '../../../../r3f/lighting2d/testing/recordedItems';
 import {
   ViewportTextureProvider,
   type ViewportTextureEntry,
@@ -243,19 +239,6 @@ describe('<SubViewportContainer>', () => {
  * it twice. The live arm serves a mixed viewport, whose offscreen pass renders the non-Control half.
  */
 describe('<SubViewportContainer> — one route per sub-viewport', () => {
-  /** The items a Control declares to the light pass of the canvas around the container. */
-  function outerLitItems() {
-    const placements: ItemPlacement[] = [];
-    const lighting: CanvasLighting2D = {
-      ...INERT_CANVAS_LIGHTING,
-      registerItem: (placement) => {
-        placements.push(placement);
-        return () => {};
-      },
-    };
-    return { placements, lighting };
-  }
-
   /** Every named group the walk emitted, so a live-drawn Control is visible by name. */
   function groupNames(renderer: Awaited<ReturnType<typeof mount>>): string[] {
     return renderer.scene
@@ -298,7 +281,7 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
   });
 
   it('keeps the light pass of the canvas around the container off a MIXED viewport’s live Controls', async () => {
-    const { placements, lighting } = outerLitItems();
+    const { placements, lighting } = recordedItems();
     await mount(
       <CanvasLighting2DContext.Provider value={lighting}>
         <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />

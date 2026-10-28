@@ -220,7 +220,7 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
-  /** The lit Control's blend state and light-list sampling, or omitted for an unlit run. */
+  /** The lit Control's blend state and light-list sampling, or omitted for an unlit run. `injection` wins: a Label3D blend run is never lit. */
   pixelMaterial?: CanvasItemPixelMaterial;
   /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
   mipmapped?: boolean;
@@ -279,7 +279,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
   material.setValues(pixelState);
-  if (mipmapped) injectViewportProgram(material, injection ?? pixelInjection);
-  else injectProgram(material, injection ?? pixelInjection);
+  const programInjection = injection ?? pixelInjection;
+  if (mipmapped) injectViewportProgram(material, programInjection);
+  else injectProgram(material, programInjection);
   return material;
 }

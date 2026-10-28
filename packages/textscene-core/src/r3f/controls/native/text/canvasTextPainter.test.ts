@@ -381,22 +381,15 @@ describe('createCanvasTextMaterial mipmapped', () => {
 });
 
 describe('createCanvasTextMaterial inside a lit Control', () => {
-  it('samples the light list before the colour encode', () => {
-    const material = createCanvasTextMaterial({
-      map: mipmappedTexture(),
-      opacity: 1,
-      pixelMaterial: litPixelMaterial(),
-    });
+  const lit = () =>
+    createCanvasTextMaterial({ map: mipmappedTexture(), opacity: 1, pixelMaterial: litPixelMaterial() });
 
-    expect(patchedFragment(material)).toContain('uLightList');
+  it('samples the light list before the colour encode', () => {
+    expect(patchedFragment(lit())).toContain('uLightList');
   });
 
   it('takes the blend state of the Control material', () => {
-    const material = createCanvasTextMaterial({
-      map: mipmappedTexture(),
-      opacity: 1,
-      pixelMaterial: litPixelMaterial(),
-    });
+    const material = lit();
 
     expect(material.blending).toBe(THREE.CustomBlending);
     expect(material.blendDst).toBe(THREE.OneFactor);

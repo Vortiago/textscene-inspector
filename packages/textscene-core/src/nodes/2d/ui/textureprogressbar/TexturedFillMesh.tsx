@@ -9,8 +9,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
-import { useCanvasItemPixelMaterial } from '../../../../r3f/components/LitCanvasItemPixels';
-import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
+import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
@@ -31,7 +30,7 @@ interface TexturedFillMeshProps {
 
 export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrder }: TexturedFillMeshProps) {
   const clippingPlanes = useControlClipPlanes();
-  const pixelMaterial = useCanvasItemPixelMaterial();
+  const canvasItemMerge = useCanvasItemMerge();
 
   const builtGeometry = useMemo(() => {
     if (!geometry || geometry.positions.length === 0) return null;
@@ -56,7 +55,7 @@ export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrde
       depthWrite: false,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
-    merge: [canvasItemFacing(), pixelMaterial],
+    merge: canvasItemMerge,
   });
 
   return (

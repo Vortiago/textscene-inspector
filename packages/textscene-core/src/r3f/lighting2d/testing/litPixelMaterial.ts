@@ -7,21 +7,14 @@ import { canvasItemFacing } from '../../canvasItemFacing';
 import { canvasItemLightingProps } from '../canvasItemLighting';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemMaterialBlendMode } from '../../../godot/scene/canvasItemMaterial';
+import { lightUniforms } from './lightUniforms';
 import type { CanvasItemPixelMaterial } from '../../components/LitCanvasItemPixels';
 
 /** Additive, so a test sees the blend state apart from the default. */
 export function litPixelMaterial(): CanvasItemPixelMaterial {
-  const uniform = { value: null };
   return {
     ...canvasItemFacing(),
     ...canvasItemBlendState(CanvasItemMaterialBlendMode.ADD),
-    ...canvasItemLightingProps({
-      lightBuffer: uniform,
-      shadowTintBuffer: uniform,
-      isLit: uniform,
-      resolution: uniform,
-      canvasModulate: uniform,
-      lightMode: uniform,
-    }),
+    ...canvasItemLightingProps(lightUniforms()),
   };
 }

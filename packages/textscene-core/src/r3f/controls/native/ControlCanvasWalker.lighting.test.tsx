@@ -13,11 +13,8 @@ import { controlNode, solveNode as solveNodeDefaults } from './testing/solveNode
 import type { SolveNode } from './solveTree';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { ControlQuad } from './controlQuad';
-import {
-  CanvasLighting2DContext,
-  INERT_CANVAS_LIGHTING,
-  type CanvasLighting2D,
-} from '../../lighting2d/lightPassContext';
+import { CanvasLighting2DContext } from '../../lighting2d/lightPassContext';
+import { recordedItems } from '../../lighting2d/testing/recordedItems';
 import type { ItemPlacement } from '../../lighting2d/itemLightList';
 
 vi.mock('../../contexts/ProjectSettingsContext', () => ({
@@ -46,14 +43,7 @@ function control(properties: Record<string, unknown>): SolveNode {
 }
 
 function withRegisteredItems(): { wrapper: (children: ReactNode) => ReactNode; placements: ItemPlacement[] } {
-  const placements: ItemPlacement[] = [];
-  const lighting: CanvasLighting2D = {
-    ...INERT_CANVAS_LIGHTING,
-    registerItem: (placement) => {
-      placements.push(placement);
-      return () => {};
-    },
-  };
+  const { lighting, placements } = recordedItems();
   return {
     placements,
     wrapper: (children) => (

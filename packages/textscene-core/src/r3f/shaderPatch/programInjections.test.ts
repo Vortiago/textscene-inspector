@@ -41,7 +41,7 @@ import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
 import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
 import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
-import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
+import { lightUniforms } from '../lighting2d/testing/lightUniforms';
 
 /** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
 const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
@@ -129,15 +129,6 @@ const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
   surface.userData = userData;
   return surface;
 };
-
-const lightUniforms = () => ({
-  lightBuffer: { value: new THREE.Texture() },
-  shadowTintBuffer: { value: new THREE.Texture() },
-  isLit: { value: 0 },
-  resolution: { value: new THREE.Vector2(2, 2) },
-  canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-  lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
-});
 
 const INJECTIONS: readonly InjectionCase[] = [
   injected('materials/godotAlphaHash.ts', 'alpha hash', SURFACE_AND_DEPTH, () => GODOT_ALPHA_HASH),

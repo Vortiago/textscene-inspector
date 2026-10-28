@@ -116,11 +116,9 @@ function ControlNodeGroup({
     solveNode.resources
   );
   const inheritedModulate = useInheritedModulate(props.modulate, solveNode.skippedAncestors?.modulate);
-  // The painter's pixels continue the chain one `self_modulate` further. Resolved
-  // here, so no painter re-enters the composition from the provider
-  // (`NativeControlComponentProps.tint`).
-  // The canvas tint reaches the node's own pixels when its light mode admits it, and the light
-  // injection divides the same value back out.
+  // The painter's pixels continue the chain one `self_modulate` further, and take the canvas tint
+  // when the light mode admits it (the light injection divides it back out). Resolved here, so no
+  // painter re-enters the composition from the provider (`NativeControlComponentProps.tint`).
   const tint = useControlOwnTint(inheritedModulate, solveNode, useCanvasModulateFor(material));
   // Own-or-ambient, not multiplicative: neither property has a self-only layer,
   // so one fold serves this painter and the descendants.
@@ -249,7 +247,7 @@ function ControlNodeGroup({
     painter
   ) : (
     <LitCanvasItemPixels material={material} lightMask={props.lightMask} zFinal={effectiveZ}>
-      {() => painter}
+      {painter}
     </LitCanvasItemPixels>
   );
   const content = wrapsChildren ? (

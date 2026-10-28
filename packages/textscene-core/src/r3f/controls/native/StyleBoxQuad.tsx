@@ -22,8 +22,7 @@ import { ninePatchGeometry } from './ninePatchGeometry';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { useControlClipPlanes } from './controlClipping';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
-import { useCanvasItemPixelMaterial } from '../../components/LitCanvasItemPixels';
-import { canvasItemFacing } from '../../canvasItemFacing';
+import { useCanvasItemMerge } from '../../components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../canvasSrgbMultiply';
 import { canvasMapProps, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
@@ -84,7 +83,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
   const size = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const kind = styleBoxKindOf(styleBox);
   const clippingPlanes = useControlClipPlanes();
-  const pixelMaterial = useCanvasItemPixelMaterial();
+  const canvasItemMerge = useCanvasItemMerge();
 
   const { flatBox, flatRect } = useMemo(() => {
     if (kind === 'line') {
@@ -132,7 +131,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     // `(i, i+2, i+1)` pattern (`style_box_flat.cpp:403-408`) gives each ring quad's
     // two triangles opposite winding. Two passes would drop a wedge per corner
     // step and draw shadow slivers over the border.
-    merge: [canvasItemFacing(), pixelMaterial],
+    merge: canvasItemMerge,
   });
 
   return (
@@ -194,7 +193,7 @@ interface ImageLike {
  * scope, embedded at parse time, so no scope prop is needed.
  */
 function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes }: StyleBoxTextureMeshProps) {
-  const pixelMaterial = useCanvasItemPixelMaterial();
+  const canvasItemMerge = useCanvasItemMerge();
   const { texture: rawTexture } = useTexture2D(
     texture.texture,
     texture.resources.externalResources,
@@ -273,7 +272,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
       depthWrite: false,
       clippingPlanes,
     },
-    merge: [canvasItemFacing(), pixelMaterial],
+    merge: canvasItemMerge,
   });
 
   return (
