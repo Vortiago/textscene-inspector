@@ -27,6 +27,7 @@ const SOURCES: Record<string, string> = {
     node('Node2D', {}, { name: 'Root' }),
     '[connection signal="ready" from="." method="go"]'
   ),
+  'editable-missing-path': scene(node('Node2D', {}, { name: 'Root' }), '[editable]'),
   'connection-node-missing': scene(
     node('Node2D', {}, { name: 'Root' }),
     '[connection signal="ready" from="Gone" to="." method="go"]'

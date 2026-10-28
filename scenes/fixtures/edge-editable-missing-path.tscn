@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+; An [editable] heading with no `path=`. The text loader returns ERR_FILE_CORRUPT for it, so Godot loads nothing
+; from the file (resource_format_text.cpp:391-395) and the linter must report an error.
+
+[node name="Root" type="Node"]
+
+[node name="Child" type="Node" parent="."]
+
+[editable]

@@ -53,6 +53,16 @@ describe('headingResourceReads', () => {
     ]);
   });
 
+  it('collects the line of each editable heading that has no path', () => {
+    const reads = readsOf(
+      '[node name="Root" type="Node3D"]',
+      '[editable]',
+      '[editable path="Inner"]',
+      '[editable]'
+    );
+    expect(reads.pathlessEditableLines).toEqual([2, 4]);
+  });
+
   it('leaves binds undefined on a connection without binds', () => {
     expect(readsOf('[connection signal="ready" from="." to="." method="go"]').connections[0]?.binds).toBe(
       undefined

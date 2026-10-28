@@ -165,7 +165,7 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 );
 
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
-const NEGATIVE_FIXTURE_COUNT = 7;
+const NEGATIVE_FIXTURE_COUNT = 8;
 
 /** The fixtures' roots: a fixture is linted in the nearest `project.godot` above it, and a flat one in none. */
 const fixtureRoots = createDiskResRoots(null);
