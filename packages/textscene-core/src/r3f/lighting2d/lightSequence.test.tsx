@@ -200,7 +200,6 @@ ${lamp('B')}`
   });
 });
 
-/** A walk entry for a node of `type` at `path`. */
 /** One node of a tree under `Root`, named by its path. */
 interface Entry {
   path: string;
