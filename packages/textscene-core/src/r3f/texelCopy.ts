@@ -87,7 +87,11 @@ export function copyTexels(
 ): void {
   const pass = copyPassesFor(gl)[transfer];
   pass.uniforms.source!.value = source;
-  pass.uniforms.placement!.value = [placement.offsetX, placement.offsetY, placement.rowStep];
+  // Written in place: a copy runs every frame, and a new array each draw is garbage each frame.
+  const at = pass.uniforms.placement!.value as number[];
+  at[0] = placement.offsetX;
+  at[1] = placement.offsetY;
+  at[2] = placement.rowStep;
   pass.uniforms.bounds!.value = placement.bounds;
   try {
     drawFullScreen(gl, pass, target);

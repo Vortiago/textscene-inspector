@@ -135,6 +135,12 @@ function dropAlpha(data: Uint8Array | Uint8ClampedArray): void {
  * from a reader that has not committed yet and holds it before the next render.
  */
 export function fillLiveTarget(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
+  if (liveTargetOf(texture).copies.size === 0) return;
+  drawOffscreen(gl, () => refillLiveCopies(texture, gl));
+}
+
+/** `fillLiveTarget` for a caller that already draws offscreen, as a pass that fills its views does. */
+export function refillLiveCopies(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
   fillCopies(texture, gl, (copy) => isHeld(copy.texture));
 }
 
@@ -143,23 +149,21 @@ export function fillLiveTarget(texture: THREE.Texture, gl: THREE.WebGLRenderer):
  * target's next render, as a sky bake does.
  */
 export function fillEveryLiveCopy(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
-  fillCopies(texture, gl, () => true);
+  if (liveTargetOf(texture).copies.size === 0) return;
+  drawOffscreen(gl, () => fillCopies(texture, gl, () => true));
 }
 
+/** Fills the copies `isFilled` picks, at every depth. The caller draws offscreen. */
 function fillCopies(
   texture: THREE.Texture,
   gl: THREE.WebGLRenderer,
   isFilled: (copy: LiveCopy) => boolean
 ): void {
-  const { copies } = liveTargetOf(texture);
-  if (copies.size === 0) return;
-  drawOffscreen(gl, () => {
-    for (const copy of copies) {
-      if (!isFilled(copy)) continue;
-      copy.fill(gl);
-      fillCopies(copy.texture, gl, isFilled);
-    }
-  });
+  for (const copy of liveTargetOf(texture).copies) {
+    if (!isFilled(copy)) continue;
+    copy.fill(gl);
+    fillCopies(copy.texture, gl, isFilled);
+  }
 }
 
 /**

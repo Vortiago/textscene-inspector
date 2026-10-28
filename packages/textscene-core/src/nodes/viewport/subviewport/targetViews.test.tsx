@@ -44,7 +44,7 @@ async function mount(target: THREE.WebGLRenderTarget) {
     await withStubbedGl(gl, { onRender: (bound) => drawnInto.push(bound) }, () => views.current!.fill());
     return drawnInto;
   };
-  return { views: views.current!, fill, unmount: () => renderer.unmount() };
+  return { views: views.current!, fill, gl, unmount: () => renderer.unmount() };
 }
 
 /** A reader that samples a view through its own window, so it reads its own copy. */
@@ -150,6 +150,17 @@ describe('useTargetViews', () => {
     const reader = flippedReader(views.decoding.texture);
     const release = holdUntilReleased(reader);
     expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.decoding.texture, reader]);
+    release();
+  });
+
+  it('fills its views and their readers within one save and restore of the renderer', async () => {
+    const { views, fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    views.decoding.retain();
+    const release = holdUntilReleased(flippedReader(views.decoding.texture));
+    // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
+    const save = vi.spyOn(gl, 'getActiveCubeFace');
+    await fill();
+    expect(save).toHaveBeenCalledTimes(1);
     release();
   });
 

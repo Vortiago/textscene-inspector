@@ -3,9 +3,15 @@
  * samples it with its own window, wrap and filter. A reader whose sampler differs from the target's
  * reads its own copy, which the target's pass refills after each render.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { fillEveryLiveCopy, liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
+import {
+  fillEveryLiveCopy,
+  fillLiveTarget,
+  liveTargetCrop,
+  publishLiveTargets,
+  unrenderedTexel,
+} from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
@@ -122,6 +128,18 @@ describe('a reader of a live target', () => {
     );
     const second = held(ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT }));
     expect(copiesFilledFrom(target.texture)).toEqual([first, second]);
+  });
+
+  it('fills a copy of a copy within one save and restore of the renderer', () => {
+    const target = liveCanvasTarget();
+    const first = held(
+      ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })
+    );
+    held(ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT }));
+    const { gl } = recordingRenderer();
+    const save = vi.spyOn(gl, 'getRenderTarget');
+    fillLiveTarget(target.texture, gl);
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   it('comes back as it is from a render target no pass publishes (edge case)', () => {
