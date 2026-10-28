@@ -1,16 +1,15 @@
 ---
 type: Skeleton3D
 category: 3D
-status: unimplemented
-fixture: unit-skeleton3d.tscn
-image: unit-skeleton3d
-visual: false
-renders_as: nothing yet, Godot poses its bones and deforms bound meshes, the previewer does not
+status: limitation
+fixture: unit-mesh-instance-3d-skinned-ribbon.tscn
+image: unit-mesh-instance-3d-skinned-ribbon
+renders_as: nothing (a transform-only group that poses the meshes bound to it)
 ---
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. Godot poses its bones and runs its modifiers each frame, deforming any mesh bound to it. The previewer does not yet (ADR-0045), so the bones hold the rest pose.
+Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones once at load and binds each MeshInstance3D that names it through `skeleton`, with `skin` unset, to Godot's automatic skin. The fixture's ribbon bends where its third bone turns.
 
 ## Linting
 
@@ -36,10 +35,13 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited fr
 |  | `skeleton3d-duplicate-bone-name` | error |
 <!-- lint:end -->
 
-Skeleton3D registers `parseNode3D` directly, so `motion_scale`, `show_rest_only`, `animate_physical_bones`, `modifier_callback_mode_process` and every `bones/*` key are never read by the lenient parser. Nothing warns and nothing substitutes a default.
+The parser reads `show_rest_only` and the bone table: `name`, `parent`, `rest`, `enabled`, `position`, `rotation` and `scale`. It does not read `motion_scale`, `animate_physical_bones` or `modifier_callback_mode_process`, which never move a frozen frame.
 
 ## Known limitations
 
-- **Needs runtime** Godot poses its bones each frame and deforms any mesh bound to it, but here the bones hold the rest pose.
+- **Needs runtime** Godot runs the skeleton's modifiers and animation each frame, but here the bones hold the pose the file writes.
+- **Approximated** Only a RibbonTrailMesh deforms, as no other mesh writes bone arrays, so every other mesh bound to a skeleton draws in its rest pose.
+- **Approximated** A bone past the skin's last index collapses its vertices, where Godot's result depends on the GPU driver.
+- **Approximated** A mesh bound to a skeleton across an instanced scene draws in its rest pose, as the pass reads only the file's own nodes.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.
 - **Not drawn** A scene override of `show_rest_only`, `motion_scale` or `bones/*` on a `Skeleton3D` in an instanced GLB is ignored with a warning, where Godot reads it.

@@ -150,7 +150,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md): an invisible transform-only group
 - [RootMotionView](../../packages/textscene-core/src/nodes/3d/rootmotionview/comparison.md): nothing (a transform-only group)
 - [ShapeCast3D](../../packages/textscene-core/src/nodes/physics/3d/shapecast3d/comparison.md): nothing (a transform-only group)
-- [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): nothing yet, Godot poses its bones and deforms bound meshes, the previewer does not
+- [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): nothing (a transform-only group that poses the meshes bound to it)
 - [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
 - [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): nothing (a transform-only group)

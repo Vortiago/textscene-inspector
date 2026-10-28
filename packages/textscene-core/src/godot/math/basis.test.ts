@@ -3,11 +3,15 @@
 import { describe, it, expect } from 'vitest';
 import {
   type BasisComponents,
+  basisDiagonal,
   basisGetScale,
   basisGetScaleAbs,
   basisHasUnitScale,
+  basisFromQuaternion,
+  basisFromQuaternionScale,
   basisInvert,
   basisIsOrthonormal,
+  basisMultiply,
 } from './basis.js';
 
 const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -110,5 +114,67 @@ describe('basisInvert', () => {
   it('leaves a singular basis as it is, as the editor build does (edge case)', () => {
     const singular: BasisComponents = [0, 0, 0, 0, 1, 0, 0, 0, 0];
     expect(basisInvert(singular)).toBe(singular);
+  });
+});
+
+const HALF_TURN_SCALE = Math.SQRT1_2;
+/** A quarter turn about Z: the rows `(0, -1, 0)`, `(1, 0, 0)`, `(0, 0, 1)`. */
+const QUARTER_TURN_Z: BasisComponents = [0, -1, 0, 1, 0, 0, 0, 0, 1];
+
+function expectBasisClose(actual: BasisComponents, expected: BasisComponents): void {
+  expected.forEach((value, i) => expect(actual[i]).toBeCloseTo(value, 6));
+}
+
+describe('basisFromQuaternion', () => {
+  it('turns the identity quaternion into the identity basis', () => {
+    expect(basisFromQuaternion({ x: 0, y: 0, z: 0, w: 1 })).toEqual(IDENTITY);
+  });
+
+  it('turns a quarter turn about Z into its rotation matrix', () => {
+    const basis = basisFromQuaternion({ x: 0, y: 0, z: HALF_TURN_SCALE, w: HALF_TURN_SCALE });
+
+    expectBasisClose(basis, QUARTER_TURN_Z);
+  });
+
+  it('normalises a quaternion that is not unit length (edge case)', () => {
+    expectBasisClose(basisFromQuaternion({ x: 0, y: 0, z: 5, w: 5 }), QUARTER_TURN_Z);
+  });
+});
+
+describe('basisMultiply', () => {
+  it('composes the right basis first, as Basis::operator* does', () => {
+    const scaleX: BasisComponents = [2, 0, 0, 0, 1, 0, 0, 0, 1];
+
+    // Rotate after scaling: the x scale lands in the first column.
+    expectBasisClose(basisMultiply(QUARTER_TURN_Z, scaleX), [0, -1, 0, 2, 0, 0, 0, 0, 1]);
+    // Scale after rotating: it lands in the first row.
+    expectBasisClose(basisMultiply(scaleX, QUARTER_TURN_Z), [0, -2, 0, 1, 0, 0, 0, 0, 1]);
+  });
+
+  it('leaves a basis alone when multiplied by the identity', () => {
+    expect(basisMultiply(QUARTER_TURN_Z, IDENTITY)).toEqual(QUARTER_TURN_Z);
+  });
+});
+
+describe('basisFromQuaternionScale', () => {
+  it('scales each column of the rotation by its axis, as Basis(quaternion, scale) does', () => {
+    const basis = basisFromQuaternionScale(
+      { x: 0, y: 0, z: HALF_TURN_SCALE, w: HALF_TURN_SCALE },
+      { x: 2, y: 3, z: 4 }
+    );
+
+    expectBasisClose(basis, [0, -3, 0, 2, 0, 0, 0, 0, 4]);
+  });
+
+  it('gives a zero scale a flat basis (edge case)', () => {
+    const basis = basisFromQuaternionScale({ x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 0, z: 1 });
+
+    expect(basis).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 1]);
+  });
+});
+
+describe('basisDiagonal', () => {
+  it('holds each scale in float32 on the diagonal', () => {
+    expect(basisDiagonal(0.1, 2, -3)).toEqual([Math.fround(0.1), 0, 0, 0, 2, 0, 0, 0, -3]);
   });
 });
