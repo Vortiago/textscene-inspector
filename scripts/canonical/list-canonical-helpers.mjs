@@ -18,12 +18,9 @@ function packageSources() {
 
 function taggedEntries() {
   const files = readImporters(REPO_ROOT, [...packageSources(), join(REPO_ROOT, 'scripts')]);
-  return (
-    [...files]
-      // A test suite holds no helper. A test kit or a file under `testing/` can, so it stays.
-      .filter(([path]) => !isTestSuite(path))
-      .flatMap(([path, text]) => canonicalEntries(text, path))
-  );
+  return [...files]
+    .filter(([path]) => !isTestSuite(path))
+    .flatMap(([path, text]) => canonicalEntries(text, path));
 }
 
 process.stdout.write(renderCanonicalList(taggedEntries()));
