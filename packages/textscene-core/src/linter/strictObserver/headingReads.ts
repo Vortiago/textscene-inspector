@@ -1,14 +1,14 @@
 /**
  * What a heading's own fields carry, which no section body holds: each `[connection]` heading, the `[editable]`
- * headings with no `path=`, and the `ExtResource` uses of a node's `instance=`. Only the linter asks, so the strict parser collects them from `onSectionStart` and the
- * shared scan never does.
+ * headings with no `path=`, and the `ExtResource` uses of a node's `instance=`. Only the linter asks, so the strict
+ * parser collects them from `onSectionStart` and the shared scan never does.
  */
 
 import type { ParsedHeading } from '../../parser/utils.js';
 import type { ConnectionHeading, HeadingFacts } from '../../parser/types.js';
 import { parseIdTrail } from '../../godot/scene/packedScene.js';
 
-export type HeadingResourceReads = Pick<
+export type HeadingReads = Pick<
   HeadingFacts,
   'connections' | 'pathlessEditableLines' | 'instancesOutsideNodeBody'
 >;
@@ -27,8 +27,8 @@ function connectionHeading({ attributes }: ParsedHeading, line: number): Connect
 }
 
 /** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
-export function headingResourceReads(): {
-  reads: HeadingResourceReads;
+export function headingReads(): {
+  reads: HeadingReads;
   read(heading: ParsedHeading, line: number): void;
 } {
   const connections: ConnectionHeading[] = [];
@@ -41,9 +41,8 @@ export function headingResourceReads(): {
     read(heading, line) {
       const { instance } = heading.attributes;
       if (heading.type === 'connection') connections.push(connectionHeading(heading, line));
-      if (heading.type === 'editable' && heading.attributes.path === undefined) {
+      if (heading.type === 'editable' && heading.attributes.path === undefined)
         pathlessEditableLines.push(line);
-      }
       if (heading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined) {
         instancesOutsideNodeBody.push(instance);
       }

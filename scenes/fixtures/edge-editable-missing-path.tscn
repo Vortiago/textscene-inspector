@@ -1,7 +1,6 @@
 [gd_scene format=3]
 
-; An [editable] heading with no `path=`. The text loader returns ERR_FILE_CORRUPT for it, so Godot loads nothing
-; from the file (resource_format_text.cpp:391-395) and the linter must report an error.
+; An [editable] heading with no `path=`: Godot loads nothing from the file (resource_format_text.cpp:391-395).
 
 [node name="Root" type="Node"]
 
