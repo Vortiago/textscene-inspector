@@ -31,6 +31,8 @@ export const decalAtlasSlot = installedOr(
 export const SHOWN_COUNT = 0;
 /** The `shownDecals` slot that holds the factor `2 ^ texture_mipmap_bias` that scales the sample's gradients. */
 export const SHOWN_GRADIENT_SCALE = 1;
+/** The `shownDecals` slot that is 1 when the atlas magnifies by a linear filter, 0 when by a nearest one. */
+export const SHOWN_LINEAR_MAGNIFICATION = 2;
 
 /**
  * The shown decals' count and the mipmap bias of the render. An array, not scalars: three caches a

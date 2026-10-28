@@ -4,7 +4,7 @@
  * Godot's clustered renderer does for each viewport (`render_forward_clustered.cpp:1639`).
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { decalAtlasTexture, setDecalAtlasFilter, updateDecalAtlas } from '../../nodes/3d/decal/decalAtlas.js';
 import {
   godotTextureFilterState,
@@ -22,7 +22,13 @@ import { visibleInTree } from '../visibleInTree.js';
 import { isDecal, type DecalObject } from './decalObject.js';
 import { EditorChromeLayers } from './editorChromeLayers.js';
 import { DecalRows } from './decalRows.js';
-import { decalAtlasSlot, SHOWN_COUNT, SHOWN_GRADIENT_SCALE, shownDecals } from './decalSlots.js';
+import {
+  decalAtlasSlot,
+  SHOWN_COUNT,
+  SHOWN_GRADIENT_SCALE,
+  SHOWN_LINEAR_MAGNIFICATION,
+  shownDecals,
+} from './decalSlots.js';
 
 export class SceneDecals {
   private readonly decals: TrackedObjects<DecalObject>;
@@ -81,6 +87,7 @@ export class SceneDecals {
     shownDecals[SHOWN_GRADIENT_SCALE] = 2 ** currentMipmapBias();
     const atlas = decalAtlasTexture();
     setDecalAtlasFilter(this.filter);
+    shownDecals[SHOWN_LINEAR_MAGNIFICATION] = this.filter.magFilter === THREE.LinearFilter ? 1 : 0;
     this.renderer.initTexture(atlas);
     this.writeAnisotropy(atlas);
     showInSlot(this.renderer, decalAtlasSlot, atlas);

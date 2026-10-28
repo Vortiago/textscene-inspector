@@ -552,7 +552,7 @@ A surface reads the mip its distance to the light asks for, so a far surface see
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
 **Decal term** (`r3f/decal/`):
-The part of every 3D program's fragment shader that mixes the decals into the albedo, as Godot's clustered shader does. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+The part of every 3D program's fragment shader that mixes the decals into the surface, as Godot's clustered shader does: the albedo of every program, and the normal, roughness, metallic, occlusion and emission of a lit one. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
 _Avoid_: "decal projection", which names the baked mesh the term replaced.
 
 **Scene rows** (`r3f/sceneRows/`):
@@ -561,8 +561,8 @@ Both share it because a fragment shader has 16 texture units.
 _Avoid_: "probe rows" and "decal rows", which name one band of it.
 
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
-The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-The Decal term reads each Decal's rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The one texture that holds the albedo, normal, ORM and emission textures of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
+The Decal term reads each Decal's rectangle of each map, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:

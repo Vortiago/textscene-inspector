@@ -1,7 +1,7 @@
 /**
  * The decals a scene draws with, packed as the texels each lit fragment fetches: Godot's `DecalData`
- * (`texture_storage.cpp:3316-3486`), one row of `SCENE_ROW_TEXELS` per decal, in the view space of
- * the camera that renders them.
+ * (`texture_storage.cpp:3316-3486`), one row per decal laid out as `decalRowLayout.ts` says, in the
+ * view space of the camera that renders them.
  */
 
 import * as THREE from 'three';
@@ -10,7 +10,7 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { AtlasRect } from '../../resources/textures/atlastexture/types.js';
 import type { DecalProperties } from '../../nodes/3d/decal/types.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk.js';
+import { DECAL_MAPS, DECAL_ROW_TEXELS, DECAL_TEXEL, RECT_TEXEL, type DecalMap } from './decalRowLayout.js';
 
 /** What a decal reads of its node. */
 export type DecalLook = Pick<
@@ -18,6 +18,7 @@ export type DecalLook = Pick<
   | 'size'
   | 'modulate'
   | 'albedo_mix'
+  | 'emission_energy'
   | 'normal_fade'
   | 'upper_fade'
   | 'lower_fade'
@@ -32,8 +33,8 @@ export type DecalLook = Pick<
 export interface DrawnDecal {
   matrixWorld: THREE.Matrix4;
   look: DecalLook;
-  /** Null for a decal with no albedo in the atlas, which Godot draws nothing for. */
-  albedoRect: AtlasRect | null;
+  /** Where the atlas holds the decal's texture for `map`, null for a map the decal lacks. */
+  mapRect(map: DecalMap): AtlasRect | null;
 }
 
 /** Godot's `max_decals` (`texture_storage.h:348`): the decals past it draw nothing. */
@@ -52,12 +53,11 @@ const boxScale = new THREE.Matrix4();
 const decalOrigin = new THREE.Vector3();
 const cameraOrigin = new THREE.Vector3();
 const normal = new THREE.Vector3();
+const basisColumns = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] as const;
 
 /**
- * The rows of the drawn decals, rewritten in place by each `pack`. The texels of one decal: the
- * to-decal matrix's rows, the normal with its fade, the albedo rectangle, the linear modulate with
- * its alpha times the distance fade and `albedo_mix`, then the mask and the two fade exponents. The
- * mask goes in two 16-bit halves, as a float holds 24 bits exactly.
+ * The rows of the drawn decals, rewritten in place by each `pack`. The mask goes in two 16-bit
+ * halves, as a float holds 24 bits exactly.
  */
 export class DecalRows extends RowBuffer {
   /** The decals the distance fade keeps, with their distance and sort key, each by one index. Cleared by `pack`. */
@@ -69,7 +69,7 @@ export class DecalRows extends RowBuffer {
   private readonly byDepth = (a: number, b: number): number => this.depths[a]! - this.depths[b]!;
 
   constructor() {
-    super(SCENE_ROW_TEXELS * 4);
+    super(DECAL_ROW_TEXELS * 4);
   }
 
   /**
@@ -94,8 +94,8 @@ export class DecalRows extends RowBuffer {
     this.order.sort(this.byDepth);
     for (const index of this.order) {
       const decal = this.candidates[index]!;
-      const rect = decal.albedoRect;
-      if (rect) this.append(decalTexels(decal, rect, fadeAt(decal.look, this.distances[index]!)));
+      if (drawsNothing(decal)) continue;
+      this.append(decalTexels(decal, fadeAt(decal.look, this.distances[index]!)));
     }
     this.candidates.length = 0;
     return this.finish();
@@ -105,6 +105,15 @@ export class DecalRows extends RowBuffer {
 /** Whether the node's scale has collapsed the box, whose matrix then has no inverse to project through. */
 function isFlat({ matrixWorld }: DrawnDecal): boolean {
   return matrixWorld.determinant() === 0;
+}
+
+/**
+ * Whether the decal has neither an albedo nor an emission texture, which Godot leaves out (`:3420`).
+ * A normal or an ORM map without an albedo changes nothing (`scene_forward_clustered.glsl:1612`,
+ * `:1627`), so it keeps the decal out as well.
+ */
+function drawsNothing(decal: DrawnDecal): boolean {
+  return decal.mapRect('albedo') === null && decal.mapRect('emission') === null;
 }
 
 /** Whether `distance` lies past the end of the decal's fade, where Godot leaves the decal out. */
@@ -120,7 +129,7 @@ function fadeAt(look: DecalLook, distance: number): number {
 }
 
 /** The texels of the decal being packed, overwritten by each `decalTexels`. */
-const row = new Float32Array(SCENE_ROW_TEXELS * 4);
+const row = new Float32Array(DECAL_ROW_TEXELS * 4);
 
 function setTexel(texel: number, x: number, y: number, z: number, w: number): void {
   const at = texel * 4;
@@ -130,18 +139,51 @@ function setTexel(texel: number, x: number, y: number, z: number, w: number): vo
   row[at + 3] = w;
 }
 
-function decalTexels(decal: DrawnDecal, rect: AtlasRect, fade: number): Float32Array {
+/** Packs `decal` into the row. `fade` is the distance fade, which scales the alpha and the emission energy. */
+function decalTexels(decal: DrawnDecal, fade: number): Float32Array {
   const { look } = decal;
   const m = toDecalMatrix(decal).elements;
-  for (let i = 0; i < 3; i++) setTexel(i, m[i]!, m[4 + i]!, m[8 + i]!, m[12 + i]!);
+  for (let i = 0; i < 3; i++) setTexel(DECAL_TEXEL.toDecal + i, m[i]!, m[4 + i]!, m[8 + i]!, m[12 + i]!);
   const up = normal.setFromMatrixColumn(decal.matrixWorld, 1).normalize().transformDirection(viewInverse);
-  setTexel(3, up.x, up.y, up.z, look.normal_fade);
-  setTexel(4, rect.x, rect.y, rect.width, rect.height);
+  setTexel(DECAL_TEXEL.up, up.x, up.y, up.z, look.normal_fade);
+  for (const map of DECAL_MAPS) setRect(map, decal.mapRect(map));
   // Godot's modulate is a linear colour, its alpha untouched (`texture_storage.cpp:3470-3474`).
   const [r, g, b] = sRGBToLinearRGB(look.modulate.r, look.modulate.g, look.modulate.b);
-  setTexel(5, r, g, b, look.modulate.a * fade * look.albedo_mix);
-  setTexel(6, look.cull_mask & 0xffff, look.cull_mask >>> 16, look.upper_fade, look.lower_fade);
+  setTexel(DECAL_TEXEL.modulate, r, g, b, look.modulate.a * fade);
+  setTexel(
+    DECAL_TEXEL.maskAndFades,
+    look.cull_mask & 0xffff,
+    look.cull_mask >>> 16,
+    look.upper_fade,
+    look.lower_fade
+  );
+  setTexel(DECAL_TEXEL.energyAndMix, look.emission_energy * fade, look.albedo_mix, 0, 0);
+  setNormalBasis(decal);
   return row;
+}
+
+function setRect(map: DecalMap, rect: AtlasRect | null): void {
+  const at = RECT_TEXEL[map];
+  if (rect) setTexel(at, rect.x, rect.y, rect.width, rect.height);
+  else setTexel(at, 0, 0, 0, 0);
+}
+
+/**
+ * The columns of the decal's basis, orthonormalised column by column as `Basis::orthonormalized` does
+ * (`texture_storage.cpp:3437`), in view space. The scale drops, so the decal's normal map tilts the
+ * normal and does not stretch it.
+ */
+function setNormalBasis({ matrixWorld }: DrawnDecal): void {
+  const [x, y, z] = basisColumns;
+  x.setFromMatrixColumn(matrixWorld, 0).normalize();
+  y.setFromMatrixColumn(matrixWorld, 1);
+  y.addScaledVector(x, -x.dot(y)).normalize();
+  z.setFromMatrixColumn(matrixWorld, 2);
+  z.addScaledVector(x, -x.dot(z)).addScaledVector(y, -y.dot(z)).normalize();
+  for (let i = 0; i < basisColumns.length; i++) {
+    const column = basisColumns[i]!.transformDirection(viewInverse);
+    setTexel(DECAL_TEXEL.normalBasis + i, column.x, column.y, column.z, 0);
+  }
 }
 
 /** The view-space point to box coordinate matrix (`texture_storage.cpp:3367-3372`). */

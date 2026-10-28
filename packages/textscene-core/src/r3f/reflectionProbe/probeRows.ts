@@ -40,6 +40,9 @@ export interface DrawnProbe {
  * the exposure normalisation. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
  */
 export class ProbeRows extends RowBuffer {
+  /** The row being packed, as wide as a decal's, whose extra texels stay zero. */
+  private readonly row = new Float32Array(SCENE_ROW_TEXELS * 4);
+
   constructor() {
     super(SCENE_ROW_TEXELS * 4);
   }
@@ -47,7 +50,10 @@ export class ProbeRows extends RowBuffer {
   /** Packs `probes` in order, and answers whether any row changed. */
   pack(probes: readonly DrawnProbe[]): boolean {
     this.begin();
-    for (const probe of probes) this.append(Float32Array.from(probeTexels(probe)));
+    for (const probe of probes) {
+      this.row.set(probeTexels(probe));
+      this.append(this.row);
+    }
     return this.finish();
   }
 }

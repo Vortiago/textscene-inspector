@@ -9,8 +9,8 @@ import { REFLECTION_ATLAS_COUNT } from '../../godot/rendering/environment/reflec
 import { FOG_UNIFORMS_MERGE, installMergedUniform } from '../shaderPatch/litUniform.js';
 import { SCENE_ROWS_UNIFORM, sceneRowsSlot } from './sceneRowsSlot.js';
 
-/** The texels of each row, whether it describes a probe or a decal. A decal leaves the last one unused. */
-export const SCENE_ROW_TEXELS = 8;
+/** The texels of each row, whether it describes a probe or a decal: the width of a decal's, which is the wider. */
+export const SCENE_ROW_TEXELS = 14;
 
 /** The row of the first decal: the rows before it are the probes', and a scene holds at most this many. */
 export const DECAL_FIRST_ROW = REFLECTION_ATLAS_COUNT;

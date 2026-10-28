@@ -21,15 +21,55 @@ describe('installGodotDecals', () => {
   });
 
   it.each(LIT_PROGRAMS)(
-    'mixes the decals into the %s albedo from the geometry normal, before the normal map',
+    'mixes the decals into the %s surface after its normal and emissive maps, from the geometry normal',
     (program) => {
       installGodotDecals();
       const fragment = THREE.ShaderLib[program].fragmentShader;
 
-      expect(fragment.indexOf('#include <normal_fragment_begin>')).toBeLessThan(fragment.indexOf(APPLY));
-      expect(fragment.indexOf(APPLY)).toBeLessThan(fragment.indexOf('#include <normal_fragment_maps>'));
+      expect(fragment.indexOf('#include <normal_fragment_maps>')).toBeLessThan(fragment.indexOf(APPLY));
+      expect(fragment.indexOf('#include <emissivemap_fragment>')).toBeLessThan(fragment.indexOf(APPLY));
+      expect(fragment.indexOf(APPLY)).toBeLessThan(fragment.indexOf('#include <lights_physical_fragment>'));
+      expect(fragment).toContain(
+        'godotApplyDecals( godotDecalSurface, - vViewPosition, nonPerturbedNormal );'
+      );
     }
   );
+
+  it.each(LIT_PROGRAMS)('mixes the normal, ORM and emission maps in the %s program only', (program) => {
+    installGodotDecals();
+    const fragment = THREE.ShaderLib[program].fragmentShader;
+
+    expect(fragment.indexOf('#define GODOT_DECAL_SHADED')).toBeLessThan(
+      fragment.indexOf('#include <godot_decal_pars>')
+    );
+    expect(THREE.ShaderLib.basic.fragmentShader).not.toContain('GODOT_DECAL_SHADED');
+  });
+
+  it.each(LIT_PROGRAMS)('scales the emission of the decals by the exposure in the %s program', (program) => {
+    installGodotDecals();
+
+    expect(THREE.ShaderLib[program].fragmentShader).toContain(
+      'totalEmissiveRadiance += godotDecalSurface.emission * godotEmissionExposure[ 0 ];'
+    );
+  });
+
+  it.each(LIT_PROGRAMS)('hands the occlusion of the decals to the AO chunk of the %s program', (program) => {
+    installGodotDecals();
+    const fragment = THREE.ShaderLib[program].fragmentShader;
+
+    expect(fragment).toContain('godotOcclusionMix = godotDecalSurface.occlusion;');
+    expect(THREE.ShaderChunk.aomap_fragment).toContain(
+      'ambientOcclusion * godotOcclusionMix.x + godotOcclusionMix.y'
+    );
+  });
+
+  it('filters a normal or ORM read that magnifies from the bytes of its taps, when the atlas magnifies linearly', () => {
+    installGodotDecals();
+    const chunk = (THREE.ShaderChunk as Record<string, string>)['godot_decal_pars']!;
+
+    expect(chunk).toContain(`${DECAL_UNIFORMS.shown}[ 0 ].z == 0.0`);
+    expect(chunk).toContain(`texelFetch( ${DECAL_UNIFORMS.atlas}`);
+  });
 
   it('mixes the decals into the unlit albedo once the alpha tests are done', () => {
     installGodotDecals();
@@ -39,6 +79,7 @@ describe('installGodotDecals', () => {
     expect(fragment.indexOf(APPLY)).toBeLessThan(
       fragment.indexOf('reflectedLight.indirectDiffuse *= diffuseColor.rgb')
     );
+    expect(fragment).toContain('GodotDecalSurface( diffuseColor.rgb )');
   });
 
   it('has the unlit vertex hand on the view position and the normal of every surface', () => {

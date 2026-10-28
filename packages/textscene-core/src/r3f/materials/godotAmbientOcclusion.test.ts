@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { GODOT_AMBIENT_OCCLUSION, ambientOcclusionUserData } from './godotAmbientOcclusion';
+import {
+  GODOT_AMBIENT_OCCLUSION,
+  OCCLUSION_MIX,
+  ambientOcclusionUserData,
+  installGodotOcclusion,
+} from './godotAmbientOcclusion';
 import type { ProgramShader } from '../materialProgramInputs';
+import { warningsOf } from '../testing/logWarnings';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel';
 
 const AO_INCLUDE = '#include <aomap_fragment>';
@@ -103,5 +110,62 @@ describe('the AO uniforms', () => {
       0,
       [1, 0, 0, 0],
     ]);
+  });
+});
+
+describe('installGodotOcclusion', () => {
+  restoreShaderGlobalsAfterEach();
+
+  it('declares the decals mix at the identity, ahead of the AO map uniforms', () => {
+    installGodotOcclusion();
+
+    expect(
+      THREE.ShaderChunk.aomap_pars_fragment.startsWith(`vec2 ${OCCLUSION_MIX} = vec2( 1.0, 0.0 );`)
+    ).toBe(true);
+  });
+
+  it("runs three's occlusion chunk for a surface with no AO map, from the occlusion 1 (`:1248`)", () => {
+    installGodotOcclusion();
+    const chunk = THREE.ShaderChunk.aomap_fragment;
+
+    expect(chunk.startsWith('#if 1\n')).toBe(true);
+    expect(chunk).toContain('float ambientOcclusion = 1.0;\n\t#ifdef USE_AOMAP\n\t\tambientOcclusion = (');
+  });
+
+  it("mixes the decals' ORM into the occlusion before anything scales by it", () => {
+    installGodotOcclusion();
+    const chunk = THREE.ShaderChunk.aomap_fragment;
+
+    expect(chunk.indexOf(`ambientOcclusion * ${OCCLUSION_MIX}.x + ${OCCLUSION_MIX}.y`)).toBeLessThan(
+      chunk.indexOf('reflectedLight.indirectDiffuse *= ambientOcclusion;')
+    );
+  });
+
+  it.each(
+    Object.entries(THREE.ShaderLib).filter(([, shader]) =>
+      shader.fragmentShader.includes('#include <aomap_fragment>')
+    )
+  )('is declared before the %s program includes the chunk that reads it', (_name, shader) => {
+    const { fragmentShader } = shader;
+
+    expect(fragmentShader.indexOf('#include <aomap_pars_fragment>')).toBeGreaterThan(-1);
+    expect(fragmentShader.indexOf('#include <aomap_pars_fragment>')).toBeLessThan(
+      fragmentShader.indexOf('#include <aomap_fragment>')
+    );
+  });
+
+  it('changes nothing and warns nothing on a second call (edge case)', () => {
+    installGodotOcclusion();
+    const once = THREE.ShaderChunk.aomap_fragment;
+
+    expect(warningsOf(installGodotOcclusion)).toEqual([]);
+    expect(THREE.ShaderChunk.aomap_fragment).toBe(once);
+  });
+
+  it('leaves both chunks alone when the sample line is gone, and warns (error case)', () => {
+    THREE.ShaderChunk.aomap_fragment = '#ifdef USE_AOMAP\n#endif';
+
+    expect(warningsOf(installGodotOcclusion)).toHaveLength(1);
+    expect(THREE.ShaderChunk.aomap_pars_fragment).not.toContain(OCCLUSION_MIX);
   });
 });
