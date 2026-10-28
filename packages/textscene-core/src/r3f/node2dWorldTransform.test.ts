@@ -34,6 +34,13 @@ describe('node2dWorldPosition', () => {
     expect(node2dWorldPosition(roots, emptyCtx, 'A/B')).toEqual({ x: 110, y: 70 });
   });
 
+  it('places a node where the live scene passes moved its parent', () => {
+    const roots = [tnode('A', at(100, 50), [tnode('B', at(10, 20))])];
+    const placed = new Map([['A', { position: { x: 300, y: 0 }, rotation: 0, scale: { x: 1, y: 1 } }]]);
+
+    expect(node2dWorldPosition(roots, emptyCtx, 'A/B', placed)).toEqual({ x: 310, y: 20 });
+  });
+
   it('applies an ancestor rotation to the child offset (Godot +Y-down, CW-positive)', () => {
     // Parent rotated 90° CW: child local +X maps to world +Y.
     const roots = [tnode('A', { ...at(100, 0), rotation: String(Math.PI / 2) }, [tnode('B', at(10, 0))])];

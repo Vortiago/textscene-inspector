@@ -34,10 +34,6 @@ const NEEDS_NO_OVERLAY = new Map([
     'r3f/components/SceneTreeViewer/useLiveStep.ts',
     'Shows the merged instance root in the tree, which no pass patches.',
   ],
-  [
-    'r3f/components/TscnPreviewShell/CamerasPanel.tsx',
-    'Lists cameras. The world position it frames from reads `rawProperties`, which no patch reaches.',
-  ],
   ['r3f/components/TscnPreviewShell/SceneStats.tsx', 'Counts the cameras by type.'],
   ['r3f/components/TscnPreviewShell/ViewportArea.tsx', 'Asks whether the scene has 2D content, by type.'],
   ['r3f/components/ViewportToolbar/ViewportToolbar.tsx', 'Asks whether a node yields the preview, by type.'],

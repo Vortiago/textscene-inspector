@@ -74,6 +74,41 @@ describe('<CamerasPanel> with 2D cameras', () => {
     expect(probe.getAttribute('data-mode')).toBe('2D');
   });
 
+  it('frames a Camera2D that a RemoteTransform2D moved at the relay’s position', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+
+[node name="Cam" type="Camera2D" parent="."]
+position = Vector2(20, 10)
+
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(500, 200)
+remote_path = NodePath("../Cam")
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('500,200@1');
+  });
+
+  it('frames a Camera2D under a Node2D that a RemoteTransform2D moved with its parent', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+
+[node name="Player" type="Node2D" parent="."]
+position = Vector2(100, 50)
+
+[node name="Cam" type="Camera2D" parent="Player"]
+position = Vector2(20, 10)
+
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(300, 0)
+remote_path = NodePath("../Player")
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('320,10@1');
+  });
+
   it('frames a top_level Camera2D under a translated Node2D at its own position', () => {
     renderPanel(`[gd_scene format=3]
 
