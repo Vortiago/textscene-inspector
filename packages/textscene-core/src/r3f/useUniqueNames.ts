@@ -31,6 +31,8 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
       ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx)),
     [path]
   );
+  // The outer useByValue keeps the identity across a new `path`, which rebuilds the selection's
+  // snapshot with no earlier value to compare.
   return useByValue(useLiveTreeSelection(tableOf, sameEntries), samePaths);
 }
 
