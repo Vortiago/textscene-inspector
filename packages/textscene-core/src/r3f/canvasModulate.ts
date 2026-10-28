@@ -27,7 +27,7 @@ interface CanvasModulateLike {
  * that sub-scene is loaded: it joins the group of the canvas it sits in, whichever file declares
  * it (`canvas_modulate.cpp:33-45`).
  */
-export function canvasModulateColor(nodes: readonly TscnNode[], ctx: LiveTreeContext): Rgba {
+function canvasModulateColor(nodes: readonly TscnNode[], ctx: LiveTreeContext): Rgba {
   let found: Rgba | null = null;
 
   liveTreeOf(nodes, ctx).fold<boolean, void>(true, ({ step }, visible, descend) => {

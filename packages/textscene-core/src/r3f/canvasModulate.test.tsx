@@ -1,22 +1,43 @@
 /**
- * `canvasModulateColor`: which CanvasModulate governs a canvas, including a
+ * `useCanvasModulateColor`: which CanvasModulate governs a canvas, including a
  * childless one beside the level, which a subtree-scoped reading ignores.
  */
 import { describe, expect, it } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
-import { canvasModulateColor } from './canvasModulate';
+import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
+import { HierarchyProvider } from './contexts/HierarchyContext';
+import { useCanvasModulateColor } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
-import { contextOver } from './liveSceneTree.testkit';
-import type { TscnScene } from '../parser/types';
+import type { TscnNode, TscnScene } from '../parser/types';
 
 const parse = (tscn: string): TscnScene => new TscnParser().parse(tscn);
 
-function colorOf(tscn: string, scenes: Record<string, TscnScene> = {}) {
-  const scene = parse(tscn);
-  return canvasModulateColor(scene.nodes, contextOver(scene, scenes));
+/** The tint `pickNodes` selects from `scene`, over the sub-scenes the loader holds. */
+function tintOver(
+  scene: TscnScene,
+  scenes: Record<string, TscnScene> = {},
+  pickNodes: (scene: TscnScene) => readonly TscnNode[] = (s) => s.nodes
+) {
+  const fake = createFakeResourceLoader();
+  for (const [path, loaded] of Object.entries(scenes)) fake.scenes.seed(path, loaded);
+  const sceneGraph = createSceneGraphFromTscnScene(scene);
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+    </HierarchyProvider>
+  );
+  return renderHook(() => useCanvasModulateColor(pickNodes(scene)), { wrapper }).result.current;
 }
 
-describe('canvasModulateColor', () => {
+function colorOf(tscn: string, scenes: Record<string, TscnScene> = {}) {
+  return tintOver(parse(tscn), scenes);
+}
+
+describe('useCanvasModulateColor', () => {
   it('is white — the modulate identity — when the scene has none', () => {
     expect(
       colorOf(`[gd_scene format=3]
@@ -124,8 +145,11 @@ color = Color(1, 0, 0, 1)
 [node name="InnerTint" type="CanvasModulate" parent="View/Inner"]
 color = Color(0, 0, 1, 1)
 `);
-    const view = scene.nodes[0]!.children[0]!;
-    expect(canvasModulateColor(view.children, contextOver(scene, {}))).toMatchObject({ r: 1, g: 0, b: 0 });
+    expect(tintOver(scene, {}, (s) => s.nodes[0]!.children[0]!.children)).toMatchObject({
+      r: 1,
+      g: 0,
+      b: 0,
+    });
   });
 
   /**

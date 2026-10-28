@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
+import type { TscnNode } from '../../../parser/types';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import {
   ViewportPassOrchestrator,
@@ -22,8 +23,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
-import { canvasModulateColor } from '../../../r3f/canvasModulate';
-import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
 
 import '../../../r3f/nodes/index';
 
@@ -85,6 +85,15 @@ interface Frame {
   readonly drawnScenes: THREE.Object3D[];
 }
 
+/** The root canvas as the stage mounts it: its light pass over the tint its nodes give. */
+function TintedStage({ nodes }: { nodes: readonly TscnNode[] }) {
+  return (
+    <CanvasLighting2DProvider canvasModulate={useCanvasModulateColor(nodes)}>
+      <NodeDispatcher nodes={nodes} />
+    </CanvasLighting2DProvider>
+  );
+}
+
 async function frameOf(): Promise<Frame> {
   const parsed = new TscnParser().parse(SCENE);
   const fake = createFakeResourceLoader();
@@ -96,11 +105,7 @@ async function frameOf(): Promise<Frame> {
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
       <ViewportTextureProvider>
         <ViewportPassProvider>
-          <CanvasLighting2DProvider
-            canvasModulate={canvasModulateColor(parsed.nodes, contextOver(parsed, {}))}
-          >
-            <NodeDispatcher nodes={parsed.nodes} />
-          </CanvasLighting2DProvider>
+          <TintedStage nodes={parsed.nodes} />
           <CaptureRenderer captured={captured} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
