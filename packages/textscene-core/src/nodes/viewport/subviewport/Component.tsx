@@ -37,7 +37,7 @@ import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
-import { useCanvasModulateColor, CanvasModulateContext } from '../../../r3f/canvasModulate';
+import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
 import { createViewportLightPassHost } from './viewportLightPassHost';
 import type { Rgba } from '../../../godot/math/math';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
@@ -103,15 +103,15 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const canvasModulate = useCanvasModulateColor(node.children);
   const contents = (
     <ViewportSizeProvider size={size}>
-      <CanvasModulateContext.Provider value={canvasModulate}>
-        <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
-      </CanvasModulateContext.Provider>
+      <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
     </ViewportSizeProvider>
   );
 
   return (
     <Node node={node}>
-      {rendersInline ? <World2DLightingBoundary>{contents}</World2DLightingBoundary> : null}
+      {rendersInline ? (
+        <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
+      ) : null}
       {rasterizes ? (
         <OffscreenViewport
           node={node}
@@ -328,7 +328,7 @@ function OffscreenViewport({
                   {children}
                 </CanvasLightPass>
               ) : (
-                <World2DLightingBoundary>{children}</World2DLightingBoundary>
+                <World2DLightingBoundary canvasModulate={canvasModulate}>{children}</World2DLightingBoundary>
               )}
             </CanvasSpaceProvider>
           </WorldScope>

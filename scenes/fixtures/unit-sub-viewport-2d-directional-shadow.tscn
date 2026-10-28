@@ -1,16 +1,12 @@
 ; One variable: a DirectionalLight2D with a LightOccluder2D shadow inside a SubViewport, beside a
 ; DirectionalLight2D outside it. The directional shadow map spans the SubViewport's clip rect
 ; Rect2(0, 0, size) (`renderer_viewport.cpp:390`), and the outside sun reaches no pixel inside. The
-; container and the Backdrop carry an unshaded CanvasItemMaterial, so the outside sun leaves both
-; alone: the previewer draws every native Control unlit, where Godot lights it.
+; outside sun lights the Backdrop and the container's surface once, as it lights any CanvasItem.
 
 [gd_scene format=3]
 
 [sub_resource type="OccluderPolygon2D" id="Occluder"]
 polygon = PackedVector2Array(80, 40, 120, 40, 120, 80, 80, 80)
-
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_unshaded"]
-light_mode = 1
 
 [node name="Root" type="Control"]
 anchors_preset = 15
@@ -18,7 +14,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="Backdrop" type="ColorRect" parent="."]
-material = SubResource("CanvasItemMaterial_unshaded")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -26,7 +21,6 @@ color = Color(0, 0, 0.4, 1)
 
 ; stretch is off, so screen = target pixel + (100, 80).
 [node name="Booth" type="SubViewportContainer" parent="."]
-material = SubResource("CanvasItemMaterial_unshaded")
 offset_left = 100.0
 offset_top = 80.0
 offset_right = 400.0

@@ -65,7 +65,7 @@ import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import type { SkippedAncestors, SkippedMaterial, SolveNode, ThemedIconRef } from './solveTree';
 import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
 import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
 import { liveNodePatches } from '../../liveNodePatches';
@@ -333,7 +333,8 @@ function isSortableChild(live: TscnNode): boolean {
  */
 function nextSkippedAncestors(
   collapsed: TscnNode,
-  previous: SkippedAncestors | null
+  previous: SkippedAncestors | null,
+  material: SkippedMaterial
 ): SkippedAncestors | null {
   if (!isCanvasItem(collapsed)) return null;
   const props = collapsed.properties as Node2DProperties;
@@ -353,7 +354,31 @@ function nextSkippedAncestors(
       { filter: props.texture_filter, repeat: props.texture_repeat },
       previous?.sampler ?? ROOT_TEXTURE_SAMPLER
     ),
+    material,
   };
+}
+
+const INHERIT_MATERIAL: SkippedMaterial = { kind: 'inherit' };
+const NO_MATERIAL: SkippedMaterial = { kind: 'none' };
+
+/**
+ * The material a promoted Control's parent item has through the skipped `collapsed`: its own
+ * `material`, or with `use_parent_material` the one above it. A chain that starts on the Control
+ * above defers to that Control. A `top_level` or canvas-root link has no parent item, so it defers
+ * to nothing (`CanvasItem::get_parent_item`, `canvas_item.cpp:565-571`).
+ */
+function skippedMaterialOf(
+  collapsed: TscnNode,
+  scope: SceneScope,
+  previous: SkippedAncestors | null,
+  canvasChainBroken: boolean
+): SkippedMaterial {
+  const props = collapsed.properties as Node2DProperties;
+  if (props.use_parent_material) {
+    if (previous) return previous.material;
+    return canvasChainBroken || isTopLevelItem(collapsed) ? NO_MATERIAL : INHERIT_MATERIAL;
+  }
+  return props.materialPath ? { kind: 'own', ref: props.materialPath, resources: scope } : NO_MATERIAL;
 }
 
 /**
@@ -688,7 +713,13 @@ function buildForest(
     // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
     const placed =
       !isControl && isCanvasItem(collapsed) ? patchedNode(collapsed, patchesOfTree().get(path)) : collapsed;
-    const childSkippedAncestors = isControl ? null : nextSkippedAncestors(placed, skippedAncestors);
+    const childSkippedAncestors = isControl
+      ? null
+      : nextSkippedAncestors(
+          placed,
+          skippedAncestors,
+          skippedMaterialOf(collapsed, ownScope, skippedAncestors, canvasChainBroken)
+        );
     // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
     // so the flag ends it on the Control itself or on any CanvasItem above.
     const topLevel = isTopLevelItem(collapsed);
