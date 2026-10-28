@@ -1,9 +1,7 @@
 /**
- * The font-variation half of `canvasTextPainter.ts`: how far an embolden pads the raster, how an
- * emboldened fill is drawn with canvas-2D calls, and how the outline ring of an emboldened or
- * sheared glyph is stroked. `FT_Outline_Embolden` grows the contour and shifts it right and up by
- * half the growth (`text_server_adv.cpp:1314-1315`). `FT_Outline_Transform` then shears it
- * (`:1318-1320`), and the stroker strokes the result (`:1383-1390`).
+ * The font-variation half of `canvasTextPainter.ts`: the embolden padding, the emboldened fill and
+ * the ring of an emboldened or sheared glyph. Godot emboldens the contour (`text_server_adv.cpp:1314`),
+ * shears it (`:1318`), then strokes the result (`:1383`).
  */
 import type { GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
@@ -50,6 +48,11 @@ export function variedGlyphContours(
   return glyphIndex === 0 ? null : outlines.glyphContours(glyphIndex, fontSizePx, variation);
 }
 
+/** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY), the MSDF path's per-vertex shear (TextRun.tsx's `dx`). */
+export function shearAboutBaseline(ctx: CanvasRenderingContext2D, skew: number, baselineY: number): void {
+  ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
+}
+
 /**
  * Strokes `contours` from the pen, with the stroke state of `ctx`. The contours carry their own
  * shear, so the caller draws them under no shear transform and the line keeps its width in every
@@ -72,10 +75,10 @@ export function strokeShearedText(
   char: string,
   penX: number,
   baselineY: number,
-  shear: (baselineY: number) => void
+  skew: number
 ): void {
   ctx.save();
-  shear(baselineY);
+  shearAboutBaseline(ctx, skew, baselineY);
   ctx.strokeText(char, penX, baselineY);
   ctx.restore();
 }

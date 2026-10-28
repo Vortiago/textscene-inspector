@@ -13,6 +13,7 @@ import {
   variedGlyphContours,
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
+  shearAboutBaseline,
   strokeContours,
   strokeShearedText,
 } from './canvasVariation';
@@ -124,10 +125,8 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`. A positive `strokeWidthPx` paints the outline ring
  * instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`).
- * `skew` shears each line's ink about its own baseline. The quad stays axis-aligned. With the
- * `outlines` of the font, the ring of an emboldened or sheared glyph strokes the outline as
- * FreeType leaves it, mitred and sheared, with a line that is not sheared. Without them, it is the
- * ring of the glyph as it stands, and a shear shears its width.
+ * `skew` shears each line's ink about its own baseline. With the `outlines` of the font, the ring of
+ * an emboldened or sheared glyph strokes the changed contour, so a shear does not shear its width.
  */
 // Happy-dom has no 2D context, so under vitest the canvas stays blank. The pixels
 // are a golden-image concern, so a unit test reads the calls, not the pixels.
@@ -185,8 +184,6 @@ export function paintSceneFontCanvas(
     contoursByChar.set(char, varied);
     return varied;
   };
-  // x' = x - skew * (y - baselineY), y' = y: the MSDF path's per-vertex shear (TextRun.tsx's `dx`).
-  const shear = (baselineY: number) => ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
 
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
@@ -194,13 +191,15 @@ export function paintSceneFontCanvas(
 
     ctx.save();
     // A contour line draws under the identity transform, so its stroke keeps its width in every direction.
-    if (skew !== 0 && !contourOutlines) shear(baselineY);
+    if (skew !== 0 && !contourOutlines) shearAboutBaseline(ctx, skew, baselineY);
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
-      const contours = contourOutlines ? contoursOf(gp.char, contourOutlines) : null;
+      // A glyph shaped with no growth, in a layout that is not sheared, stays on its plain ring.
+      const hasVariedOutline = contourOutlines && (skew !== 0 || gp.emboldenGrowthPx);
+      const contours = hasVariedOutline ? contoursOf(gp.char, contourOutlines) : null;
       if (contours) strokeContours(ctx, contours, penX, baselineY);
-      else if (contourOutlines && skew !== 0) strokeShearedText(ctx, gp.char, penX, baselineY, shear);
+      else if (contourOutlines && skew !== 0) strokeShearedText(ctx, gp.char, penX, baselineY, skew);
       else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
       else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else ctx.fillText(gp.char, penX, baselineY);
