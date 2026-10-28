@@ -1658,6 +1658,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Embolden Fill",
+    "file": "unit-progress-bar-embolden-fill.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Outline Variation",
     "file": "unit-progress-bar-outline-variation.tscn",
     "category": "Other"
@@ -3087,6 +3092,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Ribbon Instanced",
+    "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

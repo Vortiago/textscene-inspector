@@ -38,6 +38,11 @@ The resource pools of the file that wrote a node. A host node grafted into an in
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
 _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
 
+**Live scene pass** (`LiveScenePass`, `r3f/liveScenePass.ts`, ADR-0060):
+A scene pass that reads the whole **Live scene tree** and answers per live node path, so a NodePath binds across an instance border as Godot's `get_node_or_null` does.
+A component reads its result by its own node path, because the nodes of a sub-scene are shared by every instance of it.
+_Avoid_: writing a pass's result into a node. A parse-time pass for a path that may cross an instance.
+
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
 The merged node keeps it, and the render path's per-owner tables read it. A `%Name` that the table lacks at the instance root reads the table of the instance's owner next, which the file above answers.
@@ -628,7 +633,7 @@ The `THREE.Group` that stands for a Skeleton3D or a BoneAttachment3D of the **Im
 _Avoid_: A stand-in object. A path segment for the group.
 
 **Automatic skin** (`automaticSkinMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
-The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the scene pass in `skeletonBindings.ts` hands the matrices to the mesh, which draws as a SkinnedMesh.
+The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the **Live scene pass** in `skeletonBindings.ts` hands the matrices to the mesh by its live path, so the mesh draws as a SkinnedMesh.
 _Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose kept in three bones.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):

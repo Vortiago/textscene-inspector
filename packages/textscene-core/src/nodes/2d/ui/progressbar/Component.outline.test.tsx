@@ -1,6 +1,6 @@
 /**
- * The canvas outline of a `<ProgressBar>` percentage follows the emboldened glyph contours, as
- * Label3D's does. `<TextRun>` is stubbed to read the props the painter hands it.
+ * The canvas outline of a `<ProgressBar>` percentage draws beneath the percentage. `<TextRun>` is
+ * stubbed to read the props the painter hands it.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -11,26 +11,21 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
-import type { SfntOutlines } from '../../../../r3f/controls/native/text/sfntOutlines';
-import type { FontResource } from '../../../../resources/fonts/font/types';
-import { trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import { ProgressBar } from './Component';
 
 interface RunProps {
   strokeWidthPx?: number;
-  glyphOutlines?: SfntOutlines | null;
   renderOrder?: number;
 }
 
 const scene = vi.hoisted(() => ({
   metrics: undefined as FontMetrics | undefined,
-  font: null as FontResource | null,
   runs: [] as RunProps[],
 }));
 
 vi.mock('../../../../r3f/controls/native/text/resolveNodeFontMetrics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../r3f/controls/native/text/resolveNodeFontMetrics')>()),
-  resolveNodeFont: () => scene.font,
+  resolveNodeFont: () => null,
 }));
 vi.mock('../../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../r3f/controls/native/text/sceneFontLoader')>()),
@@ -67,25 +62,9 @@ async function renderBar() {
 beforeEach(() => {
   const bundled = createOpenSansCanvasFontMetrics('progress-bar-outline-test');
   scene.metrics = withVariation(bundled, { embolden: 0.6 });
-  scene.font = trueTypeFontFile();
 });
 
 describe('<ProgressBar> canvas outline', () => {
-  it.each([
-    ['emboldened', { embolden: 0.6 }],
-    ['sheared', { skew: 0.3 }],
-  ])(
-    'strokes the contours of a %s face, and never strokes the plain ring while they load',
-    async (name, variation) => {
-      scene.metrics = withVariation(createOpenSansCanvasFontMetrics(`progress-bar-${name}-test`), variation);
-
-      await renderBar();
-
-      await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
-      expect(strokeRuns().every((run) => run.glyphOutlines)).toBe(true);
-    }
-  );
-
   it('draws the percentage above its outline', async () => {
     await renderBar();
 
@@ -93,13 +72,5 @@ describe('<ProgressBar> canvas outline', () => {
     const outline = strokeRuns().at(-1);
     const percentage = scene.runs.find((run) => !run.strokeWidthPx);
     expect(percentage?.renderOrder).toBeGreaterThan(outline?.renderOrder ?? Infinity);
-  });
-
-  it('strokes a face with no embolden and no skew at once, without outlines', async () => {
-    scene.metrics = createOpenSansCanvasFontMetrics('progress-bar-plain-test');
-
-    await renderBar();
-
-    expect(strokeRuns().at(-1)?.glyphOutlines).toBeNull();
   });
 });

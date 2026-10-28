@@ -204,16 +204,18 @@ function useReadAtLoadTick<T>(
 /**
  * A value read from the shared live tree, undefined with no tree. A load tick re-reads it, and the
  * reader re-renders only where `isSame` says the value changed, so a reader whose answer a load
- * leaves alone costs no render. `select` and `isSame` must be stable.
+ * leaves alone costs no render. A null `select` asks nothing, so it watches no load. `select` and
+ * `isSame` must be stable.
  */
 export function useLiveTreeSelection<T>(
-  select: (tree: SharedLiveTree) => T | undefined,
+  select: ((tree: SharedLiveTree) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
   const { sceneGraph, loader } = useSceneGraphAndLoader();
   const readAt = useCallback(
     (version: number) => {
-      const tree = sceneGraph ? sharedTreesOf(sceneGraph)(loader, version) : null;
+      if (!sceneGraph || !select) return undefined;
+      const tree = sharedTreesOf(sceneGraph)(loader, version);
       return tree ? select(tree) : undefined;
     },
     [sceneGraph, loader, select]
@@ -222,7 +224,7 @@ export function useLiveTreeSelection<T>(
     (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),
     [isSame]
   );
-  return useReadAtLoadTick(loader, readAt, isSameSelection);
+  return useReadAtLoadTick(select ? loader : null, readAt, isSameSelection);
 }
 
 function seatedRootsOf({ roots, ctx }: SharedLiveTree): readonly TscnNode[] {
