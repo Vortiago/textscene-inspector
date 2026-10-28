@@ -26,8 +26,12 @@ const SQUARE: Quad2 = [
   { x: 0, y: 1000 },
 ];
 
-function squareView(maxDistance = 0, direction = { x: 0, y: -1 }): DirectionalShadowView {
-  return { clip: SQUARE, direction, maxDistance };
+function squareView(
+  maxDistance = 0,
+  direction = { x: 0, y: -1 },
+  scale = { x: 1, y: 1 }
+): DirectionalShadowView {
+  return { clip: SQUARE, direction, maxDistance, scale };
 }
 
 function segment(
@@ -203,5 +207,53 @@ describe('buildDirectionalShadowMap: cull_mode', () => {
   it('ignores an edge parallel to the light', () => {
     const { bins } = buildDirectionalShadowMap(squareView(), [segment(500, 300, 500, 700)]);
     expect(bins.every((depth) => depth === SHADOW_MAP_FAR)).toBe(true);
+  });
+});
+
+/**
+ * A canvas transform that scales the world, as a Camera2D zoom does, changes nothing but the
+ * units: Godot builds the map in screen pixels (`renderer_viewport.cpp:564`, the occluders'
+ * `xform_cache`), where `max_distance` is measured too.
+ */
+describe('buildDirectionalShadowMap: the canvas scale', () => {
+  it('reads max_distance in screen pixels, so a 2x zoom halves its reach in the world', () => {
+    const zoomed = buildDirectionalShadowMap(squareView(100, { x: 0, y: -1 }, { x: 2, y: 2 }), [
+      segment(400, 600, 600, 600),
+    ]);
+    const plain = buildDirectionalShadowMap(squareView(50), [segment(400, 600, 600, 600)]);
+    expect(Array.from(zoomed.bins)).toEqual(Array.from(plain.bins));
+    expect(zoomed.worldToShadow).toEqual(plain.worldToShadow);
+  });
+
+  it('measures the view in scaled pixels: a 2x horizontal scale doubles the across extent', () => {
+    // Worked by hand in scaled space: the view is 2000 x 1000 with centre (1000, 500), the diagonal
+    // 2236.07, so u(x) = 0.5 + (2x - 1000) / 2236.07 and a 200 world px edge spans 400 scaled px.
+    const { bins, worldToShadow } = buildDirectionalShadowMap(
+      squareView(0, { x: 0, y: -1 }, { x: 2, y: 1 }),
+      [segment(400, 600, 600, 600)]
+    );
+    const [m00, m01, m02, m10, m11, m12] = worldToShadow;
+    expect(m00 * 500 + m01 * 600 + m02).toBeCloseTo(0.5, 9);
+    expect(m10 * 500 + m11 * 600 + m12).toBeCloseTo(0.4, 9);
+    // u(400) = 0.5 - 200 / 2236.07 = 0.410557, so bin 841 (centre 841.5) is the first covered.
+    expect(bins[840]).toBe(SHADOW_MAP_FAR);
+    expect(bins[841]).toBeCloseTo(0.4, 6);
+    expect(bins[1206]).toBeCloseTo(0.4, 6);
+    expect(bins[1207]).toBe(SHADOW_MAP_FAR);
+  });
+
+  it('travels along the screen direction: moving along the world direction deepens and leaves u alone', () => {
+    // World (1, -1) at scale (2, 1) is screen (2, -1), so the map's depth axis lies along it.
+    const view = squareView(0, { x: Math.SQRT1_2, y: -Math.SQRT1_2 }, { x: 2, y: 1 });
+    const { worldToShadow } = buildDirectionalShadowMap(view, []);
+    const at = (x: number, y: number) => {
+      const [m00, m01, m02, m10, m11, m12] = worldToShadow;
+      return { u: m00 * x + m01 * y + m02, depth: m10 * x + m11 * y + m12 };
+    };
+    const start = at(500, 500);
+    const along = at(510, 490);
+    expect(along.u).toBeCloseTo(start.u, 9);
+    expect(along.depth).toBeGreaterThan(start.depth);
+    expect(at(510, 510).u).not.toBeCloseTo(start.u, 3);
   });
 });

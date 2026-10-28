@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Light Render Budget",
+    "file": "unit-canvas-light-render-budget.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
     "category": "Other"
@@ -458,6 +463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Emission Map",
+    "file": "unit-decal-emission-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -465,6 +475,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Mipmap Import",
     "file": "unit-decal-mipmap-import.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Normal Map",
+    "file": "unit-decal-normal-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Orm Map",
+    "file": "unit-decal-orm-map.tscn",
     "category": "Other"
   },
   {
@@ -525,6 +545,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Directional Shadow Splits",
     "file": "unit-directional-shadow-splits.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Canvas Layer Cap",
+    "file": "unit-directionallight2d-canvas-layer-cap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Render Budget",
+    "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
   },
   {
@@ -655,16 +685,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance Child",
-    "file": "unit-gizmo-instance-child.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance",
-    "file": "unit-gizmo-instance.tscn",
     "category": "Other"
   },
   {
@@ -1010,6 +1030,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Environment",
     "file": "unit-instanced-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey Child",
+    "file": "unit-instanced-gizmo-grey-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey",
+    "file": "unit-instanced-gizmo-grey.tscn",
     "category": "Other"
   },
   {
@@ -2463,6 +2493,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Editable Missing Path",
+    "file": "edge-editable-missing-path.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Int Wrap Position",
     "file": "edge-int-wrap-position.tscn",
     "category": "Edge Cases"
@@ -3182,6 +3217,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button",
     "file": "unit-button.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order By Tree",
+    "file": "unit-canvas-layer-light-order-by-tree.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order",
+    "file": "unit-canvas-layer-light-order.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -4008,6 +4053,16 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport 2d Directional Shadow",
+    "file": "unit-sub-viewport-2d-directional-shadow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 2d Light",
+    "file": "unit-sub-viewport-2d-light.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Sub Viewport Camera 2d Canvas Layer",

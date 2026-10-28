@@ -180,7 +180,7 @@ export interface StandardMaterial3DData {
   useVertexColors: boolean;
   /** `disable_specular_occlusion` (default false): a dim ambient leaves the reflection whole. */
   disablesSpecularOcclusion: boolean;
-  /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
+  /** `ao_light_affect`: how far the occlusion also occludes direct light, 0 without `ao_enabled`. Unclamped, as the setter is. */
   aoLightAffect: number;
   /** `ao_texture_channel`: the AO map channel the shader reads. */
   aoTextureChannel: EnumValue<typeof TextureChannel>;

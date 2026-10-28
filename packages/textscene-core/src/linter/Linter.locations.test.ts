@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Linter } from './Linter.js';
+import { lintRule } from './testing/testkit.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import type { Diagnostic, LintRule } from './types.js';
 
@@ -83,13 +83,9 @@ ruleRegistry.register(placed);
 ruleRegistry.register(reusing);
 ruleRegistry.register(throwing);
 
-function lint(content: string, ruleName: string): Diagnostic[] {
-  return new Linter().lint(content).filter((d) => d.ruleName === ruleName);
-}
-
 describe("a rule's diagnostic", () => {
   it("goes on its node's heading, the root's and a child's alike", () => {
-    const diagnostics = lint(
+    const diagnostics = lintRule(
       `[gd_scene format=3]
 
 [node name="Root" type="Probe"]
@@ -107,7 +103,7 @@ visible = false
   });
 
   it('follows the node, not its name, where two nodes share one', () => {
-    const diagnostics = lint(
+    const diagnostics = lintRule(
       `[gd_scene format=3]
 
 [node name="Root" type="Node"]
@@ -127,13 +123,16 @@ visible = false
   });
 
   it('keeps a location the rule set itself', () => {
-    const [diagnostic] = lint('[gd_scene format=3]\n\n[node name="Root" type="Placed"]\n', 'placed-probe');
+    const [diagnostic] = lintRule(
+      '[gd_scene format=3]\n\n[node name="Root" type="Placed"]\n',
+      'placed-probe'
+    );
 
     expect(diagnostic?.location).toEqual({ line: 1, column: 7 });
   });
 
   it('is copied, so one object a rule reuses lands on each node it ran on', () => {
-    const diagnostics = lint(
+    const diagnostics = lintRule(
       `[gd_scene format=3]
 
 [node name="Root" type="Reused"]
@@ -150,7 +149,7 @@ visible = false
 
 describe('a rule that throws', () => {
   it('is reported on the heading of the node it ran on', () => {
-    const [crash] = lint(
+    const [crash] = lintRule(
       '[gd_scene format=3]\n\n[node name="Root" type="Node"]\n\n[node name="T" type="Thrower" parent="."]\n',
       'rule-crashed'
     );

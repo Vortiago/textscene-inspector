@@ -23,9 +23,10 @@ measures depth along the light across the project viewport's diagonal
 builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder
 on its local bounds, as Godot does (`renderer_viewport.cpp:635`).
 
-The map spans the project viewport at the canvas origin. In Godot's editor no Camera2D
-becomes current (`camera_2d.cpp:354`), and the previewer draws the canvas as the editor
-does. Every occluder casts on every lit item: the directional pass reads no
+The map spans the canvas's own view. On the main canvas that is the project viewport at the
+origin. No Camera2D becomes current in Godot's editor (`camera_2d.cpp:354`), and the previewer
+draws the canvas as the editor does. In a SubViewport the map spans `Rect2(0, 0, size)` through
+the viewport's camera. Every occluder casts on every lit item: the directional pass reads no
 `shadow_item_cull_mask` on the item (`canvas.glsl:747`).
 
 ## Soft shadows: shadow_filter and shadow_filter_smooth
@@ -33,6 +34,13 @@ does. Every occluder casts on every lit item: the directional pass reads no
 
 `shadow_filter = PCF5` averages five taps across the parallel map. The taps keep one width
 along the whole band, unlike a point light's penumbra, which widens with distance.
+
+## The eight-light cap and CanvasLayers
+<!-- compare: image=unit-directionallight2d-canvas-layer-cap status=done fixture=unit-directionallight2d-canvas-layer-cap.tscn -->
+
+Godot stops listing at the eighth light with a `break` that leaves the loop of one canvas only
+(`renderer_viewport.cpp:511`). A CanvasLayer's light after eight root lights is the ninth, and it
+lights the world as the first eight do.
 
 ## Linting
 

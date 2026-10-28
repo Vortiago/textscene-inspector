@@ -1,23 +1,22 @@
 /**
  * <Decal>: Godot's texture projector. It puts a decal into the scene at the node's transform, and
- * the scene's decals mix its `texture_albedo` into every surface its box holds, per fragment, as
- * Godot's clustered renderer does (`r3f/decal/sceneDecals.ts`). Wraps `<Node3D>` for transform and
- * children. Parsed but not yet projected: the normal/ORM/emission maps and `emission_energy`.
+ * the scene's decals mix its textures into every surface its box holds, per fragment, as
+ * Godot's clustered renderer does (`r3f/decal/sceneDecals.ts`), with its normal, ORM and emission
+ * maps. Wraps `<Node3D>` for transform and children.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { extend } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { DecalObject } from '../../../r3f/decal/decalObject';
 import { useSceneDecals } from '../../../r3f/decal/useSceneDecals';
-import { useTexture2DRid } from '../../../resources/useTexture2D';
+import { useHeldTexture } from '../../../r3f/textureAtlas/useHeldTexture';
 import type { DecalProperties } from './types';
 import { holdDecalTexture, releaseDecalTexture } from './decalAtlas';
 import { decalGizmoLines } from './gizmoLines';
@@ -37,25 +36,11 @@ export function Decal({ node, children }: NodeComponentProps) {
   useSceneDecals();
   const treeOrder = useTreeOrder();
   const properties = node.properties as DecalProperties;
-  const { externalResources, internalResources } = useSceneResources();
-
-  // By RID, as `Decal::set_texture` passes it (`scene/3d/decal.cpp:46`): an AtlasTexture projects
-  // its whole sheet, and a CanvasTexture, a RID the decal atlas refuses (`texture_storage.cpp:2941`),
-  // projects nothing. The decal atlas copies it, so the shared cache entry is never bound or disposed.
-  const { texture: albedoTexture } = useTexture2DRid(
-    properties.texture_albedo,
-    externalResources,
-    internalResources
-  );
-  const albedo = albedoTexture ?? null;
-
-  // The decal atlas holds the texture while this decal projects it (`decal_set_texture`,
-  // `texture_storage.cpp:2944-2950`), and two decals with one texture share one rectangle.
-  useEffect(() => {
-    if (!albedo) return undefined;
-    holdDecalTexture(albedo);
-    return () => releaseDecalTexture(albedo);
-  }, [albedo]);
+  const albedo = useDecalTexture(properties.texture_albedo);
+  const normal = useDecalTexture(properties.texture_normal);
+  const orm = useDecalTexture(properties.texture_orm);
+  const emission = useDecalTexture(properties.texture_emission);
+  const textures = useMemo(() => ({ albedo, normal, orm, emission }), [albedo, normal, orm, emission]);
 
   // An active AnimationPlayer can drive `modulate` and `size` (ADR-0017); `null`
   // means none is, so the authored value shows.
@@ -76,7 +61,7 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      <DecalElement look={decal} albedo={albedo} treeOrder={treeOrder} />
+      <DecalElement look={decal} textures={textures} treeOrder={treeOrder} />
       {/* Godot's editor draws the projector box for every decal, faint while it is not selected
           (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none. */}
       <PluginGizmo drawnFor="every-node">
@@ -88,3 +73,14 @@ export function Decal({ node, children }: NodeComponentProps) {
     </Node3D>
   );
 }
+
+/**
+ * The texture that `reference` names, held in the decal atlas while this decal uses it
+ * (`decal_set_texture`, `texture_storage.cpp:2944-2950`). Two decals with one texture share one
+ * rectangle, and so do two maps of one decal. It resolves by RID, as `Decal::set_texture` passes it
+ * (`scene/3d/decal.cpp:46`): an AtlasTexture projects its whole sheet, and a CanvasTexture, a RID
+ * the atlas refuses (`texture_storage.cpp:2941`), projects nothing. The atlas copies the texture, so
+ * the shared cache entry is never bound or disposed.
+ */
+const useDecalTexture = (reference: string | undefined) =>
+  useHeldTexture(reference, holdDecalTexture, releaseDecalTexture);

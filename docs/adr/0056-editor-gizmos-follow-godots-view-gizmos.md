@@ -119,7 +119,7 @@ and truncates (`rendering_server.cpp:712-717`), so 0.96 × 255 = 244.8 reads 244
 
 The editable sibling of the particles emitter draws rgb(132, 119, 85), the plain unselected
 particles colour. The fill of the selected locked emitter draws rgb(167), two faces at alpha 0.6.
-The goldens `cpuparticles3d-instanced-unselected` and `cpuparticles3d-instanced-selected` show both cases.
+The goldens `instanced-gizmo-grey-unselected` and `instanced-gizmo-grey-selected` show both cases.
 
 The Light helpers are three.js helpers, not Godot gizmo materials, and #908 rebuilds them through
 `GizmoLine`. They keep their colour until then.

@@ -3,6 +3,7 @@
 import type { RawNode, RawScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { connectionDiagnostics } from './connectionDiagnostics.js';
+import { editableDiagnostics } from './editableDiagnostics.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
 import { excludedResourceTypeDiagnostics } from './excludedResourceTypes.js';
@@ -153,6 +154,7 @@ export class Linter {
       const { scene, lines } = parseResult;
       for (const d of orphanDiagnostics(scene)) diagnostics.push(d);
       for (const d of connectionDiagnostics(scene)) diagnostics.push(d);
+      for (const d of editableDiagnostics(scene)) diagnostics.push(d);
       for (const d of danglingResourceDiagnostics(scene, lines)) diagnostics.push(d);
       for (const d of excludedResourceTypeDiagnostics(scene, lines)) diagnostics.push(d);
       for (const d of resourceRuleDiagnostics(scene, lines)) diagnostics.push(d);

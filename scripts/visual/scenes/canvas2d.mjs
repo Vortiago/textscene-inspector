@@ -413,6 +413,54 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-stretch-shrink-odd.tscn',
     mode: '2d',
   },
+  // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
+  // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
+  // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
+  { name: 'sub-viewport-2d-light', file: 'unit-sub-viewport-2d-light.tscn', mode: '2d' },
+  // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
+  // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
+  // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone.
+  {
+    name: 'sub-viewport-2d-directional-shadow',
+    file: 'unit-sub-viewport-2d-directional-shadow.tscn',
+    mode: '2d',
+  },
+  // A viewport lists its own canvas first, then each CanvasLayer, whatever the tree order, and a
+  // MIX light after an ADD light differs from the reverse. Godot 4.6.3 `--mode 2d`, as Add then
+  // Mix: rgb(52,68,126) between the lights at (575,325), rgb(112,105,125) under the Add light at
+  // (500,325), and rgb(37,58,126) under the Mix light at (650,325).
+  { name: 'canvas-layer-light-order', file: 'unit-canvas-layer-light-order.tscn', mode: '2d' },
+  // The CanvasLayers list in tree order, not by `layer`: layer 5 holds the ADD light and comes
+  // first. Godot 4.6.3 `--mode 2d` gives the same three readings as the scene above.
+  {
+    name: 'canvas-layer-light-order-by-tree',
+    file: 'unit-canvas-layer-light-order-by-tree.tscn',
+    mode: '2d',
+  },
+  // The eight-light cap leaves its canvas's loop only, so a CanvasLayer's sun is the ninth.
+  // Godot 4.6.3 `--mode 2d`: rgb(178,168,221) everywhere, 64 more blue than the eight alone.
+  {
+    name: 'directionallight2d-canvas-layer-cap',
+    file: 'unit-directionallight2d-canvas-layer-cap.tscn',
+    mode: '2d',
+  },
+  // Markers at list positions 0 to 155 are lit, 156 up are not. Godot 4.6.3 `--mode 2d`:
+  // rgb(100,100,100) at (20..260,120) and (500,120), rgb(51,51,51) at (320..440,120). Each light is
+  // one full-screen pass, so the capture waits longer.
+  {
+    name: 'canvas-light-render-budget',
+    file: 'unit-canvas-light-render-budget.tscn',
+    mode: '2d',
+    screenshotTimeout: 300000,
+  },
+  // The cap on directional lights alone: red markers 0, 100 and 200 and green markers 254 and 255
+  // light, the rest do not. Godot 4.6.3 `--mode 2d`: rgb(69,59,51) at (500,20).
+  {
+    name: 'directionallight2d-render-budget',
+    file: 'unit-directionallight2d-render-budget.tscn',
+    mode: '2d',
+    screenshotTimeout: 300000,
+  },
   // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
   // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
   // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.
