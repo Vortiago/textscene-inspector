@@ -278,7 +278,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
-  material.setValues(pixelState);
+  // An explicit `side` outranks the facing the pixel material carries.
+  material.setValues(side === undefined ? pixelState : { ...pixelState, side });
   const programInjection = injection ?? pixelInjection;
   if (mipmapped) injectViewportProgram(material, programInjection);
   else injectProgram(material, programInjection);

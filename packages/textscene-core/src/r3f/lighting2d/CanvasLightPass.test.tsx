@@ -13,6 +13,8 @@ import { useRegisterCanvasLight2D, useRegisterLitItem, usePassMeshRef } from './
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import { fakeLightPassHost } from './testing/fakeLightPassHost';
 import type { LightPassHost } from './lightPassHost';
+import { useCanvasModulate } from '../canvasModulate';
+import type { Rgba } from '../../godot/math/math';
 import { settleLoads } from '../testing/settleLoads';
 import { withStubbedGl } from '../testing/stubbedGl';
 
@@ -108,5 +110,20 @@ describe('CanvasLightPass', () => {
     expect(host.run.current).not.toBeNull();
     await renderer.unmount();
     expect(host.run.current).toBeNull();
+  });
+
+  it('publishes its canvas modulate to the items inside, whatever canvas surrounds the pass', async () => {
+    const night: Rgba = { r: 0.2, g: 0.3, b: 0.6, a: 1 };
+    let seen: Rgba | undefined;
+    function ReadModulate() {
+      seen = useCanvasModulate();
+      return null;
+    }
+    await ReactThreeTestRenderer.create(
+      <CanvasLightPass host={fakeLightPassHost(300, 200)} canvasModulate={night}>
+        <ReadModulate />
+      </CanvasLightPass>
+    );
+    expect(seen).toEqual(night);
   });
 });

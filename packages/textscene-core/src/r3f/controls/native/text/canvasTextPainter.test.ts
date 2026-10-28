@@ -388,6 +388,17 @@ describe('createCanvasTextMaterial inside a lit Control', () => {
     expect(patchedFragment(lit())).toContain('uLightList');
   });
 
+  it('keeps an explicit side over the facing of the Control material', () => {
+    const material = createCanvasTextMaterial({
+      map: mipmappedTexture(),
+      opacity: 1,
+      side: THREE.FrontSide,
+      pixelMaterial: litPixelMaterial(),
+    });
+
+    expect(material.side).toBe(THREE.FrontSide);
+  });
+
   it('takes the blend state of the Control material', () => {
     const material = lit();
 

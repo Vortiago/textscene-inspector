@@ -4,6 +4,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { LIT_ITEM_USER_DATA } from '../lighting2d/itemLightCap';
 import { useCanvasItemLighting, type CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
 import { canvasItemFacing, type CanvasItemFacing } from '../canvasItemFacing';
 import {
@@ -62,7 +63,7 @@ export function LitCanvasItemPixels({ material, lightMask, zFinal, children }: L
   );
   // An `object3D`, not a group: three takes a group's `renderOrder` as the draw key.
   return (
-    <object3D ref={geometryRef}>
+    <object3D ref={geometryRef} userData={LIT_ITEM_USER_DATA}>
       <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
         {typeof children === 'function' ? children(pixelMaterial) : children}
       </CanvasItemPixelMaterialContext.Provider>
