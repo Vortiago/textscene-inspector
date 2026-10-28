@@ -152,6 +152,16 @@ async function drawsOf(
   return draws;
 }
 
+/** The mesh that copies the world into the Controls' pass: the one drawn before every Control. */
+function backdropOf(root: THREE.Object3D): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
+  let found: THREE.Mesh<THREE.BufferGeometry, THREE.Material> | undefined;
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh && o.renderOrder < 0) found = o;
+  });
+  if (!found) throw new Error(`expected a backdrop mesh in ${root.name}`);
+  return found;
+}
+
 describe('a SubViewport with 3D content and Controls', () => {
   beforeAll(() => Promise.all([import('./ViewportControls'), import('./ControlsOverWorld')]));
 
@@ -160,5 +170,12 @@ describe('a SubViewport with 3D content and Controls', () => {
     const controls = draws.find((d) => d.scene.name === CONTROLS_SCENE);
     expect(controls, `expected a draw of ${CONTROLS_SCENE}`).toBeDefined();
     expect(meshOf(controls!.scene, 'Panel')).toBeDefined();
+  });
+
+  it('replaces the target with the world, so a transparent world keeps its alpha', async () => {
+    const draws = await drawsOf(SCENE_3D);
+    const controls = draws.find((d) => d.scene.name === CONTROLS_SCENE)!;
+    const backdrop = backdropOf(controls.scene);
+    expect(backdrop.material.blending).toBe(THREE.NoBlending);
   });
 });

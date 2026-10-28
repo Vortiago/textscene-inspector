@@ -21,25 +21,23 @@ target.
 ## Linting
 
 <!-- lint:begin SubViewportContainer -->
-
 Strict parsing format-checks these `SubViewportContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property         | Accepts       | Out of range |
-| ---------------- | ------------- | ------------ |
-| `mouse_target`   | true or false |              |
-| `stretch`        | true or false |              |
-| `stretch_shrink` | integer >= 1  | error below  |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `mouse_target` | true or false |  |
+| `stretch` | true or false |  |
+| `stretch_shrink` | integer >= 1 | error below |
 
-| Rule                                                 | Reports                                   | Severity |
-| ---------------------------------------------------- | ----------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)              | `binary-resource-reference`               | info     |
-| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children`      | warning  |
-|                                                      | `canvasitem-ancestor-is-canvasgroup`      | warning  |
-| `valid-control-properties` (type-family match)       | `control-tooltip-ignored-by-mouse-filter` | warning  |
-|                                                      | `control-property-order`                  | warning  |
-| `valid-subviewportcontainer-children`                | `subviewportcontainer-no-viewport`        | warning  |
-|                                                      | `subviewportcontainer-non-arrow-cursor`   | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
+| `valid-subviewportcontainer-children` | `subviewportcontainer-no-viewport` | warning |
+|  | `subviewportcontainer-non-arrow-cursor` | warning |
 <!-- lint:end -->
 
 Strict errors on a `stretch_shrink` below `1`, which Godot's setter refuses. The lenient

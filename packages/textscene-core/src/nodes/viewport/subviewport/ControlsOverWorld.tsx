@@ -33,6 +33,7 @@ export function ControlsOverWorld({ path, nodes, size, world }: ControlsOverWorl
         opacity={1}
         map={world}
         renderOrder={-1}
+        replacesBackdrop
       />
       <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} />
     </>

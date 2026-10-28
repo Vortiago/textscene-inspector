@@ -43,9 +43,8 @@ interface ViewportSurfaceNativeProps {
    */
   tint: NativeControlComponentProps['tint'];
   /**
-   * The container's `is_layout_rtl()`. The climb casts each ancestor to `Control`, then to `Window`,
-   * then takes `get_parent()` (`control.cpp:3584-3598`). A `SubViewport` is neither, so the
-   * viewport's Controls inherit from this container.
+   * The container's `is_layout_rtl()`, passed to the viewport's Controls: the climb skips a
+   * `SubViewport` (`control.cpp:3584-3598`), so they inherit from this container.
    */
   rtl: boolean;
 }

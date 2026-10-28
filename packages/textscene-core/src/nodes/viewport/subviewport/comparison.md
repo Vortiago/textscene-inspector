@@ -31,21 +31,19 @@ Two TextureRects draw one ViewportTexture through a CanvasTexture. Only the righ
 ## Linting
 
 <!-- lint:begin SubViewport -->
-
 Strict parsing format-checks these `SubViewport` properties, plus 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property                    | Accepts                                                           | Out of range |
-| --------------------------- | ----------------------------------------------------------------- | ------------ |
-| `render_target_clear_mode`  | enum 0-2 (ALWAYS/NEVER/ONCE)                                      | warning      |
-| `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS)  | warning      |
-| `size`                      | Vector2i(x, y), both >= 2, or the Vector2 spelling Godot converts | error below  |
-| `size_2d_override`          | Vector2i(x, y), or the Vector2 spelling Godot converts            |              |
-| `size_2d_override_stretch`  | true or false                                                     |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `render_target_clear_mode` | enum 0-2 (ALWAYS/NEVER/ONCE) | warning |
+| `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS) | warning |
+| `size` | Vector2i(x, y), both >= 2, or the Vector2 spelling Godot converts | error below |
+| `size_2d_override` | Vector2i(x, y), or the Vector2 spelling Godot converts |  |
+| `size_2d_override_stretch` | true or false |  |
 
-| Rule                                    | Reports                     | Severity |
-| --------------------------------------- | --------------------------- | -------- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1, `canvas_item_default_texture_repeat` 0), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
