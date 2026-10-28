@@ -12,7 +12,7 @@ import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { nodesByPath } from '../../../utils/nodePath.js';
 import { uniqueNamePaths } from '../../../utils/uniqueNames.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
-import { poseSkeleton } from './skeletonPose.js';
+import { automaticSkinMatrices } from './skeletonPose.js';
 import type { Skeleton3DProperties } from './types.js';
 
 /**
@@ -39,15 +39,11 @@ export function bindMeshesToSkeletons(nodes: TscnNode[]): TscnNode[] {
     if (skeleton?.type !== 'Skeleton3D') continue;
     let skin = skinOf.get(skeleton);
     if (!skin) {
-      skin = automaticSkin(skeleton);
+      const { bones, showRestOnly } = skeleton.properties as Skeleton3DProperties;
+      skin = automaticSkinMatrices(bones, showRestOnly);
       skinOf.set(skeleton, skin);
     }
     properties.skinMatrices = skin;
   }
   return nodes;
-}
-
-function automaticSkin(skeleton: TscnNode): Transform3D[] {
-  const { bones, showRestOnly } = skeleton.properties as Skeleton3DProperties;
-  return poseSkeleton(bones, showRestOnly).automaticSkinMatrices;
 }

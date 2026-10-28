@@ -615,13 +615,9 @@ _Avoid_: A match on three's names or levels. A nearest-ancestor or ordered-subse
 The `THREE.Group` that stands for a Skeleton3D or a BoneAttachment3D of the **Imported scene tree**. A Skeleton3D group holds the root bones of its skeleton. A BoneAttachment3D group holds the nodes that hang on its bone. A property written to the node lands on its group, and a path through the group is the path without it.
 _Avoid_: A stand-in object. A path segment for the group.
 
-**Skeleton pose** (`nodes/3d/skeleton3d/skeletonPose.ts`):
-The three-free model of a Skeleton3D: its bone table, the global rest and global pose of each bone, and the **Automatic skin**. Other skeleton drivers read it and write bone poses into it.
-_Avoid_: A pose kept in three bones. A second bone table beside the parser's.
-
-**Automatic skin** (`automaticSkinMatrices`):
-The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The scene pass in `skeletonBindings.ts` hands these matrices to the mesh, and the mesh draws as a SkinnedMesh.
-_Avoid_: A CPU bake of the vertices. A skin read from a Skin resource.
+**Automatic skin** (`automaticSkinMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the scene pass in `skeletonBindings.ts` hands the matrices to the mesh, which draws as a SkinnedMesh.
+_Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose kept in three bones.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

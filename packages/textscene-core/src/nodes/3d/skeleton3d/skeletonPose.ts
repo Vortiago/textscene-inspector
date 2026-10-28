@@ -1,8 +1,7 @@
 /**
- * The pose model of a Skeleton3D: its bone table, and the transforms Godot derives from the bones.
- * A bone writes a rest and a pose. The skeleton turns them into global rests, global poses and the
- * automatic skin that a MeshInstance3D without a `skin` binds to. THREE-free, so the parser, the
- * scene pass and the tests all read it.
+ * The pose model of a Skeleton3D: its bone table, and the automatic skin Godot derives from it. A
+ * bone writes a rest and a pose, and a MeshInstance3D without a `skin` binds to the skin the
+ * skeleton makes of them. THREE-free, so the parser, the scene pass and the tests all read it.
  */
 
 import {
@@ -40,25 +39,17 @@ export function newBone(name: string): Bone {
   };
 }
 
-/** What a skeleton derives from its bones, one entry per bone in table order. */
-export interface SkeletonPose {
-  globalRests: Transform3D[];
-  globalPoses: Transform3D[];
-  /** The bind pose of each bone in the automatic skin: the inverse of its global rest. */
-  automaticBindPoses: Transform3D[];
-  /** The matrix that moves a vertex bound to each bone of the automatic skin from its rest to its pose. */
-  automaticSkinMatrices: Transform3D[];
-}
-
 /**
- * `show_rest_only` poses every bone at its rest (`skeleton_3d.cpp:1104`), as does a disabled bone. A bone
- * that no root reaches, which only a parent cycle makes, keeps the identity Godot allocates for it.
+ * The matrix that moves a vertex bound to each bone of the automatic skin from its rest to its
+ * pose: the global pose times the inverse of the global rest (`skeleton_3d.cpp:398-403, 1014`),
+ * one entry per bone in table order.
  *
- * @canonical The pose of a Skeleton3D's bones and its automatic skin
- *   `poseSkeleton` gives the global rests, the global poses, the automatic bind poses and the
- *   skin matrices of a bone table.
+ * `show_rest_only` poses every bone at its rest (`:1104`), as does a disabled bone. A bone that no
+ * root reaches, which only a parent cycle makes, keeps the identity Godot allocates for it.
+ *
+ * @canonical The automatic skin of a Skeleton3D's bones
  */
-export function poseSkeleton(bones: readonly Bone[], showRestOnly: boolean): SkeletonPose {
+export function automaticSkinMatrices(bones: readonly Bone[], showRestOnly: boolean): Transform3D[] {
   const globalRests = bones.map(identityTransform3D);
   const globalPoses = bones.map(identityTransform3D);
   for (const index of boneOrder(bones)) {
@@ -71,11 +62,7 @@ export function poseSkeleton(bones: readonly Bone[], showRestOnly: boolean): Ske
       isPosed ? poseOf(bone) : bone.rest
     );
   }
-  const automaticBindPoses = globalRests.map(affineInverseTransform3D);
-  const automaticSkinMatrices = globalPoses.map((pose, i) =>
-    multiplyTransform3D(pose, automaticBindPoses[i]!)
-  );
-  return { globalRests, globalPoses, automaticBindPoses, automaticSkinMatrices };
+  return globalPoses.map((pose, i) => multiplyTransform3D(pose, affineInverseTransform3D(globalRests[i]!)));
 }
 
 /** `Bone::update_pose_cache` (`skeleton_3d.h:118-124`). */

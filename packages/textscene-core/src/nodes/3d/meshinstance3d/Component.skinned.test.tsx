@@ -15,7 +15,7 @@ import { subResource } from '../../../testing/subResource';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import type { Bone } from '../skeleton3d/skeletonPose';
-import { poseSkeleton } from '../skeleton3d/skeletonPose';
+import { automaticSkinMatrices } from '../skeleton3d/skeletonPose';
 import '../skeleton3d/index';
 import '../skeleton3d/index.r3f';
 import './index';
@@ -56,7 +56,7 @@ const OVERLAY = subResource('StandardMaterial3D', 'Overlay', { albedo_color: 'Co
 const BOX = subResource('BoxMesh', 'Box', { material: 'SubResource("Red")' });
 
 function skinMatrices(bones = ribbonBones()) {
-  return poseSkeleton(bones, false).automaticSkinMatrices;
+  return automaticSkinMatrices(bones, false);
 }
 
 async function render(overrides: Partial<MeshInstance3DProperties>, mesh = 'Ribbon') {

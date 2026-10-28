@@ -12,9 +12,9 @@ import { transform3DToMatrix } from '../nodeTreeTransforms.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 /**
- * A bone beyond the skin's binds. Godot reads such a bone from past the end of the skeleton buffer, so
- * its result depends on the GPU; the lavapipe driver gives zero for a skeleton with no bind, measured
- * with `pnpm ref:godot`. A zero matrix collapses the vertex there, which three needs a bone to draw.
+ * A bone beyond the skin's binds. Godot reads `bone_transforms.data` past the buffer
+ * (`skeleton.glsl:262-265`) with robustBufferAccess off (`rendering_device_driver_vulkan.cpp:698`),
+ * so the GPU decides. A zero matrix collapses the vertex, as lavapipe does for a skeleton with no bind.
  */
 const MISSING_BONE_MATRIX = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
