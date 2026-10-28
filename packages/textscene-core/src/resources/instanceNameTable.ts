@@ -132,8 +132,7 @@ export class InstanceNameTable implements UniqueNameTable {
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
-    const followed = withOwnerTrailFollowed(authored, this.followTrail);
-    const setting = followed && withOwnerWalked(tree, followed, this.claimed);
+    const setting = this.ownerChosen(tree, authored);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
       if (!setting.ownerInInstance) {
@@ -154,6 +153,21 @@ export class InstanceNameTable implements UniqueNameTable {
     }
     this.land(segments.join('/'), setting.isUnique);
     return tree;
+  }
+
+  /**
+   * `authored` with the owner Godot takes: the one its `owner=` walk finds, or its `owner_uid_path=` owner
+   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing.
+   */
+  private ownerChosen(tree: readonly LiveNode[], authored: InstanceNameSetting): InstanceNameSetting | null {
+    const walked = this.ownerWalked(tree, authored);
+    if (!authored.ownerFallback || (walked && holdsNode(tree, walked.ownerInInstance ?? ''))) return walked;
+    return this.ownerWalked(tree, withFallbackOwner(authored));
+  }
+
+  private ownerWalked(tree: readonly LiveNode[], setting: InstanceNameSetting): InstanceNameSetting | null {
+    const followed = withOwnerTrailFollowed(setting, this.followTrail);
+    return followed && withOwnerWalked(tree, followed, this.claimed);
   }
 
   /** The table once the node at `path` sets or clears its name. */
@@ -177,6 +191,11 @@ function withChanges(
     else moved.set(key, path);
   }
   return moved;
+}
+
+/** `setting` with the owner its `owner_uid_path=` names, which Godot takes where the `owner=` walk finds nothing. */
+function withFallbackOwner({ ownerFallback, ...rest }: InstanceNameSetting): InstanceNameSetting {
+  return { ...rest, ownerContentTrail: undefined, ...ownerFallback };
 }
 
 /**
@@ -241,7 +260,7 @@ function tableOwner(
   ownerInInstance: string | undefined
 ): TableOwner | null {
   const nestedAt = instanceDepth(tree, segments.slice(0, -1));
-  if (nestedAt === null || (nestedAt === undefined && !nodeAt(tree, segments))) return null;
+  if (nestedAt === null || !namesNodeBelow(tree, segments, nestedAt)) return null;
   if (ownerInInstance === '') return THIS_INSTANCE;
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
@@ -289,6 +308,26 @@ function handOutside(
     isUnique,
     hostChildrenBefore,
   });
+}
+
+/**
+ * Whether the sub-path names a node of `tree`, or one in a nested instance, which that instance's
+ * graft finds. A sub-path that climbs out names a node above, which no tree here holds.
+ */
+function holdsNode(tree: readonly LiveNode[], subPath: string): boolean {
+  if (subPath === '' || subPath.startsWith(OUTSIDE)) return true;
+  const segments = subPath.split('/');
+  const nestedAt = instanceDepth(tree, segments.slice(0, -1));
+  return nestedAt !== null && namesNodeBelow(tree, segments, nestedAt);
+}
+
+/** Whether `segments` names a node of `tree`, or lies in the nested instance at `nestedAt` (`instanceDepth` of its parent path). */
+function namesNodeBelow(
+  tree: readonly LiveNode[],
+  segments: readonly string[],
+  nestedAt: number | undefined
+): boolean {
+  return nestedAt !== undefined || nodeAt(tree, segments) !== undefined;
 }
 
 /** The node at `path` below the sub-scene root, or undefined where none sits there. */

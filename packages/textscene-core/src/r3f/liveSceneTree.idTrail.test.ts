@@ -51,6 +51,9 @@ ${headings}`);
 const capWithTrail = (...ids: number[]) =>
   `[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(${ids.join(', ')})]`;
 
+const pathsEnding = (host: TscnScene, name: string, scenes: Record<string, TscnScene> = SCENES) =>
+  livePathsOver(host, scenes).filter((path) => path.endsWith(name));
+
 describe('a parent_id_path that ends inside instance content', () => {
   it('seats the heading under the node the trail finds in the instanced scene', () => {
     const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, INNER_ID)), SCENES);
@@ -60,21 +63,21 @@ describe('a parent_id_path that ends inside instance content', () => {
   });
 
   it('seats the heading under the instance root where the trail names the root heading', () => {
-    const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, 1)), SCENES);
+    const host = playerHost(capWithTrail(PLAYER_ID, 1));
 
-    expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Player/Cap']);
+    expect(pathsEnding(host, 'Cap')).toEqual(['Main/Player/Cap']);
   });
 
   it('re-roots the heading where no heading of the instanced scene carries the id', () => {
-    const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, 9999)), SCENES);
+    const host = playerHost(capWithTrail(PLAYER_ID, 9999));
 
-    expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Missing#Cap']);
+    expect(pathsEnding(host, 'Cap')).toEqual(['Main/Missing#Cap']);
   });
 
   it('re-roots the heading where the first id names no heading of this file', () => {
-    const paths = livePathsOver(playerHost(capWithTrail(9999, INNER_ID)), SCENES);
+    const host = playerHost(capWithTrail(9999, INNER_ID));
 
-    expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Missing#Cap']);
+    expect(pathsEnding(host, 'Cap')).toEqual(['Main/Missing#Cap']);
   });
 
   it('finds an id that only the base of the instanced scene holds', () => {
@@ -94,9 +97,9 @@ describe('a parent_id_path that ends inside instance content', () => {
 `);
     const scenes = { 'res://inner.tscn': INNER, 'res://base.tscn': base, 'res://player.tscn': derived };
 
-    const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, INNER_ID)), scenes);
+    const host = playerHost(capWithTrail(PLAYER_ID, INNER_ID));
 
-    expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Player/Inner/Cap']);
+    expect(pathsEnding(host, 'Cap', scenes)).toEqual(['Main/Player/Inner/Cap']);
   });
 
   it('follows a trail through a second instance into its scene', () => {
@@ -118,36 +121,120 @@ describe('a parent_id_path that ends inside instance content', () => {
   it('keeps the heading in the instance, not re-rooted, while a scene the trail enters is not loaded', () => {
     const deepTrail = playerHost(capWithTrail(PLAYER_ID, INNER_ID, 4444));
 
-    const paths = livePathsOver(deepTrail, { 'res://player.tscn': PLAYER });
-
-    expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Player/Cap']);
+    expect(pathsEnding(deepTrail, 'Cap', { 'res://player.tscn': PLAYER })).toEqual(['Main/Player/Cap']);
   });
 
   it('seats nothing in the instance while its own scene is not loaded', () => {
-    const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, INNER_ID)), {});
+    const host = playerHost(capWithTrail(PLAYER_ID, INNER_ID));
 
-    expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Player/Cap']);
+    expect(pathsEnding(host, 'Cap', {})).toEqual(['Main/Player/Cap']);
+  });
+});
+
+describe('a heading seated through a parent_id_path that enters an instance, then addressed by %Name', () => {
+  const unique = (name: string, parent: string) =>
+    `[node name="${name}" type="Node3D" parent="${parent}"]
+unique_name_in_owner = true
+`;
+  const capWithClaim = `${capWithTrail(PLAYER_ID, INNER_ID)}
+unique_name_in_owner = true
+`;
+  const heading = (name: string, parent: string) =>
+    `\n[node name="${name}" type="Node3D" parent="${parent}"]\n`;
+  it('seats a later heading under the node the %Name names', () => {
+    const host = playerHost(capWithClaim + heading('Hat', '%Cap'));
+
+    expect(pathsEnding(host, 'Hat')).toEqual(['Main/Player/Inner/Cap/Hat']);
+  });
+
+  it('seats a heading under a node below the claimant, through its own %Name', () => {
+    const host = playerHost(capWithClaim + unique('Hat', '%Cap') + heading('Leaf', '%Hat'));
+
+    expect(pathsEnding(host, 'Leaf')).toEqual(['Main/Player/Inner/Cap/Hat/Leaf']);
+  });
+
+  it('seats a heading by a path from the claimant, not from the instance', () => {
+    const host = playerHost(capWithClaim + heading('Hat', '%Cap') + heading('Leaf', '%Cap/Hat'));
+
+    expect(pathsEnding(host, 'Leaf')).toEqual(['Main/Player/Inner/Cap/Hat/Leaf']);
+  });
+
+  it('re-roots a heading that names the node by a path through the instance only, as Godot finds no node there', () => {
+    const host = playerHost(capWithClaim + heading('Hat', 'Player/Cap'));
+
+    expect(pathsEnding(host, 'Hat')).toEqual(['Main/Player_Cap#Hat']);
+  });
+
+  it('re-roots with its parent where the trail finds nothing, as the renamed node claims another name', () => {
+    const lost = capWithClaim.replace(`${PLAYER_ID}, ${INNER_ID}`, `${PLAYER_ID}, 9999`);
+    const host = playerHost(lost + heading('Hat', '%Cap'));
+
+    expect(pathsEnding(host, 'Hat')).toEqual(['Main/_Cap#Hat']);
+  });
+});
+
+describe('a heading addressed by %Name below a node that re-roots', () => {
+  it('re-roots with it, since the renamed node claims the renamed name', () => {
+    const host = playerHost(`[node name="Q" type="Node3D" parent="Player/Gone"]
+unique_name_in_owner = true
+
+[node name="Hat" type="Node3D" parent="%Q"]
+
+[node name="Sleeve" type="Node3D" parent="Player/Gone/Q"]
+`);
+
+    const paths = livePathsOver(host, SCENES).filter((path) => /Q|Hat|Sleeve/.test(path));
+
+    expect(paths).toEqual(['Main/Player_Gone#Q', 'Main/_Q#Hat', 'Main/Player_Gone_Q#Sleeve']);
   });
 });
 
 describe('a heading whose %Name an owner_uid_path that enters an instance registers', () => {
-  const lamp = (
+  const lampOwnedBy = (
+    owner: string,
     trail: string
-  ) => `[node name="Lamp" type="Node3D" parent="." owner="Gone" owner_uid_path=PackedInt32Array(${trail})]
+  ) => `[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${trail})]
 unique_name_in_owner = true
 
 [node name="Shade" type="Node3D" parent="Player/Inner/%Lamp"]`;
+  const lamp = (trail: string) => lampOwnedBy('Gone', trail);
 
   it('seats a later heading under the node the table of the owner the trail finds names', () => {
-    const paths = livePathsOver(playerHost(lamp(`${PLAYER_ID}, ${INNER_ID}`)), SCENES);
+    const host = playerHost(lamp(`${PLAYER_ID}, ${INNER_ID}`));
 
-    expect(paths.filter((path) => path.endsWith('Shade'))).toEqual(['Main/Lamp/Shade']);
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
   });
 
   it('re-roots the later heading where no heading answers the rest of the trail, so no table holds the name', () => {
-    const paths = livePathsOver(playerHost(lamp(`${PLAYER_ID}, 9999`)), SCENES);
+    const host = playerHost(lamp(`${PLAYER_ID}, 9999`));
 
-    expect(paths.filter((path) => path.endsWith('Shade'))).toEqual(['Main/Player_Inner__Lamp#Shade']);
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Player_Inner__Lamp#Shade']);
+  });
+
+  describe('where the owner= walk enters the instance and finds nothing', () => {
+    it('falls back to the owner its owner_uid_path finds', () => {
+      const host = playerHost(lampOwnedBy('Player/Gone', `${PLAYER_ID}, ${INNER_ID}`));
+
+      expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+    });
+
+    it('reads no trail where the walk finds the owner', () => {
+      const host = playerHost(lampOwnedBy('Player/Inner', `${PLAYER_ID}, 9999`));
+
+      expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+    });
+
+    it('leaves the node with no owner where the trail finds nothing either', () => {
+      const host = playerHost(lampOwnedBy('Player/Gone', `${PLAYER_ID}, 9999`));
+
+      expect(pathsEnding(host, 'Shade')).toEqual(['Main/Player_Inner__Lamp#Shade']);
+    });
+
+    it('takes the instance itself as owner where the trail ends on its heading', () => {
+      const host = playerHost(lampOwnedBy('Player/Gone', `${PLAYER_ID}`));
+
+      expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+    });
   });
 });
 
@@ -159,27 +246,27 @@ describe('a heading whose parent= enters an instance and finds nothing there', (
   ) => `[node name="Mid" type="Node3D" parent="." unique_id=5]
 
 [node name="Cap" type="Node3D" parent="${parent}" parent_id_path=PackedInt32Array(${trail})]`;
-  const capPath = (host: TscnScene, scenes: Record<string, TscnScene> = SCENES) =>
-    livePathsOver(host, scenes).filter((path) => path.endsWith('Cap'));
 
   it('seats the heading under the heading of this file its trail names', () => {
-    expect(capPath(playerHost(gone('5')))).toEqual(['Main/Mid/Cap']);
+    expect(pathsEnding(playerHost(gone('5')), 'Cap')).toEqual(['Main/Mid/Cap']);
   });
 
   it('seats the heading under the node its trail finds in the instance', () => {
-    expect(capPath(playerHost(gone(`${PLAYER_ID}, ${INNER_ID}`)))).toEqual(['Main/Player/Inner/Cap']);
+    expect(pathsEnding(playerHost(gone(`${PLAYER_ID}, ${INNER_ID}`)), 'Cap')).toEqual([
+      'Main/Player/Inner/Cap',
+    ]);
   });
 
   it('re-roots the heading where its trail finds nothing', () => {
-    expect(capPath(playerHost(gone('9999')))).toEqual(['Main/Player_Gone#Cap']);
+    expect(pathsEnding(playerHost(gone('9999')), 'Cap')).toEqual(['Main/Player_Gone#Cap']);
   });
 
   it('keeps the heading where its parent= walk finds a node, and reads no trail', () => {
-    expect(capPath(playerHost(gone('5', 'Player/Inner')))).toEqual(['Main/Player/Inner/Cap']);
+    expect(pathsEnding(playerHost(gone('5', 'Player/Inner')), 'Cap')).toEqual(['Main/Player/Inner/Cap']);
   });
 
   it('follows the trail for a walk that fails in a nested instance', () => {
-    expect(capPath(playerHost(gone('5', 'Player/Inner/Gone')))).toEqual(['Main/Mid/Cap']);
+    expect(pathsEnding(playerHost(gone('5', 'Player/Inner/Gone')), 'Cap')).toEqual(['Main/Mid/Cap']);
   });
 
   it('follows the trail in the base of a root that inherits one, where no heading of the file holds the id', () => {
@@ -198,7 +285,7 @@ describe('a heading whose parent= enters an instance and finds nothing there', (
 [node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
 `);
 
-    expect(capPath(inheriting, { 'res://base.tscn': base })).toEqual(['Main/Deep/Cap']);
+    expect(pathsEnding(inheriting, 'Cap', { 'res://base.tscn': base })).toEqual(['Main/Deep/Cap']);
   });
 
   it('keeps the heading in the root, not re-rooted, while a scene the trail enters in the base is not loaded', () => {
@@ -219,6 +306,6 @@ describe('a heading whose parent= enters an instance and finds nothing there', (
 [node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77, 5)]
 `);
 
-    expect(capPath(inheriting, { 'res://base.tscn': base })).toEqual(['Main/Cap']);
+    expect(pathsEnding(inheriting, 'Cap', { 'res://base.tscn': base })).toEqual(['Main/Cap']);
   });
 });

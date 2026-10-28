@@ -71,6 +71,12 @@ export interface TscnScene<N extends RawNode = TscnNode> {
   mainResource?: TscnMainResource;
 }
 
+/** The owner an `owner_uid_path=` finds: a root-relative path, and the ids still to follow inside the instance at it. */
+export interface OwnerRecovery {
+  readonly owner: string;
+  readonly ownerContentTrail?: readonly number[];
+}
+
 /**
  * The **Raw view** of a node: `rawProperties`, the literals both parsers publish, and no
  * typed `properties`. The strict parser builds this. A `TscnNode` is a `RawNode`, so a helper
@@ -133,6 +139,11 @@ export interface RawNode {
    * at `owner` holds. Where it is set, `owner` names the instance heading, not the owner itself.
    */
   ownerContentTrail?: readonly number[];
+  /**
+   * On a node whose `owner=` walk enters an instance's content, where it may find nothing, and whose
+   * `owner_uid_path=` names an owner: the owner Godot takes then (`packed_scene.cpp:159-163`).
+   */
+  ownerTrailFallback?: OwnerRecovery;
   /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this

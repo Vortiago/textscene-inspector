@@ -812,6 +812,58 @@ describe('seatScene trails that end inside instance content', () => {
       expect(seatedParents(roots).get(seated.get(nodes[2]!)!)).toBeUndefined();
     });
 
+    describe('that claims a %Name', () => {
+      const claiming = (): TscnNode[] => [
+        node('Root'),
+        instance('Player', '.'),
+        { ...node('Cap', 'Gone'), rawProperties: { unique_name_in_owner: 'true' } },
+        node('Hat', '%Cap'),
+      ];
+      const seatClaiming = () => {
+        const heads = claiming();
+        const origins = withOrigin(originsOf(heads, { Player: 7 }), 2, { idTrail: [7, 3] });
+        return { heads, ...seatScene(origins) };
+      };
+
+      it('seats a heading that names it by `%Name` below it', () => {
+        const { seated, heads } = seatClaiming();
+
+        expect(names(seated.get(heads[2]!))).toEqual(['Hat']);
+      });
+
+      it('gives it no root-relative path, since only the instance graft knows it', () => {
+        const { pathOf, seated, heads } = seatClaiming();
+
+        expect(pathOf.has(seated.get(heads[2]!)!)).toBe(false);
+        expect(pathOf.has(seated.get(heads[3]!)!)).toBe(false);
+      });
+
+      it('leaves the %Name of an override heading below it to the instance, which owns the node', () => {
+        const heads = [
+          ...claiming().slice(0, 3),
+          {
+            ...node('Lamp', '%Cap'),
+            overridesExistingNode: true,
+            rawProperties: { unique_name_in_owner: 'true' },
+          },
+        ];
+        const origins = withOrigin(originsOf(heads, { Player: 7 }), 2, { idTrail: [7, 3] });
+
+        const { roots } = seatScene(origins);
+
+        expect(sceneSeating(roots).resolve('%Lamp').status).toBe('missing');
+      });
+
+      it('does not let a path through the instance name it', () => {
+        const heads = [...claiming().slice(0, 3), node('Hat', 'Player/Cap')];
+        const origins = withOrigin(originsOf(heads, { Player: 7 }), 2, { idTrail: [7, 3] });
+
+        const { seated } = seatScene(origins);
+
+        expect(names(seated.get(heads[2]!))).toEqual([]);
+      });
+    });
+
     it('re-roots where the first id names a heading that is no instance', () => {
       const plain = [node('Root'), node('Player', '.'), node('Cap', 'Gone')];
       const origins = withOrigin(originsOf(plain, { Player: 7 }), 2, { idTrail: [7, 3] });
@@ -894,6 +946,38 @@ describe('seatScene trails that end inside instance content', () => {
           hostChildrenBefore: 0,
         },
       ]);
+    });
+
+    describe('where the owner= walk enters the instance', () => {
+      const entering: TscnNode = { ...lamp, owner: 'Player/Gone' };
+      const enteringNodes = [node('Root'), instance('Player', '.'), entering];
+      const seatEntering = (trail: number[]) =>
+        seatScene(withOrigin(originsOf(enteringNodes, { Player: 7 }), 2, { ownerIdTrail: trail }));
+
+      it('keeps the owner the trail finds, for the graft to take where the walk finds nothing', () => {
+        const seat = seatEntering([7, 3]).seated.get(entering);
+
+        expect(seat?.owner).toBe('Player/Gone');
+        expect(seat?.ownerTrailFallback).toEqual({ owner: 'Player', ownerContentTrail: [3] });
+      });
+
+      it('hands the instance the owner to take, relative to it', () => {
+        const [setting] = seatEntering([7, 3]).seated.get(enteringNodes[1]!)!.instanceNameSettings!;
+
+        expect(setting?.ownerInInstance).toBe('Gone');
+        expect(setting?.ownerFallback).toEqual({ ownerInInstance: '', ownerContentTrail: [3] });
+      });
+
+      it('keeps no owner to take where the trail finds none', () => {
+        expect(seatEntering([9]).seated.get(entering)?.ownerTrailFallback).toBeUndefined();
+      });
+
+      it('keeps no fallback where the walk ends on a heading of this file', () => {
+        const held = [node('Root'), node('Player', '.'), { ...lamp, owner: 'Player' }];
+        const origins = withOrigin(originsOf(held, { Player: 7 }), 2, { ownerIdTrail: [7] });
+
+        expect(seatScene(origins).seated.get(held[2]!)?.ownerTrailFallback).toBeUndefined();
+      });
     });
 
     it('gives the heading no owner where the first id names a heading that is no instance', () => {

@@ -221,7 +221,7 @@ _Avoid_: "re-rooted node" for a node that keeps its name.
 
 **Content trail** (`followContentTrail` in `godot/scene/packedScene.ts`):
 The ids of an `owner_uid_path=` or `parent_id_path=` that follow the id of an instance heading. The trail continues in that instance's scene, and in its base scene where its own headings lack the id (`packed_scene.cpp:1947-2005`).
-The **Seating** seats the node under the instance heading with the rest of the trail, and the instance's graft follows it over the cached scene. A trail that finds nothing there re-roots the node and gives it no owner.
+The **Seating** seats the node under the instance heading with the rest of the trail, and the instance's graft follows it over the cached scene. A trail that finds nothing there re-roots the node and gives it no owner. A `parent=` or `owner=` walk that enters an instance and finds nothing takes the trail the same way.
 _Avoid_: resolving the ids of a trail against the headings of one file alone.
 
 **Rule arm** (`linter/ruleArms.ts`):

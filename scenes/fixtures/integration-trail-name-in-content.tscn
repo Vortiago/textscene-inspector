@@ -1,0 +1,33 @@
+; The one variable: a heading seated through a `parent_id_path` that enters an instance, then named
+; by its `%Name`. `Cap` finds `Player/Inner` through its trail and claims `%Cap` in the root's table,
+; so `parent="%Cap"` seats the green Hat under Cap (node.cpp:1930-1938, packed_scene.cpp:565-570):
+; it sits right of the orange Cap, beside Inner's blue box. No other golden names such a heading.
+
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-trail-player.tscn" id="1_player"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_a"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="M_a"]
+albedo_color = Color(0.95, 0.5, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="M_b"]
+albedo_color = Color(0.1, 0.8, 0.3, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("1_player") unique_id=948136725]
+
+[node name="Cap" type="MeshInstance3D" parent="Missing" parent_id_path=PackedInt32Array(948136725, 1273451906)]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_a")
+surface_material_override/0 = SubResource("M_a")
+
+[node name="Hat" type="MeshInstance3D" parent="%Cap"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0, 0)
+mesh = SubResource("BoxMesh_a")
+surface_material_override/0 = SubResource("M_b")
+

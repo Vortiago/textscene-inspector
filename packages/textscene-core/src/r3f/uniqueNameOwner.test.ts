@@ -757,6 +757,49 @@ unique_name_in_owner = true
     expect(ownerUniquePaths(claimOwnerOf('Main/Lamp', missing.nodes, ctx)).size).toBe(0);
   });
 
+  describe('where the owner= walk enters the instance and finds no node', () => {
+    const withOwner = (owner: string, trail: string) => {
+      const host = parse(
+        `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
+
+[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${trail})]
+unique_name_in_owner = true
+`
+      );
+      return { host, ctx: contextOver(host, { 'res://player.tscn': player, 'res://inner.tscn': inner }) };
+    };
+
+    it('owns the heading by the node the trail finds', () => {
+      const { host, ctx } = withOwner('Player/Gone', '2222, 3333');
+
+      expect(claimOwnerOf('Main/Lamp', host.nodes, ctx).path).toBe('Main/Player/Inner');
+    });
+
+    it('owns the heading by the node the walk finds, and reads no trail', () => {
+      const { host, ctx } = withOwner('Player/Inner', '2222, 9999');
+
+      expect(claimOwnerOf('Main/Lamp', host.nodes, ctx).path).toBe('Main/Player/Inner');
+    });
+
+    it('owns the heading by no owner where the trail finds nothing either', () => {
+      const { host, ctx } = withOwner('Player/Gone', '2222, 9999');
+
+      expect(ownerUniquePaths(claimOwnerOf('Main/Lamp', host.nodes, ctx)).size).toBe(0);
+    });
+
+    it('waits for the scene the walk enters, so the trail is not taken while it loads', () => {
+      const { host } = withOwner('Player/Gone', '2222, 3333');
+      const loading = contextOver(host, {});
+
+      expect(claimOwnerOf('Main/Lamp', host.nodes, loading).path).not.toBe('Main/Player/Inner');
+    });
+  });
+
   it('leaves the table of the instance that holds that node without the name', () => {
     expect(tableOf('Main/Player/Inner', trailed, trailedCtx).has('%Lamp')).toBe(false);
   });

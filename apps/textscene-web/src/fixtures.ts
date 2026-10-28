@@ -2699,6 +2699,16 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Trail Name In Content",
+    "file": "integration-trail-name-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Fallback",
+    "file": "integration-trail-owner-fallback.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Trail Owner In Content",
     "file": "integration-trail-owner-in-content.tscn",
     "category": "Integration - Multi-Node"

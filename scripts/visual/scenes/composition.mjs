@@ -34,6 +34,10 @@ export const SCENE_COMPOSITION_SCENES = [
   // A `parent_id_path` that ends inside an instance: the orange box is seated under `Player/Inner`
   // beside its blue box, not re-rooted to the file root.
   { name: 'trail-parent-in-content', file: 'integration-trail-parent-in-content.tscn' },
+  // A `%Name` claimed by a heading that a trail seated inside an instance: the green box sits under it.
+  { name: 'trail-name-in-content', file: 'integration-trail-name-in-content.tscn' },
+  // An `owner=` walk that finds nothing in an instance: the trail's owner holds `%Lamp`, so Shade sits under Lamp.
+  { name: 'trail-owner-fallback', file: 'integration-trail-owner-fallback.tscn' },
   // An instance of an inherited scene: its root owns the base's `%View`, which the quad's
   // ViewportTexture reads from that root.
   {

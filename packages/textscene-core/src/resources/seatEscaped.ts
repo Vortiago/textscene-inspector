@@ -208,7 +208,8 @@ function withoutSubPath(child: LiveNode, scope: SceneScope): LiveNode {
  * `tree` with `child` under the file root and each of its descendants too, each renamed from its own
  * `parent=` and numbered past the root children that hold the name. A descendant sat below `child`
  * for a path that runs through the vanished parent, so it vanishes as well; one that an id trail
- * landed there stays (packed_scene.cpp:161-163).
+ * landed there stays (packed_scene.cpp:161-163). A `%Name` parent vanishes too: the renamed node
+ * claims the renamed name (node.cpp:2222).
  */
 function reRoot(tree: LiveNode[], child: LiveNode, scope: SceneScope): Seated {
   const rooted = [...tree];
