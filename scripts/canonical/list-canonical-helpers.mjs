@@ -6,12 +6,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { readImporters } from '../sourceTree.mjs';
+import { isTestSuite, readImporters } from '../sourceTree.mjs';
 import { workspacePackages } from '../workspace.mjs';
 import { canonicalEntries, renderCanonicalList } from './canonicalTags.mjs';
-
-/** A test suite holds no helper. A test kit or a file under `testing/` can, so it stays. */
-const TEST_SUITE = /\.(test|spec)\.(tsx?|m?js)$/;
 
 function packageSources() {
   return workspacePackages()
@@ -21,9 +18,12 @@ function packageSources() {
 
 function taggedEntries() {
   const files = readImporters(REPO_ROOT, [...packageSources(), join(REPO_ROOT, 'scripts')]);
-  return [...files]
-    .filter(([path]) => !TEST_SUITE.test(path))
-    .flatMap(([path, text]) => canonicalEntries(text, path));
+  return (
+    [...files]
+      // A test suite holds no helper. A test kit or a file under `testing/` can, so it stays.
+      .filter(([path]) => !isTestSuite(path))
+      .flatMap(([path, text]) => canonicalEntries(text, path))
+  );
 }
 
 process.stdout.write(renderCanonicalList(taggedEntries()));
