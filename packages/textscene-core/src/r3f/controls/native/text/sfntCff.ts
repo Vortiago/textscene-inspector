@@ -78,6 +78,6 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
     const outline = scaledOutline(contours);
     if (outline.x.length === 0) return null;
     applyFontMatrix(outline, matrix);
-    return variedContours(outline, variation, fontSizePx);
+    return variedContours(outline, fontSizePx, variation);
   };
 }

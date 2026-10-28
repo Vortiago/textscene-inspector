@@ -20,8 +20,8 @@ import {
  */
 export function variedContours(
   outline: ScaledOutline,
-  { embolden = 0, skew = 0 }: GlyphVariation = {},
-  fontSizePx: number
+  fontSizePx: number,
+  { embolden = 0, skew = 0 }: GlyphVariation = {}
 ): GlyphContours {
   emboldenOutline(outline, embolden, fontSizePx);
   if (skew !== 0)

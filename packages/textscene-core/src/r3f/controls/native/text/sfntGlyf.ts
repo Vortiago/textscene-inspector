@@ -242,6 +242,6 @@ export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader
   return (glyphIndex, fontSizePx, variation) => {
     const outline = glyphs.load(glyphIndex, getFontOutlineScale(unitsPerEm, fontSizePx));
     if (!outline || outline.x.length === 0) return null;
-    return variedContours(outline, variation, fontSizePx);
+    return variedContours(outline, fontSizePx, variation);
   };
 }

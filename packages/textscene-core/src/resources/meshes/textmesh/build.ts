@@ -106,10 +106,9 @@ type GlyphMeshes = Map<number, GlyphMeshData | null>;
 
 /**
  * The glyph mesh data of one font by its `font_size`, `pixel_size`, `curve_step` and variation, then
- * by codepoint. Godot caches by glyph and clears it when one of the first three changes
- * (`:3043-3060`). The face's embolden and skew change its contours, so they key the cache too. Here the cache
- * belongs to the font and not to a TextMesh, so a few settings stay: two meshes of one font at two
- * sizes do not discard each other's glyphs on every edit.
+ * by codepoint. Godot clears its cache when one of the first three changes (`:3043-3060`); the
+ * embolden and skew change the contours, so they key it too. The cache belongs to the font, so two
+ * meshes of one font at two sizes do not discard each other's glyphs on every edit.
  */
 const glyphMeshCaches = perObject<SfntOutlines, Map<string, GlyphMeshes>>(() => new Map());
 

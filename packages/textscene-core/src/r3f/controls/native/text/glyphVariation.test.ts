@@ -24,7 +24,7 @@ describe('variedContours', () => {
   it.each(cases)('shears the outline of %s as Godot does', (_, glyph) => {
     const outline = toScaledOutline(plainReferenceGlyph(glyph));
 
-    const contours = variedContours(outline, variationOf(glyph), glyph.sizePx);
+    const contours = variedContours(outline, glyph.sizePx, variationOf(glyph));
 
     expect(referencePoints(contours.points)).toEqual(glyph.points);
     expect(contours.contourEnds).toEqual(glyph.contourEnds);
@@ -34,7 +34,7 @@ describe('variedContours', () => {
   it('leaves the outline as it is for no embolden and no skew', () => {
     const glyph = plainReferenceGlyph(shearedGlyphs[0]!);
 
-    const contours = variedContours(toScaledOutline(glyph), {}, glyph.sizePx);
+    const contours = variedContours(toScaledOutline(glyph), glyph.sizePx);
 
     expect(referencePoints(contours.points)).toEqual(glyph.points);
   });
