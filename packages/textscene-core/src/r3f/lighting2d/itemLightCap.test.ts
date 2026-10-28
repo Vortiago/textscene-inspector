@@ -21,7 +21,7 @@ const EVERYWHERE: Rect2 = { x: -1e6, y: -1e6, w: 2e6, h: 2e6 };
 
 const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
 
-function positional(sequence: number): CanvasLightDeclaration {
+function positional(sequence: number | null): CanvasLightDeclaration {
   return { reach: DEFAULT_LIGHT_CULL_KEY, sequence, shadowItemCullMask: null, tintsShadow: false };
 }
 
@@ -47,12 +47,16 @@ function litQuads(count: number, x: (ordinal: number) => number = () => 0): Set<
 
 type SpiedItem = CappedItem & { take: ReturnType<typeof vi.fn<CappedItem['take']>> };
 
-function item(x = 0): SpiedItem {
+function item(x = 0, layer = 0): SpiedItem {
   const geometry = new THREE.Object3D();
   geometry.add(quad(0));
   geometry.position.set(x, 0, 0);
   geometry.updateMatrixWorld();
-  return { placement: PLACEMENT, geometry: { current: geometry }, take: vi.fn<CappedItem['take']>() };
+  return {
+    placement: { ...PLACEMENT, layer },
+    geometry: { current: geometry },
+    take: vi.fn<CappedItem['take']>(),
+  };
 }
 
 /**
@@ -147,31 +151,20 @@ describe('capItemLights', () => {
   });
 });
 
-/**
- * One render takes `MAX_LIGHTS_PER_RENDER` lights, the directional ones first and the positional ones
- * in what is left, in list order. A light past it is off every item's list
- * (`renderer_canvas_render_rd.cpp:525-530, 592-596`, `:2369`), and it does not count against the 15 an item takes.
- */
+/** A light past `MAX_LIGHTS_PER_RENDER` is off every item's list, and it does not count against the 15 an item takes. */
 describe('capItemLights, past the lights of one render', () => {
   /** Light `n` of `count` sits at x = n * 100, so each light meets one item only. */
   const spread = (count: number) => litQuads(count, (ordinal) => ordinal * 100);
 
   const directional = (count: number): Map<number, CanvasLightDeclaration> =>
-    new Map(
-      Array.from({ length: count }, (_, n) => [
-        1000 + n,
-        { reach: DEFAULT_LIGHT_CULL_KEY, sequence: null, shadowItemCullMask: null, tintsShadow: false },
-      ])
-    );
+    new Map(Array.from({ length: count }, (_, n) => [1000 + n, positional(null)]));
 
   const kept = (count: number) => [...Array(count).keys()];
 
   it('takes the first 256 positional lights by sequence, and no item lists the others', () => {
-    const first = item(0);
     const last = item(MAX_LIGHTS_PER_RENDER * 100);
-    step(lights(MAX_LIGHTS_PER_RENDER + 1), [first, last], spread(MAX_LIGHTS_PER_RENDER + 1));
+    step(lights(MAX_LIGHTS_PER_RENDER + 1), [last], spread(MAX_LIGHTS_PER_RENDER + 1));
     expect(last.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER));
-    expect(first.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER));
   });
 
   it('leaves the positional lights what the directional lights leave', () => {
@@ -185,6 +178,39 @@ describe('capItemLights, past the lights of one render', () => {
     const lit = item();
     step(new Map([...lights(5), ...directional(MAX_LIGHTS_PER_RENDER + 20)]), [lit], spread(5));
     expect(lit.take).toHaveBeenCalledWith([]);
+  });
+
+  /** The same light, handed to the canvas layer `layer` alone (`range_layer_min` and `_max`). */
+  const onLayer = (light: CanvasLightDeclaration, layer: number): CanvasLightDeclaration => ({
+    ...light,
+    reach: { ...light.reach, layerMin: layer, layerMax: layer },
+  });
+
+  const onLayerOnly = (declared: Map<number, CanvasLightDeclaration>, layer: number) =>
+    new Map([...declared].map(([ordinal, light]) => [ordinal, onLayer(light, layer)]));
+
+  // Godot hands each canvas the lights in range of its layer, and counts 256 over that list alone
+  // (`renderer_viewport.cpp:667-690`).
+  it('counts the lights of each canvas layer apart', () => {
+    const world = item(0, 0);
+    const hud = item(250 * 100, 1);
+    const declared = new Map([
+      ...onLayerOnly(lights(200), 0),
+      ...[...onLayerOnly(lights(100), 1)].map(([ordinal, light]): [number, CanvasLightDeclaration] => [
+        ordinal + 200,
+        { ...light, sequence: ordinal + 200 },
+      ]),
+    ]);
+    step(declared, [world, hud], spread(300));
+    expect(world.take).not.toHaveBeenCalled();
+    expect(hud.take).not.toHaveBeenCalled();
+  });
+
+  it('leaves a layer the directional lights of other layers do not reach its whole budget', () => {
+    const world = item(0, 0);
+    const declared = new Map([...onLayerOnly(lights(200), 0), ...onLayerOnly(directional(100), 1)]);
+    step(declared, [world], spread(200));
+    expect(world.take).not.toHaveBeenCalled();
   });
 
   it('does not count a light whose rect misses the viewport', () => {

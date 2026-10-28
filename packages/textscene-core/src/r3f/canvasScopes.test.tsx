@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import { NOTHING_CACHED } from './cacheSources';
-import { MAX_LIGHTS_PER_RENDER } from '../godot/rendering/rendering';
+import { MAX_2D_DIRECTIONAL_LIGHTS, MAX_LIGHTS_PER_RENDER } from '../godot/rendering/rendering';
 import { canvasScopesOf } from './canvasScopes';
 import { liveTreeOf } from './liveSceneTree';
 
@@ -210,7 +210,7 @@ describe('canvasScopesOf, in the order of the lists', () => {
   it('lists at most MAX_LIGHTS_PER_RENDER directional lights, the first by tree order', () => {
     const { directional } = lights([...suns('Root/S', 8), layer, ...suns('Root/Layer/L', 300)]);
     expect(directional).toHaveLength(MAX_LIGHTS_PER_RENDER);
-    expect(directional.at(-1)).toBe(`Root/Layer/L${MAX_LIGHTS_PER_RENDER - 9}`);
+    expect(directional.at(-1)).toBe(`Root/Layer/L${MAX_LIGHTS_PER_RENDER - MAX_2D_DIRECTIONAL_LIGHTS - 1}`);
   });
 
   it('stops inside the canvas that reaches the eighth light', () => {

@@ -43,7 +43,7 @@ function isListedDirectionalLight(node: TscnNode): boolean {
 
 /** The paths of the lights one viewport lists, each list in draw order. */
 export interface CanvasLightPaths {
-  /** Uncapped: the render takes what the directional lights leave of `MAX_LIGHTS_PER_RENDER`, by geometry (`itemLightCap.ts`). */
+  /** The render's budget applies later, by geometry (`itemLightCap.ts`). */
   readonly positional: readonly string[];
   /** Capped per canvas by the eighth light (`gatherDirectional`), then by `MAX_LIGHTS_PER_RENDER`. */
   readonly directional: readonly string[];

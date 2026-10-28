@@ -38,13 +38,28 @@ export interface ItemPlacement {
   readonly layer: number;
   /**
    * The ordinals of the positional lights on the item's list (`itemPositionalLights`) while more
-   * than 15 meet its rect. Null while they fit: the item then reads its placement's list.
+   * than 15 meet its rect or the render's budget drops one. Null otherwise: the item then reads its
+   * placement's list.
    */
   readonly positionalLights: readonly number[] | null;
 }
 
 /** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
 export const MAX_POSITIONAL_LIGHTS_PER_ITEM = MAX_LIGHTS_PER_ITEM - 1;
+
+/** The positional lights among `ordinals`, in list order: sequence, then ordinal. */
+export function positionalListOrder(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  ordinals: Iterable<number>
+): number[] {
+  const listed: { ordinal: number; sequence: number }[] = [];
+  for (const ordinal of ordinals) {
+    const sequence = lights.get(ordinal)?.sequence;
+    if (sequence !== null && sequence !== undefined) listed.push({ ordinal, sequence });
+  }
+  listed.sort((a, b) => a.sequence - b.sequence || a.ordinal - b.ordinal);
+  return listed.map((light) => light.ordinal);
+}
 
 /**
  * The positional lights that pass the cull test at `item`, in list order: sequence, then ordinal.
@@ -54,14 +69,11 @@ export function positionalCandidates(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   item: ItemPlacement
 ): number[] {
-  const candidates: { ordinal: number; sequence: number }[] = [];
-  for (const [ordinal, light] of lights) {
-    if (light.sequence === null) continue;
-    if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) continue;
-    candidates.push({ ordinal, sequence: light.sequence });
-  }
-  candidates.sort((a, b) => a.sequence - b.sequence || a.ordinal - b.ordinal);
-  return candidates.map((candidate) => candidate.ordinal);
+  const reaching = [...lights.keys()].filter((ordinal) => {
+    const { reach } = lights.get(ordinal)!;
+    return lightReachesItem(reach, item.lightMask, item.z, item.layer);
+  });
+  return positionalListOrder(lights, reaching);
 }
 
 /**
