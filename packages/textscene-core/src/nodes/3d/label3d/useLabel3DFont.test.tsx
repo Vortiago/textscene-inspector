@@ -5,6 +5,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { ProjectSettingsProvider } from '../../../r3f/contexts/ProjectSettingsContext';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
+import { clearSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
@@ -67,6 +68,7 @@ async function settle() {
 
 beforeEach(() => {
   bundled.metrics = createOpenSansCanvasFontMetrics('label3d-font-test');
+  clearSceneFontOutlines();
 });
 
 describe('useLabel3DFont metrics', () => {
@@ -137,22 +139,22 @@ describe('useLabel3DFont outlines', () => {
     expect(result.current?.outlines).toBeNull();
   });
 
-  it('is undefined, then holds the outlines of the bundled font, for an emboldened label with an outline', async () => {
-    const { result } = renderMetrics('SubResource("own")', {}, [], true);
+  it.each([
+    ['emboldened', 'own'],
+    ['sheared', 'sheared'],
+  ])(
+    'is undefined, then holds the outlines of the bundled font, for a %s label with an outline',
+    async (_name, id) => {
+      const { result } = renderMetrics(`SubResource("${id}")`, {}, [], true);
 
-    expect(result.current).toBeUndefined();
-    await settle();
+      expect(result.current).toBeUndefined();
 
-    expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0);
-  });
-
-  it('holds the outlines of the bundled font for a sheared label with an outline', async () => {
-    const { result } = renderMetrics('SubResource("sheared")', {}, [], true);
-
-    await settle();
-
-    expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0);
-  });
+      // The bundled font's bytes load as their own chunk, so a fixed count of ticks can end before they arrive.
+      await vi.waitFor(() =>
+        expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0)
+      );
+    }
+  );
 });
 
 const PROJECT_MIPMAPS = 'config_version=5\n\n[gui]\n\ntheme/default_font_generate_mipmaps=true\n';
