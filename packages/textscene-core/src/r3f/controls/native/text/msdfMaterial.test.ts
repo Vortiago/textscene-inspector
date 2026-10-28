@@ -133,6 +133,19 @@ describe('createMsdfMaterial', () => {
       expect(fragmentOf(lit())).toContain('uLightList');
     });
 
+    it('keeps an explicit side over the facing of the Control material', () => {
+      const material = createMsdfMaterial({
+        map: new THREE.Texture(),
+        color: RED,
+        opacity: 1,
+        pxRange: 4,
+        side: THREE.FrontSide,
+        pixelMaterial: litPixelMaterial(),
+      });
+
+      expect(material.side).toBe(THREE.FrontSide);
+    });
+
     it('takes the blend state of the Control material', () => {
       const material = lit();
 

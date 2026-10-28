@@ -169,6 +169,8 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     depthTest,
     ...canvasItemFacing(side),
     ...pixelState,
+    // An explicit `side` outranks the facing the pixel material carries.
+    ...(side === undefined ? {} : { side }),
     // `WebGLRenderer` binds `clippingPlanes` only when `( !material.isShaderMaterial &&
     // !material.isRawShaderMaterial ) || material.clipping === true`, and otherwise
     // ignores the planes.
