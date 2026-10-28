@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { meshContentKey } from '../meshSource';
-import { FONT_PATH, readyTextMesh, textMeshWith, trueTypeFontFile } from '../textmesh/textMeshFont.testkit';
+import {
+  FONT_PATH,
+  readyTextMesh,
+  systemFontResource,
+  textMeshWith,
+  trueTypeFontFile,
+} from '../textmesh/textMeshFont.testkit';
 import { isDrawablePrimitiveMesh, primitiveMeshSurface, referencesKey } from './surface';
 import { scopedMesh } from './surface.testkit';
 
@@ -71,7 +77,11 @@ describe('primitiveMeshSurface for a TextMesh', () => {
 
 describe('isDrawablePrimitiveMesh', () => {
   it('is false for a TextMesh whose font has no readable outlines', () => {
-    expect(isDrawablePrimitiveMesh(textMeshWith())).toBe(false);
+    expect(isDrawablePrimitiveMesh(textMeshWith({}, { [FONT_PATH]: systemFontResource() }))).toBe(false);
+  });
+
+  it('is true for a TextMesh with no loaded font, which draws the bundled font', () => {
+    expect(isDrawablePrimitiveMesh(textMeshWith())).toBe(true);
   });
 
   it('is true for a TextMesh whose font awaits its metrics, and for a mesh of another type', () => {

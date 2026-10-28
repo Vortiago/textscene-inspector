@@ -10,6 +10,7 @@ export interface FogPasses {
 }
 
 /** Written only by `acquireFogPasses` and the release it returns. */
+// eslint-disable-next-line no-restricted-syntax -- the entry counts its users, and the last release deletes it
 const shared = new WeakMap<THREE.WebGLRenderer, { passes: FogPasses; users: number }>();
 
 /**

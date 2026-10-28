@@ -4,8 +4,6 @@
  * render orders sit below every positional light's.
  */
 
-import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering/rendering.js';
-
 /**
  * Every light-pass mesh draws on this layer alone: the seed, the light quads and the shadow
  * volumes. The main pass never renders it. Each accumulation pass renders it with the meshes of
@@ -13,10 +11,17 @@ import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering/rendering.js';
  */
 export const LIGHT_PASS_LAYER = 1;
 
+/**
+ * The directional draw orders sit in a band of this width below the positional ones. A viewport
+ * lists no fixed number of directional lights: a CanvasLayer lists its lights past the cap
+ * (`canvasScopes.ts`), and a canvas holds far fewer than 2^20 lights.
+ */
+const DIRECTIONAL_BAND = 2 ** 20;
+
 /** The seed lands under every light. */
-export const SEED_RENDER_ORDER = -MAX_2D_DIRECTIONAL_LIGHTS - 1;
+export const SEED_RENDER_ORDER = -DIRECTIONAL_BAND - 1;
 
 /** A directional light's draw order from its slot in the directional list, below every positional light. */
 export function directionalRenderOrder(slot: number): number {
-  return slot - MAX_2D_DIRECTIONAL_LIGHTS;
+  return slot - DIRECTIONAL_BAND;
 }

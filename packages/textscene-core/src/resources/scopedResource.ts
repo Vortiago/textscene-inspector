@@ -7,6 +7,7 @@
 import type { ParsedResource } from '../parser/parsedResource';
 import type { TscnInternalResource } from '../parser/types';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
+import type { ProjectFonts } from './fonts/font/projectFonts';
 import type { FontResource } from './fonts/font/types';
 
 export interface ScopedResource {
@@ -25,4 +26,6 @@ export type LoadedFont = (path: string) => FontResource | undefined;
 export interface ResolvableResource extends ScopedResource {
   loadedFile: LoadedFile;
   loadedFont: LoadedFont;
+  /** The theme and default font that a font lookup ends at, when the resource has no font of its own. */
+  projectFonts: ProjectFonts;
 }

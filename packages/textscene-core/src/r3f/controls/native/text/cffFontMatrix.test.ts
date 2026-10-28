@@ -27,88 +27,94 @@ import {
 import { dictOperandBytes, drawnAt } from './sfntCff.testkit';
 
 describe('the FontMatrix of the Top DICT', () => {
-  it('shears a glyph by the matrix after it is hinted', () => {
-    expect(drawnAt(SHEARED_FONT, 1, 13)).toEqual(['1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375']);
-    expect(drawnAt(SHEARED_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 9.5,-10 4.296875,-10']);
+  it('shears a glyph by the matrix after it is hinted', async () => {
+    expect(await drawnAt(SHEARED_FONT, 1, 13)).toEqual([
+      '1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375',
+    ]);
+    expect(await drawnAt(SHEARED_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 9.5,-10 4.296875,-10']);
   });
 
-  it('stretches a glyph in x by the ratio of the first two diagonal entries', () => {
-    expect(drawnAt(STRETCHED_FONT, 1, 13)).toEqual(['2.59375,0 13,0 13,-9.09375 2.59375,-9.09375']);
+  it('stretches a glyph in x by the ratio of the first two diagonal entries', async () => {
+    expect(await drawnAt(STRETCHED_FONT, 1, 13)).toEqual(['2.59375,0 13,0 13,-9.09375 2.59375,-9.09375']);
   });
 
-  it('slopes a glyph in y by an entry that moves y with x', () => {
-    expect(drawnAt(SLOPED_FONT, 1, 13)).toEqual([
+  it('slopes a glyph in y by an entry that moves y with x', async () => {
+    expect(await drawnAt(SLOPED_FONT, 1, 13)).toEqual([
       '1.296875,-0.265625 6.5,-1.296875 6.5,-10.390625 1.296875,-9.359375',
     ]);
   });
 
-  it('moves a glyph by the offset in whole 26.6 units', () => {
-    expect(drawnAt(OFFSET_FONT, 1, 13)).toEqual([
+  it('moves a glyph by the offset in whole 26.6 units', async () => {
+    expect(await drawnAt(OFFSET_FONT, 1, 13)).toEqual([
       '2.0625,-0.296875 7.265625,-0.296875 7.265625,-9.390625 2.0625,-9.390625',
     ]);
   });
 
-  it('reads the reals of a matrix that are written with exponents', () => {
-    expect(drawnAt(EXPONENT_FONT, 1, 13)).toEqual(['1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375']);
+  it('reads the reals of a matrix that are written with exponents', async () => {
+    expect(await drawnAt(EXPONENT_FONT, 1, 13)).toEqual([
+      '1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375',
+    ]);
   });
 });
 
 describe('the FontMatrix of a font dict', () => {
-  it('scales a glyph by the units per em of the matrix of its font dict, hints included', () => {
-    expect(drawnAt(HALF_SIZE_FONT, 1, 13)).toEqual(['0.640625,0 3.25,0 3.25,-4.546875 0.640625,-4.546875']);
-    expect(drawnAt(HALF_SIZE_FONT, 2, 13)).toEqual(['0.640625,0 3.25,0 3.25,-5 0.640625,-5']);
+  it('scales a glyph by the units per em of the matrix of its font dict, hints included', async () => {
+    expect(await drawnAt(HALF_SIZE_FONT, 1, 13)).toEqual([
+      '0.640625,0 3.25,0 3.25,-4.546875 0.640625,-4.546875',
+    ]);
+    expect(await drawnAt(HALF_SIZE_FONT, 2, 13)).toEqual(['0.640625,0 3.25,0 3.25,-5 0.640625,-5']);
   });
 
-  it('shears a glyph by the matrix of its font dict when the Top DICT has none', () => {
-    expect(drawnAt(SHEARED_HALF_SIZE_FONT, 1, 13)).toEqual([
+  it('shears a glyph by the matrix of its font dict when the Top DICT has none', async () => {
+    expect(await drawnAt(SHEARED_HALF_SIZE_FONT, 1, 13)).toEqual([
       '0.640625,0 3.25,0 4.609375,-4.546875 2,-4.546875',
     ]);
   });
 
-  it('gives a font dict without a matrix the matrix of the Top DICT', () => {
-    expect(drawnAt(SHEARED_FONT_DICTS_FONT, 1, 13)).toEqual([
+  it('gives a font dict without a matrix the matrix of the Top DICT', async () => {
+    expect(await drawnAt(SHEARED_FONT_DICTS_FONT, 1, 13)).toEqual([
       '1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375',
     ]);
   });
 
-  it('loses the offset of the Top DICT in a font dict that takes the matrix of the Top DICT', () => {
-    expect(drawnAt(INHERITED_OFFSET_FONT, 1, 13)).toEqual([
+  it('loses the offset of the Top DICT in a font dict that takes the matrix of the Top DICT', async () => {
+    expect(await drawnAt(INHERITED_OFFSET_FONT, 1, 13)).toEqual([
       '1.296875,0 6.5,0 6.5,-9.09375 1.296875,-9.09375',
     ]);
   });
 
-  it('multiplies the matrix of a font dict with the matrix of the Top DICT', () => {
-    expect(drawnAt(SHEARED_FONT_DICTS_FONT, 2, 13)).toEqual(['0.640625,0 3.25,0 4.75,-5 2.140625,-5']);
+  it('multiplies the matrix of a font dict with the matrix of the Top DICT', async () => {
+    expect(await drawnAt(SHEARED_FONT_DICTS_FONT, 2, 13)).toEqual(['0.640625,0 3.25,0 4.75,-5 2.140625,-5']);
   });
 
-  it('scales a glyph of a CFF2 font by the matrix of its font dict', () => {
-    expect(drawnAt(CFF2_HALF_SIZE_FONT, 1, 13)).toEqual([
+  it('scales a glyph of a CFF2 font by the matrix of its font dict', async () => {
+    expect(await drawnAt(CFF2_HALF_SIZE_FONT, 1, 13)).toEqual([
       '0.640625,0 3.25,0 3.25,-4.546875 0.640625,-4.546875',
     ]);
   });
 });
 
 describe('the font dicts of a CFF that FreeType repairs or refuses', () => {
-  it('draws with the Top DICT when the FDArray is empty', () => {
-    expect(drawnAt(EMPTY_FONT_DICTS_FONT, 1, 13)).toEqual([
+  it('draws with the Top DICT when the FDArray is empty', async () => {
+    expect(await drawnAt(EMPTY_FONT_DICTS_FONT, 1, 13)).toEqual([
       '1.296875,0 6.5,0 9.234375,-9.09375 4.03125,-9.09375',
     ]);
-    expect(drawnAt(EMPTY_FONT_DICTS_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 9.203125,-9 4,-9']);
+    expect(await drawnAt(EMPTY_FONT_DICTS_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 9.203125,-9 4,-9']);
   });
 
-  it('draws no glyph whose FDSelect names a font dict the font lacks', () => {
-    expect(drawnAt(MISSING_FONT_DICT_FONT, 1, 13)).toEqual([
+  it('draws no glyph whose FDSelect names a font dict the font lacks', async () => {
+    expect(await drawnAt(MISSING_FONT_DICT_FONT, 1, 13)).toEqual([
       '1.296875,0 6.5,0 6.5,-9.09375 1.296875,-9.09375',
     ]);
-    expect(drawnAt(MISSING_FONT_DICT_FONT, 2, 13)).toBeNull();
+    expect(await drawnAt(MISSING_FONT_DICT_FONT, 2, 13)).toBeNull();
   });
 
-  it('reads an FDSelect of format 0', () => {
-    expect(drawnAt(FORMAT_0_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 6.5,-10 1.296875,-10']);
+  it('reads an FDSelect of format 0', async () => {
+    expect(await drawnAt(FORMAT_0_FONT, 2, 13)).toEqual(['1.296875,0 6.5,0 6.5,-10 1.296875,-10']);
   });
 
-  it('opens no font whose FontMatrix has fewer than six operands', () => {
-    expect(drawnAt(SHORT_MATRIX_FONT, 1, 13)).toBeNull();
+  it('opens no font whose FontMatrix has fewer than six operands', async () => {
+    expect(await drawnAt(SHORT_MATRIX_FONT, 1, 13)).toBeNull();
   });
 });
 

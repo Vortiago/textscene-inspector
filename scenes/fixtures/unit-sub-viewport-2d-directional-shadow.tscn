@@ -1,0 +1,59 @@
+; One variable: a DirectionalLight2D with a LightOccluder2D shadow inside a SubViewport, beside a
+; DirectionalLight2D outside it. The directional shadow map spans the SubViewport's clip rect
+; Rect2(0, 0, size) (`renderer_viewport.cpp:390`), and the outside sun reaches no pixel inside. The
+; container and the Backdrop carry an unshaded CanvasItemMaterial, so the outside sun leaves both
+; alone: the previewer draws every native Control unlit, where Godot lights it.
+
+[gd_scene format=3]
+
+[sub_resource type="OccluderPolygon2D" id="Occluder"]
+polygon = PackedVector2Array(80, 40, 120, 40, 120, 80, 80, 80)
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_unshaded"]
+light_mode = 1
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+material = SubResource("CanvasItemMaterial_unshaded")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+; stretch is off, so screen = target pixel + (100, 80).
+[node name="Booth" type="SubViewportContainer" parent="."]
+material = SubResource("CanvasItemMaterial_unshaded")
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Floor" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 150, 0, 150)
+
+[node name="Sun" type="DirectionalLight2D" parent="Booth/SubViewport"]
+rotation = 1.5707964
+color = Color(1, 0.5, 0.25, 1)
+energy = 1.5
+shadow_enabled = true
+
+[node name="Wall" type="LightOccluder2D" parent="Booth/SubViewport"]
+occluder = SubResource("Occluder")
+
+; Outside the container, on the main canvas: lit by the outside sun alone.
+[node name="Outside" type="Polygon2D" parent="."]
+color = Color(0.3, 0.3, 0.3, 1)
+polygon = PackedVector2Array(500, 80, 700, 80, 700, 230, 500, 230)
+
+[node name="OutsideSun" type="DirectionalLight2D" parent="."]
+color = Color(0.2, 1, 0.2, 1)
+energy = 0.5

@@ -12,12 +12,11 @@ const SRC = path.resolve(import.meta.dirname, '../..');
 
 /** The definers of the filter state, which hand it to a caller. */
 const FILTER_DEFINERS = new Set([
-  'r3f/canvasItemTextureSampler.ts',
   'resources/textures/godotTextureFilter.ts',
   'resources/textures/textureView.ts',
 ]);
 
-const SETS_FILTER = /\b(?:applyTextureFilterState|applyCanvasItemSampler)\(/;
+const SETS_FILTER = /\b(?:applyTextureFilterState|applyViewSampler)\(/;
 const WRITES_ANISOTROPY = /\buseNearestAnisotropy\(|\buseTiledUpload\(/;
 
 const isCode = (source: string, pattern: RegExp): boolean => offendingLines(source, pattern).length > 0;

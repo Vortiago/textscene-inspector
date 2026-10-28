@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
-import { notifySceneFontMetricsSettled } from '../../r3f/controls/native/text/sceneFontLoader';
+import { notifySceneFontSettled } from '../../r3f/controls/native/text/sceneFontLoader';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
@@ -93,7 +93,7 @@ describe('useResolvableMesh for a TextMesh', () => {
     expect(result.current.mesh!.loadedFont(FONT_PATH)).toBe(font);
   });
 
-  it('serves the mesh, and not loading, for a font that failed to load', () => {
+  it('serves the mesh with the bundled font, once it has settled, for a font that failed to load', async () => {
     const fake = createFakeResourceLoader();
     const { result } = renderHook(() => useResolvableMesh(textScoped), {
       wrapper: missingResourcesWrapper(fake.loader),
@@ -101,7 +101,7 @@ describe('useResolvableMesh for a TextMesh', () => {
 
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
 
-    expect(result.current.isLoading).toBe(false);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.mesh!.loadedFont(FONT_PATH)).toBeUndefined();
   });
 });
@@ -123,18 +123,19 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     const { renders } = renderCounting(BOX);
     const before = renders();
 
-    act(() => notifySceneFontMetricsSettled());
+    act(() => notifySceneFontSettled());
 
     expect(renders()).toBe(before);
   });
 
-  it('does not render again for a TextMesh whose font has no TrueType outlines', () => {
+  it('does not render again for a TextMesh whose font has no outlines the reader opens', async () => {
     const text = textMeshWith();
-    const { fake, renders } = renderCounting({ resource: text.resource, resources: text.resources });
+    const { fake, result, renders } = renderCounting({ resource: text.resource, resources: text.resources });
     act(() => fake.fonts._resolve(FONT_PATH, { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    act(() => notifySceneFontMetricsSettled());
+    act(() => notifySceneFontSettled());
 
     expect(renders()).toBe(before);
   });
@@ -146,7 +147,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    act(() => notifySceneFontMetricsSettled());
+    act(() => notifySceneFontSettled());
 
     expect(renders()).toBe(before);
   });

@@ -12,6 +12,7 @@ import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 /**
  * The target the tonemap pass of a 3D world writes, which holds no depth: the world draws into its
@@ -214,6 +215,18 @@ export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFr
   camera.bottom = frame.bottom;
   camera.position.set(...frame.position);
   if (moved) camera.updateProjectionMatrix();
+}
+
+/**
+ * The world rect `camera` frames, written into `out`: a per-frame reader allocates nothing. `y` is
+ * the bottom edge, since the previewer's world is +Y up.
+ */
+export function orthoViewRect(camera: THREE.OrthographicCamera, out: Rect2): Rect2 {
+  out.x = camera.position.x + camera.left;
+  out.y = camera.position.y + camera.bottom;
+  out.w = camera.right - camera.left;
+  out.h = camera.top - camera.bottom;
+  return out;
 }
 
 /**

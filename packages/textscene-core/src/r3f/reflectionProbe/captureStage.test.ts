@@ -83,6 +83,17 @@ describe('stageCapture', () => {
     expect([scene.environmentIntensity, ambient.intensity, scene.background]).toEqual([2, 0.6, background]);
   });
 
+  it('drops an ambient of infinite energy to zero, not to NaN (edge case)', () => {
+    const { scene, ambient } = litScene();
+    ambient.intensity = Infinity;
+
+    const restore = stageCapture(scene, { cullMask: 1, interior: true }, CLEAR);
+    const during = ambient.intensity;
+    restore();
+
+    expect([during, ambient.intensity]).toEqual([0, Infinity]);
+  });
+
   it('leaves the environment of an exterior capture (edge case)', () => {
     const { scene, background } = litScene();
 

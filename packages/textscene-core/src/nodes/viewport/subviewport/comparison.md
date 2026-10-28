@@ -13,6 +13,8 @@ A Viewport that renders its subtree into an offscreen target for a `ViewportText
 
 A target that holds canvas content, 2D-world items or Controls, stores 8-bit sRGB bytes, as Godot's non-HDR `R8G8B8A8_UNORM` target does (`texture_storage.cpp:3568-3569`). Translucent content blends in those stored numbers, as on the main canvas (`renderer_canvas_render_rd.cpp:671,729`). Each target offers Godot's two views of its storage. A canvas consumer filters the plain view's bytes and multiplies them in sRGB (`texture_storage.cpp:754`). A `source_color` material slot samples the sRGB view, which decodes each texel before the filter (`material_storage.cpp:1067,1073`). A 3D pass draws its world into a linear HDR buffer, which resolves its `msaa_3d` samples (`render_forward_clustered.cpp:2402`). Godot's tonemap pass then writes the target: glow, `adjustment_*`, auto exposure and the tone curve of the Environment of the world `find_world_3d()` resolves (`viewport.cpp:4670-4681`, `render_forward_clustered.cpp:2514`). A shared world takes the parent viewport's Environment, and an `own_world_3d` world takes its own, or LINEAR without one. A 3D-content target stores its tonemapped render as sRGB bytes too (`renderer_scene_render_rd.cpp:744`). A canvas consumer filters those bytes, and a translucent 3D surface keeps its linear blend.
 
+A sub-viewport with 2D content lights its canvas with its own World2D (`viewport.cpp:5345`). Its Light2D nodes, LightOccluder2D nodes and CanvasModulate act on the items inside it, and the canvas around it acts on nothing inside. The pass runs through the target's own camera into buffers of the target's size. A DirectionalLight2D shadow map spans `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`).
+
 The target's canvas content samples with the sub-viewport's own `canvas_item_default_texture_filter` and `canvas_item_default_texture_repeat` where no ancestor sets a value, and not with the project settings (`viewport.cpp:3974-4017`).
 
 ## Linting
@@ -45,4 +47,3 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 - **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only a material's texture slots and `Sprite2D.texture` accept.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
 - **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.
-- **Shader missing** A sub-viewport's 2D content draws unlit, so its own Light2D and LightOccluder2D nodes have no effect.

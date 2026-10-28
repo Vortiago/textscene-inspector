@@ -108,9 +108,13 @@ The LightmapGI a node takes its light from, with the node's entry in that bake: 
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
 _Avoid_: "config file" for a `.tscn`. A general settings store.
 
-**Project default font** (`resources/fonts/font/projectDefaultFont.ts`):
+**Project default font** (`resources/fonts/font/projectFonts.ts`):
 The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
 _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
+
+**Project fonts** (`resources/fonts/font/projectFonts.ts`):
+The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
+_Avoid_: "theme context", which Godot's `ThemeContext` also names.
 
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
@@ -394,6 +398,9 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.
+
+**Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
+The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
 
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.

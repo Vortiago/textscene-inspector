@@ -39,7 +39,8 @@ through the GitHub API, so no git hook runs for it.
 1. Reads the committed paths from `tool_input.files`.
 2. Loads `lint-staged.config.mjs`, the configuration of the pre-commit hook.
 3. Gets the commands of each task whose glob matches a committed path.
-4. Runs the commands in order in `$CLAUDE_PROJECT_DIR`. Their output goes to stderr.
+4. Runs the commands in order in the repository root (`REPO_ROOT` in `scripts/repoRoot.mjs`). Their
+   output goes to stderr.
 5. If a command fails, exits with code 2 and names the command.
 6. Exits with code 0 when all commands pass, or when no path matches a glob.
 
@@ -71,7 +72,7 @@ bakes an older build and sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`, so without thi
 
 1. Removes `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` from the environment (`playwrightInstallEnv` in
    `scripts/ci/`). `PLAYWRIGHT_BROWSERS_PATH` stays, so the browser lands where the launch looks.
-2. Runs `pnpm playwright:install`, the script that CI also runs, in `$CLAUDE_PROJECT_DIR`. This is
+2. Runs `pnpm playwright:install`, the script that CI also runs, in the repository root. This is
    a no-op when the browser is present.
 3. If the install fails, prints a warning to stderr.
 4. Always exits with code 0, so a session without network access still starts.
@@ -148,7 +149,7 @@ The hook prints the refused flag and the reason, and the exit code is 2. The sam
 
 ```bash
 echo '{"tool_name":"mcp__github_file_ops__commit_files","tool_input":{"files":["README.md"]}}' \
-  | CLAUDE_PROJECT_DIR=$PWD node .claude/hooks/validate-commit.mjs; echo $?
+  | node .claude/hooks/validate-commit.mjs; echo $?
 ```
 
 `README.md` matches no lint-staged glob, so the exit code is 0. A path to a `.mjs` file with an
@@ -156,7 +157,7 @@ ESLint error gives exit code 2.
 
 ```bash
 echo '{"tool_name":"Edit","tool_input":{"file_path":"packages/textscene-core/src/nodes/node/comparison.md"}}' \
-  | CLAUDE_PROJECT_DIR=$PWD node .claude/hooks/check-sheet-prose.mjs; echo $?
+  | node .claude/hooks/check-sheet-prose.mjs; echo $?
 ```
 
 The sheet passes, so the exit code is 0. A sheet with a semicolon in its prose gives exit code 2

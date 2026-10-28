@@ -8,9 +8,13 @@ import { enclosedVolume } from '../../../../r3f/csg/testing/brushVolume';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
 import type { FontFileResource } from '../../../../resources/fonts/font/types';
 import { distinctAttributePositions } from '../../../../resources/meshes/textmesh/distinctPositions.testkit';
-import { FONT_PATH, trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import {
-  csgMesh3DAwaitsFontMetrics,
+  FONT_PATH,
+  systemFontResource,
+  trueTypeFontFile,
+} from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
+import {
+  csgMesh3DAwaitsFont,
   csgMesh3DGeometry,
   csgMesh3DGeometryKey,
   csgMesh3DReadsFonts,
@@ -49,7 +53,7 @@ const contextWith = (font?: FontFileResource): CsgGeometryContext =>
 /** A context whose font has loaded and whose metrics have settled. */
 async function readyContext(): Promise<CsgGeometryContext> {
   const ctx = contextWith(trueTypeFontFile());
-  await vi.waitFor(() => expect(csgMesh3DAwaitsFontMetrics(PROPERTIES, ctx)).toBe(false));
+  await vi.waitFor(() => expect(csgMesh3DAwaitsFont(PROPERTIES, ctx)).toBe(false));
   return ctx;
 }
 
@@ -109,9 +113,13 @@ describe('csgMesh3DGeometry for a TextMesh with depth', () => {
 
 describe('csgMesh3DUndrawnMeshType for a TextMesh', () => {
   it('names the type for a mesh whose font has no readable outlines', () => {
-    const notAnSfnt = { ...trueTypeFontFile(), bytes: new ArrayBuffer(8) };
+    const ctx = csgGeometryContext({
+      internalResources: [TEXT],
+      externalResources: [FONT_REFERENCE],
+      fonts: { [FONT_PATH]: systemFontResource() },
+    });
 
-    expect(csgMesh3DUndrawnMeshType(PROPERTIES, contextWith(notAnSfnt))).toBe('TextMesh');
+    expect(csgMesh3DUndrawnMeshType(PROPERTIES, ctx)).toBe('TextMesh');
   });
 
   it('names no type for a mesh whose font is ready', async () => {
@@ -138,19 +146,19 @@ describe('csgMesh3DReadsFonts', () => {
   });
 });
 
-describe('csgMesh3DAwaitsFontMetrics', () => {
+describe('csgMesh3DAwaitsFont', () => {
   it('is true while the metrics of the font are to settle', () => {
-    expect(csgMesh3DAwaitsFontMetrics(PROPERTIES, contextWith(trueTypeFontFile()))).toBe(true);
+    expect(csgMesh3DAwaitsFont(PROPERTIES, contextWith(trueTypeFontFile()))).toBe(true);
   });
 
   it('is false for a mesh that reads no font', () => {
     const ctx = csgGeometryContext({ internalResources: [{ id: 'Box', type: 'BoxMesh', data: {} }] });
 
-    expect(csgMesh3DAwaitsFontMetrics({ mesh: 'SubResource("Box")' }, ctx)).toBe(false);
+    expect(csgMesh3DAwaitsFont({ mesh: 'SubResource("Box")' }, ctx)).toBe(false);
   });
 
   it('is false for no mesh', () => {
-    expect(csgMesh3DAwaitsFontMetrics({ mesh: undefined }, contextWith())).toBe(false);
+    expect(csgMesh3DAwaitsFont({ mesh: undefined }, contextWith())).toBe(false);
   });
 });
 
@@ -186,7 +194,7 @@ describe('csgMesh3DGeometry for a .tres TextMesh', () => {
 
   it('builds the glyphs once the file and its font are ready', async () => {
     const ctx = fileContext({ [TEXT_FILE_PATH]: TEXT_FILE }, trueTypeFontFile());
-    await vi.waitFor(() => expect(csgMesh3DAwaitsFontMetrics(FILE_PROPERTIES, ctx)).toBe(false));
+    await vi.waitFor(() => expect(csgMesh3DAwaitsFont(FILE_PROPERTIES, ctx)).toBe(false));
 
     expect(csgMesh3DGeometry(FILE_PROPERTIES, ctx)!.geometry.getAttribute('position').count).toBeGreaterThan(
       0

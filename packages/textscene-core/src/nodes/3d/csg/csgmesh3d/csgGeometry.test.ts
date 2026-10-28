@@ -228,10 +228,7 @@ describe('csgMesh3DGeometry: mesh sources', () => {
   // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1137-1139`).
   it('builds an empty brush for a PointMesh, whose surface is points', () => {
     expect(positionCount(build('SubResource("Point")'))).toBe(0);
-    const { loadedFile, loadedFont } = CTX;
-    expect(
-      meshSurfaces({ resource: INLINE_POINT, resources: CTX, loadedFile, loadedFont, file: null })
-    ).toEqual([]);
+    expect(meshSurfaces({ ...CTX, resource: INLINE_POINT, resources: CTX, file: null })).toEqual([]);
   });
 
   it('builds an empty brush for an ArrayMesh whose surface is points', () => {

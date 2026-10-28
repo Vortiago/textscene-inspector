@@ -1,0 +1,2128 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Sq" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 1100, 0, 1100, 40, 0, 40)
+
+[node name="SqM0" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 100, 40, 100, 40, 140, 0, 140)
+
+[node name="SqM1" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(60, 100, 100, 100, 100, 140, 60, 140)
+
+[node name="SqM2" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(120, 100, 160, 100, 160, 140, 120, 140)
+
+[node name="SqM3" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(180, 100, 220, 100, 220, 140, 180, 140)
+
+[node name="SqM4" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(240, 100, 280, 100, 280, 140, 240, 140)
+
+[node name="SqM5" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(300, 100, 340, 100, 340, 140, 300, 140)
+
+[node name="SqM6" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(360, 100, 400, 100, 400, 140, 360, 140)
+
+[node name="SqM7" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(420, 100, 460, 100, 460, 140, 420, 140)
+
+[node name="SqM8" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(480, 100, 520, 100, 520, 140, 480, 140)
+
+[node name="Layer" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="D0" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D1" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D2" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D3" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D4" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D5" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D6" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D7" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D8" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D9" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D10" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D11" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D12" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D13" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D14" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D15" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D16" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D17" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D18" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D19" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D20" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D21" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D22" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D23" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D24" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D25" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D26" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D27" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D28" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D29" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D30" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D31" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D32" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D33" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D34" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D35" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D36" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D37" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D38" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D39" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D40" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D41" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D42" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D43" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D44" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D45" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D46" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D47" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D48" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D49" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D50" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D51" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D52" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D53" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D54" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D55" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D56" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D57" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D58" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D59" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D60" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D61" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D62" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D63" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D64" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D65" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D66" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D67" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D68" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D69" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D70" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D71" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D72" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D73" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D74" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D75" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D76" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D77" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D78" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D79" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D80" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D81" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D82" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D83" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D84" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D85" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D86" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D87" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D88" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D89" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D90" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D91" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D92" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D93" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D94" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D95" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D96" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D97" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D98" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D99" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="P0" type="PointLight2D" parent="."]
+position = Vector2(20, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P1" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P2" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P3" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P4" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P5" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P6" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P7" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P8" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P9" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P10" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P11" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P12" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P13" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P14" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P15" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P16" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P17" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P18" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P19" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P20" type="PointLight2D" parent="."]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P21" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P22" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P23" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P24" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P25" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P26" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P27" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P28" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P29" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P30" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P31" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P32" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P33" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P34" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P35" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P36" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P37" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P38" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P39" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P40" type="PointLight2D" parent="."]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P41" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P42" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P43" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P44" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P45" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P46" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P47" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P48" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P49" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P50" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P51" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P52" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P53" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P54" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P55" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P56" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P57" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P58" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P59" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P60" type="PointLight2D" parent="."]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P61" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P62" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P63" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P64" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P65" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P66" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P67" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P68" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P69" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P70" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P71" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P72" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P73" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P74" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P75" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P76" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P77" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P78" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P79" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P80" type="PointLight2D" parent="."]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P81" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P82" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P83" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P84" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P85" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P86" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P87" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P88" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P89" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P90" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P91" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P92" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P93" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P94" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P95" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P96" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P97" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P98" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P99" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P100" type="PointLight2D" parent="."]
+position = Vector2(80, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P101" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P102" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P103" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P104" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P105" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P106" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P107" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P108" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P109" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P110" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P111" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P112" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P113" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P114" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P115" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P116" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P117" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P118" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P119" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P120" type="PointLight2D" parent="."]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P121" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P122" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P123" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P124" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P125" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P126" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P127" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P128" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P129" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P130" type="PointLight2D" parent="."]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P131" type="PointLight2D" parent="."]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P132" type="PointLight2D" parent="."]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P133" type="PointLight2D" parent="."]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P134" type="PointLight2D" parent="."]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P135" type="PointLight2D" parent="."]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P136" type="PointLight2D" parent="."]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P137" type="PointLight2D" parent="."]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P138" type="PointLight2D" parent="."]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P139" type="PointLight2D" parent="."]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P140" type="PointLight2D" parent="."]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P141" type="PointLight2D" parent="."]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P142" type="PointLight2D" parent="."]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P143" type="PointLight2D" parent="."]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P144" type="PointLight2D" parent="."]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P145" type="PointLight2D" parent="."]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P146" type="PointLight2D" parent="."]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P147" type="PointLight2D" parent="."]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P148" type="PointLight2D" parent="."]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P149" type="PointLight2D" parent="."]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P150" type="PointLight2D" parent="Layer"]
+position = Vector2(500, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P151" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P152" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P153" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P154" type="PointLight2D" parent="Layer"]
+position = Vector2(140, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P155" type="PointLight2D" parent="Layer"]
+position = Vector2(200, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P156" type="PointLight2D" parent="Layer"]
+position = Vector2(260, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P157" type="PointLight2D" parent="Layer"]
+position = Vector2(320, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P158" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P159" type="PointLight2D" parent="Layer"]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P160" type="PointLight2D" parent="Layer"]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P161" type="PointLight2D" parent="Layer"]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P162" type="PointLight2D" parent="Layer"]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P163" type="PointLight2D" parent="Layer"]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P164" type="PointLight2D" parent="Layer"]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P165" type="PointLight2D" parent="Layer"]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P166" type="PointLight2D" parent="Layer"]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P167" type="PointLight2D" parent="Layer"]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P168" type="PointLight2D" parent="Layer"]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P169" type="PointLight2D" parent="Layer"]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P170" type="PointLight2D" parent="Layer"]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P171" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P172" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P173" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P174" type="PointLight2D" parent="Layer"]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P175" type="PointLight2D" parent="Layer"]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P176" type="PointLight2D" parent="Layer"]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P177" type="PointLight2D" parent="Layer"]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P178" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P179" type="PointLight2D" parent="Layer"]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P180" type="PointLight2D" parent="Layer"]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P181" type="PointLight2D" parent="Layer"]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P182" type="PointLight2D" parent="Layer"]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P183" type="PointLight2D" parent="Layer"]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P184" type="PointLight2D" parent="Layer"]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P185" type="PointLight2D" parent="Layer"]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P186" type="PointLight2D" parent="Layer"]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P187" type="PointLight2D" parent="Layer"]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P188" type="PointLight2D" parent="Layer"]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P189" type="PointLight2D" parent="Layer"]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P190" type="PointLight2D" parent="Layer"]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P191" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P192" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P193" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P194" type="PointLight2D" parent="Layer"]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P195" type="PointLight2D" parent="Layer"]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P196" type="PointLight2D" parent="Layer"]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P197" type="PointLight2D" parent="Layer"]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P198" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P199" type="PointLight2D" parent="Layer"]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P200" type="PointLight2D" parent="Layer"]
+position = Vector2(380, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1
+
+[node name="P201" type="PointLight2D" parent="Layer"]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P202" type="PointLight2D" parent="Layer"]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P203" type="PointLight2D" parent="Layer"]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P204" type="PointLight2D" parent="Layer"]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P205" type="PointLight2D" parent="Layer"]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P206" type="PointLight2D" parent="Layer"]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P207" type="PointLight2D" parent="Layer"]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P208" type="PointLight2D" parent="Layer"]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P209" type="PointLight2D" parent="Layer"]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P210" type="PointLight2D" parent="Layer"]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P211" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P212" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P213" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P214" type="PointLight2D" parent="Layer"]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P215" type="PointLight2D" parent="Layer"]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P216" type="PointLight2D" parent="Layer"]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P217" type="PointLight2D" parent="Layer"]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P218" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P219" type="PointLight2D" parent="Layer"]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P220" type="PointLight2D" parent="Layer"]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P221" type="PointLight2D" parent="Layer"]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P222" type="PointLight2D" parent="Layer"]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P223" type="PointLight2D" parent="Layer"]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P224" type="PointLight2D" parent="Layer"]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P225" type="PointLight2D" parent="Layer"]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P226" type="PointLight2D" parent="Layer"]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P227" type="PointLight2D" parent="Layer"]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P228" type="PointLight2D" parent="Layer"]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P229" type="PointLight2D" parent="Layer"]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P230" type="PointLight2D" parent="Layer"]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P231" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P232" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P233" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P234" type="PointLight2D" parent="Layer"]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P235" type="PointLight2D" parent="Layer"]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P236" type="PointLight2D" parent="Layer"]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P237" type="PointLight2D" parent="Layer"]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P238" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P239" type="PointLight2D" parent="Layer"]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P240" type="PointLight2D" parent="Layer"]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P241" type="PointLight2D" parent="Layer"]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P242" type="PointLight2D" parent="Layer"]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P243" type="PointLight2D" parent="Layer"]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P244" type="PointLight2D" parent="Layer"]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P245" type="PointLight2D" parent="Layer"]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P246" type="PointLight2D" parent="Layer"]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P247" type="PointLight2D" parent="Layer"]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P248" type="PointLight2D" parent="Layer"]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P249" type="PointLight2D" parent="Layer"]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P250" type="PointLight2D" parent="Layer"]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P251" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P252" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P253" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P254" type="PointLight2D" parent="Layer"]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P255" type="PointLight2D" parent="Layer"]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P256" type="PointLight2D" parent="Layer"]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P257" type="PointLight2D" parent="Layer"]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P258" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P259" type="PointLight2D" parent="Layer"]
+position = Vector2(619, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P260" type="PointLight2D" parent="Layer"]
+position = Vector2(600, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P261" type="PointLight2D" parent="Layer"]
+position = Vector2(601, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P262" type="PointLight2D" parent="Layer"]
+position = Vector2(602, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P263" type="PointLight2D" parent="Layer"]
+position = Vector2(603, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P264" type="PointLight2D" parent="Layer"]
+position = Vector2(604, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P265" type="PointLight2D" parent="Layer"]
+position = Vector2(605, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P266" type="PointLight2D" parent="Layer"]
+position = Vector2(606, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P267" type="PointLight2D" parent="Layer"]
+position = Vector2(607, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P268" type="PointLight2D" parent="Layer"]
+position = Vector2(608, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P269" type="PointLight2D" parent="Layer"]
+position = Vector2(609, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P270" type="PointLight2D" parent="Layer"]
+position = Vector2(610, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P271" type="PointLight2D" parent="Layer"]
+position = Vector2(611, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P272" type="PointLight2D" parent="Layer"]
+position = Vector2(612, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P273" type="PointLight2D" parent="Layer"]
+position = Vector2(613, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P274" type="PointLight2D" parent="Layer"]
+position = Vector2(614, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P275" type="PointLight2D" parent="Layer"]
+position = Vector2(615, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P276" type="PointLight2D" parent="Layer"]
+position = Vector2(616, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P277" type="PointLight2D" parent="Layer"]
+position = Vector2(617, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P278" type="PointLight2D" parent="Layer"]
+position = Vector2(618, 400)
+texture = ExtResource("1_light")
+color = Color(0, 0, 0, 1)
+texture_scale = 0.1
+
+[node name="P279" type="PointLight2D" parent="Layer"]
+position = Vector2(440, 120)
+texture = ExtResource("1_light")
+color = Color(1, 1, 1, 1)
+texture_scale = 0.1

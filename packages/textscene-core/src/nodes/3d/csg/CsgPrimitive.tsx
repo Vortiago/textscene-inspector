@@ -59,8 +59,10 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     (subtree.absorbedPaths.has(path) || subtree.invisiblePaths.has(path));
   const ownSetup = useCsgGeometryContext(inAncestorPlan ? null : node);
   // A failed ancestor makes this node a root again, whose boolean reads the files that root loaded.
-  const setup = inAncestorPlan ? { context: subtree.context, isLoading: false } : ownSetup;
-  const ctx = setup.context;
+  const setup = inAncestorPlan
+    ? { context: subtree.context, isLoading: false, isLoadingFonts: false }
+    : ownSetup;
+  const { context: ctx, isLoadingFonts } = setup;
   // Optional: a CSG node renders outside the shell in tests and in the
   // subtree-conformance probe, where nothing can be hidden anyway.
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
@@ -87,7 +89,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   useUndrawnMeshReport(isRootLoading ? null : (registration?.undrawnMeshType?.(builderProps, ctx) ?? null));
   const { ownSolid, isOpen, hasNoFaces } = useMemo(
     () => {
-      const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
+      const built = skipped || isLoadingFonts ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
       // An open brush, or one with no face, is empty: it draws nothing and bounds to a point.
       // Only that fact is kept, not an open geometry. Null is no brush yet.
       const isOpen = built !== null && !built.isClosed;
@@ -95,7 +97,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       return { ownSolid: built && !isOpen && !hasNoFaces ? built : null, isOpen, hasNoFaces };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
-    [ownKey, properties.materialPath, skipped]
+    [ownKey, properties.materialPath, skipped, isLoadingFonts]
   );
   // Godot warns on a shape whose folded brush has no face (`csg_shape.cpp:981`). An open brush
   // empties its whole fold, but a node with no face of its own is filled by its CSG children.
