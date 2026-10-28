@@ -100,7 +100,7 @@ describe('useCompositorPass for an Environment', () => {
 
   it('mounts a pass without glow for the adjustments alone', async () => {
     const { pass } = await mount(environmentSettingsOf({ adjustment_enabled: 'true' }));
-    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null });
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 
   it('mounts no pass for an enabled glow whose every level weight is zero (edge case)', async () => {
@@ -121,7 +121,7 @@ describe('useCompositorPass for an auto exposure', () => {
   // Godot reduces the luminance whenever the camera attributes enable it (`renderer_scene_render_rd.cpp:551`).
   it('mounts a pass without glow for the auto exposure alone, and carries it', async () => {
     const { pass } = await mount(environmentSettingsOf({}), { autoExposure: AUTO_EXPOSURE });
-    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: AUTO_EXPOSURE });
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: AUTO_EXPOSURE, usesDebanding: false });
   });
 
   it('mounts a pass for the auto exposure with no Environment', async () => {
@@ -151,7 +151,18 @@ describe('useCompositorPass with no Environment', () => {
   it('mounts a multisampled pass without glow for MSAA alone', async () => {
     const Wrapper = withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n');
     const { pass } = await mount(null, { Wrapper });
-    await waitFor(() => expect(pass()).toEqual({ glow: null, samples: 4, autoExposure: null }));
+    await waitFor(() =>
+      expect(pass()).toEqual({ glow: null, samples: 4, autoExposure: null, usesDebanding: false })
+    );
+  });
+
+  /** Godot dithers in its tonemap pass (`renderer_scene_render_rd.cpp:784-797`), which three's curve lacks. */
+  it('mounts a pass that dithers for use_debanding alone', async () => {
+    const Wrapper = withProject('[rendering]\nanti_aliasing/quality/use_debanding=true\n');
+    const { pass } = await mount(null, { Wrapper });
+    await waitFor(() =>
+      expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: true })
+    );
   });
 
   it('mounts a pass without glow for a blended surface', async () => {
@@ -159,7 +170,7 @@ describe('useCompositorPass with no Environment', () => {
     blend();
     const { renderer, pass } = await mount(null, { content: mesh });
     await advance(renderer, 1);
-    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null });
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 });
 

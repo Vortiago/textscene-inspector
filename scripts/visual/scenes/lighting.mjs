@@ -19,6 +19,8 @@ export const LIGHTING_SCENES = [
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
   // The Linear upscale mode, from a Fixture project's project.godot: a bilinear read of each level.
   { name: 'glow-linear-upscale', file: 'glow-linear-upscale/unit-glow-linear-upscale.tscn' },
+  // The root's debanding, from a Fixture project's project.godot: Godot's dither on the sky.
+  { name: 'debanding', file: 'debanding/unit-debanding.tscn' },
   // A frame under 256 px has fewer glow levels, and a weighted level past the last reads that one:
   // unit-glow-authored weights its two coarsest levels. 96 px clamps both, 200 px clamps the last.
   { name: 'glow-small-frame-96', file: 'unit-glow-authored.tscn', canvas: { width: 96, height: 96 } },

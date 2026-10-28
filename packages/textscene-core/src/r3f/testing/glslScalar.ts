@@ -10,6 +10,7 @@ export const GLSL_BUILT_INS = {
   abs: Math.abs,
   exp: Math.exp,
   exp2: (x: number) => 2 ** x,
+  fract: (x: number) => x - Math.floor(x),
   log: Math.log,
   max: Math.max,
   min: Math.min,

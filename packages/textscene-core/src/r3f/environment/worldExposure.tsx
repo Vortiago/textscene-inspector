@@ -3,7 +3,8 @@
  * first valid WorldEnvironment, which chooses apart from the Environment (`world_environment.cpp:87-93`).
  * Godot scales the frame by the attributes' exposure normalisation factor, which this code calls the
  * exposure factor. It is the `exposure_multiplier` while the project uses no physical light units
- * (`camera_attributes_storage.cpp:133-138`, `camera_attributes.cpp:56-64`).
+ * (`camera_attributes_storage.cpp:133-138`, `camera_attributes.cpp:56-64`). The camera it elects
+ * gives its Environment to the world's chooser too (`WorldEnvironmentScope.tsx`).
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -13,6 +14,7 @@ import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { useWorldKind, type WorldKind } from './WorldKindContext';
 import { createWorldGroup, createWorldPublications, type WorldResolution } from './worldGroup';
+import type { EnvironmentResolution } from './WorldEnvironmentScope';
 
 /** What a WorldEnvironment's `camera_attributes` resolves to, when it holds a valid one. */
 export type CameraAttributesResolution = WorldResolution<{ attributes: CameraAttributes }>;
@@ -21,22 +23,26 @@ const cameraAttributes = createWorldGroup<{ attributes: CameraAttributes }>();
 
 export const usePublishCameraAttributes = cameraAttributes.usePublish;
 
+/** What a Camera3D holds that replaces its world's own while a viewport renders through it. */
+export interface CameraResources {
+  attributes: CameraAttributesResolution;
+  environment: EnvironmentResolution;
+}
+
 /** A Camera3D of the world, whether or not the world renders through it. */
-interface WorldCamera {
+interface WorldCamera extends CameraResources {
   path: string;
   current: boolean;
-  attributes: CameraAttributesResolution;
 }
 
 const cameras = createWorldPublications<WorldCamera>();
 
-/** Puts a Camera3D and the `attributes` it holds in its world, whether or not the world renders through it. */
-export function usePublishCamera(
-  path: string,
-  current: boolean,
-  attributes: CameraAttributesResolution
-): void {
-  cameras.usePublish(useMemo(() => ({ path, current, attributes }), [path, current, attributes]));
+/** Puts a Camera3D and what it holds in its world, whether or not the world renders through it. */
+export function usePublishCamera(path: string, current: boolean, held: CameraResources): void {
+  const { attributes, environment } = held;
+  cameras.usePublish(
+    useMemo(() => ({ path, current, attributes, environment }), [path, current, attributes, environment])
+  );
 }
 
 /**
@@ -69,13 +75,51 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
   return (
     <cameraAttributes.Provider>
       <cameras.Provider>
-        <CameraAttributesProvider>{children}</CameraAttributesProvider>
+        <RenderCameraProvider>{children}</RenderCameraProvider>
       </cameras.Provider>
     </cameraAttributes.Provider>
   );
 }
 
-function CameraAttributesProvider({ children }: { children: ReactNode }) {
+/** Gathers a world's CameraAttributes for the viewports that draw it, with no camera of its own. */
+export function WorldCameraAttributesScope({ children }: { children: ReactNode }) {
+  return <cameraAttributes.Provider>{children}</cameraAttributes.Provider>;
+}
+
+/**
+ * Gives the readers below the exposure of the world's own CameraAttributes, for a world that no one
+ * camera renders. It reads the chooser of the enclosing `WorldCameraAttributesScope`.
+ */
+export function WorldAttributesExposure({ children }: { children: ReactNode }) {
+  const attributes = attributesOf(cameraAttributes.useChosen());
+  return <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>;
+}
+
+/**
+ * Chooses the camera of a viewport that shares its parent's world. The world's CameraAttributes
+ * group is the parent's, keyed by its scenario (`world_environment.cpp:87-93`), so a node inside
+ * publishes to the parent's chooser.
+ */
+export function SharedWorldExposureScope({ children }: { children: ReactNode }) {
+  return (
+    <cameras.Provider>
+      <RenderCameraProvider>{children}</RenderCameraProvider>
+    </cameras.Provider>
+  );
+}
+
+/** The Environment of the camera the world renders through, null for none. */
+const RenderCameraEnvironmentContext = createContext<EnvironmentResolution | null>(null);
+
+/**
+ * The Environment of the camera the viewport renders through, which replaces its world's once it
+ * resolves (`renderer_scene_cull.cpp:3594-3597`). Null when it renders through none.
+ */
+export function useRenderCameraEnvironment(): EnvironmentResolution | null {
+  return useContext(RenderCameraEnvironmentContext);
+}
+
+function RenderCameraProvider({ children }: { children: ReactNode }) {
   const world = useWorldKind();
   const viewedPath = useOptionalViewportActions()?.activeCameraPath ?? null;
   const renderCamera = renderCameraOf(world, viewedPath, cameras.useAll());
@@ -89,7 +133,11 @@ function CameraAttributesProvider({ children }: { children: ReactNode }) {
     attributes?.exposureMultiplier ?? null,
     attributesOf(worldAttributes)?.exposureMultiplier ?? null
   );
-  return <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>;
+  return (
+    <RenderCameraEnvironmentContext.Provider value={renderCamera?.environment ?? null}>
+      <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>
+    </RenderCameraEnvironmentContext.Provider>
+  );
 }
 
 /**

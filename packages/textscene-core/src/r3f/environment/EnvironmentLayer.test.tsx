@@ -70,7 +70,7 @@ describe('<EnvironmentLayer> in the root world', () => {
     expect(compositors).toBe(1);
   });
 
-  it("leaves the renderer's mapping to the compositor, but installs the curve for a shared-world pass", async () => {
+  it("leaves the renderer's mapping and three's chunk to the compositor", async () => {
     const chunkBefore = THREE.ShaderChunk[TONEMAP_CHUNK];
     const { gl, unmount } = await mountLayer(
       'root',
@@ -78,7 +78,7 @@ describe('<EnvironmentLayer> in the root world', () => {
       { hasGlContext: true }
     );
     expect(gl.toneMapping).not.toBe(THREE.CustomToneMapping);
-    expect(THREE.ShaderChunk[TONEMAP_CHUNK]).not.toBe(chunkBefore);
+    expect(THREE.ShaderChunk[TONEMAP_CHUNK]).toBe(chunkBefore);
     await unmount();
   });
 
