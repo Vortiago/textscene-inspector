@@ -19,6 +19,11 @@ function entry(path: string, type: string, properties: Record<string, unknown> =
   return { path, type, properties };
 }
 
+const lamp = (path: string) => entry(path, 'PointLight2D');
+const sun = (path: string) => entry(path, 'DirectionalLight2D', { enabled: true });
+const suns = (prefix: string, count: number) =>
+  Array.from({ length: count }, (_unused, index) => sun(`${prefix}${index}`));
+
 /** The tree the entries name, under a `Root`. A path an entry does not name is a plain Node2D. */
 function treeOf(entries: readonly Entry[]) {
   const nodeAt = (name: string, type: string, properties: Record<string, unknown>): TscnNode =>
@@ -40,17 +45,13 @@ function treeOf(entries: readonly Entry[]) {
  * Godot keeps one light list per canvas, and a SubViewport owns a canvas of its own
  * (`viewport.cpp:5345`). The walk is one pass over the tree, split by the nearest SubViewport.
  */
-describe('canvasScopesOf, in the light lists', () => {
-  const lights = (entries: Entry[], canvas: string | null = null) =>
-    canvasScopesOf(treeOf(entries)).lights.get(canvas) ?? { positional: [], directional: [] };
+const lights = (entries: Entry[], canvas: string | null = null) =>
+  canvasScopesOf(treeOf(entries)).lights.get(canvas) ?? { positional: [], directional: [] };
 
+describe('canvasScopesOf, in the light lists', () => {
   it('lists a PointLight2D as positional and a DirectionalLight2D as directional, never both', () => {
     // Numbering a sun as positional would leave a hole the 2n / 2n+1 pairing spends for nothing.
-    const lists = lights([
-      entry('Root/Lamp', 'PointLight2D'),
-      entry('Root/Sun', 'DirectionalLight2D', { enabled: true }),
-      entry('Root/Sprite', 'Sprite2D'),
-    ]);
+    const lists = lights([lamp('Root/Lamp'), sun('Root/Sun'), entry('Root/Sprite', 'Sprite2D')]);
     expect(lists).toEqual({ positional: ['Root/Lamp'], directional: ['Root/Sun'] });
   });
 
@@ -63,21 +64,17 @@ describe('canvasScopesOf, in the light lists', () => {
   });
 
   it('lists the lights of the root canvas in preorder, positional and directional apart', () => {
-    const lists = lights([
-      entry('Root/Lamp', 'PointLight2D'),
-      entry('Root/Sun', 'DirectionalLight2D', { enabled: true }),
-      entry('Root/Mid/Lamp', 'PointLight2D'),
-    ]);
+    const lists = lights([lamp('Root/Lamp'), sun('Root/Sun'), lamp('Root/Mid/Lamp')]);
     expect(lists).toEqual({ positional: ['Root/Lamp', 'Root/Mid/Lamp'], directional: ['Root/Sun'] });
   });
 
   it('gives the lights below a SubViewport to its own canvas, not the root canvas', () => {
     const entries = [
-      entry('Root/Outer', 'PointLight2D'),
+      lamp('Root/Outer'),
       entry('Root/View', 'SubViewport'),
-      entry('Root/View/Inner', 'PointLight2D'),
-      entry('Root/View/Sun', 'DirectionalLight2D', { enabled: true }),
-      entry('Root/Late', 'PointLight2D'),
+      lamp('Root/View/Inner'),
+      sun('Root/View/Sun'),
+      lamp('Root/Late'),
     ];
     expect(lights(entries)).toEqual({ positional: ['Root/Outer', 'Root/Late'], directional: [] });
     expect(lights(entries, 'Root/View')).toEqual({
@@ -89,10 +86,10 @@ describe('canvasScopesOf, in the light lists', () => {
   it('keeps a nested SubViewport out of the canvas that holds it', () => {
     const entries = [
       entry('Root/View', 'SubViewport'),
-      entry('Root/View/Lamp', 'PointLight2D'),
+      lamp('Root/View/Lamp'),
       entry('Root/View/Inner', 'SubViewport'),
-      entry('Root/View/Inner/Lamp', 'PointLight2D'),
-      entry('Root/View/After', 'PointLight2D'),
+      lamp('Root/View/Inner/Lamp'),
+      lamp('Root/View/After'),
     ];
     expect(lights(entries, 'Root/View').positional).toEqual(['Root/View/Lamp', 'Root/View/After']);
     expect(lights(entries, 'Root/View/Inner').positional).toEqual(['Root/View/Inner/Lamp']);
@@ -102,18 +99,15 @@ describe('canvasScopesOf, in the light lists', () => {
     const lists = lights([
       entry('Root/Hidden', 'DirectionalLight2D', { enabled: true, visible: false }),
       entry('Root/Group', 'Node2D', { visible: false }),
-      entry('Root/Group/Inner', 'DirectionalLight2D', { enabled: true }),
+      sun('Root/Group/Inner'),
       entry('Root/Off', 'DirectionalLight2D', { enabled: false }),
-      entry('Root/Shown', 'DirectionalLight2D', { enabled: true }),
+      sun('Root/Shown'),
     ]);
     expect(lists.directional).toEqual(['Root/Shown']);
   });
 
   it('numbers a hidden positional light, since only a directional light is listed by visibility', () => {
-    const lists = lights([
-      entry('Root/Group', 'Node2D', { visible: false }),
-      entry('Root/Group/Lamp', 'PointLight2D'),
-    ]);
+    const lists = lights([entry('Root/Group', 'Node2D', { visible: false }), lamp('Root/Group/Lamp')]);
     expect(lists.positional).toEqual(['Root/Group/Lamp']);
   });
 
@@ -122,18 +116,13 @@ describe('canvasScopesOf, in the light lists', () => {
     const entries = [
       entry('Root/Group', 'Node2D', { visible: false }),
       entry('Root/Group/View', 'SubViewport'),
-      entry('Root/Group/View/Sun', 'DirectionalLight2D', { enabled: true }),
+      sun('Root/Group/View/Sun'),
     ];
     expect(lights(entries, 'Root/Group/View').directional).toEqual(['Root/Group/View/Sun']);
   });
 
   it('stops each directional list at MAX_2D_DIRECTIONAL_LIGHTS, per canvas', () => {
-    const names = Array.from({ length: 9 }, (_unused, index) => `S${index}`);
-    const entries = [
-      ...names.map((name) => entry(`Root/${name}`, 'DirectionalLight2D', { enabled: true })),
-      entry('Root/View', 'SubViewport'),
-      entry('Root/View/Sun', 'DirectionalLight2D', { enabled: true }),
-    ];
+    const entries = [...suns('Root/S', 9), entry('Root/View', 'SubViewport'), sun('Root/View/Sun')];
     expect(lights(entries).directional).toHaveLength(8);
     expect(lights(entries, 'Root/View').directional).toEqual(['Root/View/Sun']);
   });
@@ -149,7 +138,7 @@ describe('canvasScopesOf, at a CanvasLayer', () => {
   const scopes = canvasScopesOf(
     treeOf([
       entry('Root/Layer', 'CanvasLayer'),
-      entry('Root/Layer/Lamp', 'PointLight2D'),
+      lamp('Root/Layer/Lamp'),
       entry('Root/Layer/Tint', 'CanvasModulate', { color: tint }),
     ])
   );
@@ -160,5 +149,65 @@ describe('canvasScopesOf, at a CanvasLayer', () => {
 
   it('leaves the CanvasModulate below a CanvasLayer to the canvas of that layer', () => {
     expect(scopes.modulate).toBeNull();
+  });
+});
+
+/**
+ * Godot walks the canvases of a viewport in the order they attached (`renderer_viewport.cpp:441`):
+ * its own first, then each CanvasLayer in tree order. MIX against ADD does not commute.
+ */
+describe('canvasScopesOf, in the order of the lists', () => {
+  const layer = entry('Root/Layer', 'CanvasLayer');
+
+  it('lists the root canvas before a CanvasLayer that sits earlier in the tree', () => {
+    const { positional } = lights([layer, lamp('Root/Layer/Mix'), lamp('Root/Add')]);
+    expect(positional).toEqual(['Root/Add', 'Root/Layer/Mix']);
+  });
+
+  it('lists the CanvasLayers in tree order, not by layer index', () => {
+    const { positional } = lights([
+      entry('Root/High', 'CanvasLayer', { layer: 5 }),
+      lamp('Root/High/Add'),
+      entry('Root/Low', 'CanvasLayer', { layer: 1 }),
+      lamp('Root/Low/Mix'),
+    ]);
+    expect(positional).toEqual(['Root/High/Add', 'Root/Low/Mix']);
+  });
+
+  it('lists a nested CanvasLayer after the lights of the layer that holds it', () => {
+    const { positional } = lights([
+      entry('Root/Outer', 'CanvasLayer'),
+      entry('Root/Outer/Inner', 'CanvasLayer'),
+      lamp('Root/Outer/Inner/Deep'),
+      lamp('Root/Outer/Shallow'),
+    ]);
+    expect(positional).toEqual(['Root/Outer/Shallow', 'Root/Outer/Inner/Deep']);
+  });
+
+  it('lists a ParallaxBackground as a canvas of its own, as a CanvasLayer subclass', () => {
+    const { positional } = lights([
+      entry('Root/Back', 'ParallaxBackground'),
+      lamp('Root/Back/Mix'),
+      lamp('Root/Add'),
+    ]);
+    expect(positional).toEqual(['Root/Add', 'Root/Back/Mix']);
+  });
+
+  it('lists the directional lights of the root canvas first as well', () => {
+    const { directional } = lights([layer, sun('Root/Layer/Blue'), sun('Root/Sun')]);
+    expect(directional).toEqual(['Root/Sun', 'Root/Layer/Blue']);
+  });
+
+  // The gather stops at the eighth light with a `break` that leaves only the loop of the canvas it
+  // is in (`renderer_viewport.cpp:511`), so the next canvas lists its lights past the cap.
+  it('lists a CanvasLayer light past the eighth of the root canvas', () => {
+    const { directional } = lights([...suns('Root/S', 9), layer, sun('Root/Layer/Blue')]);
+    expect(directional).toHaveLength(9);
+    expect(directional.at(-1)).toBe('Root/Layer/Blue');
+  });
+
+  it('stops inside the canvas that reaches the eighth light', () => {
+    const entries = [...suns('Root/S', 5), layer, ...suns('Root/Layer/L', 6)];
+    expect(lights(entries).directional).toHaveLength(8);
   });
 });

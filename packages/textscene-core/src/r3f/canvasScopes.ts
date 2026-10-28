@@ -9,6 +9,7 @@ import { MAX_2D_DIRECTIONAL_LIGHTS } from '../godot/rendering/rendering.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import type { Rgba } from '../godot/math/math.js';
 import { perObject } from '../utils/perObject.js';
+import { isCanvasLayerType } from './canvasPaintOrder.js';
 import type { LiveTree } from './liveSceneTree.js';
 
 /**
@@ -43,8 +44,23 @@ function isListedDirectionalLight(node: TscnNode): boolean {
 /** The paths of the lights one viewport lists, each list in draw order. */
 export interface CanvasLightPaths {
   readonly positional: readonly string[];
-  /** At most `MAX_2D_DIRECTIONAL_LIGHTS` (`renderer_viewport.cpp:511`). */
+  /** Capped per canvas, not per list: see `gatherDirectional`. */
   readonly directional: readonly string[];
+}
+
+/** The lights of one canvas, in tree order. */
+interface CanvasLights {
+  readonly positional: string[];
+  readonly directional: string[];
+}
+
+function newCanvasLights(): CanvasLights {
+  return { positional: [], directional: [] };
+}
+
+/** Opens a canvas for the next CanvasLayer in `canvases`, and returns its index. */
+function attachCanvas(canvases: CanvasLights[]): number {
+  return canvases.push(newCanvasLights()) - 1;
 }
 
 export interface CanvasScopes {
@@ -70,32 +86,61 @@ interface CanvasScope {
    * parent as visible (`canvas_item.cpp:309-349`).
    */
   readonly isHidden: boolean;
-  /** Below a CanvasLayer, whose CanvasModulate tints the layer's canvas alone. */
-  readonly isInLayer: boolean;
+  /**
+   * The canvas the node draws on, as an index into its viewport's canvases: 0 is the viewport's own
+   * canvas, and each CanvasLayer below it takes the next index in preorder.
+   */
+  readonly canvas: number;
 }
 
-const OWN_CANVAS: CanvasScope = { viewportPath: null, isHidden: false, isInLayer: false };
+const OWN_CANVAS: CanvasScope = { viewportPath: null, isHidden: false, canvas: 0 };
+
+/**
+ * The directional lights a viewport lists, from the lights of each canvas in attach order. Godot stops
+ * at the eighth light with a `break` that leaves only the loop of the canvas it is in
+ * (`renderer_viewport.cpp:511`), so a later canvas lists all its lights past the cap.
+ * The canvases attach in this order: the viewport's own, then each CanvasLayer in tree order
+ * (`renderer_viewport.cpp:441`).
+ */
+function gatherDirectional(canvases: readonly CanvasLights[]): string[] {
+  const listed: string[] = [];
+  for (const { directional } of canvases) {
+    for (const path of directional) {
+      listed.push(path);
+      if (listed.length === MAX_2D_DIRECTIONAL_LIGHTS) break;
+    }
+  }
+  return listed;
+}
+
+function lightPathsOf(canvases: readonly CanvasLights[]): CanvasLightPaths {
+  return {
+    positional: canvases.flatMap((canvas) => canvas.positional),
+    directional: gatherDirectional(canvases),
+  };
+}
 
 function scopesOfCanvases(tree: LiveTree): CanvasScopes {
-  const lists = new Map<string | null, { positional: string[]; directional: string[] }>();
-  const listsOf = (viewportPath: string | null) => {
-    let list = lists.get(viewportPath);
-    if (!list) lists.set(viewportPath, (list = { positional: [], directional: [] }));
-    return list;
+  const canvasesByViewport = new Map<string | null, CanvasLights[]>();
+  const canvasesOf = (viewportPath: string | null) => {
+    let canvases = canvasesByViewport.get(viewportPath);
+    if (!canvases) canvasesByViewport.set(viewportPath, (canvases = [newCanvasLights()]));
+    return canvases;
   };
   let modulate: Rgba | null = null;
 
   tree.fold<CanvasScope, void>(OWN_CANVAS, ({ step, path }, scope, descend) => {
     const { node } = step;
-    const list = listsOf(scope.viewportPath);
-    if (isPositionalCanvasLight(node)) list.positional.push(path);
-    if (isListedDirectionalLight(node) && !scope.isHidden) list.directional.push(path);
+    const canvases = canvasesOf(scope.viewportPath);
+    const lights = canvases[scope.canvas]!;
+    if (isPositionalCanvasLight(node)) lights.positional.push(path);
+    if (isListedDirectionalLight(node) && !scope.isHidden) lights.directional.push(path);
     const { color } = node.properties as { color?: Rgba };
     if (
       node.type === 'CanvasModulate' &&
       color &&
       scope.viewportPath === null &&
-      !scope.isInLayer &&
+      scope.canvas === 0 &&
       !scope.isHidden &&
       isShownCanvasNode(node)
     ) {
@@ -103,14 +148,15 @@ function scopesOfCanvases(tree: LiveTree): CanvasScopes {
     }
 
     if (isViewportBoundary(node.type)) {
-      descend({ viewportPath: path, isHidden: false, isInLayer: false });
+      descend({ viewportPath: path, isHidden: false, canvas: 0 });
       return;
     }
     const inherited = isShownCanvasNode(node) ? scope : { ...scope, isHidden: true };
-    descend(node.type === 'CanvasLayer' ? { ...inherited, isInLayer: true } : inherited);
+    descend(isCanvasLayerType(node.type) ? { ...inherited, canvas: attachCanvas(canvases) } : inherited);
   });
-  for (const list of lists.values()) list.directional.splice(MAX_2D_DIRECTIONAL_LIGHTS);
-  return { lights: lists, modulate };
+  const lights = new Map<string | null, CanvasLightPaths>();
+  for (const [viewportPath, canvases] of canvasesByViewport) lights.set(viewportPath, lightPathsOf(canvases));
+  return { lights, modulate };
 }
 
 /**

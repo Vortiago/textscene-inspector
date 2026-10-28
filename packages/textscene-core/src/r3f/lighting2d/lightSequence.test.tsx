@@ -201,7 +201,7 @@ ${lamp('B')}`
 /**
  * Godot keeps directional lights on their own list (`renderer_viewport.cpp:491-514`): it holds only
  * lights `canvas_light_set_enabled` left on, which `Light2D::_update_light_visibility`
- * (`light_2d.cpp:59`) ties to `enabled` and visibility in the tree, and it stops at eight.
+ * (`light_2d.cpp:59`) ties to `enabled` and visibility in the tree, and it stops at eight per canvas.
  */
 describe('useDirectionalLightSlot', () => {
   function Read({ seen }: { seen: (number | null)[] }) {
@@ -261,6 +261,14 @@ ${sun('Inner', 'Group')}${sun('Shown')}`;
       names.map((name) => `Root/${name}`)
     );
     expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6, 7, null]);
+  });
+
+  it("gives a CanvasLayer's light a slot past the eighth, as the gather's break leaves one canvas only", async () => {
+    const names = Array.from({ length: 9 }, (_unused, index) => `S${index}`);
+    const layer = `[node name="Layer" type="CanvasLayer" parent="."]\n${sun('Blue', 'Layer')}`;
+    const scene = ROOT + names.map((name) => sun(name)).join('') + layer;
+    const seen = await slots(scene, ['Root/S8', 'Root/Layer/Blue']);
+    expect(seen).toEqual([null, 8]);
   });
 
   it("leaves a light inside a SubViewport off the main canvas's list, as Godot keeps one per viewport", async () => {

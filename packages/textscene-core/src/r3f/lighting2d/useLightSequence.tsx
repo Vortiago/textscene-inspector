@@ -15,11 +15,7 @@ import { canvasScopesOf, type CanvasLightPaths } from '../canvasScopes.js';
 interface CanvasLightLists {
   /** `path → sequence` over the positional lights. */
   readonly positional: ReadonlyMap<string, number>;
-  /**
-   * `path → slot` over the directional lights Godot lists, at most `MAX_2D_DIRECTIONAL_LIGHTS`
-   * (`renderer_viewport.cpp:511`).
-   * Null with no live tree to walk.
-   */
+  /** `path → slot` over the directional lights Godot lists. Null with no live tree to walk. */
   readonly directional: ReadonlyMap<string, number> | null;
 }
 
@@ -82,9 +78,9 @@ export function useLightSequence(): number | null {
 
 /**
  * This DirectionalLight2D's slot in the directional list, its draw order among the directional
- * lights, or null when Godot leaves it off the list: disabled, hidden, or past the eighth
- * (`light_2d.cpp:59`, `renderer_viewport.cpp:492-513`). With no
- * live tree to walk, a light takes slot 0.
+ * lights, or null when Godot leaves it off the list: disabled, hidden, or past the cap of its canvas
+ * (`light_2d.cpp:59`, `renderer_viewport.cpp:492-513`). With no live tree to walk, a light takes
+ * slot 0.
  */
 export function useDirectionalLightSlot(): number | null {
   const { directional } = useContext(CanvasLightSequenceContext);

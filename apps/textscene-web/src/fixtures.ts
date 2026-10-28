@@ -528,6 +528,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Canvas Layer Cap",
+    "file": "unit-directionallight2d-canvas-layer-cap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directionallight2d Shadow Pcf5",
     "file": "unit-directionallight2d-shadow-pcf5.tscn",
     "category": "Other"
@@ -3121,6 +3126,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button",
     "file": "unit-button.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order",
+    "file": "unit-canvas-layer-light-order.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

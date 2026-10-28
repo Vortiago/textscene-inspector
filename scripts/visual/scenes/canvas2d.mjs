@@ -423,6 +423,17 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-2d-directional-shadow.tscn',
     mode: '2d',
   },
+  // A viewport lists its own canvas first, then each CanvasLayer, whatever the tree order, and a
+  // MIX light after an ADD light differs from the reverse. Godot 4.6.3 `--mode 2d`: (575,325)
+  // rgb(52,68,126), (500,325) rgb(112,105,125) and (650,325) rgb(37,58,126), as Add then Mix.
+  { name: 'canvas-layer-light-order', file: 'unit-canvas-layer-light-order.tscn', mode: '2d' },
+  // The eight-light cap leaves its canvas's loop only, so a CanvasLayer's sun is the ninth.
+  // Godot 4.6.3 `--mode 2d`: rgb(178,168,221) everywhere, 64 more blue than the eight alone.
+  {
+    name: 'directionallight2d-canvas-layer-cap',
+    file: 'unit-directionallight2d-canvas-layer-cap.tscn',
+    mode: '2d',
+  },
   // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
   // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
   // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.

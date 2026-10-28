@@ -89,6 +89,14 @@ Godot applies every light on an item's list in order, whatever each light's `ran
 (`renderer_canvas_render_rd.cpp:2365-2384`). The MIX light reaches the surface through mask 2 and
 the ADD light through mask 1. Where both reach, the MIX light mixes from what the ADD light left.
 
+## Light order across CanvasLayers
+
+<!-- compare: image=unit-canvas-layer-light-order status=done fixture=unit-canvas-layer-light-order.tscn -->
+
+A viewport gathers the lights of its own canvas first, then those of each CanvasLayer in tree order
+(`renderer_viewport.cpp:441`), whatever the layer index. The MIX light sits in a CanvasLayer ahead
+of the ADD light in the tree, and still mixes from what the ADD light left.
+
 ## Many cull masks on one item
 
 <!-- compare: image=unit-pointlight2d-many-masks status=done fixture=unit-pointlight2d-many-masks.tscn -->

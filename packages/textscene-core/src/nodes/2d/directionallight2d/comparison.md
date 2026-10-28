@@ -35,6 +35,13 @@ the viewport's camera. Every occluder casts on every lit item: the directional p
 `shadow_filter = PCF5` averages five taps across the parallel map. The taps keep one width
 along the whole band, unlike a point light's penumbra, which widens with distance.
 
+## The eight-light cap and CanvasLayers
+<!-- compare: image=unit-directionallight2d-canvas-layer-cap status=done fixture=unit-directionallight2d-canvas-layer-cap.tscn -->
+
+Godot stops listing at the eighth light with a `break` that leaves the loop of one canvas only
+(`renderer_viewport.cpp:511`). A CanvasLayer's light after eight root lights is the ninth, and it
+lights the world as the first eight do.
+
 ## Linting
 
 <!-- lint:begin DirectionalLight2D -->

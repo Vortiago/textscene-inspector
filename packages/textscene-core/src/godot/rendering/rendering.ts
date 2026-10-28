@@ -53,7 +53,7 @@ export const DEFAULT_CANVAS_LAYER = 1;
 
 /**
  * `RenderingServer::MAX_2D_DIRECTIONAL_LIGHTS` (`servers/rendering/rendering_server.h:109`): the
- * DirectionalLight2Ds one viewport applies. `renderer_viewport.cpp:511` stops the list there.
+ * count at which `renderer_viewport.cpp:511` stops listing the lights of one canvas.
  */
 export const MAX_2D_DIRECTIONAL_LIGHTS = 8;
 
