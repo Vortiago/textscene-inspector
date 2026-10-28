@@ -34,7 +34,7 @@ function Scene({ seen }: { seen: Seen }) {
     tintsShadow: false,
   });
   const meshRef = usePassMeshRef<THREE.Mesh>(ordinal, 'lit');
-  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, positionalLights: null }, false);
+  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, takenLights: null }, false);
   return <mesh ref={meshRef} />;
 }
 

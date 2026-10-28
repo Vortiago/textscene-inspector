@@ -22,20 +22,21 @@ export function useRegisterCanvasLight2D(
   const { registerLight } = useCanvasLighting2D();
   const [ordinal, setOrdinal] = useState<number | null>(null);
   const { itemCullMask, zMin, zMax, layerMin, layerMax } = declaration.reach;
-  const { sequence, shadowItemCullMask, tintsShadow } = declaration;
+  const { sequence, slot, shadowItemCullMask, tintsShadow } = declaration;
   useEffect(() => {
     if (!enabled) {
       setOrdinal(null);
       return undefined;
     }
-    const slot = registerLight({
+    const registration = registerLight({
       reach: { itemCullMask, zMin, zMax, layerMin, layerMax },
       sequence,
+      slot,
       shadowItemCullMask,
       tintsShadow,
     });
-    setOrdinal(slot.ordinal);
-    return slot.release;
+    setOrdinal(registration.ordinal);
+    return registration.release;
   }, [
     enabled,
     registerLight,
@@ -45,6 +46,7 @@ export function useRegisterCanvasLight2D(
     layerMin,
     layerMax,
     sequence,
+    slot,
     shadowItemCullMask,
     tintsShadow,
   ]);
@@ -53,34 +55,33 @@ export function useRegisterCanvasLight2D(
 
 /**
  * Declares a lit item at `placement`, by value. A Light Only item asks for the unmodulated buffer.
- * The cap hands `positionalLights` as a new array only when they change, so its identity serves.
+ * The cap hands `takenLights` as a new array only when they change, so its identity serves.
  */
 export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean): void {
   const { registerItem } = useCanvasLighting2D();
-  const { lightMask, z, layer, positionalLights } = placement;
+  const { lightMask, z, layer, takenLights } = placement;
   useEffect(
-    () => registerItem({ lightMask, z, layer, positionalLights }, lightOnly),
-    [registerItem, lightMask, z, layer, positionalLights, lightOnly]
+    () => registerItem({ lightMask, z, layer, takenLights }, lightOnly),
+    [registerItem, lightMask, z, layer, takenLights, lightOnly]
   );
 }
 
 /**
  * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
- * `take` receives the item's positional light list while more than 15 lights meet it or the render
- * budget drops one. The cap
- * records a new entry as handed nothing, so each release hands the item null to match: else an
- * item that moves to a placement that fits every light keeps the list of the old one.
+ * `take` receives the item's light list while more than 15 lights meet it or the render
+ * budget drops one. The cap records a new entry as handed nothing, so each release hands the item
+ * null to match: else an item that moves to a placement that fits every light keeps the old list.
  */
 export function useCapItemLights(
   placement: ItemPlacement,
   geometry: RefObject<THREE.Object3D | null>,
-  take: (positionalLights: readonly number[] | null) => void
+  take: (takenLights: readonly number[] | null) => void
 ): void {
   const { registerCappedItem } = useCanvasLighting2D();
   const { lightMask, z, layer } = placement;
   useEffect(() => {
     const release = registerCappedItem({
-      placement: { lightMask, z, layer, positionalLights: null },
+      placement: { lightMask, z, layer, takenLights: null },
       geometry,
       take,
     });

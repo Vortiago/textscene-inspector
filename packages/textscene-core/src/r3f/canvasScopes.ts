@@ -5,7 +5,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import { MAX_2D_DIRECTIONAL_LIGHTS, MAX_LIGHTS_PER_RENDER } from '../godot/rendering/rendering.js';
+import { MAX_2D_DIRECTIONAL_LIGHTS } from '../godot/rendering/rendering.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import type { Rgba } from '../godot/math/math.js';
 import { perObject } from '../utils/perObject.js';
@@ -45,7 +45,7 @@ function isListedDirectionalLight(node: TscnNode): boolean {
 export interface CanvasLightPaths {
   /** The render's budget applies later, by geometry (`itemLightCap.ts`). */
   readonly positional: readonly string[];
-  /** Capped per canvas by the eighth light (`gatherDirectional`), then by `MAX_LIGHTS_PER_RENDER`. */
+  /** Stopped per canvas at the eighth light (`gatherDirectional`). The render's budget applies later. */
   readonly directional: readonly string[];
 }
 
@@ -115,7 +115,7 @@ function gatherDirectional(canvases: readonly CanvasLights[]): string[] {
 function lightPathsOf(canvases: readonly CanvasLights[]): CanvasLightPaths {
   return {
     positional: canvases.flatMap((canvas) => canvas.positional),
-    directional: gatherDirectional(canvases).slice(0, MAX_LIGHTS_PER_RENDER),
+    directional: gatherDirectional(canvases),
   };
 }
 

@@ -9,6 +9,7 @@ import { computeWorldBoundingBox } from '../bounds.js';
 import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
 import type { LightCullKey } from './lightCullKey.js';
 import {
+  directionalListOrder,
   itemPositionalLights,
   MAX_POSITIONAL_LIGHTS_PER_ITEM,
   positionalListOrder,
@@ -28,13 +29,13 @@ export interface CappedItem {
   readonly placement: ItemPlacement;
   /** The item's own geometry, its child items left out, or null before it mounts. */
   readonly geometry: { readonly current: THREE.Object3D | null };
-  /** Hands the item its positional light list (`itemPositionalLights`), or null for its placement's. */
-  take(positionalLights: readonly number[] | null): void;
+  /** Hands the item its whole light list (`ItemPlacement.takenLights`), or null for its placement's. */
+  take(takenLights: readonly number[] | null): void;
 }
 
 interface ItemLightCap {
   readonly lights: ReadonlyMap<number, CanvasLightDeclaration>;
-  /** Each registered item, with the positional lights it was last handed, null until crowded. */
+  /** Each registered item, with the light list it was last handed, null until crowded. */
   readonly items: Map<CappedItem, readonly number[] | null>;
   readonly passMeshes: ReadonlySet<PassMesh>;
   /**
@@ -57,8 +58,8 @@ interface Crowding {
   readonly canExceedBudget: boolean;
   /** The declared positional lights in list order. */
   readonly positionalOrder: readonly number[];
-  /** The canvas layers each declared directional light is handed to. */
-  readonly directionalReaches: readonly LightCullKey[];
+  /** The declared directional lights in list order. */
+  readonly directionalOrder: readonly number[];
   /** The candidates at each placement, by `placementId`, or null where they all fit. */
   readonly candidates: Map<string, readonly number[] | null>;
 }
@@ -66,15 +67,13 @@ interface Crowding {
 /** An entry clears when its `lights` state is collected. */
 const crowdingOf = perObject((lights: ReadonlyMap<number, CanvasLightDeclaration>): Crowding => {
   const positionalOrder = positionalListOrder(lights, lights.keys());
-  const directionalReaches = [...lights.values()]
-    .filter((light) => light.sequence === null)
-    .map((light) => light.reach);
+  const directionalOrder = directionalListOrder(lights, lights.keys());
   const canExceedBudget = lights.size > MAX_LIGHTS_PER_RENDER;
   return {
     canDrop: canExceedBudget || positionalOrder.length > MAX_POSITIONAL_LIGHTS_PER_ITEM,
     canExceedBudget,
     positionalOrder,
-    directionalReaches,
+    directionalOrder,
     candidates: new Map(),
   };
 });
@@ -139,28 +138,39 @@ function reachesLayer({ layerMin, layerMax }: LightCullKey, layer: number): bool
   return layer >= layerMin && layer <= layerMax;
 }
 
+/** What one canvas layer lists of the render's budget. */
+interface LayerBudget {
+  /** The directional lights on the layer's list: the first `MAX_LIGHTS_PER_RENDER` in list order. */
+  readonly directional: readonly number[];
+  /** Whether the layer reaches more directional lights than the budget lists. */
+  readonly dropsDirectional: boolean;
+  /** The positional lights past what the directional lights leave of the budget. */
+  readonly overBudget: ReadonlySet<number>;
+}
+
 /**
- * The positional lights past the budget of the canvas on `layer`: Godot hands each canvas the lights
- * in range of its layer (`renderer_viewport.cpp:667-690`) and counts the render's lights over that
- * list, the directional ones first. Of the positional lights listed, those whose rect meets the
- * viewport, the ones after what the directional lights leave are dropped (`renderer_canvas_render_rd.cpp:592`).
+ * The budget of the canvas on `layer`. Godot lists the lights in range of the layer
+ * (`renderer_viewport.cpp:667-690`), the directional ones first, and drops the listed positional
+ * lights whose rect meets the viewport past what they leave (`renderer_canvas_render_rd.cpp:592`).
  */
-function overBudgetLights(
+function layerBudget(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
-  { positionalOrder, directionalReaches }: Crowding,
+  { positionalOrder, directionalOrder }: Crowding,
   rects: ReadonlyMap<number, Rect2>,
   layer: number
-): ReadonlySet<number> {
-  const directional = directionalReaches.filter((reach) => reachesLayer(reach, layer)).length;
-  const budget = Math.max(0, MAX_LIGHTS_PER_RENDER - directional);
-  if (rects.size <= budget) return NOTHING_OVER_BUDGET;
-  const over = new Set<number>();
+): LayerBudget {
+  const reached = (ordinal: number) => reachesLayer(lights.get(ordinal)!.reach, layer);
+  const reachedDirectional = directionalOrder.filter(reached);
+  const directional = reachedDirectional.slice(0, MAX_LIGHTS_PER_RENDER);
+  const dropsDirectional = directional.length < reachedDirectional.length;
+  const budget = MAX_LIGHTS_PER_RENDER - directional.length;
+  if (rects.size <= budget) return { directional, dropsDirectional, overBudget: NOTHING_OVER_BUDGET };
+  const overBudget = new Set<number>();
   let listed = 0;
   for (const ordinal of positionalOrder) {
-    const reaches = reachesLayer(lights.get(ordinal)!.reach, layer);
-    if (reaches && rects.has(ordinal) && ++listed > budget) over.add(ordinal);
+    if (rects.has(ordinal) && reached(ordinal) && ++listed > budget) overBudget.add(ordinal);
   }
-  return over;
+  return { directional, dropsDirectional, overBudget };
 }
 
 /** `candidates` without the lights over budget, filtered once per placement a frame. */
@@ -184,17 +194,16 @@ function sameLights(a: readonly number[] | null, b: readonly number[] | null): b
   return sameElements(a, b);
 }
 
-/** Hands each item its positional light list this frame, where it changed, and records its window. */
+/** Hands each item its light list this frame, where it changed, and records its window. */
 export function capItemLights({ lights, items, passMeshes, viewport, windows }: ItemLightCap): void {
   const crowding = crowdingOf(lights);
   let rects: Map<number, Rect2> | null = null;
-  const overBudgetByLayer = new Map<number, ReadonlySet<number>>();
+  const budgetByLayer = new Map<number, LayerBudget>();
   const filtered = new Map<readonly number[], readonly number[]>();
-  const overBudgetAt = (layer: number, lightRects: ReadonlyMap<number, Rect2>): ReadonlySet<number> => {
-    if (!crowding.canExceedBudget) return NOTHING_OVER_BUDGET;
-    let over = overBudgetByLayer.get(layer);
-    if (!over) overBudgetByLayer.set(layer, (over = overBudgetLights(lights, crowding, lightRects, layer)));
-    return over;
+  const budgetAt = (layer: number, lightRects: ReadonlyMap<number, Rect2>): LayerBudget => {
+    let budget = budgetByLayer.get(layer);
+    if (!budget) budgetByLayer.set(layer, (budget = layerBudget(lights, crowding, lightRects, layer)));
+    return budget;
   };
   windows.clear();
   for (const [item, handed] of items) {
@@ -202,11 +211,14 @@ export function capItemLights({ lights, items, passMeshes, viewport, windows }: 
     let list: readonly number[] | null = null;
     if (candidates) {
       rects ??= lightRects(passMeshes, viewport);
-      const overBudget = overBudgetAt(item.placement.layer, rects);
+      const { directional, dropsDirectional, overBudget } = budgetAt(item.placement.layer, rects);
       const taken = withinBudget(candidates, overBudget, filtered);
       const itemRect = worldRect(item.geometry.current);
-      list = itemPositionalLights(taken, itemRect, rects) ?? (taken === candidates ? null : taken);
-      if (list) recordWindow(windows, placementId({ ...item.placement, positionalLights: list }), itemRect);
+      const positional =
+        itemPositionalLights(taken, itemRect, rects) ??
+        (taken === candidates && !dropsDirectional ? null : taken);
+      list = positional && [...positional, ...directional];
+      if (list) recordWindow(windows, placementId({ ...item.placement, takenLights: list }), itemRect);
     }
     if (sameLights(list, handed)) continue;
     items.set(item, list);

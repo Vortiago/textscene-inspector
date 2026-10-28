@@ -23,6 +23,11 @@ export interface CanvasLightDeclaration {
    */
   readonly sequence: number | null;
   /**
+   * A directional light's place in the directional list, its draw order. Absent for a positional
+   * light. A directional light without one ranks by its ordinal.
+   */
+  readonly slot?: number;
+  /**
    * `Light2D.shadow_item_cull_mask` while a positional light casts a shadow, else null. A
    * directional light's shadow reaches every item, so it declares null.
    */
@@ -37,11 +42,11 @@ export interface ItemPlacement {
   readonly z: number;
   readonly layer: number;
   /**
-   * The ordinals of the positional lights on the item's list (`itemPositionalLights`) while more
-   * than 15 meet its rect or the render's budget drops one. Null otherwise: the item then reads its
-   * placement's list.
+   * The ordinals of the lights on the item's list, the positional ones from `itemPositionalLights`,
+   * while more than 15 meet its rect or the render's budget drops one. Null otherwise: the item then
+   * reads its placement's list.
    */
-  readonly positionalLights: readonly number[] | null;
+  readonly takenLights: readonly number[] | null;
 }
 
 /** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
@@ -61,6 +66,20 @@ export function positionalListOrder(
   return listed.map((light) => light.ordinal);
 }
 
+/** The directional lights among `ordinals`, in list order: slot, then ordinal. */
+export function directionalListOrder(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  ordinals: Iterable<number>
+): number[] {
+  const listed: { ordinal: number; slot: number }[] = [];
+  for (const ordinal of ordinals) {
+    const light = lights.get(ordinal);
+    if (light?.sequence === null) listed.push({ ordinal, slot: light.slot ?? 0 });
+  }
+  listed.sort((a, b) => a.slot - b.slot || a.ordinal - b.ordinal);
+  return listed.map((light) => light.ordinal);
+}
+
 /**
  * The positional lights that pass the cull test at `item`, in list order: sequence, then ordinal.
  * More than `MAX_POSITIONAL_LIGHTS_PER_ITEM` crowds the placement, so each item's rect picks.
@@ -69,11 +88,10 @@ export function positionalCandidates(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   item: ItemPlacement
 ): number[] {
-  const reaching = [...lights.keys()].filter((ordinal) => {
+  return positionalListOrder(lights, lights.keys()).filter((ordinal) => {
     const { reach } = lights.get(ordinal)!;
     return lightReachesItem(reach, item.lightMask, item.z, item.layer);
   });
-  return positionalListOrder(lights, reaching);
 }
 
 /**
@@ -108,10 +126,10 @@ export interface LightListEntry {
   readonly unshadowed: boolean;
 }
 
-/** Whether `light` is on `item`'s list: it passes the cull test and, if capped, the item takes it. */
+/** Whether `light` is on `item`'s list: it passes the cull test and, if the list is capped, the item takes it. */
 function itemTakesLight(light: CanvasLightDeclaration, ordinal: number, item: ItemPlacement): boolean {
   if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) return false;
-  return light.sequence === null || item.positionalLights === null || item.positionalLights.includes(ordinal);
+  return item.takenLights === null || item.takenLights.includes(ordinal);
 }
 
 /** The lights on `item`'s list, in ordinal order. */
@@ -135,7 +153,7 @@ function lightListId(list: readonly LightListEntry[]): string {
 
 /** A string for a placement, for use as a Map key. */
 export function placementId(item: ItemPlacement): string {
-  const positional = item.positionalLights?.join(',') ?? '*';
+  const positional = item.takenLights?.join(',') ?? '*';
   return `${item.lightMask}|${item.z}|${item.layer}|${positional}`;
 }
 

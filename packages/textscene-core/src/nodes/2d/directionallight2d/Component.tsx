@@ -30,8 +30,8 @@ import { Light2DBlendMode } from '../../../godot/scene/light2d';
 
 export function DirectionalLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as DirectionalLight2DProperties;
-  // Null while Godot leaves the light off its directional list: disabled, hidden, or past the cap
-  // (`light_2d.cpp:59`, `renderer_viewport.cpp:492-513`).
+  // Null while Godot leaves the light off its directional list: disabled, hidden, or past the
+  // eighth light of a canvas (`light_2d.cpp:59`, `renderer_viewport.cpp:492-513`).
   const slot = useDirectionalLightSlot();
   const lit = props.enabled && slot !== null;
 
@@ -41,6 +41,7 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
   const ordinal = useRegisterCanvasLight2D(lit, {
     reach: directionalLightCullKey(props.range_layer_min, props.range_layer_max),
     sequence: null,
+    slot: slot ?? undefined,
     shadowItemCullMask: null,
     tintsShadow,
   });

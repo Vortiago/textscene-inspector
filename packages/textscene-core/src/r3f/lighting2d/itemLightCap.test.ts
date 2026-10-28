@@ -19,7 +19,7 @@ const CAP = MAX_LIGHTS_PER_ITEM - 1;
 /** A viewport no light misses. */
 const EVERYWHERE: Rect2 = { x: -1e6, y: -1e6, w: 2e6, h: 2e6 };
 
-const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
 function positional(sequence: number | null): CanvasLightDeclaration {
   return { reach: DEFAULT_LIGHT_CULL_KEY, sequence, shadowItemCullMask: null, tintsShadow: false };
@@ -90,6 +90,13 @@ describe('capItemLights', () => {
     expect(lit.take).toHaveBeenCalledWith([...Array(CAP).keys()]);
   });
 
+  it("keeps the directional lights on the list it hands, which is the item's whole list", () => {
+    const lit = item();
+    const declared = lights(CAP + 2).set(1000, { ...positional(null), slot: 0 });
+    step(declared, [lit], litQuads(CAP + 2));
+    expect(lit.take).toHaveBeenCalledWith([...Array(CAP).keys(), 1000]);
+  });
+
   it('measures each item, so items at one placement can hold different lists', () => {
     // Every light sits over the left item, and none over the right one.
     const left = item(0);
@@ -133,7 +140,7 @@ describe('capItemLights', () => {
     const left = item(-4);
     const right = item(4);
     const { windows } = step(lights(CAP + 1), [left, right], litQuads(CAP + 1));
-    const capped = placementId({ ...PLACEMENT, positionalLights: [...Array(CAP).keys()] });
+    const capped = placementId({ ...PLACEMENT, takenLights: [...Array(CAP).keys()] });
     expect([...windows]).toEqual([[capped, { x: -9, y: -5, w: 18, h: 10 }]]);
   });
 
@@ -156,8 +163,11 @@ describe('capItemLights, past the lights of one render', () => {
   /** Light `n` of `count` sits at x = n * 100, so each light meets one item only. */
   const spread = (count: number) => litQuads(count, (ordinal) => ordinal * 100);
 
+  /** `count` directional lights, ordinal `1000 + n` at slot `n`. */
   const directional = (count: number): Map<number, CanvasLightDeclaration> =>
-    new Map(Array.from({ length: count }, (_, n) => [1000 + n, positional(null)]));
+    new Map(Array.from({ length: count }, (_, n) => [1000 + n, { ...positional(null), slot: n }]));
+
+  const directionalOrdinals = (count: number) => Array.from({ length: count }, (_, n) => 1000 + n);
 
   const kept = (count: number) => [...Array(count).keys()];
 
@@ -171,13 +181,24 @@ describe('capItemLights, past the lights of one render', () => {
     const lit = item();
     const declared = new Map([...lights(200), ...directional(100)]);
     step(declared, [lit], spread(200));
-    expect(lit.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER - 100));
+    expect(lit.take).toHaveBeenCalledWith([
+      ...kept(MAX_LIGHTS_PER_RENDER - 100),
+      ...directionalOrdinals(100),
+    ]);
   });
 
   it('takes no positional light while the directional lights fill the render', () => {
     const lit = item();
     step(new Map([...lights(5), ...directional(MAX_LIGHTS_PER_RENDER + 20)]), [lit], spread(5));
-    expect(lit.take).toHaveBeenCalledWith([]);
+    expect(lit.take).toHaveBeenCalledWith(directionalOrdinals(MAX_LIGHTS_PER_RENDER));
+  });
+
+  it('lists the first 256 directional lights by slot, not by ordinal', () => {
+    const lit = item();
+    const declared = directional(MAX_LIGHTS_PER_RENDER + 1);
+    declared.set(1000, { ...declared.get(1000)!, slot: MAX_LIGHTS_PER_RENDER + 1 });
+    step(declared, [lit], litQuads(0));
+    expect(lit.take).toHaveBeenCalledWith(directionalOrdinals(MAX_LIGHTS_PER_RENDER + 1).slice(1));
   });
 
   /** The same light, handed to the canvas layer `layer` alone (`range_layer_min` and `_max`). */
@@ -211,6 +232,23 @@ describe('capItemLights, past the lights of one render', () => {
     const declared = new Map([...onLayerOnly(lights(200), 0), ...onLayerOnly(directional(100), 1)]);
     step(declared, [world], spread(200));
     expect(world.take).not.toHaveBeenCalled();
+  });
+
+  // The 256 are counted over the lights in range of a layer, so a light a layer does not reach
+  // leaves room for the lights after it (`renderer_viewport.cpp:667-690`).
+  it('counts the directional lights of each canvas layer apart', () => {
+    const [world, hud] = [item(0, 0), item(0, 1)];
+    const others = [...onLayerOnly(directional(200), 1)];
+    const shared = [...directional(100)].map(([ordinal, light]): [number, CanvasLightDeclaration] => [
+      ordinal + 200,
+      { ...light, slot: light.slot! + 200, reach: { ...light.reach, layerMin: 0, layerMax: 1 } },
+    ]);
+    step(new Map([...others, ...shared]), [world, hud], litQuads(0));
+    expect(world.take).not.toHaveBeenCalled();
+    expect(hud.take).toHaveBeenCalledWith([
+      ...directionalOrdinals(200),
+      ...directionalOrdinals(300).slice(200, 256),
+    ]);
   });
 
   it('does not count a light whose rect misses the viewport', () => {

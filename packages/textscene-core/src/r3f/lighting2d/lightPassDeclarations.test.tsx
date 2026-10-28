@@ -97,6 +97,15 @@ describe('useRegisterCanvasLight2D', () => {
     expect(registerLight.mock.calls[1]![0].sequence).toBe(4);
   });
 
+  it('is withdrawn and remade when its slot changes, since the render budget ranks by it', () => {
+    const { Wrap, registerLight, release } = spyLighting();
+    const sun = { ...DECLARATION, sequence: null, slot: 0 };
+    const { rerender } = render(<Light declaration={sun} />, { wrapper: Wrap });
+    rerender(<Light declaration={{ ...sun, slot: 1 }} />);
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(registerLight.mock.calls[1]![0].slot).toBe(1);
+  });
+
   it('is withdrawn and remade when a value changes', () => {
     const { Wrap, registerLight, release } = spyLighting();
     const { rerender } = render(<Light declaration={DECLARATION} />, { wrapper: Wrap });
@@ -122,7 +131,7 @@ describe('useRegisterCanvasLight2D', () => {
 });
 
 describe('useRegisterLitItem', () => {
-  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
   it('survives a re-render at the same placement', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
@@ -152,14 +161,14 @@ describe('useRegisterLitItem', () => {
       wrapper: Wrap,
       initialProps: { placement: PLACEMENT },
     });
-    rerender({ placement: { ...PLACEMENT, positionalLights: [0] } });
+    rerender({ placement: { ...PLACEMENT, takenLights: [0] } });
     expect(releaseItem).toHaveBeenCalledTimes(1);
-    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, positionalLights: [0] }, false]);
+    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, takenLights: [0] }, false]);
   });
 });
 
 describe('useCapItemLights', () => {
-  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
   const geometry = { current: null };
   const take = () => {};
 
@@ -179,7 +188,7 @@ describe('useCapItemLights', () => {
 
   it('stays registered while the cap hands it positional lights', () => {
     const { registerCappedItem, releaseCapped, rerender } = mount();
-    rerender({ placement: { ...PLACEMENT, positionalLights: [0] } });
+    rerender({ placement: { ...PLACEMENT, takenLights: [0] } });
     expect(registerCappedItem).toHaveBeenCalledTimes(1);
     expect(releaseCapped).not.toHaveBeenCalled();
   });

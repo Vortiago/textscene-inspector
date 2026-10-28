@@ -269,7 +269,7 @@ export default [
   },
   {
     files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
-    // Open PRs change these files; their threads convert the caches.
+    // The exempt files keep their hand-built caches until each converts to perObject.
     ignores: ['**/*.test.ts', '**/*.test.tsx', ...MODULE_WEAKMAP_EXEMPT_FILES],
     rules: {
       'no-restricted-syntax': ['error', REGISTER_ALL_SPREAD, MODULE_WEAKMAP],

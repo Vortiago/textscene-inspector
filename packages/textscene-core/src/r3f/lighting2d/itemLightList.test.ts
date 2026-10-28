@@ -29,7 +29,7 @@ function light(overrides: Partial<CanvasLightDeclaration> = {}): CanvasLightDecl
   return { reach: key(), sequence: 0, shadowItemCullMask: null, tintsShadow: false, ...overrides };
 }
 
-const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
 function lights(...declarations: CanvasLightDeclaration[]): ReadonlyMap<number, CanvasLightDeclaration> {
   return new Map(declarations.map((declaration, ordinal) => [ordinal, declaration]));
@@ -98,14 +98,20 @@ describe('the light list of an item', () => {
 
 describe('the light list of an item under the per-item cap', () => {
   it('leaves out a positional light the item does not take', () => {
-    const list = listAt(lights(light(), light()), { ...ITEM, positionalLights: [1] });
+    const list = listAt(lights(light(), light()), { ...ITEM, takenLights: [1] });
     expect(list.map((entry) => entry.ordinal)).toEqual([1]);
   });
 
-  it('keeps a directional light, which the cap does not count', () => {
+  it('keeps a directional light the item takes, which the cap does not count', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    const list = listAt(lights(sun, light()), { ...ITEM, positionalLights: [] });
+    const list = listAt(lights(sun, light()), { ...ITEM, takenLights: [0] });
     expect(list.map((entry) => entry.ordinal)).toEqual([0]);
+  });
+
+  it('leaves out a directional light the item does not take', () => {
+    const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
+    const list = listAt(lights(sun, light()), { ...ITEM, takenLights: [1] });
+    expect(list.map((entry) => entry.ordinal)).toEqual([1]);
   });
 });
 
@@ -120,7 +126,7 @@ const OVER_ITEM: Rect2 = { x: -5, y: -5, w: 10, h: 10 };
 const PAST_ITEM: Rect2 = { x: 20, y: 20, w: 10, h: 10 };
 
 /** `count` positional lights in tree order, ordinal `n` at sequence `n`. */
-function positionalLights(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
+function positionalLightsOf(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
   return lights(...Array.from({ length: count }, (_, sequence) => light({ sequence })));
 }
 
@@ -130,7 +136,7 @@ function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, Re
 
 describe('positionalCandidates', () => {
   it('lists every positional light that reaches the placement, past the cap too', () => {
-    expect(positionalCandidates(positionalLights(CAP + 1), ITEM)).toHaveLength(CAP + 1);
+    expect(positionalCandidates(positionalLightsOf(CAP + 1), ITEM)).toHaveLength(CAP + 1);
   });
 
   it('orders by sequence, not by ordinal', () => {
@@ -201,13 +207,13 @@ describe('itemPositionalLights', () => {
 
 describe('placementId', () => {
   it('separates two placements that take different positional lights', () => {
-    expect(placementId({ ...ITEM, positionalLights: [0, 1] })).not.toBe(
-      placementId({ ...ITEM, positionalLights: [0] })
+    expect(placementId({ ...ITEM, takenLights: [0, 1] })).not.toBe(
+      placementId({ ...ITEM, takenLights: [0] })
     );
   });
 
   it('separates a capped placement from an uncapped one', () => {
-    expect(placementId({ ...ITEM, positionalLights: [] })).not.toBe(placementId(ITEM));
+    expect(placementId({ ...ITEM, takenLights: [] })).not.toBe(placementId(ITEM));
   });
 });
 

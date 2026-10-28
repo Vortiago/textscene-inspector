@@ -82,9 +82,9 @@ export function useCanvasItemLighting(
   // so a list has one only while a Light Only item reads it. Past 15 positional lights on its rect, or
   // past the render's budget, the item drops the later ones from its list.
   const geometryRef = useRef<THREE.Object3D | null>(null);
-  const [positionalLights, setPositionalLights] = useState<readonly number[] | null>(null);
-  const placement = { lightMask, z: itemZ, layer: canvasLayer, positionalLights };
-  useCapItemLights(placement, geometryRef, setPositionalLights);
+  const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
+  const placement = { lightMask, z: itemZ, layer: canvasLayer, takenLights };
+  useCapItemLights(placement, geometryRef, setTakenLights);
   useRegisterLitItem(placement, lightOnly);
   const list = lists.get(placementId(placement));
 
