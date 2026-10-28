@@ -318,7 +318,7 @@ describe('buildTextMeshSurface font variation', () => {
   const EMBOLDENED = { embolden: 0.6 };
   const SHEARED = { skew: 0.3 };
   const faceOf = (variation: GlyphVariation): TextMeshFace =>
-    withVariation(OPEN_SANS_FONT_METRICS, { ...variation, outlines });
+    withOutlines(withVariation(OPEN_SANS_FONT_METRICS, variation), outlines);
   const maxX = (variation: GlyphVariation): number => {
     const properties = decodeTextMesh({
       text: '"H"',
