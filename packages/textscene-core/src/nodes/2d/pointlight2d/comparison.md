@@ -129,6 +129,15 @@ meets the item's rect, and only while its rect meets the viewport. The green lig
 the left panel, so the left panel fills its 15 lights before the red light. The right panel
 takes the red light.
 
+## At most 256 lights in one render
+
+<!-- compare: image=unit-canvas-light-render-budget status=done fixture=unit-canvas-light-render-budget.tscn -->
+
+One render takes 256 lights: the directional lights first, then the positional lights in what is
+left, in list order (`renderer_canvas_render_rd.cpp:525-530`, `:592-596`). A light past it draws
+nothing and does not count toward the 15 an item takes. A light whose rect misses the viewport is
+not listed. Here 100 directional lights leave room for the first 156 positional lights.
+
 ## Linting
 
 <!-- lint:begin PointLight2D -->

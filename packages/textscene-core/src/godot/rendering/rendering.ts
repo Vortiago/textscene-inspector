@@ -58,6 +58,13 @@ export const DEFAULT_CANVAS_LAYER = 1;
 export const MAX_2D_DIRECTIONAL_LIGHTS = 8;
 
 /**
+ * `RendererCanvasRenderRD::MAX_LIGHTS_PER_RENDER` (`renderer_rd/renderer_canvas_render_rd.h:108`): the
+ * lights one render takes, the directional ones first (`renderer_canvas_render_rd.cpp:525`), then the
+ * positional ones in the rest (`:592`). A light past it draws nothing.
+ */
+export const MAX_LIGHTS_PER_RENDER = 256;
+
+/**
  * `RendererCanvasRenderRD::MAX_LIGHTS_PER_ITEM` (`renderer_rd/renderer_canvas_render_rd.h:107`).
  * The per-item loop (`renderer_canvas_render_rd.cpp:2380`) stops one short of it, so an item takes
  * at most 15 positional lights.

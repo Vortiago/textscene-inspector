@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
+import { MAX_LIGHTS_PER_ITEM, MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import type { CanvasLightDeclaration, ItemPlacement } from './itemLightList';
 import type { PassMesh } from './lightAccumulationPass';
@@ -143,6 +143,54 @@ describe('capItemLights', () => {
     const lit = item(5);
     const quads = litQuads(CAP + 1, (ordinal) => (ordinal === 0 ? 12 : 0));
     step(lights(CAP + 1), [lit], quads, { x: -5, y: -5, w: 10, h: 10 });
+    expect(lit.take).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * One render takes `MAX_LIGHTS_PER_RENDER` lights, the directional ones first and the positional ones
+ * in what is left, in list order. A light past it is off every item's list
+ * (`renderer_canvas_render_rd.cpp:525-530, 592-596`, `:2369`), and it does not count against the 15 an item takes.
+ */
+describe('capItemLights, past the lights of one render', () => {
+  /** Light `n` of `count` sits at x = n * 100, so each light meets one item only. */
+  const spread = (count: number) => litQuads(count, (ordinal) => ordinal * 100);
+
+  const directional = (count: number): Map<number, CanvasLightDeclaration> =>
+    new Map(
+      Array.from({ length: count }, (_, n) => [
+        1000 + n,
+        { reach: DEFAULT_LIGHT_CULL_KEY, sequence: null, shadowItemCullMask: null, tintsShadow: false },
+      ])
+    );
+
+  const kept = (count: number) => [...Array(count).keys()];
+
+  it('takes the first 256 positional lights by sequence, and no item lists the others', () => {
+    const first = item(0);
+    const last = item(MAX_LIGHTS_PER_RENDER * 100);
+    step(lights(MAX_LIGHTS_PER_RENDER + 1), [first, last], spread(MAX_LIGHTS_PER_RENDER + 1));
+    expect(last.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER));
+    expect(first.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER));
+  });
+
+  it('leaves the positional lights what the directional lights leave', () => {
+    const lit = item();
+    const declared = new Map([...lights(200), ...directional(100)]);
+    step(declared, [lit], spread(200));
+    expect(lit.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER - 100));
+  });
+
+  it('takes no positional light while the directional lights fill the render', () => {
+    const lit = item();
+    step(new Map([...lights(5), ...directional(MAX_LIGHTS_PER_RENDER + 20)]), [lit], spread(5));
+    expect(lit.take).toHaveBeenCalledWith([]);
+  });
+
+  it('does not count a light whose rect misses the viewport', () => {
+    const lit = item();
+    const inView: Rect2 = { x: -50, y: -50, w: 200 * 100, h: 100 };
+    step(lights(MAX_LIGHTS_PER_RENDER + 1), [lit], spread(MAX_LIGHTS_PER_RENDER + 1), inView);
     expect(lit.take).not.toHaveBeenCalled();
   });
 });

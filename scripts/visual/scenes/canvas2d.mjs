@@ -442,6 +442,25 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-directionallight2d-canvas-layer-cap.tscn',
     mode: '2d',
   },
+  // One render takes 256 lights, the directional ones first and the positional ones in the rest, in
+  // list order. Markers at list positions 0 to 155 are lit and 156 up are not. Godot 4.6.3
+  // `--mode 2d`: rgb(100,100,100) at (20..260,120) and (500,120), rgb(51,51,51) at (320..440,120).
+  // Each light is one full-screen pass here, so the capture waits longer.
+  {
+    name: 'canvas-light-render-budget',
+    file: 'unit-canvas-light-render-budget.tscn',
+    mode: '2d',
+    screenshotTimeout: 300000,
+  },
+  // The 256 cap alone, on directional lights: the first red marker (0.05, 0.1, 0.2) and the first two
+  // green ones (0.05, 0.1) light, the 257th and later do not. Godot 4.6.3 `--mode 2d`: rgb(69,59,51)
+  // at (500,20).
+  {
+    name: 'directionallight2d-render-budget',
+    file: 'unit-directionallight2d-render-budget.tscn',
+    mode: '2d',
+    screenshotTimeout: 300000,
+  },
   // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
   // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
   // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.

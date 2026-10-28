@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { computeWorldBoundingBox } from '../bounds.js';
+import { MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering.js';
 import {
   itemPositionalLights,
   MAX_POSITIONAL_LIGHTS_PER_ITEM,
@@ -50,6 +51,13 @@ interface ItemLightCap {
 interface Crowding {
   /** Whether more positional lights are declared than an item takes, so any placement can crowd. */
   readonly canCrowd: boolean;
+  /**
+   * How many positional lights one render takes: what the directional lights leave of
+   * `MAX_LIGHTS_PER_RENDER`. The lights that meet the viewport past it are on no item's list.
+   */
+  readonly positionalBudget: number;
+  /** Whether more positional lights are declared than the budget, so some may drop. */
+  readonly canExceedBudget: boolean;
   /** The candidates at each placement, by `placementId`, or null where they all fit. */
   readonly candidates: Map<string, readonly number[] | null>;
 }
@@ -57,10 +65,16 @@ interface Crowding {
 /** An entry clears when its `lights` state is collected. */
 const crowdingOf = perObject((lights: ReadonlyMap<number, CanvasLightDeclaration>): Crowding => {
   const positional = [...lights.values()].filter((light) => light.sequence !== null).length;
-  return { canCrowd: positional > MAX_POSITIONAL_LIGHTS_PER_ITEM, candidates: new Map() };
+  const positionalBudget = Math.max(0, MAX_LIGHTS_PER_RENDER - (lights.size - positional));
+  return {
+    canCrowd: positional > MAX_POSITIONAL_LIGHTS_PER_ITEM,
+    positionalBudget,
+    canExceedBudget: positional > positionalBudget,
+    candidates: new Map(),
+  };
 });
 
-/** The candidates at `placement` while they crowd it, else null. */
+/** The candidates at `placement` while they crowd it or the render's budget can drop one, else null. */
 function crowdedCandidates(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   crowding: Crowding,
@@ -70,7 +84,7 @@ function crowdedCandidates(
   let candidates = crowding.candidates.get(id);
   if (candidates === undefined) {
     const all = positionalCandidates(lights, placement);
-    candidates = all.length > MAX_POSITIONAL_LIGHTS_PER_ITEM ? all : null;
+    candidates = all.length > MAX_POSITIONAL_LIGHTS_PER_ITEM || crowding.canExceedBudget ? all : null;
     crowding.candidates.set(id, candidates);
   }
   return candidates;
@@ -114,6 +128,26 @@ function lightRects(passMeshes: ReadonlySet<PassMesh>, viewport: Rect2): Map<num
   return rects;
 }
 
+const NO_LIGHTS: ReadonlySet<number> = new Set();
+
+/**
+ * The positional lights past the render's budget: of the lights Godot lists, those whose rect meets
+ * the viewport, the ones after the first `budget` in list order (`renderer_canvas_render_rd.cpp:592`).
+ */
+function overBudgetLights(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  rects: ReadonlyMap<number, Rect2>,
+  budget: number
+): ReadonlySet<number> {
+  const listed: { ordinal: number; sequence: number }[] = [];
+  for (const ordinal of rects.keys()) {
+    const sequence = lights.get(ordinal)?.sequence;
+    if (sequence != null) listed.push({ ordinal, sequence });
+  }
+  listed.sort((a, b) => a.sequence - b.sequence || a.ordinal - b.ordinal);
+  return new Set(listed.slice(budget).map((light) => light.ordinal));
+}
+
 function sameLights(a: readonly number[] | null, b: readonly number[] | null): boolean {
   if (a === null || b === null) return a === b;
   return sameElements(a, b);
@@ -122,15 +156,22 @@ function sameLights(a: readonly number[] | null, b: readonly number[] | null): b
 /** Hands each item its positional light list this frame, where it changed, and records its window. */
 export function capItemLights({ lights, items, passMeshes, viewport, windows }: ItemLightCap): void {
   const crowding = crowdingOf(lights);
+  const needsList = crowding.canCrowd || crowding.canExceedBudget;
   let rects: Map<number, Rect2> | null = null;
+  let overBudget: ReadonlySet<number> | null = null;
   windows.clear();
   for (const [item, handed] of items) {
-    const candidates = crowding.canCrowd ? crowdedCandidates(lights, crowding, item.placement) : null;
+    const candidates = needsList ? crowdedCandidates(lights, crowding, item.placement) : null;
     let list: readonly number[] | null = null;
     if (candidates) {
       rects ??= lightRects(passMeshes, viewport);
+      const dropped = (overBudget ??= crowding.canExceedBudget
+        ? overBudgetLights(lights, rects, crowding.positionalBudget)
+        : NO_LIGHTS);
+      const taken = dropped.size ? candidates.filter((ordinal) => !dropped.has(ordinal)) : candidates;
       const itemRect = worldRect(item.geometry.current);
-      list = itemPositionalLights(candidates, itemRect, rects);
+      list =
+        itemPositionalLights(taken, itemRect, rects) ?? (taken.length < candidates.length ? taken : null);
       if (list) recordWindow(windows, placementId({ ...item.placement, positionalLights: list }), itemRect);
     }
     if (sameLights(list, handed)) continue;

@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Light Render Budget",
+    "file": "unit-canvas-light-render-budget.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
     "category": "Other"
@@ -530,6 +535,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Directionallight2d Canvas Layer Cap",
     "file": "unit-directionallight2d-canvas-layer-cap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Render Budget",
+    "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
   },
   {
