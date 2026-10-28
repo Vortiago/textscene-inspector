@@ -159,7 +159,9 @@ describe('Control painter view conformance', () => {
     expect(launderedModulateLines('  return props.selfModulate;')).toEqual([]);
     expect(launderedModulateLines('  multiplyModulate(a, b);')).toEqual([]);
     expect(launderedModulateLines('  <Modulate2DContext.Provider value={WHITE_MODULATE}>')).toEqual([]);
-    expect(launderedModulateLines('  const canvasModulate = canvasModulateColor(n.children);')).toEqual([]);
+    expect(launderedModulateLines('  const canvasModulate = useCanvasModulateColor(n.children);')).toEqual(
+      []
+    );
     expect(launderedModulateLines(' * this node`s own `modulate` in prose is not a read')).toEqual([]);
     expect(launderedModulateLines('  const x = 1; // modulate lives on the walker')).toEqual([]);
     // No escape hatch: an exemption marker does not silence this one.

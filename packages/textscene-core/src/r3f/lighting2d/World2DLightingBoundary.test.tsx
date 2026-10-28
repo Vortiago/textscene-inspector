@@ -42,7 +42,7 @@ function occluder(object: THREE.Object3D): ShadowCaster {
 /** Reads the outer canvas's light pass, beside an occluder and a lit item of the outer canvas. */
 function Outer({ seen }: { seen: Seen }) {
   const [object] = useState(() => new THREE.Group());
-  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, positionalLights: null }, false);
+  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, takenLights: null }, false);
   const [caster] = useState(() => occluder(object));
   useShadowCaster(caster);
   seen.outerLighting = useCanvasLighting2D();

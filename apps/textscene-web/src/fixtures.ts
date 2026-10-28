@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Light Render Budget",
+    "file": "unit-canvas-light-render-budget.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
     "category": "Other"
@@ -525,6 +530,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Directional Shadow Splits",
     "file": "unit-directional-shadow-splits.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Canvas Layer Cap",
+    "file": "unit-directionallight2d-canvas-layer-cap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Render Budget",
+    "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
   },
   {
@@ -3160,6 +3175,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Canvas Layer Light Order By Tree",
+    "file": "unit-canvas-layer-light-order-by-tree.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order",
+    "file": "unit-canvas-layer-light-order.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Canvas Layer Modulate Scope",
     "file": "unit-canvas-layer-modulate-scope.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3983,6 +4008,16 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport 2d Directional Shadow",
+    "file": "unit-sub-viewport-2d-directional-shadow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 2d Light",
+    "file": "unit-sub-viewport-2d-light.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Sub Viewport Camera 2d Canvas Layer",
