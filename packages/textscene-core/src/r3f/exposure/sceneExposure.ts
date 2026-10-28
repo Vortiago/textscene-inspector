@@ -12,6 +12,7 @@ import { isAmbientLight } from '../ambientLight.js';
 import { sceneLights } from '../directionalShadow/lightLists.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { EMISSION_EXPOSURE } from './emissionExposure.js';
+import { scaleLightIntensities } from './scaleLightIntensities.js';
 
 /**
  * What a consumer draws for `exposure`, in place of what it draws for the exposure the scene holds.
@@ -103,13 +104,10 @@ export function drawnExposureRatio(scene: THREE.Scene): number {
 
 /** Scales the energy of each Light3D of `scene` by `ratio`: the flat ambient takes no exposure. */
 function scaleLights(scene: THREE.Scene, ratio: number): () => void {
-  const scaled = sceneLights(scene)
-    .filter(({ light }) => !isAmbientLight(light))
-    .map(({ light }) => ({ light, intensity: light.intensity }));
-  for (const { light, intensity } of scaled) light.intensity = intensity * ratio;
-  return () => {
-    for (const { light, intensity } of scaled) light.intensity = intensity;
-  };
+  const lights = sceneLights(scene)
+    .map(({ light }) => light)
+    .filter((light) => !isAmbientLight(light));
+  return scaleLightIntensities(lights, ratio);
 }
 
 /** Writes `factor` to the emission buffer for each render of `scene` until the returned function runs. */
