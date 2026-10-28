@@ -5,14 +5,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fontFile } from './sfntOutlines.testkit';
-import {
-  fontWork,
-  notifySceneFontSettled,
-  onSceneFontSettled,
-  peekSceneFontMetrics,
-  peekSettledSceneFontMetrics,
-  sceneFontSettleCount,
-} from './sceneFontLoader';
+import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
+import { fontWork, notifySceneFontSettled, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -373,5 +367,66 @@ describe('scene font in an environment with no font door', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );
+  });
+});
+
+/** A browser with a `FontFace` door and a 2D canvas that measures every glyph 500 design units wide. */
+function stubFontDoor() {
+  vi.stubGlobal(
+    'FontFace',
+    class {
+      load() {
+        return Promise.resolve(this);
+      }
+    }
+  );
+  vi.stubGlobal('document', {
+    fonts: { add: () => {} },
+    createElement: () => ({ getContext: () => ({ measureText: () => ({ width: 500 }) }) }),
+  });
+}
+
+describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canvas face follows', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  async function loaderWithFontDoor() {
+    vi.stubEnv('VITEST', 'false');
+    vi.resetModules();
+    stubFontDoor();
+    const { fontFile: freshFontFile, fixtureFontBytes } = await import('./sfntOutlines.testkit');
+    const mod = await import('./sceneFontLoader');
+    return { ...mod, ttf: () => freshFontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')) };
+  }
+
+  const emboldened = (base: FontResource): FontResource => ({
+    kind: 'variation',
+    baseFont: base,
+    properties: { variation_embolden: '1.2' },
+  });
+
+  it('answers null while the outlines load, then the face carrying them', async () => {
+    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const font = emboldened(ttf());
+
+    peek(font, 'Root/Bold');
+    await settleLoads();
+    expect(peek(font, 'Root/Bold')).toBeNull();
+
+    await vi.waitFor(() => expect(peek(font, 'Root/Bold')).not.toBeNull());
+    expect(peek(font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
+  });
+
+  it('settles a plain canvas face at once, with no outlines to wait for', async () => {
+    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const font = ttf();
+
+    peek(font, 'Root/Plain');
+    await settleLoads();
+
+    expect(peek(font, 'Root/Plain')?.outlines).toBeUndefined();
   });
 });

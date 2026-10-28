@@ -62,8 +62,7 @@ const MIPMAPPED_FILE: TscnInternalResource = {
 function renderMetrics(
   fontRef: string | undefined,
   files: Record<string, string> = {},
-  heldPaths: readonly string[] = [],
-  hasOutline = false
+  heldPaths: readonly string[] = []
 ) {
   const {
     ProjectSettingsProvider,
@@ -72,7 +71,7 @@ function renderMetrics(
     loaderServing,
     useLabel3DFont,
   } = modules;
-  return renderHook(() => useLabel3DFont(fontRef, hasOutline), {
+  return renderHook(() => useLabel3DFont(fontRef), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider
         loader={loaderServing({ 'res://project.godot': 'config_version=5\n', ...files }, heldPaths)}
@@ -119,25 +118,22 @@ describe('useLabel3DFont metrics', () => {
   it('takes the embolden of the label font over the bundled font', async () => {
     const { result } = renderMetrics('SubResource("own")');
 
-    await settle();
-
-    expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 });
+    // An emboldened face waits for the bundled font's bytes, which load as their own chunk.
+    await vi.waitFor(() => expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 }));
   });
 
   it('takes the embolden of the project default font when the label has no font', async () => {
     const { result } = renderMetrics(undefined, PROJECT_FONT_FILES);
 
-    await settle();
-
-    expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 2 });
+    // An emboldened face waits for the bundled font's bytes, which load as their own chunk.
+    await vi.waitFor(() => expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 2 }));
   });
 
   it('prefers the label font to the project default font', async () => {
     const { result } = renderMetrics('SubResource("own")', PROJECT_FONT_FILES);
 
-    await settle();
-
-    expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 });
+    // An emboldened face waits for the bundled font's bytes, which load as their own chunk.
+    await vi.waitFor(() => expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 }));
   });
 
   it('is undefined while the project font loads', async () => {
@@ -150,38 +146,27 @@ describe('useLabel3DFont metrics', () => {
 });
 
 describe('useLabel3DFont outlines', () => {
-  it('reads no outlines for a label without an outline', async () => {
-    const { result } = renderMetrics('SubResource("own")');
+  it('reads no outlines for a face that is neither emboldened nor sheared', async () => {
+    const { result } = renderMetrics(undefined);
 
     await settle();
 
-    expect(result.current?.outlines).toBeNull();
-  });
-
-  it('reads no outlines for an outlined label whose font is not emboldened', async () => {
-    const { result } = renderMetrics(undefined, {}, [], true);
-
-    await settle();
-
-    expect(result.current?.outlines).toBeNull();
+    expect(result.current?.metrics.outlines).toBeUndefined();
   });
 
   it.each([
     ['emboldened', 'own'],
     ['sheared', 'sheared'],
-  ])(
-    'is undefined, then holds the outlines of the bundled font, for a %s label with an outline',
-    async (_name, id) => {
-      const { result } = renderMetrics(`SubResource("${id}")`, {}, [], true);
+  ])('is undefined, then holds the outlines of the bundled font, for a %s label', async (_name, id) => {
+    const { result } = renderMetrics(`SubResource("${id}")`);
 
-      expect(result.current).toBeUndefined();
+    expect(result.current).toBeUndefined();
 
-      // The bundled font's bytes load as their own chunk, so a fixed count of ticks can end before they arrive.
-      await vi.waitFor(() =>
-        expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0)
-      );
-    }
-  );
+    // The bundled font's bytes load as their own chunk, so a fixed count of ticks can end before they arrive.
+    await vi.waitFor(() =>
+      expect(result.current?.metrics.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0)
+    );
+  });
 });
 
 const PROJECT_MIPMAPS = 'config_version=5\n\n[gui]\n\ntheme/default_font_generate_mipmaps=true\n';

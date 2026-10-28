@@ -6,6 +6,7 @@
  */
 
 import { perObject } from '../../../../utils/perObject';
+import type { SfntOutlines } from './sfntOutlines';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -42,6 +43,12 @@ export interface FontMetrics {
    * the baseline. Absent is 0, upright.
    */
   readonly skew?: number;
+  /**
+   * The glyph outlines that the text of an emboldened or sheared canvas face follows. Absent for
+   * a face that needs none. Null for a font whose outlines this previewer cannot read: its text
+   * stays on `fillText` and `strokeText`.
+   */
+  readonly outlines?: SfntOutlines | null;
 }
 
 /**
@@ -200,12 +207,14 @@ export function variationKey({ embolden = 0, skew = 0 }: GlyphVariation): string
 const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
 
 /**
- * `metrics` with a `FontVariation`'s `embolden` and `skew` set. The wrapper reads every other field
- * through the face, so a live getter stays live. With neither, it is the face itself.
+ * `metrics` with a `FontVariation`'s `embolden` and `skew` set, and the `outlines` its text follows.
+ * The wrapper reads every other field through the face, so a live getter stays live. With neither
+ * embolden nor skew, it is the face itself. One face has one set of outlines, so the first wrapper
+ * of a variation keeps the `outlines` it was made with.
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
-  { embolden = 0, skew = 0 }: GlyphVariation
+  { embolden = 0, skew = 0, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
   if (!isGlyphVaried({ embolden, skew })) return metrics;
   const byVariation = variationsOf(metrics);
@@ -214,7 +223,11 @@ export function withVariation<Metrics extends FontMetrics>(
   if (!wrapped)
     byVariation.set(
       key,
-      (wrapped = Object.create(metrics, { embolden: { value: embolden }, skew: { value: skew } }))
+      (wrapped = Object.create(metrics, {
+        embolden: { value: embolden },
+        skew: { value: skew },
+        ...(outlines !== undefined && { outlines: { value: outlines } }),
+      }))
     );
   return wrapped as Metrics;
 }

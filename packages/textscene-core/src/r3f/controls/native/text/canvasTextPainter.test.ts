@@ -145,6 +145,115 @@ describe('paintSceneFontCanvas — embolden', () => {
   });
 });
 
+describe('paintSceneFontCanvas — embolden fill from the grown contour', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const GROWN_TRIANGLE: GlyphContours = {
+    points: [
+      { x: 1, y: 0, tag: ContourPointTag.ON },
+      { x: 5, y: 0, tag: ContourPointTag.ON },
+      { x: 3, y: -6, tag: ContourPointTag.ON },
+    ],
+    contourEnds: [2],
+    isFillRight: true,
+  };
+
+  function outlinesStub() {
+    const glyphContours = vi.fn(() => GROWN_TRIANGLE);
+    return { outlines: { glyphIndex: () => 7, glyphContours } satisfies SfntOutlines, glyphContours };
+  }
+
+  /** Records every draw call of one fill: happy-dom has no 2D context. */
+  function paintFilledRecording(
+    layout: ReturnType<typeof layoutFor>,
+    skew: number,
+    outlines: SfntOutlines | null
+  ) {
+    const calls: { op: string; args: unknown[]; shear: number }[] = [];
+    let matrix = new DOMMatrix();
+    const saved: DOMMatrix[] = [];
+    const record =
+      (op: string) =>
+      (...args: unknown[]) =>
+        calls.push({ op, args, shear: matrix.c });
+    const ctx = {
+      lineWidth: 1,
+      save: () => saved.push(matrix),
+      restore: () => {
+        matrix = saved.pop()!;
+      },
+      transform: (a: number, b: number, c: number, d: number, e: number, f: number) => {
+        matrix = matrix.multiply(new DOMMatrix([a, b, c, d, e, f]));
+      },
+      fillText: record('fillText'),
+      strokeText: record('strokeText'),
+      beginPath: record('beginPath'),
+      moveTo: record('moveTo'),
+      lineTo: record('lineTo'),
+      closePath: record('closePath'),
+      fill: record('fill'),
+      stroke: record('stroke'),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew);
+    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, 0, outlines);
+    return { calls, canvasLayout };
+  }
+
+  // Chromium snaps the baseline of `fillText` to a whole pixel, so a fill at half the growth above
+  // the baseline lands a pixel off its own shift. FreeType fills the contour, which has no snap.
+  it('fills the grown outline of a bold glyph from its pen, in place of the text', () => {
+    const layout = boldLayoutFor('A', 1.2);
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls, canvasLayout } = paintFilledRecording(layout, 0, outlines);
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'fill',
+    ]);
+    expect(calls[1]!.args).toEqual([canvasLayout.offsetXPx + 1, baselineY]);
+  });
+
+  // A negative embolden shrinks the outline (`FT_Outline_Embolden`); a stroke of a negative width cannot.
+  it('fills the shrunk outline of a glyph with a negative embolden', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls } = paintFilledRecording(boldLayoutFor('A', -0.5), 0, outlines);
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: -0.5, skew: 0 });
+    expect(calls.at(-1)!.op).toBe('fill');
+  });
+
+  it('fills a bold and sheared glyph by one outline that carries both, under the identity transform', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls } = paintFilledRecording(boldLayoutFor('A', 1.2), 0.3, outlines);
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0.3 });
+    expect(calls.at(-1)!.op).toBe('fill');
+    expect(calls.every((call) => call.shear === 0)).toBe(true);
+  });
+
+  it('fills the text of a plain glyph, which has no grown outline to follow', () => {
+    const { outlines } = outlinesStub();
+    const { calls } = paintFilledRecording(layoutFor('A', 0), 0, outlines);
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+  });
+
+  it('fills the text of a sheared glyph in the sheared space, as a shear alone leaves the fill be', () => {
+    const { outlines } = outlinesStub();
+    const { calls } = paintFilledRecording(layoutFor('A', 0), 0.3, outlines);
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+  });
+});
+
 describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
   afterEach(() => vi.restoreAllMocks());
 

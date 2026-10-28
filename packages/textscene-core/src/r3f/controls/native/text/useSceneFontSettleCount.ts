@@ -4,7 +4,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { onSceneFontSettled, sceneFontSettleCount } from './sceneFontLoader';
+import { onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
 
 /**

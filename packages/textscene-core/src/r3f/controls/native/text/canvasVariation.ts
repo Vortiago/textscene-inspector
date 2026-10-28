@@ -3,11 +3,12 @@
  * the ring of an emboldened or sheared glyph. Godot emboldens the contour (`text_server_adv.cpp:1314`),
  * shears it (`:1318`), then strokes the result (`:1383`).
  */
-import type { GlyphVariation } from './fontMetrics';
+import { variationKey, type GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
 import { traceGlyphContours } from './glyphPath';
 import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
+import { perObject } from '../../../../utils/perObject';
 
 /** The largest outline growth over the glyphs of `layout`, px. 0 for a layout with no embolden. */
 export function maxEmboldenGrowthPx(layout: TextLayoutResult): number {
@@ -21,7 +22,8 @@ export function maxEmboldenGrowthPx(layout: TextLayoutResult): number {
 /**
  * Fills the glyph, then strokes it with a centred line of the growth's width, drawn at the
  * shift. Both cover the same ink as the emboldened outline. FreeType mitres the corners, as the
- * `miter` join does, so the caller sets it.
+ * `miter` join does, so the caller sets it. It serves a font with no outline to read: `fillText`
+ * snaps its baseline to a whole pixel, so the fill can sit up to half a pixel off its own stroke.
  */
 export function paintEmboldenedFill(
   ctx: CanvasRenderingContext2D,
@@ -37,6 +39,14 @@ export function paintEmboldenedFill(
   ctx.strokeText(char, x, y);
 }
 
+/**
+ * The contours read so far, by font, then by size and variation, then by glyph. A repaint at a new
+ * tint, such as a modulate animation, reads none again.
+ */
+const readContours = perObject(
+  (_outlines: SfntOutlines) => new Map<string, Map<number, GlyphContours | null>>()
+);
+
 /** The outline of `char` as the font variation leaves it, or null for a glyph the font has no outline for. */
 export function variedGlyphContours(
   outlines: SfntOutlines,
@@ -45,12 +55,31 @@ export function variedGlyphContours(
   variation: GlyphVariation
 ): GlyphContours | null {
   const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
-  return glyphIndex === 0 ? null : outlines.glyphContours(glyphIndex, fontSizePx, variation);
+  if (glyphIndex === 0) return null;
+  const byFace = readContours(outlines);
+  const faceKey = `${fontSizePx}/${variationKey(variation)}`;
+  let glyphs = byFace.get(faceKey);
+  if (!glyphs) byFace.set(faceKey, (glyphs = new Map()));
+  let contours = glyphs.get(glyphIndex);
+  if (contours === undefined)
+    glyphs.set(glyphIndex, (contours = outlines.glyphContours(glyphIndex, fontSizePx, variation)));
+  return contours;
 }
 
 /** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY), the MSDF path's per-vertex shear (TextRun.tsx's `dx`). */
 export function shearAboutBaseline(ctx: CanvasRenderingContext2D, skew: number, baselineY: number): void {
   ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
+}
+
+/** Starts a path of `contours` from the pen. */
+function traceContoursFromPen(
+  ctx: CanvasRenderingContext2D,
+  contours: GlyphContours,
+  penX: number,
+  baselineY: number
+): void {
+  ctx.beginPath();
+  traceGlyphContours(ctx, contours, penX, baselineY);
 }
 
 /**
@@ -64,9 +93,25 @@ export function strokeContours(
   penX: number,
   baselineY: number
 ): void {
-  ctx.beginPath();
-  traceGlyphContours(ctx, contours, penX, baselineY);
+  traceContoursFromPen(ctx, contours, penX, baselineY);
   ctx.stroke();
+}
+
+/**
+ * Fills `contours` from the pen, with the fill state of `ctx`. FreeType fills the grown contour
+ * where `fillText` snaps its baseline to a whole pixel, which leaves the fill off the stroke that
+ * follows the same contour. The caller draws under no shear transform, as for the stroke.
+ *
+ * @canonical Fills a glyph outline on a 2D context, from the pen
+ */
+export function fillContours(
+  ctx: CanvasRenderingContext2D,
+  contours: GlyphContours,
+  penX: number,
+  baselineY: number
+): void {
+  traceContoursFromPen(ctx, contours, penX, baselineY);
+  ctx.fill();
 }
 
 /** Strokes the glyph of a font with no outline for it as it stands, so a shear shears its width. */

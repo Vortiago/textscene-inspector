@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
-import { fontWork, sceneFontSettleCount } from './sceneFontLoader';
-import { peekSceneFontOutlines, peekVariedStrokeOutlines } from './sceneFontOutlines';
+import { fontWork, sceneFontSettleCount } from './settledChannel';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { peekGlyphOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
 import { fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
 
 const woffOfOpenSans = () =>
@@ -89,28 +91,37 @@ describe('peekSceneFontOutlines', () => {
   });
 });
 
-describe('peekVariedStrokeOutlines', () => {
-  it('answers null without an outline, so a plain label never loads outlines', () => {
+describe('peekGlyphOutlines', () => {
+  const canvasFace = createRuntimeFontMetrics({
+    scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+    measureWidthUnits: (text) => text.length * 500,
+    cssFontFamily: 'scene-font-test',
+  });
+
+  it('answers null for a face with no embolden and no skew, whose text follows the glyph as it is', () => {
     const font = woffOfOpenSans();
 
-    expect(peekVariedStrokeOutlines(font, { embolden: 1 }, false)).toBeNull();
+    expect(peekGlyphOutlines(font, canvasFace, {})).toBeNull();
+    expect(peekGlyphOutlines(font, canvasFace, { embolden: 0, skew: 0 })).toBeNull();
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
-  it('answers null for a face with no embolden and no skew, whose stroke follows the glyph as it is', () => {
-    expect(peekVariedStrokeOutlines(woffOfOpenSans(), {}, true)).toBeNull();
-    expect(peekVariedStrokeOutlines(woffOfOpenSans(), { embolden: 0, skew: 0 }, true)).toBeNull();
+  it('answers null for an atlas face, which has no contour to follow', () => {
+    const font = woffOfOpenSans();
+
+    expect(peekGlyphOutlines(font, OPEN_SANS_FONT_METRICS, { embolden: 1 })).toBeNull();
+    expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
   it.each([
     ['an emboldened', { embolden: 1 }],
     ['a sheared', { skew: 0.3 }],
-  ])('answers the outlines of the font once %s face has an outline', async (_, variation) => {
+  ])('answers the outlines of the font once %s canvas face has loaded them', async (_, variation) => {
     const font = woffOfOpenSans();
 
-    expect(peekVariedStrokeOutlines(font, variation, true)).toBeUndefined();
+    expect(peekGlyphOutlines(font, canvasFace, variation)).toBeUndefined();
 
     const outlines = await settledOutlines(font);
-    expect(peekVariedStrokeOutlines(font, variation, true)).toBe(outlines);
+    expect(peekGlyphOutlines(font, canvasFace, variation)).toBe(outlines);
   });
 });
