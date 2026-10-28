@@ -45,6 +45,7 @@ interface LightPlacement {
  * The split suns each scene's last fit placed. Written only by `fitSceneDirectionalShadows`, on
  * every render of the scene, so it holds the suns of the render in progress.
  */
+// eslint-disable-next-line no-restricted-syntax -- each render replaces the scene's suns, so it holds state, not a build cache
 const fittedSuns = new WeakMap<THREE.Object3D, readonly SplitSunLight[]>();
 const NO_SUNS: readonly SplitSunLight[] = [];
 

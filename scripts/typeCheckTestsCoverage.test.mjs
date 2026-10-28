@@ -5,35 +5,23 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, relative } from 'node:path';
+import { REPO_ROOT } from './repoRoot.mjs';
+import { workspacePackages } from './workspace.mjs';
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-
-/** Every workspace package directory, from the two workspace globs. */
-function workspacePackages() {
-  return ['packages', 'apps'].flatMap((group) =>
-    readdirSync(join(REPO_ROOT, group), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => join(group, entry.name))
-      .filter((rel) => existsSync(join(REPO_ROOT, rel, 'package.json')))
-  );
-}
-
-const scriptsOf = (rel) =>
-  JSON.parse(readFileSync(join(REPO_ROOT, rel, 'package.json'), 'utf8')).scripts ?? {};
+const scriptsOf = (dir) => JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).scripts ?? {};
 
 /** Packages shipping at least one test file, so a type-check of them means something. */
-function hasTests(rel) {
-  const walk = (dir) => {
-    if (!existsSync(dir)) return false;
-    return readdirSync(dir, { withFileTypes: true }).some((entry) => {
-      const child = join(dir, entry.name);
+function hasTests(dir) {
+  const walk = (folder) => {
+    if (!existsSync(folder)) return false;
+    return readdirSync(folder, { withFileTypes: true }).some((entry) => {
+      const child = join(folder, entry.name);
       if (entry.isDirectory()) return entry.name !== 'node_modules' && walk(child);
       return /\.test\.(ts|tsx|mts)$/.test(entry.name);
     });
   };
-  return walk(join(REPO_ROOT, rel, 'src'));
+  return walk(join(dir, 'src'));
 }
 
 describe('the recursive type-check:tests gate', () => {
@@ -44,7 +32,9 @@ describe('the recursive type-check:tests gate', () => {
   });
 
   it('is defined by every package that ships tests', () => {
-    const missing = packages.filter((rel) => !scriptsOf(rel)['type-check:tests']);
+    const missing = packages
+      .filter((dir) => !scriptsOf(dir)['type-check:tests'])
+      .map((dir) => relative(REPO_ROOT, dir));
     expect(
       missing,
       'pnpm -r skips a package that does not define the script, without a diagnostic, ' +

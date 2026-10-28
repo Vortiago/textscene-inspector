@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { sharedTexture } from '../sharedTexture.js';
+import { installedSlot } from '../sharedTexture.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 
 export const REFLECTION_PROBE_UNIFORMS = {
@@ -19,19 +19,13 @@ export const REFLECTION_PROBE_UNIFORMS = {
  * stays 0 (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds: the shown
  * scene's, or three's empty texture.
  */
-class AtlasSlot extends sharedTexture(THREE.DataArrayTexture) {}
-
-// After a dev server reloads this module, each value below is the one the earlier evaluation installed.
-export const atlasSlot = installedOr(
-  REFLECTION_PROBE_UNIFORMS.atlas,
-  THREE.DataArrayTexture,
-  () => new AtlasSlot()
-);
+export const atlasSlot = installedSlot(REFLECTION_PROBE_UNIFORMS.atlas, THREE.DataArrayTexture);
 
 /**
  * The shown probes' count, the atlas's border size and its last layer. Arrays, not scalars: three
  * caches a scalar uniform by its value (r186 `WebGLUniforms.js:163-173`), and `cloneUniforms` keeps a
- * typed array by reference, so every material reads these buffers.
+ * typed array by reference, so every material reads these buffers. After a dev server reloads this
+ * module, it is the buffer the earlier evaluation installed.
  */
 export const shownProbes = installedOr(
   REFLECTION_PROBE_UNIFORMS.probes,
