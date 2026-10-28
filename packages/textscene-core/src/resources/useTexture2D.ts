@@ -12,11 +12,13 @@ import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import {
+  findSubResource,
+  peelCanvasTextures,
   resolveExtResourcePath,
   resolveSubResourceRef,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver.js';
-import { isLocalToScene, viewportTextureHolders } from './textures/viewporttexture/localToScene.js';
+import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
 import { atlasTextureLayout } from './textures/atlastexture/decode.js';
 import { imageSize } from './formats/image/imagePixels.js';
@@ -171,39 +173,41 @@ function useTexture2DSlot(
 ): Texture2DSlot {
   // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
   // ref loses the window. A resource file may hold either, so its `[resource]` peels again.
-  const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
-  const slot = useParsedResourceSlot(unwrapped, externalResources, internalResources);
-  const slotRef = useMemo(
-    () => unwrapCanvasTextureRef(slot.ref, slot.internalResources),
+  const outer = useMemo(() => peelCanvasTextures(ref, internalResources), [ref, internalResources]);
+  const slot = useParsedResourceSlot(outer.ref, externalResources, internalResources);
+  const inner = useMemo(
+    () => peelCanvasTextures(slot.ref, slot.internalResources),
     [slot.ref, slot.internalResources]
   );
+  const slotRef = inner.ref;
   // An AtlasTexture windows the sheet it names, an ordinary Texture2D slot with the same unwrap.
   const atlas = useMemo(
     () => resolveAtlasTextureRef(slotRef, slot.internalResources),
     [slotRef, slot.internalResources]
   );
-  const sourceRef = useMemo(
-    () => (atlas ? unwrapCanvasTextureRef(atlas.texture.atlas, slot.internalResources) : slotRef),
-    [atlas, slot.internalResources, slotRef]
+  const sheet = useMemo(
+    () => (atlas ? peelCanvasTextures(atlas.texture.atlas, slot.internalResources) : null),
+    [atlas, slot.internalResources]
   );
+  const sourceRef = sheet ? sheet.ref : slotRef;
 
   // A ViewportTexture names a node, not a file, so it comes from the live registry. The hook runs
   // for every slot, as the rules of hooks ask, and idles on an undefined reference.
   const isViewport = isViewportTextureRef(sourceRef, slot.internalResources);
-  const holders = useMemo(
-    () =>
-      isViewport
-        ? viewportTextureHolders(ref, internalResources, slot.ref, slot.internalResources, atlas, sourceRef)
-        : [],
-    [isViewport, ref, internalResources, slot.ref, slot.internalResources, atlas, sourceRef]
-  );
   // Godot sets the ViewportTexture up only when every holder down to it is local to scene.
-  const isSetUp = isHeldLocally && holders.every(isLocalToScene);
-  const viewport = useViewportTextureSlot(
-    isViewport && isSetUp ? sourceRef : undefined,
-    slot.internalResources,
-    view
-  );
+  const isFile = slot.internalResources !== internalResources;
+  const isSetUp =
+    isViewport &&
+    isHeldLocally &&
+    [
+      ...outer.wrappers,
+      isFile ? resolveSubResourceRef(slot.ref, slot.internalResources) : undefined,
+      ...inner.wrappers,
+      atlas ? findSubResource(slot.internalResources, atlas.id) : undefined,
+      ...(sheet?.wrappers ?? []),
+      resolveSubResourceRef(sourceRef, slot.internalResources),
+    ].every((holder) => !holder || isLocalToScene(holder));
+  const viewport = useViewportTextureSlot(isSetUp ? sourceRef : undefined, slot.internalResources, view);
   const unconfigured = isViewport && !isSetUp ? unconfiguredViewportTexture() : null;
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
@@ -221,10 +225,7 @@ function useTexture2DSlot(
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = unconfigured ?? viewport.texture ?? procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
-  // The peel returns any other reference as it is, so a changed reference names a CanvasTexture.
-  const atlasSheet = atlas?.texture.atlas;
-  const namesCanvasTexture =
-    isPeeled(ref, unwrapped) || isPeeled(slot.ref, slotRef) || isPeeled(atlasSheet, sourceRef);
+  const namesCanvasTexture = [outer, inner, sheet].some((layer) => (layer?.wrappers.length ?? 0) > 0);
   const peeled = { atlas, atlasResources, source, namesCanvasTexture };
 
   if (!ref) return { ...peeled, result: NOTHING };
@@ -246,11 +247,6 @@ function useTexture2DSlot(
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
   const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
-}
-
-/** An empty reference peels to undefined too, but names nothing to peel. */
-function isPeeled(ref: string | null | undefined, peeled: string | undefined): boolean {
-  return !!ref && ref !== peeled;
 }
 
 /** Pixel dimensions of a Texture2D slot, as the `Vector2` the rect solver uses. */
