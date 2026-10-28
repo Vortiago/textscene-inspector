@@ -82,6 +82,24 @@ function meshOf(root: THREE.Object3D, name: string): THREE.Object3D {
   return found;
 }
 
+/** A full-rect ColorRect and a Polygon2D in a viewport wider than the largest texture. */
+const WIDE_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(20000, 100)
+
+[node name="Panel" type="ColorRect" parent="View"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Shape" type="Polygon2D" parent="View"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+`;
+
 describe('a SubViewport with 2D content and Controls', () => {
   // The Control painters load lazily; a loaded module lets one settled tick mount them.
   beforeAll(() => Promise.all([import('./ViewportControls'), import('./ControlsOverWorld')]));
@@ -101,6 +119,16 @@ describe('a SubViewport with 2D content and Controls', () => {
     expect(compareKeys(paintKey(meshOf(portal, 'Panel')), paintKey(meshOf(portal, 'Shape')))).toBeGreaterThan(
       0
     );
+  });
+
+  /**
+   * Godot lays Controls out by `size` (`Viewport::get_visible_rect`, `viewport.cpp:1202-1210`), and
+   * fails the texture allocation instead of shrinking `size` (`rendering_device.cpp:973`).
+   */
+  it('lays Controls out at the authored size when the target is capped', async () => {
+    const portal = await portalSceneOf(WIDE_SCENE);
+    const width = new THREE.Box3().setFromObject(meshOf(portal, 'Panel')).getSize(new THREE.Vector3()).x;
+    expect(width).toBe(20000);
   });
 });
 

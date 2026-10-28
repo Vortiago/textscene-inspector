@@ -17,7 +17,7 @@ import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
-import { viewportTargetSize } from './targetSize.js';
+import { viewportSize, viewportTargetSize } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate.js';
@@ -44,7 +44,9 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const properties = node.properties as SubViewportProperties;
   const { size, transparent_bg: transparentBg } = properties;
-  const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
+  const forcedRect = useViewportRect(path);
+  const { x: width, y: height } = viewportTargetSize(size, forcedRect);
+  const { x: layoutWidth, y: layoutHeight } = viewportSize(size, forcedRect);
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();
@@ -64,10 +66,10 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   );
   // The frame takes the 2D buffer's multisampling, so the target it copies into never multisamples.
   const target = useMultisampledTarget(0, createTarget);
-  const { camera, frame } = useCanvasPass(width, height, viewportMsaaMode(properties, '2d'));
+  const { camera, frame } = useCanvasPass(layoutWidth, layoutHeight, viewportMsaaMode(properties, '2d'));
 
   const canvasModulate = useCanvasModulateColor(node.children);
-  const controlsSize = useMemo(() => ({ x: width, y: height }), [width, height]);
+  const controlsSize = useMemo(() => ({ x: layoutWidth, y: layoutHeight }), [layoutWidth, layoutHeight]);
 
   const renderPass = useCallback(() => {
     renderToOffscreenTarget(gl, {

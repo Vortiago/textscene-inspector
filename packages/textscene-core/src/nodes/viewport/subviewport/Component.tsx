@@ -23,7 +23,7 @@ import { useInheritedRtl } from './useInheritedRtl';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
-import { viewportTargetSize } from './targetSize';
+import { viewportSize, viewportTargetSize } from './targetSize';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -72,20 +72,27 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
-  const targetSize = viewportTargetSize(properties.size, useViewportRect(path));
+  const forcedRect = useViewportRect(path);
+  const targetSize = viewportTargetSize(properties.size, forcedRect);
+  const authoredSize = viewportSize(properties.size, forcedRect);
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
+  // Godot lays Controls out by `size` (`viewport.cpp:1202-1210`); only the target is capped.
+  const layoutSize = useMemo(
+    () => ({ x: authoredSize.x, y: authoredSize.y }),
+    [authoredSize.x, authoredSize.y]
+  );
   const canvasModulate = useCanvasModulateColor(node.children);
   // The Controls of a 2D pass draw in its portal beside the world items, one tree-order draw. A 3D
   // pass draws them over its world, in a scene of their own (`OffscreenViewport`).
   const drawsControls = kind === '2d' && holdsControls;
   const contents = (
-    <ViewportSizeProvider size={size}>
+    <ViewportSizeProvider size={layoutSize}>
       <SubViewportSamplerScope properties={properties}>
         {children}
         {drawsControls ? (
           <PendingSuspense>
-            <MixedViewportControls path={path} nodes={node.children} size={size} />
+            <MixedViewportControls path={path} nodes={node.children} size={layoutSize} />
           </PendingSuspense>
         ) : null}
       </SubViewportSamplerScope>
@@ -102,6 +109,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
           node={node}
           path={path}
           size={size}
+          layoutSize={layoutSize}
           kind={kind}
           rendersInline={rendersInline}
           canvasModulate={canvasModulate}

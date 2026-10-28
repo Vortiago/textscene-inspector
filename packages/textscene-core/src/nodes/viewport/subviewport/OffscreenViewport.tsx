@@ -67,6 +67,8 @@ const ControlsOverWorld = lazy(() =>
 export interface OffscreenViewportProps extends NodeComponentProps {
   path: string;
   size: Vector2;
+  /** The viewport's `size`, which lays Controls out and frames the camera. `size` is the capped target. */
+  layoutSize: Vector2;
   kind: '2d' | '3d';
   rendersInline: boolean;
   /** The tint of this viewport's own canvas, where its light accumulation starts. */
@@ -84,6 +86,7 @@ export function OffscreenViewport({
   node,
   path,
   size,
+  layoutSize,
   kind,
   rendersInline,
   canvasModulate,
@@ -148,8 +151,8 @@ export function OffscreenViewport({
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
   const canvasMsaaMode = viewportMsaaMode(properties, '2d');
   const { camera: orthoCamera, frame } = useCanvasPass(
-    width,
-    height,
+    layoutSize.x,
+    layoutSize.y,
     kind === '2d' || drawsControlsOverWorld ? canvasMsaaMode : 0
   );
   // The scene the Controls of a 3D pass draw into, apart from the world's.
@@ -191,8 +194,8 @@ export function OffscreenViewport({
       applyOrthoFrame(
         orthoCamera,
         camera2d && tag
-          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), size)
-          : orthoFrameForSize(size)
+          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), layoutSize)
+          : orthoFrameForSize(layoutSize)
       );
       lightHost?.run.current?.();
     }
@@ -204,7 +207,7 @@ export function OffscreenViewport({
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect(size);
+    const aspect = viewportAspect(layoutSize);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
@@ -255,7 +258,7 @@ export function OffscreenViewport({
     mipmapBias,
     clearColor,
     transparentBg,
-    size,
+    layoutSize,
     controlsScene,
     renderControlsOverWorld,
   ]);
@@ -281,7 +284,12 @@ export function OffscreenViewport({
               <World2DLightingBoundary canvasModulate={canvasModulate}>
                 <SubViewportSamplerScope properties={properties}>
                   <PendingSuspense>
-                    <ControlsOverWorld path={path} nodes={node.children} size={size} world={target.texture} />
+                    <ControlsOverWorld
+                      path={path}
+                      nodes={node.children}
+                      size={layoutSize}
+                      world={target.texture}
+                    />
                   </PendingSuspense>
                 </SubViewportSamplerScope>
               </World2DLightingBoundary>
