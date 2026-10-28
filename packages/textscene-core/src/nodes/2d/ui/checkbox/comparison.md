@@ -15,18 +15,16 @@ previewer draws the theme's indicator icon and the label beside it.
 ## Linting
 
 <!-- lint:begin CheckBox -->
-
 Strict parsing format-checks the inherited set (13 inherited from Button, 10 inherited from BaseButton, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `CheckBox` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule                                                 | Reports                                   | Severity |
-| ---------------------------------------------------- | ----------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)              | `binary-resource-reference`               | info     |
-| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children`      | warning  |
-|                                                      | `canvasitem-ancestor-is-canvasgroup`      | warning  |
-| `valid-control-properties` (type-family match)       | `control-tooltip-ignored-by-mouse-filter` | warning  |
-|                                                      | `control-property-order`                  | warning  |
-| `valid-button-group` (type-family match)             | `button-group-without-toggle-mode`        | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
 `text`, `button_pressed`, `disabled` and `button_group` have no strict counterpart
