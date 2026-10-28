@@ -13,6 +13,8 @@ import {
   automaticSkinMatrices,
   BonePoses,
   newBone,
+  SkeletonRig,
+  skinMatricesUnder,
   type Bone,
   type BonePose,
   type PoseModifier,
@@ -427,3 +429,39 @@ function expectQuaternionClose(actual: Quaternion, expected: Quaternion): void {
   expect(actual.z).toBeCloseTo(expected.z, 6);
   expect(actual.w).toBeCloseTo(expected.w, 6);
 }
+
+describe('skinMatricesUnder: one BonePoses across frames', () => {
+  const posed = (x: number): PoseModifier => ({
+    influence: 1,
+    edit: (poses) => poses.setPosePosition(0, { x, y: 0.5, z: 0 }),
+  });
+
+  it('starts every frame from the file pose, so an edit of one frame does not reach the next', () => {
+    const poses = new BonePoses(CHAIN, false);
+
+    skinMatricesUnder(poses, [posed(3)]);
+
+    skinMatricesUnder(poses, []).forEach(expectIdentity);
+  });
+
+  it('answers what a new BonePoses answers for the same modifiers', () => {
+    const poses = new BonePoses(CHAIN, false);
+    skinMatricesUnder(poses, [quarterTurner(2)]);
+
+    expect(skinMatricesUnder(poses, [posed(1)])).toEqual(automaticSkinMatrices(CHAIN, false, [posed(1)]));
+  });
+});
+
+describe('SkeletonRig', () => {
+  it('finds the first bone of a name, and -1 for a name no bone carries', () => {
+    const rig = new SkeletonRig([bone('a', -1, [0, 0, 0]), bone('b', 0, [0, 0, 0]), bone('b', 0, [0, 1, 0])]);
+
+    expect([rig.findBone('b'), rig.findBone('nope')]).toEqual([1, -1]);
+  });
+
+  it('hands back the same taken-apart rest each time a bone asks', () => {
+    const rig = new SkeletonRig(CHAIN);
+
+    expect(rig.decomposedRest(1)).toBe(rig.decomposedRest(1));
+  });
+});

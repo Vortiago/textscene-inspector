@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { AnimatedPose } from '../../3d/skeleton3d/skeletonPose';
 import { boneTracksOf, sampleBonePoses, type BoneTrackSource } from './boneTracks';
 import type { GodotTrack } from './trackParser';
 
@@ -72,8 +73,11 @@ describe('boneTracksOf', () => {
 });
 
 describe('sampleBonePoses', () => {
-  const posesOf = (time: number, ...tracks: GodotTrack[]) =>
-    sampleBonePoses(boneTracksOf(sources(...tracks), ANIMATION), time);
+  const posesOf = (time: number, ...tracks: GodotTrack[]) => {
+    const poses = new Map<string, AnimatedPose>();
+    sampleBonePoses(boneTracksOf(sources(...tracks), ANIMATION), time, poses);
+    return poses;
+  };
 
   it('writes each sampled part to its bone, and leaves a part no track keys out of the pose', () => {
     const pose = posesOf(0.5, track({})).get(SKELETON)!.get('b1')!;
@@ -114,5 +118,19 @@ describe('sampleBonePoses', () => {
     const exact = track({ keys: [{ time: 0, transition: 1, value: [0.1, 0, 0] }] });
 
     expect(posesOf(0, exact).get(SKELETON)!.get('b1')!.position![0]!.x).toBe(Math.fround(0.1));
+  });
+
+  it('reuses the pose of a bone between samples, and hands each sample a new map for the skeleton', () => {
+    const tracks = boneTracksOf(sources(track({})), ANIMATION);
+    const first = new Map<string, AnimatedPose>();
+    const second = new Map<string, AnimatedPose>();
+
+    sampleBonePoses(tracks, 0, first);
+    const firstPose = first.get(SKELETON)!.get('b1');
+    sampleBonePoses(tracks, 1, second);
+
+    expect(second.get(SKELETON)).not.toBe(first.get(SKELETON));
+    expect(second.get(SKELETON)!.get('b1')).toBe(firstPose);
+    expect(firstPose!.position).toEqual([{ x: 2, y: 4, z: 6 }]);
   });
 });

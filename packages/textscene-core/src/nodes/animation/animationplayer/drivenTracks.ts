@@ -135,6 +135,6 @@ export function valuesPushedBy(clip: DrivenClip): PushedClip<readonly number[]> 
 export function bonesPushedBy(clip: DrivenClip): PushedClip<AnimatedPose> {
   return {
     name: clip.name,
-    sample: (time, out) => sampleBonePoses(clip.bones, time).forEach((pose, path) => out.set(path, pose)),
+    sample: (time, out) => sampleBonePoses(clip.bones, time, out),
   };
 }

@@ -22,6 +22,8 @@ import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
 import {
   animationPass,
   automaticSkinMatrices,
+  BonePoses,
+  skinMatricesUnder,
   type AnimatedPose,
   type PoseModifier,
 } from './skeletonPose.js';
@@ -205,6 +207,8 @@ function skinOf(skeleton: LiveLink, tree: LiveTree): BoundSkin {
 
 function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): BoundSkin {
   const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
+  // One pose editor for the skeleton: each frame starts it again from the file pose.
+  const poses = new BonePoses(bones, showRestOnly);
   let lastPose: AnimatedPose | undefined;
   let lastMatrices: readonly Transform3D[] = [];
   const warnUnknownBone = (name: string) =>
@@ -222,7 +226,7 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Boun
     matricesUnder: (pose) => {
       if (pose === lastPose) return lastMatrices;
       lastPose = pose;
-      lastMatrices = automaticSkinMatrices(bones, showRestOnly, [
+      lastMatrices = skinMatricesUnder(poses, [
         animationPass(pose, motionScale, warnUnknownBone),
         ...modifiers,
       ]);

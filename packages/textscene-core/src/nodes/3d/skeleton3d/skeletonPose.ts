@@ -79,12 +79,12 @@ export function animationPass(
     influence: 1,
     edit: (poses) => {
       animated.forEach((written, name) => {
-        const index = poses.findBone(name);
+        const index = poses.rig.findBone(name);
         if (index < 0) {
           onUnknownBone(name);
           return;
         }
-        const { origin, rotation, scale } = decomposedRest(poses.rest(index));
+        const { origin, rotation, rotationInverse, scale } = poses.rig.decomposedRest(index);
         if (written.position) {
           const scaled =
             motionScale === 1
@@ -92,15 +92,12 @@ export function animationPass(
               : written.position.map((position) => vector3Scaled(position, motionScale));
           poses.setPosePosition(index, summedOffsets(origin, scaled));
         }
-        if (written.rotation) poses.setPoseRotation(index, composedTurns(rotation, written.rotation));
+        if (written.rotation)
+          poses.setPoseRotation(index, composedTurns(rotation, rotationInverse, written.rotation));
         if (written.scale) poses.setPoseScale(index, summedOffsets(scale, written.scale));
       });
     },
   };
-}
-
-function decomposedRest(rest: Transform3D): { origin: Vector3; rotation: Quaternion; scale: Vector3 } {
-  return { origin: rest.origin, ...decomposeTransform3D(rest) };
 }
 
 /** `init + (value - init) * 1` for each track in turn, which is `t->loc += (loc - init) * blend`. */
@@ -109,8 +106,7 @@ function summedOffsets(init: Vector3, values: readonly Vector3[]): Vector3 {
 }
 
 /** `interpolate_via_rest(rotation, value, 1, init)` for each track in turn (`animation.cpp:5700-5707`). */
-function composedTurns(init: Quaternion, values: readonly Quaternion[]): Quaternion {
-  const initInverse = quaternionInverse(init);
+function composedTurns(init: Quaternion, initInverse: Quaternion, values: readonly Quaternion[]): Quaternion {
   return values.reduce(
     (rotation, value) =>
       normalizedQuaternion(
@@ -139,9 +135,71 @@ export function automaticSkinMatrices(
   showRestOnly: boolean,
   modifiers: readonly PoseModifier[] = []
 ): Transform3D[] {
-  const poses = new BonePoses(bones, showRestOnly);
+  return skinMatricesUnder(new BonePoses(bones, showRestOnly), modifiers);
+}
+
+/**
+ * {@link automaticSkinMatrices} on `poses`, which start again from the file pose. A caller that
+ * skins one skeleton every frame keeps its `BonePoses`, and with it the rig.
+ */
+export function skinMatricesUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): Transform3D[] {
+  poses.reset();
   for (const modifier of modifiers) runModifier(poses, modifier);
   return poses.skinMatrices();
+}
+
+/** The rest of a bone taken apart, which an animated part is measured from. */
+interface DecomposedRest {
+  origin: Vector3;
+  rotation: Quaternion;
+  rotationInverse: Quaternion;
+  scale: Vector3;
+}
+
+/**
+ * What the bones of a Skeleton3D fix for good, whatever the poses do: the order the parents come
+ * in, the global rests and their inverses, the bone names and the rests taken apart. The
+ * animation pass reads these every frame, so they are built once.
+ */
+export class SkeletonRig {
+  readonly order: number[];
+  /** The global rest of each bone. */
+  readonly globalRests: Transform3D[];
+  /** The inverse of each global rest. */
+  readonly inverseGlobalRests: Transform3D[];
+  private readonly boneIndexByName = new Map<string, number>();
+  /** Written only by `decomposedRest`, which fills an entry the first time a bone asks. */
+  private readonly decomposedRests: (DecomposedRest | undefined)[];
+
+  constructor(readonly bones: readonly Bone[]) {
+    this.order = boneOrder(bones);
+    this.globalRests = bones.map(identityTransform3D);
+    for (const index of this.order) {
+      const parent = parentOf(bones[index]!, bones.length);
+      this.globalRests[index] = standOn(parent < 0 ? null : this.globalRests[parent]!, bones[index]!.rest);
+    }
+    this.inverseGlobalRests = this.globalRests.map(affineInverseTransform3D);
+    // The first bone of a name wins, as `find_bone` does.
+    bones.forEach(({ name }, index) => {
+      if (!this.boneIndexByName.has(name)) this.boneIndexByName.set(name, index);
+    });
+    this.decomposedRests = bones.map(() => undefined);
+  }
+
+  /** `Skeleton3D::find_bone`: the first bone called `name`, else -1. */
+  findBone(name: string): number {
+    return this.boneIndexByName.get(name) ?? -1;
+  }
+
+  decomposedRest(index: number): DecomposedRest {
+    const kept = this.decomposedRests[index];
+    if (kept) return kept;
+    const { rest } = this.bones[index]!;
+    const { rotation, scale } = decomposeTransform3D(rest);
+    const decomposed = { origin: rest.origin, rotation, rotationInverse: quaternionInverse(rotation), scale };
+    this.decomposedRests[index] = decomposed;
+    return decomposed;
+  }
 }
 
 /**
@@ -172,17 +230,24 @@ function runModifier(poses: BonePoses, { influence, edit }: PoseModifier): void 
  */
 export class BonePoses {
   private readonly bones: Bone[];
-  private readonly order: number[];
-  /** Written only by `globals`; every setter clears it. */
-  private cache: { rests: Transform3D[]; poses: Transform3D[] } | undefined;
+  /** Written only by `globals`; every setter and `reset` clear it. */
+  private cache: Transform3D[] | undefined;
 
   constructor(
     bones: readonly Bone[],
-    private readonly showRestOnly: boolean
+    private readonly showRestOnly: boolean,
+    readonly rig = new SkeletonRig(bones)
   ) {
     // A copy of the list only: `write` replaces a bone and never changes one.
     this.bones = [...bones];
-    this.order = boneOrder(this.bones);
+  }
+
+  /** Puts every bone back to the pose of the file, so the next frame edits a pose as `new` would. */
+  reset(): void {
+    this.rig.bones.forEach((bone, index) => {
+      this.bones[index] = bone;
+    });
+    this.cache = undefined;
   }
 
   /** `Skeleton3D::get_bone_count`. */
@@ -192,7 +257,7 @@ export class BonePoses {
 
   /** `Skeleton3D::find_bone`: the first bone called `name`, else -1. */
   findBone(name: string): number {
-    return this.bones.findIndex((bone) => bone.name === name);
+    return this.rig.findBone(name);
   }
 
   /** `Skeleton3D::get_bone_parent`: the parent index, or -1 for none. */
@@ -214,7 +279,7 @@ export class BonePoses {
 
   /** `Skeleton3D::get_bone_global_pose`: the parents' poses under this one, rests where a bone is not posed. */
   globalPose(index: number): Transform3D {
-    return this.globals().poses[index] ?? identityTransform3D();
+    return this.globals()[index] ?? identityTransform3D();
   }
 
   /** `Skeleton3D::get_bone_pose_position`. */
@@ -271,8 +336,8 @@ export class BonePoses {
 
   /** The skin matrix of every bone: its global pose times the inverse of its global rest. */
   skinMatrices(): Transform3D[] {
-    const { rests, poses } = this.globals();
-    return poses.map((pose, i) => multiplyTransform3D(pose, affineInverseTransform3D(rests[i]!)));
+    const { inverseGlobalRests } = this.rig;
+    return this.globals().map((pose, i) => multiplyTransform3D(pose, inverseGlobalRests[i]!));
   }
 
   private write(index: number, change: Partial<Pick<Bone, 'position' | 'rotation' | 'scale'>>): void {
@@ -282,19 +347,17 @@ export class BonePoses {
     this.cache = undefined;
   }
 
-  private globals(): { rests: Transform3D[]; poses: Transform3D[] } {
+  private globals(): Transform3D[] {
     if (this.cache) return this.cache;
-    const rests = this.bones.map(identityTransform3D);
     const poses = this.bones.map(identityTransform3D);
-    for (const index of this.order) {
+    for (const index of this.rig.order) {
       const bone = this.bones[index]!;
       const parent = parentOf(bone, this.bones.length);
       const isPosed = bone.enabled && !this.showRestOnly;
-      rests[index] = standOn(parent < 0 ? null : rests[parent]!, bone.rest);
       poses[index] = standOn(parent < 0 ? null : poses[parent]!, isPosed ? poseOf(bone) : bone.rest);
     }
-    this.cache = { rests, poses };
-    return this.cache;
+    this.cache = poses;
+    return poses;
   }
 }
 
