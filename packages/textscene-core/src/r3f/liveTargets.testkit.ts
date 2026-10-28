@@ -3,7 +3,7 @@
  * a target whose renderer answers a readback.
  */
 import * as THREE from 'three';
-import { fillLiveTarget, publishLiveTargets } from './liveTargets';
+import { publishLiveTargets, refillLiveCopies } from './liveTargets';
 
 /** A renderer that records the target bound for each draw. */
 export function recordingRenderer() {
@@ -25,7 +25,7 @@ export function recordingRenderer() {
 /** The textures the pass of `target` fills after a render, in fill order. */
 export function copiesFilledFrom(target: THREE.Texture): (THREE.Texture | undefined)[] {
   const { gl, drawnInto } = recordingRenderer();
-  fillLiveTarget(target, gl);
+  refillLiveCopies(target, gl);
   return drawnInto.map((drawn) => drawn?.texture);
 }
 

@@ -134,15 +134,10 @@ function dropAlpha(data: Uint8Array | Uint8ClampedArray): void {
 
 /**
  * Refills every copy of `texture` that a reader holds, then the copies of each copy. The target's
- * pass calls it after each render. A copy no reader holds comes from a render React discarded, or
- * from a reader that has not committed yet and holds it before the next render.
+ * pass calls it after each render, inside its own offscreen draw. A copy no reader holds comes from
+ * a render React discarded, or from a reader that has not committed yet and holds it before the next
+ * render.
  */
-export function fillLiveTarget(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
-  if (liveTargetOf(texture).copies.size === 0) return;
-  drawOffscreen(gl, () => refillLiveCopies(texture, gl));
-}
-
-/** `fillLiveTarget` for a caller that already draws offscreen, as a pass that fills its views does. */
 export function refillLiveCopies(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
   fillCopies(texture, gl, (copy) => isHeld(copy.texture));
 }
