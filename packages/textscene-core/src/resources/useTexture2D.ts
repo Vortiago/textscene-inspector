@@ -33,6 +33,7 @@ import {
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
+import { isLiveTarget } from '../r3f/liveTargets.js';
 import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
 
 export interface Texture2DResult {
@@ -83,11 +84,13 @@ export function useTexture2D(
 
   // A loaded sheet's crop is cache-owned and pinned while mounted, like the procedural texture, and
   // a live target's is held. Keyed on the tables the atlas sits in, so a re-parse of the scene or of
-  // its resource file invalidates it.
+  // its resource file invalidates it, and on whether the sheet is live, which picks the crop.
   const { atlas, source, atlasResources } = slot;
+  const isLiveSheet = source !== null && isLiveTarget(source);
   const cropped = useMemo(
     () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
-    [atlas, source, atlasResources]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the resolver reads whether the sheet is live.
+    [atlas, source, atlasResources, isLiveSheet]
   );
   useProceduralTexturePins(cropped?.key ? [cropped.key] : []);
   useDisposeOnRelease(cropped?.key === null ? cropped.texture : null);

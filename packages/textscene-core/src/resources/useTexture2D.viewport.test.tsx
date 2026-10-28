@@ -11,10 +11,11 @@ import { parseTresFile } from '../parser/parsedResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { NodePathProvider } from '../r3f/contexts/NodePathContext';
-import { ViewportTextureProvider } from '../r3f/contexts/ViewportTextureContext';
+import { ViewportTextureProvider, usePublishViewportTexture } from '../r3f/contexts/ViewportTextureContext';
 import { ViewportPassProvider, useRegisterViewportPass } from '../r3f/contexts/ViewportPassRegistryContext';
 import { ViewportTexturePublisher, viewportEntry } from '../r3f/testing/ViewportTexturePublisher';
 import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
+import { publishLiveTargets } from '../r3f/liveTargets';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture';
 
@@ -56,23 +57,30 @@ const VIEWPORT_REF = 'SubResource("ViewportTexture_1")';
 const plain = createCanvasTarget(32, 32, 'plain view').texture;
 const decoding = createCanvasTarget(32, 32, 'decoding view').texture;
 
-/** A consumer at `Root/Consumer`, with the target published at `Root/SubViewport` unless told otherwise. */
-function wrapper({ isPublished = true, fake = createFakeResourceLoader() } = {}) {
+const ENTRY = viewportEntry(
+  plain,
+  { x: 32, y: 32 },
+  { decoding: { texture: decoding, retain: () => () => {} } }
+);
+
+/** An entry published before its pass marks its views live, as a pass's own effects may order. */
+function EntryBeforeLiveViews() {
+  usePublishViewportTexture('Root/SubViewport', ENTRY);
+  return null;
+}
+
+/**
+ * A consumer at `Root/Consumer`, with the target published at `Root/SubViewport` and its views live
+ * unless told otherwise.
+ */
+function wrapper({ isPublished = true, isLive = true, fake = createFakeResourceLoader() } = {}) {
   const loader = fake.loader;
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <ResourceLoaderProvider loader={loader}>
         <ViewportTextureProvider>
-          {isPublished && (
-            <ViewportTexturePublisher
-              path="Root/SubViewport"
-              entry={viewportEntry(
-                plain,
-                { x: 32, y: 32 },
-                { decoding: { texture: decoding, retain: () => () => {} } }
-              )}
-            />
-          )}
+          {isPublished && isLive && <ViewportTexturePublisher path="Root/SubViewport" entry={ENTRY} />}
+          {isPublished && !isLive && <EntryBeforeLiveViews />}
           <NodePathProvider path="Root/Consumer">{children}</NodePathProvider>
         </ViewportTextureProvider>
       </ResourceLoaderProvider>
@@ -235,6 +243,18 @@ describe('an AtlasTexture over a ViewportTexture', () => {
     expect(crop.image).toMatchObject({ width: 16, height: 16 });
     expect(copiesFilledFrom(plain)).toEqual([crop]);
     unmount();
+  });
+
+  it('crops the target live once its views go live after the slot first resolves', () => {
+    const { result, rerender, unmount } = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES),
+      { wrapper: wrapper({ isLive: false }) }
+    );
+    const withdraw = publishLiveTargets([plain], null, false);
+    rerender();
+    expect(copiesFilledFrom(plain)).toEqual([result.current.texture]);
+    unmount();
+    withdraw();
   });
 
   it('frees the crop once the slot unmounts', async () => {
