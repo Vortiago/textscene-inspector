@@ -11,6 +11,7 @@ import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
 import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
+import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
@@ -442,6 +443,33 @@ describe('createCanvasTextMaterial mipmapped', () => {
     const material = createCanvasTextMaterial({ map: mipmappedTexture(), opacity: 1 });
 
     expect(patchedFragment(material)).not.toContain('godotMipmapBias');
+  });
+});
+
+describe('createCanvasTextMaterial inside a lit Control', () => {
+  const lit = () =>
+    createCanvasTextMaterial({ map: mipmappedTexture(), opacity: 1, pixelMaterial: litPixelMaterial() });
+
+  it('samples the light list before the colour encode', () => {
+    expect(patchedFragment(lit())).toContain('uLightList');
+  });
+
+  it('keeps an explicit side over the facing of the Control material', () => {
+    const material = createCanvasTextMaterial({
+      map: mipmappedTexture(),
+      opacity: 1,
+      side: THREE.FrontSide,
+      pixelMaterial: litPixelMaterial(),
+    });
+
+    expect(material.side).toBe(THREE.FrontSide);
+  });
+
+  it('takes the blend state of the Control material', () => {
+    const material = lit();
+
+    expect(material.blending).toBe(THREE.CustomBlending);
+    expect(material.blendDst).toBe(THREE.OneFactor);
   });
 });
 

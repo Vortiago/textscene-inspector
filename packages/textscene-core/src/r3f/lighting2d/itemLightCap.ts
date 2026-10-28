@@ -104,9 +104,14 @@ function boxRect({ min, max }: THREE.Box3): Rect2 {
   return { x: min.x, y: min.y, w: max.x - min.x, h: max.y - min.y };
 }
 
-/** The world rect of `object`'s geometry. */
+/** `userData` on the object of a lit item, whose geometry the item above it does not count. */
+export const LIT_ITEM_USER_DATA = { litItem: true };
+
+const isLitItem = (object: THREE.Object3D) => object.userData.litItem === true;
+
+/** The world rect of `object`'s geometry, less that of the lit items nested inside it. */
 function worldRect(object: THREE.Object3D | null): Rect2 {
-  if (object) computeWorldBoundingBox(object, box);
+  if (object) computeWorldBoundingBox(object, box, isLitItem);
   else box.makeEmpty();
   return boxRect(box);
 }

@@ -80,8 +80,9 @@ const ABOVE_UNSHADED = midpoint(CanvasItemMaterialLightMode.UNSHADED, CanvasItem
 const LIGHT_INJECTION = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
 bool lightOnly = uLightMode > ${ABOVE_UNSHADED};
 // canvas.glsl:719: MODE_UNSHADED skips the canvas tint and the light loop,
-// so the fragment leaves as it arrived.
-if (!unshaded) {
+// so the fragment leaves as it arrived. So does an item no light reaches: the CPU already folded
+// the tint in, and the round trip through the two sRGB curves would only perturb it.
+if (!unshaded && (uLit > 0.5 || lightOnly)) {
   // canvas.glsl:713: Light Only skips the tint, and its buffers are seeded to match.
   vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
   vec2 lightUv = gl_FragCoord.xy / uLightResolution;

@@ -436,13 +436,34 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-stretch-shrink-odd.tscn',
     mode: '2d',
   },
+  // A PointLight2D lights native Controls like any CanvasItem. Godot 4.6.3 `--mode 2d`: (100,100)
+  // rgb(168,120,81) the ColorRect, (500,100) rgb(67,120,81) the Panel, (300,140) rgb(255,159,92)
+  // under the Torch.
+  { name: 'control-light2d', file: 'unit-control-light2d.tscn', mode: '2d' },
+  // `light_mask` on a Control. Godot 4.6.3 `--mode 2d`: (200,200) rgb(153,107,61) lit, (600,200)
+  // rgb(102,76,51) the Masked ColorRect at its authored colour.
+  { name: 'control-light-mask', file: 'unit-control-light-mask.tscn', mode: '2d' },
+  // A CanvasModulate tints native Controls. Godot 4.6.3 `--mode 2d`: (100,100) rgb(82,92,92).
+  { name: 'control-canvas-modulate', file: 'unit-control-canvas-modulate.tscn', mode: '2d' },
+  // A CanvasItemMaterial on a Control. Godot 4.6.3 `--mode 2d`: (100,100) rgb(204,102,51) unshaded,
+  // (400,100) rgb(176,116,72) Light Only, (640,100) rgb(249,160,112) Add, (880,100) rgb(96,50,20) Mul.
+  { name: 'control-canvas-item-material', file: 'unit-control-canvas-item-material.tscn', mode: '2d' },
+  // An outer light and tint over a Control-only SubViewport. Godot 4.6.3 `--mode 2d`: (150,120)
+  // rgb(82,133,102), lit once by the outer canvas, not twice.
+  {
+    name: 'sub-viewport-control-outer-light',
+    file: 'unit-sub-viewport-control-outer-light.tscn',
+    mode: '2d',
+  },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
   { name: 'sub-viewport-2d-light', file: 'unit-sub-viewport-2d-light.tscn', mode: '2d' },
   // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
   // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
-  // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone.
+  // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone. The outside sun
+  // lights the Backdrop and the container's surface too: (350,150) rgb(0,0,112), (150,150)
+  // rgb(69,94,69) the Wall's shadow on the lit surface.
   {
     name: 'sub-viewport-2d-directional-shadow',
     file: 'unit-sub-viewport-2d-directional-shadow.tscn',

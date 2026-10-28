@@ -261,6 +261,7 @@ describe('<ControlCanvasWalker>', () => {
         modulate: { r: 1, g: 1, b: 1, a: 1 },
         z: [],
         sampler: ROOT_TEXTURE_SAMPLER,
+        material: { kind: 'none' },
       },
     };
 
@@ -507,6 +508,7 @@ describe('<ControlCanvasWalker>', () => {
           modulate: { r: 1, g: 1, b: 1, a: 1 },
           z: [],
           sampler,
+          material: { kind: 'none' },
         },
       };
     }
@@ -637,6 +639,7 @@ describe('<ControlCanvasWalker>', () => {
           modulate: { r: 1, g: 1, b: 1, a: 1 },
           z: [{ zIndex: 5, zAsRelative: true }],
           sampler: ROOT_TEXTURE_SAMPLER,
+          material: { kind: 'none' },
         },
       };
 
@@ -670,6 +673,7 @@ describe('<ControlCanvasWalker>', () => {
             { zIndex: 3, zAsRelative: false },
           ],
           sampler: ROOT_TEXTURE_SAMPLER,
+          material: { kind: 'none' },
         },
       };
 

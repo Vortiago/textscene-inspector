@@ -30,6 +30,8 @@ import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
+import { useCanvasModulateColor } from '../../../r3f/canvasModulate.js';
+import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary.js';
 
 export interface ControlRasterPassesProps {
   /** The Control-only sub-viewports found in the scene, each with its own resource scope (ADR-0009). */
@@ -85,6 +87,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     internalResources,
     inheritedRtl
   );
+  const canvasModulate = useCanvasModulateColor(node.children);
   const solveViewport: Rect2 = useMemo(() => ({ x: 0, y: 0, w: width, h: height }), [width, height]);
 
   const renderPass = useCallback(() => {
@@ -109,20 +112,22 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-      <SubViewportSamplerScope properties={properties}>
-        <ControlCanvasWalker
-          tree={tree}
-          generation={generation}
-          viewport={solveViewport}
-          theme={theme}
-          measurer={measureText}
-          // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
-          // every Viewport, and only the root window gets
-          // `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so a project
-          // that opts out leaves a SubViewport's own Controls snapped.
-          snapToPixels
-        />
-      </SubViewportSamplerScope>
+      <World2DLightingBoundary canvasModulate={canvasModulate}>
+        <SubViewportSamplerScope properties={properties}>
+          <ControlCanvasWalker
+            tree={tree}
+            generation={generation}
+            viewport={solveViewport}
+            theme={theme}
+            measurer={measureText}
+            // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
+            // every Viewport, and only the root window gets
+            // `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so a project
+            // that opts out leaves a SubViewport's own Controls snapped.
+            snapToPixels
+          />
+        </SubViewportSamplerScope>
+      </World2DLightingBoundary>
     </SceneResourcesProvider>,
     portalScene
   );
