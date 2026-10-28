@@ -10,8 +10,11 @@ import {
   recoverByIdTrail,
   type IdHeading,
   type IdTrailEnd,
+  type TrailHeading,
 } from '../godot/scene/packedScene.js';
+import { simplifiedNodePath } from '../godot/string/nodePath.js';
 import { firstIndexWith } from '../utils/keyedLookup.js';
+import { joinPath } from '../utils/nodePath.js';
 
 /** The first heading of a scan carrying an id, the one index the builder and the linter share. */
 const firstOriginWithId = firstIndexWith((origin: NodeOrigin<RawNode>) => origin.uniqueId);
@@ -77,6 +80,27 @@ function headingOf<N extends RawNode>(
   isPlaced: (origin: NodeOrigin<N>) => boolean
 ): IdHeading {
   return { uniqueId: origin.uniqueId, instance: instanceKind(origin.node), isPlaced: isPlaced(origin) };
+}
+
+/**
+ * What a trail that enters the scene reads of each heading, in file order: the headings a seating
+ * leaves out of its tree too, since `ids.find` reads them all (`packed_scene.cpp:1960`).
+ */
+export function trailHeadingsOf<N extends RawNode>(origins: readonly NodeOrigin<N>[]): TrailHeading[] {
+  return origins.map(({ node, declaredParent, uniqueId }) => ({
+    uniqueId,
+    path: declaredParent === undefined ? '' : authoredPath(declaredParent, node.name),
+    instance: instanceKind(node),
+    instanceRef: node.instance,
+  }));
+}
+
+/** The `parent=` a heading writes for a child of the root. */
+const ROOT_PARENT = '.';
+
+/** The simplified path of a heading below `parent`. A child of the root, most headings, needs no simplifying. */
+function authoredPath(parent: string, name: string): string {
+  return parent === ROOT_PARENT ? name : simplifiedNodePath(joinPath(parent, name));
 }
 
 function instanceKind(node: RawNode): IdHeading['instance'] {
