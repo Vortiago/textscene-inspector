@@ -102,12 +102,13 @@ describe('<ProgressBar>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(2); // background + the centred fill, no text
   });
 
-  it('forwards renderOrder to every mesh it draws', async () => {
+  it('keeps every mesh it draws within its renderOrder slot', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ProgressBar {...painterEnv()} solveNode={solveNode({ value: 50 })} rect={RECT} renderOrder={9} />
     );
     for (const mesh of renderer.scene.findAllByType('Mesh')) {
-      expect(mesh.instance.renderOrder).toBe(9);
+      expect(mesh.instance.renderOrder).toBeGreaterThanOrEqual(9);
+      expect(mesh.instance.renderOrder).toBeLessThan(10);
     }
   });
 

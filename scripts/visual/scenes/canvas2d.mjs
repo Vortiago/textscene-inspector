@@ -242,8 +242,8 @@ export const CANVAS_2D_SCENES = [
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
-  // A ProgressBar percentage with an outline, over a face with and without an embolden.
-  { name: 'progress-bar-outline-embolden', file: 'unit-progress-bar-outline-embolden.tscn', mode: '2d' },
+  // A ProgressBar percentage with an outline, over a plain, an emboldened, a sheared and an emboldened and sheared face.
+  { name: 'progress-bar-outline-variation', file: 'unit-progress-bar-outline-variation.tscn', mode: '2d' },
   // The one variable: the font of each RichTextLabel style. The default theme's bold, italics and bold
   // italics over the default font, a node's own `bold_font` and `italics_font`, and bare variations
   // that draw the default font itself.

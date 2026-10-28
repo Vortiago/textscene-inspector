@@ -13,8 +13,9 @@
 import { cmapLookup } from './sfntCmap';
 import type { GlyphContours } from './glyphContours';
 import type { GlyphVariation } from './fontMetrics';
-import { cffContourReader } from './sfntCff';
-import { glyphContourReader } from './sfntGlyf';
+import { cffOutlineReader } from './sfntCff';
+import { glyphOutlineReader } from './sfntGlyf';
+import { variedContours } from './glyphVariation';
 import { openFontContainer } from './fontContainer';
 import { OUTLINE_TABLE_TAGS, type SfntFile } from './sfntTables';
 
@@ -48,14 +49,17 @@ export async function openFontOutlines(bytes: ArrayBuffer): Promise<SfntOutlines
 
 function readSfntOutlines(sfnt: SfntFile): SfntOutlines | null {
   const cmap = sfnt.tables.get('cmap');
-  const contours = glyphContourReader(sfnt) ?? cffContourReader(sfnt);
-  if (!cmap || !contours) return null;
+  const outlineOf = glyphOutlineReader(sfnt) ?? cffOutlineReader(sfnt);
+  if (!cmap || !outlineOf) return null;
   const lookup = orOnRangeError(() => cmapLookup(sfnt.dv, cmap.offset), null);
   if (!lookup) return null;
 
   return {
     glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
     glyphContours: (glyphIndex, fontSizePx, variation) =>
-      orOnRangeError(() => contours(glyphIndex, fontSizePx, variation), null),
+      orOnRangeError(() => {
+        const outline = outlineOf(glyphIndex, fontSizePx);
+        return outline && variedContours(outline, fontSizePx, variation);
+      }, null),
   };
 }

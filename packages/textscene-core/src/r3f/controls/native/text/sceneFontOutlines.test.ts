@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
 import { sceneFontSettleCount } from './sceneFontLoader';
-import { peekEmboldenedStrokeOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
+import { peekSceneFontOutlines, peekVariedStrokeOutlines } from './sceneFontOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
@@ -83,25 +83,28 @@ describe('peekSceneFontOutlines', () => {
   });
 });
 
-describe('peekEmboldenedStrokeOutlines', () => {
+describe('peekVariedStrokeOutlines', () => {
   it('answers null without an outline, so a plain label never loads outlines', () => {
     const font = woffOfOpenSans();
 
-    expect(peekEmboldenedStrokeOutlines(font, { embolden: 1 }, false)).toBeNull();
+    expect(peekVariedStrokeOutlines(font, { embolden: 1 }, false)).toBeNull();
     expect(peekSceneFontOutlines(font)).toBeUndefined();
   });
 
-  it('answers null for a face with no embolden, whose stroke follows the glyph as it is', () => {
-    expect(peekEmboldenedStrokeOutlines(woffOfOpenSans(), {}, true)).toBeNull();
-    expect(peekEmboldenedStrokeOutlines(woffOfOpenSans(), { embolden: 0 }, true)).toBeNull();
+  it('answers null for a face with no embolden and no skew, whose stroke follows the glyph as it is', () => {
+    expect(peekVariedStrokeOutlines(woffOfOpenSans(), {}, true)).toBeNull();
+    expect(peekVariedStrokeOutlines(woffOfOpenSans(), { embolden: 0, skew: 0 }, true)).toBeNull();
   });
 
-  it('answers the outlines of the font once an emboldened face has an outline', async () => {
+  it.each([
+    ['an emboldened', { embolden: 1 }],
+    ['a sheared', { skew: 0.3 }],
+  ])('answers the outlines of the font once %s face has an outline', async (_, variation) => {
     const font = woffOfOpenSans();
 
-    expect(peekEmboldenedStrokeOutlines(font, { embolden: 1 }, true)).toBeUndefined();
+    expect(peekVariedStrokeOutlines(font, variation, true)).toBeUndefined();
 
     const outlines = await settledOutlines(font);
-    expect(peekEmboldenedStrokeOutlines(font, { embolden: 1 }, true)).toBe(outlines);
+    expect(peekVariedStrokeOutlines(font, variation, true)).toBe(outlines);
   });
 });

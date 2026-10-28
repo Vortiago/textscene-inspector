@@ -17,8 +17,7 @@ import { applyFontMatrix, rescaledOutlineScale } from './cffFontMatrix';
 import type { CharstringContour } from './cffPen';
 import { openCff } from './cffTables';
 import { getFontOutlineScale } from './fontMetrics';
-import { variedContours } from './glyphVariation';
-import type { GlyphContourReader, ScaledOutline } from './glyphContours';
+import type { GlyphOutlineReader, ScaledOutline } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
 /** The divisor of the arithmetic shift right by 10 that `cff_builder_add_point` makes, from 16.16 to 26.6. */
@@ -57,14 +56,14 @@ function toFixed26_6(coordinate: number): number {
   return Math.floor(coordinate / FIXED_16_16_TO_26_6);
 }
 
-/** The glyph-contour reader of a font's CFF outlines, or null for a font with no readable `CFF ` or `CFF2` table or no `head`. */
-export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
+/** The glyph-outline reader of a font's CFF outlines, or null for a font with no readable `CFF ` or `CFF2` table or no `head`. */
+export function cffOutlineReader(sfnt: SfntFile): GlyphOutlineReader | null {
   const headUnitsPerEm = readHeadUnitsPerEm(sfnt);
   if (headUnitsPerEm === 0) return null;
   const font = openCff(sfnt);
   if (!font) return null;
 
-  return (glyphIndex, fontSizePx, variation) => {
+  return (glyphIndex, fontSizePx) => {
     const fontDict = font.fontDictOf(glyphIndex);
     if (!fontDict) return null;
     const { matrix } = fontDict;
@@ -78,6 +77,6 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
     const outline = scaledOutline(contours);
     if (outline.x.length === 0) return null;
     applyFontMatrix(outline, matrix);
-    return variedContours(outline, fontSizePx, variation);
+    return outline;
   };
 }

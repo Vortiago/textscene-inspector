@@ -9,11 +9,10 @@
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import { variedContours } from './glyphVariation';
 import { ftMulFix, getFontOutlineScale } from './fontMetrics';
 import {
   transformOutline,
-  type GlyphContourReader,
+  type GlyphOutlineReader,
   type Matrix2x2,
   type ScaledOutline,
 } from './glyphContours';
@@ -224,11 +223,11 @@ function appendOutline(whole: ScaledOutline, part: ScaledOutline, dx: number, dy
 }
 
 /**
- * The glyph-contour reader of a font's `glyf` outlines, or null for a font with no `glyf` or `loca`
+ * The glyph-outline reader of a font's `glyf` outlines, or null for a font with no `glyf` or `loca`
  * table, or a `head` or `maxp` that does not fit. A corrupt table that puts an offset past the
  * buffer reads as a glyph with no outline.
  */
-export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader | null {
+export function glyphOutlineReader({ dv, tables }: SfntFile): GlyphOutlineReader | null {
   const head = tables.get('head');
   const maxp = tables.get('maxp');
   if (!head || !maxp || !tables.has('glyf') || !tables.has('loca')) return null;
@@ -239,9 +238,8 @@ export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader
   const isLongLoca = dv.getInt16(head.offset + HEAD_INDEX_TO_LOC_FORMAT_OFFSET, false) === LONG_LOCA_FORMAT;
   const glyphCount = dv.getUint16(maxp.offset + MAXP_NUM_GLYPHS_OFFSET, false);
   const glyphs = new GlyphReader(dv, glyphCount, tables, isLongLoca);
-  return (glyphIndex, fontSizePx, variation) => {
+  return (glyphIndex, fontSizePx) => {
     const outline = glyphs.load(glyphIndex, getFontOutlineScale(unitsPerEm, fontSizePx));
-    if (!outline || outline.x.length === 0) return null;
-    return variedContours(outline, fontSizePx, variation);
+    return outline && outline.x.length > 0 ? outline : null;
   };
 }

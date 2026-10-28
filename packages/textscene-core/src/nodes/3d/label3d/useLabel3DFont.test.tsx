@@ -26,6 +26,11 @@ const OWN_FONT: TscnInternalResource = {
   type: 'FontVariation',
   data: { variation_embolden: '1.0' },
 };
+const SHEARED_FONT: TscnInternalResource = {
+  id: 'sheared',
+  type: 'FontVariation',
+  data: { variation_transform: 'Transform2D(1, 0.3, 0, 1, 0, 0)' },
+};
 const PLAIN_FILE: TscnInternalResource = { id: 'plain', type: 'FontFile', data: {} };
 const MIPMAPPED_FILE: TscnInternalResource = {
   id: 'mipmapped',
@@ -45,7 +50,7 @@ function renderMetrics(
         loader={loaderServing({ 'res://project.godot': 'config_version=5\n', ...files }, heldPaths)}
       >
         <ProjectSettingsProvider sceneKey="res://scene.tscn">
-          <SceneResourcesProvider internalResources={[OWN_FONT, PLAIN_FILE, MIPMAPPED_FILE]}>
+          <SceneResourcesProvider internalResources={[OWN_FONT, SHEARED_FONT, PLAIN_FILE, MIPMAPPED_FILE]}>
             {children}
           </SceneResourcesProvider>
         </ProjectSettingsProvider>
@@ -136,6 +141,14 @@ describe('useLabel3DFont outlines', () => {
     const { result } = renderMetrics('SubResource("own")', {}, [], true);
 
     expect(result.current).toBeUndefined();
+    await settle();
+
+    expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0);
+  });
+
+  it('holds the outlines of the bundled font for a sheared label with an outline', async () => {
+    const { result } = renderMetrics('SubResource("sheared")', {}, [], true);
+
     await settle();
 
     expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0);

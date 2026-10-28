@@ -19,6 +19,7 @@ import { ProgressBar } from './Component';
 interface RunProps {
   strokeWidthPx?: number;
   glyphOutlines?: SfntOutlines | null;
+  renderOrder?: number;
 }
 
 const scene = vi.hoisted(() => ({
@@ -29,8 +30,11 @@ const scene = vi.hoisted(() => ({
 
 vi.mock('../../../../r3f/controls/native/text/resolveNodeFontMetrics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../r3f/controls/native/text/resolveNodeFontMetrics')>()),
-  resolveNodeFontMetrics: () => scene.metrics,
   resolveNodeFont: () => scene.font,
+}));
+vi.mock('../../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../r3f/controls/native/text/sceneFontLoader')>()),
+  peekSceneFontMetrics: () => scene.metrics,
 }));
 vi.mock('../../../../r3f/controls/native/text/TextRun', () => ({
   TextRun: (props: RunProps) => {
@@ -74,7 +78,26 @@ describe('<ProgressBar> canvas outline', () => {
     expect(strokeRuns().every((run) => run.glyphOutlines)).toBe(true);
   });
 
-  it('strokes a face with no embolden at once, without outlines', async () => {
+  it('strokes the contours of a sheared face as well', async () => {
+    scene.metrics = withVariation(createOpenSansCanvasFontMetrics('progress-bar-sheared-test'), {
+      skew: 0.3,
+    });
+
+    await renderBar();
+
+    await vi.waitFor(() => expect(strokeRuns().at(-1)?.glyphOutlines).toBeTruthy());
+  });
+
+  it('draws the percentage above its outline', async () => {
+    await renderBar();
+
+    await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));
+    const outline = strokeRuns().at(-1);
+    const percentage = scene.runs.find((run) => !run.strokeWidthPx);
+    expect(percentage?.renderOrder).toBeGreaterThan(outline?.renderOrder ?? Infinity);
+  });
+
+  it('strokes a face with no embolden and no skew at once, without outlines', async () => {
     scene.metrics = createOpenSansCanvasFontMetrics('progress-bar-plain-test');
 
     await renderBar();

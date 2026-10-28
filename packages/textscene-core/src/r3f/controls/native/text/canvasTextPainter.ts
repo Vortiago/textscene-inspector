@@ -10,11 +10,12 @@
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
 import {
-  emboldenedContours,
+  variedGlyphContours,
   maxEmboldenGrowthPx,
   paintEmboldenedFill,
   strokeContours,
 } from './canvasEmbolden';
+import type { GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
 import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
@@ -123,8 +124,9 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
  * at each `GlyphPlacement.x`. A positive `strokeWidthPx` paints the outline ring
  * instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`).
  * `skew` shears each line's ink about its own baseline. The quad stays axis-aligned. With the
- * `outlines` of the font, an emboldened glyph's ring follows the grown outline, mitred as FreeType
- * mitres it. Without them, it is the ring of the glyph as it stands.
+ * `outlines` of the font, the ring of an emboldened or sheared glyph strokes the outline as
+ * FreeType leaves it, mitred and sheared, with a line that is not sheared. Without them, it is the
+ * ring of the glyph as it stands, and a shear shears its width.
  */
 // Happy-dom has no 2D context, so under vitest the canvas stays blank. The pixels
 // are a golden-image concern, so a unit test reads the calls, not the pixels.
@@ -171,14 +173,16 @@ export function paintSceneFontCanvas(
 
   const baselineOffsetPx = layout.baselineOffsetPx;
   const embolden = metrics.embolden ?? 0;
-  // A repeated character grows its outline once for the whole paint.
-  const grownContours = new Map<string, GlyphContours | null>();
-  const grownContoursOf = (char: string, glyphOutlines: SfntOutlines): GlyphContours | null => {
-    const known = grownContours.get(char);
+  const variation: GlyphVariation = { embolden, skew };
+  const isVaried = embolden !== 0 || skew !== 0;
+  // A repeated character reads its outline once for the whole paint.
+  const variedContours = new Map<string, GlyphContours | null>();
+  const variedContoursOf = (char: string, glyphOutlines: SfntOutlines): GlyphContours | null => {
+    const known = variedContours.get(char);
     if (known !== undefined) return known;
-    const grown = emboldenedContours(glyphOutlines, char, fontSizePx, embolden);
-    grownContours.set(char, grown);
-    return grown;
+    const varied = variedGlyphContours(glyphOutlines, char, fontSizePx, variation);
+    variedContours.set(char, varied);
+    return varied;
   };
 
   layout.lines.forEach((line, lineIndex) => {
@@ -194,8 +198,8 @@ export function paintSceneFontCanvas(
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
-      const grown = stroked && outlines && gp.emboldenGrowthPx ? grownContoursOf(gp.char, outlines) : null;
-      if (grown) strokeContours(ctx, grown, penX, baselineY);
+      const varied = stroked && outlines && isVaried ? variedContoursOf(gp.char, outlines) : null;
+      if (varied) strokeContours(ctx, varied, penX, baselineY);
       else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
       else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else ctx.fillText(gp.char, penX, baselineY);

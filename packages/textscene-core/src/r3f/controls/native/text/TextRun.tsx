@@ -106,8 +106,9 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * The glyph outlines of the layout's font. An emboldened glyph's stroked ring follows the grown
-   * outline with them (`FT_Outline_Embolden`), and the plain glyph's without. Canvas runs only.
+   * The glyph outlines of the layout's font. The stroked ring of an emboldened or sheared glyph
+   * follows the changed outline with them (`FT_Outline_Embolden`, `FT_Outline_Transform`), and the
+   * plain glyph's without. Canvas runs only.
    */
   glyphOutlines?: SfntOutlines | null;
   /**

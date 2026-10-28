@@ -11,7 +11,7 @@
 
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import { ftMulFix, type GlyphVariation } from './fontMetrics';
+import { ftMulFix } from './fontMetrics';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
@@ -32,15 +32,8 @@ export interface GlyphContours {
   isFillRight: boolean;
 }
 
-/**
- * The contours of a glyph at `fontSizePx`, changed by the font variation as Godot changes a glyph
- * slot, or null for a glyph with no outline.
- */
-export type GlyphContourReader = (
-  glyphIndex: number,
-  fontSizePx: number,
-  variation?: GlyphVariation
-) => GlyphContours | null;
+/** The scaled outline of a glyph at `fontSizePx` as the font loads it, or null for a glyph with no outline. */
+export type GlyphOutlineReader = (glyphIndex: number, fontSizePx: number) => ScaledOutline | null;
 
 /** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
 export interface ScaledOutline {

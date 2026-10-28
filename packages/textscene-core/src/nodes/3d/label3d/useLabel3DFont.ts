@@ -16,7 +16,7 @@ import {
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { peekEmboldenedStrokeOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { peekVariedStrokeOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
@@ -29,7 +29,7 @@ import { useProjectFonts } from '../../../resources/useProjectFonts';
 
 export interface Label3DFont {
   metrics: CanvasFontMetrics;
-  /** The glyph outlines that an emboldened outline ring follows. Null where the label needs none, or the font has none to read. */
+  /** The glyph outlines that the outline ring of an emboldened or sheared face follows. Null where the label needs none, or the font has none to read. */
   outlines: SfntOutlines | null;
   /** Whether the glyph raster carries a mip chain: the font's own setting, or the project's for the bundled font. */
   generatesMipmaps: boolean;
@@ -37,7 +37,7 @@ export interface Label3DFont {
 
 /**
  * Undefined while the bundled font registers, or while the font file, the project font, the metrics
- * or, for an emboldened label with an outline, the outlines of the font load: nothing draws against
+ * or, for an emboldened or sheared label with an outline, the outlines of the font load: nothing draws against
  * the wrong face meanwhile.
  */
 export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean): Label3DFont | undefined {
@@ -58,7 +58,7 @@ export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean)
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
     const metrics = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);
-    const outlines = peekEmboldenedStrokeOutlines(font, metrics, hasOutline);
+    const outlines = peekVariedStrokeOutlines(font, metrics, hasOutline);
     if (outlines === undefined) return undefined;
     return {
       metrics,
