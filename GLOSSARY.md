@@ -636,6 +636,10 @@ _Avoid_: A stand-in object. A path segment for the group.
 The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the **Live scene pass** in `skeletonBindings.ts` hands the matrices to the mesh by its live path, so the mesh draws as a SkinnedMesh.
 _Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose kept in three bones.
 
+**Pose modifier** (`PoseModifier`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The edit a SkeletonModifier3D child makes to the bone poses of its Skeleton3D, and its `influence`. The Skeleton3D pass runs the edits in child order on a copy of the file pose, before it makes the **Automatic skin**, as `Skeleton3D::_process_modifiers` does (`skeleton_3d.cpp:1166-1204`). The file pose is kept. A type registers a reader from its node to its edit as `poseModifier`.
+_Avoid_: A write to the bone table. A modifier that draws.
+
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).
 Each copy keeps the id its own file wrote as `authoredId`, and the inspector shows that id.

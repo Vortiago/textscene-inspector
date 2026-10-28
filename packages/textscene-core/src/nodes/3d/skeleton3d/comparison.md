@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that poses the meshes bound to it)
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones once at load and binds each MeshInstance3D that names it through `skeleton`, with `skin` unset, to Godot's automatic skin. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
+Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton`, with `skin` unset, to Godot's automatic skin. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
 
 ## Linting
 
@@ -39,7 +39,7 @@ The parser reads `show_rest_only` and the bone table: `name`, `parent`, `rest`, 
 
 ## Known limitations
 
-- **Needs runtime** Godot runs the skeleton's modifiers and animation each frame, but here the bones hold the pose the file writes.
+- **Needs runtime** Godot plays bone animation and runs every SkeletonModifier3D type, but here only the file pose and a CopyTransformModifier3D act.
 - **Approximated** Only a RibbonTrailMesh deforms, as no other mesh writes bone arrays, so every other mesh bound to a skeleton draws in its rest pose.
 - **Approximated** A bone past the skin's last index collapses its vertices, where Godot's result depends on the GPU driver.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.

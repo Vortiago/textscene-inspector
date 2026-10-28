@@ -5,6 +5,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeComponentRegistry, type ParseScenePass } from './NodeComponentRegistry';
+import type { PoseModifierReader } from '../nodes/3d/skeleton3d/poseModifier';
 
 const Dummy = () => null;
 const paths: ParseScenePass = (nodes) => nodes;
@@ -72,5 +73,22 @@ describe('nodeComponentRegistry.scenePassTypeNames', () => {
     });
     nodeComponentRegistry.register({ typeName: 'C', Component: Dummy });
     expect([...nodeComponentRegistry.scenePassTypeNames()]).toEqual(['A', 'B']);
+  });
+});
+
+describe('nodeComponentRegistry.poseModifierOf', () => {
+  beforeEach(() => nodeComponentRegistry.clear());
+
+  const reader: PoseModifierReader = () => null;
+
+  it('returns the reader a type registers', () => {
+    nodeComponentRegistry.register({ typeName: 'A', Component: Dummy, poseModifier: reader });
+    expect(nodeComponentRegistry.poseModifierOf('A')).toBe(reader);
+  });
+
+  it('is undefined for a type without one and for an unregistered type', () => {
+    nodeComponentRegistry.register({ typeName: 'A', Component: Dummy });
+    expect(nodeComponentRegistry.poseModifierOf('A')).toBeUndefined();
+    expect(nodeComponentRegistry.poseModifierOf('Missing')).toBeUndefined();
   });
 });

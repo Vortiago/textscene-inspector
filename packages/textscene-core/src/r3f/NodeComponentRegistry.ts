@@ -14,6 +14,7 @@ import { withGeometryInstance } from './visibilityRange/geometryInstance';
 import { isInvisibleBase } from './invisibleBase';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent';
 import type { EditorIconRegistration } from './nodeIcon/editorIconRegistration';
+import type { PoseModifierReader } from '../nodes/3d/skeleton3d/poseModifier';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -74,6 +75,11 @@ export interface NodeComponentRegistration {
    * type keeps its status.
    */
   editorIcon?: EditorIconRegistration;
+  /**
+   * Present for a SkeletonModifier3D type: reads the node into the edit the Skeleton3D pass runs on
+   * its pose. The type also registers a `live` scene pass, because the edit reads other nodes.
+   */
+  poseModifier?: PoseModifierReader;
 }
 
 export interface YSortGroupDescription {
@@ -202,6 +208,11 @@ class NodeComponentRegistryImpl {
   /** The icon registration of a type, or undefined when Godot's editor draws no icon for it. */
   editorIconOf(typeName: string): EditorIconRegistration | undefined {
     return this.registry.get(typeName)?.editorIcon;
+  }
+
+  /** The pose modifier reader of a type, or undefined when it is not a SkeletonModifier3D. */
+  poseModifierOf(typeName: string): PoseModifierReader | undefined {
+    return this.registry.get(typeName)?.poseModifier;
   }
 
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {

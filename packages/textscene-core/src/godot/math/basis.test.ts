@@ -9,6 +9,7 @@ import {
   basisHasUnitScale,
   basisFromQuaternion,
   basisFromQuaternionScale,
+  basisGetRotationQuaternion,
   basisInvert,
   basisIsOrthonormal,
   basisMultiply,
@@ -197,3 +198,40 @@ describe('basisDiagonal', () => {
     expect(basisDiagonal(0.1, 2, -3)).toEqual([Math.fround(0.1), 0, 0, 0, 2, 0, 0, 0, -3]);
   });
 });
+
+describe('basisGetRotationQuaternion', () => {
+  // `Basis(Quaternion(Vector3(0.3, 0.5, 0.8).normalized(), 1.1)).scaled(Vector3(2, 0.5, 1.5))` in Godot 4.6.3.
+  const rotation = { x: 0.11514294, y: 0.22789943, z: 0.1502343, w: 0.95510924 };
+  const scaledRows = (basis: BasisComponents, scale: readonly [number, number, number]): BasisComponents =>
+    basis.map((value, i) => value * scale[Math.floor(i / 3)]!) as unknown as BasisComponents;
+
+  it('returns the rotation of a basis that also scales, as Godot prints it', () => {
+    const basis = scaledRows(basisFromQuaternion(unitQuaternionAbout([0.3, 0.5, 0.8], 1.1)), [2, 0.5, 1.5]);
+
+    const result = basisGetRotationQuaternion(basis);
+
+    expect(result.x).toBeCloseTo(rotation.x, 6);
+    expect(result.y).toBeCloseTo(rotation.y, 6);
+    expect(result.z).toBeCloseTo(rotation.z, 6);
+    expect(result.w).toBeCloseTo(rotation.w, 6);
+  });
+
+  it('returns the identity quaternion for the identity basis', () => {
+    expect(basisGetRotationQuaternion(IDENTITY)).toEqual({ x: 0, y: 0, z: 0, w: 1 });
+  });
+
+  it('flips a mirrored basis into a proper rotation first (edge case)', () => {
+    const result = basisGetRotationQuaternion(MIRRORED);
+
+    // Godot negates the orthonormalised basis (-1 -> 1 on x, 1 -> -1 on y and z): a half turn about X.
+    expect(result.x).toBeCloseTo(1, 6);
+    expect(result.w).toBeCloseTo(0, 6);
+  });
+});
+
+/** The unit quaternion that turns `angle` about `axis`, built from the half-angle formula. */
+function unitQuaternionAbout(axis: readonly [number, number, number], angle: number) {
+  const length = Math.hypot(...axis);
+  const sine = Math.sin(angle / 2) / length;
+  return { x: axis[0] * sine, y: axis[1] * sine, z: axis[2] * sine, w: Math.cos(angle / 2) };
+}
