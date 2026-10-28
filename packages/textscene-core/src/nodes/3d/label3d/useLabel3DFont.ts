@@ -54,9 +54,10 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
     const font = fontForNode('Label3D', fontRef, { resources, loadedFont, projectFonts });
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
-    // A canvas face carries its outlines already. An atlas face draws as the bundled canvas face.
+    // A canvas face carries its outlines already, or none when unvaried (null, not the undefined of a load in flight).
+    // An atlas face draws as the bundled canvas face.
     const outlines = isCanvasFontMetrics(settled)
-      ? settled.outlines
+      ? (settled.outlines ?? null)
       : peekGlyphOutlines(font, bundled, settled);
     if (outlines === undefined) return undefined;
     const varied = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);

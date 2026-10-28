@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 
@@ -151,6 +151,8 @@ describe('useLabel3DFont metrics', () => {
 });
 
 describe('useLabel3DFont outlines', () => {
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
   it('reads no outlines for a face that is neither emboldened nor sheared', async () => {
     const { result } = renderMetrics(undefined);
 
@@ -158,6 +160,20 @@ describe('useLabel3DFont outlines', () => {
 
     expect(result.current?.metrics).toBeDefined();
     expect(result.current?.metrics.outlines).toBeUndefined();
+  });
+
+  it('is ready, with no outlines, for an unvaried canvas face', async () => {
+    // happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so.
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => bundled.metrics,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics(undefined);
+
+    await settle();
+
+    expect(result.current?.metrics).toBe(bundled.metrics);
   });
 
   it.each([
