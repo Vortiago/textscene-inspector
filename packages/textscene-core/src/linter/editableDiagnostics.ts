@@ -7,10 +7,9 @@
 import type { StrictScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { armDiagnostic } from './ruleArms.js';
+import { armDiagnostic, headingSubject } from './ruleArms.js';
 
-/** The stand-in for a node: an `[editable]` heading belongs to none, and a diagnostic names a subject. */
-const EDITABLE_SUBJECT = { name: '<editable>', type: 'editable' } as const;
+const EDITABLE_SUBJECT = headingSubject('editable');
 
 export function editableDiagnostics(scene: StrictScene): Diagnostic[] {
   return scene.pathlessEditableLines.map((line) =>
