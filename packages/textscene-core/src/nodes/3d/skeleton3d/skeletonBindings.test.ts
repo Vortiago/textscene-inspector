@@ -13,6 +13,8 @@ import { multiplyTransform3D, type Transform3D } from '../../../godot/math/trans
 import { bindMeshesToSkeletons } from './skeletonBindings';
 import './index';
 import '../meshinstance3d/index';
+import '../skeleton/copytransformmodifier3d/index';
+import '../skeleton/copytransformmodifier3d/index.r3f';
 
 const BONES = `bones/0/name = "b0"
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -309,3 +311,92 @@ function translation(x: number, y: number, z: number): Transform3D {
     origin: { x, y, z },
   };
 }
+
+/** The skeleton of `BONES`, a mesh bound to it and `modifier` under it, with `extra` nodes at the root. */
+function modified(modifier: string, bones = BONES, extra = ''): string {
+  return `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${bones}
+[node name="Copy" type="CopyTransformModifier3D" parent="Skeleton3D"]
+${modifier}
+${extra}[node name="Mesh" type="MeshInstance3D" parent="."]
+skeleton = NodePath("../Skeleton3D")
+`;
+}
+
+/** Equal to 5 places: the copy normalises the rotation the twin writes unnormalised. */
+function expectSkinClose(actual: readonly Transform3D[], expected: readonly Transform3D[]): void {
+  expect(actual).toHaveLength(expected.length);
+  actual.forEach((matrix, bone) => {
+    for (const row of ['basis_x', 'basis_y', 'basis_z', 'origin'] as const) {
+      for (const axis of ['x', 'y', 'z'] as const)
+        expect(matrix[row][axis]).toBeCloseTo(expected[bone]![row][axis], 5);
+    }
+  });
+}
+
+const COPY_B2_ROTATION_TO_B1 = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_bone_name = "b2"
+settings/0/copy = 2
+settings/0/relative = false
+`;
+
+describe('the Skeleton3D scene pass with a SkeletonModifier3D child', () => {
+  /** `BONES` with the rotation of b2 also on b1, which is what the modifier above makes of the pose. */
+  const COPIED_BONES = BONES.replace(
+    'bones/1/position = Vector3(0, -0.2, 0)\n',
+    'bones/1/position = Vector3(0, -0.2, 0)\nbones/1/rotation = Quaternion(0, 0, 0.5, 0.866025)\n'
+  );
+
+  it('skins the pose the modifier makes, as a skeleton written with that pose does', () => {
+    const skin = skinAt(modified(COPY_B2_ROTATION_TO_B1));
+
+    expectSkinClose(skin!, skinAt(modified('active = false', COPIED_BONES))!);
+    expect(skin).not.toEqual(skinAt(modified('active = false')));
+  });
+
+  it('skins the file pose where the modifier is not active', () => {
+    expect(skinAt(modified(`active = false\n${COPY_B2_ROTATION_TO_B1}`))).toEqual(
+      skinAt(scene('skeleton = NodePath("../Skeleton3D")'))
+    );
+  });
+
+  it('skins the rest where show_rest_only is on, whatever the modifier does', () => {
+    const skin = skinAt(modified(COPY_B2_ROTATION_TO_B1, `${BONES}show_rest_only = true\n`));
+
+    for (const matrix of skin!) expectOrigin(matrix, 0, 0, 0);
+  });
+
+  it('reads a reference node in the global space of the scene', () => {
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 1
+settings/0/relative = false
+`;
+    const target = `[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+`;
+    // The Target sits at (1, 0, 0) and the parent of b1 at (0, 0.5, 0), so b1 lands at (1, -0.5, 0) below it.
+    const twin = BONES.replace(
+      'bones/1/position = Vector3(0, -0.2, 0)',
+      'bones/1/position = Vector3(1, -0.5, 0)'
+    );
+
+    expectSkinClose(
+      skinAt(modified(copyNodePosition, BONES, target))!,
+      skinAt(modified('active = false', twin))!
+    );
+  });
+
+  it('hands back the same skin where a later load leaves the inputs as they are', () => {
+    const main = parse(modified(COPY_B2_ROTATION_TO_B1));
+    const skinOfLoad = () =>
+      bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
+
+    expect(skinOfLoad()).toBe(skinOfLoad());
+  });
+});

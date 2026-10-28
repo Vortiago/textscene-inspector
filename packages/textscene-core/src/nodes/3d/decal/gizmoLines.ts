@@ -1,8 +1,7 @@
 /** The lines of the editor gizmo of a Decal (`decal_gizmo_plugin.cpp:92-128`), in the decal's local space. */
 
 import { aabbEdges, centredAabb } from '../../../godot/math/aabb';
-import { lerp } from '../../../godot/math/math';
-import { FLOATS_PER_VERTEX, type Vector3 } from '../../../godot/math/vector';
+import { FLOATS_PER_VERTEX, vector3Lerp, type Vector3 } from '../../../godot/math/vector';
 
 /** The share of a vertical edge that each of its two stubs covers (`:111-114`). */
 const STUB_SHARE = 0.2;
@@ -12,9 +11,14 @@ const TICK_REACH = 1.2;
 
 const FLOATS_PER_EDGE = 2 * FLOATS_PER_VERTEX;
 
-/** `Vector3::lerp` (`core/math/vector3.h`) on a point's three floats. */
+/** The point `weight` of the way from `from` to `to`, as the three floats of a point. */
 function lerpPoint(from: number[], to: number[], weight: number): number[] {
-  return from.map((value, axis) => lerp(value, to[axis]!, weight));
+  const { x, y, z } = vector3Lerp(pointOf(from), pointOf(to), weight);
+  return [x, y, z];
+}
+
+function pointOf([x, y, z]: number[]): Vector3 {
+  return { x: x!, y: y!, z: z! };
 }
 
 /**

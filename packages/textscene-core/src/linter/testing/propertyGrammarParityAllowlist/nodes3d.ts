@@ -36,6 +36,18 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'The bone table is read through readBones, a loop over the bones/<index>/<leaf> keys. The other three keys shape physics, modifier timing and animation, not the rest or the pose.',
   },
 
+  BoneConstraint3D: {
+    linterOnly: ['settings/#/*'],
+    reason:
+      'The settings table is read through readConstraintSettings, a loop over the settings/<index>/<leaf> keys, which the properties.X scrape cannot see.',
+  },
+
+  CopyTransformModifier3D: {
+    linterOnly: ['setting_count', 'settings/#/*'],
+    reason:
+      'The settings table is read through readConstraintSettings, a loop over setting_count and the settings/<index>/<leaf> keys, which the properties.X scrape cannot see.',
+  },
+
   Label3D: {
     renderGap: [
       // Text shaping: the locale and BiDi settings the TextServer shapes

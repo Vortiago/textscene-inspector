@@ -28,10 +28,12 @@ that returns a result per live node path.
 - The parse stages (`transforms`, `paths`) stay for a pass that has not moved. A pass runs on one
   stage only.
 
-The Skeleton3D pass (`bindMeshesToSkeletons`) runs on the live stage. It keeps one automatic skin
-for each Skeleton3D node object. That holds while the pose is a function of the node's own
-properties. A pose that differs between two instances of one sub-scene, such as one an animation or
-a modifier writes, keys the skin by the live path of the skeleton instead.
+The Skeleton3D pass (`bindMeshesToSkeletons`) runs on the live stage. A Skeleton3D with no
+SkeletonModifier3D child keeps one automatic skin for each node object, since its pose is a function
+of the node's own properties. A Skeleton3D with a modifier child keys its skin by its live path, since
+a modifier reads the scene around the skeleton and two instances of one sub-scene pose differently.
+A type registers its edit as a `poseModifier` beside a `live` scene pass, and a load that leaves the
+skin as it was hands back the same array.
 
 ## Considered Options
 

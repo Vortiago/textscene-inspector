@@ -2,9 +2,16 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from './real.js';
-import { basisFromQuaternionScale, basisInvert, basisMultiply, type BasisComponents } from './basis.js';
-import type { Quaternion } from './quaternion.js';
-import type { Vector3 } from './vector.js';
+import {
+  basisFromQuaternionScale,
+  basisGetRotationQuaternion,
+  basisGetScale,
+  basisInvert,
+  basisMultiply,
+  type BasisComponents,
+} from './basis.js';
+import { normalizedQuaternion, quaternionSlerp, type Quaternion } from './quaternion.js';
+import { vector3Lerp, type Vector3 } from './vector.js';
 
 /**
  * A 3D transform, written `Transform3D(basis_x.xyz, basis_y.xyz, basis_z.xyz, origin.xyz)`.
@@ -55,6 +62,25 @@ function xformPoint(transform: Transform3D, point: Vector3): Vector3 {
   };
 }
 
+/** Whether two transforms hold the same twelve components, as `Transform3D::operator==` reads them. */
+export function sameTransform3D(a: Transform3D, b: Transform3D): boolean {
+  return (
+    sameVector3(a.basis_x, b.basis_x) &&
+    sameVector3(a.basis_y, b.basis_y) &&
+    sameVector3(a.basis_z, b.basis_z) &&
+    sameVector3(a.origin, b.origin)
+  );
+}
+
+/** `===`, except that a NaN equals a NaN, so a skin with a NaN in it can still be found unchanged. */
+function sameComponent(a: number, b: number): boolean {
+  return a === b || (a !== a && b !== b);
+}
+
+function sameVector3(a: Vector3, b: Vector3): boolean {
+  return sameComponent(a.x, b.x) && sameComponent(a.y, b.y) && sameComponent(a.z, b.z);
+}
+
 /**
  * `Transform3D::operator*` (`transform_3d.cpp:184-193`): `left * right` takes a point through `right`,
  * then `left`, as a child's global transform is its parent's times its own.
@@ -86,4 +112,32 @@ export function transform3DFromQuaternionScale(
   position: Vector3
 ): Transform3D {
   return transformOf(basisFromQuaternionScale(rotation, scale), { ...position });
+}
+
+/**
+ * The rotation and the scale `Basis::get_rotation_quaternion` and `Basis::get_scale` read from the
+ * basis of a transform, which a pose keeps apart (`Skeleton3D::set_bone_pose`).
+ *
+ * @canonical The rotation and the scale of a Transform3D
+ */
+export function decomposeTransform3D(transform: Transform3D): { rotation: Quaternion; scale: Vector3 } {
+  const basis = basisComponents(transform);
+  const [x, y, z] = basisGetScale(basis);
+  return { rotation: basisGetRotationQuaternion(basis), scale: { x, y, z } };
+}
+
+/**
+ * `Transform3D::interpolate_with` (`transform_3d.cpp:96-111`): the rotation slerped, the scale and
+ * the origin lerped, each from `from` to `to` by `weight`. A shear in either basis is dropped.
+ *
+ * @canonical A Transform3D between two others
+ */
+export function interpolateTransform3D(from: Transform3D, to: Transform3D, weight: number): Transform3D {
+  const start = decomposeTransform3D(from);
+  const end = decomposeTransform3D(to);
+  return transform3DFromQuaternionScale(
+    normalizedQuaternion(quaternionSlerp(start.rotation, end.rotation, weight)),
+    vector3Lerp(start.scale, end.scale, weight),
+    vector3Lerp(from.origin, to.origin, weight)
+  );
 }
