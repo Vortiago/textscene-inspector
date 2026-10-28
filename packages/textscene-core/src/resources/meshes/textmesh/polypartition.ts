@@ -170,23 +170,39 @@ interface EarVertex {
   angle: number;
 }
 
-/** `TPPLPartition::UpdateVertex`. An ear has no vertex of the polygon inside it, removed corners included. */
+/** The dot product of the unit directions from `from` to `a` and to `b`; a zero length gives a zero direction. */
+function directionDot(from: Vector2, a: Vector2, b: Vector2): number {
+  const aLength = Math.sqrt((a.x - from.x) ** 2 + (a.y - from.y) ** 2);
+  const bLength = Math.sqrt((b.x - from.x) ** 2 + (b.y - from.y) ** 2);
+  const ax = aLength === 0 ? 0 : (a.x - from.x) / aLength;
+  const ay = aLength === 0 ? 0 : (a.y - from.y) / aLength;
+  const bx = bLength === 0 ? 0 : (b.x - from.x) / bLength;
+  const by = bLength === 0 ? 0 : (b.y - from.y) / bLength;
+  return ax * bx + ay * by;
+}
+
+/** Whether no point of `vertices` but the corners of the triangle lies inside it, removed corners included. */
+function isTriangleEmpty(
+  vertices: readonly EarVertex[],
+  before: Vector2,
+  corner: Vector2,
+  after: Vector2
+): boolean {
+  for (const { point } of vertices) {
+    if (isSamePoint(point, corner) || isSamePoint(point, before) || isSamePoint(point, after)) continue;
+    if (isInside(before, corner, after, point)) return false;
+  }
+  return true;
+}
+
+/** `TPPLPartition::UpdateVertex`. */
 function updateEarVertex(vertices: EarVertex[], index: number): void {
   const vertex = vertices[index]!;
   const before = vertices[vertex.previous]!.point;
   const after = vertices[vertex.next]!.point;
-  const toBefore = normalize({ x: before.x - vertex.point.x, y: before.y - vertex.point.y });
-  const toAfter = normalize({ x: after.x - vertex.point.x, y: after.y - vertex.point.y });
-  vertex.angle = toBefore.x * toAfter.x + toBefore.y * toAfter.y;
+  vertex.angle = directionDot(vertex.point, before, after);
   vertex.isEar =
-    isConvex(before, vertex.point, after) &&
-    vertices.every(
-      ({ point }) =>
-        isSamePoint(point, vertex.point) ||
-        isSamePoint(point, before) ||
-        isSamePoint(point, after) ||
-        !isInside(before, vertex.point, after, point)
-    );
+    isConvex(before, vertex.point, after) && isTriangleEmpty(vertices, before, vertex.point, after);
 }
 
 function earVerticesOf(polygon: Polygon): EarVertex[] {
@@ -315,10 +331,15 @@ export function convexPartition(inputs: readonly PartitionPolygon[]): Polygon[] 
   return pieces;
 }
 
-interface DiagonalState {
-  isVisible: boolean;
-  weight: number;
-  bestVertex: number;
+/**
+ * The state of each pair of corners `(i, j)` with `i < j`, at index `j * count + i`: whether the pair
+ * sees each other, the weight of the cheapest triangulation between them, and its apex.
+ */
+interface DiagonalStates {
+  count: number;
+  isVisible: Uint8Array;
+  weight: Float64Array;
+  bestVertex: Int32Array;
 }
 
 /** Whether the diagonal from corner `i` to corner `j` lies inside the polygon and crosses no edge. */
@@ -332,44 +353,57 @@ function isDiagonal(polygon: Polygon, i: number, j: number): boolean {
   );
 }
 
-function diagonalStates(polygon: Polygon): DiagonalState[][] {
+function diagonalStates(polygon: Polygon): DiagonalStates {
   const count = polygon.length;
-  // `states[j][i]` for i < j.
-  const states = Array.from({ length: count }, () =>
-    Array.from({ length: count }, (): DiagonalState => ({ isVisible: true, weight: 0, bestVertex: -1 }))
-  );
+  const states: DiagonalStates = {
+    count,
+    isVisible: new Uint8Array(count * count).fill(1),
+    weight: new Float64Array(count * count),
+    bestVertex: new Int32Array(count * count).fill(-1),
+  };
   for (let i = 0; i < count - 1; i++) {
     for (let j = i + 2; j < count; j++) {
-      states[j]![i]!.isVisible = isDiagonal(polygon, i, j);
+      states.isVisible[j * count + i] = isDiagonal(polygon, i, j) ? 1 : 0;
     }
   }
   // The loop reaches the pair of the first and last corners, which are neighbours, not a diagonal.
-  states[count - 1]![0]!.isVisible = true;
+  states.isVisible[(count - 1) * count] = 1;
   return states;
 }
 
-/** Fills `states[j][i]` with the cheapest apex between corners `i` and `j`; false where none is visible. */
-function weighDiagonals(polygon: Polygon, states: DiagonalState[][]): boolean {
+/** The distance between each pair of corners `(i, j)` with `i < j`, at index `j * count + i`. */
+function cornerDistances(polygon: Polygon): Float64Array {
   const count = polygon.length;
+  const distances = new Float64Array(count * count);
+  for (let i = 0; i < count - 1; i++) {
+    for (let j = i + 1; j < count; j++) distances[j * count + i] = distance(polygon[i]!, polygon[j]!);
+  }
+  return distances;
+}
+
+/** Fills the weight and apex of each pair with the cheapest apex between its corners; false where none is visible. */
+function weighDiagonals(polygon: Polygon, states: DiagonalStates): boolean {
+  const { count, isVisible, weight, bestVertex } = states;
+  const distances = cornerDistances(polygon);
   for (let gap = 2; gap < count; gap++) {
     for (let i = 0; i < count - gap; i++) {
       const j = i + gap;
-      if (!states[j]![i]!.isVisible) continue;
-      let bestVertex = -1;
+      if (!isVisible[j * count + i]) continue;
+      let best = -1;
       let minWeight = 0;
       for (let k = i + 1; k < j; k++) {
-        if (!states[k]![i]!.isVisible || !states[j]![k]!.isVisible) continue;
-        const left = k <= i + 1 ? 0 : distance(polygon[i]!, polygon[k]!);
-        const right = j <= k + 1 ? 0 : distance(polygon[k]!, polygon[j]!);
-        const weight = states[k]![i]!.weight + states[j]![k]!.weight + left + right;
-        if (bestVertex === -1 || weight < minWeight) {
-          bestVertex = k;
-          minWeight = weight;
+        if (!isVisible[k * count + i] || !isVisible[j * count + k]) continue;
+        const left = k <= i + 1 ? 0 : distances[k * count + i]!;
+        const right = j <= k + 1 ? 0 : distances[j * count + k]!;
+        const total = weight[k * count + i]! + weight[j * count + k]! + left + right;
+        if (best === -1 || total < minWeight) {
+          best = k;
+          minWeight = total;
         }
       }
-      if (bestVertex === -1) return false;
-      states[j]![i]!.bestVertex = bestVertex;
-      states[j]![i]!.weight = minWeight;
+      if (best === -1) return false;
+      bestVertex[j * count + i] = best;
+      weight[j * count + i] = minWeight;
     }
   }
   return true;
@@ -384,7 +418,7 @@ export function triangulateMinimumWeight(polygon: Polygon): Triangle[] | null {
   const triangles: Triangle[] = [];
   const diagonals: [number, number][] = [[0, polygon.length - 1]];
   for (const [from, to] of diagonals) {
-    const apex = states[to]![from]!.bestVertex;
+    const apex = states.bestVertex[to * states.count + from]!;
     if (apex === -1) return null;
     triangles.push([polygon[from]!, polygon[apex]!, polygon[to]!]);
     if (apex > from + 1) diagonals.push([from, apex]);
