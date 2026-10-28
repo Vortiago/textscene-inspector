@@ -25,6 +25,7 @@ import {
   slotReadsSourceColor,
   slotViewSampler,
   topDownV,
+  fromTopEdge,
   type MaterialTextureStates,
   type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
@@ -182,11 +183,16 @@ function surfaceTextureStates(
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars, anisotropicFilteringLevel);
   if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
-  if (!surface) return states;
+  if (scalars.triplanar)
+    return {
+      ...states,
+      uv1: surface ? planeTiled(states.uv1, surface) : states.uv1,
+      uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
+    };
   return {
     ...states,
-    uv1: scalars.triplanar ? planeTiled(states.uv1, surface) : states.uv1,
-    uv2: scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
+    uv1: fromTopEdge(states.uv1),
+    uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
   };
 }
 

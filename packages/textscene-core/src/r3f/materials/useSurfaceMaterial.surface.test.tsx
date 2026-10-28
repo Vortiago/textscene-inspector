@@ -88,6 +88,18 @@ describe('useSurfaceMaterial on a glTF surface', () => {
     expect([map.repeat.y, map.offset.y]).toEqual([1, 0]);
   });
 
+  it("scales a Godot mesh's map from its top edge, as Godot's top-down V does", () => {
+    const map = emissionMap({ uv1_scale: 'Vector3(2, 1.5, 1)' });
+
+    expect([map.repeat.y, map.offset.y]).toEqual([1.5, -0.5]);
+  });
+
+  it("moves a Godot mesh's map down the image for a positive V offset", () => {
+    const map = emissionMap({ uv1_offset: 'Vector3(0.5, 0.25, 0)' });
+
+    expect([map.offset.x, map.offset.y]).toEqual([0.5, -0.25]);
+  });
+
   it("flips a Godot mesh's UV2 map, as its UV2 keeps the top-down V", () => {
     const map = emissionMap({ emission_on_uv2: 'true' });
 

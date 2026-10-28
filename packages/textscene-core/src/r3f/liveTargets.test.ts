@@ -80,6 +80,13 @@ describe('a reader of a live target', () => {
     expect(copiesFilledFrom(target.texture)).toEqual([]);
   });
 
+  it("reads its own copy of another reader's copy, filled after that copy", () => {
+    const target = liveCanvasTarget();
+    const first = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const second = ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    expect(copiesFilledFrom(target.texture)).toEqual([first, second]);
+  });
+
   it('comes back as it is from a render target no pass publishes (edge case)', () => {
     const target = createSceneTarget(8, 8, 'Unpublished');
     expect(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })).toBe(

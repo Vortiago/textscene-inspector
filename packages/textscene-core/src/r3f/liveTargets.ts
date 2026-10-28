@@ -2,7 +2,7 @@
  * Live targets: render target textures a pass redraws, which every reader shares as Godot's readers
  * share a ViewportTexture RID. Each Godot reader samples that RID through its own sampler, so a
  * reader whose sampler differs from the target's reads a copy of its own, which the pass refills
- * after each render. A crop of a live target is a copy too, and live in its turn.
+ * after each render. A crop of a live target is a copy too, and every copy is live in its turn.
  */
 
 import * as THREE from 'three';
@@ -88,20 +88,15 @@ export function fillLiveTarget(texture: THREE.Texture, gl: THREE.WebGLRenderer):
  */
 export function liveTargetCopy(source: THREE.Texture): THREE.Texture {
   const { width, height } = textureSize(source);
-  return addCopy(source, width, height, () => wholeTexels(width, height));
+  return addCopy(source, width, height, wholeTexels(width, height));
 }
 
 /**
  * The region `layout` cuts out of `source`, as Godot's AtlasTexture draws it: the region at its
- * margin offset inside the reported box, transparent elsewhere. Live, so a reader of the crop is
- * filled after it. The caller frees it with `dispose()`.
+ * margin offset inside the reported box, transparent elsewhere. The caller frees it with `dispose()`.
  */
 export function liveTargetCrop(source: THREE.Texture, layout: AtlasTextureLayout): THREE.Texture {
-  const crop = addCopy(source, layout.width, layout.height, () =>
-    cropPlacement(textureSize(source).height, layout)
-  );
-  publishLiveTarget(crop, liveTargetOf(source).renderer);
-  return crop;
+  return addCopy(source, layout.width, layout.height, cropPlacement(textureSize(source).height, layout));
 }
 
 /**
@@ -127,13 +122,13 @@ function cropPlacement(sourceHeight: number, { height, source, dest }: AtlasText
 /**
  * A `width` x `height` copy of `source`'s storage that `source`'s pass fills through `placement`.
  * The copy keeps the source's format, tag and sRGB-byte mark, so it samples the bytes the source
- * holds the way the source would.
+ * holds the way the source would. It is live, so a reader of the copy is filled after it.
  */
 function addCopy(
   source: THREE.Texture,
   width: number,
   height: number,
-  placement: () => TexelPlacement
+  placement: TexelPlacement
 ): THREE.Texture {
   const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, type: source.type });
   const texture = copySampling(target.texture, source);
@@ -142,13 +137,15 @@ function addCopy(
   texture.colorSpace = source.colorSpace;
   if (holdsSrgbBytes(source)) markSrgbBytes(texture);
 
-  const { copies } = liveTargetOf(source);
+  const { copies, renderer } = liveTargetOf(source);
   const copy: LiveCopy = {
     texture,
-    fill: (gl) => copyTexels(gl, source, target, placement()),
+    fill: (gl) => copyTexels(gl, source, target, placement),
   };
   copies.add(copy);
+  const withdraw = publishLiveTarget(texture, renderer);
   texture.addEventListener('dispose', () => {
+    withdraw();
     copies.delete(copy);
     target.dispose();
   });
