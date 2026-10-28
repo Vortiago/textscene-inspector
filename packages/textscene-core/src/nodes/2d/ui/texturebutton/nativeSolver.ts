@@ -110,7 +110,7 @@ export function textureButtonDraw(
     region: undefined,
     tile: false,
   };
-  if (textureSize.x <= 0 || textureSize.y <= 0) return noDraw;
+  if (textureSize.x <= 0 || textureSize.y <= 0) return sizelessDraw(rectSize, stretchMode, noDraw);
 
   switch (stretchMode ?? TextureStretchMode.STRETCH_KEEP) {
     case TextureStretchMode.STRETCH_SCALE:
@@ -192,5 +192,27 @@ export function textureButtonDraw(
         region: undefined,
         tile: false,
       };
+  }
+}
+
+/**
+ * The draw of a texture that reports size 0, as an unset ViewportTexture does (`viewport.cpp:156-160`).
+ * STRETCH_SCALE draws the empty region `Rect2(Point2(), texdraw_size)` over the rect, which samples
+ * one texel (`texture_button.cpp:182`, `:234`), and STRETCH_TILE the whole texture. Every other mode
+ * sizes the draw by the texture, or divides by it into NaN, and draws nothing.
+ */
+function sizelessDraw(
+  rectSize: Vector2,
+  stretchMode: number | undefined,
+  noDraw: TextureRectDraw
+): TextureRectDraw {
+  const rect = { offset: { x: 0, y: 0 }, size: { x: rectSize.x, y: rectSize.y } };
+  switch (stretchMode ?? TextureStretchMode.STRETCH_KEEP) {
+    case TextureStretchMode.STRETCH_SCALE:
+      return { ...rect, region: { x: 0, y: 0, w: 0, h: 0 }, tile: false };
+    case TextureStretchMode.STRETCH_TILE:
+      return { ...rect, region: undefined, tile: true };
+    default:
+      return noDraw;
   }
 }

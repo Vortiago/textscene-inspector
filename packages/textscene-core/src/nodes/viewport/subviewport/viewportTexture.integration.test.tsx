@@ -205,9 +205,14 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
     expect(mapImages(renderer)).toContain(unconfiguredViewportTexture().image);
   });
 
-  it("draws Godot's placeholder for a SpriteFrames frame that is not local to scene", async () => {
+  /** Godot reports an unset ViewportTexture's size as 0 (`viewport.cpp:134-166`), so the sprite has no area. */
+  it('draws no area for a SpriteFrames frame that is not local to scene', async () => {
     const renderer = await renderScene(spriteFramesScene('false'), '2d');
-    expect(mapImages(renderer)).toContain(unconfiguredViewportTexture().image);
+    const sprite = renderer.scene
+      .findAll((node) => node.type === 'Mesh')
+      .map((node) => node.instance as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>)
+      .find((mesh) => mesh.material.map?.image === unconfiguredViewportTexture().image);
+    expect(sprite?.geometry.parameters).toMatchObject({ width: 0, height: 0 });
   });
 
   it('draws the viewport for a SpriteFrames frame that is local to scene', async () => {
