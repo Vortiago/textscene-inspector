@@ -84,13 +84,17 @@ describe('useBuildSolveTree: a ViewportTexture slot', () => {
     expect(size).toEqual({ x: 0, y: 0 });
   });
 
-  it('takes the viewport size through a CanvasTexture that is local to scene', () => {
+  /**
+   * A CanvasTexture forwards no `changed` from its ViewportTexture (`canvas_item.cpp:1786-1796`), so
+   * the minimum size keeps the 0 it read before set up. Godot 4.6.3 lays such a TextureRect out at 0.
+   */
+  it('keeps size 0 through a CanvasTexture that is local to scene', () => {
     const size = shownTextureSize(
       shownBy('SubResource("CanvasTexture_1")'),
       [VIEWPORT_TEXTURE, canvasTexture(true)],
       'Root/SubViewport'
     );
-    expect(size).toEqual({ x: 64, y: 32 });
+    expect(size).toEqual({ x: 0, y: 0 });
   });
 
   it('waits for a viewport that has not published its target yet', () => {

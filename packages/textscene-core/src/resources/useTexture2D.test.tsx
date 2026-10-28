@@ -992,6 +992,11 @@ describe('the size of a ViewportTexture slot', () => {
       type: 'AtlasTexture',
       data: { atlas: 'SubResource("vt")', resource_local_to_scene: 'true' },
     },
+    {
+      id: 'canvas',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("vt")', resource_local_to_scene: 'true' },
+    },
     { id: 'cell', type: 'AtlasTexture', data: { atlas: 'SubResource("vt")', region: 'Rect2(0, 0, 16, 8)' } },
   ];
   const setUp = { isHeldLocally: true, viewportSize: () => ({ x: 64, y: 32 }) };
@@ -1007,8 +1012,13 @@ describe('the size of a ViewportTexture slot', () => {
     });
   });
 
-  it("is its viewport's size through an AtlasTexture of the whole sheet", () => {
-    expect(inlineTexture2DSize('SubResource("whole")', resources, setUp)).toEqual({ x: 64, y: 32 });
+  /** A wrapper forwards no `changed` from it (`canvas_item.cpp:1786-1796`, `atlas_texture.cpp:70-85`). */
+  it('is 0 by 0 through an AtlasTexture of the whole sheet, the size read before set up', () => {
+    expect(inlineTexture2DSize('SubResource("whole")', resources, setUp)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('is 0 by 0 through a CanvasTexture, the size read before set up', () => {
+    expect(inlineTexture2DSize('SubResource("canvas")', resources, setUp)).toEqual({ x: 0, y: 0 });
   });
 
   it("is the region's size through an AtlasTexture of a region", () => {
