@@ -1,8 +1,8 @@
 /**
  * RibbonTrailMesh surface, ported from Godot 4.6.3 `RibbonTrailMesh::_create_mesh_array`
- * (`scene/resources/3d/primitive_meshes.cpp:2879-3004`, without the bone arrays): a row of two
- * vertices for each segment down the ribbon, or of four for a cross, where the second pair lies
- * across the first.
+ * (`scene/resources/3d/primitive_meshes.cpp:2879-3004`): a row of two vertices for each segment
+ * down the ribbon, or of four for a cross, where the second pair lies across the first. Each row
+ * blends the bone of its section into the next bone, so a skeleton bends the ribbon.
  *
  * Derived from Godot Engine (`scene/resources/3d/primitive_meshes.cpp`), used under the MIT licence:
  *
@@ -43,10 +43,7 @@ const TANGENT: Vec4 = [0, 1, 0, 1];
 const FRONT_NORMAL: Vec3 = [0, 0, 1];
 const CROSS_NORMAL: Vec3 = [1, 0, 0];
 
-/**
- * No UV2: `PrimitiveMesh::_update` makes it from UV (`:2880`). No bone arrays: nothing here skins a
- * primitive, and Godot draws a mesh with no skin at the rest positions.
- */
+/** No UV2: `PrimitiveMesh::_update` makes it from UV (`:2880`). */
 export function buildRibbonTrailMeshSurface(p: RibbonTrailMeshProperties): GodotSurface {
   const totalSegments = p.sectionSegments * p.sections;
   const depth = storedReal(p.sectionLength * p.sections);
@@ -59,6 +56,7 @@ export function buildRibbonTrailMeshSurface(p: RibbonTrailMeshProperties): Godot
     const { v, y } = rowAt(j, totalSegments, depth);
     const width = storedReal(p.size * widthScale(v));
     writeRow(writer, p.isCross, y, width, v);
+    writeRowBones(writer, p, j, verticesPerRow);
     if (j === 0) continue;
     // The triangles back to the row before (`:2966-2994`): the strip in the XY plane, then the
     // strip across it, two vertices further into each row.
@@ -78,4 +76,22 @@ function writeRow(writer: SurfaceWriter, isCross: boolean, y: number, width: num
   if (!isCross) return;
   writer.vertex([0, y, -half], CROSS_NORMAL, TANGENT, [0, v], [0, 0]);
   writer.vertex([0, y, half], CROSS_NORMAL, TANGENT, [1, v], [0, 0]);
+}
+
+/**
+ * The bones of every vertex of row `j` (`:2955-2964`): the bone of the row's section and the one
+ * after it, which the last section lacks, so it blends into itself. The weight moves from the
+ * first to the second one segment at a time down a section. Godot holds `blend` in a `float`.
+ */
+function writeRowBones(
+  writer: SurfaceWriter,
+  { sections, sectionSegments }: RibbonTrailMeshProperties,
+  j: number,
+  verticesPerRow: number
+): void {
+  const bone = Math.trunc(j / sectionSegments);
+  const blend = storedReal(1 - storedReal((j % sectionSegments) / sectionSegments));
+  const indices: Vec4 = [bone, Math.min(sections, bone + 1), 0, 0];
+  const weights: Vec4 = [blend, storedReal(1 - blend), 0, 0];
+  for (let i = 0; i < verticesPerRow; i++) writer.bones(indices, weights);
 }
