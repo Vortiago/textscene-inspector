@@ -131,8 +131,6 @@ function lightRects(passMeshes: ReadonlySet<PassMesh>, viewport: Rect2): Map<num
   return rects;
 }
 
-const NOTHING_OVER_BUDGET: ReadonlySet<number> = new Set();
-
 /** What one canvas layer lists of the render's budget. */
 interface LayerBudget {
   /** The directional lights on the layer's list: the first `MAX_LIGHTS_PER_RENDER` in list order. */
@@ -159,7 +157,6 @@ function layerBudget(
   const directional = reachedDirectional.slice(0, MAX_LIGHTS_PER_RENDER);
   const dropsDirectional = directional.length < reachedDirectional.length;
   const budget = MAX_LIGHTS_PER_RENDER - directional.length;
-  if (rects.size <= budget) return { directional, dropsDirectional, overBudget: NOTHING_OVER_BUDGET };
   const overBudget = new Set<number>();
   let listed = 0;
   for (const ordinal of positionalOrder) {
@@ -225,7 +222,10 @@ class FrameBudget {
     return taken;
   }
 
-  /** The same array for every item that takes the placement's `taken`, so its id is built once. */
+  /**
+   * The same array for every item that takes the placement's `taken`, so its id is built once. A
+   * placement sits on one canvas layer, so the directional lights of `taken` are that layer's.
+   */
   private wholeList(taken: readonly number[], directional: readonly number[]): readonly number[] {
     let list = this.wholeLists.get(taken);
     if (!list) this.wholeLists.set(taken, (list = [...taken, ...directional]));
