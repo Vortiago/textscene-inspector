@@ -77,6 +77,28 @@ describe('tileSetFromScene', () => {
     expect([model.sources.get(0)!.tiles.size, model.sources.get(1)!.tiles.size]).toEqual([0, 0]);
   });
 
+  /** An AtlasTexture reports its region's size, and its sheet's on a zero axis (`atlas_texture.cpp:32-52`). */
+  it('creates no tile through an AtlasTexture of the whole ViewportTexture, and keeps one through a region', () => {
+    const viewportAtlas: TscnInternalResource[] = [
+      { id: 'vt', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+      { id: 'whole', type: 'AtlasTexture', data: { atlas: 'SubResource("vt")' } },
+      {
+        id: 'cell',
+        type: 'AtlasTexture',
+        data: { atlas: 'SubResource("vt")', region: 'Rect2(0, 0, 16, 16)' },
+      },
+      { id: 'w', type: 'TileSetAtlasSource', data: { texture: 'SubResource("whole")', '0:0/0': '0' } },
+      { id: 'c', type: 'TileSetAtlasSource', data: { texture: 'SubResource("cell")', '0:0/0': '0' } },
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: { 'sources/0': 'SubResource("w")', 'sources/1': 'SubResource("c")' },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', viewportAtlas, externals)!;
+    expect([model.sources.get(0)!.tiles.size, model.sources.get(1)!.tiles.size]).toEqual([0, 1]);
+  });
+
   it('pads the atlas by default, as TileSetAtlasSource does (tile_set.h use_texture_padding = true)', () => {
     const source = tileSetFromScene('SubResource("ts")', internals, externals)!.sources.get(0)!;
     expect(source.usesTexturePadding).toBe(true);

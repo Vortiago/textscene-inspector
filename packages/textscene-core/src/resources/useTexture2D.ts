@@ -3,34 +3,28 @@
  * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own resource file,
  * or a `ViewportTexture`'s live target. Wrappers peel to a fixed point, and the texture's size is
  * Godot's size for the slot.
- * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sits
- * here so the size cannot drift.
+ * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sizes a
+ * slot outside React by the same rule.
  */
 
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import type { ParsedResource } from '../parser/parsedResource.js';
 import {
   findSubResource,
   peelCanvasTextures,
   resolveExtResourcePath,
   resolveSubResourceRef,
-  unwrapCanvasTextureRef,
 } from './SubResourceResolver.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
-import { atlasTextureLayout } from './textures/atlastexture/decode.js';
-import { imageSize } from './formats/image/imagePixels.js';
+import { atlasTextureLayout, atlasTextureSize } from './textures/atlastexture/decode.js';
+import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
   resolveAtlasTexture,
   resolveAtlasTextureRef,
   type AtlasTextureReference,
 } from './textures/atlastexture/resolveAtlasTexture.js';
-import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
-import { imageRefSize } from './textures/image/decode.js';
-import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
-import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
 import {
   isViewportTextureRef,
   useViewportTextureSlot,
@@ -56,6 +50,12 @@ export interface Texture2DResult {
   missing: boolean;
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
+  /**
+   * The size Godot reports for the texture: its image's, an AtlasTexture's region's, or 0 by 0 for
+   * a ViewportTexture its scene never sets up, which samples the placeholder (`viewport.cpp:150-166`).
+   * Undefined while there is no texture.
+   */
+  size?: ImageSize;
   /**
    * Set when the slot reaches a ViewportTexture Godot never sets up, through any wrapper, whose
    * `get_image()` is null (`viewport.cpp:180-186`). `texture` then samples the placeholder.
@@ -94,10 +94,30 @@ export function useTexture2D(
   useProceduralTexturePins(cropped ? [cropped.key] : []);
   const liveCrop = useLiveCrop(atlas, isLiveSheet ? source : null);
 
-  if (!atlas) return slot.result;
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
-  return { ...slot.result, texture: liveCrop ?? cropped?.texture ?? null };
+  const texture = atlas ? (liveCrop ?? cropped?.texture ?? null) : slot.result.texture;
+  const size = useReportedSize(texture, atlas, slot.result);
+  return { ...slot.result, texture, size };
+}
+
+/**
+ * The size Godot reports for `texture`, which is `sheet`'s texture or the cell `atlas` cuts from
+ * it. Kept while its width and height hold, so a consumer's memo on it holds too.
+ */
+function useReportedSize(
+  texture: THREE.Texture | null,
+  atlas: AtlasTextureReference | null,
+  sheet: Texture2DResult
+): ImageSize | undefined {
+  const sheetSize = sheet.hasNoImage ? NO_AREA : imageSize(sheet.texture?.image);
+  const size = texture && (atlas ? atlasTextureSize(atlas.texture, sheetSize ?? null) : sheetSize);
+  const width = size?.width;
+  const height = size?.height;
+  return useMemo(
+    () => (width === undefined || height === undefined ? undefined : { width, height }),
+    [width, height]
+  );
 }
 
 /**
@@ -144,10 +164,14 @@ export function useTexture2DRid(
     view,
     isHeldLocally
   );
-  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
+  const size = useReportedSize(result.texture, null, result);
+  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, size, namesTexture: true };
 }
 
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
+
+/** `ViewportTexture::get_size` while no viewport is set (`viewport.cpp:150-166`). */
+const NO_AREA: ImageSize = { width: 0, height: 0 };
 
 const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
 
@@ -247,61 +271,4 @@ function useTexture2DSlot(
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
   const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
-}
-
-/** Pixel dimensions of a Texture2D slot, as the `Vector2` the rect solver uses. */
-interface Texture2DSize {
-  x: number;
-  y: number;
-}
-
-/**
- * The pixel size of a Texture2D slot that the scene states, for a Control's minimum-size solve,
- * which runs outside React. Null for a form only the loader can size: an image, a wrapper of one,
- * or a resource file (see `extResourceTexture2DSize`).
- */
-export function inlineTexture2DSize(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): Texture2DSize | null {
-  // Unwrapped before the atlas lookup, as in the hook: the raw ref would answer the sheet's size.
-  const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
-  const atlas = resolveAtlasTextureRef(unwrapped, internalResources);
-  if (atlas) {
-    // Region plus margin (`scene/resources/atlas_texture.cpp:33-53`), so a cell reserves the
-    // cell's size. Null when a region axis is zero, where Godot uses the sheet.
-    const layout = atlasTextureLayout(atlas.texture, null);
-    return layout ? { x: layout.width, y: layout.height } : null;
-  }
-
-  // The declared size: neither getter consults the texture's source
-  // (`scene/resources/gradient_texture.cpp`, `modules/noise/noise_texture_2d.cpp:378-384`), and
-  // building one here mints a cache entry no consumer pins, open to eviction.
-  const resource = resolveSubResourceRef(unwrapped, internalResources);
-  const decode = resource && DECLARED_SIZES[resource.type];
-  if (decode) {
-    const { width, height } = decode(resource.data);
-    return { x: width, y: height };
-  }
-  // An ImageTexture's size is its image's (`scene/resources/image_texture.cpp:74-75`, `:122-128`).
-  const image =
-    resource?.type === 'ImageTexture' ? imageRefSize(resource.data.image, internalResources) : null;
-  return image ? { x: image.width, y: image.height } : null;
-}
-
-/** The texture types whose properties state their size. */
-const DECLARED_SIZES: Readonly<
-  Record<string, (data: Record<string, string>) => { width: number; height: number }>
-> = {
-  GradientTexture2D: decodeGradientTexture2D,
-  NoiseTexture2D: decodeNoiseTexture2D,
-};
-
-/**
- * The pixel size of an `ExtResource` slot from its parsed resource file, for a caller with a synchronous
- * cache instead of hooks. Null for a file that holds no texture the scene could state inline.
- */
-export function extResourceTexture2DSize(parsed: ParsedResource): Texture2DSize | null {
-  const saved = parsedResourceTexture(parsed);
-  return inlineTexture2DSize(saved.ref, saved.internalResources);
 }

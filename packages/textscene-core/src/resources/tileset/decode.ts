@@ -5,7 +5,8 @@
  * absent properties, warn-then-skip on malformed ones, never throws.
  */
 
-import { inlineViewportTexture, isLocalToScene } from '../textures/viewporttexture/localToScene.js';
+import { isLocalToScene } from '../textures/viewporttexture/localToScene.js';
+import { BEFORE_SETUP, inlineTexture2DSize } from '../texture2DSize.js';
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { slotInt } from '../../godot/variant/intSlots.js';
@@ -200,11 +201,12 @@ function resolveAtlasSource(
 }
 
 /**
- * Whether the atlas texture reports size 0 while the scene loads, as a ViewportTexture does
+ * Whether the atlas texture reports no area while the scene loads, as a ViewportTexture does
  * (`viewport.cpp:156-160`), so `create_tile` finds room for no tile (`tile_set.cpp:4985`, `:5209`).
  */
 function isSizelessAtLoad(ref: string | undefined, data: TileSetSourceData): boolean {
-  return inlineViewportTexture(ref, data.internalResources) !== undefined;
+  const size = inlineTexture2DSize(ref, data.internalResources, BEFORE_SETUP);
+  return size !== null && (size.x <= 0 || size.y <= 0);
 }
 
 function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileSetSourceData): TileTexture {

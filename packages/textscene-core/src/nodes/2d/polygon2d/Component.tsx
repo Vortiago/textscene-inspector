@@ -15,7 +15,6 @@ import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { textureSize } from '../../../resources/textures/textureSize';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Polygon2DProperties } from './types';
@@ -31,7 +30,11 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
 
   // Either an image file or an inline procedural texture; `useTexture2D` hides
   // which, and owns the lifetime of the procedural one it rasterises.
-  const { texture: resolvedTexture } = useTexture2D(props.texture, externalResources, internalResources);
+  const { texture: resolvedTexture, size } = useTexture2D(
+    props.texture,
+    externalResources,
+    internalResources
+  );
   const sampler = useNode2DTextureSampler(props);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
@@ -49,7 +52,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
 
   // Godot divides the transformed UV by the texture's size, so the geometry rebuilds when a late
   // load changes the dimensions.
-  const uvSpace = useMemo(() => textureSize(texture) ?? null, [texture]);
+  const uvSpace = texture ? (size ?? null) : null;
 
   const geometry = useMemo(() => buildPolygonGeometry(rings, props, uvSpace), [rings, props, uvSpace]);
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.

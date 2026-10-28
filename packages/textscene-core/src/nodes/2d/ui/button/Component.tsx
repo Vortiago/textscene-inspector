@@ -5,7 +5,7 @@
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
 import { useMemo } from 'react';
-import { reportedArea } from '../../../../resources/textures/textureSize';
+import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -66,15 +66,19 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: an icon may be an inline
   // procedural texture, which has no path to load from.
-  const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
+  const { texture: iconSource, size: iconSize } = useTexture2D(
+    props.icon,
+    externalResources,
+    internalResources
+  );
   // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
   // bytes (`canvas2DTextureDecode.ts`). `ControlQuad` decodes the
   // already-filtered sample once it sees this tag.
   const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const iconNaturalSize = useMemo(
-    () => (props.icon ? reportedArea(iconTexture) : null),
-    [props.icon, iconTexture]
+    () => (props.icon && iconTexture ? sizeWithArea(iconSize) : null),
+    [props.icon, iconTexture, iconSize]
   );
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);

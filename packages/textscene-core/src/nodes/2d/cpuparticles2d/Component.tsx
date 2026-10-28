@@ -18,7 +18,6 @@ import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { textureSize } from '../../../resources/textures/textureSize';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
@@ -88,11 +87,11 @@ function ParticleField({
   const pools = useSceneResources();
   const { externalResources, internalResources } = pools;
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
-  const { texture: resolvedTexture, missing } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources
-  );
+  const {
+    texture: resolvedTexture,
+    size,
+    missing,
+  } = useTexture2D(props.texture, externalResources, internalResources);
   const sampler = useNode2DTextureSampler(props);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
@@ -124,7 +123,7 @@ function ParticleField({
   // Godot's quad is the texture's size, falling back to 1x1 when the emitter has none
   // (`cpu_particles_2d.cpp:186-192`).
   // An unset ViewportTexture reports size 0, so its quads have no area (`viewport.cpp:156-160`).
-  const { width, height } = textureSize(texture) ?? UNTEXTURED_QUAD;
+  const { width, height } = (texture && size) || UNTEXTURED_QUAD;
 
   const geometry = useMemo(
     () => buildParticleGeometry(pose, width, height, flipbook),

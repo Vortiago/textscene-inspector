@@ -28,8 +28,3 @@ export function unconfiguredViewportTexture(): THREE.DataTexture {
   placeholder.name = 'ViewportTexture placeholder';
   return placeholder;
 }
-
-/** Whether `texture` is the placeholder or a view of it, which shares its image. */
-export function isUnconfiguredViewportTexture(texture: THREE.Texture): boolean {
-  return placeholder !== undefined && texture.image === placeholder.image;
-}

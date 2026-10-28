@@ -30,13 +30,13 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
+import { NODE_PROPERTY } from '../../../resources/useTexture2D';
 import {
   extResourceTexture2DSize,
   inlineTexture2DSize,
-  NODE_PROPERTY,
-} from '../../../resources/useTexture2D';
+  type ViewportTextureSizing,
+} from '../../../resources/texture2DSize';
 import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
-import { inlineViewportTexture } from '../../../resources/textures/viewporttexture/localToScene';
 import {
   recordingSizes,
   sizesStillAnswered,
@@ -421,9 +421,6 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  */
 const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
 
-/** An unset ViewportTexture's size (`viewport.cpp:156-160`). */
-const NO_SIZE: Vector2 = { x: 0, y: 0 };
-
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
@@ -547,15 +544,13 @@ function buildForest(
     consumerPath: string,
     isHeldLocally: boolean
   ): Vector2 | null {
-    const viewport = inlineViewportTexture(ref, int);
-    if (viewport) {
-      const isSetUp = viewport.isSetUp && isHeldLocally;
-      return isSetUp ? readViewportSize(consumerPath, viewport.resource) : NO_SIZE;
-    }
-
-    // An inline procedural texture or a region cell states its size here, with no
-    // load. This walk is no component, so it cannot call `useTexture2D`.
-    const inline = inlineTexture2DSize(ref, int);
+    const sizing: ViewportTextureSizing = {
+      isHeldLocally,
+      viewportSize: (viewportTexture) => readViewportSize(consumerPath, viewportTexture),
+    };
+    // An inline procedural texture, a region cell or a ViewportTexture states its size here, with
+    // no load. This walk is no component, so it cannot call `useTexture2D`.
+    const inline = inlineTexture2DSize(ref, int, sizing);
     if (inline) return inline;
 
     // A texture in its own resource file loads on the resource bus, not the texture
@@ -569,7 +564,7 @@ function buildForest(
         return null;
       }
       if (cached === null) return null;
-      return extResourceTexture2DSize(cached);
+      return extResourceTexture2DSize(cached, sizing);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`

@@ -7,7 +7,6 @@
 
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
-import { peelCanvasTextures, resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
 /**
@@ -16,18 +15,4 @@ import { VIEWPORT_TEXTURE_TYPE } from './types.js';
  */
 export function isLocalToScene(resource: TscnInternalResource): boolean {
   return boolSlotValue(resource.data.resource_local_to_scene) ?? resource.type === VIEWPORT_TEXTURE_TYPE;
-}
-
-/**
- * The ViewportTexture a node's own slot reaches through its CanvasTextures, and whether Godot sets
- * it up there. Undefined for a slot that reaches none.
- */
-export function inlineViewportTexture(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): { resource: TscnInternalResource; isSetUp: boolean } | undefined {
-  const peeled = peelCanvasTextures(ref, internalResources);
-  const resource = resolveSubResourceRef(peeled.ref, internalResources);
-  if (resource?.type !== VIEWPORT_TEXTURE_TYPE) return undefined;
-  return { resource, isSetUp: peeled.wrappers.every(isLocalToScene) && isLocalToScene(resource) };
 }

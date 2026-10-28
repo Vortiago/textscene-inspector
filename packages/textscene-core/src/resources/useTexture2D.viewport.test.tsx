@@ -91,7 +91,12 @@ function CyclicPasses() {
 describe('useTexture2D with a ViewportTexture', () => {
   it("samples the target's plain view, as a canvas item does", () => {
     const { result } = renderHook(() => useTexture2D(VIEWPORT_REF, [], RESOURCES), { wrapper: wrapper() });
-    expect(result.current).toEqual({ texture: plain, missing: false, isArriving: false });
+    expect(result.current).toEqual({
+      texture: plain,
+      size: { width: 32, height: 32 },
+      missing: false,
+      isArriving: false,
+    });
   });
 
   it('peels a CanvasTexture down to the ViewportTexture it wraps', () => {
@@ -181,6 +186,22 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
       wrapper: wrapper(),
     });
     expect(result.current.hasNoImage).toBe(true);
+  });
+
+  /** `ViewportTexture::get_size` answers an empty size while no viewport is set (`viewport.cpp:156-160`). */
+  it('reports 0 by 0 for it, though it samples the placeholder', () => {
+    const { result } = renderHook(() => useTexture2D('SubResource("SharedViewportTexture")', [], RESOURCES), {
+      wrapper: wrapper(),
+    });
+    expect(result.current.size).toEqual({ width: 0, height: 0 });
+  });
+
+  /** An AtlasTexture reports its region whatever its sheet reports (`atlas_texture.cpp:32-52`). */
+  it("reports the region's size for an AtlasTexture that windows it", () => {
+    const { result } = renderHook(() => useTexture2D('SubResource("SharedAtlasTexture")', [], RESOURCES), {
+      wrapper: wrapper(),
+    });
+    expect(result.current.size).toEqual({ width: 16, height: 16 });
   });
 
   it('keeps its placeholder four texels square', () => {

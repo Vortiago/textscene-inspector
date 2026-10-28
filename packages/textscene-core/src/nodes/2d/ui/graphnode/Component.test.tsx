@@ -16,7 +16,10 @@ import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { unconfiguredViewportTexture } from '../../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import {
+  UNSET_VIEWPORT_TEXTURE,
+  UNSET_VIEWPORT_TEXTURE_REF,
+} from '../../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
@@ -107,21 +110,17 @@ describe('<GraphNode> (isolated painter contract)', () => {
   /** Godot draws a port icon at its reported size, which is 0 for an unset ViewportTexture (`viewport.cpp:156-160`). */
   it('draws a port icon that reports size 0 with no area', async () => {
     const fake = createFakeResourceLoader();
-    fake.textures.seed('res://port.png', unconfiguredViewportTexture());
     const child: SolveNode = {
       ...emptySolveNode(),
       path: 'N/c',
       node: controlNode('c', 'Control', { name: 'c' }),
     };
     const slots = new Map([
-      [0, { ...defaultGraphNodeSlot(), leftEnabled: true, leftIcon: 'ExtResource("1")' }],
+      [0, { ...defaultGraphNodeSlot(), leftEnabled: true, leftIcon: UNSET_VIEWPORT_TEXTURE_REF }],
     ]);
     const solveNode = {
       ...graphNode({ slots }, [child]),
-      resources: {
-        externalResources: [{ id: '1', type: 'Texture2D', path: 'res://port.png' }],
-        internalResources: [],
-      },
+      resources: { externalResources: [], internalResources: [UNSET_VIEWPORT_TEXTURE] },
     };
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>

@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import {
+  UNSET_VIEWPORT_TEXTURE,
+  UNSET_VIEWPORT_TEXTURE_REF,
+} from '../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { parseCPUParticles2D } from './parser';
@@ -107,9 +110,15 @@ describe('<CPUParticles2D>', () => {
 
   /** An unset ViewportTexture reports size 0 (`viewport.cpp:156-160`), and Godot 4.6.3 draws nothing. */
   it('gives each quad no area for a texture that reports size 0', async () => {
-    const renderer = await render(node({ amount: '1', explosiveness: '1', gravity: 'Vector2(0, 0)' }), {
-      texture: unconfiguredViewportTexture(),
-    });
+    const renderer = await render(
+      node({
+        amount: '1',
+        explosiveness: '1',
+        gravity: 'Vector2(0, 0)',
+        texture: UNSET_VIEWPORT_TEXTURE_REF,
+      }),
+      { internalResources: [UNSET_VIEWPORT_TEXTURE] }
+    );
     const geometry = particleMesh(renderer)!.geometry;
     geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
