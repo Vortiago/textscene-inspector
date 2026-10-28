@@ -63,3 +63,34 @@ describe('a RemoteTransform target inside an instanced scene', () => {
     expect(meshWorldXs(renderer)).toEqual([expect.closeTo(12, 5), expect.closeTo(22, 5)]);
   });
 });
+
+describe('a y-sorted ancestor that a RemoteTransform2D moves', () => {
+  const SORTED = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+[node name="Props" type="Node2D" parent="."]
+y_sort_enabled = true
+[node name="Marker" type="Polygon2D" parent="Props"]
+position = Vector2(5, 0)
+polygon = PackedVector2Array(0, 0, 4, 0, 4, 4)
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(100, 0)
+remote_path = NodePath("../Props")
+`;
+
+  it('carries the item lifted past it to the ancestor’s moved place', async () => {
+    const { sceneGraph } = parseTscnContent(SORTED, 'res://main.tscn');
+    const renderer = await ReactThreeTestRenderer.create(
+      <DispatchedScene sceneGraph={sceneGraph!} loader={loaderServing({})} workspace="2d" />
+    );
+    await settleLoads();
+
+    let marker: THREE.Object3D | undefined;
+    instanceAs<THREE.Object3D>(renderer.scene).traverse((o) => {
+      if (o.name === 'Marker') marker = o;
+    });
+    marker!.updateWorldMatrix(true, false);
+    // The relay moves Props to x = 100, so the marker at 5 into Props stands at 105.
+    expect(marker!.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(105, 3);
+  });
+});

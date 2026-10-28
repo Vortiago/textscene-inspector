@@ -705,14 +705,14 @@ function buildForest(
     const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
 
-    // A real Control's descendants start a fresh accumulation. A skipped node
-    // folds its own CanvasItem transform into what they inherit.
     // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
     // The passes run for the first such Node2D only, so a scene of Controls alone never runs them.
     const placed =
       !isControl && isCanvasItem(collapsed)
         ? patchedNode(collapsed, liveScenePassResults(liveNodePatches, tree).get(path))
         : collapsed;
+    // A real Control's descendants start a fresh accumulation. A skipped node
+    // folds its own CanvasItem transform into what they inherit.
     const childSkippedAncestors = isControl
       ? null
       : nextSkippedAncestors(

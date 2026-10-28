@@ -10,6 +10,7 @@ import type { TscnNode } from '../parser/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { applyRemoteTransforms } from '../nodes/3d/remotetransform3d/remoteTransforms.js';
 import { resolveCsgPolygonPaths } from '../nodes/3d/csg/csgpolygon3d/csgPolygonPaths.js';
+import { joinPath } from '../utils/nodePath.js';
 import { sameEntries } from '../utils/sameEntries.js';
 import { sameData } from '../utils/sameData.js';
 import { perObject } from '../utils/perObject.js';
@@ -57,6 +58,9 @@ export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
   return keptPatches(tree, mergedPatches(transforms, resolveCsgPolygonPaths(tree, transforms)));
 };
 
+/** {@link canTakePatch} by type, since each node asks on every render. Written only by it. */
+const canTakeByType = new Map<string, boolean>();
+
 /**
  * Whether a node of `type` can take a patch: a RemoteTransform3D drives a Node3D, a
  * RemoteTransform2D a Node2D (`remote_transform_3d.cpp:54`), and the path pass patches a
@@ -71,9 +75,6 @@ function canTakePatch(type: string): boolean {
   return can;
 }
 
-/** {@link canTakePatch} by type, since each node asks on every render. Written only by it. */
-const canTakeByType = new Map<string, boolean>();
-
 /**
  * `node` as the live passes bind it at the live path `path`, and the same node where none does. A
  * null node or path, or a node that cannot take a patch, asks nothing, so it watches no load.
@@ -81,6 +82,37 @@ const canTakeByType = new Map<string, boolean>();
 export function useLivePatchedNode<N extends TscnNode | null>(node: N, path: string | null): N {
   const patch = useLiveScenePass(liveNodePatches, node && canTakePatch(node.type) ? path : null);
   return useMemo(() => (node ? patchedNode(node, patch) : node), [node, patch]);
+}
+
+/** The live path of each node of `chain`, a run of nested nodes that starts below `basePath`. */
+export function pathsAlong(chain: readonly TscnNode[], basePath: string): string[] {
+  const paths: string[] = [];
+  let path = basePath;
+  for (const node of chain) paths.push((path = joinPath(path, node.name)));
+  return paths;
+}
+
+/**
+ * `chain` as the live passes bind it, a run of nested nodes that starts below the live path
+ * `basePath`. One subscription serves the run, and an empty run asks nothing.
+ */
+export function useLivePatchedChain(chain: readonly TscnNode[], basePath: string): readonly TscnNode[] {
+  const paths = useMemo(() => pathsAlong(chain, basePath), [chain, basePath]);
+  const select = useMemo(
+    () =>
+      paths.length === 0
+        ? null
+        : (patches: NodePatches): NodePatches =>
+            new Map(
+              paths.flatMap((path) => (patches.has(path) ? [[path, patches.get(path)!] as const] : []))
+            ),
+    [paths]
+  );
+  const patches = useLiveScenePassSelection(liveNodePatches, select, sameEntries) ?? NO_PATCHES;
+  return useMemo(
+    () => chain.map((node, index) => patchedNode(node, patches.get(paths[index]!))),
+    [chain, paths, patches]
+  );
 }
 
 /** The patches of the nodes below the live path `path`, for a reader that walks a subtree itself. */

@@ -180,7 +180,7 @@ function SortedChildren({
           // artifact rather than a draw position.
           return (
             <Fragment key={`tg-${item.node.name}-${ySortItemId(item)}`}>
-              <LiftedAncestors liftedPast={item.liftedPast}>
+              <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
                 <Renderer item={item} layerRank={layerRank} sequence={range.base} node={item.node} />
               </LiftedAncestors>
             </Fragment>
@@ -190,7 +190,7 @@ function SortedChildren({
         if (item.node) {
           return (
             <PaintRangeProvider key={`n-${item.treeOrder}`} value={range}>
-              <LiftedAncestors liftedPast={item.liftedPast}>
+              <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
                 <DispatchedNode
                   node={item.node}
                   path={liftedPath(basePath, item.liftedPast, item.node.name)}
