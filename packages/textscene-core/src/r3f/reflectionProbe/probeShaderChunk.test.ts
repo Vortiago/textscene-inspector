@@ -79,7 +79,7 @@ describe('installGodotReflectionProbes', () => {
     const gather = functionBody(probeFunctions, 'void godotGatherReflectionProbes');
 
     expect(gather).toContain('for ( int index = probeCount - 1; index >= 0; index -- )');
-    expect(gather).toContain(`( godotProbeMask( flags ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u`);
+    expect(gather).toContain(`( godotSceneRowMask( flags ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u`);
   });
 
   it('reflects about a normal bent by the roughness to the fourth, as Godot does for a probe', () => {

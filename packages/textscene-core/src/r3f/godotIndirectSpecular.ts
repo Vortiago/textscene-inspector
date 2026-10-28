@@ -11,6 +11,7 @@ import { dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { DFG_SIZE } from '../godot/rendering/materials/dfgTable.generated.js';
 import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
+import { installGodotOcclusion } from './materials/godotAmbientOcclusion.js';
 import { releasedOnUnmount, sharedTexture } from './sharedTexture.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
 
@@ -72,12 +73,7 @@ const OCCLUSION_DISABLED_DEFINE = 'GODOT_SPECULAR_OCCLUSION_DISABLED';
 const GODOT_SPECULAR_OCCLUSION = /* glsl */ `
 #if defined( STANDARD ) && ! defined( ${OCCLUSION_DISABLED_DEFINE} )
 
-	#ifdef USE_AOMAP
-		float godotAmbientOcclusion = ambientOcclusion;
-	#else
-		float godotAmbientOcclusion = 1.0;
-	#endif
-	vec3 godotAmbientLight = ( irradiance + iblIrradiance ) * RECIPROCAL_PI * godotAmbientOcclusion;
+	vec3 godotAmbientLight = ( irradiance + iblIrradiance ) * RECIPROCAL_PI * ambientOcclusion;
 	float godotSpecularOcclusion = min( dot( godotAmbientLight, vec3( 0.3, 0.59, 0.11 ) ) * 8.0, 1.0 );
 	float godotReflective = ( 1.0 - material.godotRoughness ) * material.metalness;
 	godotSpecularOcclusion = max( min( godotReflective * godotSpecularOcclusion * 10.0, 1.0 ), godotSpecularOcclusion );
@@ -139,6 +135,7 @@ export function installGodotIndirectSpecular(): void {
     patch: 'specular',
     // Godot's occlusion after three's AO, which every lit program runs.
     append: { aomap_fragment: GODOT_SPECULAR_OCCLUSION },
+    requires: [installGodotOcclusion],
   });
   if (isPatched) installLitUniform(DFG_UNIFORM, releasedOnUnmount(new DfgTexture()));
 }

@@ -463,6 +463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Emission Map",
+    "file": "unit-decal-emission-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -470,6 +475,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Mipmap Import",
     "file": "unit-decal-mipmap-import.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Normal Map",
+    "file": "unit-decal-normal-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Orm Map",
+    "file": "unit-decal-orm-map.tscn",
     "category": "Other"
   },
   {
@@ -670,16 +685,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance Child",
-    "file": "unit-gizmo-instance-child.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance",
-    "file": "unit-gizmo-instance.tscn",
     "category": "Other"
   },
   {
@@ -1025,6 +1030,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Environment",
     "file": "unit-instanced-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey Child",
+    "file": "unit-instanced-gizmo-grey-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey",
+    "file": "unit-instanced-gizmo-grey.tscn",
     "category": "Other"
   },
   {
@@ -2470,6 +2485,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Out Of Range",
     "file": "edge-csg-out-of-range.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Editable Missing Path",
+    "file": "edge-editable-missing-path.tscn",
     "category": "Edge Cases"
   },
   {

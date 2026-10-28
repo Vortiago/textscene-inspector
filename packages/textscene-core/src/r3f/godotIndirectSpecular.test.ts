@@ -60,7 +60,7 @@ describe('installGodotIndirectSpecular', () => {
   it('occludes a reflection by the luminance of the ambient after the AO map, as Godot does', () => {
     const { ao } = patchedChunks();
 
-    expect(ao).toContain('( irradiance + iblIrradiance ) * RECIPROCAL_PI * godotAmbientOcclusion');
+    expect(ao).toContain('( irradiance + iblIrradiance ) * RECIPROCAL_PI * ambientOcclusion');
     expect(ao).toContain('min( dot( godotAmbientLight, vec3( 0.3, 0.59, 0.11 ) ) * 8.0, 1.0 )');
     expect(ao.indexOf('reflectedLight.indirectSpecular *= godotSpecularOcclusion;')).toBeGreaterThan(
       ao.indexOf('ambientOcclusion = (')
@@ -109,10 +109,13 @@ describe('installGodotIndirectSpecular', () => {
     expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms).godotDfgTable?.value).toBe(table);
   });
 
-  it('leaves every chunk alone when the AO chunk lacks its line, and warns (error case)', () => {
+  it('leaves every chunk alone when the AO chunk lacks its line, and warns of it and of the skipped patch (error case)', () => {
     THREE.ShaderChunk.aomap_fragment = '#ifdef USE_AOMAP\n#endif';
 
-    expect(warningsOf(installGodotIndirectSpecular)).toHaveLength(1);
+    expect(warningsOf(installGodotIndirectSpecular)).toEqual([
+      expect.stringContaining('the occlusion patch replaces'),
+      expect.stringContaining('the specular patch is skipped'),
+    ]);
     expect(THREE.ShaderChunk.lights_fragment_begin).toBe(threeChunks.lights_fragment_begin);
   });
 

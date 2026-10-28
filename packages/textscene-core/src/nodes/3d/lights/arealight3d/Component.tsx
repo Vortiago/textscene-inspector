@@ -5,9 +5,8 @@
  * through the positional shadow atlas (`AtlasAreaShadow`).
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
-import type * as THREE from 'three';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
@@ -21,8 +20,7 @@ import { positionalShadowUserData } from '../../../../r3f/positionalShadow/decla
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
 import { AREA_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { positionalShadowDeclaration } from '../shared/positionalShadowDeclaration';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useTexture2DRid } from '../../../../resources/useTexture2D';
+import { useHeldTexture } from '../../../../r3f/textureAtlas/useHeldTexture';
 import {
   areaTextureUserData,
   holdAreaTexture,
@@ -42,16 +40,7 @@ function useAreaLightIntensity(properties: AreaLight3DProperties): number {
 }
 
 /** The `area_texture`, held in the area light atlas while the light shows it. */
-function useAreaTexture(ref: string | undefined): THREE.Texture | null {
-  const { externalResources, internalResources } = useSceneResources();
-  const { texture } = useTexture2DRid(ref, externalResources, internalResources);
-  useEffect(() => {
-    if (!texture) return;
-    holdAreaTexture(texture);
-    return () => releaseAreaTexture(texture);
-  }, [texture]);
-  return texture;
-}
+const useAreaTexture = (ref: string | undefined) => useHeldTexture(ref, holdAreaTexture, releaseAreaTexture);
 
 /**
  * The falloff and texture the shader reads, the shadow the fitter reads and the energy the fog

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { handleOf } from '../sharedTexture';
-import { DECAL_FIRST_ROW, SCENE_ROW_TEXELS } from './sceneRowsChunk';
+import { DECAL_FIRST_ROW } from './sceneRowsChunk';
+import { SCENE_ROW_TEXELS } from './sceneRowTexels';
 import { SceneRows } from './sceneRows';
 import { sceneRowsSlot } from './sceneRowsSlot';
 

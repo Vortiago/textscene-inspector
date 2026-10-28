@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+; An [editable] heading with no `path=`: Godot loads nothing from the file (resource_format_text.cpp:391-395).
+
+[node name="Root" type="Node"]
+
+[node name="Child" type="Node" parent="."]
+
+[editable]

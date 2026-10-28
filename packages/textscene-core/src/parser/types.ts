@@ -186,7 +186,7 @@ export interface ConnectionHeading {
   toIdTrail: readonly number[] | undefined;
 }
 
-/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
+/** The **Heading facts**: what the `[node]`, `[connection]` and `[editable]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
    * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which `reRootedNames`
@@ -224,6 +224,8 @@ export interface HeadingFacts {
   resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
+  /** The line of each `[editable]` heading that states no `path=`, which the loader refuses. */
+  pathlessEditableLines: readonly number[];
   /**
    * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
    * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`

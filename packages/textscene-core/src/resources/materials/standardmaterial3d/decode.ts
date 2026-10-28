@@ -218,7 +218,10 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
     disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
-    aoLightAffect: floatOr(properties['ao_light_affect'], BASE_MATERIAL_3D_DEFAULTS.aoLightAffect, CONTEXT),
+    // The shader reads `ao_light_affect` only with `ao_enabled` (`material.cpp:1959`).
+    aoLightAffect: boolOr(properties['ao_enabled'], false, CONTEXT)
+      ? floatOr(properties['ao_light_affect'], BASE_MATERIAL_3D_DEFAULTS.aoLightAffect, CONTEXT)
+      : 0,
     aoTextureChannel: textureChannel(properties, 'ao_texture_channel'),
     roughnessTextureChannel: textureChannel(properties, 'roughness_texture_channel'),
     metallicTextureChannel: textureChannel(properties, 'metallic_texture_channel'),
