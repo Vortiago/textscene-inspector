@@ -14,6 +14,8 @@ import { drawableCellOf } from '../resources/tileset/testing/drawableCellOf';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { TileShape } from '../godot/scene/tileSet';
 import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
+import type { TscnInternalResource } from '../parser/types';
+import { textureSize } from '../resources/textures/textureSize';
 import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
 
 const TEXTURE = 'res://tiles.png';
@@ -113,7 +115,7 @@ describe('TileSourceMesh texture sampler', () => {
 });
 
 /** A GradientTexture2D the TileSet's own tables hold, 8 by 4 texels. */
-const GRADIENT_TABLES = [
+const GRADIENT_TABLES: TscnInternalResource[] = [
   { id: 'Gradient_g', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' } },
   {
     id: 'Ramp',
@@ -131,7 +133,7 @@ describe('TileSourceMesh texture slot', () => {
     const renderer = await render(source, null);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-    expect([map.image.width, map.image.height]).toEqual([8, 4]);
+    expect(textureSize(map)).toEqual({ width: 8, height: 4 });
   });
 
   /** Godot sets the atlas texture up only through a TileSet that is local to scene (`core/io/resource.cpp:497-503`). */
