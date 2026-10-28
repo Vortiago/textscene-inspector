@@ -37,14 +37,15 @@ export const GIZMO_SCENES = [
   // axes for every node (`cpu_particles_3d_gizmo_plugin.cpp:98`) but not the solid box or the
   // emission shape, and Path3D draws its curve (`path_3d_editor_plugin.cpp:320`).
   { name: 'cpuparticles3d-unselected', file: 'unit-cpuparticles3d-gizmo.tscn', gizmos: true },
-  // The same emitter inside two instances. `Locked` is a plain instance, so Godot draws its gizmo in the
-  // grey of a node the edited scene does not own (`node_3d_editor_gizmos.cpp:907-917`). `Editable` is
-  // listed by `[editable]` and keeps the particles colour. One golden has nothing selected, and one
-  // selects the locked emitter.
-  { name: 'cpuparticles3d-instanced-unselected', file: 'unit-gizmo-instance.tscn', gizmos: true },
+  // The gizmo nodes inside two instances of one sub-scene. `Locked` is a plain instance, so Godot draws
+  // its gizmos in the grey of a node the edited scene does not own (`node_3d_editor_gizmos.cpp:907-917`).
+  // `Editable` is listed by `[editable]` and keeps the plugin colours. A Marker3D keeps its axis colours
+  // in both (`marker_3d_gizmo_plugin.cpp:80-92`). One golden has nothing selected, and one selects the locked
+  // emitter.
+  { name: 'instanced-gizmo-grey-unselected', file: 'unit-instanced-gizmo-grey.tscn', gizmos: true },
   {
-    name: 'cpuparticles3d-instanced-selected',
-    file: 'unit-gizmo-instance.tscn',
+    name: 'instanced-gizmo-grey-selected',
+    file: 'unit-instanced-gizmo-grey.tscn',
     gizmos: true,
     select: 'Root/Locked/Emitter',
   },

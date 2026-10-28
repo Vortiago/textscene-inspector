@@ -65,18 +65,18 @@ export interface IdHeading {
 /**
  * Where `_recover_node_path_index` seats a node whose `parent=` path does not walk
  * (`packed_scene.cpp:1947-2005`): under the heading at `heading` (`lands`), or in the scene
- * that heading instances (`inBase`).
+ * that heading instances (`inBase`), where the `rest` of the trail continues.
  */
-export interface IdTrailEnd {
-  readonly kind: 'lands' | 'inBase';
-  readonly heading: number;
-}
+export type IdTrailEnd =
+  | { readonly kind: 'lands'; readonly heading: number }
+  | { readonly kind: 'inBase'; readonly heading: number; readonly rest: readonly number[] };
 
 /**
- * Follows `trail` through a scene with no base scene, so the first lookup is local
- * (`packed_scene.cpp:1960-1979`). `firstIndexWithId` finds as `ids.find` does: id `0` names the first
+ * Follows `trail` through a scene whose instances this file does not open, so the first lookup is
+ * local (`packed_scene.cpp:1960-1979`). `firstIndexWithId` finds as `ids.find` does: id `0` names the first
  * heading with no `unique_id=`. The final `get_node_or_null` finds only the first `builtCount`
- * headings (`:2005`). Undefined where the trail resolves nowhere, so Godot re-roots the node.
+ * headings (`:2005`). An id this file lacks belongs to the base scene the root inherits, so the whole
+ * trail continues there. Undefined where the trail resolves nowhere, so Godot re-roots the node.
  */
 export function recoverByIdTrail(
   trail: readonly number[],
@@ -87,8 +87,12 @@ export function recoverByIdTrail(
   // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
   if (trail.length === 0) return undefined;
   const index = firstIndexWithId(trail[0]!);
-  if (index === undefined) return undefined;
+  if (index === undefined) return inheritedBaseEnd(trail, headingAt(0));
   return idTrailEndAt(trail, index, headingAt(index), builtCount);
+}
+
+function inheritedBaseEnd(trail: readonly number[], root: IdHeading): IdTrailEnd | undefined {
+  return root.instance === 'scene' ? { kind: 'inBase', heading: 0, rest: trail } : undefined;
 }
 
 function idTrailEndAt(
@@ -103,7 +107,81 @@ function idTrailEndAt(
   // A middle hop must be a real instance (`:1996-1997`); its scene holds the rest of the trail.
   // The instance must also be built already, or the final lookup finds nothing (`:2005`).
   const isBuiltInstance = named.instance === 'scene' && index < builtCount && named.isPlaced;
-  return isBuiltInstance ? { kind: 'inBase', heading: index } : undefined;
+  return isBuiltInstance ? { kind: 'inBase', heading: index, rest: trail.slice(1) } : undefined;
+}
+
+/** What a scene keeps of one `[node]` heading for the trails that enter it (`SceneState::ids`, `get_node_path`). */
+export interface TrailHeading extends Pick<IdHeading, 'uniqueId' | 'instance'> {
+  /** The simplified path the heading authors, from the scene root: `''` for the root itself. */
+  readonly path: string;
+  /** The heading's `instance=` ref, in the scene's own ExtResource pool. */
+  readonly instanceRef: string | undefined;
+}
+
+/**
+ * A scene another scene instances or inherits: `pending` while the loader has not answered, and
+ * `missing` where it failed, which Godot's trail walk ends in null for (`packed_scene.cpp:1963-1965`).
+ */
+export type SceneLookup = TrailScene | 'pending' | 'missing';
+
+/** One scene state as a trail hop reads it. */
+export interface TrailScene {
+  /** The index of the first heading carrying `id`, as `ids.find` finds it. */
+  indexWithId(id: number): number | undefined;
+  headingAt(index: number): TrailHeading;
+  /** The scene the heading at `index` instances. */
+  instancedScene(index: number): SceneLookup;
+  /** The scene the root inherits, or undefined where it inherits none. */
+  baseScene(): SceneLookup | undefined;
+}
+
+/** Where a trail ends: the path from the root of the scene it started in, or a scene it still waits for. */
+export type TrailWalk =
+  | { readonly status: 'found'; readonly path: string }
+  | { readonly status: 'missing' }
+  | { readonly status: 'pending' };
+
+const TRAIL_MISSING = { status: 'missing' } as const;
+
+/**
+ * The path `_recover_node_path_index` builds for `trail` over the states of `scene`, each hop
+ * naming a heading in the scene the hop before it instances (`packed_scene.cpp:1947-2003`). The
+ * caller walks the path from the node `scene` is the root of. A hop whose id the scene lacks searches
+ * the base scenes (`:1960-1979`).
+ */
+export function followContentTrail(trail: readonly number[], scene: TrailScene): TrailWalk {
+  if (trail.length === 0) return TRAIL_MISSING;
+  let path = '';
+  let current = scene;
+  for (const [hop, id] of trail.entries()) {
+    const holder = sceneHoldingId(current, id);
+    if ('status' in holder) return holder;
+    const heading = holder.scene.headingAt(holder.index);
+    path = [path, heading.path].filter(Boolean).join('/');
+    if (hop === trail.length - 1) break;
+    // A middle hop must be a real instance (`:1996-1997`).
+    if (heading.instance !== 'scene') return TRAIL_MISSING;
+    const next = holder.scene.instancedScene(holder.index);
+    if (typeof next === 'string') return { status: next };
+    current = next;
+  }
+  return { status: 'found', path };
+}
+
+/** The scene, `scene` or the nearest base of it, whose heading at `index` is the first to carry `id`. */
+function sceneHoldingId(
+  scene: TrailScene,
+  id: number
+): { scene: TrailScene; index: number } | Exclude<TrailWalk, { status: 'found' }> {
+  let current = scene;
+  for (;;) {
+    const index = current.indexWithId(id);
+    if (index !== undefined) return { scene: current, index };
+    const base = current.baseScene();
+    if (base === undefined) return TRAIL_MISSING;
+    if (typeof base === 'string') return { status: base };
+    current = base;
+  }
 }
 
 /**

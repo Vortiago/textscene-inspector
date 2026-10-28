@@ -13,6 +13,7 @@ import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.j
 import { EditedRootProvider } from '../../contexts/InstanceOwnersContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
+import { CanvasWorldScope } from '../../environment/WorldEnvironmentScope.js';
 import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { useCanvasModulateColor } from '../../canvasModulate.js';
@@ -74,7 +75,9 @@ export function World2DContents({
             {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
             <CanvasLighting2DProvider canvasModulate={canvasModulate}>
-              <NodeDispatcher nodes={nodes} />
+              <CanvasWorldScope>
+                <NodeDispatcher nodes={nodes} />
+              </CanvasWorldScope>
               {/* Inside the lighting provider, so a 2D light reaches a Control. */}
               <PendingSuspense>
                 <ControlCanvasLayer nodes={nodes} />

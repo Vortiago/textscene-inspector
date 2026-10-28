@@ -8,7 +8,7 @@
 
 import type { RawNode, TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
+import { belowRoot, joinPath, parentPathOf, pathBetween, pathUnder } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameLivePaths,
@@ -230,9 +230,59 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
   const { owner, node } = walk.to(path);
   if (node?.owner === undefined) return owner;
   const file = fileSeating(owner, path, ADDED);
-  if (node.owner === '.') return file;
-  const ownerPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, walk);
+  // `.` with a trail is the inherited root, whose base holds the owner the trail names.
+  if (node.owner === '.' && node.ownerContentTrail === undefined) return file;
+  const ownerPath = explicitOwnerPath(node.owner, node, file.path, walk);
   return ownerPath === undefined ? noOwner(walk.live) : walk.to(ownerPath).into;
+}
+
+/**
+ * The live path of the owner an explicit `owner=` names, or the one the node's `owner_uid_path=`
+ * finds where that walk finds no node (packed_scene.cpp:159-163). Undefined where neither finds one.
+ */
+function explicitOwnerPath(
+  owner: string,
+  { ownerContentTrail, ownerTrailFallback }: TscnNode,
+  filePath: string,
+  walk: OwnerWalk
+): string | undefined {
+  const walked = owner === NO_OWNER ? undefined : ownerLivePath(filePath, owner, walk);
+  const walkFinds = walked !== undefined && (!ownerTrailFallback || !walkFindsNothing(walked, walk));
+  if (walkFinds) return withContentTrailFollowed(walked, ownerContentTrail, walk);
+  if (!ownerTrailFallback) return undefined;
+  const recovered = ownerLivePath(filePath, ownerTrailFallback.owner, walk);
+  return recovered && withContentTrailFollowed(recovered, ownerTrailFallback.ownerContentTrail, walk);
+}
+
+/**
+ * Whether the loaded tree holds no node at `path`, so the `owner=` walk finds none. A scene still
+ * loading below the nearest node above `path` may hold it, so that does not count.
+ */
+function walkFindsNothing(path: string, { live }: OwnerWalk): boolean {
+  for (let above: string | null = path; above !== null; above = parentPathOf(above)) {
+    const link = live.tree.at(above);
+    if (!link) continue;
+    if (above === path) return false;
+    const scenePath = link.step.instancePath;
+    return !scenePath || live.tree.sceneNodes(scenePath) !== undefined;
+  }
+  return true;
+}
+
+/**
+ * The live path of the owner an `owner_uid_path=` finds below the instance at `instancePath`, or
+ * undefined where no heading of its scene answers the rest of the trail, or a scene it enters is
+ * not loaded yet. Without a trail, `instancePath` itself.
+ */
+function withContentTrailFollowed(
+  instancePath: string,
+  trail: readonly number[] | undefined,
+  { live }: OwnerWalk
+): string | undefined {
+  if (trail === undefined) return instancePath;
+  const scenePath = live.tree.at(instancePath)?.step.instancePath;
+  const followed = scenePath ? live.tree.followTrail(scenePath, trail) : undefined;
+  return followed?.status === 'found' ? pathUnder(instancePath, followed.path) : undefined;
 }
 
 const NO_NAMES: UniqueNameTable = { paths: () => new Map() };

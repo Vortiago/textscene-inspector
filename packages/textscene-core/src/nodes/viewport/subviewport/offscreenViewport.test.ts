@@ -426,15 +426,15 @@ describe('createSceneTarget', () => {
 
   /**
    * Linear min/mag with no mipmaps matches Godot's default
-   * `canvas_item_default_texture_filter` (1, LINEAR). Depth without stencil is
-   * what a 3D pass needs and nothing more.
+   * `canvas_item_default_texture_filter` (1, LINEAR). The world draws into its
+   * own buffer, so the target carries neither depth nor stencil.
    */
-  it('samples linearly without mipmaps, and carries depth but no stencil', () => {
+  it('samples linearly without mipmaps, and carries neither depth nor stencil', () => {
     const target = createSceneTarget(64, 64, 'Probe');
     expect(target.texture.minFilter).toBe(THREE.LinearFilter);
     expect(target.texture.magFilter).toBe(THREE.LinearFilter);
     expect(target.texture.generateMipmaps).toBe(false);
-    expect(target.depthBuffer).toBe(true);
+    expect(target.depthBuffer).toBe(false);
     expect(target.stencilBuffer).toBe(false);
     target.dispose();
   });
@@ -481,12 +481,6 @@ describe('createCanvasTarget', () => {
   it('allocates no depth buffer: every canvas material sets depthWrite false (controlQuad.tsx)', () => {
     const target = createCanvasTarget(64, 64, 'Probe');
     expect(target.depthBuffer).toBe(false);
-    target.dispose();
-  });
-
-  it('keeps the depth buffer of a 3D scene target', () => {
-    const target = createSceneTarget(64, 64, 'Probe');
-    expect(target.depthBuffer).toBe(true);
     target.dispose();
   });
 

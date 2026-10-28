@@ -68,7 +68,7 @@ function escapes(result: ReturnType<typeof graftResult>): [string, string | null
 
 /** The table and settings a graft reads. */
 function names(settings: InstanceNameSetting[], own: UniqueNamePaths = new Map()): InstanceNames {
-  return { own: () => own, settings };
+  return { ...NO_NAMES, own: () => own, settings };
 }
 
 /** A sub-scene table that claims `%Pivot` for `Sprite2D/Pivot`. */

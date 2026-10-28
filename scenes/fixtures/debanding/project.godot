@@ -1,0 +1,15 @@
+; A res:// root of its own, because `rendering/anti_aliasing/quality/use_debanding` is a PROJECT
+; setting and no .tscn can carry one. Kept in a subdirectory rather than at scenes/fixtures: a
+; project.godot there would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Debanding"
+run/main_scene="res://unit-debanding.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+anti_aliasing/quality/use_debanding=true

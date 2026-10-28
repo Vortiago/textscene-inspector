@@ -7,6 +7,7 @@
 import { scopeOf, type LiveNode } from './liveNode.js';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
 import { holdsDeepChildren, seatInInstance, type CollapseInstance } from './seatEscaped.js';
+import { WAITING_FOR_SCENES, type FollowTrail } from './sceneTrail.js';
 import { rehomeOverride } from './rehomeOverride.js';
 import { layerRawOverride } from './layerRawOverride.js';
 import { GLB_SCENE_ROOT_TYPE } from './glbSceneRoot.js';
@@ -23,6 +24,17 @@ function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: Instanc
   return { ...layerRawOverride(instanceNode, root, rehomed.raw), scope: rehomed.scope };
 }
 
+/** What the caller's scene cache lets a collapse do. */
+export interface InstanceCache {
+  /** Collapses an instance node inside the merged tree. */
+  readonly collapse: CollapseInstance;
+  /** Follows the rest of an id trail in the sub-scene. */
+  readonly followTrail: FollowTrail;
+}
+
+/** The cache of a caller with none: a nested instance stays as it is, and a trail waits. */
+const NO_CACHE: InstanceCache = { collapse: (node) => node, followTrail: WAITING_FOR_SCENES };
+
 /**
  * Fold a single-root `.tscn` sub-scene into its instance Node. Returns `null`
  * for a scene without exactly one top-level node, or a lone `GLBSceneRoot`, and
@@ -30,15 +42,17 @@ function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: Instanc
  * `type`, `children` and `instance` ref. An inherited root arrives composed over its base
  * already, carrying the table that composition built, which the host's settings land on.
  *
- * `collapse` collapses an instance node inside the merged tree: it gives the graft the table of a
- * nested instance, and seats the host children that a nested instance hands back. The default
- * leaves a nested instance as it is, for a caller with no scene cache.
+ * `cache.collapse` collapses an instance node inside the merged tree: it gives the graft the table
+ * of a nested instance, and seats the host children that a nested instance hands back.
+ * `cache.followTrail` follows the rest of a `parent_id_path=` or `owner_uid_path=` that enters the
+ * instance. The default leaves a nested instance as it is and makes a trail wait, for a caller
+ * with no scene cache.
  */
 export function mergeInstanceRoot(
   instanceNode: LiveNode,
   loadedScene: { nodes: readonly LiveNode[] },
   scopes: InstanceScopes,
-  collapse: CollapseInstance = (node) => node
+  { collapse, followTrail }: InstanceCache = NO_CACHE
 ): LiveNode | null {
   if (loadedScene.nodes.length !== 1) return null;
   const root = loadedScene.nodes[0]!;
@@ -62,6 +76,8 @@ export function mergeInstanceRoot(
     settings,
     nested,
     hasUnloadedBase,
+    followTrail,
+    isInheritedRoot: instanceNode.parent === undefined,
   });
 
   const grafted: LiveNode = {

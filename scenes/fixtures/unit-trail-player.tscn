@@ -1,0 +1,10 @@
+; The sub-scene for `integration-trail-owner-in-content` and `integration-trail-parent-in-content`:
+; it instances the inner scene as the heading with unique_id 1273451906, which an id trail names.
+
+[gd_scene load_steps=2 format=3 uid="uid://unittrailplayer"]
+
+[ext_resource type="PackedScene" path="res://unit-escaped-heading-inner.tscn" id="1_inner"]
+
+[node name="Player" type="Node3D"]
+
+[node name="Inner" parent="." instance=ExtResource("1_inner") unique_id=1273451906]

@@ -12,7 +12,8 @@ import { ViewportActionsProvider } from '../contexts/ViewportActionsContext';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
-import { WorldEnvironmentScope, usePublishEnvironment } from './WorldEnvironmentScope';
+import { CanvasWorldScope, WorldEnvironmentScope, usePublishEnvironment } from './WorldEnvironmentScope';
+import { useCanvasWorld, useDrawCanvasWorld } from './canvasWorldScene';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure';
@@ -26,11 +27,14 @@ import {
   type CameraAttributesResolution,
 } from './worldExposure';
 
-vi.mock('./EnvironmentLayer', () => ({
-  EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
-    <group name="EnvironmentLayer" userData={{ settings }} />
-  ),
-}));
+vi.mock('./EnvironmentLayer', async () => {
+  const { useExposureFactor: exposureFactor } = await import('./worldExposure');
+  return {
+    EnvironmentLayer: function EnvironmentLayer({ settings }: EnvironmentLayerProps) {
+      return <group name="EnvironmentLayer" userData={{ settings, exposure: exposureFactor() }} />;
+    },
+  };
+});
 vi.mock('./NoEnvironmentLayer', () => ({ NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" /> }));
 vi.mock('../preview/PreviewEnvironment', () => ({
   PreviewEnvironment: () => <group name="PreviewEnvironment" />,
@@ -126,7 +130,7 @@ function PublishingCamera({
   current: boolean;
   cameraAttributes: CameraAttributesResolution;
 }) {
-  usePublishCamera(path, current, cameraAttributes);
+  usePublishCamera(path, current, { attributes: cameraAttributes, environment: NO_RESOLUTION });
   return null;
 }
 
@@ -429,6 +433,27 @@ const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance:
 function withAutoExposure(autoExposure: AutoExposure | null): CameraAttributesResolution {
   return { status: 'resolved', attributes: { exposureMultiplier: 1, autoExposure } };
 }
+
+/** A shared viewport of a 2D canvas, which keeps the canvas's world drawn and captures its scene. */
+function CanvasWorldDrawer({ captured }: { captured: { scene: THREE.Scene | null } }) {
+  const world = useCanvasWorld();
+  useDrawCanvasWorld(world);
+  captured.scene = world?.scene ?? null;
+  return null;
+}
+
+describe('the exposure of a 2D canvas world', () => {
+  it("draws the world's Environment at the exposure of the world's own attributes", async () => {
+    const captured: { scene: THREE.Scene | null } = { scene: null };
+    await ReactThreeTestRenderer.create(
+      <CanvasWorldScope>
+        <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} env={environment('canvas')} />
+        <CanvasWorldDrawer captured={captured} />
+      </CanvasWorldScope>
+    );
+    expect(captured.scene!.getObjectByName('EnvironmentLayer')!.userData.exposure).toBe(2);
+  });
+});
 
 describe('the auto exposure of a world', () => {
   it('is none with no WorldEnvironment', async () => {
