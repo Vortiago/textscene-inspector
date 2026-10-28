@@ -6,12 +6,8 @@
  */
 
 import * as THREE from 'three';
-import { sharedTexture } from '../sharedTexture.js';
-import { installedOr } from '../shaderPatch/litUniform.js';
+import { installedSlot } from '../sharedTexture.js';
 
 export const SCENE_ROWS_UNIFORM = 'godotSceneRows';
 
-class SceneRowsSlot extends sharedTexture(THREE.DataTexture) {}
-
-// After a dev server reloads this module, the value is the one the earlier evaluation installed.
-export const sceneRowsSlot = installedOr(SCENE_ROWS_UNIFORM, THREE.DataTexture, () => new SceneRowsSlot());
+export const sceneRowsSlot = installedSlot(SCENE_ROWS_UNIFORM, THREE.DataTexture);
