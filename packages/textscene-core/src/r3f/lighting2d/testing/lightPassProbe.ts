@@ -23,7 +23,7 @@ function rendererOf(renderer: Rendered): THREE.WebGLRenderer {
   return root.getState().gl;
 }
 
-function drawnMeshes(scene: THREE.Object3D, camera: THREE.Camera): THREE.Mesh[] {
+export function drawnMeshes(scene: THREE.Object3D, camera: THREE.Camera): THREE.Mesh[] {
   const drawn: THREE.Mesh[] = [];
   scene.traverseVisible((object) => {
     if ((object as THREE.Mesh).isMesh && object.layers.test(camera.layers)) drawn.push(object as THREE.Mesh);
@@ -83,7 +83,7 @@ export function ownerName(mesh: THREE.Object3D): string {
 }
 
 /** Whether the mesh is the seed quad, which every draw holds. */
-function isSeed(mesh: THREE.Mesh): boolean {
+export function isSeed(mesh: THREE.Mesh): boolean {
   return !!(mesh.material as THREE.ShaderMaterial).uniforms?.uSeed;
 }
 

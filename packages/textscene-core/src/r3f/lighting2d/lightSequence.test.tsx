@@ -14,12 +14,9 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
-import {
-  holdsListedDirectionalLights,
-  isListedDirectionalLight,
-  isPositionalCanvasLight,
-  lightDrawSequence,
-} from './lightSequence';
+import { lightDrawSequence, lightPathsByCanvas } from './lightSequence';
+import { liveTreeOf } from '../liveSceneTree';
+import type { TscnNode } from '../../parser/types';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
@@ -79,21 +76,6 @@ function quadOrders(renderer: Awaited<ReturnType<typeof render>>): number[] {
     .map((m) => m.renderOrder);
 }
 
-describe('isPositionalCanvasLight', () => {
-  it('claims a slot for a PointLight2D', () => {
-    expect(isPositionalCanvasLight({ type: 'PointLight2D' } as never)).toBe(true);
-  });
-
-  it('claims none for a DirectionalLight2D, which sits on a list of its own', () => {
-    // Numbering it would leave a hole the 2n / 2n+1 pairing spends for nothing.
-    expect(isPositionalCanvasLight({ type: 'DirectionalLight2D' } as never)).toBe(false);
-  });
-
-  it('claims none for an ordinary canvas item', () => {
-    expect(isPositionalCanvasLight({ type: 'Sprite2D' } as never)).toBe(false);
-  });
-});
-
 /**
  * The provider walks once per canvas and every light reads the result. Driven directly: with every
  * cookie resolving in one tick, the dispatcher cases cannot tell a sequence from an ordinal.
@@ -121,12 +103,16 @@ describe('CanvasLightSequenceProvider', () => {
     return null;
   }
 
-  async function sequences(paths: readonly string[], scene = SCENE): Promise<(number | null)[]> {
+  async function sequences(
+    paths: readonly string[],
+    scene = SCENE,
+    viewportPath: string | null = null
+  ): Promise<(number | null)[]> {
     const seen: (number | null)[] = [];
     const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
     await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <CanvasLightSequenceProvider>
+        <CanvasLightSequenceProvider viewportPath={viewportPath}>
           {paths.map((path) => (
             <Probe key={path} path={path} seen={seen} />
           ))}
@@ -154,6 +140,21 @@ describe('CanvasLightSequenceProvider', () => {
 [node name="A" type="PointLight2D" parent="."]
 `;
     expect(await sequences(['Root/View/Inner', 'Root/A'], scene)).toEqual([null, 0]);
+  });
+
+  it("numbers the lights of a SubViewport's own canvas from zero, and leaves the outer lights off it", async () => {
+    const scene = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="A" type="PointLight2D" parent="."]
+[node name="View" type="SubViewport" parent="."]
+[node name="Inner" type="PointLight2D" parent="View"]
+[node name="Second" type="PointLight2D" parent="View"]
+`;
+    expect(await sequences(['Root/A', 'Root/View/Inner', 'Root/View/Second'], scene, 'Root/View')).toEqual([
+      null,
+      0,
+      1,
+    ]);
   });
 
   it('is null for a path the walk never saw', async () => {
@@ -199,38 +200,139 @@ ${lamp('B')}`
   });
 });
 
-describe('holdsListedDirectionalLights', () => {
-  it('enters a shown canvas node', () => {
-    expect(holdsListedDirectionalLights({ type: 'Node2D', properties: {} } as never)).toBe(true);
+/** A walk entry for a node of `type` at `path`. */
+/** One node of a tree under `Root`, named by its path. */
+interface Entry {
+  path: string;
+  type: string;
+  properties: Record<string, unknown>;
+}
+
+function entry(path: string, type: string, properties: Record<string, unknown> = {}): Entry {
+  return { path, type, properties };
+}
+
+/** The tree the entries name, under a `Root`. A path an entry does not name is a plain Node2D. */
+function treeOf(entries: readonly Entry[]) {
+  const nodeAt = (name: string, type: string, properties: Record<string, unknown>): TscnNode =>
+    ({ name, type, properties, children: [] }) as never;
+  const root = nodeAt('Root', 'Node2D', {});
+  const byPath = new Map<string, TscnNode>([['Root', root]]);
+  const place = (path: string, type: string, properties: Record<string, unknown>): void => {
+    const parentPath = path.slice(0, path.lastIndexOf('/'));
+    if (!byPath.has(parentPath)) place(parentPath, 'Node2D', {});
+    const node = nodeAt(path.split('/').pop()!, type, properties);
+    byPath.set(path, node);
+    byPath.get(parentPath)!.children.push(node);
+  };
+  for (const { path, type, properties } of entries) place(path, type, properties);
+  return liveTreeOf([root], {
+    externalResources: [],
+    internalResources: [],
+    sceneCache: { getCached: () => null },
+  });
+}
+
+/**
+ * Godot keeps one light list per canvas, and a SubViewport owns a canvas of its own
+ * (`viewport.cpp:5345`). The walk is one pass over the tree, split by the nearest SubViewport.
+ */
+describe('lightPathsByCanvas', () => {
+  const lights = (entries: Entry[], canvas: string | null = null) =>
+    lightPathsByCanvas(treeOf(entries)).get(canvas) ?? { positional: [], directional: [] };
+
+  it('lists a PointLight2D as positional and a DirectionalLight2D as directional, never both', () => {
+    // Numbering a sun as positional would leave a hole the 2n / 2n+1 pairing spends for nothing.
+    const lists = lights([
+      entry('Root/Lamp', 'PointLight2D'),
+      entry('Root/Sun', 'DirectionalLight2D', { enabled: true }),
+      entry('Root/Sprite', 'Sprite2D'),
+    ]);
+    expect(lists).toEqual({ positional: ['Root/Lamp'], directional: ['Root/Sun'] });
   });
 
-  it('stops at a hidden node', () => {
-    expect(holdsListedDirectionalLights({ type: 'Node2D', properties: { visible: false } } as never)).toBe(
-      false
-    );
+  it('leaves a disabled or hidden DirectionalLight2D off the directional list', () => {
+    const lists = lights([
+      entry('Root/Off', 'DirectionalLight2D', { enabled: false }),
+      entry('Root/Hidden', 'DirectionalLight2D', { enabled: true, visible: false }),
+    ]);
+    expect(lists.directional).toEqual([]);
   });
 
-  it('stops at a shown SubViewport', () => {
-    expect(holdsListedDirectionalLights({ type: 'SubViewport', properties: {} } as never)).toBe(false);
-  });
-});
-
-describe('isListedDirectionalLight', () => {
-  const sun = (properties: Record<string, unknown>) => ({ type: 'DirectionalLight2D', properties }) as never;
-
-  it('lists an enabled, shown DirectionalLight2D', () => {
-    expect(isListedDirectionalLight(sun({ enabled: true }))).toBe(true);
+  it('lists the lights of the root canvas in preorder, positional and directional apart', () => {
+    const lists = lights([
+      entry('Root/Lamp', 'PointLight2D'),
+      entry('Root/Sun', 'DirectionalLight2D', { enabled: true }),
+      entry('Root/Mid/Lamp', 'PointLight2D'),
+    ]);
+    expect(lists).toEqual({ positional: ['Root/Lamp', 'Root/Mid/Lamp'], directional: ['Root/Sun'] });
   });
 
-  it('leaves a disabled or hidden light off the list', () => {
-    expect(isListedDirectionalLight(sun({ enabled: false }))).toBe(false);
-    expect(isListedDirectionalLight(sun({ enabled: true, visible: false }))).toBe(false);
+  it('gives the lights below a SubViewport to its own canvas, not the root canvas', () => {
+    const entries = [
+      entry('Root/Outer', 'PointLight2D'),
+      entry('Root/View', 'SubViewport'),
+      entry('Root/View/Inner', 'PointLight2D'),
+      entry('Root/View/Sun', 'DirectionalLight2D', { enabled: true }),
+      entry('Root/Late', 'PointLight2D'),
+    ];
+    expect(lights(entries)).toEqual({ positional: ['Root/Outer', 'Root/Late'], directional: [] });
+    expect(lights(entries, 'Root/View')).toEqual({
+      positional: ['Root/View/Inner'],
+      directional: ['Root/View/Sun'],
+    });
   });
 
-  it('leaves a PointLight2D off the directional list', () => {
-    expect(isListedDirectionalLight({ type: 'PointLight2D', properties: { enabled: true } } as never)).toBe(
-      false
-    );
+  it('keeps a nested SubViewport out of the canvas that holds it', () => {
+    const entries = [
+      entry('Root/View', 'SubViewport'),
+      entry('Root/View/Lamp', 'PointLight2D'),
+      entry('Root/View/Inner', 'SubViewport'),
+      entry('Root/View/Inner/Lamp', 'PointLight2D'),
+      entry('Root/View/After', 'PointLight2D'),
+    ];
+    expect(lights(entries, 'Root/View').positional).toEqual(['Root/View/Lamp', 'Root/View/After']);
+    expect(lights(entries, 'Root/View/Inner').positional).toEqual(['Root/View/Inner/Lamp']);
+  });
+
+  it('leaves a hidden light and a light under a hidden node off the directional list', () => {
+    const lists = lights([
+      entry('Root/Hidden', 'DirectionalLight2D', { enabled: true, visible: false }),
+      entry('Root/Group', 'Node2D', { visible: false }),
+      entry('Root/Group/Inner', 'DirectionalLight2D', { enabled: true }),
+      entry('Root/Off', 'DirectionalLight2D', { enabled: false }),
+      entry('Root/Shown', 'DirectionalLight2D', { enabled: true }),
+    ]);
+    expect(lists.directional).toEqual(['Root/Shown']);
+  });
+
+  it('numbers a hidden positional light, since only a directional light is listed by visibility', () => {
+    const lists = lights([
+      entry('Root/Group', 'Node2D', { visible: false }),
+      entry('Root/Group/Lamp', 'PointLight2D'),
+    ]);
+    expect(lists.positional).toEqual(['Root/Group/Lamp']);
+  });
+
+  it("does not carry a hidden node above a SubViewport into the SubViewport's canvas", () => {
+    // A SubViewport is no CanvasItem, so its children do not inherit the hiding (`canvas_item.cpp:309-349`).
+    const entries = [
+      entry('Root/Group', 'Node2D', { visible: false }),
+      entry('Root/Group/View', 'SubViewport'),
+      entry('Root/Group/View/Sun', 'DirectionalLight2D', { enabled: true }),
+    ];
+    expect(lights(entries, 'Root/Group/View').directional).toEqual(['Root/Group/View/Sun']);
+  });
+
+  it('stops each directional list at MAX_2D_DIRECTIONAL_LIGHTS, per canvas', () => {
+    const names = Array.from({ length: 9 }, (_unused, index) => `S${index}`);
+    const entries = [
+      ...names.map((name) => entry(`Root/${name}`, 'DirectionalLight2D', { enabled: true })),
+      entry('Root/View', 'SubViewport'),
+      entry('Root/View/Sun', 'DirectionalLight2D', { enabled: true }),
+    ];
+    expect(lights(entries).directional).toHaveLength(8);
+    expect(lights(entries, 'Root/View').directional).toEqual(['Root/View/Sun']);
   });
 });
 
@@ -245,12 +347,16 @@ describe('useDirectionalLightSlot', () => {
     return null;
   }
 
-  async function slots(scene: string, paths: readonly string[]): Promise<(number | null)[]> {
+  async function slots(
+    scene: string,
+    paths: readonly string[],
+    viewportPath: string | null = null
+  ): Promise<(number | null)[]> {
     const seen: (number | null)[] = [];
     const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
     await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <CanvasLightSequenceProvider>
+        <CanvasLightSequenceProvider viewportPath={viewportPath}>
           {paths.map((path) => (
             <NodePathProvider key={path} path={path}>
               <Read seen={seen} />
@@ -302,6 +408,11 @@ ${sun('Inner', 'Group')}${sun('Shown')}`;
       .join('')}`;
     const seen = await slots(scene, ['Root/View/Inner', ...names.map((name) => `Root/${name}`)]);
     expect(seen).toEqual([null, 0, 1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("lists a SubViewport's own sun in its canvas, ahead of the outer suns", async () => {
+    const scene = `${ROOT}${sun('Outer')}[node name="View" type="SubViewport" parent="."]\n${sun('Inner', 'View')}`;
+    expect(await slots(scene, ['Root/Outer', 'Root/View/Inner'], 'Root/View')).toEqual([null, 0]);
   });
 
   it('gives slot 0 to a light outside any scene hierarchy', async () => {

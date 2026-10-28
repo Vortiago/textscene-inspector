@@ -3944,6 +3944,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Navigation"
   },
   {
+    "name": "Sub Viewport 2d Directional Shadow",
+    "file": "unit-sub-viewport-2d-directional-shadow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 2d Light",
+    "file": "unit-sub-viewport-2d-light.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Camera 2d Canvas Layer",
     "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
     "category": "Unit - Viewports"

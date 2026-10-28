@@ -411,6 +411,18 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-stretch-shrink-odd.tscn',
     mode: '2d',
   },
+  // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
+  // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
+  // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
+  { name: 'sub-viewport-2d-light', file: 'unit-sub-viewport-2d-light.tscn', mode: '2d' },
+  // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
+  // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
+  // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone.
+  {
+    name: 'sub-viewport-2d-directional-shadow',
+    file: 'unit-sub-viewport-2d-directional-shadow.tscn',
+    mode: '2d',
+  },
   // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
   // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
   // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.

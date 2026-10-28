@@ -90,4 +90,35 @@ color = Color(1, 0, 0, 1)
 `)
     ).toEqual(WHITE_MODULATE);
   });
+  it('does not reach into a SubViewport: its World2D is a canvas of its own', () => {
+    expect(
+      colorOf(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+
+[node name="Tint" type="CanvasModulate" parent="View"]
+color = Color(1, 0, 0, 1)
+`)
+    ).toEqual(WHITE_MODULATE);
+  });
+
+  it("serves a SubViewport's own subtree, leaving a nested SubViewport out", () => {
+    const view = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+
+[node name="Tint" type="CanvasModulate" parent="View"]
+color = Color(1, 0, 0, 1)
+
+[node name="Inner" type="SubViewport" parent="View"]
+
+[node name="InnerTint" type="CanvasModulate" parent="View/Inner"]
+color = Color(0, 0, 1, 1)
+`).nodes[0]!.children[0]!;
+    expect(canvasModulateColor(view.children)).toMatchObject({ r: 1, g: 0, b: 0 });
+  });
 });

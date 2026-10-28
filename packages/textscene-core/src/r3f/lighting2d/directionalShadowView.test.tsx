@@ -5,12 +5,23 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { useDirectionalShadowView, useNdcToShadow } from './directionalShadowView';
 import { buildDirectionalShadowMap, type DirectionalShadowView } from './directionalShadowMap';
+import { CanvasLighting2DProvider } from './CanvasLighting2D';
+import { CanvasLightPass } from './CanvasLightPass';
+import { fakeLightPassHost } from './testing/fakeLightPassHost';
+import type { LightPassHost } from './lightPassHost';
+
+const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+/** The pass the 2D stage mounts, which the hooks read the canvas from. */
+function stage(children: ReactNode) {
+  return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
+}
 
 /** Every view the hook published, in order, including the initial null. */
 type Published = (DirectionalShadowView | null)[];
@@ -37,7 +48,9 @@ function ViewHarness({
 
 async function mountView(props: Omit<Parameters<typeof ViewHarness>[0], 'published'> = {}) {
   const published: Published = [];
-  const renderer = await ReactThreeTestRenderer.create(<ViewHarness published={published} {...props} />);
+  const renderer = await ReactThreeTestRenderer.create(
+    stage(<ViewHarness published={published} {...props} />)
+  );
   await ReactThreeTestRenderer.act(async () => {});
   return { renderer, published };
 }
@@ -88,6 +101,54 @@ describe('useDirectionalShadowView', () => {
     const { published } = await mountView({ enabled: false });
     expect(published.every((view) => view === null)).toBe(true);
   });
+
+  describe('over a host that frames its own canvas', () => {
+    async function mountOver(host: LightPassHost) {
+      const published: Published = [];
+      const renderer = await ReactThreeTestRenderer.create(
+        <CanvasLightPass host={host} canvasModulate={WHITE}>
+          <ViewHarness published={published} />
+        </CanvasLightPass>
+      );
+      await ReactThreeTestRenderer.act(async () => {});
+      return { renderer, published };
+    }
+
+    it("clips to the host's clip, as a SubViewport's Camera2D moves it", async () => {
+      const host = fakeLightPassHost(1000, 1000);
+      host.clip = { rect: { x: 300, y: -700, w: 200, h: 100 }, scale: { x: 1, y: 1 } };
+      const { clip } = latest((await mountOver(host)).published);
+      expect(clip.map(({ x, y }) => [x, y])).toEqual([
+        [300, -700],
+        [500, -700],
+        [500, -600],
+        [300, -600],
+      ]);
+    });
+
+    it("carries the host's scale, which a Camera2D zoom sets", async () => {
+      const host = fakeLightPassHost(1000, 1000);
+      host.clip = { rect: host.clip.rect, scale: { x: 2, y: 3 } };
+      expect(latest((await mountOver(host)).published).scale).toEqual({ x: 2, y: 3 });
+    });
+
+    it("follows the host's clip on the next run of its pass", async () => {
+      const host = fakeLightPassHost(1000, 1000);
+      const { published } = await mountOver(host);
+      host.clip = { rect: { x: 100, y: -900, w: 1000, h: 1000 }, scale: { x: 1, y: 1 } };
+      await ReactThreeTestRenderer.act(async () => host.run.current!());
+      expect(latest(published).clip[0]).toEqual({ x: 100, y: -900 });
+    });
+
+    it('publishes nothing new while the clip stays', async () => {
+      const host = fakeLightPassHost(1000, 1000);
+      const { published } = await mountOver(host);
+      await ReactThreeTestRenderer.act(async () => {
+        for (let frame = 0; frame < 5; frame += 1) host.run.current!();
+      });
+      expect(published.filter((view) => view !== null)).toHaveLength(1);
+    });
+  });
 });
 
 /** Reports the matrix the hook returns for a map over a 1000 px square viewport. */
@@ -102,6 +163,7 @@ function NdcHarness({ onMatrix }: { onMatrix: (matrix: THREE.Matrix3) => void })
       ],
       direction: { x: 0, y: -1 },
       maxDistance: 0,
+      scale: { x: 1, y: 1 },
     },
     []
   );
@@ -131,7 +193,7 @@ describe('useNdcToShadow', () => {
   it("maps the camera's NDC onto the map: NDC (0, 0.2) is world (500, 600), 400 px deep", async () => {
     let matrix = new THREE.Matrix3();
     const camera = squareCamera();
-    await ReactThreeTestRenderer.create(<NdcHarness onMatrix={(m) => (matrix = m)} />, { camera });
+    await ReactThreeTestRenderer.create(stage(<NdcHarness onMatrix={(m) => (matrix = m)} />), { camera });
     await ReactThreeTestRenderer.act(async () => {});
     const [u, depth] = lookup(matrix, 0, 0.2);
     expect(u).toBeCloseTo(0.5, 9);
@@ -141,9 +203,12 @@ describe('useNdcToShadow', () => {
   it('follows a pan on the next frame in the same matrix, with no republish', async () => {
     const matrices = new Set<THREE.Matrix3>();
     const camera = squareCamera();
-    const renderer = await ReactThreeTestRenderer.create(<NdcHarness onMatrix={(m) => matrices.add(m)} />, {
-      camera,
-    });
+    const renderer = await ReactThreeTestRenderer.create(
+      stage(<NdcHarness onMatrix={(m) => matrices.add(m)} />),
+      {
+        camera,
+      }
+    );
     camera.position.x += 100;
     await ReactThreeTestRenderer.act(async () => {
       renderer.advanceFrames(1, 1 / 60);
@@ -152,6 +217,22 @@ describe('useNdcToShadow', () => {
     expect(matrices.size).toBe(1);
     // NDC 0 is now world x 600, 100 px right of the centre over the 1414.2 px diagonal.
     expect(lookup(matrix!, 0, 0)[0]).toBeCloseTo(0.5 + 100 / (1000 * Math.SQRT2), 9);
+  });
+
+  it("follows the host's camera at its pass, not the canvas camera of the renderer", async () => {
+    let matrix = new THREE.Matrix3();
+    const host = fakeLightPassHost(1000, 1000);
+    host.camera.position.set(500, 500, 10);
+    host.camera.updateProjectionMatrix();
+    await ReactThreeTestRenderer.create(
+      <CanvasLightPass host={host} canvasModulate={WHITE}>
+        <NdcHarness onMatrix={(m) => (matrix = m)} />
+      </CanvasLightPass>
+    );
+    await ReactThreeTestRenderer.act(async () => {});
+    host.camera.position.x += 100;
+    await ReactThreeTestRenderer.act(async () => host.run.current!());
+    expect(lookup(matrix, 0, 0)[0]).toBeCloseTo(0.5 + 100 / (1000 * Math.SQRT2), 9);
   });
 
   it('holds the identity until a map exists', async () => {

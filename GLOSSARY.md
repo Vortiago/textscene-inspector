@@ -395,6 +395,9 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.
 
+**Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
+The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
+
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.
 A pass in a dependency cycle never runs, and `useViewportPassCycle` lets a consumer fall back.

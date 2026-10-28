@@ -1,22 +1,18 @@
 /**
  * `useLightSequence` and `useDirectionalLightSlot`: a light's slot in its canvas light list, in
- * tree order (`lightSequence.ts` says why). The live tree is walked once per canvas, not per light,
- * since the numbering belongs to the list. Godot keeps one list per canvas
+ * tree order (`lightSequence.ts` says why). The live tree is walked once for all canvases, not per
+ * light, since the numbering belongs to the list. Godot keeps one list per canvas
  * (`renderer_canvas_cull.h:153-154`), so a light inside a
  * CanvasLayer belongs to another list.
  */
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering/rendering.js';
-import type { LiveTreeEntry } from '../liveSceneTree.js';
-import { useHasLiveTree, useLiveSceneNodes } from '../useLiveSceneTree.js';
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
+import { liveTreeOf } from '../liveSceneTree.js';
+import { useLiveTreeSelection, type SharedLiveTree } from '../useLiveSceneTree.js';
 import { useNodePath } from '../contexts/NodePathContext.js';
-import { keepsChildrenInViewport } from '../../nodes/viewport/subviewport/viewportBoundary.js';
-import {
-  holdsListedDirectionalLights,
-  isListedDirectionalLight,
-  isPositionalCanvasLight,
-} from './lightSequence.js';
+import { perObject } from '../../utils/perObject.js';
+import { sameElements } from '../../utils/sameElements.js';
+import { lightPathsByCanvas, type CanvasLightPaths } from './lightSequence.js';
 
 interface CanvasLightLists {
   /** `path → sequence` over the positional lights. */
@@ -31,32 +27,49 @@ interface CanvasLightLists {
 
 const NO_LISTS: CanvasLightLists = { positional: new Map(), directional: null };
 
+const NO_LIGHTS: CanvasLightPaths = { positional: [], directional: [] };
+
 const CanvasLightSequenceContext = createContext<CanvasLightLists>(NO_LISTS);
 
-function numberByPath(entries: readonly LiveTreeEntry[]): Map<string, number> {
-  const map = new Map<string, number>();
-  entries.forEach((entry, index) => map.set(entry.path, index));
-  return map;
+function numberByPath(paths: readonly string[]): Map<string, number> {
+  return new Map(paths.map((path, index) => [path, index]));
+}
+
+/** The lists of every canvas of `tree`, from one walk that every provider of the tree shares. */
+const canvasListsOfTree = perObject((tree: SharedLiveTree) =>
+  lightPathsByCanvas(liveTreeOf(tree.roots, tree.ctx))
+);
+
+function sameLightPaths(a: CanvasLightPaths, b: CanvasLightPaths): boolean {
+  return sameElements(a.positional, b.positional) && sameElements(a.directional, b.directional);
+}
+
+interface CanvasLightSequenceProviderProps {
+  /**
+   * The path of the SubViewport whose canvas the lists serve, or null for the root canvas. Each
+   * SubViewport has a World2D, and so a light list, of its own (`viewport.cpp:5345`).
+   */
+  viewportPath: string | null;
+  children: ReactNode;
 }
 
 /**
- * Publishes both lists for the canvas, each from a single preorder walk of the live tree. Neither
- * walk enters a SubViewport, whose World2D keeps its own lists (`viewport.cpp:5345`), and the
- * directional walk skips hidden subtrees.
+ * Publishes both lists for one canvas, each from the one preorder walk of the live tree. The
+ * directional list skips hidden lights.
  */
-export function CanvasLightSequenceProvider({ children }: { children: ReactNode }) {
-  // Module-level predicates: `useLiveSceneNodes` memoises on them, so an inline
-  // arrow would re-walk the tree every render.
-  const positional = useLiveSceneNodes(isPositionalCanvasLight, keepsChildrenInViewport);
-  const directional = useLiveSceneNodes(isListedDirectionalLight, holdsListedDirectionalLights);
-  const hasTree = useHasLiveTree();
+export function CanvasLightSequenceProvider({ viewportPath, children }: CanvasLightSequenceProviderProps) {
+  const selectCanvas = useCallback(
+    (tree: SharedLiveTree) => canvasListsOfTree(tree).get(viewportPath) ?? NO_LIGHTS,
+    [viewportPath]
+  );
+  const paths = useLiveTreeSelection(selectCanvas, sameLightPaths);
 
   const lists = useMemo<CanvasLightLists>(
     () => ({
-      positional: numberByPath(positional),
-      directional: hasTree ? numberByPath(directional.slice(0, MAX_2D_DIRECTIONAL_LIGHTS)) : null,
+      positional: numberByPath(paths?.positional ?? []),
+      directional: paths ? numberByPath(paths.directional) : null,
     }),
-    [positional, directional, hasTree]
+    [paths]
   );
 
   return <CanvasLightSequenceContext.Provider value={lists}>{children}</CanvasLightSequenceContext.Provider>;

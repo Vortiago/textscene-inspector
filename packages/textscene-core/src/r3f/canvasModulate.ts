@@ -2,11 +2,12 @@
  * Which `CanvasModulate` colour is in force for a canvas. Godot sets it with
  * `RS::canvas_set_modulate` on ENTER_CANVAS, so it tints the whole canvas wherever
  * it sits. The last one in pre-order wins, and a hidden one (`is_visible_in_tree()`)
- * does not apply. A `CanvasLayer` is its own canvas, so the walk does not enter one.
+ * does not apply.
  */
 
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types.js';
@@ -19,7 +20,7 @@ interface CanvasModulateLike {
 }
 
 /**
- * The canvas-wide tint for a scene's root nodes, white with no visible
+ * The canvas-wide tint for the nodes of one canvas, white with no visible
  * CanvasModulate. A CanvasModulate inside an instanced sub-scene is not found,
  * though Godot applies it.
  */
@@ -29,9 +30,9 @@ export function canvasModulateColor(nodes: readonly TscnNode[]): Rgba {
   const walk = (node: TscnNode, visible: boolean): void => {
     const props = node.properties as CanvasModulateLike;
     const shown = visible && props.visible !== false;
-    // Not a CanvasItem: a CanvasLayer hosts its own canvas, which any
-    // CanvasModulate inside it would tint instead of this one.
-    if (node.type === 'CanvasLayer') return;
+    // A CanvasLayer and a SubViewport are canvases of their own (`viewport.cpp:5345`): a
+    // CanvasModulate inside tints that canvas, not this one.
+    if (node.type === 'CanvasLayer' || isViewportBoundary(node.type)) return;
     if (node.type === 'CanvasModulate' && shown && props.color) found = props.color;
     for (const child of node.children) walk(child, shown);
   };
