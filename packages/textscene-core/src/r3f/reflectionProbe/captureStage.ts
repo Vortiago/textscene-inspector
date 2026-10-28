@@ -8,7 +8,6 @@ import type * as THREE from 'three';
 import type { ReflectionProbeProperties } from '../../nodes/3d/reflectionprobe/types.js';
 import { isAmbientLight } from '../ambientLight.js';
 import { hideObjects, isEditorHelper } from '../editorHelpers.js';
-import { scaleLightIntensities } from '../exposure/scaleLightIntensities.js';
 import { isInMask } from '../visualLayers.js';
 
 /**
@@ -52,17 +51,18 @@ function hideCulled(scene: THREE.Scene, cullMask: number): () => void {
 
 function dropEnvironment(scene: THREE.Scene, clearColor: THREE.Color): () => void {
   const { environmentIntensity, background } = scene;
-  const ambients: THREE.Light[] = [];
+  const ambients: { light: THREE.Light; intensity: number }[] = [];
   scene.traverse((object) => {
-    if (isAmbientLight(object)) ambients.push(object);
+    if (isAmbientLight(object)) ambients.push({ light: object, intensity: object.intensity });
   });
   // The intensity, not `environment`: a program compiles `USE_ENVMAP` from the environment.
   scene.environmentIntensity = 0;
   scene.background = clearColor;
-  const restoreAmbients = scaleLightIntensities(ambients, 0);
+  // Zero, not a scale by zero: an ambient of `inf` energy scales to NaN.
+  for (const { light } of ambients) light.intensity = 0;
   return () => {
     scene.environmentIntensity = environmentIntensity;
     scene.background = background;
-    restoreAmbients();
+    for (const { light, intensity } of ambients) light.intensity = intensity;
   };
 }
