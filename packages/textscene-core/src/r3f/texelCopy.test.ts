@@ -53,6 +53,10 @@ describe('copyTexels', () => {
     expect(copyWith('encode').drawn.fragment).toContain('sRGBTransferOETF');
   });
 
+  it("reads the source's edge texel for a placed texel past the source, as a clamped sampler does", () => {
+    expect(copyWith().drawn.fragment).toContain('clamp( at, ivec2( 0 ), textureSize( source, 0 ) - 1 )');
+  });
+
   it('holds no texture once the draw ends', () => {
     expect(copyWith().drawn.pass.uniforms.source!.value).toBeNull();
   });

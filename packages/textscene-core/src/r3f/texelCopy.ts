@@ -12,7 +12,8 @@ import { perObject } from '../utils/perObject';
 /**
  * Where each target pixel reads, in GL texel space (row 0 at the bottom): the source column is the
  * pixel's column plus `offsetX`, the source row is the pixel's row times `rowStep` plus `offsetY`.
- * A pixel whose texel falls outside `bounds` reads transparent black.
+ * A pixel whose texel falls outside `bounds` reads transparent black, and one inside `bounds` but
+ * past the source reads the edge texel, as a clamped sampler does.
  */
 export interface TexelPlacement {
   offsetX: number;
@@ -49,7 +50,7 @@ void main() {
   ivec2 pixel = ivec2(gl_FragCoord.xy);
   ivec2 at = ivec2(pixel.x + placement.x, pixel.y * placement.z + placement.y);
   bool inside = all(greaterThanEqual(at, bounds.xy)) && all(lessThan(at, bounds.zw));
-  vec4 texel = inside ? texelFetch(source, at, 0) : vec4(0.0);
+  vec4 texel = inside ? texelFetch(source, clamp( at, ivec2( 0 ), textureSize( source, 0 ) - 1 ), 0) : vec4(0.0);
   gl_FragColor = ${TRANSFERS[transfer]};
 }`;
 
