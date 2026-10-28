@@ -1,6 +1,6 @@
 /**
  * The reactive half of `collectControlRasterViewports`: re-walks the scene on every
- * live-tree tick, as `useViewportContentKind` and `useBuildSolveTree` do, since an
+ * live-tree tick, as `useViewportContent` and `useBuildSolveTree` do, since an
  * instanced sub-scene lands after the parse and may hold a Control-only sub-viewport.
  */
 import { useMemo } from 'react';

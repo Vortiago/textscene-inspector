@@ -58,7 +58,7 @@ import {
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
-import { useViewportContent } from './useViewportContentKind';
+import { useViewportContent } from './useViewportContent';
 import { useInheritedRtl } from './useInheritedRtl';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import { usePublishViewportPass } from './usePublishViewportPass';
@@ -75,6 +75,9 @@ import { hideEditorHelpers } from '../../../r3f/editorHelpers';
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
   import('./ViewportControls.js').then((m) => ({ default: m.ViewportControls }))
+);
+const ControlsOverWorld = lazy(() =>
+  import('./ControlsOverWorld.js').then((m) => ({ default: m.ControlsOverWorld }))
 );
 
 /** The Controls of a viewport beside its 2D items; the direction climb runs only for such a viewport. */
@@ -124,7 +127,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
   const canvasModulate = useCanvasModulateColor(node.children);
   // The Controls of a 2D pass draw in its portal beside the world items, one tree-order draw. A 3D
-  // pass draws no canvas, and `SubViewportContainer` draws their Controls over its surface.
+  // pass draws them over its world, in a scene of their own (`OffscreenViewport`).
   const drawsControls = kind === '2d' && holdsControls;
   const contents = (
     <ViewportSizeProvider size={size}>
@@ -152,6 +155,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
           kind={kind}
           rendersInline={rendersInline}
           canvasModulate={canvasModulate}
+          drawsControlsOverWorld={kind === '3d' && holdsControls}
         >
           {rendersInline ? null : contents}
         </OffscreenViewport>
@@ -167,6 +171,8 @@ interface OffscreenViewportProps extends NodeComponentProps {
   rendersInline: boolean;
   /** The tint of this viewport's own canvas, where its light accumulation starts. */
   canvasModulate: Rgba;
+  /** Whether a 3D pass draws the viewport's Controls over its world. */
+  drawsControlsOverWorld: boolean;
 }
 
 /**
@@ -181,6 +187,7 @@ function OffscreenViewport({
   kind,
   rendersInline,
   canvasModulate,
+  drawsControlsOverWorld,
   children,
 }: OffscreenViewportProps) {
   const properties = node.properties as SubViewportProperties;
@@ -238,7 +245,18 @@ function OffscreenViewport({
 
   // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
   // the subtree makes itself current, so the pass narrows this camera to that view each frame.
-  const { camera: orthoCamera, frame } = useCanvasPass(width, height, kind === '2d' ? msaaMode : 0);
+  // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
+  const canvasMsaaMode = viewportMsaaMode(properties, '2d');
+  const { camera: orthoCamera, frame } = useCanvasPass(
+    width,
+    height,
+    kind === '2d' || drawsControlsOverWorld ? canvasMsaaMode : 0
+  );
+  // The scene the Controls of a 3D pass draw into, apart from the world's.
+  const controlsScene = useMemo(
+    () => (drawsControlsOverWorld ? createControlsScene(node.name) : null),
+    [drawsControlsOverWorld, node.name]
+  );
   // This viewport's own World2D is lit by its own pass, run below once the camera is framed.
   // A resize reaches the host through `resize`, which keeps the host and the context it feeds.
   const firstSize = useRef(size).current;
@@ -247,6 +265,20 @@ function OffscreenViewport({
     [kind, passScene, orthoCamera, path, firstSize]
   );
   useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
+
+  // The canvas items of a viewport draw after its 3D render, into the same target. The frame's bytes
+  // return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same bytes.
+  const drawControlsOverWorld = useCallback(
+    () =>
+      renderToOffscreenTarget(gl, {
+        target,
+        clearColor,
+        transparentBg,
+        toneMapping: THREE.NoToneMapping,
+        draw: () => frame.render(gl, controlsScene!, orthoCamera, 'decode'),
+      }),
+    [gl, target, clearColor, transparentBg, frame, controlsScene, orthoCamera]
+  );
 
   const renderPass = useCallback(() => {
     if (kind === '2d') {
@@ -305,6 +337,7 @@ function OffscreenViewport({
         },
       });
       toneMap?.toneMap();
+      if (controlsScene) drawControlsOverWorld();
     } finally {
       if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
@@ -323,6 +356,8 @@ function OffscreenViewport({
     clearColor,
     transparentBg,
     size,
+    controlsScene,
+    drawControlsOverWorld,
   ]);
 
   // Consumers sample the texture directly. The ordered driver runs every
@@ -338,7 +373,26 @@ function OffscreenViewport({
     render: renderPass,
   });
 
-  if (rendersInline) return stage;
+  const controlsPortal = controlsScene
+    ? createPortal(
+        <World2DLightingBoundary canvasModulate={canvasModulate}>
+          <SubViewportSamplerScope properties={properties}>
+            <PendingSuspense>
+              <ControlsOverWorld path={path} nodes={node.children} size={size} world={target.texture} />
+            </PendingSuspense>
+          </SubViewportSamplerScope>
+        </World2DLightingBoundary>,
+        controlsScene
+      )
+    : null;
+  if (rendersInline) {
+    return (
+      <>
+        {stage}
+        {controlsPortal}
+      </>
+    );
+  }
   const WorldScope = !ownWorld3D
     ? SharedWorldEnvironmentScope
     : kind === '2d'
@@ -370,7 +424,12 @@ function OffscreenViewport({
     </CanvasWorkspaceProvider>,
     passScene
   );
-  return portal;
+  return (
+    <>
+      {portal}
+      {controlsPortal}
+    </>
+  );
 }
 
 /**
@@ -392,6 +451,13 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
   );
   useDisposeOnRelease(atlas);
   return atlas;
+}
+
+/** The scene the Controls of a 3D pass fill. */
+function createControlsScene(name: string): THREE.Scene {
+  const scene = new THREE.Scene();
+  scene.name = `${name}::controls`;
+  return scene;
 }
 
 /** The scene a portal of its own fills. */

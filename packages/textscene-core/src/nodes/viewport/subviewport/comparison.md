@@ -14,7 +14,7 @@ A Viewport that renders its subtree into an offscreen target for a `ViewportText
 
 A target that holds canvas content, 2D-world items or Controls, stores 8-bit sRGB bytes, as Godot's non-HDR `R8G8B8A8_UNORM` target does (`texture_storage.cpp:3568-3569`). Translucent content blends in those stored numbers, as on the main canvas (`renderer_canvas_render_rd.cpp:671,729`). Each target offers Godot's two views of its storage. A canvas consumer filters the plain view's bytes and multiplies them in sRGB (`texture_storage.cpp:754`). A `source_color` material slot samples the sRGB view, which decodes each texel before the filter (`material_storage.cpp:1067,1073`). A 3D pass draws its world into a linear HDR buffer, which resolves its `msaa_3d` samples (`render_forward_clustered.cpp:2402`). Godot's tonemap pass then writes the target: glow, `adjustment_*`, auto exposure and the tone curve of the Environment of the world `find_world_3d()` resolves (`viewport.cpp:4670-4681`, `render_forward_clustered.cpp:2514`). A shared world is the parent's, so its first WorldEnvironment in tree order gives the Environment, inside the viewport or out (`world_environment.cpp:76-85`). Every shared-world viewport of a 2D scene draws the scene's one World3D, so each camera shows the nodes of all of them. A Camera3D's own `environment` replaces it while the pass renders through that camera. `use_debanding` dithers the tonemap pass's output as Godot does (`tonemap.glsl:950-957`). An `own_world_3d` world takes its own, or LINEAR without one. A 3D-content target stores its tonemapped render as sRGB bytes too (`renderer_scene_render_rd.cpp:744`). A canvas consumer filters those bytes, and a translucent 3D surface keeps its linear blend.
 
-A sub-viewport that holds 2D content and Controls draws both into its own target, in tree order, through its own camera (`viewport.cpp:5344-5345`). A Camera2D inside frames the Controls that no CanvasLayer holds.
+A sub-viewport that holds 2D content and Controls draws both into its own target, in tree order, through its own camera (`viewport.cpp:5344-5345`). A Camera2D inside frames the Controls that no CanvasLayer holds. A 3D world's Controls draw over its tonemapped render in the same target, blended in sRGB numbers.
 
 A sub-viewport with 2D content lights its canvas with its own World2D (`viewport.cpp:5345`). Its Light2D nodes, LightOccluder2D nodes and CanvasModulate act on the items inside it, and the canvas around it acts on nothing inside. The pass runs through the target's own camera into buffers of the target's size. A DirectionalLight2D shadow map spans `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`).
 
@@ -23,6 +23,7 @@ The target's canvas content samples with the sub-viewport's own `canvas_item_def
 Every Texture2D slot resolves a `ViewportTexture` the same way: a material slot, a canvas item, a Control, a theme icon, a tile and a decal. Godot sets a ViewportTexture up only when every resource between the node and the texture is local to scene (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`). One it never sets up samples the magenta and black 4x4 placeholder (`viewport.cpp:168-173`).
 
 ## ViewportTexture outside the local scene
+
 <!-- compare: image=unit-viewport-texture-local-to-scene status=done fixture=unit-viewport-texture-local-to-scene.tscn -->
 
 Two TextureRects draw one ViewportTexture through a CanvasTexture. Only the right CanvasTexture is local to scene, so Godot sets up only the right one. The left draws the magenta and black placeholder, stretched.
@@ -30,19 +31,21 @@ Two TextureRects draw one ViewportTexture through a CanvasTexture. Only the righ
 ## Linting
 
 <!-- lint:begin SubViewport -->
+
 Strict parsing format-checks these `SubViewport` properties, plus 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `render_target_clear_mode` | enum 0-2 (ALWAYS/NEVER/ONCE) | warning |
-| `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS) | warning |
-| `size` | Vector2i(x, y), both >= 2, or the Vector2 spelling Godot converts | error below |
-| `size_2d_override` | Vector2i(x, y), or the Vector2 spelling Godot converts |  |
-| `size_2d_override_stretch` | true or false |  |
+| Property                    | Accepts                                                           | Out of range |
+| --------------------------- | ----------------------------------------------------------------- | ------------ |
+| `render_target_clear_mode`  | enum 0-2 (ALWAYS/NEVER/ONCE)                                      | warning      |
+| `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS)  | warning      |
+| `size`                      | Vector2i(x, y), both >= 2, or the Vector2 spelling Godot converts | error below  |
+| `size_2d_override`          | Vector2i(x, y), or the Vector2 spelling Godot converts            |              |
+| `size_2d_override_stretch`  | true or false                                                     |              |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| Rule                                    | Reports                     | Severity |
+| --------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
+
 <!-- lint:end -->
 
 Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1, `canvas_item_default_texture_repeat` 0), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).

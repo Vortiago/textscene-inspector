@@ -15,7 +15,6 @@ import {
   resolveStandaloneViewportSubtree,
   viewportContent,
   type ViewportContent,
-  type ViewportContentKind,
 } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
@@ -36,8 +35,4 @@ export function useViewportContent(node: TscnNode): ViewportContent {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [node, externalResources, sceneCache, version]
   );
-}
-
-export function useViewportContentKind(node: TscnNode): ViewportContentKind {
-  return useViewportContent(node).kind;
 }

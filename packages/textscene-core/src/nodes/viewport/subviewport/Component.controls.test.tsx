@@ -8,6 +8,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { CanvasWorldScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
@@ -82,7 +84,7 @@ function meshOf(root: THREE.Object3D, name: string): THREE.Object3D {
 
 describe('a SubViewport with 2D content and Controls', () => {
   // The Control painters load lazily; a loaded module lets one settled tick mount them.
-  beforeAll(() => import('./ViewportControls'));
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./ControlsOverWorld')]));
 
   it('draws a Control into its own pass', async () => {
     const portal = await portalSceneOf(scene('control-first'));
@@ -99,5 +101,64 @@ describe('a SubViewport with 2D content and Controls', () => {
     expect(compareKeys(paintKey(meshOf(portal, 'Panel')), paintKey(meshOf(portal, 'Shape')))).toBeGreaterThan(
       0
     );
+  });
+});
+
+const CONTROLS_SCENE = 'View::controls';
+
+/** A Camera3D, a mesh and a ColorRect in one viewport, under the 2D stage that shows it. */
+const SCENE_3D = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(200, 150)
+
+[node name="Camera3D" type="Camera3D" parent="View"]
+
+[node name="Box" type="MeshInstance3D" parent="View"]
+
+[node name="Panel" type="ColorRect" parent="View"]
+offset_right = 200.0
+offset_bottom = 150.0
+color = Color(0, 0, 0.4, 1)
+`;
+
+/** The scenes one frame draws, in order, each with the target bound at that moment. */
+async function drawsOf(
+  tscn: string
+): Promise<{ scene: THREE.Object3D; bound: THREE.WebGLRenderTarget | null }[]> {
+  const parsed = new TscnParser().parse(tscn);
+  const fake = createFakeResourceLoader();
+  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
+  const renderer = await ReactThreeTestRenderer.create(
+    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+      <ViewportModeProvider initialShowPreviewEnvironment={false}>
+        <ViewportPassStack captured={captured}>
+          <CanvasWorldScope>
+            <NodeDispatcher nodes={parsed.nodes} />
+          </CanvasWorldScope>
+        </ViewportPassStack>
+      </ViewportModeProvider>
+    </SceneStack>
+  );
+  await settleLoads();
+  const draws: { scene: THREE.Object3D; bound: THREE.WebGLRenderTarget | null }[] = [];
+  await withStubbedGl(
+    captured.current!,
+    { onRender: (bound, drawn) => draws.push({ scene: drawn, bound }) },
+    () => renderer.advanceFrames(1, 16)
+  );
+  return draws;
+}
+
+describe('a SubViewport with 3D content and Controls', () => {
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./ControlsOverWorld')]));
+
+  it('draws its Controls in a pass of their own, after the world', async () => {
+    const draws = await drawsOf(SCENE_3D);
+    const controls = draws.find((d) => d.scene.name === CONTROLS_SCENE);
+    expect(controls, `expected a draw of ${CONTROLS_SCENE}`).toBeDefined();
+    expect(meshOf(controls!.scene, 'Panel')).toBeDefined();
   });
 });

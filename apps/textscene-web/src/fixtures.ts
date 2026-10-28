@@ -4156,6 +4156,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport 3d Controls",
+    "file": "unit-sub-viewport-3d-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Camera 2d Canvas Layer",
     "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
     "category": "Unit - Viewports"

@@ -110,9 +110,9 @@ which display real content.
 
 - The 3D half needs no new rendering machinery, only the `own_world_3d` flag.
 - A container draws its sub-viewport's target on a quad that samples the published
-  texture. A sub-viewport with 2D content draws its Controls in its own pass, in one tree-order
-  draw with its Node2D items (`viewport.cpp:5344-5345`). The container draws a 3D sub-viewport's
-  Controls live over it, since a 3D pass draws no canvas.
+  texture. A sub-viewport draws its own Controls into its target (`viewport.cpp:5344-5345`). With
+  2D content they share one tree-order draw. With a 3D world they draw over the tonemapped render,
+  in a scene of their own, through a canvas frame whose bytes return to the target.
 - A target that holds canvas content, the 2D-world pass's or the Control pass's, stores
   sRGB bytes in RGBA8, as Godot's non-HDR `R8G8B8A8_UNORM` target does
   (`texture_storage.cpp:3568-3569`). The pass encodes and blends its sRGB numbers there, as

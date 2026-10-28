@@ -82,7 +82,7 @@ export function collectControlRasterViewports(
   const tree = liveTreeOf(roots, ctx);
   tree.fold<boolean | null, void>(null, (link, inheritedRtl, descend) => {
     const { step, path } = link;
-    // Classified on the resolved subtree, as `useViewportContentKind` does: a
+    // Classified on the resolved subtree, as `useViewportContent` does: a
     // raw `instance=` child reads as 3D, so both owners of this key would
     // decline and leave the consumer blank.
     if (
