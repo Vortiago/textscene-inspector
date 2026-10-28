@@ -8,20 +8,10 @@ import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// The barrel, not `ControlCanvasWalker.tsx`: its side-effect imports register
-// every `Native` painter, which a canvas with no on-screen Controls never loads
-// otherwise, leaving each Control a `<ControlFallback>` outline. Callers
-// lazy-load this module, so a scene without a Control-only viewport pays nothing.
-import '../../../r3f/controls/index.js';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
-import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext.js';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
-import { useBuildSolveTree } from '../../../r3f/controls/native/buildSolveTree.js';
-import { ControlCanvasWalker } from '../../../r3f/controls/native/ControlCanvasWalker.js';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
-import { nativeTheme } from '../../../r3f/controls/native/nativeTheme.js';
-import { measureText } from '../../../r3f/controls/native/text/measurer.js';
-import type { Rect2 } from '../../../godot/math/rect2.js';
+import { ViewportControls } from './ViewportControls.js';
 import { createCanvasTarget, renderToOffscreenTarget, viewportMsaaMode } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
@@ -58,7 +48,6 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();
-  const { themeScale } = useProjectSettings();
 
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
@@ -77,18 +66,8 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const target = useMultisampledTarget(0, createTarget);
   const { camera, frame } = useCanvasPass(width, height, viewportMsaaMode(properties, '2d'));
 
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
-  // The rtl climb steps straight over a `SubViewport` (`control.cpp:3584-3598`,
-  // and `ControlRasterViewport.inheritedRtl`), so this forest starts from the
-  // direction of the Control that encloses the viewport, not from scratch.
-  const { tree, generation } = useBuildSolveTree(
-    node.children,
-    externalResources,
-    internalResources,
-    inheritedRtl
-  );
   const canvasModulate = useCanvasModulateColor(node.children);
-  const solveViewport: Rect2 = useMemo(() => ({ x: 0, y: 0, w: width, h: height }), [width, height]);
+  const controlsSize = useMemo(() => ({ x: width, y: height }), [width, height]);
 
   const renderPass = useCallback(() => {
     renderToOffscreenTarget(gl, {
@@ -115,18 +94,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
       <World2DLightingBoundary canvasModulate={canvasModulate}>
         <SubViewportSamplerScope properties={properties}>
-          <ControlCanvasWalker
-            tree={tree}
-            generation={generation}
-            viewport={solveViewport}
-            theme={theme}
-            measurer={measureText}
-            // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
-            // every Viewport, and only the root window gets
-            // `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so a project
-            // that opts out leaves a SubViewport's own Controls snapped.
-            snapToPixels
-          />
+          <ViewportControls nodes={node.children} size={controlsSize} inheritedRtl={inheritedRtl} />
         </SubViewportSamplerScope>
       </World2DLightingBoundary>
     </SceneResourcesProvider>,

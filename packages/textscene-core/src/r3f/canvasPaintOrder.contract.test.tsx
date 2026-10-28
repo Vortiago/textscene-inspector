@@ -11,7 +11,7 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { ControlCanvasLayer } from './controls/native/ControlCanvasLayer';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
-import { nearestGroupOrder } from './testing/paintOrder';
+import { compareKeys, paintKey } from './testing/paintOrder';
 import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
@@ -68,26 +68,6 @@ async function renderWorld(
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
   return root ?? null;
-}
-
-/**
- * The key `reversePainterSortStable` (`WebGLRenderLists.js`) sorts by, smallest first:
- * `groupOrder` of the nearest `Group` (`WebGLRenderer.js:1838-1840`), `renderOrder`,
- * and negated world z, since the ortho camera looks down -Z from z=1000. No 2D
- * material writes depth. The tests assert the order of the keys, not their encoding.
- */
-function paintKey(object: THREE.Object3D): [number, number, number] {
-  const world = new THREE.Vector3();
-  object.getWorldPosition(world);
-  return [nearestGroupOrder(object), object.renderOrder, -world.z];
-}
-
-function compareKeys(a: [number, number, number], b: [number, number, number]): number {
-  for (let i = 0; i < a.length; i++) {
-    const [ai, bi] = [a[i]!, b[i]!];
-    if (ai !== bi) return ai - bi;
-  }
-  return 0;
 }
 
 /**

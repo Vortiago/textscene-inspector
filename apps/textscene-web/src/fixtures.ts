@@ -4241,6 +4241,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Mixed Controls",
+    "file": "unit-sub-viewport-mixed-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Msaa",
     "file": "unit-sub-viewport-msaa.tscn",
     "category": "Unit - Viewports"

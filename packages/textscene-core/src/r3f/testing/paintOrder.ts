@@ -4,7 +4,7 @@
  * sorts by `groupOrder`, then `renderOrder`, then view z descending, then id.
  * Every 2D canvas material skips depth writes, so this comparator decides what covers what.
  */
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import { WORLD_CANVAS_LAYER } from '../lighting2d/canvasItemPlacement';
 
@@ -17,6 +17,27 @@ import { WORLD_CANVAS_LAYER } from '../lighting2d/canvasItemPlacement';
 export function nearestGroupOrder(object: THREE.Object3D): number {
   for (let ancestor = object.parent; ancestor; ancestor = ancestor.parent) {
     if ((ancestor as THREE.Group).isGroup) return ancestor.renderOrder;
+  }
+  return 0;
+}
+
+/**
+ * The key `reversePainterSortStable` (`WebGLRenderLists.js`) sorts by, smallest first:
+ * `groupOrder` of the nearest `Group` (`WebGLRenderer.js:1838-1840`), `renderOrder`,
+ * and negated world z, since the ortho camera looks down -Z from z=1000. No 2D
+ * material writes depth. The tests assert the order of the keys, not their encoding.
+ */
+export function paintKey(object: THREE.Object3D): [number, number, number] {
+  const world = new THREE.Vector3();
+  object.getWorldPosition(world);
+  return [nearestGroupOrder(object), object.renderOrder, -world.z];
+}
+
+/** Orders two `paintKey`s as an array sort does: negative when `a` draws first. */
+export function compareKeys(a: [number, number, number], b: [number, number, number]): number {
+  for (let i = 0; i < a.length; i++) {
+    const [ai, bi] = [a[i]!, b[i]!];
+    if (ai !== bi) return ai - bi;
   }
   return 0;
 }

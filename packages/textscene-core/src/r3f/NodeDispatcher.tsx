@@ -16,9 +16,11 @@ import {
   canvasRootRanges,
   isCanvasLayerType,
   declaredCanvasLayers,
+  hostsOwnCanvas,
   layerRanks,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {
   CanvasRootRangesProvider,
   LayerRanksProvider,
@@ -250,17 +252,22 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
   const paintRange = usePaintRange();
   // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
   // walks each child's whole subtree, which on every render is quadratic in depth.
-  const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
+  // A sub-viewport is a canvas of its own, whose runs start at the beginning, as its Control walk's do.
+  const allocated = useMemo(
+    () => allocateNodePaintRange(isViewportBoundary(node.type) ? WHOLE_CANVAS_RANGE : paintRange, node),
+    [paintRange, node]
+  );
   // A pushed `visible` takes the place of the authored one, as a GLB node's does.
   const animatedVisible = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
   const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node, animatedVisible);
   const inheritedCanvasRoots = useCanvasRootRanges();
   // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
-  // its counter over its children (`canvas_layer.cpp:261-267`).
+  // its counter over its children (`canvas_layer.cpp:261-267`). So is a sub-viewport.
   const startsCanvas = isCanvasLayerType(node.type);
+  const hostsCanvas = hostsOwnCanvas(node);
   const canvasRoots = useMemo(
-    () => (startsCanvas ? canvasRootRanges(node.children, allocated.children) : inheritedCanvasRoots),
-    [startsCanvas, node.children, allocated.children, inheritedCanvasRoots]
+    () => (hostsCanvas ? canvasRootRanges(node.children, allocated.children) : inheritedCanvasRoots),
+    [hostsCanvas, node.children, allocated.children, inheritedCanvasRoots]
   );
 
   // Whether `Object::cast_to<CanvasItem>(get_parent())` succeeds for this node.
@@ -346,6 +353,8 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
                               </CanvasRootRangesProvider>
                             </WorldRoot>
                           </CanvasLayerScope>
+                        ) : hostsCanvas ? (
+                          <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
                         ) : (
                           <>{children}</>
                         )}

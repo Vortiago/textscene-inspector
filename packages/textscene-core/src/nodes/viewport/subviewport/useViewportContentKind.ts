@@ -13,12 +13,13 @@ import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree.js';
 import {
   resolveStandaloneViewportSubtree,
-  viewportContentKind,
+  viewportContent,
+  type ViewportContent,
   type ViewportContentKind,
 } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
-export function useViewportContentKind(node: TscnNode): ViewportContentKind {
+export function useViewportContent(node: TscnNode): ViewportContent {
   // The sub-viewport's children resolve their instance refs against the scene
   // the sub-viewport lives in, the scope in force here.
   const { externalResources } = useSceneResources();
@@ -28,11 +29,15 @@ export function useViewportContentKind(node: TscnNode): ViewportContentKind {
   const sceneCache = loader?.scenes ?? NOTHING_CACHED;
 
   return useMemo(
-    () => viewportContentKind(resolveStandaloneViewportSubtree(node, externalResources, sceneCache)),
+    () => viewportContent(resolveStandaloneViewportSubtree(node, externalResources, sceneCache)),
     // `version` is an intentional cache-buster: it increments each time a
     // sub-scene finishes loading, which is when an instance child stops being
     // typeless. The value itself is not read in the callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [node, externalResources, sceneCache, version]
   );
+}
+
+export function useViewportContentKind(node: TscnNode): ViewportContentKind {
+  return useViewportContent(node).kind;
 }

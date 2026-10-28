@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { lazy, useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import {
   CanvasWorldContext,
@@ -57,7 +57,9 @@ import {
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
-import { useViewportContentKind } from './useViewportContentKind';
+import { useViewportContent } from './useViewportContentKind';
+import { useInheritedRtl } from './useInheritedRtl';
+import { PendingSuspense } from '../../../resources/PendingSuspense';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
@@ -68,6 +70,11 @@ import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js'
 import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { hideEditorHelpers } from '../../../r3f/editorHelpers';
+
+// Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
+const ViewportControls = lazy(() =>
+  import('./ViewportControls.js').then((m) => ({ default: m.ViewportControls }))
+);
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -83,7 +90,8 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // Classified over the resolved subtree: in the parsed graph an `instance=`
   // child is a typeless, childless node, so an untouched 2D sub-scene and an
   // untouched 3D one are indistinguishable until the sub-scene lands.
-  const kind = useViewportContentKind(node);
+  const { kind, holdsControls } = useViewportContent(node);
+  const inheritedRtl = useInheritedRtl(path);
 
   // Only content this subsystem can rasterise gets an offscreen pass; Controls
   // are the native Control-raster pass's (`ControlRasterPass.tsx`), and an
@@ -101,9 +109,19 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
   const canvasModulate = useCanvasModulateColor(node.children);
+  // The Controls of a 2D pass draw in its portal beside the world items, one tree-order draw. A 3D
+  // pass draws no canvas, and `SubViewportContainer` draws their Controls over its surface.
+  const drawsControls = kind === '2d' && holdsControls;
   const contents = (
     <ViewportSizeProvider size={size}>
-      <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
+      <SubViewportSamplerScope properties={properties}>
+        {children}
+        {drawsControls ? (
+          <PendingSuspense>
+            <ViewportControls nodes={node.children} size={size} inheritedRtl={inheritedRtl} />
+          </PendingSuspense>
+        ) : null}
+      </SubViewportSamplerScope>
     </ViewportSizeProvider>
   );
 

@@ -17,7 +17,7 @@ import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import { projectLayoutDirectionEnv, type ProjectSettings } from '../../../parser/projectSettingsParser';
+import type { ProjectSettings } from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -65,6 +65,7 @@ import {
 } from '../../../resources/styles/theme/lookup';
 import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
   isInjected,
@@ -908,8 +909,7 @@ export function useBuildSolveTree(
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
-  // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
-  const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
+  const layoutDirectionEnv = useLayoutDirectionEnv();
 
   const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);

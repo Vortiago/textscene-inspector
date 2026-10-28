@@ -1,0 +1,48 @@
+; One variable: a ColorRect inside a SubViewport that also holds a Polygon2D. Every CanvasItem of a
+; viewport draws into that viewport's canvas, so the inner sun lights the ColorRect and the Polygon2D
+; alike, and the stage sun lights the surface once. Regress it and the ColorRect draws on the stage
+; under the opaque target, which shows the target's clear colour instead. No other golden mixes a
+; Control and a Polygon2D in one SubViewport.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+; stretch is off, so screen = target pixel + (100, 100).
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 700.0
+offset_bottom = 300.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(600, 200)
+render_target_update_mode = 4
+
+[node name="Panel" type="ColorRect" parent="Booth/SubViewport"]
+offset_right = 300.0
+offset_bottom = 200.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Shape" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0, 0, 0.4, 1)
+polygon = PackedVector2Array(300, 0, 600, 0, 600, 200, 300, 200)
+
+[node name="InnerSun" type="DirectionalLight2D" parent="Booth/SubViewport"]
+color = Color(1, 0.2, 0.2, 1)
+energy = 0.5
+
+; Outside the container, on the stage: lit by the stage sun alone.
+[node name="Outside" type="ColorRect" parent="."]
+offset_left = 100.0
+offset_top = 400.0
+offset_right = 400.0
+offset_bottom = 600.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="StageSun" type="DirectionalLight2D" parent="."]
+color = Color(0.2, 1, 0.2, 1)
+energy = 0.5

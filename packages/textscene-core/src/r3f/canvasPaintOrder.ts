@@ -196,7 +196,7 @@ export function isCanvasRoot(node: TscnNode, parentIsCanvasItem: boolean): boole
  * Whether this node owns a canvas, so the roots below it are ordered against
  * its roots: a `CanvasLayer` (`canvas_item.cpp:259-262`) or a sub-viewport (ADR-0033).
  */
-function hostsOwnCanvas(node: TscnNode): boolean {
+export function hostsOwnCanvas(node: TscnNode): boolean {
   return isCanvasLayerType(node.type) || isViewportBoundary(node.type);
 }
 

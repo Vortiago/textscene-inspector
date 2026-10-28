@@ -12,9 +12,11 @@ import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import {
   liveTreeOf,
   type CachedSceneSource,
+  type LiveTree,
   type LiveTreeContext,
   type SceneScope,
 } from '../../../r3f/liveSceneTree.js';
+import { parentPathOf } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 
@@ -31,6 +33,30 @@ export interface ControlRasterViewport extends SceneScope {
    * pass cannot see from the viewport's children.
    */
   inheritedRtl: boolean | null;
+}
+
+/**
+ * The layout direction `node`'s children inherit. `TWO_D_UI_TYPES` is this codebase's set of
+ * Control-like types (`buildSolveTree.ts` reads it too). `CanvasLayer` is in it and states no
+ * direction, which costs nothing: an unset `layout_direction` is inherited and relays what it was
+ * given (`control.cpp:3555`).
+ */
+function rtlBelow(node: TscnNode, inheritedRtl: boolean | null, env: LayoutDirectionEnv): boolean | null {
+  return TWO_D_UI_TYPES.has(node.type)
+    ? resolveLayoutRtl((node.properties as ControlProperties).layoutDirection, inheritedRtl, env)
+    : inheritedRtl;
+}
+
+/**
+ * `Control::is_layout_rtl()` of the nearest ancestor Control above the node at `path`, or `null`
+ * where there is none. The climb steps over a `SubViewport` (`control.cpp:3584-3598`), so a mixed
+ * viewport's Controls start from the Control around it.
+ */
+export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectionEnv): boolean | null {
+  const above = parentPathOf(path);
+  if (above === null) return null;
+  const link = tree.at(above);
+  return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
 /**
@@ -66,19 +92,7 @@ export function collectControlRasterViewports(
       found.push({ path, node: step.node, inheritedRtl, ...step.scope });
     }
 
-    // `TWO_D_UI_TYPES` is this codebase's set of Control-like types
-    // (`buildSolveTree.ts` reads it too). `CanvasLayer` is in it and states no
-    // direction, which costs nothing: an unset `layout_direction` is inherited
-    // and relays what it was given (`control.cpp:3555`).
-    descend(
-      TWO_D_UI_TYPES.has(step.node.type)
-        ? resolveLayoutRtl(
-            (step.node.properties as ControlProperties).layoutDirection,
-            inheritedRtl,
-            layoutDirectionEnv
-          )
-        : inheritedRtl
-    );
+    descend(rtlBelow(step.node, inheritedRtl, layoutDirectionEnv));
   });
   return found;
 }

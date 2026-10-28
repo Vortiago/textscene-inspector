@@ -77,12 +77,22 @@ export type ViewportContentKind =
   | 'dom'
   | 'empty';
 
+/** What a sub-viewport holds: the kind its pass draws, and whether Controls sit beside that kind. */
+export interface ViewportContent {
+  kind: ViewportContentKind;
+  /**
+   * Whether the subtree holds a Control. Complete only for `'2d'`: a `'3d'` walk stops at the first
+   * 3D node, and a `'dom'` viewport holds Controls alone.
+   */
+  holdsControls: boolean;
+}
+
 /**
  * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and one kind is
  * drawn where Godot composites all (`comparison.md`). A nested sub-viewport draws
  * into its own target, so it is not descended into.
  */
-export function viewportContentKind(node: TscnNode): ViewportContentKind {
+export function viewportContent(node: TscnNode): ViewportContent {
   let sawCanvasItem = false;
   let sawDom = false;
   let sawUntypedInstance = false;
@@ -122,13 +132,18 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
       return hasNode3DContent(child.children);
     });
 
-  if (hasNode3DContent(node.children)) return '3d';
-  if (sawCanvasItem) return '2d';
+  const found = (kind: ViewportContentKind): ViewportContent => ({ kind, holdsControls: sawDom });
+  if (hasNode3DContent(node.children)) return found('3d');
+  if (sawCanvasItem) return found('2d');
   // Godot's viewport demos instance 3D sub-scenes, so an untyped instance reads as
   // 3D, but only when nothing decisive was found: anything typed, or an instance
   // whose overrides name a world, outranks it.
-  if (sawUntypedInstance) return '3d';
-  return sawDom ? 'dom' : 'empty';
+  if (sawUntypedInstance) return found('3d');
+  return found(sawDom ? 'dom' : 'empty');
+}
+
+export function viewportContentKind(node: TscnNode): ViewportContentKind {
+  return viewportContent(node).kind;
 }
 
 /** The children below `from` (the roots without it) with their instances resolved. */

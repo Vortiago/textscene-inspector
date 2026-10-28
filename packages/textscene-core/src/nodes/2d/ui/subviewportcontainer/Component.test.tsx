@@ -141,7 +141,7 @@ describe('<SubViewportContainer>', () => {
   it('snaps its sub-viewport’s own Controls even when the project opts out', async () => {
     projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
     try {
-      // Mixed, so this container's live arm is under test. `ControlRasterPass` draws a
+      // 3D, so this container's live arm is under test. `ControlRasterPass` draws a
       // Control-only viewport, and its suite asserts the same rule for that route.
       const mesh = node('Mesh', 'MeshInstance3D', {});
       const bar = node('Bar', 'ColorRect', {
@@ -235,8 +235,9 @@ describe('<SubViewportContainer>', () => {
 /**
  * A sub-viewport's Controls reach the canvas by one route. `viewportContentKind`
  * (`viewport/subviewport/viewportContent.ts`) sends a Control-only (`'dom'`) viewport to
- * `ControlRasterPass`, whose texture alone carries `self_modulate`, so a live draw would composite
- * it twice. The live arm serves a mixed viewport, whose offscreen pass renders the non-Control half.
+ * `ControlRasterPass`, and a viewport with 2D content to its own pass. The texture alone carries
+ * `self_modulate`, so a live draw would composite them twice. The live arm serves a 3D viewport,
+ * whose pass draws no canvas.
  */
 describe('<SubViewportContainer> — one route per sub-viewport', () => {
   /** Every named group the walk emitted, so a live-drawn Control is visible by name. */
@@ -262,7 +263,25 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
     expect(groupNames(renderer).filter((n) => n.includes('Backdrop'))).toEqual([]);
   });
 
-  it('still draws a MIXED viewport’s Controls live, over the pass that rendered its 3D half', async () => {
+  it('does not draw a 2D viewport’s Controls live — its own pass draws them into the target', async () => {
+    const renderer = await mount(
+      <>
+        <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [
+            node('Shape', 'Polygon2D', {}),
+            node('Backdrop', 'ColorRect', {}),
+          ])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    expect(groupNames(renderer).filter((n) => n.includes('Backdrop'))).toEqual([]);
+  });
+
+  it('still draws a 3D viewport’s Controls live, over the pass that rendered its world', async () => {
     const renderer = await mount(
       <>
         <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
@@ -280,7 +299,7 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
     expect(groupNames(renderer).filter((n) => n.includes('Backdrop')).length).toBeGreaterThan(0);
   });
 
-  it('keeps the light pass of the canvas around the container off a MIXED viewport’s live Controls', async () => {
+  it('keeps the light pass of the canvas around the container off a 3D viewport’s live Controls', async () => {
     const { placements, lighting } = recordedItems();
     await mount(
       <CanvasLighting2DContext.Provider value={lighting}>

@@ -58,8 +58,7 @@ interface ViewportSurfaceNativeProps {
 
 /**
  * One nested `SubViewport`'s surface: the pixel arm (a quad sampling its texture, or the fallback)
- * and the Controls arm (its direct Control children, drawn live over a mixed viewport, since the
- * offscreen pass renders only one non-Control content kind).
+ * and the Controls arm (its Control children, drawn live over a 3D viewport, whose pass draws no canvas).
  */
 function ViewportSurfaceNative({
   viewport,
@@ -202,10 +201,10 @@ function ViewportSurfaceNative({
             renderOrder={renderOrder}
           />
         ) : null}
-        {/* `ControlRasterPass` draws a `'dom'` viewport into the texture the quad samples, and only
-            the quad carries the tint, so a live draw would composite it twice. This arm serves a
-            mixed viewport, whose offscreen pass renders the non-Control half (`viewportContent.ts`). */}
-        {contentKind === 'dom' ? null : (
+        {/* Every other kind draws its Controls into its own target, which the quad samples: a
+            `'dom'` viewport in `ControlRasterPass`, a 2D one in its own pass. A live draw would
+            composite them twice. A 3D pass draws no canvas, so its Controls draw here. */}
+        {contentKind === '3d' ? (
           <World2DLightingBoundary canvasModulate={canvasModulate}>
             <ControlCanvasWalker
               tree={tree}
@@ -219,7 +218,7 @@ function ViewportSurfaceNative({
               snapToPixels
             />
           </World2DLightingBoundary>
-        )}
+        ) : null}
       </ControlClipProvider>
     </CanvasItemGroup>
   );

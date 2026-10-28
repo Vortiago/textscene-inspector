@@ -485,6 +485,10 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-control-outer-light.tscn',
     mode: '2d',
   },
+  // A ColorRect and a Polygon2D in one sub-viewport, lit by its own sun. Godot 4.6.3 `--mode 2d`:
+  // (250,200) and (550,200) rgb(0,0,123) the ColorRect and the Polygon2D, (250,500) rgb(0,0,112) the
+  // stage ColorRect under the stage sun alone.
+  { name: 'sub-viewport-mixed-controls', file: 'unit-sub-viewport-mixed-controls.tscn', mode: '2d' },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
