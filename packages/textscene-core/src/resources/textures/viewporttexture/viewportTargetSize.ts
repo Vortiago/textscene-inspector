@@ -9,7 +9,6 @@ import type { ViewportTextureEntry } from '../../../r3f/contexts/ViewportTexture
 import type { SharedLiveTree } from '../../../r3f/useLiveSceneTree';
 import { localSceneAt } from '../../../r3f/useUniqueNames';
 import { resolveViewportTexturePath, viewportTextureRegistryKey } from '../../../r3f/viewportTexturePath';
-import { textureSize } from '../textureSize';
 
 /** The size of the target `viewportTexture` names for the node at `consumerPath`, null until it publishes. */
 export type ViewportTargetSize = (
@@ -27,7 +26,30 @@ export function viewportTargetSizes(
     if (viewportPath === null) return null;
     const scene = localSceneAt(consumerPath, live);
     const key = viewportTextureRegistryKey(scene.path, viewportPath, scene.uniquePaths);
-    const size = textureSize(key === null ? null : targets.get(key)?.plain.texture);
-    return size ? { x: size.width, y: size.height } : null;
+    return key === null ? null : (targets.get(key)?.size ?? null);
   };
+}
+
+/** One size a walk read: the slot that asked, the ViewportTexture it named, and the answer. */
+export interface ViewportSizeRead {
+  readonly consumerPath: string;
+  readonly viewportTexture: TscnInternalResource;
+  readonly size: Vector2 | null;
+}
+
+/** `lookup`, with each answer it gives pushed onto `reads`. */
+export function recordingSizes(lookup: ViewportTargetSize, reads: ViewportSizeRead[]): ViewportTargetSize {
+  return (consumerPath, viewportTexture) => {
+    const size = lookup(consumerPath, viewportTexture);
+    reads.push({ consumerPath, viewportTexture, size });
+    return size;
+  };
+}
+
+/** Whether `lookup` answers every read in `reads` as the walk that made them was answered. */
+export function sizesStillAnswered(reads: readonly ViewportSizeRead[], lookup: ViewportTargetSize): boolean {
+  return reads.every(({ consumerPath, viewportTexture, size }) => {
+    const answer = lookup(consumerPath, viewportTexture);
+    return answer === null || size === null ? answer === size : answer.x === size.x && answer.y === size.y;
+  });
 }

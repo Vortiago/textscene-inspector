@@ -11,6 +11,7 @@ import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
+import { fillEveryLiveCopy } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 
@@ -63,14 +64,17 @@ export interface SkyEnvironmentInput {
  * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
  * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0044). The result is
  * a clone only when the arrival diverges, and `releaseView` frees it
- * only then. Returns null for a sky with no panorama.
+ * only then. A live target's copy is filled now, since the bake samples it
+ * before the target's next render. Returns null for a sky with no panorama.
  */
-function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
+function skyPanoramaTexture(gl: THREE.WebGLRenderer, panorama?: THREE.Texture | null): THREE.Texture | null {
   if (!panorama) return null;
-  return textureView(panorama, {
+  const view = textureView(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
     wrap: THREE.RepeatWrapping,
   });
+  fillEveryLiveCopy(panorama, gl);
+  return view;
 }
 
 /**
@@ -82,7 +86,7 @@ export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
   { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const panoramaView = skyPanoramaTexture(panorama);
+  const panoramaView = skyPanoramaTexture(gl, panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
     uniforms: skyUniforms(sky.material, lights, panoramaView),

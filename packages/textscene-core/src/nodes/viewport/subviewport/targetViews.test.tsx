@@ -13,6 +13,7 @@ import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { ownedTextureView } from '../../../resources/textures/textureView';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
+import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
 
 type TargetViews = ReturnType<typeof useTargetViews>;
 
@@ -147,7 +148,9 @@ describe('useTargetViews', () => {
     const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe'));
     views.decoding.retain();
     const reader = flippedReader(views.decoding.texture);
+    const release = holdUntilReleased(reader);
     expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.decoding.texture, reader]);
+    release();
   });
 
   it('gives a reader the view itself once the target is gone (edge case)', async () => {

@@ -5,10 +5,10 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
+import { fillEveryLiveCopy, liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
-import { copiesFilledFrom } from './liveTargets.testkit';
+import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
 import { holdUntilReleased } from './useDisposeOnRelease';
 
 const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
@@ -19,6 +19,12 @@ afterEach(() => {
   withdrawals.forEach((withdraw) => withdraw());
   withdrawals = [];
 });
+
+/** `view`, held as a reader that draws it holds it, until the test ends. */
+function held(view: THREE.Texture): THREE.Texture {
+  withdrawals.push(holdUntilReleased(view));
+  return view;
+}
 
 /** A canvas target its pass publishes, as a SubViewport does. */
 function liveCanvasTarget(): THREE.WebGLRenderTarget {
@@ -76,7 +82,9 @@ describe('a reader of a live target', () => {
 
   it('is refilled after each render of the target', () => {
     const target = liveCanvasTarget();
-    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const view = held(
+      ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })
+    );
     expect(copiesFilledFrom(target.texture)).toEqual([view]);
   });
 
@@ -90,7 +98,9 @@ describe('a reader of a live target', () => {
   /** Godot's readers sample one RID, so readers that sample it alike need one copy between them. */
   it('shares one copy between readers that sample the target alike', () => {
     const target = liveCanvasTarget();
-    const first = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const first = held(
+      ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })
+    );
     const second = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
     expect(second).toBe(first);
     expect(copiesFilledFrom(target.texture)).toEqual([first]);
@@ -107,8 +117,10 @@ describe('a reader of a live target', () => {
 
   it("reads its own copy of another reader's copy, filled after that copy", () => {
     const target = liveCanvasTarget();
-    const first = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
-    const second = ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT });
+    const first = held(
+      ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })
+    );
+    const second = held(ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT }));
     expect(copiesFilledFrom(target.texture)).toEqual([first, second]);
   });
 
@@ -128,6 +140,34 @@ const CORNER_CELL = {
   dest: { x: 0, y: 0 },
 };
 
+/** A copy lives while a reader holds it. React can discard the render that made one. */
+describe('a copy no reader holds', () => {
+  it('is not refilled after a render of the target', () => {
+    const target = liveCanvasTarget();
+    ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    expect(copiesFilledFrom(target.texture)).toEqual([]);
+  });
+
+  it('is freed once its target is withdrawn', async () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const withdraw = publishLiveTargets([target.texture], null, false);
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    let isDisposed = false;
+    view.addEventListener('dispose', () => (isDisposed = true));
+    withdraw();
+    await Promise.resolve();
+    expect(isDisposed).toBe(true);
+  });
+
+  it('is filled on demand, for a reader that samples it before the next render', () => {
+    const target = liveCanvasTarget();
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const { gl, drawnInto } = recordingRenderer();
+    fillEveryLiveCopy(target.texture, gl);
+    expect(drawnInto.map((drawn) => drawn?.texture)).toEqual([view]);
+  });
+});
+
 describe('liveTargetCrop', () => {
   it('cuts a region out of the live target, at the region size plus its margin', () => {
     const target = liveCanvasTarget();
@@ -143,9 +183,17 @@ describe('liveTargetCrop', () => {
 
   it('is filled after the target it cuts, and a reader of the crop after the crop', () => {
     const target = liveCanvasTarget();
-    const crop = liveTargetCrop(target.texture, CORNER_CELL);
-    const reader = ownedTextureView(crop, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const crop = held(liveTargetCrop(target.texture, CORNER_CELL));
+    const reader = held(ownedTextureView(crop, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED }));
     expect(copiesFilledFrom(target.texture)).toEqual([crop, reader]);
+  });
+
+  /** Godot's AtlasTextures draw from one RID, so two that cut one region need one crop. */
+  it('shares one crop between readers that cut the same region', () => {
+    const target = liveCanvasTarget();
+    expect(liveTargetCrop(target.texture, { ...CORNER_CELL })).toBe(
+      liveTargetCrop(target.texture, CORNER_CELL)
+    );
   });
 });
 
@@ -159,6 +207,16 @@ describe('unrenderedTexel', () => {
     const target = createCanvasTarget(32, 16, 'SubViewport');
     withdrawals.push(publishLiveTargets([target.texture], null, true));
     const crop = liveTargetCrop(target.texture, CORNER_CELL);
+    expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
+    crop.dispose();
+  });
+
+  it('follows its target when the target publishes again with another transparency', () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport');
+    const withdrawOpaque = publishLiveTargets([target.texture], null, false);
+    const crop = liveTargetCrop(target.texture, CORNER_CELL);
+    withdrawals.push(publishLiveTargets([target.texture], null, true));
+    withdrawOpaque();
     expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
     crop.dispose();
   });

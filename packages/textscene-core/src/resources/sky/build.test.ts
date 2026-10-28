@@ -5,6 +5,8 @@ import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { debandingDrawnBy } from './skyLayers.testkit';
+import { publishLiveTargets } from '../../r3f/liveTargets';
+import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 
 /** A sky of `materialType` with every property at Godot's default. */
 function defaultSky(materialType: string): Sky {
@@ -185,6 +187,39 @@ describe('buildSkyEnvironment panorama wiring', () => {
     expect(sampled).not.toBe(shared);
     expect(disposedTextures).toContain(sampled);
     expect(disposedTextures).not.toContain(shared);
+  });
+
+  it('fills its copy of a live panorama before the cube samples it', async () => {
+    const { renderer } = await testRenderer();
+    const target = createCanvasTarget(8, 4, 'SubViewport');
+    const withdraw = publishLiveTargets([target.texture], renderer, false);
+    const bound: (THREE.Texture | undefined)[] = [];
+    const setRenderTarget = renderer.setRenderTarget.bind(renderer);
+    vi.spyOn(renderer, 'setRenderTarget').mockImplementation((renderTarget, ...rest) => {
+      bound.push(renderTarget?.texture as THREE.Texture | undefined);
+      setRenderTarget(renderTarget, ...rest);
+    });
+    let boundBeforeCube: (THREE.Texture | undefined)[] = [];
+    let sampled: THREE.Texture | null = null;
+    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation((_renderer, scene) => {
+      const mesh = scene.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+      sampled = mesh.material.uniforms.source_panorama!.value as THREE.Texture;
+      boundBeforeCube = [...bound];
+    });
+    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
+      new THREE.WebGLRenderTarget(1, 1)
+    );
+    const sky = defaultSky('PanoramaSkyMaterial');
+    buildSkyEnvironment(renderer, {
+      sky,
+      lights: [],
+      panorama: target.texture,
+      asBackground: true,
+      energy: 1,
+    });
+    withdraw();
+    expect(sampled).not.toBe(target.texture);
+    expect(boundBeforeCube).toContain(sampled);
   });
 
   it('never disposes a shared panorama that already repeats', async () => {

@@ -41,7 +41,10 @@ import {
   isLocalToScene,
 } from '../../../resources/textures/viewporttexture/localToScene';
 import {
+  recordingSizes,
+  sizesStillAnswered,
   viewportTargetSizes,
+  type ViewportSizeRead,
   type ViewportTargetSize,
 } from '../../../resources/textures/viewporttexture/viewportTargetSize';
 import { useViewportTextures } from '../../contexts/ViewportTextureContext';
@@ -316,6 +319,8 @@ interface ForestResult {
   pendingFonts: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
+  /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
+  viewportSizeReads: readonly ViewportSizeRead[];
 }
 
 /**
@@ -441,6 +446,8 @@ function buildForest(
   const pendingFonts = new Set<string>();
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
+  const viewportSizeReads: ViewportSizeRead[] = [];
+  const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
@@ -546,7 +553,7 @@ function buildForest(
     const viewport = inlineViewportTexture(ref, int);
     if (viewport) {
       const isSetUp = viewport.isSetUp && holders.every(isLocalToScene);
-      return isSetUp ? viewportTargetSize(consumerPath, viewport.resource) : NO_SIZE;
+      return isSetUp ? readViewportSize(consumerPath, viewport.resource) : NO_SIZE;
     }
 
     // An inline procedural texture or a region cell states its size here, with no
@@ -886,6 +893,7 @@ function buildForest(
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
     readKeys,
+    viewportSizeReads,
   };
 }
 
@@ -921,6 +929,13 @@ export function useBuildSolveTree(
     () => viewportTargetSizes(viewportTargets, live),
     [viewportTargets, live]
   );
+  // The lookup the last forest was keyed on stays the key while it answers every size that forest
+  // read alike, so a publish or a live-tree load no slot reads rebuilds nothing.
+  const lastSizes = useRef<{ key: ViewportTargetSize; reads: readonly ViewportSizeRead[] } | null>(null);
+  const sizesKey =
+    lastSizes.current && sizesStillAnswered(lastSizes.current.reads, viewportTargetSize)
+      ? lastSizes.current.key
+      : viewportTargetSize;
 
   const forest = useMemo(
     () =>
@@ -947,14 +962,15 @@ export function useBuildSolveTree(
       hiddenNodePaths,
       layoutDirectionEnv,
       inheritedRtl,
-      viewportTargetSize,
+      sizesKey,
       generation,
     ]
   );
   const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
   useEffect(() => {
     readKeys.current = forest.readKeys;
-  }, [forest]);
+    lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };
+  }, [forest, sizesKey]);
 
   // Requests what the walk found uncached after render, not during it, as
   // `useResource` does.

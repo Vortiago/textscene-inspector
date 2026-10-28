@@ -3,9 +3,9 @@
  * viewport's size once set up, and 0 for one its scene never sets up (`viewport.cpp:156-166`).
  */
 import { describe, expect, it } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext';
@@ -14,6 +14,8 @@ import { createCanvasTarget } from '../../../nodes/viewport/subviewport/offscree
 import { useBuildSolveTree } from './buildSolveTree';
 import '../../nodes/index';
 import '../index';
+
+const NO_EXTERNAL: readonly TscnExternalResource[] = [];
 
 const VIEWPORT_TEXTURE: TscnInternalResource = {
   id: 'ViewportTexture_1',
@@ -95,5 +97,49 @@ describe('useBuildSolveTree: a ViewportTexture slot', () => {
     expect(
       shownTextureSize(shownBy('SubResource("ViewportTexture_1")'), [VIEWPORT_TEXTURE], null)
     ).toBeNull();
+  });
+});
+
+/**
+ * The walk for `nodes`, which a 64 by 32 target at `Root/SubViewport` joins once `publish` runs. A
+ * publish re-renders every reader of the viewport textures.
+ */
+function solveBeforeAndAfterPublish(nodes: TscnNode[], resources: TscnInternalResource[]) {
+  const target = createCanvasTarget(64, 32, 'SubViewport');
+  const { loader } = createFakeResourceLoader();
+  let isPublished = false;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <ResourceLoaderProvider loader={loader}>
+      <ViewportTextureProvider>
+        {isPublished && (
+          <ViewportTexturePublisher
+            path="Root/SubViewport"
+            entry={viewportEntry(target.texture, { x: 64, y: 32 })}
+          />
+        )}
+        {children}
+      </ViewportTextureProvider>
+    </ResourceLoaderProvider>
+  );
+  const { result, rerender } = renderHook(() => useBuildSolveTree(nodes, NO_EXTERNAL, resources), {
+    wrapper,
+  });
+  const before = result.current.tree;
+  isPublished = true;
+  act(() => rerender());
+  return { before, after: result.current.tree };
+}
+
+describe('useBuildSolveTree: a viewport publish', () => {
+  it('keeps the forest when no slot reads the viewport', () => {
+    const { before, after } = solveBeforeAndAfterPublish(shownBy('SubResource("Missing")'), []);
+    expect(after).toBe(before);
+  });
+
+  it('rebuilds the forest when a slot reads the viewport', () => {
+    const { after } = solveBeforeAndAfterPublish(shownBy('SubResource("ViewportTexture_1")'), [
+      VIEWPORT_TEXTURE,
+    ]);
+    expect(after[0]?.textureSize).toEqual({ x: 64, y: 32 });
   });
 });
