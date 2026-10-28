@@ -17,8 +17,6 @@ import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/nativ
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { resolveNodeFont } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { peekVariedStrokeOutlines } from '../../../../r3f/controls/native/text/sceneFontOutlines';
-import { useSceneFontSettleCount } from '../../../../r3f/controls/native/text/useSceneFontSettleCount';
 // A 2D Control outlines text through the same TextServer path as Label3D.
 // `outlineRadiusPx` is the outward-only expansion for `<TextRun>`'s
 // `outlineWidthPx`. `outlineStrokeWidthPx` is the centred canvas stroke width.
@@ -116,10 +114,6 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   // a second, wider fill threshold in the same mesh.
   const drawCanvasOutline = hasOutline && isCanvasFontMetrics(layout.fontMetrics);
   const drawMsdfOutline = hasOutline && !isCanvasFontMetrics(layout.fontMetrics);
-  // The stroke of an emboldened or sheared face follows the changed glyph contours, which load in the background.
-  const strokedOutlines = peekVariedStrokeOutlines(font, fontMetrics, drawCanvasOutline);
-  const isAwaitingOutlines = strokedOutlines === undefined;
-  useSceneFontSettleCount(isAwaitingOutlines);
 
   return (
     <>
@@ -136,13 +130,12 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
       )}
       {layout && textPos && (
         <CanvasItemGroup position={[textPos.x, -textPos.y, 0]}>
-          {drawCanvasOutline && !isAwaitingOutlines && (
+          {drawCanvasOutline && (
             <TextRun
               layout={layout}
               fontSizePx={fontSizePx}
               tint={tintedOutlineColor}
               strokeWidthPx={outlineStrokeWidthPx(outlineSize)}
-              glyphOutlines={strokedOutlines}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />

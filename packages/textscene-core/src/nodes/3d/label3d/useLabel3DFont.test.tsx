@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 
@@ -62,8 +62,7 @@ const MIPMAPPED_FILE: TscnInternalResource = {
 function renderMetrics(
   fontRef: string | undefined,
   files: Record<string, string> = {},
-  heldPaths: readonly string[] = [],
-  hasOutline = false
+  heldPaths: readonly string[] = []
 ) {
   const {
     ProjectSettingsProvider,
@@ -72,7 +71,7 @@ function renderMetrics(
     loaderServing,
     useLabel3DFont,
   } = modules;
-  return renderHook(() => useLabel3DFont(fontRef, hasOutline), {
+  return renderHook(() => useLabel3DFont(fontRef), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider
         loader={loaderServing({ 'res://project.godot': 'config_version=5\n', ...files }, heldPaths)}
@@ -85,6 +84,14 @@ function renderMetrics(
       </ResourceLoaderProvider>
     ),
   });
+}
+
+/** An emboldened face waits for the bundled font's bytes, which load as their own chunk. */
+function settledMetrics(
+  result: { current: ReturnType<typeof modules.useLabel3DFont> },
+  expected: Record<string, unknown>
+) {
+  return vi.waitFor(() => expect(result.current?.metrics).toMatchObject(expected));
 }
 
 async function settle() {
@@ -119,25 +126,19 @@ describe('useLabel3DFont metrics', () => {
   it('takes the embolden of the label font over the bundled font', async () => {
     const { result } = renderMetrics('SubResource("own")');
 
-    await settle();
-
-    expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 });
+    await settledMetrics(result, { kind: 'canvas', embolden: 1 });
   });
 
   it('takes the embolden of the project default font when the label has no font', async () => {
     const { result } = renderMetrics(undefined, PROJECT_FONT_FILES);
 
-    await settle();
-
-    expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 2 });
+    await settledMetrics(result, { kind: 'canvas', embolden: 2 });
   });
 
   it('prefers the label font to the project default font', async () => {
     const { result } = renderMetrics('SubResource("own")', PROJECT_FONT_FILES);
 
-    await settle();
-
-    expect(result.current?.metrics).toMatchObject({ kind: 'canvas', embolden: 1 });
+    await settledMetrics(result, { kind: 'canvas', embolden: 1 });
   });
 
   it('is undefined while the project font loads', async () => {
@@ -150,38 +151,44 @@ describe('useLabel3DFont metrics', () => {
 });
 
 describe('useLabel3DFont outlines', () => {
-  it('reads no outlines for a label without an outline', async () => {
-    const { result } = renderMetrics('SubResource("own")');
+  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
+
+  it('reads no outlines for a face that is neither emboldened nor sheared', async () => {
+    const { result } = renderMetrics(undefined);
 
     await settle();
 
-    expect(result.current?.outlines).toBeNull();
+    expect(result.current?.metrics).toBeDefined();
+    expect(result.current?.metrics.outlines).toBeUndefined();
   });
 
-  it('reads no outlines for an outlined label whose font is not emboldened', async () => {
-    const { result } = renderMetrics(undefined, {}, [], true);
+  it('is ready, with no outlines, for an unvaried canvas face', async () => {
+    // happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so.
+    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekSettledSceneFontMetrics: () => bundled.metrics,
+    }));
+    modules = await importModules();
+    const { result } = renderMetrics(undefined);
 
     await settle();
 
-    expect(result.current?.outlines).toBeNull();
+    expect(result.current?.metrics).toBe(bundled.metrics);
   });
 
   it.each([
     ['emboldened', 'own'],
     ['sheared', 'sheared'],
-  ])(
-    'is undefined, then holds the outlines of the bundled font, for a %s label with an outline',
-    async (_name, id) => {
-      const { result } = renderMetrics(`SubResource("${id}")`, {}, [], true);
+  ])('is undefined, then holds the outlines of the bundled font, for a %s label', async (_name, id) => {
+    const { result } = renderMetrics(`SubResource("${id}")`);
 
-      expect(result.current).toBeUndefined();
+    expect(result.current).toBeUndefined();
 
-      // The bundled font's bytes load as their own chunk, so a fixed count of ticks can end before they arrive.
-      await vi.waitFor(() =>
-        expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0)
-      );
-    }
-  );
+    // The bundled font's bytes load as their own chunk, so a fixed count of ticks can end before they arrive.
+    await vi.waitFor(() =>
+      expect(result.current?.metrics.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0)
+    );
+  });
 });
 
 const PROJECT_MIPMAPS = 'config_version=5\n\n[gui]\n\ntheme/default_font_generate_mipmaps=true\n';

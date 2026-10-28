@@ -1,0 +1,82 @@
+[gd_scene load_steps=7 format=3 uid="uid://unitprogressbaremboldenfill"]
+
+; The one variable: the FontVariation of a ProgressBar percentage with no outline, so the fill is
+; all that draws. Godot grows each glyph outline by `embolden * size / 16` px, up and right, and
+; fills it. The bars are plain, emboldened at 1.2, emboldened at 3.0, shrunk at -0.5, and
+; emboldened and sheared. The font is OpenType-CFF, so the plain fill matches Godot exactly and
+; each other bar differs from it by the variation alone. `unit-progress-bar-outline-variation`
+; shows the same faces under an outline, which hides the fill's edge.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-extra-bold.otf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_embolden"]
+base_font = ExtResource("1_font")
+variation_embolden = 1.2
+
+[sub_resource type="FontVariation" id="FontVariation_embolden_large"]
+base_font = ExtResource("1_font")
+variation_embolden = 3.0
+
+[sub_resource type="FontVariation" id="FontVariation_shrink"]
+base_font = ExtResource("1_font")
+variation_embolden = -0.5
+
+[sub_resource type="FontVariation" id="FontVariation_embolden_skew"]
+base_font = ExtResource("1_font")
+variation_embolden = 1.2
+variation_transform = Transform2D(1, 0.3, 0, 1, 0, 0)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Plain" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 220.0
+offset_bottom = 90.0
+value = 42.0
+theme_override_fonts/font = ExtResource("1_font")
+theme_override_font_sizes/font_size = 40
+
+[node name="Emboldened" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 220.0
+offset_bottom = 180.0
+value = 42.0
+theme_override_fonts/font = SubResource("FontVariation_embolden")
+theme_override_font_sizes/font_size = 40
+
+[node name="EmboldenedLarge" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 200.0
+offset_right = 220.0
+offset_bottom = 270.0
+value = 42.0
+theme_override_fonts/font = SubResource("FontVariation_embolden_large")
+theme_override_font_sizes/font_size = 40
+
+[node name="Shrunk" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 290.0
+offset_right = 220.0
+offset_bottom = 360.0
+value = 42.0
+theme_override_fonts/font = SubResource("FontVariation_shrink")
+theme_override_font_sizes/font_size = 40
+
+[node name="EmboldenedSheared" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 380.0
+offset_right = 220.0
+offset_bottom = 450.0
+value = 42.0
+theme_override_fonts/font = SubResource("FontVariation_embolden_skew")
+theme_override_font_sizes/font_size = 40

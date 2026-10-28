@@ -15,6 +15,7 @@ import {
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  withOutlines,
   withVariation,
   type FontMetrics,
 } from './fontMetrics';
@@ -109,6 +110,14 @@ describe('getFontKerningAdjustmentPx', () => {
 });
 
 describe('withVariation', () => {
+  it('keeps the outlines of each font apart for one face and one variation', () => {
+    const a = { glyphIndex: () => 1, glyphContours: () => null };
+    const b = { glyphIndex: () => 2, glyphContours: () => null };
+
+    expect(withVariation(METRICS, { embolden: 1, outlines: a }).outlines).toBe(a);
+    expect(withVariation(METRICS, { embolden: 1, outlines: b }).outlines).toBe(b);
+  });
+
   it('is the face itself with no embolden and no skew', () => {
     expect(withVariation(METRICS, {})).toBe(METRICS);
     expect(withVariation(METRICS, { embolden: 0, skew: 0 })).toBe(METRICS);
@@ -153,5 +162,30 @@ describe('ftDivFix', () => {
   it('gives the largest 32-bit magnitude for a zero divisor, signed by the dividend', () => {
     expect(ftDivFix(5, 0)).toBe(0x7fffffff);
     expect(ftDivFix(-5, 0)).toBe(-0x7fffffff);
+  });
+});
+
+describe('withOutlines', () => {
+  const outlines = { glyphIndex: () => 1, glyphContours: () => null };
+
+  it('carries the outlines on a plain face, and keeps the face as the prototype', () => {
+    const face = withOutlines(METRICS, outlines);
+
+    expect(face.outlines).toBe(outlines);
+    expect(face.unitsPerEm).toBe(METRICS.unitsPerEm);
+    expect(face.embolden).toBe(0);
+  });
+
+  it('keeps the embolden and skew of a varied face', () => {
+    const face = withOutlines(withVariation(METRICS, { embolden: 1.2, skew: 0.3 }), outlines);
+
+    expect(face).toMatchObject({ embolden: 1.2, skew: 0.3 });
+  });
+
+  it('answers one face for one set of outlines, and the face itself once it carries them', () => {
+    const face = withOutlines(METRICS, outlines);
+
+    expect(withOutlines(METRICS, outlines)).toBe(face);
+    expect(withOutlines(face, outlines)).toBe(face);
   });
 });

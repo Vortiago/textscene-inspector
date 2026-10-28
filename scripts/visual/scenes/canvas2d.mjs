@@ -244,6 +244,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
   // A ProgressBar percentage with an outline, over a plain, an emboldened, a sheared and an emboldened and sheared face.
   { name: 'progress-bar-outline-variation', file: 'unit-progress-bar-outline-variation.tscn', mode: '2d' },
+  // The one variable: the FontVariation of a ProgressBar percentage with no outline, so the fill alone draws.
+  { name: 'progress-bar-embolden-fill', file: 'unit-progress-bar-embolden-fill.tscn', mode: '2d' },
   // The one variable: the font of each RichTextLabel style. The default theme's bold, italics and bold
   // italics over the default font, a node's own `bold_font` and `italics_font`, and bare variations
   // that draw the default font itself.

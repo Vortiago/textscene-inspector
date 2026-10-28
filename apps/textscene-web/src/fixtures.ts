@@ -1658,6 +1658,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Embolden Fill",
+    "file": "unit-progress-bar-embolden-fill.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Outline Variation",
     "file": "unit-progress-bar-outline-variation.tscn",
     "category": "Other"
