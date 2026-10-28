@@ -4059,6 +4059,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Shared World Glow",
+    "file": "unit-sub-viewport-shared-world-glow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Texture Emission",
     "file": "unit-sub-viewport-texture-emission.tscn",
     "category": "Unit - Viewports"

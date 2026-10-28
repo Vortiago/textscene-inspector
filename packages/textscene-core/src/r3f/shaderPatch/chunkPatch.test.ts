@@ -7,7 +7,7 @@ import {
   editedShader,
   installChunkEdits,
   rewrittenShader,
-  swappedChunk,
+  swapChunk,
   type ChunkEdit,
 } from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
@@ -141,22 +141,20 @@ describe('rewrittenShader', () => {
   });
 });
 
-describe('swappedChunk', () => {
-  it('writes the text into three and is true', () => {
-    expect(swappedChunk(CHUNK, 'two', 'test chunk has no stub')).toBe(true);
+describe('swapChunk', () => {
+  it('writes the text into three', () => {
+    swapChunk(CHUNK, 'two', 'test chunk has no stub');
     expect(THREE.ShaderChunk[CHUNK]).toBe('two');
   });
 
-  it('is false and warns nothing for the text the chunk holds (edge case)', () => {
+  it('warns nothing for the text the chunk holds (edge case)', () => {
     THREE.ShaderChunk[CHUNK] = 'two';
-    expect(
-      warningsOf(() => expect(swappedChunk(CHUNK, 'two', 'test chunk has no stub')).toBe(false))
-    ).toEqual([]);
+    expect(warningsOf(() => swapChunk(CHUNK, 'two', 'test chunk has no stub'))).toEqual([]);
   });
 
-  it('keeps the chunk, warns and is false for no text (error case)', () => {
+  it('keeps the chunk and warns for no text (error case)', () => {
     THREE.ShaderChunk[CHUNK] = 'one';
-    expect(warningsOf(() => swappedChunk(CHUNK, null, 'test chunk has no stub'))).toEqual([
+    expect(warningsOf(() => swapChunk(CHUNK, null, 'test chunk has no stub'))).toEqual([
       "[Shading] three's test chunk has no stub",
     ]);
     expect(THREE.ShaderChunk[CHUNK]).toBe('one');

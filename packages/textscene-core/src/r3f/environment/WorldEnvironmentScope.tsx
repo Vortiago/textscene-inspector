@@ -14,6 +14,7 @@ import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import { WorldExposureScope } from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
+import { WorldToneMapScope } from './worldToneMap';
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
@@ -30,16 +31,18 @@ export function WorldEnvironmentScope({ world, children }: { world: WorldKind; c
   return (
     <WorldKindProvider world={world}>
       <environments.Provider>
-        <WorldExposureScope>
-          {world === 'root' ? (
-            <RootEnvironment>{children}</RootEnvironment>
-          ) : (
-            <>
-              <SubViewportEnvironment />
-              {children}
-            </>
-          )}
-        </WorldExposureScope>
+        <WorldToneMapScope>
+          <WorldExposureScope>
+            {world === 'root' ? (
+              <RootEnvironment>{children}</RootEnvironment>
+            ) : (
+              <>
+                <SubViewportEnvironment />
+                {children}
+              </>
+            )}
+          </WorldExposureScope>
+        </WorldToneMapScope>
       </environments.Provider>
     </WorldKindProvider>
   );

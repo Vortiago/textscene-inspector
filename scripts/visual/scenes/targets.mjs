@@ -75,6 +75,9 @@ export const TILE_AND_TARGET_SCENES = [
   // `tonemap_exposure` under LINEAR inside the target while glow holds the renderer for the
   // compositor: the exposure applies inside the target and again on the quad.
   { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
+  // The shared world's glow runs inside the target: the quad shows the bloom around the emissive
+  // sphere that only the target sees.
+  { name: 'sub-viewport-shared-world-glow', file: 'unit-sub-viewport-shared-world-glow.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
