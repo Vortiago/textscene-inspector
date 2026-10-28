@@ -12,6 +12,7 @@
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { ftMulFix } from './fontMetrics';
+import type { GlyphVariation } from './glyphVariation';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
@@ -33,13 +34,13 @@ export interface GlyphContours {
 }
 
 /**
- * The contours of a glyph at `fontSizePx`, grown by `embolden` as `FT_Outline_Embolden` does, or null
- * for a glyph with no outline.
+ * The contours of a glyph at `fontSizePx`, changed by the font variation as Godot changes a glyph
+ * slot, or null for a glyph with no outline.
  */
 export type GlyphContourReader = (
   glyphIndex: number,
   fontSizePx: number,
-  embolden?: number
+  variation?: GlyphVariation
 ) => GlyphContours | null;
 
 /** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */

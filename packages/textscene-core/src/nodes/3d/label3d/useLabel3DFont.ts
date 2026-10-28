@@ -16,7 +16,7 @@ import {
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { peekEmboldenedStrokeOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
@@ -58,7 +58,7 @@ export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean)
     const settled = peekSettledSceneFontMetrics(font, nodePath);
     if (!settled) return undefined;
     const metrics = isCanvasFontMetrics(settled) ? settled : withVariation(bundled, settled);
-    const outlines = hasOutline && metrics.embolden ? peekSceneFontOutlines(font) : null;
+    const outlines = peekEmboldenedStrokeOutlines(font, metrics, hasOutline);
     if (outlines === undefined) return undefined;
     return {
       metrics,

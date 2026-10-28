@@ -1628,6 +1628,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Outline Embolden",
+    "file": "unit-progress-bar-outline-embolden.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Rtl",
     "file": "unit-progress-bar-rtl.tscn",
     "category": "Other"
@@ -3071,6 +3076,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Mesh Default Font",
     "file": "unit-text-mesh-default-font.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Embolden",
+    "file": "unit-text-mesh-embolden.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

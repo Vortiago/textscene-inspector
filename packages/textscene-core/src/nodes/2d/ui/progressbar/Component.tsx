@@ -15,7 +15,12 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import {
+  resolveNodeFont,
+  resolveNodeFontMetrics,
+} from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { peekEmboldenedStrokeOutlines } from '../../../../r3f/controls/native/text/sceneFontOutlines';
+import { useSceneFontSettleCount } from '../../../../r3f/controls/native/text/useSceneFontSettleCount';
 // A 2D Control outlines text through the same TextServer path as Label3D.
 // `outlineRadiusPx` is the outward-only expansion for `<TextRun>`'s
 // `outlineWidthPx`. `outlineStrokeWidthPx` is the centred canvas stroke width.
@@ -105,6 +110,13 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   // a second, wider fill threshold in the same mesh.
   const drawCanvasOutline = hasOutline && isCanvasFontMetrics(layout.fontMetrics);
   const drawMsdfOutline = hasOutline && !isCanvasFontMetrics(layout.fontMetrics);
+  // The stroke of an emboldened face follows the grown glyph contours, which load in the background.
+  const strokedOutlines = peekEmboldenedStrokeOutlines(
+    resolveNodeFont(solveNode, PROGRESS_BAR_THEME_FONT_KEY),
+    fontMetrics,
+    drawCanvasOutline
+  );
+  useSceneFontSettleCount(strokedOutlines === undefined);
 
   return (
     <>
@@ -121,12 +133,13 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
       )}
       {layout && textPos && (
         <CanvasItemGroup position={[textPos.x, -textPos.y, 0]}>
-          {drawCanvasOutline && (
+          {drawCanvasOutline && strokedOutlines !== undefined && (
             <TextRun
               layout={layout}
               fontSizePx={fontSizePx}
               tint={tintedOutlineColor}
               strokeWidthPx={outlineStrokeWidthPx(outlineSize)}
+              glyphOutlines={strokedOutlines}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />

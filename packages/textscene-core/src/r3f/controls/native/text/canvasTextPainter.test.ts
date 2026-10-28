@@ -229,7 +229,7 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
     const penX = canvasLayout.offsetXPx;
 
-    expect(glyphContours).toHaveBeenCalledWith(7, 16, 1.2);
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2 });
     expect(calls.map((call) => call.op)).toEqual([
       'beginPath',
       'moveTo',

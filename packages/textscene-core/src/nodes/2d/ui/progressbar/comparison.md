@@ -46,3 +46,5 @@ the out-of-range write, so the node keeps its class-default mode.
 - **Approximated** `indeterminate` never animates, so the previewer always draws Godot's
   static frame (the bar centred in the control), whatever `editor_preview_indeterminate`
   says.
+- **Approximated** The outline of an emboldened TrueType glyph follows its unhinted contour, so it sits a fraction of a pixel off Godot's.
+- **Resource gap** A SystemFont with an embolden and an outline draws the outline round the glyph as it stands.

@@ -63,3 +63,17 @@ export function peekSceneFontOutlines(font: FontResource | null | undefined): Pe
   if (!resolved) return endsWithoutBase(font) ? peekOutlines(BUNDLED, readBundledOutlines) : null;
   return peekOutlines(resolved.leaf, () => openFontOutlines(resolved.bytes));
 }
+
+/**
+ * The outlines that a stroked outline of `font` follows. Only an emboldened face with an outline
+ * needs them, as the stroke grows with the glyph: the rest answers null and loads nothing.
+ *
+ * @canonical Glyph outlines that the stroked outline of an emboldened face follows
+ */
+export function peekEmboldenedStrokeOutlines(
+  font: FontResource | null | undefined,
+  metrics: { readonly embolden?: number },
+  hasOutline: boolean
+): PeekedOutlines {
+  return hasOutline && metrics.embolden ? peekSceneFontOutlines(font) : null;
+}

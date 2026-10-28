@@ -12,6 +12,7 @@
 
 import { cmapLookup } from './sfntCmap';
 import type { GlyphContours } from './glyphContours';
+import type { GlyphVariation } from './glyphVariation';
 import { cffContourReader } from './sfntCff';
 import { glyphContourReader } from './sfntGlyf';
 import { openFontContainer } from './fontContainer';
@@ -20,8 +21,8 @@ import { OUTLINE_TABLE_TAGS, type SfntFile } from './sfntTables';
 export interface SfntOutlines {
   /** The glyph index `cmap` gives `codePoint`, or 0 for a character the font lacks. */
   glyphIndex(codePoint: number): number;
-  /** The contours of a glyph at `fontSizePx`, grown by `embolden`, or null for a glyph with no outline. */
-  glyphContours(glyphIndex: number, fontSizePx: number, embolden?: number): GlyphContours | null;
+  /** The contours of a glyph at `fontSizePx`, changed by `variation`, or null for a glyph with no outline. */
+  glyphContours(glyphIndex: number, fontSizePx: number, variation?: GlyphVariation): GlyphContours | null;
 }
 
 /** `read`, or `fallback` when a corrupt table puts an offset past the buffer: a `DataView` read throws a `RangeError` there. */
@@ -54,7 +55,7 @@ function readSfntOutlines(sfnt: SfntFile): SfntOutlines | null {
 
   return {
     glyphIndex: (codePoint) => orOnRangeError(() => lookup(codePoint), 0),
-    glyphContours: (glyphIndex, fontSizePx, embolden) =>
-      orOnRangeError(() => contours(glyphIndex, fontSizePx, embolden), null),
+    glyphContours: (glyphIndex, fontSizePx, variation) =>
+      orOnRangeError(() => contours(glyphIndex, fontSizePx, variation), null),
   };
 }

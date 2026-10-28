@@ -45,7 +45,7 @@ export function emboldenedContours(
   embolden: number
 ): GlyphContours | null {
   const glyphIndex = outlines.glyphIndex(char.codePointAt(0)!);
-  return glyphIndex === 0 ? null : outlines.glyphContours(glyphIndex, fontSizePx, embolden);
+  return glyphIndex === 0 ? null : outlines.glyphContours(glyphIndex, fontSizePx, { embolden });
 }
 
 /** Strokes `contours` from the pen, with the stroke state of `ctx`. */

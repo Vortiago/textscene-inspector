@@ -49,5 +49,5 @@ The lenient parser clamps `font_size` to 1-127, `pixel_size` to 0.0001-128 and `
 - **Approximated** Godot hints a TrueType outline vertically, so a glyph's height and y position differ from the unhinted outline by a fraction of a pixel.
 - **Resource gap** A TextMesh with a SystemFont draws a wireframe box that the node's details name, as the previewer has no OS font bytes.
 - **Approximated** A character the font lacks draws as a hex-code box, where Godot first tries the font's fallbacks and the system fonts.
-- **Approximated** A FontVariation's embolden and skew change the advance of each glyph and leave its outline as it is.
+- **Approximated** Godot fails to triangulate some emboldened glyphs and draws no face for them, where the previewer fills the glyph.
 - **Approximated** Text direction, language and the structured text override are ignored, so right-to-left text and ligatures draw in logical order.

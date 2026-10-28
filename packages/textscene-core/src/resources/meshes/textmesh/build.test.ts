@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
+import type { GlyphVariation } from '../../../r3f/controls/native/text/glyphVariation';
+import { withVariation } from '../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
@@ -31,9 +33,9 @@ function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface
 }
 
 /** The mesh data of `char` as the TextMesh builds it at the defaults of `surfaceOf`. */
-function glyphOf(char: string): GlyphMeshData {
+function glyphOf(char: string, variation: GlyphVariation = {}): GlyphMeshData {
   const index = outlines.glyphIndex(char.codePointAt(0)!);
-  return buildGlyphMeshData(outlines.glyphContours(index, FONT_SIZE), PIXEL_SIZE, 0.5);
+  return buildGlyphMeshData(outlines.glyphContours(index, FONT_SIZE, variation), PIXEL_SIZE, 0.5);
 }
 
 /** One of `x`, `y`, `z` of every vertex. */
@@ -309,14 +311,52 @@ describe('buildTextMeshSurface missing glyph', () => {
   });
 });
 
+describe('buildTextMeshSurface font variation', () => {
+  const EMBOLDENED = { embolden: 0.6 };
+  const SHEARED = { skew: 0.3 };
+  const faceOf = (variation: GlyphVariation): TextMeshFace => ({
+    outlines,
+    metrics: withVariation(OPEN_SANS_FONT_METRICS, variation),
+  });
+  const maxX = (target: TextMeshFace) =>
+    extent(
+      axis(
+        buildTextMeshSurface(
+          decodeTextMesh({ text: '"H"', font_size: String(FONT_SIZE), horizontal_alignment: LEFT }),
+          target
+        ),
+        0
+      )
+    ).max;
+
+  it('extrudes the outline that FT_Outline_Embolden grows, as the FontVariation of the face sets', () => {
+    expect(maxX(faceOf(EMBOLDENED))).toBeCloseTo(glyphOf('H', EMBOLDENED).max.x, 6);
+    expect(glyphOf('H', EMBOLDENED).max.x).toBeGreaterThan(glyphOf('H').max.x);
+  });
+
+  it('extrudes the outline that the shear of the FontVariation moves', () => {
+    expect(maxX(faceOf(SHEARED))).toBeCloseTo(glyphOf('H', SHEARED).max.x, 6);
+    expect(glyphOf('H', SHEARED).max.x).toBeGreaterThan(glyphOf('H').max.x);
+  });
+
+  it('keeps the glyphs of a plain, an emboldened and a sheared face of one font apart', () => {
+    const faces = [face, faceOf(EMBOLDENED), faceOf(SHEARED), face];
+    const variations = [{}, EMBOLDENED, SHEARED, {}];
+
+    faces.forEach((target, i) => {
+      expect(maxX(target)).toBeCloseTo(glyphOf('H', variations[i]).max.x, 6);
+    });
+  });
+});
+
 describe('buildTextMeshSurface glyph reuse', () => {
   function countingFace(): { face: TextMeshFace; contoursRead: () => number } {
     let reads = 0;
     const counting = {
       ...outlines,
-      glyphContours: (index: number, fontSize: number) => {
+      glyphContours: (...args: Parameters<typeof outlines.glyphContours>) => {
         reads += 1;
-        return outlines.glyphContours(index, fontSize);
+        return outlines.glyphContours(...args);
       },
     };
     return { face: { outlines: counting, metrics: OPEN_SANS_FONT_METRICS }, contoursRead: () => reads };

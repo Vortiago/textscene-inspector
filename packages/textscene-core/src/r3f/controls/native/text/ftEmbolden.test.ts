@@ -6,58 +6,24 @@
 import { describe, expect, it } from 'vitest';
 import reference from './ftEmbolden.godot.json';
 import { emboldenOutline } from './ftEmbolden';
-import { scaledOutlineContours, type ContourTag, type ScaledOutline } from './glyphContours';
+import { scaledOutlineContours, type ScaledOutline } from './glyphContours';
+import {
+  plainReferenceGlyph,
+  referenceGlyphTitle,
+  referencePoints,
+  toScaledOutline,
+  type ReferenceGlyph,
+} from './glyphVariation.testkit';
 import { openFontOutlines } from './sfntOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 
-interface ReferenceGlyph {
-  font: string;
-  char: string;
-  sizePx: number;
-  embolden: number;
-  contourEnds: number[];
-  isFillRight: boolean;
-  /** `[x, y, tag]` as Godot's `font_get_glyph_contours` returns them. */
-  points: [number, number, number][];
-}
-
-const glyphs = reference as ReferenceGlyph[];
-const emboldenedGlyphs = glyphs.filter((glyph) => glyph.embolden > 0);
-const title = (glyph: ReferenceGlyph): string =>
-  `${glyph.font} ${glyph.char} at ${glyph.sizePx} px, embolden ${glyph.embolden}`;
-
-/** The reference of the same glyph without embolden: Godot's hinted outline before `FT_Outline_Embolden`. */
-function plainGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
-  const plain = glyphs.find(
-    (other) =>
-      other.embolden === 0 &&
-      other.font === glyph.font &&
-      other.char === glyph.char &&
-      other.sizePx === glyph.sizePx
-  );
-  if (!plain) throw new Error(`expected a reference without embolden for ${title(glyph)}`);
-  return plain;
-}
-
-function toScaledOutline({ points, contourEnds }: ReferenceGlyph): ScaledOutline {
-  return {
-    x: points.map(([x]) => x * 64),
-    y: points.map(([, y]) => -y * 64),
-    tags: points.map(([, , tag]) => tag as ContourTag),
-    contourEnds: [...contourEnds],
-  };
-}
-
-/** The points with `-0` turned into `0`, as the JSON reference holds them. */
-function referencePoints(points: readonly { x: number; y: number; tag: number }[]): number[][] {
-  return points.map(({ x, y, tag }) => [x + 0, y + 0, tag]);
-}
+const emboldenedGlyphs = (reference as ReferenceGlyph[]).filter((glyph) => glyph.embolden > 0);
 
 describe('emboldenOutline', () => {
-  it.each(emboldenedGlyphs.map((glyph) => [title(glyph), glyph] as const))(
+  it.each(emboldenedGlyphs.map((glyph) => [referenceGlyphTitle(glyph), glyph] as const))(
     'grows the outline of %s as Godot does',
     (_, glyph) => {
-      const outline = toScaledOutline(plainGlyph(glyph));
+      const outline = toScaledOutline(plainReferenceGlyph(glyph));
 
       emboldenOutline(outline, glyph.embolden, glyph.sizePx);
 
@@ -82,14 +48,14 @@ describe('glyph contours of an emboldened CFF font', () => {
   it.each(
     emboldenedGlyphs
       .filter((glyph) => glyph.font.endsWith('.otf'))
-      .map((glyph) => [title(glyph), glyph] as const)
+      .map((glyph) => [referenceGlyphTitle(glyph), glyph] as const)
   )('matches Godot for %s', async (_, glyph) => {
     const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font)))!;
 
     const contours = outlines.glyphContours(
       outlines.glyphIndex(glyph.char.codePointAt(0)!),
       glyph.sizePx,
-      glyph.embolden
+      glyph
     )!;
 
     expect(referencePoints(contours.points)).toEqual(glyph.points);

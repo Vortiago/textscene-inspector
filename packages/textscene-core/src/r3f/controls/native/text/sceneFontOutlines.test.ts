@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
 import { sceneFontSettleCount } from './sceneFontLoader';
-import { peekSceneFontOutlines } from './sceneFontOutlines';
+import { peekEmboldenedStrokeOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
@@ -80,5 +80,28 @@ describe('peekSceneFontOutlines', () => {
     const variation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
 
     expect(await settledOutlines(variation)).toBe(await settledOutlines(null));
+  });
+});
+
+describe('peekEmboldenedStrokeOutlines', () => {
+  it('answers null without an outline, so a plain label never loads outlines', () => {
+    const font = woffOfOpenSans();
+
+    expect(peekEmboldenedStrokeOutlines(font, { embolden: 1 }, false)).toBeNull();
+    expect(peekSceneFontOutlines(font)).toBeUndefined();
+  });
+
+  it('answers null for a face with no embolden, whose stroke follows the glyph as it is', () => {
+    expect(peekEmboldenedStrokeOutlines(woffOfOpenSans(), {}, true)).toBeNull();
+    expect(peekEmboldenedStrokeOutlines(woffOfOpenSans(), { embolden: 0 }, true)).toBeNull();
+  });
+
+  it('answers the outlines of the font once an emboldened face has an outline', async () => {
+    const font = woffOfOpenSans();
+
+    expect(peekEmboldenedStrokeOutlines(font, { embolden: 1 }, true)).toBeUndefined();
+
+    const outlines = await settledOutlines(font);
+    expect(peekEmboldenedStrokeOutlines(font, { embolden: 1 }, true)).toBe(outlines);
   });
 });

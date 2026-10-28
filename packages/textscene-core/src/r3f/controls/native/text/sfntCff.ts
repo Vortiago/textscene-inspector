@@ -17,8 +17,8 @@ import { applyFontMatrix, rescaledOutlineScale } from './cffFontMatrix';
 import type { CharstringContour } from './cffPen';
 import { openCff } from './cffTables';
 import { getFontOutlineScale } from './fontMetrics';
-import { emboldenOutline } from './ftEmbolden';
-import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
+import { variedContours } from './glyphVariation';
+import type { GlyphContourReader, ScaledOutline } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
 /** The divisor of the arithmetic shift right by 10 that `cff_builder_add_point` makes, from 16.16 to 26.6. */
@@ -64,7 +64,7 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   const font = openCff(sfnt);
   if (!font) return null;
 
-  return (glyphIndex, fontSizePx, embolden = 0) => {
+  return (glyphIndex, fontSizePx, variation = {}) => {
     const fontDict = font.fontDictOf(glyphIndex);
     if (!fontDict) return null;
     const { matrix } = fontDict;
@@ -78,7 +78,6 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
     const outline = scaledOutline(contours);
     if (outline.x.length === 0) return null;
     applyFontMatrix(outline, matrix);
-    emboldenOutline(outline, embolden, fontSizePx);
-    return scaledOutlineContours(outline);
+    return variedContours(outline, variation, fontSizePx);
   };
 }
