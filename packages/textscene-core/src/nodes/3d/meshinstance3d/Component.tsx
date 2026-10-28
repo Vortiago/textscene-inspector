@@ -14,7 +14,12 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
-import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import {
+  drawnTag,
+  useMeshContent,
+  type SurfacedMesh,
+  type SurfacedPart,
+} from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
@@ -44,7 +49,15 @@ function drawOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefine
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
-export function MeshInstance3D({ node, children }: NodeComponentProps) {
+interface MeshInstance3DProps extends NodeComponentProps {
+  /**
+   * A subclass's editor gizmo. It mounts inside the mesh object, so it takes the node's transform, and
+   * only for a mesh that resolved, with the surfaces this node draws: no second decode.
+   */
+  gizmo?: (mesh: SurfacedMesh) => ReactNode;
+}
+
+export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const pools = useSceneResources();
 
@@ -101,7 +114,15 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     scale,
     shadow,
     godotLayers: properties.layers,
-    subtree: children,
+    subtree:
+      gizmo && content.kind === 'surfaced' ? (
+        <>
+          {gizmo(content.mesh)}
+          {children}
+        </>
+      ) : (
+        children
+      ),
     overlay: overlaySource ? (
       <MaterialOverlayMesh
         meshRef={meshRef}

@@ -31,6 +31,7 @@ const COLOR_BYTES = 4;
  */
 export const PRIMITIVE_POINTS = 0;
 export const PRIMITIVE_TRIANGLES = 3;
+export const PRIMITIVE_TRIANGLE_STRIP = 4;
 
 /**
  * Byte geometry of one surface's buffers, mirroring Godot's

@@ -2944,6 +2944,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Triangle Strip",
+    "file": "unit-arraymesh-triangle-strip.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"

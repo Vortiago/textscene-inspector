@@ -1,0 +1,23 @@
+; An ArrayMesh with one TRIANGLE_STRIP surface for the one variable no other golden moves: the
+; surface's four indices 0, 1, 3, 2 draw as two triangles, as Godot reads a strip
+; (`mesh.cpp:352-366`). No other scene saves a strip, so none shows a regression in it.
+[gd_scene format=3]
+
+[sub_resource type="ArrayMesh" id="Strip"]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 4,
+"index_data": PackedByteArray("AAABAAMAAgA="),
+"primitive": 4,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
+
+[node name="Root" type="Node3D"]
+
+[node name="Quad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+mesh = SubResource("Strip")

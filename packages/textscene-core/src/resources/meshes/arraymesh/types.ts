@@ -1,6 +1,9 @@
 /** ArrayMesh decoded data: one entry per decodable surface. */
 
-/** One decoded mesh surface: a TRIANGLES primitive, or POINTS when `isPoints` is set. */
+/**
+ * One decoded mesh surface: a TRIANGLES primitive, a TRIANGLE_STRIP that `indices` already lists as
+ * triangles, or POINTS when `isPoints` is set.
+ */
 export interface ArrayMeshSurface {
   /**
    * The surface's position in the mesh's `_surfaces` array, not in this one,
@@ -32,6 +35,8 @@ export interface ArrayMeshSurface {
   indices: Uint32Array;
   /** Godot's `PRIMITIVE_POINTS`: one point per index. Absent for a triangle surface. */
   isPoints?: boolean;
+  /** Godot's `PRIMITIVE_TRIANGLE_STRIP`, which `indices` lists as triangles. Absent for any other surface. */
+  isTriangleStrip?: boolean;
   /** Resolved `res://` path of the surface's material, if it has one. */
   materialPath?: string;
   /**

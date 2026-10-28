@@ -156,6 +156,26 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   return geometry;
 }
 
+/**
+ * The vertices of every triangle of a triangle geometry in Godot's winding, three per triangle, as
+ * indices into `position`. This undoes the swap `godotSurfacesGeometry` makes: the geometry stores
+ * `(v0, v2, v1)`. A geometry with no index reads its vertices three at a time.
+ *
+ * @canonical A geometry's triangles in Godot's winding
+ */
+export function godotTriangleVertices(geometry: THREE.BufferGeometry): Uint32Array {
+  const index = geometry.getIndex()?.array;
+  const vertexCount = index ? index.length : geometry.getAttribute('position').count;
+  const vertices = new Uint32Array(vertexCount - (vertexCount % 3));
+  for (let slot = 0; slot < vertices.length; slot += 3) {
+    const stored = (offset: number) => (index ? index[slot + offset]! : slot + offset);
+    vertices[slot] = stored(0);
+    vertices[slot + 1] = stored(2);
+    vertices[slot + 2] = stored(1);
+  }
+  return vertices;
+}
+
 /** An index array of `length`, wide enough to address `vertexCount` vertices. */
 function indexArray(length: number, vertexCount: number): Uint16Array | Uint32Array {
   return vertexCount > 65535 ? new Uint32Array(length) : new Uint16Array(length);
