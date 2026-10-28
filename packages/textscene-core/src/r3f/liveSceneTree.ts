@@ -73,21 +73,22 @@ export interface LiveTreeEntry {
  * scene that inherits or instances itself ends.
  */
 function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  const scenePath = loadableScenePath(node, scope);
+  const own = scopeOf(node, scope);
+  const scenePath = loadableScenePath(node, own);
   if (!scenePath) return node;
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return node;
-  return collapseOver(node, scopeOf(node, scope), scenePath, cached, sceneCache);
+  return collapseOver(node, own, scenePath, cached, sceneCache);
 }
 
 /**
- * The `res://` path of the scene `node` instances where it sits in `scope`, or null where it
+ * The `res://` path of the scene `node` instances where its scope is `own` ({@link scopeOf}), or null where it
  * instances none or a scene that already encloses it. Godot never loads a cyclic instance, so
  * nothing of it is below the node.
  */
-function loadableScenePath(node: LiveNode, scope: SceneScope): string | null {
-  const scenePath = liveInstancePath(node, scope);
-  const enclosingScenePaths = scopeOf(node, scope).instancedScenePaths ?? [];
+function loadableScenePath(node: LiveNode, own: SceneScope): string | null {
+  const scenePath = liveInstancePath(node, own);
+  const enclosingScenePaths = own.instancedScenePaths ?? [];
   return scenePath && !enclosingScenePaths.includes(scenePath) ? scenePath : null;
 }
 
@@ -255,7 +256,7 @@ function liveChildGroups(
   const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
   if (glbObject) return glbInstanceGroups(glbObject, node.children, own);
 
-  const scenePath = loadableScenePath(node, scope);
+  const scenePath = loadableScenePath(node, own);
   if (!scenePath) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
@@ -469,12 +470,14 @@ export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
   private readonly scenes: CachedSceneSource;
+  private readonly sources: { scenes: CachedSceneSource; glbs: CachedGlbSource };
 
   constructor(
     readonly roots: readonly TscnNode[],
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
+    this.sources = { scenes: this.scenes, glbs: ctx.glbCache ?? NOTHING_CACHED };
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
     this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
@@ -509,8 +512,7 @@ export class LiveTree {
    * step read is unchanged.
    */
   stepOf(node: LiveNode, scope: SceneScope): LiveStep {
-    const sources = { scenes: this.scenes, glbs: this.ctx.glbCache ?? NOTHING_CACHED };
-    return stepsByNode(node, scopeOf(node, scope), sources, ({ scenes, glbs }) =>
+    return stepsByNode(node, scopeOf(node, scope), this.sources, ({ scenes, glbs }) =>
       liveStep(node, scope, scenes, glbs)
     );
   }
