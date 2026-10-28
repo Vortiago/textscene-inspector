@@ -27,6 +27,9 @@ const TREE_SCAN_TIMEOUT_MS = 60_000;
 const KEPT = [
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
   'r3f/TscnCanvas.tsx#TscnSceneContents',
+  // The outlines of the bundled font are module state that one key holds for every label, so a test
+  // that waits on their load starts from the one reset that forgets every read.
+  'r3f/controls/native/text/sceneFontOutlines.ts#clearSceneFontOutlines',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
