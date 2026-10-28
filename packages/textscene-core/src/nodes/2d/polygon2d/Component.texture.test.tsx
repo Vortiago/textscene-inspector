@@ -18,6 +18,7 @@ import {
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
+import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 
 const TEX = 'res://shadow_gradient.png';
 /** Deliberately non-square, so an x/y swap in the divide cannot pass. */
@@ -124,6 +125,23 @@ describe('<Polygon2D> textured fill', () => {
       [1, 1],
       [1, 0],
       [0, 0],
+    ]);
+  });
+
+  /**
+   * Godot divides by the size 0 an unset ViewportTexture reports (`polygon_2d.cpp:224-237`), and
+   * Godot 4.6.3 fills the polygon with the placeholder's top-left texel.
+   */
+  it('maps every vertex to the top-left texel of a texture that reports size 0', async () => {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, unconfiguredViewportTexture());
+    const renderer = await mount({ polygon: SQUARE, texture: 'ExtResource("1")' }, fake);
+    await settleLoads();
+    expect(uvs(mesh(renderer).geometry)).toEqual([
+      [0, 1],
+      [0, 1],
+      [0, 1],
+      [0, 1],
     ]);
   });
 

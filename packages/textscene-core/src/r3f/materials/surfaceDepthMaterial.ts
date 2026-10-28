@@ -13,7 +13,6 @@ import {
 } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 import { pointShadowSizeInjection } from './godotPoint';
-import { renderTargetMapInjection } from './renderTargetMap';
 
 /** The material state a depth draw of a surface reads. */
 type DepthSurface = THREE.Material & {
@@ -97,8 +96,8 @@ function copiesOf(surface: THREE.Material): Map<DepthMaterial, DepthMaterial> {
 
 /**
  * Gives `depth` the alpha state of `surface` for one draw, cut at `alphaTest`. A change three keys
- * no program on, a slot's presence, the hash, the edge ramp or a render-target map's sampler,
- * or the size of a points surface recompiles it.
+ * no program on, a slot's presence, the hash, the edge ramp or the size of a points surface,
+ * recompiles it.
  */
 export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, alphaTest: number): void {
   const source = surface as DepthSurface;
@@ -107,7 +106,6 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
     !depth.alphaMap !== !source.alphaMap ||
-    renderTargetMapInjection(depth.userData) !== renderTargetMapInjection(surface.userData) ||
     pointShadowSizeInjection(depth.userData) !== pointShadowSizeInjection(surface.userData);
   depth.map = source.map ?? null;
   depth.alphaMap = source.alphaMap ?? null;
@@ -124,16 +122,7 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
   depth.needsUpdate = true;
 }
 
-/**
- * The depth program's own injection, the size of a points surface, the surface's alpha cut, and the
- * sampler of a render-target map that `depth.userData` records. That sample replaces the map chunk,
- * so it is last.
- */
+/** The depth program's own injection, the size of a points surface and the surface's alpha cut. */
 function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
-  return composeInjections([
-    depth.depthInjection,
-    pointShadowSizeInjection(depth.userData),
-    SURFACE_ALPHA,
-    renderTargetMapInjection(depth.userData),
-  ]);
+  return composeInjections([depth.depthInjection, pointShadowSizeInjection(depth.userData), SURFACE_ALPHA]);
 }

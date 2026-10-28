@@ -4,6 +4,9 @@
  */
 
 export const MATERIAL_SCENES = [
+  // `uv1_scale` on a clamped texture scales V from the image's top edge, as Godot's top-down V
+  // does: the bottom third holds the clamped blue row. Godot 4.6.3: (477,420) rgb(0,0,255).
+  { name: 'material-uv1-top-edge', file: 'unit-material-uv1-top-edge.tscn' },
   { name: 'material-ao', file: 'unit-material-ao.tscn' },
   { name: 'material-diffuse-mode', file: 'unit-material-diffuse-mode.tscn' },
   { name: 'material-specular-mode', file: 'unit-material-specular-mode.tscn' },

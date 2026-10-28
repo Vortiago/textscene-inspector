@@ -9,13 +9,10 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
-import type { ResolvedTextureSlots } from './types';
+import type { ResolvedTextures } from './types';
 import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 
-function build(
-  properties: Record<string, string>,
-  textures: ResolvedTextureSlots
-): THREE.MeshStandardMaterial {
+function build(properties: Record<string, string>, textures: ResolvedTextures): THREE.MeshStandardMaterial {
   return buildMaterial(parseStandardMaterial3DScalars(properties), textures) as THREE.MeshStandardMaterial;
 }
 

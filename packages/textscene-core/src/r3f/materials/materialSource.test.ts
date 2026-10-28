@@ -117,6 +117,27 @@ describe('resolveMaterialSource', () => {
   });
 });
 
+describe('a material a mesh holds', () => {
+  const mesh = { id: 'Mesh_box', type: 'BoxMesh', data: {} };
+
+  it('names the mesh as its holder', () => {
+    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS, [mesh])).toMatchObject({
+      kind: 'inline',
+      holders: [mesh],
+    });
+  });
+
+  it('names the mesh as its holder in a mesh file', () => {
+    expect(fileMaterialSources(['res://a.tres'], [mesh])).toEqual([
+      { kind: 'file', path: 'res://a.tres', holders: [mesh] },
+    ]);
+  });
+
+  it('names no holders as the node property itself', () => {
+    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS)).not.toHaveProperty('holders');
+  });
+});
+
 describe('fileMaterialSources', () => {
   it('turns each material path into a file source, in order', () => {
     expect(fileMaterialSources(['res://a.tres', 'res://mesh.tres::Mat'])).toEqual([

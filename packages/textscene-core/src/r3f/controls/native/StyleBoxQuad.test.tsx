@@ -5,6 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
@@ -285,6 +286,7 @@ describe('<StyleBoxQuad>', () => {
         texture: {
           texture: 'ExtResource("1")',
           resources: SCOPE,
+          holders: [],
           margin: { left: 0, top: 0, right: 0, bottom: 0 },
           contentMargin: { left: 0, top: 0, right: 0, bottom: 0 },
           expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
@@ -303,6 +305,31 @@ describe('<StyleBoxQuad>', () => {
       (tex as unknown as { image: { width: number; height: number } }).image = { width: 20, height: 20 };
       return tex;
     }
+
+    /** Godot sets the ViewportTexture up only when every holder is local to scene (`core/io/resource.cpp:497-503`). */
+    it("draws Godot's placeholder for a ViewportTexture a StyleBoxTexture holds that is not local to scene", async () => {
+      const viewport = {
+        id: 'Viewport',
+        type: 'ViewportTexture',
+        data: { viewport_path: 'NodePath("SubViewport")' },
+      };
+      const styleBox = { id: 'Box', type: 'StyleBoxTexture', data: {} };
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+          <StyleBoxQuad
+            styleBox={textureBox({
+              texture: 'SubResource("Viewport")',
+              resources: { externalResources: [], internalResources: [viewport] },
+              holders: [styleBox],
+            })}
+            rect={{ x: 0, y: 0, w: 100, h: 50 }}
+            renderOrder={0}
+          />
+        </ResourceLoaderProvider>
+      );
+      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+      expect((mesh.material as THREE.MeshBasicMaterial).map!.image).toBe(unconfiguredViewportTexture().image);
+    });
 
     it("draws a textured nine-patch mesh once the box's texture resolves", async () => {
       const fake = createFakeResourceLoader();

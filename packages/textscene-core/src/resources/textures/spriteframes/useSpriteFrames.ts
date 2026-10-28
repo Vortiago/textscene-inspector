@@ -13,6 +13,8 @@ import { decodeSpriteFrames } from './decode';
 import type { SpriteFramesAnimation } from './types';
 
 interface ResolvedSpriteFrames {
+  /** The SpriteFrames itself, which holds every frame texture. */
+  resource: TscnInternalResource;
   /** animation name → its parsed frames + timing. */
   animations: Map<string, SpriteFramesAnimation>;
   /** SubResource pool the frame refs resolve against (scene's, or the .tres's own). */
@@ -38,6 +40,7 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
     if (!scoped || !decoded) return EMPTY;
     return {
       spriteFrames: {
+        resource: scoped.resource,
         animations: decoded.animations,
         subResources: scoped.resources.internalResources,
         externalResources: scoped.resources.externalResources,

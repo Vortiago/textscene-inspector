@@ -1,7 +1,8 @@
 /** A held texture's pixels as Godot's image holds them: RGBA8 sRGB bytes, the top row first. */
 
 import * as THREE from 'three';
-import { readImagePixels } from '../../resources/formats/image/imagePixels.js';
+import { readImagePixels, type ImagePixels } from '../../resources/formats/image/imagePixels.js';
+import { isLiveTarget, liveTargetPixels } from '../liveTargets.js';
 import { perObject } from '../../utils/perObject.js';
 import { isBottomUp, reversedRows } from '../../utils/reversedRows.js';
 
@@ -22,12 +23,22 @@ function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   if (!readsAsBytes(texture)) return undefined;
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;
-  if (!isBottomUp(texture)) return pixels;
-  return {
-    width: pixels.width,
-    height: pixels.height,
-    data: reversedRows(pixels.data, pixels.width, pixels.height),
-  };
+  return isBottomUp(texture) ? topRowFirst(pixels) : pixels;
+}
+
+/**
+ * A live target's pixels now, read at each call, as Godot copies the target's texels into an atlas
+ * at each rebuild (`texture_storage.cpp:3216`). Its version never moves, so a cached read would
+ * keep the first frame.
+ */
+function readLiveTargetImage(texture: THREE.Texture): GodotImage | undefined {
+  if (!readsAsBytes(texture)) return undefined;
+  const pixels = liveTargetPixels(texture);
+  return pixels && topRowFirst(pixels);
+}
+
+function topRowFirst({ width, height, data }: ImagePixels): GodotImage {
+  return { width, height, data: reversedRows(data, width, height) };
 }
 
 /**
@@ -43,7 +54,7 @@ export function readableTextures(
   textures: readonly THREE.Texture[]
 ): { texture: THREE.Texture; image: GodotImage }[] {
   return textures.flatMap((texture) => {
-    const image = godotImage(texture);
+    const image = isLiveTarget(texture) ? readLiveTargetImage(texture) : godotImage(texture);
     return image ? [{ texture, image }] : [];
   });
 }

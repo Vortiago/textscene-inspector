@@ -13,6 +13,7 @@ import {
 import type { CacheSource } from '../../../r3f/cacheSources';
 import type { ThemeResource } from '../../styles/theme/types';
 import type { FontResource } from './types';
+import { perObject } from '../../../utils/perObject';
 
 export interface ProjectFonts {
   /** Null for no theme, one still loading and one that failed. */
@@ -33,6 +34,12 @@ export interface PendingProjectFonts {
   themes: Set<string>;
   fonts: Set<string>;
 }
+
+/** The project theme's own copy of a loaded theme, which a scene may also hold. */
+const outsideScenes = perObject((theme: ThemeResource): ThemeResource => ({
+  ...theme,
+  isOutsideScenes: true,
+}));
 
 /** Owns the failed-load warnings: the lookup runs on every solve pass, and the failure belongs to the file. */
 const FAILED_FONT_LOADS = {};
@@ -83,7 +90,11 @@ export function resolveProjectFonts(
   const themePath = projectThemePath(settings);
   const fontPath = projectFontPath(settings);
   return {
-    projectTheme: themePath ? (cachedOrPending(themePath, themes, pending?.themes) ?? null) : null,
+    projectTheme: themePath ? projectThemeOf(cachedOrPending(themePath, themes, pending?.themes)) : null,
     projectDefaultFont: fontPath ? resolveDefaultFont(fontPath, fonts, pending?.fonts) : null,
   };
+}
+
+function projectThemeOf(theme: ThemeResource | null | undefined): ThemeResource | null {
+  return theme ? outsideScenes(theme) : null;
 }

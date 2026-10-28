@@ -1,0 +1,43 @@
+; One variable: flip_h and flip_v on a TextureRect that samples a ViewportTexture. The target holds
+; a red top half over a blue bottom half with a green left strip, so each flip moves a colour to
+; the other side. Godot 4.6.3 `--mode 2d`: (150,150) rgb(0,0,255), (290,150) rgb(0,255,0) and
+; (150,250) rgb(255,0,0).
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="VT"]
+viewport_path = NodePath("SubViewport")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+
+[node name="Red" type="ColorRect" parent="SubViewport"]
+offset_right = 32.0
+offset_bottom = 16.0
+color = Color(1, 0, 0, 1)
+
+[node name="Blue" type="ColorRect" parent="SubViewport"]
+offset_top = 16.0
+offset_right = 32.0
+offset_bottom = 32.0
+color = Color(0, 0, 1, 1)
+
+[node name="Green" type="ColorRect" parent="SubViewport"]
+offset_right = 8.0
+offset_bottom = 32.0
+color = Color(0, 1, 0, 1)
+
+[node name="TextureRect" type="TextureRect" parent="."]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 300.0
+texture = SubResource("VT")
+expand_mode = 1
+flip_h = true
+flip_v = true

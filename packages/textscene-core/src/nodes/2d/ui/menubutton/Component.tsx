@@ -5,6 +5,7 @@
  * `children` and the transform.
  */
 import { useMemo } from 'react';
+import { buttonIconSize } from '../button/buttonIconSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -28,12 +29,6 @@ import {
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
-
-interface IconImageLike {
-  width?: number;
-  height?: number;
-}
 
 export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<MenuButtonProperties>(solveNode);
@@ -59,13 +54,10 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
   const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
-  const iconNaturalSize: Vector2 | null = useMemo(() => {
-    if (!props.icon || !iconTexture) return null;
-    const image = iconTexture.image as IconImageLike | undefined;
-    const w = image?.width ?? 0;
-    const h = image?.height ?? 0;
-    return w > 0 && h > 0 ? { x: w, y: h } : null;
-  }, [props.icon, iconTexture]);
+  const iconNaturalSize = useMemo(
+    () => (props.icon ? buttonIconSize(iconTexture) : null),
+    [props.icon, iconTexture]
+  );
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);

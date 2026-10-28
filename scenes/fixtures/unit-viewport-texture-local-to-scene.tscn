@@ -1,0 +1,57 @@
+; One variable: whether the CanvasTexture that holds a ViewportTexture is local to scene. Godot sets
+; the ViewportTexture up only when every holder down to it is local to scene
+; (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`). The left TextureRect's holder is not,
+; so it draws the 4x4 magenta and black placeholder, stretched. The right one draws the target: red
+; over blue, with a green left edge.
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_shared"]
+diffuse_texture = SubResource("ViewportTexture_1")
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_local"]
+resource_local_to_scene = true
+diffuse_texture = SubResource("ViewportTexture_1")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+
+[node name="Red" type="ColorRect" parent="SubViewport"]
+offset_right = 32.0
+offset_bottom = 16.0
+color = Color(1, 0, 0, 1)
+
+[node name="Blue" type="ColorRect" parent="SubViewport"]
+offset_top = 16.0
+offset_right = 32.0
+offset_bottom = 32.0
+color = Color(0, 0, 1, 1)
+
+[node name="Green" type="ColorRect" parent="SubViewport"]
+offset_right = 8.0
+offset_bottom = 32.0
+color = Color(0, 1, 0, 1)
+
+[node name="Shared" type="TextureRect" parent="."]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 300.0
+texture = SubResource("CanvasTexture_shared")
+expand_mode = 1
+
+[node name="Local" type="TextureRect" parent="."]
+offset_left = 400.0
+offset_top = 100.0
+offset_right = 600.0
+offset_bottom = 300.0
+texture = SubResource("CanvasTexture_local")
+expand_mode = 1

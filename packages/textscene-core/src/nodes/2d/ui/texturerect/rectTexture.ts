@@ -9,12 +9,32 @@ import {
   canvasItemViewSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
-import { textureRectUvWindow, type SampledDraw } from './nativeSolver';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { imageSize } from '../../../../resources/formats/image/imagePixels';
+import { textureSize } from '../../../../resources/textures/textureSize';
+import { textureRectUvWindow, type SampledDraw, type TextureRectDraw } from './nativeSolver';
 
 /** The flip properties TextureRect and TextureButton share. */
 interface Flip {
   flipH: boolean;
   flipV: boolean;
+}
+
+/**
+ * The draw `layOut` places by the size Godot reports for `texture`, sampled over its real image: an
+ * unset ViewportTexture lays out at size 0 yet samples the placeholder. Null while there is no image.
+ */
+export function sampledDraw(
+  texture: THREE.Texture | null,
+  layOut: (reportedSize: Vector2) => TextureRectDraw
+): SampledDraw | null {
+  const sampled = imageSize(texture?.image);
+  const reported = textureSize(texture);
+  if (!sampled || !reported) return null;
+  return {
+    textureSize: { x: sampled.width, y: sampled.height },
+    ...layOut({ x: reported.width, y: reported.height }),
+  };
 }
 
 /** The sampler of a view that draws `draw`. */

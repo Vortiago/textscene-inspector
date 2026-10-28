@@ -8,6 +8,7 @@
 import { mapToLocalPx } from './tilePlacement';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
+import { paddedTileRegion } from './paddedAtlas';
 import type { Rgba } from '../../godot/math/math';
 import { regionUvRect, type UvRect } from '../../r3f/uvWindow';
 
@@ -25,6 +26,9 @@ interface TileGeometryArrays {
   uvBounds: Float32Array | null;
 }
 
+type RegionPx = ReturnType<typeof tileDrawInfo>['regionPx'];
+
+/** Geometry that samples the atlas itself, each sample of a padded source held inside its tile. */
 export function buildTileGeometryArrays(
   cells: readonly DrawableCell[],
   source: AtlasSourceModel,
@@ -32,21 +36,69 @@ export function buildTileGeometryArrays(
   texW: number,
   texH: number
 ): TileGeometryArrays {
+  return buildArrays(
+    cells,
+    source,
+    grid,
+    { x: texW, y: texH },
+    {
+      sampledRegion: (_cell, regionPx) => regionPx,
+      hasBounds: source.usesTexturePadding,
+    }
+  );
+}
+
+/**
+ * Geometry that samples a stand-in for a padded atlas Godot built with no image of the texture, at
+ * the padded regions. The stand-in holds no tile edges, so a sample needs no bounds.
+ */
+export function buildPaddedStandInGeometryArrays(
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel,
+  grid: TileGrid,
+  standInW: number,
+  standInH: number
+): TileGeometryArrays {
+  return buildArrays(
+    cells,
+    source,
+    grid,
+    { x: standInW, y: standInH },
+    {
+      sampledRegion: (cell, regionPx) => paddedTileRegion(source, cell.atlasCoords, regionPx),
+      hasBounds: false,
+    }
+  );
+}
+
+interface Sampling {
+  /** The pixel rect a cell samples, from its rect in the atlas. */
+  sampledRegion(cell: DrawableCell, regionPx: RegionPx): RegionPx;
+  hasBounds: boolean;
+}
+
+function buildArrays(
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel,
+  grid: TileGrid,
+  texSize: { x: number; y: number },
+  sampling: Sampling
+): TileGeometryArrays {
   const positions = new Float32Array(cells.length * 4 * 3);
   const uvs = new Float32Array(cells.length * 4 * 2);
   const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
-  const uvBounds = source.usesTexturePadding ? new Float32Array(cells.length * 4 * 4) : null;
+  const uvBounds = sampling.hasBounds ? new Float32Array(cells.length * 4 * 4) : null;
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
     const info = tileDrawInfo(source, cell);
     const { flipH, flipV, transpose } = info.orientation;
     // Transposed tiles draw with swapped dimensions (Godot swaps the dest rect).
-    const { x, y, width, height } = info.regionPx;
+    const { x, y, width, height } = sampling.sampledRegion(cell, info.regionPx);
     const w = transpose ? height : width;
     const h = transpose ? width : height;
-    const uv = regionUvRect({ x, y, w: width, h: height }, { x: texW, y: texH });
+    const uv = regionUvRect({ x, y, w: width, h: height }, texSize);
 
     // Corner UV grid [[TL,TR],[BL,BR]]; transpose reflects across the main
     // diagonal, then flips swap columns/rows (Godot composes in that order).
@@ -79,7 +131,7 @@ export function buildTileGeometryArrays(
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
     writeCornerColors(colors, i * 16, cell.tileData.modulate);
-    if (uvBounds) writeCornerUvBounds(uvBounds, i * 16, uv, texW, texH);
+    if (uvBounds) writeCornerUvBounds(uvBounds, i * 16, uv, texSize.x, texSize.y);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);

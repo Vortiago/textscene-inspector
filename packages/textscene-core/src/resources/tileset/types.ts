@@ -16,6 +16,7 @@ import {
   type TileOffsetAxis,
 } from '../../godot/scene/tileSet';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
@@ -32,9 +33,19 @@ export interface TileSetModel extends TileGrid {
   sources: Map<number, AtlasSourceModel>;
 }
 
+/** An atlas source's `texture`, which resolves as any Texture2D slot does. */
+export interface TileTexture {
+  ref: string;
+  /** The tables `ref` resolves in: the TileSet's own file's, or the scene's. */
+  externalResources: readonly TscnExternalResource[];
+  internalResources: readonly TscnInternalResource[];
+  /** The TileSet and the atlas source, which hold the texture for its local-to-scene setup. */
+  holders: readonly TscnInternalResource[];
+}
+
 export interface AtlasSourceModel {
-  /** Resolved res:// texture path; null ⇒ per-source placeholder UX. */
-  texturePath: string | null;
+  /** Null for a source with no texture, which draws nothing. */
+  texture: TileTexture | null;
   margins: Vector2;
   separation: Vector2;
   textureRegionSize: Vector2;

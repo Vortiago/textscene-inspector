@@ -14,6 +14,9 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import { GraphNode } from './Component';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import { unconfiguredViewportTexture } from '../../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
@@ -99,6 +102,40 @@ describe('<GraphNode> (isolated painter contract)', () => {
       />
     );
     expect(iconMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  /** Godot draws a port icon at its reported size, which is 0 for an unset ViewportTexture (`viewport.cpp:156-160`). */
+  it('draws a port icon that reports size 0 with no area', async () => {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed('res://port.png', unconfiguredViewportTexture());
+    const child: SolveNode = {
+      ...emptySolveNode(),
+      path: 'N/c',
+      node: controlNode('c', 'Control', { name: 'c' }),
+    };
+    const slots = new Map([
+      [0, { ...defaultGraphNodeSlot(), leftEnabled: true, leftIcon: 'ExtResource("1")' }],
+    ]);
+    const solveNode = {
+      ...graphNode({ slots }, [child]),
+      resources: {
+        externalResources: [{ id: '1', type: 'Texture2D', path: 'res://port.png' }],
+        internalResources: [],
+      },
+    };
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <GraphNode
+          {...painterEnv()}
+          solveNode={solveNode}
+          rect={RECT}
+          renderOrder={0}
+          childRects={new Map([['N/c', { x: 0, y: 40, w: 100, h: 20 }]])}
+        />
+      </ResourceLoaderProvider>
+    );
+    const port = new THREE.Box3().setFromObject(iconMeshes(renderer.scene)[0]!);
+    expect([port.max.x - port.min.x, port.max.y - port.min.y]).toEqual([0, 0]);
   });
 
   it('draws no ports for a slot with both sides disabled (the default)', async () => {
