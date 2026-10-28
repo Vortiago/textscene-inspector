@@ -1,13 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
-import { sceneFontSettleCount } from './sceneFontLoader';
+import { fontWork, sceneFontSettleCount } from './sceneFontLoader';
 import { peekSceneFontOutlines, peekVariedStrokeOutlines } from './sceneFontOutlines';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
-
-function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
-  return { kind: 'file', bytes, mimeType: undefined, fallbacks, properties: {} };
-}
+import { fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
 
 const woffOfOpenSans = () =>
   fontFile(woffFromSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'), { compress: true }));
@@ -51,6 +47,16 @@ describe('peekSceneFontOutlines', () => {
     await settledOutlines(font);
 
     expect(sceneFontSettleCount()).toBe(before + 1);
+  });
+
+  it('counts the load as font work until it settles, so a capture waits for the outlines', async () => {
+    const font = woffOfOpenSans();
+
+    peekSceneFontOutlines(font);
+    expect(fontWork.pending()).toBe(1);
+
+    await settledOutlines(font);
+    await vi.waitFor(() => expect(fontWork.pending()).toBe(0));
   });
 
   it('answers null for a font file whose bytes hold no outlines', async () => {

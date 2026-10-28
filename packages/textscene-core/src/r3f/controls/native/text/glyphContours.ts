@@ -11,7 +11,7 @@
 
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import { ftMulFix } from './fontMetrics';
+import { FIXED_26_6_ONE, ftMulFix } from './fontMetrics';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
@@ -55,8 +55,6 @@ export function transformOutline(outline: ScaledOutline, [xx, xy, yx, yy]: Matri
     outline.y[i] = ftMulFix(x, yx) + ftMulFix(y, yy);
   }
 }
-
-const FIXED_26_6 = 64;
 
 /** `FT_Outline_Get_Orientation` rejects an outline that reaches beyond 2^24 in 26.6 (`ftoutln.c`). */
 const LARGEST_ORIENTED_COORDINATE = 0x1000000;
@@ -121,8 +119,8 @@ export function outlineOrientation(outline: ScaledOutline): OutlineOrientation {
 /** The outline in px with y down, as `font_get_glyph_contours` returns it (`text_server_adv.cpp:3631-3641`). */
 export function scaledOutlineContours(outline: ScaledOutline): GlyphContours {
   const points = outline.x.map((x, i): ContourPoint => ({
-    x: x / FIXED_26_6,
-    y: -outline.y[i]! / FIXED_26_6,
+    x: x / FIXED_26_6_ONE,
+    y: -outline.y[i]! / FIXED_26_6_ONE,
     tag: outline.tags[i]!,
   }));
   return {

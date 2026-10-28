@@ -6,6 +6,8 @@
  */
 
 import { ByteReader } from '../../../../resources/formats/binaryresource/byteReader';
+import { exactly } from '../../../../resources/formats/binaryresource/compressedStream';
+import { perObject } from '../../../../utils/perObject';
 import { loadBrotliDecoder } from './brotliDecoder';
 import { SCENE_FONT_TABLE_TAGS, sfntFileOfTables, type SfntFile } from './sfntTables';
 import { rebuildGlyfTables } from './woff2Glyf';
@@ -139,43 +141,38 @@ function setRebuiltGlyfTables(tables: Map<string, Uint8Array>, transformedGlyf: 
   tables.set('loca', loca);
 }
 
-/** Written only by `readWoff2Tables`. The metrics and the outlines of a scene font read one buffer, which Brotli decodes once. */
-const decodedStreams = new WeakMap<ArrayBuffer, Promise<Uint8Array>>();
-
-async function decodeStream(compressed: Uint8Array, decodedLength: number): Promise<Uint8Array> {
-  const decode = await loadBrotliDecoder();
-  const decoded = decode(compressed, decodedLength);
-  if (decoded.length !== decodedLength) {
-    throw new Error(`expected ${decodedLength} decoded bytes, got ${decoded.length}`);
-  }
-  return decoded;
+interface DecodedStream {
+  entries: DirectoryEntry[];
+  /** Every table of the file, end to end, in directory order. */
+  decoded: Uint8Array;
 }
+
+/**
+ * The directory and the decoded stream of one buffer. The metrics and the outlines of a scene font
+ * read the same buffer, which Brotli decodes once. A buffer that does not decode keeps its rejection.
+ */
+const decodedStreamOf = perObject(async (bytes: ArrayBuffer): Promise<DecodedStream> => {
+  const dv = new DataView(bytes);
+  if (dv.getUint32(FLAVOR_OFFSET, false) === SFNT_COLLECTION_FLAVOR) {
+    throw new Error('expected a single-font .woff2, got a font collection');
+  }
+  const reader = ByteReader.bigEndian(new Uint8Array(bytes));
+  reader.seek(WOFF2_HEADER_SIZE);
+  const entries = Array.from({ length: dv.getUint16(NUM_TABLES_OFFSET, false) }, () =>
+    readDirectoryEntry(reader)
+  );
+  const decodedLength = entries.reduce((sum, entry) => sum + entry.storedLength, 0);
+  const compressed = reader.take(dv.getUint32(TOTAL_COMPRESSED_SIZE_OFFSET, false));
+  const decode = await loadBrotliDecoder();
+  return { entries, decoded: exactly(decodedLength, decode(compressed, decodedLength)) };
+});
 
 /** Throws on a collection, a directory or stream that does not fit `bytes`, or a Brotli stream that does not decode to the lengths the directory sums to. */
 export async function readWoff2Tables(
   bytes: ArrayBuffer,
   tags: readonly string[] = SCENE_FONT_TABLE_TAGS
 ): Promise<SfntFile> {
-  const dv = new DataView(bytes);
-  if (dv.getUint32(FLAVOR_OFFSET, false) === SFNT_COLLECTION_FLAVOR) {
-    throw new Error('expected a single-font .woff2, got a font collection');
-  }
-  const reader = new ByteReader(new Uint8Array(bytes));
-  reader.isLittleEndian = false;
-  reader.seek(WOFF2_HEADER_SIZE);
-  const entries = Array.from({ length: dv.getUint16(NUM_TABLES_OFFSET, false) }, () =>
-    readDirectoryEntry(reader)
-  );
-
-  const decodedLength = entries.reduce((sum, entry) => sum + entry.storedLength, 0);
-  const compressed = reader.take(dv.getUint32(TOTAL_COMPRESSED_SIZE_OFFSET, false));
-  let decoding = decodedStreams.get(bytes);
-  if (!decoding) {
-    decoding = decodeStream(compressed, decodedLength);
-    decodedStreams.set(bytes, decoding);
-  }
-  const decoded = await decoding;
-
+  const { entries, decoded } = await decodedStreamOf(bytes);
   const tables = new Map<string, Uint8Array>();
   let offset = 0;
   for (const { tag, storedLength, isTransformed } of entries) {

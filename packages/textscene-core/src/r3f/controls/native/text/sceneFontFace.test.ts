@@ -5,8 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { faceDescriptors } from './sceneFontFace';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
-import type { FontFileResource } from '../../../../resources/fonts/font/types';
+import { fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
 
 class FakeFontFace {
   constructor(
@@ -34,10 +33,6 @@ function fontFaceRecorder(): { FontFace: typeof FakeFontFace; faces: FakeFontFac
     }
   }
   return { FontFace: RecordedFontFace, faces };
-}
-
-function fontFile(bytes: ArrayBuffer): FontFileResource {
-  return { kind: 'file', bytes, mimeType: 'font/ttf', fallbacks: [], properties: {} };
 }
 
 async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace> {

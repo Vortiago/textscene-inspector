@@ -7,11 +7,17 @@
 
 import { join } from 'node:path';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
+import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 const FIXTURE_FONTS = join(import.meta.dirname, '../../../../../../../scenes/fixtures/fonts');
 
 export function fixtureFontBytes(name: string): ArrayBuffer {
   return fileBytes(join(FIXTURE_FONTS, name));
+}
+
+/** A `FontFile` that holds `bytes`, or none, with the `fallbacks` a wrapper chains to. */
+export function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
+  return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
 }
 
 export interface TestPoint {

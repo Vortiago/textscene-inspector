@@ -88,6 +88,9 @@ export function getFontLinePitchPx(
 /** 1.0 in FreeType's 16.16 fixed point (`FT_Fixed`). */
 export const FIXED_16_16_ONE = 65536;
 
+/** 1.0 px in FreeType's 26.6 fixed point (`FT_F26Dot6`). */
+export const FIXED_26_6_ONE = 64;
+
 /**
  * `freetype/include/freetype/fttypes.h`'s `FT_DivFix` (`freetype/src/base/ftcalc.c`):
  * `a / b` in 16.16, rounded half up on the magnitude (`q = ( ( (FT_UInt64)a << 16 ) +
@@ -128,7 +131,7 @@ export function ftMulFix(a: number, b: number): number {
 // which `text_server_adv.cpp:1509` divides by for `fd->scale`.
 function freeTypeSizeRequest(unitsPerEm: number, fontSizePx: number): { xScale: number; ppem: number } {
   // `req.width = sz * 64.0` lands in an `FT_Long`, truncating toward zero.
-  const requested26_6 = Math.trunc(fontSizePx * 64);
+  const requested26_6 = Math.trunc(fontSizePx * FIXED_26_6_ONE);
   return { xScale: ftDivFix(requested26_6, unitsPerEm), ppem: (requested26_6 + 32) >> 6 };
 }
 
@@ -174,7 +177,7 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   // The error only adds width, so a run of odd advances can push
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
   const advance26_6 = Math.floor((advance16_16 + 512) / 1024);
-  return advance26_6 / 64;
+  return advance26_6 / FIXED_26_6_ONE;
 }
 
 /** The embolden and the shear of a `FontVariation`: absent is none. */
@@ -238,6 +241,15 @@ export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fon
  */
 export function getFontEmboldenGrowthPx(embolden: number, fontSizePx: number): number {
   return (embolden * fontSizePx) / 16;
+}
+
+/**
+ * The strength Godot passes to `FT_Outline_Embolden`: `embolden * size.x / 16`, truncated, in 26.6
+ * units, with `size.x` the font size in 26.6 (`text_server_adv.cpp:1314`). A float product, as
+ * `embolden` is a `float`. `getFontEmboldenGrowthPx` is the same strength before the truncation.
+ */
+export function getFontEmboldenStrength(embolden: number, fontSizePx: number): number {
+  return Math.trunc(Math.fround(Math.fround(embolden) * fontSizePx * FIXED_26_6_ONE) / 16);
 }
 
 /** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */

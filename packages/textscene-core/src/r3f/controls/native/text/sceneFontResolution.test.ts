@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { fontFile } from './sfntOutlines.testkit';
 import { fontGeneratesMipmaps, fontVariationSkew, resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
-
-function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
-  return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
-}
 
 describe('resolveFontFileBytes', () => {
   it('returns null for undefined/null (no font authored -- theme default)', () => {

@@ -4,6 +4,7 @@
  * peek contract. `bundledFontLoader.test.ts` reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fontFile } from './sfntOutlines.testkit';
 import {
   fontWork,
   notifySceneFontSettled,
@@ -14,11 +15,7 @@ import {
 } from './sceneFontLoader';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
-import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
-
-function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
-  return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
-}
+import type { FontResource } from '../../../../resources/fonts/font/types';
 
 /** Lets every load a peek started settle: each one resolves within a macrotask here. */
 function settleLoads(): Promise<void> {

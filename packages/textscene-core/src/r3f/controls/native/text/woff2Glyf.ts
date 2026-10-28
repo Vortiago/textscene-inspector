@@ -6,26 +6,26 @@
  */
 
 import { ByteReader } from '../../../../resources/formats/binaryresource/byteReader';
+import {
+  COMPONENT_HAS_INSTRUCTIONS,
+  COMPONENT_MORE,
+  LONG_LOCA_FORMAT,
+  SHORT_LOCA_FORMAT,
+  SIMPLE_ON_CURVE,
+  SIMPLE_X_SAME_OR_POSITIVE,
+  SIMPLE_X_SHORT,
+  SIMPLE_Y_SAME_OR_POSITIVE,
+  SIMPLE_Y_SHORT,
+  componentArgumentByteCount,
+  componentMatrixByteCount,
+} from './glyfFormat';
 
 const HEADER_STREAM_COUNT = 7;
 
 const COMPOSITE_CONTOUR_COUNT = -1;
 
-// A composite glyph's component flags (OpenType spec, "Composite Glyph Description").
-const COMPONENT_ARGS_ARE_WORDS = 0x0001;
-const COMPONENT_HAS_SCALE = 0x0008;
-const COMPONENT_MORE = 0x0020;
-const COMPONENT_HAS_XY_SCALE = 0x0040;
-const COMPONENT_HAS_2X2 = 0x0080;
-const COMPONENT_HAS_INSTRUCTIONS = 0x0100;
 const GLYPH_INDEX_BYTES = 2;
 
-// The glyph header and the point flags of a simple glyph (OpenType spec, "Simple Glyph Description").
-const POINT_ON_CURVE = 0x01;
-const POINT_X_SHORT = 0x02;
-const POINT_Y_SHORT = 0x04;
-const POINT_X_SAME_OR_POSITIVE = 0x10;
-const POINT_Y_SAME_OR_POSITIVE = 0x20;
 const MAX_SHORT_DELTA = 255;
 
 /** `255UInt16`'s first byte: 253 is followed by a `UInt16`, 254 and 255 by one byte added to their base. */
@@ -44,16 +44,8 @@ const TRIPLET_ENCODING_MASK = 0x7f;
  */
 const LONG_GLYPH_ALIGNMENT = 4;
 const SHORT_GLYPH_ALIGNMENT = 2;
-const SHORT_LOCA_FORMAT = 0;
-const LONG_LOCA_FORMAT = 1;
 /** A short `loca` holds `offset / 2` in a `UInt16`. */
 const MAX_SHORT_LOCA_OFFSET = 0xffff * 2;
-
-function bigEndian(bytes: Uint8Array): ByteReader {
-  const reader = new ByteReader(bytes);
-  reader.isLittleEndian = false;
-  return reader;
-}
 
 export interface RebuiltGlyf {
   glyf: Uint8Array;
@@ -224,9 +216,9 @@ function writeSimpleGlyph(
   glyph.append(instructions);
   for (const { dx, dy, isOnCurve } of points) {
     glyph.u8(
-      (isOnCurve ? POINT_ON_CURVE : 0) |
-        axisFlag(dx, POINT_X_SHORT, POINT_X_SAME_OR_POSITIVE) |
-        axisFlag(dy, POINT_Y_SHORT, POINT_Y_SAME_OR_POSITIVE)
+      (isOnCurve ? SIMPLE_ON_CURVE : 0) |
+        axisFlag(dx, SIMPLE_X_SHORT, SIMPLE_X_SAME_OR_POSITIVE) |
+        axisFlag(dy, SIMPLE_Y_SHORT, SIMPLE_Y_SAME_OR_POSITIVE)
     );
   }
   writeAxis(
@@ -239,16 +231,6 @@ function writeSimpleGlyph(
   );
 }
 
-function argumentByteCount(flags: number): number {
-  return flags & COMPONENT_ARGS_ARE_WORDS ? 4 : 2;
-}
-
-function transformByteCount(flags: number): number {
-  if (flags & COMPONENT_HAS_SCALE) return 2;
-  if (flags & COMPONENT_HAS_XY_SCALE) return 4;
-  return flags & COMPONENT_HAS_2X2 ? 8 : 0;
-}
-
 /** Copies the component records of a composite glyph, up to the one without `MORE_COMPONENTS`, and tells whether instructions follow. */
 function copyComponents(composite: ByteReader, glyph: GlyphBytes): boolean {
   let hasInstructions = false;
@@ -256,7 +238,9 @@ function copyComponents(composite: ByteReader, glyph: GlyphBytes): boolean {
   while (flags & COMPONENT_MORE) {
     flags = composite.u16();
     glyph.u16(flags);
-    glyph.append(composite.take(GLYPH_INDEX_BYTES + argumentByteCount(flags) + transformByteCount(flags)));
+    glyph.append(
+      composite.take(GLYPH_INDEX_BYTES + componentArgumentByteCount(flags) + componentMatrixByteCount(flags))
+    );
     hasInstructions ||= (flags & COMPONENT_HAS_INSTRUCTIONS) !== 0;
   }
   return hasInstructions;
@@ -355,7 +339,7 @@ function locaOf(offsets: readonly number[], format: number): Uint8Array {
 
 /** Throws on a table that does not hold the streams its header counts, or a glyph the streams do not describe. */
 export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
-  const header = bigEndian(transformed);
+  const header = ByteReader.bigEndian(transformed);
   header.u16(); // reserved
   header.u16(); // optionFlags: bit 0 adds an overlap bitmap after the streams, which no reader here needs
   const glyphCount = header.u16();
@@ -365,7 +349,7 @@ export function rebuildGlyfTables(transformed: Uint8Array): RebuiltGlyf {
   }
   const sizes = Array.from({ length: HEADER_STREAM_COUNT }, () => header.u32());
   const [contourCounts, pointCounts, flags, glyphStream, composites, boxes, instructions] = sizes.map(
-    (size) => bigEndian(header.take(size))
+    (size) => ByteReader.bigEndian(header.take(size))
   ) as [ByteReader, ByteReader, ByteReader, ByteReader, ByteReader, ByteReader, ByteReader];
 
   // The bitmap sits at the start of the box stream, one bit for each glyph, in whole four-byte words.

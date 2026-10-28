@@ -17,6 +17,13 @@ export class ByteReader {
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
 
+  /** A reader over a format that stores its numbers big endian, as sfnt and WOFF files do. */
+  static bigEndian(bytes: Uint8Array): ByteReader {
+    const reader = new ByteReader(bytes);
+    reader.isLittleEndian = false;
+    return reader;
+  }
+
   seek(offset: number): void {
     this.offset = offset;
   }

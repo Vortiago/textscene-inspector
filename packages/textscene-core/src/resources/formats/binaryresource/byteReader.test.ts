@@ -18,6 +18,10 @@ describe('ByteReader', () => {
     expect(reader.u32()).toBe(2);
   });
 
+  it('reads big endian from a reader made with bigEndian', () => {
+    expect(ByteReader.bigEndian(bytes(0, 0, 1, 2)).u32()).toBe(258);
+  });
+
   it('reads a signed 16-bit value in the byte order of the header', () => {
     const reader = new ByteReader(bytes(0xff, 0xfe, 0x7f, 0xff));
     reader.isLittleEndian = false;

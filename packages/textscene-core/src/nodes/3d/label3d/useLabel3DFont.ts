@@ -21,11 +21,12 @@ import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFon
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { useSceneFontSettleCount } from '../../../r3f/controls/native/text/useSceneFontSettleCount';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
-import type { FontResource } from '../../../resources/fonts/font/types';
 import { fontForNode } from '../../../resources/styles/theme/lookup';
 import type { LoadedFont } from '../../../resources/scopedResource';
-import { FONT_FILES, useCachedFiles } from '../../../resources/useLoadedFiles';
-import { useProjectFonts } from '../../../resources/useProjectFonts';
+import { useLoadedFilesAndFonts } from '../../../resources/useLoadedFilesAndFonts';
+
+/** A Label3D reads no file but its fonts. */
+const noFiles = () => [];
 
 export interface Label3DFont {
   metrics: CanvasFontMetrics;
@@ -43,12 +44,11 @@ export interface Label3DFont {
 export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean): Label3DFont | undefined {
   const resources = useSceneResources();
   const nodePath = useNodePath() ?? 'Label3D';
-  const plan = useCallback(
+  const fontsPlan = useCallback(
     (loadedFont: LoadedFont) => resolveFontReference(fontRef, resources, loadedFont).paths,
     [fontRef, resources]
   );
-  const { loadedFile: loadedFont, isLoading: isLoadingFont } = useCachedFiles<FontResource>(FONT_FILES, plan);
-  const { projectFonts, isLoading: isLoadingProjectFonts } = useProjectFonts(true);
+  const { loadedFont, projectFonts, isLoading } = useLoadedFilesAndFonts(noFiles, fontsPlan, true);
   const { settings } = useProjectSettings();
 
   const bundled = peekBundledCanvasFontMetrics();
@@ -66,7 +66,7 @@ export function useLabel3DFont(fontRef: string | undefined, hasOutline: boolean)
       generatesMipmaps: fontGeneratesMipmaps(font) ?? projectDefaultFontGeneratesMipmaps(settings),
     };
   };
-  const label3DFont = isLoadingFont || isLoadingProjectFonts ? undefined : settledFont();
+  const label3DFont = isLoading ? undefined : settledFont();
   // Listens only while a face is missing: a label that has its font draws the same through every later settle.
   useSceneFontSettleCount(label3DFont === undefined);
   return label3DFont;

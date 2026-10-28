@@ -8,12 +8,9 @@
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
 
-import { ftMulDiv, ftMulFix } from './fontMetrics';
+import { FIXED_16_16_ONE, ftMulDiv, ftMulFix, getFontEmboldenStrength } from './fontMetrics';
 import { highestBit, outlineOrientation, type ScaledOutline } from './glyphContours';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-const UNIT_16_16 = 0x10000;
-const FIXED_26_6_PER_PX = 64;
 
 /** A corner turning by less than about 160 degrees shifts; a sharper one only translates (`d > -0xF000`). */
 const SHARPEST_SHIFTED_TURN = -0xf000;
@@ -38,11 +35,11 @@ function ftVectorNormLen(vector: Vector2): number {
   let y = uint32(Math.abs(vector.y));
 
   if (x === 0) {
-    if (y > 0) vector.y = signY * UNIT_16_16;
+    if (y > 0) vector.y = signY * FIXED_16_16_ONE;
     return y;
   }
   if (y === 0) {
-    if (x > 0) vector.x = signX * UNIT_16_16;
+    if (x > 0) vector.x = signX * FIXED_16_16_ONE;
     return x;
   }
 
@@ -60,7 +57,7 @@ function ftVectorNormLen(vector: Vector2): number {
     length >>>= -shift;
   }
 
-  let reciprocalMinusOne = UNIT_16_16 - (length | 0);
+  let reciprocalMinusOne = FIXED_16_16_ONE - (length | 0);
   let u: number;
   let v: number;
   let step: number;
@@ -68,14 +65,16 @@ function ftVectorNormLen(vector: Vector2): number {
     u = uint32((x | 0) + (Math.imul(x | 0, reciprocalMinusOne) >> 16));
     v = uint32((y | 0) + (Math.imul(y | 0, reciprocalMinusOne) >> 16));
     step = Math.trunc(-((Math.imul(u, u) + Math.imul(v, v)) | 0) / 0x200);
-    step = Math.trunc(Math.imul(step, (UNIT_16_16 + reciprocalMinusOne) >> 8) / UNIT_16_16);
+    step = Math.trunc(Math.imul(step, (FIXED_16_16_ONE + reciprocalMinusOne) >> 8) / FIXED_16_16_ONE);
     reciprocalMinusOne += step;
   } while (step > 0);
 
   vector.x = signX < 0 ? -u : u;
   vector.y = signY < 0 ? -v : v;
 
-  const norm = uint32(UNIT_16_16 + Math.trunc(((Math.imul(u, x) + Math.imul(v, y)) | 0) / UNIT_16_16));
+  const norm = uint32(
+    FIXED_16_16_ONE + Math.trunc(((Math.imul(u, x) + Math.imul(v, y)) | 0) / FIXED_16_16_ONE)
+  );
   return shift > 0 ? uint32(norm + (1 << (shift - 1))) >>> shift : uint32(norm << -shift);
 }
 
@@ -104,7 +103,7 @@ function cornerShift(
   const cosine = ftMulFix(incoming.x, outgoing.x) + ftMulFix(incoming.y, outgoing.y);
   if (cosine <= SHARPEST_SHIFTED_TURN) return NO_SHIFT;
 
-  const turn = cosine + UNIT_16_16;
+  const turn = cosine + FIXED_16_16_ONE;
   const lateralX = incoming.y + outgoing.y;
   const lateralY = incoming.x + outgoing.x;
   const cross = ftMulFix(outgoing.x, incoming.y) - ftMulFix(outgoing.y, incoming.x);
@@ -171,19 +170,11 @@ function emboldenContour(
 }
 
 /**
- * The strength Godot passes: `embolden * size.x / 16`, truncated, in 26.6 units, with `size.x` the
- * font size in 26.6 (`text_server_adv.cpp:1314`). A float product, as `embolden` is a `float`.
- */
-function emboldenStrength(embolden: number, fontSizePx: number): number {
-  return Math.trunc(Math.fround(Math.fround(embolden) * fontSizePx * FIXED_26_6_PER_PX) / 16);
-}
-
-/**
  * `FT_Outline_Embolden` of `outline` by `embolden` at `fontSizePx`, in place. An outline whose
  * orientation FreeType cannot tell stays as it is, as in FreeType.
  */
 export function emboldenOutline(outline: ScaledOutline, embolden: number, fontSizePx: number): void {
-  const strength = Math.trunc(emboldenStrength(embolden, fontSizePx) / 2);
+  const strength = Math.trunc(getFontEmboldenStrength(embolden, fontSizePx) / 2);
   if (strength === 0) return;
   const orientation = outlineOrientation(outline);
   if (orientation === 'none') return;

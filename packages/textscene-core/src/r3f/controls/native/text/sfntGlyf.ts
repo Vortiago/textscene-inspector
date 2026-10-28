@@ -16,33 +16,35 @@ import {
   type Matrix2x2,
   type ScaledOutline,
 } from './glyphContours';
+import {
+  COMPONENT_ARGS_ARE_WORDS,
+  COMPONENT_ARGS_ARE_XY_VALUES,
+  COMPONENT_HAS_2X2,
+  COMPONENT_HAS_SCALE,
+  COMPONENT_HAS_XY_SCALE,
+  COMPONENT_MORE,
+  LONG_LOCA_FORMAT,
+  SIMPLE_ON_CURVE,
+  SIMPLE_REPEAT,
+  SIMPLE_X_SAME_OR_POSITIVE,
+  SIMPLE_X_SHORT,
+  SIMPLE_Y_SAME_OR_POSITIVE,
+  SIMPLE_Y_SHORT,
+  componentArgumentByteCount,
+  componentMatrixByteCount,
+} from './glyfFormat';
 import { readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
 
 const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
 const HEAD_TABLE_MIN_LENGTH = 52;
 const MAXP_NUM_GLYPHS_OFFSET = 4;
 const MAXP_TABLE_MIN_LENGTH = 6;
-const LONG_LOCA_FORMAT = 1;
 
 /**
  * The deepest chain of composite glyphs read. FreeType refuses a loop through its own recursion
  * limit (`ttgload.c`, `loader->recurse_count`), and a font that nests deeper is corrupt.
  */
 const MAX_COMPOSITE_DEPTH = 16;
-
-const SIMPLE_X_SHORT = 0x02;
-const SIMPLE_Y_SHORT = 0x04;
-const SIMPLE_REPEAT = 0x08;
-const SIMPLE_X_SAME_OR_POSITIVE = 0x10;
-const SIMPLE_Y_SAME_OR_POSITIVE = 0x20;
-const SIMPLE_ON_CURVE = 0x01;
-
-const COMPONENT_ARGS_ARE_WORDS = 0x0001;
-const COMPONENT_ARGS_ARE_XY_VALUES = 0x0002;
-const COMPONENT_HAS_SCALE = 0x0008;
-const COMPONENT_MORE = 0x0020;
-const COMPONENT_HAS_XY_SCALE = 0x0040;
-const COMPONENT_HAS_2X2 = 0x0080;
 
 /** An F2Dot14 matrix entry as the 16.16 `FT_Fixed` FreeType multiplies by (`ttgload.c`, `* 4`). */
 const F2DOT14_TO_16_16 = 4;
@@ -124,11 +126,13 @@ function readComponentMatrix(
   const entry = (offset: number) => dv.getInt16(at + offset, false) * F2DOT14_TO_16_16;
   if (flags & COMPONENT_HAS_SCALE) {
     const scale = entry(0);
-    return { matrix: [scale, 0, 0, scale], next: at + 2 };
+    return { matrix: [scale, 0, 0, scale], next: at + componentMatrixByteCount(flags) };
   }
-  if (flags & COMPONENT_HAS_XY_SCALE) return { matrix: [entry(0), 0, 0, entry(2)], next: at + 4 };
+  if (flags & COMPONENT_HAS_XY_SCALE) {
+    return { matrix: [entry(0), 0, 0, entry(2)], next: at + componentMatrixByteCount(flags) };
+  }
   if (flags & COMPONENT_HAS_2X2) {
-    return { matrix: [entry(0), entry(4), entry(2), entry(6)], next: at + 8 };
+    return { matrix: [entry(0), entry(4), entry(2), entry(6)], next: at + componentMatrixByteCount(flags) };
   }
   return { matrix: null, next: at };
 }
@@ -205,10 +209,10 @@ class GlyphReader {
     if (flags & COMPONENT_ARGS_ARE_WORDS) {
       const read = (offset: number) =>
         isXyOffset ? this.dv.getInt16(offset, false) : this.dv.getUint16(offset, false);
-      return { values: [read(at), read(at + 2)], next: at + 4 };
+      return { values: [read(at), read(at + 2)], next: at + componentArgumentByteCount(flags) };
     }
     const read = (offset: number) => (isXyOffset ? this.dv.getInt8(offset) : this.dv.getUint8(offset));
-    return { values: [read(at), read(at + 1)], next: at + 2 };
+    return { values: [read(at), read(at + 1)], next: at + componentArgumentByteCount(flags) };
   }
 }
 

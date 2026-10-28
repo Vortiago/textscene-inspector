@@ -7,6 +7,7 @@
  */
 
 import { perObject } from '../../../../utils/perObject';
+import { FIXED_16_16_ONE } from './fontMetrics';
 
 /** `head.unitsPerEm` and the magnitudes of `hhea.ascender` and `hhea.descender`, in design units. */
 export interface SfntScalars {
@@ -56,7 +57,6 @@ const FVAR_HEADER_SIZE = 16;
 // VariationAxisRecord: axisTag(4) minValue(4) defaultValue(4) maxValue(4) flags(2) axisNameID(2)
 const FVAR_AXIS_SIZE = 20;
 const FVAR_AXIS_DEFAULT_OFFSET = 8;
-const FIXED_UNITS = 65536; // Fixed is 16.16
 
 /** The tables the readers of this module use. A compressed container decompresses these and no others. */
 export const SCENE_FONT_TABLE_TAGS: readonly string[] = ['head', 'hhea', 'OS/2', 'fvar'];
@@ -223,7 +223,7 @@ export function readAxisDefaults({ dv, tables }: SfntFile): Readonly<Record<stri
 
   for (let axis = 0; axis < axisCount; axis++) {
     const at = axesStart + axis * FVAR_AXIS_SIZE;
-    defaults[readTag(dv, at)] = dv.getInt32(at + FVAR_AXIS_DEFAULT_OFFSET, false) / FIXED_UNITS;
+    defaults[readTag(dv, at)] = dv.getInt32(at + FVAR_AXIS_DEFAULT_OFFSET, false) / FIXED_16_16_ONE;
   }
   return defaults;
 }

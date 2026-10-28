@@ -3,6 +3,7 @@
  * table is a zlib stream, or stored raw when compression did not shrink it.
  */
 
+import { perObject } from '../../../../utils/perObject';
 import {
   zlibBlockInflater,
   type BlockInflater,
@@ -15,6 +16,9 @@ const WOFF_NUM_TABLES_OFFSET = 12;
 // Table directory entry: tag(4) offset(4) compLength(4) origLength(4) origChecksum(4)
 const WOFF_RECORD_SIZE = 20;
 
+/** The tables inflated so far from one buffer: the metrics and the outlines of a scene font both read `head`. */
+const inflatedTablesOf = perObject((_bytes: ArrayBuffer) => new Map<string, Uint8Array>());
+
 /** Throws on a directory or a table that does not fit `bytes`, or on a zlib stream that does not inflate to its `origLength`. */
 export async function readWoffTables(
   bytes: ArrayBuffer,
@@ -23,6 +27,7 @@ export async function readWoffTables(
   const dv = new DataView(bytes);
   const numTables = dv.getUint16(WOFF_NUM_TABLES_OFFSET, false);
   const tables = new Map<string, Uint8Array>();
+  const inflated = inflatedTablesOf(bytes);
   let inflate: BlockInflater | undefined;
 
   for (let index = 0; index < numTables; index++) {
@@ -37,8 +42,11 @@ export async function readWoffTables(
       tables.set(tag, stored);
       continue;
     }
-    inflate ??= await zlibBlockInflater();
-    tables.set(tag, inflate(stored, length));
+    if (!inflated.has(tag)) {
+      inflate ??= await zlibBlockInflater();
+      inflated.set(tag, inflate(stored, length));
+    }
+    tables.set(tag, inflated.get(tag)!);
   }
   return sfntFileOfTables(tables);
 }
