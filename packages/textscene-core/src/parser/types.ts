@@ -71,6 +71,12 @@ export interface TscnScene<N extends RawNode = TscnNode> {
   mainResource?: TscnMainResource;
 }
 
+/** The owner an `owner_uid_path=` finds: a root-relative path, and the ids still to follow inside the instance at it. */
+export interface OwnerRecovery {
+  readonly owner: string;
+  readonly ownerContentTrail?: readonly number[];
+}
+
 /**
  * The **Raw view** of a node: `rawProperties`, the literals both parsers publish, and no
  * typed `properties`. The strict parser builds this. A `TscnNode` is a `RawNode`, so a helper
@@ -117,6 +123,27 @@ export interface RawNode {
    * because its `parent` path vanished (`packed_scene.cpp:161-163`). The node keeps its name.
    */
   landedByIdTrail?: true;
+  /**
+   * On a node seated below the instance heading its `parent_id_path=` enters: the ids that continue in
+   * that instance's scene. Its graft follows them and places the node (`packed_scene.cpp:1947-2005`).
+   */
+  parentContentTrail?: readonly number[];
+  /**
+   * On a node seated below an instance for a `parent=` path into its content, whose `parent_id_path=`
+   * names a heading of this file: where Godot seats the node should the content lack the path.
+   * `contentTrail` holds the ids that continue inside that heading, where it is an instance.
+   */
+  parentTrailFallback?: { readonly path: string; readonly contentTrail?: readonly number[] };
+  /**
+   * On a node whose `owner_uid_path=` enters an instance: the ids that continue in the scene the node
+   * at `owner` holds. Where it is set, `owner` names the instance heading, not the owner itself.
+   */
+  ownerContentTrail?: readonly number[];
+  /**
+   * On a node whose `owner=` walk enters an instance's content, where it may find nothing, and whose
+   * `owner_uid_path=` names an owner: the owner Godot takes then (`packed_scene.cpp:159-163`).
+   */
+  ownerTrailFallback?: OwnerRecovery;
   /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
@@ -186,7 +213,7 @@ export interface ConnectionHeading {
   toIdTrail: readonly number[] | undefined;
 }
 
-/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
+/** The **Heading facts**: what the `[node]`, `[connection]` and `[editable]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
    * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which `reRootedNames`
@@ -224,6 +251,8 @@ export interface HeadingFacts {
   resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
+  /** The line of each `[editable]` heading that states no `path=`, which the loader refuses. */
+  pathlessEditableLines: readonly number[];
   /**
    * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
    * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`

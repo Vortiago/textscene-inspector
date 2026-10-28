@@ -38,10 +38,6 @@ vec4 godotProbeTexel( int index, int texel ) {
 	return godotSceneRowTexel( index, texel );
 }
 
-uint godotProbeMask( vec4 flags ) {
-	return uint( flags.x ) | ( uint( flags.y ) << 16u );
-}
-
 float godotProbeAxisBlend( float position, float extent, float blendDistance ) {
 	float axisBlendDistance = min( blendDistance, extent );
 	return clamp( 1.0 - ( abs( position ) - extent + axisBlendDistance ) / axisBlendDistance, 0.0, 1.0 );
@@ -108,7 +104,7 @@ void godotGatherReflectionProbes( vec3 viewPosition, vec3 normal, vec3 viewDir, 
 	vec3 worldNormal = ( vec4( normal, 0.0 ) * viewMatrix ).xyz;
 	for ( int index = probeCount - 1; index >= 0; index -- ) {
 		vec4 flags = godotProbeTexel( index, 6 );
-		if ( ( godotProbeMask( flags ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u ) continue;
+		if ( ( godotSceneRowMask( flags ) & ${INSTANCE_LAYERS_UNIFORM}[ 0 ] ) == 0u ) continue;
 		if ( reflection.a >= 1.0 && ambient.a >= 1.0 ) break;
 		godotReflectionProbe( index, flags, worldPosition, worldReflect, worldNormal, roughness, reflection, ambient );
 	}

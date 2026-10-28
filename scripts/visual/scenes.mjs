@@ -6,7 +6,8 @@
  * Gizmos toggle on (off in every other capture), `select: <node path>`,
  * `camera: <Camera3D node path>`, which the previewer looks through as `?camera=` opens it, or
  * `canvas: { width, height }`, the 3D canvas size a small frame renders at, or `settleTimeout: <ms>`,
- * each screenshot's limit where one frame outlasts Playwright's default.
+ * each screenshot's limit where one frame outlasts Playwright's default. `pnpm recapture` takes the
+ * same limit for the sheet image of the scene's fixture.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
@@ -17,6 +18,20 @@ import { PRIMITIVE_SCENES } from './scenes/primitives.mjs';
 import { CANVAS_2D_SCENES } from './scenes/canvas2d.mjs';
 import { MATERIAL_SCENES } from './scenes/materials.mjs';
 import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
+
+/** The options an entry may set. The capture reads no other, so `scenes.test.mjs` refuses one. */
+export const SCENE_OPTIONS = [
+  'name',
+  'file',
+  'mode',
+  'collisions',
+  'navigation',
+  'gizmos',
+  'select',
+  'camera',
+  'canvas',
+  'settleTimeout',
+];
 
 /**
  * Not in the set until fixed: unit-label3d.tscn, whose labels render near invisible after

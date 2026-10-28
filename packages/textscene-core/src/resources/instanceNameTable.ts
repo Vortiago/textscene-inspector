@@ -5,7 +5,7 @@
  */
 
 import type { LiveNode } from './liveNode';
-import { joinPath, pathBetween } from '../utils/nodePath';
+import { joinPath, pathBetween, pathUnder } from '../utils/nodePath';
 import {
   UNIQUE_NODE_PREFIX,
   nodePathNames,
@@ -14,6 +14,7 @@ import {
   type RootWalkTables,
 } from '../godot/string/nodePath';
 import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
+import type { FollowTrail } from './sceneTrail';
 
 /**
  * Each `%Name` key to the path from the instanced scene's root to the node that holds it. A node
@@ -58,6 +59,13 @@ export interface InstanceNames {
    * (node.cpp:1930-1938). Absent where the graft cannot collapse a nested instance.
    */
   readonly nested?: (node: LiveNode) => UniqueNamePaths | undefined;
+  /** Follows the rest of an id trail in the sub-scene. */
+  readonly followTrail: FollowTrail;
+  /**
+   * Whether the instance node is the root of the file that wrote the host children, which inherits
+   * the sub-scene as its base: a trail that names no heading of that file continues in it.
+   */
+  readonly isInheritedRoot?: boolean;
 }
 
 /**
@@ -70,15 +78,17 @@ export class InstanceNameTable implements UniqueNameTable {
   private readonly own: () => UniqueNamePaths;
   private readonly settings: readonly InstanceNameSetting[];
   private readonly nested?: InstanceNames['nested'];
+  private readonly followTrail: FollowTrail;
   /** Written only by `landUpTo`: how many of `settings` have landed. */
   private landed = 0;
   /** Written only by `paths`, read once the graft has landed every setting. */
   private finished?: UniqueNamePaths;
 
-  constructor({ own, settings, nested }: InstanceNames) {
+  constructor({ own, settings, nested, followTrail }: InstanceNames) {
     this.own = own;
     this.settings = settings;
     this.nested = nested;
+    this.followTrail = followTrail;
   }
 
   /**
@@ -122,7 +132,7 @@ export class InstanceNameTable implements UniqueNameTable {
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
-    const setting = withOwnerWalked(tree, authored, this.claimed);
+    const setting = this.ownerChosen(tree, authored);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
       if (!setting.ownerInInstance) {
@@ -143,6 +153,21 @@ export class InstanceNameTable implements UniqueNameTable {
     }
     this.land(segments.join('/'), setting.isUnique);
     return tree;
+  }
+
+  /**
+   * `authored` with the owner Godot takes: the one its `owner=` walk finds, or its `owner_uid_path=` owner
+   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing.
+   */
+  private ownerChosen(tree: readonly LiveNode[], authored: InstanceNameSetting): InstanceNameSetting | null {
+    const walked = this.ownerWalked(tree, authored);
+    if (!authored.ownerFallback || (walked && holdsNode(tree, walked.ownerInInstance ?? ''))) return walked;
+    return this.ownerWalked(tree, withFallbackOwner(authored));
+  }
+
+  private ownerWalked(tree: readonly LiveNode[], setting: InstanceNameSetting): InstanceNameSetting | null {
+    const followed = withOwnerTrailFollowed(setting, this.followTrail);
+    return followed && withOwnerWalked(tree, followed, this.claimed);
   }
 
   /** The table once the node at `path` sets or clears its name. */
@@ -166,6 +191,27 @@ function withChanges(
     else moved.set(key, path);
   }
   return moved;
+}
+
+/** `setting` with the owner its `owner_uid_path=` names, which Godot takes where the `owner=` walk finds nothing. */
+function withFallbackOwner({ ownerFallback, ...rest }: InstanceNameSetting): InstanceNameSetting {
+  return { ...rest, ownerContentTrail: undefined, ...ownerFallback };
+}
+
+/**
+ * `setting` with the owner its `ownerContentTrail` finds below the instance, as the loader's lookup
+ * finds it (packed_scene.cpp:159-163). Null where no heading answers the trail, so the node has no
+ * owner, or where a scene it enters is not loaded yet, which the next collapse follows again.
+ */
+function withOwnerTrailFollowed(
+  setting: InstanceNameSetting,
+  followTrail: FollowTrail
+): InstanceNameSetting | null {
+  if (setting.ownerContentTrail === undefined) return setting;
+  const walk = followTrail(setting.ownerContentTrail);
+  if (walk.status !== 'found') return null;
+  const { ownerContentTrail: _followed, ...rest } = setting;
+  return { ...rest, ownerInInstance: pathUnder(setting.ownerInInstance ?? '', walk.path) };
 }
 
 /**
@@ -214,7 +260,7 @@ function tableOwner(
   ownerInInstance: string | undefined
 ): TableOwner | null {
   const nestedAt = instanceDepth(tree, segments.slice(0, -1));
-  if (nestedAt === null || (nestedAt === undefined && !nodeAt(tree, segments))) return null;
+  if (nestedAt === null || !namesNodeBelow(tree, segments, nestedAt)) return null;
   if (ownerInInstance === '') return THIS_INSTANCE;
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
@@ -262,6 +308,26 @@ function handOutside(
     isUnique,
     hostChildrenBefore,
   });
+}
+
+/**
+ * Whether the sub-path names a node of `tree`, or one in a nested instance, which that instance's
+ * graft finds. A sub-path that climbs out names a node above, which no tree here holds.
+ */
+function holdsNode(tree: readonly LiveNode[], subPath: string): boolean {
+  if (subPath === '' || subPath.startsWith(OUTSIDE)) return true;
+  const segments = subPath.split('/');
+  const nestedAt = instanceDepth(tree, segments.slice(0, -1));
+  return nestedAt !== null && namesNodeBelow(tree, segments, nestedAt);
+}
+
+/** Whether `segments` names a node of `tree`, or lies in the nested instance at `nestedAt` (`instanceDepth` of its parent path). */
+function namesNodeBelow(
+  tree: readonly LiveNode[],
+  segments: readonly string[],
+  nestedAt: number | undefined
+): boolean {
+  return nestedAt !== undefined || nodeAt(tree, segments) !== undefined;
 }
 
 /** The node at `path` below the sub-scene root, or undefined where none sits there. */

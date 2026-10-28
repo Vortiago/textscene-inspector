@@ -43,11 +43,14 @@ interface SeatedFrame {
 }
 
 /**
- * Whether a node below `node` states an `instanceSubPath`: a host child that an instance's graft
- * may fail to seat. A tree without one takes no part in seating.
+ * Whether a node below `node` states an `instanceSubPath` or a `parentContentTrail`: a host child
+ * that an instance's graft may fail to seat. A tree without one takes no part in seating.
  */
 export const holdsDeepChildren = perObject((node: LiveNode): boolean =>
-  node.children.some((child) => Boolean(child.instanceSubPath) || holdsDeepChildren(child))
+  node.children.some(
+    (child) =>
+      Boolean(child.instanceSubPath) || child.parentContentTrail !== undefined || holdsDeepChildren(child)
+  )
 );
 
 /** An instance node of the tree with host children that may escape it, where it sits and in which scope. */
@@ -96,6 +99,11 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
     if (!isFileRoot) {
       leftovers.push({ ...escape, end: leftoverEnd(walkEnd, frame.claimed) });
       return null;
+    }
+    const placedByTrail = placeByTrail(tree, escape, frame);
+    if (placedByTrail) {
+      tree = placedByTrail.tree;
+      return placedByTrail.path;
     }
     const rooted = reRoot(tree, escape.child, escape.scope);
     tree = rooted.tree;
@@ -174,9 +182,25 @@ function placeAt(
   return grafted && { tree: grafted, path: joinPath(segments.join('/'), child.name) };
 }
 
+/**
+ * `tree` with the escaped child seated where its `parent_id_path=` puts it, for a `parent=` walk that
+ * found nothing (packed_scene.cpp:161-163): under a heading of this file, or in the content of the
+ * instance it enters. Null where the heading has no trail or the trail finds no node.
+ */
+function placeByTrail(tree: LiveNode[], escape: EscapedChild, frame: Frame): Seated | null {
+  const fallback = escape.child.parentTrailFallback;
+  if (!fallback) return null;
+  const { contentTrail } = fallback;
+  if (contentTrail === undefined) return placeAt(tree, fallback.path, escape, frame);
+  // The root merged over its base already, and its graft followed the trail in that base.
+  if (fallback.path === SCENE_ROOT_PATH) return null;
+  const entering = { ...escape, child: { ...escape.child, parentContentTrail: contentTrail } };
+  return placeAt(tree, fallback.path, entering, frame);
+}
+
 /** `child` as a node of the frame it is seated in: it keeps the scope it was written in. */
 function withoutSubPath(child: LiveNode, scope: SceneScope): LiveNode {
-  const { instanceSubPath: _held, ...seat } = child;
+  const { instanceSubPath: _held, parentTrailFallback: _spent, ...seat } = child;
   return { ...seat, scope, reanchoredFrom: hostChildOf(child) };
 }
 
@@ -184,7 +208,8 @@ function withoutSubPath(child: LiveNode, scope: SceneScope): LiveNode {
  * `tree` with `child` under the file root and each of its descendants too, each renamed from its own
  * `parent=` and numbered past the root children that hold the name. A descendant sat below `child`
  * for a path that runs through the vanished parent, so it vanishes as well; one that an id trail
- * landed there stays (packed_scene.cpp:161-163).
+ * landed there stays (packed_scene.cpp:161-163). A `%Name` parent vanishes too: the renamed node
+ * claims the renamed name (node.cpp:2222).
  */
 function reRoot(tree: LiveNode[], child: LiveNode, scope: SceneScope): Seated {
   const rooted = [...tree];

@@ -14,16 +14,27 @@ describe('parseStandardMaterial3DScalars: ao_light_affect', () => {
   });
 
   it('reads an authored value', () => {
-    expect(parseStandardMaterial3DScalars({ ao_light_affect: '0.5' }).aoLightAffect).toBe(0.5);
+    expect(parseStandardMaterial3DScalars({ ao_enabled: 'true', ao_light_affect: '0.5' }).aoLightAffect).toBe(
+      0.5
+    );
+  });
+
+  it('reads 0 without ao_enabled, as the shader reads the value only with it', () => {
+    // `material.cpp:1959`.
+    expect(parseStandardMaterial3DScalars({ ao_light_affect: '0.5' }).aoLightAffect).toBe(0);
   });
 
   it('keeps a value outside 0 to 1, which the setter stores unclamped', () => {
     // `material.cpp:2247-2250`: the hint is "0,1,0.01", but the setter clamps nothing.
-    expect(parseStandardMaterial3DScalars({ ao_light_affect: '1.5' }).aoLightAffect).toBe(1.5);
+    expect(parseStandardMaterial3DScalars({ ao_enabled: 'true', ao_light_affect: '1.5' }).aoLightAffect).toBe(
+      1.5
+    );
   });
 
   it('falls back to 0 for a malformed value', () => {
-    expect(parseStandardMaterial3DScalars({ ao_light_affect: 'nope' }).aoLightAffect).toBe(0);
+    expect(
+      parseStandardMaterial3DScalars({ ao_enabled: 'true', ao_light_affect: 'nope' }).aoLightAffect
+    ).toBe(0);
   });
 });
 

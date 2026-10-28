@@ -231,7 +231,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
       if (isDecal(obj)) decals.push(obj);
     });
     expect(decals).toHaveLength(1);
-    expect(decals[0]!.albedo).not.toBeNull();
+    expect(decals[0]!.textures.albedo).not.toBeNull();
 
     // The decal samples the decal atlas, which holds the 256 x 256 gradient: 256 / 32 + 1 = 9
     // cells, so 16 cells of 32 texels wide, and nearest_power_of_2(9 * 32) = 512 tall.

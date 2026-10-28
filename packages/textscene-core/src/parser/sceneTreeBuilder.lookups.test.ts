@@ -9,6 +9,9 @@ import type { NodeOrigin, TscnNode } from './types';
 
 const HEADINGS = 1000;
 
+/** The index of ids, the trail headings the scene keeps, and the heading a trail names read each id once. */
+const READS_PER_HEADING = 3;
+
 function origin(heading: TscnNode, parts: Partial<NodeOrigin<TscnNode>> = {}): NodeOrigin<TscnNode> {
   return { node: heading, line: 1, declaredParent: heading.parent, uniqueId: 0, ...parts };
 }
@@ -49,7 +52,7 @@ describe('seatScene id-trail lookups', () => {
 
     seatScene(origins);
 
-    expect(reads.count).toBeLessThanOrEqual(2 * origins.length);
+    expect(reads.count).toBeLessThanOrEqual(READS_PER_HEADING * origins.length);
   });
 
   it('reads each heading id a bounded number of times for broken parent paths', () => {
@@ -59,7 +62,7 @@ describe('seatScene id-trail lookups', () => {
 
     seatScene(origins);
 
-    expect(reads.count).toBeLessThanOrEqual(2 * origins.length);
+    expect(reads.count).toBeLessThanOrEqual(READS_PER_HEADING * origins.length);
   });
 
   it('still seats a node whose owner path lands through the trail', () => {
@@ -91,10 +94,25 @@ describe('seatScene owner resolution', () => {
     return ownerReads;
   }
 
-  it('does not resolve the owner of a heading the id trail seats out of this tree', () => {
-    const instance = node('Landing', '.', { instance: 'ExtResource("1")' });
+  it('does not resolve the owner of a heading in a file Godot refuses to instantiate', () => {
+    const recovered = node('Recovered', 'Nowhere/Here');
+    let ownerReads = 0;
+    Object.defineProperty(recovered, 'owner', {
+      get: () => {
+        ownerReads++;
+        return 'Landing';
+      },
+      enumerable: true,
+    });
 
-    expect(ownerReadsFor(instance, [7, 5])).toBe(0);
+    seatScene([
+      origin(node('Root')),
+      origin(node('Landing', '.'), { uniqueId: 7 }),
+      origin(recovered, { idTrail: [7] }),
+      origin(node('Stray')),
+    ]);
+
+    expect(ownerReads).toBe(0);
   });
 
   it('resolves the owner of a heading the id trail lands in this tree', () => {

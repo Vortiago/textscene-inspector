@@ -34,6 +34,7 @@ import { isDecal, type DecalObject } from '../../../r3f/decal/decalObject';
 import { decalGizmoLines } from './gizmoLines';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
+const MAP_PATH = 'res://textures/decal-map.png';
 const NODE_NAME = 'MyDecal';
 
 /** `editors/3d_gizmos/gizmo_colors/decal` (`editor_settings.cpp:884`). */
@@ -231,7 +232,7 @@ describe('<Decal>', () => {
       const producer = readableProducer();
       const renderer = await mount(producer);
 
-      expect(decalObjects(renderer)[0]!.albedo).toBe(producer);
+      expect(decalObjects(renderer)[0]!.textures.albedo).toBe(producer);
     });
 
     it('holds the texture in the shared atlas, clamped, in sRGB, over a mip chain, whatever the producer is', async () => {
@@ -248,6 +249,54 @@ describe('<Decal>', () => {
       expect(atlas.mipmaps).toHaveLength(5);
       expect(producer.wrapS).toBe(THREE.RepeatWrapping);
       expect(producer.colorSpace).toBe(THREE.NoColorSpace);
+    });
+
+    it.each(['normal', 'orm', 'emission'] as const)(
+      'holds the %s texture in the atlas, as an entry of its own, and hands the decal object it',
+      async (map) => {
+        const albedo = readableProducer();
+        const mapTexture = readableProducer(32);
+        const renderer = await render({
+          node: makeNode({
+            texture_albedo: 'ExtResource("1_albedo")',
+            [`texture_${map}`]: 'ExtResource("2_map")',
+          }),
+          externals: [extRef('1_albedo', TEXTURE_PATH), extRef('2_map', MAP_PATH)],
+          cached: [
+            { path: TEXTURE_PATH, texture: albedo },
+            { path: MAP_PATH, texture: mapTexture },
+          ],
+        });
+        updateDecalAtlas(GPU_TEXTURE_SIZE);
+
+        expect(decalObjects(renderer)[0]!.textures[map]).toBe(mapTexture);
+        expect(decalAtlasRect(mapTexture)).toBeDefined();
+        expect(decalAtlasRect(albedo)).toBeDefined();
+        expect(decalAtlasRect(mapTexture)).not.toEqual(decalAtlasRect(albedo));
+      }
+    );
+
+    it('keeps a texture that two maps name in the atlas until the last of them lets go', async () => {
+      const shared = readableProducer();
+      const loader = seededLoader([{ path: TEXTURE_PATH, texture: shared }]);
+      const both: RenderOptions = {
+        node: makeNode({ texture_albedo: 'ExtResource("1_tex")', texture_emission: 'ExtResource("1_tex")' }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+      };
+      const renderer = await create(decalTree(both, loader));
+      updateDecalAtlas(GPU_TEXTURE_SIZE);
+      const rect = decalAtlasRect(shared);
+      expect(decalObjects(renderer)[0]!.mapRect('emission')).toBe(rect);
+
+      await renderer.update(
+        decalTree({ ...both, node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }) }, loader)
+      );
+      updateDecalAtlas(GPU_TEXTURE_SIZE);
+      expect(decalAtlasRect(shared)).toBe(rect);
+
+      await renderer.unmount();
+      updateDecalAtlas(GPU_TEXTURE_SIZE);
+      expect(decalAtlasRect(shared)).toBeUndefined();
     });
 
     it("holds an AtlasTexture's whole sheet, which its RID names", async () => {
@@ -275,7 +324,7 @@ describe('<Decal>', () => {
         cached: [{ path: TEXTURE_PATH, texture: 'missing' }],
       });
 
-      expect(decalObjects(renderer)[0]!.albedo).toBeNull();
+      expect(decalObjects(renderer)[0]!.textures.albedo).toBeNull();
     });
 
     it('leaves the atlas when it unmounts, and never disposes the shared cache entry', async () => {

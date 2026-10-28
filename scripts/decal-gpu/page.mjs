@@ -31,6 +31,17 @@ const CAMERA_HEIGHT = 10;
 
 const RED = [255, 0, 0];
 const GREEN = [0, 255, 0];
+/** The grey of the receivers in bytes, so a decal of it changes no albedo and shows only what its maps do. */
+const RECEIVER_GREY = [128, 128, 128];
+/** A normal map texel that lies along the decal's X axis, flat to the surface (`:1619`). */
+const NORMAL_ALONG_X = [255, 128, 128];
+/** Normal map texels that tilt the surface fully one way and fully the other, flat between them in bytes. */
+const NORMAL_TILTS = [
+  [0, 128, 128],
+  [255, 128, 128],
+];
+/** The normal map texel that lies flat to the surface. */
+const NORMAL_FLAT = [128, 128, 128];
 
 installShaderPatches();
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
@@ -59,26 +70,35 @@ function pixelAt(scene, x, z) {
   return Array.from(bytes.slice(0, 3), (byte) => byte / 255);
 }
 
-/** A texture of one colour, which the decal atlas holds while `held` lists it. */
-function solidTexture(rgb, held) {
-  const data = new Uint8Array(4 * 4 * 4);
-  for (let texel = 0; texel < 16; texel += 1) data.set([...rgb, 255], texel * 4);
-  const texture = new THREE.DataTexture(data, 4, 4, THREE.RGBAFormat);
+/** A texture of `width` texels across, one colour in bytes for each, which the decal atlas holds while `held` lists it. */
+function colourTexture(colours, width, held) {
+  const data = new Uint8Array(colours.length * 4);
+  colours.forEach((rgb, texel) => data.set([...rgb, 255], texel * 4));
+  const texture = new THREE.DataTexture(data, width, colours.length / width, THREE.RGBAFormat);
   texture.needsUpdate = true;
   holdDecalTexture(texture);
   held.push(texture);
   return texture;
 }
 
+/** A map is the bytes of one colour, or a row of such colours. */
+function mapTexture(bytes, held) {
+  return Array.isArray(bytes[0])
+    ? colourTexture(bytes, bytes.length, held)
+    : colourTexture(Array(16).fill(bytes), 4, held);
+}
+
 /**
  * Runs `scenario` with a fresh scene that has a light, its scene decals and a way to add decals
- * and receivers, then lets go of everything the scenario held.
+ * and receivers, then lets go of everything the scenario held. `ambient` adds an ambient light of
+ * that intensity, which only an indirect term reads.
  */
-function inScene(scenario) {
+function inScene(scenario, { ambient = 0 } = {}) {
   const scene = new THREE.Scene();
   const light = new THREE.DirectionalLight(0xffffff, 2);
   light.position.set(0, 5, 0);
   scene.add(light);
+  if (ambient > 0) scene.add(new THREE.AmbientLight(0xffffff, ambient));
   const held = [];
   const sceneDecals = new SceneDecals(renderer, scene);
   let treeOrder = 0;
@@ -93,14 +113,18 @@ function inScene(scenario) {
       for (const decal of decals) decal.visible = true;
       return { drawn, bare };
     },
-    /** A decal of `rgb` at `position`, taller than the receivers so the fades stay at 1. */
-    addDecal(rgb, position, properties = {}) {
+    /**
+     * A decal at `position`, taller than the receivers so the fades stay at 1. `rgb` is its albedo
+     * in bytes, none for null, and `maps` gives the bytes of its other maps.
+     */
+    addDecal(rgb, position, properties = {}, maps = {}) {
       const decal = new DecalObject();
       decal.look = parseDecal(
         { type: 'node', attributes: { type: 'Decal', name: 'D' } },
         { size: 'Vector3(2, 4, 2)', upper_fade: '0', lower_fade: '0', ...properties }
       );
-      decal.albedo = solidTexture(rgb, held);
+      decal.textures.albedo = rgb && mapTexture(rgb, held);
+      for (const [map, bytes] of Object.entries(maps)) decal.textures[map] = mapTexture(bytes, held);
       decal.treeOrder = [treeOrder++];
       decal.position.set(...position);
       scene.add(decal);
@@ -118,14 +142,20 @@ function inScene(scenario) {
 
 const plane = (width, depth) => new THREE.PlaneGeometry(width, depth).rotateX(-Math.PI / 2);
 const standard = (parameters = {}) => new THREE.MeshStandardMaterial({ color: 0x808080, ...parameters });
+const unshaded = () => new THREE.MeshBasicMaterial({ color: 0x808080 });
 
-/** A receiver under a decal: the pixel inside its box, and one the box does not reach. */
-function receiver(makeMaterial) {
+/**
+ * A receiver under a decal: the pixel inside its box, and one the box does not reach. The decal
+ * is a red albedo unless `decal` names its `albedo` in bytes, none for null, its `maps` and its
+ * `properties`.
+ */
+function receiver(makeMaterial, decal = {}, sceneOptions = {}) {
+  const { albedo = RED, maps = {}, properties = {} } = decal;
   return inScene(({ scene, addDecal, sampleAt }) => {
     scene.add(new THREE.Mesh(plane(4, 4), makeMaterial()));
-    addDecal(RED, [0, 0.5, 0]);
+    addDecal(albedo, [0, 0.5, 0], properties, maps);
     return { inside: sampleAt(0, 0), outside: sampleAt(1.5, 1.5) };
-  });
+  }, sceneOptions);
 }
 
 /** A decal moved by its transform alone, with no change to its props, before the next render. */
@@ -236,10 +266,27 @@ function redUnderFarGreen(count, spacing) {
   });
 }
 
+/** A receiver with an ambient light and an AO map of white, so an indirect term shows what an ORM map occludes. */
+function aoMapMaterial() {
+  const white = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
+  white.needsUpdate = true;
+  return standard({ aoMap: white });
+}
+
+/** The ORM bytes of full occlusion, the roughest surface and no metal. */
+const ORM_OCCLUDED = [0, 255, 0];
+/** The ORM bytes of no occlusion, the roughest surface and a metal. */
+const ORM_METALLIC = [255, 255, 255];
+
+/** A decal with an emission map and no albedo. */
+const EMISSION_ONLY = { albedo: null, maps: { emission: RED } };
+
+const AMBIENT_SCENE = { ambient: 3 };
+
 window.decalSamples = () => ({
-  lit: receiver(() => standard()),
+  lit: receiver(standard),
   physical: receiver(() => new THREE.MeshPhysicalMaterial({ color: 0x808080 })),
-  unshaded: receiver(() => new THREE.MeshBasicMaterial({ color: 0x808080 })),
+  unshaded: receiver(unshaded),
   transparent: receiver(() => standard({ transparent: true, opacity: 0.5 })),
   doubleSided: receiver(() => standard({ side: THREE.DoubleSide })),
   motion: motion(),
@@ -252,4 +299,47 @@ window.decalSamples = () => ({
   sortingOffset: nearestOnTop(2),
   groupsOf32: redUnderFarGreen(32, 0.001),
   limit: redUnderFarGreen(MAX_DECALS, 0.0001),
+  emission: {
+    lit: receiver(standard, EMISSION_ONLY),
+    physical: receiver(() => new THREE.MeshPhysicalMaterial({ color: 0x808080 }), {
+      albedo: null,
+      maps: { emission: RED },
+    }),
+    unshaded: receiver(unshaded, {
+      albedo: null,
+      maps: { emission: RED },
+    }),
+    withAlbedo: receiver(standard, { albedo: RECEIVER_GREY, maps: { emission: RED } }),
+    noEnergy: receiver(standard, {
+      albedo: null,
+      maps: { emission: RED },
+      properties: { emission_energy: '0' },
+    }),
+  },
+  normalOnly: receiver(standard, { albedo: null, maps: { normal: NORMAL_ALONG_X } }),
+  ormOnly: receiver(standard, { albedo: null, maps: { orm: ORM_METALLIC } }),
+  normalMap: {
+    lit: receiver(standard, { albedo: RECEIVER_GREY, maps: { normal: NORMAL_ALONG_X } }),
+    unshaded: receiver(unshaded, {
+      albedo: RECEIVER_GREY,
+      maps: { normal: NORMAL_ALONG_X },
+    }),
+  },
+  magnifiedNormal: {
+    between: receiver(standard, { albedo: RECEIVER_GREY, maps: { normal: NORMAL_TILTS } }),
+    flat: receiver(standard, { albedo: RECEIVER_GREY, maps: { normal: NORMAL_FLAT } }),
+  },
+  ormMap: {
+    metallic: receiver(standard, { albedo: RECEIVER_GREY, maps: { orm: ORM_METALLIC } }),
+    occlusion: receiver(standard, { albedo: RECEIVER_GREY, maps: { orm: ORM_OCCLUDED } }, AMBIENT_SCENE),
+    occlusionOfAoMap: receiver(
+      aoMapMaterial,
+      { albedo: RECEIVER_GREY, maps: { orm: ORM_OCCLUDED } },
+      AMBIENT_SCENE
+    ),
+    unshaded: receiver(unshaded, {
+      albedo: RECEIVER_GREY,
+      maps: { orm: ORM_METALLIC },
+    }),
+  },
 });

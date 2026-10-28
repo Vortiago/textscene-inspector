@@ -9,9 +9,6 @@ import { REFLECTION_ATLAS_COUNT } from '../../godot/rendering/environment/reflec
 import { FOG_UNIFORMS_MERGE, installMergedUniform } from '../shaderPatch/litUniform.js';
 import { SCENE_ROWS_UNIFORM, sceneRowsSlot } from './sceneRowsSlot.js';
 
-/** The texels of each row, whether it describes a probe or a decal. A decal leaves the last one unused. */
-export const SCENE_ROW_TEXELS = 8;
-
 /** The row of the first decal: the rows before it are the probes', and a scene holds at most this many. */
 export const DECAL_FIRST_ROW = REFLECTION_ATLAS_COUNT;
 
@@ -26,6 +23,10 @@ uniform highp sampler2D ${SCENE_ROWS_UNIFORM};
 
 vec4 godotSceneRowTexel( int row, int texel ) {
 	return texelFetch( ${SCENE_ROWS_UNIFORM}, ivec2( texel, row ), 0 );
+}
+
+uint godotSceneRowMask( vec4 halves ) {
+	return uint( halves.x ) | ( uint( halves.y ) << 16u );
 }
 #endif
 `;
