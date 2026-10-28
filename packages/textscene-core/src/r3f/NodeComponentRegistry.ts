@@ -96,7 +96,7 @@ interface YSortGroupRegistration {
   }>;
 }
 
-/** Every pass takes the parsed roots and hands back the roots to build from. */
+/** A parse stage pass takes the parsed roots and hands back the roots to build from. */
 export type ParseScenePass = (
   nodes: TscnNode[],
   internalResources: readonly TscnInternalResource[]

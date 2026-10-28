@@ -104,13 +104,13 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
-  // A surface with no bone arrays stays unskinned even when the node is bound.
   // A mesh that cannot bind asks with no path, so the pass never runs for a scene without one.
   const bindingPath = useNodePath();
   const skinMatrices = useLiveScenePass(
     bindMeshesToSkeletons,
     namesSkeletonToBind(properties) ? bindingPath : null
   );
+  // A surface with no bone arrays stays unskinned even when the node is bound.
   const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, skinMatrices);
 
   const shellProps = {

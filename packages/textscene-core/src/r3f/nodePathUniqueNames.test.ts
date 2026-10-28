@@ -44,4 +44,24 @@ describe('nodePathUniquePaths', () => {
     expect(tableAt('Root/Sign').get('%Lamp')).toBe('Root/Lamp');
     expect(tableAt(null).get('%Lamp')).toBe('Root/Lamp');
   });
+
+  it('falls back from an instance root to the owner its owner= names', () => {
+    const holder = parse(`[gd_scene format=3]
+[node name="Holder" type="Node3D"]
+[node name="Knob" type="Node3D" parent="."]
+unique_name_in_owner = true
+`);
+    const host = parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://holder.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://body.tscn" id="2"]
+[node name="Main" type="Node3D"]
+[node name="Holder" parent="." instance=ExtResource("1")]
+[node name="Body" parent="Holder" instance=ExtResource("2") owner="Holder"]
+`);
+    const hostCtx = contextOver(host, { 'res://holder.tscn': holder, 'res://body.tscn': body });
+    const table = nodePathUniquePaths('Main/Holder/Body', host.nodes, hostCtx);
+
+    expect(table.get('%Knob')).toBe('Main/Holder/Knob');
+    expect(table.get('%Lamp')).toBe('Main/Holder/Body/Lamp');
+  });
 });

@@ -9,7 +9,7 @@
 import type { TscnNode } from '../../../parser/types.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../../../godot/string/nodePath.js';
-import { walkLiveTree, type LiveTree } from '../../../r3f/liveSceneTree.js';
+import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodePathUniquePaths } from '../../../r3f/nodePathUniqueNames.js';
 import { perObject } from '../../../utils/perObject.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
@@ -25,16 +25,19 @@ import type { Skeleton3DProperties } from './types.js';
  */
 export function bindMeshesToSkeletons(tree: LiveTree): ReadonlyMap<string, readonly Transform3D[]> {
   const skins = new Map<string, readonly Transform3D[]>();
-  walkLiveTree(tree.roots, tree.ctx, ({ node, path }) => {
-    const skin = boundSkinOf(node, path, tree);
+  tree.fold<void, void>(undefined, ({ step, path }, _, descend) => {
+    const skin = boundSkinOf(step.node, path, tree);
     if (skin) skins.set(path, skin);
+    descend();
   });
   return skins;
 }
 
 /** Whether a MeshInstance3D with `properties` can bind a skeleton: it names one and sets no `skin`. */
-export function namesSkeletonToBind({ skin, skeleton }: MeshInstance3DProperties): boolean {
-  return skin === undefined && skeleton !== undefined;
+export function namesSkeletonToBind(
+  properties: MeshInstance3DProperties
+): properties is MeshInstance3DProperties & { skeleton: string } {
+  return properties.skin === undefined && properties.skeleton !== undefined;
 }
 
 /** The skin of the node at `path` where it is a MeshInstance3D bound to a Skeleton3D, else undefined. */
@@ -43,7 +46,7 @@ function boundSkinOf(node: TscnNode, path: string, tree: LiveTree): readonly Tra
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
   // Only a `%Name` segment reads the table, which allocates for each bound mesh on each load.
-  const uniquePaths = properties.skeleton!.includes(UNIQUE_NODE_PREFIX)
+  const uniquePaths = properties.skeleton.includes(UNIQUE_NODE_PREFIX)
     ? nodePathUniquePaths(path, tree.roots, tree.ctx)
     : undefined;
   const skeletonPath = resolveNodePathLiteral(path, properties.skeleton, uniquePaths);
