@@ -11,6 +11,7 @@
  */
 
 import { bezierInterpolatef } from '../../../godot/math/math';
+import { storedVector2 } from '../../../godot/math/real';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import { signedPolygonArea } from '../../../godot/math/polygonArea';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -21,13 +22,10 @@ import {
 } from '../../../r3f/controls/native/text/glyphContours';
 import { triangulateContours } from './triangulate';
 
-/**
- * A polygon vertex, in single precision as Godot stores it: polypartition fails on a glyph by
- * comparisons that a double point can pass. A point on the curve is sharp, and a point stepped along
- * an arc is smooth.
- */
 export interface ContourVertex {
+  /** In single precision as Godot stores it: polypartition fails on a glyph by comparisons that a double point can pass. */
   point: Vector2;
+  /** A point on the curve is sharp, and a point stepped along an arc is smooth. */
   isSharp: boolean;
 }
 
@@ -55,6 +53,9 @@ const MIN_ARC_STEP = 0.01;
 const MAX_ARC_STEP = 0.5;
 
 const toFloat = Math.fround;
+
+const scaledPoint = (x: number, y: number, pixelSize: number): Vector2 =>
+  storedVector2({ x: x * pixelSize, y: y * pixelSize });
 
 function emptyGlyphMeshData(): GlyphMeshData {
   return {
@@ -84,7 +85,7 @@ function steppedArc(
   const vertices: ContourVertex[] = [];
   for (let t = step; t < 1; t = toFloat(t + step)) {
     const { x, y } = pointAt(t);
-    vertices.push({ point: { x: toFloat(x * pixelSize), y: toFloat(y * pixelSize) }, isSharp: false });
+    vertices.push({ point: scaledPoint(x, y, pixelSize), isSharp: false });
   }
   return vertices;
 }
@@ -134,10 +135,7 @@ function contourPolygon(
   for (let j = start; j <= end; j++) {
     const current = points[j]!;
     if (current.tag === ContourPointTag.ON) {
-      polygon.push({
-        point: { x: toFloat(current.x * pixelSize), y: toFloat(current.y * pixelSize) },
-        isSharp: true,
-      });
+      polygon.push({ point: scaledPoint(current.x, current.y, pixelSize), isSharp: true });
     } else if (current.tag === ContourPointTag.OFF_CUBIC) {
       // The arc takes the next control point too, so the loop steps past it.
       const second = j === end ? start : j + 1;

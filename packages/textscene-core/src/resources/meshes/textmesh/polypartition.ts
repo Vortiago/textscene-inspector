@@ -23,11 +23,12 @@ export interface PartitionPolygon {
 type Polygon = readonly Vector2[];
 type Triangle = readonly [Vector2, Vector2, Vector2];
 
-const isConvex = (p1: Vector2, p2: Vector2, p3: Vector2): boolean =>
-  (p3.y - p1.y) * (p2.x - p1.x) - (p3.x - p1.x) * (p2.y - p1.y) > 0;
+const turn = (p1: Vector2, p2: Vector2, p3: Vector2): number =>
+  (p3.y - p1.y) * (p2.x - p1.x) - (p3.x - p1.x) * (p2.y - p1.y);
 
-const isReflex = (p1: Vector2, p2: Vector2, p3: Vector2): boolean =>
-  (p3.y - p1.y) * (p2.x - p1.x) - (p3.x - p1.x) * (p2.y - p1.y) < 0;
+const isConvex = (p1: Vector2, p2: Vector2, p3: Vector2): boolean => turn(p1, p2, p3) > 0;
+
+const isReflex = (p1: Vector2, p2: Vector2, p3: Vector2): boolean => turn(p1, p2, p3) < 0;
 
 function isInside(p1: Vector2, p2: Vector2, p3: Vector2, p: Vector2): boolean {
   return !isConvex(p1, p, p2) && !isConvex(p2, p, p3) && !isConvex(p3, p, p1);
@@ -38,6 +39,7 @@ function inCone(p1: Vector2, p2: Vector2, p3: Vector2, p: Vector2): boolean {
   return isConvex(p1, p2, p) || isConvex(p2, p3, p);
 }
 
+/** In double, as polypartition's `tppl_float` is, so it is not `normalizedVector2`, which rounds each step to single. */
 function normalize({ x, y }: Vector2): Vector2 {
   const length = Math.sqrt(x * x + y * y);
   return length === 0 ? { x: 0, y: 0 } : { x: x / length, y: y / length };
@@ -55,33 +57,42 @@ function intersects(p11: Vector2, p12: Vector2, p21: Vector2, p22: Vector2): boo
   if (isSamePoint(p11, p21) || isSamePoint(p11, p22) || isSamePoint(p12, p21) || isSamePoint(p12, p22)) {
     return false;
   }
-  const v1ort = { x: p12.y - p11.y, y: p11.x - p12.x };
-  const v2ort = { x: p22.y - p21.y, y: p21.x - p22.x };
-  const dotWith = (ort: Vector2, from: Vector2, to: Vector2) =>
-    (to.x - from.x) * ort.x + (to.y - from.y) * ort.y;
+  const v1x = p12.y - p11.y;
+  const v1y = p11.x - p12.x;
+  const v2x = p22.y - p21.y;
+  const v2y = p21.x - p22.x;
 
-  const dot21 = dotWith(v1ort, p11, p21);
-  const dot22 = dotWith(v1ort, p11, p22);
-  const dot11 = dotWith(v2ort, p21, p11);
-  const dot12 = dotWith(v2ort, p21, p12);
+  const dot21 = (p21.x - p11.x) * v1x + (p21.y - p11.y) * v1y;
+  const dot22 = (p22.x - p11.x) * v1x + (p22.y - p11.y) * v1y;
+  const dot11 = (p11.x - p21.x) * v2x + (p11.y - p21.y) * v2y;
+  const dot12 = (p12.x - p21.x) * v2x + (p12.y - p21.y) * v2y;
   return !(dot11 * dot12 > 0) && !(dot21 * dot22 > 0);
 }
 
-interface HolePoint {
-  hole: PartitionPolygon;
+/** Whether the segment crosses an edge of `polygon`. */
+function crossesEdge(from: Vector2, to: Vector2, polygon: Polygon): boolean {
+  for (let k = 0; k < polygon.length; k++) {
+    if (intersects(from, to, polygon[k]!, polygon[k + 1 === polygon.length ? 0 : k + 1]!)) return true;
+  }
+  return false;
+}
+
+/** The corner `index` of `polygon`. */
+interface PolygonPoint {
+  polygon: PartitionPolygon;
   index: number;
 }
 
 /** The first point with the largest x among the holes, or null for no hole. */
-function rightmostHolePoint(polygons: readonly PartitionPolygon[]): HolePoint | null {
-  let best: HolePoint | null = null;
+function rightmostHolePoint(polygons: readonly PartitionPolygon[]): PolygonPoint | null {
+  let best: PolygonPoint | null = null;
   let bestX = -Infinity;
-  for (const hole of polygons) {
-    if (!hole.isHole) continue;
-    for (let index = 0; index < hole.points.length; index++) {
-      const { x } = hole.points[index]!;
+  for (const polygon of polygons) {
+    if (!polygon.isHole) continue;
+    for (let index = 0; index < polygon.points.length; index++) {
+      const { x } = polygon.points[index]!;
       if (best === null || x > bestX) {
-        best = { hole, index };
+        best = { polygon, index };
         bestX = x;
       }
     }
@@ -89,22 +100,14 @@ function rightmostHolePoint(polygons: readonly PartitionPolygon[]): HolePoint | 
   return best;
 }
 
-interface BridgePoint {
-  polygon: PartitionPolygon;
-  index: number;
-}
-
 function isVisibleFrom(holePoint: Vector2, point: Vector2, polygons: readonly PartitionPolygon[]): boolean {
-  return polygons.every(
-    (other) =>
-      other.isHole ||
-      other.points.every((from, i) => !intersects(holePoint, point, from, wrapped(other.points, i + 1)))
-  );
+  return polygons.every((other) => other.isHole || !crossesEdge(holePoint, point, other.points));
 }
 
 /** The point right of `holePoint` that it sees, and that lies leftmost-first by direction, or null. */
-function visiblePolygonPoint(polygons: readonly PartitionPolygon[], holePoint: Vector2): BridgePoint | null {
-  let best: BridgePoint | null = null;
+function visiblePolygonPoint(polygons: readonly PartitionPolygon[], holePoint: Vector2): PolygonPoint | null {
+  let best: PolygonPoint | null = null;
+  let bestDirectionX = 0;
   for (const polygon of polygons) {
     if (polygon.isHole) continue;
     const { points } = polygon;
@@ -112,22 +115,22 @@ function visiblePolygonPoint(polygons: readonly PartitionPolygon[], holePoint: V
       const point = points[i]!;
       if (point.x <= holePoint.x) continue;
       if (!inCone(wrapped(points, i - 1), point, wrapped(points, i + 1), holePoint)) continue;
-      if (best) {
-        const toPoint = normalize({ x: point.x - holePoint.x, y: point.y - holePoint.y });
-        const toBest = normalize({
-          x: best.polygon.points[best.index]!.x - holePoint.x,
-          y: best.polygon.points[best.index]!.y - holePoint.y,
-        });
-        if (toBest.x > toPoint.x) continue;
+      const directionX = normalize({ x: point.x - holePoint.x, y: point.y - holePoint.y }).x;
+      if (best && bestDirectionX > directionX) continue;
+      if (isVisibleFrom(holePoint, point, polygons)) {
+        best = { polygon, index: i };
+        bestDirectionX = directionX;
       }
-      if (isVisibleFrom(holePoint, point, polygons)) best = { polygon, index: i };
     }
   }
   return best;
 }
 
 /** The polygon with `hole` stitched in along the bridge from `bridge` to the hole's point `holeIndex`. */
-function stitchHole(bridge: BridgePoint, { hole, index: holeIndex }: HolePoint): PartitionPolygon {
+function stitchHole(
+  bridge: PolygonPoint,
+  { polygon: hole, index: holeIndex }: PolygonPoint
+): PartitionPolygon {
   const outer = bridge.polygon.points;
   const holePoints = hole.points;
   return {
@@ -144,11 +147,11 @@ function stitchHole(bridge: BridgePoint, { hole, index: holeIndex }: HolePoint):
 function removeHoles(inputs: readonly PartitionPolygon[]): Polygon[] | null {
   let polygons = inputs;
   for (let hole = rightmostHolePoint(polygons); hole; hole = rightmostHolePoint(polygons)) {
-    const holePoint = hole.hole.points[hole.index]!;
+    const holePoint = hole.polygon.points[hole.index]!;
     const bridge = visiblePolygonPoint(polygons, holePoint);
     if (!bridge) return null;
     polygons = [
-      ...polygons.filter((polygon) => polygon !== hole.hole && polygon !== bridge.polygon),
+      ...polygons.filter((polygon) => polygon !== hole.polygon && polygon !== bridge.polygon),
       stitchHole(bridge, hole),
     ];
   }
@@ -230,15 +233,8 @@ function triangulateByEars(polygon: Polygon): Triangle[] | null {
   return triangles;
 }
 
-interface SharedEdge {
-  /** The index of the first end of the edge in the first polygon, the edge running to the next point. */
-  first: number;
-  /** The same for the second polygon, where the edge runs the other way. */
-  second: number;
-}
-
 /** The union of two polygons across their shared edge, or null where the union has a reflex corner there. */
-function mergeAcrossEdge(polygon: Polygon, other: Polygon, { first, second }: SharedEdge): Vector2[] | null {
+function mergeAcrossEdge(polygon: Polygon, other: Polygon, first: number, second: number): Vector2[] | null {
   const secondNext = (second + 1) % other.length;
   const firstNext = (first + 1) % polygon.length;
   if (!isConvex(wrapped(polygon, first - 1), polygon[first]!, wrapped(other, secondNext + 1))) return null;
@@ -260,9 +256,8 @@ function convexPartitionOne(polygon: Polygon): Polygon[] | null {
   if (polygon.length < 3) return null;
   if (!hasReflexCorner(polygon)) return [polygon];
 
-  const triangles = triangulateByEars(polygon);
-  if (!triangles) return null;
-  const pieces: Polygon[] = triangles;
+  const pieces: Polygon[] | null = triangulateByEars(polygon);
+  if (!pieces) return null;
   for (let a = 0; a < pieces.length; a++) {
     for (let i = 0; i < pieces[a]!.length; i++) {
       const merge = mergeWithLaterPiece(pieces, a, i);
@@ -283,22 +278,22 @@ function mergeWithLaterPiece(
 ): { polygon: Vector2[]; otherIndex: number } | null {
   const polygon = pieces[a]!;
   for (let b = a + 1; b < pieces.length; b++) {
-    const shared = sharedEdgeAt(polygon, edge, pieces[b]!);
-    if (!shared) continue;
+    const second = sharedEdgeEnd(polygon, edge, pieces[b]!);
+    if (second === null) continue;
     // The first later piece that has the edge decides, whether or not the merge keeps convexity.
-    const polygonMerged = mergeAcrossEdge(polygon, pieces[b]!, shared);
+    const polygonMerged = mergeAcrossEdge(polygon, pieces[b]!, edge, second);
     return polygonMerged && { polygon: polygonMerged, otherIndex: b };
   }
   return null;
 }
 
-/** The shared edge that starts at corner `first` of `polygon`, or null. */
-function sharedEdgeAt(polygon: Polygon, first: number, other: Polygon): SharedEdge | null {
+/** The corner of `other` where the edge of `polygon` from corner `first` starts, run the other way, or null. */
+function sharedEdgeEnd(polygon: Polygon, first: number, other: Polygon): number | null {
   const start = polygon[first]!;
   const end = wrapped(polygon, first + 1);
   for (let second = 0; second < other.length; second++) {
     if (isSamePoint(end, other[second]!) && isSamePoint(start, wrapped(other, second + 1))) {
-      return { first, second };
+      return second;
     }
   }
   return null;
@@ -330,7 +325,7 @@ function isDiagonal(polygon: Polygon, i: number, j: number): boolean {
   return (
     inCone(wrapped(polygon, i - 1), from, wrapped(polygon, i + 1), to) &&
     inCone(wrapped(polygon, j - 1), to, wrapped(polygon, j + 1), from) &&
-    polygon.every((start, k) => !intersects(from, to, start, wrapped(polygon, k + 1)))
+    !crossesEdge(from, to, polygon)
   );
 }
 
@@ -345,7 +340,7 @@ function diagonalStates(polygon: Polygon): DiagonalState[][] {
       states[j]![i]!.isVisible = isDiagonal(polygon, i, j);
     }
   }
-  // The first and last corners are neighbours, not a diagonal.
+  // The loop reaches the pair of the first and last corners, which are neighbours, not a diagonal.
   states[count - 1]![0]!.isVisible = true;
   return states;
 }
@@ -385,8 +380,7 @@ export function triangulateMinimumWeight(polygon: Polygon): Triangle[] | null {
 
   const triangles: Triangle[] = [];
   const diagonals: [number, number][] = [[0, polygon.length - 1]];
-  for (let diagonal = diagonals.shift(); diagonal; diagonal = diagonals.shift()) {
-    const [from, to] = diagonal;
+  for (const [from, to] of diagonals) {
     const apex = states[to]![from]!.bestVertex;
     if (apex === -1) return null;
     triangles.push([polygon[from]!, polygon[apex]!, polygon[to]!]);

@@ -51,8 +51,7 @@ describe('a flat TextMesh of a glyph Godot fails to triangulate', () => {
 
 describe('a deep TextMesh of a glyph Godot fails to triangulate', () => {
   it('draws the sides and no faces', () => {
-    const faceless = vertexCount({ text: 'a', embolden: 1.2, skew: 0, depth: 0.05 });
-    expect(faceless).toBe(996);
+    expect(vertexCount({ text: 'a', embolden: 1.2, skew: 0, depth: 0.05 })).toBe(996);
   });
 
   it('draws the faces too where the glyph triangulates', () => {
