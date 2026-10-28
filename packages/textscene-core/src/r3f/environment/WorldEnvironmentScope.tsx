@@ -5,7 +5,7 @@
  * CameraAttributes choose apart (`worldExposure.tsx`).
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { createPortal } from '@react-three/fiber';
 import { EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer';
@@ -27,7 +27,7 @@ import { NO_RESOURCES } from '../SceneResourcesContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
-import { CanvasWorldSceneContext } from './canvasWorldScene';
+import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
@@ -59,7 +59,7 @@ export function WorldEnvironmentScope({ world, children }: { world: WorldKind; c
 /**
  * The world of a 2D canvas. Its viewport has no camera into it, so Godot draws none of it there
  * (`renderer_viewport.cpp:362`). Only its shared viewports draw it: one scene for all of them, with
- * the world's Environment, its shadow fit and its depth prepass applied once.
+ * the world's Environment, its shadow fit and its depth prepass applied once while one holds it.
  */
 export function CanvasWorldScope({ children }: { children: ReactNode }) {
   const scene = useMemo(() => {
@@ -67,38 +67,50 @@ export function CanvasWorldScope({ children }: { children: ReactNode }) {
     created.name = 'Canvas::world';
     return created;
   }, []);
-  useSceneShadowFit(scene);
-  useSceneDepthPrepass(scene);
+  const [holders, setHolders] = useState(0);
+  const world = useMemo<CanvasWorld>(
+    () => ({
+      scene,
+      hold: () => {
+        setHolders((count) => count + 1);
+        return () => setHolders((count) => count - 1);
+      },
+    }),
+    [scene]
+  );
+  const drawnScene = holders > 0 ? scene : null;
+  useSceneShadowFit(drawnScene);
+  useSceneDepthPrepass(drawnScene);
   return (
     <environments.Provider>
       <WorldCameraAttributesScope>
-        <CanvasWorldSceneContext.Provider value={scene}>
-          <CanvasWorldEnvironment scene={scene}>{children}</CanvasWorldEnvironment>
-        </CanvasWorldSceneContext.Provider>
+        <CanvasWorldContext.Provider value={world}>
+          <CanvasWorldEnvironment scene={drawnScene}>{children}</CanvasWorldEnvironment>
+        </CanvasWorldContext.Provider>
       </WorldCameraAttributesScope>
     </environments.Provider>
   );
 }
 
-function CanvasWorldEnvironment({ scene, children }: { scene: THREE.Scene; children: ReactNode }) {
+/** The canvas world's Environment, drawn into its scene only while that scene is drawn. */
+function CanvasWorldEnvironment({ scene, children }: { scene: THREE.Scene | null; children: ReactNode }) {
   const resolved = resolvedEnvironment(environments.useChosen());
   // The layer draws into the world's scene as a 3D view does, whatever the canvas draws.
-  const layer = createPortal(
-    <CanvasWorkspaceProvider workspace="3d">
-      <WorldKindProvider world="subViewport">
-        {resolved && <EnvironmentLayer {...resolved} />}
-      </WorldKindProvider>
-    </CanvasWorkspaceProvider>,
-    scene
-  );
+  const layer =
+    scene &&
+    createPortal(
+      <CanvasWorkspaceProvider workspace="3d">
+        <WorldKindProvider world="subViewport">
+          {resolved && <EnvironmentLayer {...resolved} />}
+        </WorldKindProvider>
+      </CanvasWorkspaceProvider>,
+      scene
+    );
   return (
-    <WorldToneMapProvider
-      settings={resolved?.settings ?? null}
-      resources={resolved?.resources ?? NO_RESOURCES}
-    >
+    <EnvironmentToneMap environment={resolved}>
       {layer}
       {children}
-    </WorldToneMapProvider>
+    </EnvironmentToneMap>
   );
 }
 
@@ -119,14 +131,10 @@ export function SharedWorldEnvironmentScope({ children }: { children: ReactNode 
 }
 
 function SharedWorldToneMap({ children }: { children: ReactNode }) {
-  const resolved = resolvedEnvironment(useViewEnvironment());
   return (
-    <WorldToneMapProvider
-      settings={resolved?.settings ?? null}
-      resources={resolved?.resources ?? NO_RESOURCES}
-    >
+    <EnvironmentToneMap environment={resolvedEnvironment(useViewEnvironment())}>
       {children}
-    </WorldToneMapProvider>
+    </EnvironmentToneMap>
   );
 }
 
@@ -172,11 +180,26 @@ function SubViewportEnvironment({ children }: { children: ReactNode }) {
   const resolved = resolvedEnvironment(useViewEnvironment());
   // One tree shape in either state, so a resolve never remounts the portal.
   return (
-    <WorldToneMapProvider
-      settings={resolved?.settings ?? null}
-      resources={resolved?.resources ?? NO_RESOURCES}
-    >
+    <EnvironmentToneMap environment={resolved}>
       {resolved && <EnvironmentLayer {...resolved} />}
+      {children}
+    </EnvironmentToneMap>
+  );
+}
+
+/** Tonemaps the world below with `environment`, or with Godot's defaults where it is null. */
+function EnvironmentToneMap({
+  environment,
+  children,
+}: {
+  environment: EnvironmentLayerProps | null;
+  children: ReactNode;
+}) {
+  return (
+    <WorldToneMapProvider
+      settings={environment?.settings ?? null}
+      resources={environment?.resources ?? NO_RESOURCES}
+    >
       {children}
     </WorldToneMapProvider>
   );

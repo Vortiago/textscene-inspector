@@ -7,8 +7,9 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
-import { useCanvasWorldScene } from '../../../r3f/environment/canvasWorldScene';
+import { useCanvasWorld, useDrawCanvasWorld } from '../../../r3f/environment/canvasWorldScene';
 import {
+  CanvasWorldScope,
   SharedWorldEnvironmentScope,
   WorldEnvironmentScope,
 } from '../../../r3f/environment/WorldEnvironmentScope';
@@ -160,9 +161,11 @@ function OffscreenViewport({
     return scene;
   }, [node.name]);
   // A portalled 3D pass in a shared world draws the canvas's world, which owns its scene's lights.
-  const canvasWorldScene = useCanvasWorldScene();
-  const drawsCanvasWorld = kind === '3d' && !ownWorld3D && !rendersInline && canvasWorldScene !== null;
-  const portalScene = drawsCanvasWorld ? canvasWorldScene : ownScene;
+  const portals3D = kind === '3d' && !rendersInline;
+  const canvasWorld = useCanvasWorld();
+  const drawnCanvasWorld = portals3D && !ownWorld3D ? canvasWorld : null;
+  useDrawCanvasWorld(drawnCanvasWorld);
+  const portalScene = drawnCanvasWorld?.scene ?? ownScene;
 
   // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
   const target = useMemo(
@@ -191,7 +194,7 @@ function OffscreenViewport({
   // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
   // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
-  const portalLightScene = kind === '3d' && !rendersInline && !drawsCanvasWorld ? portalScene : null;
+  const portalLightScene = portals3D && !drawnCanvasWorld ? ownScene : null;
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
@@ -304,7 +307,11 @@ function OffscreenViewport({
   });
 
   if (rendersInline) return stage;
-  const WorldScope = ownWorld3D ? OwnWorldEnvironmentScope : SharedWorldEnvironmentScope;
+  const WorldScope = !ownWorld3D
+    ? SharedWorldEnvironmentScope
+    : kind === '2d'
+      ? OwnCanvasWorldScope
+      : OwnWorldEnvironmentScope;
   // The portal declares the workspace its content needs, not the host's, which
   // could drop it. The portal scene is detached, so no host CanvasItem transform
   // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
@@ -358,4 +365,13 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
 /** The world of a viewport with `own_world_3d`. */
 function OwnWorldEnvironmentScope({ children }: { children: ReactNode }) {
   return <WorldEnvironmentScope world="subViewport">{children}</WorldEnvironmentScope>;
+}
+
+/** An own world drawn as a 2D canvas, whose shared viewports draw its World3D, not the parent's. */
+function OwnCanvasWorldScope({ children }: { children: ReactNode }) {
+  return (
+    <OwnWorldEnvironmentScope>
+      <CanvasWorldScope>{children}</CanvasWorldScope>
+    </OwnWorldEnvironmentScope>
+  );
 }

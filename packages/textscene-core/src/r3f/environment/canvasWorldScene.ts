@@ -4,14 +4,29 @@
  * (`viewport.cpp:4670-4681`), so their nodes share one scene.
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useLayoutEffect } from 'react';
 import type * as THREE from 'three';
 
-/** Written only by `CanvasWorldScope`. Null outside a 2D canvas. */
-export const CanvasWorldSceneContext = createContext<THREE.Scene | null>(null);
-CanvasWorldSceneContext.displayName = 'CanvasWorldSceneContext';
+/** A 2D canvas's World3D. */
+export interface CanvasWorld {
+  scene: THREE.Scene;
+  /** Keeps the world drawn until the returned release runs. */
+  hold: () => () => void;
+}
 
-/** The scene of the enclosing 2D canvas's World3D, or null outside one. */
-export function useCanvasWorldScene(): THREE.Scene | null {
-  return useContext(CanvasWorldSceneContext);
+/** Written only by `CanvasWorldScope`. Null outside a 2D canvas. */
+export const CanvasWorldContext = createContext<CanvasWorld | null>(null);
+CanvasWorldContext.displayName = 'CanvasWorldContext';
+
+/** The World3D of the enclosing 2D canvas, or null outside one. */
+export function useCanvasWorld(): CanvasWorld | null {
+  return useContext(CanvasWorldContext);
+}
+
+/**
+ * Keeps `world` drawn while the caller is mounted. A world nobody draws applies no Environment,
+ * shadow fit or depth prepass, as Godot draws no World3D without a camera into it.
+ */
+export function useDrawCanvasWorld(world: CanvasWorld | null): void {
+  useLayoutEffect(() => world?.hold(), [world]);
 }
