@@ -4035,6 +4035,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Camera Environment",
+    "file": "unit-sub-viewport-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container 2d Content",
     "file": "unit-sub-viewport-container-2d-content.tscn",
     "category": "Unit - Viewports"

@@ -12,7 +12,12 @@ import { PreviewEnvironment } from '../preview/PreviewEnvironment';
 import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
-import { SharedWorldExposureScope, WorldCameraAttributesScope, WorldExposureScope } from './worldExposure';
+import {
+  SharedWorldExposureScope,
+  WorldCameraAttributesScope,
+  WorldExposureScope,
+  useRenderCameraEnvironment,
+} from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
 import { WorldToneMapProvider } from './worldToneMap';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
@@ -72,15 +77,15 @@ function CanvasWorldEnvironment({ children }: { children: ReactNode }) {
 }
 
 /**
- * A sub-viewport's portal into its parent's world. Godot keys a world's WorldEnvironment group by
- * its scenario (`world_environment.cpp:76-85`), so a node inside publishes to the parent's chooser,
- * whose first node in tree order wins for both, and the portal draws with the parent's choice.
+ * A sub-viewport's portal into its parent's world, which only a 2D canvas portals. Godot keys a
+ * world's WorldEnvironment group by its scenario (`world_environment.cpp:76-85`), so a node inside
+ * publishes to the parent's chooser, whose first node in tree order wins for both.
  */
 export function SharedWorldEnvironmentScope({ children }: { children: ReactNode }) {
   return (
     <WorldKindProvider world="subViewport">
       <SharedWorldExposureScope>
-        <SharedWorldEnvironment>{children}</SharedWorldEnvironment>
+        <SubViewportEnvironment>{children}</SubViewportEnvironment>
       </SharedWorldExposureScope>
     </WorldKindProvider>
   );
@@ -92,9 +97,9 @@ export function SharedWorldEnvironmentScope({ children }: { children: ReactNode 
  * since each walks the whole live tree.
  */
 function RootEnvironment({ children }: { children: ReactNode }) {
-  const authored = environments.useChosen();
+  const authored = useViewEnvironment();
   const preview = usePreviewYield();
-  // A publication proves a WorldEnvironment node, which takes the preview away by type.
+  // An authored Environment proves a WorldEnvironment node or a camera's, and takes the preview away.
   const showsPreview = !authored && preview.environment;
   const resolved = resolvedEnvironment(authored);
   const applied = showsPreview ? previewEnvironment().settings : (resolved?.settings ?? null);
@@ -125,7 +130,7 @@ function RootEnvironmentLayer({
  * adds a layer here, and a missing one leaves the root's clear colour alone.
  */
 function SubViewportEnvironment({ children }: { children: ReactNode }) {
-  const resolved = resolvedEnvironment(environments.useChosen());
+  const resolved = resolvedEnvironment(useViewEnvironment());
   // One tree shape in either state, so a resolve never remounts the portal.
   return (
     <WorldToneMapProvider
@@ -138,15 +143,15 @@ function SubViewportEnvironment({ children }: { children: ReactNode }) {
   );
 }
 
-/** The parent world's Environment drawn into the portal. Its tonemap is the parent's already. */
-function SharedWorldEnvironment({ children }: { children: ReactNode }) {
-  const resolved = resolvedEnvironment(environments.useChosen());
-  return (
-    <>
-      {resolved && <EnvironmentLayer {...resolved} />}
-      {children}
-    </>
-  );
+/**
+ * The Environment a viewport renders with. A camera's resolved one replaces the world's
+ * (`renderer_scene_cull.cpp:3594-3597`). While it loads the world's holds, since Godot has no load
+ * gap to show.
+ */
+function useViewEnvironment(): EnvironmentResolution | null {
+  const camera = useRenderCameraEnvironment();
+  const world = environments.useChosen();
+  return camera?.status === 'resolved' ? camera : world;
 }
 
 function resolvedEnvironment(authored: EnvironmentResolution | null): EnvironmentLayerProps | null {

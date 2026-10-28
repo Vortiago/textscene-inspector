@@ -78,6 +78,8 @@ export const TILE_AND_TARGET_SCENES = [
   // The shared world's glow runs inside the target: the quad shows the bloom around the emissive
   // sphere that only the target sees.
   { name: 'sub-viewport-shared-world-glow', file: 'unit-sub-viewport-shared-world-glow.tscn' },
+  // A Camera3D's own Environment glows its own-world target, with no WorldEnvironment in the world.
+  { name: 'sub-viewport-camera-environment', file: 'unit-sub-viewport-camera-environment.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },

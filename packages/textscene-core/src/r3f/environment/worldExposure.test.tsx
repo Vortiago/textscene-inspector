@@ -126,7 +126,7 @@ function PublishingCamera({
   current: boolean;
   cameraAttributes: CameraAttributesResolution;
 }) {
-  usePublishCamera(path, current, cameraAttributes);
+  usePublishCamera(path, current, { attributes: cameraAttributes, environment: NO_RESOLUTION });
   return null;
 }
 
