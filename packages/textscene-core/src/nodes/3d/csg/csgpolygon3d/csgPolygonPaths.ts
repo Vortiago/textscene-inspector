@@ -1,7 +1,7 @@
 /**
  * CSGPolygon3D `path_node` resolution pass (Godot MODE_PATH). In PATH mode the outline sweeps
  * along a curve on a different node, reached by a NodePath that a render component cannot reach.
- * It runs on the live stage (ADR-0060), as Godot resolves `path_node` with `get_node_or_null` on the
+ * It is a live scene pass (ADR-0060), as Godot resolves `path_node` with `get_node_or_null` on the
  * live tree (`csg_shape.cpp:2176`), across an instance border too. It reads where the RemoteTransform
  * pass left the nodes, so it takes that pass's result.
  */
@@ -10,13 +10,9 @@ import type { LiveLink, LiveTree } from '../../../../r3f/liveSceneTree.js';
 import type { CSGPolygon3DProperties } from './types.js';
 import type { Path3DProperties } from '../../../../nodes/paths/path3d/types.js';
 import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform.js';
-import { nodePathUniquePaths } from '../../../../r3f/nodePathUniqueNames.js';
+import { uniquePathsOfLiteral } from '../../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../../r3f/nodePatch.js';
-import {
-  resolveNodePathLiteral,
-  unclaimedUniqueNames,
-  UNIQUE_NODE_PREFIX,
-} from '../../../../godot/string/nodePath.js';
+import { resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../godot/string/nodePath.js';
 import { resolveCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import { warnOnce } from '../../../../utils/warnOnce.js';
 
@@ -51,11 +47,8 @@ function resolvedPathOf(
   const props = node.properties as CSGPolygon3DProperties;
   if (node.type !== 'CSGPolygon3D' || props.mode !== MODE_PATH) return undefined;
 
-  // `path_node = NodePath("%Track")` addresses the owner's claim table, not a child. Only a
-  // `%Name` segment reads the table, which allocates for each polygon on each load.
-  const uniquePaths = props.pathNode?.includes(UNIQUE_NODE_PREFIX)
-    ? nodePathUniquePaths(polygon.path, tree.roots, tree.ctx)
-    : undefined;
+  // `path_node = NodePath("%Track")` addresses the owner's claim table, not a child.
+  const uniquePaths = uniquePathsOfLiteral(props.pathNode, polygon.path, tree);
   const targetPath = resolveNodePathLiteral(polygon.path, props.pathNode, uniquePaths);
   if (!targetPath) {
     // A unique name nothing claims is a dangling reference, not a path that deliberately

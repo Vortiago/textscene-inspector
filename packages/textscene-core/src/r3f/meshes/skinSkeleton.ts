@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { Transform3D } from '../../godot/math/transform3d.js';
 import { transform3DToMatrix } from '../nodeTreeTransforms.js';
+import { sameData } from '../../utils/sameData.js';
 import { useByValue } from '../hooks/useByValue.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
@@ -53,7 +54,7 @@ class FrozenSkeleton extends THREE.Skeleton {
 }
 
 function sameMatrices(a: readonly Transform3D[] | undefined, b: readonly Transform3D[] | undefined): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return sameData(a, b);
 }
 
 /**

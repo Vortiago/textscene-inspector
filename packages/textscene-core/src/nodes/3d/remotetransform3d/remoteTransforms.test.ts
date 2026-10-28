@@ -6,9 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { TscnParser } from '../../../parser/TscnParser';
-import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
 import type { NodePatches } from '../../../r3f/nodePatch';
 import { decomposeTransform3D } from '../../../utils/transform';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
@@ -17,10 +15,7 @@ import { applyRemoteTransforms } from './remoteTransforms';
 
 /** What the pass binds in `content`'s live tree, with each scene of `scenes` loaded. */
 function placementsOf(content: string, scenes: Readonly<Record<string, string>> = {}): NodePatches {
-  const parse = (text: string) => new TscnParser().parse(text);
-  const main = parse(content);
-  const loaded = Object.fromEntries(Object.entries(scenes).map(([path, text]) => [path, parse(text)]));
-  return applyRemoteTransforms(liveTreeOf(main.nodes, contextOver(main, loaded)));
+  return applyRemoteTransforms(liveTreeOfText(content, scenes));
 }
 
 function targetTransform3D(placements: NodePatches, path: string) {

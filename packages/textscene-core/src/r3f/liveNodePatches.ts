@@ -49,8 +49,8 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
 }
 
 /**
- * Every patch of `tree`. The transform stage runs before the path stage, since a path reads where
- * the nodes ended up.
+ * Every patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass, since a
+ * path reads where the nodes ended up.
  */
 export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
   const transforms = applyRemoteTransforms(tree);
@@ -63,8 +63,16 @@ export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
  * CSGPolygon3D, which is a Node3D.
  */
 function canTakePatch(type: string): boolean {
-  return descendsFromClass(type, 'Node3D') || descendsFromClass(type, 'Node2D');
+  let can = canTakeByType.get(type);
+  if (can === undefined) {
+    can = descendsFromClass(type, 'Node3D') || descendsFromClass(type, 'Node2D');
+    canTakeByType.set(type, can);
+  }
+  return can;
 }
+
+/** {@link canTakePatch} by type, since each node asks on every render. Written only by it. */
+const canTakeByType = new Map<string, boolean>();
 
 /**
  * `node` as the live passes bind it at the live path `path`, and the same node where none does. A
@@ -77,6 +85,7 @@ export function useLivePatchedNode<N extends TscnNode | null>(node: N, path: str
 
 /** The patches of the nodes below the live path `path`, for a reader that walks a subtree itself. */
 function patchesBelow(patches: NodePatches, path: string): NodePatches {
+  if (patches.size === 0) return NO_PATCHES;
   const below = new Map<string, NodePatch>();
   for (const [patchPath, patch] of patches) {
     if (patchPath.startsWith(`${path}/`)) below.set(patchPath, patch);

@@ -2,7 +2,7 @@
  * The RemoteTransform pass. A RemoteTransform3D or RemoteTransform2D copies its own transform onto
  * the node its `remote_path` names on enter-tree (Godot's `_update_remote()`), so a static render
  * shows the target at the relay's transform. It is a description-level effect, not simulation, so
- * ADR-0008 (what a node draws) does not govern it. It runs on the live stage (ADR-0060), as Godot
+ * ADR-0008 (what a node draws) does not govern it. It is a live scene pass (ADR-0060), as Godot
  * resolves the path with `get_node` on the live tree (`remote_transform_3d.cpp:35-36`), across an
  * instance border too. Semantics are measured on Godot 4.6.3.
  */
@@ -11,10 +11,10 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../../../godot/string/nodePath.js';
+import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
-import { nodePathUniquePaths } from '../../../r3f/nodePathUniqueNames.js';
+import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
@@ -65,11 +65,11 @@ export function applyRemoteTransforms(tree: LiveTree): NodePatches {
 /** The node `relay`'s `remote_path` names, when it descends from `targetClass`, else null. */
 function remoteTargetOf(relay: LiveLink, tree: LiveTree, targetClass: 'Node3D' | 'Node2D'): LiveLink | null {
   const remotePath = (relay.step.node.properties as RelayProps).remote_path;
-  // Only a `%Name` segment reads the table, which allocates for each relay on each load.
-  const uniquePaths = remotePath?.includes(UNIQUE_NODE_PREFIX)
-    ? nodePathUniquePaths(relay.path, tree.roots, tree.ctx)
-    : undefined;
-  const targetPath = resolveNodePathLiteral(relay.path, remotePath, uniquePaths);
+  const targetPath = resolveNodePathLiteral(
+    relay.path,
+    remotePath,
+    uniquePathsOfLiteral(remotePath, relay.path, tree)
+  );
   const target = targetPath === null ? null : tree.at(targetPath);
   return target && descendsFromClass(target.step.node.type, targetClass) ? target : null;
 }
@@ -84,20 +84,50 @@ function readFlags(props: RelayProps): RemoteFlags {
   };
 }
 
-function placeTarget3D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
-  const target = remoteTargetOf(relay, tree, 'Node3D');
-  if (!target) return;
+/** What a relay places: its target, flags and the chains that carry both to the scene root. */
+interface Placement {
+  readonly target: LiveLink;
+  readonly flags: RemoteFlags;
+  readonly relayChain: Map<string, TscnNode>;
+  readonly targetChain: Map<string, TscnNode>;
+  readonly parentPath: string | null;
+}
+
+/** The placement of `relay` onto a `targetClass` node, or null where it drives nothing. */
+function placementOf(
+  relay: LiveLink,
+  tree: LiveTree,
+  placed: Map<string, NodePatch>,
+  targetClass: 'Node3D' | 'Node2D'
+): Placement | null {
+  const target = remoteTargetOf(relay, tree, targetClass);
+  if (!target) return null;
 
   const flags = readFlags(relay.step.node.properties as RelayProps);
   // Local mode leaves the target at its authored transform in a static render (a matched pair,
   // measured). `_update_remote` keys off the relay's transform-changed notification, which the
   // global path satisfies on load and the local path does not.
-  if (!flags.useGlobal) return;
+  if (!flags.useGlobal) return null;
 
-  const relayGlobal = globalMatrix3D(relay.path, nodesOnTheWayTo(tree, relay.path, placed));
-  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
-  const desired = composeSelected3D(globalMatrix3D(target.path, targetChain), relayGlobal, flags);
-  const parentPath = parentPathOf(target.path);
+  return {
+    target,
+    flags,
+    relayChain: nodesOnTheWayTo(tree, relay.path, placed),
+    targetChain: nodesOnTheWayTo(tree, target.path, placed),
+    parentPath: parentPathOf(target.path),
+  };
+}
+
+function placeTarget3D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
+  const placement = placementOf(relay, tree, placed, 'Node3D');
+  if (!placement) return;
+  const { target, flags, relayChain, targetChain, parentPath } = placement;
+
+  const desired = composeSelected3D(
+    globalMatrix3D(target.path, targetChain),
+    globalMatrix3D(relay.path, relayChain),
+    flags
+  );
   const parentGlobal = parentPath ? globalMatrix3D(parentPath, targetChain) : new THREE.Matrix4();
   const newLocal = parentGlobal.clone().invert().multiply(desired);
 
@@ -129,17 +159,15 @@ function composeSelected3D(base: THREE.Matrix4, source: THREE.Matrix4, flags: Re
 }
 
 function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
-  const target = remoteTargetOf(relay, tree, 'Node2D');
-  if (!target) return;
+  const placement = placementOf(relay, tree, placed, 'Node2D');
+  if (!placement) return;
+  const { target, flags, relayChain, targetChain, parentPath } = placement;
 
-  const flags = readFlags(relay.step.node.properties as RelayProps);
-  // Local mode leaves the target in place, as in `placeTarget3D`.
-  if (!flags.useGlobal) return;
-
-  const relayGlobal = globalTransform2D(relay.path, nodesOnTheWayTo(tree, relay.path, placed));
-  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
-  const desired = composeSelected2D(globalTransform2D(target.path, targetChain), relayGlobal, flags);
-  const parentPath = parentPathOf(target.path);
+  const desired = composeSelected2D(
+    globalTransform2D(target.path, targetChain),
+    globalTransform2D(relay.path, relayChain),
+    flags
+  );
   const parentGlobal = parentPath ? globalTransform2D(parentPath, targetChain) : TRANSFORM2D_IDENTITY;
   const newLocal = multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
 

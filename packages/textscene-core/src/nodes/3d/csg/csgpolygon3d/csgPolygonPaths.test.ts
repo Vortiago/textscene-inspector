@@ -6,9 +6,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TscnParser } from '../../../../parser/TscnParser';
-import { liveTreeOf } from '../../../../r3f/liveSceneTree';
-import { contextOver } from '../../../../r3f/liveSceneTree.testkit';
+import { liveTreeOfText } from '../../../../r3f/liveSceneTree.testkit';
 import type { NodePatches } from '../../../../r3f/nodePatch';
 import { resolveCsgPolygonPaths } from './csgPolygonPaths';
 import * as logger from '../../../../logger';
@@ -31,10 +29,7 @@ function patchesOf(
   scenes: Readonly<Record<string, string>> = {},
   placed: NodePatches = new Map()
 ): NodePatches {
-  const parse = (text: string) => new TscnParser().parse(text);
-  const main = parse(content);
-  const loaded = Object.fromEntries(Object.entries(scenes).map(([path, text]) => [path, parse(text)]));
-  return resolveCsgPolygonPaths(liveTreeOf(main.nodes, contextOver(main, loaded)), placed);
+  return resolveCsgPolygonPaths(liveTreeOfText(content, scenes), placed);
 }
 
 /** The path the pass resolves for the polygon at the live path `path`. */
@@ -143,7 +138,7 @@ curve = SubResource("Curve3D_road")`;
     expect(base!.origin.y).toBeCloseTo(5, 5);
   });
 
-  it('reads the transform a RemoteTransform moved the Path3D to, since paths run after transforms', () => {
+  it('reads the transform a RemoteTransform moved the Path3D to, since the path pass runs after the RemoteTransform pass', () => {
     const moved = new Map([
       [
         'Root/Road/Path3D',
