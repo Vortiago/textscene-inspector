@@ -6,7 +6,8 @@ import { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { createPushStore, type PushStore } from '../contexts/pushStore';
+import type { PushStore } from '../contexts/pushStore';
+import { newPushStore } from '../contexts/pushStore.testkit';
 import { usePushedWrites, type PushedClip } from './usePushedWrites';
 
 /** A mixer playing a 1 s clip named `name`, with the action ready at time 0. */
@@ -41,7 +42,7 @@ function Harness(props: {
 }
 
 async function mount(isPlaying = true) {
-  const store = createPushStore<number>();
+  const store = newPushStore<number>();
   const actions = actionsFor('clip');
   const clip = clipNamed('clip');
   const renderer = await ReactThreeTestRenderer.create(
@@ -122,12 +123,7 @@ describe('usePushedWrites', () => {
     const actions = actionsFor('clip');
     const sample = vi.fn((time: number, out: Map<string, number>) => void out.set('a', time));
     const renderer = await ReactThreeTestRenderer.create(
-      <Harness
-        store={createPushStore<number>()}
-        clip={{ name: 'clip', sample }}
-        isPlaying
-        actions={actions}
-      />
+      <Harness store={newPushStore<number>()} clip={{ name: 'clip', sample }} isPlaying actions={actions} />
     );
 
     await renderer.advanceFrames(3, 0.016);
@@ -136,7 +132,7 @@ describe('usePushedWrites', () => {
   });
 
   it('releases every key on unmount', async () => {
-    const store = createPushStore<number>();
+    const store = newPushStore<number>();
     const actions = actionsFor('clip');
     const renderer = await ReactThreeTestRenderer.create(
       <Harness store={store} clip={clipNamed('clip')} isPlaying actions={actions} />

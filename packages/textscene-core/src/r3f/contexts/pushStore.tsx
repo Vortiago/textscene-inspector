@@ -16,7 +16,7 @@ export interface PushStore<T> {
   subscribe(key: string, listener: Listener<T>): () => void;
 }
 
-export function createPushStore<T>(): PushStore<T> {
+function createPushStore<T>(): PushStore<T> {
   /** Written only by `set`: the values written now. A release deletes the key. */
   const values = new Map<string, T>();
   const listeners = new Map<string, Set<Listener<T>>>();

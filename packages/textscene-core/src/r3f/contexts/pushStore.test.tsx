@@ -5,11 +5,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { createPushStore, createPushStoreContext } from './pushStore';
+import { createPushStoreContext } from './pushStore';
+import { newPushStore } from './pushStore.testkit';
 
-describe('createPushStore', () => {
+describe('a push store', () => {
   it('hands a pushed value to every listener of that key, and to no other key', () => {
-    const store = createPushStore<number[]>();
+    const store = newPushStore<number[]>();
     const first = vi.fn();
     const second = vi.fn();
     const other = vi.fn();
@@ -25,7 +26,7 @@ describe('createPushStore', () => {
   });
 
   it('hands the pushed value to a listener that subscribes later', () => {
-    const store = createPushStore<number[]>();
+    const store = newPushStore<number[]>();
     store.set('a', [1]);
     const late = vi.fn();
 
@@ -35,7 +36,7 @@ describe('createPushStore', () => {
   });
 
   it('releases with null, which listeners see and later listeners do not get', () => {
-    const store = createPushStore<number[]>();
+    const store = newPushStore<number[]>();
     const listener = vi.fn();
     const late = vi.fn();
     store.subscribe('a', listener);
@@ -49,7 +50,7 @@ describe('createPushStore', () => {
   });
 
   it('stops pushing to a listener that unsubscribed, and keeps the others', () => {
-    const store = createPushStore<number[]>();
+    const store = newPushStore<number[]>();
     const gone = vi.fn();
     const kept = vi.fn();
     const unsubscribe = store.subscribe('a', gone);
@@ -63,7 +64,7 @@ describe('createPushStore', () => {
   });
 
   it('lets a stale unsubscribe leave a listener that subscribed after it (edge case)', () => {
-    const store = createPushStore<number[]>();
+    const store = newPushStore<number[]>();
     const stale = vi.fn();
     const current = vi.fn();
     const unsubscribeStale = store.subscribe('a', stale);
