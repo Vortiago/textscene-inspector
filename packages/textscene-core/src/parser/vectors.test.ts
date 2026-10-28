@@ -4,7 +4,7 @@
  * The `vec2Or` family in valueParsers.ts adds fallback-on-error.
  */
 import { describe, it, expect } from 'vitest';
-import { parseVector2, parseVector3 } from './vectors';
+import { parseQuaternion, parseVector2, parseVector3 } from './vectors';
 
 describe('parseVector2', () => {
   it('parses a standard vector', () => {
@@ -88,6 +88,22 @@ describe('parseVector3', () => {
  * `can_convert_strict` converts them, but `_parse_construct<int32_t>`
  * (`variant_parser.cpp:721-733`) narrows their arguments to int32 before the widening.
  */
+describe('parseQuaternion', () => {
+  it('parses a standard quaternion, x first and w last', () => {
+    expect(parseQuaternion('Quaternion(0, 0, 0.5, 0.866025)')).toEqual({ x: 0, y: 0, z: 0.5, w: 0.866025 });
+  });
+
+  it('tolerates white space and scientific notation', () => {
+    expect(parseQuaternion(' Quaternion ( 1e-2 , 0,0 , 1 ) ')).toEqual({ x: 0.01, y: 0, z: 0, w: 1 });
+  });
+
+  it('throws on wrong arity, a non-number and a component that overflows', () => {
+    expect(() => parseQuaternion('Quaternion(0, 0, 1)')).toThrow('Invalid Quaternion');
+    expect(() => parseQuaternion('Quaternion(a, 0, 0, 1)')).toThrow('Invalid Quaternion');
+    expect(() => parseQuaternion('Quaternion(1e999, 0, 0, 1)')).toThrow('Non-finite Quaternion');
+  });
+});
+
 describe('an i-suffixed spelling in a float slot', () => {
   it('narrows each component to int32 the way Godot stores it', () => {
     expect(parseVector2('Vector2i(4294967295, 0)')).toEqual({ x: -1, y: 0 });

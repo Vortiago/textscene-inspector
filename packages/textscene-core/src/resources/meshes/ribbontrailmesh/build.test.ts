@@ -1,12 +1,14 @@
 /**
  * RibbonTrailMesh build, ported from `RibbonTrailMesh::_create_mesh_array`
- * (`primitive_meshes.cpp:2879-3004`). The curve scales the width of each row (`:2921-2924`).
+ * (`primitive_meshes.cpp:2879-3004`). The curve scales the width of each row (`:2921-2924`). Each row
+ * blends its section's bone into the next (`:2911-2964`).
  */
 
 import { describe, expect, it } from 'vitest';
 import { curveOf, point } from '../../curves/curve/curve.testkit';
 import { EMPTY_CURVE } from '../../curves/curve/types';
 import { expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
+import type { GodotSurface } from '../godotSurface';
 import { buildRibbonTrailMeshSurface } from './build';
 import type { RibbonTrailMeshProperties } from './types';
 
@@ -23,6 +25,22 @@ const COARSE_FLAT: RibbonTrailMeshProperties = {
 const COARSE_CROSS: RibbonTrailMeshProperties = { ...COARSE_FLAT, isCross: true };
 
 const SHRINKING = curveOf(point(0, 1), point(1, 0.2));
+
+/** Godot's defaults: 5 sections of 3 segments, so 16 rows and 6 bones. */
+const DEFAULT_RIBBON: RibbonTrailMeshProperties = {
+  ...COARSE_FLAT,
+  sections: 5,
+  sectionSegments: 3,
+  sectionLength: 0.2,
+};
+
+/** The bone indices and weights of vertex `vertex`. */
+function bonesOf(surface: GodotSurface, vertex: number) {
+  return {
+    indices: vertexOf(surface.bones?.indices, vertex, 4),
+    weights: vertexOf(surface.bones?.weights, vertex, 4),
+  };
+}
 
 describe('buildRibbonTrailMeshSurface', () => {
   describe('flat', () => {
@@ -145,6 +163,64 @@ describe('buildRibbonTrailMeshSurface', () => {
       const surface = buildRibbonTrailMeshSurface({ ...COARSE_FLAT, curve: EMPTY_CURVE });
 
       expect(surface.positions).toEqual(buildRibbonTrailMeshSurface(COARSE_FLAT).positions);
+    });
+  });
+
+  describe('bone arrays', () => {
+    // Row `j` takes bone `j / 3` and the one after it, capped at the last bone (`:2943-2961`).
+    it('blends the bone of the first row of a section fully into that bone', () => {
+      const { indices, weights } = bonesOf(buildRibbonTrailMeshSurface(DEFAULT_RIBBON), 0);
+
+      expect(indices).toEqual([0, 1, 0, 0]);
+      expect(weights).toEqual([1, 0, 0, 0]);
+    });
+
+    it('shifts the weight to the next bone a third at a time down a section', () => {
+      const surface = buildRibbonTrailMeshSurface(DEFAULT_RIBBON);
+
+      // Row 1 is vertex 2 and row 2 is vertex 4.
+      const rowOne = bonesOf(surface, 2);
+      expect(rowOne.indices).toEqual([0, 1, 0, 0]);
+      expect(rowOne.weights[0]).toBeCloseTo(2 / 3, 6);
+      expect(rowOne.weights[1]).toBeCloseTo(1 / 3, 6);
+      const rowTwo = bonesOf(surface, 4);
+      expect(rowTwo.weights[0]).toBeCloseTo(1 / 3, 6);
+      expect(rowTwo.weights[1]).toBeCloseTo(2 / 3, 6);
+    });
+
+    it('starts the next section on the next bone at full weight', () => {
+      const { indices, weights } = bonesOf(buildRibbonTrailMeshSurface(DEFAULT_RIBBON), 6);
+
+      expect(indices).toEqual([1, 2, 0, 0]);
+      expect(weights).toEqual([1, 0, 0, 0]);
+    });
+
+    it('holds the last row on the last bone, which has no bone after it', () => {
+      const surface = buildRibbonTrailMeshSurface(DEFAULT_RIBBON);
+
+      expect(surface.bones!.indices.length).toBe(32 * 4);
+      expect(bonesOf(surface, 31).indices).toEqual([5, 5, 0, 0]);
+      expect(bonesOf(surface, 31).weights).toEqual([1, 0, 0, 0]);
+    });
+
+    it('gives every vertex of a cross row the same pair', () => {
+      const surface = buildRibbonTrailMeshSurface({ ...DEFAULT_RIBBON, isCross: true });
+      const rowThree = [12, 13, 14, 15].map((vertex) => bonesOf(surface, vertex));
+
+      expect(surface.bones!.indices.length).toBe(64 * 4);
+      expect(rowThree.map((row) => row.indices)).toEqual(Array(4).fill([1, 2, 0, 0]));
+      expect(rowThree.map((row) => row.weights)).toEqual(Array(4).fill([1, 0, 0, 0]));
+      expect(bonesOf(surface, 63).indices).toEqual([5, 5, 0, 0]);
+    });
+
+    it('binds a ribbon of one segment in each section to each bone in turn', () => {
+      const surface = buildRibbonTrailMeshSurface(COARSE_FLAT);
+
+      expect([0, 2, 4].map((vertex) => bonesOf(surface, vertex).indices)).toEqual([
+        [0, 1, 0, 0],
+        [1, 2, 0, 0],
+        [2, 2, 0, 0],
+      ]);
     });
   });
 });
