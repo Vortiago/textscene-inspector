@@ -80,13 +80,12 @@ export function useSurfaceTextures(
   const flowmap = useRepackedFlowmap(sources.anisotropy_flowmap, scalars !== null && isAnisotropic(scalars));
   const drawn = useEachSlot(useDrawnSlot, { ...sources, anisotropy_flowmap: flowmap }, states);
 
-  const albedoTargetUv = drawn.albedo_texture?.isRenderTargetTexture ? states?.uv1.uv : undefined;
   const maps = TEXTURE_SLOTS.map((slot) => drawn[slot]);
   const textures = useMemo(
-    (): ResolvedTextures => ({ ...drawn, albedoTargetUv }),
+    (): ResolvedTextures => ({ ...drawn }),
     // `maps` has one entry per slot, a fixed length, and stands for `drawn`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [...maps, albedoTargetUv]
+    maps
   );
 
   const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing);

@@ -34,6 +34,9 @@ import {
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
+import { isLiveTarget, liveTargetCrop } from '../r3f/liveTargets.js';
+import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
+import { pinColorSpace } from './textures/textureView.js';
 
 export interface Texture2DResult {
   /**
@@ -65,19 +68,33 @@ export function useTexture2D(
   // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
   // tables the atlas sits in, so a re-parse of the scene or of its resource file invalidates it.
   const { atlas, source, atlasResources } = slot;
-  // The crop copies the sheet's pixels, and a ViewportTexture's live target has none to copy.
-  const isLiveSheet = source?.isRenderTargetTexture === true;
+  const isLiveSheet = source !== null && isLiveTarget(source);
   const cropped = useMemo(
     () => (atlas && !isLiveSheet ? resolveAtlasTexture(atlas, source, atlasResources) : null),
     [atlas, isLiveSheet, source, atlasResources]
   );
   useProceduralTexturePins(cropped ? [cropped.key] : []);
+  const liveCrop = useLiveCrop(atlas, isLiveSheet ? source : null);
 
   if (!atlas) return slot.result;
-  if (isLiveSheet) return LIVE_SHEET_CELL;
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
-  return { ...slot.result, texture: cropped?.texture ?? null };
+  return { ...slot.result, texture: liveCrop ?? cropped?.texture ?? null };
+}
+
+/**
+ * The cell `atlas` cuts out of a live target, refilled after each render of the target as Godot's
+ * AtlasTexture draws from the live RID. This slot owns it and frees it once it stops drawing it.
+ */
+function useLiveCrop(atlas: AtlasTextureReference | null, sheet: THREE.Texture | null): THREE.Texture | null {
+  const crop = useMemo(() => {
+    if (!atlas || !sheet) return null;
+    const layout = atlasTextureLayout(atlas.texture, sheet.image as { width: number; height: number });
+    // Pinned, as the sheet is: R3F reasserts `SRGBColorSpace` on a `map` every commit.
+    return layout && pinColorSpace(liveTargetCrop(sheet, layout), sheet.colorSpace as THREE.ColorSpace);
+  }, [atlas, sheet]);
+  useDisposeOnRelease(crop);
+  return crop;
 }
 
 export interface Texture2DRidResult extends Texture2DResult {
@@ -104,8 +121,6 @@ export function useTexture2DRid(
 }
 
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
-
-const LIVE_SHEET_CELL: Texture2DResult = { ...NOTHING, missing: true };
 
 const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
 

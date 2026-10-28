@@ -78,13 +78,13 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
 `;
 
 describe('ViewportTexture end to end', () => {
-  it("the quad's albedo map is the sub-viewport's published target", async () => {
+  it("the quad's albedo map is its own copy of the sub-viewport's published target", async () => {
     const renderer = await renderScene(UNIT_FIXTURE);
     const maps = materials(renderer)
       .map((material) => (material as THREE.MeshStandardMaterial).map)
       .filter((map): map is THREE.Texture => !!map);
     expect(maps).toHaveLength(1);
-    expect(maps[0]!.name).toBe('SubViewport::target');
+    expect(maps[0]!.name).toBe('SubViewport::target::copy');
   });
 
   /**
@@ -129,8 +129,9 @@ texture = SubResource("ViewportTexture_1")
     const maps = materials(renderer)
       .map((material) => (material as THREE.MeshBasicMaterial).map)
       .filter((map): map is THREE.Texture => !!map);
-    // A canvas item samples the plain view, which a 3D target serves as a copy of its bytes.
-    expect(maps.map((map) => map.name)).toContain('SubViewport::target::plain');
+    // A canvas item samples the plain view, which a 3D target serves as a copy of its bytes, and
+    // the sprite reads its own copy of that view.
+    expect(maps.map((map) => map.name)).toContain('SubViewport::target::plain::copy');
   });
 
   /**

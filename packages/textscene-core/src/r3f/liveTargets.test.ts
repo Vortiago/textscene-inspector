@@ -1,0 +1,115 @@
+/**
+ * A live target is shared by every reader, as Godot's ViewportTexture RID is, but each Godot reader
+ * samples it with its own window, wrap and filter. A reader whose sampler differs from the target's
+ * reads its own copy, which the target's pass refills after each render.
+ */
+import { afterEach, describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { liveTargetCrop, publishLiveTarget } from './liveTargets';
+import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
+import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { copiesFilledFrom } from './liveTargets.testkit';
+
+const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
+
+let withdrawals: (() => void)[] = [];
+afterEach(() => {
+  withdrawals.forEach((withdraw) => withdraw());
+  withdrawals = [];
+});
+
+/** A canvas target its pass publishes, as a SubViewport does. */
+function liveCanvasTarget(): THREE.WebGLRenderTarget {
+  const target = createCanvasTarget(32, 16, 'SubViewport');
+  withdrawals.push(publishLiveTarget(target.texture, null));
+  return target;
+}
+
+describe('a reader of a live target', () => {
+  it('reads its own copy when it samples through its own window', () => {
+    const target = liveCanvasTarget();
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    expect(view).not.toBe(target.texture);
+    expect(view.repeat.x).toBe(-1);
+    expect(view.offset.x).toBe(1);
+  });
+
+  it("keeps the target's size and storage, so it samples the bytes the target holds", () => {
+    const target = liveCanvasTarget();
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.NoColorSpace, window: FLIPPED });
+    expect(view.image).toMatchObject({ width: 32, height: 16 });
+    expect(view.internalFormat).toBe(target.texture.internalFormat);
+    expect(view.colorSpace).toBe(target.texture.colorSpace);
+  });
+
+  it('reads its own copy for its own wrap and filter', () => {
+    const target = liveCanvasTarget();
+    const view = textureView(target.texture, {
+      colorSpace: THREE.SRGBColorSpace,
+      wrap: THREE.RepeatWrapping,
+      filter: {
+        magFilter: THREE.NearestFilter,
+        minFilter: THREE.NearestFilter,
+        generateMipmaps: false,
+        anisotropy: 1,
+      },
+    });
+    expect(view).not.toBe(target.texture);
+    expect([view.wrapS, view.wrapT, view.magFilter]).toEqual([
+      THREE.RepeatWrapping,
+      THREE.RepeatWrapping,
+      THREE.NearestFilter,
+    ]);
+  });
+
+  it("shares the target when it samples the target's own state, whatever colour space it names", () => {
+    const target = liveCanvasTarget();
+    expect(textureView(target.texture, { colorSpace: THREE.NoColorSpace })).toBe(target.texture);
+  });
+
+  it('is refilled after each render of the target', () => {
+    const target = liveCanvasTarget();
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    expect(copiesFilledFrom(target.texture)).toEqual([view]);
+  });
+
+  it('is no longer filled once released', () => {
+    const target = liveCanvasTarget();
+    const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    releaseView(view);
+    expect(copiesFilledFrom(target.texture)).toEqual([]);
+  });
+
+  it('comes back as it is from a render target no pass publishes (edge case)', () => {
+    const target = createSceneTarget(8, 8, 'Unpublished');
+    expect(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })).toBe(
+      target.texture
+    );
+  });
+});
+
+describe('liveTargetCrop', () => {
+  it('cuts a region out of the live target, at the region size plus its margin', () => {
+    const target = liveCanvasTarget();
+    const crop = liveTargetCrop(target.texture, {
+      width: 12,
+      height: 8,
+      source: { x: 4, y: 2, width: 10, height: 6 },
+      dest: { x: 1, y: 1 },
+    });
+    expect(crop.image).toMatchObject({ width: 12, height: 8 });
+    expect(crop.internalFormat).toBe(target.texture.internalFormat);
+  });
+
+  it('is filled after the target it cuts, and a reader of the crop after the crop', () => {
+    const target = liveCanvasTarget();
+    const crop = liveTargetCrop(target.texture, {
+      width: 8,
+      height: 8,
+      source: { x: 0, y: 0, width: 8, height: 8 },
+      dest: { x: 0, y: 0 },
+    });
+    const reader = ownedTextureView(crop, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    expect(copiesFilledFrom(target.texture)).toEqual([crop, reader]);
+  });
+});

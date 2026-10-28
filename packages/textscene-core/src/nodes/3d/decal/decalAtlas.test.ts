@@ -9,6 +9,7 @@ import {
   updateDecalAtlas,
 } from './decalAtlas';
 import { godotTextureFilterState } from '../../../resources/textures/godotTextureFilter';
+import { readableLiveTarget } from '../../../r3f/liveTargets.testkit';
 
 const MAX_TEXTURE_SIZE = 4096;
 
@@ -24,6 +25,14 @@ function dataTexture(size: number, rgba: readonly number[] = [255, 255, 255, 255
 /** The atlas's level 0 bytes. */
 function baseLevel(): Uint8Array {
   return (decalAtlasTexture().mipmaps[0] as unknown as { data: Uint8Array }).data;
+}
+
+/** The level 0 bytes of the first texel the atlas holds for `texture`. */
+function firstTexelOf(texture: THREE.Texture): number[] {
+  const { width, height } = decalAtlasTexture().image as { width: number; height: number };
+  const rect = decalAtlasRect(texture)!;
+  const offset = (Math.round(rect.y * height) * width + Math.round(rect.x * width)) * 4;
+  return [...baseLevel().subarray(offset, offset + 4)];
 }
 
 const held: THREE.Texture[] = [];
@@ -127,6 +136,36 @@ describe('the decal atlas', () => {
     // Bottom-up, the last row is the image's top: blue.
     const level0 = baseLevel();
     expect([...level0.subarray((16 * 256 + 16) * 4, (16 * 256 + 16) * 4 + 4)]).toEqual([0, 0, 255, 255]);
+  });
+
+  it("copies a live target's bytes, top row first, when it rebuilds (texture_storage.cpp:3216)", () => {
+    const target = readableLiveTarget(2, [255, 0, 0, 255], [0, 0, 255, 255]);
+    hold(target.texture);
+
+    updateDecalAtlas(MAX_TEXTURE_SIZE);
+
+    const level0 = baseLevel();
+    expect([...level0.subarray((16 * 256 + 16) * 4, (16 * 256 + 16) * 4 + 4)]).toEqual([0, 0, 255, 255]);
+    target.withdraw();
+  });
+
+  it('keeps the copy while the target redraws, and copies again at the next rebuild', () => {
+    const target = readableLiveTarget(2, [0, 0, 255, 255], [0, 0, 255, 255]);
+    hold(target.texture);
+    updateDecalAtlas(MAX_TEXTURE_SIZE);
+    target.paint([0, 255, 0, 255], [0, 255, 0, 255]);
+
+    updateDecalAtlas(MAX_TEXTURE_SIZE);
+    const frozen = firstTexelOf(target.texture);
+    hold(dataTexture(64));
+    updateDecalAtlas(MAX_TEXTURE_SIZE);
+    const recopied = firstTexelOf(target.texture);
+
+    expect([frozen, recopied]).toEqual([
+      [0, 0, 255, 255],
+      [0, 255, 0, 255],
+    ]);
+    target.withdraw();
   });
 
   it('is sampled as sRGB over five linear-mipmap levels, clamped (render_forward_clustered.cpp:3213)', () => {

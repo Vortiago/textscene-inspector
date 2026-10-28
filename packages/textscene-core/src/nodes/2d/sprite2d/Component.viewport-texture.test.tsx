@@ -17,6 +17,7 @@ import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureCo
 import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/ViewportTexturePublisher';
 import { createCanvasTarget, createSceneTarget } from '../../viewport/subviewport/offscreenViewport';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { copiesFilledFrom } from '../../../r3f/liveTargets.testkit';
 
 const VIEWPORT_TEXTURE_RESOURCE: TscnInternalResource = {
   id: 'ViewportTexture_1',
@@ -35,7 +36,7 @@ function spriteNode(): TscnNode {
   };
 }
 
-/** The material of the sprite's quad, which samples `published` from `Root/SubViewport`. */
+/** The material of the sprite's quad, which samples its own copy of `published` from `Root/SubViewport`. */
 async function spriteMaterial(published: THREE.Texture): Promise<THREE.MeshBasicMaterial> {
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
@@ -57,7 +58,7 @@ async function spriteMaterial(published: THREE.Texture): Promise<THREE.MeshBasic
     .findAll(() => true)
     .map((n) => (n.instance as THREE.Mesh).material)
     .filter((m): m is THREE.MeshBasicMaterial => !!m && !Array.isArray(m))
-    .find((m) => m.map === published);
+    .find((m) => m.map !== null && copiesFilledFrom(published).includes(m.map));
   return material!;
 }
 

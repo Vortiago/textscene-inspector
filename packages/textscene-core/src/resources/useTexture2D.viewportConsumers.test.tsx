@@ -1,7 +1,8 @@
 /**
- * Node types that read a Texture2D slot, given a ViewportTexture. Each draws the SubViewport's live
- * target, which every reader shares, so none clones it into a frozen copy or disposes it. Godot
- * 4.6.3 draws a ViewportTexture in a TextureRect (`scenes/fixtures/unit-texture-rect-viewport-texture.tscn`).
+ * Node types that read a Texture2D slot, given a ViewportTexture. Each draws its own copy of the
+ * SubViewport's live target, which the pass refills after each render, through its own sampler, and
+ * none disposes the shared target. Godot 4.6.3 draws a ViewportTexture in a TextureRect
+ * (`scenes/fixtures/unit-texture-rect-viewport-texture.tscn`).
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
@@ -29,6 +30,7 @@ import { nativeTheme } from '../r3f/controls/native/nativeTheme';
 import { controlNode } from '../r3f/controls/native/testing/solveNode';
 import '../nodes/3d/sprite3d/index.r3f';
 import { registeredComponent } from '../r3f/testing/registeredComponent';
+import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -41,17 +43,23 @@ const RECT: Rect2 = { x: 0, y: 0, w: 320, h: 160 };
 
 const target = createCanvasTarget(32, 32, 'SubViewport');
 const decodingTarget = createCanvasTarget(32, 32, 'SubViewport decoding view');
-afterEach(() => target.texture.removeEventListener('dispose', countDispose));
+/** Every renderer a test mounts, unmounted after it, so no test sees another's copies. */
+let mounted: { unmount: () => Promise<void> }[] = [];
+afterEach(async () => {
+  target.texture.removeEventListener('dispose', countDispose);
+  await Promise.all(mounted.map((renderer) => renderer.unmount()));
+  mounted = [];
+});
 
 let disposals = 0;
 function countDispose() {
   disposals++;
 }
 
-function provide(children: ReactNode, workspace?: '2d') {
+async function provide(children: ReactNode, workspace?: '2d') {
   disposals = 0;
   target.texture.addEventListener('dispose', countDispose);
-  return ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(
     <SceneStack
       workspace={workspace}
       loader={createFakeResourceLoader().loader}
@@ -63,6 +71,8 @@ function provide(children: ReactNode, workspace?: '2d') {
       </ViewportTextureProvider>
     </SceneStack>
   );
+  mounted.push(renderer);
+  return renderer;
 }
 
 const ENTRY = viewportEntry(
@@ -87,8 +97,11 @@ function mapsIn(renderer: Awaited<ReturnType<typeof provide>>): THREE.Texture[] 
     .filter((t): t is THREE.Texture => Boolean(t));
 }
 
-function textureRect(): ReactNode {
-  const n = node('TextureRect', parseTextureRect(heading('TextureRect'), { texture: VIEWPORT_REF }));
+function textureRect(properties: Record<string, string> = {}): ReactNode {
+  const n = node(
+    'TextureRect',
+    parseTextureRect(heading('TextureRect'), { texture: VIEWPORT_REF, ...properties })
+  );
   const solveNode = {
     ...emptySolveNode(),
     path: 'N',
@@ -99,36 +112,63 @@ function textureRect(): ReactNode {
 }
 
 describe('a ViewportTexture reaches every Texture2D slot', () => {
-  it('TextureRect draws the live target', async () => {
+  it('TextureRect draws its own copy of the live target', async () => {
     const renderer = await provide(textureRect(), '2d');
-    expect(mapsIn(renderer)).toEqual([target.texture]);
+    expect(mapsIn(renderer)).toEqual(copiesFilledFrom(target.texture));
   });
 
-  it('TextureRect leaves the shared target undisposed once it unmounts', async () => {
+  it('TextureRect mirrors its copy for flip_h, and leaves the shared target unmirrored', async () => {
+    const renderer = await provide(textureRect({ flip_h: 'true' }), '2d');
+    const [copy] = mapsIn(renderer);
+    expect([copy!.repeat.x, target.texture.repeat.x]).toEqual([-1, 1]);
+  });
+
+  it('TextureRect frees its copy and leaves the shared target undisposed once it unmounts', async () => {
     const renderer = await provide(textureRect(), '2d');
     await renderer.unmount();
-    expect(disposals).toBe(0);
+    expect([disposals, copiesFilledFrom(target.texture)]).toEqual([0, []]);
   });
 
-  it('Sprite2D draws the live target and leaves it undisposed once it unmounts', async () => {
+  it('Sprite2D draws its own copy of the live target and leaves the target undisposed once it unmounts', async () => {
     const sprite = node('Sprite2D', parseSprite2D(heading('Sprite2D'), { texture: VIEWPORT_REF }));
     const renderer = await provide(<Sprite2D node={sprite} />, '2d');
-    expect(mapsIn(renderer)).toEqual([target.texture]);
+    expect(mapsIn(renderer)).toEqual(copiesFilledFrom(target.texture));
     await renderer.unmount();
     expect(disposals).toBe(0);
   });
 
-  it("Sprite3D draws the target's decoding view, as its `source_color` albedo samples it", async () => {
-    const sprite = node('Sprite3D', parseSprite3D(heading('Sprite3D'), { texture: VIEWPORT_REF }));
-    const renderer = await provide(<Sprite3D node={sprite} />);
-    expect(mapsIn(renderer)).toContain(decodingTarget.texture);
+  it('Sprite2D samples its copy through its region', async () => {
+    const sprite = node(
+      'Sprite2D',
+      parseSprite2D(heading('Sprite2D'), {
+        texture: VIEWPORT_REF,
+        region_enabled: 'true',
+        region_rect: 'Rect2(0, 0, 16, 32)',
+      })
+    );
+    const renderer = await provide(<Sprite2D node={sprite} />, '2d');
+    expect(mapsIn(renderer)[0]!.repeat.x).toBe(0.5);
   });
 
-  it('TextureRect draws the live target when the Control walker paints it', async () => {
+  it("Sprite3D draws its own copy of the target's decoding view, as its `source_color` albedo samples it", async () => {
+    const sprite = node('Sprite3D', parseSprite3D(heading('Sprite3D'), { texture: VIEWPORT_REF }));
+    const renderer = await provide(<Sprite3D node={sprite} />);
+    expect(mapsIn(renderer)).toEqual(expect.arrayContaining(copiesFilledFrom(decodingTarget.texture)));
+  });
+
+  it('Sprite3D mirrors its copy for flip_h', async () => {
+    const sprite = node(
+      'Sprite3D',
+      parseSprite3D(heading('Sprite3D'), { texture: VIEWPORT_REF, flip_h: 'true' })
+    );
+    const renderer = await provide(<Sprite3D node={sprite} />);
+    expect(mapsIn(renderer).map((map) => map.repeat.x)).toContain(-1);
+  });
+
+  it('TextureRect draws its own copy of the live target when the Control walker paints it', async () => {
     controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
     controlSolverRegistry.clear();
     const n = controlNode('TextureRect', 'TextureRect', {
-      name: 'TextureRect',
       ...parseTextureRect(heading('TextureRect'), { texture: VIEWPORT_REF }),
       offsetRight: 64,
       offsetBottom: 64,
@@ -158,7 +198,8 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
         </ViewportTextureProvider>
       </SceneStack>
     );
-    expect(mapsIn(renderer)).toEqual([target.texture]);
+    mounted.push(renderer);
+    expect(mapsIn(renderer)).toEqual(copiesFilledFrom(target.texture));
     controlComponentRegistry.clear();
   });
 });

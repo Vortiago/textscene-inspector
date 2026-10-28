@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
+import { isLiveTarget, liveTargetCopy } from '../../r3f/liveTargets';
 import { applyTextureFilterState, textureFilterMatches, type TextureFilterState } from './godotTextureFilter';
 
 /** Below this, a repeat or offset is indistinguishable from the one a texture shows. */
@@ -68,7 +69,7 @@ function sameWindow(a: UvWindow | undefined, b: UvWindow | undefined): boolean {
 }
 
 /**
- * Written only by `clonedView`. A WeakSet, not a texture field, since `Texture.clone()` copies
+ * Written only by `clonedView` and `liveCopyView`. A WeakSet, not a texture field, since `Texture.clone()` copies
  * `userData` and a clone of a view would claim a release it never made.
  */
 const ownedViews = new WeakSet<THREE.Texture>();
@@ -102,42 +103,48 @@ export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
  * The texture `sampler` samples: `source` when it already carries the state, else one clone that
  * carries every divergence. `useResource` shares one cached texture per path, while Godot keeps this
  * state per material and slot, so a write to the source would let the last consumer win for all.
- * `releaseView` frees a clone, and leaves a source to its loader.
+ * A live target diverges by its sampler alone, and a reader that diverges reads its own copy.
+ * `releaseView` frees a clone or a copy, and leaves a source to its loader or its pass.
  */
 export function textureView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  // A render target (a ViewportTexture) is never cloned: a clone is a frozen
-  // frame. Nor is it re-tagged: its pass reads the tag as its output space, and
-  // its storage, not the tag, decides what a sample decodes.
-  if (source.isRenderTargetTexture || !diverges(source, sampler)) return source;
-  return clonedView(source, sampler);
+  if (source.isRenderTargetTexture) {
+    return isLiveTarget(source) && samplesDifferently(source, sampler)
+      ? liveCopyView(source, sampler)
+      : source;
+  }
+  return diverges(source, sampler) ? clonedView(source, sampler) : source;
 }
 
 /**
  * `textureView` that always clones, for a consumer that writes the clone afterwards, as a sprite
  * moves its window to the next frame. The consumer may write any field of the result, and owns it.
- * A render target is the exception: it belongs to its viewport, so it comes back as it is.
+ * A render target no pass publishes comes back as it is, since a copy of it would never fill.
  */
 export function ownedTextureView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  if (source.isRenderTargetTexture) return source;
-  return clonedView(source, sampler);
+  if (!source.isRenderTargetTexture) return clonedView(source, sampler);
+  return isLiveTarget(source) ? liveCopyView(source, sampler) : source;
 }
 
 /**
  * The texture when a view made it, null when a loader or a producer owns it: a view of a source is
- * that source, and a render target belongs to its viewport.
+ * that source, and a shared render target belongs to its viewport.
  */
 export function viewToRelease(texture: THREE.Texture | null | undefined): THREE.Texture | null {
   return texture && ownedViews.has(texture) ? texture : null;
 }
 
-/** Frees the texture of a view: a clone is disposed, a shared source is left to its loader. */
+/** Frees the texture of a view: a clone or a copy is disposed, a shared source is left to its owner. */
 export function releaseView(texture: THREE.Texture | null | undefined): void {
   viewToRelease(texture)?.dispose();
 }
 
 function diverges(source: THREE.Texture, sampler: ViewSampler): boolean {
+  return source.colorSpace !== sampler.colorSpace || samplesDifferently(source, sampler);
+}
+
+/** Whether `sampler` reads `source` through another window, wrap, filter or UV channel. */
+function samplesDifferently(source: THREE.Texture, sampler: ViewSampler): boolean {
   return (
-    source.colorSpace !== sampler.colorSpace ||
     (sampler.wrap !== undefined && (source.wrapS !== sampler.wrap || source.wrapT !== sampler.wrap)) ||
     (sampler.filter !== undefined && !textureFilterMatches(source, sampler.filter)) ||
     source.channel !== (sampler.channel ?? 0) ||
@@ -166,6 +173,20 @@ function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture 
   clone.needsUpdate = true;
   ownedViews.add(clone);
   return clone;
+}
+
+/**
+ * A reader's own copy of a live target, filled after each render of the target. It keeps the
+ * target's tag: the copy's storage, not the tag, decides what a sample decodes, and the tag tells a
+ * canvas consumer how the bytes were encoded.
+ */
+function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
+  const copy = applyViewSampler(liveTargetCopy(source), {
+    ...sampler,
+    colorSpace: source.colorSpace as THREE.ColorSpace,
+  });
+  ownedViews.add(copy);
+  return copy;
 }
 
 function showsWindow(texture: THREE.Texture, { repeat, offset }: UvWindow): boolean {

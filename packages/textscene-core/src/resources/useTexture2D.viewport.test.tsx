@@ -14,6 +14,7 @@ import { NodePathProvider } from '../r3f/contexts/NodePathContext';
 import { ViewportTextureProvider } from '../r3f/contexts/ViewportTextureContext';
 import { ViewportPassProvider, useRegisterViewportPass } from '../r3f/contexts/ViewportPassRegistryContext';
 import { ViewportTexturePublisher, viewportEntry } from '../r3f/testing/ViewportTexturePublisher';
+import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 
 const RESOURCES: TscnInternalResource[] = [
@@ -120,11 +121,24 @@ viewport_path = NodePath("SubViewport")
 });
 
 describe('an AtlasTexture over a ViewportTexture', () => {
-  it('cuts no frozen cell out of the live target: the slot draws its placeholder', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES), {
+  it("draws a live crop of the target, at the region's size, which the pass fills", () => {
+    const { result, unmount } = renderHook(
+      () => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES),
+      { wrapper: wrapper() }
+    );
+    const crop = result.current.texture!;
+    expect(crop.image).toMatchObject({ width: 16, height: 16 });
+    expect(copiesFilledFrom(plain)).toEqual([crop]);
+    unmount();
+  });
+
+  it('frees the crop once the slot unmounts', async () => {
+    const { unmount } = renderHook(() => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES), {
       wrapper: wrapper(),
     });
-    expect(result.current).toEqual({ texture: null, missing: true, isArriving: false });
+    unmount();
+    await Promise.resolve();
+    expect(copiesFilledFrom(plain)).toEqual([]);
   });
 
   it('gives a slot read by RID the whole live target, as Godot names the sheet', () => {
