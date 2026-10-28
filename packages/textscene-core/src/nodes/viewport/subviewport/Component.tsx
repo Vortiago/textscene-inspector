@@ -6,7 +6,7 @@
  */
 
 import { lazy, useMemo } from 'react';
-import { OffscreenViewport } from './OffscreenViewport';
+import { OffscreenViewportPass } from './OffscreenViewportPass';
 
 import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -84,7 +84,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   );
   const canvasModulate = useCanvasModulateColor(node.children);
   // The Controls of a 2D pass draw in its portal beside the world items, one tree-order draw. A 3D
-  // pass draws them over its world, in a scene of their own (`OffscreenViewport`).
+  // pass draws them over its world, in a scene of their own (`OffscreenViewportPass`).
   const drawsControls = kind === '2d' && holdsControls;
   const contents = (
     <ViewportSizeProvider size={layoutSize}>
@@ -105,7 +105,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
         <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
       ) : null}
       {rasterizes ? (
-        <OffscreenViewport
+        <OffscreenViewportPass
           node={node}
           path={path}
           size={size}
@@ -116,7 +116,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
           drawsControlsOverWorld={kind === '3d' && holdsControls}
         >
           {rendersInline ? null : contents}
-        </OffscreenViewport>
+        </OffscreenViewportPass>
       ) : null}
     </Node>
   );

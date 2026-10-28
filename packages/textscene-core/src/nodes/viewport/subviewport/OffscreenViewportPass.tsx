@@ -64,7 +64,7 @@ const ControlsOverWorld = lazy(() =>
   import('./ControlsOverWorld.js').then((m) => ({ default: m.ControlsOverWorld }))
 );
 
-export interface OffscreenViewportProps extends NodeComponentProps {
+export interface OffscreenViewportPassProps extends NodeComponentProps {
   path: string;
   size: Vector2;
   /** The viewport's `size`, which lays Controls out and frames the camera. `size` is the capped target. */
@@ -82,7 +82,7 @@ export interface OffscreenViewportProps extends NodeComponentProps {
  * A separate component, so a Control-only sub-viewport mounts none of its hooks
  * and leaves the key to `ControlRasterPass.tsx`.
  */
-export function OffscreenViewport({
+export function OffscreenViewportPass({
   node,
   path,
   size,
@@ -92,7 +92,7 @@ export function OffscreenViewport({
   canvasModulate,
   drawsControlsOverWorld,
   children,
-}: OffscreenViewportProps) {
+}: OffscreenViewportPassProps) {
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg, own_world_3d: ownWorld3D } = properties;
   const { x: width, y: height } = size;
