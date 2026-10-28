@@ -52,7 +52,7 @@ export function readableLiveTarget(size: number, bottom: readonly number[], top:
       }
     },
   } as unknown as THREE.WebGLRenderer;
-  const withdraw = publishLiveTarget(target.texture, renderer);
+  const withdraw = publishLiveTarget(target.texture, renderer, false);
   return {
     texture: target.texture,
     paint: (bottomRow: readonly number[], topRow: readonly number[]) => {

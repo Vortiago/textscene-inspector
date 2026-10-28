@@ -21,29 +21,36 @@ interface LiveCopy {
 }
 
 /**
- * A target's publishers, the copies it fills in the order they were made, and the renderer that
- * holds its texels, null for one no renderer draws.
+ * A target's publishers, the copies it fills in the order they were made, the renderer that
+ * holds its texels, null for one no renderer draws, and whether its image keeps alpha.
  */
 interface LiveTarget {
   publishers: number;
   readonly copies: Set<LiveCopy>;
   renderer: THREE.WebGLRenderer | null;
+  isTransparent: boolean;
 }
 
 const liveTargetOf = perObject<THREE.Texture, LiveTarget>(() => ({
   publishers: 0,
   copies: new Set(),
   renderer: null,
+  isTransparent: false,
 }));
 
 /**
  * Marks `texture` live while `renderer` redraws it, and answers the withdrawal. Two publishers of one
- * texture keep it live until both withdraw.
+ * texture keep it live until both withdraw. `isTransparent` is the viewport's `transparent_bg`.
  */
-export function publishLiveTarget(texture: THREE.Texture, renderer: THREE.WebGLRenderer | null): () => void {
+export function publishLiveTarget(
+  texture: THREE.Texture,
+  renderer: THREE.WebGLRenderer | null,
+  isTransparent: boolean
+): () => void {
   const live = liveTargetOf(texture);
   live.publishers++;
   live.renderer = renderer;
+  live.isTransparent = isTransparent;
   let isWithdrawn = false;
   return () => {
     if (isWithdrawn) return;
@@ -55,6 +62,14 @@ export function publishLiveTarget(texture: THREE.Texture, renderer: THREE.WebGLR
 /** Whether a pass redraws `texture`, so a reader that samples it differently needs its own copy. */
 export function isLiveTarget(texture: THREE.Texture): boolean {
   return texture.isRenderTargetTexture === true && liveTargetOf(texture).publishers > 0;
+}
+
+/**
+ * The texel Godot reads from the image of a live target no pass has rendered yet: zero, with no
+ * alpha channel in an opaque target's image (`renderer_rd/storage_rd/texture_storage.cpp:3571-3575`).
+ */
+export function unrenderedTexel(texture: THREE.Texture): readonly [number, number, number, number] {
+  return liveTargetOf(texture).isTransparent ? [0, 0, 0, 0] : [0, 0, 0, 255];
 }
 
 /**
@@ -137,13 +152,13 @@ function addCopy(
   texture.colorSpace = source.colorSpace;
   if (holdsSrgbBytes(source)) markSrgbBytes(texture);
 
-  const { copies, renderer } = liveTargetOf(source);
+  const { copies, renderer, isTransparent } = liveTargetOf(source);
   const copy: LiveCopy = {
     texture,
     fill: (gl) => copyTexels(gl, source, target, placement),
   };
   copies.add(copy);
-  const withdraw = publishLiveTarget(texture, renderer);
+  const withdraw = publishLiveTarget(texture, renderer, isTransparent);
   texture.addEventListener('dispose', () => {
     withdraw();
     copies.delete(copy);

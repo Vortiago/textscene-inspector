@@ -53,6 +53,11 @@ export interface Texture2DResult {
   missing: boolean;
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
+  /**
+   * Set when the slot reaches a ViewportTexture Godot never sets up, through any wrapper, whose
+   * `get_image()` is null (`viewport.cpp:180-186`). `texture` then samples the placeholder.
+   */
+  hasNoImage?: true;
 }
 
 /** The holders of a node's own slot: none, since `make_local_resource` sets the property up itself. */
@@ -229,6 +234,8 @@ function useTexture2DSlot(
   }
 
   // A target arrives after first paint and is no file on its way, so only a cycle stops it.
+  if (unconfigured)
+    return { ...peeled, result: { texture: source, missing: false, isArriving: false, hasNoImage: true } };
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');

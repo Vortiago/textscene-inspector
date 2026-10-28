@@ -177,6 +177,13 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
     expect(result.current.texture).toBe(unconfiguredViewportTexture());
   });
 
+  it('reports no image for an AtlasTexture that windows it, as `get_image()` gives none', () => {
+    const { result } = renderHook(() => useTexture2D('SubResource("SharedAtlasTexture")', [], RESOURCES), {
+      wrapper: wrapper(),
+    });
+    expect(result.current.hasNoImage).toBe(true);
+  });
+
   it('keeps its placeholder four texels square', () => {
     const { image } = unconfiguredViewportTexture();
     expect([image.width, image.height]).toEqual([4, 4]);
@@ -192,6 +199,13 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
 });
 
 describe('an AtlasTexture over a ViewportTexture', () => {
+  it('reports the image of a target Godot sets up', () => {
+    const { result } = renderHook(() => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES), {
+      wrapper: wrapper(),
+    });
+    expect(result.current.hasNoImage).toBeUndefined();
+  });
+
   it("draws a live crop of the target, at the region's size, which the pass fills", () => {
     const { result, unmount } = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES),

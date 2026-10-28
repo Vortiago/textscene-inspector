@@ -17,6 +17,10 @@ import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
 import type { TscnInternalResource } from '../parser/types';
 import { textureSize } from '../resources/textures/textureSize';
 import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
+import { NodePathProvider } from './contexts/NodePathContext';
+import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
+import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 
 const TEXTURE = 'res://tiles.png';
 const grid: TileGrid = {
@@ -45,22 +49,43 @@ async function render(source: AtlasSourceModel, texture: THREE.Texture | null, s
   const fake = createFakeResourceLoader();
   fake.textures.seed(TEXTURE, texture);
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
-      <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
-        {(pixelMaterial) => (
-          <TileSourceMesh
-            source={source}
-            cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
-            grid={grid}
-            renderOrder={0}
-            color={new THREE.Color(1, 1, 1)}
-            opacity={1}
-            pixelMaterial={pixelMaterial}
-            sampler={sampler}
-          />
-        )}
-      </LitCanvasItemPixels>
+    <ResourceLoaderProvider loader={fake.loader}>{tileMesh(source, sampler)}</ResourceLoaderProvider>
+  );
+}
+
+/** `source` drawn at `Root/Tiles`, beside a SubViewport published at `Root/SubViewport`. */
+async function renderBesideViewport(source: AtlasSourceModel, isTransparent: boolean) {
+  const target = createCanvasTarget(32, 32, 'SubViewport');
+  return ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher
+          path="Root/SubViewport"
+          entry={viewportEntry(target.texture, { x: 32, y: 32 })}
+          isTransparent={isTransparent}
+        />
+        <NodePathProvider path="Root/Tiles">{tileMesh(source, DEFAULT_SAMPLER)}</NodePathProvider>
+      </ViewportTextureProvider>
     </ResourceLoaderProvider>
+  );
+}
+
+function tileMesh(source: AtlasSourceModel, sampler: typeof DEFAULT_SAMPLER) {
+  return (
+    <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
+      {(pixelMaterial) => (
+        <TileSourceMesh
+          source={source}
+          cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
+          grid={grid}
+          renderOrder={0}
+          color={new THREE.Color(1, 1, 1)}
+          opacity={1}
+          pixelMaterial={pixelMaterial}
+          sampler={sampler}
+        />
+      )}
+    </LitCanvasItemPixels>
   );
 }
 
@@ -141,27 +166,86 @@ describe('TileSourceMesh texture slot', () => {
    * ViewportTexture up only through a TileSet that is local to scene (`core/io/resource.cpp:497-503`).
    */
   it("draws Godot's placeholder for an AtlasTexture over a ViewportTexture in a TileSet that is not local to scene", async () => {
-    const tables: TscnInternalResource[] = [
-      { id: 'Viewport', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
-      {
-        id: 'Window',
-        type: 'AtlasTexture',
-        data: {
-          atlas: 'SubResource("Viewport")',
-          region: 'Rect2(0, 0, 32, 32)',
-          resource_local_to_scene: 'true',
-        },
+    const renderer = await render(viewportWindowSource(false, 'false'), null);
+    expect(distinctTexels(mapTexels(renderer))).toEqual(
+      distinctTexels(unconfiguredViewportTexture().image.data!)
+    );
+  });
+});
+
+/** A source whose AtlasTexture windows the SubViewport, in a TileSet local to scene or not. */
+function viewportWindowSource(
+  usesTexturePadding: boolean,
+  isTileSetLocal: 'true' | 'false'
+): AtlasSourceModel {
+  const tables: TscnInternalResource[] = [
+    { id: 'Viewport', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+    {
+      id: 'Window',
+      type: 'AtlasTexture',
+      data: {
+        atlas: 'SubResource("Viewport")',
+        region: 'Rect2(0, 0, 32, 32)',
+        resource_local_to_scene: 'true',
       },
-    ];
-    const tileSet = { id: 'TileSet_1', type: 'TileSet', data: {} };
-    const source = {
-      ...sourceOf(false),
-      texture: { ...tileTextureAt('SubResource("Window")'), internalResources: tables, holders: [tileSet] },
-    };
-    const renderer = await render(source, null);
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const { data } = (mesh.material as THREE.MeshBasicMaterial).map!.image as { data: Uint8Array };
-    expect(distinctTexels(data)).toEqual(distinctTexels(unconfiguredViewportTexture().image.data!));
+    },
+  ];
+  const tileSet = { id: 'TileSet_1', type: 'TileSet', data: { resource_local_to_scene: isTileSetLocal } };
+  return {
+    ...sourceOf(usesTexturePadding),
+    texture: { ...tileTextureAt('SubResource("Window")'), internalResources: tables, holders: [tileSet] },
+  };
+}
+
+type Rendered = Awaited<ReturnType<typeof render>>;
+
+const drawnMeshOf = (renderer: Rendered) => renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+
+function mapTexels(renderer: Rendered): ArrayLike<number> {
+  const map = (drawnMeshOf(renderer).material as THREE.MeshBasicMaterial).map!;
+  return (map.image as { data: ArrayLike<number> }).data;
+}
+
+/**
+ * Godot builds a padded source's atlas once, from the texture's image at load (`tile_set.cpp:5622-5654`),
+ * and draws each tile at its padded region (`:5333-5345`).
+ */
+describe('TileSourceMesh padding a texture with no image at load', () => {
+  it('samples the placeholder at the padded regions when Godot never sets the ViewportTexture up', async () => {
+    const renderer = await render(viewportWindowSource(true, 'false'), null);
+    const mesh = drawnMeshOf(renderer);
+    expect(distinctTexels(mapTexels(renderer))).toEqual(
+      distinctTexels(unconfiguredViewportTexture().image.data!)
+    );
+    // Atlas (1,0) pads to (19, 1, 16, 16) of the 4×4 placeholder.
+    expect(Array.from(mesh.geometry.getAttribute('uv').array)).toEqual([
+      4.75, 0.75, 8.75, 0.75, 4.75, -3.25, 8.75, -3.25,
+    ]);
+    expect(mesh.geometry.getAttribute(TILE_UV_BOUNDS_ATTRIBUTE)).toBeUndefined();
+    expect(cacheKeyOf(mesh)).not.toContain('tile-texture-padding');
+  });
+
+  /** Godot reads an opaque target's image as RGB8 and a transparent one's as RGBA8 (`texture_storage.cpp:3571-3575`). */
+  it('draws the opaque target as it stood before its first render: black', async () => {
+    const renderer = await renderBesideViewport(viewportWindowSource(true, 'true'), false);
+    expect(distinctTexels(mapTexels(renderer))).toEqual(['0,0,0,255']);
+  });
+
+  it('draws the transparent target as it stood before its first render: clear', async () => {
+    const renderer = await renderBesideViewport(viewportWindowSource(true, 'true'), true);
+    expect(distinctTexels(mapTexels(renderer))).toEqual(['0,0,0,0']);
+  });
+
+  it('keeps the padded atlas size, as Godot builds it: the grid of padded cells', async () => {
+    const renderer = await renderBesideViewport(viewportWindowSource(true, 'true'), false);
+    const map = (drawnMeshOf(renderer).material as THREE.MeshBasicMaterial).map!;
+    expect(textureSize(map)).toEqual({ width: 36, height: 36 });
+  });
+
+  it('draws the live target of a source that does not pad', async () => {
+    const renderer = await renderBesideViewport(viewportWindowSource(false, 'true'), false);
+    const map = (drawnMeshOf(renderer).material as THREE.MeshBasicMaterial).map!;
+    expect(map.isRenderTargetTexture).toBe(true);
   });
 });
 

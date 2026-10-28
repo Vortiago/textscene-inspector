@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { liveTargetCrop, publishLiveTarget } from './liveTargets';
+import { liveTargetCrop, publishLiveTarget, unrenderedTexel } from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom } from './liveTargets.testkit';
@@ -21,7 +21,7 @@ afterEach(() => {
 /** A canvas target its pass publishes, as a SubViewport does. */
 function liveCanvasTarget(): THREE.WebGLRenderTarget {
   const target = createCanvasTarget(32, 16, 'SubViewport');
-  withdrawals.push(publishLiveTarget(target.texture, null));
+  withdrawals.push(publishLiveTarget(target.texture, null, false));
   return target;
 }
 
@@ -95,6 +95,14 @@ describe('a reader of a live target', () => {
   });
 });
 
+/** The 8 by 8 cell at a target's top-left corner. */
+const CORNER_CELL = {
+  width: 8,
+  height: 8,
+  source: { x: 0, y: 0, width: 8, height: 8 },
+  dest: { x: 0, y: 0 },
+};
+
 describe('liveTargetCrop', () => {
   it('cuts a region out of the live target, at the region size plus its margin', () => {
     const target = liveCanvasTarget();
@@ -110,13 +118,23 @@ describe('liveTargetCrop', () => {
 
   it('is filled after the target it cuts, and a reader of the crop after the crop', () => {
     const target = liveCanvasTarget();
-    const crop = liveTargetCrop(target.texture, {
-      width: 8,
-      height: 8,
-      source: { x: 0, y: 0, width: 8, height: 8 },
-      dest: { x: 0, y: 0 },
-    });
+    const crop = liveTargetCrop(target.texture, CORNER_CELL);
     const reader = ownedTextureView(crop, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
     expect(copiesFilledFrom(target.texture)).toEqual([crop, reader]);
+  });
+});
+
+/** Godot reads an opaque target's image as RGB8 and a transparent one's as RGBA8 (`texture_storage.cpp:3571-3575`). */
+describe('unrenderedTexel', () => {
+  it('is opaque black for an opaque target', () => {
+    expect(unrenderedTexel(liveCanvasTarget().texture)).toEqual([0, 0, 0, 255]);
+  });
+
+  it("is clear for a crop of a transparent target, which keeps its source's alpha", () => {
+    const target = createCanvasTarget(32, 16, 'SubViewport');
+    withdrawals.push(publishLiveTarget(target.texture, null, true));
+    const crop = liveTargetCrop(target.texture, CORNER_CELL);
+    expect(unrenderedTexel(crop)).toEqual([0, 0, 0, 0]);
+    crop.dispose();
   });
 });

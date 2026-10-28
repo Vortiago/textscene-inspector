@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useTexture2D } from '../resources/useTexture2D';
-import { buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
+import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
@@ -16,6 +16,7 @@ import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { materialProgramInputs } from './materialProgramInputs';
+import { usePaddedAtlasStandIn } from './paddedAtlasStandIn';
 import type { CanvasItemPixelMaterial } from './components/LitCanvasItemPixels';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
@@ -58,14 +59,17 @@ export function TileSourceMesh({
     'plain',
     slot?.holders
   );
-  const tex = useCanvas2DTexture(texResult.texture, sampler);
+  const standIn = usePaddedAtlasStandIn(texResult, source);
+  const isStandIn = standIn !== null;
+  const tex = useCanvas2DTexture(standIn ?? texResult.texture, sampler);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;
 
   const geometry = useMemo(() => {
     if (!texW || !texH) return null;
-    const arrays = buildTileGeometryArrays(cells, source, grid, texW, texH);
+    const build = isStandIn ? buildPaddedStandInGeometryArrays : buildTileGeometryArrays;
+    const arrays = build(cells, source, grid, texW, texH);
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(arrays.positions, 3));
     geom.setAttribute('uv', new THREE.BufferAttribute(arrays.uvs, 2));
@@ -74,7 +78,7 @@ export function TileSourceMesh({
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
-  }, [cells, source, grid, texW, texH]);
+  }, [cells, source, grid, texW, texH, isStandIn]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
 
@@ -100,7 +104,7 @@ export function TileSourceMesh({
       depthWrite: false,
       defines: CANVAS_SRGB_DEFINES,
     },
-    merge: [pixelMaterial, source.usesTexturePadding ? { injection: TILE_TEXTURE_PADDING } : undefined],
+    merge: [pixelMaterial, padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined],
   });
 
   return (
@@ -108,4 +112,9 @@ export function TileSourceMesh({
       <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
+}
+
+/** A padded source holds each sample inside its tile in the shader, unless it samples a stand-in. */
+function padsInShader(source: AtlasSourceModel, isStandIn: boolean): boolean {
+  return source.usesTexturePadding && !isStandIn;
 }

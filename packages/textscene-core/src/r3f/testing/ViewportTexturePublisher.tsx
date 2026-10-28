@@ -12,15 +12,23 @@ import {
   type ViewportTextureEntry,
 } from '../contexts/ViewportTextureContext';
 
-/** Publishes `entry` at `path`, as a SubViewport publishes its target. */
-export function ViewportTexturePublisher({ path, entry }: { path: string; entry: ViewportTextureEntry }) {
+/** Publishes `entry` at `path`, as a SubViewport publishes its target, opaque unless `isTransparent`. */
+export function ViewportTexturePublisher({
+  path,
+  entry,
+  isTransparent = false,
+}: {
+  path: string;
+  entry: ViewportTextureEntry;
+  isTransparent?: boolean;
+}) {
   useEffect(() => {
     const withdrawals = [
-      publishLiveTarget(entry.plain.texture, null),
-      publishLiveTarget(entry.decoding.texture, null),
+      publishLiveTarget(entry.plain.texture, null, isTransparent),
+      publishLiveTarget(entry.decoding.texture, null, isTransparent),
     ];
     return () => withdrawals.forEach((withdraw) => withdraw());
-  }, [entry]);
+  }, [entry, isTransparent]);
   usePublishViewportTexture(path, entry);
   return null;
 }

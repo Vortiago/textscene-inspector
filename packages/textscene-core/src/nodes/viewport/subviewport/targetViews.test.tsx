@@ -23,7 +23,7 @@ function Probe({
   target: THREE.WebGLRenderTarget;
   views: { current: TargetViews | null };
 }) {
-  views.current = useTargetViews(target);
+  views.current = useTargetViews(target, false);
   return null;
 }
 

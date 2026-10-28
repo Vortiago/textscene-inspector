@@ -29,8 +29,8 @@ interface PassTargetViews {
   dispose(): void;
 }
 
-/** The views of `target`, live while it is mounted and disposed with it. */
-export function useTargetViews(target: THREE.WebGLRenderTarget): PassTargetViews {
+/** The views of `target`, live while it is mounted and disposed with it. `isTransparent` is `transparent_bg`. */
+export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: boolean): PassTargetViews {
   const gl = useThree((state) => state.gl);
   const views = useMemo(() => {
     const holdsBytes = holdsSrgbBytes(target.texture);
@@ -54,11 +54,11 @@ export function useTargetViews(target: THREE.WebGLRenderTarget): PassTargetViews
   useDisposeOnRelease(views);
   useEffect(() => {
     const withdrawals = [
-      publishLiveTarget(views.plain.texture, gl),
-      publishLiveTarget(views.decoding.texture, gl),
+      publishLiveTarget(views.plain.texture, gl, isTransparent),
+      publishLiveTarget(views.decoding.texture, gl, isTransparent),
     ];
     return () => withdrawals.forEach((withdraw) => withdraw());
-  }, [views, gl]);
+  }, [views, gl, isTransparent]);
   return views;
 }
 

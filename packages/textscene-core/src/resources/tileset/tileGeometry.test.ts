@@ -3,7 +3,7 @@
  * with Y negated once, and UVs under spriteFrame.ts's flipY=true convention.
  */
 import { describe, it, expect } from 'vitest';
-import { buildTileGeometryArrays } from './tileGeometry';
+import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from './tileGeometry';
 import type { AtlasSourceModel, TileGrid } from './types';
 import { TileShape } from '../../godot/scene/tileSet';
 import type { DrawableCell } from './drawableCell';
@@ -148,5 +148,24 @@ describe('buildTileGeometryArrays', () => {
       0.875,
       0.359375, // BR
     ]);
+  });
+});
+
+/**
+ * A padded source whose texture had no image at load draws from a stand-in at Godot's padded
+ * regions (`tile_set.cpp:5333-5345`), with no tile bounds, since the stand-in holds no tile edges.
+ */
+describe('buildPaddedStandInGeometryArrays', () => {
+  const padded: AtlasSourceModel = { ...source, usesTexturePadding: true };
+
+  it("windows UVs to the tile's padded region of the stand-in", () => {
+    // Atlas (1,0) pads to (19, 1, 16, 16): u 19/4..35/4, v 1 - 1/4..1 - 17/4 on a 4×4 stand-in.
+    const { uvs } = buildPaddedStandInGeometryArrays([cell(0, 0, 1, 0)], padded, grid, 4, 4);
+    expect(Array.from(uvs)).toEqual([4.75, 0.75, 8.75, 0.75, 4.75, -3.25, 8.75, -3.25]);
+  });
+
+  it('gives no tile bounds', () => {
+    const { uvBounds } = buildPaddedStandInGeometryArrays([cell(0, 0)], padded, grid, 4, 4);
+    expect(uvBounds).toBeNull();
   });
 });
