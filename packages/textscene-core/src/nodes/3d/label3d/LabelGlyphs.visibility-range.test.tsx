@@ -35,9 +35,6 @@ const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | und
 vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => loader.metrics,
 }));
-vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
-  onSceneFontMetricsSettled: () => () => {},
-}));
 
 beforeEach(() => {
   loader.metrics = createOpenSansCanvasFontMetrics('label3d-range-test-family');

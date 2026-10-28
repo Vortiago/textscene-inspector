@@ -15,7 +15,11 @@ import { lineStartOffset, VerticalAlignment } from '../../../godot/math/alignmen
 import type { EnumValue } from '../../../godot/classdb/enumNames';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
-import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
+import {
+  variationKey,
+  type FontMetrics,
+  type GlyphVariation,
+} from '../../../r3f/controls/native/text/fontMetrics';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { isControlChar, shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
@@ -101,10 +105,10 @@ function blockStartY(
 type GlyphMeshes = Map<number, GlyphMeshData | null>;
 
 /**
- * The glyph mesh data of one font by its `font_size`, `pixel_size` and `curve_step`, then by codepoint.
- * Godot caches by glyph and clears it when one of the three changes (`:3043-3060`). Here the cache
- * belongs to the font and not to a TextMesh, so a few settings stay: two meshes of one font at two
- * sizes do not discard each other's glyphs on every edit.
+ * The glyph mesh data of one font by its `font_size`, `pixel_size`, `curve_step` and variation, then
+ * by codepoint. Godot clears its cache when one of the first three changes (`:3043-3060`); the
+ * embolden and skew change the contours, so they key it too. The cache belongs to the font, so two
+ * meshes of one font at two sizes do not discard each other's glyphs on every edit.
  */
 const glyphMeshCaches = perObject<SfntOutlines, Map<string, GlyphMeshes>>(() => new Map());
 
@@ -124,11 +128,12 @@ function cachedGlyphMeshes(outlines: SfntOutlines, settings: string): GlyphMeshe
 /** Each glyph's mesh data, built once per font and settings, so a keystroke in `text` triangulates only the glyphs it adds. */
 function glyphMeshes(
   properties: TextMeshProperties,
-  outlines: SfntOutlines
+  { outlines, metrics }: TextMeshFace
 ): (codepoint: number) => GlyphMeshData | null {
+  const variation: GlyphVariation = { embolden: metrics.embolden, skew: metrics.skew };
   const meshes = cachedGlyphMeshes(
     outlines,
-    `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}`
+    `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${variationKey(variation)}`
   );
   return (codepoint) => {
     if (!meshes.has(codepoint)) {
@@ -138,7 +143,7 @@ function glyphMeshes(
         index === 0
           ? null
           : buildGlyphMeshData(
-              outlines.glyphContours(index, properties.fontSize),
+              outlines.glyphContours(index, properties.fontSize, variation),
               properties.pixelSize,
               properties.curveStep
             )
@@ -315,7 +320,7 @@ class TextMeshWriter {
 
 export function buildTextMeshSurface(properties: TextMeshProperties, face: TextMeshFace): GodotSurface {
   const lines = shapeTextMeshLines(properties, face.metrics);
-  const placed = placeGlyphs(properties, lines, glyphMeshes(properties, face.outlines));
+  const placed = placeGlyphs(properties, lines, glyphMeshes(properties, face));
   const writer = new TextMeshWriter(properties.depth, inkBounds(placed));
   for (const glyph of placed) {
     if (isOutline(glyph)) writer.writeGlyph(glyph);

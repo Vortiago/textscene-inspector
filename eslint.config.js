@@ -62,13 +62,6 @@ const MODULE_WEAKMAP = {
     'Build a cache keyed by an object with perObject (utils/perObject.ts, its keeps and stamp options), or add `// eslint-disable-next-line no-restricted-syntax -- <the reason perObject does not fit>`.',
 };
 
-/** The core files exempt from MODULE_WEAKMAP. */
-const MODULE_WEAKMAP_EXEMPT_FILES = [
-  'packages/textscene-core/src/r3f/controls/native/buildSolveTree.ts',
-  'packages/textscene-core/src/r3f/controls/native/solveTree.ts',
-  'packages/textscene-core/src/r3f/controls/native/text/sceneFontLoader.ts',
-];
-
 /**
  * A core test asserts a tier through `toBeAtTier`, `toBeAllAtTier` or a helper that records it.
  * `expect(d.severity)` records nothing, so the setup file's title check cannot see the test.
@@ -269,8 +262,7 @@ export default [
   },
   {
     files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
-    // The exempt files keep their hand-built caches until each converts to perObject.
-    ignores: ['**/*.test.ts', '**/*.test.tsx', ...MODULE_WEAKMAP_EXEMPT_FILES],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-syntax': ['error', REGISTER_ALL_SPREAD, MODULE_WEAKMAP],
     },

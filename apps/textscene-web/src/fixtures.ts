@@ -1113,6 +1113,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Scene Font",
+    "file": "unit-label3d-scene-font.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d Shadow",
     "file": "unit-label3d-shadow.tscn",
     "category": "Other"
@@ -1635,6 +1640,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Primitive Mesh Uv2",
     "file": "unit-primitive-mesh-uv2.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Progress Bar Outline Variation",
+    "file": "unit-progress-bar-outline-variation.tscn",
     "category": "Other"
   },
   {
@@ -3084,6 +3094,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Default Font",
+    "file": "unit-text-mesh-default-font.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Embolden",
+    "file": "unit-text-mesh-embolden.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Woff2",
+    "file": "unit-text-mesh-woff2.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh",
     "file": "unit-text-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3097,6 +3122,12 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Project Default Font",
+    "file": "project-default-font/unit-text-mesh-project-default-font.tscn",
+    "category": "Unit - Primitive Meshes",
+    "root": "project-default-font"
   },
   {
     "name": "Audio Listener 2d",

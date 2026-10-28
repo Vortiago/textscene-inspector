@@ -12,6 +12,9 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 export interface Label3DProperties extends GeometryInstance3DProperties {
   text: string;
 
+  /** The raw `font` property, a reference into the scene's font resources. Absent draws the project font. */
+  font?: string;
+
   /** Size of one pixel's width in 3D world units (default 0.005). */
   pixel_size: number;
 

@@ -262,6 +262,21 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
   };
 }
 
+/** The `res://` path a project setting names, or null for no setting and an empty one. */
+function projectFilePath(settings: ProjectSettings | null, key: string): string | null {
+  return settings?.[key]?.trim() || null;
+}
+
+/** `gui/theme/custom`, the project theme (`ThemeDB::initialize_theme`, `scene/theme/theme_db.cpp:52`). */
+export function projectThemePath(settings: ProjectSettings | null): string | null {
+  return projectFilePath(settings, 'gui/theme/custom');
+}
+
+/** `gui/theme/custom_font`, the project default font (`theme_db.cpp:53`). */
+export function projectFontPath(settings: ProjectSettings | null): string | null {
+  return projectFilePath(settings, 'gui/theme/custom_font');
+}
+
 /**
  * `gui/theme/default_font_generate_mipmaps`, which the default font takes (`theme_db.cpp:64`). Off
  * by default (`text_server.cpp:2387`), so its glyph pages carry no mip chain.
