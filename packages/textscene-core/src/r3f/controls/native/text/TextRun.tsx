@@ -27,7 +27,6 @@ import {
   createCanvasTextMaterial,
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { buildGlyphQuadArrays } from './glyphQuads';
@@ -110,12 +109,6 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * The glyph outlines of the layout's font. The stroked ring of an emboldened or sheared glyph
-   * follows the changed outline with them (`FT_Outline_Embolden`, `FT_Outline_Transform`), and the
-   * plain glyph's without. Canvas runs only.
-   */
-  glyphOutlines?: SfntOutlines | null;
-  /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
    * Canvas runs only: the MSDF atlas is always sampled linearly.
@@ -180,7 +173,6 @@ function buildTextRun(
   fontSizePx: number,
   look: TextRunLook,
   strokeWidthPx: number,
-  glyphOutlines: SfntOutlines | null,
   textureFilter: TextureFilterState,
   mipmapped: boolean,
   outlineColor: Rgba | undefined,
@@ -196,15 +188,7 @@ function buildTextRun(
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-    const canvas = paintSceneFontCanvas(
-      layout,
-      fontSizePx,
-      tint,
-      skew,
-      canvasLayout,
-      strokeWidthPx,
-      glyphOutlines
-    );
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
     // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
@@ -269,7 +253,6 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
-  glyphOutlines = null,
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -291,7 +274,6 @@ export function TextRun({
         fontSizePx,
         { tint, clippingPlanes, depthTest, side, pixelMaterial },
         strokeWidthPx,
-        glyphOutlines,
         textureFilter,
         mipmapped,
         outlineColor,
@@ -312,7 +294,6 @@ export function TextRun({
       side,
       pixelMaterial,
       strokeWidthPx,
-      glyphOutlines,
       textureFilter,
       mipmapped,
       outlineColor?.r,

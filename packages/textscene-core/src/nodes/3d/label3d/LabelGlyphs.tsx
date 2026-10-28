@@ -36,7 +36,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const strokeWidthPx = drawOutline ? outlineStrokeWidthPx(properties.outline_size) : 0;
 
   // `undefined` until `document.fonts` has the family of the font; the hook re-renders once it does.
-  const font = useLabel3DFont(properties.font, drawOutline);
+  const font = useLabel3DFont(properties.font);
   const fontMetrics = font?.metrics;
   usePendingWhile(!fontMetrics);
 
@@ -138,7 +138,6 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   fontSizePx={properties.font_size}
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
-                  glyphOutlines={font?.outlines}
                   depthTest={depthTest}
                   side={side}
                   renderOrder={outlineSurface.renderOrder}

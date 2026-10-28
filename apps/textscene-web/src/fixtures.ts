@@ -1658,6 +1658,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Embolden Fill",
+    "file": "unit-progress-bar-embolden-fill.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Outline Variation",
     "file": "unit-progress-bar-outline-variation.tscn",
     "category": "Other"
@@ -1950,6 +1955,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spring Bone Simulator 3d",
     "file": "unit-spring-bone-simulator-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World Content",
+    "file": "unit-sprite-2d-shared-world-content.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World Environment",
+    "file": "unit-sprite-2d-shared-world-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World First Environment",
+    "file": "unit-sprite-2d-shared-world-first-environment.tscn",
     "category": "Other"
   },
   {
@@ -2372,6 +2392,12 @@ export const fixtures: Fixture[] = [
     "file": "alpha-antialiasing/unit-alpha-antialiasing.tscn",
     "category": "Other",
     "root": "alpha-antialiasing"
+  },
+  {
+    "name": "Debanding",
+    "file": "debanding/unit-debanding.tscn",
+    "category": "Other",
+    "root": "debanding"
   },
   {
     "name": "Decal Filter",
@@ -4090,6 +4116,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Camera Environment",
+    "file": "unit-sub-viewport-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container 2d Content",
     "file": "unit-sub-viewport-container-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -4165,6 +4196,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Debanding",
+    "file": "unit-sub-viewport-debanding.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Inherited Rtl",
     "file": "unit-sub-viewport-inherited-rtl.tscn",
     "category": "Unit - Viewports"
@@ -4192,6 +4228,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Shared World Exposure",
     "file": "unit-sub-viewport-shared-world-exposure.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Glow",
+    "file": "unit-sub-viewport-shared-world-glow.tscn",
     "category": "Unit - Viewports"
   },
   {

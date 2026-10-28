@@ -8,7 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { useResourceLoader } from '../../resources/useResource.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
-import { fontWork } from '../controls/native/text/sceneFontLoader.js';
+import { fontWork } from '../controls/native/text/settledChannel.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';

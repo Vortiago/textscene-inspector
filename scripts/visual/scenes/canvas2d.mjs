@@ -244,6 +244,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
   // A ProgressBar percentage with an outline, over a plain, an emboldened, a sheared and an emboldened and sheared face.
   { name: 'progress-bar-outline-variation', file: 'unit-progress-bar-outline-variation.tscn', mode: '2d' },
+  // The one variable: the FontVariation of a ProgressBar percentage with no outline, so the fill alone draws.
+  { name: 'progress-bar-embolden-fill', file: 'unit-progress-bar-embolden-fill.tscn', mode: '2d' },
   // The one variable: the font of each RichTextLabel style. The default theme's bold, italics and bold
   // italics over the default font, a node's own `bold_font` and `italics_font`, and bare variations
   // that draw the default font itself.
@@ -406,6 +408,27 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
+  // A WorldEnvironment inside a shared-world viewport glows its target. Godot 4.6.3 `--mode 2d`:
+  // (400,370) rgb(106,63,30) in the bloom below the sphere, and (400,420) rgb(31,22,24).
+  {
+    name: 'sprite-2d-shared-world-environment',
+    file: 'unit-sprite-2d-shared-world-environment.tscn',
+    mode: '2d',
+  },
+  // Two shared-world viewports take the first WorldEnvironment in tree order, so both glow. Godot
+  // 4.6.3 `--mode 2d`: both targets match, with the bloom of the Left one's Environment.
+  {
+    name: 'sprite-2d-shared-world-first-environment',
+    file: 'unit-sprite-2d-shared-world-first-environment.tscn',
+    mode: '2d',
+  },
+  // Two shared-world viewports draw one World3D, so the Right camera shows the Left one's sphere.
+  // Godot 4.6.3 `--mode 2d`: both targets match, each with the glowing sphere.
+  {
+    name: 'sprite-2d-shared-world-content',
+    file: 'unit-sprite-2d-shared-world-content.tscn',
+    mode: '2d',
+  },
   // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3
   // `--mode 2d`: (400,150) rgb(127,127,127) and (200,280) rgb(76,76,76), the last column and row.
   {
@@ -467,12 +490,12 @@ export const CANVAS_2D_SCENES = [
   },
   // Markers at list positions 0 to 155 are lit, 156 up are not. Godot 4.6.3 `--mode 2d`:
   // rgb(100,100,100) at (20..260,120) and (500,120), rgb(51,51,51) at (320..440,120). Each light is
-  // one full-screen pass, so the capture waits longer.
+  // one full-screen pass, so a frame takes seconds in software rendering.
   {
     name: 'canvas-light-render-budget',
     file: 'unit-canvas-light-render-budget.tscn',
     mode: '2d',
-    screenshotTimeout: 300000,
+    settleTimeout: 120000,
   },
   // The cap on directional lights alone: red markers 0, 100 and 200 and green markers 254 and 255
   // light, the rest do not. Godot 4.6.3 `--mode 2d`: rgb(69,59,51) at (500,20).
@@ -480,7 +503,7 @@ export const CANVAS_2D_SCENES = [
     name: 'directionallight2d-render-budget',
     file: 'unit-directionallight2d-render-budget.tscn',
     mode: '2d',
-    screenshotTimeout: 300000,
+    settleTimeout: 120000,
   },
   // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
   // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at

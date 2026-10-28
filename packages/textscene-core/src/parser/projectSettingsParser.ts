@@ -343,6 +343,14 @@ export function projectTextureMipmapBias(settings: ProjectSettings | null): numb
 }
 
 /**
+ * `rendering/anti_aliasing/quality/use_debanding`, which the root viewport takes
+ * (`scene/main/scene_tree.cpp:2097-2098`).
+ */
+export function projectUsesDebanding(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/anti_aliasing/quality/use_debanding']) === true;
+}
+
+/**
  * `rendering/viewport/transparent_background`, which the root viewport takes
  * (`scene/main/scene_tree.cpp:2085-2086`). A transparent root clears to `Color(0, 0, 0, 0)`, not
  * the clear colour (`renderer_viewport.cpp:371`).

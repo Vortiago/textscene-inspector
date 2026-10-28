@@ -47,7 +47,7 @@ async function freshModule() {
   vi.resetModules();
   const logger = await import('../../../../logger');
   vi.spyOn(logger, 'warn').mockImplementation(() => {});
-  const { onSceneFontSettled } = await import('./sceneFontLoader');
+  const { onSceneFontSettled } = await import('./settledChannel');
   const { peekBundledCanvasFontMetrics } = await import('./bundledFontLoader');
   return { peekBundledCanvasFontMetrics, onSceneFontSettled, logger };
 }

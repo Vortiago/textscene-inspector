@@ -33,6 +33,7 @@ function effectWith(properties: Record<string, string>, autoExposure: AutoExposu
     exposure: 1,
     transparentBackground: false,
     usesBicubicGlowUpscale: true,
+    usesDebanding: false,
   });
 }
 

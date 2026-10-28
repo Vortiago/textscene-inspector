@@ -10,7 +10,7 @@ import {
   withPreviewBrowser,
   writeCaptureImage,
 } from '../../visual/previewServer.mjs';
-import { imgPath, modeOfExistingGodot } from './targets.mjs';
+import { imgPath, modeOfExistingGodot, settleTimeoutOf } from './targets.mjs';
 
 export async function captureOurs(targets, godotModes) {
   const failures = [];
@@ -44,7 +44,9 @@ export async function captureOurs(targets, godotModes) {
                 camera: t.camera,
               });
               if (!target) throw new Error(reason);
-              const { buffer, reason: settleReason } = await settleCanvas(page, target);
+              const { buffer, reason: settleReason } = await settleCanvas(page, target, {
+                screenshotTimeout: settleTimeoutOf(t.fixture),
+              });
               if (!buffer) throw new Error(settleReason);
               const opened = await readViewportMode(page);
               if (opened !== mode) {

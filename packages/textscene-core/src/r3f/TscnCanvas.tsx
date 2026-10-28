@@ -15,6 +15,7 @@ import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
+import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
@@ -85,10 +86,14 @@ export function TscnSceneContents() {
  * It carries the `tscnEmptyState` tag `frameSceneBounds` skips on itself:
  * `traverse()` visits every descendant whatever the tag of an ancestor, and the
  * 10-unit grid would otherwise frame a mesh-free scene, such as a lone Path3D.
+ * It is editor chrome too, so a SubViewport pass draws none of it.
  */
 function GroundGrid() {
-  return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={{ tscnEmptyState: true }} />;
+  return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={GROUND_GRID_USER_DATA} />;
 }
+
+/** One object, as R3F assigns a new `userData` object on each render. */
+const GROUND_GRID_USER_DATA = { tscnEmptyState: true, ...editorHelperUserData() };
 
 /**
  * The opt-in grid for a non-empty scene, off by default (see ViewportModeContext).

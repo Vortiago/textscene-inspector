@@ -277,7 +277,7 @@ describe('the tone mapping curve', () => {
     const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
     let restore = (): void => {};
     const warnings = warningsOf(() => {
-      restore = installToneMapping(gl, { mode }, 'material');
+      restore = installToneMapping(gl, { mode });
     });
     const spliced = THREE.ShaderChunk.tonemapping_pars_fragment;
     restore();

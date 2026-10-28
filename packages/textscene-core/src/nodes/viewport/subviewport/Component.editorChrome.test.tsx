@@ -1,7 +1,7 @@
 /**
- * A SubViewport pass draws no editor gizmo and no node icon. Godot's gizmos live in the editor
- * viewport alone, and an icon aligned to the editor camera would draw skewed through the camera of
- * the viewport.
+ * A SubViewport pass draws no editor chrome: no gizmo, no node icon, no selection or hover box and
+ * no grid. Godot's editor overlays live in the editor viewport alone, and an icon aligned to the
+ * editor camera would draw skewed through the camera of the viewport.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -20,6 +20,13 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { InWorld } from '../../../r3f/testing/InWorld';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { TscnSceneContents } from '../../../r3f/TscnCanvas';
+import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
+import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
+import { HoverSeeder } from '../../../r3f/testing/HoverSeeder';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 import '../../../r3f/nodes/index';
 
@@ -91,5 +98,73 @@ describe('<SubViewport> pass', () => {
     expect(viewportPasses.every((pass) => pass.visibleChromeCount === 0 && pass.visibleIconCount === 0)).toBe(
       true
     );
+  });
+});
+
+/** A shared-world viewport whose pass draws the main scene, with the light and box beside it. */
+const SHARED_WORLD_SCENE = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+
+[node name="Light" type="OmniLight3D" parent="."]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="Viewport"]
+`;
+
+/** Whether `object` draws only in the editor: chrome, a node icon or the ground grid. */
+function isEditorOnly(object: THREE.Object3D): boolean {
+  return isEditorHelper(object) || isNodeIcon(object) || object instanceof THREE.GridHelper;
+}
+
+/** How many editor-only objects each render of the canvas's whole editor stack leaves visible. */
+async function visibleEditorOnlyPerRender(): Promise<number[]> {
+  const parsed = new TscnParser().parse(SHARED_WORLD_SCENE);
+  const graph = createSceneGraphFromTscnScene(parsed);
+  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
+  const renderer = await ReactThreeTestRenderer.create(
+    <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+      <ViewportModeProvider initialShowGizmos initialShowGrid>
+        <SelectionProvider>
+          <SelectSeeder path="Light" />
+          <HoverSeeder path="Box" />
+          <ViewportTextureProvider>
+            <ViewportPassProvider>
+              <TscnSceneContents />
+              <CaptureRenderer captured={captured} />
+            </ViewportPassProvider>
+          </ViewportTextureProvider>
+        </SelectionProvider>
+      </ViewportModeProvider>
+    </HierarchyProvider>
+  );
+  const counts: number[] = [];
+  await waitFor(async () => {
+    await withStubbedGl(
+      captured.current!,
+      {
+        onRender: (bound, renderedScene) => {
+          if (bound?.texture.name !== 'Viewport::world') return;
+          let visible = 0;
+          renderedScene.traverseVisible((object) => isEditorOnly(object) && visible++);
+          counts.push(visible);
+        },
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+    expect(counts.length).toBeGreaterThan(0);
+  });
+  return counts;
+}
+
+describe('<SubViewport> pass in a shared world', () => {
+  it('draws none of the editor chrome the main scene holds', async () => {
+    expect(Math.max(...(await visibleEditorOnlyPerRender()))).toBe(0);
   });
 });
