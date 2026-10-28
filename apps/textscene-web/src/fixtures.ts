@@ -1773,11 +1773,6 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Skeleton3d",
-    "file": "unit-skeleton3d.tscn",
-    "category": "Other"
-  },
-  {
     "name": "Sky Debanding Off",
     "file": "unit-sky-debanding-off.tscn",
     "category": "Other"
@@ -3001,6 +2996,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Ribbon",
+    "file": "unit-mesh-instance-3d-skinned-ribbon.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

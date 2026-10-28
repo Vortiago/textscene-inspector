@@ -9,21 +9,14 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
-import { firstSegment, indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import { firstSegment } from '../../../godot/classdb/indexedKey.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { stringToInt } from '../../../godot/string/string.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
 import { BONE_LEAVES } from './boneLeaves.js';
-import { UNREACHABLE_BONE_SLOT } from './boneNameOrder.js';
+import { BONE_KEY_RE, UNREACHABLE_BONE_SLOT } from './boneTable.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { MODIFIER_CALLBACK_MODE_PROCESS_NAMES } from '../../../godot/scene/skeleton3d.js';
-
-/**
- * `bones/<idx>/<sub>`: the index is a bare `path.get_slicec('/', 1).to_int()` with no validity gate
- * (skeleton_3d.cpp:82), so {@link stringToInt} decides the number: `bones/x/position` names bone 0,
- * and Godot applies it.
- */
-const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
 
 /**
  * `bones/<idx>/<sub>` dispatcher. The malformed-key and Vector3/Quaternion

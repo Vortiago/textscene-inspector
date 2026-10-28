@@ -3,7 +3,7 @@
  * or a magenta wireframe placeholder for a GLB, a mesh type no slice builds, or an
  * unresolvable mesh. A node with no `mesh` draws nothing.
  * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
- * missing-texture placeholder.
+ * missing-texture placeholder. A node bound to a Skeleton3D draws its triangles as a THREE.SkinnedMesh.
  */
 
 import * as THREE from 'three';
@@ -24,14 +24,27 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
-/** What a MeshInstance3D mounts: a mesh draws triangles, and a PointMesh draws points. */
+/** What a MeshInstance3D mounts: a mesh draws triangles, a PointMesh draws points. */
 type DrawnMesh = THREE.Mesh | THREE.Points;
+
+/**
+ * The element of the node's own draw and the props that bind it. A skeleton makes it a
+ * THREE.SkinnedMesh, drawn detached so the skin matrices stay in mesh space and the node's
+ * transform applies after them.
+ */
+function drawOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefined) {
+  // A PointMesh stays `<points>`: a SkinnedMesh would draw its one index per point as triangles.
+  return skeleton && !drawsPoints
+    ? { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } }
+    : { Drawn: drawnTag(drawsPoints), skin: {} };
+}
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
@@ -88,11 +101,14 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
+  // A surface with no bone arrays stays unskinned even when the node is bound.
+  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, properties.skinMatrices);
 
   const shellProps = {
     name: node.name,
     meshRef,
     drawsPoints,
+    skeleton,
     position,
     rotation,
     scale,
@@ -111,6 +127,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
       <MaterialOverlayMesh
         meshRef={meshRef}
         drawsPoints={drawsPoints}
+        skeleton={skeleton}
         source={overlaySource}
         shadow={shadow}
       />
@@ -174,12 +191,15 @@ const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 function MaterialOverlayMesh({
   meshRef,
   drawsPoints,
+  skeleton,
   source,
   shadow,
 }: {
   meshRef: RefObject<DrawnMesh | null>;
   /** The base draws points, so the overlay does too. */
   drawsPoints: boolean;
+  /** The base is skinned, so the overlay is skinned by the same skeleton. */
+  skeleton?: THREE.Skeleton | null;
   source: MaterialSource;
   /**
    * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
@@ -202,9 +222,10 @@ function MaterialOverlayMesh({
   useEffect(readBack);
 
   if (!geometry) return null;
-  const Drawn = drawnTag(drawsPoints);
+  const { Drawn, skin } = drawOf(drawsPoints, skeleton);
   return (
     <Drawn
+      {...skin}
       geometry={geometry}
       // Explicit: three breaks ties by creation order, so a re-parse that remounts one
       // material would draw the overlay under its surface. Godot appends the overlay
@@ -228,6 +249,8 @@ interface MeshShellProps {
   meshRef: RefObject<DrawnMesh | null>;
   /** The mesh draws `PRIMITIVE_POINTS`, so the shell mounts `<points>`. */
   drawsPoints: boolean;
+  /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
+  skeleton: THREE.Skeleton | null;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -252,6 +275,7 @@ function MeshShell({
   name,
   meshRef,
   drawsPoints,
+  skeleton,
   position,
   rotation,
   scale,
@@ -261,9 +285,10 @@ function MeshShell({
   overlay,
   children,
 }: MeshShellProps) {
-  const Drawn = drawnTag(drawsPoints);
+  const { Drawn, skin } = drawOf(drawsPoints, skeleton);
   return (
     <Drawn
+      {...skin}
       ref={meshRef}
       name={name}
       position={position}

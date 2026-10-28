@@ -1,20 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { NOTHING_CACHED, answeredOnce, firstCached, recordingReads } from './cacheSources.js';
+import { NOTHING_CACHED, answeredOnce, recordingReads } from './cacheSources.js';
 
 const answering = (entries: Record<string, string | null>) => ({
   getCached: (path: string) => entries[path],
-});
-
-describe('firstCached', () => {
-  it('answers each path from the first source that holds it', () => {
-    const cache = firstCached(answering({ 'res://a.tscn': 'a' }), answering({ 'res://b.tscn': 'b' }));
-    expect([cache.getCached('res://a.tscn'), cache.getCached('res://b.tscn')]).toEqual(['a', 'b']);
-  });
-
-  it('reads a path no source holds as not cached (edge case)', () => {
-    const cache = firstCached(answering({ 'res://loading.tscn': null }), answering({}));
-    expect(cache.getCached('res://loading.tscn')).toBeUndefined();
-  });
 });
 
 describe('recordingReads', () => {

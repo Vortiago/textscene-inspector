@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
-import { joinPath, parentPathOf } from '../../../utils/nodePath.js';
+import { nodesByPath, parentPathOf } from '../../../utils/nodePath.js';
 import { uniqueNamePaths } from '../../../utils/uniqueNames.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
@@ -47,18 +47,13 @@ interface RelayProps {
  * so every consumer reads the moved target. The parse is memoized per content, so a re-run is idempotent.
  */
 export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
-  const nodeByPath = new Map<string, TscnNode>();
-  const relays: Array<{ node: TscnNode; path: string }> = [];
-
-  const walk = (node: TscnNode, parentPath: string): void => {
-    const path = joinPath(parentPath, node.name);
-    nodeByPath.set(path, node);
-    if (REMOTE_TRANSFORM_TYPES.has(node.type)) relays.push({ node, path });
-    for (const child of node.children) walk(child, path);
-  };
   // Only the authored root scene. The live scene tree (ADR-0013) composes instanced sub-scenes
   // later, so a relay inside an instance, or a `remote_path` that crosses one, is not resolved.
-  for (const node of nodes) walk(node, '');
+  const nodeByPath = nodesByPath(nodes);
+  const relays: { node: TscnNode; path: string }[] = [];
+  for (const [path, node] of nodeByPath) {
+    if (REMOTE_TRANSFORM_TYPES.has(node.type)) relays.push({ node, path });
+  }
 
   if (relays.length === 0) return nodes;
   const uniquePaths = uniqueNamePaths(nodes);

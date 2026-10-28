@@ -8,6 +8,12 @@ import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
 
+/** A surface's `ARRAY_BONES` and `ARRAY_WEIGHTS`: four bones and four weights for every vertex. */
+export interface SurfaceBones {
+  indices: Uint16Array;
+  weights: Float32Array;
+}
+
 /** One surface as Godot's mesh arrays hold it: front faces clockwise, UV with V down. */
 export interface GodotSurface {
   /** `xyz` per vertex. */
@@ -20,6 +26,8 @@ export interface GodotSurface {
   uvs?: Float32Array;
   /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV2. */
   uv2s?: Float32Array;
+  /** The bones that skin each vertex, or undefined for a surface with no ARRAY_BONES. */
+  bones?: SurfaceBones;
   /** Three per triangle, or one per drawn point. */
   indices: ArrayLike<number>;
   /** Godot's `PRIMITIVE_POINTS`: one point per index, drawn at the material's point size. */
@@ -68,6 +76,9 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   // them: mixing the two across groups looks inconsistent.
   const useDecodedNormals = surfaces.length > 0 && surfaces.every((s) => s.normals);
   const useDecodedTangents = surfaces.length > 0 && surfaces.every((s) => s.tangents);
+  // Skinning is all or nothing: three skins a whole geometry, so a surface without bones would
+  // draw at the origin of bone 0.
+  const isSkinned = surfaces.length > 0 && surfaces.every((s) => s.bones);
 
   const positions = new Float32Array(totalVertices * 3);
   const uvs = hasUV ? new Float32Array(totalVertices * 2) : undefined;
@@ -78,6 +89,9 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   // three builds `vBitangent = cross(normal, tangent) * w`, Godot's binormal
   // (`scene_forward_clustered.glsl:756`), so the tangents pass through as Godot wrote them.
   const tangents = useDecodedTangents ? new Float32Array(totalVertices * 4) : undefined;
+  const skin = isSkinned
+    ? { indices: new Uint16Array(totalVertices * 4), weights: new Float32Array(totalVertices * 4) }
+    : undefined;
   const indices = indexArray(totalIndices, totalVertices);
 
   let vertexBase = 0;
@@ -102,6 +116,10 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
       else setDefaultPointNormals(normals, vertexBase, vertexCount);
     }
     if (tangents && surface.tangents) tangents.set(surface.tangents, vertexBase * 4);
+    if (skin && surface.bones) {
+      skin.indices.set(surface.bones.indices, vertexBase * 4);
+      skin.weights.set(surface.bones.weights, vertexBase * 4);
+    }
     // Re-base each surface's indices into the merged vertex array. A triangle's winding reverses:
     // Godot fronts triangles clockwise and three.js counter-clockwise, so without the swap every
     // face is back-culled. A point has no winding.
@@ -129,6 +147,10 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.computeVertexNormals();
   }
   if (tangents) geometry.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4));
+  if (skin) {
+    geometry.setAttribute('skinIndex', new THREE.BufferAttribute(skin.indices, 4));
+    geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skin.weights, 4));
+  }
   if (isPoints) geometry.userData[DRAWS_POINTS] = true;
 
   return geometry;

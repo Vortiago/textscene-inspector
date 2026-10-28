@@ -15,23 +15,6 @@ export interface CacheSource<T> {
 export const NOTHING_CACHED: CacheSource<never> = { getCached: () => undefined };
 
 /**
- * A source that answers each path from the first of `sources` that holds it.
- *
- * @canonical A `getCached` reader for a walk
- */
-export function firstCached<T>(...sources: readonly CacheSource<T>[]): CacheSource<T> {
-  return {
-    getCached: (path) => {
-      for (const source of sources) {
-        const answer = source.getCached(path);
-        if (answer !== null && answer !== undefined) return answer;
-      }
-      return undefined;
-    },
-  };
-}
-
-/**
  * `source`, with each path it is asked for handed to `onRead` with the answer it gave.
  *
  * @canonical A `getCached` reader for a walk

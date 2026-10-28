@@ -8,7 +8,7 @@
 import type { TscnNode, TscnInternalResource } from '../../../../parser/types.js';
 import type { CSGPolygon3DProperties } from './types.js';
 import type { Path3DProperties } from '../../../../nodes/paths/path3d/types.js';
-import { joinPath } from '../../../../utils/nodePath.js';
+import { nodesByPath } from '../../../../utils/nodePath.js';
 import { uniqueNamePaths } from '../../../../utils/uniqueNames.js';
 import { resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../godot/string/nodePath.js';
 import { resolveCurve3D } from '../../../../resources/curves/curve3d/index.js';
@@ -30,19 +30,13 @@ export function resolveCsgPolygonPaths(
   nodes: TscnNode[],
   internalResources: readonly TscnInternalResource[]
 ): TscnNode[] {
-  const nodeByPath = new Map<string, TscnNode>();
-  const polygons: Array<{ node: TscnNode; path: string }> = [];
-
-  const walk = (node: TscnNode, parentPath: string): void => {
-    const path = joinPath(parentPath, node.name);
-    nodeByPath.set(path, node);
-    if (node.type === 'CSGPolygon3D') {
-      const props = node.properties as CSGPolygon3DProperties;
-      if (props.mode === MODE_PATH) polygons.push({ node, path });
+  const nodeByPath = nodesByPath(nodes);
+  const polygons: { node: TscnNode; path: string }[] = [];
+  for (const [path, node] of nodeByPath) {
+    if (node.type === 'CSGPolygon3D' && (node.properties as CSGPolygon3DProperties).mode === MODE_PATH) {
+      polygons.push({ node, path });
     }
-    for (const child of node.children) walk(child, path);
-  };
-  for (const node of nodes) walk(node, '');
+  }
 
   if (polygons.length === 0) return nodes;
 
