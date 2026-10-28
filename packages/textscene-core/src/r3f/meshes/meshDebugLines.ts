@@ -4,8 +4,8 @@
  */
 
 import type { SurfacedMesh } from './meshContent';
+import { FLOATS_PER_VERTEX } from '../../godot/math/vector';
 import { geometryDrawsPoints, godotTriangleVertices } from '../../resources/meshes/godotSurface';
-import { FLOATS_PER_VERTEX } from '../gizmo/axisCross';
 
 /** Three segments, two vertices each. */
 const FLOATS_PER_TRIANGLE_EDGES = 6 * FLOATS_PER_VERTEX;

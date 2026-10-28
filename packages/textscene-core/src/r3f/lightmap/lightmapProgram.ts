@@ -130,6 +130,7 @@ vGodotLightmapUv = uv1;`;
  * Each material's assignment. Written only by `bindLightmap`, and collected with its material. Not
  * `userData`, which a material's clone copies through JSON.
  */
+// eslint-disable-next-line no-restricted-syntax -- bindLightmap writes or deletes an entry from outside
 const assignments = new WeakMap<Material, LightmapAssignment>();
 
 /**

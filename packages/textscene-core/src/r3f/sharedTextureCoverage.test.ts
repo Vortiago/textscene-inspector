@@ -58,6 +58,9 @@ function topLevelFunction(statement: ts.Statement): { name: string; body: ts.Nod
   return { name: declaration.name.text, body: initializer };
 }
 
+/** The factories another module exports that build a texture for each call. */
+const IMPORTED_FACTORIES = new Set(['installedSlot']);
+
 function isReleaseCall(node: ts.Node): boolean {
   return (
     ts.isCallExpression(node) &&
@@ -97,7 +100,7 @@ class Module {
     );
   }
 
-  /** Whether `node` builds a texture: a constructor, a loader, or a call of this module's factory. */
+  /** Whether `node` builds a texture: a constructor, a loader, or a call of a factory. */
   builds(node: ts.Node): boolean {
     if (ts.isNewExpression(node)) {
       const name = node.expression.getText();
@@ -105,7 +108,8 @@ class Module {
     }
     if (!ts.isCallExpression(node)) return false;
     const callee = node.expression;
-    if (ts.isIdentifier(callee)) return this.calls(node, this.factories);
+    if (ts.isIdentifier(callee))
+      return IMPORTED_FACTORIES.has(callee.text) || this.calls(node, this.factories);
     return (
       ts.isPropertyAccessExpression(callee) &&
       callee.name.text === 'load' &&

@@ -1,12 +1,12 @@
 /**
  * Builds a tiny OpenType-CFF font in memory for the CFF reader's tests: a `CFF ` or `CFF2` table
- * with the charstrings a test writes, plus the `cmap` and `head` that `parseSfntOutlines` needs.
+ * with the charstrings a test writes, plus the `cmap` and `head` that `openFontOutlines` needs.
  * `charstring` assembles Type 2 operators and operands by name.
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import type { GlyphContours } from './glyphContours';
-import { parseSfntOutlines } from './sfntOutlines';
+import { openFontOutlines } from './sfntOutlines';
 import { ByteWriter, cmapTable, headTable, sfntFileBytes } from './sfntOutlines.testkit';
 
 export type CharstringToken = number | OperatorName | { fixed: number } | { raw: readonly number[] };
@@ -446,7 +446,11 @@ export function contourText(contours: GlyphContours): string[] {
  * What glyph `glyphIndex` of `font` draws at `fontSizePx`, as `contourText`, or null when it draws nothing.
  * @canonical The points a built CFF test font draws, as text
  */
-export function drawnAt(font: TestCffFont, glyphIndex: number, fontSizePx: number): string[] | null {
-  const contours = parseSfntOutlines(buildTestCffFont(font))?.glyphContours(glyphIndex, fontSizePx);
+export async function drawnAt(
+  font: TestCffFont,
+  glyphIndex: number,
+  fontSizePx: number
+): Promise<string[] | null> {
+  const contours = (await openFontOutlines(buildTestCffFont(font)))?.glyphContours(glyphIndex, fontSizePx);
   return contours ? contourText(contours) : null;
 }

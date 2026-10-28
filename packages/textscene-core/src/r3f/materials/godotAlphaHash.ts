@@ -81,6 +81,7 @@ interface HashUniforms {
  * Each hashed material's uniforms. Written by the draw hooks before each draw, and collected with
  * its material.
  */
+// eslint-disable-next-line no-restricted-syntax -- alignAlphaHash reads an entry without building one, and a perObject read always builds
 const hashUniforms = new WeakMap<THREE.Material, HashUniforms>();
 
 function hashUniformsOf(material: THREE.Material): HashUniforms {

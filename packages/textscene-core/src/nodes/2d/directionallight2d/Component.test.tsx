@@ -12,7 +12,11 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
-import { LIGHT_PASS_LAYER, directionalRenderOrder } from '../../../r3f/lighting2d/lightPassLayers';
+import {
+  LIGHT_PASS_LAYER,
+  SEED_RENDER_ORDER,
+  directionalRenderOrder,
+} from '../../../r3f/lighting2d/lightPassLayers';
 import { itemUniforms, ownerName, recordLightPass } from '../../../r3f/lighting2d/testing/lightPassProbe';
 import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
@@ -128,6 +132,10 @@ describe('DirectionalLight2D Component', () => {
       directionalRenderOrder(1),
     ]);
     expect(directionalRenderOrder(1)).toBeLessThan(0);
+    // The list has no fixed length: a CanvasLayer lists its lights past the eighth.
+    expect(directionalRenderOrder(1000)).toBeGreaterThan(directionalRenderOrder(999));
+    expect(directionalRenderOrder(1000)).toBeLessThan(0);
+    expect(directionalRenderOrder(0)).toBeGreaterThan(SEED_RENDER_ORDER);
   });
 
   it('draws nothing while disabled, and its children still draw', async () => {

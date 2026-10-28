@@ -22,6 +22,7 @@ import { FLEX_OPERANDS, PathOperators } from './cffPathOperators';
 import { ContourBuilder, type CharstringContour } from './cffPen';
 import type { PrivateBlues } from './cffPrivateDict';
 import { twoByteInteger, type CffFont, type CffPrivate } from './cffTables';
+import { perObject } from '../../../../utils/perObject';
 
 /** `CF2_OPERAND_STACK_SIZE`, and `CFF2_DEFAULT_STACK` for a CFF2 table. */
 const OPERAND_STACK_CFF1 = 48;
@@ -355,13 +356,12 @@ class CharstringRun {
 /** The sizes a font keeps zones for, so a size that changes every frame cannot grow the cache without bound. */
 const MAX_SCALES_PER_FONT = 16;
 
-/** Written only by `blueZonesAt`. A font's entry goes when the font's blue values are collected. */
-const zonesOfFont = new WeakMap<PrivateBlues, Map<number, BlueZones>>();
+/** Each font's zones by scale, written only by `blueZonesAt`. An entry goes with its font's blues. */
+const zonesOfFont = perObject((_blues: PrivateBlues) => new Map<number, BlueZones>());
 
 /** The zones of `blues` at `scale`, shared by the glyphs of a size: a zone is read-only once built. */
 function blueZonesAt(blues: PrivateBlues, scale: number): BlueZones {
-  let atScale = zonesOfFont.get(blues);
-  if (!atScale) zonesOfFont.set(blues, (atScale = new Map()));
+  const atScale = zonesOfFont(blues);
   let zones = atScale.get(scale);
   if (!zones) {
     if (atScale.size >= MAX_SCALES_PER_FONT) atScale.clear();

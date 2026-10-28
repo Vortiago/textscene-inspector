@@ -14,7 +14,11 @@ import { bezierInterpolatef } from '../../../godot/math/math';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import { signedPolygonArea } from '../../../godot/math/polygonArea';
 import type { Vector2 } from '../../../godot/math/vector';
-import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
+import {
+  midpoint,
+  type ContourPoint,
+  type GlyphContours,
+} from '../../../r3f/controls/native/text/glyphContours';
 import { triangulateContours, type TriangulatedContour } from './triangulate';
 
 /** A polygon vertex. A point on the curve is sharp, and a point stepped along an arc is smooth. */
@@ -53,10 +57,6 @@ function emptyGlyphMeshData(): GlyphMeshData {
     min: { x: Infinity, y: Infinity },
     max: { x: -Infinity, y: -Infinity },
   };
-}
-
-function midpoint(a: ContourPoint, b: ContourPoint): Vector2 {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
 /**

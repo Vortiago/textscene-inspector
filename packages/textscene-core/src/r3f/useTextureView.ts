@@ -4,7 +4,7 @@
  * nothing draws it.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import {
   ownedTextureView,
@@ -13,6 +13,7 @@ import {
   viewToRelease,
   type ViewSampler,
 } from '../resources/textures/textureView';
+import { useByValue } from './hooks/useByValue';
 import { useTiledUpload } from './tiledUpload/useTiledUpload';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 
@@ -54,16 +55,9 @@ function useView(
   sampler: ViewSampler | null | undefined,
   make: MakeView
 ): THREE.Texture | null {
-  const stated = useStatedByValue(sampler);
+  const stated = useByValue(sampler, sameViewSampler);
   const view = useMemo(() => (source ? make(source, stated) : null), [source, stated, make]);
   return useDrawnView(view);
-}
-
-/** The sampler of an earlier render that states the same values, so a memo keyed on it sees one identity. */
-function useStatedByValue(sampler: ViewSampler | null | undefined): ViewSampler | null | undefined {
-  const previous = useRef(sampler);
-  if (!sameViewSampler(previous.current, sampler)) previous.current = sampler;
-  return previous.current;
 }
 
 /**

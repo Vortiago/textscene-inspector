@@ -7,14 +7,17 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from '../math/real.js';
-import { normalizedVector3, vector3Dot } from '../math/vector.js';
+import { normalizedVector3, vector3Length } from '../math/vector.js';
 import {
+  basisColumn,
   basisDiagonal,
   basisFrom,
   basisFromQuaternion,
   basisInvert,
   basisMultiply,
+  basisOrthonormalized,
   type BasisComponents,
+  type Triple,
 } from '../math/basis.js';
 
 /** The transform fields of a glTF node. */
@@ -23,8 +26,6 @@ export interface GltfNodeTransform {
   rotation?: readonly number[];
   scale?: readonly number[];
 }
-
-type Triple = [number, number, number];
 
 export const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
@@ -37,7 +38,7 @@ export function gltfNodeBasis(node: GltfNodeTransform): BasisComponents {
   let basis = IDENTITY_BASIS;
   // `set_quaternion_scale(q, get_scale())`, and the identity's scale is exactly one.
   if (node.rotation) basis = basisMultiply(quaternionBasis(node.rotation), IDENTITY_BASIS);
-  if (node.scale) basis = basisMultiply(orthonormalized(basis), diagonal(node.scale));
+  if (node.scale) basis = basisMultiply(basisOrthonormalized(basis), diagonal(node.scale));
   return basis;
 }
 
@@ -52,7 +53,7 @@ export function rowScaledBasis(basis: BasisComponents, rowScales: readonly numbe
  */
 export function transformChainScale(chain: readonly BasisComponents[]): Triple {
   const basis = chain.reduce<BasisComponents>((xf, node) => basisMultiply(node, xf), IDENTITY_BASIS);
-  return [0, 1, 2].map((axis) => length(column(basis, axis))) as Triple;
+  return [0, 1, 2].map((axis) => vector3Length(...basisColumn(basis, axis))) as Triple;
 }
 
 /**
@@ -108,32 +109,4 @@ function quaternionBasis([x = 0, y = 0, z = 0, w = 1]: readonly number[]): Basis
 
 function diagonal([x = 1, y = 1, z = 1]: readonly number[]): BasisComponents {
   return basisDiagonal(x, y, z);
-}
-
-/** `Basis::orthonormalize` (`basis.cpp:56-72`), Gram-Schmidt over the columns. */
-function orthonormalized(basis: BasisComponents): BasisComponents {
-  const x = normalizedVector3(...column(basis, 0));
-  const y = normalizedVector3(...subtract(column(basis, 1), scaled(x, vector3Dot(x, column(basis, 1)))));
-  const zColumn = column(basis, 2);
-  const z = normalizedVector3(
-    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
-  );
-  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
-}
-
-function column(basis: BasisComponents, axis: number): Triple {
-  return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
-}
-
-function scaled(v: Triple, s: number): Triple {
-  return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
-}
-
-function subtract(a: Triple, b: Triple): Triple {
-  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
-}
-
-/** `Vector3::length` (`vector3.h:532-538`). */
-function length(v: Triple): number {
-  return f(Math.sqrt(vector3Dot(v, v)));
 }

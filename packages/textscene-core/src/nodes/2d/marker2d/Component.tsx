@@ -11,7 +11,8 @@ import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import { writeGodotPointAsThree } from '../../../r3f/node2dTransform';
-import { axisCross, FLOATS_PER_VERTEX } from '../../../r3f/gizmo/axisCross';
+import { FLOATS_PER_VERTEX } from '../../../godot/math/vector';
+import { axisCross } from '../../../r3f/gizmo/axisCross';
 import type { Marker2DProperties } from './types';
 
 const { X, Y } = Vector3Axis;

@@ -108,9 +108,13 @@ The LightmapGI a node takes its light from, with the node's entry in that bake: 
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
 _Avoid_: "config file" for a `.tscn`. A general settings store.
 
-**Project default font** (`resources/fonts/font/projectDefaultFont.ts`):
+**Project default font** (`resources/fonts/font/projectFonts.ts`):
 The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
 _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
+
+**Project fonts** (`resources/fonts/font/projectFonts.ts`):
+The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
+_Avoid_: "theme context", which Godot's `ThemeContext` also names.
 
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
@@ -395,6 +399,9 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.
 
+**Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
+The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
+
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.
 A pass in a dependency cycle never runs, and `useViewportPassCycle` lets a consumer fall back.
@@ -552,7 +559,7 @@ A surface reads the mip its distance to the light asks for, so a far surface see
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
 **Decal term** (`r3f/decal/`):
-The part of every 3D program's fragment shader that mixes the decals into the albedo, as Godot's clustered shader does. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+The part of every 3D program's fragment shader that mixes the decals into the surface, as Godot's clustered shader does: the albedo of every program, and the normal, roughness, metallic, occlusion and emission of a lit one. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
 _Avoid_: "decal projection", which names the baked mesh the term replaced.
 
 **Scene rows** (`r3f/sceneRows/`):
@@ -561,8 +568,8 @@ Both share it because a fragment shader has 16 texture units.
 _Avoid_: "probe rows" and "decal rows", which name one band of it.
 
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
-The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-The Decal term reads each Decal's rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The one texture that holds the albedo, normal, ORM and emission textures of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
+The Decal term reads each Decal's rectangle of each map, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:

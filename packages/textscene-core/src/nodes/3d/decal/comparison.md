@@ -6,7 +6,7 @@ renders_as: a texture projected onto the surfaces its box intersects
 
 # Decal
 
-Godot's texture projector: it casts `texture_albedo` down the node's local -Y axis onto the surfaces inside its `size` box, blended onto the lit surface.
+Godot's texture projector: it casts `texture_albedo`, `texture_normal`, `texture_orm` and `texture_emission` down the node's local -Y axis onto the surfaces inside its `size` box. The albedo blends onto the surface, and the emission adds to it.
 
 The editor draws the box as a gizmo (`decal_gizmo_plugin.cpp`). The previewer draws it for every decal when the Gizmos toggle is on, faint while the decal is not selected (ADR-0056). It also draws Godot's billboard icon at the origin. Godot's runtime draws no box, so a capture that compares with Godot keeps the toggle off.
 
@@ -22,13 +22,31 @@ Editor gizmos draw on layer 27 of 1 to 32, bit 26 (`node_3d_editor_gizmos.cpp:22
 
 <!-- compare: image=unit-decal-roughness-receiver status=done fixture=unit-decal-roughness-receiver.tscn -->
 
-A decal replaces only the receiver's albedo (`scene_forward_clustered.glsl:1610`). The receiver's roughness, metallic and AO maps and the terms of each surface keep shading the decal.
+A decal replaces the receiver's albedo (`scene_forward_clustered.glsl:1610`). Without an ORM map, the receiver's roughness, metallic and AO maps and the terms of each surface keep shading the decal.
+
+## Normal map
+
+<!-- compare: image=unit-decal-normal-map status=done fixture=unit-decal-normal-map.tscn -->
+
+`texture_normal` applies where the albedo applies (`scene_forward_clustered.glsl:1612-1625`). It mixes into the receiver's normal by the decal's alpha, after the receiver's own normal map. The map tilts along the decal's own axes, so a rotated decal tilts its bumps with it. A decal with a normal map and no albedo draws nothing.
+
+## ORM map
+
+<!-- compare: image=unit-decal-orm-map status=done fixture=unit-decal-orm-map.tscn -->
+
+`texture_orm` applies where the albedo applies (`scene_forward_clustered.glsl:1627-1637`). Its red, green and blue channels mix into the receiver's occlusion, roughness and metallic by the decal's alpha. Where the alpha is 1, the decal's occlusion replaces the receiver's AO map. A decal with an ORM map and no albedo draws nothing.
+
+## Emission
+
+<!-- compare: image=unit-decal-emission-map status=done fixture=unit-decal-emission-map.tscn -->
+
+`texture_emission` adds its colour, times `modulate`, `emission_energy` and the fades, to the receiver's emission (`scene_forward_clustered.glsl:1640-1650`). It needs no albedo, so a decal with an emission texture alone draws. The distance fade scales the energy. An unshaded receiver keeps its albedo alone and shows no emission, normal or ORM (`:2958-2960`).
 
 ## Order and cap
 
 <!-- compare: image=unit-decal-triangulation status=done fixture=unit-decal-triangulation.tscn -->
 
-The decals sort by distance minus `sorting_offset`, nearest first, and the first 512 that the distance fade keeps are drawn (`texture_storage.cpp:3316-3486`). The shader applies them in groups of 32, the highest index of a group first (`scene_forward_clustered.glsl:1535-1654`), so the nearest decal of a group draws last. `decal-gpu` (`pnpm test:gpu`) checks the order and the cap on the real shaders.
+The decals sort by distance minus `sorting_offset`, nearest first, and the first 512 that the distance fade keeps are drawn (`texture_storage.cpp:3316-3486`). The shader applies them in groups of 32, the highest index of a group first (`scene_forward_clustered.glsl:1535-1654`), so the nearest decal of a group draws last. `decal-gpu` (`pnpm test:gpu`) checks the order and the cap on the real shaders. A decal with no albedo and no emission texture counts among the 512 and draws nothing (`:3353-3356,3420`).
 
 ## Texture wrappers
 
@@ -40,7 +58,7 @@ A decal takes its texture's RID (`scene/3d/decal.cpp:46`), as a material slot do
 
 <!-- compare: image=unit-decal-mipmap-import status=done fixture=unit-decal-mipmap-import.tscn -->
 
-One decal atlas holds every albedo texture that a decal projects, as in Godot (`texture_storage.cpp:3038-3258`). Two decals with one texture share one rectangle. The atlas packs the textures with Godot's best-fit skyline in its size order. Each texture takes a cell of `(size / 32) + 1` with a border of 32 texels, and the atlas has five levels (`texture_storage.h:274`).
+One decal atlas holds every texture that a decal projects, as in Godot (`texture_storage.cpp:3038-3258`). Two maps with one texture share one rectangle. The atlas packs the textures with Godot's best-fit skyline in its size order. Each texture takes a cell of `(size / 32) + 1` with a border of 32 texels, and the atlas has five levels (`texture_storage.h:274`).
 
 Level 0 copies each texture into its rectangle over transparent black. Each next level halves the whole previous level in RGBA8 bytes with the importer's 2 × 2 byte average (`:3220-3222`). The atlas rebuilds only when a texture joins it or changes its pixels. A texture that leaves keeps its place until then (`:3258`).
 
@@ -53,6 +71,8 @@ A texture that would push the atlas past the GPU's `MAX_TEXTURE_SIZE` stays out,
 <!-- compare: image=unit-decal-filter status=done fixture=decal-filter/unit-decal-filter.tscn -->
 
 The decal sampler follows the project setting `rendering/textures/decals/filter`, Linear Mipmap by default (`render_forward_clustered.cpp:3436-3460`, `renderer_scene_render_rd.cpp:1730`). It numbers the filters as `BaseMaterial3D.texture_filter` does, so each maps to the sampler a material gets (`godotTextureFilter.ts`). The anisotropic filters take the anisotropic level of the viewport that draws. A filter without mipmaps reads only the first level of the atlas.
+
+Godot reads an albedo or emission map through the atlas's sRGB view, and a normal or ORM map through its linear view (`render_forward_clustered.cpp:3205-3213`). A WebGL texture has one view, so the atlas is an sRGB texture and a normal or ORM read encodes its texels back to bytes. A read that magnifies filters those bytes itself, as the linear view does.
 
 The reference driver and the browser's pick different taps for Nearest with Mipmaps and Anisotropic, so that filter differs from `pnpm ref:godot` (see the comparison README).
 
@@ -92,8 +112,3 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 The linter warns (`resource-type-excluded-by-hint`) when one of the four `texture_*` slots holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`decal.cpp:49-58`).
 
 `size` falls back to Godot's default `Vector3(2, 2, 2)` with a warning when malformed. `albedo_mix`, `emission_energy`, `normal_fade`, `upper_fade`, `lower_fade` and `cull_mask` fall back the same way to `1`, `1`, `0`, `0.3`, `0.3` and `1048575`. The two fade exponents are also clamped at zero, as Godot's setters clamp them. `modulate` falls back silently to opaque white, and the four `texture_*` references are copied through unvalidated.
-
-## Known limitations
-
-- **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so a decal carries albedo alone.
-- **Approximated** An untextured decal takes a place among the 512 and draws nothing, where Godot leaves its buffer row unwritten (`texture_storage.cpp:3420`).

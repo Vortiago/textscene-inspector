@@ -29,6 +29,7 @@ const FACE_UPS: readonly THREE.Vector3[] = [
 ];
 
 /** Written only by `captureCameras`. A camera leaves it once it is collected. */
+// eslint-disable-next-line no-restricted-syntax -- captureCameras writes each entry from outside, and probeCaptureOf only reads it
 const captures = new WeakMap<THREE.Camera, ProbeCapture>();
 
 /** The capture `camera` draws, or undefined for a camera that draws none. */

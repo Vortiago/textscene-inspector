@@ -9,7 +9,8 @@ import { RowTexture } from '../rowTexture/rowTexture.js';
 import type { PackedRows } from '../rowTexture/packedRows.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
-import { DECAL_FIRST_ROW, SCENE_ROW_TEXELS } from './sceneRowsChunk.js';
+import { DECAL_FIRST_ROW } from './sceneRowsChunk.js';
+import { SCENE_ROW_TEXELS } from './sceneRowTexels.js';
 import { sceneRowsSlot } from './sceneRowsSlot.js';
 
 const ROW_FLOATS = SCENE_ROW_TEXELS * 4;

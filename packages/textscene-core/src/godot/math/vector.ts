@@ -20,6 +20,13 @@ export interface Vector3 {
 export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
 
 /**
+ * The floats of one 3D vertex in a flat array, as a `PackedVector3Array` or a line list holds them.
+ *
+ * @canonical The floats of a 3D vertex in a flat array
+ */
+export const FLOATS_PER_VERTEX = 3;
+
+/**
  * `Vector2::normalize` (`core/math/vector2.cpp:52-59`) in `real_t` float: a zero vector stays zero.
  *
  * @canonical A unit vector

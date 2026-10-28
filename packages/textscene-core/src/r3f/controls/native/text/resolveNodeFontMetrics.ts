@@ -24,13 +24,7 @@ import { perObject } from '../../../../utils/perObject';
  * walk, so a new generation never hits and an old one is collected with its nodes.
  */
 const scopeFor = perObject((n: ShareNode): ThemeResolutionScope =>
-  themeResolutionScope(
-    n.node.type,
-    controlProps(n).themeTypeVariation,
-    n.themeChain,
-    n.projectTheme,
-    n.projectDefaultFont
-  )
+  themeResolutionScope(n.node.type, controlProps(n).themeTypeVariation, n.themeChain, n.projectFonts)
 );
 
 /**

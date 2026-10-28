@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Light Render Budget",
+    "file": "unit-canvas-light-render-budget.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
     "category": "Other"
@@ -458,6 +463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Emission Map",
+    "file": "unit-decal-emission-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -465,6 +475,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Mipmap Import",
     "file": "unit-decal-mipmap-import.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Normal Map",
+    "file": "unit-decal-normal-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Orm Map",
+    "file": "unit-decal-orm-map.tscn",
     "category": "Other"
   },
   {
@@ -525,6 +545,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Directional Shadow Splits",
     "file": "unit-directional-shadow-splits.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Canvas Layer Cap",
+    "file": "unit-directionallight2d-canvas-layer-cap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Render Budget",
+    "file": "unit-directionallight2d-render-budget.tscn",
     "category": "Other"
   },
   {
@@ -1098,6 +1128,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Scene Font",
+    "file": "unit-label3d-scene-font.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d Shadow",
     "file": "unit-label3d-shadow.tscn",
     "category": "Other"
@@ -1620,6 +1655,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Primitive Mesh Uv2",
     "file": "unit-primitive-mesh-uv2.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Progress Bar Outline Variation",
+    "file": "unit-progress-bar-outline-variation.tscn",
     "category": "Other"
   },
   {
@@ -3074,6 +3114,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Default Font",
+    "file": "unit-text-mesh-default-font.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Embolden",
+    "file": "unit-text-mesh-embolden.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Woff2",
+    "file": "unit-text-mesh-woff2.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh",
     "file": "unit-text-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3087,6 +3142,12 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Project Default Font",
+    "file": "project-default-font/unit-text-mesh-project-default-font.tscn",
+    "category": "Unit - Primitive Meshes",
+    "root": "project-default-font"
   },
   {
     "name": "Audio Listener 2d",
@@ -3131,6 +3192,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button",
     "file": "unit-button.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order By Tree",
+    "file": "unit-canvas-layer-light-order-by-tree.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order",
+    "file": "unit-canvas-layer-light-order.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -3957,6 +4028,16 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport 2d Directional Shadow",
+    "file": "unit-sub-viewport-2d-directional-shadow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 2d Light",
+    "file": "unit-sub-viewport-2d-light.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Sub Viewport Camera 2d Canvas Layer",

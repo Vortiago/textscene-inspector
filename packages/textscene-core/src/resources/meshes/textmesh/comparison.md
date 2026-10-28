@@ -9,7 +9,7 @@ renders_as: one THREE.BufferGeometry of the glyph outlines, with front, back and
 
 # TextMesh
 
-A PrimitiveMesh that builds a flat or deep surface from the outlines of a font's glyphs. The previewer reads the outlines from a TrueType or OpenType-CFF scene font and tessellates them as Godot does. The 2D text controls and this mesh lay out lines with one shaper. A MeshInstance3D, a GridMap cell and a CSGMesh3D show their loading state until the font file and its metrics arrive, then draw the text.
+A PrimitiveMesh that builds a flat or deep surface from the outlines of a font's glyphs. The previewer reads the outlines from a TrueType or OpenType-CFF font in a plain, WOFF or WOFF2 file and tessellates them as Godot does. The font is the mesh's `font`, else the project theme's font for TextMesh, else the project default font (`gui/theme/custom_font`), else the bundled font (`primitive_meshes.cpp:3779-3809`). The 2D text controls and this mesh lay out lines with one shaper. A MeshInstance3D, a GridMap cell and a CSGMesh3D show their loading state until the font file and its metrics arrive, then draw the text.
 
 ## Linting
 
@@ -47,7 +47,7 @@ The lenient parser clamps `font_size` to 1-127, `pixel_size` to 0.0001-128 and `
 ## Known limitations
 
 - **Approximated** Godot hints a TrueType outline vertically, so a glyph's height and y position differ from the unhinted outline by a fraction of a pixel.
-- **Resource gap** A TextMesh with no font, or a font the previewer cannot read (WOFF, WOFF2 or SystemFont), draws a wireframe box, and the node's details name the type.
+- **Resource gap** A TextMesh with a SystemFont draws a wireframe box that the node's details name, as the previewer has no OS font bytes.
 - **Approximated** A character the font lacks draws as a hex-code box, where Godot first tries the font's fallbacks and the system fonts.
-- **Approximated** A FontVariation's embolden and skew change the advance of each glyph and leave its outline as it is.
+- **Approximated** Godot fails to triangulate some emboldened glyphs and draws no face for them, where the previewer fills the glyph.
 - **Approximated** Text direction, language and the structured text override are ignored, so right-to-left text and ligatures draw in logical order.

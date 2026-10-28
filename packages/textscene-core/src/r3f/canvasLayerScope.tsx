@@ -10,7 +10,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { CanvasLayerProperties } from '../nodes/2d/ui/canvaslayer/types.js';
 import { threeMatrixFromTransform2D } from './node2dTransform.js';
 import { canvasLayerOf } from './canvasPaintOrder.js';
-import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
+import { useCanvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { Modulate2DContext, WHITE_MODULATE } from './canvasItemModulate.js';
 import { ROOT_TEXTURE_SAMPLER, TextureSampler2DContext } from './canvasItemTextureSampler.js';
 import { CanvasLayerIndexProvider, EffectiveZProvider } from './lighting2d/canvasItemPlacement.js';
@@ -48,7 +48,7 @@ export function CanvasLayerScope({ node, children }: { node: TscnNode; children:
   // only this layer. The texture caches test the same null `parent_item`
   // (`canvas_item.cpp:1625-1699`). Visibility crosses only because
   // `scene/main/canvas_layer.cpp:57-63` propagates it by hand.
-  const modulate = useMemo(() => canvasModulateColor(node.children), [node.children]);
+  const modulate = useCanvasModulateColor(node.children);
   // Godot draws a layer's canvas through the layer's transform (`renderer_viewport.cpp:70-74`),
   // under the anchor a sub-viewport pass through a Camera2D sets.
   const { canvasTransform, follow_viewport_enabled, follow_viewport_scale } =

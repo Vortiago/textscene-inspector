@@ -10,7 +10,13 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { RowBuffer } from '../rowTexture/packedRows.js';
-import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowsChunk.js';
+import {
+  highMaskHalf,
+  lowMaskHalf,
+  SCENE_ROW_TEXELS,
+  setMatrixRows,
+  setTexel,
+} from '../sceneRows/sceneRowTexels.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {
@@ -40,6 +46,9 @@ export interface DrawnProbe {
  * the exposure normalisation. The mask goes in two 16-bit halves, as a float holds 24 bits exactly.
  */
 export class ProbeRows extends RowBuffer {
+  /** The row being packed, as wide as a decal's, whose extra texels stay zero. */
+  private readonly row = new Float32Array(SCENE_ROW_TEXELS * 4);
+
   constructor() {
     super(SCENE_ROW_TEXELS * 4);
   }
@@ -47,26 +56,29 @@ export class ProbeRows extends RowBuffer {
   /** Packs `probes` in order, and answers whether any row changed. */
   pack(probes: readonly DrawnProbe[]): boolean {
     this.begin();
-    for (const probe of probes) this.append(Float32Array.from(probeTexels(probe)));
+    for (const probe of probes) {
+      setProbeTexels(this.row, probe);
+      this.append(this.row);
+    }
     return this.finish();
   }
 }
 
-function probeTexels(probe: DrawnProbe): number[] {
-  const m = probe.worldToLocal.elements;
-  const matrixRow = (row: number) => [m[row]!, m[4 + row]!, m[8 + row]!, m[12 + row]!];
+function setProbeTexels(row: Float32Array, probe: DrawnProbe): void {
   const { size, originOffset, ambientColor: colour, ambientColorEnergy: energy, reflectionMask } = probe;
   // Godot stores the ambient colour in linear, times its energy (`light_storage.cpp:1817-1822`).
-  const ambient = sRGBToLinearRGB(colour.r, colour.g, colour.b).map((channel) => channel * energy);
-  const texels = [
-    matrixRow(0),
-    matrixRow(1),
-    matrixRow(2),
-    [size.x / 2, size.y / 2, size.z / 2, probe.blendDistance],
-    [originOffset.x, originOffset.y, originOffset.z, probe.intensity],
-    [...ambient, probe.ambientMode],
-    [reflectionMask & 0xffff, reflectionMask >>> 16, probe.boxProjection ? 1 : 0, probe.atlasLayer],
-    [probe.exposureNormalization, 0, 0, 0],
-  ];
-  return texels.flat();
+  const [r, g, b] = sRGBToLinearRGB(colour.r, colour.g, colour.b);
+  setMatrixRows(row, 0, probe.worldToLocal.elements);
+  setTexel(row, 3, size.x / 2, size.y / 2, size.z / 2, probe.blendDistance);
+  setTexel(row, 4, originOffset.x, originOffset.y, originOffset.z, probe.intensity);
+  setTexel(row, 5, r * energy, g * energy, b * energy, probe.ambientMode);
+  setTexel(
+    row,
+    6,
+    lowMaskHalf(reflectionMask),
+    highMaskHalf(reflectionMask),
+    probe.boxProjection ? 1 : 0,
+    probe.atlasLayer
+  );
+  setTexel(row, 7, probe.exposureNormalization, 0, 0, 0);
 }

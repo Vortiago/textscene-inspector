@@ -152,6 +152,7 @@ export function heightmapUserData(heightmap: Heightmap | null): Record<string, u
  * The heightmap texture of each material. Written only by `bindHeightmap`, and collected with its
  * material. Not `userData`, which a material's clone copies through JSON.
  */
+// eslint-disable-next-line no-restricted-syntax -- bindHeightmap writes or deletes an entry from outside
 const heightmapTextures = new WeakMap<Material, THREE.Texture>();
 
 /** Gives `material` the texture its heightmap samples, or none. A rebind needs no recompile. */

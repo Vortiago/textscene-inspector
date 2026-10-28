@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
+import { withVariation, type GlyphVariation } from '../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
-import { parseSfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { shapedTextSizeWidthPx, shapeText } from '../../../r3f/controls/native/text/textLayout';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
@@ -21,7 +22,7 @@ const BOTTOM = '2';
 /** Half the default depth of 0.05, as the surface's float stores it. */
 const HALF_DEPTH = Math.fround(0.025);
 
-const outlines = parseSfntOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf'))!;
+const outlines = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
 const face: TextMeshFace = { outlines, metrics: OPEN_SANS_FONT_METRICS };
 
 /** A TextMesh at `font_size` 64 with depth 0.05, the properties of `raw` over those defaults, built. */
@@ -31,9 +32,9 @@ function surfaceOf(text: string, raw: Record<string, string> = {}): GodotSurface
 }
 
 /** The mesh data of `char` as the TextMesh builds it at the defaults of `surfaceOf`. */
-function glyphOf(char: string): GlyphMeshData {
+function glyphOf(char: string, variation: GlyphVariation = {}): GlyphMeshData {
   const index = outlines.glyphIndex(char.codePointAt(0)!);
-  return buildGlyphMeshData(outlines.glyphContours(index, FONT_SIZE), PIXEL_SIZE, 0.5);
+  return buildGlyphMeshData(outlines.glyphContours(index, FONT_SIZE, variation), PIXEL_SIZE, 0.5);
 }
 
 /** One of `x`, `y`, `z` of every vertex. */
@@ -309,14 +310,45 @@ describe('buildTextMeshSurface missing glyph', () => {
   });
 });
 
+describe('buildTextMeshSurface font variation', () => {
+  const EMBOLDENED = { embolden: 0.6 };
+  const SHEARED = { skew: 0.3 };
+  const faceOf = (variation: GlyphVariation): TextMeshFace => ({
+    outlines,
+    metrics: withVariation(OPEN_SANS_FONT_METRICS, variation),
+  });
+  const maxX = (variation: GlyphVariation): number => {
+    const properties = decodeTextMesh({
+      text: '"H"',
+      font_size: String(FONT_SIZE),
+      horizontal_alignment: LEFT,
+    });
+    return extent(axis(buildTextMeshSurface(properties, faceOf(variation)), 0)).max;
+  };
+
+  it.each([
+    ['embolden', EMBOLDENED],
+    ['skew', SHEARED],
+  ])('extrudes the outline that the %s of the FontVariation changes', (_, variation) => {
+    expect(maxX(variation)).toBeCloseTo(glyphOf('H', variation).max.x, 6);
+    expect(glyphOf('H', variation).max.x).toBeGreaterThan(glyphOf('H').max.x);
+  });
+
+  it('keeps the glyphs of a plain, an emboldened and a sheared face of one font apart', () => {
+    for (const variation of [{}, EMBOLDENED, SHEARED, {}]) {
+      expect(maxX(variation)).toBeCloseTo(glyphOf('H', variation).max.x, 6);
+    }
+  });
+});
+
 describe('buildTextMeshSurface glyph reuse', () => {
   function countingFace(): { face: TextMeshFace; contoursRead: () => number } {
     let reads = 0;
     const counting = {
       ...outlines,
-      glyphContours: (index: number, fontSize: number) => {
+      glyphContours: (...args: Parameters<typeof outlines.glyphContours>) => {
         reads += 1;
-        return outlines.glyphContours(index, fontSize);
+        return outlines.glyphContours(...args);
       },
     };
     return { face: { outlines: counting, metrics: OPEN_SANS_FONT_METRICS }, contoursRead: () => reads };

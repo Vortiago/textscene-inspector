@@ -12,6 +12,7 @@ import {
   basisInvert,
   basisIsOrthonormal,
   basisMultiply,
+  basisOrthonormalized,
 } from './basis.js';
 
 const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -114,6 +115,24 @@ describe('basisInvert', () => {
   it('leaves a singular basis as it is, as the editor build does (edge case)', () => {
     const singular: BasisComponents = [0, 0, 0, 0, 1, 0, 0, 0, 0];
     expect(basisInvert(singular)).toBe(singular);
+  });
+});
+
+describe('basisOrthonormalized', () => {
+  it('drops a scale, keeping the direction of each column', () => {
+    expect(basisOrthonormalized([4, 0, 0, 0, 0.5, 0, 0, 0, 2])).toEqual(IDENTITY);
+  });
+
+  it('removes a shear by Gram-Schmidt, so the first column keeps its direction (basis.cpp:56-72)', () => {
+    const [xx, yx, zx, xy, yy, zy, xz, yz, zz] = basisOrthonormalized([1, 1, 0, 0, 1, 0, 0, 0, 1]);
+
+    expect([xx, xy, xz]).toEqual([1, 0, 0]);
+    expect([yx, yy, yz]).toEqual([0, 1, 0]);
+    expect([zx, zy, zz]).toEqual([0, 0, 1]);
+  });
+
+  it('gives an orthonormal basis for a turned, sheared and scaled one', () => {
+    expect(basisIsOrthonormal(basisOrthonormalized([2, 1, 0.3, -1, 3, 0.2, 0.5, 0.1, 4]))).toBe(true);
   });
 });
 
