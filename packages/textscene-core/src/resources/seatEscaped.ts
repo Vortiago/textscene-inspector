@@ -7,7 +7,7 @@
 
 import type { SceneScope } from '../parser/types';
 import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
-import { graftAt } from './graftInstanceChildren';
+import { graftAt, placementKey } from './graftInstanceChildren';
 import {
   endAboveRoot,
   nodeAt,
@@ -17,7 +17,7 @@ import {
   type ClaimedPath,
 } from './instanceNameTable';
 import { reRootedName } from '../godot/scene/packedScene';
-import { simplifiedNodePath, UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
+import { simplifiedNodePath } from '../godot/string/nodePath';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
 import { joinPath, SCENE_ROOT_PATH } from '../utils/nodePath';
 import { perObject } from '../utils/perObject';
@@ -115,8 +115,9 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
     const placements = new Map<string, string>();
     for (const escape of escapes) {
       const at = seat(escape, pending.names);
-      if (at !== null && isFirstHolder(escape.child, isFileRoot)) {
-        placements.set(placementKey(escape.child), pathFrom(pending.names, at));
+      const key = placementKey(hostChildOf(escape.child));
+      if (at !== null && key && isFirstHolder(escape.child, isFileRoot)) {
+        placements.set(key, pathFrom(pending.names, at));
       }
     }
     const hostChildren = new Set(escapes.map(({ child }) => hostChildOf(child)));
@@ -215,12 +216,6 @@ function isFirstHolder(child: LiveNode, isFileRoot: boolean): boolean {
   return child.reanchoredFrom === undefined || isFileRoot;
 }
 
-/** The key the instance records a seated child under: its heading's sub-path and its name, as `uniqueParentPlacements` keys them. */
-function placementKey(child: LiveNode): string {
-  const { instanceSubPath = '' } = hostChildOf(child);
-  return joinPath(instanceSubPath, child.name);
-}
-
 /** `path` from the node at `from`, which climbs out of it with `..` to the frame root. */
 function pathFrom(from: readonly string[], path: string): string {
   return [...from.map(() => OUTSIDE), path].join('/');
@@ -228,9 +223,8 @@ function pathFrom(from: readonly string[], path: string): string {
 
 /** `node` that records `placements` of the children it handed back, or the same node with none. */
 function withPlacements(node: LiveNode, placements: ReadonlyMap<string, string>): LiveNode {
-  const unique = [...placements].filter(([key]) => key.includes(UNIQUE_NODE_PREFIX));
-  if (unique.length === 0) return node;
-  return { ...node, seatedPlacements: new Map([...(node.seatedPlacements ?? []), ...unique]) };
+  if (placements.size === 0) return node;
+  return { ...node, seatedPlacements: new Map([...(node.seatedPlacements ?? []), ...placements]) };
 }
 
 /** The first instance in `nodes`, in tree order, that holds deep children and is not done yet. */
