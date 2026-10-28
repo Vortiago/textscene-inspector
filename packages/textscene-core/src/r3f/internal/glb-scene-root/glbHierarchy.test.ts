@@ -7,7 +7,8 @@ import type { TscnNode } from '../../../parser/types';
 import {
   flattenGlbObjects,
   glbObjectName,
-  glbSceneRootChildCount,
+  glbChildrenBelow,
+  glbHostChildrenInOrder,
   glbSceneRootChildren,
   GLB_ANIMATION_PLAYER_NAME,
 } from './glbHierarchy';
@@ -164,26 +165,128 @@ describe('glbSceneRootChildren animation player', () => {
   });
 });
 
-describe('glbSceneRootChildCount', () => {
-  it('counts the top-level objects and the AnimationPlayer the clips add', () => {
+describe('glbSceneRootChildren host children', () => {
+  /** A GLB root with the objects `a` and `b` and one clip, so an AnimationPlayer follows them. */
+  function rigWithClip(): THREE.Group {
     const root = new THREE.Group();
-    root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Group(), 'arm'));
+    root.add(named(new THREE.Group(), 'a'), named(new THREE.Group(), 'b'));
     root.animations = [new THREE.AnimationClip('idle', 1, [])];
-    expect(glbSceneRootChildCount(root)).toBe(3);
+    return root;
+  }
+
+  const namesOf = (nodes: readonly TscnNode[]) => nodes.map((node) => node.name);
+
+  it('puts a host child with no index after the objects and the AnimationPlayer', () => {
+    const host = makeNode('Host', 'Node');
+
+    expect(namesOf(glbSceneRootChildren(rigWithClip(), [], [host]))).toEqual([
+      'a',
+      'b',
+      GLB_ANIMATION_PLAYER_NAME,
+      'Host',
+    ]);
   });
 
-  it('counts no AnimationPlayer for a GLB with no clips (edge case)', () => {
-    const root = new THREE.Group();
-    root.add(named(new THREE.Mesh(), 'body'));
-    expect(glbSceneRootChildCount(root)).toBe(1);
+  it('moves a host child to its index among the objects', () => {
+    const host = { ...makeNode('Host', 'Node'), index: 1 };
+
+    expect(namesOf(glbSceneRootChildren(rigWithClip(), [], [host]))).toEqual([
+      'a',
+      'Host',
+      'b',
+      GLB_ANIMATION_PLAYER_NAME,
+    ]);
   });
 
-  it('counts the objects the GLB loaded with, not a node mounted below it later', () => {
+  it('adds the host children in turn, the way the loader does', () => {
+    const first = makeNode('First', 'Node');
+    const second = { ...makeNode('Second', 'Node'), index: 0 };
+
+    expect(namesOf(glbSceneRootChildren(rigWithClip(), [], [first, second]))).toEqual([
+      'Second',
+      'a',
+      'b',
+      GLB_ANIMATION_PLAYER_NAME,
+      'First',
+    ]);
+  });
+
+  it('keeps a host child whose index is past the last place at the end (edge case)', () => {
+    const host = { ...makeNode('Host', 'Node'), index: 9 };
+
+    expect(namesOf(glbSceneRootChildren(rigWithClip(), [], [host])).at(-1)).toBe('Host');
+  });
+
+  it('leaves the shared children without the host child for one call', () => {
+    const root = rigWithClip();
+
+    glbSceneRootChildren(root, [], [makeNode('Host', 'Node')]);
+
+    expect(namesOf(glbSceneRootChildren(root, []))).toEqual(['a', 'b', GLB_ANIMATION_PLAYER_NAME]);
+  });
+});
+
+describe('glbHostChildrenInOrder', () => {
+  it('lists the host children in the order they stand among the objects', () => {
     const root = new THREE.Group();
-    root.add(named(new THREE.Mesh(), 'body'));
-    expect(glbSceneRootChildCount(root)).toBe(1);
-    root.add(new THREE.Group());
-    expect(glbSceneRootChildCount(root)).toBe(1);
+    root.add(named(new THREE.Group(), 'a'), named(new THREE.Group(), 'b'));
+    const first = makeNode('First', 'Node');
+    const second = { ...makeNode('Second', 'Node'), index: 0 };
+
+    expect(glbHostChildrenInOrder(root, [first, second])).toEqual([second, first]);
+  });
+});
+
+describe('glbChildrenBelow', () => {
+  /** A GLB whose object `body` holds `arm` and `leg`. */
+  function rig() {
+    const root = new THREE.Group();
+    const body = named(new THREE.Group(), 'body');
+    body.add(named(new THREE.Group(), 'arm'), named(new THREE.Group(), 'leg'));
+    root.add(body);
+    return flattenGlbObjects(root);
+  }
+
+  const BODY = 0;
+  const ARM = 1;
+  const LEG = 2;
+
+  it('lists a node with no index after the objects of its target', () => {
+    const node = makeNode('Node', 'Node');
+
+    expect(glbChildrenBelow(rig(), [{ node, target: BODY }]).get(BODY)).toEqual([
+      { entry: ARM },
+      { entry: LEG },
+      node,
+    ]);
+  });
+
+  it('moves a node to its index among the objects of its target', () => {
+    const node = { ...makeNode('Node', 'Node'), index: 1 };
+
+    expect(glbChildrenBelow(rig(), [{ node, target: BODY }]).get(BODY)).toEqual([
+      { entry: ARM },
+      node,
+      { entry: LEG },
+    ]);
+  });
+
+  it('adds the nodes of one target in authored order', () => {
+    const first = makeNode('First', 'Node');
+    const second = { ...makeNode('Second', 'Node'), index: 0 };
+
+    expect(
+      glbChildrenBelow(rig(), [
+        { node: first, target: BODY },
+        { node: second, target: BODY },
+      ]).get(BODY)
+    ).toEqual([second, { entry: ARM }, { entry: LEG }, first]);
+  });
+
+  it('lists only the targets that gain a node', () => {
+    const node = makeNode('Node', 'Node');
+
+    expect([...glbChildrenBelow(rig(), [{ node, target: LEG }]).keys()]).toEqual([LEG]);
   });
 });
 
