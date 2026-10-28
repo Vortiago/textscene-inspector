@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
 import { isLiveTarget, liveTargetCopy } from '../../r3f/liveTargets';
+import { isHeld } from '../../r3f/useDisposeOnRelease';
+import { perObject } from '../../utils/perObject';
 import { applyTextureFilterState, textureFilterMatches, type TextureFilterState } from './godotTextureFilter';
 
 /** Below this, a repeat or offset is indistinguishable from the one a texture shows. */
@@ -133,9 +135,13 @@ export function viewToRelease(texture: THREE.Texture | null | undefined): THREE.
   return texture && ownedViews.has(texture) ? texture : null;
 }
 
-/** Frees the texture of a view: a clone or a copy is disposed, a shared source is left to its owner. */
+/**
+ * Frees the texture of a view: a clone or a copy is disposed, a shared source is left to its owner.
+ * A copy another reader still holds stays, and its last holder frees it.
+ */
 export function releaseView(texture: THREE.Texture | null | undefined): void {
-  viewToRelease(texture)?.dispose();
+  const view = viewToRelease(texture);
+  if (view && !isHeld(view)) view.dispose();
 }
 
 function diverges(source: THREE.Texture, sampler: ViewSampler): boolean {
@@ -175,18 +181,43 @@ function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture 
   return clone;
 }
 
+/** Each live target's whole copies, written only by `liveCopyView`. A copy leaves its set when disposed. */
+const copiesOf = perObject<THREE.Texture, Set<THREE.Texture>>(() => new Set());
+
 /**
- * A reader's own copy of a live target, filled after each render of the target. It keeps the
- * target's tag: the copy's storage, not the tag, decides what a sample decodes, and the tag tells a
- * canvas consumer how the bytes were encoded.
+ * A copy of a live target, filled after each render of the target, shared by every reader that
+ * samples it alike, as Godot's readers sample one RID. It keeps the target's tag: the copy's
+ * storage, not the tag, decides what a sample decodes, and the tag tells a canvas consumer how the
+ * bytes were encoded. Each reader holds the copy, and the last to let go frees it.
  */
 function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
+  const copies = copiesOf(source);
+  for (const copy of copies) if (samplesAlike(copy, source, sampler)) return copy;
   const copy = applyViewSampler(liveTargetCopy(source), {
     ...sampler,
     colorSpace: source.colorSpace as THREE.ColorSpace,
   });
   ownedViews.add(copy);
+  copies.add(copy);
+  copy.addEventListener('dispose', () => copies.delete(copy));
   return copy;
+}
+
+/** Whether `copy` samples as `sampler` reads `source`, where a field left out keeps the source's value. */
+function samplesAlike(copy: THREE.Texture, source: THREE.Texture, sampler: ViewSampler): boolean {
+  const wrap = sampler.wrap ?? source.wrapS;
+  const window = sampler.window ?? { repeat: source.repeat, offset: source.offset };
+  return (
+    copy.wrapS === wrap &&
+    copy.wrapT === (sampler.wrap ?? source.wrapT) &&
+    (sampler.filter ? textureFilterMatches(copy, sampler.filter) : filtersAlike(copy, source)) &&
+    copy.channel === (sampler.channel ?? 0) &&
+    showsWindow(copy, window)
+  );
+}
+
+function filtersAlike(a: THREE.Texture, b: THREE.Texture): boolean {
+  return a.magFilter === b.magFilter && a.minFilter === b.minFilter && a.anisotropy === b.anisotropy;
 }
 
 function showsWindow(texture: THREE.Texture, { repeat, offset }: UvWindow): boolean {

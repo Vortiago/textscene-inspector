@@ -9,6 +9,7 @@ import { liveTargetCrop, publishLiveTarget, unrenderedTexel } from './liveTarget
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom } from './liveTargets.testkit';
+import { holdUntilReleased } from './useDisposeOnRelease';
 
 const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
 const UPRIGHT = { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
@@ -84,6 +85,24 @@ describe('a reader of a live target', () => {
     const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
     releaseView(view);
     expect(copiesFilledFrom(target.texture)).toEqual([]);
+  });
+
+  /** Godot's readers sample one RID, so readers that sample it alike need one copy between them. */
+  it('shares one copy between readers that sample the target alike', () => {
+    const target = liveCanvasTarget();
+    const first = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const second = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    expect(second).toBe(first);
+    expect(copiesFilledFrom(target.texture)).toEqual([first]);
+  });
+
+  it('keeps a shared copy filled while another reader still holds it', () => {
+    const target = liveCanvasTarget();
+    const held = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const release = holdUntilReleased(held);
+    releaseView(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED }));
+    expect(copiesFilledFrom(target.texture)).toEqual([held]);
+    release();
   });
 
   it("reads its own copy of another reader's copy, filled after that copy", () => {
