@@ -12,13 +12,13 @@ export interface Quaternion {
   w: number;
 }
 
+/** The turn of no rotation. Callers treat a quaternion as immutable, so one value is shared. */
+export const QUATERNION_IDENTITY: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
+
 /**
  * `Quaternion(axis, angle)` (`quaternion.cpp:283-302`): the vector part is the axis times
  * `sin(angle / 2)`, and a zero axis gives the all-zero quaternion.
  */
-/** The turn of no rotation. Callers treat a quaternion as immutable, so one value is shared. */
-export const QUATERNION_IDENTITY: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
-
 export function quaternionFromAxisAngle(axis: Vector3, angle: number): Quaternion {
   const length = f(Math.sqrt(f(f(f(axis.x * axis.x) + f(axis.y * axis.y)) + f(axis.z * axis.z))));
   if (length === 0) return { x: 0, y: 0, z: 0, w: 0 };
