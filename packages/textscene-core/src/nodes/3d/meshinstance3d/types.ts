@@ -1,5 +1,6 @@
 /** MeshInstance3D type definitions. */
 
+import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 
 /** MeshInstance3D node properties. */
@@ -21,6 +22,13 @@ export interface MeshInstance3DProperties extends GeometryInstance3DProperties {
 
   /** The Skin resource reference for skeletal animation. */
   skin?: string;
+
+  /**
+   * One matrix for each bone of the Skeleton3D `skeleton` names, in mesh space: the global pose of the
+   * bone times its bind pose in the automatic skin. Written by the Skeleton3D scene pass. Unset for a
+   * mesh that binds no skeleton.
+   */
+  skinMatrices?: readonly Transform3D[];
 
   /** Global illumination mode (0=DISABLED, 1=STATIC, 2=DYNAMIC). */
   giMode?: number;

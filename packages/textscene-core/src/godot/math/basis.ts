@@ -8,7 +8,8 @@
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
-import { normalizedVector3, vector3Dot } from './vector.js';
+import type { Quaternion } from './quaternion.js';
+import { normalizedVector3, vector3Dot, type Vector3 } from './vector.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
@@ -123,4 +124,73 @@ export function basisInvert(n: BasisComponents): BasisComponents {
     f(cofac(0, 1, 2, 0) * s),
     f(cofac(0, 0, 1, 1) * s),
   ];
+}
+
+/**
+ * `Basis::operator*` (`basis.h:281-286`): each component is `tdot` of the right over the left's row.
+ *
+ * @canonical A Basis product and a Basis from a quaternion and a scale
+ *   `basisMultiply`, `basisFromQuaternion` and `basisFromQuaternionScale`, in float32 as Godot rounds.
+ */
+export function basisMultiply(left: BasisComponents, right: BasisComponents): BasisComponents {
+  return basisFrom((i) => {
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    return f(
+      f(f(right[col]! * left[3 * row]!) + f(right[3 + col]! * left[3 * row + 1]!)) +
+        f(right[6 + col]! * left[3 * row + 2]!)
+    );
+  });
+}
+
+/** The basis whose row-major component `i` is `component(i)`. */
+export function basisFrom(component: (i: number) => number): BasisComponents {
+  return [
+    component(0),
+    component(1),
+    component(2),
+    component(3),
+    component(4),
+    component(5),
+    component(6),
+    component(7),
+    component(8),
+  ];
+}
+
+/** The scale basis of `x`, `y` and `z`, each held in float32. */
+export function basisDiagonal(x: number, y: number, z: number): BasisComponents {
+  return [f(x), 0, 0, 0, f(y), 0, 0, 0, f(z)];
+}
+
+/** `Basis::set_quaternion` (`basis.cpp:828-838`). It divides by the squared length, so any length turns. */
+export function basisFromQuaternion({ x: qx, y: qy, z: qz, w: qw }: Quaternion): BasisComponents {
+  const [x, y, z, w] = [qx, qy, qz, qw].map(f) as [number, number, number, number];
+  const d = f(f(f(f(x * x) + f(y * y)) + f(z * z)) + f(w * w));
+  const s = f(2 / d);
+  const xs = f(x * s);
+  const ys = f(y * s);
+  const zs = f(z * s);
+  const [wx, wy, wz] = [f(w * xs), f(w * ys), f(w * zs)];
+  const [xx, xy, xz] = [f(x * xs), f(x * ys), f(x * zs)];
+  const [yy, yz, zz] = [f(y * ys), f(y * zs), f(z * zs)];
+  return [
+    f(1 - f(yy + zz)),
+    f(xy - wz),
+    f(xz + wy),
+    f(xy + wz),
+    f(1 - f(xx + zz)),
+    f(yz - wx),
+    f(xz - wy),
+    f(yz + wx),
+    f(1 - f(xx + yy)),
+  ];
+}
+
+/**
+ * `Basis::set_quaternion_scale` (`basis.cpp:880-883`): the diagonal of `scale`, rotated by the
+ * quaternion, so each column of the rotation takes its axis's scale.
+ */
+export function basisFromQuaternionScale(rotation: Quaternion, scale: Vector3): BasisComponents {
+  return basisMultiply(basisFromQuaternion(rotation), basisDiagonal(scale.x, scale.y, scale.z));
 }
