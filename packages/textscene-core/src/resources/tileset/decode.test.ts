@@ -11,6 +11,8 @@ import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { countedTable } from '../testing/countedTable';
 
+const TILESET_PATH = 'res://tileset.tres';
+
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -350,7 +352,7 @@ sources/0 = SubResource("TileSetAtlasSource_a")
 `;
 
   it('resolves a TileSet .tres against its own ext/sub resources', () => {
-    const model = tileSetFromFile(parseTresFile(TILESET_TRES));
+    const model = tileSetFromFile(parseTresFile(TILESET_TRES), TILESET_PATH);
     expect(model).not.toBeNull();
     expect(model!.shape).toBe(1);
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
@@ -361,11 +363,20 @@ sources/0 = SubResource("TileSetAtlasSource_a")
     expect(source.tiles.get('0:0')!.alternatives.get(1)!.flipH).toBe(true);
   });
 
+  it('resolves the TileSet a path addresses inside a resource file, by its sub-resource id', () => {
+    const library = parseTresFile(
+      '[gd_resource type="Resource" format=3]\n\n' +
+        '[sub_resource type="TileSet" id="TileSet_1"]\ntile_size = Vector2i(32, 32)\n\n' +
+        '[resource]\n'
+    );
+    expect(tileSetFromFile(library, 'res://library.tres::TileSet_1')?.tileSize).toEqual({ x: 32, y: 32 });
+  });
+
   it('returns null for a .tres that is not a TileSet', () => {
     const material = parseTresFile(
       '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nmetallic = 0.5\n'
     );
-    expect(tileSetFromFile(material)).toBeNull();
+    expect(tileSetFromFile(material, TILESET_PATH)).toBeNull();
   });
 });
 
@@ -415,7 +426,8 @@ describe('a TileSet enum Godot reads differently from `parseInt`', () => {
     // Godot's tokenizer types `1e1` as FLOAT and stores 10, where `parseInt`
     // would stop at the `e` and read 1 (STACKED_OFFSET).
     const model = tileSetFromFile(
-      parseTresFile('[gd_resource type="TileSet"]\n\n[resource]\ntile_layout = 1e1\n')!
+      parseTresFile('[gd_resource type="TileSet"]\n\n[resource]\ntile_layout = 1e1\n')!,
+      TILESET_PATH
     );
 
     expect(model?.layout).toBe(10);
@@ -452,12 +464,15 @@ describe('TileSet source lookups', () => {
 
   it('reads each entry of a .tres table once, however many sources it names', () => {
     const { table, entryReads } = countedTable(atlasSources());
-    const model = tileSetFromFile({
-      resourceType: 'TileSet',
-      properties: tileSetBody(),
-      extResources: externals,
-      subResources: table,
-    });
+    const model = tileSetFromFile(
+      {
+        resourceType: 'TileSet',
+        properties: tileSetBody(),
+        extResources: externals,
+        subResources: table,
+      },
+      TILESET_PATH
+    );
 
     expect([...model!.sources.keys()]).toEqual([0, 1, 2, 3]);
     expect(entryReads()).toBe(table.length);

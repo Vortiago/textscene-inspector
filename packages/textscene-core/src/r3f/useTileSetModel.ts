@@ -50,7 +50,7 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
     if (fileResult.status === 'unavailable' || !fileResult.value) {
       return { model: null, status: 'unavailable' };
     }
-    const model = tileSetFromFile(fileResult.value);
+    const model = tileSetFromFile(fileResult.value, filePath);
     return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
   }, [
     tileSetRef,

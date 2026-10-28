@@ -12,6 +12,7 @@ import { slotInt } from '../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
+import { fileResources, findSectionResource } from '../resourceSection';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';
 import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
@@ -111,14 +112,14 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
   return n;
 }
 
-/** Adapter: a TileSet from its own resource file, or null for another type. */
-export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
-  if (parsed.resourceType !== 'TileSet') return null;
-  return resolveTileSetModel({
-    tileSet: { id: '', type: parsed.resourceType, data: parsed.properties },
-    externalResources: parsed.extResources,
-    internalResources: parsed.subResources,
-  });
+/**
+ * Adapter: the TileSet `path` addresses in its resource file, the file's `[resource]` or one of its
+ * sub-resources, or null for another type.
+ */
+export function tileSetFromFile(parsed: ParsedResource, path: string): TileSetModel | null {
+  const tileSet = findSectionResource(parsed, path);
+  if (tileSet?.type !== 'TileSet') return null;
+  return resolveTileSetModel({ tileSet, ...fileResources(parsed) });
 }
 
 /**
