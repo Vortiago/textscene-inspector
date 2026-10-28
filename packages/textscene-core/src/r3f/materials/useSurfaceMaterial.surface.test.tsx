@@ -14,6 +14,7 @@ import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { GLTF_SURFACE, type TexturedSurface } from './surfaceTextures';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { copiesFilledFrom } from '../liveTargets.testkit';
+import { unconfiguredViewportTexture } from '../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
@@ -129,15 +130,20 @@ function targetProps(properties: Record<string, string>, surface?: TexturedSurfa
   const target = renderTargetTexture();
   const decoding = renderTargetTexture();
   const { view, retainers } = countingView(decoding);
-  const props = materialProps(properties, VIEWPORT, surface, (children) => (
-    <ViewportTextureProvider>
-      <ViewportTexturePublisher
-        path="Root/SubViewport"
-        entry={viewportEntry(target, { x: 4, y: 4 }, { decoding: view })}
-      />
-      <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
-    </ViewportTextureProvider>
-  ));
+  const props = materialProps(
+    { resource_local_to_scene: 'true', ...properties },
+    VIEWPORT,
+    surface,
+    (children) => (
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher
+          path="Root/SubViewport"
+          entry={viewportEntry(target, { x: 4, y: 4 }, { decoding: view })}
+        />
+        <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
+      </ViewportTextureProvider>
+    )
+  );
   return { props, target, decoding, retainers };
 }
 
@@ -177,6 +183,21 @@ describe('useSurfaceMaterial with a render-target albedo', () => {
     const { props } = viewportProps({ uv1_scale: 'Vector3(2, 3, 1)' });
 
     expect(Object.keys(props.userData ?? {}).some((key) => key.includes('Target'))).toBe(false);
+  });
+});
+
+describe('useSurfaceMaterial with a ViewportTexture Godot never sets up', () => {
+  /**
+   * `make_local_resource` sets up a material only when it is local to scene, and only then its
+   * ViewportTexture (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`).
+   */
+  it('binds the placeholder in a material that is not local to scene', () => {
+    const { props } = targetProps({
+      resource_local_to_scene: 'false',
+      albedo_texture: 'SubResource("ViewportTexture_a")',
+    });
+
+    expect(props.map!.image).toBe(unconfiguredViewportTexture().image);
   });
 });
 

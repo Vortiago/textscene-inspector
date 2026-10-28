@@ -135,19 +135,36 @@ export function unwrapCanvasTextureRef(
   ref: string | null | undefined,
   internalResources: readonly TscnInternalResource[]
 ): string | undefined {
+  return peelCanvasTextures(ref, internalResources).ref;
+}
+
+/** The `CanvasTexture` wrappers `unwrapCanvasTextureRef` peels off `ref`, outermost first. */
+export function canvasTextureWrappers(
+  ref: string | null | undefined,
+  internalResources: readonly TscnInternalResource[]
+): readonly TscnInternalResource[] {
+  return peelCanvasTextures(ref, internalResources).wrappers;
+}
+
+const NO_WRAPPERS: readonly TscnInternalResource[] = [];
+
+function peelCanvasTextures(
+  ref: string | null | undefined,
+  internalResources: readonly TscnInternalResource[]
+): { ref: string | undefined; wrappers: readonly TscnInternalResource[] } {
   let current = ref;
   // Fixed point, not a fixed count: a painter and a layout solve that peel N levels
-  // agree only up to the shallower chain. Applying it twice changes nothing. `peeled`
+  // agree only up to the shallower chain. Applying it twice changes nothing. `wrappers`
   // is allocated only on the first wrapper, since most references are not one.
-  let peeled: Set<string> | undefined;
+  let wrappers: TscnInternalResource[] | undefined;
   while (current) {
-    if (peeled?.has(current)) return undefined;
     const sub = resolveSubResourceRef(current, internalResources);
-    if (sub?.type !== 'CanvasTexture') return current;
-    (peeled ??= new Set()).add(current);
+    if (sub?.type !== 'CanvasTexture') return { ref: current, wrappers: wrappers ?? NO_WRAPPERS };
+    if (wrappers?.includes(sub)) return { ref: undefined, wrappers };
+    (wrappers ??= []).push(sub);
     current = sub.data.diffuse_texture;
   }
-  return undefined;
+  return { ref: undefined, wrappers: wrappers ?? NO_WRAPPERS };
 }
 
 /**

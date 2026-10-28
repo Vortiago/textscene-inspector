@@ -8,6 +8,7 @@ import { useHeldTexture } from './useHeldTexture';
 const named = vi.hoisted(() => ({ texture: null as THREE.Texture | null }));
 
 vi.mock('../../resources/useTexture2D', () => ({
+  NODE_PROPERTY: [],
   useTexture2DRid: () => ({ texture: named.texture }),
 }));
 

@@ -36,11 +36,6 @@ import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource } from './materialSource';
 
-/** The resource tables a material's references resolve in: its owning file's. */
-type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
-
-const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
-
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
 
@@ -51,24 +46,27 @@ export const GLTF_SURFACE = 'gltf';
 export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
 
 /**
- * Every texture slot of one StandardMaterial3D, resolved in `tables`, the material's own file. A
+ * Every texture slot of one StandardMaterial3D, resolved in `material`'s own file's tables. A
  * triplanar material tiles per world unit: a PlaneMesh `surface` folds in its size, and CSG or an
  * ArrayMesh passes none and gets `uv1_scale`. Null when a slot never draws, a file that cannot load
  * or a ViewportTexture in a pass cycle: the surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
-  tables: MaterialTables | null,
+  material: MaterialResource | null,
   surface?: TexturedSurface
 ): ResolvedTextures | null {
-  const resourceTables = tables ?? NO_TABLES;
-
   // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
   // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`), so a
   // `normal_texture` without `normal_enabled` reaches no shader.
   const references = scalars?.textureSlots;
 
-  const sources = useEachSlot(useSlotTexture, references, resourceTables);
+  // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
+  const holders = useMemo(
+    () => (material ? [...(material.holders ?? []), material.resource] : NO_RESOURCES),
+    [material]
+  );
+  const sources = useEachSlot(useSlotTexture, references, material, holders);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -110,6 +108,8 @@ function useEachSlot<Args extends unknown[], T>(
   return results as Record<TextureSlot, T>;
 }
 
+const NO_RESOURCES: readonly never[] = [];
+
 /** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
 type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 
@@ -121,14 +121,16 @@ type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
-  { externalResources, internalResources }: MaterialTables
+  material: MaterialResource | null,
+  holders: readonly TscnInternalResource[]
 ): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
   const result = useTexture2DRid(
     textureSlotReference(references, slot),
-    externalResources,
-    internalResources,
-    view
+    material?.externalResources ?? NO_RESOURCES,
+    material?.internalResources ?? NO_RESOURCES,
+    view,
+    holders
   );
   return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }

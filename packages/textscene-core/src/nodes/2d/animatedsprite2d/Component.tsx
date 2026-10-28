@@ -143,7 +143,9 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const { texture: frameTexture, missing: frameMissing } = useTexture2D(
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
-    resolved?.subResources ?? NO_INTERNAL_RESOURCES
+    resolved?.subResources ?? NO_INTERNAL_RESOURCES,
+    'plain',
+    resolved ? [resolved.resource] : undefined
   );
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone

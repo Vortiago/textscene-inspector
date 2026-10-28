@@ -13,6 +13,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 
 import '../../../r3f/nodes/index';
 
@@ -184,6 +185,7 @@ texture = SubResource("ViewportTexture_1")
 viewport_path = NodePath("NoSuchViewport")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+resource_local_to_scene = true
 albedo_texture = SubResource("ViewportTexture_1")
 
 [node name="Root" type="Node3D"]
@@ -197,4 +199,93 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
       .filter((map): map is THREE.Texture => !!map);
     expect(maps).toHaveLength(0);
   });
+
+  it("draws Godot's placeholder for a material a mesh holds that is not local to scene", async () => {
+    const renderer = await renderScene(meshHeldMaterialScene('false'));
+    expect(mapImages(renderer)).toContain(unconfiguredViewportTexture().image);
+  });
+
+  it("draws Godot's placeholder for a SpriteFrames frame that is not local to scene", async () => {
+    const renderer = await renderScene(spriteFramesScene('false'), '2d');
+    expect(mapImages(renderer)).toContain(unconfiguredViewportTexture().image);
+  });
+
+  it('draws the viewport for a SpriteFrames frame that is local to scene', async () => {
+    const renderer = await renderScene(spriteFramesScene('true'), '2d');
+    const images = mapImages(renderer);
+    expect(images.length).toBeGreaterThan(0);
+    expect(images).not.toContain(unconfiguredViewportTexture().image);
+  });
+
+  it('draws the viewport for a material a mesh holds that is local to scene', async () => {
+    const renderer = await renderScene(meshHeldMaterialScene('true'));
+    const images = mapImages(renderer);
+    expect(images.length).toBeGreaterThan(0);
+    expect(images).not.toContain(unconfiguredViewportTexture().image);
+  });
 });
+
+/**
+ * An AnimatedSprite2D whose SpriteFrames holds a ViewportTexture frame. Godot sets the frame up
+ * only when the SpriteFrames is local to scene too (`core/io/resource.cpp:497-503`).
+ */
+function spriteFramesScene(isFramesLocal: 'true' | 'false'): string {
+  return `[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_1"]
+resource_local_to_scene = ${isFramesLocal}
+animations = [{"frames": [{"duration": 1.0, "texture": SubResource("ViewportTexture_1")}], "loop": true, "name": &"default", "speed": 5.0}]
+
+[node name="Stage" type="Node2D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(4, 4)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_1")
+`;
+}
+
+/**
+ * A local material with a ViewportTexture albedo that the QuadMesh holds. Godot sets it up only
+ * when the mesh is local to scene too (`core/io/resource.cpp:497-503`).
+ */
+function meshHeldMaterialScene(isMeshLocal: 'true' | 'false'): string {
+  return `[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+resource_local_to_scene = true
+albedo_texture = SubResource("ViewportTexture_1")
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+resource_local_to_scene = ${isMeshLocal}
+material = SubResource("StandardMaterial3D_1")
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(4, 4)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_1")
+`;
+}
+
+/** The image behind each drawn map, a copy's included. */
+function mapImages(renderer: Awaited<ReturnType<typeof renderScene>>): unknown[] {
+  return materials(renderer)
+    .map((material) => (material as THREE.MeshStandardMaterial).map?.image)
+    .filter((image) => image !== undefined);
+}
