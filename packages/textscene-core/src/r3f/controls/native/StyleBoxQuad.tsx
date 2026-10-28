@@ -195,7 +195,9 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
   const { texture: rawTexture } = useTexture2D(
     texture.texture,
     texture.resources.externalResources,
-    texture.resources.internalResources
+    texture.resources.internalResources,
+    'plain',
+    texture.holders
   );
 
   const geometry = useMemo(() => {

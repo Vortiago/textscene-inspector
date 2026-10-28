@@ -24,6 +24,7 @@ import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,
   checkButtonIconColor,
+  checkButtonDrawnIconSize,
   checkButtonIconMaxWidth,
   checkButtonIconNaturalSize,
   checkButtonMarginX,
@@ -61,6 +62,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
       ),
     [solveNode, props.disabled]
   );
+  const drawnIconSize = useMemo(() => checkButtonDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
 
   // Unlike CheckBox's fixed white, the icon colour is a theme key a scene can override, so it
   // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
@@ -105,8 +107,8 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
       <CanvasItemGroup position={[content.iconRect.x, -content.iconRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={content.iconRect.w}
-          height={content.iconRect.h}
+          width={drawnIconSize.x}
+          height={drawnIconSize.y}
           color={iconLinearColor}
           opacity={tintedIconColorSrgb.a}
           map={iconTexture}

@@ -385,12 +385,17 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
     const node = controlNode('L', 'LineEdit', { name: 'L' });
     expect(lineEditTextureSlots(node, {})).toEqual([]);
     const themed = {
-      clear: { ref: 'ExtResource("1_clear")', resources: { externalResources: [], internalResources: [] } },
+      clear: {
+        ref: 'ExtResource("1_clear")',
+        resources: { externalResources: [], internalResources: [] },
+        holders: [],
+      },
     };
     expect(lineEditTextureSlots(node, themed)).toContainEqual({
       key: 'clear',
       ref: 'ExtResource("1_clear")',
       scope: themed.clear.resources,
+      holders: themed.clear.holders,
     });
   });
 

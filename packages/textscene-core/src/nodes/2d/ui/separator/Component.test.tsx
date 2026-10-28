@@ -14,6 +14,7 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { SeparatorChrome } from './Component';
+import { NODE_PROPERTY } from '../../../../resources/useTexture2D';
 
 const RECT = { x: 0, y: 0, w: 100, h: 25 };
 
@@ -77,7 +78,7 @@ describe('<SeparatorChrome>', () => {
     );
     // `SeparatorChrome` reads only `solveNode.styleBoxes.separator`, resolved here by the walk's own
     // StyleBox parser, not by hand.
-    node.styleBoxes = { separator: parseStyleBox('SubResource("Line_1")', [], resources)! };
+    node.styleBoxes = { separator: parseStyleBox('SubResource("Line_1")', [], resources, NODE_PROPERTY)! };
     const renderer = await ReactThreeTestRenderer.create(
       <SeparatorChrome
         {...painterEnv()}

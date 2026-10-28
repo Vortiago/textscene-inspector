@@ -30,8 +30,16 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
-import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
-import { inlineViewportTexture } from '../../../resources/textures/viewporttexture/localToScene';
+import {
+  extResourceTexture2DSize,
+  inlineTexture2DSize,
+  NODE_PROPERTY,
+} from '../../../resources/useTexture2D';
+import { themeHolder } from '../../../resources/styles/theme/themeHolder';
+import {
+  inlineViewportTexture,
+  isLocalToScene,
+} from '../../../resources/textures/viewporttexture/localToScene';
 import {
   viewportTargetSizes,
   type ViewportTargetSize,
@@ -119,7 +127,7 @@ const resolvedStylesOfTheme = perObject(
     const out: Record<string, Record<string, ResolvedStyleBox>> = {};
     for (const [type, byName] of Object.entries(theme.styles ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        const resolved = parseStyleBox(ref, externalResources, internalResources);
+        const resolved = parseStyleBox(ref, externalResources, internalResources, [themeHolder(theme)]);
         if (resolved) (out[type] ??= {})[name] = resolved;
       }
     }
@@ -142,7 +150,7 @@ function resolveStyleBoxes(
   const local: Record<string, ResolvedStyleBox> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources);
+      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources, NODE_PROPERTY);
       if (resolved) local[key] = resolved;
     }
   }
@@ -185,7 +193,7 @@ const iconRefsOfTheme = perObject(
     const out: Record<string, Record<string, ThemedIconRef>> = {};
     for (const [type, byName] of Object.entries(theme.icons ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        (out[type] ??= {})[name] = { ref, resources };
+        (out[type] ??= {})[name] = { ref, resources, holders: [themeHolder(theme)] };
       }
     }
     return out;
@@ -206,7 +214,7 @@ function resolveThemedIcons(
   const local: Record<string, ThemedIconRef> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope };
+      local[key] = { ref, resources: scope, holders: NODE_PROPERTY };
     }
   }
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
@@ -507,10 +515,14 @@ function buildForest(
     ref: string,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
-    consumerPath: string
+    consumerPath: string,
+    holders: readonly TscnInternalResource[]
   ): Vector2 | null {
     const viewport = inlineViewportTexture(ref, int);
-    if (viewport) return viewport.isSetUp ? viewportTargetSize(consumerPath, viewport.resource) : NO_SIZE;
+    if (viewport) {
+      const isSetUp = viewport.isSetUp && holders.every(isLocalToScene);
+      return isSetUp ? viewportTargetSize(consumerPath, viewport.resource) : NO_SIZE;
+    }
 
     // An inline procedural texture or a region cell states its size here, with no
     // load. This walk is no component, so it cannot call `useTexture2D`.
@@ -565,9 +577,15 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope } of requests) {
+      for (const { key, ref, scope, holders = NODE_PROPERTY } of requests) {
         slots[key] = ref
-          ? resolveTextureRefSize(ref, scope?.externalResources ?? ext, scope?.internalResources ?? int, path)
+          ? resolveTextureRefSize(
+              ref,
+              scope?.externalResources ?? ext,
+              scope?.internalResources ?? int,
+              path,
+              holders
+            )
           : null;
       }
       // The first request stands in for `textureSize`, Godot's first-priority
@@ -580,7 +598,10 @@ function buildForest(
     // type carries at most one of.
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
-    const size = typeof ref === 'string' && ref !== '' ? resolveTextureRefSize(ref, ext, int, path) : null;
+    const size =
+      typeof ref === 'string' && ref !== ''
+        ? resolveTextureRefSize(ref, ext, int, path, NODE_PROPERTY)
+        : null;
     return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 

@@ -15,6 +15,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   buttonTextAlignShiftPx,
@@ -145,7 +146,7 @@ export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
   const requests: TextureSlotRequest[] = [];
   for (const name of CHECK_BOX_ICON_THEME_NAMES) {
     const themed = themedIcons[name];
-    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+    if (themed) requests.push(themedSlotRequest(name, themed));
   }
   return requests;
 };
@@ -164,6 +165,18 @@ export function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vec
     h = Math.max(h, size.y);
   }
   return { x: w, y: h };
+}
+
+/**
+ * The size Godot draws the current icon at: its own, fitted, at the offset the largest icon sets
+ * (`check_box.cpp:137-142`). An icon that reports size 0 draws nothing.
+ */
+export function checkBoxDrawnIconSize(
+  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
+  key: CheckBoxIconKey
+): Vector2 {
+  const own = n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? CHECKBOX_ICON_NATURAL_SIZE;
+  return fitIconSize(own, checkBoxIconMaxWidth(n.constants));
 }
 
 /** `check_v_offset` theme constant default (`default_theme.cpp:309`). */
