@@ -161,7 +161,7 @@ interface DecomposedRest {
  * in, the global rests and their inverses, the bone names and the rests taken apart. The
  * animation pass reads these every frame, so they are built once.
  */
-export class SkeletonRig {
+class SkeletonRig {
   readonly order: number[];
   /** The global rest of each bone. */
   readonly globalRests: Transform3D[];

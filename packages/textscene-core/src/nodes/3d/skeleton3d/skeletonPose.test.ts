@@ -13,7 +13,6 @@ import {
   automaticSkinMatrices,
   BonePoses,
   newBone,
-  SkeletonRig,
   skinMatricesUnder,
   type Bone,
   type BonePose,
@@ -452,15 +451,18 @@ describe('skinMatricesUnder: one BonePoses across frames', () => {
   });
 });
 
-describe('SkeletonRig', () => {
+describe('the rig of a BonePoses', () => {
   it('finds the first bone of a name, and -1 for a name no bone carries', () => {
-    const rig = new SkeletonRig([bone('a', -1, [0, 0, 0]), bone('b', 0, [0, 0, 0]), bone('b', 0, [0, 1, 0])]);
+    const { rig } = new BonePoses(
+      [bone('a', -1, [0, 0, 0]), bone('b', 0, [0, 0, 0]), bone('b', 0, [0, 1, 0])],
+      false
+    );
 
     expect([rig.findBone('b'), rig.findBone('nope')]).toEqual([1, -1]);
   });
 
   it('hands back the same taken-apart rest each time a bone asks', () => {
-    const rig = new SkeletonRig(CHAIN);
+    const { rig } = new BonePoses(CHAIN, false);
 
     expect(rig.decomposedRest(1)).toBe(rig.decomposedRest(1));
   });
