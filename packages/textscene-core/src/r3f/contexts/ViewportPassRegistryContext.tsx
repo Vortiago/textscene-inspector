@@ -58,21 +58,38 @@ export function useRegisterViewportPass(): RegisterViewportPass {
 
 /** Sets `pass` at `path` in `state`, with the order and cycles it leads to, and returns the cleanup. */
 function registerPass(state: ExternalStore<PassRegistryState>, path: string, pass: ViewportPass): () => void {
-  state.set(registryState(new Map(state.get().passes).set(path, pass)));
+  if (state === NO_PROVIDER) return () => {};
+  setPasses(state, new Map(state.get().passes).set(path, pass));
   return () => {
     // Only this exact pass, so a remount that re-registered first survives.
     if (state.get().passes.get(path) !== pass) return;
     const next = new Map(state.get().passes);
     next.delete(path);
-    state.set(registryState(next));
+    setPasses(state, next);
   };
 }
 
-function registryState(passes: ReadonlyMap<string, ViewportPass>): PassRegistryState {
+function setPasses(state: ExternalStore<PassRegistryState>, passes: ReadonlyMap<string, ViewportPass>): void {
+  state.set(registryState(passes, state.get().cycles));
+}
+
+/** The state for `passes`. A cycle equal to one in `previous` stays that object, so its readers keep it. */
+function registryState(
+  passes: ReadonlyMap<string, ViewportPass>,
+  previous: ReadonlyMap<string, ViewportPassCycle> = new Map()
+): PassRegistryState {
   const result = orderViewportPasses([...passes].map(([id, pass]) => ({ id, dependsOn: pass.dependsOn })));
   const cycles = new Map<string, ViewportPassCycle>();
-  for (const cycle of result.cycles) cycles.set(cycle.sampler, cycle);
-  return { passes, order: result.order, cycles };
+  for (const cycle of result.cycles) {
+    const kept = previous.get(cycle.sampler);
+    cycles.set(cycle.sampler, kept && isSameCycle(kept, cycle) ? kept : cycle);
+  }
+  const isUnchanged = cycles.size === previous.size && [...cycles].every(([id, c]) => previous.get(id) === c);
+  return { passes, order: result.order, cycles: isUnchanged ? previous : cycles };
+}
+
+function isSameCycle(a: ViewportPassCycle, b: ViewportPassCycle): boolean {
+  return a.path.length === b.path.length && a.path.every((id, i) => id === b.path[i]);
 }
 
 /**

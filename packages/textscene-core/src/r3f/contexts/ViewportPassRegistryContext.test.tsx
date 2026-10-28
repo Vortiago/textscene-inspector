@@ -57,6 +57,9 @@ function mount(children: ReactNode) {
   );
 }
 
+const A_IN_CYCLE: ViewportPass = { dependsOn: ['b'], render: () => {} };
+const B_IN_CYCLE: ViewportPass = { dependsOn: ['a'], render: () => {} };
+
 describe('useRegisterViewportPass (no provider)', () => {
   it('is a safe no-op, returning a cleanup function', async () => {
     let register: ReturnType<typeof useRegisterViewportPass> | null = null;
@@ -163,6 +166,34 @@ describe('<ViewportPassOrchestrator>', () => {
       expect(seenOther.at(-1)).toBeNull();
     });
 
+    it('keeps the cycle its reader holds when an unrelated pass registers', async () => {
+      const seen: (unknown | null)[] = [];
+      const cycle = (
+        <>
+          <Registrar path="a" pass={A_IN_CYCLE} />
+          <Registrar path="b" pass={B_IN_CYCLE} />
+        </>
+      );
+      const renderer = await mount(
+        <>
+          {cycle}
+          <CycleWatch path="b" seen={seen} />
+        </>
+      );
+      const before = seen.at(-1);
+      await renderer.update(
+        <ViewportPassProvider>
+          <>
+            {cycle}
+            <CycleWatch path="b" seen={seen} />
+            <Registrar path="other" pass={{ dependsOn: [], render: () => {} }} />
+          </>
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+      expect(seen.at(-1)).toBe(before);
+    });
+
     it('logs a warning naming the offending sampler', async () => {
       warnCalls.length = 0;
       await mount(
@@ -177,11 +208,6 @@ describe('<ViewportPassOrchestrator>', () => {
   });
 });
 
-/**
- * Godot rebuilds its decal and area light atlases before it draws the viewports
- * (`renderer_rd/storage_rd/utilities.cpp:256-258`, `rendering_server_default.cpp:102`), so an atlas
- * copies a target as it stood before this frame's passes.
- */
 /** Counts its renders into `renders`, as a texture slot that names no ViewportTexture reads the cycle. */
 function NoCycleWatch({ renders }: { renders: number[] }) {
   useViewportPassCycle(null);
@@ -205,6 +231,11 @@ describe('useViewportPassCycle', () => {
   });
 });
 
+/**
+ * Godot rebuilds its decal and area light atlases before it draws the viewports
+ * (`renderer_rd/storage_rd/utilities.cpp:256-258`, `rendering_server_default.cpp:102`), so an atlas
+ * copies a target as it stood before this frame's passes.
+ */
 describe('<ViewportPassOrchestrator> and the texture atlases', () => {
   const BLUE = [0, 0, 255, 255];
   const GREEN = [0, 255, 0, 255];
