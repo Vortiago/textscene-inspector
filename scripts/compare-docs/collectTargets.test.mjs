@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { collectTargets } from './recapture/targets.mjs';
+import { collectTargets, settleTimeoutOf } from './recapture/targets.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
 
 describe('collectTargets', () => {
@@ -84,5 +84,19 @@ describe('collectTargets', () => {
       sampled++;
     }
     expect(sampled).toBeGreaterThan(0);
+  });
+});
+
+describe('settleTimeoutOf', () => {
+  it('gives a fixture the limit its golden scene declares, as the golden run does', () => {
+    expect(settleTimeoutOf('unit-directionallight2d-render-budget.tscn')).toBeGreaterThan(30000);
+  });
+
+  it('leaves a fixture whose scene declares none to the default', () => {
+    expect(settleTimeoutOf('unit-directionallight2d-canvas-layer-cap.tscn')).toBeUndefined();
+  });
+
+  it('leaves a fixture no golden scene shows to the default', () => {
+    expect(settleTimeoutOf('no-such-fixture.tscn')).toBeUndefined();
   });
 });
