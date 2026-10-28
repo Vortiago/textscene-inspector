@@ -3540,6 +3540,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Texture Rect Viewport Texture",
+    "file": "unit-texture-rect-viewport-texture.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
     "category": "Unit - 2D UI Controls"
