@@ -924,9 +924,11 @@ export function useBuildSolveTree(
   // The lookup the last forest was keyed on stays the key while it answers every size that forest
   // read alike, so a publish or a live-tree load no slot reads rebuilds nothing.
   const lastSizes = useRef<{ key: ViewportTargetSize; reads: readonly ViewportSizeRead[] } | null>(null);
+  // Key first: an unchanged lookup answers every read alike, so a render with none re-reads nothing.
+  const last = lastSizes.current;
   const sizesKey =
-    lastSizes.current && sizesStillAnswered(lastSizes.current.reads, viewportTargetSize)
-      ? lastSizes.current.key
+    last && (last.key === viewportTargetSize || sizesStillAnswered(last.reads, viewportTargetSize))
+      ? last.key
       : viewportTargetSize;
 
   const forest = useMemo(
