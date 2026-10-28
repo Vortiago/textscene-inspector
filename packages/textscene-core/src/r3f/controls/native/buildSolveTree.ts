@@ -30,7 +30,22 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
-import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
+import {
+  extResourceTexture2DSize,
+  inlineTexture2DSize,
+  NODE_PROPERTY,
+} from '../../../resources/useTexture2D';
+import { themeHolder } from '../../../resources/styles/theme/themeHolder';
+import {
+  inlineViewportTexture,
+  isLocalToScene,
+} from '../../../resources/textures/viewporttexture/localToScene';
+import {
+  viewportTargetSizes,
+  type ViewportTargetSize,
+} from '../../../resources/textures/viewporttexture/viewportTargetSize';
+import { useViewportTextures } from '../../contexts/ViewportTextureContext';
+import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
@@ -115,7 +130,7 @@ const resolvedStylesOfTheme = perObject(
     const out: Record<string, Record<string, ResolvedStyleBox>> = {};
     for (const [type, byName] of Object.entries(theme.styles ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        const resolved = parseStyleBox(ref, externalResources, internalResources);
+        const resolved = parseStyleBox(ref, externalResources, internalResources, [themeHolder(theme)]);
         if (resolved) (out[type] ??= {})[name] = resolved;
       }
     }
@@ -138,7 +153,7 @@ function resolveStyleBoxes(
   const local: Record<string, ResolvedStyleBox> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources);
+      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources, NODE_PROPERTY);
       if (resolved) local[key] = resolved;
     }
   }
@@ -181,7 +196,7 @@ const iconRefsOfTheme = perObject(
     const out: Record<string, Record<string, ThemedIconRef>> = {};
     for (const [type, byName] of Object.entries(theme.icons ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        (out[type] ??= {})[name] = { ref, resources };
+        (out[type] ??= {})[name] = { ref, resources, holders: [themeHolder(theme)] };
       }
     }
     return out;
@@ -202,7 +217,7 @@ function resolveThemedIcons(
   const local: Record<string, ThemedIconRef> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope };
+      local[key] = { ref, resources: scope, holders: NODE_PROPERTY };
     }
   }
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
@@ -407,6 +422,9 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  */
 const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
 
+/** An unset ViewportTexture's size (`viewport.cpp:156-160`). */
+const NO_SIZE: Vector2 = { x: 0, y: 0 };
+
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
@@ -416,7 +434,8 @@ function buildForest(
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  inheritedRtl: boolean | null
+  inheritedRtl: boolean | null,
+  viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
   const pendingTextures = new Set<string>();
@@ -523,8 +542,16 @@ function buildForest(
   function resolveTextureRefSize(
     ref: string,
     ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[]
+    int: readonly TscnInternalResource[],
+    consumerPath: string,
+    holders: readonly TscnInternalResource[]
   ): Vector2 | null {
+    const viewport = inlineViewportTexture(ref, int);
+    if (viewport) {
+      const isSetUp = viewport.isSetUp && holders.every(isLocalToScene);
+      return isSetUp ? viewportTargetSize(consumerPath, viewport.resource) : NO_SIZE;
+    }
+
     // An inline procedural texture or a region cell states its size here, with no
     // load. This walk is no component, so it cannot call `useTexture2D`.
     const inline = inlineTexture2DSize(ref, int);
@@ -569,6 +596,7 @@ function buildForest(
    */
   function resolveTextureSize(
     node: TscnNode,
+    path: string,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     themedIcons: Readonly<Record<string, ThemedIconRef>>
@@ -577,9 +605,15 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope } of requests) {
+      for (const { key, ref, scope, holders = NODE_PROPERTY } of requests) {
         slots[key] = ref
-          ? resolveTextureRefSize(ref, scope?.externalResources ?? ext, scope?.internalResources ?? int)
+          ? resolveTextureRefSize(
+              ref,
+              scope?.externalResources ?? ext,
+              scope?.internalResources ?? int,
+              path,
+              holders
+            )
           : null;
       }
       // The first request stands in for `textureSize`, Godot's first-priority
@@ -592,7 +626,10 @@ function buildForest(
     // type carries at most one of.
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
-    const size = typeof ref === 'string' && ref !== '' ? resolveTextureRefSize(ref, ext, int) : null;
+    const size =
+      typeof ref === 'string' && ref !== ''
+        ? resolveTextureRefSize(ref, ext, int, path, NODE_PROPERTY)
+        : null;
     return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 
@@ -783,6 +820,7 @@ function buildForest(
     const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
     const texture = resolveTextureSize(
       collapsed,
+      path,
       ownScope.externalResources,
       ownScope.internalResources,
       themedIcons
@@ -886,6 +924,12 @@ export function useBuildSolveTree(
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
   // Both counters only grow, so their sum moves whenever either does.
   const generation = fontMetricsVersion + cacheVersion;
+  const viewportTargets = useViewportTextures();
+  const live = useSharedLiveTree();
+  const viewportTargetSize = useMemo(
+    () => viewportTargetSizes(viewportTargets, live),
+    [viewportTargets, live]
+  );
 
   const forest = useMemo(
     () =>
@@ -897,7 +941,8 @@ export function useBuildSolveTree(
         projectSettings,
         hiddenNodePaths,
         layoutDirectionEnv,
-        inheritedRtl
+        inheritedRtl,
+        viewportTargetSize
       ),
     // `generation` is a cache-buster, not read inside: the loader's caches are
     // outside React's dependency graph.
@@ -911,6 +956,7 @@ export function useBuildSolveTree(
       hiddenNodePaths,
       layoutDirectionEnv,
       inheritedRtl,
+      viewportTargetSize,
       generation,
     ]
   );

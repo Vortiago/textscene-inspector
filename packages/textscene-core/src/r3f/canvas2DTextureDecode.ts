@@ -5,7 +5,8 @@
  * retag. A PointLight2D cookie and every 3D material slot state their own sampler (`textureView.ts`).
  */
 import * as THREE from 'three';
-import { useOwnedTextureView } from './useTextureView';
+import { useOwnedTextureView, useWindowedTextureView } from './useTextureView';
+import type { UvWindow } from './uvWindow';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { holdsSrgbBytes } from './srgbByteTextures';
 import {
@@ -29,6 +30,15 @@ export function useCanvas2DTexture(
   // The sampler states the wrap too: a file-loaded entry arrives clamped (ADR-0044), but a producer
   // can hand over Repeat, such as a seamless `NoiseTexture2D`, and Godot's item default is Disabled.
   return useOwnedTextureView(texture, canvasItemViewSampler(sampler));
+}
+
+/** `useCanvas2DTexture` that shows `window`, as `useWindowedTextureView` does. */
+export function useWindowedCanvas2DTexture(
+  texture: THREE.Texture | null | undefined,
+  sampler: CanvasItemTextureSampler,
+  window: UvWindow
+): THREE.Texture | null {
+  return useWindowedTextureView(texture, canvasItemViewSampler(sampler), window);
 }
 
 /** `useCanvas2DTexture` with the sampler the owning Control's painter inherits. */

@@ -181,6 +181,22 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
   });
 });
 
+/** The size an unset ViewportTexture reports (`viewport.cpp:156-160`), which still samples its placeholder. */
+describe('textureRectDraw — a texture that reports size 0', () => {
+  const RECT = { x: 200, y: 200 };
+  const ZERO = { x: 0, y: 0 };
+
+  it('draws nothing under STRETCH_KEEP and STRETCH_KEEP_CENTERED, which draw at the texture size (:53-58)', () => {
+    expect(textureRectDraw(RECT, ZERO, 2).size).toEqual(ZERO);
+    expect(textureRectDraw(RECT, ZERO, 3).size).toEqual(ZERO);
+  });
+
+  it('fills the rect under STRETCH_SCALE and STRETCH_TILE, which ignore the texture size (:46-52)', () => {
+    expect(textureRectDraw(RECT, ZERO, 0).size).toEqual(RECT);
+    expect(textureRectDraw(RECT, ZERO, 1)).toMatchObject({ size: RECT, tile: true });
+  });
+});
+
 describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
   const RECT = { x: 300, y: 100 }; // 3:1, not the texture's 2:1 aspect.
 

@@ -14,6 +14,7 @@ import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
 import {
   checkBoxIconNaturalSize,
+  checkBoxDrawnIconSize,
   checkBoxMinimumSize,
   checkBoxTextTheme,
   resolveCheckBoxDrawState,
@@ -370,5 +371,18 @@ describe('checkBoxMinimumSize — the shaped text extent is ceiled (text_server_
 
   it('keeps the icon and separation OUT of the ceil — an empty CheckBox is unchanged by it', () => {
     expect(checkBoxMinimumSize(node({}), ctx()).x).toBe(checkBoxMinimumSize(node({ text: '' }), ctx()).x);
+  });
+});
+
+/** Godot draws the current icon at its own fitted size, placed by the largest (`check_box.cpp:137-142`). */
+describe('checkBoxDrawnIconSize', () => {
+  it("is the current icon's own size, not the largest icon's", () => {
+    const n = { textureSlots: { checked: { x: 32, y: 32 } }, constants: {} };
+    expect(checkBoxDrawnIconSize(n, 'unchecked')).toEqual({ x: 16, y: 16 });
+  });
+
+  it('is 0 for an icon that reports size 0, as an unset ViewportTexture does', () => {
+    const n = { textureSlots: { unchecked: { x: 0, y: 0 } }, constants: {} };
+    expect(checkBoxDrawnIconSize(n, 'unchecked')).toEqual({ x: 0, y: 0 });
   });
 });

@@ -6,16 +6,8 @@
 
 import * as THREE from 'three';
 import { sharedTexture } from '../sharedTexture.js';
-import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
 import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
-
-/** The width and height of one roughness band of the radiance atlas, an equirectangular map. */
-export const FOG_RADIANCE_BAND_WIDTH = 128;
-export const FOG_RADIANCE_BAND_HEIGHT = 64;
-
-/** The bands, from roughness 1/7 to 1, one per radiance mip the aerial perspective reads. */
-export const FOG_RADIANCE_BANDS = MAX_ROUGHNESS_LOD;
 
 /**
  * The volume the fog pass integrates into. It is no render target's texture in three's eyes, so it
@@ -34,24 +26,6 @@ class FogVolumeTexture extends sharedTexture(THREE.Data3DTexture) {
   }
 }
 
-/**
- * The sky's radiance as the aerial perspective reads it, one equirectangular band per roughness,
- * stacked bottom-up. A pass draws it in place, as it does the volume.
- */
-class FogRadianceTexture extends sharedTexture(THREE.Texture) {
-  constructor() {
-    super();
-    this.name = 'FogRadiance';
-    this.image = { width: FOG_RADIANCE_BAND_WIDTH, height: FOG_RADIANCE_BAND_HEIGHT * FOG_RADIANCE_BANDS };
-    this.format = THREE.RGBAFormat;
-    this.type = THREE.HalfFloatType;
-    this.minFilter = THREE.LinearFilter;
-    this.magFilter = THREE.LinearFilter;
-    this.wrapS = THREE.RepeatWrapping;
-    this.generateMipmaps = false;
-  }
-}
-
 /** Each uniform's name in the GLSL, which `fogChunks.ts` declares. */
 export const FOG_UNIFORM = {
   volume: 'volumetricFogVolume',
@@ -64,8 +38,6 @@ export const FOG_UNIFORM = {
   sunDirections: 'fogSunDirections',
   sunSurfaceColors: 'fogSunSurfaceColors',
   sunSkyColors: 'fogSunSkyColors',
-  skyRotation: 'fogSkyRotation',
-  radiance: 'fogRadiance',
 } as const;
 
 type FogUniformKey = keyof typeof FOG_UNIFORM;
@@ -99,9 +71,6 @@ export const fogUniforms = {
   sunSurfaceColors: installed('sunSurfaceColors', vec4Array),
   /** Each sun's colour times its energy as the sky reads it, zero where the sky skips it. */
   sunSkyColors: installed('sunSkyColors', vec4Array),
-  /** World to sky space, the inverse of `sky_rotation`'s basis, column-major. */
-  skyRotation: installed('skyRotation', () => new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1])),
-  radiance: installed('radiance', () => new FogRadianceTexture()),
 };
 
 /** The uniforms a shader that includes `GODOT_FOG_PARS_CHUNK` reads, one record per material. */

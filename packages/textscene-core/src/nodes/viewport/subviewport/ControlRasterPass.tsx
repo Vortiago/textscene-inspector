@@ -107,6 +107,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     target,
     width,
     height,
+    isTransparent: transparentBg,
     render: renderPass,
   });
 

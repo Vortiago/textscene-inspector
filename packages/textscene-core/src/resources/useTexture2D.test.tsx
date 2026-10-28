@@ -7,7 +7,13 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { extResourceTexture2DSize, inlineTexture2DSize, useTexture2D, useTexture2DRid } from './useTexture2D';
+import {
+  extResourceTexture2DSize,
+  inlineTexture2DSize,
+  useTexture2D,
+  NODE_PROPERTY,
+  useTexture2DRid,
+} from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
@@ -664,7 +670,14 @@ describe('useTexture2D — inline AtlasTexture', () => {
   it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped", () => {
     const whole = sheet();
     const { result } = renderHook(
-      () => useTexture2DRid('SubResource("AtlasTexture_cell")', externalResources, resources),
+      () =>
+        useTexture2DRid(
+          'SubResource("AtlasTexture_cell")',
+          externalResources,
+          resources,
+          'plain',
+          NODE_PROPERTY
+        ),
       { wrapper: withLoader({ path: 'res://sheet.png', texture: whole }) }
     );
 
@@ -674,7 +687,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
   it('gives a slot read by RID a plain image as it is (edge case)', () => {
     const image = sheet();
     const { result } = renderHook(
-      () => useTexture2DRid('ExtResource("1_sheet")', externalResources, resources),
+      () => useTexture2DRid('ExtResource("1_sheet")', externalResources, resources, 'plain', NODE_PROPERTY),
       {
         wrapper: withLoader({ path: 'res://sheet.png', texture: image }),
       }
@@ -685,7 +698,14 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
   it('reports an unresolvable sheet behind a slot read by RID as missing (error case)', () => {
     const { result } = renderHook(
-      () => useTexture2DRid('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
+      () =>
+        useTexture2DRid(
+          'SubResource("AtlasTexture_unknownsheet")',
+          externalResources,
+          resources,
+          'plain',
+          NODE_PROPERTY
+        ),
       { wrapper: withLoader() }
     );
 
@@ -696,7 +716,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
     'gives a slot read by RID no texture for %s, whose RID names a CanvasTexture',
     (id) => {
       const { result } = renderHook(
-        () => useTexture2DRid(`SubResource("${id}")`, externalResources, resources),
+        () => useTexture2DRid(`SubResource("${id}")`, externalResources, resources, 'plain', NODE_PROPERTY),
         { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
       );
 
@@ -926,10 +946,10 @@ noise = SubResource("FastNoiseLite_huop3")
     const { fake, Wrapper } = withLoader();
     fake.resources.seed(
       'res://textures/procedural.tres',
-      parseTresFile(`[gd_resource type="ViewportTexture" format=3]
+      parseTresFile(`[gd_resource type="CurveTexture" format=3]
 
 [resource]
-viewport_path = NodePath("SubViewport")
+width = 64
 `)
     );
 

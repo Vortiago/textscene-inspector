@@ -20,6 +20,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
+  checkBoxDrawnIconSize,
   checkBoxIconMaxWidth,
   checkBoxHSeparation,
   checkBoxCheckVOffset,
@@ -52,6 +53,10 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     const fitted = fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants));
     return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
   }, [solveNode]);
+  const drawnIconSize = useMemo(() => {
+    const fitted = checkBoxDrawnIconSize(solveNode, iconKey);
+    return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
+  }, [solveNode, iconKey]);
 
   const text = props.text ?? '';
   const hasText = text.length > 0;
@@ -93,8 +98,8 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       <CanvasItemGroup position={[content.iconRect.x, -content.iconRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={content.iconRect.w}
-          height={content.iconRect.h}
+          width={drawnIconSize.x}
+          height={drawnIconSize.y}
           color={tint.color}
           opacity={tint.opacity}
           map={iconTexture}

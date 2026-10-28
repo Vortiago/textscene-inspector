@@ -15,6 +15,8 @@ import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { textureSize } from '../../../resources/textures/textureSize';
+import type { ImageSize } from '../../../resources/formats/image/imagePixels';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
@@ -45,14 +47,11 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     [props.polygon, props.polygons, props.internalVertexCount, props.invertEnabled, props.invertBorder]
   );
 
-  // Godot divides the transformed UV by the texture's pixel size, so the
-  // geometry rebuilds when a late load changes the dimensions.
-  const textureSize = useMemo(() => imageSize(texture), [texture]);
+  // Godot divides the transformed UV by the texture's size, so the geometry rebuilds when a late
+  // load changes the dimensions.
+  const uvSpace = useMemo(() => textureSize(texture) ?? null, [texture]);
 
-  const geometry = useMemo(
-    () => buildPolygonGeometry(rings, props, textureSize),
-    [rings, props, textureSize]
-  );
+  const geometry = useMemo(() => buildPolygonGeometry(rings, props, uvSpace), [rings, props, uvSpace]);
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
   useDisposeOnRelease(geometry);
 
@@ -144,13 +143,6 @@ function FilledPolygon({
   );
 }
 
-/** A resolved texture's pixel dimensions, or null while it has no image yet. */
-function imageSize(texture: THREE.Texture | null): { width: number; height: number } | null {
-  const image = texture?.image as { width?: number; height?: number } | undefined;
-  if (!image?.width || !image.height) return null;
-  return { width: image.width, height: image.height };
-}
-
 /**
  * Builds the mesh from the resolved rings, or null with no fillable ring.
  * `polygons` yields independent rings, and `invert_enabled` the grown bounds with
@@ -159,7 +151,7 @@ function imageSize(texture: THREE.Texture | null): { width: number; height: numb
 function buildPolygonGeometry(
   rings: PolygonRings,
   props: Polygon2DProperties,
-  textureSize: { width: number; height: number } | null
+  uvSpace: ImageSize | null
 ): THREE.BufferGeometry | null {
   if (rings.outlines.length === 0) return null;
 
@@ -187,8 +179,8 @@ function buildPolygonGeometry(
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setIndex(index);
 
-  if (textureSize) {
-    geometry.setAttribute('uv', new THREE.BufferAttribute(buildUvs(points, props, textureSize), 2));
+  if (uvSpace) {
+    geometry.setAttribute('uv', new THREE.BufferAttribute(buildUvs(points, props, uvSpace), 2));
   }
 
   const colors = buildVertexColors(points.length, props.vertexColors);
@@ -202,11 +194,9 @@ function buildPolygonGeometry(
  * tex_size`, with `texmat = Transform2D(tex_rot, tex_ofs).scale(tex_scale)`.
  * `scale` scales the origin too, which the expanded form keeps visible.
  */
-function buildUvs(
-  points: Vector2[],
-  props: Polygon2DProperties,
-  textureSize: { width: number; height: number }
-): Float32Array {
+function buildUvs(points: Vector2[], props: Polygon2DProperties, uvSpace: ImageSize): Float32Array {
+  // Godot divides by a size 0 (`polygon_2d.cpp:224-237`), and its draw samples the top-left texel.
+  if (uvSpace.width === 0 || uvSpace.height === 0) return topLeftUvs(points.length);
   const cos = Math.cos(props.textureRotation);
   const sin = Math.sin(props.textureRotation);
   const { x: sx, y: sy } = props.textureScale;
@@ -220,11 +210,11 @@ function buildUvs(
   for (let i = 0; i < points.length; i++) {
     const vx = authored ? authored[i * 2]! : points[i]!.x;
     const vy = authored ? authored[i * 2 + 1]! : points[i]!.y;
-    out[i * 2] = (sx * (cos * vx - sin * vy + ox)) / textureSize.width;
+    out[i * 2] = (sx * (cos * vx - sin * vy + ox)) / uvSpace.width;
     // Godot's texel space runs +Y down from the top-left, and three samples a
     // `flipY` texture with v = 1 at the top row. The flip comes after the whole
     // Godot-side transform, never inside it, to keep the image upright.
-    out[i * 2 + 1] = 1 - (sy * (sin * vx + cos * vy + oy)) / textureSize.height;
+    out[i * 2 + 1] = 1 - (sy * (sin * vx + cos * vy + oy)) / uvSpace.height;
   }
   return out;
 }
@@ -273,4 +263,11 @@ function triangulateRing(points: Vector2[], outline: number[], holes: number[][]
       index.push(global);
     }
   }
+}
+
+/** The top-left texel's UV, u 0 and v 1, at every vertex. */
+function topLeftUvs(vertexCount: number): Float32Array {
+  const out = new Float32Array(vertexCount * 2);
+  for (let i = 0; i < vertexCount; i++) out[i * 2 + 1] = 1;
+  return out;
 }

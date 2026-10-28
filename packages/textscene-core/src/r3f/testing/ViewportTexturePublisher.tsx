@@ -1,14 +1,34 @@
-/** A test stand-in for a SubViewport: it publishes a ViewportTexture entry with no target behind it. */
+/**
+ * A test stand-in for a SubViewport: it publishes a ViewportTexture entry with no pass behind it, and
+ * its views as live targets, as the pass does.
+ */
 
+import { useEffect } from 'react';
 import type * as THREE from 'three';
+import { publishLiveTarget } from '../liveTargets';
 import {
   usePublishViewportTexture,
   type TargetView,
   type ViewportTextureEntry,
 } from '../contexts/ViewportTextureContext';
 
-/** Publishes `entry` at `path`, as a SubViewport publishes its target. */
-export function ViewportTexturePublisher({ path, entry }: { path: string; entry: ViewportTextureEntry }) {
+/** Publishes `entry` at `path`, as a SubViewport publishes its target, opaque unless `isTransparent`. */
+export function ViewportTexturePublisher({
+  path,
+  entry,
+  isTransparent = false,
+}: {
+  path: string;
+  entry: ViewportTextureEntry;
+  isTransparent?: boolean;
+}) {
+  useEffect(() => {
+    const withdrawals = [
+      publishLiveTarget(entry.plain.texture, null, isTransparent),
+      publishLiveTarget(entry.decoding.texture, null, isTransparent),
+    ];
+    return () => withdrawals.forEach((withdraw) => withdraw());
+  }, [entry, isTransparent]);
   usePublishViewportTexture(path, entry);
   return null;
 }

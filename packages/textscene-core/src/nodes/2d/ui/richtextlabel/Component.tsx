@@ -13,9 +13,9 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
-import { useUvWindow } from '../../../../r3f/useUvWindow';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -59,8 +59,6 @@ function RichTextImage({
   const { externalResources, internalResources } = resources;
   const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
 
-  // `ControlQuad` decodes the sample itself, so the clone arrives as undecoded sRGB.
-  const drawnTexture = useOwnerCanvas2DTexture(rawTexture);
   const regionWindow = useMemo(
     () =>
       frameUvWindow(rawTexture ?? undefined, {
@@ -75,7 +73,8 @@ function RichTextImage({
       }),
     [rawTexture, spec.region]
   );
-  useUvWindow(drawnTexture, regionWindow);
+  // `ControlQuad` decodes the sample itself, so the clone arrives as undecoded sRGB.
+  const drawnTexture = useWindowedCanvas2DTexture(rawTexture, useResolvedTextureSampler(), regionWindow);
 
   if (!rawTexture || !drawnTexture) return null;
 

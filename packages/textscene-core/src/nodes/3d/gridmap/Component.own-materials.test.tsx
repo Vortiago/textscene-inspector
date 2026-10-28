@@ -11,6 +11,7 @@ import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.test
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../../../godot/rendering/materials/defaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
+import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import {
   drawnMaterials,
   mountGridMap,
@@ -80,5 +81,36 @@ describe('<GridMap> tile material textures', () => {
     });
     expect(tileMaterial()?.map).toBeInstanceOf(THREE.Texture);
     expect(tileMaterial()?.map).not.toBe(pendingMapStandIn('albedo_texture'));
+  });
+});
+
+/** A ViewportTexture in the tile material, which Godot sets up only through local holders. */
+const LOCAL_VIEWPORT_TILE = {
+  subResources: `[sub_resource type="ViewportTexture" id="Viewport"]
+viewport_path = NodePath("SubViewport")
+
+`,
+  materialLines: 'resource_local_to_scene = true\nalbedo_texture = SubResource("Viewport")',
+  meshLines: 'resource_local_to_scene = true',
+};
+
+describe('<GridMap> tile material with a ViewportTexture', () => {
+  /**
+   * The MeshLibrary is the node's property, so Godot sets up the tile material only through a
+   * library that is local to scene (`core/io/resource.cpp:497-503`).
+   */
+  it("draws Godot's placeholder when the library is not local to scene", async () => {
+    const tile = await renderInstancedTile(LOCAL_VIEWPORT_TILE);
+    expect((tile.material as THREE.MeshStandardMaterial).map?.image).toBe(
+      unconfiguredViewportTexture().image
+    );
+  });
+
+  it('looks the viewport up when the library is local to scene, so a missing one leaves the slot empty', async () => {
+    const tile = await renderInstancedTile({
+      ...LOCAL_VIEWPORT_TILE,
+      itemLines: 'resource_local_to_scene = true',
+    });
+    expect((tile.material as THREE.MeshStandardMaterial).map).toBeNull();
   });
 });

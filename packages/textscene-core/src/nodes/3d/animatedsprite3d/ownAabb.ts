@@ -26,7 +26,9 @@ export function useAnimatedSprite3DAabb(node: TscnNode): Aabb | null {
   const { texture, missing } = useTexture2D(
     frameRef ?? undefined,
     spriteFrames?.externalResources ?? NO_EXTERNAL_RESOURCES,
-    spriteFrames?.subResources ?? NO_INTERNAL_RESOURCES
+    spriteFrames?.subResources ?? NO_INTERNAL_RESOURCES,
+    'plain',
+    spriteFrames ? [spriteFrames.resource] : undefined
   );
   const isPending = status === 'pending' || (frameRef !== null && !missing && !texture);
 
