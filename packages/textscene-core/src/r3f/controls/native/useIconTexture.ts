@@ -6,8 +6,8 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
-import { pinNoColorSpace } from '../../../resources/textures/textureView';
-import { applyCanvasItemSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
+import { applyViewSampler } from '../../../resources/textures/textureView';
+import { canvasItemViewSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { useNearestAnisotropy } from '../../nearestAnisotropy';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -23,13 +23,8 @@ export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | 
   const sampler = useResolvedTextureSampler();
   const texture = useMemo(() => {
     if (dataUrl === null) return null;
-    // With `hdr_2d` off (`rendering_server.cpp:3771`) Godot's canvas samples the non-sRGB view
-    // (`texture_storage.cpp:754`), so the filter blends encoded bytes. `NoColorSpace` stops a
-    // `SRGB8_ALPHA8` upload that decodes first. Pinned, since fiber re-tags a `map` on each commit,
-    // and `ControlQuad` applies the matching decode. The loader bypasses `res://`, so it tags here.
-    const tex = new THREE.TextureLoader().load(dataUrl);
-    applyCanvasItemSampler(tex, sampler);
-    return pinNoColorSpace(tex);
+    // The loader bypasses `res://`, so the canvas sampler and its `NoColorSpace` tag go on here.
+    return applyViewSampler(new THREE.TextureLoader().load(dataUrl), canvasItemViewSampler(sampler));
   }, [dataUrl, sampler]);
   useDisposeOnRelease(texture);
   useNearestAnisotropy(texture);

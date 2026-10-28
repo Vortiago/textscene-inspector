@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
+import { isDrawable } from './drawable.js';
 import { degToRad } from '../godot/math/math.js';
 
 /**
@@ -51,12 +52,11 @@ export function frameSceneBounds(
     // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
     // subtracted solid enlarges its bounds on both sides. An invisible one the recursion
     // never reached carries a zero-size proxy, so it lands here as the point Godot has.
-    const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
-    if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
+    if (!isDrawable(obj)) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
     if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
     // Points frame as meshes do: Godot unions the AABB of every visual instance, a PointMesh's too.
-    if (o.isMesh || o.isPoints) {
+    if (!(obj as THREE.Line).isLine) {
       meshBox.union(objBox);
       hasMesh = true;
     } else {

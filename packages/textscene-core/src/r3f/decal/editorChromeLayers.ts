@@ -7,17 +7,11 @@
 
 import * as THREE from 'three';
 import { GODOT_EDITOR_GIZMO_LAYERS } from '../../godot/scene/visualLayers.js';
+import { type Drawable, isDrawable } from '../drawable.js';
 import { isUnderEditorHelper } from '../editorHelpers.js';
 import { restoreInstanceLayers, showInstanceLayers } from '../instanceLayers/instanceLayers.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { setVisualLayers } from '../visualLayers.js';
-
-type Drawable = THREE.Mesh | THREE.Line | THREE.Points;
-
-function isDrawable(object: THREE.Object3D): object is Drawable {
-  const { isMesh, isLine, isPoints } = object as Partial<Record<'isMesh' | 'isLine' | 'isPoints', boolean>>;
-  return isMesh === true || isLine === true || isPoints === true;
-}
 
 /** Whether `object` draws, and it or an ancestor is the root of editor chrome. */
 function isChromeDrawable(object: THREE.Object3D): object is Drawable {

@@ -75,7 +75,7 @@ export function label3DAabb(
 
 /**
  * The one-sided reach of Godot's outline stroke, `outline_size * 16 / 64` px. FreeType's
- * stroker (`text_server_adv.cpp:1376-1403`, keyed at `label_3d.cpp:344-349`) gets
+ * stroker (`text_server_adv.cpp:1383-1390`, keyed at `label_3d.cpp:344-349`) gets
  * `outline_size` unscaled (`text_server_adv.h:406-414`), and `FT_Stroker_Set`
  * (`text_server_adv.cpp:1383`) takes 26.6 fixed point, so `font_size` plays no part.
  */

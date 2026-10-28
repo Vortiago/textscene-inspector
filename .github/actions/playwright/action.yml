@@ -11,5 +11,5 @@ runs:
 
     # No --with-deps: ubuntu-latest already has every library Chromium loads. The flag adds only
     # fonts and a Mesa upgrade, which no golden reads, for 15-24 s of apt in each job.
-    - run: npx playwright install chromium
+    - run: pnpm playwright:install
       shell: bash

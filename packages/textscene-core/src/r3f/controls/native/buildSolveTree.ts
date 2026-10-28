@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
+import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { projectLayoutDirectionEnv, type ProjectSettings } from '../../../parser/projectSettingsParser';
@@ -32,7 +33,7 @@ import type { ResourceType } from '../../../resources/ResourceEventBus';
 import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
-import { resolveProjectDefaultFont } from '../../../resources/fonts/font/projectDefaultFont';
+import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -47,7 +48,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
-import { useFontMetricsSettleCount } from './text/useFontMetricsSettleCount';
+import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
@@ -102,30 +103,22 @@ const NO_THEME_SCOPE: ThemeResolutionScope = {
  * never the querying node's: a Theme's StyleBoxes live in the theme file. Keyed by
  * the `ThemeResource` object, which every referencing node shares.
  */
-const themeStyleBoxCache = new WeakMap<
-  ThemeResource,
-  Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>>
->();
-
-function resolvedStylesOfTheme(
-  theme: ThemeResource
-): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> {
-  const cached = themeStyleBoxCache.get(theme);
-  if (cached) return cached;
-  const { externalResources, internalResources } = theme.resources ?? {
-    externalResources: [],
-    internalResources: [],
-  };
-  const out: Record<string, Record<string, ResolvedStyleBox>> = {};
-  for (const [type, byName] of Object.entries(theme.styles ?? {})) {
-    for (const [name, ref] of Object.entries(byName)) {
-      const resolved = parseStyleBox(ref, externalResources, internalResources);
-      if (resolved) (out[type] ??= {})[name] = resolved;
+const resolvedStylesOfTheme = perObject(
+  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> => {
+    const { externalResources, internalResources } = theme.resources ?? {
+      externalResources: [],
+      internalResources: [],
+    };
+    const out: Record<string, Record<string, ResolvedStyleBox>> = {};
+    for (const [type, byName] of Object.entries(theme.styles ?? {})) {
+      for (const [name, ref] of Object.entries(byName)) {
+        const resolved = parseStyleBox(ref, externalResources, internalResources);
+        if (resolved) (out[type] ??= {})[name] = resolved;
+      }
     }
+    return out;
   }
-  themeStyleBoxCache.set(theme, out);
-  return out;
-}
+);
 
 /**
  * Every StyleBox slot, keyed as `Control::get_theme_stylebox` keys them. A
@@ -179,26 +172,18 @@ function resolveThemedConstants(
  * theme like `resolvedStylesOfTheme`. Left unresolved: loading a texture needs a
  * `useTexture2D` subscription only a component can hold.
  */
-const themeIconRefCache = new WeakMap<
-  ThemeResource,
-  Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>>
->();
-
-function iconRefsOfTheme(
-  theme: ThemeResource
-): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> {
-  const cached = themeIconRefCache.get(theme);
-  if (cached) return cached;
-  const resources = theme.resources ?? { externalResources: [], internalResources: [] };
-  const out: Record<string, Record<string, ThemedIconRef>> = {};
-  for (const [type, byName] of Object.entries(theme.icons ?? {})) {
-    for (const [name, ref] of Object.entries(byName)) {
-      (out[type] ??= {})[name] = { ref, resources };
+const iconRefsOfTheme = perObject(
+  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> => {
+    const resources = theme.resources ?? { externalResources: [], internalResources: [] };
+    const out: Record<string, Record<string, ThemedIconRef>> = {};
+    for (const [type, byName] of Object.entries(theme.icons ?? {})) {
+      for (const [name, ref] of Object.entries(byName)) {
+        (out[type] ??= {})[name] = { ref, resources };
+      }
     }
+    return out;
   }
-  themeIconRefCache.set(theme, out);
-  return out;
-}
+);
 
 /**
  * `Control::get_theme_icon`'s override-then-chain walk. A local
@@ -496,20 +481,12 @@ function buildForest(
     return out;
   }
 
-  /** The project's default theme (`gui/theme/custom`), resolved once for every node. */
-  const projectTheme: ThemeResource | null = (() => {
-    const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim();
-    if (!projectThemeRef) return null;
-    const cached = themeCache.getCached(projectThemeRef);
-    if (cached === undefined) {
-      pendingThemes.add(projectThemeRef);
-      return null;
-    }
-    return cached;
-  })();
-
-  /** The project's default font (`gui/theme/custom_font`), resolved once for every node. */
-  const projectDefaultFont = resolveProjectDefaultFont(projectSettings, fontCache, pendingFonts);
+  /** The project's theme and default font, resolved once for every node. */
+  const projectFonts = resolveProjectFonts(
+    projectSettings,
+    { themes: themeCache, fonts: fontCache },
+    { themes: pendingThemes, fonts: pendingFonts }
+  );
 
   /**
    * A Texture2D ref's pixel size, or null until known. `textureSize` and every
@@ -761,8 +738,7 @@ function buildForest(
       collapsed.type,
       (collapsed.properties as ControlProperties).themeTypeVariation,
       nodeThemeChain,
-      projectTheme,
-      projectDefaultFont
+      projectFonts
     );
     const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
     const texture = resolveTextureSize(
@@ -805,8 +781,7 @@ function buildForest(
       icons: themedIcons,
       resources: ownScope,
       themeChain: nodeThemeChain,
-      projectTheme,
-      projectDefaultFont,
+      projectFonts,
     };
     const hoistedBelow = isBoundary ? [] : childHoisted;
     return canvasChainBroken || topLevel
@@ -860,7 +835,7 @@ export function useBuildSolveTree(
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   // With or without a loader: `peekSceneFontMetrics` starts font loads from the
   // solve itself and answers with the bundled fallback until the metrics settle.
-  const fontMetricsVersion = useFontMetricsSettleCount(true);
+  const fontMetricsVersion = useSceneFontSettleCount(true);
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;

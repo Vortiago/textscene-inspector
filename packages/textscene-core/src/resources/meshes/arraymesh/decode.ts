@@ -19,7 +19,12 @@ import {
   readPackedBytes,
   readUvScale,
 } from './surfaceFields.js';
-import { PRIMITIVE_POINTS, PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
+import {
+  PRIMITIVE_POINTS,
+  PRIMITIVE_TRIANGLES,
+  PRIMITIVE_TRIANGLE_STRIP,
+  surfaceLayout,
+} from './surfaceFormat.js';
 import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
 import { decodeIndices, decodeNormalFrame, decodePositions, decodeUVs } from './vertexBuffers.js';
@@ -67,13 +72,31 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
 }
 
 /**
- * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle or one
- * to a point, as `add_surface_from_arrays` with no ARRAY_INDEX does.
+ * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, one
+ * to a point, or one to a strip slot, as `add_surface_from_arrays` with no ARRAY_INDEX does.
  */
 function drawOrderIndices(vertexCount: number): Uint32Array {
   const indices = new Uint32Array(vertexCount);
   for (let i = 0; i < vertexCount; i++) indices[i] = i;
   return indices;
+}
+
+/**
+ * A triangle strip as a triangle list, as `Mesh::generate_triangle_mesh` reads it (`mesh.cpp:352-366`):
+ * slot `j` makes the triangle `(j-2, j-1, j)`, and an odd `j` swaps the last two so each keeps one
+ * winding. Fewer than three indices make no triangle.
+ */
+function stripToTriangles(strip: Uint32Array): Uint32Array {
+  const triangleCount = Math.max(strip.length - 2, 0);
+  const triangles = new Uint32Array(triangleCount * 3);
+  for (let j = 2; j < strip.length; j++) {
+    const odd = j % 2 === 1;
+    const out = (j - 2) * 3;
+    triangles[out] = strip[j - 2]!;
+    triangles[out + 1] = strip[odd ? j : j - 1]!;
+    triangles[out + 2] = strip[odd ? j - 1 : j]!;
+  }
+  return triangles;
 }
 
 /**
@@ -95,18 +118,19 @@ function decodeSurfaces(
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
 
-    // A LINES/STRIP surface read as triangles fabricates faces. `readInt`
-    // defaults an absent key to 0, and Godot always writes `primitive` for a
-    // saved surface, so only a declared value other than triangles or points skips it.
+    // A LINES or LINE_STRIP surface read as triangles fabricates faces. `readInt` defaults an
+    // absent key to 0, and Godot always writes `primitive` for a saved surface, so only a declared
+    // value other than triangles, a triangle strip or points skips it.
     const primitive = block.includes('"primitive"') ? readInt(block, 'primitive') : PRIMITIVE_TRIANGLES;
     const isPoints = primitive === PRIMITIVE_POINTS;
-    if (primitive !== PRIMITIVE_TRIANGLES && !isPoints) {
+    const isStrip = primitive === PRIMITIVE_TRIANGLE_STRIP;
+    if (primitive !== PRIMITIVE_TRIANGLES && !isPoints && !isStrip) {
       nonTriangle++;
       const name = readName(block);
       warn(
         `[ArrayMesh] surface ${surfaceIndex}${name ? ` "${name}"` : ''} is primitive ` +
-          `${primitive}, not triangles (3) or points (0) — skipping it; this decoder builds ` +
-          `triangle and points geometry only`
+          `${primitive}, not triangles (3), a triangle strip (4) or points (0) — skipping it; this ` +
+          `decoder builds triangle and points geometry only`
       );
       continue;
     }
@@ -137,14 +161,15 @@ function decodeSurfaces(
         )
     );
     const indexData = readPackedBytes(block, 'index_data');
-    const indices = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
-    if (!indices) {
+    const stored = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
+    if (!stored) {
       warn(
         `[ArrayMesh] surface ${surfaceIndex}'s index_data is ${indexData.byteLength} B for ` +
           `${indexCount} indices — dropping the surface so the rest of the mesh still renders`
       );
       continue;
     }
+    const indices = isStrip ? stripToTriangles(stored) : stored;
 
     surfaces.push({
       surfaceIndex,
@@ -158,6 +183,7 @@ function decodeSurfaces(
       tangents,
       indices,
       ...(isPoints && { isPoints }),
+      ...(isStrip && { isTriangleStrip: true }),
       ...readMaterial(block),
     });
   }

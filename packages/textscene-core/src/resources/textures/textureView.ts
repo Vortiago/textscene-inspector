@@ -145,15 +145,24 @@ function diverges(source: THREE.Texture, sampler: ViewSampler): boolean {
   );
 }
 
+/**
+ * Writes `sampler` onto `texture`, which the caller owns, and answers it. It marks nothing for
+ * upload, so a texture still loading uploads when its loader marks it.
+ *
+ * @canonical Apply a view sampler to a texture the caller owns
+ */
+export function applyViewSampler(texture: THREE.Texture, sampler: ViewSampler): THREE.Texture {
+  if (sampler.window) applyUvWindow(texture, sampler.window);
+  if (sampler.wrap !== undefined) texture.wrapS = texture.wrapT = sampler.wrap;
+  texture.channel = sampler.channel ?? 0;
+  if (sampler.filter) applyTextureFilterState(texture, sampler.filter);
+  // Pinned, not assigned: R3F reasserts `SRGBColorSpace` on a `map` every commit.
+  return pinColorSpace(texture, sampler.colorSpace);
+}
+
 /** One clone, however many reasons. `clone()` shares `source`, so the image bytes are not duplicated. */
 function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  const clone = source.clone();
-  if (sampler.window) applyUvWindow(clone, sampler.window);
-  if (sampler.wrap !== undefined) clone.wrapS = clone.wrapT = sampler.wrap;
-  clone.channel = sampler.channel ?? 0;
-  if (sampler.filter) applyTextureFilterState(clone, sampler.filter);
-  // Pinned, not assigned: R3F reasserts `SRGBColorSpace` on a `map` every commit.
-  pinColorSpace(clone, sampler.colorSpace);
+  const clone = applyViewSampler(source.clone(), sampler);
   clone.needsUpdate = true;
   ownedViews.add(clone);
   return clone;

@@ -4,7 +4,7 @@
  * (skeleton_3d.cpp:85), and `name` has no arm below the index guard at :90, so a name for any other
  * slot is dropped. A refused bone (:605, :606) is never added, which shifts every later slot.
  */
-import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import { firstSegment, indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
 import { literalText, stringToInt } from '../../../godot/string/string.js';
 import { unquoteString } from '../../../parser/utils.js';
 
@@ -26,7 +26,29 @@ const BONE_NAME_KEY = indexedKeyRegex('^bones/(#)/name(?:/.*)?$', 'to_int');
  * (skeleton_3d.cpp:82), so `bones/x/position` names bone 0, and Godot applies it. Read the index
  * with `stringToInt(…, 'uint32')`, which `uint32_t which` stores.
  */
-export const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
+const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
+
+/** A `bones/<idx>/<sub>` key as `_set` reads it. */
+export interface BoneKey {
+  /** The index as the file writes it. */
+  readonly indexText: string;
+  /** The slot the index names, as `uint32_t which` stores it. */
+  readonly which: number;
+  /** Slice 2, which alone decides the arm (:83): `bones/0/position/x` reaches `position`. */
+  readonly leaf: string;
+}
+
+/**
+ * The bone slot and leaf `key` writes, or null for a key that is no bone key.
+ *
+ * @canonical The bone slot and leaf of a Skeleton3D `bones/` key
+ */
+export function boneKeyOf(key: string): BoneKey | null {
+  const match = BONE_KEY_RE.exec(key);
+  if (!match) return null;
+  const indexText = match[1]!;
+  return { indexText, which: stringToInt(indexText, 'uint32'), leaf: firstSegment(match[2]!) };
+}
 
 /**
  * The String `add_bone` receives. Quotes and a `&`/`^` prefix come off, then

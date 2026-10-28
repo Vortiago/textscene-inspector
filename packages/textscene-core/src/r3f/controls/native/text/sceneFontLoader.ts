@@ -40,7 +40,7 @@ const SYNTHETIC_UNITS_PER_EM = 1000;
 let familyCounter = 0;
 
 /**
- * How many loads have settled, never reset. Written only by `notifySceneFontMetricsSettled`. A hook
+ * How many loads have settled, never reset. Written only by `notifySceneFontSettled`. A hook
  * reads the count as the snapshot of `useSyncExternalStore`, so a load that settles between its
  * render and its subscription still re-renders it.
  */
@@ -53,14 +53,14 @@ export const sceneFontSettleCount = settleCount.get;
  * resource on its first settle and once for the bundled font, never for a font that short-circuits
  * synchronously.
  */
-export const onSceneFontMetricsSettled = settleCount.subscribe;
+export const onSceneFontSettled = settleCount.subscribe;
 
 /**
  * Fires every settled listener, for a scene font load and for the bundled font registration. A
  * throwing listener does not stop the later ones: the store rethrows the first error once all
  * have run.
  */
-export function notifySceneFontMetricsSettled(): void {
+export function notifySceneFontSettled(): void {
   settleCount.set(settleCount.get() + 1);
 }
 
@@ -70,11 +70,42 @@ export function notifySceneFontMetricsSettled(): void {
  */
 export const fontWork = createWorkCount();
 
-type CacheEntry =
-  { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
+type PeekEntry<T> = { status: 'pending' } | { status: 'settled'; value: T };
 
-/** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. A `WeakMap` frees the entry of an evicted resource. */
-const metricsCache = new WeakMap<FontFileResource, CacheEntry>();
+/**
+ * A peek over loads keyed by object. The first peek of a key starts its load and answers
+ * undefined, and a peek after the load settles answers its value. A settle wakes the readers that
+ * built without it. A load never rejects: it settles on a fallback value. A `WeakMap` frees the
+ * entry of an evicted key.
+ *
+ * @canonical A peek over async loads keyed by object, counted as font work
+ */
+export function createSettledPeek<K extends object, T>(): (key: K, load: () => Promise<T>) => T | undefined {
+  const entries = new WeakMap<K, PeekEntry<T>>();
+
+  async function settle(key: K, load: () => Promise<T>): Promise<void> {
+    const endWork = fontWork.begin();
+    entries.set(key, { status: 'pending' });
+    const value = await load();
+    entries.set(key, { status: 'settled', value });
+    try {
+      notifySceneFontSettled();
+    } finally {
+      // A throwing listener must not leave the work counted: a capture waits on it for good.
+      endWork();
+    }
+  }
+
+  return (key, load) => {
+    const entry = entries.get(key);
+    if (entry) return entry.status === 'settled' ? entry.value : undefined;
+    void settle(key, load);
+    return undefined;
+  };
+}
+
+/** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. */
+const peekMetrics = createSettledPeek<FontFileResource, FontMetrics>();
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */
 function warnUnresolvable(font: FontResource, nodePath: string): void {
@@ -116,7 +147,7 @@ export async function registerFontFace(
  * Registers `bytes` as a fresh `FontFace` held at its `fvar` defaults, and builds its
  * `CanvasFontMetrics`. Ascent and descent come from the font's tables, as FreeType reads them, for a font in a container
  * `fontContainer.ts` opens, else from canvas box metrics. Throws on an invalid font, and
- * `resolveSceneFontMetrics` catches and falls back.
+ * `loadSceneFontMetrics` catches and falls back.
  */
 async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<CanvasFontMetrics> {
   const family = `tscn-scene-font-${++familyCounter}`;
@@ -170,45 +201,17 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
   return createRuntimeFontMetrics({ scalars, measureWidthUnits, cssFontFamily: family });
 }
 
-/** The async pipeline for one resolved `FontResource`. It never throws, and always returns usable `FontMetrics`. */
-async function resolveSceneFontMetrics(
-  font: FontResource | null | undefined,
-  nodePath: string
-): Promise<FontMetrics> {
-  if (!font) return OPEN_SANS_FONT_METRICS;
-
-  const resolved = resolveFontFileBytes(font);
-  if (!resolved) {
-    warnUnresolvable(font, nodePath);
+/** Loads the font at `bytes`. It never throws, and always returns usable `FontMetrics`. */
+async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<FontMetrics> {
+  if (IS_VITEST) return OPEN_SANS_FONT_METRICS;
+  try {
+    return await loadRuntimeFont(bytes, nodePath);
+  } catch (err: unknown) {
+    logger.warn(
+      `[SceneFont] Node "${nodePath}": failed to load scene font (${err instanceof Error ? err.message : String(err)}). Falling back to the bundled default font.`
+    );
     return OPEN_SANS_FONT_METRICS;
   }
-
-  const existing = metricsCache.get(resolved.leaf);
-  if (existing?.status === 'settled') return existing.metrics;
-  if (existing?.status === 'pending') return existing.promise;
-
-  const promise: Promise<FontMetrics> = IS_VITEST
-    ? Promise.resolve(OPEN_SANS_FONT_METRICS)
-    : loadRuntimeFont(resolved.bytes, nodePath).catch((err: unknown) => {
-        logger.warn(
-          `[SceneFont] Node "${nodePath}": failed to load scene font (${err instanceof Error ? err.message : String(err)}). Falling back to the bundled default font.`
-        );
-        return OPEN_SANS_FONT_METRICS;
-      });
-
-  const endWork = fontWork.begin();
-  metricsCache.set(resolved.leaf, { status: 'pending', promise });
-  const metrics = await promise;
-  metricsCache.set(resolved.leaf, { status: 'settled', metrics });
-  try {
-    // Wakes a solve or paint pass that ran against the bundled fallback, so it reruns and reads the
-    // settled cache.
-    notifySceneFontMetricsSettled();
-  } finally {
-    // A throwing listener must not leave the work counted: a capture waits on it for good.
-    endWork();
-  }
-  return metrics;
 }
 
 /** `metrics` with the embolden and skew of `font`, when it is a `FontVariation`. */
@@ -219,8 +222,8 @@ function withFontVariation(metrics: FontMetrics, font: FontResource): FontMetric
 /**
  * The metrics of `font` once its load has settled, with the `FontVariation` embolden and skew on
  * top, and null while a load is in flight. A font that cannot load, or has no bytes to load,
- * settles at once on the bundled default. It starts `resolveSceneFontMetrics` once per font, so
- * calling both peeks never double-loads. A consumer that must not draw against the default while
+ * settles at once on the bundled default. It starts one load per font, so calling both peeks
+ * never double-loads. A consumer that must not draw against the default while
  * the real font loads reads this one.
  */
 export function peekSettledSceneFontMetrics(
@@ -237,12 +240,8 @@ export function peekSettledSceneFontMetrics(
     return OPEN_SANS_FONT_METRICS;
   }
 
-  const existing = metricsCache.get(resolved.leaf);
-  if (existing?.status === 'settled') return withFontVariation(existing.metrics, font);
-  if (!existing) {
-    void resolveSceneFontMetrics(font, nodePath);
-  }
-  return null;
+  const metrics = peekMetrics(resolved.leaf, () => loadSceneFontMetrics(resolved.bytes, nodePath));
+  return metrics ? withFontVariation(metrics, font) : null;
 }
 
 /**

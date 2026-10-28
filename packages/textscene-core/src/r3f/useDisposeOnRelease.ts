@@ -7,6 +7,7 @@ interface Disposable {
 }
 
 /** How many holders each object has. Written only by `holdUntilReleased`, and cleared when the object is disposed. */
+// eslint-disable-next-line no-restricted-syntax -- it counts holders, and a dispose deletes the entry
 const holders = new WeakMap<Disposable, number>();
 
 /**

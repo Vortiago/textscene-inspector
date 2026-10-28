@@ -11,7 +11,7 @@ renders_as: a solid built from an arbitrary Mesh resource
 
 The CSG shape whose solid comes from a `Mesh` resource, so any mesh can take part in a boolean. The previewer builds the solid from the triangle surfaces of an inline or `.tres` PrimitiveMesh or ArrayMesh. Each face takes the node's `material`, else its own surface's material, as in Godot.
 
-A TextMesh with a TrueType or OpenType-CFF scene font builds its brush from its glyph outlines, inline or in a `.tres`. The brush builds once the font file and its metrics have loaded. The text draws as a solid and takes part in a boolean as any other mesh does. The golden `unit-csg-mesh-text-mesh` shows both. The gap to Godot is the glyph hinting that the TextMesh sheet lists.
+A TextMesh builds its brush from its glyph outlines, inline or in a `.tres`, in the font the TextMesh sheet names. The brush builds once the font file and its metrics have loaded. The text draws as a solid and takes part in a boolean as any other mesh does. The golden `unit-csg-mesh-text-mesh` shows both. The gap to Godot is the glyph hinting that the TextMesh sheet lists.
 
 ## Linting
 
@@ -34,7 +34,7 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 1 inherited from
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The linter warns (`resource-type-excluded-by-hint`) when `mesh` holds a class its hint excludes: a `PlaneMesh`, `PointMesh`, `QuadMesh` or `RibbonTrailMesh`. Godot's editor never offers such a class, and the setter keeps it without a warning (`csg_shape.cpp:1302-1316`). A `PointMesh` adds nothing to the solid, as in Godot, whose brush builder skips every surface that is not triangles (`csg_shape.cpp:1148-1150`).
+The linter warns (`resource-type-excluded-by-hint`) when `mesh` holds a class its hint excludes: a `PlaneMesh`, `PointMesh`, `QuadMesh` or `RibbonTrailMesh`. Godot's editor never offers such a class, and the setter keeps it without a warning (`csg_shape.cpp:1302-1316`). A `PointMesh` adds nothing to the solid, as in Godot, whose brush builder skips every surface that is not triangles (`csg_shape.cpp:1137-1139`).
 
 The lenient parser copies `mesh` through only when present. An absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable.
 
@@ -42,4 +42,4 @@ A `mesh` that is an open brush adds nothing to the solid, as in Godot. A PlaneMe
 
 ## Known limitations
 
-- **Resource gap** A TextMesh with a font the previewer cannot read adds nothing to the solid, and the node's details name the type.
+- **Resource gap** A TextMesh with a SystemFont adds nothing to the solid, and the node's details name the type.

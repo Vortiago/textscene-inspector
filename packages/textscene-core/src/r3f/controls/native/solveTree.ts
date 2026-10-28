@@ -5,7 +5,9 @@
  */
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
+import { perObject } from '../../../utils/perObject';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
@@ -155,15 +157,10 @@ export interface SolveNode {
    */
   themeChain: readonly ThemeResource[];
   /**
-   * The project's default theme (`gui/theme/custom`), or `null` when unset or
-   * unresolved. Required, like `fontOverrides`.
+   * The project's theme and default font. Every font lookup ends at them, before the bundled font.
+   * Required, like `fontOverrides`.
    */
-  projectTheme: ThemeResource | null;
-  /**
-   * The font `gui/theme/custom_font` names, or `null` when unset, still loading or failed. Every font
-   * lookup ends at it, before the bundled one. Required, like `fontOverrides`.
-   */
-  projectDefaultFont: FontResource | null;
+  projectFonts: ProjectFonts;
   /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
@@ -236,18 +233,16 @@ type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
  * One view per property bag, so repeated calls return the same object: painters
  * memoise on props identity. Weak, so a re-parse's discarded bags go with it.
  */
-const PAINTER_VIEWS = new WeakMap<object, object>();
-
-/** This node's properties as its own type, in the painter view. */
-export function painterView<T extends ControlProperties>(n: SolveNode): PainterView<T> {
-  const bag = n.node.properties;
-  const cached = PAINTER_VIEWS.get(bag);
-  if (cached) return cached as PainterView<T>;
+const viewOf = perObject((bag: object): object => {
   // Rest-destructured, not assigned `undefined`: a helper handed the whole
   // object must not find the key at all. Shallow: nested values stay shared.
   const { modulate: _modulate, selfModulate: _selfModulate, ...view } = bag as ControlProperties;
-  PAINTER_VIEWS.set(bag, view);
-  return view as unknown as PainterView<T>;
+  return view;
+});
+
+/** This node's properties as its own type, in the painter view. */
+export function painterView<T extends ControlProperties>(n: SolveNode): PainterView<T> {
+  return viewOf(n.node.properties) as PainterView<T>;
 }
 
 /**

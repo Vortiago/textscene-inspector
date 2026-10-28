@@ -1,8 +1,10 @@
 /** A TextMesh in a scene that holds a TrueType or OpenType-CFF font, for the tests of what reads its font. */
 
 import { vi } from 'vitest';
+import { woffFromSfnt } from '../../../r3f/controls/native/text/fontContainer.testkit';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
+import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
 import type { ResolvableResource } from '../../scopedResource';
 import { NO_FILES, loadedFilesOf } from '../../testing/loadedFiles';
@@ -30,16 +32,41 @@ export function openTypeFontFile(): FontFileResource {
   };
 }
 
+/** A FontFile in a WOFF, new on each call. */
+export function woffFontFile(): FontFileResource {
+  return {
+    ...trueTypeFontFile(),
+    bytes: woffFromSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'), { compress: true }),
+    mimeType: 'font/woff',
+  };
+}
+
+/** A FontFile in a WOFF2 whose `glyf` is transformed, new on each call. */
+export function woff2FontFile(): FontFileResource {
+  return {
+    ...trueTypeFontFile(),
+    bytes: fixtureFontBytes('recursive-vf-subset.woff2'),
+    mimeType: 'font/woff2',
+  };
+}
+
+/** A SystemFont: OS family names, which the previewer has no bytes for. */
+export function systemFontResource(): FontResource {
+  return { kind: 'system', fontNames: ['sans-serif'], properties: {} };
+}
+
 /** A TextMesh whose `font` names `FONT_PATH`, and the fonts loaded so far, `fonts`. */
 export function textMeshWith(
   data: Record<string, string> = {},
-  fonts: Record<string, FontResource> = {}
+  fonts: Record<string, FontResource> = {},
+  projectFonts: ProjectFonts = NO_PROJECT_FONTS
 ): ResolvableResource {
   return {
     resource: { id: 'text', type: 'TextMesh', data: { text: '"H"', font: 'ExtResource("font")', ...data } },
     resources: { ...NO_RESOURCES, externalResources: [{ id: 'font', type: 'FontFile', path: FONT_PATH }] },
     loadedFile: NO_FILES,
     loadedFont: loadedFilesOf(fonts),
+    projectFonts,
   };
 }
 

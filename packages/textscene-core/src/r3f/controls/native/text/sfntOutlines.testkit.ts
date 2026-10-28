@@ -1,5 +1,5 @@
 /**
- * Builds a tiny TrueType font in memory for the outline reader's tests: the tables `parseSfntOutlines`
+ * Builds a tiny TrueType font in memory for the outline reader's tests: the tables `openFontOutlines`
  * reads (`head`, `maxp`, `cmap`, `loca`, `glyf`) and nothing else, so a test states the glyphs it
  * needs and no more. Every coordinate is a whole design unit, written as a 16-bit delta.
  * It also reads the font fixtures of `scenes/fixtures/fonts/`.
@@ -7,11 +7,21 @@
 
 import { join } from 'node:path';
 import { fileBytes } from '../../../../resources/testing/fileBytes';
+import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 const FIXTURE_FONTS = join(import.meta.dirname, '../../../../../../../scenes/fixtures/fonts');
 
 export function fixtureFontBytes(name: string): ArrayBuffer {
   return fileBytes(join(FIXTURE_FONTS, name));
+}
+
+/**
+ * A `FontFile` that holds `bytes`, or none, with the `fallbacks` a wrapper chains to.
+ *
+ * @canonical A FontFile resource fixture for a font test
+ */
+export function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []): FontFileResource {
+  return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
 }
 
 export interface TestPoint {

@@ -61,6 +61,7 @@ const SURFACE_ALPHA: ProgramInjection = {
 };
 
 /** Each surface's depth materials, one per three material it copies. Disposed with the surface. */
+// eslint-disable-next-line no-restricted-syntax -- a surface's dispose deletes its entry
 const depthCopies = new WeakMap<THREE.Material, Map<DepthMaterial, DepthMaterial>>();
 
 /**

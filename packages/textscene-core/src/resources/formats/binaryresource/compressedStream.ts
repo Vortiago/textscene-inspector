@@ -73,7 +73,8 @@ export async function zlibBlockInflater(): Promise<BlockInflater> {
   return (block, size) => exactly(size, unzlibSync(block, { out: new Uint8Array(size) }));
 }
 
-function exactly(size: number, inflated: Uint8Array): Uint8Array {
+/** `inflated` when it holds exactly `size` bytes, as Godot reads a block. */
+export function exactly(size: number, inflated: Uint8Array): Uint8Array {
   if (inflated.length !== size) throw new Error(`expected ${size} bytes, got ${inflated.length}`);
   return inflated;
 }
