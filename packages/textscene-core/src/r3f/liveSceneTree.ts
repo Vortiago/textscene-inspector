@@ -19,7 +19,7 @@ import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { sameElements } from '../utils/sameElements.js';
 import { perObject } from '../utils/perObject.js';
-import { NOTHING_CACHED, answeredOnce, recordingReads } from './cacheSources.js';
+import { NOTHING_CACHED, answeredOnce, keptWhileAnswered } from './cacheSources.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -31,8 +31,7 @@ export interface CachedSceneSource {
   getCached: (path: string) => (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined;
 }
 
-type CacheAnswer = ReturnType<CachedSceneSource['getCached']>;
-type CachedScene = NonNullable<CacheAnswer>;
+type CachedScene = NonNullable<ReturnType<CachedSceneSource['getCached']>>;
 
 /** Read surface for the loader's GLB cache, so the walk can descend into a GLB's internals. */
 export interface CachedGlbSource {
@@ -105,27 +104,21 @@ function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
 }
 
 /**
- * One composition of an inherited sub-scene over its bases: the scenes it enclosed and read, and
- * what the cache answered for each read.
- */
-interface Composition {
-  readonly instancedScenePaths: readonly string[];
-  readonly reads: ReadonlyMap<string, CacheAnswer>;
-  readonly composed: { nodes: readonly LiveNode[] };
-}
-
-/**
  * The sources that ask about one scene in one chain at once: the loader's cache, and the
  * single-path source of a tree row. Two keep each from replacing the other's composition.
  */
 const COMPOSITIONS_PER_CHAIN = 2;
 
 /**
- * Written only by {@link composedSubScene}, keyed by the cached scene object. The entries clear
- * when nothing holds that object any more. A scene composes once for each chain of scenes that
- * encloses it, since the cyclic-instancing check reads that chain.
+ * Written only by {@link composedSubScene}, keyed by the cached scene object. A scene composes once
+ * for each chain of scenes that encloses it, since the cyclic-instancing check reads that chain.
  */
-const compositions = new WeakMap<CachedScene, Composition[]>();
+const compositions = keptWhileAnswered<
+  CachedScene,
+  readonly string[],
+  { scenes: CachedSceneSource },
+  { nodes: readonly LiveNode[] }
+>({ sameVariant: sameElements, perVariant: COMPOSITIONS_PER_CHAIN });
 
 /**
  * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
@@ -140,32 +133,22 @@ function composedSubScene(
 ): { nodes: readonly LiveNode[] } {
   const root = cached.nodes[0];
   if (cached.nodes.length !== 1 || !root || !(root.instance || holdsDeepChildren(root))) return cached;
-  const enclosing = content.instancedScenePaths ?? [];
-  const stored = compositions.get(cached) ?? [];
-  const sameChain = stored.filter((c) => sameElements(c.instancedScenePaths, enclosing));
-  const known = sameChain.find((c) => stillAnswered(c.reads, sceneCache));
-  if (known) return known.composed;
-
-  const composition = composeRecording(cached, root, content, sceneCache);
-  const otherChains = stored.filter((c) => !sameChain.includes(c));
-  compositions.set(cached, [...otherChains, ...sameChain.slice(1 - COMPOSITIONS_PER_CHAIN), composition]);
-  return composition.composed;
+  // The recording source also sees the reads of a base's own composition, so a change of any base ends this entry.
+  return compositions(cached, content.instancedScenePaths ?? [], { scenes: sceneCache }, ({ scenes }) =>
+    composedOverBases(cached, root, content, scenes)
+  );
 }
 
-/** The composition of `root` over its bases, with every answer the cache gave while it composed. */
-function composeRecording(
+/** `cached` with its sole `root` collapsed over its bases and seated, or the same scene where nothing changes. */
+function composedOverBases(
   cached: CachedScene,
   root: LiveNode,
   content: SceneScope,
   sceneCache: CachedSceneSource
-): Composition {
-  const reads = new Map<string, CacheAnswer>();
-  // The recorder also sees the reads of a base's own composition, so a change of any base ends this entry.
-  const recorder = recordingReads(sceneCache, (path, answer) => reads.set(path, answer));
-  const collapsed = collapseLiveNode(root, content, recorder);
-  const [seated] = seatedFile([collapsed], content, recorder, cached.nodes);
-  const composed = seated === root ? cached : { nodes: [seated!] };
-  return { instancedScenePaths: content.instancedScenePaths ?? [], reads, composed };
+): { nodes: readonly LiveNode[] } {
+  const collapsed = collapseLiveNode(root, content, sceneCache);
+  const [seated] = seatedFile([collapsed], content, sceneCache, cached.nodes);
+  return seated === root ? cached : { nodes: [seated!] };
 }
 
 /**
@@ -199,16 +182,6 @@ function seatedFile(
     collapse
   );
   return seated === root ? roots : [seated];
-}
-
-function stillAnswered<Answer>(
-  reads: ReadonlyMap<string, Answer>,
-  cache: { getCached: (path: string) => Answer }
-): boolean {
-  for (const [path, answer] of reads) {
-    if (cache.getCached(path) !== answer) return false;
-  }
-  return true;
 }
 
 /**
@@ -530,28 +503,10 @@ export class LiveTree {
    * step read is unchanged.
    */
   stepOf(node: LiveNode, scope: SceneScope): LiveStep {
-    const own = scopeOf(node, scope);
-    const glbs = this.ctx.glbCache ?? NOTHING_CACHED;
-    const entries = stepsByNode.get(node) ?? [];
-    const previous = entries.find((entry) => sameScope(entry.scope, own));
-    if (
-      previous &&
-      stillAnswered(previous.sceneReads, this.scenes) &&
-      stillAnswered(previous.glbReads, glbs)
-    ) {
-      return previous.step;
-    }
-    const sceneReads = new Map<string, CacheAnswer>();
-    const glbReads = new Map<string, GlbAnswer>();
-    const step = liveStep(
-      node,
-      scope,
-      recordingReads(this.scenes, (path, answer) => sceneReads.set(path, answer)),
-      recordingReads(glbs, (path, answer) => glbReads.set(path, answer))
+    const sources = { scenes: this.scenes, glbs: this.ctx.glbCache ?? NOTHING_CACHED };
+    return stepsByNode(node, scopeOf(node, scope), sources, ({ scenes, glbs }) =>
+      liveStep(node, scope, scenes, glbs)
     );
-    const others = entries.filter((entry) => entry !== previous);
-    stepsByNode.set(node, [...others, { scope: own, sceneReads, glbReads, step }]);
-    return step;
   }
 
   /**
@@ -578,16 +533,6 @@ export class LiveTree {
   }
 }
 
-type GlbAnswer = ReturnType<CachedGlbSource['getCached']>;
-
-/** A step with the scope it was taken in and each cache answer it read, to tell when it is stale. */
-interface RememberedStep {
-  readonly scope: SceneScope;
-  readonly sceneReads: ReadonlyMap<string, CacheAnswer>;
-  readonly glbReads: ReadonlyMap<string, GlbAnswer>;
-  readonly step: LiveStep;
-}
-
 /**
  * Written only by {@link LiveTree.stepOf}: the steps of a node under each scope it was asked in.
  * They outlive the tree that took them, since a load that a step did not read leaves it as it is.
@@ -595,7 +540,12 @@ interface RememberedStep {
  * scope it was asked in: an evicting limit would take the step again at each load. The scopes are
  * the scenes' own and finite, and the entries clear when nothing holds the node any more.
  */
-const stepsByNode = new WeakMap<LiveNode, RememberedStep[]>();
+const stepsByNode = keptWhileAnswered<
+  LiveNode,
+  SceneScope,
+  { scenes: CachedSceneSource; glbs: CachedGlbSource },
+  LiveStep
+>({ sameVariant: sameScope, perVariant: 1 });
 
 /** What a fold of the live tree does at each node. */
 type FoldVisit<Inherited, Result> = (
