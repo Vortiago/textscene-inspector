@@ -117,12 +117,12 @@ export function textureView(source: THREE.Texture, sampler: ViewSampler): THREE.
 
 /**
  * `textureView` that always clones, for a consumer that writes the clone afterwards, as a sprite
- * moves its window to the next frame. The consumer may write any field of the result, and owns it.
- * A render target no pass publishes comes back as it is, since a copy of it would never fill.
+ * moves its window to the next frame. The consumer may write any field of a clone, and owns it. A
+ * render target comes back as `textureView` gives it, since its pass refills a copy each frame: a
+ * consumer states its window in `sampler`, and writes only a view that `viewToRelease` names.
  */
 export function ownedTextureView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  if (!source.isRenderTargetTexture) return clonedView(source, sampler);
-  return isLiveTarget(source) ? liveCopyView(source, sampler) : source;
+  return source.isRenderTargetTexture ? textureView(source, sampler) : clonedView(source, sampler);
 }
 
 /**

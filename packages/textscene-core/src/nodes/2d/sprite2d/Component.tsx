@@ -12,8 +12,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { useUvWindow } from '../../../r3f/useUvWindow';
-import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
+import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -38,7 +37,6 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles.
   const sampler = useNode2DTextureSampler(props);
-  const drawnTexture = useCanvas2DTexture(sourceTexture, sampler);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {
@@ -46,7 +44,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
     return frameUvWindow(sourceTexture ?? undefined, frameProps);
   }, [sourceTexture, props, animatedFrame]);
-  useUvWindow(drawnTexture, frameWindow);
+  const drawnTexture = useWindowedCanvas2DTexture(sourceTexture, sampler, frameWindow);
 
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture

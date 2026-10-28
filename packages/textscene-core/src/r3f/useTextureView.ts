@@ -16,6 +16,9 @@ import {
 import { useByValue } from './hooks/useByValue';
 import { useTiledUpload } from './tiledUpload/useTiledUpload';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
+import { isLiveTarget } from './liveTargets';
+import { useUvWindow } from './useUvWindow';
+import type { UvWindow } from './uvWindow';
 
 /**
  * `source` as `sampler` samples it: the source itself when it already does, else one clone. Null
@@ -45,6 +48,22 @@ export function useOwnedTextureView(
 }
 
 type MakeView = (source: THREE.Texture, sampler: ViewSampler | null | undefined) => THREE.Texture | null;
+
+/**
+ * `useOwnedTextureView` that shows `window`. A clone takes the window by a write, so a moving window
+ * keeps the clone. A live target takes it in the sampler, so only a reader whose window or sampler
+ * differs from the target's reads its own copy.
+ */
+export function useWindowedTextureView(
+  source: THREE.Texture | null | undefined,
+  sampler: ViewSampler | null | undefined,
+  window: UvWindow
+): THREE.Texture | null {
+  const isLive = source ? isLiveTarget(source) : false;
+  const view = useOwnedTextureView(source, sampler && isLive ? { ...sampler, window } : sampler);
+  useUvWindow(view, window);
+  return view;
+}
 
 const sharedView: MakeView = (source, sampler) => (sampler ? textureView(source, sampler) : source);
 

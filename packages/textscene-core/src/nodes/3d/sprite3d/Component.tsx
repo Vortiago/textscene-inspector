@@ -13,8 +13,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
-import { useOwnedTextureView } from '../../../r3f/useTextureView';
-import { useUvWindow } from '../../../r3f/useUvWindow';
+import { useWindowedTextureView } from '../../../r3f/useTextureView';
 import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
@@ -88,14 +87,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // `texture_albedo` is a `source_color` sampler (`sprite_3d.cpp:306`), so the view reads as an
   // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`). The view is this
   // component's, never the loader's cached entry, since a frame writes its window on it.
-  const displayedTexture = useOwnedTextureView(
-    sourceTexture,
-    sourceTexture && {
-      colorSpace: sourceColorSpace(sourceTexture),
-      filter: textureFilter,
-      wrap: WRAP[wrap],
-    }
-  );
   // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
   const frameWindow = useMemo(
     () =>
@@ -106,7 +97,15 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       ),
     [sourceTexture, properties]
   );
-  useUvWindow(displayedTexture, frameWindow);
+  const displayedTexture = useWindowedTextureView(
+    sourceTexture,
+    sourceTexture && {
+      colorSpace: sourceColorSpace(sourceTexture),
+      filter: textureFilter,
+      wrap: WRAP[wrap],
+    },
+    frameWindow
+  );
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).

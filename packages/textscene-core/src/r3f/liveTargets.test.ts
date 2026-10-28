@@ -11,6 +11,7 @@ import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subview
 import { copiesFilledFrom } from './liveTargets.testkit';
 
 const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
+const UPRIGHT = { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
 
 let withdrawals: (() => void)[] = [];
 afterEach(() => {
@@ -67,6 +68,11 @@ describe('a reader of a live target', () => {
     expect(textureView(target.texture, { colorSpace: THREE.NoColorSpace })).toBe(target.texture);
   });
 
+  it("shares the target with a reader that owns its view but samples the target's own state", () => {
+    const target = liveCanvasTarget();
+    expect(ownedTextureView(target.texture, { colorSpace: THREE.NoColorSpace })).toBe(target.texture);
+  });
+
   it('is refilled after each render of the target', () => {
     const target = liveCanvasTarget();
     const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
@@ -83,7 +89,7 @@ describe('a reader of a live target', () => {
   it("reads its own copy of another reader's copy, filled after that copy", () => {
     const target = liveCanvasTarget();
     const first = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
-    const second = ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    const second = ownedTextureView(first, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT });
     expect(copiesFilledFrom(target.texture)).toEqual([first, second]);
   });
 
