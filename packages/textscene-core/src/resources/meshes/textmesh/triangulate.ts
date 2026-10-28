@@ -9,7 +9,8 @@ import type { Vector2 } from '../../../godot/math/vector';
 import { convexPartition, triangulateMinimumWeight } from './polypartition';
 
 /**
- * The triangles that fill the contours, three points to a triangle, wound as the contours are. Empty
+ * The triangles that fill the contours, three points to a triangle, counter-clockwise on a y-up page
+ * for contours that wind as a glyph's outer contours do. Empty
  * where Godot fails to partition the glyph, or to triangulate a piece of it.
  */
 export function triangulateContours(contours: readonly (readonly Vector2[])[]): Vector2[] {

@@ -104,7 +104,10 @@ function isVisibleFrom(holePoint: Vector2, point: Vector2, polygons: readonly Pa
   return polygons.every((other) => other.isHole || !crossesEdge(holePoint, point, other.points));
 }
 
-/** The point right of `holePoint` that it sees, and that lies leftmost-first by direction, or null. */
+/**
+ * The point right of `holePoint` that it sees, with the largest x in its normalised direction from
+ * `holePoint`, the first of equals. Null where it sees none.
+ */
 function visiblePolygonPoint(polygons: readonly PartitionPolygon[], holePoint: Vector2): PolygonPoint | null {
   let best: PolygonPoint | null = null;
   let bestDirectionX = 0;
