@@ -13,14 +13,9 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw } from './nativeSolver';
-import { rectTextureSampler } from './rectTexture';
+import { rectTextureSampler, sampledDraw } from './rectTexture';
 import type { TextureRectProperties } from './types';
 import { useOwnedTextureView } from '../../../../r3f/useTextureView';
-
-interface ImageLike {
-  width?: number;
-  height?: number;
-}
 
 export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureRectProperties>(solveNode);
@@ -35,12 +30,13 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
   // procedural texture, which has no path and rasterises out of the scene.
   const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
 
-  const draw = useMemo(() => {
-    const image = rawTexture?.image as ImageLike | undefined;
-    const textureSize = { x: image?.width ?? 0, y: image?.height ?? 0 };
-    if (!rawTexture || textureSize.x <= 0 || textureSize.y <= 0) return null;
-    return { textureSize, ...textureRectDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
-  }, [rawTexture, rect.w, rect.h, props.stretchMode]);
+  const draw = useMemo(
+    () =>
+      sampledDraw(rawTexture, (reported) =>
+        textureRectDraw({ x: rect.w, y: rect.h }, reported, props.stretchMode)
+      ),
+    [rawTexture, rect.w, rect.h, props.stretchMode]
+  );
 
   const drawnTexture = useOwnedTextureView(
     rawTexture,

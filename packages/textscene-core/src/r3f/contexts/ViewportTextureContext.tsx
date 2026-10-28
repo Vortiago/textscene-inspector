@@ -64,8 +64,13 @@ export function usePublishViewportTexture(path: string, entry: ViewportTextureEn
 
 /** The target published at `path`, or null. */
 export function useViewportTexture(path: string | null): ViewportTextureEntry | null {
-  const targets = useContext(ViewportTexturesContext);
+  const targets = useViewportTextures();
   return path === null ? null : (targets.get(path) ?? null);
+}
+
+/** Every published target, by path, for a reader that resolves many paths outside a hook. */
+export function useViewportTextures(): ReadonlyMap<string, ViewportTextureEntry> {
+  return useContext(ViewportTexturesContext);
 }
 
 export function ViewportTextureProvider({ children }: { children: ReactNode }) {

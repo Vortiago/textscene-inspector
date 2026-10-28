@@ -136,24 +136,39 @@ describe('TileSourceMesh texture slot', () => {
     expect(textureSize(map)).toEqual({ width: 8, height: 4 });
   });
 
-  /** Godot sets the atlas texture up only through a TileSet that is local to scene (`core/io/resource.cpp:497-503`). */
-  it("draws Godot's placeholder for a ViewportTexture in a TileSet that is not local to scene", async () => {
-    const viewport = {
-      id: 'Viewport',
-      type: 'ViewportTexture',
-      data: { viewport_path: 'NodePath("SubViewport")' },
-    };
+  /**
+   * An AtlasTexture reports its region while the scene loads, so its tiles exist, and Godot sets its
+   * ViewportTexture up only through a TileSet that is local to scene (`core/io/resource.cpp:497-503`).
+   */
+  it("draws Godot's placeholder for an AtlasTexture over a ViewportTexture in a TileSet that is not local to scene", async () => {
+    const tables: TscnInternalResource[] = [
+      { id: 'Viewport', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+      {
+        id: 'Window',
+        type: 'AtlasTexture',
+        data: {
+          atlas: 'SubResource("Viewport")',
+          region: 'Rect2(0, 0, 32, 32)',
+          resource_local_to_scene: 'true',
+        },
+      },
+    ];
     const tileSet = { id: 'TileSet_1', type: 'TileSet', data: {} };
     const source = {
       ...sourceOf(false),
-      texture: {
-        ...tileTextureAt('SubResource("Viewport")'),
-        internalResources: [viewport],
-        holders: [tileSet],
-      },
+      texture: { ...tileTextureAt('SubResource("Window")'), internalResources: tables, holders: [tileSet] },
     };
     const renderer = await render(source, null);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    expect((mesh.material as THREE.MeshBasicMaterial).map!.image).toBe(unconfiguredViewportTexture().image);
+    const { data } = (mesh.material as THREE.MeshBasicMaterial).map!.image as { data: Uint8Array };
+    expect(distinctTexels(data)).toEqual(distinctTexels(unconfiguredViewportTexture().image.data!));
   });
 });
+
+/** The distinct RGBA texels of `data`, sorted, each written as `r,g,b,a`. */
+function distinctTexels(data: ArrayLike<number>): string[] {
+  const texels = new Set<string>();
+  for (let i = 0; i < data.length; i += 4)
+    texels.add([data[i], data[i + 1], data[i + 2], data[i + 3]].join(','));
+  return [...texels].sort();
+}

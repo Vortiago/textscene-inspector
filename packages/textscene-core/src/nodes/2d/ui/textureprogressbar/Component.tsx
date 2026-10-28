@@ -36,20 +36,24 @@ import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import type { TextureProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
+import { textureSize } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
-interface ImageLike {
-  width?: number;
-  height?: number;
+/** The size a plain or radial layer draws at: the size Godot reports for its texture. */
+function reportedSize(texture: THREE.Texture | null): Vector2 | null {
+  return areaOf(textureSize(texture));
 }
 
-function naturalSize(texture: THREE.Texture | null): Vector2 | null {
-  const image = texture?.image as ImageLike | undefined;
-  const w = image?.width ?? 0;
-  const h = image?.height ?? 0;
-  return texture && w > 0 && h > 0 ? { x: w, y: h } : null;
+/** The size a nine-patch layer cuts its margins from: the sampled image's. */
+function sampledSize(texture: THREE.Texture | null): Vector2 | null {
+  return areaOf(imageSize(texture?.image));
+}
+
+function areaOf(size: ImageSize | undefined): Vector2 | null {
+  return size && size.width > 0 && size.height > 0 ? { x: size.width, y: size.height } : null;
 }
 
 /** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
@@ -95,11 +99,13 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
 
   // Memoised, so the geometry and crop memos that read a size rebuild only when its texture changes.
-  const underSize = useMemo(() => naturalSize(underTexture), [underTexture]);
-  const progressSize = useMemo(() => naturalSize(progressTexture), [progressTexture]);
-  const overSize = useMemo(() => naturalSize(overTexture), [overTexture]);
-
   const ninePatchStretch = props.ninePatchStretch === true;
+  // An unset ViewportTexture reports size 0 yet samples the placeholder, which a nine patch stretches.
+  const layerSize = ninePatchStretch ? sampledSize : reportedSize;
+  const underSize = useMemo(() => layerSize(underTexture), [layerSize, underTexture]);
+  const progressSize = useMemo(() => layerSize(progressTexture), [layerSize, progressTexture]);
+  const overSize = useMemo(() => layerSize(overTexture), [layerSize, overTexture]);
+
   const stretchMarginLeft = props.stretchMarginLeft ?? 0;
   const stretchMarginTop = props.stretchMarginTop ?? 0;
   const stretchMarginRight = props.stretchMarginRight ?? 0;

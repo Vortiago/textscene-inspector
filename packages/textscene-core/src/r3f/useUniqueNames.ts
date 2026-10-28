@@ -41,7 +41,7 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
  * ({@link localSceneUniquePaths}). With no scene tree there is no table, so a `%Name` addresses
  * nothing.
  */
-interface LocalScene {
+export interface LocalScene {
   readonly path: string;
   readonly uniquePaths?: ReadonlyMap<string, string>;
 }
@@ -50,6 +50,16 @@ interface LocalScene {
 interface LocalSceneOwner {
   readonly path: string;
   readonly uniquePaths: ReadonlyMap<string, string>;
+}
+
+function localSceneOwnerOf(path: string, live: SharedLiveTree): LocalSceneOwner {
+  const owner = localSceneOf(path, live.roots, live.ctx);
+  return { path: owner.path, uniquePaths: localSceneUniquePaths(owner) };
+}
+
+/** The local scene of the node at `path`, as {@link useLocalScene} gives it, for a caller with no hooks. */
+export function localSceneAt(path: string, live: SharedLiveTree | null): LocalScene {
+  return live ? localSceneOwnerOf(path, live) : { path: path.split('/')[0]! };
 }
 
 const sameLocalSceneOwner = (a: LocalSceneOwner, b: LocalSceneOwner) =>
@@ -65,8 +75,7 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
   const ownerOf = useCallback(
     (live: SharedLiveTree): LocalSceneOwner | undefined => {
       if (!path) return undefined;
-      const owner = localSceneOf(path, live.roots, live.ctx);
-      return { path: owner.path, uniquePaths: localSceneUniquePaths(owner) };
+      return localSceneOwnerOf(path, live);
     },
     [path]
   );
