@@ -58,6 +58,7 @@ function dropEnvironment(scene: THREE.Scene, clearColor: THREE.Color): () => voi
   // The intensity, not `environment`: a program compiles `USE_ENVMAP` from the environment.
   scene.environmentIntensity = 0;
   scene.background = clearColor;
+  // Zero, not a scale by zero: an ambient of `inf` energy scales to NaN.
   for (const { light } of ambients) light.intensity = 0;
   return () => {
     scene.environmentIntensity = environmentIntensity;

@@ -96,12 +96,19 @@ const INLINE_POINTS: TscnInternalResource = {
   data: { _surfaces: wallQuadSurfaces({ primitive: 0 }) },
 };
 
+const INLINE_STRIP: TscnInternalResource = {
+  id: 'Strip',
+  type: 'ArrayMesh',
+  data: { _surfaces: wallQuadSurfaces({ primitive: 4 }) },
+};
+
 const CTX = csgGeometryContext({
   internalResources: [
     INLINE_BOX,
     INLINE_CAPSULE,
     INLINE_POINT,
     INLINE_POINTS,
+    INLINE_STRIP,
     INLINE_QUADS,
     INLINE_TUBE,
     INLINE_RIBBON,
@@ -218,7 +225,7 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
   });
 
-  // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1148-1150`).
+  // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1137-1139`).
   it('builds an empty brush for a PointMesh, whose surface is points', () => {
     expect(positionCount(build('SubResource("Point")'))).toBe(0);
     expect(meshSurfaces({ ...CTX, resource: INLINE_POINT, resources: CTX, file: null })).toEqual([]);
@@ -226,6 +233,10 @@ describe('csgMesh3DGeometry: mesh sources', () => {
 
   it('builds an empty brush for an ArrayMesh whose surface is points', () => {
     expect(positionCount(build('SubResource("Points")'))).toBe(0);
+  });
+
+  it('builds an empty brush for an ArrayMesh whose surface is a triangle strip', () => {
+    expect(positionCount(build('SubResource("Strip")'))).toBe(0);
   });
 
   // A shape with no brush warns in Godot (`csg_shape.cpp:981`), so these differ from a mesh not built.

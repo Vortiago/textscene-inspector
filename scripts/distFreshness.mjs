@@ -8,17 +8,18 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { newestMtime } from './newestMtime.mjs';
+import { isTestFile } from './sourceTree.mjs';
 
 export const BUILD = 'pnpm --filter @textscene/core build';
 
+const TYPESCRIPT_RE = /\.tsx?$/;
+
 /**
- * `tsc` emits `src/**` minus the tests, the test kit and the ambient
- * declarations, mirroring the package tsconfig's `exclude`. An edit to those is
- * not staleness: `tsc --build` no-ops on it, so the prescribed build could not
- * clear the complaint.
+ * `tsc` emits `src/**` minus the test files and the ambient declarations,
+ * mirroring the package tsconfig's `exclude`. An edit to those is not staleness:
+ * `tsc --build` no-ops on it, so the prescribed build could not clear the complaint.
  */
-const COMPILED = /\.tsx?$/;
-const NOT_COMPILED = /\.d\.ts$|\.testkit\.tsx?$|\.(test|spec)\.tsx?$/;
+const isCompiled = (path) => TYPESCRIPT_RE.test(path) && !path.endsWith('.d.ts') && !isTestFile(path);
 
 /** Newest kept file under `dir`; `testing/` is the excluded kit, at any depth. */
 export const newest = (dir, keep) => newestMtime(dir, keep, (name) => name !== 'testing');
@@ -75,7 +76,7 @@ export function stalenessMessage(core, what = 'this ledger') {
   // A deleted source bumps no mtime under `src`, but a name in tsc's file list
   // that is no longer on disk dates the build.
   const removed = (record.fileNames ?? [])
-    .filter((f) => f.startsWith('./src/') && COMPILED.test(f) && !NOT_COMPILED.test(f))
+    .filter((f) => f.startsWith('./src/') && isCompiled(f))
     .find((f) => !existsSync(join(core, f)));
   if (removed) {
     return (
@@ -84,7 +85,7 @@ export function stalenessMessage(core, what = 'this ledger') {
     );
   }
 
-  const source = newest(join(core, 'src'), (n) => COMPILED.test(n) && !NOT_COMPILED.test(n));
+  const source = newest(join(core, 'src'), isCompiled);
   if (source.failed) {
     return `packages/textscene-core/src could not be walked, so ${what} cannot be trusted.`;
   }

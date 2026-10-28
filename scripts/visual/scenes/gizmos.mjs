@@ -20,6 +20,9 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', gizmos: true, select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', gizmos: true, select: 'Root/MySpringArm3D' },
+  // The SoftBody3D wireframe: the triangle edges of its mesh in the collision debug colour.
+  { name: 'softbody3d-selected', file: 'unit-softbody3d.tscn', gizmos: true, select: 'Root/SoftBody3D' },
+  { name: 'softbody3d-unselected', file: 'unit-softbody3d.tscn', gizmos: true },
   // The particle emitters: the visibility_aabb box and the emission shape lines, with the axes from
   // the box centre on CPUParticles3D. The GPUParticles3D scene gives its box shape the offset and
   // scale only a ParticleProcessMaterial has.

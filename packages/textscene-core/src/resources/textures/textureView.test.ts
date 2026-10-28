@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
+  applyViewSampler,
   ownedTextureView,
   pinColorSpace,
   releaseView,
@@ -487,6 +488,38 @@ describe('release', () => {
     releaseView(copy);
 
     expect(seen.count).toBe(0);
+  });
+});
+
+describe('applyViewSampler', () => {
+  it('writes every field the sampler states onto the texture itself', () => {
+    const texture = new THREE.Texture();
+
+    const sampled = applyViewSampler(
+      texture,
+      sampler({ filter: filterOf(0), wrap: THREE.MirroredRepeatWrapping, window: uvWindow(0.5, 0.25) })
+    );
+
+    expect([sampled === texture, texture.magFilter, texture.wrapT, texture.repeat.toArray()]).toEqual([
+      true,
+      THREE.NearestFilter,
+      THREE.MirroredRepeatWrapping,
+      [0.5, 0.25],
+    ]);
+  });
+
+  it('pins the colour space, so a later write leaves it', () => {
+    const texture = applyViewSampler(new THREE.Texture(), sampler());
+
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('leaves the texture to its caller: no upload mark, and nothing for a view to release', () => {
+    const texture = applyViewSampler(new THREE.Texture(), sampler());
+
+    expect([texture.version, viewToRelease(texture)]).toEqual([0, null]);
   });
 });
 

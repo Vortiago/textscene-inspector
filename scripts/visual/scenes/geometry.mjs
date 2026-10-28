@@ -28,6 +28,8 @@ export const GEOMETRY_SCENES = [
   // A SoftBody3D draws its box at rest, with no simulation. No other scene shows a regression in
   // it: the box is the only node here that draws.
   { name: 'soft-body-3d', file: 'unit-soft-body-3d.tscn' },
+  // An ArrayMesh triangle-strip surface, read as triangles as Godot reads it.
+  { name: 'arraymesh-triangle-strip', file: 'unit-arraymesh-triangle-strip.tscn' },
   // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's
   // begin, so both vanish while A's child stays, and C and D blend at a SELF margin fade.
   { name: 'visibility-range', file: 'unit-visibility-range.tscn' },
