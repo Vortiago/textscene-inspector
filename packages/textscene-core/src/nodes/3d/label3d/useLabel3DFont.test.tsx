@@ -2,14 +2,34 @@ import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { ProjectSettingsProvider } from '../../../r3f/contexts/ProjectSettingsContext';
-import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
-import { clearSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { loaderServing } from '../../../resources/testing/servingResourceLoader';
-import { useLabel3DFont } from './useLabel3DFont';
+
+/**
+ * The modules under test, imported again after each `vi.resetModules()`: the outlines of the bundled
+ * font sit in a module-wide cache, so a test that reads a label's outlines needs the cache empty.
+ * One import graph holds the hook and the providers, so their contexts are the same objects.
+ */
+async function importModules() {
+  vi.resetModules();
+  const [settings, fontMetrics, resources, loading, serving, hook] = await Promise.all([
+    import('../../../r3f/contexts/ProjectSettingsContext'),
+    import('../../../r3f/controls/native/text/openSansCanvasFontMetrics'),
+    import('../../../r3f/SceneResourcesContext'),
+    import('../../../resources/ResourceLoaderContext'),
+    import('../../../resources/testing/servingResourceLoader'),
+    import('./useLabel3DFont'),
+  ]);
+  return {
+    ProjectSettingsProvider: settings.ProjectSettingsProvider,
+    createOpenSansCanvasFontMetrics: fontMetrics.createOpenSansCanvasFontMetrics,
+    SceneResourcesProvider: resources.SceneResourcesProvider,
+    ResourceLoaderProvider: loading.ResourceLoaderProvider,
+    loaderServing: serving.loaderServing,
+    useLabel3DFont: hook.useLabel3DFont,
+  };
+}
+
+let modules: Awaited<ReturnType<typeof importModules>>;
 
 // happy-dom has no `FontFace`, so the bundled registration answers what the test sets.
 const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
@@ -45,6 +65,13 @@ function renderMetrics(
   heldPaths: readonly string[] = [],
   hasOutline = false
 ) {
+  const {
+    ProjectSettingsProvider,
+    ResourceLoaderProvider,
+    SceneResourcesProvider,
+    loaderServing,
+    useLabel3DFont,
+  } = modules;
   return renderHook(() => useLabel3DFont(fontRef, hasOutline), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider
@@ -66,9 +93,9 @@ async function settle() {
   });
 }
 
-beforeEach(() => {
-  bundled.metrics = createOpenSansCanvasFontMetrics('label3d-font-test');
-  clearSceneFontOutlines();
+beforeEach(async () => {
+  modules = await importModules();
+  bundled.metrics = modules.createOpenSansCanvasFontMetrics('label3d-font-test');
 });
 
 describe('useLabel3DFont metrics', () => {

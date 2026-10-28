@@ -17,16 +17,8 @@ type PeekedOutlines = SfntOutlines | null | undefined;
 
 type CacheEntry = { status: 'pending' } | { status: 'settled'; outlines: SfntOutlines | null };
 
-/**
- * Keyed by the leaf `FontFileResource`, as the metrics are, so a reloaded file is read again and a
- * shared one once. Written only by `loadOutlines` and `clearSceneFontOutlines`.
- */
-let outlinesCache = new WeakMap<object, CacheEntry>();
-
-/** Forgets every read, so a test that peeks the bundled font starts with it not loaded. Nothing else calls it. */
-export function clearSceneFontOutlines(): void {
-  outlinesCache = new WeakMap();
-}
+/** Keyed by the leaf `FontFileResource`, as the metrics are, so a reloaded file is read again and a shared one once. */
+const outlinesCache = new WeakMap<object, CacheEntry>();
 
 /** The cache key of the bundled font, which has no resource. */
 const BUNDLED = {};
