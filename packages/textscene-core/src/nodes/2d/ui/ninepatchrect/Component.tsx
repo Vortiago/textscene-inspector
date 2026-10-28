@@ -9,8 +9,7 @@ import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
-import { drawnClone } from '../../../../r3f/drawnClone';
+import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFilterState, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
@@ -21,7 +20,7 @@ import {
   type NinePatchGeometryBuffers,
 } from '../../../../r3f/controls/native/ninePatchGeometry';
 import type { NinePatchRectProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 interface ImageLike {
@@ -94,29 +93,23 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
 
   // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping
   // sampler, so a clamp is right whatever the item's `texture_repeat`.
-  const preparedTexture = useMemo(() => {
-    if (!rawTexture || !geometry) return null;
-    return drawnClone(rawTexture, {
-      colorSpace: THREE.NoColorSpace,
-      filter: canvasItemFilterState(sampler.filter),
-      wrap: THREE.ClampToEdgeWrapping,
-    });
-  }, [rawTexture, geometry, sampler.filter]);
-  const drawnTexture = useUploadedClone(preparedTexture);
+  const drawnTexture = useOwnedTextureView(geometry ? rawTexture : null, {
+    colorSpace: THREE.NoColorSpace,
+    filter: canvasItemFilterState(sampler.filter),
+    wrap: THREE.ClampToEdgeWrapping,
+  });
 
   const clippingPlanes = useControlClipPlanes();
-  const srgbDefines = useCanvasSrgbDefines(drawnTexture);
 
   if (!geometry || !drawnTexture) return null;
 
   const program = materialProgramInputs({
     props: {
-      map: drawnTexture,
+      ...canvasMapProps(drawnTexture),
       color: tint.color,
       opacity: tint.opacity,
       transparent: true,
       depthWrite: false,
-      defines: srgbDefines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: [canvasItemFacing()],

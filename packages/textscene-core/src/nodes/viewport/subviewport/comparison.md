@@ -40,7 +40,7 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 - **Approximated** A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.
 - **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
 - **Approximated** `use_debanding` does not affect the target.
-- **Approximated** A shared-world target takes the environment's tone curve and exposure but not its glow or `adjustment_*`, which Godot also runs inside the target.
+- **Approximated** A shared-world target takes the environment's tone curve and exposure but not its glow, `adjustment_*` or auto exposure, which Godot also runs inside the target.
 - **Approximated** An `own_world_3d` target's own Environment neither tonemaps nor glows it, where Godot tonemaps each viewport with its own world's Environment.
 - **Approximated** A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (`render_forward_clustered.cpp:2402`, `:2514`).
 - **Approximated** Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.

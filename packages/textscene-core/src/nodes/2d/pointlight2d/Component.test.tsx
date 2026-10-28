@@ -132,6 +132,13 @@ describe('PointLight2D Component', () => {
     expect(r.scene.findAllByType('Mesh').length).toBe(0);
   });
 
+  it('makes no cookie view when enabled=false, since nothing draws it', async () => {
+    const clone = vi.spyOn(THREE.Texture.prototype, 'clone');
+    await render(node({ enabled: 'false' }));
+    expect(clone).not.toHaveBeenCalled();
+    clone.mockRestore();
+  });
+
   it('still draws its children when enabled=false, since `enabled` switches the light alone', async () => {
     const light = node({ enabled: 'false' });
     const fake = createFakeResourceLoader();

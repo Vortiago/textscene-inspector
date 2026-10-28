@@ -1,0 +1,57 @@
+; One variable: the luminance range of CameraAttributesPhysical.auto_exposure_min_exposure_value and
+; _max_exposure_value. The frame is darker than the minimum, so Godot holds the luminance at the
+; minimum and the frame draws darker than the default range would draw it. The Physical class
+; converts its range in EV100, where Practical converts ISO, so `unit-camera-attributes-auto-exposure`
+; shows neither the class nor the clamp.
+[gd_scene load_steps=6 format=3]
+
+[sub_resource type="CameraAttributesPhysical" id="Attr_1"]
+auto_exposure_enabled = true
+auto_exposure_min_exposure_value = 0.0
+auto_exposure_max_exposure_value = 2.0
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.2, 0.2, 0.2, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.3, 0.3, 1)
+tonemap_mode = 0
+tonemap_exposure = 1
+
+[sub_resource type="BoxMesh" id="Box_1"]
+
+[sub_resource type="StandardMaterial3D" id="Grey_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 1.0
+metallic_specular = 0.0
+
+[sub_resource type="StandardMaterial3D" id="Emissive_1"]
+albedo_color = Color(0, 0, 0, 1)
+roughness = 1.0
+metallic_specular = 0.0
+emission_enabled = true
+emission = Color(0.4, 0.1, 0.1, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+camera_attributes = SubResource("Attr_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 3, 0)
+light_energy = 0.5
+
+[node name="GreyBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("Box_1")
+surface_material_override/0 = SubResource("Grey_1")
+
+[node name="EmissiveBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+mesh = SubResource("Box_1")
+surface_material_override/0 = SubResource("Emissive_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.894427, 0.447214, 0, -0.447214, 0.894427, 0, 2, 4)
+fov = 70.0

@@ -11,4 +11,5 @@ nodeComponentRegistry.register({
   typeName: 'GPUParticles3D',
   Component: GPUParticles3D,
   renderIntent: 'pending',
+  editorIcon: { icon: 'GizmoGPUParticles3D' },
 });

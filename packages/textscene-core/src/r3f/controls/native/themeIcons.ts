@@ -5,7 +5,7 @@
  * (`default_theme_icons_builders.py`). Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
  */
 
-function svgDataUrl(base64: string): string {
+export function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;
 }
 

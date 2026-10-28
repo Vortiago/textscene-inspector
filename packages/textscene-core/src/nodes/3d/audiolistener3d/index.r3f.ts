@@ -10,4 +10,5 @@ nodeComponentRegistry.register({
   typeName: 'AudioListener3D',
   Component: Node3D,
   renderIntent: 'transform-only',
+  editorIcon: { icon: 'GizmoAudioListener3D' },
 });

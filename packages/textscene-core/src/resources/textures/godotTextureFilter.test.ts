@@ -8,9 +8,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   applyTextureFilterState,
+  carriesMipLevels,
   dropMipChain,
   godotTextureFilterState,
   hasDroppedMipChain,
+  hasMipChain,
   textureFilterMatches,
 } from './godotTextureFilter';
 
@@ -227,5 +229,28 @@ describe('hasDroppedMipChain', () => {
 
   it('finds none on a texture that keeps its mip chain (edge case)', () => {
     expect(hasDroppedMipChain(new THREE.Texture())).toBe(false);
+  });
+});
+
+describe('carriesMipLevels', () => {
+  const level = (size: number) => ({ data: new Uint8Array(size * size * 4), width: size, height: size });
+
+  it('holds for a texture with levels below its base', () => {
+    const texture = new THREE.DataTexture(new Uint8Array(16), 2, 2);
+    texture.mipmaps = [level(2), level(1)] as unknown as THREE.DataTexture['mipmaps'];
+    expect(carriesMipLevels(texture)).toBe(true);
+  });
+
+  it('does not hold for a texture that holds its base level alone, or none (edge case)', () => {
+    const texture = new THREE.DataTexture(new Uint8Array(16), 2, 2);
+    expect(carriesMipLevels(texture)).toBe(false);
+    texture.mipmaps = [level(2)] as unknown as THREE.DataTexture['mipmaps'];
+    expect(carriesMipLevels(texture)).toBe(false);
+  });
+
+  it('does not hold for a chain the GPU generates, which has no levels to read', () => {
+    const texture = new THREE.Texture();
+    texture.generateMipmaps = true;
+    expect([carriesMipLevels(texture), hasMipChain(texture)]).toEqual([false, true]);
   });
 });

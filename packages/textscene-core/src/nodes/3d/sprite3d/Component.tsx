@@ -12,9 +12,8 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
-import { drawnClone } from '../../../r3f/drawnClone';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
-import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
+import { useOwnedTextureView } from '../../../r3f/useTextureView';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -86,24 +85,17 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     textureFilter: properties.texture_filter,
     anisotropicFilteringLevel,
   });
-  // The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a `source_color`
-  // sampler, so the clone reads as an albedo does, not as the 2D canvas's retag. Sprite3D's
-  // texture is a node property, not a material slot, so the node's own `texture_filter`
-  // (`material.cpp:3055`) lands on this clone.
-  const samplerClone = useMemo(
-    () =>
-      sourceTexture
-        ? drawnClone(sourceTexture, {
-            colorSpace: sourceColorSpace(sourceTexture),
-            filter: textureFilter,
-            wrap: WRAP[wrap],
-          })
-        : null,
-    [sourceTexture, wrap, textureFilter]
+  // `texture_albedo` is a `source_color` sampler (`sprite_3d.cpp:306`), so the view reads as an
+  // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`). The view is this
+  // component's, never the loader's cached entry, since a frame writes its window on it.
+  const displayedTexture = useOwnedTextureView(
+    sourceTexture,
+    sourceTexture && {
+      colorSpace: sourceColorSpace(sourceTexture),
+      filter: textureFilter,
+      wrap: WRAP[wrap],
+    }
   );
-  // The clone is this component's, never the loader's cached entry: `useUploadedClone`
-  // uploads it once and disposes it once it no longer draws. A frame change keeps it.
-  const displayedTexture = useUploadedClone(samplerClone);
   // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
   const frameWindow = useMemo(
     () =>

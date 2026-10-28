@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { formatHasSrgbView } from '../../godot/rendering/srgbView.js';
-import { pinNoColorSpace } from './applyTextureState';
+import { pinNoColorSpace } from './textureView';
 
 /** The `Image::format_names` entry. In `userData`, so every `clone()` carries it. */
 const GODOT_FORMAT = 'textsceneGodotFormat';
