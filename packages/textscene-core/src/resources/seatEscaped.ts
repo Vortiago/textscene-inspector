@@ -8,7 +8,14 @@
 import type { SceneScope } from '../parser/types';
 import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
 import { graftAt } from './graftInstanceChildren';
-import { endAboveRoot, nodeAt, OUTSIDE, subPathSegments, type ClaimedPath } from './instanceNameTable';
+import {
+  endAboveRoot,
+  nodeAt,
+  OUTSIDE,
+  replacedAt,
+  subPathSegments,
+  type ClaimedPath,
+} from './instanceNameTable';
 import { reRootedName } from '../godot/scene/packedScene';
 import { simplifiedNodePath, UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
@@ -117,7 +124,7 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
     const current = nodeAt(tree, pending.names) ?? pending.node;
     const stripped = withPlacements(withoutHostChildren(current, hostChildren), placements);
     if (current === pending.node) done.add(stripped);
-    tree = replaceAt(tree, pending.names, stripped);
+    tree = replacedAt(tree, pending.names, () => stripped);
   }
 
   if (tree === frame.root.children && leftovers.length === 0) return { root: frame.root, escaped: [] };
@@ -244,17 +251,6 @@ function nextPending(
     }
   }
   return undefined;
-}
-
-/** `tree` with the node at `names` replaced, as a copy along that spine. */
-function replaceAt(tree: readonly LiveNode[], names: readonly string[], replacement: LiveNode): LiveNode[] {
-  const [head, ...rest] = names;
-  const index = tree.findIndex((node) => node.name === head);
-  const copy = [...tree];
-  const target = tree[index]!;
-  copy[index] =
-    rest.length === 0 ? replacement : { ...target, children: replaceAt(target.children, rest, replacement) };
-  return copy;
 }
 
 /** `node` without the host children in `removed`, at any depth, or the same node where it holds none. */
