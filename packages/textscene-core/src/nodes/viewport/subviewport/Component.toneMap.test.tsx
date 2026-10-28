@@ -104,7 +104,8 @@ async function namesOf(targets: Promise<THREE.WebGLRenderTarget[]>): Promise<str
 /** The names of the targets one viewport's pass draws, which end with its own target. */
 function passOf(viewport: string, names: string[]): string[] {
   const end = names.indexOf(`${viewport}::target`);
-  const start = names.findLastIndex((name, at) => at < end && name.endsWith('::target')) + 1;
+  const before = names.slice(0, end);
+  const start = before.map((name) => name.endsWith('::target')).lastIndexOf(true) + 1;
   return names.slice(start, end + 1);
 }
 
