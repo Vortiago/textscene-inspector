@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { fillEveryLiveCopy, liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
+import { fillLiveCopy, liveTargetCrop, publishLiveTargets, unrenderedTexel } from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
 import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
@@ -14,6 +14,7 @@ import { flippedUvWindow } from './uvWindow';
 
 const FLIPPED = { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } };
 const UPRIGHT = { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
+const UPRIGHT_CELL = { repeat: { x: 0.5, y: 1 }, offset: { x: 0, y: 0 } };
 
 let withdrawals: (() => void)[] = [];
 afterEach(() => {
@@ -246,11 +247,12 @@ describe('a copy no reader holds', () => {
     expect(isDisposed).toBe(true);
   });
 
-  it('is filled on demand, for a reader that samples it before the next render', () => {
+  it('is filled on demand, alone, for a reader that samples it before the next render', () => {
     const target = liveCanvasTarget();
     const view = ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED });
+    held(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: UPRIGHT_CELL }));
     const { gl, drawnInto } = recordingRenderer();
-    fillEveryLiveCopy(target.texture, gl);
+    fillLiveCopy(target.texture, view, gl);
     expect(drawnInto.map((drawn) => drawn?.texture)).toEqual([view]);
   });
 });

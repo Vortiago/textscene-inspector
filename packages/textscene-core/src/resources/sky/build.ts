@@ -11,7 +11,7 @@ import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
-import { fillEveryLiveCopy } from '../../r3f/liveTargets';
+import { fillLiveCopy } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 
@@ -73,7 +73,7 @@ function skyPanoramaTexture(gl: THREE.WebGLRenderer, panorama?: THREE.Texture | 
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
     wrap: THREE.RepeatWrapping,
   });
-  fillEveryLiveCopy(panorama, gl);
+  fillLiveCopy(panorama, view, gl);
   return view;
 }
 

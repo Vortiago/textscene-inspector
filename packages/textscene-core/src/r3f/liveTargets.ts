@@ -148,12 +148,12 @@ export function refillLiveCopies(texture: THREE.Texture, gl: THREE.WebGLRenderer
 }
 
 /**
- * Fills every copy of `texture` now, held or not, for a reader that samples a copy before the
- * target's next render, as a sky bake does.
+ * Fills `copy` of `source` now, for a reader that samples it before the target's next render, as a
+ * sky bake does. A texture that is no copy of `source` needs no fill.
  */
-export function fillEveryLiveCopy(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
-  if (!hasLiveCopies(texture)) return;
-  drawOffscreen(gl, () => fillCopies(texture, gl, () => true));
+export function fillLiveCopy(source: THREE.Texture, copy: THREE.Texture, gl: THREE.WebGLRenderer): void {
+  const live = [...liveTargetOf(source).copies].find((candidate) => candidate.texture === copy);
+  if (live) drawOffscreen(gl, () => live.fill(gl));
 }
 
 /** Fills the copies `isFilled` picks, at every depth. The caller draws offscreen. */
