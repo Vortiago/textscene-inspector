@@ -14,7 +14,7 @@ import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import { WorldExposureScope } from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
-import { WorldToneMapProvider } from './worldToneMap';
+import { SharedWorldToneMapProvider, WorldToneMapProvider } from './worldToneMap';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 
@@ -27,9 +27,18 @@ export const usePublishEnvironment = environments.usePublish;
 
 /**
  * One viewport's world: the WorldEnvironments inside publish to it, and its choosers apply the
- * winners. The Environment and the CameraAttributes choose apart.
+ * winners. The Environment and the CameraAttributes choose apart. A sub-viewport that
+ * `sharesParentWorld` tonemaps with the parent's Environment when it has none of its own.
  */
-export function WorldEnvironmentScope({ world, children }: { world: WorldKind; children: ReactNode }) {
+export function WorldEnvironmentScope({
+  world,
+  sharesParentWorld = false,
+  children,
+}: {
+  world: WorldKind;
+  sharesParentWorld?: boolean;
+  children: ReactNode;
+}) {
   return (
     <WorldKindProvider world={world}>
       <environments.Provider>
@@ -37,7 +46,7 @@ export function WorldEnvironmentScope({ world, children }: { world: WorldKind; c
           {world === 'root' ? (
             <RootEnvironment>{children}</RootEnvironment>
           ) : (
-            <SubViewportEnvironment>{children}</SubViewportEnvironment>
+            <SubViewportEnvironment sharesParentWorld={sharesParentWorld}>{children}</SubViewportEnvironment>
           )}
         </WorldExposureScope>
       </environments.Provider>
@@ -87,19 +96,21 @@ function RootEnvironmentLayer({
  * A sub-viewport's portal world. Its pass sets its own clear colour, so only a resolved Environment
  * adds a layer here, and a missing one leaves the root's clear colour alone.
  */
-function SubViewportEnvironment({ children }: { children: ReactNode }) {
+function SubViewportEnvironment({
+  sharesParentWorld,
+  children,
+}: {
+  sharesParentWorld: boolean;
+  children: ReactNode;
+}) {
   const authored = environments.useChosen();
-  if (authored?.status !== 'resolved') {
-    return (
-      <WorldToneMapProvider settings={null} resources={NO_RESOURCES}>
-        {children}
-      </WorldToneMapProvider>
-    );
-  }
+  const resolved = authored?.status === 'resolved' ? authored.environment : null;
+  const ToneMapProvider = sharesParentWorld ? SharedWorldToneMapProvider : WorldToneMapProvider;
+  // One tree shape in either state, so a resolve never remounts the portal.
   return (
-    <WorldToneMapProvider settings={authored.environment.settings} resources={authored.environment.resources}>
-      <EnvironmentLayer {...authored.environment} />
+    <ToneMapProvider settings={resolved?.settings ?? null} resources={resolved?.resources ?? NO_RESOURCES}>
+      {resolved && <EnvironmentLayer {...resolved} />}
       {children}
-    </WorldToneMapProvider>
+    </ToneMapProvider>
   );
 }

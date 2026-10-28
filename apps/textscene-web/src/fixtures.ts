@@ -1938,6 +1938,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Shared World Environment",
+    "file": "unit-sprite-2d-shared-world-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Soft Alpha Border",
     "file": "unit-sprite-2d-soft-alpha-border.tscn",
     "category": "Other"

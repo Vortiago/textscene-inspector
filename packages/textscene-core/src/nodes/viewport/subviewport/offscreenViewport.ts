@@ -16,8 +16,8 @@ import type { Rect2 } from '../../../godot/math/rect2';
 
 /**
  * The target the tonemap pass of a 3D world writes, which holds no depth: the world draws into its
- * own buffer (`r3f/environment/offscreenToneMap.ts`). Godot tonemaps each viewport into its own target as
- * sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
+ * own buffer (`r3f/environment/offscreenToneMap.ts`). Godot tonemaps each viewport into its own
+ * target as sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
  * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from encoding
  * too: an sRGB tag would stack a shader encode on the hardware encode.
  */

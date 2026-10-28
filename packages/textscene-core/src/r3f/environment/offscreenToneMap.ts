@@ -37,6 +37,9 @@ interface OffscreenToneMapOptions {
   name: string;
 }
 
+/** The tonemap effect reads no time, since a frame draws at its settled luminance. */
+const NO_ELAPSED_TIME = 0;
+
 /**
  * Mounts the world buffer and the tonemap pass of one offscreen viewport in the world it sits in,
  * and hands them to `stage` while it stays mounted. A pass in a portal of its own world mounts it
@@ -76,7 +79,7 @@ function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap
   const gl = useThree((state) => state.gl);
   const pass = useEffectPass(effect, width, height);
   return useMemo(() => {
-    const draw = (target: THREE.WebGLRenderTarget) => pass.render(gl, worldBuffer, target, 0);
+    const draw = (target: THREE.WebGLRenderTarget) => pass.render(gl, worldBuffer, target, NO_ELAPSED_TIME);
     return { worldBuffer, toneMap: (target) => drawOffscreen(gl, () => draw(target)) };
   }, [gl, pass, worldBuffer]);
 }

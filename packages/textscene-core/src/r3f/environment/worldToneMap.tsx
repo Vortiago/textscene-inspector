@@ -42,6 +42,21 @@ export function WorldToneMapProvider({
 }
 
 /**
+ * Gives a portalled shared world its Environment. The world is the parent's, which a WorldEnvironment
+ * inside joins too: an inside one draws the portal's background, so it holds here, and the parent's
+ * holds without one.
+ */
+export function SharedWorldToneMapProvider({
+  settings,
+  resources,
+  children,
+}: WorldEnvironmentToneMap & { children: ReactNode }) {
+  const parent = useContext(WorldToneMapContext);
+  const chosen = settings ? { settings, resources } : parent;
+  return <WorldToneMapProvider {...chosen}>{children}</WorldToneMapProvider>;
+}
+
+/**
  * What a tonemap pass of this world reads: its Environment and its auto exposure.
  *
  * @canonical The Environment a viewport tonemaps with

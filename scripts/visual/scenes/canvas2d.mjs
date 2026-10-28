@@ -406,6 +406,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
+  // A WorldEnvironment inside a shared-world viewport glows its target. Godot 4.6.3 `--mode 2d`:
+  // (400,370) rgb(106,63,30) in the bloom below the sphere, and (400,420) rgb(31,22,24).
+  {
+    name: 'sprite-2d-shared-world-environment',
+    file: 'unit-sprite-2d-shared-world-environment.tscn',
+    mode: '2d',
+  },
   // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3
   // `--mode 2d`: (400,150) rgb(127,127,127) and (200,280) rgb(76,76,76), the last column and row.
   {

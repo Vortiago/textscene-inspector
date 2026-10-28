@@ -166,7 +166,7 @@ function OffscreenViewport({
   // Written only by the stage below while it is mounted.
   const toneMapStage = useRef<OffscreenToneMap | null>(null);
   // Godot tonemaps through the Environment of the world `find_world_3d()` resolves, so the stage
-  // mounts in that world: inside the portal for an own world, beside it for a shared one.
+  // mounts in that world: beside an inline pass, and inside a portal, whose scope answers for both.
   const stage =
     kind === '3d' ? (
       <OffscreenToneMapStage
@@ -303,8 +303,8 @@ function OffscreenViewport({
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
         <WorldRootProvider value={portalScene}>
-          <WorldEnvironmentScope world="subViewport">
-            {ownWorld3D && stage}
+          <WorldEnvironmentScope world="subViewport" sharesParentWorld={!ownWorld3D}>
+            {stage}
             <CanvasSpaceProvider value={null}>
               {lightHost ? (
                 <CanvasLightPass host={lightHost} canvasModulate={canvasModulate}>
@@ -320,12 +320,7 @@ function OffscreenViewport({
     </CanvasWorkspaceProvider>,
     portalScene
   );
-  return (
-    <>
-      {!ownWorld3D && stage}
-      {portal}
-    </>
-  );
+  return portal;
 }
 
 /**
