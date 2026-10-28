@@ -35,6 +35,11 @@ export const PRIMITIVE_SCENES = [
   { name: 'ribbon-trail-mesh-texture-uv', file: 'unit-ribbon-trail-mesh-texture-uv.tscn' },
   // A MeshInstance3D bound to a Skeleton3D bends the ribbon along the posed bones.
   { name: 'mesh-instance-3d-skinned-ribbon', file: 'unit-mesh-instance-3d-skinned-ribbon.tscn' },
+  // The same ribbon and skeleton inside an instanced scene bend as they do in the host file.
+  {
+    name: 'mesh-instance-3d-skinned-ribbon-instanced',
+    file: 'unit-mesh-instance-3d-skinned-ribbon-instanced.tscn',
+  },
   // The tangent frame every ported builder writes, under a normal map and each light type.
   { name: 'primitive-mesh-normal-map', file: 'unit-primitive-mesh-normal-map.tscn' },
   // The steps PrimitiveMesh applies after every builder: the UV2 layout and `flip_faces`.

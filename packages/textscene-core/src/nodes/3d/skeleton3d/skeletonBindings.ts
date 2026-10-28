@@ -2,48 +2,53 @@
  * The Skeleton3D scene pass. A MeshInstance3D that names a Skeleton3D through `skeleton`, and sets
  * no `skin`, binds to the automatic skin of that skeleton (`MeshInstance3D::_resolve_skeleton_path`,
  * `mesh_instance_3d.cpp:175-199`). The component cannot reach the skeleton, so this pass poses each
- * skeleton once and hands the mesh its skin matrices, as `applyRemoteTransforms` hands its target a
- * transform. It runs once per parse, after the transform passes.
+ * skeleton once and hands the mesh its skin matrices by its live path. It runs on the live stage
+ * (ADR-0060), as Godot resolves the path on the live tree, across an instance border too.
  */
 
 import type { TscnNode } from '../../../parser/types.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
-import { nodesByPath } from '../../../utils/nodePath.js';
-import { uniqueNamePaths } from '../../../utils/uniqueNames.js';
+import type { LiveTree } from '../../../r3f/liveSceneTree.js';
+import { nodePathUniquePaths } from '../../../r3f/uniqueNameOwner.js';
+import { perObject } from '../../../utils/perObject.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
 import { automaticSkinMatrices } from './skeletonPose.js';
 import type { Skeleton3DProperties } from './types.js';
 
 /**
- * Sets `skinMatrices` on every MeshInstance3D bound to a Skeleton3D in `nodes`, mutating each in
- * place, and returns the same array. A node that writes no `skeleton` binds nothing, as Godot's
- * default is empty unless the project turns on `default_parent_skeleton_in_mesh_instance_3d`
- * (`mesh_instance_3d.cpp:937`). A path that is empty, resolves to no node, or names a node that is
- * not a Skeleton3D binds nothing, and so does a node with a `skin`, which this pass does not read.
- * A path into an instanced scene or from the live SceneTree stays unresolved, as in the other passes.
- * Idempotent: a re-run clears and writes the same matrices.
+ * The skin matrices of every MeshInstance3D in `tree` bound to a Skeleton3D, by the mesh's live
+ * path. A node that writes no `skeleton` binds nothing, as Godot's default is empty unless the
+ * project turns on `default_parent_skeleton_in_mesh_instance_3d` (`mesh_instance_3d.cpp:937`). A
+ * path that is empty, absolute, resolves to no node, or names a node that is not a Skeleton3D binds
+ * nothing, and so does a node with a `skin`, which this pass does not read.
  */
-export function bindMeshesToSkeletons(nodes: TscnNode[]): TscnNode[] {
-  const nodeByPath = nodesByPath(nodes);
-  const skinOf = new Map<TscnNode, Transform3D[]>();
-  let uniquePaths: Map<string, string> | undefined;
-  for (const [path, mesh] of nodeByPath) {
-    if (mesh.type !== 'MeshInstance3D') continue;
-    const properties = mesh.properties as MeshInstance3DProperties;
-    delete properties.skinMatrices;
-    if (properties.skin !== undefined || properties.skeleton === undefined) continue;
-    uniquePaths ??= uniqueNamePaths(nodes);
-    const targetPath = resolveNodePathLiteral(path, properties.skeleton, uniquePaths);
-    const skeleton = targetPath === null ? undefined : nodeByPath.get(targetPath);
-    if (skeleton?.type !== 'Skeleton3D') continue;
-    let skin = skinOf.get(skeleton);
-    if (!skin) {
-      const { bones, showRestOnly } = skeleton.properties as Skeleton3DProperties;
-      skin = automaticSkinMatrices(bones, showRestOnly);
-      skinOf.set(skeleton, skin);
-    }
-    properties.skinMatrices = skin;
-  }
-  return nodes;
+export function bindMeshesToSkeletons(tree: LiveTree): ReadonlyMap<string, readonly Transform3D[]> {
+  const skins = new Map<string, readonly Transform3D[]>();
+  tree.fold<void, void>(undefined, ({ step, path }, _, descend) => {
+    const skin = boundSkinOf(step.node, path, tree);
+    if (skin) skins.set(path, skin);
+    descend();
+  });
+  return skins;
 }
+
+/** The skin of the node at `path` where it is a MeshInstance3D bound to a Skeleton3D, else undefined. */
+function boundSkinOf(node: TscnNode, path: string, tree: LiveTree): readonly Transform3D[] | undefined {
+  if (node.type !== 'MeshInstance3D') return undefined;
+  const { skin, skeleton } = node.properties as MeshInstance3DProperties;
+  if (skin !== undefined || skeleton === undefined) return undefined;
+  const uniquePaths = nodePathUniquePaths(path, tree.roots, tree.ctx);
+  const skeletonPath = resolveNodePathLiteral(path, skeleton, uniquePaths);
+  const target = skeletonPath === null ? undefined : tree.at(skeletonPath)?.step.node;
+  return target?.type === 'Skeleton3D' ? automaticSkinOf(target) : undefined;
+}
+
+/**
+ * One skin for each Skeleton3D node, shared by every mesh bound to it. A load that leaves the node
+ * as it is hands back the same skin, so a bound mesh does not draw again.
+ */
+const automaticSkinOf = perObject((skeleton: TscnNode): readonly Transform3D[] => {
+  const { bones, showRestOnly } = skeleton.properties as Skeleton3DProperties;
+  return automaticSkinMatrices(bones, showRestOnly);
+});

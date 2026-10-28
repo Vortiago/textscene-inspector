@@ -3,7 +3,8 @@
 ; The one variable: the skinned deformation. A MeshInstance3D names a Skeleton3D through `skeleton`,
 ; and its RibbonTrailMesh, which writes bone indices and weights, bends along the posed bones: the
 ; third bone is turned 60 degrees about Z, so the lower half of the ribbon swings aside. No other
-; scene binds a MeshInstance3D to a Skeleton3D, so no other golden shows a regression in it.
+; scene binds a MeshInstance3D to a Skeleton3D in its own file, so no other golden shows a regression
+; in it. unit-mesh-instance-3d-skinned-ribbon-instanced.tscn instances this scene.
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
 shading_mode = 0

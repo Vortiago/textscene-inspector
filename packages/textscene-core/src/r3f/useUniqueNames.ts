@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
+import { localSceneUniquePaths, localSceneOf, nodePathUniquePaths } from './uniqueNameOwner.js';
 import { sameEntries } from '../utils/sameEntries.js';
 import { useByValue } from './hooks/useByValue.js';
 import { sameSelection, useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
@@ -21,14 +21,13 @@ function samePaths(a: UniquePaths, b: UniquePaths): boolean {
  * The `%Name` table the node at `path` resolves against, as the live paths the dispatcher
  * registers, or undefined with no scene. A flag says a node claimed a name, and only the first
  * claimant keeps it, so the answer needs the whole tree. It is per owner: a name registers on
- * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
+ * the claimant's owner (node.cpp:2222-2234) and resolves through {@link nodePathUniquePaths}.
  */
 export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
-  // Without a path, the outer root's table. An inherited root's table is rebuilt on every load,
-  // so the reader compares entries and re-renders only where a name moved.
+  // An inherited root's table is rebuilt on every load, so the reader compares entries and
+  // re-renders only where a name moved.
   const tableOf = useCallback(
-    (live: SharedLiveTree) =>
-      ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx)),
+    (live: SharedLiveTree) => nodePathUniquePaths(path, live.roots, live.ctx),
     [path]
   );
   // The outer useByValue keeps the identity across a new `path`, which rebuilds the selection's

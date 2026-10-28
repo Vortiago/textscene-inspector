@@ -7,35 +7,35 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { TscnParser } from '../../../parser/TscnParser';
-import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import type { TscnNode } from '../../../parser/types';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { parseTscnContent } from '../../../r3f/hooks/useParsedScene';
+import type { SceneGraph } from '../../../core/SceneGraph';
+import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
+import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
-import { subResource } from '../../../testing/subResource';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import type { Bone } from '../skeleton3d/skeletonPose';
 import { automaticSkinMatrices } from '../skeleton3d/skeletonPose';
-import '../skeleton3d/index';
-import '../skeleton3d/index.r3f';
-import './index';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { meshInstanceNode, meshInstanceTree, renderMeshInstance } from './testing/renderMeshInstance';
-import type { MeshInstance3DProperties } from './types';
+import '../../../r3f/nodes/index';
 
 /** The six chained bones of `unit-mesh-instance-3d-skinned-ribbon.tscn`: b2 turned 60 degrees about Z. */
 function ribbonBones(): Bone[] {
-  const chain = [0.5, -0.2, -0.2, -0.2, -0.2, -0.2].map((y, i) => ({
+  return RIBBON_BONE_Y.map((y, i) => ({
     name: `b${i}`,
     parent: i - 1,
     rest: translation(y),
     enabled: true,
     position: { x: 0, y, z: 0 },
-    rotation: i === 2 ? { x: 0, y: 0, z: 0.5, w: 0.866025 } : { x: 0, y: 0, z: 0, w: 1 },
+    rotation: i === TURNED_BONE ? { x: 0, y: 0, z: 0.5, w: 0.866025 } : { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   }));
-  return chain;
 }
+
+const RIBBON_BONE_Y = [0.5, -0.2, -0.2, -0.2, -0.2, -0.2];
+const TURNED_BONE = 2;
 
 function translation(y: number) {
   return {
@@ -46,25 +46,77 @@ function translation(y: number) {
   };
 }
 
-const RIBBON = subResource('RibbonTrailMesh', 'Ribbon', {
-  shape: '0',
-  size: '0.4',
-  material: 'SubResource("Red")',
-});
-const RED = subResource('StandardMaterial3D', 'Red', { albedo_color: 'Color(1, 0, 0, 1)' });
-const OVERLAY = subResource('StandardMaterial3D', 'Overlay', { albedo_color: 'Color(0, 0, 1, 1)' });
-const BOX = subResource('BoxMesh', 'Box', { material: 'SubResource("Red")' });
-
-function skinMatrices(bones = ribbonBones()) {
-  return automaticSkinMatrices(bones, false);
+/** The `bones/*` keys of the first `count` bones of {@link ribbonBones}. */
+function bonesText(count = RIBBON_BONE_Y.length): string {
+  return RIBBON_BONE_Y.slice(0, count)
+    .map((y, i) => {
+      const rotation = i === TURNED_BONE ? 'Quaternion(0, 0, 0.5, 0.866025)' : 'Quaternion(0, 0, 0, 1)';
+      const parent = i > 0 ? `bones/${i}/parent = ${i - 1}\n` : '';
+      return `bones/${i}/name = "b${i}"
+${parent}bones/${i}/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, ${y}, 0)
+bones/${i}/position = Vector3(0, ${y}, 0)
+bones/${i}/rotation = ${rotation}
+`;
+    })
+    .join('');
 }
 
-async function render(overrides: Partial<MeshInstance3DProperties>, mesh = 'Ribbon') {
-  return renderMeshInstance({
-    loader: loaderServing(),
-    node: meshInstanceNode({ mesh: `SubResource("${mesh}")` }, overrides),
-    internalResources: [RIBBON, BOX, RED, OVERLAY],
-  });
+const SUB_RESOURCES = `[sub_resource type="StandardMaterial3D" id="Red"]
+albedo_color = Color(1, 0, 0, 1)
+[sub_resource type="StandardMaterial3D" id="Overlay"]
+albedo_color = Color(0, 0, 1, 1)
+[sub_resource type="RibbonTrailMesh" id="Ribbon"]
+shape = 0
+size = 0.4
+material = SubResource("Red")
+[sub_resource type="BoxMesh" id="Box"]
+material = SubResource("Red")
+[sub_resource type="Skin" id="Skin_1"]
+`;
+
+/** A scene whose MeshInstance3D `Mesh` draws `mesh` and writes `meshLines`, beside a Skeleton3D of `bones`. */
+function boundScene({
+  mesh = 'Ribbon',
+  meshLines = 'skeleton = NodePath("../Skeleton3D")',
+  bones = bonesText(),
+} = {}) {
+  return `[gd_scene format=3]
+${SUB_RESOURCES}
+[node name="Root" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${bones}
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("${mesh}")
+${meshLines}
+`;
+}
+
+/** The whole preview pipeline over `content`: the parse, the dispatcher and the live tree of the loader. */
+function sceneTree(sceneGraph: SceneGraph, loader: ReturnType<typeof loaderServing>) {
+  const root = sceneGraph.scenes.get(sceneGraph.rootScene)!;
+  return (
+    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+      <SceneStack loader={loader} scene={root}>
+        <NodeDispatcher nodes={root.nodes} />
+      </SceneStack>
+    </HierarchyProvider>
+  );
+}
+
+function parsed(content: string): SceneGraph {
+  const { sceneGraph, error } = parseTscnContent(content, 'res://main.tscn');
+  if (!sceneGraph) throw new Error(`expected a scene, got ${error}`);
+  return sceneGraph;
+}
+
+async function renderContent(content: string, files: Record<string, string> = {}) {
+  const renderer = await ReactThreeTestRenderer.create(sceneTree(parsed(content), loaderServing(files)));
+  await settleLoads();
+  return renderer;
+}
+
+function render(scene: Parameters<typeof boundScene>[0] = {}) {
+  return renderContent(boundScene(scene));
 }
 
 function skinnedMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.SkinnedMesh[] {
@@ -77,7 +129,7 @@ function vertexOf(mesh: THREE.SkinnedMesh, index: number): number[] {
 
 describe('MeshInstance3D bound to a Skeleton3D', () => {
   it('draws a surface with bone arrays as a SkinnedMesh over the skeleton the pass gave it', async () => {
-    const renderer = await render({ skinMatrices: skinMatrices() });
+    const renderer = await render();
 
     const [skinned] = skinnedMeshes(renderer);
     expect(skinned!.skeleton.bones).toHaveLength(6);
@@ -85,7 +137,7 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('leaves the bone matrices as filled once, so the renderer does not skin them again each frame', async () => {
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: skinMatrices() }));
+    const [skinned] = skinnedMeshes(await render());
     const filled = Array.from(skinned!.skeleton.boneMatrices!);
 
     skinned!.skeleton.bones[2]!.matrixWorld.makeTranslation(9, 9, 9);
@@ -96,22 +148,18 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('keeps the skeleton when a re-parse hands over the same matrices in a new array', async () => {
-    const scene = (matrices: ReturnType<typeof skinMatrices>) => ({
-      loader: loaderServing(),
-      node: meshInstanceNode({ mesh: 'SubResource("Ribbon")' }, { skinMatrices: matrices }),
-      internalResources: [RIBBON, RED],
-    });
-    const renderer = await ReactThreeTestRenderer.create(meshInstanceTree(scene(skinMatrices())));
-    const [before] = skinnedMeshes(renderer as Awaited<ReturnType<typeof render>>);
+    const loader = loaderServing();
+    const renderer = await ReactThreeTestRenderer.create(sceneTree(parsed(boundScene()), loader));
+    const [before] = skinnedMeshes(renderer);
 
-    await renderer.update(meshInstanceTree(scene(skinMatrices())));
-    const [after] = skinnedMeshes(renderer as Awaited<ReturnType<typeof render>>);
+    await renderer.update(sceneTree(parsed(boundScene()), loader));
+    const [after] = skinnedMeshes(renderer);
 
     expect(after!.skeleton).toBe(before!.skeleton);
   });
 
   it('moves each vertex by the matrices of its bones, in mesh space', async () => {
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: skinMatrices() }));
+    const [skinned] = skinnedMeshes(await render());
 
     // Row 0 is all b0, which sits at its rest.
     expect(vertexOf(skinned!, 0)).toEqual([-0.2, 0.5, 0].map((v) => expect.closeTo(v, 5)));
@@ -121,7 +169,7 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('blends the vertices of a row between the two bones its weights name', async () => {
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: skinMatrices() }));
+    const [skinned] = skinnedMeshes(await render());
 
     // Row 5 sits two thirds down the section of b1 (which stays) and b2 (which turns 60 degrees
     // about its joint at (0, 0.1)), so it weighs 1/3 on the first and 2/3 on the second.
@@ -138,13 +186,8 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
 
   it("applies the node's own transform after the skin", async () => {
     const renderer = await render({
-      skinMatrices: skinMatrices(),
-      transform: {
-        basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 0, y: 0, z: 1 },
-        origin: { x: 3, y: 0, z: 0 },
-      },
+      meshLines:
+        'skeleton = NodePath("../Skeleton3D")\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)',
     });
     const [skinned] = skinnedMeshes(renderer);
 
@@ -156,8 +199,8 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('feeds the skin matrices to the skeleton one for each bone', async () => {
-    const matrices = skinMatrices();
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: matrices }));
+    const matrices = automaticSkinMatrices(ribbonBones(), false);
+    const [skinned] = skinnedMeshes(await render());
 
     skinned!.skeleton.update();
     const bone2 = new THREE.Matrix4().fromArray(skinned!.skeleton.boneMatrices!, 2 * 16);
@@ -169,14 +212,14 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('draws a surface with no bone arrays unskinned although the node is bound', async () => {
-    const renderer = await render({ skinMatrices: skinMatrices() }, 'Box');
+    const renderer = await render({ mesh: 'Box' });
 
     expect(skinnedMeshes(renderer)).toEqual([]);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });
 
   it('draws a node that binds no skeleton unskinned, at its rest pose', async () => {
-    const renderer = await render({});
+    const renderer = await render({ meshLines: '' });
 
     expect(skinnedMeshes(renderer)).toEqual([]);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
@@ -184,8 +227,7 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
 
   it('draws the material overlay skinned too, over the same skeleton', async () => {
     const renderer = await render({
-      skinMatrices: skinMatrices(),
-      materialOverlay: 'SubResource("Overlay")',
+      meshLines: 'skeleton = NodePath("../Skeleton3D")\nmaterial_overlay = SubResource("Overlay")',
     });
 
     const [base, overlay] = skinnedMeshes(renderer);
@@ -195,7 +237,7 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('keeps the surface material on the skinned mesh', async () => {
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: skinMatrices() }));
+    const [skinned] = skinnedMeshes(await render());
 
     const material = (
       Array.isArray(skinned!.material) ? skinned!.material[0] : skinned!.material
@@ -205,7 +247,7 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('lets a bone past the skin collapse its vertices, as an empty bone buffer does (edge case)', async () => {
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: skinMatrices(ribbonBones().slice(0, 3)) }));
+    const [skinned] = skinnedMeshes(await render({ bones: bonesText(3) }));
 
     // Six bones are asked for, three are bound: the three missing bones are zero matrices.
     expect(skinned!.skeleton.bones).toHaveLength(6);
@@ -215,56 +257,38 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 
   it('collapses the mesh of a skeleton with no bone to the origin, which Godot draws as nothing (edge case)', async () => {
-    const [skinned] = skinnedMeshes(await render({ skinMatrices: [] }));
+    const [skinned] = skinnedMeshes(await render({ bones: '' }));
 
     expect(vertexOf(skinned!, 0)).toEqual([0, 0, 0]);
     expect(vertexOf(skinned!, 31)).toEqual([0, 0, 0]);
   });
 });
 
-/** The node the whole pipeline binds: the parse, the scene passes, then the registered component. */
-function parsedMesh(content: string): {
-  node: TscnNode;
-  internalResources: TscnParserScene['internalResources'];
-} {
-  const scene = new TscnParser().parse(content);
-  for (const { run } of nodeComponentRegistry.scenePasses()) run(scene.nodes, scene.internalResources);
-  const [root] = scene.nodes;
-  const node = root!.children.find((child) => child.name === 'Mesh');
-  if (!node) throw new Error('expected a MeshInstance3D named Mesh below the root');
-  return { node, internalResources: scene.internalResources };
-}
-
-type TscnParserScene = ReturnType<TscnParser['parse']>;
-
 describe('MeshInstance3D with a skin set', () => {
-  const content = (meshLines: string) => `[gd_scene format=3]
-[sub_resource type="RibbonTrailMesh" id="Ribbon"]
-[sub_resource type="Skin" id="Skin_1"]
-[node name="Root" type="Node3D"]
-[node name="Skeleton3D" type="Skeleton3D" parent="."]
-bones/0/name = "b0"
-bones/1/name = "b1"
-bones/1/parent = 0
-[node name="Mesh" type="MeshInstance3D" parent="."]
-mesh = SubResource("Ribbon")
-skeleton = NodePath("../Skeleton3D")
-${meshLines}
-`;
-
-  async function renderParsed(meshLines: string) {
-    const { node, internalResources } = parsedMesh(content(meshLines));
-    return renderMeshInstance({ loader: loaderServing(), node, internalResources });
-  }
-
   it('draws unskinned, as the Skin resource is not read here', async () => {
-    const renderer = await renderParsed('skin = SubResource("Skin_1")');
+    const renderer = await render({
+      meshLines: 'skeleton = NodePath("../Skeleton3D")\nskin = SubResource("Skin_1")',
+    });
 
     expect(skinnedMeshes(renderer)).toEqual([]);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });
+});
 
-  it('draws skinned once the skin is not set, which proves the fixture binds', async () => {
-    expect(skinnedMeshes(await renderParsed(''))).toHaveLength(1);
+/** A sub-scene of the ribbon and its skeleton, as `unit-mesh-instance-3d-skinned-ribbon.tscn` holds them. */
+const RIG_PATH = 'res://rig.tscn';
+
+describe('MeshInstance3D bound to a Skeleton3D inside an instanced scene', () => {
+  const host = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="${RIG_PATH}" id="1"]
+[node name="Host" type="Node3D"]
+[node name="Rig" parent="." instance=ExtResource("1")]
+`;
+
+  it('draws skinned once the loader brings the sub-scene, which the root parse never holds', async () => {
+    const renderer = await renderContent(host, { [RIG_PATH]: boundScene() });
+
+    const [skinned] = skinnedMeshes(renderer);
+    expect(vertexOf(skinned!, 31)).toEqual(vertexOf(skinnedMeshes(await render())[0]!, 31));
   });
 });
