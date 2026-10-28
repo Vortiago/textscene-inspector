@@ -132,6 +132,11 @@ function dropAlpha(data: Uint8Array | Uint8ClampedArray): void {
   for (let alpha = 3; alpha < data.length; alpha += 4) data[alpha] = 255;
 }
 
+/** Whether any copy of `texture` is live, so its pass has a copy to refill after a render. */
+export function hasLiveCopies(texture: THREE.Texture): boolean {
+  return liveTargetOf(texture).copies.size > 0;
+}
+
 /**
  * Refills every copy of `texture` that a reader holds, then the copies of each copy. The target's
  * pass calls it after each render, inside its own offscreen draw. A copy no reader holds comes from
@@ -147,7 +152,7 @@ export function refillLiveCopies(texture: THREE.Texture, gl: THREE.WebGLRenderer
  * target's next render, as a sky bake does.
  */
 export function fillEveryLiveCopy(texture: THREE.Texture, gl: THREE.WebGLRenderer): void {
-  if (liveTargetOf(texture).copies.size === 0) return;
+  if (!hasLiveCopies(texture)) return;
   drawOffscreen(gl, () => fillCopies(texture, gl, () => true));
 }
 

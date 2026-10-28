@@ -164,6 +164,14 @@ describe('useTargetViews', () => {
     release();
   });
 
+  it('leaves the renderer alone when no reader holds a view or a copy', async () => {
+    const { fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
+    const save = vi.spyOn(gl, 'getActiveCubeFace');
+    await fill();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('gives a reader the view itself once the target is gone (edge case)', async () => {
     const { views, unmount } = await mount(createCanvasTarget(8, 8, 'Probe'));
     await unmount();

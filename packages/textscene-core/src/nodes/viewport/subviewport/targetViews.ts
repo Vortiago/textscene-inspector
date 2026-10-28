@@ -10,13 +10,15 @@ import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
-import { publishLiveTargets, refillLiveCopies } from '../../../r3f/liveTargets';
+import { hasLiveCopies, publishLiveTargets, refillLiveCopies } from '../../../r3f/liveTargets';
 import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
 
 /** A view as its pass holds it: `fill` runs after each render of the pass, inside one offscreen draw. */
 interface PassView extends TargetView {
+  /** Whether `fill` has a copy to refresh: one a consumer holds. */
+  isFilled(): boolean;
   fill(): void;
   dispose(): void;
 }
@@ -39,14 +41,16 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     return {
       plain,
       decoding,
-      // One save and restore of the renderer for the views and every copy a reader holds.
-      fill: () =>
+      // One save and restore of the renderer for the views and every copy a reader holds, and none
+      // for a pass with nothing to fill.
+      fill: () => {
+        const views = [plain, decoding];
+        if (!views.some((view) => view.isFilled() || hasLiveCopies(view.texture))) return;
         drawOffscreen(gl, () => {
-          plain.fill();
-          decoding.fill();
-          refillLiveCopies(plain.texture, gl);
-          refillLiveCopies(decoding.texture, gl);
-        }),
+          views.forEach((view) => view.fill());
+          views.forEach((view) => refillLiveCopies(view.texture, gl));
+        });
+      },
       dispose: () => {
         plain.dispose();
         decoding.dispose();
@@ -63,7 +67,7 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
 
 /** The view of a target whose storage is that view already, so it needs no copy. */
 function ownStorageView(texture: THREE.Texture): PassView {
-  return { texture, retain: () => () => {}, fill: () => {}, dispose: () => {} };
+  return { texture, retain: () => () => {}, isFilled: () => false, fill: () => {}, dispose: () => {} };
 }
 
 /**
@@ -91,9 +95,13 @@ class ViewCopy implements PassView {
     return holdUntilReleased(this);
   }
 
+  isFilled(): boolean {
+    return isHeld(this);
+  }
+
   /** Refreshes the copy while a consumer holds it. The caller draws offscreen. */
   fill(): void {
-    if (isHeld(this)) copyTexels(this.gl, this.source.texture, this.copy, this.whole, this.transfer);
+    if (this.isFilled()) copyTexels(this.gl, this.source.texture, this.copy, this.whole, this.transfer);
   }
 
   dispose(): void {
