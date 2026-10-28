@@ -1,7 +1,7 @@
 /** Godot's vector types as plain components, for engine facts that import nothing. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { cubicInterpolateInTimef, lerpf } from './math.js';
+import { cubicInterpolateInTimef, lerpf, type KeyTimes } from './math.js';
 import { storedReal as f } from './real.js';
 
 /** A point, a size or a direction: two components, as Godot's `Vector2` and `Vector2i` hold them. */
@@ -92,6 +92,11 @@ export function vector3Sub(a: Vector3, b: Vector3): Vector3 {
   return { x: f(a.x - b.x), y: f(a.y - b.y), z: f(a.z - b.z) };
 }
 
+/** `Vector3::operator*` by a scalar (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Scaled({ x, y, z }: Vector3, factor: number): Vector3 {
+  return { x: f(x * factor), y: f(y * factor), z: f(z * factor) };
+}
+
 /** `Vector3::operator*` by a vector (`core/math/vector3.h`) in `real_t` float. */
 export function vector3Mul(a: Vector3, b: Vector3): Vector3 {
   return { x: f(a.x * b.x), y: f(a.y * b.y), z: f(a.z * b.z) };
@@ -113,13 +118,6 @@ export function vector3Lerp(from: Vector3, to: Vector3, weight: number): Vector3
     y: lerpf(from.y, to.y, weight),
     z: lerpf(from.z, to.z, weight),
   };
-}
-
-/** The times of the key after, the key before and the key past the next, counted from a key. */
-export interface KeyTimes {
-  toT: number;
-  preT: number;
-  postT: number;
 }
 
 /**

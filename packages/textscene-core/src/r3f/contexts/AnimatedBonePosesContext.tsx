@@ -13,15 +13,12 @@ type PoseListener = (pose: AnimatedPose | null) => void;
 export interface AnimatedBonePoseRegistry {
   /** The driver writes the poses of its clip to the Skeleton3D at `skeletonPath`, or `null` to release it. */
   set(skeletonPath: string, pose: AnimatedPose | null): void;
-  /** The poses written to the skeleton now, or `null` while its clip writes none. */
-  get(skeletonPath: string): AnimatedPose | null;
-  /** Calls `listener` on every write to the skeleton, and answers the function that stops it. */
+  /** Calls `listener` at once with the poses written now, if any, then on every write. It answers the function that stops it. */
   subscribe(skeletonPath: string, listener: PoseListener): () => void;
 }
 
 const NOOP: AnimatedBonePoseRegistry = {
   set: () => {},
-  get: () => null,
   subscribe: () => () => {},
 };
 
@@ -42,11 +39,12 @@ export function AnimatedBonePosesProvider({ children }: { children: ReactNode })
         else poses.delete(skeletonPath);
         listeners.get(skeletonPath)?.forEach((listener) => listener(pose));
       },
-      get: (skeletonPath) => poses.get(skeletonPath) ?? null,
       subscribe: (skeletonPath, listener) => {
         const listening = listeners.get(skeletonPath) ?? new Set<PoseListener>();
         listening.add(listener);
         listeners.set(skeletonPath, listening);
+        const written = poses.get(skeletonPath);
+        if (written) listener(written);
         return () => listening.delete(listener);
       },
     }),

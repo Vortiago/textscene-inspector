@@ -12,7 +12,7 @@ import type { Transform3D } from '../../godot/math/transform3d.js';
 import type { BoundSkin } from '../../nodes/3d/skeleton3d/skeletonBindings.js';
 import type { AnimatedPose } from '../../nodes/3d/skeleton3d/skeletonPose.js';
 import { useAnimatedBonePoses } from '../contexts/AnimatedBonePosesContext.js';
-import { transform3DToMatrix } from '../nodeTreeTransforms.js';
+import { setMatrixFromTransform3D } from '../nodeTreeTransforms.js';
 import { useByValue } from '../hooks/useByValue.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
@@ -31,8 +31,9 @@ function boneCountOf(geometry: THREE.BufferGeometry): number {
   return highest + 1;
 }
 
-function boneMatrixOf(skinMatrix: Transform3D | undefined): THREE.Matrix4 {
-  return skinMatrix ? transform3DToMatrix(skinMatrix) : MISSING_BONE_MATRIX;
+function writeBoneMatrix(target: THREE.Matrix4, skinMatrix: Transform3D | undefined): void {
+  if (skinMatrix) setMatrixFromTransform3D(target, skinMatrix);
+  else target.copy(MISSING_BONE_MATRIX);
 }
 
 function boneOf(skinMatrix: Transform3D | undefined): THREE.Bone {
@@ -40,7 +41,7 @@ function boneOf(skinMatrix: Transform3D | undefined): THREE.Bone {
   // Never in a scene graph, so nothing recomputes the world matrix written here.
   bone.matrixAutoUpdate = false;
   bone.matrixWorldAutoUpdate = false;
-  bone.matrixWorld.copy(boneMatrixOf(skinMatrix));
+  writeBoneMatrix(bone.matrixWorld, skinMatrix);
   return bone;
 }
 
@@ -61,7 +62,7 @@ class SkinSkeleton extends THREE.Skeleton {
 
   /** Moves each bone to its matrix of `skinMatrices` and fills the bone matrices from them, in place. */
   writeSkin(skinMatrices: readonly Transform3D[]): void {
-    this.bones.forEach((bone, i) => bone.matrixWorld.copy(boneMatrixOf(skinMatrices[i])));
+    this.bones.forEach((bone, i) => writeBoneMatrix(bone.matrixWorld, skinMatrices[i]));
     super.update();
   }
 }
@@ -104,8 +105,6 @@ function useAnimatedPose(skeleton: SkinSkeleton | null, skin: BoundSkin | undefi
     if (!skeleton || !skin) return;
     const follow = (pose: AnimatedPose | null) =>
       skeleton.writeSkin(pose ? skin.matricesUnder(pose) : skin.matrices);
-    const written = poses.get(skin.skeletonPath);
-    if (written) follow(written);
     return poses.subscribe(skin.skeletonPath, follow);
   }, [skeleton, skin, poses]);
 }

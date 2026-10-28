@@ -46,9 +46,7 @@ describe('boneTracksOf', () => {
   it('lists the tracks that name a bone, each on the skeleton the scene path names', () => {
     const tracks = boneTracksOf(clip(track({}), track({ bone: undefined, targetPath: 'Mesh' })), underRoot);
 
-    expect(tracks.map(({ skeletonPath, bone, part }) => [skeletonPath, bone, part])).toEqual([
-      [SKELETON, 'b1', 'position'],
-    ]);
+    expect(tracks.map(({ skeletonPath, bone }) => [skeletonPath, bone])).toEqual([[SKELETON, 'b1']]);
   });
 
   it('leaves out a track whose path leaves the scene, as the clip builder warns for it', () => {
@@ -58,7 +56,11 @@ describe('boneTracksOf', () => {
   it('names the part by the track type: position, rotation or scale', () => {
     const tracks = boneTracksOf(clip(track({}), rotation('b1'), track({ property: 'scale' })), underRoot);
 
-    expect(tracks.map(({ part }) => part)).toEqual(['position', 'rotation', 'scale']);
+    expect(tracks.map(({ sample }) => Object.keys(sample(0.5)!))).toEqual([
+      ['position'],
+      ['rotation'],
+      ['scale'],
+    ]);
   });
 });
 

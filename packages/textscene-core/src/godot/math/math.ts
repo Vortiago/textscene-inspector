@@ -15,6 +15,16 @@ export const TAU = Math.PI * 2;
  */
 export const CMP_EPSILON = 0.00001;
 
+/** `UNIT_EPSILON` (`math_defs.h:65`), the tolerance of `Vector3::is_normalized` in an official build. */
+export const UNIT_EPSILON = 0.001;
+
+/** The times of the key after, the key before and the key past the next, counted from a key. */
+export interface KeyTimes {
+  toT: number;
+  preT: number;
+  postT: number;
+}
+
 /**
  * `Math::is_zero_approx` (math_funcs.h): `abs(s) < CMP_EPSILON`, false for `nan` and `inf`, so a
  * setter guarded by it lets a non-finite value through. Validators depend on that strictness.
@@ -163,7 +173,7 @@ export function pingpongf(value: number, length: number): number {
  * Above 1 it eases in, between 0 and 1 out, below 0 in and out, and 0 gives 0.
  */
 export function ease(x: number, c: number): number {
-  const clamped = x < 0 ? 0 : x > 1 ? 1 : x;
+  const clamped = clamp(x, 0, 1);
   if (c > 0) return c < 1 ? 1 - Math.pow(1 - clamped, 1 / c) : Math.pow(clamped, c);
   if (c < 0) {
     return clamped < 0.5

@@ -80,6 +80,16 @@ async function staticTwin(): Promise<number[]> {
   return boneMatrices(await mounted(twin));
 }
 
+/** The bend clip playing half a second in, and the skin of the same skeleton before it played. */
+async function bentAfterHalfSecond(): Promise<{ renderer: Mounted; filePose: number[] }> {
+  // The transport `play` drives is the one of the scene mounted last.
+  const filePose = boneMatrices(await mounted(ribbonScene()));
+  const renderer = await mounted(playedScene(BEND_AT_ONCE));
+  await play();
+  await renderer.advanceFrames(1, 0.5);
+  return { renderer, filePose };
+}
+
 const warnings = vi.spyOn(logger, 'warn');
 afterEach(() => warnings.mockClear());
 
@@ -113,11 +123,7 @@ describe('an AnimationPlayer track on Skeleton3D:<bone>', () => {
   });
 
   it('restores the file pose on stop', async () => {
-    // The transport `play` drives is the one of the scene mounted last.
-    const filePose = boneMatrices(await mounted(ribbonScene()));
-    const renderer = await mounted(playedScene(BEND_AT_ONCE));
-    await play();
-    await renderer.advanceFrames(1, 0.5);
+    const { renderer, filePose } = await bentAfterHalfSecond();
     expect(boneMatrices(renderer)).not.toEqual(filePose);
 
     await stop();
@@ -127,10 +133,7 @@ describe('an AnimationPlayer track on Skeleton3D:<bone>', () => {
   });
 
   it('restores the file pose at the stop itself, before another frame runs', async () => {
-    const filePose = boneMatrices(await mounted(ribbonScene()));
-    const renderer = await mounted(playedScene(BEND_AT_ONCE));
-    await play();
-    await renderer.advanceFrames(1, 0.5);
+    const { renderer, filePose } = await bentAfterHalfSecond();
 
     await stop();
 
@@ -138,10 +141,7 @@ describe('an AnimationPlayer track on Skeleton3D:<bone>', () => {
   });
 
   it('restores the file pose when the selection leaves the player, as ADR-0012 stops it', async () => {
-    const filePose = boneMatrices(await mounted(ribbonScene()));
-    const renderer = await mounted(playedScene(BEND_AT_ONCE));
-    await play();
-    await renderer.advanceFrames(1, 0.5);
+    const { renderer, filePose } = await bentAfterHalfSecond();
     expect(boneMatrices(renderer)).not.toEqual(filePose);
 
     await select('Root/Mesh');

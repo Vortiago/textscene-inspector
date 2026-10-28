@@ -16,15 +16,13 @@ import {
 import type { AnimatedPose, BonePose } from '../../3d/skeleton3d/skeletonPose';
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
 
-type BoneTrackKeys =
-  | { part: 'position' | 'scale'; keys: TrackKey<Vector3>[] }
-  | { part: 'rotation'; keys: TrackKey<Quaternion>[] };
-
 /** One track that writes a part of the pose of `bone` on the Skeleton3D at `skeletonPath`. */
-export type BoneTrack = BoneTrackKeys & { skeletonPath: string; bone: string; setup: SampleSetup };
-
-/** The poses a clip writes, by the live path of each Skeleton3D. */
-export type SkeletonPoses = ReadonlyMap<string, AnimatedPose>;
+export interface BoneTrack {
+  skeletonPath: string;
+  bone: string;
+  /** The part this track writes at `time`, or null where `Animation` has no sample. */
+  sample: (time: number) => BonePose | null;
+}
 
 /**
  * The bone tracks of `animation`, each on the skeleton `scenePathOf` finds for it. A track whose
@@ -44,21 +42,26 @@ export function boneTracksOf(
       length: storedReal(animation.length),
       loopMode: animation.loopMode,
     };
-    tracks.push({ skeletonPath, bone: track.bone, setup, ...keysOf(track) });
+    tracks.push({ skeletonPath, bone: track.bone, sample: samplerOf(track, setup) });
   }
   return tracks;
 }
 
-/** The keys of a bone track as `real_t` values, which are what `Animation` holds. */
-function keysOf(track: GodotTrack): BoneTrackKeys {
-  switch (track.property) {
-    case 'quaternion':
-      return { part: 'rotation', keys: track.keys.map((key) => keyOf(key, quaternionOf)) };
-    case 'scale':
-      return { part: 'scale', keys: track.keys.map((key) => keyOf(key, vector3Of)) };
-    default:
-      return { part: 'position', keys: track.keys.map((key) => keyOf(key, vector3Of)) };
+/** The sampler of the part a track writes, over its keys as `real_t` values, which are what `Animation` holds. */
+function samplerOf(track: GodotTrack, setup: SampleSetup): BoneTrack['sample'] {
+  if (track.property === 'quaternion') {
+    const keys = track.keys.map((key) => keyOf(key, quaternionOf));
+    return (time) => {
+      const rotation = sampleQuaternionTrack(keys, time, setup);
+      return rotation && { rotation };
+    };
   }
+  const keys = track.keys.map((key) => keyOf(key, vector3Of));
+  const part = track.property === 'scale' ? 'scale' : 'position';
+  return (time) => {
+    const value = sampleVector3Track(keys, time, setup);
+    return value && { [part]: value };
+  };
 }
 
 function keyOf<T>(key: GodotKeyframe, read: (components: number[]) => T): TrackKey<T> {
@@ -82,16 +85,16 @@ function quaternionOf([x = 0, y = 0, z = 0, w = 1]: number[]): Quaternion {
  * every key past the clip, writes nothing, so the bone keeps the pose of the file for that part.
  * Where two tracks write one part of one bone, the later one wins.
  */
-export function sampleBonePoses(tracks: readonly BoneTrack[], time: number): SkeletonPoses {
+export function sampleBonePoses(
+  tracks: readonly BoneTrack[],
+  time: number
+): ReadonlyMap<string, AnimatedPose> {
   const poses = new Map<string, Map<string, BonePose>>();
   for (const track of tracks) {
-    const sampled =
-      track.part === 'rotation'
-        ? sampleQuaternionTrack(track.keys, time, track.setup)
-        : sampleVector3Track(track.keys, time, track.setup);
+    const sampled = track.sample(time);
     if (sampled === null) continue;
     const bones = poses.get(track.skeletonPath) ?? new Map<string, BonePose>();
-    bones.set(track.bone, { ...bones.get(track.bone), [track.part]: sampled });
+    bones.set(track.bone, { ...bones.get(track.bone), ...sampled });
     poses.set(track.skeletonPath, bones);
   }
   return poses;

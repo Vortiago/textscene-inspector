@@ -15,8 +15,7 @@ import {
   type Transform3D,
 } from '../../../godot/math/transform3d.js';
 import { normalizedQuaternion, type Quaternion } from '../../../godot/math/quaternion.js';
-import { storedReal as f } from '../../../godot/math/real.js';
-import type { Vector3 } from '../../../godot/math/vector.js';
+import { vector3Scaled, type Vector3 } from '../../../godot/math/vector.js';
 
 /** One entry of `bones/<i>/…` (`skeleton_3d.h:105-113`). */
 export interface Bone {
@@ -67,15 +66,11 @@ export function animatedBones(bones: readonly Bone[], animated: AnimatedPose, mo
     written.add(bone.name);
     return {
       ...bone,
-      ...(pose.position && { position: scaledBy(pose.position, motionScale) }),
+      ...(pose.position && { position: vector3Scaled(pose.position, motionScale) }),
       ...(pose.rotation && { rotation: normalizedQuaternion(pose.rotation) }),
       ...(pose.scale && { scale: pose.scale }),
     };
   });
-}
-
-function scaledBy({ x, y, z }: Vector3, factor: number): Vector3 {
-  return { x: f(x * factor), y: f(y * factor), z: f(z * factor) };
 }
 
 /** The names of `animated` that no bone of `bones` carries. */

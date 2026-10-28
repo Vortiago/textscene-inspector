@@ -19,7 +19,6 @@ describe('AnimatedBonePosesContext', () => {
     const { result } = renderHook(useAnimatedBonePoses);
 
     expect(() => result.current.set('Root/Skeleton3D', POSE)).not.toThrow();
-    expect(result.current.get('Root/Skeleton3D')).toBeNull();
   });
 
   it('hands a pushed pose to every listener of that skeleton, and to no other', () => {
@@ -38,24 +37,28 @@ describe('AnimatedBonePosesContext', () => {
     expect(other).not.toHaveBeenCalled();
   });
 
-  it('keeps the pushed pose for a listener that subscribes later', () => {
+  it('hands the pushed pose to a listener that subscribes later', () => {
     const { result } = renderHook(useAnimatedBonePoses, { wrapper });
-
+    const late = vi.fn();
     result.current.set('Root/Skeleton3D', POSE);
 
-    expect(result.current.get('Root/Skeleton3D')).toBe(POSE);
+    result.current.subscribe('Root/Skeleton3D', late);
+
+    expect(late).toHaveBeenCalledWith(POSE);
   });
 
-  it('releases with null, which listeners and later readers see', () => {
+  it('releases with null, which listeners see and later listeners do not get', () => {
     const { result } = renderHook(useAnimatedBonePoses, { wrapper });
     const listener = vi.fn();
+    const late = vi.fn();
     result.current.subscribe('Root/Skeleton3D', listener);
     result.current.set('Root/Skeleton3D', POSE);
 
     result.current.set('Root/Skeleton3D', null);
+    result.current.subscribe('Root/Skeleton3D', late);
 
     expect(listener).toHaveBeenLastCalledWith(null);
-    expect(result.current.get('Root/Skeleton3D')).toBeNull();
+    expect(late).not.toHaveBeenCalled();
   });
 
   it('stops pushing to a listener that unsubscribed', () => {

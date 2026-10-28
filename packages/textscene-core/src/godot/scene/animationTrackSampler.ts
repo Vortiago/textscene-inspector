@@ -5,14 +5,20 @@
  * values are `real_t`, so a caller rounds them to float32 first.
  */
 
-import { clamp, ease, isEqualApprox, isZeroApprox, pingpongf, posmod, round } from '../math/math.js';
-import { storedReal as f } from '../math/real.js';
 import {
-  quaternionSlerp,
-  quaternionSphericalCubicInterpolateInTime,
-  type Quaternion,
-} from '../math/quaternion.js';
-import { vector3CubicInterpolateInTime, vector3Lerp, type KeyTimes, type Vector3 } from '../math/vector.js';
+  clamp,
+  ease,
+  isEqualApprox,
+  isZeroApprox,
+  pingpongf,
+  posmod,
+  round,
+  type KeyTimes,
+} from '../math/math.js';
+import { storedReal as f } from '../math/real.js';
+import { quaternionSlerp, type Quaternion } from '../math/quaternion.js';
+import { quaternionSphericalCubicInterpolateInTime } from '../math/quaternionCubic.js';
+import { vector3CubicInterpolateInTime, vector3Lerp, type Vector3 } from '../math/vector.js';
 import { AnimationInterpolation, AnimationLoopMode } from './animation.js';
 
 /** One key of a track: `Animation::TKey` (`animation.h:102-108`). */
@@ -143,14 +149,12 @@ function spanAt<T>(keys: readonly TrackKey<T>[], count: number, time: number, se
   const found = findKey(keys, time);
   const isStartEdge = found === -1;
   const isEndEdge = found >= count - 1;
-  const needsCubic =
-    setup.interp === AnimationInterpolation.CUBIC || setup.interp === AnimationInterpolation.CUBIC_ANGLE;
 
   let span: Span;
-  if (!wrapsAround(setup)) span = spanWithoutLoop(found, isStartEdge, count, needsCubic);
+  if (!wrapsAround(setup)) span = spanWithoutLoop(found, isStartEdge, count);
   else if (setup.loopMode === AnimationLoopMode.LINEAR) {
-    span = spanAroundLoop(keys, found, isStartEdge, isEndEdge, count, time, setup, needsCubic);
-  } else span = spanAcrossPingPong(keys, found, isStartEdge, isEndEdge, count, time, setup, needsCubic);
+    span = spanAroundLoop(keys, found, isStartEdge, isEndEdge, count, time, setup);
+  } else span = spanAcrossPingPong(keys, found, isStartEdge, isEndEdge, count, time, setup);
 
   if (!isStartEdge && !isEndEdge) {
     const start = keys[span.idx]!.time;
@@ -160,14 +164,14 @@ function spanAt<T>(keys: readonly TrackKey<T>[], count: number, time: number, se
 }
 
 /** `LOOP_NONE`, or a track that does not wrap: both ends hold their key (`:2559-2566`). */
-function spanWithoutLoop(found: number, isStartEdge: boolean, count: number, needsCubic: boolean): Span {
+function spanWithoutLoop(found: number, isStartEdge: boolean, count: number): Span {
   const idx = isStartEdge ? 0 : found;
   const last = count - 1;
   return {
     idx,
     next: clamp(idx + 1, 0, last),
-    pre: needsCubic ? clamp(idx - 1, 0, last) : -1,
-    post: needsCubic ? clamp(idx + 2, 0, last) : -1,
+    pre: clamp(idx - 1, 0, last),
+    post: clamp(idx + 2, 0, last),
     from: 0,
     delta: 0,
   };
@@ -181,16 +185,15 @@ function spanAroundLoop<T>(
   isEndEdge: boolean,
   count: number,
   time: number,
-  setup: SampleSetup,
-  needsCubic: boolean
+  setup: SampleSetup
 ): Span {
   const idx = isStartEdge ? count - 1 : found;
   const next = posmod(idx + 1, count);
   const span: Span = {
     idx,
     next,
-    pre: needsCubic ? posmod(idx - 1, count) : -1,
-    post: needsCubic ? posmod(idx + 2, count) : -1,
+    pre: posmod(idx - 1, count),
+    post: posmod(idx + 2, count),
     from: 0,
     delta: 0,
   };
@@ -214,8 +217,7 @@ function spanAcrossPingPong<T>(
   isEndEdge: boolean,
   count: number,
   time: number,
-  setup: SampleSetup,
-  needsCubic: boolean
+  setup: SampleSetup
 ): Span {
   const foldedIndex = (index: number) => round(pingpongf(f(index + 0.5), count) - 0.5);
   const walked = isStartEdge ? -1 : found;
@@ -224,8 +226,8 @@ function spanAcrossPingPong<T>(
   const span: Span = {
     idx,
     next,
-    pre: needsCubic ? foldedIndex(walked - 1) : -1,
-    post: needsCubic ? foldedIndex(walked + 2) : -1,
+    pre: foldedIndex(walked - 1),
+    post: foldedIndex(walked + 2),
     from: 0,
     delta: 0,
   };

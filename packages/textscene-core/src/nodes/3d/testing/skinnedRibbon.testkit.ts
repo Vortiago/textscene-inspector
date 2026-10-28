@@ -6,7 +6,7 @@
 export const RIBBON_BONE_Y = [0.5, -0.2, -0.2, -0.2, -0.2, -0.2];
 
 /** The turn about Z that bone 2 carries in the file: 60 degrees. */
-export const RIBBON_TURN = 'Quaternion(0, 0, 0.5, 0.866025)';
+const RIBBON_TURN = 'Quaternion(0, 0, 0.5, 0.866025)';
 
 const NO_TURN = 'Quaternion(0, 0, 0, 1)';
 
@@ -31,7 +31,7 @@ bones/${i}/rotation = ${rotation}
     .join('');
 }
 
-export const RIBBON_SUB_RESOURCES = `[sub_resource type="StandardMaterial3D" id="Red"]
+const RIBBON_SUB_RESOURCES = `[sub_resource type="StandardMaterial3D" id="Red"]
 albedo_color = Color(1, 0, 0, 1)
 [sub_resource type="StandardMaterial3D" id="Overlay"]
 albedo_color = Color(0, 0, 1, 1)
