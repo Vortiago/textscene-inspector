@@ -13,6 +13,8 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { drawableCellOf } from '../resources/tileset/testing/drawableCellOf';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { TileShape } from '../godot/scene/tileSet';
+import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
+import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
 
 const TEXTURE = 'res://tiles.png';
 const grid: TileGrid = {
@@ -24,7 +26,7 @@ const grid: TileGrid = {
 
 function sourceOf(usesTexturePadding: boolean): AtlasSourceModel {
   return {
-    texturePath: TEXTURE,
+    texture: tileTextureAt(TEXTURE),
     margins: { x: 0, y: 0 },
     separation: { x: 0, y: 0 },
     textureRegionSize: { x: 16, y: 16 },
@@ -85,7 +87,7 @@ describe('TileSourceMesh texture padding', () => {
 
 describe('TileSourceMesh without a usable texture', () => {
   it('draws nothing when the source has no texture (tile_map_layer.cpp:724)', async () => {
-    const renderer = await render({ ...sourceOf(false), texturePath: null }, null);
+    const renderer = await render({ ...sourceOf(false), texture: null }, null);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
@@ -107,5 +109,49 @@ describe('TileSourceMesh texture sampler', () => {
     const map = (mesh.material as THREE.MeshBasicMaterial).map!;
     expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
     expect([map.wrapS, map.wrapT]).toEqual([THREE.RepeatWrapping, THREE.RepeatWrapping]);
+  });
+});
+
+/** A GradientTexture2D the TileSet's own tables hold, 8 by 4 texels. */
+const GRADIENT_TABLES = [
+  { id: 'Gradient_g', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' } },
+  {
+    id: 'Ramp',
+    type: 'GradientTexture2D',
+    data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
+  },
+];
+
+describe('TileSourceMesh texture slot', () => {
+  it('draws an atlas texture the TileSet holds as a procedural texture, as any Texture2D slot does', async () => {
+    const source = {
+      ...sourceOf(false),
+      texture: { ...tileTextureAt('SubResource("Ramp")'), internalResources: GRADIENT_TABLES },
+    };
+    const renderer = await render(source, null);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
+    expect([map.image.width, map.image.height]).toEqual([8, 4]);
+  });
+
+  /** Godot sets the atlas texture up only through a TileSet that is local to scene (`core/io/resource.cpp:497-503`). */
+  it("draws Godot's placeholder for a ViewportTexture in a TileSet that is not local to scene", async () => {
+    const viewport = {
+      id: 'Viewport',
+      type: 'ViewportTexture',
+      data: { viewport_path: 'NodePath("SubViewport")' },
+    };
+    const tileSet = { id: 'TileSet_1', type: 'TileSet', data: {} };
+    const source = {
+      ...sourceOf(false),
+      texture: {
+        ...tileTextureAt('SubResource("Viewport")'),
+        internalResources: [viewport],
+        holders: [tileSet],
+      },
+    };
+    const renderer = await render(source, null);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((mesh.material as THREE.MeshBasicMaterial).map!.image).toBe(unconfiguredViewportTexture().image);
   });
 });

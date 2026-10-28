@@ -1,12 +1,12 @@
 /**
  * One batched mesh for a run of tile cells that draw from one atlas source, with the
- * 2D material of Sprite2D. It owns the source's texture load.
+ * 2D material of Sprite2D. It resolves the source's texture as any Texture2D slot is resolved.
  */
 
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
-import { useResource } from '../resources/useResource';
+import { useTexture2D } from '../resources/useTexture2D';
 import { buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
@@ -17,6 +17,7 @@ import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemPixelMaterial } from './components/LitCanvasItemPixels';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 interface TileSourceMeshProps {
   source: AtlasSourceModel;
@@ -35,6 +36,9 @@ interface TileSourceMeshProps {
   sampler: CanvasItemTextureSampler;
 }
 
+const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
+const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
+
 export function TileSourceMesh({
   source,
   cells,
@@ -46,8 +50,15 @@ export function TileSourceMesh({
   pixelMaterial,
   sampler,
 }: TileSourceMeshProps) {
-  const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
-  const tex = useCanvas2DTexture(texResult.value, sampler);
+  const slot = source.texture;
+  const texResult = useTexture2D(
+    slot?.ref,
+    slot?.externalResources ?? NO_EXTERNAL_RESOURCES,
+    slot?.internalResources ?? NO_INTERNAL_RESOURCES,
+    'plain',
+    slot?.holders
+  );
+  const tex = useCanvas2DTexture(texResult.texture, sampler);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;
@@ -68,9 +79,9 @@ export function TileSourceMesh({
   useDisposeOnRelease(geometry);
 
   // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
-  // placeholder for the whole source (the panel row comes from useResource's missing-path report).
-  if (!source.texturePath) return null;
-  if (texResult.status === 'unavailable') {
+  // placeholder for the whole source (the panel row comes from the resolver's missing report).
+  if (!slot) return null;
+  if (texResult.missing) {
     return <MissingResourcePlaceholder shape="plane" name={name} />;
   }
   // Pending: render nothing, so no placeholder flashes.

@@ -27,6 +27,7 @@ import type {
   AlternativeTileModel,
   AtlasSourceModel,
   AtlasTileModel,
+  TileTexture,
   TileMaterial,
   TileSetModel,
 } from './types';
@@ -36,8 +37,11 @@ import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 interface TileSetSourceData {
-  /** The TileSet resource's own properties (raw value strings). */
-  properties: Record<string, string>;
+  /** The TileSet itself, whose `data` holds its properties as raw value strings. */
+  tileSet: TscnInternalResource;
+  /** The tables the TileSet's references resolve in. */
+  externalResources: readonly TscnExternalResource[];
+  internalResources: readonly TscnInternalResource[];
   findSubResource(id: string): TscnInternalResource | undefined;
   /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
   resolveResourcePath(ref: string): string | null;
@@ -56,7 +60,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
 
   // `sources/1`, `sources/01` and `sources/+1` are one source: `_set` drops the id
   // before re-adding (tile_set.cpp:3965-3968), so the last value wins, as `Map.set` does.
-  for (const [key, value] of Object.entries(data.properties)) {
+  for (const [key, value] of Object.entries(data.tileSet.data)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
     const sourceId = stringToInt(sourceMatch[1]!);
@@ -79,10 +83,11 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       continue;
     }
 
-    sources.set(sourceId, resolveAtlasSource(sub.data, data, tileMaterial));
+    sources.set(sourceId, resolveAtlasSource(sub, data, tileMaterial));
   }
 
-  const shape = intEnumOr(data.properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
+  const properties = data.tileSet.data;
+  const shape = intEnumOr(properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
   if (shape < TileShape.TILE_SHAPE_SQUARE || shape > TileShape.TILE_SHAPE_HEXAGON) {
     warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
@@ -90,17 +95,15 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   // `set_tile_layout` and `set_tile_offset_axis` store any int (`tile_set.cpp:368-371`, `:376-379`).
   return {
     shape,
-    layout: intEnumOr(
-      data.properties.tile_layout,
-      TileLayout.TILE_LAYOUT_STACKED,
-      'tile_layout'
-    ) as EnumValue<typeof TileLayout>,
+    layout: intEnumOr(properties.tile_layout, TileLayout.TILE_LAYOUT_STACKED, 'tile_layout') as EnumValue<
+      typeof TileLayout
+    >,
     offsetAxis: intEnumOr(
-      data.properties.tile_offset_axis,
+      properties.tile_offset_axis,
       TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
       'tile_offset_axis'
     ) as EnumValue<typeof TileOffsetAxis>,
-    tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
+    tileSize: tileSetVec2i(properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
   };
 }
@@ -119,7 +122,9 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
 export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
-    properties: parsed.properties,
+    tileSet: { id: '', type: parsed.resourceType, data: parsed.properties },
+    externalResources: parsed.extResources,
+    internalResources: parsed.subResources,
     findSubResource: (id) => findSubResourceById(parsed.subResources, id),
     resolveResourcePath: (ref) => resolveExtResourcePath(ref, parsed.extResources),
   });
@@ -140,7 +145,9 @@ export function tileSetFromScene(
   if (!tileSet || tileSet.type !== 'TileSet') return null;
 
   return resolveTileSetModel({
-    properties: tileSet.data,
+    tileSet,
+    externalResources,
+    internalResources,
     findSubResource: (id) => findSubResourceById(internalResources, id),
     resolveResourcePath: (ref) => resolveExtResourcePath(ref, externalResources),
   });
@@ -186,19 +193,28 @@ function loadTileMaterial(
 }
 
 function resolveAtlasSource(
-  props: Record<string, string>,
+  atlasSource: TscnInternalResource,
   data: TileSetSourceData,
   tileMaterial: TileMaterialResolver
 ): AtlasSourceModel {
-  const textureRef = props.texture ?? null;
+  const props = atlasSource.data;
   return {
-    texturePath: textureRef ? data.resolveResourcePath(textureRef) : null,
+    texture: props.texture ? tileTexture(props.texture, atlasSource, data) : null,
     margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
     separation: tileSetVec2i(props.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
     // On unless the file says `false` (`tile_set.h:673`).
     usesTexturePadding: boolSlotValue(props.use_texture_padding) !== false,
     tiles: resolveTiles(props, tileMaterial),
+  };
+}
+
+function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileSetSourceData): TileTexture {
+  return {
+    ref,
+    externalResources: data.externalResources,
+    internalResources: data.internalResources,
+    holders: [data.tileSet, atlasSource],
   };
 }
 

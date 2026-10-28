@@ -8,6 +8,7 @@ import type { AtlasSourceModel, TileGrid } from './types';
 import { TileShape } from '../../godot/scene/tileSet';
 import type { DrawableCell } from './drawableCell';
 import { drawableCellOf } from './testing/drawableCellOf';
+import { tileTextureAt } from './testing/tileTexture';
 
 const grid: TileGrid = {
   shape: TileShape.TILE_SHAPE_SQUARE,
@@ -17,7 +18,7 @@ const grid: TileGrid = {
 };
 
 const source: AtlasSourceModel = {
-  texturePath: 'res://tiles.png',
+  texture: tileTextureAt('res://tiles.png'),
   margins: { x: 0, y: 0 },
   separation: { x: 0, y: 0 },
   textureRegionSize: { x: 16, y: 16 },

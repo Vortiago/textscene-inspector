@@ -10,9 +10,10 @@ import {
   TILE_TRANSFORM_FLIP_V,
   TILE_TRANSFORM_TRANSPOSE,
 } from '../../godot/scene/tileSet';
+import { tileTextureAt } from './testing/tileTexture';
 
 const source: AtlasSourceModel = {
-  texturePath: 'res://t.png',
+  texture: tileTextureAt('res://t.png'),
   margins: { x: 4, y: 6 },
   separation: { x: 2, y: 3 },
   textureRegionSize: { x: 16, y: 16 },
