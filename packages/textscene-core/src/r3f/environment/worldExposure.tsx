@@ -75,6 +75,24 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
   );
 }
 
+/** Gathers a world's CameraAttributes for the viewports that draw it, with no camera of its own. */
+export function WorldCameraAttributesScope({ children }: { children: ReactNode }) {
+  return <cameraAttributes.Provider>{children}</cameraAttributes.Provider>;
+}
+
+/**
+ * Chooses the camera of a viewport that shares its parent's world. The world's CameraAttributes
+ * group is the parent's, keyed by its scenario (`world_environment.cpp:87-93`), so a node inside
+ * publishes to the parent's chooser.
+ */
+export function SharedWorldExposureScope({ children }: { children: ReactNode }) {
+  return (
+    <cameras.Provider>
+      <CameraAttributesProvider>{children}</CameraAttributesProvider>
+    </cameras.Provider>
+  );
+}
+
 function CameraAttributesProvider({ children }: { children: ReactNode }) {
   const world = useWorldKind();
   const viewedPath = useOptionalViewportActions()?.activeCameraPath ?? null;

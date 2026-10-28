@@ -334,6 +334,7 @@
   "spring-arm-3d-selected": 30.1,
   "sprite-2d-soft-alpha-border": 2.6,
   "sprite-2d-shared-world-environment": 11.9,
+  "sprite-2d-shared-world-first-environment": 11.9,
   "sprite-2d-viewport-texture": 2.6,
   "sprite2d": 2.6,
   "sprite2d-block-compressed": 4.1,

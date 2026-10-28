@@ -4,13 +4,14 @@
  * its own for `own_world_3d`. The glow chain runs whenever that Environment enables glow
  * (`renderer_scene_render_rd.cpp:575`, `:686`).
  */
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { waitFor } from '@testing-library/react';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { CanvasWorldScope, WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { ViewportPassStack } from './viewportPasses.testkit';
@@ -54,6 +55,29 @@ ${viewportGlows ? glowingEnvironment('ViewportEnvironment', 'Viewport') : ''}
 ${witness ? '[node name="Witness" type="SubViewport" parent="."]\n\n[node name="Camera3D" type="Camera3D" parent="Witness"]\n' : ''}`;
 }
 
+/**
+ * A 2D scene with two shared-world viewports: the first holds a glowing Environment, and the second
+ * a plain one.
+ */
+const TWO_SHARED_WORLDS_IN_2D = `[gd_scene format=3]
+
+${GLOW}
+[sub_resource type="Environment" id="Env_plain"]
+
+[node name="Root" type="Node2D"]
+
+[node name="First" type="SubViewport" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="First"]
+${glowingEnvironment('FirstEnvironment', 'First')}
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="Viewport"]
+
+[node name="ViewportEnvironment" type="WorldEnvironment" parent="Viewport"]
+environment = SubResource("Env_plain")
+`;
+
 /** A 2D scene with a shared-world viewport whose own subtree holds a glowing Environment. */
 const SHARED_WORLD_IN_2D = `[gd_scene format=3]
 
@@ -75,13 +99,14 @@ async function mount(
 ): Promise<() => Promise<THREE.WebGLRenderTarget[]>> {
   const parsed = new TscnParser().parse(source);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
+  const WorldScope = workspace === '2d' ? CanvasWorldScope : RootWorldScope;
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={createFakeResourceLoader().loader} scene={parsed} workspace={workspace}>
       <ViewportModeProvider initialShowPreviewEnvironment={false}>
         <ViewportPassStack captured={captured}>
-          <WorldEnvironmentScope world="root">
+          <WorldScope>
             <NodeDispatcher nodes={parsed.nodes} />
-          </WorldEnvironmentScope>
+          </WorldScope>
         </ViewportPassStack>
       </ViewportModeProvider>
     </SceneStack>
@@ -96,6 +121,11 @@ async function mount(
 }
 
 const GLOW_LEVEL_0 = 'GodotGlow.Level0';
+
+/** The root world of a 3D canvas, as `TscnCanvas` mounts it. */
+function RootWorldScope({ children }: { children: ReactNode }) {
+  return <WorldEnvironmentScope world="root">{children}</WorldEnvironmentScope>;
+}
 
 async function namesOf(targets: Promise<THREE.WebGLRenderTarget[]>): Promise<string[]> {
   return (await targets).map((target) => target.texture.name);
@@ -154,6 +184,18 @@ describe('<SubViewport> tonemap pass', () => {
    */
   it('runs the glow chain of an Environment inside a shared world drawn apart from a 2D canvas', async () => {
     const nextFrameTargets = await mount(SHARED_WORLD_IN_2D, '2d');
+
+    await waitFor(async () =>
+      expect(passOf('Viewport', await namesOf(nextFrameTargets()))).toContain(GLOW_LEVEL_0)
+    );
+  });
+
+  /**
+   * A shared world keeps one WorldEnvironment group, keyed by its scenario, whose first node in tree
+   * order wins (`world_environment.cpp:76-85`, `scene_tree.cpp:1568-1581`).
+   */
+  it('takes the WorldEnvironment first in tree order across a shared world', async () => {
+    const nextFrameTargets = await mount(TWO_SHARED_WORLDS_IN_2D, '2d');
 
     await waitFor(async () =>
       expect(passOf('Viewport', await namesOf(nextFrameTargets()))).toContain(GLOW_LEVEL_0)

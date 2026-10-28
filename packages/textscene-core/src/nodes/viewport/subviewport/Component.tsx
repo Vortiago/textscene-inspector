@@ -5,9 +5,12 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
-import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import {
+  SharedWorldEnvironmentScope,
+  WorldEnvironmentScope,
+} from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -171,6 +174,7 @@ function OffscreenViewport({
     kind === '3d' ? (
       <OffscreenToneMapStage
         stage={toneMapStage}
+        target={target}
         msaaMode={msaaMode}
         width={width}
         height={height}
@@ -258,7 +262,7 @@ function OffscreenViewport({
           }
         },
       });
-      toneMap?.toneMap(target);
+      toneMap?.toneMap();
     } finally {
       if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
@@ -294,16 +298,17 @@ function OffscreenViewport({
   });
 
   if (rendersInline) return stage;
+  const WorldScope = ownWorld3D ? OwnWorldEnvironmentScope : SharedWorldEnvironmentScope;
   // The portal declares the workspace its content needs, not the host's, which
   // could drop it. The portal scene is detached, so no host CanvasItem transform
   // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
-  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`), and the world a
-  // WorldEnvironment inside applies to.
+  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`). A WorldEnvironment
+  // inside applies to an own world, and to the parent's world through a shared one.
   const portal = createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
         <WorldRootProvider value={portalScene}>
-          <WorldEnvironmentScope world="subViewport" sharesParentWorld={!ownWorld3D}>
+          <WorldScope>
             {stage}
             <CanvasSpaceProvider value={null}>
               {lightHost ? (
@@ -314,7 +319,7 @@ function OffscreenViewport({
                 <World2DLightingBoundary>{children}</World2DLightingBoundary>
               )}
             </CanvasSpaceProvider>
-          </WorldEnvironmentScope>
+          </WorldScope>
         </WorldRootProvider>
       </AnisotropicFilteringProvider>
     </CanvasWorkspaceProvider>,
@@ -342,4 +347,9 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
   );
   useDisposeOnRelease(atlas);
   return atlas;
+}
+
+/** The world of a viewport with `own_world_3d`. */
+function OwnWorldEnvironmentScope({ children }: { children: ReactNode }) {
+  return <WorldEnvironmentScope world="subViewport">{children}</WorldEnvironmentScope>;
 }
