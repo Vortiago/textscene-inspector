@@ -7,7 +7,11 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
-import { useCanvasWorld, useDrawCanvasWorld } from '../../../r3f/environment/canvasWorldScene';
+import {
+  CanvasWorldContext,
+  useCanvasWorld,
+  useDrawCanvasWorld,
+} from '../../../r3f/environment/canvasWorldScene';
 import {
   CanvasWorldScope,
   SharedWorldEnvironmentScope,
@@ -362,9 +366,16 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
   return atlas;
 }
 
-/** The world of a viewport with `own_world_3d`. */
+/**
+ * The world of a viewport with `own_world_3d`. It hides the enclosing canvas's world, so a shared
+ * viewport nested below reaches this world, as `find_world_3d()` does (`viewport.cpp:4670-4681`).
+ */
 function OwnWorldEnvironmentScope({ children }: { children: ReactNode }) {
-  return <WorldEnvironmentScope world="subViewport">{children}</WorldEnvironmentScope>;
+  return (
+    <WorldEnvironmentScope world="subViewport">
+      <CanvasWorldContext.Provider value={null}>{children}</CanvasWorldContext.Provider>
+    </WorldEnvironmentScope>
+  );
 }
 
 /** An own world drawn as a 2D canvas, whose shared viewports draw its World3D, not the parent's. */

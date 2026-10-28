@@ -21,12 +21,23 @@ import { perObject } from '../../utils/perObject.js';
  */
 export type ExposureStage = (exposure: number | null) => () => void;
 
+/** What a scene's world holds: the factor its scene renders with, and the factor of its own attributes. */
+interface HeldExposure {
+  view: number | null;
+  world: number | null;
+}
+
 /**
- * What a scene's world holds: the factor its scene renders with, and the factor of the world's own
- * attributes. Written only by `useSceneExposure`, and cleared when that scene's world unmounts.
+ * Each scene's held exposures, the latest last. A list, not one entry: the shared-world viewports of
+ * a 2D canvas all hold its one scene. Written only by `useSceneExposure`, each entry removed when its
+ * world unmounts.
  */
-// eslint-disable-next-line no-restricted-syntax -- useSceneExposure writes each entry and deletes it on unmount
-const held = new WeakMap<THREE.Scene, { view: number | null; world: number | null }>();
+const heldOf = perObject<THREE.Scene, HeldExposure[]>(() => []);
+
+function latestHeld(scene: THREE.Scene): HeldExposure | undefined {
+  const entries = heldOf(scene);
+  return entries[entries.length - 1];
+}
 
 /** The exposure `drawAtExposure` draws a scene at, written only by it and cleared when the draw ends. */
 // eslint-disable-next-line no-restricted-syntax -- drawAtExposure writes an entry for one draw and deletes it after the draw
@@ -41,7 +52,7 @@ const stagesOf = perObject<THREE.Scene, Set<ExposureStage>>(() => new Set());
  * @canonical The exposure a scene renders with
  */
 export function exposureOfScene(scene: THREE.Scene): number | null {
-  return held.get(scene)?.view ?? null;
+  return latestHeld(scene)?.view ?? null;
 }
 
 /**
@@ -51,7 +62,7 @@ export function exposureOfScene(scene: THREE.Scene): number | null {
  * @canonical The exposure a scene renders with
  */
 export function worldExposureOfScene(scene: THREE.Scene): number | null {
-  return held.get(scene)?.world ?? null;
+  return latestHeld(scene)?.world ?? null;
 }
 
 /**
@@ -138,11 +149,13 @@ export function useSceneExposure(factor: number | null, worldFactor: number | nu
   const scene = useThree((state) => state.scene);
   // A layout effect, so the buffer changes in the commit that changes every light's intensity.
   useLayoutEffect(() => {
-    held.set(scene, { view: factor, world: worldFactor });
+    const entry: HeldExposure = { view: factor, world: worldFactor };
+    const entries = heldOf(scene);
+    entries.push(entry);
     const stopWriting = factor === null ? undefined : writeEmissionExposure(scene, factor);
     return () => {
       stopWriting?.();
-      held.delete(scene);
+      entries.splice(entries.indexOf(entry), 1);
     };
   }, [scene, factor, worldFactor]);
 }

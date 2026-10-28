@@ -14,7 +14,7 @@ export interface CanvasWorld {
   hold: () => () => void;
 }
 
-/** Written only by `CanvasWorldScope`. Null outside a 2D canvas. */
+/** Written by `CanvasWorldScope`, and set to null by an own world. Null outside a 2D canvas. */
 export const CanvasWorldContext = createContext<CanvasWorld | null>(null);
 CanvasWorldContext.displayName = 'CanvasWorldContext';
 

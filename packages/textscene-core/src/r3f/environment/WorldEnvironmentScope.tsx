@@ -16,6 +16,7 @@ import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import {
   SharedWorldExposureScope,
+  WorldAttributesExposure,
   WorldCameraAttributesScope,
   WorldExposureScope,
   useRenderCameraEnvironment,
@@ -95,13 +96,14 @@ export function CanvasWorldScope({ children }: { children: ReactNode }) {
 /** The canvas world's Environment, drawn into its scene only while that scene is drawn. */
 function CanvasWorldEnvironment({ scene, children }: { scene: THREE.Scene | null; children: ReactNode }) {
   const resolved = resolvedEnvironment(environments.useChosen());
-  // The layer draws into the world's scene as a 3D view does, whatever the canvas draws.
+  // The layer draws into the world's scene as a 3D view does, whatever the canvas draws, at the
+  // exposure of the world's own CameraAttributes, since the viewports that draw it share one.
   const layer =
     scene &&
     createPortal(
       <CanvasWorkspaceProvider workspace="3d">
         <WorldKindProvider world="subViewport">
-          {resolved && <EnvironmentLayer {...resolved} />}
+          <WorldAttributesExposure>{resolved && <EnvironmentLayer {...resolved} />}</WorldAttributesExposure>
         </WorldKindProvider>
       </CanvasWorkspaceProvider>,
       scene

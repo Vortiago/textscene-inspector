@@ -106,6 +106,38 @@ async function rightPassDrawsSubject(source: string): Promise<boolean> {
   return draws!;
 }
 
+/**
+ * The Left viewport of `siblings` beside a 3D viewport of its own world, whose 2D viewport holds
+ * the shared Right viewport. Right reaches that own world through the 2D one, not the canvas's.
+ */
+const NESTED_IN_3D = `[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Left" type="SubViewport" parent="."]
+
+[node name="Subject" type="MeshInstance3D" parent="Left"]
+mesh = SubResource("SphereMesh_1")
+
+[node name="Camera3D" type="Camera3D" parent="Left"]
+
+[node name="Outer" type="SubViewport" parent="."]
+own_world_3d = true
+
+[node name="Floor" type="MeshInstance3D" parent="Outer"]
+mesh = SubResource("SphereMesh_1")
+
+[node name="Middle" type="SubViewport" parent="Outer"]
+
+[node name="Canvas" type="Node2D" parent="Outer/Middle"]
+
+[node name="Right" type="SubViewport" parent="Outer/Middle"]
+
+[node name="Camera3D" type="Camera3D" parent="Outer/Middle/Right"]
+`;
+
 /** A 2D scene with no viewport, whose WorldEnvironment nothing draws. */
 const NO_VIEWPORT = `[gd_scene format=3]
 
@@ -145,5 +177,9 @@ describe('<SubViewport> shared world of a 2D canvas', () => {
 
   it("gives a shared viewport inside a 2D viewport of its own world that world, not the canvas's", async () => {
     expect(await rightPassDrawsSubject(NESTED)).toBe(false);
+  });
+
+  it("gives a shared viewport below a 3D viewport of its own world that world, not the canvas's", async () => {
+    expect(await rightPassDrawsSubject(NESTED_IN_3D)).toBe(false);
   });
 });

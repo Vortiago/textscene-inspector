@@ -87,6 +87,15 @@ export function WorldCameraAttributesScope({ children }: { children: ReactNode }
 }
 
 /**
+ * Gives the readers below the exposure of the world's own CameraAttributes, for a world that no one
+ * camera renders. It reads the chooser of the enclosing `WorldCameraAttributesScope`.
+ */
+export function WorldAttributesExposure({ children }: { children: ReactNode }) {
+  const attributes = attributesOf(cameraAttributes.useChosen());
+  return <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>;
+}
+
+/**
  * Chooses the camera of a viewport that shares its parent's world. The world's CameraAttributes
  * group is the parent's, keyed by its scenario (`world_environment.cpp:87-93`), so a node inside
  * publishes to the parent's chooser.
