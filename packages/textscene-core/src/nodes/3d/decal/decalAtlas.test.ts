@@ -149,6 +149,17 @@ describe('the decal atlas', () => {
     target.withdraw();
   });
 
+  /** Godot reads an opaque target's image as RGB8 (`texture_storage.cpp:3571-3575`). */
+  it("copies an opaque target's texels opaque, as its image has no alpha", () => {
+    const target = readableLiveTarget(2, [0, 0, 0, 0], [0, 0, 0, 0]);
+    hold(target.texture);
+
+    updateDecalAtlas(MAX_TEXTURE_SIZE);
+
+    expect(firstTexelOf(target.texture)).toEqual([0, 0, 0, 255]);
+    target.withdraw();
+  });
+
   it('keeps the copy while the target redraws, and copies again at the next rebuild', () => {
     const target = readableLiveTarget(2, [0, 0, 255, 255], [0, 0, 255, 255]);
     hold(target.texture);

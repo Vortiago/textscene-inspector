@@ -73,13 +73,20 @@ export function unrenderedTexel(texture: THREE.Texture): readonly [number, numbe
 }
 
 /**
- * The bytes a live target holds now, bottom row first, read back from its renderer. Undefined for
- * a texture no renderer publishes. A GPU readback, so only a rebuild that copies the target reads it.
+ * The bytes Godot's image of a live target holds now, bottom row first, read back from its
+ * renderer. Undefined for a texture no renderer publishes. A GPU readback, so only a rebuild that copies the target reads it.
  */
 export function liveTargetPixels(texture: THREE.Texture): ImagePixels | undefined {
-  const { renderer, publishers } = liveTargetOf(texture);
+  const { renderer, publishers, isTransparent } = liveTargetOf(texture);
   if (!renderer || publishers === 0 || !texture.renderTarget) return undefined;
-  return readRenderTargetPixels(renderer, texture.renderTarget as THREE.WebGLRenderTarget);
+  const pixels = readRenderTargetPixels(renderer, texture.renderTarget as THREE.WebGLRenderTarget);
+  if (!isTransparent) dropAlpha(pixels.data);
+  return pixels;
+}
+
+/** An opaque target's image has no alpha channel (`renderer_rd/storage_rd/texture_storage.cpp:3571-3575`). */
+function dropAlpha(data: Uint8Array | Uint8ClampedArray): void {
+  for (let alpha = 3; alpha < data.length; alpha += 4) data[alpha] = 255;
 }
 
 /**
