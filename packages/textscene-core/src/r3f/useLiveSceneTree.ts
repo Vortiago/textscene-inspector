@@ -127,6 +127,7 @@ interface BuiltTree {
 }
 
 /** Written only by {@link sharedTreeAt}: the tree for a graph and loader. */
+// eslint-disable-next-line no-restricted-syntax -- an open PR changes this file; convert after it merges
 const sharedTrees = new WeakMap<SceneGraph, WeakMap<object, BuiltTree>>();
 
 /** The key of a reader with no loader, which a WeakMap cannot take as null. */
@@ -246,6 +247,7 @@ interface LoaderTree {
 const NO_ROOTS: readonly TscnNode[] = [];
 
 /** Written only by {@link loaderTreeAt}: the tree of each loader for the load tick it was built at. */
+// eslint-disable-next-line no-restricted-syntax -- an open PR changes this file; convert after it merges
 const loaderTrees = new WeakMap<object, LoaderTree>();
 
 /**

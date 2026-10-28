@@ -12,6 +12,7 @@ import { freeShadowMap } from './shadowMapAllocation.js';
  * Each hidden light's own layer mask. Written only by `hideLight`. An entry clears when `showLight`
  * hands the mask back.
  */
+// eslint-disable-next-line no-restricted-syntax -- hideLight writes an entry and showLight deletes it
 const ownMasks = new WeakMap<THREE.Light, number>();
 
 /** Takes the light off every layer. A second call keeps the mask the first one saved. */

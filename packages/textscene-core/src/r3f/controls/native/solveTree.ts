@@ -236,6 +236,7 @@ type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
  * One view per property bag, so repeated calls return the same object: painters
  * memoise on props identity. Weak, so a re-parse's discarded bags go with it.
  */
+// eslint-disable-next-line no-restricted-syntax -- an open PR changes this file; convert after it merges
 const PAINTER_VIEWS = new WeakMap<object, object>();
 
 /** This node's properties as its own type, in the painter view. */

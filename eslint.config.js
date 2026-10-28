@@ -52,6 +52,16 @@ const REGISTER_ALL_SPREAD = {
     'Pass each part of a validator table to registerAll as its own argument. A spread keeps the last validator for a shared key and drops the earlier one without a report.',
 };
 
+/** A hand-built cache keyed by an object, beside `perObject`, is a duplicate of it. */
+const MODULE_WEAKMAP = {
+  selector: [
+    "Program > VariableDeclaration > VariableDeclarator > NewExpression.init[callee.name='WeakMap']",
+    "Program > ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > NewExpression.init[callee.name='WeakMap']",
+  ].join(', '),
+  message:
+    'Build a cache keyed by an object with perObject (utils/perObject.ts, its keeps and stamp options), or add `// eslint-disable-next-line no-restricted-syntax -- <the reason perObject does not fit>`.',
+};
+
 /**
  * A core test asserts a tier through `toBeAtTier`, `toBeAllAtTier` or a helper that records it.
  * `expect(d.severity)` records nothing, so the setup file's title check cannot see the test.
@@ -241,12 +251,13 @@ export default [
     },
   },
 
-  // Test files are exempt: a registry test spreads a shared group on purpose.
+  // Test files are exempt: a registry test spreads a shared group on purpose, and a test builds
+  // its own fixture caches.
   {
     files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', REGISTER_ALL_SPREAD],
+      'no-restricted-syntax': ['error', REGISTER_ALL_SPREAD, MODULE_WEAKMAP],
     },
   },
 
@@ -263,10 +274,12 @@ export default [
       'packages/textscene-core/src/linter/ruleArms.ts',
     ],
     rules: {
-      // Repeats REGISTER_ALL_SPREAD: for these files, this block's options replace the block above's.
+      // Repeats REGISTER_ALL_SPREAD and MODULE_WEAKMAP: for these files, this block's options
+      // replace the block above's.
       'no-restricted-syntax': [
         'error',
         REGISTER_ALL_SPREAD,
+        MODULE_WEAKMAP,
         {
           selector:
             "ObjectExpression:has(> Property[key.name='ruleName']):not(:has(> Property[key.name='grounding']))",
