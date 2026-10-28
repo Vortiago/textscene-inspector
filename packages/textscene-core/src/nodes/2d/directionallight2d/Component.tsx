@@ -6,7 +6,7 @@
  * its shadow samples a parallel map (`directionalShadowMap.ts`) built over the view.
  */
 
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -18,14 +18,11 @@ import { useDirectionalLightSlot } from '../../../r3f/lighting2d/useLightSequenc
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
-import { buildDirectionalShadowMap } from '../../../r3f/lighting2d/directionalShadowMap';
-import { useDirectionalShadowView, useNdcToShadow } from '../../../r3f/lighting2d/directionalShadowView';
+import { useDirectionalShadow } from '../../../r3f/lighting2d/directionalShadowView';
 import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
 import {
   createDirectionalLightMaterial,
   createDirectionalShadowColorMaterial,
-  createDirectionalShadowTexture,
-  writeDirectionalShadowMap,
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -89,26 +86,11 @@ function DirectionalLightQuads({
 }) {
   const { color, energy, blend_mode: blendMode, shadow_filter, shadow_filter_smooth, shadow_color } = props;
 
-  // Held in state, so the view sampler starts once the quad is in the tree: the light's world
-  // matrix does not exist before that.
+  // Held in state, so the shadow starts once the quad is in the tree: the light's world matrix
+  // does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
-  const shadowed = casters.length > 0;
-  const view = useDirectionalShadowView(quad, shadowed, props.max_distance);
-  const map = useMemo(
-    () => (shadowed && view ? buildDirectionalShadowMap(view, casters) : null),
-    [shadowed, view, casters]
-  );
-  const ndcToShadow = useNdcToShadow(map?.worldToShadow ?? null);
-
-  // One texture for the light's lifetime, filled at commit: a write from a render React discards
-  // would reach the materials already on screen.
-  const [shadowMap] = useState(createDirectionalShadowTexture);
-  useDisposeOnRelease(shadowMap);
-  useLayoutEffect(() => {
-    if (map) writeDirectionalShadowMap(shadowMap, map.bins);
-  }, [map, shadowMap]);
-
-  const hasMap = map !== null;
+  const { map: shadowMap, ndcToShadow } = useDirectionalShadow(quad, casters, props.max_distance);
+  const hasMap = quad !== null && casters.length > 0;
   const sampling = useMemo<DirectionalShadowSampling | undefined>(
     () =>
       hasMap

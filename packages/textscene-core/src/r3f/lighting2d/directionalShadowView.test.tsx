@@ -5,182 +5,202 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
-import { useDirectionalShadowView, useNdcToShadow } from './directionalShadowView';
+import { useDirectionalShadow, type DirectionalShadowSampler } from './directionalShadowView';
 import { buildDirectionalShadowMap, type DirectionalShadowView } from './directionalShadowMap';
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { CanvasLightPass } from './CanvasLightPass';
 import { fakeLightPassHost } from './testing/fakeLightPassHost';
-import type { LightPassHost } from './lightPassHost';
+import type { CanvasClip, LightPassHost } from './lightPassHost';
+import type { Quad2, ShadowCasterEdges } from './shadowVolumes';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
-/** The pass the 2D stage mounts, which the hooks read the canvas from. */
-function stage(children: ReactNode) {
-  return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
+/** An occluder box 100 by 60 px, from its lower-left corner. */
+function box(x: number, y: number): ShadowCasterEdges {
+  const [x1, y1] = [x + 100, y + 60];
+  return {
+    segments: [x, y, x1, y, x1, y, x1, y1, x1, y1, x, y1, x, y1, x, y],
+    cullMode: 0,
+    bounds: [
+      { x, y },
+      { x: x1, y },
+      { x: x1, y: y1 },
+      { x, y: y1 },
+    ],
+  };
 }
 
-/** Every view the hook published, in order, including the initial null. */
-type Published = (DirectionalShadowView | null)[];
+// One box below the origin, where the stage and the default host look, and one above it, where the
+// square host looks, so every canvas in these tests has an occluder in view.
+const CASTERS = [box(400, -400), box(400, 400)];
 
-function ViewHarness({
-  published,
+function clipOf(x: number, y: number, w: number, h: number, scale = { x: 1, y: 1 }): CanvasClip {
+  return { rect: { x, y, w, h }, scale };
+}
+
+function quadOf({ x, y, w, h }: CanvasClip['rect']): Quad2 {
+  return [
+    { x, y },
+    { x: x + w, y },
+    { x: x + w, y: y + h },
+    { x, y: y + h },
+  ];
+}
+
+/** The depths a map over `view` stores, which a sampler for the same view must have written. */
+function binsOver(clip: CanvasClip, direction: { x: number; y: number }, maxDistance = 0) {
+  const view: DirectionalShadowView = {
+    clip: quadOf(clip.rect),
+    direction,
+    maxDistance,
+    scale: clip.scale,
+  };
+  return Array.from(buildDirectionalShadowMap(view, CASTERS).bins);
+}
+
+const binsOf = (sampler: DirectionalShadowSampler) => Array.from(sampler.map.image.data as Float32Array);
+
+/** The light node in the tree, and the sampler its hook returned. */
+function SamplerHarness({
+  onSampler,
   godotRotation = 0,
   maxDistance = 0,
-  enabled = true,
+  casters = CASTERS,
 }: {
-  published: Published;
+  onSampler: (sampler: DirectionalShadowSampler) => void;
   godotRotation?: number;
   maxDistance?: number;
-  enabled?: boolean;
+  casters?: readonly ShadowCasterEdges[];
 }) {
   const [anchor, setAnchor] = useState<THREE.Group | null>(null);
-  const view = useDirectionalShadowView(anchor, enabled, maxDistance);
-  useEffect(() => {
-    published.push(view);
-  }, [view, published]);
+  onSampler(useDirectionalShadow(anchor, casters, maxDistance));
   // The previewer conjugates the 2D tree by diag(1, -1), which negates a rotation.
   return <group ref={setAnchor} rotation={[0, 0, -godotRotation]} />;
 }
 
-async function mountView(props: Omit<Parameters<typeof ViewHarness>[0], 'published'> = {}) {
-  const published: Published = [];
+type HarnessProps = Omit<Parameters<typeof SamplerHarness>[0], 'onSampler'>;
+
+/** The pass the 2D stage mounts, which the hook reads the canvas from. */
+function stage(children: ReactNode) {
+  return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
+}
+
+async function mountOnStage(props: HarnessProps = {}) {
+  let sampler!: DirectionalShadowSampler;
+  await ReactThreeTestRenderer.create(stage(<SamplerHarness onSampler={(s) => (sampler = s)} {...props} />));
+  await ReactThreeTestRenderer.act(async () => {});
+  return sampler;
+}
+
+async function mountOver(host: LightPassHost, props: HarnessProps = {}) {
+  let sampler!: DirectionalShadowSampler;
   const renderer = await ReactThreeTestRenderer.create(
-    stage(<ViewHarness published={published} {...props} />)
+    <CanvasLightPass host={host} canvasModulate={WHITE}>
+      <SamplerHarness onSampler={(s) => (sampler = s)} {...props} />
+    </CanvasLightPass>
   );
   await ReactThreeTestRenderer.act(async () => {});
-  return { renderer, published };
+  return { renderer, sampler };
 }
 
-function latest(published: Published): DirectionalShadowView {
-  const view = published.at(-1);
-  expect(view).toBeTruthy();
-  return view!;
-}
+/** The canvas of the 2D stage: Godot's default project viewport at the origin. */
+const STAGE_CLIP = clipOf(0, -648, 1152, 648);
+const DOWN = { x: 0, y: -1 };
 
-describe('useDirectionalShadowView', () => {
+describe('useDirectionalShadow, in the map it builds', () => {
   it('sends an unrotated light down the screen, Godot +Y', async () => {
-    const { direction } = latest((await mountView()).published);
-    expect(direction.x).toBeCloseTo(0, 12);
-    expect(direction.y).toBeCloseTo(-1, 12);
+    const expected = binsOver(STAGE_CLIP, DOWN);
+    expect(expected).not.toEqual(binsOver(STAGE_CLIP, { x: 1, y: 0 }));
+    expect(binsOf(await mountOnStage())).toEqual(expected);
   });
 
   it('turns the light with its rotation, clockwise on screen for a positive one', async () => {
     // Godot 4.6.3 at rotation 0.5 shadows down and to the left of the occluder.
-    const { direction } = latest((await mountView({ godotRotation: 0.5 })).published);
-    expect(direction.x).toBeCloseTo(-Math.sin(0.5), 12);
-    expect(direction.y).toBeCloseTo(-Math.cos(0.5), 12);
+    const expected = binsOver(STAGE_CLIP, { x: -Math.sin(0.5), y: -Math.cos(0.5) });
+    expect(expected).not.toEqual(binsOver(STAGE_CLIP, DOWN));
+    expect(binsOf(await mountOnStage({ godotRotation: 0.5 }))).toEqual(expected);
   });
 
   it("clips to Godot's default project viewport at the canvas origin", async () => {
-    const { clip } = latest((await mountView()).published);
-    expect(clip.map(({ x, y }) => [x, y])).toEqual([
-      [0, -648],
-      [1152, -648],
-      [1152, 0],
-      [0, 0],
-    ]);
+    const shifted = clipOf(100, -648, 1152, 648);
+    const expected = binsOver(STAGE_CLIP, DOWN);
+    expect(expected).not.toEqual(binsOver(shifted, DOWN));
+    expect(binsOf(await mountOnStage())).toEqual(expected);
   });
 
   it('keeps max_distance in canvas pixels', async () => {
-    expect(latest((await mountView({ maxDistance: 100 })).published).maxDistance).toBe(100);
+    const expected = binsOver(STAGE_CLIP, DOWN, 100);
+    expect(expected).not.toEqual(binsOver(STAGE_CLIP, DOWN));
+    expect(binsOf(await mountOnStage({ maxDistance: 100 }))).toEqual(expected);
   });
 
-  it('publishes once for a still light, however many frames run', async () => {
-    const { renderer, published } = await mountView();
-    await ReactThreeTestRenderer.act(async () => {
-      renderer.advanceFrames(20, 1 / 60);
-    });
-    expect(published.filter((view) => view !== null)).toHaveLength(1);
-  });
-
-  it('publishes null while disabled', async () => {
-    const { published } = await mountView({ enabled: false });
-    expect(published.every((view) => view === null)).toBe(true);
+  it('writes nothing without an occluder', async () => {
+    const sampler = await mountOnStage({ casters: [] });
+    expect(sampler.map.version).toBe(0);
+    expect(sampler.ndcToShadow.equals(new THREE.Matrix3())).toBe(true);
   });
 
   describe('over a host that frames its own canvas', () => {
-    async function mountOver(host: LightPassHost) {
-      const published: Published = [];
-      const renderer = await ReactThreeTestRenderer.create(
-        <CanvasLightPass host={host} canvasModulate={WHITE}>
-          <ViewHarness published={published} />
-        </CanvasLightPass>
-      );
-      await ReactThreeTestRenderer.act(async () => {});
-      return { renderer, published };
-    }
-
     it("clips to the host's clip, as a SubViewport's Camera2D moves it", async () => {
       const host = fakeLightPassHost(1000, 1000);
-      host.clip = { rect: { x: 300, y: -700, w: 200, h: 100 }, scale: { x: 1, y: 1 } };
-      const { clip } = latest((await mountOver(host)).published);
-      expect(clip.map(({ x, y }) => [x, y])).toEqual([
-        [300, -700],
-        [500, -700],
-        [500, -600],
-        [300, -600],
-      ]);
+      host.clip = clipOf(300, -700, 200, 100);
+      const expected = binsOver(host.clip, DOWN);
+      expect(expected).not.toEqual(binsOver(STAGE_CLIP, DOWN));
+      expect(binsOf((await mountOver(host)).sampler)).toEqual(expected);
     });
 
     it("carries the host's scale, which a Camera2D zoom sets", async () => {
       const host = fakeLightPassHost(1000, 1000);
-      host.clip = { rect: host.clip.rect, scale: { x: 2, y: 3 } };
-      expect(latest((await mountOver(host)).published).scale).toEqual({ x: 2, y: 3 });
+      host.clip = clipOf(0, -1000, 1000, 1000, { x: 2, y: 3 });
+      const expected = binsOver(host.clip, DOWN);
+      expect(expected).not.toEqual(binsOver(clipOf(0, -1000, 1000, 1000), DOWN));
+      expect(binsOf((await mountOver(host)).sampler)).toEqual(expected);
     });
 
-    it("follows the host's clip on the next run of its pass", async () => {
+    it("follows the host's clip on the next run of its pass, before any React render", async () => {
       const host = fakeLightPassHost(1000, 1000);
-      const { published } = await mountOver(host);
-      host.clip = { rect: { x: 100, y: -900, w: 1000, h: 1000 }, scale: { x: 1, y: 1 } };
-      await ReactThreeTestRenderer.act(async () => host.run.current!());
-      expect(latest(published).clip[0]).toEqual({ x: 100, y: -900 });
+      const { sampler } = await mountOver(host);
+      host.clip = clipOf(100, -900, 1000, 1000);
+      host.run.current!();
+      expect(binsOf(sampler)).toEqual(binsOver(host.clip, DOWN));
     });
 
-    it('publishes nothing new while the clip stays', async () => {
+    it('builds the map only when the clip, the light or the occluders change', async () => {
       const host = fakeLightPassHost(1000, 1000);
-      const { published } = await mountOver(host);
-      await ReactThreeTestRenderer.act(async () => {
-        for (let frame = 0; frame < 5; frame += 1) host.run.current!();
-      });
-      expect(published.filter((view) => view !== null)).toHaveLength(1);
+      const { sampler } = await mountOver(host);
+      const written = sampler.map.version;
+      for (let frame = 0; frame < 5; frame += 1) host.run.current!();
+      expect(sampler.map.version).toBe(written);
+    });
+
+    it('builds the map again for new occluders', async () => {
+      const host = fakeLightPassHost(1000, 1000);
+      let sampler!: DirectionalShadowSampler;
+      const mount = (casters: readonly ShadowCasterEdges[]) => (
+        <CanvasLightPass host={host} canvasModulate={WHITE}>
+          <SamplerHarness onSampler={(s) => (sampler = s)} casters={casters} />
+        </CanvasLightPass>
+      );
+      const renderer = await ReactThreeTestRenderer.create(mount(CASTERS));
+      await ReactThreeTestRenderer.act(async () => {});
+      const before = binsOf(sampler);
+      await renderer.update(mount([box(100, -200)]));
+      expect(binsOf(sampler)).not.toEqual(before);
     });
   });
 });
 
-/** Reports the matrix the hook returns for a map over a 1000 px square viewport. */
-function NdcHarness({ onMatrix }: { onMatrix: (matrix: THREE.Matrix3) => void }) {
-  const map = buildDirectionalShadowMap(
-    {
-      clip: [
-        { x: 0, y: 0 },
-        { x: 1000, y: 0 },
-        { x: 1000, y: 1000 },
-        { x: 0, y: 1000 },
-      ],
-      direction: { x: 0, y: -1 },
-      maxDistance: 0,
-      scale: { x: 1, y: 1 },
-    },
-    []
-  );
-  const [worldToShadow] = useState(() => map.worldToShadow);
-  onMatrix(useNdcToShadow(worldToShadow));
-  return null;
-}
-
 /** An orthographic camera showing the square exactly: x 0..1000, y 0..1000. */
-function squareCamera(): THREE.OrthographicCamera {
-  // `manual`, so R3F keeps these bounds rather than refitting them to the test canvas.
-  const camera = Object.assign(new THREE.OrthographicCamera(-500, 500, 500, -500, 0.1, 100), {
-    manual: true,
-  });
-  camera.position.set(500, 500, 10);
-  camera.updateProjectionMatrix();
-  return camera;
+function squareHost(): ReturnType<typeof fakeLightPassHost> {
+  const host = fakeLightPassHost(1000, 1000);
+  host.clip = clipOf(0, 0, 1000, 1000);
+  host.camera.position.set(500, 500, 10);
+  host.camera.updateProjectionMatrix();
+  return host;
 }
 
 /** `(u, depth)` at an NDC point through `matrix`. */
@@ -189,59 +209,33 @@ function lookup(matrix: THREE.Matrix3, x: number, y: number): [number, number] {
   return [point.x, point.y];
 }
 
-describe('useNdcToShadow', () => {
-  it("maps the camera's NDC onto the map: NDC (0, 0.2) is world (500, 600), 400 px deep", async () => {
-    let matrix = new THREE.Matrix3();
-    const camera = squareCamera();
-    await ReactThreeTestRenderer.create(stage(<NdcHarness onMatrix={(m) => (matrix = m)} />), { camera });
-    await ReactThreeTestRenderer.act(async () => {});
-    const [u, depth] = lookup(matrix, 0, 0.2);
+describe('useDirectionalShadow, in the lookup it writes', () => {
+  it("maps the host camera's NDC onto the map: NDC (0, 0.2) is world (500, 600), 400 px deep", async () => {
+    const { sampler } = await mountOver(squareHost());
+    const [u, depth] = lookup(sampler.ndcToShadow, 0, 0.2);
     expect(u).toBeCloseTo(0.5, 9);
     expect(depth).toBeCloseTo(0.4, 9);
   });
 
-  it('follows a pan on the next frame in the same matrix, with no republish', async () => {
-    const matrices = new Set<THREE.Matrix3>();
-    const camera = squareCamera();
-    const renderer = await ReactThreeTestRenderer.create(
-      stage(<NdcHarness onMatrix={(m) => matrices.add(m)} />),
-      {
-        camera,
-      }
-    );
-    camera.position.x += 100;
-    await ReactThreeTestRenderer.act(async () => {
-      renderer.advanceFrames(1, 1 / 60);
-    });
-    const [matrix] = [...matrices];
-    expect(matrices.size).toBe(1);
-    // NDC 0 is now world x 600, 100 px right of the centre over the 1414.2 px diagonal.
-    expect(lookup(matrix!, 0, 0)[0]).toBeCloseTo(0.5 + 100 / (1000 * Math.SQRT2), 9);
-  });
-
-  it("follows the host's camera at its pass, not the canvas camera of the renderer", async () => {
-    let matrix = new THREE.Matrix3();
-    const host = fakeLightPassHost(1000, 1000);
-    host.camera.position.set(500, 500, 10);
-    host.camera.updateProjectionMatrix();
-    await ReactThreeTestRenderer.create(
-      <CanvasLightPass host={host} canvasModulate={WHITE}>
-        <NdcHarness onMatrix={(m) => (matrix = m)} />
-      </CanvasLightPass>
-    );
-    await ReactThreeTestRenderer.act(async () => {});
+  it('follows a pan on the next run in the same matrix', async () => {
+    const host = squareHost();
+    const { sampler } = await mountOver(host);
+    const { ndcToShadow } = sampler;
     host.camera.position.x += 100;
-    await ReactThreeTestRenderer.act(async () => host.run.current!());
-    expect(lookup(matrix, 0, 0)[0]).toBeCloseTo(0.5 + 100 / (1000 * Math.SQRT2), 9);
+    host.run.current!();
+    // NDC 0 is now world x 600, 100 px right of the centre over the 1414.2 px diagonal.
+    expect(lookup(ndcToShadow, 0, 0)[0]).toBeCloseTo(0.5 + 100 / (1000 * Math.SQRT2), 9);
+    expect(sampler.ndcToShadow).toBe(ndcToShadow);
   });
 
-  it('holds the identity until a map exists', async () => {
-    let matrix: THREE.Matrix3 | null = null;
-    function Empty() {
-      matrix = useNdcToShadow(null);
-      return null;
-    }
-    await ReactThreeTestRenderer.create(<Empty />);
-    expect(matrix!.equals(new THREE.Matrix3())).toBe(true);
+  it('describes the same frame as the map when both the clip and the camera move', async () => {
+    const host = squareHost();
+    const { sampler } = await mountOver(host);
+    host.clip = clipOf(100, 0, 1000, 1000);
+    host.camera.position.x += 100;
+    host.run.current!();
+    expect(binsOf(sampler)).toEqual(binsOver(host.clip, DOWN));
+    // The map spans world x 100..1100, so NDC 0 at world x 600 is its centre.
+    expect(lookup(sampler.ndcToShadow, 0, 0)[0]).toBeCloseTo(0.5, 9);
   });
 });
