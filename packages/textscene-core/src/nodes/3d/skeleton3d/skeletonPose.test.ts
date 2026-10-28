@@ -7,7 +7,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { identityTransform3D, multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
-import { automaticSkinMatrices, newBone, type Bone, type BonePoses, type PoseModifier } from './skeletonPose';
+import {
+  animatedBones,
+  automaticSkinMatrices,
+  newBone,
+  unknownBoneNames,
+  type Bone,
+  type BonePoses,
+  type PoseModifier,
+} from './skeletonPose';
 
 const QUARTER_TURN_Z = { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 };
 
@@ -294,3 +302,65 @@ function quarterTurnZ(): Transform3D {
     origin: { x: 0, y: 0, z: 0 },
   };
 }
+
+describe('animatedBones', () => {
+  const FILE_POSE = [
+    bone('b0', -1, [0, 0.5, 0], { rotation: QUARTER_TURN_Z, scale: { x: 2, y: 2, z: 2 } }),
+    bone('b1', 0, [0, -0.2, 0]),
+  ];
+
+  it('lays the parts a clip writes over the file pose of the bone it names, and leaves the other parts', () => {
+    const [first, second] = animatedBones(
+      FILE_POSE,
+      new Map([['b0', { position: { x: 1, y: 2, z: 3 } }]]),
+      1
+    );
+
+    expect(first).toEqual({ ...FILE_POSE[0], position: { x: 1, y: 2, z: 3 } });
+    expect(second).toBe(FILE_POSE[1]);
+  });
+
+  it('multiplies a position by the motion scale and nothing else, as the mixer does', () => {
+    const [first] = animatedBones(
+      FILE_POSE,
+      new Map([['b0', { position: { x: 1, y: 2, z: 3 }, scale: { x: 4, y: 5, z: 6 } }]]),
+      2
+    );
+
+    expect(first!.position).toEqual({ x: 2, y: 4, z: 6 });
+    expect(first!.scale).toEqual({ x: 4, y: 5, z: 6 });
+  });
+
+  it('normalises a rotation, as the blend of the mixer returns it', () => {
+    const [first] = animatedBones(FILE_POSE, new Map([['b0', { rotation: { x: 0, y: 0, z: 2, w: 0 } }]]), 1);
+
+    expect(first!.rotation).toEqual({ x: 0, y: 0, z: 1, w: 0 });
+  });
+
+  it('writes the first bone of a name, which is the one find_bone answers', () => {
+    const twins = [bone('twin', -1, [0, 0, 0]), bone('twin', -1, [0, 0, 0])];
+
+    const [first, second] = animatedBones(twins, new Map([['twin', { position: { x: 1, y: 1, z: 1 } }]]), 1);
+
+    expect(first!.position).toEqual({ x: 1, y: 1, z: 1 });
+    expect(second).toBe(twins[1]);
+  });
+
+  it('changes nothing for a name the skeleton lacks', () => {
+    expect(animatedBones(FILE_POSE, new Map([['ghost', { position: { x: 9, y: 9, z: 9 } }]]), 1)).toEqual(
+      FILE_POSE
+    );
+  });
+});
+
+describe('unknownBoneNames', () => {
+  it('lists the names of a pose that no bone of the skeleton carries', () => {
+    const pose = new Map([
+      ['b0', {}],
+      ['ghost', {}],
+      ['other', {}],
+    ]);
+
+    expect(unknownBoneNames(CHAIN, pose)).toEqual(['ghost', 'other']);
+  });
+});

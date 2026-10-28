@@ -1,8 +1,8 @@
 /**
  * Resolves an AnimationPlayer's libraries into typed GodotAnimations, THREE-free and React-free, so a
  * linter rule can use it too. It reads `value` tracks (dict-form keys) and the 3D transform tracks
- * `position_3d`/`rotation_3d`/`scale_3d` (flat keys). Other track types and skeletal bone sub-paths
- * (`Node:bone`) resolve to nothing, and anything unparseable is skipped, not thrown.
+ * `position_3d`/`rotation_3d`/`scale_3d` (flat keys), a bone of a Skeleton3D (`Node:bone`) among
+ * them. Other track types resolve to nothing, and anything unparseable is skipped, not thrown.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -34,6 +34,11 @@ export interface GodotTrack {
   /** Node portion of the track's NodePath, relative to the animation root. */
   targetPath: string;
   /**
+   * The bone a 3D transform track names with its one subname (`Skeleton3D:b4`), else undefined. The
+   * mixer binds it to the bone when the target is a Skeleton3D (`animation_mixer.cpp:791-803`).
+   */
+  bone?: string;
+  /**
    * The animated transform property. For `value` tracks this is the NodePath's
    * property part (`position`, `rotation`, …). For 3D transform tracks it is
    * derived from the track type: `position`, `scale`, or `quaternion`.
@@ -49,6 +54,8 @@ export interface GodotTrack {
    * FORCES nearest interpolation regardless of `interp` (`animation.cpp`).
    */
   updateMode?: number;
+  /** `Track::loop_wrap` (`animation.h:110`): whether the span past the last key runs on to the first. */
+  loopWrap: boolean;
   keys: GodotKeyframe[];
 }
 
@@ -115,6 +122,11 @@ export function resolveAudioTrackPaths(
  */
 function trackEnabled(data: Readonly<Record<string, string>>, i: number): boolean {
   return boolSlotValue(data[`tracks/${i}/enabled`]) !== false;
+}
+
+/** `Track::loop_wrap`, true unless `tracks/N/loop_wrap` says otherwise (animation.cpp:152-153). */
+function trackLoopWraps(data: Readonly<Record<string, string>>, i: number): boolean {
+  return boolSlotValue(data[`tracks/${i}/loop_wrap`]) !== false;
 }
 
 /** Every enabled audio track's raw NodePath inner string within one Animation resource's data. */
@@ -192,6 +204,7 @@ function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[] {
     // update_mode to 0 (CONTINUOUS).
     const interp = numberOr(data[`tracks/${i}/interp`], 1);
     const updateMode = numberOr(data[`tracks/${i}/update`], 0);
+    const loopWrap = trackLoopWraps(data, i);
 
     // `hasOwn` so a track type that collides with an Object.prototype key
     // (for example "constructor", "toString") does not resolve to an inherited member.
@@ -199,14 +212,21 @@ function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[] {
     if (transform3d) {
       const inner = extractNodePathInner(rawPath);
       if (inner === null) continue;
-      // A `:` segment is a skeleton bone sub-path (for example `Skeleton3D:body`). Binding one needs
-      // Skeleton3D bone rendering, so skip it rather than bind the whole transform to the skeleton.
-      if (inner.includes(':')) continue;
+      const target = parseBoneNodePath(inner);
+      if (target === null) continue;
 
       const keys = parseFlatTransformKeys(rawKeys, transform3d.components);
       if (keys.length === 0) continue;
 
-      tracks.push({ type, targetPath: inner, property: transform3d.property, interp, updateMode, keys });
+      tracks.push({
+        type,
+        ...target,
+        property: transform3d.property,
+        interp,
+        updateMode,
+        loopWrap,
+        keys,
+      });
       continue;
     }
 
@@ -224,6 +244,7 @@ function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[] {
       property: target.property,
       interp,
       updateMode,
+      loopWrap,
       keys,
     });
   }
@@ -232,6 +253,18 @@ function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[] {
 
 /** The path a whole NodePath-slot value names ({@link nodePathLiteral}), or null. */
 export const extractNodePathInner = nodePathLiteral;
+
+/**
+ * The node and the bone of a transform track's path. One subname names a bone (`Skeleton3D:b4`),
+ * which `AnimationMixer` binds when the node is a Skeleton3D (`animation_mixer.cpp:795`). A path with
+ * two subnames or more binds none, so it resolves to nothing (null).
+ */
+function parseBoneNodePath(inner: string): { targetPath: string; bone?: string } | null {
+  const colon = inner.indexOf(':');
+  if (colon === -1) return { targetPath: inner };
+  const bone = inner.slice(colon + 1);
+  return bone.includes(':') ? null : { targetPath: inner.slice(0, colon), bone };
+}
 
 function parseNodePath(raw: string): { targetPath: string; property: string } | null {
   const inner = extractNodePathInner(raw);

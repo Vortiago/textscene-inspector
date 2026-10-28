@@ -10,6 +10,7 @@ describe('formatSkeleton3DProperties', () => {
       transform: { ...identityTransform3D(), origin: { x: 1, y: 2, z: 3 } },
       bones: [newBone('a'), newBone('b')],
       showRestOnly: true,
+      motionScale: 1,
     });
 
     expect(sections[0]).toEqual({
@@ -23,7 +24,12 @@ describe('formatSkeleton3DProperties', () => {
   });
 
   it('counts no bone for a skeleton that adds none (edge case)', () => {
-    const [section] = formatSkeleton3DProperties({ name: 'S', bones: [], showRestOnly: false });
+    const [section] = formatSkeleton3DProperties({
+      name: 'S',
+      bones: [],
+      showRestOnly: false,
+      motionScale: 1,
+    });
 
     expect(section!.items[0]).toEqual({ label: 'Bones', value: '0' });
   });

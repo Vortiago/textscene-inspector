@@ -19,7 +19,7 @@ function anim(name: string, length: number, tracks: GodotTrack[]): GodotAnimatio
 }
 
 function track(property: string, keys: GodotTrack['keys'], targetPath = 'Target'): GodotTrack {
-  return { type: 'value', targetPath, property, interp: 1, keys };
+  return { type: 'value', targetPath, property, interp: 1, loopWrap: true, keys };
 }
 
 function findTrack(clip: ReturnType<typeof buildClip>, name: string) {
@@ -127,9 +127,32 @@ describe('buildClip — rotation actually drives the quaternion (regression)', (
   });
 });
 
+describe('buildClip — bone tracks', () => {
+  const boneTrack: GodotTrack = {
+    type: 'position_3d',
+    targetPath: 'Skeleton',
+    bone: 'b4',
+    property: 'position',
+    interp: 1,
+    loopWrap: true,
+    keys: [{ time: 0, value: [1, 2, 3], transition: 1 }],
+  };
+
+  it('builds no THREE track for a bone, which the Skeleton3D pose plays instead', () => {
+    expect(build(anim('a', 1, [boneTrack])).tracks).toEqual([]);
+  });
+
+  it('warns once for a bone track whose skeleton the walk leaves the scene', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    buildClip(anim('a', 1, [boneTrack]), () => null);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+});
+
 describe('buildClip — quaternion (rotation_3d)', () => {
   function quatTrack(keys: GodotTrack['keys'], targetPath = 'Target'): GodotTrack {
-    return { type: 'rotation_3d', targetPath, property: 'quaternion', interp: 1, keys };
+    return { type: 'rotation_3d', targetPath, property: 'quaternion', interp: 1, loopWrap: true, keys };
   }
 
   it('maps a length-4 quaternion track to a QuaternionKeyframeTrack on <path>.quaternion', () => {

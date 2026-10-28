@@ -9,4 +9,6 @@ export interface Skeleton3DProperties extends Node3DProperties {
   bones: Bone[];
   /** Every bone takes its rest in place of its pose. */
   showRestOnly: boolean;
+  /** Multiplies a bone position that an animation writes (`animation_mixer.cpp:1020-1023`). */
+  motionScale: number;
 }

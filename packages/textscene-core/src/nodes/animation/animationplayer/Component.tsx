@@ -32,7 +32,9 @@ import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { AnimationLoopMode } from '../../../godot/scene/animation.js';
+import { boneTracksOf } from './boneTracks';
 import { buildClip } from './clipBuilder';
+import { useBonePoses } from './useBonePoses';
 import { sampleSteppedValue, sampleInterpolatedValue, VALUE_PUSH_PROPERTIES } from './valueTracks';
 
 import type { AnimationPlayerProperties } from './types';
@@ -225,6 +227,15 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     });
     ownedValues.current = next;
   });
+
+  // The bone tracks of the selected clip write the pose of a Skeleton3D, which the mixer cannot (ADR-0011).
+  const boneClip = useMemo(() => {
+    if (!isDriving) return null;
+    const clip = animations.find((a) => a.name === transport.selectedClip);
+    const tracks = clip ? boneTracksOf(clip, scenePathOf) : [];
+    return clip && tracks.length > 0 ? { name: clip.name, tracks } : null;
+  }, [isDriving, scenePathOf, animations, transport.selectedClip]);
+  useBonePoses(boneClip, transport.playState === 'playing' || transport.playState === 'paused', actionsRef);
 
   // Release the moment this player stops driving (stop, deselect, or a switch to a clip with no
   // value tracks) in an effect, not a frame tick, so the authored values return even when a state

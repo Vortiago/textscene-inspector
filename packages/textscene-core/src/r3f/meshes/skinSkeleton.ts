@@ -2,12 +2,16 @@
  * The THREE.Skeleton a scene Skeleton3D's skin gives a mesh. A skinned mesh draws detached from its
  * skeleton, so each bone carries the skin matrix of its bind in its world matrix, in mesh space,
  * and an identity inverse: three then skins a vertex by the weighted sum of those matrices, as
- * `skeleton.glsl:248-291` does.
+ * `skeleton.glsl:248-291` does. An AnimationPlayer that writes bone poses to the Skeleton3D moves
+ * the skin in place, through the matrices of the bones, and builds nothing again.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { Transform3D } from '../../godot/math/transform3d.js';
+import type { BoundSkin } from '../../nodes/3d/skeleton3d/skeletonBindings.js';
+import type { AnimatedPose } from '../../nodes/3d/skeleton3d/skeletonPose.js';
+import { useAnimatedBonePoses } from '../contexts/AnimatedBonePosesContext.js';
 import { transform3DToMatrix } from '../nodeTreeTransforms.js';
 import { useByValue } from '../hooks/useByValue.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
@@ -27,20 +31,24 @@ function boneCountOf(geometry: THREE.BufferGeometry): number {
   return highest + 1;
 }
 
+function boneMatrixOf(skinMatrix: Transform3D | undefined): THREE.Matrix4 {
+  return skinMatrix ? transform3DToMatrix(skinMatrix) : MISSING_BONE_MATRIX;
+}
+
 function boneOf(skinMatrix: Transform3D | undefined): THREE.Bone {
   const bone = new THREE.Bone();
   // Never in a scene graph, so nothing recomputes the world matrix written here.
   bone.matrixAutoUpdate = false;
   bone.matrixWorldAutoUpdate = false;
-  bone.matrixWorld.copy(skinMatrix ? transform3DToMatrix(skinMatrix) : MISSING_BONE_MATRIX);
+  bone.matrixWorld.copy(boneMatrixOf(skinMatrix));
   return bone;
 }
 
 /**
- * A skeleton whose bones never move: it fills its bone matrices once, and `update` leaves them, so
- * the renderer neither multiplies every bone nor uploads the bone texture again each frame.
+ * A skeleton whose bones move only when `writeSkin` says so: `update` leaves them, so the renderer
+ * neither multiplies every bone nor uploads the bone texture again each frame.
  */
-class FrozenSkeleton extends THREE.Skeleton {
+class SkinSkeleton extends THREE.Skeleton {
   constructor(bones: THREE.Bone[]) {
     super(
       bones,
@@ -50,6 +58,12 @@ class FrozenSkeleton extends THREE.Skeleton {
   }
 
   override update(): void {}
+
+  /** Moves each bone to its matrix of `skinMatrices` and fills the bone matrices from them, in place. */
+  writeSkin(skinMatrices: readonly Transform3D[]): void {
+    this.bones.forEach((bone, i) => bone.matrixWorld.copy(boneMatrixOf(skinMatrices[i])));
+    super.update();
+  }
 }
 
 function sameMatrices(a: readonly Transform3D[] | undefined, b: readonly Transform3D[] | undefined): boolean {
@@ -57,22 +71,41 @@ function sameMatrices(a: readonly Transform3D[] | undefined, b: readonly Transfo
 }
 
 /**
- * The skeleton of `skinMatrices` for the skinned `geometry`, or null for a geometry with no bone
- * arrays or a node that binds no skeleton. Disposed once nothing draws it.
+ * The skeleton of the `skin` of a Skeleton3D for the skinned `geometry`, or null for a geometry with
+ * no bone arrays or a node that binds no skeleton. It takes the bone poses that an AnimationPlayer
+ * writes to the Skeleton3D, and the file pose again once they are released. Disposed once nothing
+ * draws it.
  *
  * @canonical The THREE.Skeleton a scene Skeleton3D gives a mesh
  */
 export function useSkinSkeleton(
   geometry: THREE.BufferGeometry | undefined,
-  skinMatrices: readonly Transform3D[] | undefined
+  skin: BoundSkin | undefined
 ): THREE.Skeleton | null {
   // By value, so a re-parse that builds the same skin again does not rebuild the skeleton.
-  const stableMatrices = useByValue(skinMatrices, sameMatrices);
+  const stableMatrices = useByValue(skin?.matrices, sameMatrices);
   const skeleton = useMemo(() => {
     if (!geometry?.getAttribute('skinIndex') || !stableMatrices) return null;
     const bones = Array.from({ length: boneCountOf(geometry) }, (_unused, i) => boneOf(stableMatrices[i]));
-    return new FrozenSkeleton(bones);
+    return new SkinSkeleton(bones);
   }, [geometry, stableMatrices]);
   useDisposeOnRelease(skeleton);
+  useAnimatedPose(skeleton, skin);
   return skeleton;
+}
+
+/**
+ * Follows the poses written to the Skeleton3D of `skin`, starting on the ones already written, and
+ * writes the file pose back where they are released.
+ */
+function useAnimatedPose(skeleton: SkinSkeleton | null, skin: BoundSkin | undefined): void {
+  const poses = useAnimatedBonePoses();
+  useEffect(() => {
+    if (!skeleton || !skin) return;
+    const follow = (pose: AnimatedPose | null) =>
+      skeleton.writeSkin(pose ? skin.matricesUnder(pose) : skin.matrices);
+    const written = poses.get(skin.skeletonPath);
+    if (written) follow(written);
+    return poses.subscribe(skin.skeletonPath, follow);
+  }, [skeleton, skin, poses]);
 }

@@ -14,7 +14,8 @@ import {
   transform3DFromQuaternionScale,
   type Transform3D,
 } from '../../../godot/math/transform3d.js';
-import type { Quaternion } from '../../../godot/math/quaternion.js';
+import { normalizedQuaternion, type Quaternion } from '../../../godot/math/quaternion.js';
+import { storedReal as f } from '../../../godot/math/real.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
 
 /** One entry of `bones/<i>/…` (`skeleton_3d.h:105-113`). */
@@ -40,6 +41,47 @@ export function newBone(name: string): Bone {
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   };
+}
+
+/** The parts of a bone pose that a clip writes: a part it does not key stays undefined and keeps the file pose. */
+export interface BonePose {
+  position?: Vector3;
+  rotation?: Quaternion;
+  scale?: Vector3;
+}
+
+/** The poses a clip writes to a skeleton, by bone name. */
+export type AnimatedPose = ReadonlyMap<string, BonePose>;
+
+/**
+ * The bones with the poses of a clip over their file pose, as `AnimationMixer` applies a bone track
+ * (`animation_mixer.cpp:1878-1891`). A name finds the first bone of that name, as `find_bone` does, and
+ * a name no bone carries writes nothing. A position takes the `motion_scale` of the skeleton
+ * (`:1016-1024`), and a rotation comes out of the blend normalised.
+ */
+export function animatedBones(bones: readonly Bone[], animated: AnimatedPose, motionScale: number): Bone[] {
+  const written = new Set<string>();
+  return bones.map((bone) => {
+    const pose = animated.get(bone.name);
+    if (!pose || written.has(bone.name)) return bone;
+    written.add(bone.name);
+    return {
+      ...bone,
+      ...(pose.position && { position: scaledBy(pose.position, motionScale) }),
+      ...(pose.rotation && { rotation: normalizedQuaternion(pose.rotation) }),
+      ...(pose.scale && { scale: pose.scale }),
+    };
+  });
+}
+
+function scaledBy({ x, y, z }: Vector3, factor: number): Vector3 {
+  return { x: f(x * factor), y: f(y * factor), z: f(z * factor) };
+}
+
+/** The names of `animated` that no bone of `bones` carries. */
+export function unknownBoneNames(bones: readonly Bone[], animated: AnimatedPose): string[] {
+  const names = new Set(bones.map((bone) => bone.name));
+  return [...animated.keys()].filter((name) => !names.has(name));
 }
 
 /**

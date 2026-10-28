@@ -455,7 +455,7 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     expect(anim.tracks[0]!.keys[0]!.transition).toBe(0.25);
   });
 
-  it('skips skeletal bone sub-path tracks (Node:bone) but keeps plain-node tracks', () => {
+  it('names the bone of a transform track on Skeleton3D:bone and keeps the path to the skeleton', () => {
     const internal = [
       subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
       subResource('Animation', 'A', {
@@ -468,7 +468,39 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
       }),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
-    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Mesh']);
+    expect(anim.tracks.map((t) => [t.targetPath, t.bone])).toEqual([
+      ['Skeleton/Skeleton3D', 'body'],
+      ['Mesh', undefined],
+    ]);
+  });
+
+  it('skips a transform track whose path holds more than one subname, as the mixer binds no bone to it', () => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"rotation_3d"',
+        'tracks/0/path': 'NodePath("Skeleton3D:body:x")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it.each([
+    ['wraps when loop_wrap is absent', undefined, true],
+    ['wraps when loop_wrap is true', 'true', true],
+    ['does not wrap when loop_wrap is false', 'false', false],
+  ])('a track %s', (_name, loopWrap, expected) => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
+        ...(loopWrap === undefined ? {} : { 'tracks/0/loop_wrap': loopWrap }),
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks[0]!.loopWrap).toBe(expected);
   });
 
   it('does not treat an Object.prototype key (e.g. "constructor") as a transform track type', () => {

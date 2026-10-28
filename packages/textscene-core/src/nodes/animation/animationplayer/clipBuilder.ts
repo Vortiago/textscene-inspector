@@ -2,7 +2,8 @@
  * Builds a THREE.AnimationClip template from a resolved GodotAnimation. Each track is named by its
  * target's scene path (`Root/Arm.position`), which `r3f/animation/trackTargets.ts` binds to the
  * exact object (ADR-0011). It builds position, scale, rotation and rotation_degrees (as radians) in
- * 3D and 2D, and the `quaternion` of Godot's `rotation_3d` tracks. It drops every other track.
+ * 3D and 2D, and the `quaternion` of Godot's `rotation_3d` tracks. It drops every other track, and
+ * a bone track too: the Skeleton3D pose plays it (`boneTracks.ts`).
  */
 
 import {
@@ -44,6 +45,7 @@ function buildTracks(track: GodotTrack, scenePathOf: ScenePathOf): KeyframeTrack
     );
     return [];
   }
+  if (track.bone !== undefined) return [];
   const built = buildTrackData(track, scenePath);
   const interpolation = threeInterpolation(track);
   for (const t of built) t.setInterpolation(interpolation);

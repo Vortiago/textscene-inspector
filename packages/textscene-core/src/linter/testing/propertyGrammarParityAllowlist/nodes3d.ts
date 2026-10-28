@@ -26,14 +26,12 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // A wildcard validator. `readBones` reads it in a loop over Object.keys, which the
       // properties.X scrape cannot see.
       'bones/*',
-      // Physics bones, the modifier schedule and the animation root-motion scale never move
-      // a frozen frame.
+      // Physics bones and the modifier schedule never move a frozen frame.
       'animate_physical_bones',
       'modifier_callback_mode_process',
-      'motion_scale',
     ],
     reason:
-      'The bone table is read through readBones, a loop over the bones/<index>/<leaf> keys. The other three keys shape physics, modifier timing and animation, not the rest or the pose.',
+      'The bone table is read through readBones, a loop over the bones/<index>/<leaf> keys. The other two keys shape physics and modifier timing, not the rest or the pose.',
   },
 
   BoneConstraint3D: {

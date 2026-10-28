@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that poses the meshes bound to it)
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton`, with `skin` unset, to Godot's automatic skin. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
+Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. An AnimationPlayer that plays a clip writes the pose of each bone the clip keys, with the position scaled by `motion_scale`. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton`, with `skin` unset, to Godot's automatic skin. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
 
 ## Linting
 
@@ -35,11 +35,11 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited fr
 |  | `skeleton3d-duplicate-bone-name` | error |
 <!-- lint:end -->
 
-The parser reads `show_rest_only` and the bone table: `name`, `parent`, `rest`, `enabled`, `position`, `rotation` and `scale`. It does not read `motion_scale`, `animate_physical_bones` or `modifier_callback_mode_process`, which never move a frozen frame.
+The parser reads `show_rest_only` and the bone table: `name`, `parent`, `rest`, `enabled`, `position`, `rotation` and `scale`. It reads `motion_scale`. It does not read `animate_physical_bones` or `modifier_callback_mode_process`, which never move a frozen frame.
 
 ## Known limitations
 
-- **Needs runtime** Godot plays bone animation and runs every SkeletonModifier3D type, but here only the file pose and a CopyTransformModifier3D act.
+- **Needs runtime** Godot runs every SkeletonModifier3D type, but here only the bone pose and a CopyTransformModifier3D act.
 - **Approximated** Only a RibbonTrailMesh deforms, as no other mesh writes bone arrays, so every other mesh bound to a skeleton draws in its rest pose.
 - **Approximated** A bone past the skin's last index collapses its vertices, where Godot's result depends on the GPU driver.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.
