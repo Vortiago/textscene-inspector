@@ -379,7 +379,8 @@ describe('<MeshInstance3D> external PrimitiveMesh', () => {
 
   it('draws the placeholder for a TextMesh with no readable font', async () => {
     const mesh = await renderCrate({
-      [WALL_PATH]: '[gd_resource type="TextMesh" format=3]\n\n[resource]\n',
+      [WALL_PATH]:
+        '[gd_resource type="TextMesh" format=3]\n\n[sub_resource type="SystemFont" id="SystemFont_item"]\n\n[resource]\nfont = SubResource("SystemFont_item")\n',
     });
     expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });

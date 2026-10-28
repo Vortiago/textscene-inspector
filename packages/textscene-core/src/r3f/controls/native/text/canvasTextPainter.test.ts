@@ -11,7 +11,9 @@ import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
 import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
+import type { GlyphContours } from './glyphContours';
+import type { SfntOutlines } from './sfntOutlines';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -88,7 +90,7 @@ function boldLayoutFor(text: string, embolden: number) {
 }
 
 // `FT_Outline_Embolden` grows the outline by `embolden * size / 16` px and anchors it at the left
-// and bottom (`text_server_adv.cpp:1313-1314`): half the growth on each side, then a shift of half.
+// and bottom (`text_server_adv.cpp:1314-1315`): half the growth on each side, then a shift of half.
 describe('embolden padding', () => {
   it('pads the raster by the outline growth on every side, so the grown ink stays inside it', () => {
     const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
@@ -140,6 +142,163 @@ describe('paintSceneFontCanvas — embolden', () => {
     expect(calls[0]!.args).toEqual(expectedArgs);
     expect(calls[1]!.args).toEqual(expectedArgs);
     expect(calls[1]!.lineWidth).toBeCloseTo(growthPx, 10);
+  });
+});
+
+describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  interface Call {
+    op: string;
+    args: unknown[];
+    lineWidth: number;
+    /** The horizontal shear (`c`) of the transform in force. */
+    shear: number;
+  }
+
+  /** The grown outline of a glyph: a triangle, whose points the tests read back from the path. */
+  const GROWN_TRIANGLE: GlyphContours = {
+    points: [
+      { x: 1, y: 0, tag: ContourPointTag.ON },
+      { x: 5, y: 0, tag: ContourPointTag.ON },
+      { x: 3, y: -6, tag: ContourPointTag.ON },
+    ],
+    contourEnds: [2],
+    isFillRight: true,
+  };
+
+  function outlinesStub(glyphIndex = 7) {
+    const glyphContours = vi.fn(() => GROWN_TRIANGLE);
+    return {
+      outlines: { glyphIndex: () => glyphIndex, glyphContours } satisfies SfntOutlines,
+      glyphContours,
+    };
+  }
+
+  /** Records every draw call of one stroked paint: happy-dom has no 2D context. */
+  function paintStrokedRecording(
+    layout: ReturnType<typeof layoutFor>,
+    strokeWidthPx: number,
+    { skew = 0, outlines = null }: { skew?: number; outlines?: SfntOutlines | null } = {}
+  ) {
+    const calls: Call[] = [];
+    let matrix = new DOMMatrix();
+    const saved: DOMMatrix[] = [];
+    const record = (op: string, args: unknown[]) =>
+      calls.push({ op, args, lineWidth: ctx.lineWidth, shear: matrix.c });
+    const ctx = {
+      lineWidth: 1,
+      save: () => saved.push(matrix),
+      restore: () => {
+        matrix = saved.pop()!;
+      },
+      transform: (a: number, b: number, c: number, d: number, e: number, f: number) => {
+        matrix = matrix.multiply(new DOMMatrix([a, b, c, d, e, f]));
+      },
+      strokeText: (...args: unknown[]) => record('strokeText', args),
+      beginPath: (...args: unknown[]) => record('beginPath', args),
+      moveTo: (...args: unknown[]) => record('moveTo', args),
+      lineTo: (...args: unknown[]) => record('lineTo', args),
+      closePath: (...args: unknown[]) => record('closePath', args),
+      stroke: (...args: unknown[]) => record('stroke', args),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
+    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, skew, canvasLayout, strokeWidthPx, outlines);
+    return { calls, canvasLayout };
+  }
+
+  it('strokes a plain glyph once, centred on its contour at its pen', () => {
+    const layout = layoutFor('A', 0);
+    const { outlines } = outlinesStub();
+    const { calls, canvasLayout } = paintStrokedRecording(layout, 4, { outlines });
+
+    expect(calls).toEqual([
+      {
+        op: 'strokeText',
+        args: ['A', canvasLayout.offsetXPx, canvasLayout.offsetYPx + layout.baselineOffsetPx],
+        lineWidth: 4,
+        shear: 0,
+      },
+    ]);
+  });
+
+  // FreeType strokes the emboldened contour (`text_server_adv.cpp:1314-1315`, then `:1383-1390`),
+  // which `FT_Outline_Embolden` has already shifted right and up.
+  it('strokes the grown outline of a bold glyph from its pen, in place of the text', () => {
+    const layout = boldLayoutFor('A', 1.2);
+    const { outlines, glyphContours } = outlinesStub(7);
+    const { calls, canvasLayout } = paintStrokedRecording(layout, 4, { outlines });
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+    const penX = canvasLayout.offsetXPx;
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'stroke',
+    ]);
+    expect(calls[1]!.args).toEqual([penX + 1, baselineY]);
+    expect(calls[3]!.args).toEqual([penX + 3, baselineY - 6]);
+    expect(calls.at(-1)!.lineWidth).toBe(4);
+  });
+
+  it('grows the outline of a repeated character once for the whole paint', () => {
+    const { outlines, glyphContours } = outlinesStub();
+
+    paintStrokedRecording(boldLayoutFor('AAA', 1.2), 4, { outlines });
+
+    expect(glyphContours).toHaveBeenCalledTimes(1);
+  });
+
+  // Godot strokes the sheared outline (`text_server_adv.cpp:1318-1320`, then `:1383-1390`), so the
+  // shear is in the path points and the line keeps its width in every direction.
+  it('strokes the sheared outline of a sheared glyph under the identity transform', () => {
+    const { outlines, glyphContours } = outlinesStub(7);
+    const { calls } = paintStrokedRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
+    expect(calls.map((call) => call.op)).toContain('stroke');
+    expect(calls.every((call) => call.shear === 0)).toBe(true);
+  });
+
+  it('strokes a bold and sheared glyph by one outline that carries both', () => {
+    const { outlines, glyphContours } = outlinesStub(7);
+
+    paintStrokedRecording(boldLayoutFor('A', 1.2), 4, { skew: 0.3, outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0.3 });
+  });
+
+  it('strokes the text of a sheared glyph in the sheared space where the label has no outlines', () => {
+    const { calls } = paintStrokedRecording(layoutFor('A', 0), 4, { skew: 0.3 });
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+  });
+
+  it('strokes the text of a sheared glyph that the font has no glyph for in the sheared space', () => {
+    const { outlines } = outlinesStub(0);
+    const { calls } = paintStrokedRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+  });
+
+  it('strokes the text of a bold glyph where the label has no outlines', () => {
+    const { calls } = paintStrokedRecording(boldLayoutFor('A', 1.2), 4);
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+  });
+
+  it('strokes the text of a bold glyph that the font has no glyph for', () => {
+    const { outlines } = outlinesStub(0);
+    const { calls } = paintStrokedRecording(boldLayoutFor('A', 1.2), 4, { outlines });
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
   });
 });
 

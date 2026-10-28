@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import { signedPolygonArea } from '../../../godot/math/polygonArea';
-import { parseSfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { buildGlyphMeshData, type GlyphMeshData } from './glyphMesh';
@@ -221,7 +221,7 @@ describe('buildGlyphMeshData contours', () => {
   });
 });
 
-describe('buildGlyphMeshData triangles', () => {
+describe('buildGlyphMeshData triangles', async () => {
   /** The area the triangles cover, each triangle's own sign kept. */
   function trianglesArea(data: GlyphMeshData): number {
     let area = 0;
@@ -253,7 +253,7 @@ describe('buildGlyphMeshData triangles', () => {
     expect(trianglesArea(data)).toBeCloseTo(84, 9);
   });
 
-  const font = parseSfntOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf'))!;
+  const font = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
 
   it.each(['o', 'g', 'B', 'é', '8', 'H'])('covers exactly the area %s encloses', (char) => {
     const contours = font.glyphContours(font.glyphIndex(char.codePointAt(0)!), 64)!;

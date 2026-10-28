@@ -14,12 +14,7 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
-import {
-  holdsListedDirectionalLights,
-  isListedDirectionalLight,
-  isPositionalCanvasLight,
-  lightDrawSequence,
-} from './lightSequence';
+import { lightDrawSequence } from './lightSequence';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
@@ -79,21 +74,6 @@ function quadOrders(renderer: Awaited<ReturnType<typeof render>>): number[] {
     .map((m) => m.renderOrder);
 }
 
-describe('isPositionalCanvasLight', () => {
-  it('claims a slot for a PointLight2D', () => {
-    expect(isPositionalCanvasLight({ type: 'PointLight2D' } as never)).toBe(true);
-  });
-
-  it('claims none for a DirectionalLight2D, which sits on a list of its own', () => {
-    // Numbering it would leave a hole the 2n / 2n+1 pairing spends for nothing.
-    expect(isPositionalCanvasLight({ type: 'DirectionalLight2D' } as never)).toBe(false);
-  });
-
-  it('claims none for an ordinary canvas item', () => {
-    expect(isPositionalCanvasLight({ type: 'Sprite2D' } as never)).toBe(false);
-  });
-});
-
 /**
  * The provider walks once per canvas and every light reads the result. Driven directly: with every
  * cookie resolving in one tick, the dispatcher cases cannot tell a sequence from an ordinal.
@@ -121,12 +101,16 @@ describe('CanvasLightSequenceProvider', () => {
     return null;
   }
 
-  async function sequences(paths: readonly string[], scene = SCENE): Promise<(number | null)[]> {
+  async function sequences(
+    paths: readonly string[],
+    scene = SCENE,
+    viewportPath: string | null = null
+  ): Promise<(number | null)[]> {
     const seen: (number | null)[] = [];
     const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
     await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <CanvasLightSequenceProvider>
+        <CanvasLightSequenceProvider viewportPath={viewportPath}>
           {paths.map((path) => (
             <Probe key={path} path={path} seen={seen} />
           ))}
@@ -154,6 +138,21 @@ describe('CanvasLightSequenceProvider', () => {
 [node name="A" type="PointLight2D" parent="."]
 `;
     expect(await sequences(['Root/View/Inner', 'Root/A'], scene)).toEqual([null, 0]);
+  });
+
+  it("numbers the lights of a SubViewport's own canvas from zero, and leaves the outer lights off it", async () => {
+    const scene = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="A" type="PointLight2D" parent="."]
+[node name="View" type="SubViewport" parent="."]
+[node name="Inner" type="PointLight2D" parent="View"]
+[node name="Second" type="PointLight2D" parent="View"]
+`;
+    expect(await sequences(['Root/A', 'Root/View/Inner', 'Root/View/Second'], scene, 'Root/View')).toEqual([
+      null,
+      0,
+      1,
+    ]);
   });
 
   it('is null for a path the walk never saw', async () => {
@@ -199,45 +198,10 @@ ${lamp('B')}`
   });
 });
 
-describe('holdsListedDirectionalLights', () => {
-  it('enters a shown canvas node', () => {
-    expect(holdsListedDirectionalLights({ type: 'Node2D', properties: {} } as never)).toBe(true);
-  });
-
-  it('stops at a hidden node', () => {
-    expect(holdsListedDirectionalLights({ type: 'Node2D', properties: { visible: false } } as never)).toBe(
-      false
-    );
-  });
-
-  it('stops at a shown SubViewport', () => {
-    expect(holdsListedDirectionalLights({ type: 'SubViewport', properties: {} } as never)).toBe(false);
-  });
-});
-
-describe('isListedDirectionalLight', () => {
-  const sun = (properties: Record<string, unknown>) => ({ type: 'DirectionalLight2D', properties }) as never;
-
-  it('lists an enabled, shown DirectionalLight2D', () => {
-    expect(isListedDirectionalLight(sun({ enabled: true }))).toBe(true);
-  });
-
-  it('leaves a disabled or hidden light off the list', () => {
-    expect(isListedDirectionalLight(sun({ enabled: false }))).toBe(false);
-    expect(isListedDirectionalLight(sun({ enabled: true, visible: false }))).toBe(false);
-  });
-
-  it('leaves a PointLight2D off the directional list', () => {
-    expect(isListedDirectionalLight({ type: 'PointLight2D', properties: { enabled: true } } as never)).toBe(
-      false
-    );
-  });
-});
-
 /**
  * Godot keeps directional lights on their own list (`renderer_viewport.cpp:491-514`): it holds only
  * lights `canvas_light_set_enabled` left on, which `Light2D::_update_light_visibility`
- * (`light_2d.cpp:59`) ties to `enabled` and visibility in the tree, and it stops at eight.
+ * (`light_2d.cpp:59`) ties to `enabled` and visibility in the tree, and it stops at eight per canvas.
  */
 describe('useDirectionalLightSlot', () => {
   function Read({ seen }: { seen: (number | null)[] }) {
@@ -245,12 +209,16 @@ describe('useDirectionalLightSlot', () => {
     return null;
   }
 
-  async function slots(scene: string, paths: readonly string[]): Promise<(number | null)[]> {
+  async function slots(
+    scene: string,
+    paths: readonly string[],
+    viewportPath: string | null = null
+  ): Promise<(number | null)[]> {
     const seen: (number | null)[] = [];
     const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
     await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <CanvasLightSequenceProvider>
+        <CanvasLightSequenceProvider viewportPath={viewportPath}>
           {paths.map((path) => (
             <NodePathProvider key={path} path={path}>
               <Read seen={seen} />
@@ -295,6 +263,14 @@ ${sun('Inner', 'Group')}${sun('Shown')}`;
     expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6, 7, null]);
   });
 
+  it("gives a CanvasLayer's light a slot past the eighth, as the gather's break leaves one canvas only", async () => {
+    const names = Array.from({ length: 9 }, (_unused, index) => `S${index}`);
+    const layer = `[node name="Layer" type="CanvasLayer" parent="."]\n${sun('Blue', 'Layer')}`;
+    const scene = ROOT + names.map((name) => sun(name)).join('') + layer;
+    const seen = await slots(scene, ['Root/S8', 'Root/Layer/Blue']);
+    expect(seen).toEqual([null, 8]);
+  });
+
   it("leaves a light inside a SubViewport off the main canvas's list, as Godot keeps one per viewport", async () => {
     const names = Array.from({ length: 8 }, (_unused, index) => `S${index}`);
     const scene = `${ROOT}[node name="View" type="SubViewport" parent="."]\n${sun('Inner', 'View')}${names
@@ -302,6 +278,11 @@ ${sun('Inner', 'Group')}${sun('Shown')}`;
       .join('')}`;
     const seen = await slots(scene, ['Root/View/Inner', ...names.map((name) => `Root/${name}`)]);
     expect(seen).toEqual([null, 0, 1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("lists a SubViewport's own sun in its canvas, ahead of the outer suns", async () => {
+    const scene = `${ROOT}${sun('Outer')}[node name="View" type="SubViewport" parent="."]\n${sun('Inner', 'View')}`;
+    expect(await slots(scene, ['Root/Outer', 'Root/View/Inner'], 'Root/View')).toEqual([null, 0]);
   });
 
   it('gives slot 0 to a light outside any scene hierarchy', async () => {

@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
@@ -27,6 +27,10 @@ import {
 import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
+import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
+import { useCanvasModulateColor, CanvasModulateContext } from '../../../r3f/canvasModulate';
+import { createViewportLightPassHost } from './viewportLightPassHost';
+import type { Rgba } from '../../../godot/math/math';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import {
   applyOrthoFrame,
@@ -87,20 +91,31 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // dispatcher hands it (subtreeConformance).
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
-  const size = viewportTargetSize(properties.size, useViewportRect(path));
+  // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
+  const targetSize = viewportTargetSize(properties.size, useViewportRect(path));
+  // Stable while the numbers are, so the pass and the light host do not follow a new object.
+  const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
+  const canvasModulate = useCanvasModulateColor(node.children);
   const contents = (
     <ViewportSizeProvider size={size}>
-      <World2DLightingBoundary>
+      <CanvasModulateContext.Provider value={canvasModulate}>
         <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
-      </World2DLightingBoundary>
+      </CanvasModulateContext.Provider>
     </ViewportSizeProvider>
   );
 
   return (
     <Node node={node}>
-      {rendersInline ? contents : null}
+      {rendersInline ? <World2DLightingBoundary>{contents}</World2DLightingBoundary> : null}
       {rasterizes ? (
-        <OffscreenViewport node={node} path={path} size={size} kind={kind} rendersInline={rendersInline}>
+        <OffscreenViewport
+          node={node}
+          path={path}
+          size={size}
+          kind={kind}
+          rendersInline={rendersInline}
+          canvasModulate={canvasModulate}
+        >
           {rendersInline ? null : contents}
         </OffscreenViewport>
       ) : null}
@@ -113,6 +128,8 @@ interface OffscreenViewportProps extends NodeComponentProps {
   size: Vector2;
   kind: '2d' | '3d';
   rendersInline: boolean;
+  /** The tint of this viewport's own canvas, where its light accumulation starts. */
+  canvasModulate: Rgba;
 }
 
 /**
@@ -120,7 +137,15 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * A separate component, so a Control-only sub-viewport mounts none of its hooks
  * and leaves the key to `ControlRasterPass.tsx`.
  */
-function OffscreenViewport({ node, path, size, kind, rendersInline, children }: OffscreenViewportProps) {
+function OffscreenViewport({
+  node,
+  path,
+  size,
+  kind,
+  rendersInline,
+  canvasModulate,
+  children,
+}: OffscreenViewportProps) {
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg } = properties;
   const { x: width, y: height } = size;
@@ -156,6 +181,14 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
   const { camera: orthoCamera, frame } = useCanvasPass(width, height, kind === '2d' ? msaaMode : 0);
   /** Written only by the pass, through `recompileOnCurveChange`. */
   const portalCurve = useRef({ revision: -1 });
+  // This viewport's own World2D is lit by its own pass, run below once the camera is framed.
+  // A resize reaches the host through `resize`, which keeps the host and the context it feeds.
+  const firstSize = useRef(size).current;
+  const lightHost = useMemo(
+    () => (kind === '2d' ? createViewportLightPassHost(portalScene, orthoCamera, path, firstSize) : null),
+    [kind, portalScene, orthoCamera, path, firstSize]
+  );
+  useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
 
   const renderPass = useCallback(() => {
     const source = rendersInline ? mainScene : portalScene;
@@ -170,9 +203,10 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
       applyOrthoFrame(
         orthoCamera,
         camera2d && tag
-          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), { x: width, y: height })
-          : orthoFrameForSize({ x: width, y: height })
+          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), size)
+          : orthoFrameForSize(size)
       );
+      lightHost?.run.current?.();
     }
 
     const camera = kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
@@ -185,7 +219,7 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect({ x: width, y: height });
+    const aspect = viewportAspect(size);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
@@ -226,6 +260,7 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
     kind,
     path,
     orthoCamera,
+    lightHost,
     gl,
     target,
     frame,
@@ -234,8 +269,7 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
     clearColor,
     transparentBg,
     properties.own_world_3d,
-    width,
-    height,
+    size,
   ]);
 
   // Consumers sample the texture directly. The ordered driver runs every
@@ -261,7 +295,15 @@ function OffscreenViewport({ node, path, size, kind, rendersInline, children }: 
       <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
         <WorldRootProvider value={portalScene}>
           <WorldEnvironmentScope world="subViewport">
-            <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+            <CanvasSpaceProvider value={null}>
+              {lightHost ? (
+                <CanvasLightPass host={lightHost} canvasModulate={canvasModulate}>
+                  {children}
+                </CanvasLightPass>
+              ) : (
+                <World2DLightingBoundary>{children}</World2DLightingBoundary>
+              )}
+            </CanvasSpaceProvider>
           </WorldEnvironmentScope>
         </WorldRootProvider>
       </AnisotropicFilteringProvider>

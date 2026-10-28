@@ -8,13 +8,13 @@ import { useCallback, useMemo } from 'react';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { sameEntries } from '../utils/sameEntries.js';
 import { useByValue } from './hooks/useByValue.js';
-import { useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
+import { sameSelection, useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
 
 type UniquePaths = ReadonlyMap<string, string> | undefined;
 
 /** Whether two tables hold the same entries. A sub-scene owner's table is rebuilt on every load. */
 function samePaths(a: UniquePaths, b: UniquePaths): boolean {
-  return a === undefined || b === undefined ? a === b : sameEntries(a, b);
+  return sameSelection(a, b, sameEntries);
 }
 
 /**

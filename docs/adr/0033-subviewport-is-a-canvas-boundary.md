@@ -129,6 +129,11 @@ which display real content.
   A `ParallaxBackground` is a `CanvasLayer` whose layer transform tracks the viewport's
   canvas transform (`parallax_background.cpp::_camera_moved` → `set_scroll_offset`), so
   it covers a Camera2D-framed surface wherever the camera goes.
+- A sub-viewport with 2D content runs its own Light2D pass, because its World2D owns the
+  lights, occluders and CanvasModulate (`viewport.cpp:5345`). The pass draws through the
+  target's camera into buffers of the target's size, and a DirectionalLight2D shadow map
+  spans `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`). The canvas around the
+  sub-viewport lights nothing inside it, and the sub-viewport lights nothing outside.
 - Node paths inside a sub-viewport stay in the one path space, so the boundary does not
   affect selection, the scene tree or the inspector.
 - **Deliberate non-changes**, each of which looks like an inconsistency:
