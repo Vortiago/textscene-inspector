@@ -2,15 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
-import {
-  hideShownSky,
-  SHOWN_ENERGY,
-  SkyRadiance,
-  shownSky,
-  skyLayersSlot,
-  skyRotation,
-  type SkyBake,
-} from './skyRadiance';
+import { hideShownSky, SHOWN_ENERGY, SkyRadiance, shownSky, skyRotation, type SkyBake } from './skyRadiance';
+import { skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, testRenderer } from '../../testing/recordingWebGL';
 
 /** A sky's layer array at radiance `radianceSize`, set up on `renderer` as a bake leaves it. */

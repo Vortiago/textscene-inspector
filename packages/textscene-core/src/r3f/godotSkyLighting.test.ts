@@ -8,7 +8,8 @@ import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
 import { restoreShaderGlobalsAfterEach } from './testing/shaderPatches';
 import { functionBody } from './testing/glslSource';
-import { SKY_RADIANCE_UNIFORMS, shownSky, skyLayersSlot, skyRotation } from './sky/skyRadiance';
+import { SKY_RADIANCE_UNIFORMS, shownSky, skyRotation } from './sky/skyRadiance';
+import { skyLayersSlot } from './sky/skyRadiance.testkit';
 
 const threeChunks = { ...THREE.ShaderChunk };
 

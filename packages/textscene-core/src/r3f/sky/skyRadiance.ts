@@ -31,7 +31,7 @@ const { layers: LAYERS, shown: SHOWN, rotation: ROTATION } = SKY_RADIANCE_UNIFOR
  * (three r186 `WebGLTextures.js:626`), and binds whatever handle it holds on a renderer: the array
  * of the sky shown last, or three's empty array.
  */
-export const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
+const skyLayersSlot = installedSlot(LAYERS, THREE.DataArrayTexture);
 
 /**
  * The shown sky's `ambient_light_sky_contribution`, its layers' border size, the scale from a

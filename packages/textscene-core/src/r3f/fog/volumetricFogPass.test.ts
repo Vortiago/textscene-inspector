@@ -16,13 +16,8 @@ import { VolumetricFogPass } from './volumetricFogPass';
 import { areaLightAtlasTexture } from '../areaLight/areaLightAtlas';
 import { AREA_LIGHT_ATLAS_UNIFORM } from '../areaLight/areaTextureFetch';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
-import {
-  hideShownSky,
-  SkyRadiance,
-  SKY_RADIANCE_UNIFORMS,
-  skyLayersSlot,
-  type SkyBake,
-} from '../sky/skyRadiance';
+import { hideShownSky, SkyRadiance, SKY_RADIANCE_UNIFORMS, type SkyBake } from '../sky/skyRadiance';
+import { skyLayersSlot } from '../sky/skyRadiance.testkit';
 
 type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
 
