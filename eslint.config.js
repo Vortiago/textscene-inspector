@@ -63,12 +63,7 @@ const MODULE_WEAKMAP = {
 };
 
 /** The core files exempt from MODULE_WEAKMAP. */
-const MODULE_WEAKMAP_EXEMPT_FILES = [
-  'packages/textscene-core/src/r3f/controls/native/buildSolveTree.ts',
-  'packages/textscene-core/src/r3f/controls/native/solveTree.ts',
-  'packages/textscene-core/src/r3f/controls/native/text/sceneFontLoader.ts',
-  'packages/textscene-core/src/r3f/useLiveSceneTree.ts',
-];
+const MODULE_WEAKMAP_EXEMPT_FILES = ['packages/textscene-core/src/r3f/useLiveSceneTree.ts'];
 
 /**
  * A core test asserts a tier through `toBeAtTier`, `toBeAllAtTier` or a helper that records it.
