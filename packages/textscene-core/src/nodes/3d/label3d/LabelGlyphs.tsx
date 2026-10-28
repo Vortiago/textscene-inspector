@@ -28,8 +28,15 @@ export interface LabelGlyphsProps {
 }
 
 export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
+  // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
+  // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
+  // `blend_mix, depth_draw_opaque` (`material.cpp:775-812`), sorted ascending by
+  // `material_set_render_priority` (`:402`), which three's `renderOrder` matches.
+  const drawOutline = properties.outline_size > 0 && properties.outline_modulate.a !== 0;
+  const strokeWidthPx = drawOutline ? outlineStrokeWidthPx(properties.outline_size) : 0;
+
   // `undefined` until `document.fonts` has the family of the font; the hook re-renders once it does.
-  const font = useLabel3DFont(properties.font);
+  const font = useLabel3DFont(properties.font, drawOutline);
   const fontMetrics = font?.metrics;
   usePendingWhile(!fontMetrics);
 
@@ -99,13 +106,6 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const mipmapped = font?.generatesMipmaps ?? false;
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
 
-  // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
-  // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
-  // `blend_mix, depth_draw_opaque` (`material.cpp:775-812`), sorted ascending by
-  // `material_set_render_priority` (`:402`), which three's `renderOrder` matches.
-  const drawOutline = properties.outline_size > 0 && properties.outline_modulate.a !== 0;
-  const strokeWidthPx = drawOutline ? outlineStrokeWidthPx(properties.outline_size) : 0;
-
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
   // material's render priority. Any other mode bakes `priority * pixel_size` into
   // the vertex Z (`:417-420`), and in Godot px inside `Component.tsx`'s
@@ -138,6 +138,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   fontSizePx={properties.font_size}
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
+                  glyphOutlines={font?.outlines}
                   depthTest={depthTest}
                   side={side}
                   renderOrder={outlineSurface.renderOrder}

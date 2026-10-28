@@ -17,6 +17,7 @@ import { applyFontMatrix, rescaledOutlineScale } from './cffFontMatrix';
 import type { CharstringContour } from './cffPen';
 import { openCff } from './cffTables';
 import { getFontOutlineScale } from './fontMetrics';
+import { emboldenOutline } from './ftEmbolden';
 import { scaledOutlineContours, type GlyphContourReader, type ScaledOutline } from './glyphContours';
 import { readHeadUnitsPerEm, type SfntFile } from './sfntTables';
 
@@ -63,7 +64,7 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   const font = openCff(sfnt);
   if (!font) return null;
 
-  return (glyphIndex, fontSizePx) => {
+  return (glyphIndex, fontSizePx, embolden = 0) => {
     const fontDict = font.fontDictOf(glyphIndex);
     if (!fontDict) return null;
     const { matrix } = fontDict;
@@ -77,6 +78,7 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
     const outline = scaledOutline(contours);
     if (outline.x.length === 0) return null;
     applyFontMatrix(outline, matrix);
+    emboldenOutline(outline, embolden, fontSizePx);
     return scaledOutlineContours(outline);
   };
 }

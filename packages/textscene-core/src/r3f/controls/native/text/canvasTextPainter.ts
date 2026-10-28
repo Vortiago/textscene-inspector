@@ -9,7 +9,14 @@
 // `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
 // with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
-import { EmboldenRingPainter, maxEmboldenGrowthPx, paintEmboldenedFill } from './canvasEmbolden';
+import {
+  emboldenedContours,
+  maxEmboldenGrowthPx,
+  paintEmboldenedFill,
+  strokeContours,
+} from './canvasEmbolden';
+import type { GlyphContours } from './glyphContours';
+import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
@@ -115,7 +122,9 @@ function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
  * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
  * at each `GlyphPlacement.x`. A positive `strokeWidthPx` paints the outline ring
  * instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`).
- * `skew` shears each line's ink about its own baseline. The quad stays axis-aligned.
+ * `skew` shears each line's ink about its own baseline. The quad stays axis-aligned. With the
+ * `outlines` of the font, an emboldened glyph's ring follows the grown outline, mitred as FreeType
+ * mitres it. Without them, it is the ring of the glyph as it stands.
  */
 // Happy-dom has no 2D context, so under vitest the canvas stays blank. The pixels
 // are a golden-image concern, so a unit test reads the calls, not the pixels.
@@ -125,7 +134,8 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  strokeWidthPx = 0
+  strokeWidthPx = 0,
+  outlines: SfntOutlines | null = null
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -145,7 +155,7 @@ export function paintSceneFontCanvas(
   const stroked = strokeWidthPx > 0;
   if (stroked) {
     // FreeType's `FT_Glyph_Stroke` exports both borders, an annulus a centred canvas
-    // stroke of the same width paints (`text_server_adv.cpp:1376-1403`).
+    // stroke of the same width paints (`text_server_adv.cpp:1383-1390`).
     // `LINEJOIN_ROUND`/`LINECAP_BUTT` are that stroker's settings (`:1383`).
     ctx.strokeStyle = opaqueCssColor(tint);
     ctx.lineWidth = strokeWidthPx;
@@ -160,7 +170,16 @@ export function paintSceneFontCanvas(
   }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
-  let ringPainter: EmboldenRingPainter | undefined;
+  const embolden = metrics.embolden ?? 0;
+  // A repeated character grows its outline once for the whole paint.
+  const grownContours = new Map<string, GlyphContours | null>();
+  const grownContoursOf = (char: string, glyphOutlines: SfntOutlines): GlyphContours | null => {
+    const known = grownContours.get(char);
+    if (known !== undefined) return known;
+    const grown = emboldenedContours(glyphOutlines, char, fontSizePx, embolden);
+    grownContours.set(char, grown);
+    return grown;
+  };
 
   layout.lines.forEach((line, lineIndex) => {
     const lineTopPx = lineIndex * layout.linePitchPx;
@@ -175,15 +194,9 @@ export function paintSceneFontCanvas(
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
       const penX = canvasLayout.offsetXPx + gp.x;
-      if (stroked && gp.emboldenGrowthPx) {
-        (ringPainter ??= new EmboldenRingPainter(ctx)).paint(
-          gp.char,
-          penX,
-          baselineY,
-          gp.emboldenGrowthPx,
-          strokeWidthPx
-        );
-      } else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
+      const grown = stroked && outlines && gp.emboldenGrowthPx ? grownContoursOf(gp.char, outlines) : null;
+      if (grown) strokeContours(ctx, grown, penX, baselineY);
+      else if (stroked) ctx.strokeText(gp.char, penX, baselineY);
       else if (gp.emboldenGrowthPx) paintEmboldenedFill(ctx, gp.char, penX, baselineY, gp.emboldenGrowthPx);
       else ctx.fillText(gp.char, penX, baselineY);
     }

@@ -220,7 +220,7 @@ export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fon
 
 /**
  * The px `FT_Outline_Embolden` grows an outline by: `strength = embolden * size.x / 16` in 26.6
- * (`text_server_adv.cpp:1313-1314`). The ink keeps its left and bottom edges and gains this much
+ * (`text_server_adv.cpp:1314-1315`). The ink keeps its left and bottom edges and gains this much
  * at the right and top.
  */
 export function getFontEmboldenGrowthPx(embolden: number, fontSizePx: number): number {

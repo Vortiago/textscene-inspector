@@ -74,6 +74,8 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont draws as the bundled font, as the previewer has no bytes for the OS fonts.
 - **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.
+- **Approximated** The outline of an emboldened TrueType glyph follows its unhinted contour, so it sits a fraction of a pixel off Godot's.
+- **Resource gap** A SystemFont with an embolden and an outline draws the outline round the glyph as it stands.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).

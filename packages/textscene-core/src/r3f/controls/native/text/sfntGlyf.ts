@@ -9,6 +9,7 @@
  */
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
+import { emboldenOutline } from './ftEmbolden';
 import { ftMulFix, getFontOutlineScale } from './fontMetrics';
 import {
   scaledOutlineContours,
@@ -239,8 +240,10 @@ export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader
   const isLongLoca = dv.getInt16(head.offset + HEAD_INDEX_TO_LOC_FORMAT_OFFSET, false) === LONG_LOCA_FORMAT;
   const glyphCount = dv.getUint16(maxp.offset + MAXP_NUM_GLYPHS_OFFSET, false);
   const glyphs = new GlyphReader(dv, glyphCount, tables, isLongLoca);
-  return (glyphIndex, fontSizePx) => {
+  return (glyphIndex, fontSizePx, embolden = 0) => {
     const outline = glyphs.load(glyphIndex, getFontOutlineScale(unitsPerEm, fontSizePx));
-    return outline && outline.x.length > 0 ? scaledOutlineContours(outline) : null;
+    if (!outline || outline.x.length === 0) return null;
+    emboldenOutline(outline, embolden, fontSizePx);
+    return scaledOutlineContours(outline);
   };
 }

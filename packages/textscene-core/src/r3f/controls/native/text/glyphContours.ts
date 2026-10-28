@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { ftMulFix } from './fontMetrics';
 
@@ -31,8 +32,15 @@ export interface GlyphContours {
   isFillRight: boolean;
 }
 
-/** The contours of a glyph at `fontSizePx`, or null for a glyph with no outline. */
-export type GlyphContourReader = (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
+/**
+ * The contours of a glyph at `fontSizePx`, grown by `embolden` as `FT_Outline_Embolden` does, or null
+ * for a glyph with no outline.
+ */
+export type GlyphContourReader = (
+  glyphIndex: number,
+  fontSizePx: number,
+  embolden?: number
+) => GlyphContours | null;
 
 /** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
 export interface ScaledOutline {
@@ -57,28 +65,64 @@ export function transformOutline(outline: ScaledOutline, [xx, xy, yx, yy]: Matri
 
 const FIXED_26_6 = 64;
 
-/** Whether the points of `values` do not all share one value. */
-function varies(values: readonly number[]): boolean {
-  return values.some((value) => value !== values[0]);
+/** `FT_Outline_Get_Orientation` rejects an outline that reaches beyond 2^24 in 26.6 (`ftoutln.c`). */
+const LARGEST_ORIENTED_COORDINATE = 0x1000000;
+
+/** The bits an area product may take, so that 32 bits suffice for it in FreeType (`ftoutln.c`). */
+const AREA_COORDINATE_BITS = 14;
+
+type OutlineOrientation = 'fillRight' | 'fillLeft' | 'none';
+
+/** `FT_MSB`: the index of the highest set bit of `value`. */
+export const highestBit = (value: number): number => 31 - Math.clz32(value);
+
+/** The point halfway between `a` and `b`, where two control points in a row meet. */
+export function midpoint(a: Vector2, b: Vector2): Vector2 {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/** The shift that brings a coordinate range of `extent` into `AREA_COORDINATE_BITS` bits. */
+const areaShift = (extent: number): number => Math.max(highestBit(extent) - AREA_COORDINATE_BITS, 0);
+
+/** The least and the greatest of `values`, which spreading into `Math.min` cannot take for a long outline. */
+function extent(values: readonly number[]): [number, number] {
+  let least = Infinity;
+  let greatest = -Infinity;
+  for (const value of values) {
+    least = Math.min(least, value);
+    greatest = Math.max(greatest, value);
+  }
+  return [least, greatest];
 }
 
 /**
- * `FT_Outline_Get_Orientation` is `FT_ORIENTATION_FILL_RIGHT` (`ftoutln.c`): the sign of the
- * area the control polygon spans over every contour. Collapsed in x or y, it is neither.
+ * `FT_Outline_Get_Orientation` (`ftoutln.c`): the sign of the area the control polygon spans over
+ * every contour, on coordinates shifted to fit. A collapsed or oversized outline has none.
  */
-function isFillRight(outline: ScaledOutline): boolean {
-  if (!varies(outline.x) || !varies(outline.y)) return false;
+export function outlineOrientation(outline: ScaledOutline): OutlineOrientation {
+  // An empty outline is fill right, as in FreeType.
+  if (outline.x.length === 0) return 'fillRight';
+  const [xMin, xMax] = extent(outline.x);
+  const [yMin, yMax] = extent(outline.y);
+  if (xMin === xMax || yMin === yMax) return 'none';
+  if (Math.max(-xMin, -yMin, xMax, yMax) > LARGEST_ORIENTED_COORDINATE) return 'none';
+
+  const xShift = areaShift(Math.max(Math.abs(xMax), Math.abs(xMin)));
+  const yShift = areaShift(yMax - yMin);
   let area = 0;
   let first = 0;
   for (const last of outline.contourEnds) {
     let previous = last;
     for (let i = first; i <= last; i++) {
-      area += (outline.y[i]! - outline.y[previous]!) * (outline.x[i]! + outline.x[previous]!);
+      area +=
+        ((outline.y[i]! >> yShift) - (outline.y[previous]! >> yShift)) *
+        ((outline.x[i]! >> xShift) + (outline.x[previous]! >> xShift));
       previous = i;
     }
     first = last + 1;
   }
-  return area < 0;
+  if (area === 0) return 'none';
+  return area < 0 ? 'fillRight' : 'fillLeft';
 }
 
 /** The outline in px with y down, as `font_get_glyph_contours` returns it (`text_server_adv.cpp:3631-3641`). */
@@ -88,5 +132,9 @@ export function scaledOutlineContours(outline: ScaledOutline): GlyphContours {
     y: -outline.y[i]! / FIXED_26_6,
     tag: outline.tags[i]!,
   }));
-  return { points, contourEnds: outline.contourEnds, isFillRight: isFillRight(outline) };
+  return {
+    points,
+    contourEnds: outline.contourEnds,
+    isFillRight: outlineOrientation(outline) === 'fillRight',
+  };
 }

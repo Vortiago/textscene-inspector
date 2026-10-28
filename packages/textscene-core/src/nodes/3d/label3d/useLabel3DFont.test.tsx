@@ -36,9 +36,10 @@ const MIPMAPPED_FILE: TscnInternalResource = {
 function renderMetrics(
   fontRef: string | undefined,
   files: Record<string, string> = {},
-  heldPaths: readonly string[] = []
+  heldPaths: readonly string[] = [],
+  hasOutline = false
 ) {
-  return renderHook(() => useLabel3DFont(fontRef), {
+  return renderHook(() => useLabel3DFont(fontRef, hasOutline), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider
         loader={loaderServing({ 'res://project.godot': 'config_version=5\n', ...files }, heldPaths)}
@@ -111,6 +112,33 @@ describe('useLabel3DFont metrics', () => {
     await settle();
 
     expect(result.current).toBeUndefined();
+  });
+});
+
+describe('useLabel3DFont outlines', () => {
+  it('reads no outlines for a label without an outline', async () => {
+    const { result } = renderMetrics('SubResource("own")');
+
+    await settle();
+
+    expect(result.current?.outlines).toBeNull();
+  });
+
+  it('reads no outlines for an outlined label whose font is not emboldened', async () => {
+    const { result } = renderMetrics(undefined, {}, [], true);
+
+    await settle();
+
+    expect(result.current?.outlines).toBeNull();
+  });
+
+  it('is undefined, then holds the outlines of the bundled font, for an emboldened label with an outline', async () => {
+    const { result } = renderMetrics('SubResource("own")', {}, [], true);
+
+    expect(result.current).toBeUndefined();
+    await settle();
+
+    expect(result.current?.outlines?.glyphIndex('A'.codePointAt(0)!)).toBeGreaterThan(0);
   });
 });
 
