@@ -66,7 +66,7 @@ export function useSkinSkeleton(
   geometry: THREE.BufferGeometry | undefined,
   skinMatrices: readonly Transform3D[] | undefined
 ): THREE.Skeleton | null {
-  // By value, so a re-parse that writes a new array of the same matrices does not rebuild the skeleton.
+  // By value, so a re-parse that builds the same skin again does not rebuild the skeleton.
   const stableMatrices = useByValue(skinMatrices, sameMatrices);
   const skeleton = useMemo(() => {
     if (!geometry?.getAttribute('skinIndex') || !stableMatrices) return null;

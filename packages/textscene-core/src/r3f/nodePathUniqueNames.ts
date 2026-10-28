@@ -5,7 +5,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
-import { claimOwnerOf, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneOf, localSceneUniquePaths, ownerUniquePaths } from './uniqueNameOwner.js';
 
 /**
  * The `%Name` table a NodePath on the node at `path` reads: the node's own table where it is an
@@ -20,10 +20,9 @@ export function nodePathUniquePaths(
   ctx: LiveTreeContext
 ): ReadonlyMap<string, string> {
   const nodePath = path || (roots[0]?.name ?? '');
-  const callers = ownerUniquePaths(claimOwnerOf(nodePath, roots, ctx));
   // An instance root is the local scene of its own path, and the owner of the names inside it.
   const scene = localSceneOf(nodePath, roots, ctx);
-  if (scene.path !== nodePath) return callers;
-  const own = ownerUniquePaths(scene);
-  return own === callers || own.size === 0 ? callers : new Map([...callers, ...own]);
+  return scene.path === nodePath
+    ? localSceneUniquePaths(scene)
+    : ownerUniquePaths(claimOwnerOf(nodePath, roots, ctx));
 }

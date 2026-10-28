@@ -10,9 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseTscnContent } from '../../../r3f/hooks/useParsedScene';
 import type { SceneGraph } from '../../../core/SceneGraph';
-import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
-import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
@@ -91,18 +89,6 @@ ${meshLines}
 `;
 }
 
-/** The whole preview pipeline over `content`: the parse, the dispatcher and the live tree of the loader. */
-function sceneTree(sceneGraph: SceneGraph, loader: ReturnType<typeof loaderServing>) {
-  const root = sceneGraph.scenes.get(sceneGraph.rootScene)!;
-  return (
-    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-      <SceneStack loader={loader} scene={root}>
-        <NodeDispatcher nodes={root.nodes} />
-      </SceneStack>
-    </HierarchyProvider>
-  );
-}
-
 function parsed(content: string): SceneGraph {
   const { sceneGraph, error } = parseTscnContent(content, 'res://main.tscn');
   if (!sceneGraph) throw new Error(`expected a scene, got ${error}`);
@@ -110,14 +96,14 @@ function parsed(content: string): SceneGraph {
 }
 
 async function renderContent(content: string, files: Record<string, string> = {}) {
-  const renderer = await ReactThreeTestRenderer.create(sceneTree(parsed(content), loaderServing(files)));
+  const renderer = await ReactThreeTestRenderer.create(
+    <DispatchedScene sceneGraph={parsed(content)} loader={loaderServing(files)} />
+  );
   await settleLoads();
   return renderer;
 }
 
-function render(scene: Parameters<typeof boundScene>[0] = {}) {
-  return renderContent(boundScene(scene));
-}
+const render = (scene?: Parameters<typeof boundScene>[0]) => renderContent(boundScene(scene));
 
 function skinnedMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.SkinnedMesh[] {
   return renderer.scene.findAllByType('SkinnedMesh').map((m) => instanceAs<THREE.SkinnedMesh>(m));
@@ -149,10 +135,12 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
 
   it('keeps the skeleton when a re-parse hands over the same matrices in a new array', async () => {
     const loader = loaderServing();
-    const renderer = await ReactThreeTestRenderer.create(sceneTree(parsed(boundScene()), loader));
+    const renderer = await ReactThreeTestRenderer.create(
+      <DispatchedScene sceneGraph={parsed(boundScene())} loader={loader} />
+    );
     const [before] = skinnedMeshes(renderer);
 
-    await renderer.update(sceneTree(parsed(boundScene()), loader));
+    await renderer.update(<DispatchedScene sceneGraph={parsed(boundScene())} loader={loader} />);
     const [after] = skinnedMeshes(renderer);
 
     expect(after!.skeleton).toBe(before!.skeleton);
@@ -275,7 +263,6 @@ describe('MeshInstance3D with a skin set', () => {
   });
 });
 
-/** A sub-scene of the ribbon and its skeleton, as `unit-mesh-instance-3d-skinned-ribbon.tscn` holds them. */
 const RIG_PATH = 'res://rig.tscn';
 
 describe('MeshInstance3D bound to a Skeleton3D inside an instanced scene', () => {
@@ -286,6 +273,7 @@ describe('MeshInstance3D bound to a Skeleton3D inside an instanced scene', () =>
 `;
 
   it('draws skinned once the loader brings the sub-scene, which the root parse never holds', async () => {
+    // The sub-scene holds the ribbon and its skeleton, as `unit-mesh-instance-3d-skinned-ribbon.tscn` does.
     const renderer = await renderContent(host, { [RIG_PATH]: boundScene() });
 
     const [skinned] = skinnedMeshes(renderer);

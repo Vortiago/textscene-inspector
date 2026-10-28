@@ -13,14 +13,16 @@ sub-scene's nodes are shared by every instance of it, so a pass cannot write its
 
 ## Decision
 
-A pass registers on the `live` stage of `NodeComponentRegistration.scenePass`. It is a
-`LiveScenePass`: a function of one `LiveTree` that returns a result per live node path.
+A type that drives through such a pass declares the `live` stage in
+`NodeComponentRegistration.scenePass`. The pass is a `LiveScenePass`: a function of one `LiveTree`
+that returns a result per live node path.
 
 - `liveScenePassResults` runs a pass once for each live tree, so every reader shares one run. A
   load builds a new tree, so a sub-scene that arrives after the root binds then.
 - A component reads its result by the pass and its own node path (`useLiveScenePass`). It
   re-renders only where its result changes identity, so a pass hands back the same result for an
-  input that a load leaves as it is.
+  input that a load leaves as it is. A component that cannot be bound asks with no path, so the
+  pass never runs for a scene where nothing binds.
 - A NodePath resolves from the live path of the node that writes it. A `%Name` reads the table of
   that node where it is an instance root, then its owner's (`nodePathUniquePaths`, `node.cpp:1930-1938`).
 - The parse stages (`transforms`, `paths`) stay for a pass that has not moved. A pass runs on one
@@ -36,5 +38,5 @@ a modifier writes, keys the skin by the live path of the skeleton instead.
 - **Compose the sub-scenes into the parse, then run the passes.** Rejected. Sub-scenes load lazily
   (ADR-0013), so the parse would wait on every load, and the live tree would be built twice.
 - **Run every live pass on each tree, in the registry.** Rejected. The reader names the pass, so a
-  pass runs only when a reader asks for it. The registration still declares the drive, which the
+  pass runs only when a reader asks for it. The registration declares only the drive, which the
   sheet guards of ADR-0045 read.

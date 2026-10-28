@@ -4,13 +4,11 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { nodeComponentRegistry, type ScenePass } from './NodeComponentRegistry';
-import type { LiveScenePass } from './liveScenePass';
+import { nodeComponentRegistry, type ParseScenePass } from './NodeComponentRegistry';
 
 const Dummy = () => null;
-const paths: ScenePass = (nodes) => nodes;
-const transforms: ScenePass = (nodes) => nodes;
-const live: LiveScenePass<number> = () => new Map();
+const paths: ParseScenePass = (nodes) => nodes;
+const transforms: ParseScenePass = (nodes) => nodes;
 
 describe('nodeComponentRegistry.parseScenePasses', () => {
   beforeEach(() => nodeComponentRegistry.clear());
@@ -52,7 +50,7 @@ describe('nodeComponentRegistry.parseScenePasses', () => {
     nodeComponentRegistry.register({
       typeName: 'A',
       Component: Dummy,
-      scenePass: { stage: 'live', run: live },
+      scenePass: { stage: 'live' },
     });
     expect(nodeComponentRegistry.parseScenePasses()).toEqual([]);
   });
@@ -65,7 +63,7 @@ describe('nodeComponentRegistry.scenePassTypeNames', () => {
     nodeComponentRegistry.register({
       typeName: 'A',
       Component: Dummy,
-      scenePass: { stage: 'live', run: live },
+      scenePass: { stage: 'live' },
     });
     nodeComponentRegistry.register({
       typeName: 'B',

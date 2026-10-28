@@ -14,7 +14,6 @@ import { withGeometryInstance } from './visibilityRange/geometryInstance';
 import { isInvisibleBase } from './invisibleBase';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent';
 import type { EditorIconRegistration } from './nodeIcon/editorIconRegistration';
-import type { LiveScenePass } from './liveScenePass';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -59,8 +58,8 @@ export interface NodeComponentRegistration {
    * A pass for a component that cannot reach the node it names: a RemoteTransform's target, a
    * CSGPolygon3D's path, a MeshInstance3D's skeleton. A parse stage pass runs over the authored
    * tree before the graph is built, once per parse in stage order, once even when two types share
-   * it (`useParsedScene`). A `live` pass runs over the Live scene tree, and its reader asks for it
-   * by the pass (`useLiveScenePass`, ADR-0060).
+   * it (`useParsedScene`). A `live` registration declares a pass over the Live scene tree, which
+   * its reader names (`useLiveScenePass`, ADR-0060).
    */
   scenePass?: ScenePassRegistration;
   /**
@@ -98,11 +97,14 @@ interface YSortGroupRegistration {
 }
 
 /** Every pass takes the parsed roots and hands back the roots to build from. */
-export type ScenePass = (nodes: TscnNode[], internalResources: readonly TscnInternalResource[]) => TscnNode[];
+export type ParseScenePass = (
+  nodes: TscnNode[],
+  internalResources: readonly TscnInternalResource[]
+) => TscnNode[];
 
 /** A pass and the types whose registrations carry it. */
-interface RegisteredScenePass {
-  run: ScenePass;
+interface RegisteredParseScenePass {
+  run: ParseScenePass;
   typeNames: string[];
 }
 
@@ -112,12 +114,12 @@ interface RegisteredScenePass {
  */
 interface ParseScenePassRegistration {
   stage: 'transforms' | 'paths';
-  run: ScenePass;
+  run: ParseScenePass;
 }
 
+/** A drive on the live stage. The reader names the pass, so the registry runs nothing. */
 interface LiveScenePassRegistration {
   stage: 'live';
-  run: LiveScenePass<unknown>;
 }
 
 type ScenePassRegistration = ParseScenePassRegistration | LiveScenePassRegistration;
@@ -219,8 +221,8 @@ class NodeComponentRegistryImpl {
    * The registered parse stage passes, each once with the types that share it, in stage order then
    * registration order.
    */
-  parseScenePasses(): readonly RegisteredScenePass[] {
-    const byRun = new Map<ScenePass, RegisteredScenePass>();
+  parseScenePasses(): readonly RegisteredParseScenePass[] {
+    const byRun = new Map<ParseScenePass, RegisteredParseScenePass>();
     for (const stage of PARSE_STAGES) {
       for (const typeName of this.registry.getAllTypeNames()) {
         const pass = this.registry.get(typeName)?.scenePass;
