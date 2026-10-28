@@ -159,17 +159,16 @@ function OffscreenViewport({
   const clearColor = useProjectClearColor();
   const mainScene = useThree((state) => state.scene);
   const canvasCamera = useThree((state) => state.camera);
-  const ownScene = useMemo(() => {
-    const scene = new THREE.Scene();
-    scene.name = `${node.name}::offscreen`;
-    return scene;
-  }, [node.name]);
   // A portalled 3D pass in a shared world draws the canvas's world, which owns its scene's lights.
   const portals3D = kind === '3d' && !rendersInline;
   const canvasWorld = useCanvasWorld();
   const drawnCanvasWorld = portals3D && !ownWorld3D ? canvasWorld : null;
   useDrawCanvasWorld(drawnCanvasWorld);
-  const portalScene = drawnCanvasWorld?.scene ?? ownScene;
+  // The scene the pass draws: the parent's for an inline pass, else the one the portal fills.
+  const passScene = useMemo(
+    () => (rendersInline ? mainScene : (drawnCanvasWorld?.scene ?? createOwnScene(node.name))),
+    [rendersInline, mainScene, drawnCanvasWorld, node.name]
+  );
 
   // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
   const target = useMemo(
@@ -198,7 +197,7 @@ function OffscreenViewport({
   // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
   // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
-  const portalLightScene = portals3D && !drawnCanvasWorld ? ownScene : null;
+  const portalLightScene = portals3D && !drawnCanvasWorld ? passScene : null;
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
@@ -212,20 +211,18 @@ function OffscreenViewport({
   // A resize reaches the host through `resize`, which keeps the host and the context it feeds.
   const firstSize = useRef(size).current;
   const lightHost = useMemo(
-    () => (kind === '2d' ? createViewportLightPassHost(portalScene, orthoCamera, path, firstSize) : null),
-    [kind, portalScene, orthoCamera, path, firstSize]
+    () => (kind === '2d' ? createViewportLightPassHost(passScene, orthoCamera, path, firstSize) : null),
+    [kind, passScene, orthoCamera, path, firstSize]
   );
   useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
 
   const renderPass = useCallback(() => {
-    const source = rendersInline ? mainScene : portalScene;
-
     if (kind === '2d') {
       // The camera's world matrix is what carries an instanced sub-scene's
       // transform, and nothing has refreshed it yet this frame: `gl.render`
       // updates matrices, and this pass runs before the main one.
-      source.updateMatrixWorld(true);
-      const camera2d = selectViewportCamera2D(source);
+      passScene.updateMatrixWorld(true);
+      const camera2d = selectViewportCamera2D(passScene);
       const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
       applyOrthoFrame(
         orthoCamera,
@@ -239,7 +236,7 @@ function OffscreenViewport({
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
-    const camera = kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
+    const camera = kind === '3d' ? selectViewportCamera(passScene, path) : orthoCamera;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
@@ -263,11 +260,11 @@ function OffscreenViewport({
           if (kind === '3d' && !rendersClear) gl.clear(true, true, true);
           if (!camera) return;
           // The pass draws through the viewport's own camera, which no editor gizmo is built for.
-          const showChrome = hideEditorHelpers(source);
+          const showChrome = hideEditorHelpers(passScene);
           try {
             renderWithMipmapBias(mipmapBias, () =>
               renderWithShadowAtlas(shadowAtlas, () =>
-                kind === '2d' ? frame.render(gl, source, camera) : gl.render(source, camera)
+                kind === '2d' ? frame.render(gl, passScene, camera) : gl.render(passScene, camera)
               )
             );
           } finally {
@@ -280,10 +277,8 @@ function OffscreenViewport({
       if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
   }, [
-    rendersInline,
-    mainScene,
     canvasCamera,
-    portalScene,
+    passScene,
     kind,
     path,
     orthoCamera,
@@ -324,7 +319,7 @@ function OffscreenViewport({
   const portal = createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
-        <WorldRootProvider value={portalScene}>
+        <WorldRootProvider value={passScene}>
           <WorldScope>
             {stage}
             <CanvasSpaceProvider value={null}>
@@ -340,7 +335,7 @@ function OffscreenViewport({
         </WorldRootProvider>
       </AnisotropicFilteringProvider>
     </CanvasWorkspaceProvider>,
-    portalScene
+    passScene
   );
   return portal;
 }
@@ -364,6 +359,13 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
   );
   useDisposeOnRelease(atlas);
   return atlas;
+}
+
+/** The scene a portal of its own fills. */
+function createOwnScene(name: string): THREE.Scene {
+  const scene = new THREE.Scene();
+  scene.name = `${name}::offscreen`;
+  return scene;
 }
 
 /**
