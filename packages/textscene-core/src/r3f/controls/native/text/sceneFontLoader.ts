@@ -74,7 +74,6 @@ type CacheEntry =
   { status: 'pending'; promise: Promise<FontMetrics> } | { status: 'settled'; metrics: FontMetrics };
 
 /** Keyed by the resolved leaf `FontFileResource`, so nodes that share a font share one load. A `WeakMap` frees the entry of an evicted resource. */
-// eslint-disable-next-line no-restricted-syntax -- an open PR changes this file; convert after it merges
 const metricsCache = new WeakMap<FontFileResource, CacheEntry>();
 
 /** Warns once per unresolvable resource, not per call: the peek runs on every solve pass, and the failure belongs to the resource. */

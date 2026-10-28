@@ -102,7 +102,6 @@ const NO_THEME_SCOPE: ThemeResolutionScope = {
  * never the querying node's: a Theme's StyleBoxes live in the theme file. Keyed by
  * the `ThemeResource` object, which every referencing node shares.
  */
-// eslint-disable-next-line no-restricted-syntax -- an open PR changes this file; convert after it merges
 const themeStyleBoxCache = new WeakMap<
   ThemeResource,
   Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>>
@@ -180,7 +179,6 @@ function resolveThemedConstants(
  * theme like `resolvedStylesOfTheme`. Left unresolved: loading a texture needs a
  * `useTexture2D` subscription only a component can hold.
  */
-// eslint-disable-next-line no-restricted-syntax -- an open PR changes this file; convert after it merges
 const themeIconRefCache = new WeakMap<
   ThemeResource,
   Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>>
