@@ -7,6 +7,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
+import { useCanvasWorldScene } from '../../../r3f/environment/canvasWorldScene';
 import {
   SharedWorldEnvironmentScope,
   WorldEnvironmentScope,
@@ -153,11 +154,15 @@ function OffscreenViewport({
   const clearColor = useProjectClearColor();
   const mainScene = useThree((state) => state.scene);
   const canvasCamera = useThree((state) => state.camera);
-  const portalScene = useMemo(() => {
+  const ownScene = useMemo(() => {
     const scene = new THREE.Scene();
     scene.name = `${node.name}::offscreen`;
     return scene;
   }, [node.name]);
+  // A portalled 3D pass in a shared world draws the canvas's world, which owns its scene's lights.
+  const canvasWorldScene = useCanvasWorldScene();
+  const drawsCanvasWorld = kind === '3d' && !ownWorld3D && !rendersInline && canvasWorldScene !== null;
+  const portalScene = drawsCanvasWorld ? canvasWorldScene : ownScene;
 
   // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
   const target = useMemo(
@@ -183,10 +188,10 @@ function OffscreenViewport({
         name={node.name}
       />
     ) : null;
-  // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
-  // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
-  // 2D portal holds no 3D surface.
-  const portalLightScene = kind === '3d' && !rendersInline ? portalScene : null;
+  // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
+  // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
+  // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
+  const portalLightScene = kind === '3d' && !rendersInline && !drawsCanvasWorld ? portalScene : null;
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);

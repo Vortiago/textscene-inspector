@@ -63,6 +63,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['worldenvironment-requires-environment'],
     reason: 'the WorldEnvironment names no Environment on purpose, to pin the root Godot draws with none',
   },
+  'unit-sprite-2d-shared-world-first-environment.tscn': {
+    rules: ['single-worldenvironment'],
+    reason:
+      'the two WorldEnvironment nodes are the fixture, to pin that the first in tree order wins the shared world',
+  },
   'unit-sprite2d-untextured.tscn': {
     rules: ['sprite2d-requires-texture'],
     reason: 'the two textureless Sprite2D nodes are the fixture, to pin that Godot draws nothing for them',

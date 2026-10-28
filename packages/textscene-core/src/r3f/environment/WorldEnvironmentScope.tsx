@@ -5,7 +5,9 @@
  * CameraAttributes choose apart (`worldExposure.tsx`).
  */
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import * as THREE from 'three';
+import { createPortal } from '@react-three/fiber';
 import { EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer';
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
 import { PreviewEnvironment } from '../preview/PreviewEnvironment';
@@ -22,6 +24,10 @@ import { createWorldGroup, type WorldResolution } from './worldGroup';
 import { WorldToneMapProvider } from './worldToneMap';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
 import { NO_RESOURCES } from '../SceneResourcesContext';
+import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
+import { useSceneShadowFit } from '../SceneShadowFitter';
+import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
+import { CanvasWorldSceneContext } from './canvasWorldScene';
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
@@ -52,25 +58,45 @@ export function WorldEnvironmentScope({ world, children }: { world: WorldKind; c
 
 /**
  * The world of a 2D canvas. Its viewport has no camera into it, so Godot draws none of it there
- * (`renderer_viewport.cpp:362`), and only its shared viewports draw it, with its Environment.
+ * (`renderer_viewport.cpp:362`). Only its shared viewports draw it: one scene for all of them, with
+ * the world's Environment, its shadow fit and its depth prepass applied once.
  */
 export function CanvasWorldScope({ children }: { children: ReactNode }) {
+  const scene = useMemo(() => {
+    const created = new THREE.Scene();
+    created.name = 'Canvas::world';
+    return created;
+  }, []);
+  useSceneShadowFit(scene);
+  useSceneDepthPrepass(scene);
   return (
     <environments.Provider>
       <WorldCameraAttributesScope>
-        <CanvasWorldEnvironment>{children}</CanvasWorldEnvironment>
+        <CanvasWorldSceneContext.Provider value={scene}>
+          <CanvasWorldEnvironment scene={scene}>{children}</CanvasWorldEnvironment>
+        </CanvasWorldSceneContext.Provider>
       </WorldCameraAttributesScope>
     </environments.Provider>
   );
 }
 
-function CanvasWorldEnvironment({ children }: { children: ReactNode }) {
+function CanvasWorldEnvironment({ scene, children }: { scene: THREE.Scene; children: ReactNode }) {
   const resolved = resolvedEnvironment(environments.useChosen());
+  // The layer draws into the world's scene as a 3D view does, whatever the canvas draws.
+  const layer = createPortal(
+    <CanvasWorkspaceProvider workspace="3d">
+      <WorldKindProvider world="subViewport">
+        {resolved && <EnvironmentLayer {...resolved} />}
+      </WorldKindProvider>
+    </CanvasWorkspaceProvider>,
+    scene
+  );
   return (
     <WorldToneMapProvider
       settings={resolved?.settings ?? null}
       resources={resolved?.resources ?? NO_RESOURCES}
     >
+      {layer}
       {children}
     </WorldToneMapProvider>
   );
@@ -79,15 +105,28 @@ function CanvasWorldEnvironment({ children }: { children: ReactNode }) {
 /**
  * A sub-viewport's portal into its parent's world, which only a 2D canvas portals. Godot keys a
  * world's WorldEnvironment group by its scenario (`world_environment.cpp:76-85`), so a node inside
- * publishes to the parent's chooser, whose first node in tree order wins for both.
+ * publishes to the parent's chooser, whose first node in tree order wins for both. The canvas's
+ * world draws that Environment into the shared scene, so the portal adds only its tonemap.
  */
 export function SharedWorldEnvironmentScope({ children }: { children: ReactNode }) {
   return (
     <WorldKindProvider world="subViewport">
       <SharedWorldExposureScope>
-        <SubViewportEnvironment>{children}</SubViewportEnvironment>
+        <SharedWorldToneMap>{children}</SharedWorldToneMap>
       </SharedWorldExposureScope>
     </WorldKindProvider>
+  );
+}
+
+function SharedWorldToneMap({ children }: { children: ReactNode }) {
+  const resolved = resolvedEnvironment(useViewEnvironment());
+  return (
+    <WorldToneMapProvider
+      settings={resolved?.settings ?? null}
+      resources={resolved?.resources ?? NO_RESOURCES}
+    >
+      {children}
+    </WorldToneMapProvider>
   );
 }
 

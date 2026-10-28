@@ -420,6 +420,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-shared-world-first-environment.tscn',
     mode: '2d',
   },
+  // Two shared-world viewports draw one World3D, so the Right camera shows the Left one's sphere.
+  // Godot 4.6.3 `--mode 2d`: both targets match, each with the glowing sphere.
+  {
+    name: 'sprite-2d-shared-world-content',
+    file: 'unit-sprite-2d-shared-world-content.tscn',
+    mode: '2d',
+  },
   // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3
   // `--mode 2d`: (400,150) rgb(127,127,127) and (200,280) rgb(76,76,76), the last column and row.
   {

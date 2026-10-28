@@ -52,5 +52,5 @@ The exposure of a valid `attributes` replaces the world's while the world render
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.
-- **Not drawn** A Camera3D in a SubViewport that shares the root world of a 3D scene leaves that SubViewport at the exposure and the Environment of the root world.
+- **Not drawn** A Camera3D in a SubViewport that shares the root world of a 3D scene leaves that SubViewport at the exposure and the Environment of the root world. In a shared world of a 2D scene, its `environment` sets the tone mapping but not the background, sky, ambient or fog.
 - **Editor only** The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.
