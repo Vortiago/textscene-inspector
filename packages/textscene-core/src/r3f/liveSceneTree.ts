@@ -73,12 +73,22 @@ export interface LiveTreeEntry {
  * scene that inherits or instances itself ends.
  */
 function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  const scenePath = liveInstancePath(node, scope);
-  const outer = scopeOf(node, scope);
-  if (!scenePath || (outer.instancedScenePaths ?? []).includes(scenePath)) return node;
+  const scenePath = loadableScenePath(node, scope);
+  if (!scenePath) return node;
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return node;
-  return collapseOver(node, outer, scenePath, cached, sceneCache);
+  return collapseOver(node, scopeOf(node, scope), scenePath, cached, sceneCache);
+}
+
+/**
+ * The `res://` path of the scene `node` instances where it sits in `scope`, or null where it
+ * instances none or a scene that already encloses it. Godot never loads a cyclic instance, so
+ * nothing of it is below the node.
+ */
+function loadableScenePath(node: LiveNode, scope: SceneScope): string | null {
+  const scenePath = liveInstancePath(node, scope);
+  const enclosingScenePaths = scopeOf(node, scope).instancedScenePaths ?? [];
+  return scenePath && !enclosingScenePaths.includes(scenePath) ? scenePath : null;
 }
 
 /** The collapse of `node` over `cached`, the scene at `scenePath` that the caller read once. */
@@ -245,12 +255,8 @@ function liveChildGroups(
   const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
   if (glbObject) return glbInstanceGroups(glbObject, node.children, own);
 
-  const scenePath = liveInstancePath(node, scope);
+  const scenePath = loadableScenePath(node, scope);
   if (!scenePath) return inlineOnly();
-
-  // Cyclic instancing: Godot never loads the scene here, so nothing of it is below.
-  const enclosingScenePaths = own.instancedScenePaths ?? [];
-  if (enclosingScenePaths.includes(scenePath)) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
@@ -272,7 +278,7 @@ function liveChildGroups(
   groups.push({
     origin: 'subscene',
     children: cached.nodes,
-    scope: contentScopeOf(cached, [...enclosingScenePaths, scenePath]),
+    scope: contentScopeOf(cached, [...(own.instancedScenePaths ?? []), scenePath]),
   });
   return groups;
 }
@@ -300,8 +306,8 @@ function instancedGlbObject(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): THREE.Object3D | undefined {
-  const scenePath = liveInstancePath(node, scope);
-  if (!scenePath || (scope.instancedScenePaths ?? []).includes(scenePath)) return undefined;
+  const scenePath = loadableScenePath(node, scope);
+  if (!scenePath) return undefined;
   const glbPath = loneGlbRootPath(sceneCache.getCached(scenePath)?.nodes ?? []);
   return glbPath ? (glbCache?.getCached(glbPath) ?? undefined) : undefined;
 }
