@@ -128,3 +128,7 @@ omission.
 > not, it is only absent here. The self-transform trackers (`XRNode3D`, `XRController3D`,
 > `XROrigin3D`, `XRAnchor3D`) stay in the first: a session updates only their own transform, and
 > children ride the rendered hierarchy.
+
+> **Amendment (skinned draw):** `Skeleton3D` registers `transform-only` with a scene pass that binds each
+> MeshInstance3D naming it to the **Automatic skin**. That is an implemented drive (ADR-0045), so its
+> sheet status is `limitation`.

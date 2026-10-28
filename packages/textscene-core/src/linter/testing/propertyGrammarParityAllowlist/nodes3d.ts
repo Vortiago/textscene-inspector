@@ -21,6 +21,21 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'data is a packed cell dictionary decoded by a bespoke helper (extractCells), and baked_meshes draw in place of the cells (grid_map.cpp:688). The physics/navigation/octant keys never reach a frame.',
   },
 
+  Skeleton3D: {
+    linterOnly: [
+      // A wildcard validator. `readBones` reads it in a loop over Object.keys, which the
+      // properties.X scrape cannot see.
+      'bones/*',
+      // Physics bones, the modifier schedule and the animation root-motion scale never move
+      // a frozen frame.
+      'animate_physical_bones',
+      'modifier_callback_mode_process',
+      'motion_scale',
+    ],
+    reason:
+      'The bone table is read through readBones, a loop over the bones/<index>/<leaf> keys. The other three keys shape physics, modifier timing and animation, not the rest or the pose.',
+  },
+
   Label3D: {
     renderGap: [
       // Text shaping: the font, the locale and BiDi settings the TextServer

@@ -22,6 +22,13 @@ export const UNREACHABLE_BONE_SLOT = 2 ** 31;
 const BONE_NAME_KEY = indexedKeyRegex('^bones/(#)/name(?:/.*)?$', 'to_int');
 
 /**
+ * `bones/<idx>/<sub>`: the index is a bare `path.get_slicec('/', 1).to_int()` with no validity gate
+ * (skeleton_3d.cpp:82), so `bones/x/position` names bone 0, and Godot applies it. Read the index
+ * with `stringToInt(…, 'uint32')`, which `uint32_t which` stores.
+ */
+export const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
+
+/**
  * The String `add_bone` receives. Quotes and a `&`/`^` prefix come off, then
  * the escapes the tokenizer resolves before any setter runs, so `"a:b"`
  * is the two-character name with a colon in it that Godot refuses.
@@ -53,37 +60,51 @@ interface BoneNameFinding {
   heldBy?: number;
 }
 
-/**
- * Every dropped `bones/<i>/name` write, in file order. An unreachable slot (`INVALID_BONE_INDEX`)
- * and a name :605 refuses are skipped, since phase 1 reports both on the same key. Both still leave
- * the bone unadded, which `added` records.
- */
-export function boneNameFindings(properties: Record<string, string>): BoneNameFinding[] {
-  const findings: BoneNameFinding[] = [];
-  const taken = new Map<string, number>();
-  let added = 0;
+/** What one `bones/<i>/name` write did: added a bone, left none, or was dropped. */
+type BoneAddition = { kind: 'added'; name: string } | { kind: 'refused' } | BoneNameFinding;
 
-  for (const [key, value] of Object.entries(properties)) {
+/**
+ * The bone count and names that decide each `bones/<i>/name` write, in file order. The linter reads
+ * what it drops, and the bone table reads what it adds, so the two cannot disagree.
+ */
+export class BoneAdder {
+  private readonly taken = new Map<string, number>();
+  private added = 0;
+
+  /**
+   * Null for a key that is no `bones/<i>/name`. An unreachable slot (`INVALID_BONE_INDEX`) and a name
+   * :605 refuses are `refused`, since phase 1 reports both on the same key. Both leave the bone
+   * unadded.
+   */
+  write(key: string, value: string): BoneAddition | null {
     const match = BONE_NAME_KEY.exec(key);
-    if (!match) continue;
+    if (!match) return null;
     const indexText = match[1]!;
     const index = stringToInt(indexText, 'uint32');
-    if (index >= UNREACHABLE_BONE_SLOT) continue;
+    if (index >= UNREACHABLE_BONE_SLOT) return { kind: 'refused' };
     const name = boneNameText(value);
-    if (addBoneRefusal(name) !== null) continue;
+    if (addBoneRefusal(name) !== null) return { kind: 'refused' };
 
-    if (index !== added) {
-      findings.push({ kind: 'order', key, indexText, index, expected: added, name });
-      continue;
+    if (index !== this.added) {
+      return { kind: 'order', key, indexText, index, expected: this.added, name };
     }
-    const heldBy = taken.get(name);
+    const heldBy = this.taken.get(name);
     if (heldBy !== undefined) {
-      findings.push({ kind: 'duplicate', key, indexText, index, expected: added, name, heldBy });
-      continue;
+      return { kind: 'duplicate', key, indexText, index, expected: this.added, name, heldBy };
     }
-    taken.set(name, index);
-    added++;
+    this.taken.set(name, index);
+    this.added++;
+    return { kind: 'added', name };
   }
+}
 
+/** Every dropped `bones/<i>/name` write, in file order. */
+export function boneNameFindings(properties: Record<string, string>): BoneNameFinding[] {
+  const findings: BoneNameFinding[] = [];
+  const adder = new BoneAdder();
+  for (const [key, value] of Object.entries(properties)) {
+    const addition = adder.write(key, value);
+    if (addition && (addition.kind === 'order' || addition.kind === 'duplicate')) findings.push(addition);
+  }
   return findings;
 }
