@@ -5,7 +5,10 @@
  */
 
 import plainReference from './ftEmbolden.godot.json';
-import type { ContourTag, ScaledOutline } from './glyphContours';
+import type { ContourTag, GlyphContours, ScaledOutline } from './glyphContours';
+import type { GlyphVariation } from './fontMetrics';
+import { openFontOutlines } from './sfntOutlines';
+import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 export interface ReferenceGlyph {
   font: string;
@@ -32,8 +35,21 @@ export function plainReferenceGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
       other.char === glyph.char &&
       other.sizePx === glyph.sizePx
   );
-  if (!plain) throw new Error(`expected a reference without embolden for ${referenceGlyphTitle(glyph)}`);
+  if (!plain)
+    throw new Error(`expected a reference without embolden or skew for ${referenceGlyphTitle(glyph)}`);
   return plain;
+}
+
+export const variationOf = ({ embolden, skew }: ReferenceGlyph): GlyphVariation => ({ embolden, skew });
+
+/** The contours the reader gives the font of `glyph` for its character, size and variation. */
+export async function readerContours(glyph: ReferenceGlyph): Promise<GlyphContours> {
+  const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font)))!;
+  return outlines.glyphContours(
+    outlines.glyphIndex(glyph.char.codePointAt(0)!),
+    glyph.sizePx,
+    variationOf(glyph)
+  )!;
 }
 
 export function toScaledOutline({ points, contourEnds }: ReferenceGlyph): ScaledOutline {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
-import type { GlyphVariation } from '../../../r3f/controls/native/text/glyphVariation';
-import { withVariation } from '../../../r3f/controls/native/text/fontMetrics';
+import { withVariation, type GlyphVariation } from '../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
@@ -318,34 +317,27 @@ describe('buildTextMeshSurface font variation', () => {
     outlines,
     metrics: withVariation(OPEN_SANS_FONT_METRICS, variation),
   });
-  const maxX = (target: TextMeshFace) =>
-    extent(
-      axis(
-        buildTextMeshSurface(
-          decodeTextMesh({ text: '"H"', font_size: String(FONT_SIZE), horizontal_alignment: LEFT }),
-          target
-        ),
-        0
-      )
-    ).max;
+  const maxX = (variation: GlyphVariation): number => {
+    const properties = decodeTextMesh({
+      text: '"H"',
+      font_size: String(FONT_SIZE),
+      horizontal_alignment: LEFT,
+    });
+    return extent(axis(buildTextMeshSurface(properties, faceOf(variation)), 0)).max;
+  };
 
-  it('extrudes the outline that FT_Outline_Embolden grows, as the FontVariation of the face sets', () => {
-    expect(maxX(faceOf(EMBOLDENED))).toBeCloseTo(glyphOf('H', EMBOLDENED).max.x, 6);
-    expect(glyphOf('H', EMBOLDENED).max.x).toBeGreaterThan(glyphOf('H').max.x);
-  });
-
-  it('extrudes the outline that the shear of the FontVariation moves', () => {
-    expect(maxX(faceOf(SHEARED))).toBeCloseTo(glyphOf('H', SHEARED).max.x, 6);
-    expect(glyphOf('H', SHEARED).max.x).toBeGreaterThan(glyphOf('H').max.x);
+  it.each([
+    ['embolden', EMBOLDENED],
+    ['skew', SHEARED],
+  ])('extrudes the outline that the %s of the FontVariation changes', (_, variation) => {
+    expect(maxX(variation)).toBeCloseTo(glyphOf('H', variation).max.x, 6);
+    expect(glyphOf('H', variation).max.x).toBeGreaterThan(glyphOf('H').max.x);
   });
 
   it('keeps the glyphs of a plain, an emboldened and a sheared face of one font apart', () => {
-    const faces = [face, faceOf(EMBOLDENED), faceOf(SHEARED), face];
-    const variations = [{}, EMBOLDENED, SHEARED, {}];
-
-    faces.forEach((target, i) => {
-      expect(maxX(target)).toBeCloseTo(glyphOf('H', variations[i]).max.x, 6);
-    });
+    for (const variation of [{}, EMBOLDENED, SHEARED, {}]) {
+      expect(maxX(variation)).toBeCloseTo(glyphOf('H', variation).max.x, 6);
+    }
   });
 });
 

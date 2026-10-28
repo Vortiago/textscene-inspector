@@ -64,7 +64,7 @@ export function cffContourReader(sfnt: SfntFile): GlyphContourReader | null {
   const font = openCff(sfnt);
   if (!font) return null;
 
-  return (glyphIndex, fontSizePx, variation = {}) => {
+  return (glyphIndex, fontSizePx, variation) => {
     const fontDict = font.fontDictOf(glyphIndex);
     if (!fontDict) return null;
     const { matrix } = fontDict;

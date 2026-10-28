@@ -177,6 +177,14 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   return advance26_6 / 64;
 }
 
+/** The embolden and the shear of a `FontVariation`: absent is none. */
+export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew'>;
+
+/** One string for a variation, with an absent embolden and skew equal to 0: the key of every cache that varies by it. */
+export function variationKey({ embolden = 0, skew = 0 }: GlyphVariation): string {
+  return `${embolden}/${skew}`;
+}
+
 /**
  * The wrappers of one face, by embolden and skew: one each, so a layout memoised on `FontMetrics`
  * identity keeps its hits.
@@ -189,11 +197,11 @@ const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetri
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
-  { embolden = 0, skew = 0 }: { embolden?: number; skew?: number }
+  { embolden = 0, skew = 0 }: GlyphVariation
 ): Metrics {
   if (embolden === 0 && skew === 0) return metrics;
   const byVariation = variationsOf(metrics);
-  const key = `${embolden}/${skew}`;
+  const key = variationKey({ embolden, skew });
   let wrapped = byVariation.get(key);
   if (!wrapped)
     byVariation.set(

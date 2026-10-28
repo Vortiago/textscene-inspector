@@ -10,12 +10,11 @@ import { scaledOutlineContours, type ScaledOutline } from './glyphContours';
 import {
   plainReferenceGlyph,
   referenceGlyphTitle,
+  readerContours,
   referencePoints,
   toScaledOutline,
   type ReferenceGlyph,
 } from './glyphVariation.testkit';
-import { openFontOutlines } from './sfntOutlines';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 const emboldenedGlyphs = (reference as ReferenceGlyph[]).filter((glyph) => glyph.embolden > 0);
 
@@ -50,13 +49,7 @@ describe('glyph contours of an emboldened CFF font', () => {
       .filter((glyph) => glyph.font.endsWith('.otf'))
       .map((glyph) => [referenceGlyphTitle(glyph), glyph] as const)
   )('matches Godot for %s', async (_, glyph) => {
-    const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font)))!;
-
-    const contours = outlines.glyphContours(
-      outlines.glyphIndex(glyph.char.codePointAt(0)!),
-      glyph.sizePx,
-      glyph
-    )!;
+    const contours = await readerContours(glyph);
 
     expect(referencePoints(contours.points)).toEqual(glyph.points);
     expect(contours.contourEnds).toEqual(glyph.contourEnds);

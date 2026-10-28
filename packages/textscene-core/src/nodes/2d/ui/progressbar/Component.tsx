@@ -116,7 +116,8 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
     fontMetrics,
     drawCanvasOutline
   );
-  useSceneFontSettleCount(strokedOutlines === undefined);
+  const isAwaitingOutlines = strokedOutlines === undefined;
+  useSceneFontSettleCount(isAwaitingOutlines);
 
   return (
     <>
@@ -133,7 +134,7 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
       )}
       {layout && textPos && (
         <CanvasItemGroup position={[textPos.x, -textPos.y, 0]}>
-          {drawCanvasOutline && strokedOutlines !== undefined && (
+          {drawCanvasOutline && !isAwaitingOutlines && (
             <TextRun
               layout={layout}
               fontSizePx={fontSizePx}

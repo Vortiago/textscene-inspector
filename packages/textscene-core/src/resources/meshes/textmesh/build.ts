@@ -15,7 +15,11 @@ import { lineStartOffset, VerticalAlignment } from '../../../godot/math/alignmen
 import type { EnumValue } from '../../../godot/classdb/enumNames';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
-import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
+import {
+  variationKey,
+  type FontMetrics,
+  type GlyphVariation,
+} from '../../../r3f/controls/native/text/fontMetrics';
 import { hexCodeBoxAdvanceSize } from '../../../r3f/controls/native/text/hexCodeBox';
 import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { isControlChar, shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
@@ -101,9 +105,9 @@ function blockStartY(
 type GlyphMeshes = Map<number, GlyphMeshData | null>;
 
 /**
- * The glyph mesh data of one font by its `font_size`, `pixel_size`, `curve_step`, embolden and skew,
- * then by codepoint. Godot caches by glyph and clears it when one of the first three changes
- * (`:3043-3060`); the last two belong to the font it draws with. Here the cache
+ * The glyph mesh data of one font by its `font_size`, `pixel_size`, `curve_step` and variation, then
+ * by codepoint. Godot caches by glyph and clears it when one of the first three changes
+ * (`:3043-3060`). The face's embolden and skew change its contours, so they key the cache too. Here the cache
  * belongs to the font and not to a TextMesh, so a few settings stay: two meshes of one font at two
  * sizes do not discard each other's glyphs on every edit.
  */
@@ -127,10 +131,10 @@ function glyphMeshes(
   properties: TextMeshProperties,
   { outlines, metrics }: TextMeshFace
 ): (codepoint: number) => GlyphMeshData | null {
-  const { embolden = 0, skew = 0 } = metrics;
+  const variation: GlyphVariation = { embolden: metrics.embolden, skew: metrics.skew };
   const meshes = cachedGlyphMeshes(
     outlines,
-    `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${embolden}|${skew}`
+    `${properties.fontSize}|${properties.pixelSize}|${properties.curveStep}|${variationKey(variation)}`
   );
   return (codepoint) => {
     if (!meshes.has(codepoint)) {
@@ -140,7 +144,7 @@ function glyphMeshes(
         index === 0
           ? null
           : buildGlyphMeshData(
-              outlines.glyphContours(index, properties.fontSize, { embolden, skew }),
+              outlines.glyphContours(index, properties.fontSize, variation),
               properties.pixelSize,
               properties.curveStep
             )

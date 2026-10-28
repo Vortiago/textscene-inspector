@@ -5,20 +5,13 @@
  */
 
 import { emboldenOutline } from './ftEmbolden';
+import { FIXED_16_16_ONE, type GlyphVariation } from './fontMetrics';
 import {
   scaledOutlineContours,
   transformOutline,
   type GlyphContours,
   type ScaledOutline,
 } from './glyphContours';
-
-const UNIT_16_16 = 0x10000;
-
-/** The face's `variation_embolden` and the shear of its `variation_transform`: absent is none. */
-export interface GlyphVariation {
-  embolden?: number;
-  skew?: number;
-}
 
 /**
  * The contours of `outline` once the variation has changed it, in place. The shear matrix is the
@@ -27,11 +20,16 @@ export interface GlyphVariation {
  */
 export function variedContours(
   outline: ScaledOutline,
-  { embolden = 0, skew = 0 }: GlyphVariation,
+  { embolden = 0, skew = 0 }: GlyphVariation = {},
   fontSizePx: number
 ): GlyphContours {
   emboldenOutline(outline, embolden, fontSizePx);
   if (skew !== 0)
-    transformOutline(outline, [UNIT_16_16, Math.trunc(Math.fround(skew) * UNIT_16_16), 0, UNIT_16_16]);
+    transformOutline(outline, [
+      FIXED_16_16_ONE,
+      Math.trunc(Math.fround(skew) * FIXED_16_16_ONE),
+      0,
+      FIXED_16_16_ONE,
+    ]);
   return scaledOutlineContours(outline);
 }

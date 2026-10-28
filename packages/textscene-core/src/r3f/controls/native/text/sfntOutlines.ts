@@ -12,7 +12,7 @@
 
 import { cmapLookup } from './sfntCmap';
 import type { GlyphContours } from './glyphContours';
-import type { GlyphVariation } from './glyphVariation';
+import type { GlyphVariation } from './fontMetrics';
 import { cffContourReader } from './sfntCff';
 import { glyphContourReader } from './sfntGlyf';
 import { openFontContainer } from './fontContainer';

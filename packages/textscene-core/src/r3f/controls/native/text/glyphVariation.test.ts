@@ -10,12 +10,12 @@ import { variedContours } from './glyphVariation';
 import {
   plainReferenceGlyph,
   referenceGlyphTitle,
+  readerContours,
   referencePoints,
   toScaledOutline,
+  variationOf,
   type ReferenceGlyph,
 } from './glyphVariation.testkit';
-import { openFontOutlines } from './sfntOutlines';
-import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 const shearedGlyphs = reference as ReferenceGlyph[];
 const cases = shearedGlyphs.map((glyph) => [referenceGlyphTitle(glyph), glyph] as const);
@@ -24,7 +24,7 @@ describe('variedContours', () => {
   it.each(cases)('shears the outline of %s as Godot does', (_, glyph) => {
     const outline = toScaledOutline(plainReferenceGlyph(glyph));
 
-    const contours = variedContours(outline, glyph, glyph.sizePx);
+    const contours = variedContours(outline, variationOf(glyph), glyph.sizePx);
 
     expect(referencePoints(contours.points)).toEqual(glyph.points);
     expect(contours.contourEnds).toEqual(glyph.contourEnds);
@@ -44,15 +44,7 @@ describe('glyph contours of a sheared CFF font', () => {
   it.each(cases.filter(([, glyph]) => glyph.font.endsWith('.otf')))(
     'match Godot for %s',
     async (_, glyph) => {
-      const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font)))!;
-
-      const contours = outlines.glyphContours(
-        outlines.glyphIndex(glyph.char.codePointAt(0)!),
-        glyph.sizePx,
-        glyph
-      )!;
-
-      expect(referencePoints(contours.points)).toEqual(glyph.points);
+      expect(referencePoints((await readerContours(glyph)).points)).toEqual(glyph.points);
     }
   );
 });

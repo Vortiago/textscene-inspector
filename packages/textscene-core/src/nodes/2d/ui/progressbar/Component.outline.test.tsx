@@ -11,9 +11,9 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
-import { fixtureFontBytes } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SfntOutlines } from '../../../../r3f/controls/native/text/sfntOutlines';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+import { trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
 import { ProgressBar } from './Component';
 
 interface RunProps {
@@ -51,16 +51,7 @@ function outlinedBar(): SolveNode {
   };
 }
 
-/** A font file whose outlines read in the background, as a font file of a scene does. */
-function openSansFile(): FontResource {
-  return {
-    kind: 'file',
-    bytes: fixtureFontBytes('open-sans-semibold-subset.ttf'),
-    mimeType: undefined,
-    fallbacks: [],
-    properties: {},
-  };
-}
+const strokeRuns = (): RunProps[] => scene.runs.filter((run) => run.strokeWidthPx);
 
 async function renderBar() {
   scene.runs = [];
@@ -69,16 +60,14 @@ async function renderBar() {
   );
 }
 
-const strokeRuns = (): RunProps[] => scene.runs.filter((run) => run.strokeWidthPx);
-
 beforeEach(() => {
   const bundled = createOpenSansCanvasFontMetrics('progress-bar-outline-test');
   scene.metrics = withVariation(bundled, { embolden: 0.6 });
-  scene.font = openSansFile();
+  scene.font = trueTypeFontFile();
 });
 
 describe('<ProgressBar> canvas outline', () => {
-  it('strokes the contours of the emboldened face, and never the plain ring while they load', async () => {
+  it('strokes the contours of the emboldened face, and never strokes the plain ring while they load', async () => {
     await renderBar();
 
     await vi.waitFor(() => expect(strokeRuns().length).toBeGreaterThan(0));

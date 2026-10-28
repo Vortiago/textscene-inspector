@@ -11,8 +11,7 @@
 
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
-import { ftMulFix } from './fontMetrics';
-import type { GlyphVariation } from './glyphVariation';
+import { ftMulFix, type GlyphVariation } from './fontMetrics';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
