@@ -1,7 +1,8 @@
 # Claude Code hooks
 
 The `PreToolUse` hooks make every commit that Claude Code makes pass the checks of the git pre-commit
-hook. The `PostToolUse` hook checks the prose of a comparison sheet after Claude Code edits it.
+hook. The `PostToolUse` hook checks the prose of a comparison sheet after Claude Code edits it. The
+`SessionStart` hook installs the Chromium that CI uses.
 Each hook is an ES module that `node` runs. Claude Code sends the tool input to the hook as JSON on
 stdin.
 
@@ -61,6 +62,20 @@ fixes a violation at once instead of at the next test run.
 
 `scripts/compare-docs/sheetProse.test.mjs` tests the checks and the path filter.
 
+### `ensure-playwright-chromium.mjs`
+
+Installs the Chromium of the locked Playwright when a session starts. A golden compares exact
+pixels, and a different Chromium build rasterises Canvas 2D text differently. The cloud container
+bakes an older build and sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`, so without this hook
+`pnpm test:visual` fails on `main` or cannot launch.
+
+1. Removes `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` from the environment (`playwrightInstallEnv` in
+   `scripts/ci/`). `PLAYWRIGHT_BROWSERS_PATH` stays, so the browser lands where the launch looks.
+2. Runs `pnpm exec playwright install chromium` in `$CLAUDE_PROJECT_DIR`. This is a no-op when the
+   browser is present.
+3. If the install fails, prints a warning to stderr.
+4. Always exits with code 0, so a session without network access still starts.
+
 ## Configuration
 
 `.claude/settings.json` configures the hooks:
@@ -84,6 +99,17 @@ fixes a violation at once instead of at the next test run.
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.mjs",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ensure-playwright-chromium.mjs",
             "timeout": 300
           }
         ]
