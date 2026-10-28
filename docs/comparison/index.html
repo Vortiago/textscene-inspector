@@ -2360,7 +2360,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>fog_enabled</code> in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, <code>fog_sun_scatter</code> and <code>fog_aerial_perspective</code> follow Godot's shader too. <code>fog_sky_affect</code> sets how far the fog covers the background.</p></div>
+        <div class="prose"><p><code>fog_enabled</code> in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, <code>fog_sun_scatter</code> and <code>fog_aerial_perspective</code> follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. <code>fog_sky_affect</code> sets how far the fog covers the background.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Volumetric fog</h3><span class="status st-limitation">Limitation</span></div>
@@ -2377,7 +2377,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>volumetric_fog_enabled</code> over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.</p>
+        <div class="prose"><p><code>volumetric_fog_enabled</code> over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. <code>volumetric_fog_ambient_inject</code> lights the fog with the sky's radiance layers, as Godot does. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.</p>
 <ul><li><strong>Not drawn</strong> <code>volumetric_fog_gi_inject</code> adds no light, because the previewer draws no VoxelGI or SDFGI.</li></ul></div>
       </section>
       <section class="prop">
@@ -5904,14 +5904,14 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Sky" hidden>
       <header class="sheet-head">
         <h2>Sky</h2>
-        <span class="renders">renders as Godot's radiance layers as an octmap array + a THREE PMREM environment + background</span>
+        <span class="renders">renders as Godot's radiance layers as an octmap array + background</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_sky.html" target="_blank" rel="noopener" title="Godot class reference for Sky">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/resources/sky.h" target="_blank" rel="noopener" title="Godot engine source for Sky">source ↗</a>
         
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, baked as Godot bakes them into an octmap array with a mip chain per layer, give every reflection and the ambient light. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, baked as Godot bakes them into an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>
