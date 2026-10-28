@@ -22,6 +22,11 @@ import { Sprite2D } from '../nodes/2d/sprite2d/Component';
 import { parseSprite2D } from '../nodes/2d/sprite2d/parser';
 import { parseSprite3D } from '../nodes/3d/sprite3d/parser';
 import { SceneStack } from '../r3f/testing/SceneStack';
+import { ControlCanvasWalker } from '../r3f/controls/native/ControlCanvasWalker';
+import { controlComponentRegistry } from '../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../r3f/controls/native/solverRegistry';
+import { nativeTheme } from '../r3f/controls/native/nativeTheme';
+import { controlNode } from '../r3f/controls/native/testing/solveNode';
 import '../nodes/3d/sprite3d/index.r3f';
 import { registeredComponent } from '../r3f/testing/registeredComponent';
 
@@ -117,5 +122,43 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
     const sprite = node('Sprite3D', parseSprite3D(heading('Sprite3D'), { texture: VIEWPORT_REF }));
     const renderer = await provide(<Sprite3D node={sprite} />);
     expect(mapsIn(renderer)).toContain(decodingTarget.texture);
+  });
+
+  it('TextureRect draws the live target when the Control walker paints it', async () => {
+    controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
+    controlSolverRegistry.clear();
+    const n = controlNode('TextureRect', 'TextureRect', {
+      name: 'TextureRect',
+      ...parseTextureRect(heading('TextureRect'), { texture: VIEWPORT_REF }),
+      offsetRight: 64,
+      offsetBottom: 64,
+    });
+    const root = {
+      ...emptySolveNode(),
+      path: 'Root/TextureRect',
+      node: n,
+      resources: { internalResources: RESOURCES, externalResources: [] },
+    };
+    const viewport = { x: 0, y: 0, w: 1152, h: 648 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <SceneStack
+        workspace="2d"
+        loader={createFakeResourceLoader().loader}
+        scene={{ internalResources: RESOURCES }}
+      >
+        <ViewportTextureProvider>
+          <ViewportTexturePublisher path="Root/SubViewport" entry={ENTRY} />
+          <ControlCanvasWalker
+            tree={[root]}
+            generation={0}
+            viewport={viewport}
+            theme={nativeTheme(1)}
+            measurer={null}
+          />
+        </ViewportTextureProvider>
+      </SceneStack>
+    );
+    expect(mapsIn(renderer)).toEqual([target.texture]);
+    controlComponentRegistry.clear();
   });
 });

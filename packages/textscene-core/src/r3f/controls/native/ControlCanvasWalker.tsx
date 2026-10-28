@@ -18,6 +18,7 @@ import { TextureSampler2DContext, useInheritedTextureSampler } from '../../canva
 import { useControlOwnTint, useInheritedModulate } from './controlTint';
 import { canvasRenderOrder } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
+import { NodePathProvider } from '../../contexts/NodePathContext';
 import { useLayerRank } from '../../contexts/PaintOrderContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
@@ -213,7 +214,9 @@ function ControlNodeGroup({
   // context, so they must be its React children. The registration declares it,
   // so a second such type adds no branch here.
   const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
-  const content = wrapsChildren ? (
+  // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
+  // counts from the painter's local scene.
+  const painted = wrapsChildren ? (
     <Painter
       solveNode={solveNode}
       rect={rect}
@@ -247,6 +250,7 @@ function ControlNodeGroup({
       {childElements}
     </>
   );
+  const content = <NodePathProvider path={solveNode.path}>{painted}</NodePathProvider>;
 
   const ownGroup = (
     // Every group here carries the key: three takes `groupOrder` from the nearest
