@@ -82,6 +82,15 @@ export interface Rgba {
   a: number;
 }
 
+/**
+ * `Color::operator*` (`core/math/color.h`) in `float`: each channel product rounded.
+ *
+ * @canonical A Color product in float32
+ */
+export function multiplyColor(a: Rgba, b: Rgba): Rgba {
+  return { r: f(a.r * b.r), g: f(a.g * b.g), b: f(a.b * b.b), a: f(a.a * b.a) };
+}
+
 /** `Color::lerp` (`core/math/color.h:110-117`): {@link lerp} on each channel, alpha included. */
 export function lerpColor(from: Rgba, to: Rgba, weight: number): Rgba {
   return {
@@ -100,7 +109,11 @@ export function lerpf(from: number, to: number, weight: number): number {
 /** `(float)PI / 180.0f`, the constant of the float `Math::deg_to_rad`. */
 const DEG_TO_RAD_FLOAT = f(f(Math.PI) / 180);
 
-/** The float overload of `Math::deg_to_rad` (`core/math/math_funcs.h:325-327`). */
+/**
+ * The float overload of `Math::deg_to_rad` (`core/math/math_funcs.h:325-327`).
+ *
+ * @canonical Angles in float32
+ */
 export function degToRadf(degrees: number): number {
   return f(degrees * DEG_TO_RAD_FLOAT);
 }

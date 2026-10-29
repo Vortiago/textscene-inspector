@@ -26,12 +26,20 @@ export function storedVector3(value: Vector3): Vector3 {
   return { x: storedReal(value.x), y: storedReal(value.y), z: storedReal(value.z) };
 }
 
-/** The colour a `Color` field holds after `value` is assigned to it. */
+/**
+ * The colour a `Color` field holds after `value` is assigned to it.
+ *
+ * @canonical A stored Color
+ */
 export function storedColor(value: Rgba): Rgba {
   return { r: fround(value.r), g: fround(value.g), b: fround(value.b), a: fround(value.a) };
 }
 
-/** The transform a `Transform2D` field holds after `value` is assigned to it. */
+/**
+ * The transform a `Transform2D` field holds after `value` is assigned to it.
+ *
+ * @canonical A stored Transform2D
+ */
 export function storedTransform2D(value: Transform2DColumns): Transform2DColumns {
   const { a, b, c, d, tx, ty } = value;
   return { a: fround(a), b: fround(b), c: fround(c), d: fround(d), tx: fround(tx), ty: fround(ty) };

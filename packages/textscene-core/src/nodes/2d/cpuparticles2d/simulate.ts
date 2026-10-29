@@ -37,7 +37,7 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
-import { degToRad, degToRadf, lerpf, TAU } from '../../../godot/math/math.js';
+import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
   TRANSFORM2D_IDENTITY,
@@ -46,13 +46,14 @@ import {
   transform2DXform,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-import { type CPUParticles2DProperties } from './types';
+import { type CPUParticles2DProperties, type ParticleParam } from './types';
 import type { Rgba } from '../../../godot/math/math.js';
 import {
   normalizedVector2,
   vector2Add,
   vector2Length,
-  vector2Scale,
+  vector2LengthSquared,
+  vector2Scaled,
   vector2Sub,
   type Vector2,
 } from '../../../godot/math/vector.js';
@@ -325,7 +326,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
 
     // Godot integrates position after the appearance pass, and does it on the
     // restart frame too, so a newborn particle is already one step along.
-    const displacement = vector2Scale(p.velocity, localDelta);
+    const displacement = vector2Scaled(p.velocity, f(localDelta));
     p.transform.tx = f(p.transform.tx + displacement.x);
     p.transform.ty = f(p.transform.ty + displacement.y);
   }
@@ -426,15 +427,15 @@ function restartParticle(
   );
   const direction = { x: f(Math.cos(angle1Rad)), y: f(Math.sin(angle1Rad)) };
   const velocityParam = props.params[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]!;
-  p.velocity = vector2Scale(direction, lerpf(velocityParam.min, velocityParam.max, rng.randf()));
+  p.velocity = vector2Scaled(direction, lerpSlot(velocityParam, rng.randf()));
 
   const angleParam = props.params[CPUParticlesParameter.ANGLE]!;
-  p.rotation = degToRadf(f(texAngle * lerpf(angleParam.min, angleParam.max, p.angleRand)));
+  p.rotation = degToRadf(f(texAngle * lerpSlot(angleParam, p.angleRand)));
 
   const animOffset = props.params[CPUParticlesParameter.ANIM_OFFSET]!;
   p.custom[0] = 0.0;
   p.custom[1] = 0.0;
-  p.custom[2] = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
+  p.custom[2] = f(texAnimOffset * lerpSlot(animOffset, p.animOffsetRand));
   p.custom[3] = f(1.0 - rng.randf() * props.lifetime_randomness);
   p.transform = { ...TRANSFORM2D_IDENTITY };
   p.time = 0;
@@ -508,7 +509,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   // Each of the three accelerations sits behind a C++ ternary, so its
   // `rand_from_seed` draw is consumed only when the branch is taken. Drawing
   // unconditionally would desynchronise every later value in the same step.
-  if (vector2Length(p.velocity) > 0) {
+  if (vector2LengthSquared(p.velocity) > 0) {
     const accel = lerpParam(props, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
     addAcceleration(force, normalizedVector2(p.velocity), texLinearAccel, accel);
   }
@@ -519,21 +520,21 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
     x: f(p.transform.tx - state.emissionXform.tx),
     y: f(p.transform.ty - state.emissionXform.ty),
   };
-  if (vector2Length(diff) > 0) {
+  if (vector2LengthSquared(diff) > 0) {
     const radial = lerpParam(props, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
-    addAcceleration(force, normalizedVector2(diff), texRadialAccel, radial);
+    const outward = normalizedVector2(diff);
+    addAcceleration(force, outward, texRadialAccel, radial);
 
-    // `yx * Vector2(-1, 1)` is `(-diff.y, diff.x)`: the perpendicular Godot spins
-    // tangential acceleration around. Its length is `diff`'s.
+    // `yx * Vector2(-1, 1)` is `(-diff.y, diff.x)`, the perpendicular Godot spins tangential
+    // acceleration around. It has `diff`'s length, so its unit vector is `outward` turned.
     const tangential = lerpParam(props, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef);
-    const perpendicular = normalizedVector2({ x: -diff.y, y: diff.x });
     // `direction * (tex_tangential_accel * lerp)`: one product, not two.
-    addAcceleration(force, perpendicular, 1, f(texTangentialAccel * tangential));
+    addAcceleration(force, { x: -outward.y, y: outward.x }, 1, f(texTangentialAccel * tangential));
   }
 
-  const step = f(localDelta);
-  p.velocity.x = f(p.velocity.x + f(force.x * step));
-  p.velocity.y = f(p.velocity.y + f(force.y * step));
+  const delta = f(localDelta);
+  p.velocity.x = f(p.velocity.x + f(force.x * delta));
+  p.velocity.y = f(p.velocity.y + f(force.y * delta));
 
   const orbitAmount = f(texOrbitVelocity * lerpParam(props, CPUParticlesParameter.ORBIT_VELOCITY, seedRef));
   if (orbitAmount !== 0.0) {
@@ -552,18 +553,23 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
 
   if (curves[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]) {
     // With a velocity curve, the speed is the curve, not an acceleration.
-    p.velocity = vector2Scale(normalizedVector2(p.velocity), texLinearVelocity);
+    p.velocity = vector2Scaled(normalizedVector2(p.velocity), texLinearVelocity);
   }
 
   if (f(props.params[CPUParticlesParameter.DAMPING]!.max + texDamping) > 0.0) {
     const damp = f(texDamping * lerpParam(props, CPUParticlesParameter.DAMPING, seedRef));
+    const length = vector2Length(p.velocity);
     // `damp * local_delta` is a double, so the subtraction runs in double and rounds once.
-    const speed = f(vector2Length(p.velocity) - damp * localDelta);
-    p.velocity = speed < 0.0 ? { x: 0, y: 0 } : vector2Scale(normalizedVector2(p.velocity), speed);
+    const speed = f(length - damp * localDelta);
+    // `normalized() * v`: the unit vector divides by the length measured above, and is zero for none.
+    p.velocity =
+      speed < 0.0 || length === 0
+        ? { x: 0, y: 0 }
+        : { x: f(f(p.velocity.x / length) * speed), y: f(f(p.velocity.y / length) * speed) };
   }
 
   const angleParam = props.params[CPUParticlesParameter.ANGLE]!;
-  let baseAngle = f(texAngle * lerpf(angleParam.min, angleParam.max, p.angleRand));
+  let baseAngle = f(texAngle * lerpSlot(angleParam, p.angleRand));
   baseAngle = f(
     baseAngle +
       p.custom[1] *
@@ -574,7 +580,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   p.rotation = degToRadf(baseAngle);
 
   const animOffset = props.params[CPUParticlesParameter.ANIM_OFFSET]!;
-  const offset = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
+  const offset = f(texAnimOffset * lerpSlot(animOffset, p.animOffsetRand));
   const progress = f(f(tv * texAnimSpeed) * lerpParam(props, CPUParticlesParameter.ANIM_SPEED, seedRef));
   p.custom[2] = f(offset + progress);
 
@@ -603,7 +609,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const texHueVariation = hueCurve ? f(sampleCurve(hueCurve, tv)) : 0.0;
 
   const hueParam = props.params[CPUParticlesParameter.HUE_VARIATION]!;
-  const hueRotAngle = f(texHueVariation * TAU * lerpf(hueParam.min, hueParam.max, p.hueRotRand));
+  const hueRotAngle = f(texHueVariation * TAU * lerpSlot(hueParam, p.hueRotRand));
 
   const base = colorRamp ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color) : props.color;
   // Called unconditionally, not short-circuited at angle 0: Godot's basis is not
@@ -616,7 +622,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
 
   if (props.particle_flag_align_y) {
     const yAxis = normalizedVector2(
-      vector2Length(p.velocity) > 0 ? p.velocity : { x: p.transform.c, y: p.transform.d }
+      vector2LengthSquared(p.velocity) > 0 ? p.velocity : { x: p.transform.c, y: p.transform.d }
     );
     p.transform.c = yAxis.x;
     p.transform.d = yAxis.y;
@@ -633,7 +639,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   }
 
   const scaleParam = props.params[CPUParticlesParameter.SCALE]!;
-  const drawnScale = f(texScale * lerpf(scaleParam.min, scaleParam.max, p.scaleRand));
+  const drawnScale = f(texScale * lerpSlot(scaleParam, p.scaleRand));
   const scale = drawnScale < MIN_SCALE ? f(MIN_SCALE) : drawnScale;
   p.transform.a = f(p.transform.a * scale);
   p.transform.b = f(p.transform.b * scale);
@@ -680,6 +686,14 @@ function sampleParam(
   return curve ? f(sampleCurve(curve, tv)) : 1.0;
 }
 
+/**
+ * `Math::lerp(min, max, weight)` over a parameter slot. A slot with equal bounds answers that
+ * bound without the four float roundings: `min + (max - min) * weight` is `min` for a finite weight.
+ */
+function lerpSlot(slot: ParticleParam, weight: number): number {
+  return slot.min === slot.max ? slot.min : lerpf(slot.min, slot.max, weight);
+}
+
 /** `Math::lerp(parameters_min[p], parameters_max[p], rand_from_seed(seed))`. */
 function lerpParam(
   props: CPUParticles2DProperties,
@@ -687,12 +701,7 @@ function lerpParam(
   seedRef: SeedRef
 ): number {
   const slot = props.params[param]!;
-  return lerpf(slot.min, slot.max, randFromSeed(seedRef));
-}
-
-/** `Color::operator*` (`core/math/color.h`) in `real_t` float. */
-function multiplyColor(a: Rgba, b: Rgba): Rgba {
-  return { r: f(a.r * b.r), g: f(a.g * b.g), b: f(a.b * b.b), a: f(a.a * b.a) };
+  return lerpSlot(slot, randFromSeed(seedRef));
 }
 
 /** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_2d.cpp:1090-1092`), as floats. */
@@ -726,9 +735,15 @@ const UNROTATED_HUE_ROWS = hueBasisRows(0);
  */
 function rotateHue(color: Rgba, angle: number): Rgba {
   const rows = angle === 0 ? UNROTATED_HUE_ROWS : hueBasisRows(angle);
-  // `xform_inv` reads down a column of the rows, not across one.
-  const channel = (k: number) =>
-    f(f(f(rows[0]![k]! * color.r) + f(rows[1]![k]! * color.g)) + f(rows[2]![k]! * color.b));
+  return {
+    r: hueChannel(rows, 0, color),
+    g: hueChannel(rows, 1, color),
+    b: hueChannel(rows, 2, color),
+    a: color.a,
+  };
+}
 
-  return { r: channel(0), g: channel(1), b: channel(2), a: color.a };
+/** `xform_inv` reads down column `k` of the rows, not across one. */
+function hueChannel(rows: readonly number[][], k: number, color: Rgba): number {
+  return f(f(f(rows[0]![k]! * color.r) + f(rows[1]![k]! * color.g)) + f(rows[2]![k]! * color.b));
 }

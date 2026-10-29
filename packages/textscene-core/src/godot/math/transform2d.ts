@@ -86,6 +86,8 @@ export function multiplyTransform2D(
 /**
  * `Transform2D::xform` (`transform_2d.h`, `tdotx` and `tdoty` plus the origin) in `real_t` float.
  * A transform with a zero origin gives `Transform2D::basis_xform`.
+ *
+ * @canonical A point through a Transform2D in float32
  */
 export function transform2DXform(t: Transform2DColumns, v: Vector2): Vector2 {
   return {

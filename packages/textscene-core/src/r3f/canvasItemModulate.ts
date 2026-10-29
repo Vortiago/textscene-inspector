@@ -8,7 +8,7 @@
 import { createContext, useContext, useMemo } from 'react';
 import type * as THREE from 'three';
 import { useGodotLinearColor } from './godotColor';
-import type { Rgba } from '../godot/math/math';
+import { multiplyColor, type Rgba } from '../godot/math/math';
 
 export const WHITE_MODULATE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -18,10 +18,8 @@ export function useParentModulate(): Rgba {
   return useContext(Modulate2DContext);
 }
 
-/** Component-wise RGBA multiply (Godot composes modulate by multiplication). */
-export function multiplyModulate(a: Rgba, b: Rgba): Rgba {
-  return { r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a };
-}
+/** Godot composes modulate by `Color` multiplication. */
+export const multiplyModulate = multiplyColor;
 
 export interface CanvasItemTint {
   /** Ancestor modulate × this node's `modulate`, for the child context. */

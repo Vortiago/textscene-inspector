@@ -9,6 +9,7 @@ import {
   cubicInterpolatef,
   degToRad,
   degToRadf,
+  multiplyColor,
   radToDeg,
   lerpColor,
   lerpf,
@@ -286,5 +287,17 @@ describe('bezierInterpolatef', () => {
 
   it('is linear when the handles sit a third of the way along a straight span (edge case)', () => {
     expect(bezierInterpolatef(0, 10, 20, 30, 0.25)).toBeCloseTo(7.5, 5);
+  });
+});
+
+describe('multiplyColor', () => {
+  it('multiplies each channel and rounds it to single precision', () => {
+    const product = multiplyColor({ r: 0.3, g: 1, b: 0.5, a: 0.7 }, { r: 0.3, g: 0.1, b: 1, a: 0.7 });
+    expect(product).toEqual({
+      r: Math.fround(0.09),
+      g: Math.fround(0.1),
+      b: 0.5,
+      a: Math.fround(0.49),
+    });
   });
 });
