@@ -55,6 +55,8 @@ import {
   viewportMsaaMode,
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
+import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
+import { drawAtExposure } from '../../../r3f/exposure/sceneExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useViewportContentKind } from './useViewportContentKind';
@@ -181,18 +183,21 @@ function OffscreenViewport({
   const toneMapStage = useRef<OffscreenToneMap | null>(null);
   // Godot tonemaps through the Environment of the world `find_world_3d()` resolves, so the stage
   // mounts in that world: beside an inline pass, and inside a portal, whose scope answers for both.
+  // It reads the attributes of this pass's own camera, which scale the world it draws.
   const stage =
     kind === '3d' ? (
-      <OffscreenToneMapStage
-        stage={toneMapStage}
-        target={target}
-        msaaMode={msaaMode}
-        width={width}
-        height={height}
-        transparentBackground={transparentBg}
-        usesDebanding={properties.use_debanding}
-        name={node.name}
-      />
+      <ViewportPassAttributes path={path}>
+        <OffscreenToneMapStage
+          stage={toneMapStage}
+          target={target}
+          msaaMode={msaaMode}
+          width={width}
+          height={height}
+          transparentBackground={transparentBg}
+          usesDebanding={properties.use_debanding}
+          name={node.name}
+        />
+      </ViewportPassAttributes>
     ) : null;
   // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
@@ -264,7 +269,9 @@ function OffscreenViewport({
           try {
             renderWithMipmapBias(mipmapBias, () =>
               renderWithShadowAtlas(shadowAtlas, () =>
-                kind === '2d' ? frame.render(gl, passScene, camera) : gl.render(passScene, camera)
+                kind === '2d'
+                  ? frame.render(gl, passScene, camera)
+                  : drawAtExposure(passScene, toneMap!.exposure, () => gl.render(passScene, camera))
               )
             );
           } finally {

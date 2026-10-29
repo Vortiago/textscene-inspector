@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import { electViewportCamera } from '../../../godot/scene/camera3d';
+import { electViewportCamera, isUnderViewport } from '../../../godot/scene/camera3d';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
@@ -126,14 +126,13 @@ export function renderToOffscreenTarget(
  * shared-world source holds every viewport's cameras.
  */
 export function selectViewportCamera(root: THREE.Object3D, viewportPath: string): THREE.Camera | null {
-  const prefix = `${viewportPath}/`;
   const cameras: THREE.Camera[] = [];
 
   // Depth-first pre-order, which is the order nodes enter the tree.
   root.traverse((object) => {
     if (!(object as THREE.Camera).isCamera) return;
     const path = object.userData?.tscnPath;
-    if (typeof path === 'string' && path.startsWith(prefix)) cameras.push(object as THREE.Camera);
+    if (typeof path === 'string' && isUnderViewport(path, viewportPath)) cameras.push(object as THREE.Camera);
   });
 
   return electViewportCamera(cameras, (camera) => camera.userData?.tscnCurrent === true);

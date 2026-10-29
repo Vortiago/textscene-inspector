@@ -24,6 +24,7 @@ import {
   useOptionalExposureFactor,
   usePublishCameraAttributes,
   usePublishCamera,
+  ViewportPassAttributes,
   type CameraAttributesResolution,
 } from './worldExposure';
 
@@ -85,11 +86,11 @@ function Publishing({
 }
 
 /** Shows what a consumer in the world reads. */
-function Reader() {
+function Reader({ name = 'Reader' }: { name?: string }) {
   const optionalFactor = useOptionalExposureFactor();
   const factor = useExposureFactor();
   const autoExposure = useAutoExposure();
-  return <group name="Reader" userData={{ optionalFactor, factor, autoExposure }} />;
+  return <group name={name} userData={{ optionalFactor, factor, autoExposure }} />;
 }
 
 function read(renderer: Renderer): { optionalFactor: number | null; factor: number } {
@@ -512,6 +513,60 @@ describe('the auto exposure of a world', () => {
       )
     );
     expect(readAutoExposure(renderer)).toBe(AUTO_EXPOSURE);
+  });
+});
+
+/** A viewport pass at `Root/View` beside the root view: the world holds 2, the viewed camera 3. */
+function passIn(children: ReactNode) {
+  return inRoot(
+    <>
+      <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+      <CameraAt order={[1]} path="Root/Main" cameraAttributes={attributes(3)} />
+      {children}
+      <ViewportPassAttributes path="Root/View">
+        <Reader name="PassReader" />
+      </ViewportPassAttributes>
+    </>,
+    'Root/Main'
+  );
+}
+
+/** What the Reader inside the pass reads. */
+function readPass(renderer: Renderer): { factor: number; autoExposure: AutoExposure | null } {
+  const { factor, autoExposure } = renderer.scene.find((node) => node.props.name === 'PassReader').props
+    .userData;
+  return { factor, autoExposure };
+}
+
+describe('the attributes of a viewport pass', () => {
+  it('are those of the camera it elects below its path, with their auto exposure', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      passIn(
+        <CameraAt order={[2]} path="Root/View/Camera3D" cameraAttributes={withAutoExposure(AUTO_EXPOSURE)} />
+      )
+    );
+    expect(readPass(renderer)).toEqual({ factor: 1, autoExposure: AUTO_EXPOSURE });
+  });
+
+  it("are the world's, not the viewed camera's, for a camera that holds none", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      passIn(<CameraAt order={[2]} path="Root/View/Camera3D" cameraAttributes={NO_RESOLUTION} />)
+    );
+    expect(readPass(renderer).factor).toBe(2);
+  });
+
+  it("are the world's while the camera's attributes load", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      passIn(<CameraAt order={[2]} path="Root/View/Camera3D" cameraAttributes={PENDING_RESOLUTION} />)
+    );
+    expect(readPass(renderer).factor).toBe(2);
+  });
+
+  it('ignore a camera outside its path', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      passIn(<CameraAt order={[2]} path="Root/Other/Camera3D" cameraAttributes={attributes(5)} />)
+    );
+    expect(readPass(renderer).factor).toBe(2);
   });
 });
 

@@ -5,6 +5,7 @@ import {
   CAMERA_3D_PROJECTION_HINT_NAMES,
   CAMERA_3D_PROJECTION_NAMES,
   electViewportCamera,
+  isUnderViewport,
 } from './camera3d.js';
 
 describe('Camera3D enum label tables', () => {
@@ -47,5 +48,19 @@ describe('electViewportCamera', () => {
   it('answers the last of two current cameras, since a claim overwrites (viewport.cpp:4565)', () => {
     const last = camera('last', true);
     expect(elect([camera('early', true), last])).toBe(last);
+  });
+});
+
+describe('isUnderViewport', () => {
+  it('holds for a descendant of the viewport', () => {
+    expect(isUnderViewport('Root/View/Camera3D', 'Root/View')).toBe(true);
+  });
+
+  it('fails for a sibling whose name starts with the viewport name', () => {
+    expect(isUnderViewport('Root/ViewTwo/Camera3D', 'Root/View')).toBe(false);
+  });
+
+  it('fails for the viewport itself', () => {
+    expect(isUnderViewport('Root/View', 'Root/View')).toBe(false);
   });
 });
