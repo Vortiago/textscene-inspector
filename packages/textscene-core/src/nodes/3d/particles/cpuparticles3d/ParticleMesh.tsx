@@ -1,6 +1,6 @@
 /**
  * The mesh at every particle of a settled CPUParticles3D: one InstancedMesh per triangle part, or one
- * THREE.Points per points part, each with its overlay.
+ * THREE.Points per surface of a points part, each with its overlay.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -8,7 +8,15 @@ import type * as THREE from 'three';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlot } from '../../../../r3f/materials/SurfaceMaterialSlot';
-import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
+import {
+  SurfaceMaterialSlots,
+  surfaceAttach,
+  surfaceSources,
+} from '../../../../r3f/materials/SurfaceMaterialSlots';
+import { useSurfaceScalars } from '../../../../r3f/materials/useSurfaceMaterial';
+import { readsObjectSpace } from '../../../../r3f/materials/godotTriplanar';
+import { geometryUntilDisposed } from '../../../../r3f/meshes/geometryUntilDisposed';
+import { pointPlacementOf } from '../../../../r3f/meshes/pointsAtPlaces';
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
 import { useMeshContent } from '../../../../r3f/meshes/meshContent';
@@ -22,6 +30,7 @@ import {
   particleCount,
   particleGeometry,
   particlePoints,
+  particlePointsInItemSpace,
   releaseParticleGeometry,
   writeParticleData,
   writeParticleMatrices,
@@ -149,26 +158,91 @@ function useParticleMatrices(buffer: Float32Array, geometry: THREE.BufferGeometr
   return meshRef;
 }
 
-/** A points part as one THREE.Points holding every particle's points, new for each buffer. */
+/**
+ * A points part as one THREE.Points per surface, holding every particle's points, new for each
+ * buffer. Each form is built for the first draw that reads it and disposed when the last lets go.
+ */
 function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
-  const { sources, overlay, buffer, shadow, godotLayers } = draw;
-  const geometry = useMemo(() => particlePoints(source, buffer), [source, buffer]);
-  useDisposeOnRelease(geometry);
-  const startingMaterial = useOneSurfaceStartingMaterial(sources.length);
+  const { sources, overlay, buffer } = draw;
+  const forms = useMemo<PointForms>(
+    () => ({
+      placed: geometryUntilDisposed(() => particlePoints(source, buffer)),
+      inItemSpace: geometryUntilDisposed(() => particlePointsInItemSpace(source, buffer)),
+    }),
+    [source, buffer]
+  );
   return (
     <>
-      <points
-        args={[geometry, startingMaterial]}
-        {...drawHookProps(shadow)}
-        userData={drawUserData(godotLayers)}
-      >
-        <SurfaceMaterialSlots sources={sources} drawsPoints drawsParticles />
-      </points>
-      {overlay && (
-        <points args={[geometry]} {...overlayDrawProps(shadow)} userData={boxlessUserData()}>
-          <SurfaceMaterialSlot source={overlay} points="mesh" drawsParticles />
-        </points>
-      )}
+      {sources.map((material, surface) => (
+        <PointsSurface
+          key={surface}
+          forms={forms}
+          material={material}
+          attach={surfaceAttach(surface, sources.length)}
+          surfaceCount={sources.length}
+          draw={draw}
+        />
+      ))}
+      {overlay && <PointsOverlay forms={forms} overlay={overlay} draw={draw} />}
     </>
+  );
+}
+
+/** A points part at every particle: placed, and placed with each item's space for a material that reads it. */
+interface PointForms {
+  placed: () => THREE.BufferGeometry;
+  inItemSpace: () => THREE.BufferGeometry;
+}
+
+/** The form `material` draws: the item's space costs a mat4 per point, so only a reader gets it. */
+function usePointForm(forms: PointForms, material: MaterialSource | undefined): THREE.BufferGeometry {
+  const scalars = useSurfaceScalars(material);
+  const geometry = (readsObjectSpace(scalars?.triplanar ?? null) ? forms.inItemSpace : forms.placed)();
+  useDisposeOnRelease(geometry);
+  return geometry;
+}
+
+interface PointsSurfaceProps {
+  forms: PointForms;
+  material: MaterialSource | undefined;
+  attach: string;
+  surfaceCount: number;
+  draw: ParticleDraw;
+}
+
+/** One surface of a points part, drawn on its own, as each surface picks its own form. */
+function PointsSurface({ forms, material, attach, surfaceCount, draw }: PointsSurfaceProps) {
+  const geometry = usePointForm(forms, material);
+  const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
+  return (
+    <points
+      args={[geometry, startingMaterial]}
+      {...drawHookProps(draw.shadow)}
+      userData={drawUserData(draw.godotLayers)}
+    >
+      <SurfaceMaterialSlot
+        source={material}
+        attach={attach}
+        points={pointPlacementOf(geometry)}
+        drawsParticles
+      />
+    </points>
+  );
+}
+
+function PointsOverlay({
+  forms,
+  overlay,
+  draw,
+}: {
+  forms: PointForms;
+  overlay: MaterialSource;
+  draw: ParticleDraw;
+}) {
+  const geometry = usePointForm(forms, overlay);
+  return (
+    <points args={[geometry]} {...overlayDrawProps(draw.shadow)} userData={boxlessUserData()}>
+      <SurfaceMaterialSlot source={overlay} points={pointPlacementOf(geometry)} drawsParticles />
+    </points>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { pointsAtPlaces, pointsAtPlacesInItemSpace } from './pointsAtPlaces';
-import { CELL_POINT_ATTRIBUTES } from '../materials/godotPoint';
+import { PLACED_POINT_ATTRIBUTES } from '../materials/godotPoint';
 
 /** Two points, drawn in reverse order by an index, in two groups of one point. */
 function twoPoints(): THREE.BufferGeometry {
@@ -78,7 +78,7 @@ describe('pointsAtPlaces', () => {
 
   it('carries no item space for a surface that does not read it, as it costs a mat4 per point', () => {
     expect(
-      pointsAtPlaces(twoPoints(), [moved(0)]).getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix)
+      pointsAtPlaces(twoPoints(), [moved(0)]).getAttribute(PLACED_POINT_ATTRIBUTES.placeMatrix)
     ).toBeUndefined();
   });
 
@@ -86,10 +86,10 @@ describe('pointsAtPlaces', () => {
     const halfTurn = new THREE.Matrix4().makeRotationY(Math.PI).setPosition(5, 0, 0);
     const merged = pointsAtPlacesInItemSpace(twoPoints(), [new THREE.Matrix4(), halfTurn]);
 
-    expect(Array.from(merged.getAttribute(CELL_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
+    expect(Array.from(merged.getAttribute(PLACED_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
       0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
     ]);
-    expect(Array.from(merged.getAttribute(CELL_POINT_ATTRIBUTES.itemNormal).array)).toEqual([
+    expect(Array.from(merged.getAttribute(PLACED_POINT_ATTRIBUTES.itemNormal).array)).toEqual([
       0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
     ]);
   });
@@ -97,7 +97,7 @@ describe('pointsAtPlaces', () => {
   it("gives each point its cell's matrix, as Godot's MODEL_MATRIX holds the instance", () => {
     const cell = moved(20);
     const matrices = pointsAtPlacesInItemSpace(twoPoints(), [moved(10), cell]).getAttribute(
-      CELL_POINT_ATTRIBUTES.cellMatrix
+      PLACED_POINT_ATTRIBUTES.placeMatrix
     );
 
     expect(matrices.itemSize).toBe(16);

@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { pointsAtPlaces } from '../../../../r3f/meshes/pointsAtPlaces';
+import { pointsAtPlaces, pointsAtPlacesInItemSpace } from '../../../../r3f/meshes/pointsAtPlaces';
 import {
   PARTICLE_COLOR_ATTRIBUTE,
   PARTICLE_CUSTOM_ATTRIBUTE,
@@ -123,23 +123,39 @@ function writeSlices(
  * particle's colour and custom data. three has no instanced form of `THREE.Points`.
  */
 export function particlePoints(source: THREE.BufferGeometry, buffer: Float32Array): THREE.BufferGeometry {
-  const count = particleCount(buffer);
-  const matrices = Array.from({ length: count }, (_, i) => particleMatrix(new THREE.Matrix4(), buffer, i));
-  const points = pointsAtPlaces(source, matrices);
+  return withParticleData(pointsAtPlaces(source, particleMatrices(buffer)), source, buffer);
+}
+
+/**
+ * `particlePoints`, with each point's item position and normal and its particle's matrix, for a
+ * material that reads the item's space as Godot's `MODEL_MATRIX` gives it to each instance.
+ */
+export function particlePointsInItemSpace(
+  source: THREE.BufferGeometry,
+  buffer: Float32Array
+): THREE.BufferGeometry {
+  return withParticleData(pointsAtPlacesInItemSpace(source, particleMatrices(buffer)), source, buffer);
+}
+
+function particleMatrices(buffer: Float32Array): THREE.Matrix4[] {
+  return Array.from({ length: particleCount(buffer) }, (_, i) =>
+    particleMatrix(new THREE.Matrix4(), buffer, i)
+  );
+}
+
+/** `points`, with each of a particle's `source` vertices carrying its colour and custom data. */
+function withParticleData(
+  points: THREE.BufferGeometry,
+  source: THREE.BufferGeometry,
+  buffer: Float32Array
+): THREE.BufferGeometry {
   const vertices = source.getAttribute('position').count;
-  points.setAttribute(
-    PARTICLE_COLOR_ATTRIBUTE,
-    new THREE.BufferAttribute(
-      particleSlices(buffer, PARTICLE_COLOR_OFFSET, VEC4_FLOATS, vertices),
-      VEC4_FLOATS
-    )
-  );
-  points.setAttribute(
-    PARTICLE_CUSTOM_ATTRIBUTE,
-    new THREE.BufferAttribute(
-      particleSlices(buffer, PARTICLE_CUSTOM_OFFSET, VEC4_FLOATS, vertices),
-      VEC4_FLOATS
-    )
-  );
+  for (const [name, offset] of [
+    [PARTICLE_COLOR_ATTRIBUTE, PARTICLE_COLOR_OFFSET],
+    [PARTICLE_CUSTOM_ATTRIBUTE, PARTICLE_CUSTOM_OFFSET],
+  ] as const) {
+    const slices = particleSlices(buffer, offset, VEC4_FLOATS, vertices);
+    points.setAttribute(name, new THREE.BufferAttribute(slices, VEC4_FLOATS));
+  }
   return points;
 }

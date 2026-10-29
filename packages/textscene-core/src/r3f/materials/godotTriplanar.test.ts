@@ -88,12 +88,12 @@ describe('triplanarInjection: the projected position and weights', () => {
 
   it("reads a merged GridMap point's item position and normal, placed by its cell as an instance", () => {
     const { vertexShader } = compiled(worldTriplanarRecord()).shader;
-    const cellPoints = vertexShader.slice(vertexShader.indexOf('#ifdef GODOT_CELL_POINTS'));
+    const cellPoints = vertexShader.slice(vertexShader.indexOf('#ifdef GODOT_PLACED_POINTS'));
 
     expect(cellPoints).toContain('godotNormal = godotItemNormal;');
     expect(cellPoints).toContain('godotVertex = godotItemPosition;');
-    expect(cellPoints).toContain('godotModel *= godotCellMatrix;');
-    expect(cellPoints).toContain('godotModelNormal *= mat3( godotCellMatrix );');
+    expect(cellPoints).toContain('godotModel *= godotPlaceMatrix;');
+    expect(cellPoints).toContain('godotModelNormal *= mat3( godotPlaceMatrix );');
   });
 });
 

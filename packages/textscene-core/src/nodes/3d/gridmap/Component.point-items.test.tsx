@@ -7,7 +7,7 @@ import { Vector3, type Material, type Points } from 'three';
 import { ORTHO_BASES } from './cellData';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { mountGridMap } from './testing/gridMapCorpus';
-import { CELL_POINT_ATTRIBUTES } from '../../../r3f/materials/godotPoint';
+import { PLACED_POINT_ATTRIBUTES } from '../../../r3f/materials/godotPoint';
 
 const POINT_LIBRARY = `[gd_resource type="MeshLibrary" format=3]
 
@@ -129,10 +129,10 @@ item/0/mesh = SubResource("Mesh_item")
     const [points, ...others] = grid.points();
 
     expect(others).toEqual([]);
-    expect(Array.from(points!.geometry.getAttribute(CELL_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
+    expect(Array.from(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
       0, 0, 0, 0, 0, 0,
     ]);
-    expect((points!.material as Material).userData.godotPointsAtCells).toBe(true);
+    expect((points!.material as Material).userData.godotPointsAtPlaces).toBe(true);
   });
 
   it("draws each cell's points on their own when the material billboards, as each turns about its cell", async () => {
@@ -160,7 +160,7 @@ item/0/mesh = SubResource("Mesh_item")
     });
     const [points] = grid.points();
 
-    expect(points!.geometry.getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix)).toBeUndefined();
-    expect((points!.material as Material).userData.godotPointsAtCells).toBe(false);
+    expect(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.placeMatrix)).toBeUndefined();
+    expect((points!.material as Material).userData.godotPointsAtPlaces).toBe(false);
   });
 });

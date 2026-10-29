@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { CELL_POINT_ATTRIBUTES, type PointPlacement } from '../materials/godotPoint';
+import { PLACED_POINT_ATTRIBUTES, type PointPlacement } from '../materials/godotPoint';
 import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
 
 type TypedArrayConstructor = new (length: number) => THREE.TypedArray;
@@ -55,17 +55,17 @@ export function pointsAtPlacesInItemSpace(
   matrices: readonly THREE.Matrix4[]
 ): THREE.BufferGeometry {
   const merged = pointsAtPlaces(source, matrices);
-  const { itemPosition, itemNormal, cellMatrix } = CELL_POINT_ATTRIBUTES;
+  const { itemPosition, itemNormal, placeMatrix } = PLACED_POINT_ATTRIBUTES;
   merged.setAttribute(itemPosition, repeatedAttribute(source, 'position', matrices.length));
   merged.setAttribute(itemNormal, repeatedAttribute(source, 'normal', matrices.length));
-  merged.setAttribute(cellMatrix, placeMatrices(source.getAttribute('position').count, matrices));
+  merged.setAttribute(placeMatrix, placeMatrices(source.getAttribute('position').count, matrices));
   return merged;
 }
 
 /** Where `geometry`'s points sit: merged at places by `pointsAtPlacesInItemSpace`, or in the mesh. Undefined for triangles. */
 export function pointPlacementOf(geometry: THREE.BufferGeometry): PointPlacement | undefined {
   if (!geometryDrawsPoints(geometry)) return undefined;
-  return geometry.getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix) ? 'cells' : 'mesh';
+  return geometry.getAttribute(PLACED_POINT_ATTRIBUTES.placeMatrix) ? 'places' : 'mesh';
 }
 
 /** `source`'s attribute `name` once for each of `places`, as it stands. */

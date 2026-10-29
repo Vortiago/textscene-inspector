@@ -155,8 +155,9 @@ const VERTEX_PARS = `${NODE_POSE_PARS}${UV_SETS.map(projectionVertexPars).join('
  * Godot's VERTEX and NORMAL: the mesh's, after skinning and morphs, before an instance's
  * transform. A scope of its own, since three runs the normal chunks in only some programs.
  * Godot's MODEL_MATRIX and MODEL_NORMAL_MATRIX are the node's, then the instance's, whose basis
- * turns the normal as it stands (`scene_forward_clustered.glsl:338-346`). A merged GridMap point
- * carries its item's space and its cell's matrix, which Godot draws as an instance (`godotPoint.ts`).
+ * turns the normal as it stands (`scene_forward_clustered.glsl:338-346`). A merged point, at a
+ * GridMap cell or a particle, carries its item's space and its place's matrix, which Godot draws as
+ * an instance (`godotPoint.ts`).
  */
 const GODOT_VERTEX_INPUTS = /* glsl */ `
 	vec3 godotNormal;
@@ -173,11 +174,11 @@ const GODOT_VERTEX_INPUTS = /* glsl */ `
 		godotModel *= instanceMatrix;
 		godotModelNormal *= mat3( instanceMatrix );
 	#endif
-	#ifdef GODOT_CELL_POINTS
+	#ifdef GODOT_PLACED_POINTS
 		godotNormal = godotItemNormal;
 		godotVertex = godotItemPosition;
-		godotModel *= godotCellMatrix;
-		godotModelNormal *= mat3( godotCellMatrix );
+		godotModel *= godotPlaceMatrix;
+		godotModelNormal *= mat3( godotPlaceMatrix );
 	#endif
 `;
 

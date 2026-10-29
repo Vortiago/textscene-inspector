@@ -35,7 +35,7 @@ import {
   pointsAtPlaces,
   pointsAtPlacesInItemSpace,
 } from '../../../r3f/meshes/pointsAtPlaces';
-import { geometryUntilDisposed } from './geometryUntilDisposed';
+import { geometryUntilDisposed } from '../../../r3f/meshes/geometryUntilDisposed';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import { readsObjectSpace } from '../../../r3f/materials/godotTriplanar';

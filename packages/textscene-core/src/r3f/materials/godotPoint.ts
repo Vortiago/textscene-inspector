@@ -16,23 +16,23 @@ import { bagForms } from './bagForms';
 const POINT_SIZE_KEY = 'godotPointSize';
 const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
 const POINT_COORD_ALBEDO_KEY = 'godotPointCoordAlbedo';
-const POINTS_AT_CELLS_KEY = 'godotPointsAtCells';
+const POINTS_AT_PLACES_KEY = 'godotPointsAtPlaces';
 const PROJECT_CHUNK = '#include <project_vertex>';
 
 /**
- * Where a points surface's vertices sit: in the node's own mesh, or merged at every cell of a
- * GridMap, each carrying its item's space (`pointsAtPlaces.ts`).
+ * Where a points surface's vertices sit: in the node's own mesh, or merged at every place, a
+ * GridMap's cells or a CPUParticles3D's particles, each carrying its item's space (`pointsAtPlaces.ts`).
  */
-export type PointPlacement = 'mesh' | 'cells';
+export type PointPlacement = 'mesh' | 'places';
 
 /**
- * The attributes each merged GridMap point carries: its item's position and normal, and its cell's
+ * The attributes each merged point carries: its item's position and normal, and its place's
  * matrix, so a program reads Godot's VERTEX, NORMAL and MODEL_MATRIX.
  */
-export const CELL_POINT_ATTRIBUTES = {
+export const PLACED_POINT_ATTRIBUTES = {
   itemPosition: 'godotItemPosition',
   itemNormal: 'godotItemNormal',
-  cellMatrix: 'godotCellMatrix',
+  placeMatrix: 'godotPlaceMatrix',
 } as const;
 
 /** How a material draws the points of a points surface. */
@@ -64,15 +64,15 @@ export function pointDrawOf(
   };
 }
 
-/** The merged points' attributes, under `GODOT_CELL_POINTS`, which the triplanar mapping reads. */
-const GODOT_CELL_POINTS: ProgramInjection = {
-  cacheKey: 'godot-cell-points',
+/** The merged points' attributes, under `GODOT_PLACED_POINTS`, which the triplanar mapping reads. */
+const GODOT_PLACED_POINTS: ProgramInjection = {
+  cacheKey: 'godot-placed-points',
   onBeforeCompile(shader) {
-    const { itemPosition, itemNormal, cellMatrix } = CELL_POINT_ATTRIBUTES;
-    shader.vertexShader = `#define GODOT_CELL_POINTS
+    const { itemPosition, itemNormal, placeMatrix } = PLACED_POINT_ATTRIBUTES;
+    shader.vertexShader = `#define GODOT_PLACED_POINTS
 attribute vec3 ${itemPosition};
 attribute vec3 ${itemNormal};
-attribute mat4 ${cellMatrix};
+attribute mat4 ${placeMatrix};
 ${shader.vertexShader}`;
   },
 };
@@ -148,13 +148,13 @@ export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefi
 
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {
   const readsMap = draw.samplesAlbedoAtPointCoord && Boolean(bag.props.map);
-  const isAtCells = draw.placement === 'cells';
+  const isAtPlaces = draw.placement === 'places';
   const userData = {
     ...bag.props.userData,
     [POINT_SIZE_KEY]: draw.pixels,
     [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
     [POINT_COORD_ALBEDO_KEY]: readsMap,
-    [POINTS_AT_CELLS_KEY]: isAtCells,
+    [POINTS_AT_PLACES_KEY]: isAtPlaces,
   };
   return {
     ...bag,
@@ -163,7 +163,7 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
       bag.injection,
       GODOT_POINT_SIZE,
       readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
-      isAtCells ? GODOT_CELL_POINTS : undefined,
+      isAtPlaces ? GODOT_PLACED_POINTS : undefined,
     ]),
   };
 }
@@ -183,5 +183,5 @@ export function pointShadowSizeInjection(userData: Record<string, unknown>): Pro
   const size = userData[POINT_COORD_ALBEDO_KEY]
     ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD
     : GODOT_POINT_SHADOW_SIZE;
-  return userData[POINTS_AT_CELLS_KEY] ? composeInjections([size, GODOT_CELL_POINTS]) : size;
+  return userData[POINTS_AT_PLACES_KEY] ? composeInjections([size, GODOT_PLACED_POINTS]) : size;
 }
