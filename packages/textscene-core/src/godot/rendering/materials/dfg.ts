@@ -4,8 +4,8 @@
  * for the light that scatters more than once (`scene_forward_clustered.glsl:2224-2231`).
  */
 
-import { DFG_TABLE_BASE64 } from './dfgTable.generated.js';
-import { decodeBase64Bytes } from '../../variant/packedBytes.js';
+import { DFG_SIZE, DFG_TABLE_RESIDUALS } from './dfgTable.generated.js';
+import { fromResiduals } from '../tableResiduals.js';
 
 /**
  * The table as the half floats Godot stores it in: `[fresnel, total]` per texel, a row per
@@ -13,10 +13,5 @@ import { decodeBase64Bytes } from '../../variant/packedBytes.js';
  * Godot's read.
  */
 export function dfgHalfFloats(): Uint16Array {
-  const bytes = decodeBase64Bytes(DFG_TABLE_BASE64);
-  const halfFloats = new Uint16Array(bytes.length / 2);
-  for (let i = 0; i < halfFloats.length; i += 1) {
-    halfFloats[i] = bytes[i * 2]! | (bytes[i * 2 + 1]! << 8);
-  }
-  return halfFloats;
+  return new Uint16Array(fromResiduals(DFG_TABLE_RESIDUALS, { width: DFG_SIZE, channels: 2 }));
 }

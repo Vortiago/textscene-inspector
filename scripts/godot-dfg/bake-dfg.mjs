@@ -9,6 +9,7 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { TAU } from '../../packages/textscene-core/src/godot/math/math.ts';
+import { toResiduals } from '../../packages/textscene-core/src/godot/rendering/tableResiduals.ts';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
@@ -131,10 +132,10 @@ function roundedShift(value, shift) {
   return kept + (rest > half || (rest === half && kept & 1) ? 1 : 0);
 }
 
-/** The generated module: the table as base64 of its little-endian half floats. */
+/** The generated module: the table's half floats as residuals (`tableResiduals.ts`). */
 export function renderTableModule(table) {
-  const bytes = Buffer.alloc(table.length * 2);
-  table.forEach((value, index) => bytes.writeUInt16LE(toHalfFloat(value), index * 2));
+  const halfFloats = Array.from(table, toHalfFloat);
+  const residuals = toResiduals(halfFloats, { width: DFG_SIZE, channels: 2 });
   return `/**
  * Godot 4.6.3's DFG table (\`integrate_dfg.glsl\`), in the half floats Godot stores it in.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm godot:dfg
@@ -144,11 +145,10 @@ export function renderTableModule(table) {
 export const DFG_SIZE = ${DFG_SIZE};
 
 /**
- * Base64 of the little-endian half floats: \`[fresnel, total]\` per texel, a row per roughness
- * and a column per N.V, each at its texel's centre.
+ * The half floats as residuals (\`tableResiduals.ts\`): \`[fresnel, total]\` per texel, a row per
+ * roughness and a column per N.V, each at its texel's centre.
  */
-export const DFG_TABLE_BASE64 =
-  '${bytes.toString('base64')}';
+export const DFG_TABLE_RESIDUALS: readonly number[] = [${residuals.join(',')}];
 `;
 }
 
