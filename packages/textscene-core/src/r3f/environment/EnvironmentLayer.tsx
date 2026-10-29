@@ -67,6 +67,9 @@ export function DrawnEnvironmentLayer(props: EnvironmentLayerProps) {
   );
 }
 
+/** The `fog_sun_scatter` above which Godot's sky reads the lights for the scatter (`sky.cpp:1053`). */
+const SUN_SCATTER_MIN = 0.001;
+
 function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. The two are independent: a
@@ -94,6 +97,7 @@ function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps
           intensity={skyAmbient ? skyAmbient.energy : 0}
           contribution={skyAmbient ? skyAmbient.contribution : 1}
           resources={skyResources}
+          fogScattersSun={(settings.fog?.sunScatter ?? 0) > SUN_SCATTER_MIN}
         />
       )}
     </>

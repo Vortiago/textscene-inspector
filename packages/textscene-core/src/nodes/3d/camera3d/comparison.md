@@ -51,6 +51,8 @@ A valid `attributes` replaces the exposure of the world while the world renders 
 
 A SubViewport that shares a world draws with the exposure and the Environment of its own camera (`renderer_scene_cull.cpp:2707`, `:3562-3565`, `:3594-3597`). Where the camera holds none, it draws with those of the world. Two viewports of one world so draw one frame with two backgrounds, two ambients, two fogs, two tone curves and two exposures.
 
+The radiance of a sky that two such viewports draw is baked once, at the exposure of the first. The Sky sheet gives the rule.
+
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.

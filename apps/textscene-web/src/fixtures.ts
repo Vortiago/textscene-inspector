@@ -4386,6 +4386,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Shared World Sky Exposure",
+    "file": "unit-sub-viewport-shared-world-sky-exposure.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Texture Emission",
     "file": "unit-sub-viewport-texture-emission.tscn",
     "category": "Unit - Viewports"

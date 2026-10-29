@@ -106,6 +106,13 @@ export const TILE_AND_TARGET_SCENES = [
     file: 'unit-sub-viewport-shared-world-camera-environment.tscn',
     mode: '2d',
   },
+  // Two shared-world SubViewports of a 2D canvas that draw the world's sky at exposures 2 and 1: the
+  // second reads the ambient the first baked, and draws its background at its own exposure.
+  {
+    name: 'sub-viewport-shared-world-sky-exposure',
+    file: 'unit-sub-viewport-shared-world-sky-exposure.tscn',
+    mode: '2d',
+  },
   // A SubViewport's `use_debanding` dithers the bloom its camera's Environment adds.
   { name: 'sub-viewport-debanding', file: 'unit-sub-viewport-debanding.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB

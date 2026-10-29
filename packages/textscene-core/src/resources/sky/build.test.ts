@@ -37,6 +37,7 @@ describe('buildSkyEnvironment layers', () => {
     const { renderer } = await testRenderer();
     const sky: Sky = {
       material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      processMode: 'automatic',
       radianceFilter: 'importance-sample',
       radianceSize: 1024,
     };
@@ -95,6 +96,7 @@ describe('buildSkyEnvironment radiance size', () => {
     const pmrem = vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap');
     const sky: Sky = {
       material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      processMode: 'automatic',
       radianceFilter: 'importance-sample',
       radianceSize,
     };
