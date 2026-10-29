@@ -65,9 +65,42 @@ describe('while the instance is not loaded', () => {
   });
 });
 
+describe('while a nested scene the owner= walk enters is not loaded', () => {
+  const host = hostOwnedBy('Player/Inner/Gone');
+  const playerOnly = { 'res://player.tscn': TRAIL_SCENES['res://player.tscn']! };
+
+  it('keeps the heading below the %Name the root claims', () => {
+    expect(shadePaths(host, playerOnly)).toEqual(['Main/Lamp/Shade']);
+  });
+
+  it('seats it there once that scene loads and the walk finds nothing', () => {
+    expect(shadePaths(host)).toEqual(['Main/Lamp/Shade']);
+  });
+});
+
+describe('where the owner= walk finds the owner in a nested instance', () => {
+  it('re-roots a heading below the %Name, which the root does not claim', () => {
+    expect(shadePaths(hostOwnedBy('Player/Inner/Box'))).toEqual(['Main/_Lamp#Shade']);
+  });
+});
+
 describe('the parse, which cannot see the instance', () => {
   it('answers a path through the %Name as unknowable', () => {
     expect(sceneSeating(hostOwnedBy('Player/Gone').nodes).resolve('%Lamp').status).toBe('unknowable');
+  });
+
+  it('answers a path through the %Name with a subname as unknowable', () => {
+    expect(sceneSeating(hostOwnedBy('Player/Gone').nodes).resolve('%Lamp:position').status).toBe(
+      'unknowable'
+    );
+  });
+
+  it('answers the path of a heading below the %Name as unknowable', () => {
+    expect(sceneSeating(hostOwnedBy('Player/Gone').nodes).resolve('Lamp/Shade').status).toBe('unknowable');
+  });
+
+  it('answers the path the heading takes, re-rooted, as unknowable', () => {
+    expect(sceneSeating(hostOwnedBy('Player/Gone').nodes).resolve('_Lamp#Shade').status).toBe('unknowable');
   });
 
   it('answers the path of the node itself', () => {

@@ -50,13 +50,13 @@ _Avoid_: a pass mutating a node it was handed.
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
 The merged node keeps it, and the render path's per-owner tables read it. A `%Name` that the table lacks at the instance root reads the table of the instance's owner next, which the file above answers.
-An inherited root's table lands this file's root-owned settings after the base's names, so the base's first claimant keeps a name (`node.cpp:2222-2233`).
+An inherited root's table lands this file's root-owned settings after the base's names, so the base's first claimant keeps a name (`node.cpp:2222-2233`). The parse answers a path below this file's claimant as unknowable.
 A setting whose `owner=` walk enters one instance, and whose `owner_uid_path=` names an owner in another or the file root, carries an **Owner hand-off**.
 _Avoid_: a second composer of an instance's table.
 
 **Owner hand-off** (`OwnerHandOff`, `resources/ownerHandOff.ts`):
 The link between a setting in the table of the instance an `owner=` walk enters and its copy in the table of the owner the `owner_uid_path=` finds. Godot takes the trail's owner only where the walk finds no node (`packed_scene.cpp:157-168`).
-The first instance collapses before the second, and its graft reports each hand-off whose walk found nothing. The copy lands only then. Where the trail's owner is the file root, the live tree decides the claim, and the parse answers a path through that `%Name` as unknowable.
+The first instance collapses before the second, and its graft reports what it decided for each hand-off. The copy lands only where the walk found nothing. Where the trail's owner is the file root, the live tree decides the claim, and the parse answers a path through that `%Name`, or below its claimant, as unknowable.
 _Avoid_: deciding the owner in the parse, which cannot see the instance.
 
 **ExtResource**:

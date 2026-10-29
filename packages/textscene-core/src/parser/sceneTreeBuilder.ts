@@ -28,11 +28,13 @@ import {
 } from './nodeOwner.js';
 import {
   UNIQUE_NODE_PREFIX,
+  nodePathWalkNames,
+  simplifiedNames,
   walkFromRoot,
   walkedPath,
   type RootWalkTables,
 } from '../godot/string/nodePath.js';
-import { reRootedName, type TrailHeading } from '../godot/scene/packedScene.js';
+import { reparentedName, reRootedName, type TrailHeading } from '../godot/scene/packedScene.js';
 import { contentTrailSegment, idTrailEnd, ownerTrailEnd, trailHeadingsOf } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
@@ -174,6 +176,7 @@ function seatHeadings<N extends SceneNode<N>>(
     // Only a heading that gets a seat resolves its `owner=`.
     const resolveOwner: OwnerResolver = () =>
       node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
+    rememberUndecidedSeat(tables, node.parent, node.name);
     const end = walkFromRoot(node.parent, tables.tree);
     const parentPath = walkedPath(end);
     if (parentPath !== null && seatBelowParent(tables, node, parentPath, resolveOwner)) {
@@ -398,22 +401,56 @@ function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, res
 }
 
 /**
+ * Where a heading below a `%Name` that a live reader decides sits: under this file's claimant, and
+ * re-rooted, as either may hold it. That claim is a root fallback's, or this file's at an inherited
+ * root, whose base may claim the name first (node.cpp:2222-2233).
+ */
+function rememberUndecidedSeat<N extends RawNode>(
+  tables: SeatingTables<N>,
+  parent: string,
+  name: string
+): void {
+  const names = nodePathWalkNames(parent);
+  const isInheritedRoot = tables.root.instance !== undefined;
+  const at = names.findIndex(
+    (part) => tables.awaitedKeys.has(part) || (isInheritedRoot && tables.uniquePaths.has(part))
+  );
+  if (at === -1) return;
+  const claimant = tables.uniquePaths.get(names[at]!)!;
+  const claimedParent = walkedPath(walkFromRoot([claimant, ...names.slice(at + 1)].join('/'), tables.tree));
+  if (claimedParent !== null) tables.undecidedSeats.add(joinPath(claimedParent, name));
+  tables.undecidedSeats.add(reparentedName(parent, name));
+}
+
+/**
  * The node a path names over the seated tables. A walk Godot ends in null is missing. One that
- * passes through content this file does not list, onto no heading, is unknowable. The walk keeps
- * only the two tables it reads, since the seating cache holds it as long as the tree lives.
+ * passes through content this file does not list, onto no heading, through a `%Name` a root
+ * fallback awaits, or at or below an undecided seat, is unknowable. The walk keeps only the tables
+ * it reads, since the seating cache holds it as long as the tree lives.
  */
 function seatedResolver<N extends RawNode>({
   byPath,
   tree,
   awaitedKeys,
-}: Pick<SeatingTables<N>, 'byPath' | 'tree' | 'awaitedKeys'>): (path: string) => NodePathResolution<N> {
+  undecidedSeats,
+}: Pick<SeatingTables<N>, 'byPath' | 'tree' | 'awaitedKeys' | 'undecidedSeats'>): (
+  path: string
+) => NodePathResolution<N> {
   return (path) => {
-    if (awaitedKeys.size > 0 && path.split('/').some((name) => awaitedKeys.has(name))) return UNKNOWABLE;
+    // The walk's names, not a split on `/`: a `:subname` stays off the last name (node_path.cpp:405-427).
+    const names = nodePathWalkNames(path);
+    if (names.some((name) => awaitedKeys.has(name))) return UNKNOWABLE;
+    if (undecidedSeats.size > 0 && isAtOrBelowAny(simplifiedNames(names), undecidedSeats)) return UNKNOWABLE;
     const end = walkFromRoot(path, tree);
     if (end === null) return MISSING;
     const node = typeof end === 'string' ? byPath.get(end) : undefined;
     return node ? { status: 'found', node } : UNKNOWABLE;
   };
+}
+
+/** Whether the path `names` spells is one of `paths`, or below one. */
+function isAtOrBelowAny(names: readonly string[], paths: ReadonlySet<string>): boolean {
+  return names.some((_, index) => paths.has(names.slice(0, index + 1).join('/')));
 }
 
 /**
@@ -431,6 +468,8 @@ interface SeatingTables<N> {
   readonly rootFallbacks: RootFallback[];
   /** The root's `%Name` keys a {@link RootFallback} claims, which a parse cannot answer. */
   readonly awaitedKeys: Set<string>;
+  /** Written only by `rememberUndecidedSeat`: the paths a heading may hold, which a parse cannot answer. */
+  readonly undecidedSeats: Set<string>;
   /** The names of the root's children, which a re-rooted name must not repeat. */
   readonly rootChildNames: Set<string>;
   /** Every seated node, keyed by the folded path its own children address it at. */
@@ -472,6 +511,7 @@ function newTables<N extends SceneNode<N>>(
     ownersFound,
     rootFallbacks: [],
     awaitedKeys: new Set(),
+    undecidedSeats: new Set(),
     rootChildNames: new Set(),
     byPath,
     pathOf: new Map([[root, SCENE_ROOT_PATH]]),

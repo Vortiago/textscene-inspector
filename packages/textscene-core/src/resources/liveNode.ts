@@ -4,7 +4,7 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
-import type { OwnerHandOff } from '../parser/nodeOwner.js';
+import type { HandOffDecision } from '../parser/nodeOwner.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
 import { resolveInstancePath } from './SubResourceResolver.js';
 
@@ -48,7 +48,7 @@ export interface LiveNode extends TscnNode {
    * Set by the merge on a collapsed instance: the hand-offs of the settings whose `owner=` walk found
    * nothing in it. The frame that holds the copy awaiting each lands it (`seatEscaped`).
    */
-  readonly handedOff?: readonly OwnerHandOff[];
+  readonly handOffDecisions?: readonly HandOffDecision[];
   /**
    * Set on an instance by the file that seated the host children the instance handed back: where each
    * went, keyed like `uniqueParentPlacements`, with the path climbing out of the instance with `..`.

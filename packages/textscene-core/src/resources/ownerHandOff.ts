@@ -109,8 +109,9 @@ function outcomeOf(
   const source = sourceOf(nodes, handOff, scope);
   if (!source) return 'undecided';
   const collapsed = collapse(source.node, source.scope);
-  if ((collapsed.handedOff ?? []).includes(handOff)) return 'handed';
-  return collapsed === source.node ? 'undecided' : 'kept';
+  const decision = collapsed.handOffDecisions?.find((decided) => decided.handOff === handOff);
+  if (!decision) return 'undecided';
+  return decision.isHandedOff ? 'handed' : 'kept';
 }
 
 /** An instance whose setting carries a hand-off, and the scope of its group. */

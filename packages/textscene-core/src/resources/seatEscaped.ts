@@ -9,7 +9,7 @@ import type { SceneScope } from '../parser/types';
 import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
 import { graftAt, placementKey } from './graftInstanceChildren';
 import { endAboveRoot, OUTSIDE, subPathSegments, type ClaimedPath } from './instanceNameTable';
-import type { OwnerHandOff } from '../parser/nodeOwner';
+import type { HandOffDecision } from '../parser/nodeOwner';
 import { handsOffOwner, withHandOffsSettled } from './ownerHandOff';
 import { nodeAt, replacedAt } from './liveTreeIndex';
 import { reRootedName } from '../godot/scene/packedScene';
@@ -37,7 +37,7 @@ interface SeatedFrame {
   /** The children that left the frame: a walk that ended above its root, or found nothing. */
   readonly escaped: readonly EscapedChild[];
   /** The hand-offs of the settings that the frame's instances could not land, which the file settles. */
-  readonly handedOff: readonly OwnerHandOff[];
+  readonly handOffDecisions: readonly HandOffDecision[];
 }
 
 /**
@@ -85,7 +85,7 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
   const handedHosts = new Set(frame.handedBack.map(({ child }) => hostChildOf(child)));
   let tree = withoutHostChildren(frame.root, handedHosts).children;
   const leftovers: EscapedChild[] = [];
-  const handedOff: OwnerHandOff[] = [];
+  const handOffDecisions: HandOffDecision[] = [];
   const seatedHostChildren = new Set<LiveNode>();
   const done = new Set<LiveNode>();
 
@@ -123,7 +123,7 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
   ) {
     done.add(pending.node);
     const collapsed = collapse(pending.node, pending.groupScope);
-    handedOff.push(...(collapsed.handedOff ?? []));
+    handOffDecisions.push(...(collapsed.handOffDecisions ?? []));
     const escapes = collapsed.escaped ?? [];
     if (escapes.length === 0) continue;
     const placements = new Map<string, string>();
@@ -143,9 +143,9 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
   }
 
   if (tree === frame.root.children && leftovers.length === 0)
-    return { root: frame.root, escaped: [], handedOff };
+    return { root: frame.root, escaped: [], handOffDecisions };
   const { escaped: _graft, ...root } = frame.root;
-  return { root: { ...root, children: tree }, escaped: leftovers, handedOff };
+  return { root: { ...root, children: tree }, escaped: leftovers, handOffDecisions };
 }
 
 /** Where a child that this frame could not place goes on from it: the frame is an instance, whose owner sits above. */

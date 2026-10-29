@@ -98,7 +98,7 @@ export function mergeInstanceRoot(
       ? new Map([...graft.uniqueParentPlacements, ...seatedPlacements])
       : graft.uniqueParentPlacements,
     ...(graft.escaped.length > 0 ? { escaped: graft.escaped } : {}),
-    ...(graft.handedOff.length > 0 ? { handedOff: graft.handedOff } : {}),
+    ...(graft.handOffDecisions.length > 0 ? { handOffDecisions: graft.handOffDecisions } : {}),
   };
   return mayHandBack(instanceNode) ? seatedInstance(grafted, scopes, collapse) : grafted;
 }
@@ -115,12 +115,12 @@ function seatedInstance(merged: LiveNode, scopes: InstanceScopes, collapse: Coll
     },
     collapse
   );
-  if (seated.root === merged && seated.handedOff.length === 0) return merged;
+  if (seated.root === merged && seated.handOffDecisions.length === 0) return merged;
   const escaped = [...(merged.escaped ?? []), ...seated.escaped];
-  const handedOff = [...(merged.handedOff ?? []), ...seated.handedOff];
+  const handOffDecisions = [...(merged.handOffDecisions ?? []), ...seated.handOffDecisions];
   return {
     ...seated.root,
     ...(escaped.length > 0 ? { escaped } : {}),
-    ...(handedOff.length > 0 ? { handedOff } : {}),
+    ...(handOffDecisions.length > 0 ? { handOffDecisions } : {}),
   };
 }

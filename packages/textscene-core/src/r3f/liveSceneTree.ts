@@ -188,13 +188,10 @@ function collapseOver(
  * owner hand-off asks the instance that hands it off before the frame seats that instance.
  */
 function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
-  const collapsed = new WeakMap<LiveNode, Map<SceneScope, LiveNode>>();
-  return (node, scope) => {
-    let byScope = collapsed.get(node);
-    if (!byScope) collapsed.set(node, (byScope = new Map()));
-    if (!byScope.has(scope)) byScope.set(scope, collapseLiveNode(node, scope, sceneCache));
-    return byScope.get(scope)!;
-  };
+  const collapsedIn = perObject((node: LiveNode) =>
+    perObject((scope: SceneScope) => collapseLiveNode(node, scope, sceneCache))
+  );
+  return (node, scope) => collapsedIn(node)(scope);
 }
 
 /**
@@ -259,7 +256,7 @@ function composedOverBases(
  * The nodes of one file with the children their instances handed back seated where the file's own
  * walk puts them. The same array where no instance hands one back.
  *
- * @param roots the file's nodes, collapsed over the base an inherited root names
+ * @param authored the file's nodes, collapsed over the base an inherited root names
  * @param scope the scope the file's nodes resolve against
  * @param seating the nodes as the parse seated them, whose `%Name` claims the file answers a walk with
  */

@@ -18,7 +18,7 @@ import {
   holderAfterSetting,
   isOutsideInstance,
   type InstanceNameSetting,
-  type OwnerHandOff,
+  type HandOffDecision,
 } from '../parser/nodeOwner';
 import type { FollowTrail } from './sceneTrail';
 import { passesContentTrail } from '../parser/idTrail';
@@ -90,8 +90,8 @@ export class InstanceNameTable implements UniqueNameTable {
   private landed = 0;
   /** Written only by `paths`, read once the graft has landed every setting. */
   private finished?: UniqueNamePaths;
-  /** Written only by `ownerChosen`: the settings whose owner this instance lacks, which another lands. */
-  readonly handedOff: OwnerHandOff[] = [];
+  /** Written only by `ownerChosen`: what this graft decided for each hand-off its settings carry. */
+  readonly handOffDecisions: HandOffDecision[] = [];
 
   /**
    * @param placements where the graft placed each host child that only it can name, as
@@ -189,20 +189,33 @@ export class InstanceNameTable implements UniqueNameTable {
 
   /**
    * `authored` with the owner Godot takes: the one its `owner=` walk finds, or its `owner_uid_path=` owner
-   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing, or
-   * where the `owner_uid_path=` owner is in another instance, to which the setting is handed off.
+   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing, where
+   * a scene the walk enters is still loading, or where the `owner_uid_path=` owner is in another
+   * instance, to which the setting is handed off.
    */
   private ownerChosen(tree: readonly LiveNode[], authored: InstanceNameSetting): InstanceNameSetting | null {
     const walked = this.ownerWalked(tree, authored);
-    if (walked && holdsNode(tree, walked.ownerInInstance ?? '')) return walked;
-    if (authored.ownerFallback) return this.ownerWalked(tree, withFallbackOwner(authored));
-    if (!authored.ownerHandOff) return walked;
-    this.handedOff.push(authored.ownerHandOff);
-    return null;
+    // A scene the owner trail enters is still loading, so nothing is decided yet.
+    if (walked === OWNER_PENDING) return null;
+    const { ownerHandOff: handOff } = authored;
+    // An owner inside a nested instance is that instance's graft to find, which carries the hand-off on.
+    if (handOff && walked && isInNestedInstance(tree, walked.ownerInInstance ?? '')) return walked;
+    const isFound = walked !== null && holdsNode(tree, walked.ownerInInstance ?? '');
+    if (handOff) {
+      this.handOffDecisions.push({ handOff, isHandedOff: !isFound });
+      return isFound ? walked : null;
+    }
+    if (isFound || !authored.ownerFallback) return walked;
+    const fallback = this.ownerWalked(tree, withFallbackOwner(authored));
+    return fallback === OWNER_PENDING ? null : fallback;
   }
 
-  private ownerWalked(tree: readonly LiveNode[], setting: InstanceNameSetting): InstanceNameSetting | null {
+  private ownerWalked(
+    tree: readonly LiveNode[],
+    setting: InstanceNameSetting
+  ): InstanceNameSetting | null | typeof OWNER_PENDING {
     const followed = withOwnerTrailFollowed(setting, this.followTrail);
+    if (followed === OWNER_PENDING) return followed;
     return followed && withOwnerWalked(tree, followed, this.claimed);
   }
 
@@ -234,17 +247,21 @@ function withFallbackOwner({ ownerFallback, ...rest }: InstanceNameSetting): Ins
   return { ...rest, ownerContentTrail: undefined, ...ownerFallback };
 }
 
+/** A walk to an owner through a scene not loaded yet, which the next collapse follows again. */
+const OWNER_PENDING = 'owner pending';
+
 /**
  * `setting` with the owner its `ownerContentTrail` finds below the instance, as the loader's lookup
  * finds it (packed_scene.cpp:159-163). Null where no heading answers the trail, so the node has no
- * owner, or where a scene it enters is not loaded yet, which the next collapse follows again.
+ * owner, and {@link OWNER_PENDING} where a scene it enters is not loaded yet.
  */
 function withOwnerTrailFollowed(
   setting: InstanceNameSetting,
   followTrail: FollowTrail
-): InstanceNameSetting | null {
+): InstanceNameSetting | null | typeof OWNER_PENDING {
   if (setting.ownerContentTrail === undefined) return setting;
   const walk = followTrail(setting.ownerContentTrail);
+  if (walk.status === 'pending') return OWNER_PENDING;
   if (walk.status !== 'found') return null;
   const { ownerContentTrail: _followed, ...rest } = setting;
   return { ...rest, ownerInInstance: pathUnder(setting.ownerInInstance ?? '', walk.path) };
@@ -355,6 +372,12 @@ function holdsNode(tree: readonly LiveNode[], subPath: string): boolean {
   const segments = subPath.split('/');
   const nestedAt = instanceDepth(tree, segments.slice(0, -1));
   return nestedAt !== null && namesNodeBelow(tree, segments, nestedAt);
+}
+
+/** Whether the sub-path names a node inside a nested instance of `tree`, which that instance's graft finds. */
+function isInNestedInstance(tree: readonly LiveNode[], subPath: string): boolean {
+  if (subPath === '' || subPath.startsWith(OUTSIDE)) return false;
+  return typeof instanceDepth(tree, subPath.split('/').slice(0, -1)) === 'number';
 }
 
 /** Whether `segments` names a node of `tree`, or lies in the nested instance at `nestedAt` (`instanceDepth` of its parent path). */

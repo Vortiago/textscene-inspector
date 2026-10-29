@@ -204,6 +204,16 @@ unique_name_in_owner = true
     expect(quill('Brim')).toEqual(['Main/Deep/Cap/Brim/Quill']);
   });
 
+  it('seats a heading below the claimant of this file, for a name the base leaves free', () => {
+    const host = inheritingTrailBase(`[node name="Foo" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Child" type="Node3D" parent="%Foo"]
+`);
+
+    expect(pathsEnding(host, 'Child', BASE_SCENES)).toEqual(['Main/Foo/Child']);
+  });
+
   it('leaves a name the base claimed first with the base node, for a heading seated by its parent=', () => {
     const host = inheritingTrailBase(`[node name="Mid" type="Node3D" parent="."]
 

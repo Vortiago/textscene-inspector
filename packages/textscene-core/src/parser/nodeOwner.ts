@@ -85,6 +85,12 @@ export interface UniqueNameClaim {
  */
 export type OwnerHandOff = symbol;
 
+/** What a graft decided for an {@link OwnerHandOff}: handed off where its `owner=` walk finds no node, kept where it finds one. */
+export interface HandOffDecision {
+  readonly handOff: OwnerHandOff;
+  readonly isHandedOff: boolean;
+}
+
 /** The owner an `owner_uid_path=` finds in the instance, in the fields of {@link InstanceNameSetting} that name an owner. */
 export type InstanceOwnerFallback = Required<Pick<InstanceNameSetting, 'ownerInInstance'>> &
   Pick<InstanceNameSetting, 'ownerContentTrail'>;
