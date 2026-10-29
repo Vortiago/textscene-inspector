@@ -33,7 +33,7 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 
 ## Exposure
 
-The `camera_attributes` of the first WorldEnvironment that holds a valid one set the exposure of the world, apart from the Environment. The `attributes` of the Camera3D that the world renders through replace them (`renderer_scene_cull.cpp`). The exposure scales:
+The `camera_attributes` of the first WorldEnvironment that holds a valid one set the exposure of the world, apart from the Environment. The `attributes` of the Camera3D that a viewport renders through replace them for that viewport (`renderer_scene_cull.cpp`). The exposure scales:
 
 - the energy of each light, including the lights of a GLB file, and each emission.
 - a colour background and a sky background, a colour before the linear conversion.

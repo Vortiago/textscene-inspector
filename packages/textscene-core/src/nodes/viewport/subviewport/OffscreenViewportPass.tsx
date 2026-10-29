@@ -41,12 +41,14 @@ import {
   renderToOffscreenTarget,
   orthoFrameForCamera2D,
   orthoFrameForSize,
-  selectViewportCamera,
+  cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
   viewportMsaaMode,
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
+import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
+import { drawAtExposure } from '../../../r3f/exposure/sceneExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
@@ -123,18 +125,21 @@ export function OffscreenViewportPass({
   const toneMapStage = useRef<OffscreenToneMap | null>(null);
   // Godot tonemaps through the Environment of the world `find_world_3d()` resolves, so the stage
   // mounts in that world: beside an inline pass, and inside a portal, whose scope answers for both.
+  // It reads the attributes of this pass's own camera, which scale the world it draws.
   const stage =
     kind === '3d' ? (
-      <OffscreenToneMapStage
-        stage={toneMapStage}
-        target={target}
-        msaaMode={msaaMode}
-        width={width}
-        height={height}
-        transparentBackground={transparentBg}
-        usesDebanding={properties.use_debanding}
-        name={node.name}
-      />
+      <ViewportPassAttributes path={path}>
+        <OffscreenToneMapStage
+          stage={toneMapStage}
+          target={target}
+          msaaMode={msaaMode}
+          width={width}
+          height={height}
+          transparentBackground={transparentBg}
+          usesDebanding={properties.use_debanding}
+          name={node.name}
+        />
+      </ViewportPassAttributes>
     ) : null;
   // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
@@ -203,7 +208,8 @@ export function OffscreenViewportPass({
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
-    const camera = kind === '3d' ? selectViewportCamera(passScene, path) : orthoCamera;
+    const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
+    const exposure = toneMap?.exposure ?? null;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
@@ -231,7 +237,9 @@ export function OffscreenViewportPass({
           try {
             renderWithMipmapBias(mipmapBias, () =>
               renderWithShadowAtlas(shadowAtlas, () =>
-                kind === '2d' ? frame.render(gl, passScene, camera) : gl.render(passScene, camera)
+                kind === '2d'
+                  ? frame.render(gl, passScene, camera)
+                  : drawAtExposure(passScene, exposure, () => gl.render(passScene, camera))
               )
             );
           } finally {
@@ -248,7 +256,6 @@ export function OffscreenViewportPass({
     canvasCamera,
     passScene,
     kind,
-    path,
     orthoCamera,
     lightHost,
     gl,

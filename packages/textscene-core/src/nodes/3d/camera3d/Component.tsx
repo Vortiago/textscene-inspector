@@ -77,7 +77,6 @@ export function Camera3D({ node, children }: NodeComponentProps) {
         element={CameraElement}
         name={node.name}
         tscnPath={tscnPath}
-        current={properties.current}
         position={offsetPosition}
         rotation={rotation}
         scale={scale}
@@ -96,8 +95,6 @@ interface SceneCameraProps {
   element: 'perspectiveCamera' | 'orthographicCamera';
   name: string;
   tscnPath: string;
-  /** Godot's `Camera3D.current`: which camera the owning viewport renders through. */
-  current: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -111,7 +108,6 @@ function SceneCamera({
   element: CameraElement,
   name,
   tscnPath,
-  current,
   position,
   rotation,
   scale,
@@ -123,13 +119,10 @@ function SceneCamera({
   const cameraRef = useRef<FiberCamera>(null);
   useEffect(() => {
     if (cameraRef.current) {
-      // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it,
-      // and with `current` so a SubViewport can apply Godot's own election rule
-      // (`camera_3d.cpp`: `if (current || first_camera)`) to its own cameras.
+      // Tag the camera with its TSCN path so ActiveCameraSwitcher and a SubViewport pass can find it.
       cameraRef.current.userData.tscnPath = tscnPath;
-      cameraRef.current.userData.tscnCurrent = current;
     }
-  }, [tscnPath, current]);
+  }, [tscnPath]);
   // `manual` keeps R3F's resize from refitting the projection to the canvas in pixels. The viewport
   // that renders through the camera refits it to its own aspect, and a lens change keeps that aspect.
   useLayoutEffect(() => {

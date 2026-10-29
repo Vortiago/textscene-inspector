@@ -12,6 +12,7 @@ import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
+import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
 import { Node } from '../../node/Component';
@@ -101,23 +102,25 @@ export function SubViewport({ node, children }: NodeComponentProps) {
 
   return (
     <Node node={node}>
-      {rendersInline ? (
-        <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
-      ) : null}
-      {rasterizes ? (
-        <OffscreenViewportPass
-          node={node}
-          path={path}
-          size={size}
-          layoutSize={layoutSize}
-          kind={kind}
-          rendersInline={rendersInline}
-          canvasModulate={canvasModulate}
-          drawsControlsOverWorld={kind === '3d' && holdsControls}
-        >
-          {rendersInline ? null : contents}
-        </OffscreenViewportPass>
-      ) : null}
+      <EnclosingViewportProvider path={path}>
+        {rendersInline ? (
+          <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
+        ) : null}
+        {rasterizes ? (
+          <OffscreenViewportPass
+            node={node}
+            path={path}
+            size={size}
+            layoutSize={layoutSize}
+            kind={kind}
+            rendersInline={rendersInline}
+            canvasModulate={canvasModulate}
+            drawsControlsOverWorld={kind === '3d' && holdsControls}
+          >
+            {rendersInline ? null : contents}
+          </OffscreenViewportPass>
+        ) : null}
+      </EnclosingViewportProvider>
     </Node>
   );
 }
