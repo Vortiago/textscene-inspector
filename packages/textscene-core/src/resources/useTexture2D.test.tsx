@@ -7,13 +7,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import {
-  extResourceTexture2DSize,
-  inlineTexture2DSize,
-  useTexture2D,
-  NODE_PROPERTY,
-  useTexture2DRid,
-} from './useTexture2D';
+import { useTexture2D, NODE_PROPERTY, useTexture2DRid } from './useTexture2D';
+import { extResourceTexture2DSize, inlineTexture2DSize } from './texture2DSize';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
@@ -196,6 +191,21 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
     expect((result.current.texture as THREE.DataTexture).image.width).toBe(16);
     expect(result.current.missing).toBe(false);
+  });
+
+  it("reports the texture's image size", () => {
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("GradientTexture2D_a")', [], gradientResources),
+      { wrapper: withLoader() }
+    );
+    expect(result.current.size).toEqual({ width: 16, height: 16 });
+  });
+
+  it('reports no size for no texture (edge case)', () => {
+    const { result } = renderHook(() => useTexture2D(undefined, [], gradientResources), {
+      wrapper: withLoader(),
+    });
+    expect(result.current.size).toBeUndefined();
   });
 
   it('loads an ExtResource image through the resource pipeline', () => {
@@ -681,7 +691,12 @@ describe('useTexture2D — inline AtlasTexture', () => {
       { wrapper: withLoader({ path: 'res://sheet.png', texture: whole }) }
     );
 
-    expect(result.current).toEqual({ texture: whole, missing: false, isArriving: false, namesTexture: true });
+    expect(result.current).toEqual({
+      texture: whole,
+      missing: false,
+      isArriving: false,
+      namesTexture: true,
+    });
   });
 
   it('gives a slot read by RID a plain image as it is (edge case)', () => {
@@ -693,7 +708,12 @@ describe('useTexture2D — inline AtlasTexture', () => {
       }
     );
 
-    expect(result.current).toEqual({ texture: image, missing: false, isArriving: false, namesTexture: true });
+    expect(result.current).toEqual({
+      texture: image,
+      missing: false,
+      isArriving: false,
+      namesTexture: true,
+    });
   });
 
   it('reports an unresolvable sheet behind a slot read by RID as missing (error case)', () => {
@@ -958,6 +978,59 @@ width = 64
     });
 
     expect(result.current).toEqual({ texture: null, missing: true, isArriving: false });
+  });
+});
+
+/** A ViewportTexture reports its viewport's size once set up, and 0 by 0 before (`viewport.cpp:150-166`). */
+describe('the size of a ViewportTexture slot', () => {
+  const resources: TscnInternalResource[] = [
+    { id: 'vt', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+    {
+      id: 'whole',
+      type: 'AtlasTexture',
+      data: { atlas: 'SubResource("vt")', resource_local_to_scene: 'true' },
+    },
+    {
+      id: 'canvas',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("vt")', resource_local_to_scene: 'true' },
+    },
+    { id: 'cell', type: 'AtlasTexture', data: { atlas: 'SubResource("vt")', region: 'Rect2(0, 0, 16, 8)' } },
+  ];
+  const setUp = { isHeldLocally: true, viewportSize: () => ({ x: 64, y: 32 }) };
+
+  it('is the size of the viewport it names once set up', () => {
+    expect(inlineTexture2DSize('SubResource("vt")', resources, setUp)).toEqual({ x: 64, y: 32 });
+  });
+
+  it('is 0 by 0 when a holder leaves it unset up', () => {
+    expect(inlineTexture2DSize('SubResource("vt")', resources, { ...setUp, isHeldLocally: false })).toEqual({
+      x: 0,
+      y: 0,
+    });
+  });
+
+  /** A wrapper forwards no `changed` from it (`canvas_item.cpp:1786-1796`, `atlas_texture.cpp:70-85`). */
+  it('is 0 by 0 through an AtlasTexture of the whole sheet, the size read before set up', () => {
+    expect(inlineTexture2DSize('SubResource("whole")', resources, setUp)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('is 0 by 0 through a CanvasTexture, the size read before set up', () => {
+    expect(inlineTexture2DSize('SubResource("canvas")', resources, setUp)).toEqual({ x: 0, y: 0 });
+  });
+
+  it("is the region's size through an AtlasTexture of a region", () => {
+    expect(inlineTexture2DSize('SubResource("cell")', resources, setUp)).toEqual({ x: 16, y: 8 });
+  });
+
+  it('is the size of the viewport a .tres ViewportTexture names', () => {
+    const tres: ParsedResource = {
+      resourceType: 'ViewportTexture',
+      properties: { viewport_path: 'NodePath("SubViewport")' },
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceTexture2DSize(tres, setUp)).toEqual({ x: 64, y: 32 });
   });
 });
 

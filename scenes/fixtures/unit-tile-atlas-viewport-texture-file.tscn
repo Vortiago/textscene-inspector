@@ -1,0 +1,69 @@
+; One variable: whether a TileSet atlas names its ViewportTexture inline or from a .tres file. Either
+; way the texture reports no area while the scene loads (`viewport.cpp:156-160`), so `create_tile`
+; finds room for no tile (`tile_set.cpp:4985`, `:5209`) and neither layer draws. A red square marks
+; each layer's place.
+
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://unit-tile-atlas-viewport-texture-file.tres" id="1"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_inline"]
+resource_local_to_scene = true
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_inline"]
+resource_local_to_scene = true
+texture = SubResource("ViewportTexture_inline")
+0:0/0 = 0
+1:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_inline"]
+resource_local_to_scene = true
+sources/0 = SubResource("TileSetAtlasSource_inline")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_file"]
+resource_local_to_scene = true
+texture = ExtResource("1")
+0:0/0 = 0
+1:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_file"]
+resource_local_to_scene = true
+sources/0 = SubResource("TileSetAtlasSource_file")
+
+[node name="Root" type="Node2D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(32, 16)
+render_target_update_mode = 4
+
+[node name="Green" type="ColorRect" parent="SubViewport"]
+offset_right = 32.0
+offset_bottom = 16.0
+color = Color(0, 1, 0, 1)
+
+[node name="InlineMark" type="ColorRect" parent="."]
+offset_left = 96.0
+offset_top = 96.0
+offset_right = 104.0
+offset_bottom = 104.0
+color = Color(1, 0, 0, 1)
+
+[node name="Inline" type="TileMapLayer" parent="."]
+position = Vector2(100, 100)
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_inline")
+
+[node name="FileMark" type="ColorRect" parent="."]
+offset_left = 396.0
+offset_top = 96.0
+offset_right = 404.0
+offset_bottom = 104.0
+color = Color(1, 0, 0, 1)
+
+[node name="File" type="TileMapLayer" parent="."]
+position = Vector2(400, 100)
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_file")

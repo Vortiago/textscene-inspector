@@ -5,8 +5,8 @@
  * under the scene's AnimationTransport. It loads stopped, and stopping restores what it captured.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useMemo, useRef } from 'react';
+import { useThree } from '@react-three/fiber';
 import type { AnimationClip, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
@@ -28,12 +28,23 @@ import {
 } from '../../../r3f/animation/trackTargets';
 import { GODOT_EULER_ORDER } from '../../../r3f/animation/restPoseTracks';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
+import { useAnimatedBonePoses } from '../../../r3f/contexts/AnimatedBonePosesContext';
+import { usePushedWrites } from '../../../r3f/animation/usePushedWrites';
+import { useByValue } from '../../../r3f/hooks/useByValue';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
+import { resolveLiveEntry } from '../../../r3f/liveSceneTree';
+import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { AnimationLoopMode } from '../../../godot/scene/animation.js';
 import { buildClip } from './clipBuilder';
-import { sampleSteppedValue, sampleInterpolatedValue, VALUE_PUSH_PROPERTIES } from './valueTracks';
+import {
+  boneCandidatePaths,
+  bonesPushedBy,
+  splitTracks,
+  valuesPushedBy,
+  type TrackScene,
+} from './drivenTracks';
 
 import type { AnimationPlayerProperties } from './types';
 
@@ -81,11 +92,33 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [rootPath, rootNames]
   );
 
+  // Whether a track path names a Skeleton3D decides if its subname is a bone (`animation_mixer.cpp:795`).
+  // Without a scene graph a path with one subname is taken for a bone. The split keys on the
+  // answer, not the tree, so a scene that loads elsewhere does not rebuild the mixer.
+  const liveTree = useSharedLiveTree();
+  const skeletonPaths = useByValue(
+    useMemo(
+      () =>
+        boneCandidatePaths(animations, scenePathOf).filter(
+          (scenePath) =>
+            liveTree === null ||
+            resolveLiveEntry(scenePath, liveTree.roots, liveTree.ctx)?.node.type === 'Skeleton3D'
+        ),
+      [animations, scenePathOf, liveTree]
+    ),
+    (a, b) => a.length === b.length && a.every((path, i) => path === b[i])
+  );
+  const trackScene = useMemo<TrackScene>(() => {
+    const skeletons = new Set(skeletonPaths);
+    return { scenePathOf, isSkeleton: (scenePath) => skeletons.has(scenePath) };
+  }, [scenePathOf, skeletonPaths]);
+  const driven = useMemo(() => animations.map((a) => splitTracks(a, trackScene)), [animations, trackScene]);
+
   // Clip templates, each track named by its target's scene path. `bind` turns them into clips that
   // move the exact objects. GLBSceneRoot uses ready-made glTF clips.
   const clips = useMemo<AnimationClip[]>(
-    () => animations.map((a) => buildClip(a, scenePathOf)),
-    [animations, scenePathOf]
+    () => driven.map((d) => buildClip(d.mixer, scenePathOf)),
+    [driven, scenePathOf]
   );
 
   const durations = useMemo(
@@ -173,67 +206,23 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     restore,
   });
 
-  // ADR-0016/0017: the THREE mixer drives transforms only, so each frame this samples the selected
-  // clip's value-push tracks at the live playhead (`frame` stepped, `modulate`/`size` interpolated)
-  // and pushes them through the AnimatedValue registry. Not driving releases the targets (null).
-  const valueRegistry = useAnimatedValueRegistry();
-  // The selected clip's value-push tracks with target paths resolved once
-  // (the player path / root_node / track target are constant for the clip).
-  const valueTargets = useMemo(() => {
-    if (!isDriving) return null;
-    const clip = animations.find((a) => a.name === transport.selectedClip);
-    if (!clip) return null;
-    const targets = clip.tracks
-      .filter((t) => t.type === 'value' && Object.hasOwn(VALUE_PUSH_PROPERTIES, t.property))
-      .flatMap((t) => {
-        const path = scenePathOf(t.targetPath);
-        return path === null ? [] : [{ path, property: t.property, keys: t.keys, interp: t.interp }];
-      });
-    return targets.length > 0 ? { clipName: clip.name, targets } : null;
-  }, [isDriving, scenePathOf, animations, transport.selectedClip]);
-
-  // Owned (path, property) pairs currently driven, keyed by `${path}:${property}`.
-  const ownedValues = useRef<Map<string, { path: string; property: string }>>(new Map());
-  const releaseOwnedValues = useCallback(() => {
-    const owned = ownedValues.current;
-    if (owned.size === 0) return;
-    owned.forEach(({ path, property }) => valueRegistry.set(path, property, null));
-    owned.clear();
-  }, [valueRegistry]);
-
-  useFrame(() => {
-    const action = valueTargets ? actionsRef.current.get(valueTargets.clipName) : undefined;
-    const playing = transport.playState === 'playing' || transport.playState === 'paused';
-    if (!valueTargets || !playing || !action) {
-      releaseOwnedValues(); // clip switched away / stopped while the loop runs
-      return;
-    }
-    // Read the LIVE mixer playhead (advanced by usePlaybackLoop earlier this
-    // frame), not the React-state transport.time which lags the useFrame closure.
-    const owned = ownedValues.current;
-    const next = new Map<string, { path: string; property: string }>();
-    for (const { path, property, keys, interp } of valueTargets.targets) {
-      const value =
-        Object.hasOwn(VALUE_PUSH_PROPERTIES, property) && VALUE_PUSH_PROPERTIES[property]
-          ? sampleInterpolatedValue(keys, action.time, interp)
-          : [sampleSteppedValue(keys, action.time)];
-      valueRegistry.set(path, property, value);
-      next.set(`${path}:${property}`, { path, property });
-    }
-    owned.forEach((entry, key) => {
-      if (!next.has(key)) valueRegistry.set(entry.path, entry.property, null);
-    });
-    ownedValues.current = next;
-  });
-
-  // Release the moment this player stops driving (stop, deselect, or a switch to a clip with no
-  // value tracks) in an effect, not a frame tick, so the authored values return even when a state
-  // change does not tick the loop.
-  useEffect(() => {
-    const driving = !!valueTargets && (transport.playState === 'playing' || transport.playState === 'paused');
-    if (!driving) releaseOwnedValues();
-  }, [valueTargets, transport.playState, releaseOwnedValues]);
-  useEffect(() => releaseOwnedValues, [releaseOwnedValues]); // release on unmount
+  // ADR-0016/0017: the THREE mixer drives transforms only. The selected clip's value tracks and bone
+  // tracks are sampled at the live playhead each frame and pushed to the registries the nodes listen on.
+  const isPlaying = transport.playState === 'playing' || transport.playState === 'paused';
+  const selectedClip = useMemo(
+    () => (isDriving ? (driven.find((d) => d.name === transport.selectedClip) ?? null) : null),
+    [isDriving, driven, transport.selectedClip]
+  );
+  const valueClip = useMemo(
+    () => (selectedClip && selectedClip.values.length > 0 ? valuesPushedBy(selectedClip) : null),
+    [selectedClip]
+  );
+  const boneClip = useMemo(
+    () => (selectedClip && selectedClip.bones.length > 0 ? bonesPushedBy(selectedClip) : null),
+    [selectedClip]
+  );
+  usePushedWrites(useAnimatedValueRegistry(), valueClip, isPlaying, actionsRef);
+  usePushedWrites(useAnimatedBonePoses(), boneClip, isPlaying, actionsRef);
 
   return (
     <group

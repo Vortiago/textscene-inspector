@@ -17,7 +17,7 @@ import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import { projectLayoutDirectionEnv, type ProjectSettings } from '../../../parser/projectSettingsParser';
+import type { ProjectSettings } from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -30,18 +30,18 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
+import { NODE_PROPERTY } from '../../../resources/useTexture2D';
 import {
   extResourceTexture2DSize,
   inlineTexture2DSize,
-  NODE_PROPERTY,
-} from '../../../resources/useTexture2D';
-import { themeHolder } from '../../../resources/styles/theme/themeHolder';
+  type ViewportTextureSizing,
+} from '../../../resources/texture2DSize';
+import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
 import {
-  inlineViewportTexture,
-  isLocalToScene,
-} from '../../../resources/textures/viewporttexture/localToScene';
-import {
+  recordingSizes,
+  sizesStillAnswered,
   viewportTargetSizes,
+  type ViewportSizeRead,
   type ViewportTargetSize,
 } from '../../../resources/textures/viewporttexture/viewportTargetSize';
 import { useViewportTextures } from '../../contexts/ViewportTextureContext';
@@ -65,6 +65,7 @@ import {
 } from '../../../resources/styles/theme/lookup';
 import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
   isInjected,
@@ -130,7 +131,7 @@ const resolvedStylesOfTheme = perObject(
     const out: Record<string, Record<string, ResolvedStyleBox>> = {};
     for (const [type, byName] of Object.entries(theme.styles ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        const resolved = parseStyleBox(ref, externalResources, internalResources, [themeHolder(theme)]);
+        const resolved = parseStyleBox(ref, externalResources, internalResources, isThemeLocalToScene(theme));
         if (resolved) (out[type] ??= {})[name] = resolved;
       }
     }
@@ -196,7 +197,7 @@ const iconRefsOfTheme = perObject(
     const out: Record<string, Record<string, ThemedIconRef>> = {};
     for (const [type, byName] of Object.entries(theme.icons ?? {})) {
       for (const [name, ref] of Object.entries(byName)) {
-        (out[type] ??= {})[name] = { ref, resources, holders: [themeHolder(theme)] };
+        (out[type] ??= {})[name] = { ref, resources, isHeldLocally: isThemeLocalToScene(theme) };
       }
     }
     return out;
@@ -217,7 +218,7 @@ function resolveThemedIcons(
   const local: Record<string, ThemedIconRef> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope, holders: NODE_PROPERTY };
+      local[key] = { ref, resources: scope, isHeldLocally: NODE_PROPERTY };
     }
   }
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
@@ -319,6 +320,8 @@ interface ForestResult {
   pendingFonts: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
+  /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
+  viewportSizeReads: readonly ViewportSizeRead[];
 }
 
 /**
@@ -422,9 +425,6 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  */
 const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
 
-/** An unset ViewportTexture's size (`viewport.cpp:156-160`). */
-const NO_SIZE: Vector2 = { x: 0, y: 0 };
-
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
@@ -444,6 +444,8 @@ function buildForest(
   const pendingFonts = new Set<string>();
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
+  const viewportSizeReads: ViewportSizeRead[] = [];
+  const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
@@ -544,17 +546,15 @@ function buildForest(
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     consumerPath: string,
-    holders: readonly TscnInternalResource[]
+    isHeldLocally: boolean
   ): Vector2 | null {
-    const viewport = inlineViewportTexture(ref, int);
-    if (viewport) {
-      const isSetUp = viewport.isSetUp && holders.every(isLocalToScene);
-      return isSetUp ? viewportTargetSize(consumerPath, viewport.resource) : NO_SIZE;
-    }
-
-    // An inline procedural texture or a region cell states its size here, with no
-    // load. This walk is no component, so it cannot call `useTexture2D`.
-    const inline = inlineTexture2DSize(ref, int);
+    const sizing: ViewportTextureSizing = {
+      isHeldLocally,
+      viewportSize: (viewportTexture) => readViewportSize(consumerPath, viewportTexture),
+    };
+    // An inline procedural texture, a region cell or a ViewportTexture states its size here, with
+    // no load. This walk is no component, so it cannot call `useTexture2D`.
+    const inline = inlineTexture2DSize(ref, int, sizing);
     if (inline) return inline;
 
     // A texture in its own resource file loads on the resource bus, not the texture
@@ -568,7 +568,7 @@ function buildForest(
         return null;
       }
       if (cached === null) return null;
-      return extResourceTexture2DSize(cached);
+      return extResourceTexture2DSize(cached, sizing);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`
@@ -605,14 +605,14 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope, holders = NODE_PROPERTY } of requests) {
+      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(
               ref,
               scope?.externalResources ?? ext,
               scope?.internalResources ?? int,
               path,
-              holders
+              isHeldLocally
             )
           : null;
       }
@@ -895,6 +895,7 @@ function buildForest(
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
     readKeys,
+    viewportSizeReads,
   };
 }
 
@@ -917,8 +918,7 @@ export function useBuildSolveTree(
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
-  // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
-  const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
+  const layoutDirectionEnv = useLayoutDirectionEnv();
 
   const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
@@ -930,6 +930,15 @@ export function useBuildSolveTree(
     () => viewportTargetSizes(viewportTargets, live),
     [viewportTargets, live]
   );
+  // The lookup the last forest was keyed on stays the key while it answers every size that forest
+  // read alike, so a publish or a live-tree load no slot reads rebuilds nothing.
+  const lastSizes = useRef<{ key: ViewportTargetSize; reads: readonly ViewportSizeRead[] } | null>(null);
+  // Key first: an unchanged lookup answers every read alike, so a render with none re-reads nothing.
+  const last = lastSizes.current;
+  const sizesKey =
+    last && (last.key === viewportTargetSize || sizesStillAnswered(last.reads, viewportTargetSize))
+      ? last.key
+      : viewportTargetSize;
 
   const forest = useMemo(
     () =>
@@ -956,14 +965,15 @@ export function useBuildSolveTree(
       hiddenNodePaths,
       layoutDirectionEnv,
       inheritedRtl,
-      viewportTargetSize,
+      sizesKey,
       generation,
     ]
   );
   const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
   useEffect(() => {
     readKeys.current = forest.readKeys;
-  }, [forest]);
+    lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };
+  }, [forest, sizesKey]);
 
   // Requests what the walk found uncached after render, not during it, as
   // `useResource` does.

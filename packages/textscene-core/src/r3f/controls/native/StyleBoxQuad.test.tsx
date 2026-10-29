@@ -15,6 +15,7 @@ import type { StyleBoxLineBox, StyleBoxTextureBox } from './parseStyleBox';
 import { sRGBChannelToLinear } from '../../../utils/colorSpace';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -286,7 +287,7 @@ describe('<StyleBoxQuad>', () => {
         texture: {
           texture: 'ExtResource("1")',
           resources: SCOPE,
-          holders: [],
+          isHeldLocally: true,
           margin: { left: 0, top: 0, right: 0, bottom: 0 },
           contentMargin: { left: 0, top: 0, right: 0, bottom: 0 },
           expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
@@ -320,7 +321,7 @@ describe('<StyleBoxQuad>', () => {
             styleBox={textureBox({
               texture: 'SubResource("Viewport")',
               resources: { externalResources: [], internalResources: [viewport] },
-              holders: [styleBox],
+              isHeldLocally: isLocalToScene(styleBox),
             })}
             rect={{ x: 0, y: 0, w: 100, h: 50 }}
             renderOrder={0}

@@ -235,9 +235,14 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
   };
 
   it('icon sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
-    const { iconRect } = layoutCheckButtonContent(BASE);
-    // x = floor(150 - (32+6)) = 112. y = floor((28-16)/2 + 0) = 6.
-    expect(iconRect).toEqual({ x: 112, y: 6, w: 32, h: 16 });
+    const { iconPosition } = layoutCheckButtonContent(BASE);
+    // x = 150 - (32+6) = 112. y = (28-16)/2 + 0 = 6.
+    expect(iconPosition).toEqual({ x: 112, y: 6 });
+  });
+
+  it('centres the icon at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
+    const { iconPosition } = layoutCheckButtonContent({ ...BASE, rectSize: { x: 150, y: 31 } });
+    expect(iconPosition.y).toBe(7.5);
   });
 
   it('LEFT-aligned text (the default) starts at marginX with no shift', () => {
@@ -289,14 +294,14 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
   });
 
   it('returns textOffset: null when hasText is false (icon still positioned)', () => {
-    const { iconRect, textOffset } = layoutCheckButtonContent({ ...BASE, hasText: false });
+    const { iconPosition, textOffset } = layoutCheckButtonContent({ ...BASE, hasText: false });
     expect(textOffset).toBeNull();
-    expect(iconRect).toEqual({ x: 112, y: 6, w: 32, h: 16 });
+    expect(iconPosition).toEqual({ x: 112, y: 6 });
   });
 
   it('check_v_offset shifts the icon vertically', () => {
-    const { iconRect } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
-    expect(iconRect.y).toBe(9);
+    const { iconPosition } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
+    expect(iconPosition.y).toBe(9);
   });
 });
 
@@ -320,8 +325,8 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
   };
 
   it('draws the toggle at the left content margin, vertically unchanged', () => {
-    const { iconRect } = layoutCheckButtonContent(BASE);
-    expect(iconRect).toEqual({ x: 6, y: 6, w: 32, h: 16 });
+    const { iconPosition } = layoutCheckButtonContent(BASE);
+    expect(iconPosition).toEqual({ x: 6, y: 6 });
   });
 
   it('lays LEFT-aligned text out at the far end of the box right of the toggle', () => {

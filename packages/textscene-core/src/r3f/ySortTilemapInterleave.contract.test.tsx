@@ -25,6 +25,8 @@ import { SceneStack } from './testing/SceneStack';
 import './nodes/index';
 import { settleLoads } from './testing/settleLoads';
 
+const TILESET_PATH = 'res://tileset.tres';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const isoRoot = resolve(here, '../../../../scenes/isometric');
 const tilesetContent = readFileSync(resolve(isoRoot, 'tileset/tileset.tres'), 'utf8');
@@ -97,7 +99,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 
 describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () => {
   it('a decoration between two tile rows draws BETWEEN the tile groups by Y', async () => {
-    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH)!;
     // Two single-source cells at distinct Godot local Y (DIAMOND_DOWN 128x64).
     const yLow = mapToLocalPx(model, { x: 0, y: 0 }).y; // 32
     const yHigh = mapToLocalPx(model, { x: 0, y: 4 }).y; // 160
@@ -124,7 +126,7 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     // The rows share the layer's own reserve (`canvasPaintOrder.ts`). A fresh reserve
     // per row runs off the subtree's run into the next sibling's, which the test above
     // misses: its decoration sits inside the same subtree and overflows with it.
-    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH)!;
     const cells: PlacedCell[] = [0, 2, 4, 6, 8].map((y) => ({
       coords: { x: 0, y },
       sourceId: 0,

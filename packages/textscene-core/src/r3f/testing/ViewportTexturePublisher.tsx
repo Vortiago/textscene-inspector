@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react';
 import type * as THREE from 'three';
-import { publishLiveTarget } from '../liveTargets';
+import { publishLiveTargets } from '../liveTargets';
 import {
   usePublishViewportTexture,
   type TargetView,
@@ -22,13 +22,10 @@ export function ViewportTexturePublisher({
   entry: ViewportTextureEntry;
   isTransparent?: boolean;
 }) {
-  useEffect(() => {
-    const withdrawals = [
-      publishLiveTarget(entry.plain.texture, null, isTransparent),
-      publishLiveTarget(entry.decoding.texture, null, isTransparent),
-    ];
-    return () => withdrawals.forEach((withdraw) => withdraw());
-  }, [entry, isTransparent]);
+  useEffect(
+    () => publishLiveTargets([entry.plain.texture, entry.decoding.texture], null, isTransparent),
+    [entry, isTransparent]
+  );
   usePublishViewportTexture(path, entry);
   return null;
 }

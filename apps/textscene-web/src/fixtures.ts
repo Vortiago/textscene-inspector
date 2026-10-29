@@ -308,6 +308,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Box Fitted Icon",
+    "file": "unit-check-box-fitted-icon.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Check Button Half Pixel Icon",
+    "file": "unit-check-button-half-pixel-icon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Check Button Rtl",
     "file": "unit-check-button-rtl.tscn",
     "category": "Other"
@@ -1998,6 +2008,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Viewport Texture Frame",
+    "file": "unit-sprite-2d-viewport-texture-frame.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Viewport Texture",
     "file": "unit-sprite-2d-viewport-texture.tscn",
     "category": "Other"
@@ -2945,6 +2960,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Atlas Viewport Texture File",
+    "file": "unit-tile-atlas-viewport-texture-file.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Flips",
     "file": "unit-tile-map-layer-flips.tscn",
     "category": "Unit - 2D Canvas"
@@ -3212,6 +3232,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Text Mesh Embolden",
     "file": "unit-text-mesh-embolden.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Triangulation Failure",
+    "file": "unit-text-mesh-triangulation-failure.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -3658,6 +3683,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Rect Viewport Texture Flip",
     "file": "unit-texture-rect-viewport-texture-flip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture Wrapped",
+    "file": "unit-texture-rect-viewport-texture-wrapped.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -4171,6 +4201,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport 3d Controls",
+    "file": "unit-sub-viewport-3d-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Camera 2d Canvas Layer",
     "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
     "category": "Unit - Viewports"
@@ -4268,6 +4303,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Inherited Rtl",
     "file": "unit-sub-viewport-inherited-rtl.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Mixed Controls",
+    "file": "unit-sub-viewport-mixed-controls.tscn",
     "category": "Unit - Viewports"
   },
   {

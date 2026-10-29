@@ -11,6 +11,7 @@ import { copySampling } from '../copySampling';
 import { carriesMipLevels } from '../godotTextureFilter';
 import { texelTexture, textureMipChain } from '../texelTexture';
 import type { MipLevel } from '../../processing/mipChain';
+import { clamp } from '../../../godot/math/math';
 import { copyGodotFormat } from '../sourceColorSpace';
 import { isBottomUp } from '../../../utils/reversedRows';
 import { perObject } from '../../../utils/perObject';
@@ -165,5 +166,5 @@ function blit(raw: RawPixels, layout: AtlasTextureLayout, out: Uint8Array | Uint
 
 /** The texel a clamped sampler reads at `index` of an axis `size` texels long. */
 function clampToEdge(index: number, size: number): number {
-  return Math.min(Math.max(index, 0), size - 1);
+  return clamp(index, 0, size - 1);
 }

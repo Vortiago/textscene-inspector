@@ -24,9 +24,16 @@ y-sorted layer. Each quadrant takes its own lights, so a large layer is not held
 positional lights in total.
 
 ## Padded atlas from a ViewportTexture
+
 <!-- compare: image=unit-tile-atlas-viewport-padding status=done fixture=unit-tile-atlas-viewport-padding.tscn -->
 
 Two padded layers draw tiles from an AtlasTexture over one ViewportTexture. Only the right TileSet is local to scene. The left samples the placeholder at its padded regions, and the right draws the opaque target as it stands before its first render: black.
+
+## Atlas over a ViewportTexture file
+
+<!-- compare: image=unit-tile-atlas-viewport-texture-file status=done fixture=unit-tile-atlas-viewport-texture-file.tscn -->
+
+Two layers name a ViewportTexture as their atlas texture, one inline and one from a `.tres`. A ViewportTexture reports no area while the scene loads, so `create_tile` finds room for no tile and neither layer draws (`tile_set.cpp:4985`). The previewer loads the texture's file before it creates any tile.
 
 ## Linting
 

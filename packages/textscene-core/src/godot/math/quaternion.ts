@@ -12,6 +12,9 @@ export interface Quaternion {
   w: number;
 }
 
+/** The turn of no rotation. Callers treat a quaternion as immutable, so one value is shared. */
+export const QUATERNION_IDENTITY: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
+
 /**
  * `Quaternion(axis, angle)` (`quaternion.cpp:283-302`): the vector part is the axis times
  * `sin(angle / 2)`, and a zero axis gives the all-zero quaternion.
@@ -58,7 +61,7 @@ export function normalizedQuaternion({ x, y, z, w }: Quaternion): Quaternion {
  * quaternions within `CMP_EPSILON` of coinciding interpolate linearly.
  */
 export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number): Quaternion {
-  let cosine = f(f(f(from.x * to.x) + f(from.y * to.y)) + f(f(from.z * to.z) + f(from.w * to.w)));
+  let cosine = quaternionDot(from, to);
   const sign = cosine < 0 ? -1 : 1;
   cosine = Math.abs(cosine);
   let fromScale = f(1 - weight);
@@ -75,4 +78,9 @@ export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number
     z: f(f(fromScale * from.z) + f(toScale * sign * to.z)),
     w: f(f(fromScale * from.w) + f(toScale * sign * to.w)),
   };
+}
+
+/** `Quaternion::dot` (`quaternion.h`). */
+export function quaternionDot(a: Quaternion, b: Quaternion): number {
+  return f(f(f(a.x * b.x) + f(a.y * b.y)) + f(f(a.z * b.z) + f(a.w * b.w)));
 }

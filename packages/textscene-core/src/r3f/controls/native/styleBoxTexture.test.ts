@@ -47,7 +47,7 @@ describe('parseStyleBoxTexture', () => {
     expect(box).toEqual({
       texture: 'ExtResource("1_tex")',
       resources: { externalResources: [], internalResources },
-      holders: [expect.objectContaining({ id: 'Tex_full' })],
+      isHeldLocally: false,
       margin: { left: 2, top: 3, right: 4, bottom: 5 },
       contentMargin: { left: 10, top: 11, right: 12, bottom: 13 },
       expandMargin: { left: 1, top: 2, right: 3, bottom: 4 },
@@ -64,7 +64,7 @@ describe('parseStyleBoxTexture', () => {
     expect(box).toEqual({
       texture: undefined,
       resources: { externalResources: [], internalResources },
-      holders: [expect.objectContaining({ id: 'Tex_empty' })],
+      isHeldLocally: false,
       margin: { left: 0, top: 0, right: 0, bottom: 0 },
       contentMargin: { left: 0, top: 0, right: 0, bottom: 0 },
       expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
