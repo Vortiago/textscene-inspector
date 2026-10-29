@@ -56,7 +56,7 @@ export function electViewportCamera<T>(cameras: readonly T[], isCurrent: (camera
  * Whether a node at `nodePath` is a descendant of the viewport at `viewportPath`: only a descendant
  * Camera3D joins `get_viewport()` on ENTER_WORLD, and a shared world holds every viewport's cameras.
  *
- * @canonical The camera a viewport renders through
+ * @canonical A node below a viewport
  */
 export function isUnderViewport(nodePath: string, viewportPath: string): boolean {
   return nodePath.startsWith(`${viewportPath}/`);

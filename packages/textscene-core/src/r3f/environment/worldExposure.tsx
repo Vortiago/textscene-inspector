@@ -57,8 +57,13 @@ function renderCameraOf(
   viewedPath: string | null,
   worldCameras: readonly WorldCamera[]
 ): WorldCamera | null {
-  if (world === 'subViewport') return electViewportCamera(worldCameras, (camera) => camera.current);
+  if (world === 'subViewport') return electCamera(worldCameras);
   return worldCameras.find((camera) => camera.path === viewedPath) ?? null;
+}
+
+/** The camera a viewport renders through among its `cameras`. */
+function electCamera(viewportCameras: readonly WorldCamera[]): WorldCamera | null {
+  return electViewportCamera(viewportCameras, (camera) => camera.current);
 }
 
 /** The attributes of a resolution, or null while there are none to read. */
@@ -152,7 +157,7 @@ function RenderCameraProvider({ children }: { children: ReactNode }) {
 }
 
 function SharedRenderCameraProvider({ children }: { children: ReactNode }) {
-  const renderCamera = electViewportCamera(cameras.useAll(), (camera) => camera.current);
+  const renderCamera = electCamera(cameras.useAll());
   const worldAttributes = attributesOf(cameraAttributes.useChosen());
   useSceneExposure(worldAttributes?.exposureMultiplier ?? null, worldAttributes?.exposureMultiplier ?? null);
   return (
@@ -191,10 +196,7 @@ export function ViewportPassAttributes({ path, children }: { path: string; child
   const worldAttributes = cameraAttributes.useChosen();
   const attributes = useMemo(() => {
     const below = worldCameras.filter((camera) => isUnderViewport(camera.path, path));
-    return drawnAttributes(
-      electViewportCamera(below, (camera) => camera.current),
-      worldAttributes
-    );
+    return drawnAttributes(electCamera(below), worldAttributes);
   }, [worldCameras, worldAttributes, path]);
   return <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>;
 }
