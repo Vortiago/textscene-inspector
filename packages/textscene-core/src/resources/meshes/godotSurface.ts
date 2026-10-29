@@ -37,6 +37,18 @@ export interface GodotSurface {
 /** Set on the geometry of points surfaces, which a drawer mounts as `THREE.Points`. */
 const DRAWS_POINTS = 'godotDrawsPoints';
 
+/** Set on the geometry of skinned surfaces: the bones each surface addresses, in surface order. */
+const SURFACE_BONE_COUNTS = 'godotSurfaceBoneCounts';
+
+/**
+ * How many bones each surface of `geometry` addresses: the highest bone index of any vertex of the
+ * surface array, drawn or not, plus one (`rendering_server.cpp:925`). Undefined for a geometry
+ * `godotSurfacesGeometry` built from surfaces with no bones.
+ */
+export function surfaceBoneCounts(geometry: THREE.BufferGeometry): readonly number[] | undefined {
+  return geometry.userData[SURFACE_BONE_COUNTS] as readonly number[] | undefined;
+}
+
 /** Whether `godotSurfacesGeometry` built `geometry` from points surfaces. */
 export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
   return geometry.userData[DRAWS_POINTS] === true;
@@ -152,8 +164,13 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skin.weights, 4));
   }
   if (isPoints) geometry.userData[DRAWS_POINTS] = true;
+  if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map(boneCountOfSurface);
 
   return geometry;
+}
+
+function boneCountOfSurface(surface: GodotSurface): number {
+  return surface.bones!.indices.reduce((highest, bone) => Math.max(highest, bone + 1), 0);
 }
 
 /**

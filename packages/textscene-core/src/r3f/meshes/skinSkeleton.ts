@@ -15,6 +15,7 @@ import { useAnimatedBonePoses } from '../contexts/AnimatedBonePosesContext.js';
 import { setMatrixFromTransform3D } from '../nodeTreeTransforms.js';
 import { sameData } from '../../utils/sameData.js';
 import { useByValue } from '../hooks/useByValue.js';
+import { surfaceBoneCounts } from '../../resources/meshes/godotSurface.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 /**
@@ -23,28 +24,11 @@ import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
  */
 const MISSING_BONE_MATRIX = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-/** A run of index slots of a geometry: one surface, or all of it. */
-interface SlotRange {
-  start: number;
-  count: number;
-}
-
-/**
- * How many bones the skin indices of the vertices in `range` address: the highest index, plus one,
- * as `_surface_set_data` counts them (`rendering_server.cpp:925`). The whole geometry where no range is given.
- */
-function boneCountOf(geometry: THREE.BufferGeometry, range?: SlotRange): number {
+/** How many bones the geometry's skin indices address: the highest index, plus one. */
+function boneCountOf(geometry: THREE.BufferGeometry): number {
   const indices = geometry.getAttribute('skinIndex');
-  const triangles = geometry.getIndex();
-  // A whole geometry counts every vertex, drawn or not, as the skeleton must hold what any addresses.
-  const { start, count } = range ?? { start: 0, count: indices.count };
-  const vertexAt = range && triangles ? (slot: number) => triangles.getX(slot) : (slot: number) => slot;
   let highest = -1;
-  for (let slot = start; slot < start + count; slot++) {
-    for (let k = 0; k < indices.itemSize; k++) {
-      highest = Math.max(highest, indices.getComponent(vertexAt(slot), k));
-    }
-  }
+  for (let i = 0; i < indices.array.length; i++) highest = Math.max(highest, indices.array[i]!);
   return highest + 1;
 }
 
@@ -55,11 +39,9 @@ function boneCountOf(geometry: THREE.BufferGeometry, range?: SlotRange): number 
  * A skin with no bind keeps the mesh's own bounds (`mesh_storage.cpp:716`), and its vertices collapse.
  */
 export function isOutgrownBySkin(geometry: THREE.BufferGeometry | undefined, bindCount: number): boolean {
-  if (!geometry?.getAttribute('skinIndex') || bindCount === 0) return false;
-  const surfaces = geometry.groups.length
-    ? geometry.groups
-    : [{ start: 0, count: geometry.getIndex()?.count ?? geometry.getAttribute('position').count }];
-  return surfaces.every((surface) => boneCountOf(geometry, surface) > bindCount);
+  const boneCounts = geometry && surfaceBoneCounts(geometry);
+  if (!boneCounts || bindCount === 0) return false;
+  return boneCounts.every((boneCount) => boneCount > bindCount);
 }
 
 function writeBoneMatrix(target: THREE.Matrix4, skinMatrix: Transform3D | undefined): void {
