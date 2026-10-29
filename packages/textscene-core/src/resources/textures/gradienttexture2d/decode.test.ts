@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { decodeGradientTexture2D, resolveGradient } from './decode';
 import { gradientOf } from './gradient.testkit';
+import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import { loadedFilesOf, NO_FILES } from '../../testing/loadedFiles';
 
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
@@ -161,21 +164,45 @@ const RAMP_RESOURCE: TscnInternalResource = {
   data: { ...ORANGE_RAMP },
 };
 
+const RAMP_PATH = 'res://ramp.tres';
+const SCENE_RAMP: SceneResources = {
+  internalResources: [RAMP_RESOURCE],
+  externalResources: [{ id: '8_ramp', type: 'Gradient', path: RAMP_PATH }],
+};
+const RAMP_FILE = loadedFilesOf({
+  [RAMP_PATH]: parseTresFile(
+    `[gd_resource type="Gradient" format=3]\n\n[resource]\n` +
+      Object.entries(ORANGE_RAMP)
+        .map(([key, value]) => `${key} = ${value}\n`)
+        .join('')
+  ),
+});
+
 describe('resolveGradient', () => {
   it('decodes the Gradient a SubResource reference names (happy path)', () => {
-    const gradient = resolveGradient('SubResource("3")', [RAMP_RESOURCE]);
+    const gradient = resolveGradient('SubResource("3")', SCENE_RAMP, NO_FILES);
     expect(gradient?.stops).toHaveLength(2);
     expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: Math.fround(0.6), b: Math.fround(0.2), a: 1 });
   });
 
-  it('returns null when the reference names a different resource type (error path)', () => {
-    const curve: TscnInternalResource = { type: 'Curve', id: '3', data: {} };
-    expect(resolveGradient('SubResource("3")', [curve])).toBeNull();
+  it('decodes the Gradient a loaded .tres holds, as it does a SubResource', () => {
+    const fromFile = resolveGradient('ExtResource("8_ramp")', SCENE_RAMP, RAMP_FILE);
+    expect(fromFile).toEqual(resolveGradient('SubResource("3")', SCENE_RAMP, NO_FILES));
   });
 
-  it('returns null for an absent or non-SubResource reference (edge case)', () => {
-    expect(resolveGradient(undefined, [RAMP_RESOURCE])).toBeNull();
-    expect(resolveGradient('ExtResource("3")', [RAMP_RESOURCE])).toBeNull();
-    expect(resolveGradient('SubResource("nope")', [RAMP_RESOURCE])).toBeNull();
+  it('returns null while the .tres has not loaded', () => {
+    expect(resolveGradient('ExtResource("8_ramp")', SCENE_RAMP, NO_FILES)).toBeNull();
+  });
+
+  it('returns null when the reference names a different resource type (error path)', () => {
+    const curve: TscnInternalResource = { type: 'Curve', id: '3', data: {} };
+    expect(
+      resolveGradient('SubResource("3")', { ...SCENE_RAMP, internalResources: [curve] }, NO_FILES)
+    ).toBeNull();
+  });
+
+  it('returns null for an absent reference or an unknown id (edge case)', () => {
+    expect(resolveGradient(undefined, SCENE_RAMP, NO_FILES)).toBeNull();
+    expect(resolveGradient('SubResource("nope")', SCENE_RAMP, NO_FILES)).toBeNull();
   });
 });

@@ -1,18 +1,40 @@
 /**
  * The noise and the colour ramp a NoiseTexture2D or NoiseTexture3D names, resolved to the values
- * its build reads, so a worker job needs nothing but them.
+ * its build reads, so a worker job needs nothing but them. A reference is a SubResource, or an
+ * ExtResource once its `.tres` has loaded.
  */
 
 import type { TscnInternalResource } from '../../parser/types';
-import { findSubResource, parseResourceReference } from '../SubResourceResolver';
+import type { SceneResources } from '../../r3f/SceneResourcesContext';
+import { resolveReferencedResource } from '../resolveReference';
+import type { LoadedFile } from '../scopedResource';
 import { decodeFastNoiseLite } from '../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../noise/fastnoiselite/types';
-import { resolveGradient } from './gradienttexture2d/decode';
+import { decodeGradientResource } from './gradienttexture2d/decode';
 import type { Gradient } from './gradienttexture2d/types';
 
 interface NoiseSources {
   noise: FastNoiseLiteData;
   colorRamp: Gradient | null;
+}
+
+interface NoiseRefs {
+  noise: string | null;
+  colorRamp: string | null;
+}
+
+/**
+ * The resources the refs name. One parse answers a reference with one object, so a plan built from
+ * these objects is stale exactly when one of them is another object.
+ */
+export function noiseSourceResources(
+  refs: NoiseRefs,
+  pools: SceneResources,
+  loadedFile: LoadedFile
+): Array<TscnInternalResource | null> {
+  return [refs.noise, refs.colorRamp].map((ref) =>
+    resolveReferencedResource(ref ?? undefined, pools, loadedFile)
+  );
 }
 
 /**
@@ -21,15 +43,11 @@ interface NoiseSources {
  * Another Noise subclass would be its own slice behind the same `noise` slot.
  */
 export function resolveNoiseSources(
-  refs: { noise: string | null; colorRamp: string | null },
-  resources: readonly TscnInternalResource[]
+  refs: NoiseRefs,
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): NoiseSources | null {
-  const noiseResource = refs.noise
-    ? findSubResource(resources, parseResourceReference(refs.noise)?.id ?? '')
-    : undefined;
-  if (!noiseResource || noiseResource.type !== 'FastNoiseLite') return null;
-  return {
-    noise: decodeFastNoiseLite(noiseResource.data),
-    colorRamp: refs.colorRamp ? resolveGradient(refs.colorRamp, resources) : null,
-  };
+  const [noise, colorRamp] = noiseSourceResources(refs, pools, loadedFile);
+  if (!noise || noise.type !== 'FastNoiseLite') return null;
+  return { noise: decodeFastNoiseLite(noise.data), colorRamp: decodeGradientResource(colorRamp ?? null) };
 }

@@ -6,7 +6,8 @@
  * `key` while holding it.
  */
 
-import type { TscnInternalResource } from '../../parser/types.js';
+import type { SceneResources } from '../../r3f/SceneResourcesContext.js';
+import type { LoadedFile } from '../scopedResource.js';
 import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTexture.js';
 import { resolveImageTexture } from './imagetexture/resolveImageTexture.js';
 import { resolveImageTexture3D } from './imagetexture3d/resolveImageTexture3D.js';
@@ -16,20 +17,22 @@ import type { ProceduralTextureLookup } from './proceduralBuilds.js';
 
 export function resolveProceduralTexture(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): ProceduralTextureLookup | null {
   const ready =
-    resolveGradientTexture2D(ref, internalResources) ?? resolveImageTexture(ref, internalResources);
+    resolveGradientTexture2D(ref, pools, loadedFile) ?? resolveImageTexture(ref, pools.internalResources);
   if (ready) return { status: 'ready', ...ready };
-  return resolveNoiseTexture2D(ref, internalResources);
+  return resolveNoiseTexture2D(ref, pools, loadedFile);
 }
 
 /** {@link resolveProceduralTexture} for a Texture3D slot. */
 export function resolveProceduralTexture3D(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): ProceduralTextureLookup | null {
-  const image = resolveImageTexture3D(ref, internalResources);
+  const image = resolveImageTexture3D(ref, pools.internalResources);
   if (image) return { status: 'ready', ...image };
-  return resolveNoiseTexture3D(ref, internalResources);
+  return resolveNoiseTexture3D(ref, pools, loadedFile);
 }

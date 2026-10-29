@@ -177,6 +177,17 @@ describe('a noise texture whose saved sources are still loading', () => {
 });
 
 describe('a Texture3D slot with a saved Gradient or FastNoiseLite', () => {
+  it('starts no build until every source is in', () => {
+    const { wrapper, jobs } = setUp({ isRampLoaded: false });
+    const { result } = renderHook(
+      () => useTexture3D(NOISE_VOLUME, { externalResources: EXTERNAL, internalResources: SAVED }),
+      { wrapper }
+    );
+
+    expect(jobs).toEqual([]);
+    expect(result.current).toBeNull();
+  });
+
   it('builds a NoiseTexture3D whose noise and color_ramp are ExtResources from the content of the SubResource form', () => {
     const inline = jobStartedBy(() =>
       useTexture3D(NOISE_VOLUME, { externalResources: [], internalResources: INLINE })

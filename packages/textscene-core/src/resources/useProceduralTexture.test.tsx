@@ -5,6 +5,7 @@
  * the consumer starts it, keeps the texture it had until the new one lands, and drops it on unmount.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NO_FILES, poolsOf } from './testing/loadedFiles';
 import * as THREE from 'three';
 import { Component, StrictMode, useLayoutEffect, type ReactNode } from 'react';
 import { act, render, renderHook } from '@testing-library/react';
@@ -80,7 +81,7 @@ describe('useProceduralTexture', () => {
   it('rasterises the gradient a SubResource reference names', () => {
     const resources = scene();
     const { result } = renderHook(() =>
-      useProceduralTexture('SubResource("GradientTexture2D_a")', resources)
+      useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES)
     );
 
     expect(result.current).toMatchObject({ claimed: true });
@@ -92,7 +93,7 @@ describe('useProceduralTexture', () => {
     const resources = scene();
     const key = proceduralTextureKey(resources, 'GradientTexture2D_a');
     const { unmount } = renderHook(() =>
-      useProceduralTexture('SubResource("GradientTexture2D_a")', resources)
+      useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES)
     );
 
     expect(traffic.pinned).toEqual([key]);
@@ -113,7 +114,7 @@ describe('useProceduralTexture', () => {
       'SubResource("ImageTexture_x")',
       'SubResource("Nothing_here")',
     ]) {
-      const { result, unmount } = renderHook(() => useProceduralTexture(ref, resources));
+      const { result, unmount } = renderHook(() => useProceduralTexture(ref, poolsOf(resources), NO_FILES));
       expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false, building: false });
       unmount();
     }
@@ -125,7 +126,7 @@ describe('useProceduralTexture', () => {
   it('holds one pin across re-renders of the same reference', () => {
     const resources = scene();
     const { rerender } = renderHook(() =>
-      useProceduralTexture('SubResource("GradientTexture2D_a")', resources)
+      useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES)
     );
 
     rerender();
@@ -141,9 +142,12 @@ describe('useProceduralTexture', () => {
     const resources = scene();
     const keyA = proceduralTextureKey(resources, 'GradientTexture2D_a');
     const keyB = proceduralTextureKey(resources, 'GradientTexture2D_b');
-    const { rerender } = renderHook(({ ref }: { ref: string }) => useProceduralTexture(ref, resources), {
-      initialProps: { ref: 'SubResource("GradientTexture2D_a")' },
-    });
+    const { rerender } = renderHook(
+      ({ ref }: { ref: string }) => useProceduralTexture(ref, poolsOf(resources), NO_FILES),
+      {
+        initialProps: { ref: 'SubResource("GradientTexture2D_a")' },
+      }
+    );
 
     rerender({ ref: 'SubResource("GradientTexture2D_b")' });
 
@@ -154,7 +158,7 @@ describe('useProceduralTexture', () => {
   it('leaves no pin behind after a StrictMode mount/unmount cycle', () => {
     const resources = scene();
     const { unmount } = renderHook(
-      () => useProceduralTexture('SubResource("GradientTexture2D_a")', resources),
+      () => useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES),
       { wrapper: strict }
     );
     unmount();
@@ -252,8 +256,8 @@ function renderSlots(runner: JobRunner, resources: TscnInternalResource[], stric
   const { loader, wrapper } = withRunner(runner, strictMode);
   const hook = renderHook(
     ({ scene }: { scene: TscnInternalResource[] }) => [
-      useProceduralTexture(NOISE, scene),
-      useProceduralTexture(GRADIENT, scene),
+      useProceduralTexture(NOISE, poolsOf(scene), NO_FILES),
+      useProceduralTexture(GRADIENT, poolsOf(scene), NO_FILES),
     ],
     { initialProps: { scene: resources }, wrapper }
   );
@@ -296,7 +300,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     let isShown = false;
     renderHook(
       () => {
-        const slots = [useProceduralTexture(NOISE, noiseScene(1))];
+        const slots = [useProceduralTexture(NOISE, poolsOf(noiseScene(1)), NO_FILES)];
         useLayoutEffect(() => {
           isShown = slots[0]?.texture instanceof THREE.DataTexture;
         });
@@ -406,7 +410,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     const caught: unknown[] = [];
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     function Consumer(): null {
-      useProceduralTexture(NOISE, noiseScene(1));
+      useProceduralTexture(NOISE, poolsOf(noiseScene(1)), NO_FILES);
       return null;
     }
     render(
@@ -424,7 +428,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
   });
 
   it('builds in-thread outside a loader provider', async () => {
-    const { result } = renderHook(() => [useProceduralTexture(NOISE, noiseScene(1))]);
+    const { result } = renderHook(() => [useProceduralTexture(NOISE, poolsOf(noiseScene(1)), NO_FILES)]);
     await flush();
 
     const [slot] = result.current as ProceduralSlot[];
@@ -447,7 +451,7 @@ function noiseVolumeScene(): TscnInternalResource[] {
 describe('useProceduralTexture3D', () => {
   it('builds the NoiseTexture3D a SubResource reference names', async () => {
     const { result } = renderHook(() =>
-      useProceduralTexture3D('SubResource("NoiseTexture3D_a")', noiseVolumeScene())
+      useProceduralTexture3D('SubResource("NoiseTexture3D_a")', poolsOf(noiseVolumeScene()), NO_FILES)
     );
     await flush();
 
@@ -455,13 +459,15 @@ describe('useProceduralTexture3D', () => {
   });
 
   it('leaves a NoiseTexture2D unclaimed, since a Texture3D slot cannot draw it', () => {
-    const { result } = renderHook(() => useProceduralTexture3D(NOISE, noiseVolumeScene()));
+    const { result } = renderHook(() => useProceduralTexture3D(NOISE, poolsOf(noiseVolumeScene()), NO_FILES));
 
     expect(result.current).toEqual({ texture: null, claimed: false, building: false });
   });
 
   it('leaves a missing reference unclaimed (edge case)', () => {
-    const { result } = renderHook(() => useProceduralTexture3D(undefined, noiseVolumeScene()));
+    const { result } = renderHook(() =>
+      useProceduralTexture3D(undefined, poolsOf(noiseVolumeScene()), NO_FILES)
+    );
 
     expect(result.current.claimed).toBe(false);
   });

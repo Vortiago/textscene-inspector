@@ -22,7 +22,8 @@ export interface ProceduralTextureResolution<T extends THREE.Texture = THREE.Tex
 
 /**
  * Resolves `ref` as an inline `[sub_resource]` of `typeName`, rasterised once per
- * file and sub-resource. Null for every other reference form, which leaves the
+ * file and sub-resource. A `variant` joins the cache key for a raster that also depends on a
+ * resource outside the file. Null for every other reference form, which leaves the
  * caller's async path untouched, and for pixels the tab cannot allocate: a
  * GradientTexture2D at Godot's 16384² ceiling is 1 GiB of RGBA8. The result is
  * borrowed: never dispose it.
@@ -31,21 +32,23 @@ export function resolveProceduralSubResource<T extends THREE.Texture>(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[],
   typeName: string,
-  rasterize: (properties: Record<string, string>, resources: readonly TscnInternalResource[]) => T | null
+  rasterize: (properties: Record<string, string>, resources: readonly TscnInternalResource[]) => T | null,
+  variant?: string
 ): ProceduralTextureResolution<T> | null {
   const resource = findTypedSubResource(ref, internalResources, typeName);
   if (!resource) return null;
 
   // The cache holds plain THREE.Texture, but a given sub-resource id has one
   // type, so whatever it holds under this key came out of this same rasterize.
-  const texture = proceduralTexture(internalResources, resource.id, () =>
+  const cacheId = variant ? `${resource.id}:${variant}` : resource.id;
+  const texture = proceduralTexture(internalResources, cacheId, () =>
     unlessAllocationFails(allocationLabel(typeName, resource.id), () =>
       rasterize(resource.data, internalResources)
     )
   ) as T | null;
   if (!texture) return null;
 
-  return { texture, key: proceduralTextureKey(internalResources, resource.id) };
+  return { texture, key: proceduralTextureKey(internalResources, cacheId) };
 }
 
 /** The inline `[sub_resource]` of `typeName` that `ref` names. Null for every other reference form. */

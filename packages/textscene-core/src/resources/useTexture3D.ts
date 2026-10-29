@@ -13,17 +13,17 @@ import { resolveExtResourcePath } from './SubResourceResolver.js';
 import { useProceduralTexture3D } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
-import { useSavedTextureSources } from './useSavedTextureSources.js';
+import { useTextureSources } from './useTextureSources.js';
 
 export function useTexture3D(ref: string | undefined, pools: SceneResources): THREE.Data3DTexture | null {
   const slot = useParsedResourceSlot(ref, pools.externalResources, pools.internalResources);
-  const { internalResources: proceduralResources, isLoading: isLoadingSources } = useSavedTextureSources(
-    slot.ref,
-    slot.externalResources,
-    slot.internalResources
+  const slotPools = useMemo(
+    () => ({ externalResources: slot.externalResources, internalResources: slot.internalResources }),
+    [slot.externalResources, slot.internalResources]
   );
+  const { loadedFile, isLoading: isLoadingSources } = useTextureSources(slot.ref, slotPools);
   // No build starts until every saved source is in: a build without one would be thrown away.
-  const procedural = useProceduralTexture3D(isLoadingSources ? undefined : slot.ref, proceduralResources);
+  const procedural = useProceduralTexture3D(isLoadingSources ? undefined : slot.ref, slotPools, loadedFile);
 
   const imagePath = useMemo(() => {
     const extPath = resolveExtResourcePath(slot.ref, slot.externalResources);
