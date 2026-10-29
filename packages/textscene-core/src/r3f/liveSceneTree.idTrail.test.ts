@@ -211,6 +211,60 @@ unique_name_in_owner = true
   });
 });
 
+describe('a heading below a trail-seated heading, in a file whose root inherits a base', () => {
+  const base = parse(`[gd_scene format=3]
+
+[node name="Base" type="Node3D" unique_id=1]
+
+[node name="Deep" type="Node3D" parent="." unique_id=77]
+
+[node name="Feather" type="Node3D" parent="." unique_id=78]
+unique_name_in_owner = true
+`);
+  const inheriting = (below: string) =>
+    parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Main" instance=ExtResource("base")]
+
+[node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
+unique_name_in_owner = true
+
+[node name="${below}" type="Node3D" parent="%Cap"]
+unique_name_in_owner = true
+
+[node name="Quill" type="Node3D" parent="%${below}"]
+`);
+  const quill = (below: string) => pathsEnding(inheriting(below), 'Quill', { 'res://base.tscn': base });
+
+  it('leaves a name the base claimed first with the base node', () => {
+    expect(quill('Feather')).toEqual(['Main/Feather/Quill']);
+  });
+
+  it('claims a free name in the table of the inherited root', () => {
+    expect(quill('Brim')).toEqual(['Main/Deep/Cap/Brim/Quill']);
+  });
+
+  it('leaves a name the base claimed first with the base node, for a heading seated by its parent=', () => {
+    const host = parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Main" instance=ExtResource("base")]
+
+[node name="Mid" type="Node3D" parent="."]
+
+[node name="Feather" type="Node3D" parent="Mid"]
+unique_name_in_owner = true
+
+[node name="Quill" type="Node3D" parent="%Feather"]
+`);
+
+    expect(pathsEnding(host, 'Quill', { 'res://base.tscn': base })).toEqual(['Main/Feather/Quill']);
+  });
+});
+
 describe('a heading addressed by %Name below a node that re-roots', () => {
   it('re-roots with it, since the renamed node claims the renamed name', () => {
     const host = playerHost(`[node name="Q" type="Node3D" parent="Player/Gone"]

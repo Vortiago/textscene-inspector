@@ -952,3 +952,40 @@ unique_name_in_owner = true
     expect(table.get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
   });
 });
+
+describe('a %Name that an inheriting file and its base both claim', () => {
+  // The base claims first, so it keeps the name (node.cpp:2222-2233).
+  const base = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Base" type="Node3D" unique_id=1]
+
+[node name="Deep" type="Node3D" parent="." unique_id=77]
+
+[node name="Feather" type="Node3D" parent="." unique_id=78]
+unique_name_in_owner = true
+`);
+  const inheriting = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Main" instance=ExtResource("base")]
+
+[node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
+unique_name_in_owner = true
+
+[node name="Feather" type="Node3D" parent="%Cap"]
+unique_name_in_owner = true
+`);
+  const rootTable = () =>
+    ownerUniquePaths(
+      claimOwnerOf('Main/Deep', inheriting.nodes, contextOver(inheriting, { 'res://base.tscn': base }))
+    );
+
+  it('keeps the base node in the table of the root', () => {
+    expect(rootTable().get('%Feather')).toBe('Main/Feather');
+  });
+
+  it('places the name a trail-seated heading claims where its trail finds the base node', () => {
+    expect(rootTable().get('%Cap')).toBe('Main/Deep/Cap');
+  });
+});

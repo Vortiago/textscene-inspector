@@ -122,12 +122,14 @@ export class InstanceNameTable implements UniqueNameTable {
   }
 
   /**
-   * `path` with a leading segment of a content trail replaced by where the graft placed the node
-   * the trail found, as the seating keys a node below it (`contentTrailSegment`).
+   * `path` with its leading sub-path replaced where a trail placed the node there: a segment of a
+   * content trail (`contentTrailSegment`), or a plain path the base lacks. A path through a `%Name`
+   * resolves through the claims as they stand when it lands, so a later claim moves it.
    */
   private placedTrailSeat(path: string): string {
-    if (!passesContentTrail(path.split('/')[0]!)) return path;
-    return placedBelow(this.placements, path.split('/')).join('/');
+    const segments = path.split('/');
+    if (!passesContentTrail(segments[0]!) && path.includes(UNIQUE_NODE_PREFIX)) return path;
+    return placedBelow(this.placements, segments).join('/');
   }
 
   /** The path from the sub-scene root that holds `key` now, as in {@link UniqueNamePaths}. */

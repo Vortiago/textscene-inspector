@@ -107,11 +107,11 @@ class Graft {
     };
   }
 
-  seat(hosted: LiveNode): void {
+  /** Seats `hosted`, and records where under `key`, the path a setting for it names. */
+  seat(hosted: LiveNode, key = placementKey(hosted)): void {
     const { child, status } = followedChild(hosted, this.names.followTrail);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
     const stamped = withFallbackScope(child, this.scopes.outer);
-    const key = placementKey(hosted);
     if (status === 'waiting') this.misplaced.push(stamped);
     else if (status === 'missing') this.escaped.push({ child, scope: stamped.scope!, end: null });
     else if (child.instanceSubPath) this.seatAtSubPath(child, stamped, key);
@@ -136,7 +136,7 @@ class Graft {
     const inside = segments?.[0] === OUTSIDE ? null : segments;
     const next = inside && graftAt(this.grafted, inside, stamped, this.scopes.content);
     if (!inside || !next) {
-      this.seatUnwalked(child, stamped, segments);
+      this.seatUnwalked(child, stamped, segments, key);
       return;
     }
     this.grafted = next;
@@ -144,11 +144,16 @@ class Graft {
   }
 
   /** A child whose `parent=` walk found nothing, so its `parent_id_path=` is tried (packed_scene.cpp:161-163). */
-  private seatUnwalked(child: LiveNode, stamped: LiveNode, segments: readonly string[] | null): void {
+  private seatUnwalked(
+    child: LiveNode,
+    stamped: LiveNode,
+    segments: readonly string[] | null,
+    key: string | undefined
+  ): void {
     const { hasUnloadedBase } = this.names;
     const entered = hasUnloadedBase ? undefined : enteredThroughBase(child, this.names);
     if (entered?.status === 'waiting') this.misplaced.push(stamped);
-    else if (entered) this.seat(entered.child);
+    else if (entered) this.seat(entered.child, key ?? joinPath(child.instanceSubPath!, child.name));
     else if (child.overridesExistingNode || hasUnloadedBase) {
       // A base still loading seats the child at its next collapse, so only an override warns.
       if (child.overridesExistingNode) {

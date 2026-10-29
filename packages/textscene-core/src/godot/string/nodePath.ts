@@ -111,15 +111,15 @@ function walk(
     if (part.startsWith(UNIQUE_NODE_PREFIX)) {
       if (segments[0] === '..') return [...segments, ...parts.slice(index)];
       // A jump through the owner's claim table (node.cpp:1930-1938): the walk restarts at the
-      // claimed path, so a following `..` steps up from there. An opaque node reads its own table
-      // first, which another file fills. Below the root that table shadows any claim here. At the
-      // root it holds this file's claims too, so a claim here seats as Godot seats it unshadowed.
+      // claimed path, so a following `..` steps up from there. An opaque node reads its own table,
+      // which another file fills. At an inherited root that table also lands this file's claims after
+      // the base's, so the base's first claim keeps the name (node.cpp:2222-2233).
       const current = segments.join('/');
       const isOpaqueHere = isOpaque?.(current) === true;
       const isBelowRoot = segments.length > floor;
       // An instance root whose table lacks the name defers to its owner's table, here the walk's.
       const isDeferred = isOpaqueHere && isBelowRoot && instanceTable?.(current)?.has(part) === false;
-      const claimed = isOpaqueHere && isBelowRoot && !isDeferred ? undefined : uniquePaths?.get(part);
+      const claimed = isOpaqueHere && !isDeferred ? undefined : uniquePaths?.get(part);
       if (!claimed)
         return isOpaqueHere && !isDeferred
           ? { unlisted: [...segments, ...parts.slice(index)].join('/') }

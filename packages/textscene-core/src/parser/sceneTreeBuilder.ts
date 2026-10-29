@@ -345,8 +345,7 @@ function registerInContent<N extends SceneNode<N>>(
   tables.places.set(seat, place);
   const path = joinPath(joinPath(tables.pathOf.get(instanceSeat)!, segment), seat.name);
   keyAt(tables, path, seat);
-  if (uniqueNameSetting(seat) === true && isOwnedByRoot(seat, true))
-    claimInRoot(tables, { node: seat, ...place }, path);
+  recordSetting(tables, { node: seat, ...place }, path, isOwnedByRoot(seat, true));
 }
 
 /**
@@ -531,28 +530,41 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   keyAt(tables, path, node);
-  const setting = uniqueNameSetting(node);
+  recordSetting(tables, { node, ...place }, path, isRootOwned, isBelowContent ? undefined : instance);
+}
+
+/**
+ * Record the `%Name` setting of a seated node in its owner's table: the root's where `isRootOwned`,
+ * else the one its explicit `owner=` names, else the one of `instance`, the instance it sits in.
+ * An inherited root owns its base's nodes (packed_scene.cpp:227-231), so only its graft over the
+ * base composes the one table both files' names land in, each at its heading.
+ */
+function recordSetting<N extends RawNode>(
+  tables: SeatingTables<N>,
+  claim: UniqueNameClaim & { readonly node: N },
+  path: string,
+  isRootOwned: boolean,
+  instance?: N
+): void {
+  const setting = uniqueNameSetting(claim.node);
   if (setting === undefined) return;
   if (isRootOwned) {
-    if (setting) claimInRoot(tables, { node, ...place }, path);
-    // An inherited root owns its base's nodes (packed_scene.cpp:227-231), so only its graft over
-    // the base composes the one table both files' names land in, each at its heading.
-    if (tables.root.instance && !isBelowContent)
+    if (setting) claimInRoot(tables, claim, path);
+    if (tables.root.instance)
       handToInstance(tables, tables.root, {
-        pathInInstance: relativeTo(tables.root.name, place.livePath)!,
+        pathInInstance: relativeTo(tables.root.name, claim.livePath)!,
         isUnique: setting,
         ownerInInstance: '',
       });
     return;
   }
-  if (node.owner !== undefined) {
-    handToOwner(tables, { node, ...place }, path, setting);
+  if (claim.node.owner !== undefined) {
+    handToOwner(tables, claim, path, setting);
     return;
   }
-  if (isBelowContent) return;
   if (instance === undefined) return;
   handToInstance(tables, instance, {
-    pathInInstance: pathInInstance(tables, instance, place.livePath)!,
+    pathInInstance: pathInInstance(tables, instance, claim.livePath)!,
     isUnique: setting,
   });
 }
