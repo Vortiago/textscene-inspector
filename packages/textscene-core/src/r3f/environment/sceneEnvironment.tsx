@@ -28,6 +28,8 @@ interface SceneEnvironments {
   shown: Environment | null;
   /** The world's own Environment, which a probe captures with. Written only by `useOwnEnvironment`. */
   own: Environment | null;
+  /** Grows each time `own` or one of its parts changes, written by `useOwnEnvironment` and `registerEnvironmentPart`. */
+  ownChanges: number;
   /** The Environment whose parts are on the scene now, written only by `putOn`. */
   applied: Environment | null;
   parts: Map<Environment, Set<EnvironmentPart>>;
@@ -38,6 +40,7 @@ interface SceneEnvironments {
 const environmentsOf = perObject((_scene: THREE.Scene): SceneEnvironments => ({
   shown: null,
   own: null,
+  ownChanges: 0,
   applied: null,
   parts: new Map(),
   onScene: [],
@@ -68,10 +71,12 @@ export function registerEnvironmentPart(
   const parts = environments.parts.get(environment) ?? new Set<EnvironmentPart>();
   environments.parts.set(environment, parts);
   parts.add(part);
+  if (environment === environments.own) environments.ownChanges += 1;
   if (environments.applied === environment) environments.onScene.push({ part, takeOff: part() });
   return () => {
     parts.delete(part);
     if (parts.size === 0) environments.parts.delete(environment);
+    if (environment === environments.own) environments.ownChanges += 1;
     const index = environments.onScene.findIndex((entry) => entry.part === part);
     if (index === -1) return;
     environments.onScene[index]!.takeOff();
@@ -133,12 +138,13 @@ export function drawAsWorld<T>(scene: THREE.Scene, draw: () => T): T {
 }
 
 /**
- * Runs `read` with the world's own Environment on `scene`, for a reader of what a probe captures.
+ * A count that grows each time the world's own Environment on `scene`, or one of its parts,
+ * changes, so a probe captures again only for a change it would capture.
  *
  * @canonical The Environment and the exposure a draw of a scene takes
  */
-export function withOwnEnvironment<T>(scene: THREE.Scene, read: () => T): T {
-  return drawWithEnvironment(scene, environmentsOf(scene).own, read);
+export function ownEnvironmentChanges(scene: THREE.Scene): number {
+  return environmentsOf(scene).ownChanges;
 }
 
 /**
@@ -152,8 +158,11 @@ export function useOwnEnvironment(environment: Environment | null): void {
   useLayoutEffect(() => {
     const environments = environmentsOf(scene);
     environments.own = environment;
+    environments.ownChanges += 1;
     return () => {
-      if (environments.own === environment) environments.own = null;
+      if (environments.own !== environment) return;
+      environments.own = null;
+      environments.ownChanges += 1;
     };
   }, [scene, environment]);
 }

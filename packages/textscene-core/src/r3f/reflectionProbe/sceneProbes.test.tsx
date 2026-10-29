@@ -47,17 +47,17 @@ const WORLD_BACKGROUND = new THREE.Color('blue');
 const CAMERA_BACKGROUND = new THREE.Color('red');
 
 /** A view through a camera with an Environment of its own, over a world that holds another. */
-function ViewedThroughCamera() {
-  const world = useMemo(() => ({}), []);
-  const camera = useMemo(() => ({}), []);
-  useOwnEnvironment(world);
+function ViewedThroughCamera({ world = WORLD_BACKGROUND, camera = CAMERA_BACKGROUND }) {
+  const worldEnvironment = useMemo(() => ({}), []);
+  const cameraEnvironment = useMemo(() => ({}), []);
+  useOwnEnvironment(worldEnvironment);
   return (
     <>
-      <ShownEnvironment environment={camera}>
-        <BackgroundPart color={CAMERA_BACKGROUND} />
+      <ShownEnvironment environment={cameraEnvironment}>
+        <BackgroundPart color={camera} />
       </ShownEnvironment>
-      <DrawnEnvironment environment={world}>
-        <BackgroundPart color={WORLD_BACKGROUND} />
+      <DrawnEnvironment environment={worldEnvironment}>
+        <BackgroundPart color={world} />
       </DrawnEnvironment>
     </>
   );
@@ -432,7 +432,7 @@ describe('SceneProbes under a camera with an Environment of its own', () => {
     const backgroundAtRender: unknown[] = [];
     observeSceneCamera(scene, () => backgroundAtRender.push(scene.background));
     probes.settle();
-    return { ...probes, backgroundAtRender };
+    return { ...probes, mounted, backgroundAtRender };
   }
 
   it("captures with the world's own Environment, not the camera's (renderer_scene_cull.cpp:3692)", async () => {
@@ -447,5 +447,21 @@ describe('SceneProbes under a camera with an Environment of its own', () => {
     facesDrawn();
 
     expect(scene.background).toBe(CAMERA_BACKGROUND);
+  });
+
+  it("captures again once a part of the world's own Environment changes", async () => {
+    const { facesDrawn, mounted } = await settledUnderCamera();
+    facesDrawn();
+    await mounted.update(<ViewedThroughCamera world={new THREE.Color('green')} />);
+
+    expect(facesDrawn()).toBe(6);
+  });
+
+  it("keeps its capture when only the camera's Environment changes", async () => {
+    const { facesDrawn, mounted } = await settledUnderCamera();
+    facesDrawn();
+    await mounted.update(<ViewedThroughCamera camera={new THREE.Color('green')} />);
+
+    expect(facesDrawn()).toBe(0);
   });
 });

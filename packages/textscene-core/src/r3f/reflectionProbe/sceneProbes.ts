@@ -34,7 +34,7 @@ import { atlasSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
 import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure.js';
-import { drawAsWorld, withOwnEnvironment } from '../environment/sceneEnvironment.js';
+import { drawAsWorld, ownEnvironmentChanges } from '../environment/sceneEnvironment.js';
 import { exposureOverBaked } from '../exposure/exposureOverBaked.js';
 
 /** What a probe's capture shows: changed, it captures again. */
@@ -75,11 +75,7 @@ export class SceneProbes {
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
   /** What the captures saw of the environment, which a sky that bakes later changes. */
-  private seen: { environment: unknown; background: unknown; clearColor: number } = {
-    environment: undefined,
-    background: undefined,
-    clearColor: -1,
-  };
+  private seen = { ownEnvironmentChanges: -1, clearColor: -1 };
   /**
    * The exposure each probe last captured at, written only by `capture`, and only while the world
    * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
@@ -122,7 +118,7 @@ export class SceneProbes {
       .slice(0, REFLECTION_ATLAS_COUNT);
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
-    withOwnEnvironment(this.scene, () => this.markCapturesStale(clearColor));
+    this.markCapturesStale(clearColor);
     const stale = this.canCapture() ? probes.findIndex((probe, layer) => !this.isCaptured(probe, layer)) : -1;
     if (stale !== -1) {
       beginStep(this.renderer, 'Reflection probes');
@@ -178,18 +174,16 @@ export class SceneProbes {
 
   /**
    * Marks every capture stale once new content settles, or once the world's own Environment the
-   * captures saw changes. A stale capture still draws, so no probe vanishes until it captures again. A change of
-   * exposure marks none: Godot rescales the capture instead.
+   * captures saw changes. A stale capture still draws, so no probe vanishes until it captures again.
+   * A change of exposure marks none: Godot rescales the capture instead.
    */
   private markCapturesStale(clearColor: THREE.Color): void {
-    const { environment, background } = this.scene;
+    const now = { ownEnvironmentChanges: ownEnvironmentChanges(this.scene), clearColor: clearColor.getHex() };
     const { seen } = this;
     const hasNewEnvironment =
-      environment !== seen.environment ||
-      background !== seen.background ||
-      clearColor.getHex() !== seen.clearColor;
+      now.ownEnvironmentChanges !== seen.ownEnvironmentChanges || now.clearColor !== seen.clearColor;
     if (!this.hasNewContent && !hasNewEnvironment) return;
-    this.seen = { environment, background, clearColor: clearColor.getHex() };
+    this.seen = now;
     this.hasNewContent = false;
     this.generation += 1;
   }

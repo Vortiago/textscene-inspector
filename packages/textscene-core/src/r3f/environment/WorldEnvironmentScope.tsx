@@ -11,7 +11,8 @@ import * as THREE from 'three';
 import { createPortal } from '@react-three/fiber';
 import { DrawnEnvironmentLayer, EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer';
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
-import { PreviewEnvironment, previewEnvironmentLayer } from '../preview/PreviewEnvironment';
+import { PreviewEnvironment } from '../preview/PreviewEnvironment';
+import { previewEnvironment } from '../preview/godotPreviewLighting';
 import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
@@ -151,9 +152,9 @@ function RootEnvironment({ children }: { children: ReactNode }) {
   const preview = usePreviewYield();
   // An authored Environment proves a WorldEnvironment node or a camera's, and takes the preview away.
   const showsPreview = !authored && preview.environment;
-  const shown = showsPreview ? previewEnvironmentLayer() : resolvedEnvironment(authored);
+  const shown = showsPreview ? previewEnvironment() : resolvedEnvironment(authored);
   // The preview stands in for a WorldEnvironment, so a pass through a camera with none draws it too.
-  const own = !chosen && preview.environment ? previewEnvironmentLayer() : resolvedEnvironment(chosen);
+  const own = !chosen && preview.environment ? previewEnvironment() : resolvedEnvironment(chosen);
   return (
     <WorldOwnEnvironmentContext.Provider value={own}>
       <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
@@ -209,8 +210,9 @@ export function ViewportPassEnvironment({ children }: { children: ReactNode }) {
 }
 
 /**
- * Whether a camera's Environment replaces its world's: once it resolves (`renderer_scene_cull.cpp:3594-3597`).
- * While it loads the world's holds, since Godot has no load gap to show.
+ * Whether a camera's Environment replaces its world's: once it resolves
+ * (`renderer_scene_cull.cpp:3594-3597`). While it loads the world's holds, since Godot has no load
+ * gap to show.
  */
 function replacesWorld(
   camera: EnvironmentResolution | null

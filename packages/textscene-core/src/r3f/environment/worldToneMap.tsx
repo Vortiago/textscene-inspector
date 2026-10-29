@@ -1,8 +1,9 @@
 /**
- * The Environment a world's viewports tonemap their 3D render with. Godot's tonemap pass reads the
- * environment of the scenario the viewport renders (`renderer_scene_cull.cpp:3594-3613`), which is
- * the world `find_world_3d()` resolves (`viewport.cpp:4670-4681`). The world's chooser provides it
- * (`WorldEnvironmentScope.tsx`), and a SubViewport's tonemap pass reads it.
+ * The Environment a viewport pass tonemaps its 3D render with. Godot's tonemap pass reads the
+ * environment its render forces: the camera's, else that of the scenario the viewport renders
+ * (`renderer_scene_cull.cpp:3594-3613`), the world `find_world_3d()` resolves
+ * (`viewport.cpp:4670-4681`). `ViewportPassEnvironment` provides it, and a SubViewport's tonemap
+ * pass reads it.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -11,7 +12,7 @@ import type { AutoExposure } from '../../resources/cameraattributes/types';
 import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 import { useAutoExposure } from './worldExposure';
 
-/** The Environment a world applies, as its tonemap pass reads it. */
+/** The Environment a viewport pass draws with, as its tonemap pass reads it. */
 interface WorldEnvironmentToneMap {
   /** Null for a world with no Environment, whose pass keeps Godot's defaults: LINEAR at exposure 1. */
   settings: EnvironmentSettings | null;
@@ -31,7 +32,7 @@ const WorldToneMapContext = createContext<WorldEnvironmentToneMap>({
 });
 WorldToneMapContext.displayName = 'WorldToneMapContext';
 
-/** Gives the world below it the Environment its chooser applies. One per world. */
+/** Gives the tonemap stage below it the Environment its pass draws with. One per viewport pass. */
 export function WorldToneMapProvider({
   settings,
   resources,

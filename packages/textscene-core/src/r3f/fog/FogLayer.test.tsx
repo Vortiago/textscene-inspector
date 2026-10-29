@@ -8,7 +8,7 @@ import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { fireSceneRender } from '../testing/fireSceneRender';
 import { FogLayer } from './FogLayer';
-import { ShownEnvironment } from '../environment/sceneEnvironment';
+import { DrawnEnvironment, drawWith, ShownEnvironment } from '../environment/sceneEnvironment';
 import { FogVolumeObject } from './fogVolumeObject';
 import { VolumetricFogPass } from './volumetricFogPass';
 
@@ -76,5 +76,42 @@ describe('FogLayer', () => {
     gl.shadowMap.render([], new THREE.Scene(), camera);
 
     expect(prepare).not.toHaveBeenCalled();
+  });
+});
+
+/** The Environment a pass draws with, which the scene does not show. */
+const DRAWN = {};
+
+/** A shown fogged Environment and, while `drawn`, a second fogged one a pass draws with. */
+function TwoFogs({ drawn }: { drawn: boolean }) {
+  return (
+    <>
+      <ShownEnvironment environment={ENVIRONMENT}>
+        <FogLayer depth={null} volumetric={volumetric} />
+      </ShownEnvironment>
+      {drawn && (
+        <DrawnEnvironment environment={DRAWN}>
+          <FogLayer depth={null} volumetric={volumetric} />
+        </DrawnEnvironment>
+      )}
+    </>
+  );
+}
+
+describe('FogLayer beside a drawn Environment', () => {
+  it('shows one fog object for every Environment of the scene, so a pass resolves no program again', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<TwoFogs drawn />);
+    const scene = renderer.scene.instance as THREE.Scene;
+    const shown = scene.fog;
+
+    expect(drawWith(scene, DRAWN, null, () => scene.fog)).toBe(shown);
+  });
+
+  it("keeps the shown fog's view volumes when a drawn fogged Environment unmounts", async () => {
+    const forget = vi.spyOn(VolumetricFogPass.prototype, 'forget');
+    const renderer = await ReactThreeTestRenderer.create(<TwoFogs drawn />);
+    await renderer.update(<TwoFogs drawn={false} />);
+
+    expect(forget).not.toHaveBeenCalled();
   });
 });
