@@ -6,6 +6,7 @@
  */
 
 import type { SceneScope } from '../parser/types';
+import type { HandOffDecision } from '../parser/nodeOwner';
 import { hostChildOf, scopeOf, withFallbackScope, type EscapedChild, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
@@ -18,6 +19,7 @@ import {
   type UniqueNameTable,
 } from './instanceNameTable';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
+import { contentTrailSegment } from '../parser/idTrail';
 import { joinPath } from '../utils/nodePath';
 import { enteredThroughBase, followedChild } from './parentContentTrail';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
@@ -42,6 +44,8 @@ export interface GraftedInstance {
   readonly uniqueParentPlacements: ReadonlyMap<string, string>;
   /** The host children whose `parent=` walk leaves the instance or finds nothing, as of their headings. */
   readonly escaped: readonly EscapedChild[];
+  /** What this graft decided for each hand-off its settings carry, in file order. */
+  readonly handOffDecisions: readonly HandOffDecision[];
 }
 
 /**
@@ -86,7 +90,7 @@ class Graft {
     private readonly names: InstanceNames
   ) {
     this.grafted = [...rootChildren];
-    this.table = new InstanceNameTable(names);
+    this.table = new InstanceNameTable(names, this.placements);
   }
 
   landUpTo(settingCount: number): void {
@@ -99,48 +103,57 @@ class Graft {
       uniqueNames: this.table,
       uniqueParentPlacements: this.placements,
       escaped: this.escaped,
+      handOffDecisions: this.table.handOffDecisions,
     };
   }
 
-  seat(hosted: LiveNode): void {
+  /** Seats `hosted`, and records where under `key`, the path a setting for it names. */
+  seat(hosted: LiveNode, key = placementKey(hosted)): void {
     const { child, status } = followedChild(hosted, this.names.followTrail);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
     const stamped = withFallbackScope(child, this.scopes.outer);
     if (status === 'waiting') this.misplaced.push(stamped);
     else if (status === 'missing') this.escaped.push({ child, scope: stamped.scope!, end: null });
-    else if (child.instanceSubPath) this.seatAtSubPath(child, stamped);
-    else this.seatDirect(child, stamped);
+    else if (child.instanceSubPath) this.seatAtSubPath(child, stamped, key);
+    else this.seatDirect(child, stamped, key);
   }
 
-  private seatDirect(child: LiveNode, stamped: LiveNode): void {
+  private seatDirect(child: LiveNode, stamped: LiveNode, key: string | undefined): void {
     const folded = child.overridesExistingNode
       ? foldOrWarn(this.grafted, stamped, this.scopes.content)
       : null;
     if (folded) this.grafted = folded;
     else if (child.overridesExistingNode) this.misplaced.push(stamped);
-    else insertAtIndex(this.grafted, stamped);
+    else {
+      insertAtIndex(this.grafted, stamped);
+      if (key) this.placements.set(key, child.name);
+    }
   }
 
-  private seatAtSubPath(child: LiveNode, stamped: LiveNode): void {
+  private seatAtSubPath(child: LiveNode, stamped: LiveNode, key: string | undefined): void {
     const subPath = child.instanceSubPath!;
     const segments = this.table.walk(subPath, this.grafted);
     const inside = segments?.[0] === OUTSIDE ? null : segments;
     const next = inside && graftAt(this.grafted, inside, stamped, this.scopes.content);
     if (!inside || !next) {
-      this.seatUnwalked(child, stamped, segments);
+      this.seatUnwalked(child, stamped, segments, key);
       return;
     }
     this.grafted = next;
-    const key = placementKey(child);
     if (key) this.placements.set(key, joinPath(inside.join('/'), child.name));
   }
 
   /** A child whose `parent=` walk found nothing, so its `parent_id_path=` is tried (packed_scene.cpp:161-163). */
-  private seatUnwalked(child: LiveNode, stamped: LiveNode, segments: readonly string[] | null): void {
+  private seatUnwalked(
+    child: LiveNode,
+    stamped: LiveNode,
+    segments: readonly string[] | null,
+    key: string | undefined
+  ): void {
     const { hasUnloadedBase } = this.names;
     const entered = hasUnloadedBase ? undefined : enteredThroughBase(child, this.names);
     if (entered?.status === 'waiting') this.misplaced.push(stamped);
-    else if (entered) this.seat(entered.child);
+    else if (entered) this.seat(entered.child, key ?? joinPath(child.instanceSubPath!, child.name));
     else if (child.overridesExistingNode || hasUnloadedBase) {
       // A base still loading seats the child at its next collapse, so only an override warns.
       if (child.overridesExistingNode) {
@@ -160,13 +173,15 @@ class Graft {
 }
 
 /**
- * The key a placement records `hostChild` under: its sub-path and its name, as authored. Undefined
- * where the sub-path passes through no `%Name`, as the path as written then needs no record.
+ * The key a placement records `hostChild` under: its sub-path and its name, as authored, with the
+ * segment of its content trail for a sub-path the trail finds. Undefined where the sub-path passes
+ * through no `%Name` and no trail, as the path as written then needs no record.
  *
  * @canonical The key of a host child's placement, as `uniqueParentPlacements` keys it
  */
 export function placementKey(hostChild: LiveNode): string | undefined {
-  const { instanceSubPath, name } = hostChild;
+  const { instanceSubPath, parentContentTrail, name } = hostChild;
+  if (parentContentTrail !== undefined) return joinPath(contentTrailSegment(parentContentTrail), name);
   return instanceSubPath?.includes(UNIQUE_NODE_PREFIX) ? joinPath(instanceSubPath, name) : undefined;
 }
 

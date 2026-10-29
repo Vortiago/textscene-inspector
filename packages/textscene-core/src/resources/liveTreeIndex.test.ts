@@ -1,7 +1,7 @@
-/** The tree reads and copies that the `%Name` table and the seating share. */
+/** Addressing and replacing a node of a Live tree by its path. */
 
 import { describe, expect, it } from 'vitest';
-import { replacedAt } from './instanceNameTable';
+import { replacedAt } from './liveTreeIndex';
 import type { LiveNode } from './liveNode';
 
 const node = (name: string, children: LiveNode[] = []): LiveNode => ({

@@ -38,6 +38,14 @@ export const SCENE_COMPOSITION_SCENES = [
   { name: 'trail-name-in-content', file: 'integration-trail-name-in-content.tscn' },
   // An `owner=` walk that finds nothing in an instance: the trail's owner holds `%Lamp`, so Shade sits under Lamp.
   { name: 'trail-owner-fallback', file: 'integration-trail-owner-fallback.tscn' },
+  // An `owner=` walk that finds nothing in one instance, with a trail owner in another: that owner holds `%Lamp`.
+  { name: 'trail-owner-other-instance', file: 'integration-trail-owner-other-instance.tscn' },
+  // An `owner=` walk that finds nothing in an instance, with the root as trail owner: the root holds `%Lamp`.
+  { name: 'trail-owner-root-fallback', file: 'integration-trail-owner-root-fallback.tscn' },
+  // A heading below a trail seat whose `owner=` names Player: Player's table holds `%Brim`, so the green box sits under it.
+  { name: 'trail-foreign-owner-in-content', file: 'integration-trail-foreign-owner-in-content.tscn' },
+  // A name an inherited root's base claimed first: the green box sits on the base's blue box, not the orange one.
+  { name: 'trail-inherited-root-claim', file: 'integration-trail-inherited-root-claim.tscn' },
   // An instance of an inherited scene: its root owns the base's `%View`, which the quad's
   // ViewportTexture reads from that root.
   {

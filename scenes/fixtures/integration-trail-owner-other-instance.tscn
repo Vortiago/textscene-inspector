@@ -1,0 +1,30 @@
+; The one variable: an `owner=` walk that finds nothing in one instance, with an `owner_uid_path`
+; that ends in another. `Player/Gone` does not exist, so Godot takes the trail's owner,
+; `Other/Inner` (packed_scene.cpp:159-163), and `Lamp` claims `%Lamp` there: Shade sits under Lamp,
+; left of the origin and up. `trail-owner-fallback` keeps both owners in one instance.
+
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-trail-player.tscn" id="1_player"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_a"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="M_a"]
+albedo_color = Color(0.95, 0.5, 0.15, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("1_player") unique_id=948136725]
+
+[node name="Other" parent="." instance=ExtResource("1_player") unique_id=611204873]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+
+[node name="Lamp" type="Node3D" parent="." owner="Player/Gone" owner_uid_path=PackedInt32Array(611204873, 1273451906)]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+
+[node name="Shade" type="MeshInstance3D" parent="Other/Inner/%Lamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_a")
+surface_material_override/0 = SubResource("M_a")
