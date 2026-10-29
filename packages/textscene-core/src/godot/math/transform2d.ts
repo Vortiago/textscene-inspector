@@ -11,6 +11,8 @@
  */
 
 import { isEqualApprox, isZeroApprox, sign } from './math.js';
+import { storedReal as f } from './real.js';
+import type { Vector2 } from './vector.js';
 
 /**
  * `columns[0] = (a, b)` is the x axis, `columns[1] = (c, d)` the y axis and `columns[2] = (tx, ty)`
@@ -71,6 +73,56 @@ export function multiplyTransform2D(
     tx: parent.a * local.tx + parent.c * local.ty + parent.tx,
     ty: parent.b * local.tx + parent.d * local.ty + parent.ty,
   };
+}
+
+/**
+ * `Transform2D::operator*` (`transform_2d.cpp:198-218`) in `real_t` float: the same product as
+ * {@link multiplyTransform2D}, each multiply and add rounded as C++ rounds a `float`.
+ *
+ * @canonical A Transform2D product in float32
+ */
+export function multiplyTransform2Df(
+  parent: Transform2DColumns,
+  local: Transform2DColumns
+): Transform2DColumns {
+  const origin = transform2DXformf(parent, { x: local.tx, y: local.ty });
+  return {
+    a: f(f(parent.a * local.a) + f(parent.c * local.b)),
+    b: f(f(parent.b * local.a) + f(parent.d * local.b)),
+    c: f(f(parent.a * local.c) + f(parent.c * local.d)),
+    d: f(f(parent.b * local.c) + f(parent.d * local.d)),
+    tx: origin.x,
+    ty: origin.y,
+  };
+}
+
+/**
+ * `Transform2D::xform` (`transform_2d.h`, `tdotx` and `tdoty` plus the origin) in `real_t` float.
+ * A transform with a zero origin gives `Transform2D::basis_xform`.
+ */
+export function transform2DXformf(t: Transform2DColumns, v: Vector2): Vector2 {
+  return {
+    x: f(f(f(t.a * v.x) + f(t.c * v.y)) + t.tx),
+    y: f(f(f(t.b * v.x) + f(t.d * v.y)) + t.ty),
+  };
+}
+
+/**
+ * `Transform2D::affine_invert` (`transform_2d.cpp:48-66`) in `real_t` float. A singular transform
+ * has no inverse: {@link affineInverseTransform2D} explains the identity answered here.
+ *
+ * @canonical A Transform2D inverse in float32
+ */
+export function affineInverseTransform2Df(t: Transform2DColumns): Transform2DColumns {
+  const det = f(f(t.a * t.d) - f(t.b * t.c));
+  if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
+  const idet = f(1 / det);
+  const a = f(t.d * idet);
+  const b = f(t.b * -idet);
+  const c = f(t.c * -idet);
+  const d = f(t.a * idet);
+  const origin = transform2DXformf({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
+  return { a, b, c, d, tx: origin.x, ty: origin.y };
 }
 
 /**

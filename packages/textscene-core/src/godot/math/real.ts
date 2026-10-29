@@ -3,6 +3,7 @@
  * so a `real_t` field, and every Vector, Rect2 and Transform component, holds single precision.
  */
 
+import type { Transform2DColumns } from './transform2d.js';
 import type { Vector2, Vector3 } from './vector.js';
 
 // Bound once, not read from `Math` per call: the core tests run in a vmThreads VM context, where
@@ -22,6 +23,12 @@ export function storedVector2(value: Vector2): Vector2 {
 /** The vector a `Vector3` field holds after `value` is assigned to it. */
 export function storedVector3(value: Vector3): Vector3 {
   return { x: storedReal(value.x), y: storedReal(value.y), z: storedReal(value.z) };
+}
+
+/** The transform a `Transform2D` field holds after `value` is assigned to it. */
+export function storedTransform2D(value: Transform2DColumns): Transform2DColumns {
+  const { a, b, c, d, tx, ty } = value;
+  return { a: fround(a), b: fround(b), c: fround(c), d: fround(d), tx: fround(tx), ty: fround(ty) };
 }
 
 /** Single precision needs at most nine significant digits to read back unchanged. */

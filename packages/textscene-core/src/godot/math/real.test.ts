@@ -1,6 +1,13 @@
 /** The `real_t` storage facts: a single-precision round, and the text that names it. */
 import { describe, it, expect } from 'vitest';
-import { formatReal, shortestReal, storedReal, storedVector2, storedVector3 } from './real.js';
+import {
+  formatReal,
+  shortestReal,
+  storedReal,
+  storedTransform2D,
+  storedVector2,
+  storedVector3,
+} from './real.js';
 
 describe('storedReal', () => {
   it('rounds to the nearest single-precision value', () => {
@@ -77,5 +84,18 @@ describe('storedVector3', () => {
     storedVector3(value);
 
     expect(value.x).toBe(0.99);
+  });
+});
+
+describe('storedTransform2D', () => {
+  it('rounds each of the six components to single precision', () => {
+    expect(storedTransform2D({ a: 0.99, b: 0.1, c: -0.99, d: 2, tx: 13.3, ty: -7.1 })).toEqual({
+      a: storedReal(0.99),
+      b: storedReal(0.1),
+      c: storedReal(-0.99),
+      d: 2,
+      tx: storedReal(13.3),
+      ty: storedReal(-7.1),
+    });
   });
 });

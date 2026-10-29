@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  vector2Add,
+  vector2Length,
+  vector2Scale,
+  vector2Sub,
   vector3Add,
   vector3Div,
   vector3Mul,
@@ -11,6 +15,7 @@ import {
   vector3Lerp,
   vector3Maxf,
 } from './vector';
+import { storedReal } from './real';
 
 describe('normalizedVector2', () => {
   it('scales a vector to unit length in single precision', () => {
@@ -90,5 +95,28 @@ describe('component-wise Vector3 arithmetic', () => {
 
   it('divides by zero to an infinity, as float division does (edge case)', () => {
     expect(vector3Div({ x: 1, y: -1, z: 0 }, { x: 0, y: 0, z: 0 }).y).toBe(-Infinity);
+  });
+});
+
+// The expected numbers are Godot 4.6.3's float `Vector2`
+// (/mnt/project-files/cpuparticles2d-995/transform-oracle.gd).
+describe('component-wise Vector2 arithmetic', () => {
+  const a = { x: storedReal(0.1), y: storedReal(0.7) };
+  const b = { x: storedReal(0.2), y: storedReal(0.3) };
+
+  it('adds and subtracts each component, rounded to float', () => {
+    expect(vector2Add(a, b)).toEqual({ x: storedReal(0.300000011921), y: 1 });
+    expect(vector2Sub(a, b)).toEqual({ x: storedReal(-0.10000000149), y: storedReal(0.399999976158) });
+  });
+
+  it('scales each component by a real_t', () => {
+    expect(vector2Scale(a, storedReal(0.3))).toEqual({
+      x: storedReal(0.030000001192),
+      y: storedReal(0.210000008345),
+    });
+  });
+
+  it('measures the length in float', () => {
+    expect(vector2Length({ x: storedReal(3.3), y: storedReal(-4.7) })).toBe(storedReal(5.742821216583));
   });
 });
