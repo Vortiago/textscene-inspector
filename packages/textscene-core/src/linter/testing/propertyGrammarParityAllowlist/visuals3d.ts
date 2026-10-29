@@ -115,8 +115,9 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   CPUParticles3D: {
     linterOnly: PARTICLE_PARAM_KEYS,
+    renderGap: ['emission_colors', 'emission_normals', 'emission_points'],
     reason:
-      'The parameter min, max and curve keys ARE read, through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see.',
+      'The parameter min, max and curve keys ARE read, through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see. The POINTS and DIRECTED_POINTS shapes pick their point with the process-wide `Math::rand()` (`cpu_particles_3d.cpp:911`), which no file seeds, so the simulation emits them from the origin and reads none of the point keys.',
   },
 
   GPUParticles3D: {

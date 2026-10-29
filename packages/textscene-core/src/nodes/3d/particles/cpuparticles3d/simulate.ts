@@ -682,10 +682,8 @@ function inverseEmissionTransform(global: Transform3D): Transform3D {
 function drawOrder(state: SimState, input: ParticleSim3DInput, viewAxis: Vector3 | null): number[] | null {
   const { sim } = input;
   const { particles } = state;
-  const order = particles.map((_, index) => index);
   if (sim.drawOrder === CPUParticles3DDrawOrder.LIFETIME) {
-    sortArray(order, (a, b) => particles[a]!.time > particles[b]!.time);
-    return order;
+    return sortedIndices(particles.length, (a, b) => particles[a]!.time > particles[b]!.time);
   }
   if (sim.drawOrder !== CPUParticles3DDrawOrder.VIEW_DEPTH || !viewAxis) return null;
   // Far to near. A local-coords emitter takes the axis through its whole inverse, origin and all.
@@ -694,7 +692,13 @@ function drawOrder(state: SimState, input: ParticleSim3DInput, viewAxis: Vector3
     : normalized(viewAxis);
   // Each depth once, not twice per comparison.
   const depths = particles.map((p) => dot(axis, p.origin));
-  sortArray(order, (a, b) => depths[a]! < depths[b]!);
+  return sortedIndices(particles.length, (a, b) => depths[a]! < depths[b]!);
+}
+
+/** The indices below `count`, in the order Godot's `SortArray` gives them under `less`. */
+function sortedIndices(count: number, less: (a: number, b: number) => boolean): number[] {
+  const order = Array.from({ length: count }, (_, index) => index);
+  sortArray(order, less);
   return order;
 }
 

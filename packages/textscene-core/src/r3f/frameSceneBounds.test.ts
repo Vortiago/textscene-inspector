@@ -202,7 +202,7 @@ describe('frameSceneBounds: a node icon', () => {
   });
 });
 
-describe('frameSceneBounds — a boxless draw', () => {
+describe('frameSceneBounds: a boxless draw', () => {
   // `CPUParticles3D::get_aabb` is `AABB()` (`cpu_particles_3d.cpp:43-45`), so the particles never frame.
   it('frames the scene without a draw whose node gives the editor no box', () => {
     const framed = (withParticles: boolean) => {

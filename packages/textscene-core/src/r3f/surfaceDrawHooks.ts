@@ -17,7 +17,7 @@ import { billboardWorldMatrix } from './surfaceBillboard';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
-import { aimParticleBillboards } from './materials/godotParticles';
+import { aimParticleBillboards, drawsParticles } from './materials/godotParticles';
 import {
   drawDepthInjections,
   surfaceDepthMaterial,
@@ -123,8 +123,9 @@ function pose(
   passCamera: THREE.Camera
 ): boolean {
   // An InstancedMesh keeps its pose: `drawsAsOneBatch` says why it cannot billboard here. A particle
-  // draw billboards each instance in its program instead, toward the main camera of this render.
-  if ((object as THREE.InstancedMesh).isInstancedMesh) {
+  // draw keeps it too: its program billboards each instance toward the main camera of this render,
+  // and a billboard about the node would move every particle that a points draw holds.
+  if ((object as THREE.InstancedMesh).isInstancedMesh || drawsParticles(material)) {
     aimParticleBillboards(material, mainCamera);
     return false;
   }

@@ -50,12 +50,17 @@ export function particleDrawOf(scalars: StandardMaterial3DScalars | null): Parti
  */
 const MAIN_CAMERA_WORLD: THREE.IUniform<THREE.Matrix4> = { value: new THREE.Matrix4() };
 
+/** Whether `material` draws a particle emitter's particles, which its program places and billboards. */
+export function drawsParticles(material: THREE.Material): boolean {
+  return material.userData[PARTICLE_DRAW_KEY] !== undefined;
+}
+
 /**
  * Aims every ENABLED and FIXED_Y particle billboard at `mainCamera`, before a draw of `material`.
  * Each render writes its own camera, so a SubViewport's draws aim at the SubViewport's.
  */
 export function aimParticleBillboards(material: THREE.Material, mainCamera: THREE.Camera): void {
-  if (material.userData[PARTICLE_DRAW_KEY] === undefined) return;
+  if (!drawsParticles(material)) return;
   MAIN_CAMERA_WORLD.value.copy(mainCamera.matrixWorld);
 }
 

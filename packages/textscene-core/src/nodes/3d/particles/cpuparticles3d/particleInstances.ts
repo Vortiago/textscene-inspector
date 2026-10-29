@@ -114,12 +114,7 @@ function writeSlices(
   buffer: Float32Array,
   offset: number
 ): void {
-  const array = attribute.array as Float32Array;
-  const count = particleCount(buffer);
-  for (let i = 0; i < count; i++) {
-    const at = i * PARTICLE_FLOATS + offset;
-    for (let k = 0; k < VEC4_FLOATS; k++) array[i * VEC4_FLOATS + k] = buffer[at + k]!;
-  }
+  (attribute.array as Float32Array).set(particleSlices(buffer, offset, VEC4_FLOATS));
   (attribute as THREE.BufferAttribute).needsUpdate = true;
 }
 

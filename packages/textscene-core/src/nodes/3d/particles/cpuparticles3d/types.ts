@@ -52,12 +52,6 @@ export interface CPUParticles3DSimulation {
   fractDelta: boolean;
   localCoords: boolean;
   drawOrder: EnumValue<typeof CPUParticles3DDrawOrder>;
-  /** `emission_points`, as flat floats, three per point. */
-  emissionPoints: Float32Array;
-  /** `emission_normals`, as flat floats, three per normal. */
-  emissionNormals: Float32Array;
-  /** `emission_colors`, as flat floats, four per colour. */
-  emissionColors: Float32Array;
   alignY: boolean;
   rotateY: boolean;
   disableZ: boolean;

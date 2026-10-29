@@ -301,6 +301,23 @@ describe('surfaceDrawHooks — particle instances', () => {
       true
     );
   });
+
+  // Godot billboards each particle about its own origin, so a billboard about the node would move
+  // every particle that one points draw holds (edge case).
+  it('keeps the pose of a points draw, which holds every particle', () => {
+    const billboarded = material({ billboard_mode: '1' });
+    const bag = { materialClass: 'standard' as const, props: { userData: billboarded.userData } };
+    Object.assign(billboarded.userData, withParticleDraw(bag, particleDrawOf(null)).props.userData);
+    const points = new THREE.Points(new THREE.BufferGeometry(), billboarded);
+    applyShadowCasting(points, shadowCastingEffects(ShadowCastingSetting.ON));
+    points.position.set(5, 6, 7);
+    points.rotation.set(0, Math.PI / 2, 0);
+    points.updateMatrixWorld(true);
+    const drawn = points as unknown as THREE.Mesh;
+    expect(drawColourGroup(drawn, camera, 0, (s) => s.matrixWorld.clone()).equals(points.matrixWorld)).toBe(
+      true
+    );
+  });
 });
 
 describe('surfaceDrawHooks — cast_shadow', () => {

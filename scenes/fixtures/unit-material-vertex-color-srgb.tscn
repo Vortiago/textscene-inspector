@@ -1,6 +1,7 @@
 ; The variable: vertex_color_is_srgb. Two rows of particles share one colour, whose green sits on the
 ; power arm of the sRGB curve and whose blue on the linear arm. The upper row's material decodes the
-; colour from sRGB and the lower row's reads it as linear, so the upper row draws darker.
+; colour from sRGB and the lower row's reads it as linear, so the upper row draws darker. No other
+; golden shows it: no other golden scene sets vertex_color_is_srgb.
 [gd_scene load_steps=5 format=3]
 
 [sub_resource type="StandardMaterial3D" id="Srgb"]

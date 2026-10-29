@@ -15,11 +15,9 @@ import {
 import { colorOr } from '../../../../utils/colorParser';
 import { storedColor } from '../../../../godot/math/real';
 import { CPUParticles3DDrawOrder } from '../../../../godot/scene/particles3d';
-import { parsePackedColorArray, parsePackedVector3Array } from '../../../../resources/shapes/packedArray';
 import { readParticleEmission } from '../../../../resources/materials/particleprocessmaterial/emission';
 import { parseParticleAmount, parseParticleParams } from '../../../shared/cpuparticles/params';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
-import { warn } from '../../../../logger';
 import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
 
 const DRAW_ORDERS = Object.values(CPUParticles3DDrawOrder);
@@ -59,13 +57,6 @@ function parseSimulation(properties: Record<string, string>, context: string): C
     fractDelta: boolOr(properties.fract_delta, true, at('fract_delta')),
     localCoords: boolOr(properties.local_coords, false, at('local_coords')),
     drawOrder: enumOr(properties.draw_order, CPUParticles3DDrawOrder.INDEX, DRAW_ORDERS, at('draw_order')),
-    emissionPoints: packedOrEmpty(parsePackedVector3Array, properties.emission_points, at('emission_points')),
-    emissionNormals: packedOrEmpty(
-      parsePackedVector3Array,
-      properties.emission_normals,
-      at('emission_normals')
-    ),
-    emissionColors: packedOrEmpty(parsePackedColorArray, properties.emission_colors, at('emission_colors')),
     alignY: boolOr(properties.particle_flag_align_y, false, at('particle_flag_align_y')),
     rotateY: boolOr(properties.particle_flag_rotate_y, false, at('particle_flag_rotate_y')),
     disableZ: boolOr(properties.particle_flag_disable_z, false, at('particle_flag_disable_z')),
@@ -89,20 +80,3 @@ function parseSimulation(properties: Record<string, string>, context: string): C
 function heldReference(value: string | undefined): string | undefined {
   return holdsResource(value) ? value : undefined;
 }
-
-/** A packed slot's floats, or none for an absent value and one this cannot read. */
-function packedOrEmpty(
-  parse: (value: string) => Float32Array,
-  value: string | undefined,
-  context: string
-): Float32Array {
-  if (value === undefined) return EMPTY;
-  try {
-    return parse(value);
-  } catch (error) {
-    warn(`${context}: ${error instanceof Error ? error.message : String(error)}, keeping none`);
-    return EMPTY;
-  }
-}
-
-const EMPTY = new Float32Array(0);
