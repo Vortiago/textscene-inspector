@@ -276,6 +276,19 @@ describe('readShadowMaps', () => {
     expect(reader).not.toHaveBeenCalled();
   });
 
+  it('keeps a later reader of the scene when an earlier disposer runs again (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    const stopEarlier = readShadowMaps(renderer, SCENE, vi.fn());
+    stopEarlier();
+    const later = vi.fn();
+    readShadowMaps(renderer, SCENE, later);
+    stopEarlier();
+
+    runPass(renderer, []);
+
+    expect(later).toHaveBeenCalledOnce();
+  });
+
   it('calls no reader for a render of another scene, such as the tone pass quad', () => {
     const { renderer } = fakeRenderer();
     const reader = vi.fn();

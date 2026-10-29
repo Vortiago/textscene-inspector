@@ -36,8 +36,11 @@ type ShadowMapReader = (camera: THREE.Camera) => void;
  */
 const READERS = Symbol.for('textscene.shadowPass');
 
-/** The readers of each scene. A render of any other scene, such as a tone pass quad, calls none. */
-type Readers = Map<THREE.Object3D, Set<ShadowMapReader>>;
+/**
+ * The readers of each scene. A render of any other scene, such as a tone pass quad, calls none. A
+ * WeakMap, since the pass only looks a scene up: a reader never disposed keeps no scene alive.
+ */
+type Readers = WeakMap<THREE.Object3D, Set<ShadowMapReader>>;
 
 /** The render step a frame profile times the readers as: the fog volumes are the only reader. */
 const READ_STEP: RenderStep = 'Fog';
@@ -73,7 +76,8 @@ export function readShadowMaps(
   readers.set(scene, reads.add(read));
   return () => {
     reads.delete(read);
-    if (reads.size === 0) readers.delete(scene);
+    // A disposer that runs again after a new reader of `scene` must not drop that reader's set.
+    if (reads.size === 0 && readers.get(scene) === reads) readers.delete(scene);
   };
 }
 
@@ -82,7 +86,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   const shadowMap = renderer.shadowMap as WrappedShadowMap;
   const existing = shadowMap[READERS];
   if (existing) return existing;
-  const readers: Readers = new Map();
+  const readers: Readers = new WeakMap();
   shadowMap[READERS] = readers;
   const threePass: ThreeShadowPass = { shadowMap, draw: shadowMap.render.bind(shadowMap) };
   const copy = new OmniShadowCopy();

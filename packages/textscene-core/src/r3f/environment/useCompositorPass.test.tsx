@@ -165,6 +165,7 @@ describe('useCompositorPass over a blended surface', () => {
     blend();
     await advance(renderer, 1);
 
-    expect([opaque, pass()]).toEqual([expect.anything(), opaque]);
+    expect(opaque).not.toBeNull();
+    expect(pass()).toBe(opaque);
   });
 });
