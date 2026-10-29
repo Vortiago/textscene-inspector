@@ -16,6 +16,10 @@ describe('multiplyModulate', () => {
     expect(multiplyModulate(WHITE_MODULATE, c)).toEqual(c);
   });
 
+  it('keeps a 0.9 channel on the half step 229.5 that Godot writes as 230', () => {
+    expect(multiplyModulate(WHITE_MODULATE, { r: 0.9, g: 0.9, b: 0.9, a: 1 }).r).toBe(0.9);
+  });
+
   it('composes hierarchically (a parent dims its children)', () => {
     expect(multiplyModulate({ r: 0.5, g: 0.5, b: 0.5, a: 1 }, { r: 0.5, g: 0.5, b: 0.5, a: 1 })).toEqual({
       r: 0.25,
