@@ -17,27 +17,17 @@ import {
   describeInstantiatedGizmo,
   type GizmoNodeCase,
 } from '../../../../r3f/testing/gizmoContract';
-import '../attractors/gpuparticlesattractorbox3d/index';
-import '../attractors/gpuparticlesattractorbox3d/index.r3f';
-import '../attractors/gpuparticlesattractorsphere3d/index';
-import '../attractors/gpuparticlesattractorsphere3d/index.r3f';
-import '../attractors/gpuparticlesattractorvectorfield3d/index';
-import '../attractors/gpuparticlesattractorvectorfield3d/index.r3f';
-import '../collisions/gpuparticlescollisionbox3d/index';
-import '../collisions/gpuparticlescollisionbox3d/index.r3f';
-import '../collisions/gpuparticlescollisionheightfield3d/index';
-import '../collisions/gpuparticlescollisionheightfield3d/index.r3f';
-import '../collisions/gpuparticlescollisionsdf3d/index';
-import '../collisions/gpuparticlescollisionsdf3d/index.r3f';
-import '../collisions/gpuparticlescollisionsphere3d/index';
-import '../collisions/gpuparticlescollisionsphere3d/index.r3f';
+import '../../../../r3f/nodes/index';
+import '../../../../parser/TscnParser';
 
 const COLLISION_COLOR = godotColorToLinear({ r: 0.5, g: 0.7, b: 1 });
 const ATTRACTOR_COLOR = godotColorToLinear({ r: 1, g: 0.7, b: 0.5 });
 
 const COLLISION_BOXES = ['GPUParticlesCollisionBox3D', 'GPUParticlesCollisionHeightField3D'];
 const ATTRACTOR_BOXES = ['GPUParticlesAttractorBox3D', 'GPUParticlesAttractorVectorField3D'];
-const SPHERES = ['GPUParticlesCollisionSphere3D', 'GPUParticlesAttractorSphere3D'];
+const COLLISION_SPHERE = 'GPUParticlesCollisionSphere3D';
+const ATTRACTOR_SPHERE = 'GPUParticlesAttractorSphere3D';
+const SPHERES = [COLLISION_SPHERE, ATTRACTOR_SPHERE];
 const SDF = 'GPUParticlesCollisionSDF3D';
 
 function node(type: string, props: Record<string, string>): TscnNode {
@@ -51,12 +41,16 @@ function node(type: string, props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
+interface Place {
+  props?: Record<string, string>;
+  selectedPath?: string | null;
+  showGizmos?: boolean;
+  instantiated?: boolean;
+}
+
 async function render(
   type: string,
-  props: Record<string, string> = {},
-  selectedPath: string | null = 'Volume',
-  showGizmos = true,
-  instantiated = false
+  { props = {}, selectedPath = 'Volume', showGizmos = true, instantiated = false }: Place = {}
 ) {
   const Volume = nodeComponentRegistry.get(type)!;
   return ReactThreeTestRenderer.create(
@@ -73,9 +67,8 @@ async function render(
   );
 }
 
-/** Each gizmo line object's vertices, colour and opacity, in draw order. */
 async function gizmoLines(type: string, props: Record<string, string> = {}, selectedPath = 'Volume') {
-  const renderer = await render(type, props, selectedPath);
+  const renderer = await render(type, { props, selectedPath });
   return renderer.scene.findAllByType('LineSegments').map((line) => {
     const object = line.instance as THREE.LineSegments;
     const material = object.material as THREE.LineBasicMaterial;
@@ -92,14 +85,14 @@ describe.each([...COLLISION_BOXES, ...ATTRACTOR_BOXES, ...SPHERES, SDF])('<%s> g
     nodePath: 'Volume',
     drawnFor: 'every-node',
     mount: ({ selectedPath, showGizmos, instantiated }) =>
-      render(type, {}, selectedPath, showGizmos, instantiated),
+      render(type, { selectedPath, showGizmos, instantiated }),
   };
   describeGizmoToggle(`<${type}>`, gizmoCase);
   describeInstantiatedGizmo(`<${type}>`, gizmoCase);
 
   it('keeps its children in the node transform, selected or not', async () => {
     for (const selected of [null, 'Volume']) {
-      const renderer = await render(type, {}, selected);
+      const renderer = await render(type, { selectedPath: selected });
       const group = renderer.scene.findByProps({ name: 'Volume' });
       expect(group.children.map((child) => child.props.name)).toContain('Child');
     }
@@ -148,7 +141,7 @@ describe('sphere gizmos', () => {
 });
 
 describe('colours', () => {
-  it.each([...COLLISION_BOXES, SPHERES[0]!, SDF])(
+  it.each([...COLLISION_BOXES, COLLISION_SPHERE, SDF])(
     '<%s> draws in the collision colour (0.5, 0.7, 1)',
     async (type) => {
       const [first] = await gizmoLines(type);
@@ -156,7 +149,7 @@ describe('colours', () => {
     }
   );
 
-  it.each([...ATTRACTOR_BOXES, SPHERES[1]!])(
+  it.each([...ATTRACTOR_BOXES, ATTRACTOR_SPHERE])(
     '<%s> draws in the attractor colour (1, 0.7, 0.5)',
     async (type) => {
       const [first] = await gizmoLines(type);

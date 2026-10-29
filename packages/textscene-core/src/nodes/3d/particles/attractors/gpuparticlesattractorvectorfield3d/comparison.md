@@ -18,17 +18,19 @@ The previewer draws the gizmo of Godot's editor in the attractor colour. It draw
 ## Linting
 
 <!-- lint:begin GPUParticlesAttractorVectorField3D -->
+
 Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properties, plus 4 inherited from GPUParticlesAttractor3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `size` | Vector3(x, y, z), each float >= 0.01 | warning below |
-| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| Property  | Accepts                                                        | Out of range  |
+| --------- | -------------------------------------------------------------- | ------------- |
+| `size`    | Vector3(x, y, z), each float >= 0.01                           | warning below |
+| `texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| Rule                                          | Reports                     | Severity |
+| --------------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
+
 <!-- lint:end -->
 
 The lenient parser reads `size` for the gizmo. A malformed `Vector3` keeps Godot's default. A `size` below `0.01` or a `texture` that is not a `Texture3D` parses with no warning. Strict checks only that `texture` is a resource reference.

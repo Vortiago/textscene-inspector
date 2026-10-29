@@ -1,13 +1,10 @@
-/**
- * GPUParticlesAttractorVectorField3D draws nothing of its own, so the badge reads "not implemented". Its component mounts the
- * Node3D base for `visible` and the workspace split, and the editor gizmo.
- */
+/** GPUParticlesAttractorVectorField3D draws only its editor gizmo, so the badge reads "not implemented". */
 
 import { nodeComponentRegistry } from '../../../../../r3f/NodeComponentRegistry';
-import { GPUParticlesAttractorVectorField3D } from './Component';
+import { boxVolumeNode } from '../../volume/volumeNode';
 
 nodeComponentRegistry.register({
   typeName: 'GPUParticlesAttractorVectorField3D',
-  Component: GPUParticlesAttractorVectorField3D,
+  Component: boxVolumeNode('attractor'),
   renderIntent: 'pending',
 });

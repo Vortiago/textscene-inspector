@@ -1,58 +1,52 @@
 /**
  * The editor gizmos of the GPU particles collision and attractor nodes: a box, three great circles,
  * or a box with the cell grid of the SDF type (`gpu_particles_collision_3d_gizmo_plugin.cpp:150-306`).
- * The component mounts one in an every-node `PluginGizmo`.
  */
 
 import { useMemo } from 'react';
-import { aabbEdges, centredAabb } from '../../../../godot/math/aabb';
+import { centredAabb } from '../../../../godot/math/aabb';
 import type { Vector3 } from '../../../../godot/math/vector';
 import { gpuParticlesCollisionSdfCells } from '../../../../godot/scene/particlesCollision3d';
+import { AabbGizmo } from '../../../../r3f/components/AabbGizmo';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { cellGridLines } from '../../../../r3f/gizmo/cellGrid';
 import { sphereCircleLines } from '../../../../r3f/gizmo/sphereCircles';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 
-type VolumeKind = 'collision' | 'attractor';
+type Colour = { r: number; g: number; b: number };
 
 /** `editors/3d_gizmos/gizmo_colors/particle_collision` and `particle_attractor` (`editor_settings.cpp:887-888`). */
-const GIZMO_COLORS: Readonly<Record<VolumeKind, { r: number; g: number; b: number }>> = {
-  collision: Object.freeze({ r: 0.5, g: 0.7, b: 1 }),
-  attractor: Object.freeze({ r: 1, g: 0.7, b: 0.5 }),
-};
+export const COLLISION_COLOR: Colour = Object.freeze({ r: 0.5, g: 0.7, b: 1 });
+export const ATTRACTOR_COLOR: Colour = Object.freeze({ r: 1, g: 0.7, b: 0.5 });
 
-/** The alpha of `shape_material_collision_internal`: the grid draws a lot of lines (`gpu_particles_collision_3d_gizmo_plugin.cpp:48-50`). */
+/** The alpha of `shape_material_collision_internal`: the grid draws a lot of lines (`:48-50`). */
 const GRID_ALPHA = 0.15;
 
-function VolumeLines({ lines, kind, opacity }: { lines: number[]; kind: VolumeKind; opacity?: number }) {
-  const positions = useMemo(() => new Float32Array(lines), [lines]);
-  return (
-    <GizmoLine positions={positions} color={useGodotLinearColor(GIZMO_COLORS[kind])} opacity={opacity} />
-  );
+/** The box centred on the node. The memo keys on the numbers, as a re-parse gives a new object. */
+function useCentredBox({ x, y, z }: Vector3) {
+  return useMemo(() => centredAabb({ x, y, z }), [x, y, z]);
 }
 
-/** The 12 edges of the box of `size` centred on the node (`:245-262`). */
-export function BoxVolumeGizmo({ size, kind }: { size: Vector3; kind: VolumeKind }) {
-  const edges = useMemo(() => aabbEdges(centredAabb(size)), [size]);
-  return <VolumeLines lines={edges} kind={kind} />;
+export function BoxVolumeGizmo({ size, color }: { size: Vector3; color: Colour }) {
+  return <AabbGizmo aabb={useCentredBox(size)} color={color} />;
 }
 
-/** The three great circles of a sphere of `radius` (`:167-243`). */
-export function SphereVolumeGizmo({ radius, kind }: { radius: number; kind: VolumeKind }) {
-  const circles = useMemo(() => sphereCircleLines(radius), [radius]);
-  return <VolumeLines lines={circles} kind={kind} />;
+export function SphereVolumeGizmo({ radius, color }: { radius: number; color: Colour }) {
+  const circles = useMemo(() => new Float32Array(sphereCircleLines(radius)), [radius]);
+  return <GizmoLine positions={circles} color={useGodotLinearColor(color)} />;
 }
 
-/** The box of `size`, and the cells of `resolution` inside it at a low opacity (`:264-304`). */
+/** The box of `size`, and the cells of `resolution` inside it at a low opacity. */
 export function SdfVolumeGizmo({ size, resolution }: { size: Vector3; resolution: number }) {
+  const box = useCentredBox(size);
   const grid = useMemo(
-    () => cellGridLines(centredAabb(size), gpuParticlesCollisionSdfCells(resolution)),
-    [size, resolution]
+    () => new Float32Array(cellGridLines(box, gpuParticlesCollisionSdfCells(resolution))),
+    [box, resolution]
   );
   return (
     <>
-      <BoxVolumeGizmo size={size} kind="collision" />
-      <VolumeLines lines={grid} kind="collision" opacity={GRID_ALPHA} />
+      <AabbGizmo aabb={box} color={COLLISION_COLOR} />
+      <GizmoLine positions={grid} color={useGodotLinearColor(COLLISION_COLOR)} opacity={GRID_ALPHA} />
     </>
   );
 }

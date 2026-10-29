@@ -1,13 +1,10 @@
-/**
- * GPUParticlesAttractorSphere3D draws nothing of its own, so the badge reads "not implemented". Its component mounts the
- * Node3D base for `visible` and the workspace split, and the editor gizmo.
- */
+/** GPUParticlesAttractorSphere3D draws only its editor gizmo, so the badge reads "not implemented". */
 
 import { nodeComponentRegistry } from '../../../../../r3f/NodeComponentRegistry';
-import { GPUParticlesAttractorSphere3D } from './Component';
+import { sphereVolumeNode } from '../../volume/volumeNode';
 
 nodeComponentRegistry.register({
   typeName: 'GPUParticlesAttractorSphere3D',
-  Component: GPUParticlesAttractorSphere3D,
+  Component: sphereVolumeNode('attractor'),
   renderIntent: 'pending',
 });

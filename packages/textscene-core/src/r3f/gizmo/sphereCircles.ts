@@ -5,11 +5,24 @@
 
 import { storedReal as f } from '../../godot/math/real';
 
-/** A signed corner of a quarter: which sign each coordinate takes, in the order the PUSH_QUARTER macros write them. */
+/** A signed corner of a quarter: the sign each coordinate takes, in the order the PUSH_QUARTER macros write them. */
 type Corner = readonly [sx: 1 | -1, sy: 1 | -1];
 
+interface Plane {
+  corners: readonly Corner[];
+  point: (u: number, v: number) => number[];
+}
+
+/** The corner order of `PUSH_QUARTER_XY` and `PUSH_QUARTER_YZ` (`:181-198`). */
+const SIGNED_Y_FIRST: readonly Corner[] = [
+  [1, -1],
+  [1, 1],
+  [-1, -1],
+  [-1, 1],
+];
+
 /** The circle planes of `PUSH_QUARTER`, `PUSH_QUARTER_XY` and `PUSH_QUARTER_YZ` (`:170-198`). */
-const PLANES: readonly { corners: readonly Corner[]; point: (u: number, v: number) => number[] }[] = [
+const PLANES: readonly Plane[] = [
   {
     corners: [
       [1, 1],
@@ -19,24 +32,8 @@ const PLANES: readonly { corners: readonly Corner[]; point: (u: number, v: numbe
     ],
     point: (u, v) => [u, 0, v],
   },
-  {
-    corners: [
-      [1, -1],
-      [1, 1],
-      [-1, -1],
-      [-1, 1],
-    ],
-    point: (u, v) => [u, v, 0],
-  },
-  {
-    corners: [
-      [1, -1],
-      [1, 1],
-      [-1, -1],
-      [-1, 1],
-    ],
-    point: (u, v) => [0, v, u],
-  },
+  { corners: SIGNED_Y_FIRST, point: (u, v) => [u, v, 0] },
+  { corners: SIGNED_Y_FIRST, point: (u, v) => [0, v, u] },
 ];
 
 const POINTS_IN_OCTANT = 16;
@@ -45,7 +42,7 @@ const ANGLE_STEP = f(Math.PI / (4 * POINTS_IN_OCTANT));
 
 /** The four mirrored segments of one quarter step, in all four quadrants of a plane. */
 function quarterSegments(
-  plane: (typeof PLANES)[number],
+  plane: Plane,
   from: readonly [number, number],
   to: readonly [number, number]
 ): number[] {
@@ -56,10 +53,8 @@ function quarterSegments(
 }
 
 /**
- * Flat `xyz` segment ends of the circles of `radius` in the XZ, XY and YZ planes: 16 steps of an
- * octant, each with its mirror across the diagonal, 384 segments in all. The engine computes in
- * `float`, so a rounding keeps the points it writes. No radius is refused: 0 collapses the circles
- * to the origin, and a negative radius runs them on the opposite side.
+ * Flat `xyz` segment ends of the circles of `radius` in the XZ, XY and YZ planes. The engine computes
+ * in `float`, so each step rounds. No radius is refused: 0 collapses the circles to the origin.
  *
  * @canonical The three great circles of a sphere gizmo
  */

@@ -1,6 +1,8 @@
+/** Godot's default radius (`scene/3d/gpu_particles_collision_3d.h:58,304`). */
+const DEFAULT_RADIUS = 1;
+
 /** The Node3D parse plus the `radius` of a sphere (`scene/3d/gpu_particles_collision_3d.cpp:74-78`). */
 
-import { GPU_PARTICLES_VOLUME_DEFAULTS } from '../../../../godot/scene/gpuParticlesVolume';
 import type { ParsedHeading } from '../../../../parser/utils';
 import { realOr } from '../../../../parser/valueParsers';
 import { parseNode3D } from '../../../base/node3d/parser';
@@ -12,6 +14,6 @@ export function parseSphereVolume(
 ): SphereVolumeProperties {
   return {
     ...parseNode3D(heading, properties),
-    radius: realOr(properties.radius, GPU_PARTICLES_VOLUME_DEFAULTS.radius, `${heading.type} radius`),
+    radius: realOr(properties.radius, DEFAULT_RADIUS, `${heading.type} radius`),
   };
 }
