@@ -1,0 +1,33 @@
+; The one variable: a root-owned heading below a trail-seated heading claims a name that the base
+; of an inherited root claimed first. The base keeps it (node.cpp:2222-2233), so `parent="%Feather"`
+; seats the green Quill on the base's blue Feather, right of the origin, not on the orange Cap.
+; No other golden claims a name the base holds.
+
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-trail-inherited-base.tscn" id="1_base"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_a"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="M_a"]
+albedo_color = Color(0.95, 0.5, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="M_b"]
+albedo_color = Color(0.1, 0.8, 0.3, 1)
+
+[node name="Main" instance=ExtResource("1_base")]
+
+[node name="Cap" type="MeshInstance3D" parent="Missing" parent_id_path=PackedInt32Array(77)]
+unique_name_in_owner = true
+mesh = SubResource("BoxMesh_a")
+surface_material_override/0 = SubResource("M_a")
+
+[node name="Feather" type="Node3D" parent="%Cap"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+
+[node name="Quill" type="MeshInstance3D" parent="%Feather"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("BoxMesh_a")
+surface_material_override/0 = SubResource("M_b")
