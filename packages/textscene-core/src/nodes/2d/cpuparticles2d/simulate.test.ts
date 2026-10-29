@@ -805,6 +805,30 @@ describe('the POINTS, DIRECTED_POINTS and RING shapes', () => {
     expect(particle!.transform.ty).toBeGreaterThan(-5);
   });
 
+  /** One DIRECTED_POINTS particle moving +x, born at (10, -5). */
+  function directed(overrides: Record<string, string>) {
+    return pose({
+      amount: '1',
+      gravity: 'Vector2(0, 0)',
+      spread: '0',
+      initial_velocity_min: '60',
+      initial_velocity_max: '60',
+      emission_shape: '5',
+      emission_points: 'PackedVector2Array(10, -5)',
+      ...overrides,
+    })[0]!;
+  }
+
+  it('takes the point colour for DIRECTED_POINTS too', () => {
+    const { color } = directed({ emission_colors: 'PackedColorArray(0, 1, 1, 1)' });
+    expect([color.r < 0.1, color.g > 0.9, color.b > 0.9]).toEqual([true, true, true]);
+  });
+
+  it('keeps the velocity when the normals do not match the points one for one (edge case)', () => {
+    const { transform } = directed({ emission_normals: 'PackedVector2Array(0, 1, 1, 0)' });
+    expect([transform.tx > 10, transform.ty]).toEqual([true, -5]);
+  });
+
   it('places every RING particle between the inner and the outer radius', () => {
     const particles = pose({
       ...STILL,

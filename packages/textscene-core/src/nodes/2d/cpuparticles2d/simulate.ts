@@ -42,6 +42,7 @@ import {
   colorCount,
   pickPoint,
   previewProcessRng,
+  processRandf,
   turnedByNormal,
 } from '../../shared/cpuparticles/emissionPoints';
 import { DEFAULT_PREVIEW_SEED } from '../../shared/cpuparticles/process';
@@ -519,10 +520,10 @@ function emitAtPoint(props: CPUParticles2DProperties, state: SimState, p: Partic
 
 /** A place in the ring, from two draws of Godot's process-wide `Math::randf()` (`:952-957`). */
 function emitOnRing(props: CPUParticles2DProperties, processRng: GodotRandomPCG, p: Particle): void {
-  const t = f(TAU * processRng.randf());
+  const t = f(TAU * processRandf(processRng));
   const outerSquared = f(props.emission_ring_radius * props.emission_ring_radius);
   const innerSquared = f(props.emission_ring_inner_radius * props.emission_ring_inner_radius);
-  const radius = f(Math.sqrt(f(f(processRng.randf() * f(outerSquared - innerSquared)) + innerSquared)));
+  const radius = f(Math.sqrt(f(f(processRandf(processRng) * f(outerSquared - innerSquared)) + innerSquared)));
   p.transform.tx = f(f(Math.cos(t)) * radius);
   p.transform.ty = f(f(Math.sin(t)) * radius);
 }

@@ -1,9 +1,38 @@
-/** The POINTS and DIRECTED_POINTS steps both emitters share, against values Godot 4.6.3 printed. */
+/** The process-wide draws and the POINTS and DIRECTED_POINTS steps both emitters share, against values Godot 4.6.3 printed. */
 
 import { describe, expect, it } from 'vitest';
 import { GodotRandomPCG } from './godotRng';
+import { DEFAULT_PREVIEW_SEED } from './process';
 import { storedVector2 } from '../../../godot/math/real.js';
-import { colorAt, colorCount, pickPoint, turnedByNormal } from './emissionPoints';
+import {
+  colorAt,
+  colorCount,
+  pickPoint,
+  previewProcessRng,
+  processRandf,
+  turnedByNormal,
+} from './emissionPoints';
+
+describe('processRandf', () => {
+  it('takes one `rand()` word over `(float)UINT32_MAX`, not the two `RandomPCG::randf` draws', () => {
+    // Godot's `randi()` after `seed = 0` gives 881477183, then 1327520283.
+    const rng = new GodotRandomPCG(0);
+    expect(processRandf(rng)).toBe(Math.fround(Math.fround(881477183) / 2 ** 32));
+    expect(rng.rand()).toBe(1327520283);
+  });
+
+  it('reaches 1 for a word that rounds up to 2^32 in float (edge case)', () => {
+    const rng = { rand: () => 0xffffffff } as GodotRandomPCG;
+    expect(processRandf(rng)).toBe(1);
+  });
+});
+
+describe('previewProcessRng', () => {
+  it("draws apart from the stream of an unseeded emitter's first particle", () => {
+    // That particle seeds its own stream with the preview seed, and Godot's clock-seeded stream is independent of it.
+    expect(previewProcessRng().rand()).not.toBe(new GodotRandomPCG(DEFAULT_PREVIEW_SEED).rand());
+  });
+});
 
 describe('pickPoint', () => {
   it('takes `Math::rand() % count` from the stream (happy path)', () => {
