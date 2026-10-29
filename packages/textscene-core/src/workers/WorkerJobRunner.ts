@@ -6,13 +6,7 @@
  */
 
 import { warn } from '../logger.js';
-import {
-  WORKER_JOBS,
-  type WorkerJob,
-  type WorkerJobInput,
-  type WorkerJobName,
-  type WorkerJobOutput,
-} from './jobs';
+import type { WORKER_JOBS, WorkerJob, WorkerJobInput, WorkerJobName, WorkerJobOutput } from './jobs';
 import { fromJobError, type WorkerJobReply, type WorkerJobRequest } from './protocol';
 
 /** The part of a `Worker` the runner uses, so a test can stand in for one. */
@@ -39,6 +33,17 @@ interface QueuedJob {
   settled: boolean;
   /** Set while the job waits for its in-thread turn. */
   timer?: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * Written only by `inThreadJobs`, on its first call, and never cleared. A dynamic import, as the
+ * jobs bundle `fastnoise-lite`, which a host with a worker never runs on the page.
+ */
+let inThreadJobsLoad: Promise<typeof WORKER_JOBS> | null = null;
+
+function inThreadJobs(): Promise<typeof WORKER_JOBS> {
+  inThreadJobsLoad ??= import('./jobs').then((m) => m.WORKER_JOBS);
+  return inThreadJobsLoad;
 }
 
 function abortError(): DOMException {
@@ -108,13 +113,25 @@ export class WorkerJobRunner {
     // before the task runs skips the work.
     job.timer = setTimeout(() => {
       job.timer = undefined;
-      try {
-        const entry = WORKER_JOBS[job.name] as WorkerJob<unknown, unknown>;
-        this.finish(job, () => job.resolve(entry.run(job.input)));
-      } catch (error) {
-        this.finish(job, () => job.reject(error));
-      }
+      void inThreadJobs().then(
+        (jobs) => this.runLoadedJob(job, jobs[job.name] as WorkerJob<unknown, unknown>),
+        (error: unknown) => {
+          if (!job.settled) this.finish(job, () => job.reject(error));
+        }
+      );
     }, 0);
+  }
+
+  private runLoadedJob(job: QueuedJob, entry: WorkerJob<unknown, unknown>): void {
+    if (job.settled) return;
+    let output: unknown;
+    try {
+      output = entry.run(job.input);
+    } catch (error) {
+      this.finish(job, () => job.reject(error));
+      return;
+    }
+    this.finish(job, () => job.resolve(output));
   }
 
   private async runInWorker(job: QueuedJob): Promise<void> {
