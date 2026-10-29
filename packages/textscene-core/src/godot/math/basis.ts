@@ -7,7 +7,7 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from './real.js';
-import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
+import { basisDeterminant, isEqualApprox, isZeroApprox, sign, UNIT_EPSILON } from './math.js';
 import type { Quaternion } from './quaternion.js';
 import { normalizedVector3, vector3Dot, type Vector3 } from './vector.js';
 
@@ -242,4 +242,46 @@ export function basisGetRotationQuaternion(n: BasisComponents): Quaternion {
   return basisGetQuaternion(
     determinantOf(orthonormal) < 0 ? [-a, -b, -c, -d, -e, -g, -h, -i, -j] : orthonormal
   );
+}
+
+/**
+ * `Basis::set_axis_angle` (`basis.cpp:840-868`) in `real_t` float: the rotation by `angle` radians
+ * about the unit `axis`, built from the axis-angle formula, not through a quaternion. A
+ * non-normalised axis fails the editor build's `MATH_CHECKS` and leaves the identity.
+ */
+export function basisFromAxisAngle(axis: Vector3, angle: number): BasisComponents {
+  const lengthSquared = vector3Dot([axis.x, axis.y, axis.z], [axis.x, axis.y, axis.z]);
+  // `Vector3::is_normalized` (`vector3.h:566-569`): within `UNIT_EPSILON` of 1, squared.
+  if (lengthSquared !== 1 && !(Math.abs(lengthSquared - 1) < UNIT_EPSILON))
+    return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  const sq = { x: f(axis.x * axis.x), y: f(axis.y * axis.y), z: f(axis.z * axis.z) };
+  const cosine = f(Math.cos(angle));
+  const sine = f(Math.sin(angle));
+  const t = f(1 - cosine);
+  const diagonal = (square: number) => f(square + f(cosine * f(1 - square)));
+  // `xyzt ± zyxs`: the product of two axis components and `t`, then one component and `sine`.
+  const pair = (a: number, b: number) => f(f(a * b) * t);
+  const xy = pair(axis.x, axis.y);
+  const xz = pair(axis.x, axis.z);
+  const yz = pair(axis.y, axis.z);
+  const zs = f(axis.z * sine);
+  const ys = f(axis.y * sine);
+  const xs = f(axis.x * sine);
+  return [
+    diagonal(sq.x),
+    f(xy - zs),
+    f(xz + ys),
+    f(xy + zs),
+    diagonal(sq.y),
+    f(yz - xs),
+    f(xz - ys),
+    f(yz + xs),
+    diagonal(sq.z),
+  ];
+}
+
+/** `Basis::scale` (`basis.cpp:234-238`) in `real_t` float: each row times its axis of `scale`. */
+export function basisScaledRows(n: BasisComponents, scale: Vector3): BasisComponents {
+  const factor = [scale.x, scale.y, scale.z] as const;
+  return basisFrom((i) => f(n[i]! * factor[Math.floor(i / 3)]!));
 }

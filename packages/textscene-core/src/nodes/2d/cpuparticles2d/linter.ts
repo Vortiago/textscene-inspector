@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { CPU_PARTICLES_PARAMS } from '../../../godot/scene/cpuParticles.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/paramMinAboveMax.js';
-import { drawableParamBounds, type NonFiniteBound } from './drawableParamBounds.js';
+import { drawableParamBounds, type NonFiniteBound } from '../../shared/cpuparticles/drawableParamBounds.js';
 import { formatReal } from '../../../godot/math/real.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES } from '../../../godot/scene/particles2d.js';

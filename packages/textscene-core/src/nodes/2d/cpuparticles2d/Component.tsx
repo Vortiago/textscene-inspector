@@ -22,7 +22,12 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
 import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
-import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
+import {
+  paramCurveReferences,
+  particleFiles,
+  resolveParticleCurves,
+  resolveParticleGradient,
+} from '../../shared/cpuparticles/sceneResources';
 import { simulateFrozenPose } from './simulate';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -100,7 +105,14 @@ function ParticleField({
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
 
-  const planFiles = useCallback(() => particleFiles(props, pools), [props, pools]);
+  const planFiles = useCallback(
+    () =>
+      particleFiles(
+        [...paramCurveReferences(props.params), props.color_ramp, props.color_initial_ramp],
+        pools
+      ),
+    [props, pools]
+  );
   const { loadedFile } = useLoadedFiles(planFiles);
   const curves = useMemo(
     () => resolveParticleCurves(props.params, pools, loadedFile),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
-import { CPU_PARTICLES_2D_PARAM_COUNT } from './types';
+import { CPU_PARTICLES_PARAM_COUNT } from '../../shared/cpuparticles/params';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 
@@ -65,7 +65,7 @@ describe('parseCPUParticles2D', () => {
 
   it('defaults every parameter range to 0 except Scale, which defaults to 1', () => {
     const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {});
-    expect(result.params).toHaveLength(CPU_PARTICLES_2D_PARAM_COUNT);
+    expect(result.params).toHaveLength(CPU_PARTICLES_PARAM_COUNT);
     for (const param of result.params) expect(param.curve).toBeUndefined();
 
     expect(result.params[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]).toEqual({ min: 0, max: 0 });
@@ -132,15 +132,18 @@ describe('parseCPUParticles2D', () => {
     expect(result.params[CPUParticlesParameter.SCALE]).toEqual({ min: 3, max: 3 });
   });
 
-  it('clamps `amount` into Godot’s 1..1,000,000 range (edge case)', () => {
+  it('previews at most the top of the `amount` hint (edge case)', () => {
     const tooMany = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
       amount: '5000000',
     });
-    // cpu_particles_2d.cpp:1492 hints `amount` as "1,1000000,1,exp".
+    // cpu_particles_2d.cpp:1491 hints `amount` as "1,1000000,1,exp".
     expect(tooMany.amount).toBe(1_000_000);
+  });
 
+  it('keeps the default `amount` the setter keeps when it refuses 0 (error path)', () => {
+    // `set_amount` fails on a count below 1 (cpu_particles_2d.cpp:68), so the constructor's 8 stays.
     const tooFew = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), { amount: '0' });
-    expect(tooFew.amount).toBe(1);
+    expect(tooFew.amount).toBe(8);
   });
 
   it('falls back to Index for an out-of-range `draw_order` (error path)', () => {

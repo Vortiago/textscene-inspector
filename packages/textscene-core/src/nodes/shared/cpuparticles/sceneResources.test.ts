@@ -3,8 +3,13 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { NO_RESOURCES, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { loadedFilesOf, NO_FILES } from '../../../resources/testing/loadedFiles';
-import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
-import { CPU_PARTICLES_2D_PARAM_COUNT, type ParticleParam } from './types';
+import {
+  paramCurveReferences,
+  particleFiles,
+  resolveParticleCurves,
+  resolveParticleGradient,
+} from './sceneResources';
+import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
@@ -40,7 +45,7 @@ function sceneOf(internalResources: TscnInternalResource[], externalResources = 
 function params(
   overrides: Partial<Record<EnumValue<typeof CPUParticlesParameter>, string>> = {}
 ): ParticleParam[] {
-  return Array.from({ length: CPU_PARTICLES_2D_PARAM_COUNT }, (_, i) => {
+  return Array.from({ length: CPU_PARTICLES_PARAM_COUNT }, (_, i) => {
     const curve = overrides[i as EnumValue<typeof CPUParticlesParameter>];
     return curve ? { min: 0, max: 1, curve } : { min: 0, max: 1 };
   });
@@ -80,7 +85,7 @@ describe('resolveParticleCurves', () => {
       sceneOf([CURVE]),
       NO_FILES
     );
-    expect(curves).toHaveLength(CPU_PARTICLES_2D_PARAM_COUNT);
+    expect(curves).toHaveLength(CPU_PARTICLES_PARAM_COUNT);
     expect(curves.filter((c) => c !== null)).toHaveLength(1);
   });
 
@@ -125,23 +130,23 @@ describe('resolveParticleGradient', () => {
 });
 
 describe('particleFiles', () => {
-  const ramps = { color_ramp: 'ExtResource("8_ramp")', color_initial_ramp: 'SubResource("2")' };
-
   it('names the .tres each curve slot and ramp loads from', () => {
+    const curves = paramCurveReferences(
+      params({
+        [CPUParticlesParameter.SCALE]: 'ExtResource("7_curve")',
+        [CPUParticlesParameter.DAMPING]: 'ExtResource("7_curve")',
+      })
+    );
     const files = particleFiles(
-      {
-        params: params({
-          [CPUParticlesParameter.SCALE]: 'ExtResource("7_curve")',
-          [CPUParticlesParameter.DAMPING]: 'ExtResource("7_curve")',
-        }),
-        ...ramps,
-      },
+      [...curves, 'ExtResource("8_ramp")', 'SubResource("2")'],
       sceneOf([GRADIENT])
     );
     expect(files).toEqual([CURVE_PATH, CURVE_PATH, GRADIENT_PATH]);
   });
 
   it('names no file for SubResource references or none', () => {
-    expect(particleFiles({ params: params() }, sceneOf([CURVE, GRADIENT]))).toEqual([]);
+    expect(particleFiles([...paramCurveReferences(params()), undefined], sceneOf([CURVE, GRADIENT]))).toEqual(
+      []
+    );
   });
 });

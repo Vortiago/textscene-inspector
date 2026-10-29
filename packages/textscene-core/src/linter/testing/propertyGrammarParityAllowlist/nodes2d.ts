@@ -3,20 +3,8 @@
  * simulation settings.
  */
 
-import { PARAM_SLOTS } from '../../../nodes/2d/cpuparticles2d/types.js';
+import { PARTICLE_PARAM_KEYS } from './particleParamKeys.js';
 import type { AsymmetryEntry } from './types.js';
-
-/**
- * CPUParticles2D's parameter slots. `parser.ts` reads each `<prefix>_min`,
- * `_max` and `_curve` through a table (`properties[`${prefix}_min`]`), which the
- * `properties.X` scrape cannot see. Derived from the parser's own table, so a
- * renamed prefix or dropped slot moves both sides at once.
- */
-const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, curve }) => [
-  `${prefix}_min`,
-  `${prefix}_max`,
-  ...(curve ? [`${prefix}_curve`] : []),
-]);
 
 export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   AnimatedSprite2D: {
