@@ -18,6 +18,7 @@ import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/inst
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
 import { pointShadowSizeInjection } from './materials/godotPoint';
+import { aimParticleBillboards, particleShadowInjection } from './materials/godotParticles';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 
@@ -118,9 +119,12 @@ function pose(
   mainCamera: THREE.Camera,
   passCamera: THREE.Camera
 ): boolean {
-  // An InstancedMesh this codebase did not batch, such as a GLB instanced under
-  // `three-loader`, keeps its pose: `drawsAsOneBatch` says why it cannot billboard.
-  if ((object as THREE.InstancedMesh).isInstancedMesh) return false;
+  // An InstancedMesh keeps its pose: `drawsAsOneBatch` says why it cannot billboard here. A particle
+  // draw billboards each instance in its program, toward the main camera of this render.
+  if ((object as THREE.InstancedMesh).isInstancedMesh) {
+    aimParticleBillboards(mainCamera);
+    return false;
+  }
   const billboard = billboardOf(material);
   const camera = billboard.mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
   if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, billboard)) {
@@ -160,7 +164,8 @@ function shadowAlphaCut(material: THREE.Material): number {
 
 /**
  * Draws a surface whose shadow needs its own depth material, and makes three's draw draw nothing.
- * three's would cut the texture alpha alone, and at the scissor only, and write no point size.
+ * three's would cut the texture alpha alone, and at the scissor only, and write no point size and no
+ * particle billboard.
  */
 function castOwnShadow(
   renderer: THREE.WebGLRenderer,
@@ -195,9 +200,16 @@ function cutsShadow(material: THREE.Material): boolean {
   return material.alphaHash || shadowAlphaCut(material) > 0;
 }
 
-/** Whether three's depth material cannot draw `material`'s shadow: it cuts alpha, or sizes points. */
+/**
+ * Whether three's depth material cannot draw `material`'s shadow: it cuts alpha, sizes points or
+ * draws particles.
+ */
 function needsOwnDepth(material: THREE.Material): boolean {
-  return cutsShadow(material) || pointShadowSizeInjection(material.userData) !== undefined;
+  return (
+    cutsShadow(material) ||
+    pointShadowSizeInjection(material.userData) !== undefined ||
+    particleShadowInjection(material.userData) !== undefined
+  );
 }
 
 function closeDraw(): void {

@@ -27,6 +27,8 @@ import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRou
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw } from '../materials/godotPoint';
+import { withParticleDraw } from '../materials/godotParticles';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
@@ -120,6 +122,16 @@ const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
     { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord }
   ).injection;
 
+/** A flipbook particle draw, which reaches every chunk the injection edits. */
+const particleBag = () =>
+  withParticleDraw(
+    { materialClass: 'standard', props: { map: new THREE.Texture() } },
+    {
+      billboard: { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: true },
+      anim: { hFrames: 2, vFrames: 2, loop: true },
+    }
+  );
+
 const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
   const surface = new THREE.MeshStandardMaterial();
   surface.userData = userData;
@@ -155,6 +167,7 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
+  injected('materials/godotParticles.ts', 'particle draw', SURFACE_AND_DEPTH, () => particleBag().injection),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
   ),

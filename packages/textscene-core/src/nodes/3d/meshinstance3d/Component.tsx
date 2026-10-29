@@ -24,6 +24,7 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { MATERIAL_OVERLAY_RENDER_ORDER } from '../../../r3f/materials/materialOverlay';
 import { useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
@@ -177,13 +178,6 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 }
 
 const NO_PARTS: readonly SurfacedPart[] = [];
-
-/**
- * The overlay's draw-order key. Any value above the 3D default (0) puts it after
- * its own surface; 1 keeps it as close to that surface as three allows, since
- * every step also steps it past unrelated content at the same depth.
- */
-const MATERIAL_OVERLAY_RENDER_ORDER = 1;
 
 /** Opts a mesh out of picking: three calls `raycast` and collects nothing. */
 const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};

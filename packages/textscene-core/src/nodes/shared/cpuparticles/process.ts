@@ -32,7 +32,7 @@
  */
 
 import { storedReal as f } from '../../../godot/math/real.js';
-import type { Rgba } from '../../../godot/math/math.js';
+import { multiplyColor, type Rgba } from '../../../godot/math/math.js';
 import { idhash } from '../../2d/cpuparticles2d/godotRng';
 
 /**
@@ -175,11 +175,6 @@ export function restartStep(clock: RestartClock, i: number): RestartStep {
   }
 
   return { restart, localDelta };
-}
-
-/** `Color::operator*` (`core/math/color.h`) in `real_t` float. */
-export function multiplyColor(a: Rgba, b: Rgba): Rgba {
-  return { r: f(a.r * b.r), g: f(a.g * b.g), b: f(a.b * b.b), a: f(a.a * b.a) };
 }
 
 /** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_3d.cpp:1136-1138`), as floats. */

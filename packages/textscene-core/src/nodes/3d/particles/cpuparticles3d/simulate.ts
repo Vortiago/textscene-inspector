@@ -43,6 +43,7 @@ import {
   degToRad,
   degToRadf,
   lerpf,
+  multiplyColor,
   TAU,
   type Rgba,
 } from '../../../../godot/math/math.js';
@@ -79,13 +80,13 @@ import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import {
   DEFAULT_PREVIEW_SEED,
   firstDrawnStep,
-  multiplyColor,
   particleColor,
   restartStep,
   settle,
   type RestartClock,
 } from '../../../shared/cpuparticles/process';
 import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
+import { TRANSFORM_FLOATS } from '../../../../resources/meshes/multimesh/types';
 import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
 
 /** Floats per particle in the buffer: a 3×4 transform, a colour and the custom data (`cpu_particles_3d.cpp:1279-1312`). */
@@ -94,6 +95,19 @@ export const PARTICLE_FLOATS = 20;
 export const PARTICLE_COLOR_OFFSET = 12;
 /** Where a particle's custom data starts: angle, phase, animation offset and lifetime ratio. */
 export const PARTICLE_CUSTOM_OFFSET = 16;
+
+/** Each particle's 3×4 transform out of `buffer`, `TRANSFORM_FLOATS` apiece, as the multimesh box reads them. */
+export function particleTransforms(buffer: Float32Array): Float32Array {
+  const count = buffer.length / PARTICLE_FLOATS;
+  const transforms = new Float32Array(count * TRANSFORM_FLOATS);
+  for (let i = 0; i < count; i++) {
+    transforms.set(
+      buffer.subarray(i * PARTICLE_FLOATS, i * PARTICLE_FLOATS + TRANSFORM_FLOATS),
+      i * TRANSFORM_FLOATS
+    );
+  }
+  return transforms;
+}
 
 /** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
 type ParticleCurves = ReadonlyArray<Curve | null>;
@@ -110,11 +124,6 @@ export interface ParticleSim3DInput {
    * maps each particle back through its inverse.
    */
   emissionTransform: Transform3D;
-  /**
-   * The current Camera3D's global Z axis, which `draw_order = VIEW_DEPTH` sorts along. Null with no
-   * current camera, where Godot keeps the index order.
-   */
-  viewAxis: Vector3 | null;
 }
 
 /** Godot's private `Particle` struct, the fields the process loop reads. */
@@ -153,18 +162,23 @@ interface SimState {
   emissionXform: Transform3D;
 }
 
+/** An emitter after its settle, which {@link particleDataBuffer} writes out. */
+export interface SettledParticles {
+  input: ParticleSim3DInput;
+  /** Null for an emitter that is not emitting, which never settles. */
+  state: SimState | null;
+}
+
 /**
- * Evaluates the emitter to the buffer Godot writes after its settle, `PARTICLE_FLOATS` per particle
- * in draw order, relative to the emitter node. An inactive particle writes a zero transform. No
- * clock: a running emitter makes a golden unstable (ADR-0012), and the editor animates on wall
- * clock, at an instant no file or reference render can name.
+ * Runs the emitter to the pose Godot first draws after its enter-tree settle. No clock: a running
+ * emitter makes a golden unstable (ADR-0012), and the editor animates on wall clock, at an instant
+ * no file or reference render can name.
  */
-export function simulateFrozenPose3D(input: ParticleSim3DInput): Float32Array {
+export function settleParticles(input: ParticleSim3DInput): SettledParticles {
   const sim = input.props.simulation;
   // `_update_internal` bails before touching the buffer when the emitter is neither active nor
-  // emitting, and a scene file cannot make `active` true without `emitting`. The multimesh keeps
-  // the zeroed buffer `multimesh_allocate_data` gave it, every instance still drawn.
-  if (!sim.emitting) return new Float32Array(sim.amount * PARTICLE_FLOATS);
+  // emitting, and a scene file cannot make `active` true without `emitting`.
+  if (!sim.emitting) return { input, state: null };
 
   const state: SimState = {
     time: 0,
@@ -177,7 +191,7 @@ export function simulateFrozenPose3D(input: ParticleSim3DInput): Float32Array {
   };
   settle(sim, (frameTime) => particlesProcess(state, input, frameTime));
   particlesProcess(state, input, firstDrawnStep(sim));
-  return particleDataBuffer(state, input);
+  return { input, state };
 }
 
 function newParticle(): Particle {
@@ -638,11 +652,21 @@ function flattenZ(p: Particle): void {
   p.origin = { ...p.origin, z: 0 };
 }
 
-/** `_update_particle_data_buffer` (`cpu_particles_3d.cpp:1230-1318`). */
-function particleDataBuffer(state: SimState, input: ParticleSim3DInput): Float32Array {
+/**
+ * `_update_particle_data_buffer` (`cpu_particles_3d.cpp:1230-1318`): `PARTICLE_FLOATS` per particle
+ * in draw order, relative to the emitter node. An inactive particle writes a zero transform.
+ * `viewAxis` is the global Z axis of the camera the viewport renders through, which `VIEW_DEPTH`
+ * sorts along. Null for none, where Godot keeps the index order.
+ */
+export function particleDataBuffer(
+  { input, state }: SettledParticles,
+  viewAxis: Vector3 | null
+): Float32Array {
   const sim = input.props.simulation;
+  // The multimesh keeps the zeroed buffer `multimesh_allocate_data` gave it, every instance drawn.
+  if (!state) return new Float32Array(sim.amount * PARTICLE_FLOATS);
   const inverseEmission = inverseEmissionTransform(input.emissionTransform);
-  const order = drawOrder(state, input, inverseEmission);
+  const order = drawOrder(state, sim, inverseEmission, viewAxis);
   const buffer = new Float32Array(order.length * PARTICLE_FLOATS);
   order.forEach((index, slot) => {
     const p = state.particles[index]!;
@@ -669,17 +693,21 @@ function inverseEmissionTransform(global: Transform3D): Transform3D {
 }
 
 /** The particle indices in draw order (`:1239-1271`). */
-function drawOrder(state: SimState, input: ParticleSim3DInput, inverseEmission: Transform3D): number[] {
-  const sim = input.props.simulation;
+function drawOrder(
+  state: SimState,
+  sim: CPUParticles3DSimulation,
+  inverseEmission: Transform3D,
+  viewAxis: Vector3 | null
+): number[] {
   const { particles } = state;
   const order = particles.map((_, index) => index);
   if (sim.drawOrder === CPUParticles3DDrawOrder.LIFETIME) {
     sortArray(order, (a, b) => particles[a]!.time > particles[b]!.time);
-  } else if (sim.drawOrder === CPUParticles3DDrawOrder.VIEW_DEPTH && input.viewAxis) {
+  } else if (sim.drawOrder === CPUParticles3DDrawOrder.VIEW_DEPTH && viewAxis) {
     // Far to near. A local-coords emitter takes the axis through its whole inverse, origin and all.
     const axis = sim.localCoords
-      ? normalized(transformXform(inverseEmission, input.viewAxis))
-      : normalized(input.viewAxis);
+      ? normalized(transformXform(inverseEmission, viewAxis))
+      : normalized(viewAxis);
     const depth = (index: number) => dot(axis, particles[index]!.origin);
     sortArray(order, (a, b) => depth(a) < depth(b));
   }

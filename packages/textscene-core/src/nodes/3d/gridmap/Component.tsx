@@ -29,7 +29,7 @@ import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { pointsAtCells } from './pointCells';
+import { pointsAtPlaces } from '../../../r3f/meshes/pointsAtPlaces';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
@@ -227,7 +227,7 @@ function GridMapPart(props: GridMapPartProps) {
  */
 function PointsPart(props: GridMapPartProps) {
   const { part, matrices } = props;
-  const geometry = useMemo(() => pointsAtCells(part.geometry, matrices), [part.geometry, matrices]);
+  const geometry = useMemo(() => pointsAtPlaces(part.geometry, matrices), [part.geometry, matrices]);
   useDisposeOnRelease(geometry);
   return <PartSurfaces {...props} geometry={geometry} />;
 }

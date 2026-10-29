@@ -77,6 +77,7 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     pointSize: data.pointSize,
     billboardMode: data.billboardMode,
     billboardKeepScale: data.billboardKeepScale,
+    particlesAnim: data.particlesAnim,
     anisotropy: data.anisotropy,
     transmission: data.transmission,
     refractionThickness: data.refractionThickness,

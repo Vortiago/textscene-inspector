@@ -23,6 +23,10 @@ export interface CPUParticles3DProperties extends GeometryInstance3DProperties {
   mesh: string | undefined;
   /** Whether `mesh` holds a mesh, which the multimesh box measures (`mesh_storage.cpp:1832`). */
   hasMesh: boolean;
+  /** GeometryInstance3D's `material_override`, which draws every surface in place of its own material. */
+  materialOverride: string | undefined;
+  /** GeometryInstance3D's `material_overlay`, which draws every surface a second time. */
+  materialOverlay: string | undefined;
   /** The emission shape and its sizes, which the editor gizmo draws and the simulation emits from. */
   emission: ParticleEmission;
   simulation: CPUParticles3DSimulation;

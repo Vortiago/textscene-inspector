@@ -46,7 +46,8 @@ import {
   transform2DXform,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-import { type CPUParticles2DProperties, type ParticleParam } from './types';
+import type { CPUParticles2DProperties } from './types';
+import type { ParticleParam } from '../../shared/cpuparticles/params';
 import type { Rgba } from '../../../godot/math/math.js';
 import {
   normalizedVector2,

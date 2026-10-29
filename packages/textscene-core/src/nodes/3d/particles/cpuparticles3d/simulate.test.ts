@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
 import { parseCPUParticles3D } from './parser';
-import { PARTICLE_FLOATS, simulateFrozenPose3D, type ParticleSim3DInput } from './simulate';
+import { particleDataBuffer, PARTICLE_FLOATS, settleParticles, type ParticleSim3DInput } from './simulate';
 import {
   identityTransform3D,
   multiplyTransform3D,
@@ -70,7 +70,6 @@ function input(properties: Record<string, string>, overrides: Partial<ParticleSi
     colorRamp: null,
     colorInitialRamp: null,
     emissionTransform: identityTransform3D(),
-    viewAxis: null,
     ...overrides,
   } satisfies ParticleSim3DInput;
 }
@@ -81,21 +80,23 @@ function cameraAxis(parent: Transform3D, camera: string) {
   return { x: basis_x.z, y: basis_y.z, z: basis_z.z };
 }
 
-/** The oracle's emitter and camera are both children of the node that holds `parent`. */
-function oracleInput({ properties, parent, camera, curves, ramps }: OracleCase) {
+/** The buffer the oracle's emitter writes. Its emitter and camera are both children of `parent`. */
+function oracleBuffer({ properties, parent, camera, curves, ramps }: OracleCase): Float32Array {
   const emissionTransform = parent ? parseTransform3D(parent) : identityTransform3D();
-  return input(properties, {
-    curves: PARAM_SLOTS.map(({ prefix }) => curveNamed(curves, `${prefix}_curve`)),
-    scaleCurves: {
-      x: curveNamed(curves, 'scale_curve_x'),
-      y: curveNamed(curves, 'scale_curve_y'),
-      z: curveNamed(curves, 'scale_curve_z'),
-    },
-    colorRamp: gradientOf(ramps?.color_ramp),
-    colorInitialRamp: gradientOf(ramps?.color_initial_ramp),
-    emissionTransform,
-    viewAxis: camera ? cameraAxis(emissionTransform, camera) : null,
-  });
+  const settled = settleParticles(
+    input(properties, {
+      curves: PARAM_SLOTS.map(({ prefix }) => curveNamed(curves, `${prefix}_curve`)),
+      scaleCurves: {
+        x: curveNamed(curves, 'scale_curve_x'),
+        y: curveNamed(curves, 'scale_curve_y'),
+        z: curveNamed(curves, 'scale_curve_z'),
+      },
+      colorRamp: gradientOf(ramps?.color_ramp),
+      colorInitialRamp: gradientOf(ramps?.color_initial_ramp),
+      emissionTransform,
+    })
+  );
+  return particleDataBuffer(settled, camera ? cameraAxis(emissionTransform, camera) : null);
 }
 
 /**
@@ -132,9 +133,9 @@ const ROW_OF_FOUR = {
   mesh: 'SubResource("Box")',
 };
 
-describe('simulateFrozenPose3D', () => {
+describe('particleDataBuffer after settleParticles', () => {
   it('writes the buffer Godot writes for a point emitter (happy path)', () => {
-    expect(rows(simulateFrozenPose3D(input(ROW_OF_FOUR)))).toEqual([
+    expect(rows(particleDataBuffer(settleParticles(input(ROW_OF_FOUR)), null))).toEqual([
       [1, 0, 0, 1.4999998807907104, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, 0, 1, 0, 0.7333333492279053, 0, 1],
       [1, 0, 0, 1.0000003576278687, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, 0, 1, 0, 0.4833333194255829, 0, 1],
       [1, 0, 0, 0.5, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, 0, 1, 0, 0.23333333432674408, 0, 1],
@@ -143,7 +144,7 @@ describe('simulateFrozenPose3D', () => {
   });
 
   it.each(Object.entries(ORACLE_CASES))('writes the buffer Godot writes for the %s case', (_, oracle) => {
-    const buffer = simulateFrozenPose3D(oracleInput(oracle));
+    const buffer = oracleBuffer(oracle);
     const expected = new Float32Array(oracle.buffer);
     if (oracle.floatSteps === undefined) {
       expect(rows(buffer)).toEqual(rows(expected));

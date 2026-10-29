@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from './shadowCasting';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import { withPointDraw } from './materials/godotPoint';
+import { particleDrawOf, withParticleDraw } from './materials/godotParticles';
 import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { instanceLayers } from './instanceLayers/instanceLayersChunk';
@@ -254,6 +255,51 @@ describe('surfaceDrawHooks — point shadow', () => {
       false,
       expect.stringContaining('gl_PointSize = godotPointSize;'),
     ]);
+  });
+});
+
+describe('surfaceDrawHooks — particle instances', () => {
+  /** An InstancedMesh of one ENABLED billboard surface, which casts, typed as the mesh the helpers take. */
+  function particleSurface(): THREE.Mesh {
+    const bag = { materialClass: 'standard' as const, props: {} };
+    const draw = particleDrawOf(null);
+    const userData = withParticleDraw(bag, { ...draw, billboard: { mode: 1, keepScale: false } }).props
+      .userData;
+    const particles = new THREE.InstancedMesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshStandardMaterial({ userData }),
+      2
+    );
+    applyShadowCasting(particles, shadowCastingEffects(ShadowCastingSetting.ON));
+    return particles;
+  }
+
+  // Godot's shadow pass runs the billboard of the colour pass on each instance (`material.cpp:1309`).
+  it("casts the instances' shadow with its own depth material, which billboards them", () => {
+    const { cast, castsOwn, threeDraws } = shadowDraw(particleSurface());
+    const shader = { ...THREE.ShaderLib.depth, uniforms: {} } as unknown as ProgramShader;
+    cast.onBeforeCompile.call(cast, shader as never, undefined as never);
+    expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
+      true,
+      false,
+      expect.stringContaining('#define instanceMatrix godotParticleInstance'),
+    ]);
+  });
+
+  // `MAIN_CAM_INV_VIEW_MATRIX` is the main camera's on a shadow pass too (`material.cpp:1263-1264`).
+  it('aims the billboard at the main camera, not the light', () => {
+    const shadow = drawShadowGroup(particleSurface(), camera, shadowCamera, 0, (s) => s.castMaterial!);
+    const shader = { ...THREE.ShaderLib.depth, uniforms: {} } as unknown as ProgramShader;
+    shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
+    const aimed = shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4;
+    expect([aimed.equals(camera.matrixWorld), aimed.equals(shadowCamera.matrixWorld)]).toEqual([true, false]);
+  });
+
+  it('keeps the instanced pose, which the program billboards', () => {
+    const mesh = particleSurface();
+    expect(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld.clone()).equals(mesh.matrixWorld)).toBe(
+      true
+    );
   });
 });
 

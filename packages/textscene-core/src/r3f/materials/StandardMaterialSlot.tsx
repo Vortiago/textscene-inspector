@@ -11,6 +11,7 @@ import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
 import { bindHeightmap } from './godotParallax';
 import { withPointDraw, type PointDraw } from './godotPoint';
+import { withParticleDraw, type ParticleDraw } from './godotParticles';
 import type { FadeVariants } from './fadeVariants';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
@@ -21,19 +22,35 @@ interface StandardMaterialSlotProps {
   bags: FadeVariants<StandardMaterialBag>;
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
-  /** How the material draws the points of a surface that draws `THREE.Points`. */
-  pointDraw?: PointDraw;
+  draws?: SurfaceDraws;
 }
 
-export function StandardMaterialSlot({ bags, attach, pointDraw }: StandardMaterialSlotProps) {
+/** How a material draws a surface that is not one plain mesh. */
+export interface SurfaceDraws {
+  /** How it draws the points of a surface that draws `THREE.Points`. */
+  pointDraw?: PointDraw;
+  /** How it draws a particle emitter's instances. */
+  particleDraw?: ParticleDraw;
+}
+
+export function StandardMaterialSlot({ bags, attach, draws = {} }: StandardMaterialSlotProps) {
   const lightmap = useLightmapAssignment();
   return (
     <FadedMaterials attach={attach}>
       {(pass, mount) =>
-        materialBagElement(withPointDraw(bags[pass], pointDraw), mount, pass === 'unfaded' ? lightmap : null)
+        materialBagElement(drawnBag(bags[pass], draws), mount, pass === 'unfaded' ? lightmap : null)
       }
     </FadedMaterials>
   );
+}
+
+/** `bag` as a material for the surface `draws` describes. */
+export function drawnBag(
+  bag: StandardMaterialBag,
+  { pointDraw, particleDraw }: SurfaceDraws
+): StandardMaterialBag {
+  const drawn = withPointDraw(bag, pointDraw);
+  return particleDraw ? withParticleDraw(drawn, particleDraw) : drawn;
 }
 
 /**

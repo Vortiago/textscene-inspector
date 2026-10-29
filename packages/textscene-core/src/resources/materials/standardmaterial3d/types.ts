@@ -209,6 +209,8 @@ export interface StandardMaterial3DData {
    * billboarding (`material.cpp:1274-1281`). It rides the built material's `userData`.
    */
   billboardKeepScale: boolean;
+  /** `particles_anim_*`: the flipbook a `BILLBOARD_PARTICLES` shader cuts each particle's UV to. */
+  particlesAnim: ParticlesAnim;
   /**
    * `anisotropy` (−1..1), gated on `anisotropy_enabled`. The sign picks the axis the highlight
    * stretches along: the tangent when positive, the bitangent when negative.
@@ -294,9 +296,20 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   pointSize: number;
   billboardMode: number;
   billboardKeepScale: boolean;
+  particlesAnim: ParticlesAnim;
   anisotropy: number;
   transmission: number;
   refractionThickness: number;
   /** Slot → raw reference string, carried through for the loader's resolution. */
   textureSlots: TextureSlotReferences;
+}
+
+/**
+ * A particle flipbook: `particles_anim_h_frames` by `_v_frames` cells, which the setters store
+ * unchecked, and whether a particle's frame wraps or holds at the last cell.
+ */
+export interface ParticlesAnim {
+  hFrames: number;
+  vFrames: number;
+  loop: boolean;
 }

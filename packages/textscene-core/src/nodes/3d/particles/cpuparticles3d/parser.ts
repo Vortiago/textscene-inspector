@@ -28,12 +28,14 @@ export function parseCPUParticles3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CPUParticles3DProperties {
-  const mesh = holdsResource(properties.mesh) ? properties.mesh : undefined;
+  const mesh = heldReference(properties.mesh);
   return {
     ...parseGeometryInstance3D(heading, properties),
     visibilityAabb: parseNonEmptyAabb(properties.visibility_aabb, 'visibility_aabb'),
     mesh,
     hasMesh: mesh !== undefined,
+    materialOverride: heldReference(properties.material_override),
+    materialOverlay: heldReference(properties.material_overlay),
     emission: readParticleEmission(properties),
     simulation: parseSimulation(properties, heading.attributes.name ?? 'CPUParticles3D'),
   };

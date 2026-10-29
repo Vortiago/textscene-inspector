@@ -9,8 +9,9 @@ import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { TscnInternalResource } from '../../parser/types';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
-import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
-import { pointDrawOf, withPointDraw } from './godotPoint';
+import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
+import { pointDrawOf } from './godotPoint';
+import { particleDrawOf } from './godotParticles';
 import type { MaterialSource } from './materialSource';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
@@ -23,6 +24,8 @@ interface SurfaceMaterialSlotProps {
   triplanarMesh?: TscnInternalResource;
   /** The surface draws `THREE.Points`, so its material also sizes each point. */
   drawsPoints?: boolean;
+  /** The surface draws a particle emitter's instances, which its material colours and billboards. */
+  drawsParticles?: boolean;
 }
 
 /**
@@ -37,6 +40,7 @@ export function SurfaceMaterialSlot({
   attach,
   triplanarMesh,
   drawsPoints,
+  drawsParticles,
 }: SurfaceMaterialSlotProps) {
   const { scalars, bags } = useSurfaceMaterial(source, triplanarMesh);
   const pixelRatio = useThree((state) => state.viewport.dpr);
@@ -44,6 +48,11 @@ export function SurfaceMaterialSlot({
     () => (drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined),
     [drawsPoints, scalars, pixelRatio]
   );
-  if (!bags) return materialBagElement(withPointDraw(MISSING_TEXTURE_MATERIAL, pointDraw), attach, null);
-  return <StandardMaterialSlot bags={bags} attach={attach} pointDraw={pointDraw} />;
+  const particleDraw = useMemo(
+    () => (drawsParticles ? particleDrawOf(scalars) : undefined),
+    [drawsParticles, scalars]
+  );
+  const draws = { pointDraw, particleDraw };
+  if (!bags) return materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
+  return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />;
 }
