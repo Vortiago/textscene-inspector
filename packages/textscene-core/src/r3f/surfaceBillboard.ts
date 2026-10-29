@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
 import type { ProgramInjection } from './materialProgramInputs';
-import { editedChunk, editedProgram } from './shaderPatch/chunkPatch';
+import { editedChunk, rewrittenShader } from './shaderPatch/chunkPatch';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
@@ -83,10 +83,13 @@ function fixedYBasis(camera: THREE.Matrix4): boolean {
   return true;
 }
 
+const DEFAULT_NORMAL_INCLUDE = /#include <defaultnormal_vertex>/g;
+
 /**
  * Godot's billboard turns normals by `mat3(MODELVIEW_MATRIX)` (`material.cpp:1284,1307,1338`), not
  * by its inverse transpose, so a kept non-uniform scale stretches them as it stretches the surface.
- * three writes `normalMatrix` after the draw hook (`WebGLRenderer.js:2161`), so the program reads it.
+ * three writes `normalMatrix` after the draw hook (`WebGLRenderer.js:2161`), so the program reads
+ * the hook's `modelViewMatrix`. Every include turns so: the unshaded parallax adds a second one.
  */
 export const GODOT_BILLBOARD_NORMAL: ProgramInjection = {
   cacheKey: 'godot-billboard-normal',
@@ -96,10 +99,12 @@ export const GODOT_BILLBOARD_NORMAL: ProgramInjection = {
       godot: 'transformedNormal = mat3( modelViewMatrix ) * transformedNormal;',
     };
     const chunk = editedChunk('defaultnormal_vertex', turn);
-    editedProgram(
-      shader,
-      { vertex: [{ three: '#include <defaultnormal_vertex>', godot: chunk }] },
-      'billboard normal'
-    );
+    const turned = rewrittenShader(shader.vertexShader, DEFAULT_NORMAL_INCLUDE, () => chunk);
+    if (turned === shader.vertexShader) {
+      throw new Error(
+        `expected the vertex shader of the billboard normal to hold "#include <defaultnormal_vertex>" once or more, got:\n${turned}`
+      );
+    }
+    shader.vertexShader = turned;
   },
 };

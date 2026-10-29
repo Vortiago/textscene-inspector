@@ -252,7 +252,7 @@ function triplanarRecord(scalars: StandardMaterial3DScalars): TriplanarRecord | 
   );
   return {
     ...triplanar,
-    isBillboard: surfaceBillboard(scalars) !== NO_BILLBOARD,
+    isBillboard: billboards(scalars),
     uv1Maps: triplanar.uv1 ? mapsOf(uv1Slots) : [],
     uv2Maps: triplanar.uv2 ? mapsOf(scalars.uv2Slots) : [],
   };
@@ -280,18 +280,23 @@ const BILLBOARDING_MODES: ReadonlySet<number> = new Set([
   BillboardMode.BILLBOARD_PARTICLES,
 ]);
 
+/** Whether `scalars` describe a surface that billboards. */
+function billboards(scalars: StandardMaterial3DScalars | null): scalars is StandardMaterial3DScalars {
+  return scalars !== null && BILLBOARDING_MODES.has(scalars.billboardMode);
+}
+
 /**
  * The billboard `scalars` describe, null being Godot's default surface. Built once per
  * bag, so the draw hooks read it every draw group without allocating.
  */
 export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): SurfaceBillboard {
-  if (!scalars || !BILLBOARDING_MODES.has(scalars.billboardMode)) return NO_BILLBOARD;
+  if (!billboards(scalars)) return NO_BILLBOARD;
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
 }
 
-/** Godot's billboard normal turn for a surface that billboards, after any patch that inlines `defaultnormal_vertex`. */
+/** Godot's billboard normal turn for a surface that billboards, after any patch that adds a `defaultnormal_vertex`. */
 function billboardNormalInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
-  return surfaceBillboard(scalars) === NO_BILLBOARD ? undefined : GODOT_BILLBOARD_NORMAL;
+  return billboards(scalars) ? GODOT_BILLBOARD_NORMAL : undefined;
 }
 
 /** The billboard a material was derived with. */

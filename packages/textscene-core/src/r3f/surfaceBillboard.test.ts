@@ -187,6 +187,14 @@ describe('the billboard normal matrix', () => {
     }
   });
 
+  it('turns the normals the unshaded parallax adds too, as its program includes the chunk twice', () => {
+    const vertex = patchedVertex(
+      standardMaterial({ shading_mode: '0', heightmap_enabled: 'true', billboard_mode: '1' })
+    );
+
+    expect(vertex).not.toContain('normalMatrix * transformedNormal');
+  });
+
   it("keeps three's normal matrix for a surface that does not billboard (edge case)", () => {
     expect(patchedVertex(standardMaterial({ albedo_color: 'Color(1, 0, 0, 1)' }))).not.toContain(
       TURNS_BY_MODEL_VIEW
