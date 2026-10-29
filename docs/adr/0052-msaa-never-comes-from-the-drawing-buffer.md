@@ -29,9 +29,9 @@ own texture, as three allocates it. The MSAA paths are these:
   sRGB-encoded values, so items blend as they blend on the drawing buffer
   (`Canvas2DStage/canvasFrame.ts`). The same target draws the canvas with `msaa_2d` off, with one
   sample (ADR-0057).
-- A 3D root with no valid Environment (ADR-0025) mounts `NoEnvironmentLayer`: the project's clear
-  colour (`renderer_viewport.cpp:371`), and the compositor with Godot's default LINEAR curve
-  (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
+- A 3D root with no valid Environment (ADR-0025) mounts `NoEnvironmentLayer`, the project's clear
+  colour (`renderer_viewport.cpp:371`), and the root's compositor draws it with Godot's default
+  LINEAR curve (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
 - A SubViewport's `msaa_3d` multisamples the linear HDR buffer its 3D pass draws into, which
   resolves before its own tonemap pass writes the target (`r3f/environment/offscreenToneMap.ts`).
   Its `msaa_2d` multisamples the frame its canvas draws through. Godot takes `msaa_3d` for the 3D

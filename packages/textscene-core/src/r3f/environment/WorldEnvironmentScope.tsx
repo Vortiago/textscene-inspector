@@ -10,6 +10,8 @@ import * as THREE from 'three';
 import { createPortal } from '@react-three/fiber';
 import { EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer';
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
+import { Compositor } from './Compositor';
+import { useDraws3D } from './draws3D';
 import { PreviewEnvironment } from '../preview/PreviewEnvironment';
 import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
@@ -30,12 +32,12 @@ import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
 import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 
-/** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 /** A resolved Environment: what its layer draws, and the pools its own references, such as `glow_map`, resolve in. */
 export interface ResolvedEnvironment extends EnvironmentLayerProps {
   resources: SceneResources;
 }
 
+/** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: ResolvedEnvironment }>;
 
 const environments = createWorldGroup<{ environment: ResolvedEnvironment }>();
@@ -148,11 +150,13 @@ function SharedWorldToneMap({ children }: { children: ReactNode }) {
 /**
  * The root viewport's Environment, which falls back to the editor preview environment, and the
  * editor preview sun after the scene, so the scene's own nodes come first. One yield serves both,
- * since each walks the whole live tree.
+ * since each walks the whole live tree. One compositor tonemaps every 3D frame of the canvas with
+ * whichever Environment applies, so a switch or a load keeps its buffer (ADR-0061).
  */
 function RootEnvironment({ children }: { children: ReactNode }) {
   const authored = useViewEnvironment();
   const preview = usePreviewYield();
+  const draws3D = useDraws3D();
   // An authored Environment proves a WorldEnvironment node or a camera's, and takes the preview away.
   const showsPreview = !authored && preview.environment;
   const resolved = resolvedEnvironment(authored);
@@ -160,6 +164,7 @@ function RootEnvironment({ children }: { children: ReactNode }) {
   const resources = resolved?.resources ?? NO_RESOURCES;
   return (
     <WorldToneMapProvider settings={applied} resources={resources}>
+      {draws3D && <Compositor />}
       <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
       {children}
       {preview.sun && <PreviewSun />}

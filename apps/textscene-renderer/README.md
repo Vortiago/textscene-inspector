@@ -17,8 +17,9 @@ npm install @textscene/renderer react react-dom three @react-three/fiber @react-
 ```
 
 The renderer takes the text of a scene and parses it itself. The peer dependencies are
-`react`, `react-dom`, `three`, `@react-three/fiber`, `@react-three/drei` and `postprocessing`. `package.json` names the supported versions. The renderer patches three.js
-shaders, so a `three` version outside that range can draw wrongly.
+`react`, `react-dom`, `three`, `@react-three/fiber`, `@react-three/drei` and `postprocessing`.
+`package.json` names the supported versions. The renderer patches three.js shaders, so a `three`
+version outside that range can draw wrongly.
 
 ## Use
 

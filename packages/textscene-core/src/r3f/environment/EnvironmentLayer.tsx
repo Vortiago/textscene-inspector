@@ -1,7 +1,8 @@
 /**
  * Applies one Godot `Environment` to its world, authored or the editor preview's (ADR-0025):
- * background, sky, flat ambient, tonemapping, glow, colour adjustments, depth fog and volumetric fog.
- * Each restores what it found on unmount, because the renderer and scene outlive an environment.
+ * background, sky, flat ambient, depth fog and volumetric fog. Each restores what it found on
+ * unmount, because the renderer and scene outlive an environment. The tonemap, the glow and the
+ * colour adjustments run in each viewport's tonemap pass (`toneMapPass.ts`).
  */
 
 import { useEffect } from 'react';
@@ -13,11 +14,9 @@ import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useDraws3D } from './draws3D';
-import { useWorldKind } from './WorldKindContext';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
-import { Compositor } from './Compositor';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 import { registerExposureStage } from '../exposure/sceneExposure';
@@ -41,9 +40,6 @@ export function EnvironmentLayer({ settings, sky, skyResources }: EnvironmentLay
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
   const draws3D = useDraws3D();
-  // Only the root world tonemaps the canvas. A portal store shares the root's internal state, so its
-  // compositor would draw the portal scene onto the canvas, not into the target.
-  const tonesCanvas = useWorldKind() === 'root';
   const { showFog } = useViewportMode();
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && showFog && (!!settings.fog || !!settings.volumetricFog);
@@ -51,7 +47,6 @@ export function EnvironmentLayer({ settings, sky, skyResources }: EnvironmentLay
 
   return (
     <>
-      {tonesCanvas && draws3D && <Compositor />}
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
       {sky && (showsSky || skyAmbient) && (
         <SkyLayer

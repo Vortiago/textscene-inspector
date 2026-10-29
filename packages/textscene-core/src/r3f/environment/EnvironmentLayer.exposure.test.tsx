@@ -1,7 +1,7 @@
 /**
  * Godot scales a colour background by the exposure in sRGB, before it converts the colour to linear
  * (`render_forward_clustered.cpp:1988-2011`). It scales no flat ambient (`render_scene_data_rd.cpp:174-190`).
- * Markers stand in for the compositor and the fog, whose own tests draw them.
+ * A marker stands in for the fog, whose own tests draw it.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -17,7 +17,6 @@ import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
 
-vi.mock('./Compositor', () => ({ Compositor: () => <group name="Compositor" /> }));
 vi.mock('../fog/FogLayer', () => ({ FogLayer: () => <group name="FogLayer" /> }));
 
 function Exposure({ multiplier }: { multiplier: number }) {
