@@ -106,7 +106,7 @@ describe('pointDrawOf', () => {
   });
 
   it('carries the canvas pixel ratio beside the size', () => {
-    expect(pointDrawOf(null, 2).pixelRatio).toBe(2);
+    expect(pointDrawOf(null, 2, 'mesh').pixelRatio).toBe(2);
   });
 });
 
