@@ -83,6 +83,9 @@ import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry'
 import type { SkippedAncestors, SkippedMaterial, SolveNode, ThemedIconRef } from './solveTree';
 import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
 import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
+import { liveNodePatches } from '../../liveNodePatches';
+import { liveScenePassResults } from '../../liveScenePass';
+import { patchedNode } from '../../nodePatch';
 import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
@@ -739,12 +742,18 @@ function buildForest(
     const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
 
+    // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
+    // The passes run for the first such Node2D only, so a scene of Controls alone never runs them.
+    const placed =
+      !isControl && isCanvasItem(collapsed)
+        ? patchedNode(collapsed, liveScenePassResults(liveNodePatches, tree).get(path))
+        : collapsed;
     // A real Control's descendants start a fresh accumulation. A skipped node
     // folds its own CanvasItem transform into what they inherit.
     const childSkippedAncestors = isControl
       ? null
       : nextSkippedAncestors(
-          collapsed,
+          placed,
           skippedAncestors,
           skippedMaterialOf(collapsed, ownScope, skippedAncestors, canvasChainBroken)
         );

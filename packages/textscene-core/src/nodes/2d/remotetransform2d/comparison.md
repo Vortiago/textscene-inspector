@@ -10,8 +10,8 @@ renders_as: nothing itself, it copies its transform onto its remote_path target
 # RemoteTransform2D
 
 RemoteTransform2D draws nothing and copies its transform onto the node `remote_path`
-names. The previewer applies that once on load, the static enter-tree effect, so the
-target jumps to the relay's position.
+names. The previewer applies that over the live scene tree, so the target jumps to the
+relay's position, also across an instanced scene boundary.
 
 ## Linting
 
@@ -43,7 +43,5 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 
 - **Approximated** `use_global_coordinates = false` is a no-op on a static load, so only
   the default global drive repositions the target.
-- **Approximated** A `remote_path` crossing into or out of an instanced sub-scene is
-  left unresolved.
 - **Approximated** Relay chains resolve in document order, and a feedback loop is not
   iterated to a fixed point.
