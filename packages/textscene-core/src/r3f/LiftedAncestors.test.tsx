@@ -32,7 +32,7 @@ async function inheritedBy(
   const { Probe, resolved } = samplerProbe();
   await ReactThreeTestRenderer.create(
     <TextureSampler2DContext.Provider value={ambient}>
-      <LiftedAncestors liftedPast={liftedPast}>
+      <LiftedAncestors liftedPast={liftedPast} basePath="Root">
         <Probe />
       </LiftedAncestors>
     </TextureSampler2DContext.Provider>

@@ -59,12 +59,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   // The sprite's material samples `texture_albedo` as `source_color` (`material.cpp:969`), so a
   // ViewportTexture gives its decoding view.
-  const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
-    properties.texture,
-    externalResources,
-    internalResources,
-    'decoding'
-  );
+  const {
+    texture: sourceTexture,
+    size: reportedSize,
+    missing: textureMissing,
+  } = useTexture2D(properties.texture, externalResources, internalResources, 'decoding');
 
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
   // corners, so only an overrunning window tiles.
@@ -110,10 +109,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
   const rect = useMemo(() => {
-    const px = frameSizePx(sourceTexture ?? undefined, properties);
+    const px = frameSizePx(reportedSize, properties);
     const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
     return spriteQuadRect(size, properties);
-  }, [sourceTexture, properties]);
+  }, [reportedSize, properties]);
   // The frame decides the box, so a texture still loading leaves the sprite unplaced.
   const placement = useMemo(
     () =>

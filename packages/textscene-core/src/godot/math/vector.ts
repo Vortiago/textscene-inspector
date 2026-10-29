@@ -1,7 +1,7 @@
 /** Godot's vector types as plain components, for engine facts that import nothing. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { lerpf } from './math.js';
+import { cubicInterpolateInTimef, lerpf, type KeyTimes } from './math.js';
 import { storedReal as f } from './real.js';
 
 /** A point, a size or a direction: two components, as Godot's `Vector2` and `Vector2i` hold them. */
@@ -92,6 +92,11 @@ export function vector3Sub(a: Vector3, b: Vector3): Vector3 {
   return { x: f(a.x - b.x), y: f(a.y - b.y), z: f(a.z - b.z) };
 }
 
+/** `Vector3::operator*` by a scalar (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Scaled({ x, y, z }: Vector3, factor: number): Vector3 {
+  return { x: f(x * factor), y: f(y * factor), z: f(z * factor) };
+}
+
 /** `Vector3::operator*` by a vector (`core/math/vector3.h`) in `real_t` float. */
 export function vector3Mul(a: Vector3, b: Vector3): Vector3 {
   return { x: f(a.x * b.x), y: f(a.y * b.y), z: f(a.z * b.z) };
@@ -113,4 +118,33 @@ export function vector3Lerp(from: Vector3, to: Vector3, weight: number): Vector3
     y: lerpf(from.y, to.y, weight),
     z: lerpf(from.z, to.z, weight),
   };
+}
+
+/**
+ * `Vector3::cubic_interpolate_in_time` (`core/math/vector3.h:314-320`): each component through
+ * `cubicInterpolateInTimef`, from `from` to `to` with `pre` and `post` as the keys around them.
+ * `toT`, `preT` and `postT` are the times of `to`, `pre` and `post` counted from `from`.
+ *
+ * @canonical A Vector3 on a cubic through keys at uneven times
+ */
+export function vector3CubicInterpolateInTime(
+  from: Vector3,
+  to: Vector3,
+  pre: Vector3,
+  post: Vector3,
+  weight: number,
+  { toT, preT, postT }: KeyTimes
+): Vector3 {
+  const axis = (component: 'x' | 'y' | 'z') =>
+    cubicInterpolateInTimef(
+      from[component],
+      to[component],
+      pre[component],
+      post[component],
+      weight,
+      toT,
+      preT,
+      postT
+    );
+  return { x: axis('x'), y: axis('y'), z: axis('z') };
 }

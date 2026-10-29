@@ -1,0 +1,57 @@
+; One variable: the wrapper between a TextureRect at its minimum size and a set-up ViewportTexture.
+; A direct ViewportTexture lays the rect out at the 64 by 32 target's size. An AtlasTexture of the
+; whole sheet and a CanvasTexture forward no change from it, so each rect keeps the size 0 it read
+; before set up, and Godot 4.6.3 draws neither.
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_whole"]
+resource_local_to_scene = true
+atlas = SubResource("ViewportTexture_1")
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_1"]
+resource_local_to_scene = true
+diffuse_texture = SubResource("ViewportTexture_1")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(64, 32)
+render_target_update_mode = 4
+
+[node name="Red" type="ColorRect" parent="SubViewport"]
+offset_right = 32.0
+offset_bottom = 32.0
+color = Color(1, 0, 0, 1)
+
+[node name="Blue" type="ColorRect" parent="SubViewport"]
+offset_left = 32.0
+offset_right = 64.0
+offset_bottom = 32.0
+color = Color(0, 0, 1, 1)
+
+[node name="Direct" type="TextureRect" parent="."]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 100.0
+offset_bottom = 100.0
+texture = SubResource("ViewportTexture_1")
+
+[node name="WholeAtlas" type="TextureRect" parent="."]
+offset_left = 300.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 100.0
+texture = SubResource("AtlasTexture_whole")
+
+[node name="Canvas" type="TextureRect" parent="."]
+offset_left = 500.0
+offset_top = 100.0
+offset_right = 500.0
+offset_bottom = 100.0
+texture = SubResource("CanvasTexture_1")

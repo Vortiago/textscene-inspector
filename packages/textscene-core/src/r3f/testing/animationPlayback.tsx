@@ -7,6 +7,8 @@ import { afterEach } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DispatchedScene } from './DispatchedScene';
+import { useOptionalSelection, type SelectionContextValue } from '../contexts/SelectionContext';
+import { AnimatedBonePosesProvider } from '../contexts/AnimatedBonePosesContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -27,8 +29,10 @@ afterEach(async () => {
 });
 
 let transport: AnimationTransport;
+let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
+  selection = useOptionalSelection();
   return null;
 }
 
@@ -62,13 +66,20 @@ export async function mountWithPlayer(tscn: string, playerPath: string) {
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
     <AnimationTransportProvider>
-      <Capture />
-      <DispatchedScene
-        sceneGraph={createSceneGraphFromTscnScene(parsed)}
-        loader={fake.loader}
-        workspace="3d"
-        selectedPath={playerPath}
-      />
+      <AnimatedBonePosesProvider>
+        <DispatchedScene
+          sceneGraph={createSceneGraphFromTscnScene(parsed)}
+          loader={fake.loader}
+          workspace="3d"
+          selectedPath={playerPath}
+          around={(nodes) => (
+            <>
+              <Capture />
+              {nodes}
+            </>
+          )}
+        />
+      </AnimatedBonePosesProvider>
     </AnimationTransportProvider>
   );
   mounted.push(renderer);
@@ -87,6 +98,15 @@ export function sceneRoot(renderer: Awaited<ReturnType<typeof mountWithPlayer>>[
 
 export async function play(): Promise<void> {
   await ReactThreeTestRenderer.act(async () => transport.play());
+}
+
+/** Selects the node at `path`, or none. */
+export async function select(path: string | null): Promise<void> {
+  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+}
+
+export async function stop(): Promise<void> {
+  await ReactThreeTestRenderer.act(async () => transport.stop());
 }
 
 /**

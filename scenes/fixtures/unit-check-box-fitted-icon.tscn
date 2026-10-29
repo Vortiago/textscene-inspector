@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3]
+
+; The one variable: a CheckBox icon that `icon_max_width` fits to a fractional height. A 20x15 icon
+; under a 10 px cap draws at 10x7.5, unrounded (`check_box.cpp:61`, `:139-141`).
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Icon_fitted"]
+gradient = SubResource("Gradient_icon")
+width = 20
+height = 15
+fill_to = Vector2(0, 1)
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Fitted" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 140.0
+offset_bottom = 68.0
+theme_override_constants/icon_max_width = 10
+theme_override_icons/unchecked = SubResource("Icon_fitted")
+text = "Fitted"

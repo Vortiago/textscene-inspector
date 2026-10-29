@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { copyTexels } from '../../texelCopy';
+import { copyTexels, type TexelPlacement, type TexelTransfer } from '../../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 
@@ -18,16 +18,12 @@ import { beginStep, endStep } from '../../frameProfile/frameProfile';
 function copyToTarget(
   gl: THREE.WebGLRenderer,
   frame: CanvasFrame,
-  target: THREE.WebGLRenderTarget | null
+  target: THREE.WebGLRenderTarget | null,
+  transfer: TexelTransfer
 ): void {
   beginStep(gl, 'Canvas copy');
   try {
-    copyTexels(gl, frame.texture, target, {
-      offsetX: 0,
-      offsetY: frame.height - 1,
-      rowStep: -1,
-      bounds: [0, 0, frame.width, frame.height],
-    });
+    copyTexels(gl, frame.texture, target, frame.rowsReversed(), transfer);
   } finally {
     endStep(gl, 'Canvas copy');
   }
@@ -41,6 +37,7 @@ function copyToTarget(
  */
 class CanvasFrame extends THREE.WebGLRenderTarget {
   private readonly outputSize = new THREE.Vector2();
+  private placement: TexelPlacement = reversedRows(1, 1);
 
   constructor() {
     super(1, 1, { depthBuffer: true, stencilBuffer: false });
@@ -56,9 +53,15 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
   /**
    * Draws `scene` into the frame and copies the result, rows reversed, to the target bound before.
    * The frame clears itself where the render will not: a render clears only while the renderer's
-   * `autoClear` is on, which the tone-map composer turns off.
+   * `autoClear` is on, which the tone-map composer turns off. A target of SRGB8_ALPHA8 storage takes
+   * the `decode` transfer, so its hardware encode writes the frame's bytes back unchanged.
    */
-  render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
+  render(
+    gl: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    transfer: TexelTransfer = 'none'
+  ): void {
     const previous = gl.getRenderTarget();
     this.sizeLike(gl, previous);
     try {
@@ -69,7 +72,7 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
       gl.setRenderTarget(previous);
       throw error;
     }
-    copyToTarget(gl, this, previous);
+    copyToTarget(gl, this, previous, transfer);
   }
 
   /** The copy neither scales nor filters, so the frame is as large as the output it copies to. */
@@ -80,6 +83,18 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
       this.setSize(this.outputSize.x, this.outputSize.y);
     }
   }
+
+  /** Each row of the frame from its mirror row, made again only when the frame changes size. */
+  rowsReversed(): TexelPlacement {
+    const [, , width, height] = this.placement.bounds;
+    if (width !== this.width || height !== this.height)
+      this.placement = reversedRows(this.width, this.height);
+    return this.placement;
+  }
+}
+
+function reversedRows(width: number, height: number): TexelPlacement {
+  return { offsetX: 0, offsetY: height - 1, rowStep: -1, bounds: [0, 0, width, height] };
 }
 
 /** The factory `useMultisampledTarget` takes for a 2D canvas frame. */

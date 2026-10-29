@@ -23,6 +23,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'text-mesh-cff', file: 'unit-text-mesh-cff.tscn' },
   // The same scene with a FontVariation embolden on the font, which grows each outline before it is extruded.
   { name: 'text-mesh-embolden', file: 'unit-text-mesh-embolden.tscn' },
+  // The same font at an embolden where Godot fails to triangulate the a and draws no face for it.
+  { name: 'text-mesh-triangulation-failure', file: 'unit-text-mesh-triangulation-failure.tscn' },
   // The same scene under a variable `.woff2`, whose transformed `glyf` the reader rebuilds.
   { name: 'text-mesh-woff2', file: 'unit-text-mesh-woff2.tscn' },
   // The same scene with no `font`, which draws Godot's default font, and again in a project whose
@@ -83,6 +85,8 @@ export const PRIMITIVE_SCENES = [
   // with the curve tessellation, and it covers both NodePath shapes the corpus
   // writes: a sibling and a child.
   { name: 'csg-polygon-path', file: 'unit-csg-polygon-path.tscn' },
+  // The same polygons and Path3D nodes inside an instanced scene draw the same extrusions.
+  { name: 'csg-polygon-path-instanced', file: 'unit-csg-polygon-path-instanced.tscn' },
   // Real boolean evaluation (ADR-0027). If the three groups render the same, a
   // solid block beside a solid ball, the evaluator has stopped running.
   { name: 'csg-boolean-ops', file: 'unit-csg-boolean-ops.tscn' },

@@ -107,7 +107,7 @@ const COMPOSITE_KEYS: ReadonlyArray<{
 
 /**
  * One keyframe value, or `null` when this renderer cannot key the text. `null`, not NaN: NaN is a
- * `number`, passes every shape check in `clipBuilder` and `valueTracks`, and samples NaN for the
+ * `number`, passes every shape check in `clipBuilder` and `trackSampling`, and samples NaN for the
  * rest of the clip. A non-finite read (`Color(1e999, 0, 0, 1)` overflows) is `null` too, since
  * three.js draws Infinity as NaN geometry. `inf` stays a legal literal that this cannot render.
  */

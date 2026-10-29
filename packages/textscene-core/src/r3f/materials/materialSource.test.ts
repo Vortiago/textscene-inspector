@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { fileMaterialSources, resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import '../../resources/formats/binaryresource/index';
+import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene';
 
 const INTERNAL: TscnInternalResource[] = [
   { id: 'Mat_body', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
@@ -120,21 +121,21 @@ describe('resolveMaterialSource', () => {
 describe('a material a mesh holds', () => {
   const mesh = { id: 'Mesh_box', type: 'BoxMesh', data: {} };
 
-  it('names the mesh as its holder', () => {
-    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS, [mesh])).toMatchObject({
+  it('is held as the mesh holds it, not local to scene', () => {
+    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS, isLocalToScene(mesh))).toMatchObject({
       kind: 'inline',
-      holders: [mesh],
+      isHeldLocally: false,
     });
   });
 
-  it('names the mesh as its holder in a mesh file', () => {
-    expect(fileMaterialSources(['res://a.tres'], [mesh])).toEqual([
-      { kind: 'file', path: 'res://a.tres', holders: [mesh] },
+  it('is held as the mesh holds it in a mesh file', () => {
+    expect(fileMaterialSources(['res://a.tres'], isLocalToScene(mesh))).toEqual([
+      { kind: 'file', path: 'res://a.tres', isHeldLocally: false },
     ]);
   });
 
-  it('names no holders as the node property itself', () => {
-    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS)).not.toHaveProperty('holders');
+  it('states nothing for the node property itself', () => {
+    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS)).not.toHaveProperty('isHeldLocally');
   });
 });
 

@@ -5,23 +5,19 @@
  * absent properties, warn-then-skip on malformed ones, never throws.
  */
 
-import { inlineViewportTexture } from '../textures/viewporttexture/localToScene.js';
+import { isLocalToScene } from '../textures/viewporttexture/localToScene.js';
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { slotInt } from '../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
+import { fileResources, findSectionResource } from '../resourceSection';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';
 import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-// Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
-import {
-  findSubResource as findSubResourceById,
-  parseResourceReference,
-  resolveExtResourcePath,
-} from '../SubResourceResolver';
+import { findSubResource, parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
 import { defaultTileData } from './types';
 import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 import type {
@@ -43,9 +39,6 @@ interface TileSetSourceData {
   /** The tables the TileSet's references resolve in. */
   externalResources: readonly TscnExternalResource[];
   internalResources: readonly TscnInternalResource[];
-  findSubResource(id: string): TscnInternalResource | undefined;
-  /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
-  resolveResourcePath(ref: string): string | null;
 }
 
 /**
@@ -74,7 +67,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     }
 
     const ref = parseResourceReference(value);
-    const sub = ref?.type === 'SubResource' ? data.findSubResource(ref.id) : undefined;
+    const sub = ref?.type === 'SubResource' ? findSubResource(data.internalResources, ref.id) : undefined;
     if (!sub) {
       warn(`[TileSet] source ${key}: unresolvable reference "${value}" — skipped`);
       continue;
@@ -119,16 +112,14 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
   return n;
 }
 
-/** Adapter: a TileSet from its own resource file, or null for another type. */
-export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
-  if (parsed.resourceType !== 'TileSet') return null;
-  return resolveTileSetModel({
-    tileSet: { id: '', type: parsed.resourceType, data: parsed.properties },
-    externalResources: parsed.extResources,
-    internalResources: parsed.subResources,
-    findSubResource: (id) => findSubResourceById(parsed.subResources, id),
-    resolveResourcePath: (ref) => resolveExtResourcePath(ref, parsed.extResources),
-  });
+/**
+ * Adapter: the TileSet `path` addresses in its resource file, the file's `[resource]` or one of its
+ * sub-resources, or null for another type.
+ */
+export function tileSetFromFile(parsed: ParsedResource, path: string): TileSetModel | null {
+  const tileSet = findSectionResource(parsed, path);
+  if (tileSet?.type !== 'TileSet') return null;
+  return resolveTileSetModel({ tileSet, ...fileResources(parsed) });
 }
 
 /**
@@ -142,15 +133,13 @@ export function tileSetFromScene(
 ): TileSetModel | null {
   const ref = parseResourceReference(tileSetRef);
   if (!ref || ref.type !== 'SubResource') return null;
-  const tileSet = findSubResourceById(internalResources, ref.id);
+  const tileSet = findSubResource(internalResources, ref.id);
   if (!tileSet || tileSet.type !== 'TileSet') return null;
 
   return resolveTileSetModel({
     tileSet,
     externalResources,
     internalResources,
-    findSubResource: (id) => findSubResourceById(internalResources, id),
-    resolveResourcePath: (ref) => resolveExtResourcePath(ref, externalResources),
   });
 }
 
@@ -182,10 +171,10 @@ function loadTileMaterial(
   data: TileSetSourceData
 ): TileMaterial | null {
   if (parsed?.type !== 'SubResource') {
-    const path = data.resolveResourcePath(ref);
+    const path = resolveExtResourcePath(ref, data.externalResources);
     return path ? { path } : null;
   }
-  const sub = data.findSubResource(parsed.id);
+  const sub = findSubResource(data.internalResources, parsed.id);
   if (!sub) {
     warn(`[TileSet] material ${ref} names nothing — no material`);
     return null;
@@ -206,16 +195,8 @@ function resolveAtlasSource(
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
     // On unless the file says `false` (`tile_set.h:673`).
     usesTexturePadding: boolSlotValue(props.use_texture_padding) !== false,
-    tiles: isSizelessAtLoad(props.texture, data) ? new Map() : resolveTiles(props, tileMaterial),
+    tiles: resolveTiles(props, tileMaterial),
   };
-}
-
-/**
- * Whether the atlas texture reports size 0 while the scene loads, as a ViewportTexture does
- * (`viewport.cpp:156-160`), so `create_tile` finds room for no tile (`tile_set.cpp:4985`, `:5209`).
- */
-function isSizelessAtLoad(ref: string | undefined, data: TileSetSourceData): boolean {
-  return inlineViewportTexture(ref, data.internalResources) !== undefined;
 }
 
 function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileSetSourceData): TileTexture {
@@ -223,7 +204,7 @@ function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileS
     ref,
     externalResources: data.externalResources,
     internalResources: data.internalResources,
-    holders: [data.tileSet, atlasSource],
+    isHeldLocally: isLocalToScene(data.tileSet) && isLocalToScene(atlasSource),
   };
 }
 

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { TscnParser } from '../../../parser/TscnParser';
-import { resolveStandaloneViewportSubtree, viewportContentKind } from './viewportContent';
+import { resolveStandaloneViewportSubtree, viewportContent, viewportContentKind } from './viewportContent';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
@@ -272,6 +272,24 @@ z_index = 3
  * childless `Node` whichever world its sub-scene lives in. Once the sub-scene is
  * cached, Instance root merge gives the node its real identity.
  */
+describe('viewportContent — Controls beside the drawn kind', () => {
+  const MESH = '\n[node name="Box" type="MeshInstance3D" parent="Viewport"]';
+  const SPRITE = '\n[node name="Sprite" type="Sprite2D" parent="Viewport"]';
+  const PANEL = '\n[node name="Panel" type="ColorRect" parent="Viewport"]';
+
+  it('finds a Control that follows the first 3D node', () => {
+    expect(viewportContent(viewport(MESH + PANEL))).toEqual({ kind: '3d', holdsControls: true });
+  });
+
+  it('finds a Control beside 2D content', () => {
+    expect(viewportContent(viewport(SPRITE + PANEL))).toEqual({ kind: '2d', holdsControls: true });
+  });
+
+  it('finds none in a viewport without a Control', () => {
+    expect(viewportContent(viewport(MESH + SPRITE)).holdsControls).toBe(false);
+  });
+});
+
 describe('resolveStandaloneViewportSubtree', () => {
   /** `[gd_scene]` with one instanced child, plus the sub-scene it points at. */
   function scene(subScene: string, extra = '') {

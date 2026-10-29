@@ -41,7 +41,11 @@ _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
 **Live scene pass** (`LiveScenePass`, `r3f/liveScenePass.ts`, ADR-0060):
 A scene pass that reads the whole **Live scene tree** and answers per live node path, so a NodePath binds across an instance border as Godot's `get_node_or_null` does.
 A component reads its result by its own node path, because the nodes of a sub-scene are shared by every instance of it.
-_Avoid_: writing a pass's result into a node. A parse-time pass for a path that may cross an instance.
+_Avoid_: writing a pass's result into a node. A pass that runs before the sub-scenes load, for a path that may cross an instance.
+
+**Node patch** (`NodePatch`, `r3f/nodePatch.ts`, ADR-0060):
+The property values a **Live scene pass** lays over one node of the **Live scene tree**, found by the node's live path. `patchedNode` returns the node with its patch over its properties.
+_Avoid_: a pass mutating a node it was handed.
 
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
@@ -643,6 +647,10 @@ _Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose ke
 **Pose modifier** (`PoseModifier`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The edit a SkeletonModifier3D child makes to the bone poses of its Skeleton3D, and its `influence`. The Skeleton3D pass runs the edits in child order on a copy of the file pose, before it makes the **Automatic skin**, as `Skeleton3D::_process_modifiers` does (`skeleton_3d.cpp:1166-1204`). The file pose is kept. A type registers a reader from its node to its edit as `poseModifier`.
 _Avoid_: A write to the bone table. A modifier that draws.
+
+**Bone pose** (`BonePose`, `AnimatedPose`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The position, rotation and scale of one bone, each part optional. An AnimationPlayer writes the poses its bone tracks sample, and the Skeleton3D pass lays them over the file pose before the **Pose modifier** edits run (`animation_mixer.cpp:1878-1891`). A part no track keys keeps the file pose.
+_Avoid_: A write to the bone table. A pose kept in three bones.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

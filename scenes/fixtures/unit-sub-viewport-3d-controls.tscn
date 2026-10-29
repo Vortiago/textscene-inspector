@@ -1,0 +1,57 @@
+; One variable: Controls inside a SubViewport that renders a 3D world. A viewport draws its canvas
+; items over its 3D render, in the same target (`renderer_viewport.cpp::_draw_viewport`). Regress it
+; and the target holds the quad alone. The translucent Veil blends over the tonemapped quad in sRGB
+; numbers, so a blend in linear light reads brighter. No other golden mixes a Control and a 3D world
+; in one SubViewport.
+
+[gd_scene format=3]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(4, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+shading_mode = 0
+albedo_color = Color(1, 0.4, 0, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+; stretch is off, so screen = target pixel + (100, 80).
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+own_world_3d = true
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Booth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Quad" type="MeshInstance3D" parent="Booth/SubViewport"]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="Veil" type="ColorRect" parent="Booth/SubViewport"]
+offset_right = 100.0
+offset_bottom = 200.0
+color = Color(0, 0.8, 0, 0.5)
+
+[node name="Plate" type="ColorRect" parent="Booth/SubViewport"]
+offset_left = 130.0
+offset_top = 130.0
+offset_right = 170.0
+offset_bottom = 170.0
+color = Color(0.2, 0.2, 0.9, 1)

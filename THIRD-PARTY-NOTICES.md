@@ -57,6 +57,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/textmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/textmesh/glyphMesh.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`) |
+| `packages/textscene-core/src/resources/meshes/textmesh/polypartition.ts` | `thirdparty/misc/polypartition.cpp` (MIT, Copyright (c) 2011-2021 Ivan Fratric and contributors — `RemoveHoles`, `Triangulate_EC`, `ConvexPartition_HM` and `Triangulate_OPT`, as `TextMesh::_generate_glyph_mesh_data` calls them) |
 | `packages/textscene-core/src/resources/meshes/textmesh/textMeshLines.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s line breaking and `HORIZONTAL_ALIGNMENT_FILL` justification) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntOutlines.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |

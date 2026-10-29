@@ -388,14 +388,14 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
       clear: {
         ref: 'ExtResource("1_clear")',
         resources: { externalResources: [], internalResources: [] },
-        holders: [],
+        isHeldLocally: true,
       },
     };
     expect(lineEditTextureSlots(node, themed)).toContainEqual({
       key: 'clear',
       ref: 'ExtResource("1_clear")',
       scope: themed.clear.resources,
-      holders: themed.clear.holders,
+      isHeldLocally: themed.clear.isHeldLocally,
     });
   });
 
