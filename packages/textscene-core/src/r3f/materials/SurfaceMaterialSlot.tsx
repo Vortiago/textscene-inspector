@@ -21,7 +21,7 @@ interface SurfaceMaterialSlotProps {
   attach?: string;
   /** The surface draws `THREE.Points`, placed so, and its material also sizes each point. Undefined for triangles. */
   points?: PointPlacement;
-  /** The surface draws a particle emitter's instances: the patch that colours and billboards them. */
+  /** The surface draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
 }
 

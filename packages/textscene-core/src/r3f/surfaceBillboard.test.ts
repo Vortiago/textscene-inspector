@@ -1,189 +1,170 @@
-import { describe, expect, it } from 'vitest';
+/**
+ * The billboard a surface's programs compile: a plain draw faces the camera about its node and each
+ * instance about its own origin, as Godot's MODEL_MATRIX holds each instance's
+ * (`scene_forward_clustered.glsl:338-342`).
+ */
 import * as THREE from 'three';
-import { billboardWorldMatrix } from './surfaceBillboard';
+import { describe, expect, it } from 'vitest';
+import { aimBillboards, billboardInjections } from './surfaceBillboard';
+import { withPointDraw } from './materials/godotPoint';
+import type { ProgramInjection, ProgramShader } from './materialProgramInputs';
+import {
+  MATERIAL_OF_PROGRAM,
+  patchedVertex,
+  programShader,
+  type ProgramName,
+} from './testing/patchedFragment';
+import { standardMaterial } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
-import { TEST_CAMERA } from './testing/threePasses';
-import { patchedVertex } from './testing/patchedFragment';
-import { standardMaterial } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 
-/** A billboard that keeps the model scale, so a test can compare the full basis. */
-const keepingScale = (mode: number): SurfaceBillboard => ({ mode, keepScale: true });
+const PARTICLES: SurfaceBillboard = { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: false };
 
-/** A model yawed a quarter turn, scaled (2, 3, 4), at (5, 6, 7). */
-function yawedScaledModel(): THREE.Matrix4 {
-  return new THREE.Matrix4().compose(
-    new THREE.Vector3(5, 6, 7),
-    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2),
-    new THREE.Vector3(2, 3, 4)
-  );
+/** `injection` compiled into `program`'s shaders, as a material of that program compiles it. */
+function compiled(injection: ProgramInjection, program: ProgramName = 'standard'): ProgramShader {
+  const shader = programShader(program);
+  injection.onBeforeCompile.call(MATERIAL_OF_PROGRAM[program](), shader);
+  return shader;
 }
 
-function column(matrix: THREE.Matrix4, index: 0 | 1 | 2 | 3): THREE.Vector3 {
-  return new THREE.Vector3().setFromMatrixColumn(matrix, index);
+function colourOf(billboard: SurfaceBillboard, program: ProgramName = 'standard'): string {
+  return compiled(billboardInjections(billboard)!.colour, program).vertexShader;
 }
 
-function expectVectorClose(actual: THREE.Vector3, expected: THREE.Vector3) {
-  expect(actual.x).toBeCloseTo(expected.x, 6);
-  expect(actual.y).toBeCloseTo(expected.y, 6);
-  expect(actual.z).toBeCloseTo(expected.z, 6);
-}
-
-describe('billboardWorldMatrix — ENABLED', () => {
-  const camera = TEST_CAMERA;
-
-  it('takes the camera basis as the model basis', () => {
-    const target = new THREE.Matrix4();
-    expect(
-      billboardWorldMatrix(
-        target,
-        yawedScaledModel(),
-        camera.matrixWorld,
-        keepingScale(BillboardMode.BILLBOARD_ENABLED)
-      )
-    ).toBe(true);
-    for (const i of [0, 1, 2] as const) {
-      expectVectorClose(column(target, i).normalize(), column(camera.matrixWorld, i).normalize());
-    }
+describe('billboardInjections', () => {
+  it('is none for a surface that does not billboard', () => {
+    expect(billboardInjections({ mode: BillboardMode.BILLBOARD_DISABLED, keepScale: false })).toBeUndefined();
   });
 
-  it('keeps the model origin', () => {
-    const target = new THREE.Matrix4();
-    billboardWorldMatrix(
-      target,
-      yawedScaledModel(),
-      camera.matrixWorld,
-      keepingScale(BillboardMode.BILLBOARD_ENABLED)
-    );
-    expectVectorClose(column(target, 3), new THREE.Vector3(5, 6, 7));
-  });
-
-  it('drops the model scale by default, as Godot does without billboard_keep_scale', () => {
-    // `material.cpp:1266-1271` takes the camera basis alone. `:1274-1281` multiplies the
-    // model scale back only under FLAG_BILLBOARD_KEEP_SCALE.
-    const target = new THREE.Matrix4();
-    billboardWorldMatrix(target, yawedScaledModel(), camera.matrixWorld, {
-      mode: BillboardMode.BILLBOARD_ENABLED,
-      keepScale: false,
-    });
-    for (const i of [0, 1, 2] as const) expect(column(target, i).length()).toBeCloseTo(1, 6);
-  });
-
-  it('keeps the model scale per axis, as billboard_keep_scale does', () => {
-    const target = new THREE.Matrix4();
-    billboardWorldMatrix(
-      target,
-      yawedScaledModel(),
-      camera.matrixWorld,
-      keepingScale(BillboardMode.BILLBOARD_ENABLED)
-    );
-    expect(column(target, 0).length()).toBeCloseTo(2, 6);
-    expect(column(target, 1).length()).toBeCloseTo(3, 6);
-    expect(column(target, 2).length()).toBeCloseTo(4, 6);
+  it('hands back the same injections for the same billboard, so each compiles one program', () => {
+    expect(billboardInjections({ ...PARTICLES })).toBe(billboardInjections(PARTICLES));
   });
 });
 
-describe('billboardWorldMatrix — FIXED_Y', () => {
-  it('keeps world up as the Y axis and turns X and Z toward the camera plane', () => {
-    const camera = TEST_CAMERA;
-    const target = new THREE.Matrix4();
-    expect(
-      billboardWorldMatrix(
-        target,
-        yawedScaledModel(),
-        camera.matrixWorld,
-        keepingScale(BillboardMode.BILLBOARD_FIXED_Y)
-      )
-    ).toBe(true);
+describe('a BILLBOARD_PARTICLES billboard', () => {
+  const vertexShader = colourOf(PARTICLES);
 
-    const up = new THREE.Vector3(0, 1, 0);
-    const cameraX = column(camera.matrixWorld, 0);
-    const cameraZ = column(camera.matrixWorld, 2);
-    expectVectorClose(column(target, 0), up.clone().cross(cameraZ).normalize().multiplyScalar(2));
-    expectVectorClose(column(target, 1), new THREE.Vector3(0, 3, 0));
-    expectVectorClose(column(target, 2), cameraX.clone().cross(up).normalize().multiplyScalar(4));
-    expectVectorClose(column(target, 3), new THREE.Vector3(5, 6, 7));
+  // `material.cpp:1309-1324`: the pass camera's normalised axes, at the model's origin.
+  it('faces the pass camera about its own origin', () => {
+    expect(vertexShader).toContain('uniform mat4 godotPassCameraWorld;');
+    expect(vertexShader).toContain('normalize( godotPassCameraWorld[ 0 ] )');
+    expect(vertexShader).toContain('godotModel[ 3 ]');
   });
 
-  it('leaves the target alone when the camera looks straight down the Y axis', () => {
-    // `normalize(cross(up, camZ))` of an exactly zero vector has no direction.
-    const lookingDown = new THREE.Matrix4().makeBasis(
-      new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(0, 0, -1),
-      new THREE.Vector3(0, 1, 0)
+  it('turns by the angle in the instance custom data', () => {
+    expect(vertexShader).toContain('attribute vec4 instanceCustom;');
+    expect(vertexShader).toContain(
+      'vec4( cos( godotInstanceCustom.x ), - sin( godotInstanceCustom.x ), 0.0, 0.0 )'
     );
-    const target = new THREE.Matrix4().makeScale(9, 9, 9);
-    expect(
-      billboardWorldMatrix(
-        target,
-        yawedScaledModel(),
-        lookingDown,
-        keepingScale(BillboardMode.BILLBOARD_FIXED_Y)
-      )
-    ).toBe(false);
-    expect(target.equals(new THREE.Matrix4().makeScale(9, 9, 9))).toBe(true);
+  });
+
+  it('turns a plain draw, which has no custom data, by no angle (edge case)', () => {
+    expect(vertexShader).toMatch(/#else\s+#define godotInstanceCustom vec4\( 0\.0 \)/);
+  });
+
+  // three multiplies `modelMatrix` after `instanceMatrix`, so the instance carries the inverse.
+  it('poses every chunk that reads the instance, before the first of them', () => {
+    const define = vertexShader.indexOf('#define instanceMatrix godotInstanceLocal');
+    expect(define).toBeGreaterThan(-1);
+    expect(define).toBeLessThan(vertexShader.indexOf('#include <uv_vertex>'));
+    expect(vertexShader).toContain('inverse( modelMatrix ) * godotBillboardWorld');
+  });
+
+  it('poses every chunk of a plain draw that reads the model, before the first of them', () => {
+    const define = vertexShader.indexOf('#define modelMatrix godotBillboardWorld');
+    expect(define).toBeGreaterThan(-1);
+    expect(define).toBeLessThan(vertexShader.indexOf('#include <uv_vertex>'));
+    expect(vertexShader).toContain('#define modelViewMatrix ( viewMatrix * godotBillboardWorld )');
+  });
+
+  // `material.cpp:1338`: MODELVIEW_NORMAL_MATRIX is `mat3(MODELVIEW_MATRIX)`.
+  it('turns the normal by the billboard model-view', () => {
+    expect(vertexShader).toContain(
+      'transformedNormal = mat3( viewMatrix * godotBillboardWorld ) * objectNormal;'
+    );
+  });
+
+  it('keeps no scale unless the material asks', () => {
+    expect(vertexShader).not.toContain('length( godotModel[ 0 ].xyz )');
+  });
+
+  // `material.cpp:1274-1281`.
+  it('keeps the instance scale under billboard_keep_scale', () => {
+    expect(colourOf({ ...PARTICLES, keepScale: true })).toContain('length( godotModel[ 0 ].xyz )');
+  });
+
+  // Instanced points declare `instanceMatrix` at the top of their text, which the billboard reads.
+  it('declares the billboard after the instance matrix of instanced points', () => {
+    const points = withPointDraw(
+      { materialClass: 'basic', props: { userData: {} }, injection: billboardInjections(PARTICLES)!.colour },
+      { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'instances' }
+    );
+    const shader = compiled(points.injection!, 'basic').vertexShader;
+    expect(shader.indexOf('mat4 godotBillboard()')).toBeGreaterThan(
+      shader.indexOf('attribute mat4 instanceMatrix;')
+    );
   });
 });
 
-describe('billboardWorldMatrix — PARTICLES', () => {
-  it('normalises the camera basis, unlike ENABLED', () => {
-    // A camera under a scaled parent: ENABLED copies its columns, PARTICLES normalises them.
-    const cameraWorld = new THREE.Matrix4().makeScale(2, 2, 2);
-    const particles = new THREE.Matrix4();
-    const enabled = new THREE.Matrix4();
-    billboardWorldMatrix(
-      particles,
-      new THREE.Matrix4(),
-      cameraWorld,
-      keepingScale(BillboardMode.BILLBOARD_PARTICLES)
-    );
-    billboardWorldMatrix(
-      enabled,
-      new THREE.Matrix4(),
-      cameraWorld,
-      keepingScale(BillboardMode.BILLBOARD_ENABLED)
-    );
-    expect(column(particles, 0).length()).toBeCloseTo(1, 6);
-    expect(column(enabled, 0).length()).toBeCloseTo(2, 6);
+describe.each([
+  ['BILLBOARD_ENABLED', BillboardMode.BILLBOARD_ENABLED],
+  ['BILLBOARD_FIXED_Y', BillboardMode.BILLBOARD_FIXED_Y],
+])('a %s instance', (_name, mode) => {
+  const billboard: SurfaceBillboard = { mode, keepScale: false };
+
+  // `material.cpp:1263-1264`: MAIN_CAM_INV_VIEW_MATRIX, the main camera even on a shadow pass.
+  it('faces the main camera, which a shadow pass keeps', () => {
+    const shader = compiled(billboardInjections(billboard)!.colour);
+    expect(shader.vertexShader).toContain('uniform mat4 godotMainCameraWorld;');
+    expect(shader.uniforms.godotMainCameraWorld).toBeDefined();
+  });
+
+  it('reads the main camera the draw hooks aim it at', () => {
+    const shader = compiled(billboardInjections(billboard)!.colour);
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(1, 2, 3);
+    camera.updateMatrixWorld();
+    aimBillboards(camera, new THREE.PerspectiveCamera());
+    const aimed = shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4;
+    expect(aimed.equals(camera.matrixWorld)).toBe(true);
+  });
+
+  it('copies the camera basis unnormalised, unlike PARTICLES', () => {
+    expect(colourOf(billboard)).not.toContain('normalize( godotPassCameraWorld');
   });
 });
 
-describe('billboardWorldMatrix — DISABLED', () => {
-  it('reports no billboard and leaves the target alone', () => {
-    const camera = TEST_CAMERA;
-    const target = new THREE.Matrix4().makeScale(9, 9, 9);
-    expect(
-      billboardWorldMatrix(
-        target,
-        yawedScaledModel(),
-        camera.matrixWorld,
-        keepingScale(BillboardMode.BILLBOARD_DISABLED)
-      )
-    ).toBe(false);
-    expect(target.equals(new THREE.Matrix4().makeScale(9, 9, 9))).toBe(true);
+describe('a BILLBOARD_FIXED_Y billboard', () => {
+  const vertexShader = colourOf({ mode: BillboardMode.BILLBOARD_FIXED_Y, keepScale: false });
+
+  // `material.cpp:1291-1295`.
+  it('keeps world up and turns X and Z toward the camera plane', () => {
+    expect(vertexShader).toContain('cross( vec3( 0.0, 1.0, 0.0 ), godotMainCameraWorld[ 2 ].xyz )');
+    expect(vertexShader).toContain('vec4( 0.0, 1.0, 0.0, 0.0 )');
   });
 
-  it('treats a mode outside the enum as DISABLED', () => {
-    const camera = TEST_CAMERA;
-    expect(
-      billboardWorldMatrix(new THREE.Matrix4(), yawedScaledModel(), camera.matrixWorld, keepingScale(7))
-    ).toBe(false);
+  it('keeps the model basis while the camera looks straight down, as GLSL cannot normalise zero (edge case)', () => {
+    expect(vertexShader).toContain(
+      'if ( dot( godotAxisX, godotAxisX ) == 0.0 || dot( godotAxisZ, godotAxisZ ) == 0.0 ) return godotModel;'
+    );
   });
 });
 
-describe('the billboard normal matrix', () => {
-  const TURNS_BY_MODEL_VIEW = 'transformedNormal = mat3( modelViewMatrix ) * transformedNormal;';
-
-  it("turns a billboard's normals by mat3(MODELVIEW_MATRIX), as Godot's billboard writes MODELVIEW_NORMAL_MATRIX", () => {
-    const vertex = patchedVertex(standardMaterial({ billboard_mode: '1', billboard_keep_scale: 'true' }));
-
-    expect(vertex).toContain(TURNS_BY_MODEL_VIEW);
-    expect(vertex).not.toContain('normalMatrix * transformedNormal');
+describe.each(['depth', 'distance'] as const)('the billboard on the %s program', (program) => {
+  // Godot's shadow pass runs the same vertex code, with the light's view (`material.cpp:1309`).
+  it('billboards a plain draw and each instance toward the light', () => {
+    const { vertexShader } = compiled(billboardInjections(PARTICLES)!.depth, program);
+    expect(vertexShader).toContain('#define instanceMatrix godotInstanceLocal');
+    expect(vertexShader).toContain('#define modelMatrix godotBillboardWorld');
   });
+});
 
-  it('turns the normals of every billboarding mode so', () => {
-    for (const mode of ['2', '3']) {
-      expect(patchedVertex(standardMaterial({ billboard_mode: mode }))).toContain(TURNS_BY_MODEL_VIEW);
+describe('the billboard normal of a StandardMaterial3D', () => {
+  const TURNS_BY_BILLBOARD = 'transformedNormal = mat3( viewMatrix * godotBillboardWorld ) * objectNormal;';
+
+  it('turns the normals of every billboarding mode', () => {
+    for (const mode of ['1', '2', '3']) {
+      expect(patchedVertex(standardMaterial({ billboard_mode: mode }))).toContain(TURNS_BY_BILLBOARD);
     }
   });
 
@@ -191,13 +172,12 @@ describe('the billboard normal matrix', () => {
     const vertex = patchedVertex(
       standardMaterial({ shading_mode: '0', heightmap_enabled: 'true', billboard_mode: '1' })
     );
-
-    expect(vertex).not.toContain('normalMatrix * transformedNormal');
+    expect(vertex.split(TURNS_BY_BILLBOARD)).toHaveLength(3);
   });
 
   it("keeps three's normal matrix for a surface that does not billboard (edge case)", () => {
     expect(patchedVertex(standardMaterial({ albedo_color: 'Color(1, 0, 0, 1)' }))).not.toContain(
-      TURNS_BY_MODEL_VIEW
+      TURNS_BY_BILLBOARD
     );
   });
 });

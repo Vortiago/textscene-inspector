@@ -1,6 +1,6 @@
 /**
  * Godot surface state that three holds per object, applied per draw group: a billboard's
- * pose, the node's pose a program reads, the layers a probe's mask meets, shadow-pass membership,
+ * cameras, the node's pose a program reads, the layers a probe's mask meets, shadow-pass membership,
  * the shadow's alpha cut and SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
  * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import { billboardOf, castsShadowOf } from '../resources/materials/standardmaterial3d/materialBag';
-import { aimInstanceBillboards, billboardWorldMatrix } from './surfaceBillboard';
+import { aimBillboards } from './surfaceBillboard';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
 import { alignNodePose } from './materials/nodePose';
 import { opaquePrepassOf } from './materials/opaquePrepass';
@@ -78,16 +78,9 @@ function drawnMaterial(object: unknown, group: unknown): THREE.Material | undefi
  * before-hook and cleared by the after-hook three calls next: three draws one group at
  * a time, so no two draws are ever open together.
  */
-let posed: THREE.Object3D | null = null;
-const posedMatrixWorld = new THREE.Matrix4();
-/** Set only by a shadow draw, whose model-view three computed once for every group. */
-let viewed: THREE.Object3D | null = null;
-const viewedModelView = new THREE.Matrix4();
 let skipped: THREE.BufferGeometry | null = null;
 let skippedCount = Infinity;
 
-/** Scratch for the billboarded matrix, overwritten by every draw. */
-const billboarded = new THREE.Matrix4();
 /** Scratch for the node's matrix, overwritten by every draw. */
 const nodeMatrix = new THREE.Matrix4();
 
@@ -103,46 +96,17 @@ function skip(geometry: THREE.BufferGeometry): void {
 }
 
 /**
- * Give this draw the billboarded pose of `material`'s mode. three uploads `matrixWorld`
- * as `modelMatrix`, so it moves for this draw and comes back after it.
- *
- * @returns whether the pose moved
+ * Aims this draw's billboard, which its program builds, at the cameras of this render: Godot's
+ * shadow pass keeps the main camera as `MAIN_CAM_INV_VIEW_MATRIX` (`material.cpp:1263-1264`).
  */
-function pose(
-  object: THREE.Object3D,
-  material: THREE.Material,
-  mainCamera: THREE.Camera,
-  passCamera: THREE.Camera
-): boolean {
-  // An instanced draw keeps its pose: its program billboards each instance about its own origin,
-  // toward the cameras of this render, as Godot's MODEL_MATRIX holds each instance's.
-  if (drawsInstances(object)) {
-    aimInstanceBillboards(mainCamera, passCamera);
-    return false;
-  }
-  const billboard = billboardOf(material);
-  const camera = billboard.mode === BillboardMode.BILLBOARD_PARTICLES ? passCamera : mainCamera;
-  if (!billboardWorldMatrix(billboarded, object.matrixWorld, camera.matrixWorld, billboard)) {
-    return false;
-  }
-  posed = object;
-  posedMatrixWorld.copy(object.matrixWorld);
-  object.matrixWorld.copy(billboarded);
-  return true;
-}
-
-/** Whether `object` draws its geometry once at each instance: an InstancedMesh, or instanced points. */
-function drawsInstances(object: THREE.Object3D): boolean {
-  if ((object as THREE.InstancedMesh).isInstancedMesh) return true;
-  const { geometry } = object as THREE.Points;
-  return (geometry as THREE.InstancedBufferGeometry | undefined)?.isInstancedBufferGeometry === true;
+function aimBillboard(material: THREE.Material, mainCamera: THREE.Camera, passCamera: THREE.Camera): void {
+  if (billboardOf(material).mode === BillboardMode.BILLBOARD_DISABLED) return;
+  aimBillboards(mainCamera, passCamera);
 }
 
 /** Gives this draw of `material` the node's pose, which Godot's MODEL_MATRIX holds (`nodePose.ts`). */
 function alignPose(object: THREE.Object3D, material: THREE.Material, instance: DrawnInstance): void {
-  if (!instance.nodeMatrixWorld(nodeMatrix)) {
-    nodeMatrix.copy(posed === object ? posedMatrixWorld : object.matrixWorld);
-  }
+  if (!instance.nodeMatrixWorld(nodeMatrix)) nodeMatrix.copy(object.matrixWorld);
   alignNodePose(material, nodeMatrix, object.matrixWorld);
 }
 
@@ -195,7 +159,7 @@ function cutsShadow(material: THREE.Material): boolean {
 
 /**
  * Whether three's depth material cannot draw `material`'s shadow: it cuts alpha, or its draw adds
- * to the depth program, as a points size, an instance billboard or a particle colour does.
+ * to the depth program, as a points size, a billboard or a particle colour does.
  */
 function needsOwnDepth(material: THREE.Material): boolean {
   return cutsShadow(material) || addsDepthInjections(material.userData);
@@ -207,19 +171,11 @@ function closeDraw(): void {
     skipped.drawRange.count = skippedCount;
     skipped = null;
   }
-  if (posed) {
-    posed.matrixWorld.copy(posedMatrixWorld);
-    posed = null;
-  }
-  if (viewed) {
-    viewed.modelViewMatrix.copy(viewedModelView);
-    viewed = null;
-  }
 }
 
 /** A drawing colour pass: the surface billboards if its material says so. */
-export const poseColourDraw: CastRule['colourDraw'] = (object, _geometry, material, camera) => {
-  pose(object, material, camera, camera);
+export const poseColourDraw: CastRule['colourDraw'] = (_object, _geometry, material, camera) => {
+  aimBillboard(material, camera, camera);
 };
 
 /** SHADOWS_ONLY's colour pass: the surface draws nothing, and still casts. */
@@ -245,9 +201,6 @@ export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): Surfa
       showInstanceLayers(renderer, this);
     },
     onAfterRender: closeDraw,
-    // three sets `modelViewMatrix` once per object before its group loop
-    // (`WebGLShadowMap.js:528`), so a moved pose recomputes it here. The main camera
-    // stays the billboard's, as `MAIN_CAM_INV_VIEW_MATRIX` is on a shadow pass.
     onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group) {
       const material = drawnMaterial(object, group);
       if (!material) return;
@@ -264,11 +217,7 @@ export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): Surfa
       }
       // three passes the object itself here, typed as the scene.
       const drawn = object as unknown as THREE.Object3D;
-      if (pose(drawn, material, camera, shadowCamera)) {
-        viewed = drawn;
-        viewedModelView.copy(drawn.modelViewMatrix);
-        drawn.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, drawn.matrixWorld);
-      }
+      aimBillboard(material, camera, shadowCamera);
       if (!needsOwnDepth(material)) return;
       const shadowDepth = depthMaterial as THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
       // three passes the geometry group, or null for one material, typed as a `Group`.

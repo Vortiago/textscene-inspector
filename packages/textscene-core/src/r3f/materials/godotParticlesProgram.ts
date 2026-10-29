@@ -14,11 +14,8 @@ import type { StandardMaterialBag } from '../../resources/materials/standardmate
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { bagForms } from './bagForms';
 import { withDepthInjection } from './depthInjections';
-import { INSTANCE_CUSTOM_ATTRIBUTE } from '../meshes/sharedInstances';
+import { INSTANCE_CUSTOM, MAIN_CHUNK, UV_CHUNK } from '../surfaceBillboard';
 import { PARTICLE_COLOR_ATTRIBUTE, type ParticleDraw } from './godotParticles';
-
-const UV_CHUNK = '#include <uv_vertex>';
-const MAIN_CHUNK = 'void main() {';
 
 /**
  * The flipbook cell of `material.cpp:1340-1350`, in Godot's top-down V. A map's coordinate here is
@@ -29,7 +26,7 @@ const PARTICLE_FRAME = /* glsl */ `vec2 godotParticleFrame( vec2 uv ) {
 	float h_frames = float( GODOT_PARTICLE_H_FRAMES );
 	float v_frames = float( GODOT_PARTICLE_V_FRAMES );
 	float particle_total_frames = float( GODOT_PARTICLE_H_FRAMES * GODOT_PARTICLE_V_FRAMES );
-	float particle_frame = floor( ${INSTANCE_CUSTOM_ATTRIBUTE}.z * particle_total_frames );
+	float particle_frame = floor( ${INSTANCE_CUSTOM}.z * particle_total_frames );
 	#ifdef GODOT_PARTICLE_ANIM_LOOP
 		particle_frame = mod( particle_frame, particle_total_frames );
 	#else
@@ -66,25 +63,28 @@ function frameDefines({ anim }: ParticleDraw): string {
   return defines.join('\n');
 }
 
+/** Whether `draw` cuts the flipbook, which only BILLBOARD_PARTICLES does (`material.cpp:1340`). */
+function cutsFrames(draw: ParticleDraw): boolean {
+  return draw.billboard.mode === BillboardMode.BILLBOARD_PARTICLES;
+}
+
 /**
  * What a program compiles with to draw `draw`'s instances. Each edit lands only where its chunk is:
- * the depth programs read no colour. The PARTICLES billboard declares the custom data the
- * flipbook reads (`surfaceBillboard.ts`).
+ * the depth programs read no colour. The billboard declares the custom data the flipbook reads
+ * (`surfaceBillboard.ts`).
  */
 function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjection {
-  const cutsFrames = draw.billboard.mode === BillboardMode.BILLBOARD_PARTICLES;
   return {
     cacheKey,
     onBeforeCompile(shader) {
       const declarations = [`attribute vec4 ${PARTICLE_COLOR_ATTRIBUTE};`];
       const vertex: TextEdit[] = [];
       if (shader.vertexShader.includes(VERTEX_COLOR_CHUNK)) vertex.push(PARTICLE_COLOR);
-      if (cutsFrames) {
+      if (cutsFrames(draw)) {
         declarations.push(frameDefines(draw), PARTICLE_FRAME);
         vertex.push({ three: UV_CHUNK, godot: frameCuts(this) });
       }
-      // Before `main`, not at the top: instanced points declare their attributes at the top of
-      // their text (`godotPoint.ts`).
+      // Before `main`, for the reason the billboard's declarations are (`surfaceBillboard.ts`).
       vertex.push({ three: MAIN_CHUNK, godot: `${declarations.join('\n')}\n${MAIN_CHUNK}` });
       editedProgram(shader, { vertex }, 'particle draw');
     },
@@ -95,9 +95,8 @@ function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjecti
 const injections = new Map<string, ProgramInjection>();
 
 function injectionOf(draw: ParticleDraw): ProgramInjection {
-  const { billboard, anim } = draw;
-  const frames = billboard.mode === BillboardMode.BILLBOARD_PARTICLES;
-  const key = frames
+  const { anim } = draw;
+  const key = cutsFrames(draw)
     ? `godot-particles:frames:${anim.hFrames}:${anim.vFrames}:${anim.loop}`
     : 'godot-particles';
   let injection = injections.get(key);

@@ -10,13 +10,12 @@ import { GLTF_MODE_TRIANGLES, gltfObjects, targetCount } from '../../../../godot
 import { meshSurfaces } from '../godotPrimitives';
 import { markReadsNoLightmap } from '../meshInstances';
 import {
-  IDENTITY_BASIS,
   gltfNodeBasis,
   rowScaledBasis,
   transformChainScale,
   type GltfNodeTransform,
 } from '../../../../godot/import/importerBasis';
-import type { BasisComponents } from '../../../../godot/math/basis';
+import { IDENTITY_BASIS, type BasisComponents } from '../../../../godot/math/basis';
 import type { LightmapUnwrap } from '../../../../parser/importParser';
 import type { RootScale } from '../types';
 import { parseUnwrapCache, type UnwrapCacheEntry } from './unwrapCache';

@@ -4,13 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  IDENTITY_BASIS,
-  gltfNodeBasis,
-  rowScaledBasis,
-  transformChainScale,
-  unwrapSpace,
-} from './importerBasis';
+import { gltfNodeBasis, rowScaledBasis, transformChainScale, unwrapSpace } from './importerBasis';
+import { IDENTITY_BASIS } from '../math/basis';
 
 function float32(bits: number): number {
   const view = new DataView(new ArrayBuffer(4));

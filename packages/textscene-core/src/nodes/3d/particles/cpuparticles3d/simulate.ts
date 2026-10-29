@@ -49,10 +49,13 @@ import {
 } from '../../../../godot/math/math.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import {
+  basisColumnInto,
+  basisCopy,
   basisDeterminantOf,
   basisFromColumns,
   basisOrthonormalize,
-  type BasisComponents,
+  basisSetColumn,
+  IDENTITY_BASIS,
   type MutableBasis,
 } from '../../../../godot/math/basis.js';
 import { basisScale, basisSetAxisAngle, basisXform } from '../../../../godot/math/basisFloat.js';
@@ -66,17 +69,20 @@ import {
   transform3DXform,
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
+import { transform2DBasisXformInto, type Transform2DColumns } from '../../../../godot/math/transform2d.js';
 import {
   normalizedVector3,
   vector3Add,
-  vector3Cross,
-  vector3Dot,
+  vector3CrossInto,
+  vector3DotComponents,
   vector3Length,
+  vector3LengthSquared,
   vector3Lerp,
   vector3Mul,
   vector3NormalizeInto,
   vector3Scaled,
   vector3Set,
+  type Vector2,
   type Vector3,
 } from '../../../../godot/math/vector.js';
 import { sortArray } from '../../../../godot/templates/sortArray.js';
@@ -141,7 +147,6 @@ const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
 /** `Color()`, which a never-born particle's colours hold (`color.h`). */
 const DEFAULT_COLOR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
 const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 });
-const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const Y_AXIS: Vector3 = Object.freeze({ x: 0, y: 1, z: 0 });
 
 interface SimState {
@@ -245,9 +250,9 @@ function particlesProcess(state: SimState, input: ParticleSim3DInput, delta: num
     const p = state.particles[i]!;
     if (!state.emitting && !p.active) continue;
 
-    const { localDelta } = restartStep(clock, i, step);
-    let { restart } = step;
-    if (p.time * (1.0 - sim.explosiveness) > p.lifetime) restart = true;
+    restartStep(clock, i, step);
+    const { localDelta } = step;
+    const restart = step.restart || p.time * (1.0 - sim.explosiveness) > p.lifetime;
 
     let tv = 0.0;
     if (restart) {
@@ -300,7 +305,7 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   p.animOffsetRand = rng.randf();
   p.startColorRand = colorInitialRamp ? sampleGradientColor(colorInitialRamp, rng.randf()) : WHITE;
 
-  p.velocity = sim.disableZ ? planarVelocity(sim, rng) : spreadVelocity(sim, rng);
+  copyVector3(p.velocity, sim.disableZ ? planarVelocity(sim, rng) : spreadVelocity(sim, rng));
 
   const angle = sim.params[CPUParticlesParameter.ANGLE]!;
   p.custom[0] = degToRadf(f(texAngle * lerpf(angle.min, angle.max, p.angleRand)));
@@ -309,8 +314,8 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   p.custom[2] = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
   // `lifetime_randomness` is a double, so the product and the difference are doubles.
   p.custom[3] = f(1.0 - rng.randf() * sim.lifetimeRandomness);
-  p.basis = [...IDENTITY_BASIS];
-  p.origin = ZERO;
+  basisCopy(p.basis, IDENTITY_BASIS);
+  copyVector3(p.origin, ZERO);
   p.time = 0;
   p.lifetime = sim.lifetime * p.custom[3];
   p.baseColor = WHITE;
@@ -318,22 +323,17 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   emitAtShape(input, state, p);
 
   if (!sim.localCoords) {
-    p.velocity = basisXform(basisOfTransform3D(state.emissionXform), p.velocity);
+    copyVector3(p.velocity, basisXform(basisOfTransform3D(state.emissionXform), p.velocity));
     const placed = multiplyTransform3D(state.emissionXform, transform3DOf(p.basis, p.origin));
-    p.basis = [...basisOfTransform3D(placed)];
-    p.origin = placed.origin;
+    basisCopy(p.basis, basisOfTransform3D(placed));
+    copyVector3(p.origin, placed.origin);
   }
-  own(p);
   if (sim.disableZ) flattenZ(p);
 }
 
-/**
- * Gives `p` its own origin and velocity after a restart, which may have handed it a shared constant
- * or an emission point, so the steps can write them in place.
- */
-function own(p: Particle): void {
-  p.origin = { ...p.origin };
-  p.velocity = { ...p.velocity };
+/** Writes `v` into `out`, which the particle owns, so a step can write it in place. */
+function copyVector3(out: Vector3, v: Vector3): void {
+  vector3Set(out, v.x, v.y, v.z);
 }
 
 /** The velocity of a `particle_flag_disable_z` emitter: `direction` turned in the XY plane (`:839-843`). */
@@ -382,14 +382,14 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
   switch (emission.shape) {
     case EmissionShape.SPHERE: {
       const surface = sphereSurfacePoint(emission.sphereRadius, rng);
-      p.origin = vector3Lerp(ZERO, surface, rng.randf());
+      copyVector3(p.origin, vector3Lerp(ZERO, surface, rng.randf()));
       break;
     }
     case EmissionShape.SPHERE_SURFACE:
-      p.origin = sphereSurfacePoint(emission.sphereRadius, rng);
+      copyVector3(p.origin, sphereSurfacePoint(emission.sphereRadius, rng));
       break;
     case EmissionShape.BOX:
-      p.origin = vector3Mul(boxCorner(rng), emission.boxExtents);
+      copyVector3(p.origin, vector3Mul(boxCorner(rng), emission.boxExtents));
       break;
     case EmissionShape.POINTS:
       emitAtPoint(sim, state, p);
@@ -397,12 +397,12 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
     case EmissionShape.DIRECTED_POINTS: {
       const index = emitAtPoint(sim, state, p);
       if (index !== null && vector3Count(sim.emissionNormals) === vector3Count(sim.emissionPoints)) {
-        p.velocity = directedVelocity(sim, vector3At(sim.emissionNormals, index), p.velocity);
+        copyVector3(p.velocity, directedVelocity(sim, vector3At(sim.emissionNormals, index), p.velocity));
       }
       break;
     }
     case EmissionShape.RING:
-      p.origin = ringPoint(emission, rng);
+      copyVector3(p.origin, ringPoint(emission, rng));
       break;
     default:
       // POINT emits from the origin, which `restartParticle` sets before the switch.
@@ -418,7 +418,7 @@ function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle
   const count = vector3Count(sim.emissionPoints);
   const index = pickPoint(state.processRng, count);
   if (index === null) return null;
-  p.origin = vector3At(sim.emissionPoints, index);
+  copyVector3(p.origin, vector3At(sim.emissionPoints, index));
   if (colorCount(sim.emissionColors) === count) p.baseColor = colorAt(sim.emissionColors, index);
   return index;
 }
@@ -459,6 +459,9 @@ function boxCorner(rng: GodotRandomPCG): Vector3 {
   return { x, y, z };
 }
 
+/** Scratch for `ringPoint`'s rotation about the ring axis, which `basisSetAxisAngle` overwrites whole. */
+const ringRotation: MutableBasis = [...IDENTITY_BASIS];
+
 /** A point in the ring's cone frustum (`cpu_particles_3d.cpp:948-969`). */
 function ringPoint(emission: ParticleEmission, rng: GodotRandomPCG): Vector3 {
   const { ringRadius, ringInnerRadius, ringHeight, ringConeAngle, ringAxis } = emission;
@@ -480,20 +483,39 @@ function ringPoint(emission: ParticleEmission, rng: GodotRandomPCG): Vector3 {
     ? cross({ x: 0, y: 1, z: 0 }, axis)
     : cross({ x: 1, y: 0, z: 0 }, axis);
   ortho = normalized(ortho);
-  ortho = normalized(basisXform(basisSetAxisAngle([...IDENTITY_BASIS], axis, angle), ortho));
+  ortho = normalized(basisXform(basisSetAxisAngle(ringRotation, axis, angle), ortho));
   // `y_pos * height - height / 2.0` mixes in a double.
   const along = f(f(yPos * ringHeight) - ringHeight / 2.0);
   return vector3Add(vector3Scaled(ortho, radius), vector3Scaled(axis, along));
 }
 
-/** Scratch for one step of one particle, overwritten by every step, so a step allocates nothing. */
+// Scratch, so a step allocates nothing. Each is valid only until the next call that writes it.
+
+/** Written by `advanceParticle` from gravity at the start of each step, then summed into. */
 const force: Vector3 = { x: 0, y: 0, z: 0 };
-const unit: Vector3 = { x: 0, y: 0, z: 0 };
+/** Written by `advanceParticle` at the start of each step: the particle's offset from the emitter. */
 const diff: Vector3 = { x: 0, y: 0, z: 0 };
+/** A unit vector `advanceParticle` and `addTangentialForce` write before each read. */
+const unit: Vector3 = { x: 0, y: 0, z: 0 };
+/** The two unit vectors `crossNormalsInto` writes on each call. */
+const unitA: Vector3 = { x: 0, y: 0, z: 0 };
+const unitB: Vector3 = { x: 0, y: 0, z: 0 };
+/** The basis columns the orient functions write on each call. */
 const xAxis: Vector3 = { x: 0, y: 0, z: 0 };
 const yAxis: Vector3 = { x: 0, y: 0, z: 0 };
 const zAxis: Vector3 = { x: 0, y: 0, z: 0 };
-const altSeed: SeedRef = { value: 0 };
+/** `alt_seed`: written by `advanceParticle` from `p.seed` at the start of each step. */
+const stepSeed: SeedRef = { value: 0 };
+/** `orbit`'s rotation and its turned offset, written on each call. */
+const orbitRotation: { -readonly [K in keyof Transform2DColumns]: number } = {
+  a: 1,
+  b: 0,
+  c: 0,
+  d: 1,
+  tx: 0,
+  ty: 0,
+};
+const orbitTurned: Vector2 = { x: 0, y: 0 };
 
 /** The alive branch: integrate one step, returning the normalised age `tv` (`:977-1092`). */
 function advanceParticle(
@@ -503,8 +525,7 @@ function advanceParticle(
   localDelta: number
 ): number {
   const { sim, curves } = input;
-  const seedRef = altSeed;
-  seedRef.value = p.seed;
+  stepSeed.value = p.seed;
   const { velocity } = p;
 
   p.time += localDelta;
@@ -535,18 +556,18 @@ function advanceParticle(
   // Each acceleration sits behind a C++ ternary, so its `rand_from_seed` draw is consumed only
   // when the branch is taken. Drawing unconditionally would desynchronise every later value.
   if (length(velocity) > 0.0) {
-    const accel = lerpParam(sim.params, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
+    const accel = lerpParam(sim.params, CPUParticlesParameter.LINEAR_ACCEL, stepSeed);
     addScaledTwice(force, normalizedInto(unit, velocity), texLinearAccel, accel);
   }
   if (length(diff) > 0.0) {
-    const radial = lerpParam(sim.params, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
+    const radial = lerpParam(sim.params, CPUParticlesParameter.RADIAL_ACCEL, stepSeed);
     addScaledTwice(force, normalizedInto(unit, diff), texRadialAccel, radial);
   }
-  addTangentialForce(sim, texTangentialAccel, seedRef);
+  addTangentialForce(sim, diff, force, texTangentialAccel, stepSeed);
 
   addScaled(velocity, force, f(localDelta));
 
-  if (sim.disableZ) orbit(sim, p, texOrbitVelocity, localDelta, seedRef);
+  if (sim.disableZ) orbit(sim, p, diff, texOrbitVelocity, localDelta, stepSeed);
 
   if (curves[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]) {
     // With a velocity curve, the speed is the curve, not an acceleration.
@@ -554,7 +575,7 @@ function advanceParticle(
   }
 
   if (f(sim.params[CPUParticlesParameter.DAMPING]!.max + texDamping) > 0.0) {
-    const damp = f(texDamping * lerpParam(sim.params, CPUParticlesParameter.DAMPING, seedRef));
+    const damp = f(texDamping * lerpParam(sim.params, CPUParticlesParameter.DAMPING, stepSeed));
     // `damp * local_delta` is a double, so the subtraction runs in double and rounds once.
     const speed = f(length(velocity) - damp * localDelta);
     if (speed < 0.0) vector3Set(velocity, 0, 0, 0);
@@ -569,13 +590,15 @@ function advanceParticle(
       p.custom[1] *
         sim.lifetime *
         texAngularVelocity *
-        lerpParam(sim.params, CPUParticlesParameter.ANGULAR_VELOCITY, seedRef)
+        lerpParam(sim.params, CPUParticlesParameter.ANGULAR_VELOCITY, stepSeed)
   );
   p.custom[0] = degToRadf(baseAngle);
 
   const animOffset = sim.params[CPUParticlesParameter.ANIM_OFFSET]!;
   const offset = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
-  const progress = f(f(tv * texAnimSpeed) * lerpParam(sim.params, CPUParticlesParameter.ANIM_SPEED, seedRef));
+  const progress = f(
+    f(tv * texAnimSpeed) * lerpParam(sim.params, CPUParticlesParameter.ANIM_SPEED, stepSeed)
+  );
   p.custom[2] = f(offset + progress);
 
   return tv;
@@ -595,11 +618,12 @@ function scaleInto(out: Vector3, v: Vector3, factor: number): void {
 
 /**
  * The tangential acceleration (`:1038-1046`), added to `force`: about Z in the XY plane with
- * `disable_z`, else along `diff × gravity`, so an emitter with no gravity has none. Godot adds
- * a zero vector for none, which turns a -0 component into +0.
+ * `disable_z`, else along `diff × gravity`, so an emitter with no gravity has none.
  */
 function addTangentialForce(
   sim: CPUParticles3DSimulation,
+  diff: Vector3,
+  force: Vector3,
   texTangentialAccel: number,
   seedRef: SeedRef
 ): void {
@@ -607,7 +631,7 @@ function addTangentialForce(
   if (sim.disableZ) vector3Set(unit, -diff.y, diff.x, 0);
   else crossNormalsInto(unit, diff, sim.gravity);
   if (!(length(unit) > 0.0)) {
-    addScaled(force, ZERO, 0);
+    positiveZeroes(force);
     return;
   }
   const accel = f(
@@ -616,25 +640,21 @@ function addTangentialForce(
   addScaled(force, normalizedInto(unit, unit), accel);
 }
 
+/** `force += Vector3()`: Godot adds a zero vector for no tangential force, which turns a -0 into +0. */
+function positiveZeroes(v: Vector3): void {
+  vector3Set(v, v.x + 0, v.y + 0, v.z + 0);
+}
+
 /** `out = a.normalized().cross(b.normalized())` in `real_t` float. */
 function crossNormalsInto(out: Vector3, a: Vector3, b: Vector3): void {
-  crossInto(out, normalizedInto(xAxis, a), normalizedInto(yAxis, b));
+  vector3CrossInto(out, normalizedInto(unitA, a), normalizedInto(unitB, b));
 }
 
-/** `out = a.cross(b)` in `real_t` float. `out` may be `a` or `b`. */
-function crossInto(out: Vector3, a: Vector3, b: Vector3): Vector3 {
-  return vector3Set(
-    out,
-    f(f(a.y * b.z) - f(a.z * b.y)),
-    f(f(a.z * b.x) - f(a.x * b.z)),
-    f(f(a.x * b.y) - f(a.y * b.x))
-  );
-}
-
-/** The orbit of a `disable_z` emitter about the emission origin (`:1050-1062`). */
+/** The orbit of a `disable_z` emitter about the emission origin, `diff` away (`:1050-1062`). */
 function orbit(
   sim: CPUParticles3DSimulation,
   p: Particle,
+  diff: Vector3,
   texOrbitVelocity: number,
   localDelta: number,
   seedRef: SeedRef
@@ -646,10 +666,18 @@ function orbit(
   const cos = f(Math.cos(-ang));
   const sin = f(Math.sin(-ang));
   // `Transform2D(cos, sin, -sin, cos).basis_xform(diff)`, then `origin += rotated - diff` in the plane.
-  const rotatedX = f(f(cos * diff.x) + f(-sin * diff.y));
-  const rotatedY = f(f(sin * diff.x) + f(cos * diff.y));
+  orbitRotation.a = cos;
+  orbitRotation.b = sin;
+  orbitRotation.c = -sin;
+  orbitRotation.d = cos;
+  const rotated = transform2DBasisXformInto(orbitTurned, orbitRotation, diff);
   const { origin } = p;
-  vector3Set(origin, f(f(origin.x - diff.x) + rotatedX), f(f(origin.y - diff.y) + rotatedY), f(origin.z + 0));
+  vector3Set(
+    origin,
+    f(f(origin.x - diff.x) + rotated.x),
+    f(f(origin.y - diff.y) + rotated.y),
+    f(origin.z + 0)
+  );
 }
 
 /** Colour, orientation and scale, run for every particle (`cpu_particles_3d.cpp:1094-1212`). */
@@ -687,18 +715,18 @@ function orient(sim: CPUParticles3DSimulation, p: Particle): void {
 function turnInPlane(basis: MutableBasis, angle: number): void {
   const cos = f(Math.cos(angle));
   const sin = f(Math.sin(angle));
-  writeColumn(basis, 0, vector3Set(xAxis, cos, -sin, 0));
-  writeColumn(basis, 1, vector3Set(yAxis, sin, cos, 0));
-  writeColumn(basis, 2, vector3Set(zAxis, 0, 0, 1));
+  basisSetColumn(basis, 0, vector3Set(xAxis, cos, -sin, 0));
+  basisSetColumn(basis, 1, vector3Set(yAxis, sin, cos, 0));
+  basisSetColumn(basis, 2, vector3Set(zAxis, 0, 0, 1));
 }
 
 /** `disable_z` with `align_y`: Y along the velocity, or kept for a still particle, and Z out of the plane. */
 function alignPlanarYToVelocity(basis: MutableBasis, velocity: Vector3): void {
-  const y = length(velocity) > 0.0 ? normalizedInto(yAxis, velocity) : columnInto(yAxis, basis, 1);
-  const x = normalizedInto(xAxis, crossInto(xAxis, y, columnInto(zAxis, basis, 2)));
-  writeColumn(basis, 0, x);
-  writeColumn(basis, 1, y);
-  writeColumn(basis, 2, vector3Set(zAxis, 0, 0, 1));
+  const y = length(velocity) > 0.0 ? normalizedInto(yAxis, velocity) : basisColumnInto(yAxis, basis, 1);
+  const x = normalizedInto(xAxis, vector3CrossInto(xAxis, y, basisColumnInto(zAxis, basis, 2)));
+  basisSetColumn(basis, 0, x);
+  basisSetColumn(basis, 1, y);
+  basisSetColumn(basis, 2, vector3Set(zAxis, 0, 0, 1));
 }
 
 /** `align_y`: Y along the velocity, then the other two columns crossed in Godot's order. */
@@ -706,31 +734,19 @@ function alignYToVelocity(basis: MutableBasis, velocity: Vector3): void {
   const y =
     length(velocity) > 0.0
       ? normalizedInto(yAxis, velocity)
-      : normalizedInto(yAxis, columnInto(yAxis, basis, 1));
-  const x = columnInto(xAxis, basis, 0);
-  const z = columnInto(zAxis, basis, 2);
+      : normalizedInto(yAxis, basisColumnInto(yAxis, basis, 1));
+  const x = basisColumnInto(xAxis, basis, 0);
+  const z = basisColumnInto(zAxis, basis, 2);
   if (sameVector3(y, x)) {
-    normalizedInto(x, crossInto(x, y, z));
-    normalizedInto(z, crossInto(z, x, y));
+    normalizedInto(x, vector3CrossInto(x, y, z));
+    normalizedInto(z, vector3CrossInto(z, x, y));
   } else {
-    normalizedInto(z, crossInto(z, x, y));
-    normalizedInto(x, crossInto(x, y, z));
+    normalizedInto(z, vector3CrossInto(z, x, y));
+    normalizedInto(x, vector3CrossInto(x, y, z));
   }
-  writeColumn(basis, 0, x);
-  writeColumn(basis, 1, y);
-  writeColumn(basis, 2, z);
-}
-
-/** `Basis::get_column(index)` written into `out`. */
-function columnInto(out: Vector3, basis: BasisComponents, index: number): Vector3 {
-  return vector3Set(out, basis[index]!, basis[index + 3]!, basis[index + 6]!);
-}
-
-/** `Basis::set_column(index, v)`. */
-function writeColumn(basis: MutableBasis, index: number, v: Vector3): void {
-  basis[index] = v.x;
-  basis[index + 3] = v.y;
-  basis[index + 6] = v.z;
+  basisSetColumn(basis, 0, x);
+  basisSetColumn(basis, 1, y);
+  basisSetColumn(basis, 2, z);
 }
 
 /** `tex_scale * lerp(scale range)`, each axis floored at `CMP_EPSILON`, scales the basis (`:1101-1122`, `:1201-1211`). */
@@ -868,12 +884,12 @@ function writeColor(buffer: Float32Array, at: number, { r, g, b, a }: Rgba): voi
 }
 
 function dot(a: Vector3, b: Vector3): number {
-  return vector3Dot([a.x, a.y, a.z], [b.x, b.y, b.z]);
+  return vector3DotComponents(a.x, a.y, a.z, b.x, b.y, b.z);
 }
 
+/** `a.cross(b)` as a new vector, for the restart branch, which keeps it. */
 function cross(a: Vector3, b: Vector3): Vector3 {
-  const [x, y, z] = vector3Cross([a.x, a.y, a.z], [b.x, b.y, b.z]);
-  return { x, y, z };
+  return vector3CrossInto({ x: 0, y: 0, z: 0 }, a, b);
 }
 
 function normalizedInto(out: Vector3, v: Vector3): Vector3 {
@@ -890,5 +906,5 @@ function length(v: Vector3): number {
 }
 
 function lengthSquared(v: Vector3): number {
-  return dot(v, v);
+  return vector3LengthSquared(v.x, v.y, v.z);
 }

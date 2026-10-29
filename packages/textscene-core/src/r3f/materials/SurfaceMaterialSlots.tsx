@@ -29,7 +29,7 @@ interface SurfaceMaterialSlotsProps {
   sources: readonly (MaterialSource | undefined)[];
   /** Where the points sit when the mesh draws `THREE.Points`, so each material also sizes them. */
   points?: PointPlacement;
-  /** The mesh draws a particle emitter's instances: the patch that colours and billboards them. */
+  /** The mesh draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
 }
 

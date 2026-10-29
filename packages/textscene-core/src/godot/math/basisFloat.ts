@@ -6,10 +6,8 @@
 
 import { storedReal as f } from './real.js';
 import { UNIT_EPSILON } from './math.js';
-import type { BasisComponents, MutableBasis, Triple } from './basis.js';
-import { vector3Dot, type Vector3 } from './vector.js';
-
-const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+import { basisCopy, IDENTITY_BASIS, type BasisComponents, type MutableBasis } from './basis.js';
+import { vector3DotComponents, vector3LengthSquared, type Vector3 } from './vector.js';
 
 /**
  * `Basis::xform` (`basis.h:336-341`) in `real_t` float: each row dotted with `v`. Not a
@@ -18,11 +16,11 @@ const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
  * @canonical A vector through a Basis in float32
  */
 export function basisXform(n: BasisComponents, v: Vector3): Vector3 {
-  const components: Triple = [v.x, v.y, v.z];
+  const { x, y, z } = v;
   return {
-    x: vector3Dot([n[0], n[1], n[2]], components),
-    y: vector3Dot([n[3], n[4], n[5]], components),
-    z: vector3Dot([n[6], n[7], n[8]], components),
+    x: vector3DotComponents(n[0], n[1], n[2], x, y, z),
+    y: vector3DotComponents(n[3], n[4], n[5], x, y, z),
+    z: vector3DotComponents(n[6], n[7], n[8], x, y, z),
   };
 }
 
@@ -33,11 +31,10 @@ export function basisXform(n: BasisComponents, v: Vector3): Vector3 {
  */
 export function basisSetAxisAngle(n: MutableBasis, axis: Vector3, angle: number): MutableBasis {
   const { x, y, z } = axis;
-  const lengthSquared = f(f(f(x * x) + f(y * y)) + f(z * z));
+  const lengthSquared = vector3LengthSquared(x, y, z);
   // `Vector3::is_normalized` (`vector3.h:566-569`): within `UNIT_EPSILON` of 1, squared.
   if (lengthSquared !== 1 && !(Math.abs(lengthSquared - 1) < UNIT_EPSILON)) {
-    n.splice(0, 9, ...IDENTITY);
-    return n;
+    return basisCopy(n, IDENTITY_BASIS);
   }
   const cosine = f(Math.cos(angle));
   const sine = f(Math.sin(angle));

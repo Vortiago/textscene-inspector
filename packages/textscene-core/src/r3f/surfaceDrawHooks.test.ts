@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from './shadowCasting';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import { withPointDraw } from './materials/godotPoint';
-import { programShader } from './testing/patchedFragment';
+import { patchedUniforms, programShader } from './testing/patchedFragment';
 import { instanceLayers } from './instanceLayers/instanceLayersChunk';
 import { shownProbes } from './reflectionProbe/probeSlots';
 import { setVisualLayers } from './visualLayers';
@@ -18,7 +18,7 @@ import {
   drawsColour,
   drawShadowGroup,
   expectSameMatrix,
-  expectSameRotation,
+  groupMaterialAt,
   TEST_CAMERA as camera,
   TEST_SHADOW_CAMERA as shadowCamera,
 } from './testing/threePasses';
@@ -26,7 +26,6 @@ import {
 const OPAQUE = 0;
 const ADDITIVE = 1;
 const BILLBOARD = 2;
-const PARTICLE_BILLBOARD = 3;
 const ALPHA_BLENDED = 4;
 const DEPTH_PRE_PASS = 5;
 
@@ -54,18 +53,18 @@ function surfacesMesh(castShadow: number | undefined = ShadowCastingSetting.ON):
 }
 
 describe('surfaceDrawHooks — colour pass billboard', () => {
-  it('draws a billboarding group with the camera basis', () => {
+  it('draws a billboarding group in the object pose, which its program billboards', () => {
     const mesh = surfacesMesh();
     const drawn = drawColourGroup(mesh, camera, BILLBOARD, (s) => s.matrixWorld);
-    expectSameRotation(drawn, camera.matrixWorld);
-    expect(new THREE.Vector3().setFromMatrixPosition(drawn)).toEqual(new THREE.Vector3(5, 6, 7));
+    expect(drawn.equals(mesh.matrixWorld)).toBe(true);
   });
 
-  it('restores the object pose after the draw', () => {
+  it('aims the billboard at the camera of the colour pass', () => {
     const mesh = surfacesMesh();
-    const before = mesh.matrixWorld.clone();
-    drawColourGroup(mesh, camera, BILLBOARD, () => undefined);
-    expect(mesh.matrixWorld.equals(before)).toBe(true);
+    const aimed = drawColourGroup(mesh, camera, BILLBOARD, () =>
+      mainCameraOf(groupMaterialAt(mesh, BILLBOARD))
+    );
+    expect(aimed.equals(camera.matrixWorld)).toBe(true);
   });
 
   it('leaves the model-view three computed for the draw, not a stale one from before it', () => {
@@ -76,39 +75,73 @@ describe('surfaceDrawHooks — colour pass billboard', () => {
     const drawn = drawColourGroup(mesh, camera, BILLBOARD, (s) => s.modelViewMatrix);
     expect(mesh.modelViewMatrix.equals(drawn)).toBe(true);
   });
-
-  it('leaves a group whose material does not billboard in the object pose', () => {
-    const mesh = surfacesMesh();
-    const drawn = drawColourGroup(mesh, camera, OPAQUE, (s) => s.matrixWorld);
-    expect(drawn.equals(mesh.matrixWorld)).toBe(true);
-  });
 });
 
-describe('surfaceDrawHooks — shadow pass billboard', () => {
-  it('faces the main camera, not the light, as MAIN_CAM_INV_VIEW_MATRIX does', () => {
-    const mesh = surfacesMesh();
-    const drawn = drawShadowGroup(mesh, camera, shadowCamera, BILLBOARD, (s) => s);
-    expectSameRotation(drawn.matrixWorld, camera.matrixWorld);
-    const expectedModelView = new THREE.Matrix4().multiplyMatrices(
-      shadowCamera.matrixWorldInverse,
-      drawn.matrixWorld
+/** The main camera the billboard of `material`'s program reads now. */
+function mainCameraOf(material: THREE.Material): THREE.Matrix4 {
+  return patchedUniforms(material).godotMainCameraWorld!.value as THREE.Matrix4;
+}
+
+/** The pass camera the billboard of `material`'s program reads now. */
+function passCameraOf(material: THREE.Material): THREE.Matrix4 {
+  return patchedUniforms(material).godotPassCameraWorld!.value as THREE.Matrix4;
+}
+
+/** A plain mesh and an InstancedMesh of one billboarding surface in `mode`, which cast. */
+const BILLBOARD_DRAWS: readonly [string, (mode?: number) => THREE.Mesh][] = [
+  ['a plain draw', (mode = BillboardMode.BILLBOARD_ENABLED) => castingDraw(new THREE.Mesh(), mode)],
+  [
+    'an instanced draw',
+    (mode = BillboardMode.BILLBOARD_ENABLED) =>
+      castingDraw(new THREE.InstancedMesh(undefined, undefined, 2), mode),
+  ],
+];
+
+function castingDraw(mesh: THREE.Mesh, mode: number): THREE.Mesh {
+  mesh.geometry = new THREE.BufferGeometry();
+  mesh.material = material({ billboard_mode: String(mode) });
+  applyShadowCasting(mesh, shadowCastingEffects(ShadowCastingSetting.ON));
+  mesh.position.set(5, 6, 7);
+  mesh.rotation.set(0, Math.PI / 2, 0);
+  mesh.updateMatrixWorld(true);
+  return mesh;
+}
+
+describe.each(BILLBOARD_DRAWS)('surfaceDrawHooks — shadow pass billboard of %s', (_name, billboarding) => {
+  // Godot's shadow pass runs the billboard of the colour pass (`material.cpp:1309`).
+  it('casts with its own depth material, which billboards the draw', () => {
+    const { cast, castsOwn, threeDraws } = shadowDraw(billboarding());
+    const shader = programShader('depth');
+    cast.onBeforeCompile.call(cast, shader as never, undefined as never);
+    expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
+      true,
+      false,
+      expect.stringContaining('mat4 godotBillboardWorld = godotBillboard();'),
+    ]);
+  });
+
+  it('keeps the object pose, which the program billboards', () => {
+    const mesh = billboarding();
+    const drawn = drawShadowGroup(mesh, camera, shadowCamera, 0, (s) => s.matrixWorld.clone());
+    expect(drawn.equals(mesh.matrixWorld)).toBe(true);
+  });
+
+  // `MAIN_CAM_INV_VIEW_MATRIX` is the main camera's on a shadow pass too (`material.cpp:1263-1264`).
+  it('aims the billboard at the main camera, not the light', () => {
+    const mesh = billboarding();
+    const aimed = drawShadowGroup(mesh, camera, shadowCamera, 0, () =>
+      mainCameraOf(groupMaterialAt(mesh, 0))
     );
-    expect(drawn.modelViewMatrix.equals(expectedModelView)).toBe(true);
+    expect([aimed.equals(camera.matrixWorld), aimed.equals(shadowCamera.matrixWorld)]).toEqual([true, false]);
   });
 
-  it('faces the pass camera for BILLBOARD_PARTICLES, which reads INV_VIEW_MATRIX', () => {
-    const mesh = surfacesMesh();
-    const drawn = drawShadowGroup(mesh, camera, shadowCamera, PARTICLE_BILLBOARD, (s) => s.matrixWorld);
-    expectSameRotation(drawn, shadowCamera.matrixWorld);
-  });
-
-  it('restores the pose and the model-view matrix after the draw', () => {
-    const mesh = surfacesMesh();
-    const pose = mesh.matrixWorld.clone();
-    drawShadowGroup(mesh, camera, shadowCamera, BILLBOARD, () => undefined);
-    expect(mesh.matrixWorld.equals(pose)).toBe(true);
-    const objectModelView = new THREE.Matrix4().multiplyMatrices(shadowCamera.matrixWorldInverse, pose);
-    expect(mesh.modelViewMatrix.equals(objectModelView)).toBe(true);
+  // PARTICLES reads `INV_VIEW_MATRIX`, the camera of the pass it draws in (`material.cpp:1309-1312`).
+  it('aims a PARTICLES billboard at the light', () => {
+    const mesh = billboarding(BillboardMode.BILLBOARD_PARTICLES);
+    const aimed = drawShadowGroup(mesh, camera, shadowCamera, 0, () =>
+      passCameraOf(groupMaterialAt(mesh, 0))
+    );
+    expect([aimed.equals(shadowCamera.matrixWorld), aimed.equals(camera.matrixWorld)]).toEqual([true, false]);
   });
 });
 
@@ -119,14 +152,10 @@ function hashObjectSpace(material: THREE.Material): THREE.Matrix4 {
   return shader.uniforms.godotObjectFromModel!.value as THREE.Matrix4;
 }
 
-function groupMaterial(mesh: THREE.Mesh, group: number): THREE.Material {
-  return (mesh.material as THREE.Material[])[group]!;
-}
-
 describe('surfaceDrawHooks — alpha hash object space', () => {
   it('hashes a billboarding group in the object space of its unposed node', () => {
     const mesh = surfacesMesh();
-    const objectSpace = hashObjectSpace(groupMaterial(mesh, BILLBOARD));
+    const objectSpace = hashObjectSpace(groupMaterialAt(mesh, BILLBOARD));
     const drawn = drawColourGroup(mesh, camera, BILLBOARD, (s) => s.matrixWorld);
     expectSameMatrix(objectSpace, mesh.matrixWorld.clone().invert().multiply(drawn));
   });
@@ -141,14 +170,14 @@ describe('surfaceDrawHooks — alpha hash object space', () => {
         nodeMatrixWorld: (target) => (target.copy(node), true),
       })
     );
-    const objectSpace = hashObjectSpace(groupMaterial(mesh, OPAQUE));
+    const objectSpace = hashObjectSpace(groupMaterialAt(mesh, OPAQUE));
     drawColourGroup(mesh, camera, OPAQUE, () => undefined);
     expectSameMatrix(objectSpace, node.clone().invert().multiply(mesh.matrixWorld));
   });
 
   it('hashes a group three draws in the node pose in its own vertex space (edge case)', () => {
     const mesh = surfacesMesh();
-    const objectSpace = hashObjectSpace(groupMaterial(mesh, OPAQUE));
+    const objectSpace = hashObjectSpace(groupMaterialAt(mesh, OPAQUE));
     objectSpace.makeScale(3, 3, 3);
     drawColourGroup(mesh, camera, OPAQUE, () => undefined);
     expectSameMatrix(objectSpace, new THREE.Matrix4());
@@ -253,58 +282,9 @@ describe('surfaceDrawHooks — point shadow', () => {
   });
 });
 
-describe('surfaceDrawHooks — instanced billboards', () => {
-  /** An InstancedMesh of one billboarding surface in `mode`, which casts, typed as the mesh the helpers take. */
-  function instancedSurface(mode: number = BillboardMode.BILLBOARD_ENABLED): THREE.Mesh {
-    const instances = new THREE.InstancedMesh(
-      new THREE.BufferGeometry(),
-      material({ billboard_mode: String(mode) }),
-      2
-    );
-    applyShadowCasting(instances, shadowCastingEffects(ShadowCastingSetting.ON));
-    return instances;
-  }
-
-  // Godot's shadow pass runs the billboard of the colour pass on each instance (`material.cpp:1309`).
-  it("casts the instances' shadow with its own depth material, which billboards them", () => {
-    const { cast, castsOwn, threeDraws } = shadowDraw(instancedSurface());
-    const shader = programShader('depth');
-    cast.onBeforeCompile.call(cast, shader as never, undefined as never);
-    expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
-      true,
-      false,
-      expect.stringContaining('#define instanceMatrix godotInstanceLocal'),
-    ]);
-  });
-
-  // `MAIN_CAM_INV_VIEW_MATRIX` is the main camera's on a shadow pass too (`material.cpp:1263-1264`).
-  it('aims the billboard at the main camera, not the light', () => {
-    const shadow = drawShadowGroup(instancedSurface(), camera, shadowCamera, 0, (s) => s.castMaterial!);
-    const shader = programShader('depth');
-    shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
-    const aimed = shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4;
-    expect([aimed.equals(camera.matrixWorld), aimed.equals(shadowCamera.matrixWorld)]).toEqual([true, false]);
-  });
-
-  // PARTICLES reads `INV_VIEW_MATRIX`, the camera of the pass it draws in (`material.cpp:1309-1312`).
-  it('aims a PARTICLES billboard at the light on a shadow pass', () => {
-    const surface = instancedSurface(BillboardMode.BILLBOARD_PARTICLES);
-    const shadow = drawShadowGroup(surface, camera, shadowCamera, 0, (s) => s.castMaterial!);
-    const shader = programShader('depth');
-    shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
-    const aimed = shader.uniforms.godotPassCameraWorld!.value as THREE.Matrix4;
-    expect([aimed.equals(shadowCamera.matrixWorld), aimed.equals(camera.matrixWorld)]).toEqual([true, false]);
-  });
-
-  it('keeps the instanced pose, which the program billboards', () => {
-    const mesh = instancedSurface();
-    expect(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld.clone()).equals(mesh.matrixWorld)).toBe(
-      true
-    );
-  });
-
-  // Godot billboards each instance about its own origin, so a billboard about the node would move
-  // every instance of a points draw (edge case).
+// Godot billboards each instance about its own origin, so a billboard about the node would move
+// every instance of a points draw (edge case).
+describe('surfaceDrawHooks — instanced points billboard', () => {
   it('keeps the pose of instanced points', () => {
     const points = new THREE.Points(new THREE.InstancedBufferGeometry(), material({ billboard_mode: '1' }));
     applyShadowCasting(points, shadowCastingEffects(ShadowCastingSetting.ON));

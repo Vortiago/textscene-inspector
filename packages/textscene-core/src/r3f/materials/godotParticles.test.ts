@@ -106,7 +106,7 @@ describe('the BILLBOARD_PARTICLES flipbook', () => {
   });
 
   it('reads the frame from the instance custom data', () => {
-    expect(mapped(0)).toContain('floor( instanceCustom.z * particle_total_frames )');
+    expect(mapped(0)).toContain('floor( godotInstanceCustom.z * particle_total_frames )');
   });
 
   it('holds at the last cell without the loop', () => {

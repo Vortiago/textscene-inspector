@@ -118,16 +118,52 @@ type Components3 = readonly [number, number, number];
 
 /** `Vector3::dot` (`core/math/vector3.h`) in `real_t` float, the products summed in order. */
 export function vector3Dot(a: Components3, b: Components3): number {
-  return f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
+  return vector3DotComponents(a[0], a[1], a[2], b[0], b[1], b[2]);
+}
+
+/**
+ * {@link vector3Dot} of `(ax, ay, az)` and `(bx, by, bz)`, for a caller that holds no tuple, such as
+ * a basis column.
+ *
+ * @canonical A Vector3 dot product in float32
+ *   `vector3Dot` over tuples, `vector3DotComponents` over six components, one rounding chain.
+ */
+export function vector3DotComponents(
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number
+): number {
+  return f(f(f(ax * bx) + f(ay * by)) + f(az * bz));
 }
 
 /** `Vector3::cross` (`core/math/vector3.h`) in `real_t` float. */
 export function vector3Cross(a: Components3, b: Components3): [number, number, number] {
-  return [
-    f(f(a[1] * b[2]) - f(a[2] * b[1])),
-    f(f(a[2] * b[0]) - f(a[0] * b[2])),
-    f(f(a[0] * b[1]) - f(a[1] * b[0])),
-  ];
+  const cross = vector3CrossInto(crossScratch, asVector3(a), asVector3(b));
+  return [cross.x, cross.y, cross.z];
+}
+
+/** Scratch for `vector3Cross`, overwritten by every call. */
+const crossScratch: Vector3 = { x: 0, y: 0, z: 0 };
+
+function asVector3([x, y, z]: Components3): Vector3 {
+  return { x, y, z };
+}
+
+/**
+ * {@link vector3Cross} written into `out`, for a loop that allocates nothing. `out` may be `a` or `b`.
+ *
+ * @canonical A Vector3 cross product in float32, written in place
+ */
+export function vector3CrossInto(out: Vector3, a: Vector3, b: Vector3): Vector3 {
+  return vector3Set(
+    out,
+    f(f(a.y * b.z) - f(a.z * b.y)),
+    f(f(a.z * b.x) - f(a.x * b.z)),
+    f(f(a.x * b.y) - f(a.y * b.x))
+  );
 }
 
 /** `Vector3::maxf` (`core/math/vector3.h:105-107`): each component raised to at least `floor`. */
@@ -140,9 +176,14 @@ export function vector3Length(x: number, y: number, z: number): number {
   return f(Math.sqrt(vector3LengthSquared(x, y, z)));
 }
 
-/** The squares summed in order, so a permuted vector can round to another length, as in Godot. */
-function vector3LengthSquared(x: number, y: number, z: number): number {
-  return f(f(f(x * x) + f(y * y)) + f(z * z));
+/**
+ * `Vector3::length_squared` (`core/math/vector3.h`) in `real_t` float. The squares sum in order, so
+ * a permuted vector can round to another length, as in Godot.
+ *
+ * @canonical A Vector3 length squared in float32
+ */
+export function vector3LengthSquared(x: number, y: number, z: number): number {
+  return vector3DotComponents(x, y, z, x, y, z);
 }
 
 /** `Vector3::operator+` (`core/math/vector3.h`) in `real_t` float. */

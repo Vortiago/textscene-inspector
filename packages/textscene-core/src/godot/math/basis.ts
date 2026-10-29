@@ -9,7 +9,13 @@
 import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import type { Quaternion } from './quaternion.js';
-import { vector3Dot, vector3NormalizeInto, type Vector3 } from './vector.js';
+import {
+  vector3Dot,
+  vector3DotComponents,
+  vector3NormalizeInto,
+  vector3Set,
+  type Vector3,
+} from './vector.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
@@ -26,6 +32,14 @@ export type BasisComponents = readonly [
 
 export type Triple = [number, number, number];
 
+/**
+ * `Basis()`, the identity. Frozen, since every caller shares it: a basis written in place copies it
+ * with {@link basisCopy}.
+ *
+ * @canonical The identity basis
+ */
+export const IDENTITY_BASIS: BasisComponents = Object.freeze<BasisComponents>([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+
 /** Column `index` of the basis, the vector `Basis::get_column` returns. */
 export function basisColumn(n: BasisComponents, index: number): Triple {
   return [n[index]!, n[index + 3]!, n[index + 6]!];
@@ -33,6 +47,33 @@ export function basisColumn(n: BasisComponents, index: number): Triple {
 
 /** A basis a loop writes in place, as Godot's own methods do. */
 export type MutableBasis = [number, number, number, number, number, number, number, number, number];
+
+/**
+ * {@link basisColumn} written into `out`, for a loop that allocates nothing.
+ *
+ * @canonical A Basis column read and written in place
+ *   `basisColumnInto` reads `Basis::get_column`, `basisSetColumn` writes `Basis::set_column`.
+ */
+export function basisColumnInto(out: Vector3, n: BasisComponents, index: number): Vector3 {
+  return vector3Set(out, n[index]!, n[index + 3]!, n[index + 6]!);
+}
+
+/** `Basis::set_column(index, v)`: writes `v` into column `index` of `n`. */
+export function basisSetColumn(n: MutableBasis, index: number, v: Vector3): void {
+  n[index] = v.x;
+  n[index + 3] = v.y;
+  n[index + 6] = v.z;
+}
+
+/**
+ * Copies the nine components of `from` into `out`, for a basis written in place.
+ *
+ * @canonical A Basis copied into one written in place
+ */
+export function basisCopy(out: MutableBasis, from: BasisComponents): MutableBasis {
+  for (let i = 0; i < 9; i++) out[i] = from[i]!;
+  return out;
+}
 
 /**
  * `Basis::orthonormalized` (`basis.cpp:74-78`): a copy through {@link basisOrthonormalize}.
@@ -51,10 +92,10 @@ const unitColumn: Vector3 = { x: 0, y: 0, z: 0 };
  */
 export function basisOrthonormalize(n: MutableBasis): MutableBasis {
   writeUnitColumn(n, 0, n[0], n[3], n[6]);
-  const xDotY = f(f(f(n[0] * n[1]) + f(n[3] * n[4])) + f(n[6] * n[7]));
+  const xDotY = columnDot(n, 0, 1);
   writeUnitColumn(n, 1, f(n[1] - f(n[0] * xDotY)), f(n[4] - f(n[3] * xDotY)), f(n[7] - f(n[6] * xDotY)));
-  const xDotZ = f(f(f(n[0] * n[2]) + f(n[3] * n[5])) + f(n[6] * n[8]));
-  const yDotZ = f(f(f(n[1] * n[2]) + f(n[4] * n[5])) + f(n[7] * n[8]));
+  const xDotZ = columnDot(n, 0, 2);
+  const yDotZ = columnDot(n, 1, 2);
   writeUnitColumn(
     n,
     2,
@@ -65,11 +106,13 @@ export function basisOrthonormalize(n: MutableBasis): MutableBasis {
   return n;
 }
 
+/** `get_column(i).dot(get_column(j))` in `real_t` float. */
+function columnDot(n: BasisComponents, i: number, j: number): number {
+  return vector3DotComponents(n[i]!, n[i + 3]!, n[i + 6]!, n[j]!, n[j + 3]!, n[j + 6]!);
+}
+
 function writeUnitColumn(n: MutableBasis, index: number, x: number, y: number, z: number): void {
-  const unit = vector3NormalizeInto(unitColumn, x, y, z);
-  n[index] = unit.x;
-  n[index + 3] = unit.y;
-  n[index + 6] = unit.z;
+  basisSetColumn(n, index, vector3NormalizeInto(unitColumn, x, y, z));
 }
 
 /**

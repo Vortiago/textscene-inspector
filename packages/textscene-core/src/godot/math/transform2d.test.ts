@@ -14,6 +14,7 @@ import {
   transform2DGetScale,
   transform2DHasZeroSkew,
   transform2DBasisXform,
+  transform2DBasisXformInto,
   transform2DIsConformal,
   transform2DXform,
   type Transform2DColumns,
@@ -353,5 +354,22 @@ describe('the one spelling of the Transform2D construction, product and inverse'
   it('declares no second field layout for a Transform2D', () => {
     const layouts = sources.filter(({ text }) => OTHER_LAYOUT.test(text)).map(({ rel }) => rel);
     expect(layouts).toEqual([]);
+  });
+});
+
+describe('transform2DBasisXformInto', () => {
+  it('writes the turned vector into the one it is given', () => {
+    const quarterTurn = { a: 0, b: 1, c: -1, d: 0, tx: 5, ty: -6 };
+    const out = { x: 0, y: 0 };
+
+    expect(transform2DBasisXformInto(out, quarterTurn, { x: 1.5, y: -2.5 })).toBe(out);
+    expect(out).toEqual({ x: 2.5, y: 1.5 });
+  });
+
+  it('reads the vector before it writes, so the out vector may be the input (edge case)', () => {
+    const v = { x: 1.5, y: -2.5 };
+
+    transform2DBasisXformInto(v, { a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0 }, v);
+    expect(v).toEqual({ x: 2.5, y: 1.5 });
   });
 });

@@ -33,7 +33,7 @@
  */
 
 import { storedReal as f } from '../../../godot/math/real.js';
-import { lerpf, type Rgba } from '../../../godot/math/math.js';
+import { lerpf, multiplyColorInto, type Rgba } from '../../../godot/math/math.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import type { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import type { Curve } from '../../../resources/curves/curve/types';
@@ -153,12 +153,12 @@ function restartTime(clock: RestartClock, i: number): number {
 }
 
 /**
- * Whether particle `i` restarts this step, and its `local_delta` (`cpu_particles_3d.cpp:776-801`).
- * With `fract_delta` (default true) a particle born mid-step gets only the remainder after its
- * restart instant, so same-step births spread into a bar instead of one displacement. The caller
- * still restarts a particle that outlived its lifetime (`:803-805`).
+ * Writes into `out` whether particle `i` restarts this step, and its `local_delta`
+ * (`cpu_particles_3d.cpp:776-801`). With `fract_delta` (default true) a particle born mid-step gets
+ * only the remainder after its restart instant, so same-step births spread into a bar instead of
+ * one displacement. The caller still restarts a particle that outlived its lifetime (`:803-805`).
  */
-export function restartStep(clock: RestartClock, i: number, out: RestartStep): RestartStep {
+export function restartStep(clock: RestartClock, i: number, out: RestartStep): void {
   const { prevTime, time, lifetime, delta, fractDelta } = clock;
   const restartAt = restartTime(clock, i);
   let restart = false;
@@ -185,7 +185,6 @@ export function restartStep(clock: RestartClock, i: number, out: RestartStep): R
 
   out.restart = restart;
   out.localDelta = localDelta;
-  return out;
 }
 
 /** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_3d.cpp:1136-1138`), as floats. */
@@ -262,13 +261,13 @@ export interface TintedParticle {
  * `base` is `color`, times the `color_ramp` sample at the particle's age where there is a ramp.
  */
 export function tintParticle(p: TintedParticle, base: Rgba, hueAngle: number): void {
-  const { color, baseColor, startColorRand } = p;
+  const { color } = p;
   rotateHueInto(color, base, hueAngle);
-  color.r = f(color.r * f(baseColor.r * startColorRand.r));
-  color.g = f(color.g * f(baseColor.g * startColorRand.g));
-  color.b = f(color.b * f(baseColor.b * startColorRand.b));
-  color.a = f(color.a * f(baseColor.a * startColorRand.a));
+  multiplyColorInto(color, color, multiplyColorInto(birthTint, p.baseColor, p.startColorRand));
 }
+
+/** Scratch for `tintParticle`'s `p.base_color * p.start_color_rand`, overwritten by every call. */
+const birthTint: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 
 /** Each parameter's curve, by `CPUParticlesParameter`, null for none. */
 export type ParticleCurves = ReadonlyArray<Curve | null>;

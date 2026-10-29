@@ -47,6 +47,7 @@ import {
   lerpParam,
   restartStep,
   sampleParam,
+  tintParticle,
   type ParticleCurves,
   type RestartClock,
   type RestartStep,
@@ -300,9 +301,9 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     const p = state.particles[i]!;
     if (!state.emitting && !p.active) continue;
 
-    const { localDelta } = restartStep(clock, i, step);
-    let { restart } = step;
-    if (p.time * (1.0 - props.explosiveness) > p.lifetime) restart = true;
+    restartStep(clock, i, step);
+    const { localDelta } = step;
+    const restart = step.restart || p.time * (1.0 - props.explosiveness) > p.lifetime;
 
     let tv = 0.0;
 
@@ -600,13 +601,8 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const hueRotAngle = f(texHueVariation * TAU * lerpf(hueParam.min, hueParam.max, p.hueRotRand));
 
   const base = colorRamp ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color) : props.color;
-  // Called unconditionally, not short-circuited at angle 0: Godot's basis is not
-  // quite the identity there. The blue column comes out at -0.001/-0.001/1, so
-  // every particle takes a slight tint.
-  const rotated = rotateHue(base, hueRotAngle);
-
-  // `p.color *= p.base_color * p.start_color_rand` (`:1126`): the right side multiplies first.
-  p.color = multiplyColor(rotated, multiplyColor(p.baseColor, p.startColorRand));
+  // `cpu_particles_2d.cpp:1090-1126` tints as 3D does.
+  tintParticle(p, base, hueRotAngle);
 
   if (props.particle_flag_align_y) {
     const yAxis = normalizedVector2(
@@ -663,48 +659,4 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
     });
   }
   return pose;
-}
-
-/** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_2d.cpp:1090-1092`), as floats. */
-const HUE_LUMINANCE: readonly number[] = [0.299, 0.587, 0.114].map(f);
-const HUE_COSINE_ROWS: readonly (readonly number[])[] = [
-  [0.701, -0.587, -0.114],
-  [-0.299, 0.413, -0.114],
-  [-0.3, -0.588, 0.886],
-].map((row) => row.map(f));
-const HUE_SINE_ROWS: readonly (readonly number[])[] = [
-  [0.168, 0.33, -0.497],
-  [-0.328, 0.035, 0.292],
-  [1.25, -1.05, -0.203],
-].map((row) => row.map(f));
-
-/** The blended basis as three rows: `mat1[j] + mat2[j] * c + mat3[j] * s` in `real_t` float. */
-function hueBasisRows(angle: number): number[][] {
-  const c = f(Math.cos(angle));
-  const s = f(Math.sin(angle));
-  return HUE_COSINE_ROWS.map((cosine, j) =>
-    cosine.map((_, k) => f(f(HUE_LUMINANCE[k]! + f(cosine[k]! * c)) + f(HUE_SINE_ROWS[j]![k]! * s)))
-  );
-}
-
-/** Most particles have no hue curve, so their angle is zero: the basis is built once for them. */
-const UNROTATED_HUE_ROWS = hueBasisRows(0);
-
-/**
- * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
- * angle, then applied with `Basis::xform_inv`, the transpose, in `real_t` float.
- */
-function rotateHue(color: Rgba, angle: number): Rgba {
-  const rows = angle === 0 ? UNROTATED_HUE_ROWS : hueBasisRows(angle);
-  return {
-    r: hueChannel(rows, 0, color),
-    g: hueChannel(rows, 1, color),
-    b: hueChannel(rows, 2, color),
-    a: color.a,
-  };
-}
-
-/** `xform_inv` reads down column `k` of the rows, not across one. */
-function hueChannel(rows: readonly number[][], k: number, color: Rgba): number {
-  return f(f(f(rows[0]![k]! * color.r) + f(rows[1]![k]! * color.g)) + f(rows[2]![k]! * color.b));
 }

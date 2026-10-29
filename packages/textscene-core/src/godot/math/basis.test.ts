@@ -3,6 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   type BasisComponents,
+  basisColumnInto,
+  basisCopy,
   basisDiagonal,
   basisGetScale,
   basisGetScaleAbs,
@@ -15,6 +17,8 @@ import {
   basisMultiply,
   basisOrthonormalize,
   basisOrthonormalized,
+  basisSetColumn,
+  IDENTITY_BASIS,
   type MutableBasis,
 } from './basis.js';
 
@@ -247,3 +251,37 @@ function unitQuaternionAbout(axis: readonly [number, number, number], angle: num
   const sine = Math.sin(angle / 2) / length;
   return { x: axis[0] * sine, y: axis[1] * sine, z: axis[2] * sine, w: Math.cos(angle / 2) };
 }
+
+describe('IDENTITY_BASIS', () => {
+  it('is the identity, frozen so no caller can write into the shared one', () => {
+    expect(IDENTITY_BASIS).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    expect(Object.isFrozen(IDENTITY_BASIS)).toBe(true);
+  });
+});
+
+describe('basisColumnInto', () => {
+  it('writes column `index` into the vector it is given', () => {
+    const out = { x: 0, y: 0, z: 0 };
+
+    expect(basisColumnInto(out, [1, 2, 3, 4, 5, 6, 7, 8, 9], 1)).toBe(out);
+    expect(out).toEqual({ x: 2, y: 5, z: 8 });
+  });
+});
+
+describe('basisSetColumn', () => {
+  it('writes the vector into column `index`, leaving the other columns', () => {
+    const n: MutableBasis = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+    basisSetColumn(n, 2, { x: -1, y: -2, z: -3 });
+    expect(n).toEqual([1, 2, -1, 4, 5, -2, 7, 8, -3]);
+  });
+});
+
+describe('basisCopy', () => {
+  it('copies every component into the basis it is given', () => {
+    const out: MutableBasis = [9, 9, 9, 9, 9, 9, 9, 9, 9];
+
+    expect(basisCopy(out, IDENTITY_BASIS)).toBe(out);
+    expect(out).toEqual([...IDENTITY_BASIS]);
+  });
+});

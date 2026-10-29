@@ -37,6 +37,11 @@ function groupMaterial(mesh: THREE.Mesh, group: THREE.Group | null): THREE.Mater
   return material[(group as { materialIndex?: number } | null)?.materialIndex ?? 0]!;
 }
 
+/** The material three draws the mesh's group at `groupIndex` with (0 for a single material). */
+export function groupMaterialAt(mesh: THREE.Mesh, groupIndex = 0): THREE.Material {
+  return groupMaterial(mesh, groupAt(mesh, groupIndex));
+}
+
 function snapshot(mesh: THREE.Mesh, material: THREE.Material, drawn: THREE.Material): DrawState {
   return {
     material,

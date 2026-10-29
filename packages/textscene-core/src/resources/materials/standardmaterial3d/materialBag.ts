@@ -230,7 +230,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...triplanarUserData(triplanarRecord(scalars)),
     ...viewportSamplersUserData(),
   };
-  // An instanced draw's shadow billboards each instance as its colour pass does.
+  // A billboard's shadow billboards as its colour pass does (`material.cpp:1309`).
   const injections = billboardInjections(billboard);
   return injections ? withDepthInjection(userData, 'afterCut', injections.depth) : userData;
 }
@@ -306,7 +306,7 @@ export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): Sur
 }
 
 /**
- * Godot's billboard for a surface that billboards: the instance pose and the normal turn, after any
+ * Godot's billboard for a surface that billboards: the pose and the normal turn, after any
  * patch that adds a `defaultnormal_vertex`.
  */
 function billboardInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {

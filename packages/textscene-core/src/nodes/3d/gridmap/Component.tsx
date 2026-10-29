@@ -175,8 +175,8 @@ interface GridMapItemProps extends CellGrid {
 }
 
 /**
- * All cells sharing one MeshLibrary item. Each surface decides on its own whether it batches,
- * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
+ * All cells sharing one MeshLibrary item, each surface as one instanced draw, which Godot
+ * billboards per instance in its shader (`scene_forward_clustered.glsl:338-342`).
  */
 function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
   const content = useMeshContent(usePathResolution(item.meshPath), isMeshHeldLocally);

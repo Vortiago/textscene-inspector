@@ -90,10 +90,19 @@ export function multiplyTransform2D(
  * @canonical A vector through a Transform2D basis in float32
  */
 export function transform2DBasisXform(t: Transform2DColumns, v: Vector2): Vector2 {
-  return {
-    x: f(f(t.a * v.x) + f(t.c * v.y)),
-    y: f(f(t.b * v.x) + f(t.d * v.y)),
-  };
+  return transform2DBasisXformInto({ x: 0, y: 0 }, t, v);
+}
+
+/**
+ * {@link transform2DBasisXform} written into `out`, for a loop that allocates nothing. `out` may be `v`.
+ *
+ * @canonical A vector through a Transform2D basis in float32, written in place
+ */
+export function transform2DBasisXformInto(out: Vector2, t: Transform2DColumns, v: Vector2): Vector2 {
+  const x = f(f(t.a * v.x) + f(t.c * v.y));
+  out.y = f(f(t.b * v.x) + f(t.d * v.y));
+  out.x = x;
+  return out;
 }
 
 /**

@@ -12,7 +12,10 @@ import {
   normalizedVector3,
   vector3NormalizeInto,
   vector3Cross,
+  vector3CrossInto,
   vector3Dot,
+  vector3DotComponents,
+  vector3LengthSquared,
   vector3Lerp,
   vector3Maxf,
 } from './vector';
@@ -132,5 +135,39 @@ describe('component-wise Vector2 arithmetic', () => {
 
   it('measures the length in float', () => {
     expect(vector2Length({ x: storedReal(3.3), y: storedReal(-4.7) })).toBe(storedReal(5.742821216583));
+  });
+});
+
+describe('vector3DotComponents', () => {
+  it('rounds as vector3Dot does, over six components', () => {
+    expect(vector3DotComponents(0.1, 0.2, 0.3, 3, 5, 7)).toBe(vector3Dot([0.1, 0.2, 0.3], [3, 5, 7]));
+  });
+
+  it('sums the products in order, each step rounded to single precision', () => {
+    const f = Math.fround;
+    expect(vector3DotComponents(0.1, 0.2, 0.3, 3, 5, 7)).toBe(f(f(f(0.1 * 3) + f(0.2 * 5)) + f(0.3 * 7)));
+  });
+});
+
+describe('vector3LengthSquared', () => {
+  it('sums the squares in order, each step rounded to single precision', () => {
+    const f = Math.fround;
+    expect(vector3LengthSquared(0.1, 0.2, 0.3)).toBe(f(f(f(0.1 * 0.1) + f(0.2 * 0.2)) + f(0.3 * 0.3)));
+  });
+});
+
+describe('vector3CrossInto', () => {
+  it('writes the cross product into the vector it is given', () => {
+    const out = { x: 9, y: 9, z: 9 };
+
+    expect(vector3CrossInto(out, { x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 })).toBe(out);
+    expect(out).toEqual({ x: 0, y: 0, z: 1 });
+  });
+
+  it('reads both operands before it writes, so the out vector may be one of them (edge case)', () => {
+    const a = { x: 1, y: 2, z: 3 };
+
+    vector3CrossInto(a, a, { x: 4, y: 5, z: 6 });
+    expect([a.x, a.y, a.z]).toEqual(vector3Cross([1, 2, 3], [4, 5, 6]));
   });
 });
