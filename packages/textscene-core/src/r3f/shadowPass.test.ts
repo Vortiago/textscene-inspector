@@ -72,7 +72,7 @@ function spotLight(hasSlot = true): THREE.SpotLight {
 /** The scene every reader below reads, unless a test renders another. */
 const SCENE = new THREE.Scene();
 
-const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[], scene: THREE.Object3D = SCENE) =>
+const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[], scene: THREE.Scene = SCENE) =>
   renderer.shadowMap.render(lights, scene, new THREE.PerspectiveCamera());
 
 describe('installShadowPass', () => {
