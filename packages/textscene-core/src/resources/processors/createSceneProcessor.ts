@@ -129,6 +129,7 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
     nodes: roots,
     externalResources: [],
     internalResources: [],
+    refusesToInstantiate: false,
   };
 }
 

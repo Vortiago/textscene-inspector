@@ -116,10 +116,10 @@ describe('the installed light function', () => {
     const mapped = preprocessorBranch(godotChunks()[SETUP_CHUNK], '#ifdef USE_NORMALMAP_TANGENTSPACE');
     expect(mapped).toContain('vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );');
     expect(mapped).toContain(
-      'godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );'
+      'godotDndu = godotPair.x * ( godotMapNormal( GODOT_NORMAL_TEXEL( vec2( godotPair.x, 0.0 ) ), tbn + godotPair.x * godotTbnDx ) - normal );'
     );
     expect(mapped).toContain(
-      'godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );'
+      'godotDndv = godotPair.y * ( godotMapNormal( GODOT_NORMAL_TEXEL( vec2( 0.0, godotPair.y ) ), tbn + godotPair.y * godotTbnDy ) - normal );'
     );
     expect(mapped).not.toContain('dFdx( normal )');
   });

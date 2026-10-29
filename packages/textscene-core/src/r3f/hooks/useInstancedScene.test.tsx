@@ -14,13 +14,19 @@ import {
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnScene } from '../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../parser/sceneDefaults.testkit';
 
 const SCENE_PATH = 'res://child.tscn';
 const INSTANCE_REF = 'ExtResource("1_child")';
 const EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [
   { id: '1_child', path: SCENE_PATH, type: 'PackedScene' },
 ];
-const CHILD_SCENE: TscnScene = { nodes: [], externalResources: [], internalResources: [] };
+const CHILD_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
+  nodes: [],
+  externalResources: [],
+  internalResources: [],
+};
 
 function wrapper(fake: FakeResourceLoader) {
   return function Wrapper({ children }: { children: ReactNode }) {

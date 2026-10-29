@@ -259,6 +259,25 @@ size = Vector3(1, 1, 1)
     });
   });
 
+  describe('refusal to instantiate', () => {
+    const refusesText = (body: string) =>
+      new TscnParser().parse(`[gd_scene format=3]\n\n${body}`).refusesToInstantiate;
+
+    it('is false for a scene with one root', () => {
+      expect(
+        refusesText('[node name="Root" type="Node3D"]\n\n[node name="A" type="Node3D" parent="."]\n')
+      ).toBe(false);
+    });
+
+    it('is true for a second heading with no parent', () => {
+      expect(refusesText('[node name="One" type="Node3D"]\n\n[node name="Two" type="Node3D"]\n')).toBe(true);
+    });
+
+    it('is true for a scene with no node', () => {
+      expect(refusesText('')).toBe(true);
+    });
+  });
+
   describe('stranded nodes', () => {
     afterEach(() => {
       vi.restoreAllMocks();

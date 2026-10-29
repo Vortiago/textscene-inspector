@@ -7,7 +7,9 @@
 
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveSubResourceRef } from '../../SubResourceResolver';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import { resolveReferencedResource } from '../../resolveReference';
+import type { LoadedFile } from '../../scopedResource';
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
   GradientTexture2DFill,
@@ -70,15 +72,16 @@ export function decodeGradientResource(resource: TscnInternalResource | null): G
 }
 
 /**
- * The `Gradient` a `SubResource("id")` property names, or null for anything else, an ExtResource
- * included: the texture and noise callers hold no loaded files. {@link decodeGradientResource}
- * decodes a resource a caller resolved itself, as CPUParticles2D does for a `.tres` ramp.
+ * The `Gradient` that `ref` names: a SubResource, or an ExtResource once its `.tres` has loaded.
+ * Null for no reference, an unknown id, a file not loaded yet, or a resource of another type.
+ * The one path every reader of a Gradient reference takes: a texture, a noise texture, a particle ramp.
  */
 export function resolveGradient(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): Gradient | null {
-  return decodeGradientResource(resolveSubResourceRef(ref, internalResources) ?? null);
+  return decodeGradientResource(resolveReferencedResource(ref, pools, loadedFile));
 }
 
 /** `width = 64` and `height = 64` (`gradient_texture.h:92-93`). */

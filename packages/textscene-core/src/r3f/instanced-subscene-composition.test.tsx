@@ -12,6 +12,7 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 import './nodes/index';
 // The parsers `parsedNode` and the Instance root merge build node properties with.
@@ -25,6 +26,7 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
     { id: 'Plane_1', type: 'PlaneMesh', data: { size: 'Vector2(0.5, 0.5)' } },
   ];
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       {
         ...parsedNode({ name: 'FrameRoot', type: 'Node3D' }),

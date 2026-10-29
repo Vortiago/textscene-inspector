@@ -28,6 +28,52 @@ export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
 export const FLOATS_PER_VERTEX = 3;
 
 /**
+ * `Vector2::length_squared` (`core/math/vector2.h`) in `real_t` float. It is positive exactly when
+ * {@link vector2Length} is, so a test for a non-zero vector needs no square root.
+ *
+ * @canonical A Vector2 length squared in float32
+ */
+export function vector2LengthSquared({ x, y }: Vector2): number {
+  return f(f(x * x) + f(y * y));
+}
+
+/**
+ * `Vector2::length` (`core/math/vector2.cpp:44-46`) in `real_t` float.
+ *
+ * @canonical A Vector2 length in float32
+ */
+export function vector2Length({ x, y }: Vector2): number {
+  return f(Math.sqrt(vector2LengthSquared({ x, y })));
+}
+
+/**
+ * `Vector2::operator+` (`core/math/vector2.h`) in `real_t` float.
+ *
+ * @canonical A Vector2 sum in float32
+ */
+export function vector2Add(a: Vector2, b: Vector2): Vector2 {
+  return { x: f(a.x + b.x), y: f(a.y + b.y) };
+}
+
+/**
+ * `Vector2::operator-` (`core/math/vector2.h`) in `real_t` float.
+ *
+ * @canonical A Vector2 difference in float32
+ */
+export function vector2Sub(a: Vector2, b: Vector2): Vector2 {
+  return { x: f(a.x - b.x), y: f(a.y - b.y) };
+}
+
+/**
+ * `Vector2::operator*` by a `real_t` (`core/math/vector2.h:239`) in `real_t` float, the factor already a `real_t`.
+ *
+ * @canonical A Vector2 times a scalar in float32
+ */
+export function vector2Scaled({ x, y }: Vector2, factor: number): Vector2 {
+  return { x: f(x * factor), y: f(y * factor) };
+}
+
+/**
  * `Vector2::normalize` (`core/math/vector2.cpp:52-59`) in `real_t` float: a zero vector stays zero.
  *
  * @canonical A unit vector

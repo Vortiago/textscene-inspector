@@ -125,6 +125,27 @@ export function rewrittenShader(
   return text.replace(pattern, rewrite);
 }
 
+/** three's own pattern for a chunk include (`WebGLProgram.js`). */
+const INCLUDE = /^[ \t]*#include +<([\w./]+)>/gm;
+
+/**
+ * `source` with `rewrite` applied to its own text and to every chunk an include names whose text
+ * the rewrite changes, nested chunks too, inlined in place of the include. A chunk the rewrite
+ * leaves as it is stays an include, so a later patch still finds it. `rewrite` must leave its own
+ * output as it is.
+ *
+ * @canonical A rewrite of every sample a program draws
+ */
+export function rewrittenThroughChunks(source: string, rewrite: (text: string) => string): string {
+  const inlined = rewrittenShader(source, INCLUDE, (include, name) => {
+    const chunk = THREE.ShaderChunk[name as ChunkName];
+    if (chunk === undefined) return include;
+    const rewritten = rewrittenThroughChunks(chunk, rewrite);
+    return rewritten === chunk ? include : rewritten;
+  });
+  return rewrite(inlined);
+}
+
 /**
  * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied,
  * as `editedShader`.

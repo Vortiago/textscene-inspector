@@ -6,6 +6,7 @@ import {
   editedShader,
   installChunkEdits,
   rewrittenShader,
+  rewrittenThroughChunks,
   type ChunkEdit,
 } from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
@@ -112,6 +113,32 @@ describe('rewrittenShader', () => {
 
   it('is the text itself for no match, which is no error (edge case)', () => {
     expect(rewrittenShader('b', /a/g, () => 'x')).toBe('b');
+  });
+});
+
+describe('rewrittenThroughChunks', () => {
+  const marked = (text: string) => text.replaceAll('discard;', 'return;');
+
+  it('inlines a chunk whose text the rewrite changes, rewritten', () => {
+    const source = `#include <${CHUNK}>`;
+
+    expect(rewrittenThroughChunks(source, marked)).toBe(marked(threeChunk));
+  });
+
+  it('inlines a chunk that includes a chunk the rewrite changes', () => {
+    THREE.ShaderChunk[OTHER_CHUNK] = `#include <${CHUNK}>`;
+
+    expect(rewrittenThroughChunks(`#include <${OTHER_CHUNK}>`, marked)).toBe(marked(threeChunk));
+  });
+
+  it('keeps the include of a chunk the rewrite leaves as it is', () => {
+    const source = '#include <common>\nvoid main() { discard; }';
+
+    expect(rewrittenThroughChunks(source, marked)).toBe('#include <common>\nvoid main() { return; }');
+  });
+
+  it('keeps an include that names no chunk (edge case)', () => {
+    expect(rewrittenThroughChunks('#include <no_such_chunk>', marked)).toBe('#include <no_such_chunk>');
   });
 });
 

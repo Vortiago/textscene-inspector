@@ -14,8 +14,7 @@ import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from '../r3f/NodeDispatcher';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
-import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import type { ResourceLoader } from './ResourceLoader';
+import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { SceneStack } from '../r3f/testing/SceneStack';
@@ -311,7 +310,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
 
   function withRunner(runner: JobRunner) {
     const fake = createFakeResourceLoader();
-    const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+    const loader = withJobRunner(fake, runner);
     const requested: string[] = [];
     fake.textures.setRequestImpl((path) => requested.push(path));
     function Wrapper({ children }: { children: ReactNode }) {
@@ -914,7 +913,7 @@ noise = SubResource("FastNoiseLite_huop3")
 
   function withLoader(runner: JobRunner = fakeJobRunner().runner) {
     const fake = createFakeResourceLoader();
-    const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+    const loader = withJobRunner(fake, runner);
     const requested: string[] = [];
     fake.textures.setRequestImpl((path) => requested.push(path));
     function Wrapper({ children }: { children: ReactNode }) {

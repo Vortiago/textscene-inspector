@@ -76,7 +76,7 @@ describe('surfaceDepthMaterial', () => {
       new THREE.MeshBasicMaterial({
         userData: withPointDraw(
           { materialClass: 'basic', props: {} },
-          { pixels, pixelRatio, samplesAlbedoAtPointCoord: false }
+          { pixels, pixelRatio, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
         ).props.userData,
       });
 
@@ -95,7 +95,7 @@ describe('surfaceDepthMaterial', () => {
         map: new THREE.Texture(),
         userData: withPointDraw(
           { materialClass: 'basic', props: { map: new THREE.Texture() } },
-          { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: true }
+          { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: true, placement: 'mesh' }
         ).props.userData,
       });
       const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
@@ -187,7 +187,7 @@ describe('syncSurfaceDepth', () => {
     const version = depth.version;
     surface.userData = withPointDraw(
       { materialClass: 'basic', props: {} },
-      { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: false }
+      { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
     ).props.userData!;
 
     syncSurfaceDepth(depth, surface, 0.5);

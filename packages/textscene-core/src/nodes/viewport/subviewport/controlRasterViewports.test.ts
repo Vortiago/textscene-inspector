@@ -117,100 +117,44 @@ texture = ExtResource("2")
     expect(found[0]!.internalResources).toBe(sub.internalResources);
   });
 
-  it('keeps the OUTER scope for a host-authored child of an instance node', () => {
-    // A multi-root sub-scene does not collapse: the instance node stays, its
-    // authored children keep the outer scope, and the loaded roots get the
-    // sub-scene's, the split `LiveTree.stepOf` documents.
-    const authored = parse(`[gd_scene format=3]
-
-[ext_resource type="Texture2D" path="res://inner.png" id="9"]
+  it('finds only the host-authored SubViewport under an instance of a refused scene, in the host scope', () => {
+    // Godot refuses to instantiate the scene, so the instance node stays as authored and none of
+    // the scene's own viewports exist.
+    const refused = parse(`[gd_scene format=3]
 
 [node name="A" type="Node2D"]
 
 [node name="Deep" type="SubViewport" parent="."]
 
-[node name="Label" type="Label" parent="Deep"]
+[node name="Stray" type="Node2D"]
 `);
-    // Two roots, so `mergeInstanceRoot` refuses the collapse. Built rather than
-    // parsed: a `.tscn` has one root, and the multi-root shape reaches the walk
-    // from the loader's cache (a GLB, a composed scene).
-    const sub = {
-      nodes: [{ ...authored.nodes[0]!, children: [] }, authored.nodes[0]!.children[0]!],
-      internalResources: authored.internalResources,
-      externalResources: authored.externalResources,
-    };
     const host = parse(`[gd_scene format=3]
 
-[ext_resource type="PackedScene" path="res://multi.tscn" id="1"]
-
-[node name="World" type="Node3D"]
-
-[node name="Multi" parent="." instance=ExtResource("1")]
-
-[node name="Own" type="SubViewport" parent="Multi"]
-
-[node name="Panel" type="Panel" parent="Multi/Own"]
-`);
-    const found = collectControlRasterViewports(host.nodes, sceneCacheOver({ 'res://multi.tscn': sub }), {
-      internalResources: host.internalResources,
-      externalResources: host.externalResources,
-    });
-    const byPath = Object.fromEntries(found.map((v) => [v.path, v]));
-    expect(Object.keys(byPath).sort()).toEqual(['World/Multi/Deep', 'World/Multi/Own']);
-    expect(byPath['World/Multi/Own']!.externalResources).toBe(host.externalResources);
-    expect(byPath['World/Multi/Deep']!.externalResources).toBe(sub.externalResources);
-  });
-
-  it("keeps the HOST internalResources pool for a host-authored SubViewport under a multi-root instance, not the sub-scene's", () => {
-    // Pins the host scope's `internalResources` pool, which no
-    // other test here reads. Host and sub-scene both declare id "1" for a
-    // different StyleBoxFlat, so a wrong pool shows as a wrong colour, not as
-    // an absent one.
-    const authored = parse(`[gd_scene format=3]
-
-[sub_resource type="StyleBoxFlat" id="1"]
-bg_color = Color(0.1, 0.2, 0.3, 1)
-
-[node name="A" type="Node2D"]
-
-[node name="Deep" type="SubViewport" parent="."]
-
-[node name="Label" type="Label" parent="Deep"]
-`);
-    const sub = {
-      nodes: [{ ...authored.nodes[0]!, children: [] }, authored.nodes[0]!.children[0]!],
-      internalResources: authored.internalResources,
-      externalResources: authored.externalResources,
-    };
-    const host = parse(`[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://multi.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://refused.tscn" id="1"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="World" type="Node3D"]
 
-[node name="Multi" parent="." instance=ExtResource("1")]
+[node name="Refused" parent="." instance=ExtResource("1")]
 
-[node name="Own" type="SubViewport" parent="Multi"]
+[node name="Own" type="SubViewport" parent="Refused"]
 
-[node name="Panel" type="Panel" parent="Multi/Own"]
+[node name="Panel" type="Panel" parent="Refused/Own"]
 `);
-    const found = collectControlRasterViewports(host.nodes, sceneCacheOver({ 'res://multi.tscn': sub }), {
-      internalResources: host.internalResources,
-      externalResources: host.externalResources,
-    });
-    const byPath = Object.fromEntries(found.map((v) => [v.path, v]));
+    const found = collectControlRasterViewports(
+      host.nodes,
+      sceneCacheOver({ 'res://refused.tscn': refused }),
+      {
+        internalResources: host.internalResources,
+        externalResources: host.externalResources,
+      }
+    );
 
-    const hostOwned = byPath['World/Multi/Own']!;
-    expect(hostOwned.internalResources).toBe(host.internalResources);
-    expect(hostOwned.internalResources[0]!.data.bg_color).toBe('Color(0.9, 0.9, 0.9, 1)');
-
-    // The sub-scene's own SubViewport keeps resolving against its own pool.
-    const subOwned = byPath['World/Multi/Deep']!;
-    expect(subOwned.internalResources).toBe(sub.internalResources);
-    expect(subOwned.internalResources[0]!.data.bg_color).toBe('Color(0.1, 0.2, 0.3, 1)');
+    expect(found.map((v) => v.path)).toEqual(['World/Refused/Own']);
+    expect(found[0]!.internalResources).toBe(host.internalResources);
+    expect(found[0]!.externalResources).toBe(host.externalResources);
   });
 
   it('falls back to the outer scope when the sub-scene has not loaded yet', () => {

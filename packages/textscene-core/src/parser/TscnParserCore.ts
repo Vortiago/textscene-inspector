@@ -30,6 +30,7 @@ import {
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
+import { refusesToInstantiate } from './instantiateRefusal.js';
 import * as logger from '../logger.js';
 import { nodeOrigin } from './rawNode.js';
 import { simplifiedNodePath } from '../godot/string/nodePath.js';
@@ -333,6 +334,7 @@ export class TscnParserCore {
         nodes: seating.roots,
         externalResources,
         internalResources,
+        refusesToInstantiate: refusesToInstantiate(origins),
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(editableInstances.length > 0 ? { editableInstances } : {}),
         ...(mainResource ? { mainResource } : {}),

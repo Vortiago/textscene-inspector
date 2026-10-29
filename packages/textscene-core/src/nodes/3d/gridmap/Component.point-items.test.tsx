@@ -7,6 +7,7 @@ import { Vector3, type Material, type Points } from 'three';
 import { ORTHO_BASES } from './cellData';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { mountGridMap } from './testing/gridMapCorpus';
+import { CELL_POINT_ATTRIBUTES } from '../../../r3f/materials/godotPoint';
 
 const POINT_LIBRARY = `[gd_resource type="MeshLibrary" format=3]
 
@@ -104,5 +105,62 @@ item/0/mesh = SubResource("Mesh_item")
     expect(others).toEqual([]);
     // The four corners of the wall quad, once for each of the two cells.
     expect(points!.geometry.getAttribute('position').count).toBe(8);
+  });
+});
+
+describe('<GridMap> item with a PointMesh under triplanar mapping', () => {
+  const triplanarLibrary = (mapping: string) => `[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="StandardMaterial3D" id="Projected"]
+${mapping}
+
+[sub_resource type="PointMesh" id="Mesh_item"]
+material = SubResource("Projected")
+
+[resource]
+item/0/mesh = SubResource("Mesh_item")
+`;
+
+  it("keeps every cell in one Points under local triplanar, each point carrying its item's space", async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('uv1_triplanar = true'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+    const [points, ...others] = grid.points();
+
+    expect(others).toEqual([]);
+    expect(Array.from(points!.geometry.getAttribute(CELL_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
+      0, 0, 0, 0, 0, 0,
+    ]);
+    expect((points!.material as Material).userData.godotPointsAtCells).toBe(true);
+  });
+
+  it("draws each cell's points on their own when the material billboards, as each turns about its cell", async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('billboard_mode = 1'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+
+    expect(grid.points()).toHaveLength(2);
+  });
+
+  it('keeps every cell in one Points under world triplanar, as the world position reads the same', async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+
+    expect(grid.points()).toHaveLength(1);
+  });
+
+  it('leaves out the item space a surface does not read, as it costs a mat4 per point', async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+    const [points] = grid.points();
+
+    expect(points!.geometry.getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix)).toBeUndefined();
+    expect((points!.material as Material).userData.godotPointsAtCells).toBe(false);
   });
 });

@@ -6,7 +6,7 @@ renders_as: a THREE.DataTexture / CanvasTexture
 
 # Texture2D (sub-resource textures)
 
-A material's texture slot can point at a Texture2D that the scene or a `.tres` describes. The previewer rasterises or windows a GradientTexture2D, CanvasTexture, AtlasTexture, NoiseTexture2D or saved ImageTexture on the client. Each reaches every consumer as a `THREE.Texture`.
+A material's texture slot can point at a Texture2D that the scene or a `.tres` describes. The previewer rasterises or windows a GradientTexture2D, CanvasTexture, AtlasTexture, NoiseTexture2D or saved ImageTexture on the client. Each reaches every consumer as a `THREE.Texture`. A GradientTexture2D `gradient` can name a Gradient saved as a `.tres`. A NoiseTexture `noise` and `color_ramp` can name a FastNoiseLite and a Gradient saved the same way.
 
 ## GradientTexture2D
 <!-- compare: image=unit-coin-glow status=limitation fixture=unit-coin-glow.tscn -->

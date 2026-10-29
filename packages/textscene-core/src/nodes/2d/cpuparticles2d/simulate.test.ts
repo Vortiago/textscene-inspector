@@ -3,10 +3,11 @@ import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
 import { simulateFrozenPose, type ParticleSimInput } from './simulate';
 import { type CPUParticles2DProperties } from './types';
-import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../resources/curves/curve/types';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
+import { storedReal } from '../../../godot/math/real.js';
 import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 import { CurveTangentMode } from '../../../godot/scene/curve';
 
@@ -523,23 +524,6 @@ describe('simulateFrozenPose', () => {
     }
   });
 
-  it('settles a global-coords emitter to the same bits, through the shared product', () => {
-    // The pose this emitter gives with `multiplyTransform2D` and the inverse in their current
-    // order of operations. A reordered sum moves the last bits of every particle.
-    const emissionTransform = transform2DFromParts(0.7, { x: 2, y: 0.5 }, 0.3, { x: 13.5, y: -7.25 });
-    const pose = simulateFrozenPose(
-      input({ props: props({ amount: '12', local_coords: 'false' }), emissionTransform })
-    );
-    expect(pose.find((particle) => particle.index === 0)!.transform).toEqual({
-      a: 0.28278115199109793,
-      b: -1.3486717917104292,
-      c: 0.4404055504977479,
-      d: 1.6011995689278613,
-      tx: 194.69840048004875,
-      ty: 707.8725383166859,
-    });
-  });
-
   it('leaves the quad in node space when `local_coords` is true', () => {
     const emissionTransform = { a: 2, b: 0, c: 0, d: 2, tx: 0, ty: 0 };
     const local = simulateFrozenPose(
@@ -557,5 +541,203 @@ describe('simulateFrozenPose', () => {
       expect(Number.isFinite(particle.transform.tx)).toBe(true);
       expect(Number.isFinite(particle.transform.a)).toBe(true);
     }
+  });
+});
+
+// The expected values come from Godot 4.6.3 running the single-particle path of
+// `_particles_process` through its own float `Vector2` maths
+// (/mnt/project-files/cpuparticles2d-995/oracle.gd), as the issue measured: a double
+// simulation gives 0.44721360 for the first case, Godot 0.44721353.
+describe('the simulation in real_t float (cpu_particles_2d.cpp:765-1112)', () => {
+  const FRAME_STEPS = { thirty: '0.52', sixty: '0.66' };
+
+  /** One particle, no spread, a fixed speed, and the aligned frame Godot writes. */
+  function alignedPose(overrides: Record<string, string>, emissionTransform = TRANSFORM2D_IDENTITY) {
+    const pose = simulateFrozenPose(
+      input({
+        emissionTransform,
+        props: props({
+          amount: '1',
+          particle_flag_align_y: 'true',
+          spread: '0',
+          local_coords: 'true',
+          gravity: 'Vector2(0, 0)',
+          ...overrides,
+        }),
+      })
+    );
+    return pose[0]!.transform;
+  }
+
+  function speed(value: string) {
+    return { initial_velocity_min: value, initial_velocity_max: value };
+  }
+
+  it('normalises the velocity of the issue case to Godot’s float value', () => {
+    const transform = alignedPose({
+      direction: 'Vector2(1, 2)',
+      ...speed('100'),
+      preprocess: '0.01',
+      fixed_fps: '30',
+    });
+    expect(transform).toEqual({
+      a: storedReal(0.89442718029),
+      b: storedReal(-0.44721353054),
+      c: storedReal(0.44721353054),
+      d: storedReal(0.89442718029),
+      tx: storedReal(1.490711927414),
+      ty: storedReal(2.981424331665),
+    });
+  });
+
+  it('keeps the aligned frame through renormalising damping steps', () => {
+    const transform = alignedPose({
+      direction: 'Vector2(1, 2)',
+      ...speed('100'),
+      preprocess: FRAME_STEPS.thirty,
+      fixed_fps: '30',
+    });
+    expect(transform).toEqual({
+      a: storedReal(0.89442718029),
+      b: storedReal(-0.44721353054),
+      c: storedReal(0.44721353054),
+      d: storedReal(0.89442718029),
+      tx: storedReal(23.851388931274),
+      ty: storedReal(47.702781677246),
+    });
+  });
+
+  it('integrates gravity in float', () => {
+    const transform = alignedPose({
+      direction: 'Vector2(1, 2)',
+      ...speed('100'),
+      gravity: 'Vector2(0, 980)',
+      preprocess: FRAME_STEPS.thirty,
+      fixed_fps: '30',
+    });
+    expect(transform).toEqual({
+      a: storedReal(0.997034788132),
+      b: storedReal(-0.076951093972),
+      c: storedReal(0.076951093972),
+      d: storedReal(0.997034788132),
+      tx: storedReal(23.851388931274),
+      ty: storedReal(178.369476318359),
+    });
+  });
+
+  it('damps and accelerates along the velocity in float', () => {
+    const transform = alignedPose({
+      direction: 'Vector2(3, -1)',
+      ...speed('250'),
+      gravity: 'Vector2(15, 980)',
+      damping_min: '40',
+      damping_max: '40',
+      linear_accel_min: '25',
+      linear_accel_max: '25',
+      preprocess: FRAME_STEPS.thirty,
+      fixed_fps: '30',
+    });
+    expect(transform).toEqual({
+      a: storedReal(0.861765563488),
+      b: storedReal(-0.507306873798),
+      c: storedReal(0.507306873798),
+      d: storedReal(0.861765563488),
+      tx: storedReal(126.807250976562),
+      ty: storedReal(87.52466583252),
+    });
+  });
+
+  it('keeps a negative acceleration and a faster frame rate in float', () => {
+    const transform = alignedPose({
+      direction: 'Vector2(-2, 5)',
+      ...speed('77'),
+      gravity: 'Vector2(0, 98)',
+      damping_min: '7.5',
+      damping_max: '7.5',
+      linear_accel_min: '-12',
+      linear_accel_max: '-12',
+      preprocess: FRAME_STEPS.sixty,
+      fixed_fps: '60',
+    });
+    expect(transform).toEqual({
+      a: storedReal(0.979723393917),
+      b: storedReal(0.200354531407),
+      c: storedReal(-0.200354531407),
+      d: storedReal(0.979723393917),
+      tx: storedReal(-17.802814483643),
+      ty: storedReal(64.867774963379),
+    });
+  });
+
+  it('renormalises the kept frame of a particle that damping stopped (edge case)', () => {
+    // Velocity is zero from the second step, so the Y column stays and renormalises each step.
+    const transform = alignedPose({
+      direction: 'Vector2(1, 2)',
+      ...speed('100'),
+      damping_min: '5000',
+      damping_max: '5000',
+      preprocess: FRAME_STEPS.thirty,
+      fixed_fps: '30',
+    });
+    expect(transform).toEqual({
+      a: storedReal(0.894427239895),
+      b: storedReal(-0.447213560343),
+      c: storedReal(0.447213560343),
+      d: storedReal(0.894427239895),
+      tx: storedReal(1.490711927414),
+      ty: storedReal(2.981424331665),
+    });
+  });
+
+  describe('with a global-coords emitter', () => {
+    // Every component is exact in float, so Godot and this start from the same transform.
+    const emission = { a: 1.5, b: 0.5, c: -0.25, d: 2, tx: 13.5, ty: -7.25 };
+    const global = { local_coords: 'false', preprocess: FRAME_STEPS.thirty, fixed_fps: '30' };
+
+    it('measures radial and tangential acceleration from the emitter origin', () => {
+      const transform = alignedPose(
+        {
+          ...global,
+          direction: 'Vector2(1, 2)',
+          ...speed('100'),
+          gravity: 'Vector2(0, 98)',
+          radial_accel_min: '30',
+          radial_accel_max: '30',
+          tangential_accel_min: '20',
+          tangential_accel_max: '20',
+        },
+        emission
+      );
+      expect(transform).toEqual({
+        a: storedReal(0.622425079346),
+        b: storedReal(-0.225816890597),
+        c: storedReal(0.169076949358),
+        d: storedReal(0.452776670456),
+        tx: storedReal(24.101068496704),
+        ty: storedReal(56.402324676514),
+      });
+    });
+
+    it('orbits around the emitter origin through a float rotation', () => {
+      const transform = alignedPose(
+        {
+          ...global,
+          direction: 'Vector2(-3, 1)',
+          ...speed('60'),
+          gravity: 'Vector2(5, 0)',
+          orbit_velocity_min: '0.3',
+          orbit_velocity_max: '0.3',
+        },
+        emission
+      );
+      expect(transform).toEqual({
+        a: storedReal(0.148423105478),
+        b: storedReal(0.459989339113),
+        c: storedReal(-0.627670764923),
+        d: storedReal(0.210736349225),
+        tx: storedReal(-22.462873458862),
+        ty: storedReal(18.141859054565),
+      });
+    });
   });
 });

@@ -586,3 +586,57 @@ describe('isAnisotropic', () => {
     expect(anisotropic({ anisotropy: '0.5' })).toBe(false);
   });
 });
+
+/** The first projection of `map` in UV set `uv`'s blend, as the program samples it through the mipmap bias. */
+const projectedSample = (map: string, uv: 'Uv1' | 'Uv2') =>
+  `( ${map}, godotTriplanarUv( ${map}Transform, vGodot${uv}TriplanarPos.xy ) ) * vGodot${uv}PowerNormal.z`;
+
+describe('standardMaterialBags — triplanar mapping', () => {
+  const texture = () => new THREE.Texture();
+
+  it('samples a UV1 map at the projected vertex position, not at the mesh UV', () => {
+    const fragment = patchedFragment(
+      materialFromBag(
+        bag({ uv1_triplanar: 'true' }, { albedo_texture: texture(), roughness_texture: texture() })
+      )
+    );
+
+    expect(fragment).toContain(projectedSample('map', 'Uv1'));
+    expect(fragment).toContain(projectedSample('roughnessMap', 'Uv1'));
+    expect(fragment).not.toContain('( map, vMapUv )');
+  });
+
+  it('samples a UV2 slot in the UV2 projection, and keeps a UV1 slot on its UV', () => {
+    const fragment = patchedFragment(
+      materialFromBag(
+        bag(
+          { uv2_triplanar: 'true', emission_enabled: 'true', emission_on_uv2: 'true' },
+          { albedo_texture: texture(), emission_texture: texture() }
+        )
+      )
+    );
+
+    expect(fragment).toContain(projectedSample('emissiveMap', 'Uv2'));
+    expect(fragment).toContain('( map, vMapUv )');
+  });
+
+  it('reads the albedo at the mesh UV under use_point_size, as Godot reads POINT_COORD (material.cpp:1612-1620)', () => {
+    const fragment = patchedFragment(
+      materialFromBag(
+        bag(
+          { uv1_triplanar: 'true', use_point_size: 'true' },
+          { albedo_texture: texture(), metallic_texture: texture() }
+        )
+      )
+    );
+
+    expect(fragment).toContain('( map, vMapUv )');
+    expect(fragment).toContain(projectedSample('metalnessMap', 'Uv1'));
+  });
+
+  it('samples nothing projected without triplanar mapping (edge case)', () => {
+    expect(patchedFragment(materialFromBag(bag({}, { albedo_texture: texture() })))).not.toContain(
+      'godotTriplanarUv'
+    );
+  });
+});

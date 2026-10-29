@@ -9,18 +9,21 @@ import { makeNode } from '../parser/testing/parserKit';
 import type { TscnExternalResource, TscnScene } from '../parser/types';
 import { rootScope, type LiveTreeContext } from './liveSceneTree';
 import { contextOver, stepOver } from './liveSceneTree.testkit';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
 
 const externalResources: TscnExternalResource[] = [{ id: '1', path: 'res://kid.tscn', type: 'PackedScene' }];
 
 const main: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [makeNode('Kid', 'Node3D', { instance: 'ExtResource("1")' })],
   externalResources,
   internalResources: [],
 };
 
 const kid: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [makeNode('Kid', 'CharacterBody3D')],
   externalResources: [],
   internalResources: [],

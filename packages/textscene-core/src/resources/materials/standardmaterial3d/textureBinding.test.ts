@@ -205,15 +205,45 @@ describe('bindSlotTexture — UV set per slot', () => {
     expect(bound.repeat.x).toBe(3);
   });
 
-  it('samples the first UV set under UV2 triplanar, as UV1 triplanar does (edge case)', () => {
+  it('samples the whole texture in top-down V under UV2 triplanar, as the position carries uv2_scale', () => {
     const state = materialTextureStates(
-      parseStandardMaterial3DScalars({ emission_on_uv2: 'true', uv2_triplanar: 'true' }),
+      parseStandardMaterial3DScalars({
+        emission_on_uv2: 'true',
+        uv2_triplanar: 'true',
+        uv2_scale: 'Vector3(2, 2, 1)',
+      }),
       DEFAULT_ANISOTROPIC_FILTERING_LEVEL
     );
 
     const bound = bindSlotTexture(loaded(), 'emission_texture', state);
 
-    expect([bound.channel, bound.repeat.y, bound.offset.y]).toEqual([0, 1, 0]);
+    expect([bound.repeat.x, bound.repeat.y, bound.offset.x, bound.offset.y]).toEqual([1, -1, 0, 1]);
+  });
+});
+
+/**
+ * A triplanar UV set samples at the projected vertex position, which carries `uv1_scale` and
+ * `uv1_offset` (`material.cpp:1425-1431`). The texture's own window is the whole image, read from
+ * its top edge as Godot's `texture()` reads it.
+ */
+describe('materialTextureStates: triplanar mapping', () => {
+  const TRIPLANAR = materialTextureStates(
+    parseStandardMaterial3DScalars({
+      uv1_triplanar: 'true',
+      uv1_scale: 'Vector3(3, 0.5, 2)',
+      uv1_offset: 'Vector3(0.25, 0.75, 0)',
+    }),
+    DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+  );
+
+  it('samples the whole texture in top-down V, whatever uv1_scale and uv1_offset hold', () => {
+    const bound = bindSlotTexture(loaded(), 'albedo_texture', TRIPLANAR);
+
+    expect([bound.repeat.x, bound.repeat.y, bound.offset.x, bound.offset.y]).toEqual([1, -1, 0, 1]);
+  });
+
+  it('keeps the material wrapping, as each projection tiles across the surface', () => {
+    expect(bindSlotTexture(loaded(), 'normal_texture', TRIPLANAR).wrapS).toBe(THREE.RepeatWrapping);
   });
 });
 
