@@ -17,13 +17,8 @@ import { useTextureSources } from './useTextureSources.js';
 
 export function useTexture3D(ref: string | undefined, pools: SceneResources): THREE.Data3DTexture | null {
   const slot = useParsedResourceSlot(ref, pools.externalResources, pools.internalResources);
-  const slotPools = useMemo(
-    () => ({ externalResources: slot.externalResources, internalResources: slot.internalResources }),
-    [slot.externalResources, slot.internalResources]
-  );
-  const { loadedFile, isLoading: isLoadingSources } = useTextureSources(slot.ref, slotPools);
-  // No build starts until every saved source is in: a build without one would be thrown away.
-  const procedural = useProceduralTexture3D(isLoadingSources ? undefined : slot.ref, slotPools, loadedFile);
+  const sources = useTextureSources(slot.ref, slot.externalResources, slot.internalResources);
+  const procedural = useProceduralTexture3D(sources.readyRef, sources.pools, sources.loadedFile);
 
   const imagePath = useMemo(() => {
     const extPath = resolveExtResourcePath(slot.ref, slot.externalResources);

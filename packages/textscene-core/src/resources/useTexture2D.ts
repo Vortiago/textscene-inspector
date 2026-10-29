@@ -223,13 +223,9 @@ function useTexture2DSlot(
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
-  const pools = useMemo(
-    () => ({ externalResources: slot.externalResources, internalResources: slot.internalResources }),
-    [slot.externalResources, slot.internalResources]
-  );
-  const { loadedFile, isLoading: isLoadingSources } = useTextureSources(sourceRef, pools);
-  // No build starts until every saved source is in: a build without one would be thrown away.
-  const procedural = useProceduralTexture(isLoadingSources ? undefined : sourceRef, pools, loadedFile);
+  const sources = useTextureSources(sourceRef, slot.externalResources, slot.internalResources);
+  const isLoadingSources = sources.isLoading;
+  const procedural = useProceduralTexture(sources.readyRef, sources.pools, sources.loadedFile);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.

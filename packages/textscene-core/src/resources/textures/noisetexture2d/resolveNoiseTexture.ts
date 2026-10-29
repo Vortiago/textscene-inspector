@@ -9,7 +9,7 @@
 import type * as THREE from 'three';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import type { LoadedFile } from '../../scopedResource';
-import { noiseSourceResources, resolveNoiseSources } from '../noiseSources';
+import { noiseRefsOf, noiseSourceResources, resolveNoiseSources } from '../noiseSources';
 import {
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
@@ -29,7 +29,7 @@ export function resolveNoiseTexture2D(
     pools.internalResources,
     'NoiseTexture2D',
     (properties) => plan(properties, pools, loadedFile),
-    (properties) => noiseSourceResources(decodeNoiseTexture2D(properties), pools, loadedFile)
+    (properties) => noiseSourceResources(noiseRefsOf(properties), pools, loadedFile)
   );
 }
 

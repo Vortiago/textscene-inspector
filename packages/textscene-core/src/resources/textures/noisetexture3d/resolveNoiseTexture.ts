@@ -5,7 +5,7 @@
 
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import type { LoadedFile } from '../../scopedResource';
-import { noiseSourceResources, resolveNoiseSources } from '../noiseSources';
+import { noiseRefsOf, noiseSourceResources, resolveNoiseSources } from '../noiseSources';
 import {
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
@@ -25,7 +25,7 @@ export function resolveNoiseTexture3D(
     pools.internalResources,
     'NoiseTexture3D',
     (properties) => plan(properties, pools, loadedFile),
-    (properties) => noiseSourceResources(decodeNoiseTexture3D(properties), pools, loadedFile)
+    (properties) => noiseSourceResources(noiseRefsOf(properties), pools, loadedFile)
   );
 }
 
