@@ -7,6 +7,7 @@ import {
   type ParticleDraw,
 } from './godotParticles';
 import { withParticleDraw } from './godotParticlesProgram';
+import { withPointDraw } from './godotPoint';
 import type { ProgramShader } from '../materialProgramInputs';
 import { SRGB_VERTEX_COLOR } from './godotVertexColor';
 import { programShader, type ProgramName } from '../testing/patchedFragment';
@@ -104,7 +105,7 @@ describe('a BILLBOARD_PARTICLES draw', () => {
     expect(vertexShader).toContain('inverse( modelMatrix ) * godotParticleWorld');
   });
 
-  // A points draw holds each particle at its own origin, which a billboard about that origin keeps.
+  // three declares `instanceMatrix` only for an InstancedMesh, so any other draw keeps its pose.
   it('billboards only an instanced draw (edge case)', () => {
     const define = vertexShader.indexOf('#define instanceMatrix godotParticleInstance');
     expect(vertexShader.slice(0, define)).toMatch(/#ifdef USE_INSTANCING\s+mat4 godotParticleWorld[^#]*$/);
@@ -124,6 +125,20 @@ describe('a BILLBOARD_PARTICLES draw', () => {
   it('keeps the instance scale under billboard_keep_scale', () => {
     const kept = compiled({ ...PARTICLES, billboard: { ...PARTICLES.billboard, keepScale: true } });
     expect(kept.vertexShader).toContain('#define GODOT_PARTICLE_KEEP_SCALE');
+  });
+
+  // Instanced points declare `instanceMatrix` at the top of their text, which the billboard reads.
+  it('declares the billboard after the instance matrix of instanced points', () => {
+    const points = withPointDraw(BAG, {
+      pixels: 4,
+      pixelRatio: 1,
+      samplesAlbedoAtPointCoord: false,
+      placement: 'instances',
+    });
+    const { vertexShader } = compiled(PARTICLES, 'basic', new THREE.MeshBasicMaterial(), points);
+    expect(vertexShader.indexOf('mat4 godotParticleBillboard()')).toBeGreaterThan(
+      vertexShader.indexOf('attribute mat4 instanceMatrix;')
+    );
   });
 });
 

@@ -6,21 +6,29 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadParticleEmitter } from './emitterModule';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { TscnInternalResource } from '../../../../parser/types';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
 import { PARTICLE_COLOR_ATTRIBUTE } from '../../../../r3f/materials/godotParticles';
+import { instanceMatrices } from '../../../../r3f/meshes/sharedInstances';
 import { BOX, emitterNode, ROW_OF_FOUR } from './cpuparticles3d.testkit';
 import './index.r3f';
 
 const CPUParticles3D = registeredComponent('CPUParticles3D');
 
-async function render(properties: Record<string, string>) {
-  return ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={[BOX]} externalResources={[]}>
+const OVERLAY: TscnInternalResource = { id: 'Overlay', type: 'StandardMaterial3D', data: {} };
+
+function emitter(properties: Record<string, string>) {
+  return (
+    <SceneResourcesProvider internalResources={[BOX, OVERLAY]} externalResources={[]}>
       <CPUParticles3D node={emitterNode(properties)} />
     </SceneResourcesProvider>
   );
+}
+
+async function render(properties: Record<string, string>) {
+  return ReactThreeTestRenderer.create(emitter(properties));
 }
 
 async function particles(properties: Record<string, string> = ROW_OF_FOUR): Promise<THREE.InstancedMesh> {
@@ -49,6 +57,19 @@ describe('<CPUParticles3D> draw', () => {
   it("gives each instance its particle's colour", async () => {
     const colors = (await particles()).geometry.getAttribute(PARTICLE_COLOR_ATTRIBUTE);
     expect(Array.from(colors.array.slice(0, 4))).toEqual([1, 0.5, 0, 1]);
+  });
+
+  // three frees a disposed InstancedMesh's matrices (`WebGLObjects.js:78`), which the draw kept reads.
+  it('gives a removed overlay its own matrices back, so its dispose frees none the draw reads', async () => {
+    const renderer = await render({ ...ROW_OF_FOUR, material_overlay: 'SubResource("Overlay")' });
+    const [drawn, overlay] = renderer.scene
+      .findAll((node) => node.type === 'Mesh')
+      .map((node) => node.instance as THREE.InstancedMesh);
+    const shared = instanceMatrices(drawn!.geometry);
+
+    await renderer.update(emitter(ROW_OF_FOUR));
+
+    expect([drawn!.instanceMatrix === shared, overlay!.instanceMatrix === shared]).toEqual([true, false]);
   });
 
   it('draws nothing while the emitter is off', async () => {

@@ -82,8 +82,6 @@ type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
  */
 const MAX_SIM_STEPS = 4096;
 
-/** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
-
 export interface ParticleSimInput {
   props: CPUParticles2DProperties;
   curves: ParticleCurves;

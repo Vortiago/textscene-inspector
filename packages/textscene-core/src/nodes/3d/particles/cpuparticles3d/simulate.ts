@@ -100,8 +100,6 @@ import type { ParticleEmission } from '../../../../resources/materials/particlep
 import type { CPUParticles3DSimulation } from './types';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
-/** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
-
 export interface ParticleSim3DInput {
   sim: CPUParticles3DSimulation;
   /** The emission shape, which places each newborn particle. */

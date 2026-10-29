@@ -264,5 +264,7 @@ export function lerpParam(
   seedRef: SeedRef
 ): number {
   const slot = params[param]!;
-  return lerpf(slot.min, slot.max, randFromSeed(seedRef));
+  const weight = randFromSeed(seedRef);
+  // A constant slot skips the lerp's roundings. `+ 0` keeps its result: -0 lerps to +0.
+  return slot.min === slot.max ? f(slot.min) + 0 : lerpf(slot.min, slot.max, weight);
 }

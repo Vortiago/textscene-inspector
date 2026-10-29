@@ -33,8 +33,8 @@ import {
   instancesBounds,
   pointPlacementOf,
   raycastInstancedPoints,
-  releaseSharedInstances,
   sharedInstancesAt,
+  useSharedInstances,
 } from '../../../r3f/meshes/sharedInstances';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
@@ -235,10 +235,7 @@ function PointsPart(props: GridMapPartProps) {
     }),
     [part.geometry, matrices]
   );
-  useLayoutEffect(
-    () => () => releaseSharedInstances(cellPoints.geometry, part.geometry),
-    [cellPoints, part.geometry]
-  );
+  useSharedInstances(cellPoints.geometry, part.geometry);
   return <PartSurfaces {...props} cellPoints={cellPoints} />;
 }
 

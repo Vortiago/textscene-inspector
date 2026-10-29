@@ -2,6 +2,7 @@
  * <GridMap> items whose mesh is a PointMesh: Godot draws it as `PRIMITIVE_POINTS`
  * (`primitive_meshes.cpp:2388`), one point at each cell's place, never as the placeholder.
  */
+import { StrictMode } from 'react';
 import { describe, expect, it } from 'vitest';
 import {
   Matrix3,
@@ -100,6 +101,11 @@ describe('<GridMap> item with an inline PointMesh', () => {
   it('draws no triangle mesh and no placeholder box', async () => {
     const grid = await mountGridMap({ library: POINT_LIBRARY });
     expect(grid.tiles()).toEqual([]);
+  });
+
+  it("keeps the item's points through a remount, as StrictMode runs one", async () => {
+    const [points] = (await mountGridMap({ library: POINT_LIBRARY, wrapper: StrictMode })).points();
+    expect(points!.geometry.getAttribute('position')?.count).toBe(1);
   });
 });
 

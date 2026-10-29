@@ -16,7 +16,7 @@ import { useMeshContent } from '../../../../r3f/meshes/meshContent';
 import {
   instanceMatrices,
   raycastInstancedPoints,
-  releaseSharedInstances,
+  useSharedInstances,
 } from '../../../../r3f/meshes/sharedInstances';
 import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
@@ -130,8 +130,15 @@ function ParticlePoints({ geometry, startingMaterial, draw }: InstancedDrawProps
 /** An InstancedMesh, and the overlay's, each reading the geometry's instance matrices: one write places both. */
 function ParticleMeshInstances({ geometry, startingMaterial, draw }: InstancedDrawProps) {
   const { sources, overlay, shadow, godotLayers } = draw;
+  // Each mesh gets its own matrices back before r3f disposes it: three frees a disposed
+  // InstancedMesh's matrices (`WebGLObjects.js:78`), which the other draw still reads.
   const sharesMatrices = (mesh: THREE.InstancedMesh | null) => {
-    if (mesh) mesh.instanceMatrix = instanceMatrices(geometry);
+    if (!mesh) return;
+    const own = mesh.instanceMatrix;
+    mesh.instanceMatrix = instanceMatrices(geometry);
+    return () => {
+      mesh.instanceMatrix = own;
+    };
   };
   return (
     <>
@@ -174,7 +181,7 @@ function useParticleGeometry(
 ): THREE.InstancedBufferGeometry {
   const count = particleCount(buffer);
   const geometry = useMemo(() => particleGeometry(source, count), [source, count]);
-  useLayoutEffect(() => () => releaseSharedInstances(geometry, source), [geometry, source]);
+  useSharedInstances(geometry, source);
   useLayoutEffect(() => writeParticles(geometry, buffer), [geometry, buffer]);
   return geometry;
 }

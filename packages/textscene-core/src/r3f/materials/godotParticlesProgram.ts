@@ -24,6 +24,7 @@ import {
 } from './godotParticles';
 
 const UV_CHUNK = '#include <uv_vertex>';
+const MAIN_CHUNK = 'void main() {';
 const NORMAL_CHUNK = '#include <defaultnormal_vertex>';
 /** Every run of the normal chunk: a patch may run it again, and each run needs the billboard. */
 const NORMAL_CHUNKS = /#include <defaultnormal_vertex>/g;
@@ -79,8 +80,8 @@ mat4 godotParticleBillboard() {
 /**
  * three multiplies `modelMatrix` after `instanceMatrix`, so the instance carries the node's inverse
  * and every chunk that reads it draws the billboard. A macro after the attribute's declaration, so
- * each later read takes the billboard. A points draw holds each particle in its vertices, at the
- * particle's origin, which a billboard about that origin leaves in place.
+ * each later read takes the billboard. Instanced points declare the attribute in their own program
+ * text (`godotPoint.ts`), so they billboard as an InstancedMesh does.
  */
 const BILLBOARD_POSE = /* glsl */ `#ifdef USE_INSTANCING
 	mat4 godotParticleWorld = godotParticleBillboard();
@@ -181,10 +182,12 @@ function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjecti
         declarations.push(PARTICLE_FRAME);
         vertex.push({ three: UV_CHUNK, godot: frameCuts(this) });
       }
+      // Before `main`, not at the top: instanced points define USE_INSTANCING and declare
+      // `instanceMatrix` at the top of their text (`godotPoint.ts`), which the billboard reads.
+      vertex.push({ three: MAIN_CHUNK, godot: `${declarations.join('\n')}\n${MAIN_CHUNK}` });
       editedProgram(shader, { vertex }, 'particle draw');
       if (billboarded)
         shader.vertexShader = rewrittenShader(shader.vertexShader, NORMAL_CHUNKS, () => BILLBOARD_NORMAL);
-      shader.vertexShader = `${declarations.join('\n')}\n${shader.vertexShader}`;
     },
   };
 }

@@ -4,6 +4,7 @@
  * binds its `instanceMatrix` attribute (`WebGLBindingStates.js:169`). A points program declares it.
  */
 
+import { useLayoutEffect } from 'react';
 import * as THREE from 'three';
 import type { PointPlacement } from '../materials/godotPoint';
 import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
@@ -16,14 +17,13 @@ const MATRIX_FLOATS = 16;
 
 /**
  * `source` for `count` places, whose matrices are zero until a caller writes them. It shares
- * the source's attributes, index and groups, which `releaseSharedInstances` leaves to their owner.
+ * the source's attributes, index and groups, which `useSharedInstances` leaves to their owner.
  *
  * @canonical Instanced geometry over a shared source
  */
 export function sharedInstances(source: THREE.BufferGeometry, count: number): THREE.InstancedBufferGeometry {
   const geometry = new THREE.InstancedBufferGeometry();
-  for (const [name, attribute] of Object.entries(source.attributes)) geometry.setAttribute(name, attribute);
-  geometry.setIndex(source.index);
+  share(geometry, source);
   for (const { start, count: groupCount, materialIndex } of source.groups) {
     geometry.addGroup(start, groupCount, materialIndex);
   }
@@ -34,6 +34,12 @@ export function sharedInstances(source: THREE.BufferGeometry, count: number): TH
     new THREE.InstancedBufferAttribute(new Float32Array(count * MATRIX_FLOATS), MATRIX_FLOATS)
   );
   return geometry;
+}
+
+/** Gives `geometry` the attributes and index of `source`, which it draws but does not own. */
+function share(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
+  for (const [name, attribute] of Object.entries(source.attributes)) geometry.setAttribute(name, attribute);
+  geometry.setIndex(source.index);
 }
 
 /** `source` at each of `matrices`. */
@@ -65,10 +71,21 @@ export function instanceMatrices(geometry: THREE.BufferGeometry): THREE.Instance
  * Disposes `geometry` without the attributes it shares with `source`. Three frees each attribute
  * of a disposed geometry (`WebGLGeometries.js:8-37`), and the source's draws would read freed buffers.
  */
-export function releaseSharedInstances(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
+function releaseSharedInstances(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
   for (const name of Object.keys(source.attributes)) geometry.deleteAttribute(name);
   geometry.setIndex(null);
   geometry.dispose();
+}
+
+/**
+ * Holds `geometry`'s share of `source` while the caller is mounted, and releases it on unmount. A
+ * remount, as StrictMode runs one, shares the same geometry again.
+ */
+export function useSharedInstances(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
+  useLayoutEffect(() => {
+    share(geometry, source);
+    return () => releaseSharedInstances(geometry, source);
+  }, [geometry, source]);
 }
 
 /** Where `geometry`'s points sit: at instances, or in the mesh. Undefined for triangles. */
@@ -92,8 +109,12 @@ export function instancesBounds(
   return { boundingBox, boundingSphere: boundingBox.getBoundingSphere(new THREE.Sphere()) };
 }
 
-/** Scratch for `raycastInstancedPoints`, overwritten by every call. */
-const instancePoints = new THREE.Points();
+/**
+ * Scratch for `raycastInstancedPoints`, overwritten by every call. The points hold
+ * `NO_GEOMETRY` between calls, so a released draw's instance buffers are not kept alive.
+ */
+const NO_GEOMETRY = new THREE.BufferGeometry();
+const instancePoints = new THREE.Points(NO_GEOMETRY);
 const instanceLocal = new THREE.Matrix4();
 const instanceWorld = new THREE.Matrix4();
 const instanceHits: THREE.Intersection[] = [];
@@ -118,4 +139,5 @@ export function raycastInstancedPoints(
     for (const hit of instanceHits) intersects.push({ ...hit, instanceId, object: this });
     instanceHits.length = 0;
   }
+  instancePoints.geometry = NO_GEOMETRY;
 }
