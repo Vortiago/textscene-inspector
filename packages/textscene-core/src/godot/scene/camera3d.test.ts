@@ -5,7 +5,7 @@ import {
   CAMERA_3D_PROJECTION_HINT_NAMES,
   CAMERA_3D_PROJECTION_NAMES,
   electViewportCamera,
-  isUnderViewport,
+  electCameraOfViewport,
 } from './camera3d.js';
 
 describe('Camera3D enum label tables', () => {
@@ -51,16 +51,29 @@ describe('electViewportCamera', () => {
   });
 });
 
-describe('isUnderViewport', () => {
-  it('holds for a descendant of the viewport', () => {
-    expect(isUnderViewport('Root/View/Camera3D', 'Root/View')).toBe(true);
+describe('electCameraOfViewport', () => {
+  const camera = (viewport: string | null, current = false) => ({ viewport, current });
+
+  it('elects among the cameras of that viewport only', () => {
+    const mine = camera('Root/View');
+    expect(electCameraOfViewport([camera('Root/Other'), mine], 'Root/View')).toBe(mine);
   });
 
-  it('fails for a sibling whose name starts with the viewport name', () => {
-    expect(isUnderViewport('Root/ViewTwo/Camera3D', 'Root/View')).toBe(false);
+  it('leaves a camera of a nested viewport to the nested viewport', () => {
+    const nested = camera('Root/View/Inner', true);
+    expect(electCameraOfViewport([nested], 'Root/View')).toBeNull();
+    expect(electCameraOfViewport([nested], 'Root/View/Inner')).toBe(nested);
   });
 
-  it('fails for the viewport itself', () => {
-    expect(isUnderViewport('Root/View', 'Root/View')).toBe(false);
+  it('elects among the cameras of the root viewport for a null path', () => {
+    const root = camera(null);
+    expect(electCameraOfViewport([camera('Root/View', true), root], null)).toBe(root);
+  });
+
+  it('prefers the last current camera of the viewport', () => {
+    const current = camera('Root/View', true);
+    expect(electCameraOfViewport([camera('Root/View'), current, camera('Root/View')], 'Root/View')).toBe(
+      current
+    );
   });
 });

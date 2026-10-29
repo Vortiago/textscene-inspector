@@ -18,11 +18,13 @@ import { SCENE_BUFFER_TYPE } from './useCompositorPass';
 import { useGodotToneMapEffect } from './useGodotToneMapEffect';
 import type { GodotToneMapEffect } from './GodotToneMapEffect';
 import { useWorldToneMap } from './worldToneMap';
-import { useOptionalExposureFactor } from './worldExposure';
+import { useOptionalExposureFactor, usePassCameraPath } from './worldExposure';
 
 export interface OffscreenToneMap {
   /** The buffer the world draws into, at the viewport's `msaa_3d` samples. */
   worldBuffer: THREE.WebGLRenderTarget;
+  /** The path of the camera the pass draws through, null for none. */
+  cameraPath: string | null;
   /** The exposure factor the pass draws its world at, null for none. */
   exposure: number | null;
   /** Tonemaps what `worldBuffer` holds into the target, and leaves the renderer as it found it. */
@@ -50,8 +52,8 @@ const NO_ELAPSED_TIME = 0;
 /**
  * Mounts the world buffer and the tonemap pass of one offscreen viewport in the world it sits in,
  * and hands them to `stage` while it stays mounted. A pass in a portal of its own world mounts it
- * inside the portal, so it reads that world's Environment. It reads the exposure and the auto
- * exposure of the attributes around it (`ViewportPassAttributes`).
+ * inside the portal, so it reads that world's Environment. It reads the camera, the exposure and the
+ * auto exposure of the attributes around it (`ViewportPassAttributes`).
  *
  * @canonical Godot's tonemap pass into a render target
  */
@@ -73,6 +75,7 @@ function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap
   const { target, msaaMode, width, height, transparentBackground, usesDebanding, name } = options;
   const world = useWorldToneMap();
   const exposure = useOptionalExposureFactor();
+  const cameraPath = usePassCameraPath();
   const { settings } = world;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
   const effect = useGodotToneMapEffect({
@@ -90,8 +93,8 @@ function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap
   const pass = useEffectPass(effect, width, height);
   return useMemo(() => {
     const draw = () => pass.render(gl, worldBuffer, target, NO_ELAPSED_TIME);
-    return { worldBuffer, exposure, toneMap: () => drawOffscreen(gl, draw) };
-  }, [gl, pass, worldBuffer, target, exposure]);
+    return { worldBuffer, cameraPath, exposure, toneMap: () => drawOffscreen(gl, draw) };
+  }, [gl, pass, worldBuffer, target, cameraPath, exposure]);
 }
 
 function worldBufferOf(width: number, height: number, name: string): THREE.WebGLRenderTarget {

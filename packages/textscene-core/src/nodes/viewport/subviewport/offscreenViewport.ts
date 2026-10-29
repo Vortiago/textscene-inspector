@@ -6,7 +6,6 @@
 
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import { electViewportCamera, isUnderViewport } from '../../../godot/scene/camera3d';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
@@ -121,21 +120,19 @@ export function renderToOffscreenTarget(
 }
 
 /**
- * The camera a sub-viewport renders through, or null when it has none. Only a
- * descendant counts: a `Camera3D` joins `get_viewport()` on ENTER_WORLD, and a
- * shared-world source holds every viewport's cameras.
+ * The scene's camera at `cameraPath`, or null before it mounts. The world elects the camera
+ * (`electCameraOfViewport`) from what the cameras publish, so the pass draws through the one whose
+ * attributes it draws at.
  */
-export function selectViewportCamera(root: THREE.Object3D, viewportPath: string): THREE.Camera | null {
-  const cameras: THREE.Camera[] = [];
-
-  // Depth-first pre-order, which is the order nodes enter the tree.
+export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
+  if (cameraPath === null) return null;
+  let found: THREE.Camera | null = null;
   root.traverse((object) => {
-    if (!(object as THREE.Camera).isCamera) return;
-    const path = object.userData?.tscnPath;
-    if (typeof path === 'string' && isUnderViewport(path, viewportPath)) cameras.push(object as THREE.Camera);
+    if (!found && (object as THREE.Camera).isCamera && object.userData?.tscnPath === cameraPath) {
+      found = object as THREE.Camera;
+    }
   });
-
-  return electViewportCamera(cameras, (camera) => camera.userData?.tscnCurrent === true);
+  return found;
 }
 
 /**

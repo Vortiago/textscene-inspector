@@ -53,11 +53,18 @@ export function electViewportCamera<T>(cameras: readonly T[], isCurrent: (camera
 }
 
 /**
- * Whether a node at `nodePath` is a descendant of the viewport at `viewportPath`: only a descendant
- * Camera3D joins `get_viewport()` on ENTER_WORLD, and a shared world holds every viewport's cameras.
+ * The camera `viewportPath` renders through, from the cameras of its world in tree order. A camera
+ * belongs to its nearest viewport above it, null for the root viewport, so a camera of a nested
+ * viewport never claims the outer one (`camera_3d.cpp`, `NOTIFICATION_ENTER_WORLD`).
  *
- * @canonical A node below a viewport
+ * @canonical The camera a viewport renders through
  */
-export function isUnderViewport(nodePath: string, viewportPath: string): boolean {
-  return nodePath.startsWith(`${viewportPath}/`);
+export function electCameraOfViewport<T extends { viewport: string | null; current: boolean }>(
+  cameras: readonly T[],
+  viewportPath: string | null
+): T | null {
+  return electViewportCamera(
+    cameras.filter((camera) => camera.viewport === viewportPath),
+    (camera) => camera.current
+  );
 }

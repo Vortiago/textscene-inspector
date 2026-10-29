@@ -25,6 +25,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
+import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
@@ -49,7 +50,7 @@ import {
   renderToOffscreenTarget,
   orthoFrameForCamera2D,
   orthoFrameForSize,
-  selectViewportCamera,
+  cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
   viewportMsaaMode,
@@ -111,21 +112,23 @@ export function SubViewport({ node, children }: NodeComponentProps) {
 
   return (
     <Node node={node}>
-      {rendersInline ? (
-        <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
-      ) : null}
-      {rasterizes ? (
-        <OffscreenViewport
-          node={node}
-          path={path}
-          size={size}
-          kind={kind}
-          rendersInline={rendersInline}
-          canvasModulate={canvasModulate}
-        >
-          {rendersInline ? null : contents}
-        </OffscreenViewport>
-      ) : null}
+      <EnclosingViewportProvider path={path}>
+        {rendersInline ? (
+          <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
+        ) : null}
+        {rasterizes ? (
+          <OffscreenViewport
+            node={node}
+            path={path}
+            size={size}
+            kind={kind}
+            rendersInline={rendersInline}
+            canvasModulate={canvasModulate}
+          >
+            {rendersInline ? null : contents}
+          </OffscreenViewport>
+        ) : null}
+      </EnclosingViewportProvider>
     </Node>
   );
 }
@@ -241,7 +244,7 @@ function OffscreenViewport({
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
-    const camera = kind === '3d' ? selectViewportCamera(passScene, path) : orthoCamera;
+    const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
@@ -288,7 +291,6 @@ function OffscreenViewport({
     canvasCamera,
     passScene,
     kind,
-    path,
     orthoCamera,
     lightHost,
     gl,

@@ -51,6 +51,31 @@ attributes = SubResource("Bright")
 [node name="Camera3D" type="Camera3D" parent="Plain"]
 `;
 
+/** An Outer viewport whose camera holds 2, around an Inner viewport whose camera holds 0.25. */
+const NESTED = `[gd_scene format=3]
+
+${ATTRIBUTES('Viewed', 4)}
+${ATTRIBUTES('Outer', 2)}
+${ATTRIBUTES('Inner', 0.25)}
+[node name="Root" type="Node3D"]
+
+[node name="Main" type="Camera3D" parent="."]
+current = true
+attributes = SubResource("Viewed")
+
+[node name="Lamp" type="OmniLight3D" parent="."]
+
+[node name="Outer" type="SubViewport" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="Outer"]
+attributes = SubResource("Outer")
+
+[node name="Inner" type="SubViewport" parent="Outer"]
+
+[node name="Camera3D" type="Camera3D" parent="Outer/Inner"]
+attributes = SubResource("Inner")
+`;
+
 /** A 2D canvas whose two shared-world viewports look at one lamp through cameras of two exposures. */
 const CANVAS = `[gd_scene format=3]
 
@@ -139,6 +164,12 @@ describe('<SubViewport> exposure', () => {
   it("draws an inline pass whose camera holds none at the world's own attributes", async () => {
     const { passes } = await passEnergies(INLINE, '3d');
     expect(passes.get('Plain')).toBeCloseTo(0.5 / 4);
+  });
+
+  it('draws a nested viewport at its own camera and the outer one at its own', async () => {
+    const { passes } = await passEnergies(NESTED, '3d');
+    expect(passes.get('Outer')).toBeCloseTo(2 / 4);
+    expect(passes.get('Inner')).toBeCloseTo(0.25 / 4);
   });
 
   it('draws each shared-world viewport of a 2D canvas at its own exposure', async () => {
