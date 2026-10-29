@@ -182,7 +182,6 @@ export function OffscreenViewportPass({
         target,
         clearColor,
         transparentBg,
-        toneMapping: THREE.NoToneMapping,
         draw: () => frame.render(gl, controlsScene!, orthoCamera, 'decode'),
       }),
     [gl, target, clearColor, transparentBg, frame, controlsScene, orthoCamera]
@@ -218,13 +217,10 @@ export function OffscreenViewportPass({
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
     try {
-      // Neither pass draws a curve: canvas items draw after Godot's 3D tonemap pass, and the 3D world
-      // draws in linear HDR for its tonemap pass.
       renderToOffscreenTarget(gl, {
         target: toneMap ? toneMap.worldBuffer : target,
         clearColor,
         transparentBg,
-        toneMapping: THREE.NoToneMapping,
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
           // A 3D pass clears its target itself where no render will, as `CanvasFrame.render`

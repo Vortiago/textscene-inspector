@@ -1,8 +1,7 @@
 /**
- * The colour background as a texture three draws through its background mesh, so it passes through
- * the tone curve, as Godot tonemaps its clear colour, and under fog through the fog, as Godot fogs it
- * in the fog-only sky pass (`forward_clustered/render_forward_clustered.cpp:1996-2014`). three's
- * clear skips both.
+ * The colour background as a texture three draws through its background mesh, so under fog it
+ * passes through the fog, as Godot fogs it in the fog-only sky pass
+ * (`forward_clustered/render_forward_clustered.cpp:1996-2014`). three's clear skips the fog.
  */
 
 import * as THREE from 'three';

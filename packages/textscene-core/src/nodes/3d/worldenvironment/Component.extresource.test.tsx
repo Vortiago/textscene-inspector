@@ -7,8 +7,10 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useResolvedEnvironment } from './useResolvedEnvironment';
-import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
-import type { EnvironmentLayerProps } from '../../../r3f/environment/EnvironmentLayer';
+import type {
+  EnvironmentResolution,
+  ResolvedEnvironment,
+} from '../../../r3f/environment/WorldEnvironmentScope';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -53,7 +55,7 @@ async function resolution(
 }
 
 /** The resolved Environment, or null for any other resolution. */
-async function resolve(...args: Parameters<typeof resolution>): Promise<EnvironmentLayerProps | null> {
+async function resolve(...args: Parameters<typeof resolution>): Promise<ResolvedEnvironment | null> {
   const seen = await resolution(...args);
   return seen?.status === 'resolved' ? seen.environment : null;
 }

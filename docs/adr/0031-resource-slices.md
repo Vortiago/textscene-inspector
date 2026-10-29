@@ -89,8 +89,8 @@ missing-resources row).
   three's `premultipliedAlpha` flag adds an in-shader `rgb *= a` that Godot does not
   have, so both renderers keep it off and carry the ported factors.
 - **AgX tonemapping** reads `tonemap_agx_white` (default 16.29) per
-  `Environment::_update_tonemap`. `tonemap_agx_contrast` goes through both tonemap paths
-  (in-material chunk and glow composer), so the two bake one curve.
+  `Environment::_update_tonemap`. `tonemap_agx_contrast` reaches the curve the tonemap
+  pass bakes.
 
 ## Consequences
 

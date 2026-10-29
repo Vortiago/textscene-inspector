@@ -23,9 +23,8 @@ const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
 
 // Modules a dynamic import() does not reach itself but that must stay off the closure: the
-// tables behind the area light's LTC textures, the noise jobs' `fastnoise-lite`, and n8ao, which
-// no code path uses.
-const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/(fastnoise-lite|n8ao)\//;
+// tables behind the area light's LTC textures and the noise jobs' `fastnoise-lite`.
+const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/fastnoise-lite\//;
 
 /** Where esbuild writes the webview, as the metafile's output keys begin. */
 const OUTPUT_PREFIX = 'dist/webview/';

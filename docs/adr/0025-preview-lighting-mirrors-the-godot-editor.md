@@ -78,7 +78,7 @@ the IBL, blended with the flat colour by `ambient_light_sky_contribution`. For t
 source, `ambient_light_color × energy` is wrong: the colour is inert at the default
 contribution of 1.0.
 
-**`tonemap_mode` is implemented**, mapping Godot's enum onto `gl.toneMapping`. The preview
+**`tonemap_mode` is implemented** in the tonemap pass (ADR-0061). The preview
 environment uses FILMIC. Ignoring it gives a measured 25/255 mean channel error, 20 times
 the goldens' threshold. A scene-owned environment defaults to LINEAR, so this changes only
 the preview environment and scenes that set the property.

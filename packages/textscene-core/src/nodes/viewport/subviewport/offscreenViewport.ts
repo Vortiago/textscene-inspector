@@ -87,9 +87,9 @@ export function viewportMsaaMode(
 const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
- * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
- * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the pass. `draw`
- * clears whatever it needs cleared.
+ * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour and
+ * alpha. `draw` clears whatever it needs cleared. three draws no tone curve into a target
+ * (`WebGLPrograms.js:180`).
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -98,24 +98,20 @@ export function renderToOffscreenTarget(
     /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
     clearColor: THREE.Color;
     transparentBg: boolean;
-    toneMapping?: THREE.ToneMapping;
     draw: () => void;
   }
 ): void {
   const previousTarget = gl.getRenderTarget();
   const previousAlpha = gl.getClearAlpha();
-  const previousToneMapping = gl.toneMapping;
   gl.getClearColor(PREVIOUS_CLEAR_COLOR);
 
   try {
-    if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
     options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
-    gl.toneMapping = previousToneMapping;
   }
 }
 

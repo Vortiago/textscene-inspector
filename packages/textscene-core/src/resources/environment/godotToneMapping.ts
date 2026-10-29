@@ -1,5 +1,5 @@
 /**
- * Godot's tonemapping curves, ported for three's `CustomToneMapping` hook. No three
+ * Godot's tonemapping curves, ported for the tonemap pass (`godotCompositor.ts`). No three
  * curve is Godot's: Godot scales input by an `exposure_bias` and divides by the curve
  * at `tonemap_white`, so white maps to 1.0. FILMIC's bias of 2.0 alone brightens by
  * 1.73x, and three's Cineon in its place measures a flat 13% dark against Godot.
@@ -25,26 +25,8 @@ import {
 } from '../../godot/rendering/environment/toneMapping.js';
 
 /**
- * The GLSL function that takes the place of three's `CustomToneMapping` stub, per mode. three
- * does NOT apply `toneMappingExposure` for the custom hook, so each curve multiplies it in first,
- * as Godot does with `tonemap_exposure`. The white is a per-environment constant, baked in so no
- * material declares a uniform for it.
- */
-export function customToneMappingFunction(
-  mode: number,
-  white: number,
-  agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
-): string {
-  return /* glsl */ `vec3 CustomToneMapping(vec3 color) {
-  color *= toneMappingExposure;
-${curveGlsl(mode, white, agxContrast)}
-}`;
-}
-
-/**
- * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and three cannot
- * tonemap in-material then. The caller applies exposure first. Every mode gets a body: LINEAR returns
- * its input, so no consumer supplies a fifth.
+ * The mode's curve as `godotToneMap`. The caller applies exposure first. Every mode gets a body:
+ * LINEAR returns its input, so no consumer supplies a fifth.
  */
 export function toneMappingEffectGlsl(
   mode: number,
@@ -58,7 +40,7 @@ ${curveGlsl(mode, white, agxContrast)}
 `;
 }
 
-/** The mode's curve on an exposed `color`, with the white it reads baked in, so both paths draw alike. */
+/** The mode's curve on an exposed `color`, with the white it reads baked in. */
 function curveGlsl(mode: number, white: number, agxContrast: number): string {
   const body = (CURVES[mode] ?? UNKNOWN_MODE_CURVE)(agxContrast);
   return `  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};\n${body}`;

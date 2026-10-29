@@ -49,7 +49,7 @@ const OPAQUE_AFTER_CUT: ProgramInjection = {
  * Whether three sends the surface through the blend equation. `WebGLState.setMaterial` turns
  * blending off for NoBlending, and for NormalBlending without `transparent`.
  */
-export function isBlended(blend: SurfaceBlend): boolean {
+function isBlended(blend: SurfaceBlend): boolean {
   const blending = blend.blending ?? THREE.NormalBlending;
   if (blending === THREE.NoBlending) return false;
   return blending !== THREE.NormalBlending || blend.transparent === true;
@@ -68,7 +68,7 @@ const ALBEDO_ALPHA_UNREAD_PROPS: SurfaceAlphaProps = Object.freeze({ injection: 
 
 /**
  * The props a surface needs so that three blends the alpha its Godot shader writes. A MIX blend
- * of alpha 1 overwrites, which three spells as NoBlending: no patched program, and no compositor.
+ * of alpha 1 overwrites, which three spells as NoBlending: no patched program.
  */
 export function surfaceAlphaProps(source: SurfaceAlphaSource, blend: SurfaceBlend): SurfaceAlphaProps {
   if (!isBlended(blend)) return NO_PROPS;

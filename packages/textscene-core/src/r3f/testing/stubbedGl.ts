@@ -1,7 +1,6 @@
 /**
- * Runs a frame or a call with the renderer's bind and draw entry points replaced by recorders. The
- * fake WebGL context's `setRenderTarget` throws "invalid value used as weak map key" as an
- * unhandled rejection, so the code under test exercises only the state around the GL side.
+ * Runs a frame or a call with the renderer's bind and draw entry points replaced by recorders, so a
+ * test reads which targets the frame binds and what it draws into each.
  */
 import type ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';

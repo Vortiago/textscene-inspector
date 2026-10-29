@@ -62,22 +62,6 @@ async function scenesRenderedNextFrame(
   return rendered;
 }
 
-/**
- * The `gl.toneMapping` in force when the offscreen pass binds its target next
- * frame, since the scoping must be decided by bind time. Only non-null binds
- * count: the pass's `finally` restores the previous (null) target.
- */
-async function toneMappingAtNextBind(
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
-  gl: THREE.WebGLRenderer
-): Promise<THREE.ToneMapping | null> {
-  let seen: THREE.ToneMapping | null = null;
-  await advanceFrameWithStubbedGl(renderer, gl, (target) => {
-    if (seen === null && target !== null) seen = gl.toneMapping;
-  });
-  return seen;
-}
-
 async function renderScene(
   source: string,
   workspace: '2d' | '3d' = '3d',
@@ -292,18 +276,6 @@ describe('<SubViewport> offscreen publisher', () => {
   });
 
   /**
-   * A 3D pass draws its world in linear HDR, and its own tonemap pass applies the curve after
-   * (`Component.toneMap.test.tsx`), so the pass suspends the canvas's curve.
-   */
-  it('3D content: the offscreen pass draws without the canvas tonemap', async () => {
-    const { renderer, gl } = await renderScene(scene3D());
-    gl().toneMapping = THREE.CustomToneMapping;
-    expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.NoToneMapping);
-    // Restored after the pass: the main render still owns the live curve.
-    expect(gl().toneMapping).toBe(THREE.CustomToneMapping);
-  });
-
-  /**
    * An own world's lights reach no render but this pass's, so the pass fits their shadows to
    * its own camera. A DirectionalLight3D draws four splits by default, through a split sun.
    */
@@ -374,25 +346,6 @@ size = Vector2i(300, 300)
 `);
     const [portal] = await scenesRenderedNextFrame(renderer, gl());
     expect(portal!.onBeforeRender).toBe(THREE.Object3D.prototype.onBeforeRender);
-  });
-
-  /**
-   * Godot never tonemaps a 2D-world canvas: `tonemap.glsl` is a 3D post effect,
-   * and canvas items draw into the target after it, in output space. So a
-   * 2D-content target inherits no curve.
-   */
-  it('2D content: the offscreen pass renders without the 3D environment tonemap', async () => {
-    const { renderer, gl } = await renderScene(`[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="Viewport" type="SubViewport" parent="."]
-size = Vector2i(300, 300)
-
-[node name="Inside" type="Sprite2D" parent="Viewport"]
-`);
-    gl().toneMapping = THREE.CustomToneMapping;
-    expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.NoToneMapping);
   });
 
   /**

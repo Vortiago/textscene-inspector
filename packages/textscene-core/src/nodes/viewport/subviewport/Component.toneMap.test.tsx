@@ -147,9 +147,13 @@ describe('<SubViewport> tonemap pass', () => {
   it('draws the world into a linear HDR buffer, which the tonemap pass writes into the target', async () => {
     const nextFrameTargets = await mount(scene({ ownWorld: true, rootGlows: false, viewportGlows: false }));
 
-    const [world, ...rest] = await nextFrameTargets();
-    expect(world?.texture.type).toBe(THREE.HalfFloatType);
-    expect(rest.at(-1)?.texture.name).toBe('Viewport::target');
+    const targets = await nextFrameTargets();
+    const pass = targets.slice(
+      0,
+      targets.findIndex((target) => target.texture.name === 'Viewport::target') + 1
+    );
+    expect(pass[0]?.texture.type).toBe(THREE.HalfFloatType);
+    expect(pass.at(-1)?.texture.name).toBe('Viewport::target');
   });
 
   it('runs the glow chain of the shared world in its pass', async () => {

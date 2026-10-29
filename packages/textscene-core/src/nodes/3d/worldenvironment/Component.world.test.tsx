@@ -114,10 +114,10 @@ describe('WorldEnvironment (assertions 81–87)', () => {
     expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
   });
 
-  it('#87 fog_enabled=true → no three fog without the GL context the fog passes need', async () => {
+  it('#87 fog_enabled=true → the scene draws fog', async () => {
     const renderer = await render(makeNode(), [
       subResource('Environment', 'Env', { background_mode: '1', fog_enabled: 'true', fog_density: '0.1' }),
     ]);
-    expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
   });
 });
