@@ -14,7 +14,12 @@ import { nodeEscapesParent } from './nodeEscapesParent.js';
 
 /** A parsed `Transform3D` as a `Matrix4`. `basis_x/y/z` are the matrix's ROWS. */
 export function transform3DToMatrix(t: Transform3D): THREE.Matrix4 {
-  return new THREE.Matrix4().set(
+  return setMatrixFromTransform3D(new THREE.Matrix4(), t);
+}
+
+/** `transform3DToMatrix` written into `target`, for a per-frame path that keeps its matrix. */
+export function setMatrixFromTransform3D(target: THREE.Matrix4, t: Transform3D): THREE.Matrix4 {
+  return target.set(
     t.basis_x.x,
     t.basis_x.y,
     t.basis_x.z,

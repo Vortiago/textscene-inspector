@@ -7,6 +7,7 @@
 
 import {
   normalizedQuaternion,
+  QUATERNION_IDENTITY,
   quaternionFromAxisAngle,
   quaternionInverse,
   quaternionMultiply,
@@ -160,7 +161,7 @@ function copyOnto(
 function maskedRotation(rotation: Quaternion, axisFlags: number): Quaternion {
   switch (axisFlags) {
     case 0:
-      return { x: 0, y: 0, z: 0, w: 1 };
+      return QUATERNION_IDENTITY;
     case AXIS_X:
     case AXIS_Y:
     case AXIS_Z: {

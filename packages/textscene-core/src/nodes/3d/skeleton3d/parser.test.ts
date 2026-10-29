@@ -49,4 +49,16 @@ describe('parseSkeleton3D', () => {
       parseSkeleton3D(heading('Skeleton3D', { name: 'S' }), { show_rest_only: 'maybe' }).showRestOnly
     ).toBe(false);
   });
+
+  it.each([
+    ['2', 2],
+    ['0.5', 0.5],
+    [undefined, 1],
+    ['0', 1],
+    ['-3', 1],
+    ['maybe', 1],
+  ])('reads motion_scale %s as %s, and any value at or below 0 as 1', (written, expected) => {
+    const properties: Record<string, string> = written === undefined ? {} : { motion_scale: written };
+    expect(parseSkeleton3D(heading('Skeleton3D', { name: 'S' }), properties).motionScale).toBe(expected);
+  });
 });

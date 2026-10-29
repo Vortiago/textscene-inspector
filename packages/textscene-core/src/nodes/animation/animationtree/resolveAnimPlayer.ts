@@ -6,7 +6,7 @@
  * unique-name table.
  */
 
-import { extractNodePathInner } from '../animationplayer/animationResolver';
+import { extractNodePathInner } from '../animationplayer/trackParser';
 import { resolveRelativePath } from '../../../godot/string/nodePath';
 
 export function resolveAnimPlayerPath(
