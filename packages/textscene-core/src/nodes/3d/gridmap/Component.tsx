@@ -31,6 +31,7 @@ import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { pointPlacementOf, pointsAtCells, pointsAtCellsInItemSpace } from './pointCells';
+import { geometryUntilDisposed } from './geometryUntilDisposed';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import { readsObjectSpace } from '../../../r3f/materials/godotTriplanar';
@@ -227,8 +228,8 @@ function PointsPart(props: GridMapPartProps) {
   const { part, matrices } = props;
   const cellPoints = useMemo<CellPoints>(
     () => ({
-      placed: lazily(() => pointsAtCells(part.geometry, matrices)),
-      inItemSpace: lazily(() => pointsAtCellsInItemSpace(part.geometry, matrices)),
+      placed: geometryUntilDisposed(() => pointsAtCells(part.geometry, matrices)),
+      inItemSpace: geometryUntilDisposed(() => pointsAtCellsInItemSpace(part.geometry, matrices)),
     }),
     [part.geometry, matrices]
   );
@@ -239,12 +240,6 @@ function PointsPart(props: GridMapPartProps) {
 interface CellPoints {
   placed: () => THREE.BufferGeometry;
   inItemSpace: () => THREE.BufferGeometry;
-}
-
-/** `build`'s result, built at the first call and kept. */
-function lazily<T>(build: () => T): () => T {
-  let built: { value: T } | undefined;
-  return () => (built ??= { value: build() }).value;
 }
 
 function PartSurfaces({
