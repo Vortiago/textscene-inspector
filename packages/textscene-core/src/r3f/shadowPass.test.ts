@@ -69,8 +69,11 @@ function spotLight(hasSlot = true): THREE.SpotLight {
   return light;
 }
 
-const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[]) =>
-  renderer.shadowMap.render(lights, new THREE.Scene(), new THREE.PerspectiveCamera());
+/** The scene every reader below reads, unless a test renders another. */
+const SCENE = new THREE.Scene();
+
+const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[], scene: THREE.Object3D = SCENE) =>
+  renderer.shadowMap.render(lights, scene, new THREE.PerspectiveCamera());
 
 describe('installShadowPass', () => {
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
@@ -229,18 +232,18 @@ describe('readShadowMaps', () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
     const reader = vi.fn(() => order.push('read'));
-    readShadowMaps(renderer, reader);
+    readShadowMaps(renderer, scene, reader);
 
     renderer.shadowMap.render([omniLight()], scene, camera);
 
     expect(order).toEqual(['three', 'copy', 'read']);
-    expect(reader).toHaveBeenCalledWith(scene, camera);
+    expect(reader).toHaveBeenCalledWith(camera);
     copy.mockRestore();
   });
 
   it('records the height of the draw’s target after a reader renders into another (edge case)', () => {
     const { renderer } = fakeRenderer();
-    readShadowMaps(renderer, () => {
+    readShadowMaps(renderer, SCENE, () => {
       installedFramebufferHeight()[0] = 1;
     });
 
@@ -255,7 +258,7 @@ describe('readShadowMaps', () => {
     vi.resetModules();
     const reloaded = await import('./shadowPass');
     const reader = vi.fn();
-    reloaded.readShadowMaps(renderer, reader);
+    reloaded.readShadowMaps(renderer, SCENE, reader);
 
     runPass(renderer, []);
 
@@ -265,10 +268,20 @@ describe('readShadowMaps', () => {
   it('stops calling a reader once its disposer runs (error case)', () => {
     const { renderer } = fakeRenderer();
     const reader = vi.fn();
-    const stop = readShadowMaps(renderer, reader);
+    const stop = readShadowMaps(renderer, SCENE, reader);
     stop();
 
     runPass(renderer, []);
+
+    expect(reader).not.toHaveBeenCalled();
+  });
+
+  it('calls no reader for a render of another scene, such as the tone pass quad', () => {
+    const { renderer } = fakeRenderer();
+    const reader = vi.fn();
+    readShadowMaps(renderer, SCENE, reader);
+
+    runPass(renderer, [], new THREE.Scene());
 
     expect(reader).not.toHaveBeenCalled();
   });
@@ -284,7 +297,7 @@ describe('the shadow pass under a frame profile', () => {
     let time = 0;
     const { renderer, threePass } = fakeRenderer();
     threePass.mockImplementation(() => (time += 3));
-    readShadowMaps(renderer, () => (time += 2));
+    readShadowMaps(renderer, SCENE, () => (time += 2));
 
     const stats = profiledWindow(
       renderer,
@@ -302,8 +315,8 @@ describe('the shadow pass under a frame profile', () => {
   it('times every reader together as the one Fog step', () => {
     let time = 0;
     const { renderer } = fakeRenderer();
-    readShadowMaps(renderer, () => (time += 2));
-    readShadowMaps(renderer, () => (time += 5));
+    readShadowMaps(renderer, SCENE, () => (time += 2));
+    readShadowMaps(renderer, SCENE, () => (time += 5));
 
     const stats = profiledWindow(
       renderer,
@@ -323,8 +336,7 @@ describe('the shadow pass under a frame profile', () => {
     const { renderer, threePass } = fakeRenderer();
     threePass.mockImplementation(() => (time += 3));
     const fogged = new THREE.Scene();
-    readShadowMaps(renderer, (rendered) => {
-      if (rendered !== fogged) return;
+    readShadowMaps(renderer, fogged, () => {
       time += 2;
       runPass(renderer, [new THREE.DirectionalLight()]);
     });
@@ -355,6 +367,19 @@ describe('the shadow pass under a frame profile', () => {
 
     expect(stepCpuMs(stats)).toEqual([['Other', 0]]);
   });
+
+  it('times no Fog step for a render of a scene no reader reads, such as the tone pass quad', () => {
+    const { renderer } = fakeRenderer();
+    readShadowMaps(renderer, SCENE, () => {});
+
+    const stats = profiledWindow(
+      renderer,
+      () => 0,
+      () => runPass(renderer, [], new THREE.Scene())
+    );
+
+    expect(stepCpuMs(stats)).toEqual([['Other', 0]]);
+  });
 });
 
 describe('the sun shadow rows', () => {
@@ -381,7 +406,7 @@ describe('the sun shadow rows', () => {
     const { renderer } = fakeRenderer();
     const readerSun = sunAt(7);
     let isReading = false;
-    readShadowMaps(renderer, () => {
+    readShadowMaps(renderer, SCENE, () => {
       if (isReading) return;
       isReading = true;
       runPass(renderer, [readerSun]);

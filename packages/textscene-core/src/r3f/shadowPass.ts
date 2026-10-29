@@ -27,7 +27,7 @@ import type { RenderStep } from './frameProfile/frameStats.js';
  * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
  * through `camera`. A reader may render, and its renders run the pass again for their own objects.
  */
-type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
+type ShadowMapReader = (camera: THREE.Camera) => void;
 
 /**
  * A global key for a wrapped pass's readers, kept on the renderer's shadow map. A module that a dev
@@ -36,7 +36,8 @@ type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
  */
 const READERS = Symbol.for('textscene.shadowPass');
 
-type Readers = Set<ShadowMapReader>;
+/** Each reader with the scene it reads. A render of any other scene, such as a tone pass quad, calls none. */
+type Readers = Set<{ scene: THREE.Object3D; read: ShadowMapReader }>;
 
 /** The render step a frame profile times the readers as: the fog volumes are the only reader. */
 const READ_STEP: RenderStep = 'Fog';
@@ -59,11 +60,16 @@ export function installShadowPass(renderer: THREE.WebGLRenderer): void {
 }
 
 /**
- * Calls `reader` after each shadow pass of `renderer`, until the returned disposer runs. The pass
- * wraps itself on the first reader.
+ * Calls `read` after each shadow pass of `renderer` that renders `scene`, until the returned
+ * disposer runs. The pass wraps itself on the first reader.
  */
-export function readShadowMaps(renderer: THREE.WebGLRenderer, reader: ShadowMapReader): () => void {
+export function readShadowMaps(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Object3D,
+  read: ShadowMapReader
+): () => void {
   const readers = readersOf(renderer);
+  const reader = { scene, read };
   readers.add(reader);
   return () => {
     readers.delete(reader);
@@ -115,20 +121,25 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
 }
 
 function readMaps(readers: Readers, scene: THREE.Object3D, camera: THREE.Camera): void {
-  for (const read of readers) read(scene, camera);
+  for (const reader of readers) if (reader.scene === scene) reader.read(camera);
 }
 
-/** {@link readMaps}, timed as {@link READ_STEP} when there is a reader. */
+/** {@link readMaps}, timed as {@link READ_STEP} when a reader reads `scene`. */
 function readMapsTimed(
   renderer: THREE.WebGLRenderer,
   readers: Readers,
   scene: THREE.Object3D,
   camera: THREE.Camera
 ): void {
-  if (readers.size === 0) return;
+  if (!readsScene(readers, scene)) return;
   beginStep(renderer, READ_STEP);
   readMaps(readers, scene, camera);
   endStep(renderer, READ_STEP);
+}
+
+function readsScene(readers: Readers, scene: THREE.Object3D): boolean {
+  for (const reader of readers) if (reader.scene === scene) return true;
+  return false;
 }
 
 /** Copies each light's cube into the atlas. Each copy leaves the render target as it found it. */
