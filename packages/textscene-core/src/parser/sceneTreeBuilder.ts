@@ -33,7 +33,7 @@ import {
   type RootWalkTables,
 } from '../godot/string/nodePath.js';
 import { reRootedName, type TrailHeading } from '../godot/scene/packedScene.js';
-import { idTrailEnd, ownerTrailEnd, trailHeadingsOf } from './idTrail.js';
+import { contentTrailSegment, idTrailEnd, ownerTrailEnd, trailHeadingsOf } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 import { insertAtIndex } from '../godot/scene/siblingIndex.js';
@@ -336,7 +336,7 @@ function registerInContent<N extends SceneNode<N>>(
 ): void {
   tables.contentSeats.add(seat);
   if (!seat.name) return;
-  const segment = `:${rest.join(',')}`;
+  const segment = contentTrailSegment(rest);
   const { path: authored, livePath } = tables.places.get(instanceSeat)!;
   const place = placeBelow(
     { path: joinPath(authored, segment), livePath: joinPath(livePath, segment) },
@@ -545,11 +545,11 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
       });
     return;
   }
-  if (isBelowContent) return;
   if (node.owner !== undefined) {
     handToOwner(tables, { node, ...place }, path, setting);
     return;
   }
+  if (isBelowContent) return;
   if (instance === undefined) return;
   handToInstance(tables, instance, {
     pathInInstance: pathInInstance(tables, instance, place.livePath)!,

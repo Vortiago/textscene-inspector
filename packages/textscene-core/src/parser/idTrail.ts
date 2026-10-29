@@ -16,6 +16,42 @@ import { simplifiedNodePath } from '../godot/string/nodePath.js';
 import { firstIndexWith } from '../utils/keyedLookup.js';
 import { joinPath } from '../utils/nodePath.js';
 
+/**
+ * The path segment that stands for the node an id trail finds inside an instance, which only that
+ * instance's graft can name. No heading writes it, since `:` ends a name in a NodePath.
+ *
+ * @canonical The path segment of a node a content trail finds
+ */
+export function contentTrailSegment(trail: readonly number[]): string {
+  return CONTENT_TRAIL_MARK + trail.join(',');
+}
+
+const CONTENT_TRAIL_MARK = ':';
+
+/** Whether `path` passes through the segment of a content trail ({@link contentTrailSegment}). */
+export function passesContentTrail(path: string): boolean {
+  return path.includes(CONTENT_TRAIL_MARK);
+}
+
+/** Stands in for a content trail's segment while a path simplifies: a name no NodePath spells. */
+const TRAIL_STAND_IN = '\u0000';
+
+/**
+ * `path` simplified as `simplifiedNodePath` simplifies it, with the segment of a content trail kept
+ * as a name, where a NodePath would read `:` as the start of its subnames.
+ */
+export function simplifiedLivePath(path: string): string {
+  if (!passesContentTrail(path)) return simplifiedNodePath(path);
+  const trails: string[] = [];
+  const standIns = path
+    .split('/')
+    .map((segment) => (passesContentTrail(segment) ? TRAIL_STAND_IN + (trails.push(segment) - 1) : segment));
+  return simplifiedNodePath(standIns.join('/'))
+    .split('/')
+    .map((segment) => (segment.startsWith(TRAIL_STAND_IN) ? trails[Number(segment.slice(1))]! : segment))
+    .join('/');
+}
+
 /** The first heading of a scan carrying an id, the one index the builder and the linter share. */
 const firstOriginWithId = firstIndexWith((origin: NodeOrigin<RawNode>) => origin.uniqueId);
 

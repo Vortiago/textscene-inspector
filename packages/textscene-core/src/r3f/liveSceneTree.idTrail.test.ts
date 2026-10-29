@@ -176,6 +176,41 @@ unique_name_in_owner = true
   });
 });
 
+describe('a heading below a trail-seated heading, with an explicit owner= of its own', () => {
+  const capWithBrim = (brimOwner: string) => `${capWithTrail(PLAYER_ID, INNER_ID)}
+unique_name_in_owner = true
+
+[node name="Brim" type="Node3D" parent="%Cap" owner="${brimOwner}"]
+unique_name_in_owner = true
+`;
+  const feather = (parent: string) => `\n[node name="Feather" type="Node3D" parent="${parent}"]\n`;
+
+  it('registers its %Name in the table of the instance its owner= names', () => {
+    const host = playerHost(capWithBrim('Player') + feather('Player/%Brim'));
+
+    expect(pathsEnding(host, 'Feather')).toEqual(['Main/Player/Inner/Cap/Brim/Feather']);
+  });
+
+  it('registers it in no table of the root', () => {
+    const host = playerHost(capWithBrim('Player') + feather('%Brim'));
+
+    expect(pathsEnding(host, 'Feather')).toEqual(['Main/_Brim#Feather']);
+  });
+
+  it('registers it in the table of the nested instance its owner= names', () => {
+    const host = playerHost(capWithBrim('Player/Inner') + feather('Player/Inner/%Brim'));
+
+    expect(pathsEnding(host, 'Feather')).toEqual(['Main/Player/Inner/Cap/Brim/Feather']);
+  });
+
+  it('registers it in the table of another instance its owner= names, from outside that instance', () => {
+    const other = `[node name="Other" parent="." instance=ExtResource("player") unique_id=4444]\n\n`;
+    const host = playerHost(other + capWithBrim('Other') + feather('Other/%Brim'));
+
+    expect(pathsEnding(host, 'Feather')).toEqual(['Main/Player/Inner/Cap/Brim/Feather']);
+  });
+});
+
 describe('a heading addressed by %Name below a node that re-roots', () => {
   it('re-roots with it, since the renamed node claims the renamed name', () => {
     const host = playerHost(`[node name="Q" type="Node3D" parent="Player/Gone"]

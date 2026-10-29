@@ -20,6 +20,7 @@ import {
   type OwnerHandOff,
 } from '../parser/nodeOwner';
 import type { FollowTrail } from './sceneTrail';
+import { passesContentTrail } from '../parser/idTrail';
 
 /**
  * Each `%Name` key to the path from the instanced scene's root to the node that holds it. A node
@@ -91,7 +92,14 @@ export class InstanceNameTable implements UniqueNameTable {
   /** Written only by `ownerChosen`: the settings whose owner this instance lacks, which another lands. */
   readonly handedOff: OwnerHandOff[] = [];
 
-  constructor({ own, settings, nested, followTrail }: InstanceNames) {
+  /**
+   * @param placements where the graft placed each host child that only it can name, as
+   *   `uniqueParentPlacements` keys it, filled in as the graft seats them
+   */
+  constructor(
+    { own, settings, nested, followTrail }: InstanceNames,
+    private readonly placements: ReadonlyMap<string, string>
+  ) {
     this.own = own;
     this.settings = settings;
     this.nested = nested;
@@ -110,7 +118,16 @@ export class InstanceNameTable implements UniqueNameTable {
         const node = nodeAt(tree, path.split('/'));
         return node && nested(node);
       });
-    return subPathSegments(subPath, tree, this.claimed, nestedTable);
+    return subPathSegments(this.placedTrailSeat(subPath), tree, this.claimed, nestedTable);
+  }
+
+  /**
+   * `path` with a leading segment of a content trail replaced by where the graft placed the node
+   * the trail found, as the seating keys a node below it (`contentTrailSegment`).
+   */
+  private placedTrailSeat(path: string): string {
+    if (!passesContentTrail(path.split('/')[0]!)) return path;
+    return placedBelow(this.placements, path.split('/')).join('/');
   }
 
   /** The path from the sub-scene root that holds `key` now, as in {@link UniqueNamePaths}. */
@@ -141,7 +158,8 @@ export class InstanceNameTable implements UniqueNameTable {
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
     if (authored.awaits) return tree;
-    const setting = this.ownerChosen(tree, authored);
+    const placed = { ...authored, pathInInstance: this.placedTrailSeat(authored.pathInInstance) };
+    const setting = this.ownerChosen(tree, placed);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
       if (!setting.ownerInInstance) {
@@ -420,6 +438,20 @@ export function indicesWhere(
     if (below) return [index, ...below];
   }
   return undefined;
+}
+
+/**
+ * `path`, as segments, with its longest leading sub-path that `placements` holds replaced by the
+ * placed path.
+ *
+ * @canonical A path with its leading sub-path replaced where a graft placed it
+ */
+export function placedBelow(placements: ReadonlyMap<string, string>, path: readonly string[]): string[] {
+  for (let end = path.length; end > 0; end--) {
+    const placed = placements.get(path.slice(0, end).join('/'));
+    if (placed !== undefined) return [...placed.split('/'), ...path.slice(end)];
+  }
+  return [...path];
 }
 
 /** `setting` spelt below the nested instance at depth `at` of `segments`, its expanded path. */

@@ -19,6 +19,7 @@ import {
   type UniqueNameTable,
 } from './instanceNameTable';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
+import { contentTrailSegment } from '../parser/idTrail';
 import { joinPath } from '../utils/nodePath';
 import { enteredThroughBase, followedChild } from './parentContentTrail';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
@@ -89,7 +90,7 @@ class Graft {
     private readonly names: InstanceNames
   ) {
     this.grafted = [...rootChildren];
-    this.table = new InstanceNameTable(names);
+    this.table = new InstanceNameTable(names, this.placements);
   }
 
   landUpTo(settingCount: number): void {
@@ -110,22 +111,26 @@ class Graft {
     const { child, status } = followedChild(hosted, this.names.followTrail);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
     const stamped = withFallbackScope(child, this.scopes.outer);
+    const key = placementKey(hosted);
     if (status === 'waiting') this.misplaced.push(stamped);
     else if (status === 'missing') this.escaped.push({ child, scope: stamped.scope!, end: null });
-    else if (child.instanceSubPath) this.seatAtSubPath(child, stamped);
-    else this.seatDirect(child, stamped);
+    else if (child.instanceSubPath) this.seatAtSubPath(child, stamped, key);
+    else this.seatDirect(child, stamped, key);
   }
 
-  private seatDirect(child: LiveNode, stamped: LiveNode): void {
+  private seatDirect(child: LiveNode, stamped: LiveNode, key: string | undefined): void {
     const folded = child.overridesExistingNode
       ? foldOrWarn(this.grafted, stamped, this.scopes.content)
       : null;
     if (folded) this.grafted = folded;
     else if (child.overridesExistingNode) this.misplaced.push(stamped);
-    else insertAtIndex(this.grafted, stamped);
+    else {
+      insertAtIndex(this.grafted, stamped);
+      if (key) this.placements.set(key, child.name);
+    }
   }
 
-  private seatAtSubPath(child: LiveNode, stamped: LiveNode): void {
+  private seatAtSubPath(child: LiveNode, stamped: LiveNode, key: string | undefined): void {
     const subPath = child.instanceSubPath!;
     const segments = this.table.walk(subPath, this.grafted);
     const inside = segments?.[0] === OUTSIDE ? null : segments;
@@ -135,7 +140,6 @@ class Graft {
       return;
     }
     this.grafted = next;
-    const key = placementKey(child);
     if (key) this.placements.set(key, joinPath(inside.join('/'), child.name));
   }
 
@@ -164,13 +168,15 @@ class Graft {
 }
 
 /**
- * The key a placement records `hostChild` under: its sub-path and its name, as authored. Undefined
- * where the sub-path passes through no `%Name`, as the path as written then needs no record.
+ * The key a placement records `hostChild` under: its sub-path and its name, as authored, with the
+ * segment of its content trail for a sub-path the trail finds. Undefined where the sub-path passes
+ * through no `%Name` and no trail, as the path as written then needs no record.
  *
  * @canonical The key of a host child's placement, as `uniqueParentPlacements` keys it
  */
 export function placementKey(hostChild: LiveNode): string | undefined {
-  const { instanceSubPath, name } = hostChild;
+  const { instanceSubPath, parentContentTrail, name } = hostChild;
+  if (parentContentTrail !== undefined) return joinPath(contentTrailSegment(parentContentTrail), name);
   return instanceSubPath?.includes(UNIQUE_NODE_PREFIX) ? joinPath(instanceSubPath, name) : undefined;
 }
 

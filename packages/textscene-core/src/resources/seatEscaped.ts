@@ -19,7 +19,7 @@ import {
 import type { OwnerHandOff } from '../parser/nodeOwner';
 import { handsOffOwner, withHandOffsSettled } from './ownerHandOff';
 import { reRootedName } from '../godot/scene/packedScene';
-import { simplifiedNodePath } from '../godot/string/nodePath';
+import { simplifiedLivePath } from '../parser/idTrail';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
 import { joinPath, SCENE_ROOT_PATH } from '../utils/nodePath';
 import { perObject } from '../utils/perObject';
@@ -167,7 +167,7 @@ function leftoverEnd(walkEnd: string | null, claimed: ClaimedPath): string | nul
  */
 function endInFrame(end: string | null, from: readonly string[]): string | null {
   if (end === null) return null;
-  const simplified = simplifiedNodePath(joinPath(from.join('/'), end));
+  const simplified = simplifiedLivePath(joinPath(from.join('/'), end));
   return simplified === '.' ? SCENE_ROOT_PATH : simplified;
 }
 

@@ -16,7 +16,8 @@ import {
   cachedUniqueNamesBelowRoot,
 } from '../utils/uniqueNames.js';
 import { perObject } from '../utils/perObject.js';
-import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
+import { passesContentTrail, simplifiedLivePath } from '../parser/idTrail.js';
+import { placedBelow, type UniqueNamePaths, type UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
   holdsInstanceContent,
@@ -81,7 +82,12 @@ function fileSeating(owner: ClaimOwner, livePath: string, counts: Counts): Claim
   return owner;
 }
 
-/** The live tree with each `%`-spelt live path placed once per walk. */
+/** Whether a live path passes through a `%Name` or a content trail, where only a graft knows the node. */
+function isPlacedByGraft(livePath: string): boolean {
+  return livePath.includes(UNIQUE_NODE_PREFIX) || passesContentTrail(livePath);
+}
+
+/** The live tree with each live path a graft places ({@link isPlacedByGraft}) placed once per walk. */
 class PlacedLiveTree {
   /** Written only by `placed`. */
   private readonly placements = new Map<string, string>();
@@ -89,12 +95,12 @@ class PlacedLiveTree {
   constructor(readonly tree: LiveTree) {}
 
   /**
-   * `livePath` with each host sub-path through a `%Name` replaced by where the graft placed it, as
-   * of its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest
+   * `livePath` with each host sub-path through a `%Name` or a content trail replaced by where the
+   * graft placed it, as of its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest
    * as written, and so does a heading its file seats through a `%Name` the graft could not reach.
    */
   placed(livePath: string): string {
-    if (!livePath.includes(UNIQUE_NODE_PREFIX)) return livePath;
+    if (!isPlacedByGraft(livePath)) return livePath;
     const cached = this.placements.get(livePath);
     if (cached !== undefined) return cached;
     let segments = livePath.split('/');
@@ -108,19 +114,10 @@ class PlacedLiveTree {
     }
     // A child its file seated outside the instance climbs out of it with `..`.
     const spelt = segments.join('/');
-    const placed = segments.includes('..') ? simplifiedNodePath(spelt) : spelt;
+    const placed = segments.includes('..') ? simplifiedLivePath(spelt) : spelt;
     this.placements.set(livePath, placed);
     return placed;
   }
-}
-
-/** `rest` with its longest leading sub-path that `placements` holds replaced by the placed path. */
-function placedBelow(placements: ReadonlyMap<string, string>, rest: readonly string[]): string[] {
-  for (let end = rest.length; end > 0; end--) {
-    const placed = placements.get(rest.slice(0, end).join('/'));
-    if (placed !== undefined) return [...placed.split('/'), ...rest.slice(end)];
-  }
-  return [...rest];
 }
 
 interface Candidate {
@@ -326,9 +323,9 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
   return new Map([...ownerUniquePaths(scene.parent), ...own]);
 }
 
-/** `paths` with each live path placed, the same object where none passes through a `%Name`. */
+/** `paths` with each live path placed, the same object where no graft places any. */
 function withPlacedLivePaths(paths: UniqueNamePaths, live: PlacedLiveTree): UniqueNamePaths {
-  if (![...paths.values()].some((path) => path.includes(UNIQUE_NODE_PREFIX))) return paths;
+  if (![...paths.values()].some(isPlacedByGraft)) return paths;
   return new Map([...paths].map(([key, path]) => [key, live.placed(path)]));
 }
 
@@ -345,7 +342,7 @@ export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
 
 /** `paths` from a node, spelt from the root through the node at `path`. */
 function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
-  return new Map([...paths].map(([key, fromNode]) => [key, simplifiedNodePath(joinPath(path, fromNode))]));
+  return new Map([...paths].map(([key, fromNode]) => [key, simplifiedLivePath(joinPath(path, fromNode))]));
 }
 
 /**

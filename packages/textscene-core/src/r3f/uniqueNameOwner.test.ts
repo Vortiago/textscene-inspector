@@ -887,3 +887,68 @@ unique_name_in_owner = true
     );
   });
 });
+
+describe('a %Name that a heading seated through a parent_id_path= into an instance claims', () => {
+  // The trail names the `Player` heading, then the `Inner` heading of player.tscn, so `Cap` sits
+  // below the node at `Player/Inner`, which only the graft of `Player` finds (packed_scene.cpp:1985-2005).
+  const parse = (text: string) => new TscnParser().parse(text);
+  const inner = parse(`[gd_scene format=3]
+
+[node name="Inner" type="Node3D" unique_id=1]
+`);
+  const player = parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
+
+[node name="Player" type="Node3D" unique_id=1]
+
+[node name="Inner" parent="." instance=ExtResource("inner") unique_id=3333]
+`);
+  const host = parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
+
+[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(2222, 3333)]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node3D" parent="%Cap" owner="Player"]
+unique_name_in_owner = true
+`);
+  const ctx = contextOver(host, { 'res://player.tscn': player, 'res://inner.tscn': inner });
+
+  it('reads in the root table the path the graft placed the claimant at', () => {
+    const table = ownerUniquePaths(claimOwnerOf('Main/Player', host.nodes, ctx));
+
+    expect(table.get('%Cap')).toBe('Main/Player/Inner/Cap');
+  });
+
+  it('reads a claim of a node below it in the table of the instance its owner= names', () => {
+    const table = ownerUniquePaths(claimOwnerOf('Main/Player/Inner', host.nodes, ctx));
+
+    expect(table.get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
+  });
+
+  it('reads a claim of a node below it in the table of another instance, which climbs out of it', () => {
+    const otherOwned = parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
+
+[node name="Other" parent="." instance=ExtResource("player") unique_id=4444]
+
+[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(2222, 3333)]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node3D" parent="%Cap" owner="Other"]
+unique_name_in_owner = true
+`);
+    const otherCtx = contextOver(otherOwned, { 'res://player.tscn': player, 'res://inner.tscn': inner });
+    const table = ownerUniquePaths(claimOwnerOf('Main/Other/Inner', otherOwned.nodes, otherCtx));
+
+    expect(table.get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
+  });
+});
