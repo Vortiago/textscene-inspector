@@ -83,6 +83,16 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'sub-viewport-shared-world-glow', file: 'unit-sub-viewport-shared-world-glow.tscn' },
   // A Camera3D's own Environment glows its own-world target, with no WorldEnvironment in the world.
   { name: 'sub-viewport-camera-environment', file: 'unit-sub-viewport-camera-environment.tscn' },
+  // A Camera3D's `attributes` at exposure_multiplier 2 in a shared-world SubViewport over a world with
+  // none: the pass draws the light, the sphere and the colour background at its camera's exposure.
+  { name: 'sub-viewport-camera-exposure', file: 'unit-sub-viewport-camera-exposure.tscn' },
+  // Two shared-world SubViewports of a 2D canvas, whose cameras hold exposure 2 and 0.5: one frame
+  // draws the one lit sphere at both.
+  {
+    name: 'sub-viewport-shared-world-camera-exposure',
+    file: 'unit-sub-viewport-shared-world-camera-exposure.tscn',
+    mode: '2d',
+  },
   // A SubViewport's `use_debanding` dithers the bloom its camera's Environment adds.
   { name: 'sub-viewport-debanding', file: 'unit-sub-viewport-debanding.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB

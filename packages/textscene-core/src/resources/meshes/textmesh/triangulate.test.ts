@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Vector2 } from '../../../godot/math/vector';
-import { triangulateContours, type TriangulatedContour } from './triangulate';
+import { triangulateContours } from './triangulate';
 
+/** A square wound counter-clockwise on a y-up page. */
 function square(x: number, y: number, size: number): Vector2[] {
   return [
     { x, y },
@@ -11,8 +12,8 @@ function square(x: number, y: number, size: number): Vector2[] {
   ];
 }
 
-const outer = (points: Vector2[]): TriangulatedContour => ({ points, isHole: false });
-const hole = (points: Vector2[]): TriangulatedContour => ({ points: points.reverse(), isHole: true });
+/** A hole winds clockwise. */
+const hole = (points: Vector2[]): Vector2[] => points.reverse();
 
 function triangleAreas(corners: readonly Vector2[]): number[] {
   const areas: number[] = [];
@@ -36,46 +37,32 @@ describe('triangulateContours', () => {
       { x: 10, y: 20 },
       { x: 0, y: 20 },
     ];
-    const corners = triangulateContours([outer(lShape)]);
+    const corners = triangulateContours([lShape]);
     expect([corners.length / 3, totalArea(corners)]).toEqual([4, 300]);
   });
 
-  it('winds every triangle with a positive signed area', () => {
-    const corners = triangulateContours([outer(square(0, 0, 10).reverse())]);
+  it('keeps the winding of the outline on every triangle', () => {
+    const corners = triangulateContours([square(0, 0, 10)]);
     expect(triangleAreas(corners).every((area) => area > 0)).toBe(true);
   });
 
   it('fills two separate outlines', () => {
-    const corners = triangulateContours([outer(square(0, 0, 10)), outer(square(20, 0, 5))]);
+    const corners = triangulateContours([square(0, 0, 10), square(20, 0, 5)]);
     expect(totalArea(corners)).toBe(125);
   });
 
   it('leaves each of two holes in one outline uncovered', () => {
-    const corners = triangulateContours([
-      outer(square(0, 0, 30)),
-      hole(square(3, 3, 6)),
-      hole(square(18, 12, 6)),
-    ]);
+    const corners = triangulateContours([square(0, 0, 30), hole(square(3, 3, 6)), hole(square(18, 12, 6))]);
     expect(totalArea(corners)).toBeCloseTo(900 - 36 - 36, 9);
   });
 
   it('fills an island inside a hole, and not the hole', () => {
-    const corners = triangulateContours([
-      outer(square(0, 0, 30)),
-      hole(square(5, 5, 20)),
-      outer(square(10, 10, 10)),
-    ]);
+    const corners = triangulateContours([square(0, 0, 30), hole(square(5, 5, 20)), square(10, 10, 10)]);
     expect(totalArea(corners)).toBeCloseTo(900 - 400 + 100, 9);
   });
 
-  it('leaves a hole uncovered however the outline winds', () => {
-    const corners = triangulateContours([outer(square(0, 0, 10).reverse()), hole(square(3, 3, 4).reverse())]);
-    expect(totalArea(corners)).toBeCloseTo(84, 9);
-  });
-
-  it('ignores a hole that no outline contains', () => {
-    const corners = triangulateContours([outer(square(0, 0, 10)), hole(square(50, 50, 4))]);
-    expect(totalArea(corners)).toBe(100);
+  it('gives nothing for a hole that no outline sees', () => {
+    expect(triangulateContours([square(0, 0, 10), hole(square(50, 50, 4))])).toEqual([]);
   });
 
   it('gives nothing for no contour', () => {
