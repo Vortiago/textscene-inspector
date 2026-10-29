@@ -5,6 +5,7 @@
  */
 
 import type { LiveNode } from './liveNode';
+import { nodeAt, replacedAt } from './liveTreeIndex';
 import { joinPath, pathBetween, pathUnder } from '../utils/nodePath';
 import {
   UNIQUE_NODE_PREFIX,
@@ -13,8 +14,14 @@ import {
   walkedPath,
   type RootWalkTables,
 } from '../godot/string/nodePath';
-import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
+import {
+  holderAfterSetting,
+  isOutsideInstance,
+  type InstanceNameSetting,
+  type HandOffDecision,
+} from '../parser/nodeOwner';
 import type { FollowTrail } from './sceneTrail';
+import { passesContentTrail } from '../parser/idTrail';
 
 /**
  * Each `%Name` key to the path from the instanced scene's root to the node that holds it. A node
@@ -83,8 +90,17 @@ export class InstanceNameTable implements UniqueNameTable {
   private landed = 0;
   /** Written only by `paths`, read once the graft has landed every setting. */
   private finished?: UniqueNamePaths;
+  /** Written only by `ownerChosen`: what this graft decided for each hand-off its settings carry. */
+  readonly handOffDecisions: HandOffDecision[] = [];
 
-  constructor({ own, settings, nested, followTrail }: InstanceNames) {
+  /**
+   * @param placements where the graft placed each host child that only it can name, as
+   *   `uniqueParentPlacements` keys it, filled in as the graft seats them
+   */
+  constructor(
+    { own, settings, nested, followTrail }: InstanceNames,
+    private readonly placements: ReadonlyMap<string, string>
+  ) {
     this.own = own;
     this.settings = settings;
     this.nested = nested;
@@ -103,7 +119,19 @@ export class InstanceNameTable implements UniqueNameTable {
         const node = nodeAt(tree, path.split('/'));
         return node && nested(node);
       });
-    return subPathSegments(subPath, tree, this.claimed, nestedTable);
+    return subPathSegments(this.placedTrailSeat(subPath), tree, this.claimed, nestedTable);
+  }
+
+  /**
+   * `path` with its leading sub-path replaced where a trail placed the node there: a segment of a
+   * content trail (`contentTrailSegment`), or a plain path the base lacks. A path through a `%Name`
+   * resolves through the claims as they stand when it lands, so a later claim moves it.
+   */
+  private placedTrailSeat(path: string): string {
+    if (this.placements.size === 0) return path;
+    const segments = path.split('/');
+    if (!passesContentTrail(segments[0]!) && path.includes(UNIQUE_NODE_PREFIX)) return path;
+    return placedBelow(this.placements, segments).join('/');
   }
 
   /** The path from the sub-scene root that holds `key` now, as in {@link UniqueNamePaths}. */
@@ -129,10 +157,14 @@ export class InstanceNameTable implements UniqueNameTable {
 
   /**
    * `tree` once `setting` lands in this table, or once it is handed to the nested instance whose
-   * table it names. A setting on a node the sub-scene lacks changes nothing.
+   * table it names. A setting on a node the sub-scene lacks, or one that awaits a hand-off, changes
+   * nothing.
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
-    const setting = this.ownerChosen(tree, authored);
+    if (authored.awaits) return tree;
+    const pathInInstance = this.placedTrailSeat(authored.pathInInstance);
+    const placed = pathInInstance === authored.pathInInstance ? authored : { ...authored, pathInInstance };
+    const setting = this.ownerChosen(tree, placed);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
       if (!setting.ownerInInstance) {
@@ -157,16 +189,33 @@ export class InstanceNameTable implements UniqueNameTable {
 
   /**
    * `authored` with the owner Godot takes: the one its `owner=` walk finds, or its `owner_uid_path=` owner
-   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing.
+   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing, where
+   * a scene the walk enters is still loading, or where the `owner_uid_path=` owner is in another
+   * instance, to which the setting is handed off.
    */
   private ownerChosen(tree: readonly LiveNode[], authored: InstanceNameSetting): InstanceNameSetting | null {
     const walked = this.ownerWalked(tree, authored);
-    if (!authored.ownerFallback || (walked && holdsNode(tree, walked.ownerInInstance ?? ''))) return walked;
-    return this.ownerWalked(tree, withFallbackOwner(authored));
+    // A scene the owner trail enters is still loading, so nothing is decided yet.
+    if (walked === OWNER_PENDING) return null;
+    const { ownerHandOff: handOff } = authored;
+    const place = walked === null ? 'absent' : nodePlace(tree, walked.ownerInInstance ?? '');
+    if (handOff) {
+      // An owner inside a nested instance is that instance's graft to find, which carries the hand-off on.
+      if (place === 'nested') return walked;
+      this.handOffDecisions.push({ handOff, isHandedOff: place === 'absent' });
+      return place === 'absent' ? null : walked;
+    }
+    if (place !== 'absent' || !authored.ownerFallback) return walked;
+    const fallback = this.ownerWalked(tree, withFallbackOwner(authored));
+    return fallback === OWNER_PENDING ? null : fallback;
   }
 
-  private ownerWalked(tree: readonly LiveNode[], setting: InstanceNameSetting): InstanceNameSetting | null {
+  private ownerWalked(
+    tree: readonly LiveNode[],
+    setting: InstanceNameSetting
+  ): InstanceNameSetting | null | typeof OWNER_PENDING {
     const followed = withOwnerTrailFollowed(setting, this.followTrail);
+    if (followed === OWNER_PENDING) return followed;
     return followed && withOwnerWalked(tree, followed, this.claimed);
   }
 
@@ -198,17 +247,21 @@ function withFallbackOwner({ ownerFallback, ...rest }: InstanceNameSetting): Ins
   return { ...rest, ownerContentTrail: undefined, ...ownerFallback };
 }
 
+/** A walk to an owner through a scene not loaded yet, which the next collapse follows again. */
+const OWNER_PENDING = 'owner pending';
+
 /**
  * `setting` with the owner its `ownerContentTrail` finds below the instance, as the loader's lookup
  * finds it (packed_scene.cpp:159-163). Null where no heading answers the trail, so the node has no
- * owner, or where a scene it enters is not loaded yet, which the next collapse follows again.
+ * owner, and {@link OWNER_PENDING} where a scene it enters is not loaded yet.
  */
 function withOwnerTrailFollowed(
   setting: InstanceNameSetting,
   followTrail: FollowTrail
-): InstanceNameSetting | null {
+): InstanceNameSetting | null | typeof OWNER_PENDING {
   if (setting.ownerContentTrail === undefined) return setting;
   const walk = followTrail(setting.ownerContentTrail);
+  if (walk.status === 'pending') return OWNER_PENDING;
   if (walk.status !== 'found') return null;
   const { ownerContentTrail: _followed, ...rest } = setting;
   return { ...rest, ownerInInstance: pathUnder(setting.ownerInInstance ?? '', walk.path) };
@@ -264,11 +317,11 @@ function tableOwner(
   if (ownerInInstance === '') return THIS_INSTANCE;
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
-  if (!ownerSegments.every((name, index) => segments[index] === name)) {
-    return isNestedInstanceAt(tree, ownerSegments) ? OUTSIDE_THE_OWNER : null;
-  }
   const ownerAt = instanceDepth(tree, ownerSegments);
-  return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
+  if (typeof ownerAt !== 'number') return null;
+  return ownerSegments.every((name, index) => segments[index] === name)
+    ? { nestedAt: ownerAt }
+    : OUTSIDE_THE_OWNER;
 }
 
 /**
@@ -286,14 +339,10 @@ function instanceDepth(tree: readonly LiveNode[], path: readonly string[]): numb
   return undefined;
 }
 
-/** Whether the node at `path` is an instance with no instance above it, whose graft this one hands to. */
-function isNestedInstanceAt(tree: readonly LiveNode[], path: readonly string[]): boolean {
-  return instanceDepth(tree, path) === path.length - 1;
-}
-
 /**
- * `tree` with `setting` handed to the nested instance at `owner`, on the node at `nodePath` outside
- * it, which that instance's graft lands in its own table. A node `owner` does not name is no table.
+ * `tree` with `setting`, on the node at `nodePath` outside the nested instance that holds `owner`,
+ * handed to that instance, whose graft walks the rest of `owner` and lands it in its own table. An
+ * owner no nested instance holds is no table this graft reaches.
  */
 function handOutside(
   tree: LiveNode[],
@@ -301,24 +350,31 @@ function handOutside(
   nodePath: string,
   setting: InstanceNameSetting
 ): LiveNode[] {
-  if (!isNestedInstanceAt(tree, owner)) return tree;
-  const { isUnique, hostChildrenBefore } = setting;
-  return handTo(tree, owner, {
-    pathInInstance: pathBetween(owner.join('/'), nodePath),
+  const nestedAt = instanceDepth(tree, owner);
+  if (typeof nestedAt !== 'number') return tree;
+  const instancePath = owner.slice(0, nestedAt + 1);
+  const { isUnique, hostChildrenBefore, ownerHandOff } = setting;
+  return handTo(tree, instancePath, {
+    pathInInstance: pathBetween(instancePath.join('/'), nodePath),
     isUnique,
     hostChildrenBefore,
+    ...(nestedAt < owner.length - 1 ? { ownerInInstance: owner.slice(nestedAt + 1).join('/') } : {}),
+    ...(ownerHandOff ? { ownerHandOff } : {}),
   });
 }
 
 /**
- * Whether the sub-path names a node of `tree`, or one in a nested instance, which that instance's
- * graft finds. A sub-path that climbs out names a node above, which no tree here holds.
+ * Where the sub-path's node is: `here` in `tree`, `nested` in a nested instance, which that
+ * instance's graft finds, or `absent`. A sub-path that climbs out counts as here, as it names a
+ * node above, which no tree here can check.
  */
-function holdsNode(tree: readonly LiveNode[], subPath: string): boolean {
-  if (subPath === '' || subPath.startsWith(OUTSIDE)) return true;
+function nodePlace(tree: readonly LiveNode[], subPath: string): 'here' | 'nested' | 'absent' {
+  if (subPath === '' || subPath.startsWith(OUTSIDE)) return 'here';
   const segments = subPath.split('/');
   const nestedAt = instanceDepth(tree, segments.slice(0, -1));
-  return nestedAt !== null && namesNodeBelow(tree, segments, nestedAt);
+  if (nestedAt === null) return 'absent';
+  if (nestedAt !== undefined) return 'nested';
+  return nodeAt(tree, segments) === undefined ? 'absent' : 'here';
 }
 
 /** Whether `segments` names a node of `tree`, or lies in the nested instance at `nestedAt` (`instanceDepth` of its parent path). */
@@ -330,42 +386,18 @@ function namesNodeBelow(
   return nestedAt !== undefined || nodeAt(tree, segments) !== undefined;
 }
 
-/** The node at `path` below the sub-scene root, or undefined where none sits there. */
-export function nodeAt(tree: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
-  let siblings = tree;
-  let found: LiveNode | undefined;
-  for (const name of path) {
-    found = siblings.find((n) => n.name === name);
-    if (!found) return undefined;
-    siblings = found.children;
-  }
-  return found;
-}
-
 /**
- * `tree` with the node at `path` swapped for what `replace` returns for it, as a copy along that
- * spine that shares every other node. The caller passes a path that names a node.
+ * `path`, as segments, with its longest leading sub-path that `placements` holds replaced by the
+ * placed path.
  *
- * @canonical A Live tree with the node at a name path replaced
+ * @canonical A path with its leading sub-path replaced where a graft placed it
  */
-export function replacedAt(
-  tree: readonly LiveNode[],
-  path: readonly string[],
-  replace: (node: LiveNode) => LiveNode
-): LiveNode[] {
-  const replacedBelow = (siblings: readonly LiveNode[], depth: number): LiveNode[] => {
-    const name = path[depth];
-    const index = siblings.findIndex((n) => n.name === name);
-    if (index === -1) throw new Error(`expected a node at "${path.join('/')}", found none named "${name}"`);
-    const target = siblings[index]!;
-    const copy = [...siblings];
-    copy[index] =
-      depth === path.length - 1
-        ? replace(target)
-        : { ...target, children: replacedBelow(target.children, depth + 1) };
-    return copy;
-  };
-  return replacedBelow(tree, 0);
+export function placedBelow(placements: ReadonlyMap<string, string>, path: readonly string[]): string[] {
+  for (let end = path.length; end > 0; end--) {
+    const placed = placements.get(path.slice(0, end).join('/'));
+    if (placed !== undefined) return [...placed.split('/'), ...path.slice(end)];
+  }
+  return [...path];
 }
 
 /** `setting` spelt below the nested instance at depth `at` of `segments`, its expanded path. */

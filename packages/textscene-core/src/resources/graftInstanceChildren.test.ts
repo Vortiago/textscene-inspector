@@ -13,6 +13,7 @@ import { authoredSpelling } from './authoredSpelling';
 import { extResourcePathOf } from './testing/extResourcePathOf';
 import * as logger from '../logger';
 import { NO_NAMES, NO_SCOPES } from './testing/noScopes';
+import { WAITING_FOR_SCENES } from './sceneTrail';
 import type { InstanceNameSetting } from '../parser/nodeOwner';
 // The Node parser, which a fold parses an unregistered type with, as in every host.
 import '../nodes/node/index';
@@ -581,5 +582,36 @@ describe('placementKey', () => {
 
   it('keys nothing for a child with no sub-path', () => {
     expect(placementKey(node('Ring'))).toBeUndefined();
+  });
+});
+
+describe('a setting whose owner_uid_path= owner sits in another instance', () => {
+  const HAND_OFF = Symbol('Lamp');
+  const ownedBy = (owner: Partial<InstanceNameSetting>): InstanceNameSetting => ({
+    pathInInstance: 'Sprite2D/Pivot',
+    isUnique: true,
+    hostChildrenBefore: 0,
+    ownerHandOff: HAND_OFF,
+    ...owner,
+  });
+  const decisions = (setting: InstanceNameSetting, facts: Partial<InstanceNames> = {}) =>
+    graftResult(subScene(), [], { names: { ...names([setting]), ...facts } }).handOffDecisions;
+
+  it('hands it off where its owner= walk finds no node', () => {
+    expect(decisions(ownedBy({ ownerInInstance: 'Gone' }))).toEqual([
+      { handOff: HAND_OFF, isHandedOff: true },
+    ]);
+  });
+
+  it('keeps it where its owner= walk finds the owner', () => {
+    expect(decisions(ownedBy({ ownerInInstance: 'Sprite2D' }))).toEqual([
+      { handOff: HAND_OFF, isHandedOff: false },
+    ]);
+  });
+
+  it('decides nothing while a scene its owner trail enters is not loaded', () => {
+    const setting = ownedBy({ ownerInInstance: 'Sprite2D', ownerContentTrail: [7] });
+
+    expect(decisions(setting, { followTrail: WAITING_FOR_SCENES })).toEqual([]);
   });
 });

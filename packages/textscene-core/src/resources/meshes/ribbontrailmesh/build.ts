@@ -33,7 +33,7 @@ import { storedReal } from '../../../godot/math/real.js';
 import { curveScaleSampler } from '../primitivemesh/curveScale.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { SurfaceWriter, type Vec3, type Vec4 } from '../primitivemesh/surfaceWriter.js';
-import { rowAt } from '../primitivemesh/rows.js';
+import { rowAt, sectionBones } from '../primitivemesh/rows.js';
 import type { RibbonTrailMeshProperties } from './types.js';
 
 /** The tangent of every vertex (`:2946-2952`). */
@@ -56,7 +56,8 @@ export function buildRibbonTrailMeshSurface(p: RibbonTrailMeshProperties): Godot
     const { v, y } = rowAt(j, totalSegments, depth);
     const width = storedReal(p.size * widthScale(v));
     writeRow(writer, p.isCross, y, width, v);
-    writeRowBones(writer, p, j, verticesPerRow);
+    const bones = sectionBones(j, p.sections, p.sectionSegments);
+    for (let i = 0; i < verticesPerRow; i++) writer.bones(bones);
     if (j === 0) continue;
     // The triangles back to the row before (`:2966-2994`): the strip in the XY plane, then the
     // strip across it, two vertices further into each row.
@@ -76,22 +77,4 @@ function writeRow(writer: SurfaceWriter, isCross: boolean, y: number, width: num
   if (!isCross) return;
   writer.vertex([0, y, -half], CROSS_NORMAL, TANGENT, [0, v], [0, 0]);
   writer.vertex([0, y, half], CROSS_NORMAL, TANGENT, [1, v], [0, 0]);
-}
-
-/**
- * The bones of every vertex of row `j` (`:2955-2964`): the bone of the row's section and the one
- * after it, which the last section lacks, so it blends into itself. The weight moves from the
- * first to the second one segment at a time down a section. Godot holds `blend` in a `float`.
- */
-function writeRowBones(
-  writer: SurfaceWriter,
-  { sections, sectionSegments }: RibbonTrailMeshProperties,
-  j: number,
-  verticesPerRow: number
-): void {
-  const bone = Math.trunc(j / sectionSegments);
-  const blend = storedReal(1 - storedReal((j % sectionSegments) / sectionSegments));
-  const indices: Vec4 = [bone, Math.min(sections, bone + 1), 0, 0];
-  const weights: Vec4 = [blend, storedReal(1 - blend), 0, 0];
-  for (let i = 0; i < verticesPerRow; i++) writer.bones(indices, weights);
 }

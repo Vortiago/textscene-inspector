@@ -1,10 +1,11 @@
 /**
  * The rows a CylinderMesh, TubeTrailMesh or RibbonTrailMesh writes from the top edge down, as
- * `create_mesh_array` steps through them, and the quads between the rings of a round one.
+ * `create_mesh_array` steps through them, the quads between the rings of a round one, and the bones
+ * a trail mesh gives each row.
  */
 
 import { storedReal } from '../../../godot/math/real.js';
-import type { SurfaceWriter } from './surfaceWriter.js';
+import type { SurfaceWriter, VertexBones } from './surfaceWriter.js';
 
 /** A row's V down the mesh, and its Y on a mesh of the given height centred on the origin. */
 export interface Row {
@@ -41,4 +42,21 @@ export function writeRings(writer: SurfaceWriter, rowCount: number, writeRing: (
     }
     prevrow = thisrow;
   }
+}
+
+/**
+ * The bones of every vertex of row `j` of a trail mesh with `perSection` rows to each of its
+ * `sections` (`primitive_meshes.cpp:2545-2580`, `:2955-2964`): the bone of the row's section and the
+ * one after it, which the last section lacks, so it blends into itself. The weight moves from the
+ * first to the second one row at a time down a section. Godot holds `blend` in a `float`.
+ *
+ * @canonical The bones of a trail mesh row
+ */
+export function sectionBones(j: number, sections: number, perSection: number): VertexBones {
+  const bone = Math.trunc(j / perSection);
+  const blend = storedReal(1 - storedReal((j % perSection) / perSection));
+  return {
+    indices: [bone, Math.min(sections, bone + 1), 0, 0],
+    weights: [blend, storedReal(1 - blend), 0, 0],
+  };
 }
