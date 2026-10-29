@@ -14,13 +14,19 @@ A Viewport that renders its subtree into an offscreen target for a `ViewportText
 
 A target that holds canvas content, 2D-world items or Controls, stores 8-bit sRGB bytes, as Godot's non-HDR `R8G8B8A8_UNORM` target does (`texture_storage.cpp:3568-3569`). Translucent content blends in those stored numbers, as on the main canvas (`renderer_canvas_render_rd.cpp:671,729`). Each target offers Godot's two views of its storage. A canvas consumer filters the plain view's bytes and multiplies them in sRGB (`texture_storage.cpp:754`). A `source_color` material slot samples the sRGB view, which decodes each texel before the filter (`material_storage.cpp:1067,1073`). A 3D pass draws its world into a linear HDR buffer, which resolves its `msaa_3d` samples (`render_forward_clustered.cpp:2402`). Godot's tonemap pass then writes the target: glow, `adjustment_*`, auto exposure and the tone curve of the Environment of the world `find_world_3d()` resolves (`viewport.cpp:4670-4681`, `render_forward_clustered.cpp:2514`). A shared world is the parent's, so its first WorldEnvironment in tree order gives the Environment, inside the viewport or out (`world_environment.cpp:76-85`). Every shared-world viewport of a 2D scene draws the scene's one World3D, so each camera shows the nodes of all of them. A Camera3D's own `environment` replaces it while the pass renders through that camera. `use_debanding` dithers the tonemap pass's output as Godot does (`tonemap.glsl:950-957`). An `own_world_3d` world takes its own, or LINEAR without one. A 3D-content target stores its tonemapped render as sRGB bytes too (`renderer_scene_render_rd.cpp:744`). A canvas consumer filters those bytes, and a translucent 3D surface keeps its linear blend.
 
-A sub-viewport that holds 2D content and Controls draws both into its own target, in tree order, through its own camera (`viewport.cpp:5344-5345`). A Camera2D inside frames the Controls that no CanvasLayer holds. A 3D world's Controls draw over its tonemapped render in the same target, blended in sRGB numbers. Controls lay out by the authored `size`, also where the target is smaller than the device allows (`viewport.cpp:1202-1210`).
+A sub-viewport that holds 2D content and Controls draws both into its own target, in tree order, through its own camera (`viewport.cpp:5344-5345`). A Camera2D inside frames the Controls that no CanvasLayer holds. A 3D world's 2D items and Controls draw over its tonemapped render in the same target, blended in sRGB numbers. Every CanvasLayer draws over it, whatever its `layer`, and a Camera2D moves them but not the world (`renderer_viewport.cpp:380-715`). Controls lay out by the authored `size`, also where the target is smaller than the device allows (`viewport.cpp:1202-1210`).
 
 A sub-viewport with 2D content lights its canvas with its own World2D (`viewport.cpp:5345`). Its Light2D nodes, LightOccluder2D nodes and CanvasModulate act on the items inside it, and the canvas around it acts on nothing inside. The pass runs through the target's own camera into buffers of the target's size. A DirectionalLight2D shadow map spans `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`).
 
 The target's canvas content samples with the sub-viewport's own `canvas_item_default_texture_filter` and `canvas_item_default_texture_repeat` where no ancestor sets a value, and not with the project settings (`viewport.cpp:3974-4017`).
 
 Every Texture2D slot resolves a `ViewportTexture` the same way: a material slot, a canvas item, a Control, a theme icon, a tile and a decal. Godot sets a ViewportTexture up only when every resource between the node and the texture is local to scene (`packed_scene.cpp:701-704`, `core/io/resource.cpp:497-503`). One it never sets up samples the magenta and black 4x4 placeholder (`viewport.cpp:168-173`).
+
+## 2D items over a 3D world
+
+<!-- compare: image=unit-sub-viewport-3d-canvas-item status=done fixture=unit-sub-viewport-3d-canvas-item.tscn -->
+
+A quad, a translucent Polygon2D and an opaque one share a SubViewport, and a CanvasLayer below the world's canvas holds a third. Godot draws the 3D render first and every canvas over it, so the CanvasLayer's polygon covers the quad and sits under the opaque Polygon2D.
 
 ## ViewportTexture outside the local scene
 
@@ -50,7 +56,6 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 
 ## Known limitations
 
-- **Approximated** A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.
 - **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.

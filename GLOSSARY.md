@@ -413,6 +413,10 @@ _Avoid_: "performance budget" (it holds counts, not times). "baseline" (a golden
 Godot's `SubViewport` Node, a canvas boundary but not a world boundary: it owns its World2D and shares the parent's World3D unless `own_world_3d` is set (ADR-0033).
 _Avoid_: bare "viewport" or the unhyphenated "subviewport" for the Godot node. "offscreen subtree".
 
+**Canvas over world**:
+The pass of a 3D **sub-viewport** that draws its 2D items and Controls over the tonemapped world, in the same target (`CanvasOverWorld.tsx`, ADR-0033).
+_Avoid_: "overlay". "HUD pass".
+
 **Viewport surface**:
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.

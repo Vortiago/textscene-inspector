@@ -526,6 +526,11 @@ export const CANVAS_2D_SCENES = [
   // rgb(255,102,0) the quad alone, (240,240) rgb(51,51,230) the Plate, (110,90) rgb(38,140,38) the
   // Veil over the clear colour.
   { name: 'sub-viewport-3d-controls', file: 'unit-sub-viewport-3d-controls.tscn', mode: '2d' },
+  // 2D-world items over a 3D world in one sub-viewport. Godot 4.6.3 `--mode 2d`: (150,180)
+  // rgb(128,153,0) the translucent Veil over the quad, (250,180) rgb(255,102,0) the quad alone,
+  // (240,240) rgb(51,51,229) Plate over Under, (260,260) rgb(229,25,25) Under, on a CanvasLayer
+  // below the world's canvas, over the quad all the same.
+  { name: 'sub-viewport-3d-canvas-item', file: 'unit-sub-viewport-3d-canvas-item.tscn', mode: '2d' },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.

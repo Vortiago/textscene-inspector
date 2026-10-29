@@ -5,7 +5,7 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { lazy, useMemo } from 'react';
+import { lazy, useMemo, type ReactNode } from 'react';
 import { OffscreenViewportPass } from './OffscreenViewportPass';
 
 import type { TscnNode } from '../../../parser/types';
@@ -59,7 +59,7 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // Classified over the resolved subtree: in the parsed graph an `instance=`
   // child is a typeless, childless node, so an untouched 2D sub-scene and an
   // untouched 3D one are indistinguishable until the sub-scene lands.
-  const { kind, holdsControls } = useViewportContent(node);
+  const { kind, holdsControls, holdsCanvasItems } = useViewportContent(node);
 
   // Only content this subsystem can rasterise gets an offscreen pass. A Control-only viewport
   // is the native Control-raster pass's (`ControlRasterPass.tsx`), and an empty one has nothing
@@ -84,28 +84,32 @@ export function SubViewport({ node, children }: NodeComponentProps) {
     [authoredSize.x, authoredSize.y]
   );
   const canvasModulate = useCanvasModulateColor(node.children);
-  // The Controls of a 2D pass draw in its portal beside the world items, one tree-order draw. A 3D
-  // pass draws them over its world, in a scene of their own (`OffscreenViewportPass`).
-  const drawsControls = kind === '2d' && holdsControls;
-  const contents = (
+  // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws
+  // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
+  // so the world's portal holds the children alone and each workspace drops the other's nodes.
+  const inViewport = (inner: ReactNode) => (
     <ViewportSizeProvider size={layoutSize}>
-      <SubViewportSamplerScope properties={properties}>
-        {children}
-        {drawsControls ? (
-          <PendingSuspense>
-            <MixedViewportControls path={path} nodes={node.children} size={layoutSize} />
-          </PendingSuspense>
-        ) : null}
-      </SubViewportSamplerScope>
+      <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
     </ViewportSizeProvider>
   );
+  const canvasContents = inViewport(
+    <>
+      {holdsCanvasItems ? children : null}
+      {holdsControls ? (
+        <PendingSuspense>
+          <MixedViewportControls path={path} nodes={node.children} size={layoutSize} />
+        </PendingSuspense>
+      ) : null}
+    </>
+  );
+  const contents = kind === '2d' ? canvasContents : inViewport(children);
+  const drawsCanvasOverWorld = kind === '3d' && (holdsControls || holdsCanvasItems);
 
   return (
     <Node node={node}>
       <EnclosingViewportProvider path={path}>
-        {rendersInline ? (
-          <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
-        ) : null}
+        {/* The pass first: a container both workspaces mount registers its path twice, and the
+            last mount wins, which must be the world's (`SelectionContext.registerNodeObject`). */}
         {rasterizes ? (
           <OffscreenViewportPass
             node={node}
@@ -115,10 +119,14 @@ export function SubViewport({ node, children }: NodeComponentProps) {
             kind={kind}
             rendersInline={rendersInline}
             canvasModulate={canvasModulate}
-            drawsControlsOverWorld={kind === '3d' && holdsControls}
+            canvasOverWorld={drawsCanvasOverWorld ? canvasContents : null}
+            holdsCanvasItems={holdsCanvasItems}
           >
             {rendersInline ? null : contents}
           </OffscreenViewportPass>
+        ) : null}
+        {rendersInline ? (
+          <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
         ) : null}
       </EnclosingViewportProvider>
     </Node>
