@@ -138,20 +138,19 @@ export function unwrapCanvasTextureRef(
   return peelCanvasTextures(ref, internalResources).ref;
 }
 
-/** The `CanvasTexture` wrappers `unwrapCanvasTextureRef` peels off `ref`, outermost first. */
-export function canvasTextureWrappers(
-  ref: string | null | undefined,
-  internalResources: readonly TscnInternalResource[]
-): readonly TscnInternalResource[] {
-  return peelCanvasTextures(ref, internalResources).wrappers;
+/** A reference with its `CanvasTexture` wrappers peeled off, and the wrappers, outermost first. */
+export interface PeeledCanvasTextures {
+  ref: string | undefined;
+  wrappers: readonly TscnInternalResource[];
 }
 
 const NO_WRAPPERS: readonly TscnInternalResource[] = [];
 
-function peelCanvasTextures(
+/** `unwrapCanvasTextureRef`, with the wrappers it peels, for a caller that reads both. */
+export function peelCanvasTextures(
   ref: string | null | undefined,
   internalResources: readonly TscnInternalResource[]
-): { ref: string | undefined; wrappers: readonly TscnInternalResource[] } {
+): PeeledCanvasTextures {
   let current = ref;
   // Fixed point, not a fixed count: a painter and a layout solve that peel N levels
   // agree only up to the shallower chain. Applying it twice changes nothing. `wrappers`

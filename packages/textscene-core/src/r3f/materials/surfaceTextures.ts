@@ -10,7 +10,8 @@ import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
 import type { TscnInternalResource } from '../../parser/types';
-import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
+import { NODE_PROPERTY, useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 import { useTextureView } from '../useTextureView';
 import type {
   ResolvedTextures,
@@ -35,6 +36,7 @@ import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScal
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource } from './materialSource';
+import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene.js';
 
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
@@ -62,11 +64,10 @@ export function useSurfaceTextures(
   const references = scalars?.textureSlots;
 
   // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
-  const holders = useMemo(
-    () => (material ? [...(material.holders ?? []), material.resource] : NO_RESOURCES),
-    [material]
-  );
-  const sources = useEachSlot(useSlotTexture, references, material, holders);
+  const isHeldLocally = material
+    ? (material.isHeldLocally ?? true) && isLocalToScene(material.resource)
+    : NODE_PROPERTY;
+  const sources = useEachSlot(useSlotTexture, references, material, isHeldLocally);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -108,8 +109,6 @@ function useEachSlot<Args extends unknown[], T>(
   return results as Record<TextureSlot, T>;
 }
 
-const NO_RESOURCES: readonly never[] = [];
-
 /** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
 type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 
@@ -122,15 +121,15 @@ function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
   material: MaterialResource | null,
-  holders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
   const result = useTexture2DRid(
     textureSlotReference(references, slot),
-    material?.externalResources ?? NO_RESOURCES,
-    material?.internalResources ?? NO_RESOURCES,
+    material?.externalResources ?? NO_RESOURCES.externalResources,
+    material?.internalResources ?? NO_RESOURCES.internalResources,
     view,
-    holders
+    isHeldLocally
   );
   return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }
@@ -185,17 +184,9 @@ function surfaceTextureStates(
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars, anisotropicFilteringLevel);
   if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
-  if (scalars.triplanar)
-    return {
-      ...states,
-      uv1: surface ? planeTiled(states.uv1, surface) : states.uv1,
-      uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
-    };
-  return {
-    ...states,
-    uv1: fromTopEdge(states.uv1),
-    uv2: surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
-  };
+  const uv2 = surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2;
+  if (!scalars.triplanar) return { ...states, uv1: fromTopEdge(states.uv1), uv2 };
+  return { ...states, uv1: surface ? planeTiled(states.uv1, surface) : states.uv1, uv2 };
 }
 
 /**

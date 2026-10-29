@@ -240,9 +240,9 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   };
 
   it('icon sits at (margin, vertically centred + check_v_offset)', () => {
-    const { iconRect } = layoutCheckBoxContent(BASE);
+    const { iconPosition } = layoutCheckBoxContent(BASE);
     // y = floor((28-16)/2 + 0) = 6.
-    expect(iconRect).toEqual({ x: 4, y: 6, w: 16, h: 16 });
+    expect(iconPosition).toEqual({ x: 4, y: 6 });
   });
 
   it('text starts past the icon + h_separation (the reserved "internal margin" width)', () => {
@@ -254,14 +254,14 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   });
 
   it('returns textOffset: null when hasText is false (icon still positioned)', () => {
-    const { iconRect, textOffset } = layoutCheckBoxContent({ ...BASE, hasText: false });
+    const { iconPosition, textOffset } = layoutCheckBoxContent({ ...BASE, hasText: false });
     expect(textOffset).toBeNull();
-    expect(iconRect).toEqual({ x: 4, y: 6, w: 16, h: 16 });
+    expect(iconPosition).toEqual({ x: 4, y: 6 });
   });
 
   it('check_v_offset shifts the icon vertically (a rarely-set theme_override_constants key)', () => {
-    const { iconRect } = layoutCheckBoxContent({ ...BASE, checkVOffset: 3 });
-    expect(iconRect.y).toBe(9);
+    const { iconPosition } = layoutCheckBoxContent({ ...BASE, checkVOffset: 3 });
+    expect(iconPosition.y).toBe(9);
   });
 
   it('a wider/taller icon (icon_max_width clamp NOT applied — already-fitted input) shifts the text start accordingly', () => {
@@ -299,9 +299,9 @@ describe('layoutCheckBoxContent — RTL puts the check on the right and the labe
   };
 
   it('draws the check at the right content margin', () => {
-    const { iconRect } = layoutCheckBoxContent(BASE);
+    const { iconPosition } = layoutCheckBoxContent(BASE);
     // x = 150 - 4 - 16 = 130; y is direction-independent: floor((28-16)/2) = 6.
-    expect(iconRect).toEqual({ x: 130, y: 6, w: 16, h: 16 });
+    expect(iconPosition).toEqual({ x: 130, y: 6 });
   });
 
   it('lays the label out flush against the check', () => {
@@ -319,10 +319,10 @@ describe('layoutCheckBoxContent — RTL puts the check on the right and the labe
   });
 
   it('keeps check_v_offset and the no-text case direction-independent', () => {
-    expect(layoutCheckBoxContent({ ...BASE, checkVOffset: 3 }).iconRect.y).toBe(9);
-    const { textOffset, iconRect } = layoutCheckBoxContent({ ...BASE, hasText: false });
+    expect(layoutCheckBoxContent({ ...BASE, checkVOffset: 3 }).iconPosition.y).toBe(9);
+    const { textOffset, iconPosition } = layoutCheckBoxContent({ ...BASE, hasText: false });
     expect(textOffset).toBeNull();
-    expect(iconRect.x).toBe(130);
+    expect(iconPosition.x).toBe(130);
   });
 });
 

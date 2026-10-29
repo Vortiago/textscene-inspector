@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+; The one variable: a CheckButton whose height leaves its icon an odd number of pixels to centre in.
+; Godot places the icon at the unrounded half pixel (`check_button.cpp:140`).
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="HalfPixel" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 200.0
+offset_bottom = 71.0
+text = "Half pixel"

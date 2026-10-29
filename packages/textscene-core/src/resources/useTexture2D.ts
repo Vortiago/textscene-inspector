@@ -3,31 +3,28 @@
  * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own resource file,
  * or a `ViewportTexture`'s live target. Wrappers peel to a fixed point, and the texture's size is
  * Godot's size for the slot.
- * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sits
- * here so the size cannot drift.
+ * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sizes a
+ * slot outside React by the same rule.
  */
 
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import type { ParsedResource } from '../parser/parsedResource.js';
 import {
+  findSubResource,
+  peelCanvasTextures,
   resolveExtResourcePath,
   resolveSubResourceRef,
-  unwrapCanvasTextureRef,
 } from './SubResourceResolver.js';
-import { isLocalToScene, viewportTextureHolders } from './textures/viewporttexture/localToScene.js';
+import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
-import { atlasTextureLayout } from './textures/atlastexture/decode.js';
+import { atlasTextureSize } from './textures/atlastexture/decode.js';
+import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
   resolveAtlasTexture,
   resolveAtlasTextureRef,
   type AtlasTextureReference,
 } from './textures/atlastexture/resolveAtlasTexture.js';
-import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
-import { imageRefSize } from './textures/image/decode.js';
-import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
-import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
 import {
   isViewportTextureRef,
   useViewportTextureSlot,
@@ -36,9 +33,8 @@ import {
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
-import { isLiveTarget, liveTargetCrop } from '../r3f/liveTargets.js';
+import { isLiveTarget } from '../r3f/liveTargets.js';
 import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
-import { pinColorSpace } from './textures/textureView.js';
 
 export interface Texture2DResult {
   /**
@@ -54,62 +50,79 @@ export interface Texture2DResult {
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
   /**
+   * The size Godot reports for the texture: its image's, an AtlasTexture's region's, or 0 by 0 for
+   * a ViewportTexture its scene never sets up, which samples the placeholder (`viewport.cpp:150-166`).
+   * Undefined while there is no texture.
+   */
+  size?: ImageSize;
+  /**
    * Set when the slot reaches a ViewportTexture Godot never sets up, through any wrapper, whose
    * `get_image()` is null (`viewport.cpp:180-186`). `texture` then samples the placeholder.
    */
   hasNoImage?: true;
 }
 
-/** The holders of a node's own slot: none, since `make_local_resource` sets the property up itself. */
-export const NODE_PROPERTY: readonly TscnInternalResource[] = [];
+/**
+ * `isHeldLocally` for a node's own slot: `make_local_resource` sets the property up itself, as if
+ * every resource between were local to scene.
+ */
+export const NODE_PROPERTY = true;
 
 /**
  * The texture a slot draws. `view` is the ViewportTexture view the slot samples: a canvas item
- * samples the plain one. `holders` are the resources between the node and `ref`, the node's
- * property first: the SpriteFrames that holds a frame.
+ * samples the plain one. `isHeldLocally` is false when a resource between the node and `ref`, such
+ * as the SpriteFrames that holds a frame, is not local to scene.
  */
 export function useTexture2D(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   view: ViewportTextureView = 'plain',
-  holders: readonly TscnInternalResource[] = NODE_PROPERTY
+  isHeldLocally: boolean = NODE_PROPERTY
 ): Texture2DResult {
-  const slot = useTexture2DSlot(ref, externalResources, internalResources, view, holders);
+  const slot = useTexture2DSlot(ref, externalResources, internalResources, view, isHeldLocally);
 
-  // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
-  // tables the atlas sits in, so a re-parse of the scene or of its resource file invalidates it.
+  // A loaded sheet's crop is cache-owned and pinned while mounted, like the procedural texture, and
+  // a live target's is held. Keyed on the tables the atlas sits in, so a re-parse of the scene or of
+  // its resource file invalidates it, and on whether the sheet is live, which picks the crop.
   const { atlas, source, atlasResources } = slot;
   const isLiveSheet = source !== null && isLiveTarget(source);
   const cropped = useMemo(
-    () => (atlas && !isLiveSheet ? resolveAtlasTexture(atlas, source, atlasResources) : null),
-    [atlas, isLiveSheet, source, atlasResources]
+    () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the resolver reads whether the sheet is live.
+    [atlas, source, atlasResources, isLiveSheet]
   );
-  useProceduralTexturePins(cropped ? [cropped.key] : []);
-  const liveCrop = useLiveCrop(atlas, isLiveSheet ? source : null);
+  useProceduralTexturePins(cropped?.key ? [cropped.key] : []);
+  useDisposeOnRelease(cropped?.key === null ? cropped.texture : null);
 
-  if (!atlas) return slot.result;
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
-  return { ...slot.result, texture: liveCrop ?? cropped?.texture ?? null };
+  const texture = atlas ? (cropped?.texture ?? null) : slot.result.texture;
+  const size = useReportedSize(texture, atlas, slot.result);
+  return { ...slot.result, texture, size };
 }
 
 /**
- * The cell `atlas` cuts out of a live target, refilled after each render of the target as Godot's
- * AtlasTexture draws from the live RID. This slot owns it and frees it once it stops drawing it.
+ * The size Godot reports for `texture`, which is `sheet`'s texture or the cell `atlas` cuts from
+ * it. Kept while its width and height hold, so a consumer's memo on it holds too.
  */
-function useLiveCrop(atlas: AtlasTextureReference | null, sheet: THREE.Texture | null): THREE.Texture | null {
-  const crop = useMemo(() => {
-    if (!atlas || !sheet) return null;
-    const layout = atlasTextureLayout(atlas.texture, sheet.image as { width: number; height: number });
-    // Pinned, as the sheet is: R3F reasserts `SRGBColorSpace` on a `map` every commit.
-    return layout && pinColorSpace(liveTargetCrop(sheet, layout), sheet.colorSpace as THREE.ColorSpace);
-  }, [atlas, sheet]);
-  useDisposeOnRelease(crop);
-  return crop;
+function useReportedSize(
+  texture: THREE.Texture | null,
+  atlas: AtlasTextureReference | null,
+  sheet: Texture2DResult
+): ImageSize | undefined {
+  const sheetSize = sheet.hasNoImage ? NO_AREA : imageSize(sheet.texture?.image);
+  const size = texture && (atlas ? atlasTextureSize(atlas.texture, sheetSize ?? null) : sheetSize);
+  const width = size?.width;
+  const height = size?.height;
+  return useMemo(
+    () => (width === undefined || height === undefined ? undefined : { width, height }),
+    [width, height]
+  );
 }
 
-export interface Texture2DRidResult extends Texture2DResult {
+/** No `size`: a slot read by RID samples the texture and lays nothing out by it. */
+export interface Texture2DRidResult extends Omit<Texture2DResult, 'size'> {
   /**
    * False when the RID names a CanvasTexture, a canvas object no texture owner holds
    * (`scene/main/canvas_item.cpp:1919-1921`). A sampler bound to it reads Godot's white default
@@ -121,26 +134,29 @@ export interface Texture2DRidResult extends Texture2DResult {
 /**
  * The texture Godot's `get_rid()` names, for a slot the rendering server reads by RID. An
  * AtlasTexture names its whole sheet there (`scene/resources/atlas_texture.cpp:55-61`).
- * `holders` are as `useTexture2D` names them: the mesh and the material for a material slot.
+ * `isHeldLocally` is as `useTexture2D` names it: the mesh's and the material's for a material slot.
  */
 export function useTexture2DRid(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   view: ViewportTextureView,
-  holders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): Texture2DRidResult {
   const { result, namesCanvasTexture } = useTexture2DSlot(
     ref,
     externalResources,
     internalResources,
     view,
-    holders
+    isHeldLocally
   );
   return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
 
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
+
+/** `ViewportTexture::get_size` while no viewport is set (`viewport.cpp:150-166`). */
+const NO_AREA: ImageSize = { width: 0, height: 0 };
 
 const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
 
@@ -162,43 +178,45 @@ function useTexture2DSlot(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   view: ViewportTextureView,
-  outerHolders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): Texture2DSlot {
   // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
   // ref loses the window. A resource file may hold either, so its `[resource]` peels again.
-  const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
-  const slot = useParsedResourceSlot(unwrapped, externalResources, internalResources);
-  const slotRef = useMemo(
-    () => unwrapCanvasTextureRef(slot.ref, slot.internalResources),
+  const outer = useMemo(() => peelCanvasTextures(ref, internalResources), [ref, internalResources]);
+  const slot = useParsedResourceSlot(outer.ref, externalResources, internalResources);
+  const inner = useMemo(
+    () => peelCanvasTextures(slot.ref, slot.internalResources),
     [slot.ref, slot.internalResources]
   );
+  const slotRef = inner.ref;
   // An AtlasTexture windows the sheet it names, an ordinary Texture2D slot with the same unwrap.
   const atlas = useMemo(
     () => resolveAtlasTextureRef(slotRef, slot.internalResources),
     [slotRef, slot.internalResources]
   );
-  const sourceRef = useMemo(
-    () => (atlas ? unwrapCanvasTextureRef(atlas.texture.atlas, slot.internalResources) : slotRef),
-    [atlas, slot.internalResources, slotRef]
+  const sheet = useMemo(
+    () => (atlas ? peelCanvasTextures(atlas.texture.atlas, slot.internalResources) : null),
+    [atlas, slot.internalResources]
   );
+  const sourceRef = sheet ? sheet.ref : slotRef;
 
   // A ViewportTexture names a node, not a file, so it comes from the live registry. The hook runs
   // for every slot, as the rules of hooks ask, and idles on an undefined reference.
   const isViewport = isViewportTextureRef(sourceRef, slot.internalResources);
-  const holders = useMemo(
-    () =>
-      isViewport
-        ? viewportTextureHolders(ref, internalResources, slot.ref, slot.internalResources, atlas, sourceRef)
-        : [],
-    [isViewport, ref, internalResources, slot.ref, slot.internalResources, atlas, sourceRef]
-  );
   // Godot sets the ViewportTexture up only when every holder down to it is local to scene.
-  const isSetUp = outerHolders.every(isLocalToScene) && holders.every(isLocalToScene);
-  const viewport = useViewportTextureSlot(
-    isViewport && isSetUp ? sourceRef : undefined,
-    slot.internalResources,
-    view
-  );
+  const isFile = slot.internalResources !== internalResources;
+  const isSetUp =
+    isViewport &&
+    isHeldLocally &&
+    [
+      ...outer.wrappers,
+      isFile ? resolveSubResourceRef(slot.ref, slot.internalResources) : undefined,
+      ...inner.wrappers,
+      atlas ? findSubResource(slot.internalResources, atlas.id) : undefined,
+      ...(sheet?.wrappers ?? []),
+      resolveSubResourceRef(sourceRef, slot.internalResources),
+    ].every((holder) => !holder || isLocalToScene(holder));
+  const viewport = useViewportTextureSlot(isSetUp ? sourceRef : undefined, slot.internalResources, view);
   const unconfigured = isViewport && !isSetUp ? unconfiguredViewportTexture() : null;
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
@@ -216,10 +234,7 @@ function useTexture2DSlot(
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = unconfigured ?? viewport.texture ?? procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
-  // The peel returns any other reference as it is, so a changed reference names a CanvasTexture.
-  const atlasSheet = atlas?.texture.atlas;
-  const namesCanvasTexture =
-    isPeeled(ref, unwrapped) || isPeeled(slot.ref, slotRef) || isPeeled(atlasSheet, sourceRef);
+  const namesCanvasTexture = [outer, inner, sheet].some((layer) => (layer?.wrappers.length ?? 0) > 0);
   const peeled = { atlas, atlasResources, source, namesCanvasTexture };
 
   if (!ref) return { ...peeled, result: NOTHING };
@@ -241,66 +256,4 @@ function useTexture2DSlot(
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
   const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
-}
-
-/** An empty reference peels to undefined too, but names nothing to peel. */
-function isPeeled(ref: string | null | undefined, peeled: string | undefined): boolean {
-  return !!ref && ref !== peeled;
-}
-
-/** Pixel dimensions of a Texture2D slot, as the `Vector2` the rect solver uses. */
-interface Texture2DSize {
-  x: number;
-  y: number;
-}
-
-/**
- * The pixel size of a Texture2D slot that the scene states, for a Control's minimum-size solve,
- * which runs outside React. Null for a form only the loader can size: an image, a wrapper of one,
- * or a resource file (see `extResourceTexture2DSize`).
- */
-export function inlineTexture2DSize(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): Texture2DSize | null {
-  // Unwrapped before the atlas lookup, as in the hook: the raw ref would answer the sheet's size.
-  const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
-  const atlas = resolveAtlasTextureRef(unwrapped, internalResources);
-  if (atlas) {
-    // Region plus margin (`scene/resources/atlas_texture.cpp:33-53`), so a cell reserves the
-    // cell's size. Null when a region axis is zero, where Godot uses the sheet.
-    const layout = atlasTextureLayout(atlas.texture, null);
-    return layout ? { x: layout.width, y: layout.height } : null;
-  }
-
-  // The declared size: neither getter consults the texture's source
-  // (`scene/resources/gradient_texture.cpp`, `modules/noise/noise_texture_2d.cpp:378-384`), and
-  // building one here mints a cache entry no consumer pins, open to eviction.
-  const resource = resolveSubResourceRef(unwrapped, internalResources);
-  const decode = resource && DECLARED_SIZES[resource.type];
-  if (decode) {
-    const { width, height } = decode(resource.data);
-    return { x: width, y: height };
-  }
-  // An ImageTexture's size is its image's (`scene/resources/image_texture.cpp:74-75`, `:122-128`).
-  const image =
-    resource?.type === 'ImageTexture' ? imageRefSize(resource.data.image, internalResources) : null;
-  return image ? { x: image.width, y: image.height } : null;
-}
-
-/** The texture types whose properties state their size. */
-const DECLARED_SIZES: Readonly<
-  Record<string, (data: Record<string, string>) => { width: number; height: number }>
-> = {
-  GradientTexture2D: decodeGradientTexture2D,
-  NoiseTexture2D: decodeNoiseTexture2D,
-};
-
-/**
- * The pixel size of an `ExtResource` slot from its parsed resource file, for a caller with a synchronous
- * cache instead of hooks. Null for a file that holds no texture the scene could state inline.
- */
-export function extResourceTexture2DSize(parsed: ParsedResource): Texture2DSize | null {
-  const saved = parsedResourceTexture(parsed);
-  return inlineTexture2DSize(saved.ref, saved.internalResources);
 }

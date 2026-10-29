@@ -308,6 +308,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Box Fitted Icon",
+    "file": "unit-check-box-fitted-icon.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Check Button Half Pixel Icon",
+    "file": "unit-check-button-half-pixel-icon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Check Button Rtl",
     "file": "unit-check-button-rtl.tscn",
     "category": "Other"
@@ -1998,6 +2008,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Viewport Texture Frame",
+    "file": "unit-sprite-2d-viewport-texture-frame.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Viewport Texture",
     "file": "unit-sprite-2d-viewport-texture.tscn",
     "category": "Other"
@@ -2945,6 +2960,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Atlas Viewport Texture File",
+    "file": "unit-tile-atlas-viewport-texture-file.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Flips",
     "file": "unit-tile-map-layer-flips.tscn",
     "category": "Unit - 2D Canvas"
@@ -3658,6 +3678,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Rect Viewport Texture Flip",
     "file": "unit-texture-rect-viewport-texture-flip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture Wrapped",
+    "file": "unit-texture-rect-viewport-texture-wrapped.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

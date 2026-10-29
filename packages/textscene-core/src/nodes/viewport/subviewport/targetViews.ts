@@ -9,14 +9,16 @@ import * as THREE from 'three';
 import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
-import { copyTexels, wholeTexels, type TexelTransfer } from '../../../r3f/texelCopy.js';
-import { fillLiveTarget, publishLiveTarget } from '../../../r3f/liveTargets';
+import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
+import { hasLiveCopies, publishLiveTargets, refillLiveCopies } from '../../../r3f/liveTargets';
 import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
 
-/** A view as its pass holds it: `fill` runs after each render of the pass. */
+/** A view as its pass holds it: `fill` runs after each render of the pass, inside one offscreen draw. */
 interface PassView extends TargetView {
+  /** Whether `fill` has a copy to refresh: one a consumer holds. */
+  isFilled(): boolean;
   fill(): void;
   dispose(): void;
 }
@@ -39,11 +41,15 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     return {
       plain,
       decoding,
+      // One save and restore of the renderer for the views and every copy a reader holds, and none
+      // for a pass with nothing to fill.
       fill: () => {
-        plain.fill();
-        decoding.fill();
-        fillLiveTarget(plain.texture, gl);
-        fillLiveTarget(decoding.texture, gl);
+        const views = [plain, decoding];
+        if (!views.some((view) => view.isFilled() || hasLiveCopies(view.texture))) return;
+        drawOffscreen(gl, () => {
+          views.forEach((view) => view.fill());
+          views.forEach((view) => refillLiveCopies(view.texture, gl));
+        });
       },
       dispose: () => {
         plain.dispose();
@@ -52,19 +58,16 @@ export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: b
     };
   }, [gl, target]);
   useDisposeOnRelease(views);
-  useEffect(() => {
-    const withdrawals = [
-      publishLiveTarget(views.plain.texture, gl, isTransparent),
-      publishLiveTarget(views.decoding.texture, gl, isTransparent),
-    ];
-    return () => withdrawals.forEach((withdraw) => withdraw());
-  }, [views, gl, isTransparent]);
+  useEffect(
+    () => publishLiveTargets([views.plain.texture, views.decoding.texture], gl, isTransparent),
+    [views, gl, isTransparent]
+  );
   return views;
 }
 
 /** The view of a target whose storage is that view already, so it needs no copy. */
 function ownStorageView(texture: THREE.Texture): PassView {
-  return { texture, retain: () => () => {}, fill: () => {}, dispose: () => {} };
+  return { texture, retain: () => () => {}, isFilled: () => false, fill: () => {}, dispose: () => {} };
 }
 
 /**
@@ -74,6 +77,7 @@ function ownStorageView(texture: THREE.Texture): PassView {
 class ViewCopy implements PassView {
   readonly texture: THREE.Texture;
   private readonly copy: THREE.WebGLRenderTarget;
+  private readonly whole: TexelPlacement;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
@@ -81,6 +85,7 @@ class ViewCopy implements PassView {
     private readonly transfer: TexelTransfer
   ) {
     this.copy = new THREE.WebGLRenderTarget(source.width, source.height, { depthBuffer: false });
+    this.whole = wholeTexels(source.width, source.height);
     copySampling(this.copy.texture, source.texture);
     this.texture = this.copy.texture;
   }
@@ -90,10 +95,13 @@ class ViewCopy implements PassView {
     return holdUntilReleased(this);
   }
 
+  isFilled(): boolean {
+    return isHeld(this);
+  }
+
+  /** Refreshes the copy while a consumer holds it. The caller draws offscreen. */
   fill(): void {
-    if (!isHeld(this)) return;
-    const whole = wholeTexels(this.source.width, this.source.height);
-    drawOffscreen(this.gl, () => copyTexels(this.gl, this.source.texture, this.copy, whole, this.transfer));
+    if (this.isFilled()) copyTexels(this.gl, this.source.texture, this.copy, this.whole, this.transfer);
   }
 
   dispose(): void {

@@ -121,7 +121,7 @@ describe('frameUvWindow — region_rect larger than its texture', () => {
   it('keeps the quad at the full region size (Godot sizes dst_rect from base_rect)', () => {
     // `get_rect()` uses `s = region_rect.size`: the sprite does not shrink to
     // the part of the region the texture covers.
-    expect(frameSizePx(makeTexture(100, 80), oversized())).toEqual({ width: 200, height: 40 });
+    expect(frameSizePx({ width: 100, height: 80 }, oversized())).toEqual({ width: 200, height: 40 });
   });
 });
 
@@ -184,17 +184,17 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
 });
 
 describe('frameSizePx', () => {
-  it('falls back to 1×1 without a loaded image', () => {
+  it('falls back to 1×1 without a texture', () => {
     expect(frameSizePx(undefined, baseProps())).toEqual({ width: 1, height: 1 });
   });
 
   it('returns the full image size for a plain sprite', () => {
-    expect(frameSizePx(makeTexture(100, 80), baseProps())).toEqual({ width: 100, height: 80 });
+    expect(frameSizePx({ width: 100, height: 80 }, baseProps())).toEqual({ width: 100, height: 80 });
   });
 
   it('returns the region size when region_enabled', () => {
     const size = frameSizePx(
-      makeTexture(100, 80),
+      { width: 100, height: 80 },
       baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } })
     );
     expect(size).toEqual({ width: 50, height: 40 });
@@ -202,7 +202,7 @@ describe('frameSizePx', () => {
 
   it('subdivides the base rect by the frame grid (region + frames compose)', () => {
     const size = frameSizePx(
-      makeTexture(100, 80),
+      { width: 100, height: 80 },
       baseProps({
         region_enabled: true,
         region_rect: { x: 0, y: 0, width: 100, height: 40 },
