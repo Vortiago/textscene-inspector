@@ -131,5 +131,5 @@ Godot's billboard icon marks the origin of every emitter, faint while it is not 
 - **Needs runtime** The emitter runs in Godot and freezes here, at the moment named above.
 - **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its particles sit in plausible places where Godot randomises them on every run.
 - **Approximated** `emission_shape` POINTS and DIRECTED_POINTS sample Godot's process-wide RNG, so they emit from the origin here.
-- **Approximated** An `amount` above `1000000` draws `1000000` particles, where Godot draws them all.
+- **Approximated** An `amount` above `1000000`, the most Godot's own editor allows, draws `1000000` particles, where Godot draws them all.
 - **Editor only** The box and axes draw at 0.3 alpha while unselected (ADR-0056) when the Gizmos toggle is on, which a capture keeps off.
