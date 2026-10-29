@@ -1,8 +1,8 @@
 /**
- * Reads the slices off disk: which directories are slices, and which keys each
- * side names. The parser half is a scrape of `properties.X` and `properties['X']`,
- * since nothing in the build exposes that set. The allowlist records the reads a
- * scrape cannot see, such as a table-driven one.
+ * Reads the slices off disk: which directories are slices, which parser each registers, whether
+ * its component is pending, and which keys each side names. The parser half is a scrape of
+ * `properties.X` and `properties['X']`, since nothing in the build exposes that set. The
+ * allowlist records the reads a scrape cannot see, such as a table-driven one.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -59,9 +59,8 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // Every modifier reads `active` and `influence`, and a constraint reads the base `settings/<i>/` leaves.
   SkeletonModifier3D: '3d/skeleton/skeletonmodifier3d/parser.ts',
   BoneConstraint3D: '3d/skeleton/boneconstraint3d/parser.ts',
-  // The H and V flow containers register their base's parse.
+  // The H and V flow containers and the enabler register the parse of this base.
   FlowContainer: '2d/ui/flowcontainer/parser.ts',
-  // The enabler registers its base's parse.
   VisibleOnScreenNotifier3D: '3d/visibleonscreennotifier3d/parser.ts',
 };
 
@@ -79,12 +78,20 @@ const BASE_PARSER_FILES: ReadonlySet<string> = new Set(
   Object.values(BASE_TYPE_TO_PARSER_SUBPATH).map((subpath) => join(nodesRoot, subpath))
 );
 
+/** Written only by {@link findParserFile}: a slice's parser file never changes during a run. */
+const parserFiles = new Map<string, string | null>();
+
 /**
  * The file of the parser a slice registers, or null when it registers a base parser. It is the
  * slice's `parser.ts`, or else the module its `index.ts` names in `parser: <name>` and imports from
  * a relative path, such as a family parser that several slices share.
  */
 export function findParserFile(dir: string): string | null {
+  if (!parserFiles.has(dir)) parserFiles.set(dir, locateParserFile(dir));
+  return parserFiles.get(dir)!;
+}
+
+function locateParserFile(dir: string): string | null {
   const own = join(dir, 'parser.ts');
   if (existsSync(own)) return own;
   const indexFile = join(dir, 'index.ts');
@@ -92,9 +99,7 @@ export function findParserFile(dir: string): string | null {
   const src = readFileSync(indexFile, 'utf8');
   const name = /\bparser:\s*(\w+)/.exec(src)?.[1];
   if (!name) return null;
-  const specifier = new RegExp(`import\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*'(\\.[^']+)'`).exec(
-    src
-  )?.[1];
+  const specifier = relativeImports(src).find((entry) => entry.names.includes(name))?.specifier;
   if (!specifier) return null;
   const file = resolveImport(indexFile, specifier);
   return BASE_PARSER_FILES.has(file) ? null : file;
@@ -106,11 +111,7 @@ export function findSliceDirs(dir: string): string[] {
   return atLeast(dirs, 50, 'findSliceDirs');
 }
 
-/**
- * Whether the slice registers its component under `renderIntent: 'pending'`: the previewer does
- * not draw what the node does, so a key it validates and does not read is a render gap by
- * definition, and no allowlist entry needs to say so.
- */
+/** Whether the slice registers its component under `renderIntent: 'pending'`. */
 export function isPendingSlice(dir: string): boolean {
   const file = join(dir, 'index.r3f.ts');
   return existsSync(file) && /renderIntent:\s*'pending'/.test(readFileSync(file, 'utf8'));
@@ -142,6 +143,21 @@ function familyCountKey(name: string): string {
   return key;
 }
 
+/** Each `import { a, type b, c as d } from './x'` of `src`: the local names and the relative specifier. */
+function relativeImports(src: string): { names: string[]; specifier: string }[] {
+  const importRe = /import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/g;
+  return [...src.matchAll(importRe)].map(([, list, specifier]) => ({
+    names: list!.split(',').map((n) =>
+      n
+        .trim()
+        .replace(/^type\s+/, '')
+        .split(/\s+as\s+/)
+        .pop()!
+    ),
+    specifier: specifier!,
+  }));
+}
+
 /**
  * Every key a parser file reads, following each relative import it hands the
  * whole bag to, such as `parseAudioBase(properties, ctx)`, recursively. The base
@@ -152,17 +168,7 @@ export function scrapeParserReads(file: string, seen = new Set<string>()): Set<s
   seen.add(file);
   const src = readFileSync(file, 'utf8');
   const reads = scrapeParserProps(src);
-  const importRe = /import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/g;
-  let m: RegExpExecArray | null;
-  while ((m = importRe.exec(src)) !== null) {
-    const names = m[1]!.split(',').map((n) =>
-      n
-        .trim()
-        .replace(/^type\s+/, '')
-        .split(/\s+as\s+/)
-        .pop()!
-    );
-    const specifier = m[2]!;
+  for (const { names, specifier } of relativeImports(src)) {
     for (const name of names) {
       if (!name || !new RegExp(`\\b${name}\\((?:[^()]*,\\s*)?properties\\s*[,)]`).test(src)) continue;
       for (const key of scrapeParserReads(resolveImport(file, specifier), seen)) reads.add(key);

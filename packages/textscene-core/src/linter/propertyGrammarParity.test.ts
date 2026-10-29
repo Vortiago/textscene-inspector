@@ -35,7 +35,7 @@ interface StaleScanInput {
 function findStaleEntries({ allowlist, slices, baseChainOf, validatorKeysOf }: StaleScanInput): string[] {
   const staleSections: string[] = [];
   // An entry answers for its own slice and every slice below it: a base class
-  // reuses the base parser, has no parser.ts, and is absent from `collectSlices`.
+  // registers a base parser, and is absent from `collectSlices`.
   const coveredSlices = (nodeType: string) =>
     slices.filter((s) => s.nodeType === nodeType || baseChainOf(s.nodeType).includes(nodeType));
 
@@ -44,7 +44,7 @@ function findStaleEntries({ allowlist, slices, baseChainOf, validatorKeysOf }: S
     if (covered.length === 0) {
       // Node type has no slice pair, so the allowlist entry is stale.
       staleSections.push(
-        `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
+        `${nodeType}: no slice with its own parser and a linterParser found, and no slice inherits from it`
       );
       continue;
     }
@@ -192,7 +192,7 @@ describe('property-grammar parity guard', () => {
 
     it('an entry no slice answers for is stale', () => {
       expect(scan({}, { linterOnly: [KEY], reason })).toEqual([
-        `${BASE}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`,
+        `${BASE}: no slice with its own parser and a linterParser found, and no slice inherits from it`,
       ]);
     });
   });
@@ -276,7 +276,7 @@ describe('property-grammar parity guard', () => {
     expect(
       withLinterParser.length - collectSlices().length,
       'Slices outside this guard changed. Update the count, and say in the commit ' +
-        'whether the new ones are base-parser reusers (expected) or are missing a parser.ts they should have.'
+        'whether the new ones are base-parser reusers (expected) or have no parser of their own that they should have.'
     ).toBe(PARSER_REUSING_SLICES);
   });
 });
