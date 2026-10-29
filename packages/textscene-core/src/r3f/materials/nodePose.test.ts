@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { alignNodePose, nodePoseUniforms } from './nodePose';
-
-function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
-  actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
-}
+import { expectSameMatrix } from '../testing/threePasses';
 
 describe('nodePoseUniforms', () => {
   it('gives each material its own pose', () => {

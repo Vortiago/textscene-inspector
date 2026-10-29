@@ -62,6 +62,11 @@ export function alignNodePose(
 ): void {
   const pose = poses.get(material);
   if (!pose) return;
+  if (modelMatrix.equals(nodeMatrixWorld)) {
+    pose.godotObjectFromModel.value.identity();
+    pose.godotModelFromObject.value.identity();
+    return;
+  }
   pose.godotObjectFromModel.value.copy(nodeMatrixWorld).invert().multiply(modelMatrix);
   pose.godotModelFromObject.value.copy(modelMatrix).invert().multiply(nodeMatrixWorld);
 }

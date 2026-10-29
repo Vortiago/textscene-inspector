@@ -4,7 +4,6 @@
  * tangent frame Godot writes for a projecting surface (`material.cpp:1386-1414`).
  */
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import {
   readsObjectSpace,
   triplanarInjection,
@@ -12,17 +11,9 @@ import {
   type TriplanarRecord,
 } from './godotTriplanar';
 import { nodePoseUniforms } from './nodePose';
-import { programShader, type ProgramName } from '../testing/patchedFragment';
+import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
 import type { ProgramShader } from '../materialProgramInputs';
-
-const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
-  basic: () => new THREE.MeshBasicMaterial(),
-  standard: () => new THREE.MeshStandardMaterial(),
-  physical: () => new THREE.MeshPhysicalMaterial(),
-  depth: () => new THREE.MeshDepthMaterial(),
-  distance: () => new THREE.MeshDistanceMaterial(),
-};
 
 /** `record` on a material of `program`, and that program as its compile leaves it. */
 function compiled(record: TriplanarRecord, program: ProgramName = 'physical') {
@@ -146,7 +137,8 @@ describe('triplanarInjection: the tangent frame', () => {
     const { vertexShader } = compiled(worldTriplanarRecord()).shader;
 
     expect(vertexShader).toContain('#define GODOT_TRIPLANAR_TANGENT_WORLD\n');
-    expect(vertexShader).toContain('godotTangent = inverse( godotModelNormal ) * normalize( godotTangent );');
+    expect(vertexShader).toContain('mat3 godotNormalModel = inverse( godotModelNormal );');
+    expect(vertexShader).toContain('godotTangent = godotNormalModel * normalize( godotTangent );');
   });
 
   it("turns a billboard's frame by mat3(MODELVIEW_MATRIX), as Godot's billboard writes it", () => {
@@ -173,8 +165,8 @@ describe('triplanarInjection: uniforms and programs', () => {
       })
     );
 
-    expect(shader.uniforms['godotUv1TriplanarScale']!.value).toEqual([3, 4, 5]);
-    expect(shader.uniforms['godotUv1TriplanarOffset']!.value).toEqual([1, 0, 2]);
+    expect(shader.uniforms['godotUv1TriplanarScale']!.value).toEqual({ x: 3, y: 4, z: 5 });
+    expect(shader.uniforms['godotUv1TriplanarOffset']!.value).toEqual({ x: 1, y: 0, z: 2 });
     expect(shader.uniforms['godotUv1TriplanarSharpness']!.value).toBe(9);
   });
 

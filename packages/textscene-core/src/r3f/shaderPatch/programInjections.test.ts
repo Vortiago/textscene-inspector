@@ -17,7 +17,7 @@ import {
   walkSources,
 } from '../testing/sourceScan';
 import { warningsOf } from '../testing/logWarnings';
-import { programShader, type ProgramName } from '../testing/patchedFragment';
+import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
 import { GODOT_ALPHA_ANTIALIASING } from '../materials/godotAlphaAntialiasing';
@@ -43,15 +43,6 @@ import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
 import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { lightUniforms } from '../lighting2d/testing/lightUniforms';
-
-/** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
-const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
-  basic: () => new THREE.MeshBasicMaterial(),
-  standard: () => new THREE.MeshStandardMaterial(),
-  physical: () => new THREE.MeshPhysicalMaterial(),
-  depth: () => new THREE.MeshDepthMaterial(),
-  distance: () => new THREE.MeshDistanceMaterial(),
-};
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 

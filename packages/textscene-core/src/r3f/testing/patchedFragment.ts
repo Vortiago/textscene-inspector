@@ -18,6 +18,15 @@ export const SURFACE_AND_DEPTH_PROGRAMS: readonly ProgramName[] = [
   'distance',
 ];
 
+/** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
+export const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
+  basic: () => new THREE.MeshBasicMaterial(),
+  standard: () => new THREE.MeshStandardMaterial(),
+  physical: () => new THREE.MeshPhysicalMaterial(),
+  depth: () => new THREE.MeshDepthMaterial(),
+  distance: () => new THREE.MeshDistanceMaterial(),
+};
+
 /** The program of each three class a Godot surface draws with, by material type. */
 export const PROGRAM_OF_TYPE: Readonly<Record<string, ProgramName>> = {
   MeshBasicMaterial: 'basic',

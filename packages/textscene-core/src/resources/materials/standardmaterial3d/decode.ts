@@ -174,7 +174,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
-    ...uv2Transform(properties),
+    ...uv2Transform(properties, triplanar?.uv2 != null),
     uv2Slots: uv2Slots(properties),
     transparency,
     transparent: alphaPass,
@@ -401,10 +401,12 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
  * `uv2_scale` and `uv2_offset` on the UV2 attribute, where Godot applies them: under a UV2 detail
  * layer that does not project (`material.cpp:1249-1256`). Elsewhere the shader reads UV2 as stored.
  */
-function uv2Transform(properties: Record<string, string>): { uv2Scale: Vector2; uv2Offset: Vector2 } {
+function uv2Transform(
+  properties: Record<string, string>,
+  isProjected: boolean
+): { uv2Scale: Vector2; uv2Offset: Vector2 } {
   const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
   const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
-  const isProjected = boolOr(properties['uv2_triplanar'], false, CONTEXT);
   if (isProjected || detailUv !== DetailUV.DETAIL_UV_2) return identity;
   return {
     uv2Scale: vec2FromVector3(properties['uv2_scale'], identity.uv2Scale),

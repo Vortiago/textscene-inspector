@@ -18,6 +18,7 @@ import {
   drawColourGroup,
   drawsColour,
   drawShadowGroup,
+  expectSameMatrix,
   expectSameRotation,
   TEST_CAMERA as camera,
   TEST_SHADOW_CAMERA as shadowCamera,
@@ -121,10 +122,6 @@ function hashObjectSpace(material: THREE.Material): THREE.Matrix4 {
 
 function groupMaterial(mesh: THREE.Mesh, group: number): THREE.Material {
   return (mesh.material as THREE.Material[])[group]!;
-}
-
-function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
-  actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
 }
 
 describe('surfaceDrawHooks — alpha hash object space', () => {

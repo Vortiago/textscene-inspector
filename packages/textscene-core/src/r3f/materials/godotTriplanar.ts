@@ -53,14 +53,24 @@ export function readsObjectSpace(triplanar: Triplanar | null): boolean {
 const UV_SETS = ['uv1', 'uv2'] as const;
 type UvSet = (typeof UV_SETS)[number];
 
+/** `text` with its first letter in upper case, as GLSL names join words. */
+function capitalised(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
 /** The GLSL name of UV set `uv`'s `name`, as `godotUv1TriplanarScale`. */
 function glslName(uv: UvSet, name: string): string {
-  return `godot${uv.charAt(0).toUpperCase()}${uv.slice(1)}${name}`;
+  return `godot${capitalised(uv)}${name}`;
 }
 
 /** The varying of UV set `uv`'s `name`, as `vGodotUv1TriplanarPos`. */
 function varyingName(uv: UvSet, name: string): string {
-  return `vGodot${uv.charAt(0).toUpperCase()}${uv.slice(1)}${name}`;
+  return `v${capitalised(glslName(uv, name))}`;
+}
+
+/** UV set `uv`'s projected position and blend weights, as each stage names the varyings. */
+function projectionVaryings(uv: UvSet): { position: string; weights: string } {
+  return { position: varyingName(uv, 'TriplanarPos'), weights: varyingName(uv, 'PowerNormal') };
 }
 
 /** UV set `uv`'s define, which each program state of the record turns on. */
@@ -79,17 +89,16 @@ const NO_PROJECTION: TriplanarProjection = {
 function projectionUniforms(material: Material, uv: UvSet): Record<string, IUniform> {
   const projection = () =>
     recordedOn<TriplanarRecord | null>(material, TRIPLANAR_KEY, null)?.[uv] ?? NO_PROJECTION;
+  // three uploads a vec3 from any object with x, y and z, so the record's own vectors serve.
   return {
     [glslName(uv, 'TriplanarScale')]: {
       get value() {
-        const { x, y, z } = projection().scale;
-        return [x, y, z];
+        return projection().scale;
       },
     },
     [glslName(uv, 'TriplanarOffset')]: {
       get value() {
-        const { x, y, z } = projection().offset;
-        return [x, y, z];
+        return projection().offset;
       },
     },
     [glslName(uv, 'TriplanarSharpness')]: {
@@ -100,16 +109,24 @@ function projectionUniforms(material: Material, uv: UvSet): Record<string, IUnif
   };
 }
 
+/** One UV set's varyings, in both stages. */
+function projectionVaryingPars(uv: UvSet): string {
+  const { position, weights } = projectionVaryings(uv);
+  return `#ifdef ${projects(uv)}
+varying vec3 ${position};
+varying vec3 ${weights};
+#endif
+`;
+}
+
 /** One UV set's uniforms and varyings, in the vertex program. */
 function projectionVertexPars(uv: UvSet): string {
   return `#ifdef ${projects(uv)}
 uniform vec3 ${glslName(uv, 'TriplanarScale')};
 uniform vec3 ${glslName(uv, 'TriplanarOffset')};
 uniform float ${glslName(uv, 'TriplanarSharpness')};
-varying vec3 ${varyingName(uv, 'TriplanarPos')};
-varying vec3 ${varyingName(uv, 'PowerNormal')};
 #endif
-`;
+${projectionVaryingPars(uv)}`;
 }
 
 /**
@@ -163,8 +180,9 @@ const GODOT_FRAME = /* glsl */ `
 	godotBinormal += vec3( 0.0, 0.0, - 1.0 ) * abs( godotFrameNormal.y );
 	godotBinormal += vec3( 0.0, 1.0, 0.0 ) * abs( godotFrameNormal.z );
 	#ifdef GODOT_TRIPLANAR_TANGENT_WORLD
-		godotTangent = inverse( godotModelNormal ) * normalize( godotTangent );
-		godotBinormal = inverse( godotModelNormal ) * normalize( godotBinormal );
+		mat3 godotNormalModel = inverse( godotModelNormal );
+		godotTangent = godotNormalModel * normalize( godotTangent );
+		godotBinormal = godotNormalModel * normalize( godotBinormal );
 	#else
 		godotTangent = normalize( godotTangent );
 		godotBinormal = normalize( godotBinormal );
@@ -184,8 +202,7 @@ const GODOT_FRAME = /* glsl */ `
  */
 function projectionVertex(uv: UvSet): string {
   const worldNormal = uv === 'uv1' ? 'godotModelNormal * godotNormal' : 'mat3( godotModel ) * godotNormal';
-  const position = `${varyingName(uv, 'TriplanarPos')}`;
-  const weights = `${varyingName(uv, 'PowerNormal')}`;
+  const { position, weights } = projectionVaryings(uv);
   return /* glsl */ `
 	#ifdef ${projects(uv)}
 		#ifdef ${projectsWorld(uv)}
@@ -208,19 +225,7 @@ const VERTEX = `${GODOT_VERTEX_INPUTS}${GODOT_FRAME}${UV_SETS.map(projectionVert
 
 /** three's coordinate of each map, `v<Map>Uv`. */
 function coordinateOf(map: TriplanarMap): string {
-  return `v${map.charAt(0).toUpperCase()}${map.slice(1)}Uv`;
-}
-
-/**
- * One UV set's varyings and screen gradients, and a map's coordinate in each projection: its
- * position through the texture's window, as three's vertex program carries a UV through it.
- */
-function projectionFragmentPars(uv: UvSet): string {
-  return `#ifdef ${projects(uv)}
-varying vec3 ${varyingName(uv, 'TriplanarPos')};
-varying vec3 ${varyingName(uv, 'PowerNormal')};
-#endif
-`;
+  return `v${capitalised(map)}Uv`;
 }
 
 const NORMAL_MAP_PARS = '#include <normalmap_pars_fragment>';
@@ -245,7 +250,11 @@ vec4 godotTriplanarNormalTexel( const in vec3 position, const in vec3 weights, c
 #endif
 `;
 
-const FRAGMENT_PARS = `${UV_SETS.map(projectionFragmentPars).join('')}${FRAME_VARYINGS}
+/**
+ * The varyings, and a map's coordinate in a projection: the position through the texture's window,
+ * as three's vertex program carries a UV through it.
+ */
+const FRAGMENT_PARS = `${UV_SETS.map(projectionVaryingPars).join('')}${FRAME_VARYINGS}
 vec2 godotTriplanarUv( const in mat3 window, const in vec2 position ) {
 	return ( window * vec3( position, 1.0 ) ).xy;
 }
@@ -278,8 +287,7 @@ const TRIPLANAR_FRAME = `${NORMAL_BEGIN}
  * map's sampler, so the mipmap bias finds every sample.
  */
 function triplanarSample(map: TriplanarMap, uv: UvSet): string {
-  const position = `${varyingName(uv, 'TriplanarPos')}`;
-  const weights = `${varyingName(uv, 'PowerNormal')}`;
+  const { position, weights } = projectionVaryings(uv);
   const sample = (coordinate: string) =>
     `texture2D( ${map}, godotTriplanarUv( ${map}Transform, ${coordinate} ) )`;
   return `( ${sample(`${position}.xy`)} * ${weights}.z + ${sample(`${position}.xz`)} * ${weights}.y + ${sample(
@@ -287,31 +295,35 @@ function triplanarSample(map: TriplanarMap, uv: UvSet): string {
   )} * ${weights}.x )`;
 }
 
-/** The program text with each sample of the record's maps in its UV set's projections. */
-function triplanarSamples(record: Pick<TriplanarRecord, 'uv1Maps' | 'uv2Maps'>): (text: string) => string {
-  const sets = UV_SETS.flatMap((uv) =>
-    record[`${uv}Maps`].filter((map) => map !== 'normalMap').map((map) => ({ map, uv }))
+/**
+ * The UV set of each map the sample rewrite projects. The normal map reads through
+ * `GODOT_NORMAL_TEXEL` instead, as the roughness limiter reads its neighbours.
+ */
+function projectedMaps(record: Pick<TriplanarRecord, 'uv1Maps' | 'uv2Maps'>): Map<TriplanarMap, UvSet> {
+  return new Map(
+    UV_SETS.flatMap((uv) =>
+      record[`${uv}Maps`].filter((map) => map !== 'normalMap').map((map) => [map, uv] as const)
+    )
   );
-  if (sets.length === 0) return (text) => text;
-  const uvOf = new Map<TriplanarMap, UvSet>(sets.map(({ map, uv }) => [map, uv]));
+}
+
+/** The program text with each sample of `maps` in its UV set's projections. */
+function triplanarSamples(maps: Map<TriplanarMap, UvSet>): (text: string) => string {
+  if (maps.size === 0) return (text) => text;
   const pattern = new RegExp(
-    String.raw`texture2D\(\s*(${sets.map(({ map }) => map).join('|')})\s*,\s*(v\w+Uv)\s*\)`,
+    String.raw`texture2D\(\s*(${[...maps.keys()].join('|')})\s*,\s*(v\w+Uv)\s*\)`,
     'g'
   );
   return (text) =>
-    rewrittenShader(text, pattern, (sample, map) =>
-      sample.includes(coordinateOf(map as TriplanarMap))
-        ? triplanarSample(map as TriplanarMap, uvOf.get(map as TriplanarMap)!)
-        : sample
-    );
+    rewrittenShader(text, pattern, (sample, name) => {
+      const map = name as TriplanarMap;
+      return sample.includes(coordinateOf(map)) ? triplanarSample(map, maps.get(map)!) : sample;
+    });
 }
 
-/** The window uniform of each map a sample reads in the fragment program. */
-function windowUniforms(record: Pick<TriplanarRecord, 'uv1Maps' | 'uv2Maps'>): string {
-  return [...record.uv1Maps, ...record.uv2Maps]
-    .filter((map) => map !== 'normalMap')
-    .map((map) => `uniform mat3 ${map}Transform;\n`)
-    .join('');
+/** The window uniform of each map in `maps`, which the fragment program samples. */
+function windowUniforms(maps: Map<TriplanarMap, UvSet>): string {
+  return [...maps.keys()].map((map) => `uniform mat3 ${map}Transform;\n`).join('');
 }
 
 /**
@@ -336,8 +348,9 @@ function triplanarProgram(record: TriplanarRecord, cacheKey: string): ProgramInj
   const defines = definesOf(record)
     .map((define) => `#define ${define}\n`)
     .join('');
-  const samples = triplanarSamples(record);
-  const windows = windowUniforms(record);
+  const maps = projectedMaps(record);
+  const samples = triplanarSamples(maps);
+  const windows = windowUniforms(maps);
   return {
     cacheKey,
     onBeforeCompile(shader) {
@@ -351,7 +364,7 @@ function triplanarProgram(record: TriplanarRecord, cacheKey: string): ProgramInj
         shader,
         {
           vertex: [{ three: PROJECT_VERTEX, godot: VERTEX }],
-          fragment: [{ three: MAIN, godot: MAIN_GRADIENTS }, ...frameEdits(shader.fragmentShader)],
+          fragment: [{ three: MAIN, godot: MAIN_GRADIENTS }, ...litEdits(shader.fragmentShader)],
         },
         'triplanar mapping'
       );
@@ -368,7 +381,7 @@ const LIT_EDITS = [
 ];
 
 /** The edits of `LIT_EDITS` whose anchor `fragmentShader` holds. */
-function frameEdits(fragmentShader: string): { three: string; godot: string }[] {
+function litEdits(fragmentShader: string): { three: string; godot: string }[] {
   return LIT_EDITS.filter((edit) => fragmentShader.includes(edit.three));
 }
 

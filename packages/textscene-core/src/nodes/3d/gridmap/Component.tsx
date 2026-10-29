@@ -317,6 +317,9 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   );
 }
 
+/** The merged points already sit at their cells, so their object draws in the GridMap's space. */
+const MERGED_POINTS_MATRIX = new THREE.Matrix4();
+
 /**
  * A surface's points at every cell: one THREE.Points of `cellPoints`, whose geometry holds each
  * cell's matrix, so the object keeps the identity. A material that reads the item's own space draws
@@ -335,16 +338,14 @@ function PointTiles({
   if (readsObjectSpace(scalars?.triplanar ?? null)) {
     return (
       <>
-        {matrices.map((m, i) => (
-          <CellPoints key={i} draw={draw} matrix={m} />
+        {matrices.map((matrix, cell) => (
+          <CellPoints key={cell} draw={draw} matrix={matrix} />
         ))}
       </>
     );
   }
-  return <CellPoints draw={{ ...draw, geometry: cellPoints }} matrix={IDENTITY} />;
+  return <CellPoints draw={{ ...draw, geometry: cellPoints }} matrix={MERGED_POINTS_MATRIX} />;
 }
-
-const IDENTITY = new THREE.Matrix4();
 
 /** A surface's points at `matrix`. */
 function CellPoints({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }) {
