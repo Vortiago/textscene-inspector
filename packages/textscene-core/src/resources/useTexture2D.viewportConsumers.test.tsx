@@ -137,7 +137,7 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
     expect(disposals).toBe(0);
   });
 
-  it('Sprite2D samples its copy through its region', async () => {
+  it("Sprite2D samples its copy of the region's cell through the region", async () => {
     const sprite = node(
       'Sprite2D',
       parseSprite2D(heading('Sprite2D'), {
@@ -147,7 +147,9 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
       })
     );
     const renderer = await provide(<Sprite2D node={sprite} />, '2d');
-    expect(mapsIn(renderer)[0]!.repeat.x).toBe(0.5);
+    const [cell] = mapsIn(renderer);
+    expect(cell!.image).toMatchObject({ width: 17 });
+    expect(cell!.repeat.x).toBe(16 / 17);
   });
 
   it("Sprite3D draws its own copy of the target's decoding view, as its `source_color` albedo samples it", async () => {

@@ -49,14 +49,12 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]],
     CHECK_BOX_ICONS[iconKey]
   );
-  const iconSize = useMemo(() => {
-    const fitted = fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants));
-    return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
-  }, [solveNode]);
-  const drawnIconSize = useMemo(() => {
-    const fitted = checkBoxDrawnIconSize(solveNode, iconKey);
-    return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
-  }, [solveNode, iconKey]);
+  // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
+  const iconSize = useMemo(
+    () => fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants)),
+    [solveNode]
+  );
+  const drawnIconSize = useMemo(() => checkBoxDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
 
   const text = props.text ?? '';
   const hasText = text.length > 0;
@@ -95,7 +93,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
-      <CanvasItemGroup position={[content.iconRect.x, -content.iconRect.y, 0]}>
+      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={drawnIconSize.x}

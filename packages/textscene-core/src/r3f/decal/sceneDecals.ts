@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { decalAtlasTexture, setDecalAtlasFilter, updateDecalAtlas } from '../../nodes/3d/decal/decalAtlas.js';
+import { areAtlasesUpdatedPerFrame } from '../textureAtlas/updateTextureAtlases.js';
 import {
   godotTextureFilterState,
   type TextureFilterState,
@@ -80,7 +81,7 @@ export class SceneDecals {
     this.chrome.place();
     this.orderVisibleDecals();
     if (this.ordered.length === 0) return this.endRender();
-    updateDecalAtlas(this.renderer.capabilities.maxTextureSize);
+    if (!areAtlasesUpdatedPerFrame()) updateDecalAtlas(this.renderer.capabilities.maxTextureSize);
     if (this.rows.pack(this.ordered, camera.matrixWorld)) this.sceneRows.setDecals(this.rows);
     if (this.rows.count === 0) return this.endRender();
     shownDecals[SHOWN_COUNT] = this.rows.count;

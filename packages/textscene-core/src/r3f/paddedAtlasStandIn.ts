@@ -2,16 +2,16 @@
  * What a padded atlas source draws from when its texture has no image of its own at load. Godot
  * builds the padded atlas once, from the texture's `get_image()` (`tile_set.cpp:5622-5654`). A
  * ViewportTexture it never set up gives no image, so the draw samples the empty texture's
- * placeholder. One it set up gives its target as it stands before the first render.
+ * placeholder. One it set up gives its target as it stands before the first render, every texel
+ * alike, so one texel stands in for the whole padded atlas.
  */
 
 import { useMemo } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { isLiveTarget, unrenderedTexel } from './liveTargets';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
-import { paddedAtlasSize } from '../resources/tileset/paddedAtlas';
 import type { AtlasSourceModel } from '../resources/tileset/types';
-import { textureSize } from '../resources/textures/textureSize';
+import { colourDataTexture } from '../resources/textures/colourDataTexture';
 import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import type { Texture2DResult } from '../resources/useTexture2D';
 
@@ -24,23 +24,17 @@ export function usePaddedAtlasStandIn(slot: Texture2DResult, source: AtlasSource
   const isPadded = source.usesTexturePadding && texture !== null;
   const isUnrenderedTarget = isPadded && isLiveTarget(texture);
   const snapshot = useMemo(
-    () => (isUnrenderedTarget && texture ? unrenderedSnapshot(texture, source) : null),
-    [isUnrenderedTarget, texture, source]
+    () => (isUnrenderedTarget && texture ? unrenderedSnapshot(texture) : null),
+    [isUnrenderedTarget, texture]
   );
   useDisposeOnRelease(snapshot);
   if (isPadded && slot.hasNoImage) return unconfiguredViewportTexture();
   return snapshot;
 }
 
-/** The padded atlas Godot builds from `target`'s image before the target's first render. */
-function unrenderedSnapshot(target: THREE.Texture, source: AtlasSourceModel): THREE.DataTexture {
-  const size = paddedAtlasSize(source, textureSize(target) ?? { width: 0, height: 0 });
-  const texel = unrenderedTexel(target);
-  const data = new Uint8Array(size.x * size.y * 4);
-  for (let offset = 0; offset < data.length; offset += 4) data.set(texel, offset);
-  const snapshot = new THREE.DataTexture(data, size.x, size.y);
+/** The texel of the padded atlas Godot builds from `target`'s image before the target's first render. */
+function unrenderedSnapshot(target: THREE.Texture): THREE.DataTexture {
+  const snapshot = colourDataTexture(Uint8Array.from(unrenderedTexel(target)), 1, 1, 'RGBA8');
   snapshot.name = `${target.name}::unrendered`;
-  snapshot.colorSpace = THREE.SRGBColorSpace;
-  snapshot.needsUpdate = true;
   return snapshot;
 }

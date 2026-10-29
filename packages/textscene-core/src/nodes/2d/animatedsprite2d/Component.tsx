@@ -24,6 +24,7 @@ import { frameAtTime, clipDuration } from '../../../resources/textures/spritefra
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
 const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
@@ -140,22 +141,23 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
 
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
   // against those pools: the scene's, or the .tres's.
-  const { texture: frameTexture, missing: frameMissing } = useTexture2D(
+  const {
+    texture: frameTexture,
+    size: frameSize,
+    missing: frameMissing,
+  } = useTexture2D(
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
     resolved?.subResources ?? NO_INTERNAL_RESOURCES,
     'plain',
-    resolved ? [resolved.resource] : undefined
+    resolved ? isLocalToScene(resolved.resource) : undefined
   );
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
   // once it no longer draws, so playback leaks no GPU texture.
   const sampler = useNode2DTextureSampler(props);
   const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
-  const { width, height } = useMemo(
-    () => frameSizePx(frameTexture ?? undefined, WHOLE_FRAME),
-    [frameTexture]
-  );
+  const { width, height } = useMemo(() => frameSizePx(frameSize, WHOLE_FRAME), [frameSize]);
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
   // and so does a `.tres` still loading. The placeholder is for a resource that is set but failed.

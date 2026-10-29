@@ -24,7 +24,6 @@ import {
   swapAlignmentSide,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -266,8 +265,8 @@ interface CheckButtonContentInput {
 }
 
 interface CheckButtonContentLayout {
-  /** Local to the control's own top-left, Godot px. */
-  iconRect: Rect2;
+  /** The icon's top-left, local to the control's own top-left, Godot px. */
+  iconPosition: Vector2;
   /** The text paragraph's box top-left, local Godot px. `null` when there is no text. */
   textOffset: Vector2 | null;
 }
@@ -292,11 +291,10 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     rtl,
   } = input;
 
-  const iconRect: Rect2 = {
-    x: Math.floor(rtl ? marginX : rectSize.x - (iconSize.x + marginX)),
-    y: Math.floor((rectSize.y - iconSize.y) / 2 + checkVOffset),
-    w: iconSize.x,
-    h: iconSize.y,
+  // Unrounded: an odd height leaves the icon on a half pixel (`check_button.cpp:135-140`).
+  const iconPosition: Vector2 = {
+    x: rtl ? marginX : rectSize.x - (iconSize.x + marginX),
+    y: (rectSize.y - iconSize.y) / 2 + checkVOffset,
   };
 
   let textOffset: Vector2 | null = null;
@@ -311,5 +309,5 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     textOffset = { x, y };
   }
 
-  return { iconRect, textOffset };
+  return { iconPosition, textOffset };
 }

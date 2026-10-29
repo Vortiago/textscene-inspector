@@ -13,6 +13,7 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { spriteQuadAabb, spriteQuadRect } from '../sprite3d/quad';
 import { selectedFrameTexture } from './frameSelection';
 import type { AnimatedSprite3DProperties } from './types';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 /** Stable empty pools, so the frame texture's memo holds between renders. */
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
@@ -23,21 +24,25 @@ export function useAnimatedSprite3DAabb(node: TscnNode): Aabb | null {
   const properties = node.properties as AnimatedSprite3DProperties;
   const { spriteFrames, status } = useSpriteFrames(node.rawProperties['sprite_frames']);
   const frameRef = selectedFrameTexture(node.rawProperties, spriteFrames?.animations ?? null);
-  const { texture, missing } = useTexture2D(
+  const {
+    texture,
+    size: reportedSize,
+    missing,
+  } = useTexture2D(
     frameRef ?? undefined,
     spriteFrames?.externalResources ?? NO_EXTERNAL_RESOURCES,
     spriteFrames?.subResources ?? NO_INTERNAL_RESOURCES,
     'plain',
-    spriteFrames ? [spriteFrames.resource] : undefined
+    spriteFrames ? isLocalToScene(spriteFrames.resource) : undefined
   );
   const isPending = status === 'pending' || (frameRef !== null && !missing && !texture);
 
   return useMemo(() => {
     if (isPending) return null;
     if (!texture) return EMPTY_AABB;
-    const px = frameSizePx(texture, WHOLE_FRAME);
+    const px = frameSizePx(reportedSize, WHOLE_FRAME);
     if (px.width === 0 || px.height === 0) return EMPTY_AABB;
     const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
     return spriteQuadAabb(spriteQuadRect(size, properties), properties.axis, properties.billboard);
-  }, [isPending, texture, properties]);
+  }, [isPending, texture, reportedSize, properties]);
 }

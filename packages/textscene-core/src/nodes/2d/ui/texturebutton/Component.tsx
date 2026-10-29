@@ -46,14 +46,16 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     textureHover: hoverTex,
     textureDisabled: disabledTex,
   };
-  const rawTexture = slot ? bySlot[slot].texture : null;
+  const drawn = slot ? bySlot[slot] : null;
+  const rawTexture = drawn?.texture ?? null;
+  const size = drawn?.size;
 
   const draw = useMemo(
     () =>
-      sampledDraw(rawTexture, (reported) =>
+      sampledDraw(rawTexture, size, (reported) =>
         textureButtonDraw({ x: rect.w, y: rect.h }, reported, props.stretchMode)
       ),
-    [rawTexture, rect.w, rect.h, props.stretchMode]
+    [rawTexture, size, rect.w, rect.h, props.stretchMode]
   );
 
   const drawnTexture = useOwnedTextureView(

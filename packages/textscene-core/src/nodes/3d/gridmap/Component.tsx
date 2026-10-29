@@ -33,6 +33,7 @@ import { pointsAtCells } from './pointCells';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 /** Where each cell sits in the grid, and how much its mesh scales. */
 type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
@@ -89,7 +90,7 @@ function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3
 export function GridMap({ node, children }: NodeComponentProps) {
   const properties = node.properties as GridMapProperties;
   const library = useMeshLibraryModel(properties.meshLibrary);
-  const meshHolders = useMemo(() => (library.resource ? [library.resource] : []), [library.resource]);
+  const isMeshHeldLocally = !library.resource || isLocalToScene(library.resource);
 
   const cellsByItem = useMemo(() => {
     const grouped = new Map<number, GridMapCell[]>();
@@ -119,7 +120,13 @@ export function GridMap({ node, children }: NodeComponentProps) {
         // Godot draws a cell only for an item the library holds with a mesh (`:676-678,689`).
         if (!item?.meshPath) return null;
         return (
-          <GridMapItem key={itemId} item={item} meshHolders={meshHolders} cells={cells} {...gridProps} />
+          <GridMapItem
+            key={itemId}
+            item={item}
+            isMeshHeldLocally={isMeshHeldLocally}
+            cells={cells}
+            {...gridProps}
+          />
         );
       })}
       {children}
@@ -160,7 +167,7 @@ function bakedMeshNode(ref: string, index: number): TscnNode {
 interface GridMapItemProps extends CellGrid {
   item: MeshLibraryItem;
   /** The library, which holds the item's mesh for its materials' local-to-scene setup. */
-  meshHolders: readonly TscnInternalResource[];
+  isMeshHeldLocally: boolean;
   cells: GridMapCell[];
 }
 
@@ -168,8 +175,8 @@ interface GridMapItemProps extends CellGrid {
  * All cells sharing one MeshLibrary item. Each surface decides on its own whether it batches,
  * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
  */
-function GridMapItem({ item, meshHolders, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
-  const content = useMeshContent(usePathResolution(item.meshPath), meshHolders);
+function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
+  const content = useMeshContent(usePathResolution(item.meshPath), isMeshHeldLocally);
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged

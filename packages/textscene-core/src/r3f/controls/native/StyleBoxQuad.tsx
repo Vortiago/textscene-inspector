@@ -199,7 +199,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     texture.resources.externalResources,
     texture.resources.internalResources,
     'plain',
-    texture.holders
+    texture.isHeldLocally
   );
 
   const geometry = useMemo(() => {

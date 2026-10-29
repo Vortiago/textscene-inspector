@@ -12,7 +12,8 @@ import { fileResources, findSectionResource } from '../../resources/resourceSect
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
-import type { MaterialResource, MaterialSource } from './materialSource';
+import { held, type MaterialResource, type MaterialSource } from './materialSource';
+import { NODE_PROPERTY } from '../../resources/useTexture2D';
 
 /** What a material source loads to. */
 type LoadedMaterial =
@@ -46,9 +47,9 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   const inlineResource = inline?.resource;
   const inlineInternal = inline?.internalResources;
   const inlineExternal = inline?.externalResources;
-  const holders = source?.holders;
+  const isHeldLocally = source?.isHeldLocally ?? NODE_PROPERTY;
   const loaded = useMemo((): LoadedMaterial => {
-    const holding = holders ? { holders } : {};
+    const holding = held(isHeldLocally);
     if (inlineResource && inlineInternal && inlineExternal) {
       return ready({
         resource: inlineResource,
@@ -59,7 +60,7 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
     }
     if (!file || !body) return ABSENT;
     return ready({ resource: body, ...fileResources(file), ...holding });
-  }, [inlineResource, inlineInternal, inlineExternal, holders, file, body]);
+  }, [inlineResource, inlineInternal, inlineExternal, isHeldLocally, file, body]);
 
   useEffect(() => {
     if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {

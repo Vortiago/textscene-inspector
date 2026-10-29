@@ -1,0 +1,45 @@
+; One variable: a Sprite2D that draws one frame of a ViewportTexture. The target holds four 4 px
+; columns, red, green, blue and yellow, one frame each. Magnified at scale 16, the filter blends
+; each frame's edge texels into its neighbour's, which Godot reads past the frame.
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[node name="Root" type="Node2D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(16, 8)
+render_target_update_mode = 4
+
+[node name="Red" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 4, 0, 4, 8, 0, 8)
+
+[node name="Green" type="Polygon2D" parent="SubViewport"]
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(4, 0, 8, 0, 8, 8, 4, 8)
+
+[node name="Blue" type="Polygon2D" parent="SubViewport"]
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(8, 0, 12, 0, 12, 8, 8, 8)
+
+[node name="Yellow" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 1, 0, 1)
+polygon = PackedVector2Array(12, 0, 16, 0, 16, 8, 12, 8)
+
+[node name="Frame" type="Sprite2D" parent="."]
+position = Vector2(300, 300)
+scale = Vector2(16, 16)
+texture = SubResource("ViewportTexture_1")
+hframes = 4
+frame = 1
+
+[node name="FlippedFrame" type="Sprite2D" parent="."]
+position = Vector2(700, 300)
+scale = Vector2(16, 16)
+texture = SubResource("ViewportTexture_1")
+flip_h = true
+hframes = 4
+frame = 2
