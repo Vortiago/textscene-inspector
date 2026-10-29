@@ -25,14 +25,7 @@ const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'useSelection']
 const PUBLIC_TYPE_EXPORTS = ['ResourceProvider'];
 
 /** The packages the bundle imports from the consumer, so it has one React and one three.js. */
-const IMPORTED_PEERS = [
-  '@react-three/drei',
-  '@react-three/fiber',
-  '@react-three/postprocessing',
-  'postprocessing',
-  'react',
-  'three',
-];
+const IMPORTED_PEERS = ['@react-three/drei', '@react-three/fiber', 'postprocessing', 'react', 'three'];
 
 /** `react-dom` is a peer of `@react-three/fiber`, which the bundle imports and the consumer installs. */
 const PEER_PACKAGES = [...IMPORTED_PEERS, 'react-dom'];

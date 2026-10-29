@@ -104,8 +104,8 @@ function previewHorizonColor(): Rgba {
 
 /**
  * Godot's preview environment, through the same decode and build pipeline as an
- * authored `WorldEnvironment`, so the two cannot diverge. Its glow becomes a
- * bloom pass in `ToneMapLayer`. Built once: the root's chooser and its layer read the same one.
+ * authored `WorldEnvironment`, so the two cannot diverge. Its glow runs in the
+ * tonemap pass (`toneMapPass.ts`). Built once: the root's chooser and its layer read the same one.
  */
 export function previewEnvironment(): EnvironmentAndSky {
   return (builtPreviewEnvironment ??= buildPreviewEnvironment());

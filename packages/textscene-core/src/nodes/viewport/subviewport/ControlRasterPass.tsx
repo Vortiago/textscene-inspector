@@ -76,8 +76,6 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
       target,
       clearColor,
       transparentBg,
-      // Controls are never tonemapped, on-screen or off.
-      toneMapping: THREE.NoToneMapping,
       draw: () => frame.render(gl, portalScene, camera),
     });
   }, [gl, target, frame, clearColor, transparentBg, portalScene, camera]);

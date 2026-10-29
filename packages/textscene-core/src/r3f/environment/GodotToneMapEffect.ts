@@ -40,7 +40,7 @@ export class GodotToneMapEffect extends Effect {
   constructor(options: CompositeOptions) {
     const { fragmentShader, uniforms } = compositeProgram(options);
     super('GodotToneMapEffect', fragmentShader, {
-      // The effect writes the finished frame, glow and curve applied, so the composer must not
+      // The effect writes the finished frame, glow and curve applied, so the effect pass must not
       // blend it into the scene again.
       blendFunction: BlendFunction.SRC,
       uniforms: new Map(Object.entries(uniforms).map(([name, value]) => [name, new THREE.Uniform(value)])),

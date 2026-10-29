@@ -132,28 +132,6 @@ describe('<ControlRasterPasses>', () => {
     expect(bindings).toEqual(['plain', 'frame', 'plain', 'decoding']);
   });
 
-  it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
-    const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
-    const renderer = await ReactThreeTestRenderer.create(
-      <ViewportTextureProvider>
-        <ViewportPassProvider>
-          <ControlRasterPasses viewports={walk(parse(GUI_SCENE))} />
-          <CaptureRenderer captured={capturedGl} />
-          <ViewportPassOrchestrator />
-        </ViewportPassProvider>
-      </ViewportTextureProvider>
-    );
-    const gl = capturedGl.current!;
-    gl.toneMapping = THREE.CustomToneMapping;
-    let seenAtBind: THREE.ToneMapping | null = null;
-    await advanceFrameWithStubbedGl(renderer, gl, (target) => {
-      if (seenAtBind === null && target !== null) seenAtBind = gl.toneMapping;
-    });
-    expect(seenAtBind).toBe(THREE.NoToneMapping);
-    // Restored after the pass, as the 3D/2D pass restores its own.
-    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
-  });
-
   /**
    * `scene/main/viewport.h` sets `snap_controls_to_pixels` true on every Viewport,
    * and `main/main.cpp` hands the project setting to the root alone. Measured on
