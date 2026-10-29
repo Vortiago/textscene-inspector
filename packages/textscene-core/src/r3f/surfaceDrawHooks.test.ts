@@ -261,7 +261,7 @@ describe('surfaceDrawHooks — point shadow', () => {
 
 describe('surfaceDrawHooks — particle instances', () => {
   /** An InstancedMesh of one ENABLED billboard surface, which casts, typed as the mesh the helpers take. */
-  function particleSurface(mode: BillboardMode = BillboardMode.BILLBOARD_ENABLED): THREE.Mesh {
+  function particleSurface(mode: number = BillboardMode.BILLBOARD_ENABLED): THREE.Mesh {
     const bag = { materialClass: 'standard' as const, props: {} };
     const draw = particleDrawOf(null);
     const userData = withParticleDraw(bag, { ...draw, billboard: { mode, keepScale: false } }).props.userData;
