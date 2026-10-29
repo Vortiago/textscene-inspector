@@ -75,8 +75,8 @@ export const TILE_AND_TARGET_SCENES = [
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },
-  // `tonemap_exposure` under LINEAR inside the target while glow holds the renderer for the
-  // compositor: the exposure applies inside the target and again on the quad.
+  // `tonemap_exposure` under LINEAR inside the target, with glow on the main view: the exposure
+  // applies inside the target and again on the quad.
   { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
   // The shared world's glow runs inside the target: the quad shows the bloom around the emissive
   // sphere that only the target sees.
@@ -118,8 +118,8 @@ export const TILE_AND_TARGET_SCENES = [
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
-  // An own-world SubViewport's Environment stays in its world: its glow mounts no compositor
-  // over the canvas, and its tone curve leaves the root's LINEAR box untouched.
+  // An own-world SubViewport's Environment stays in its world: its glow stays off the canvas, and
+  // its tone curve leaves the root's LINEAR box untouched.
   { name: 'sub-viewport-own-world-glow', file: 'unit-sub-viewport-own-world-glow.tscn' },
   { name: 'sub-viewport-own-world-tonemap', file: 'unit-sub-viewport-own-world-tonemap.tscn' },
   // MSAA, each from the setting that turns it on: the root viewport's msaa_3d and msaa_2d, from a

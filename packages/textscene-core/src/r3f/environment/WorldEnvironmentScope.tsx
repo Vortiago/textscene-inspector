@@ -11,6 +11,8 @@ import * as THREE from 'three';
 import { createPortal } from '@react-three/fiber';
 import { DrawnEnvironmentLayer, EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer';
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
+import { Compositor } from './Compositor';
+import { useDraws3D } from './draws3D';
 import { PreviewEnvironment } from '../preview/PreviewEnvironment';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
 import { PreviewSun } from '../preview/PreviewSun';
@@ -27,7 +29,7 @@ import {
 } from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
 import { PassToneMapProvider } from './passToneMap';
-import { NO_RESOURCES } from '../SceneResourcesContext';
+import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
@@ -35,15 +37,20 @@ import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 import { identityKey } from '../../utils/identityKey';
 import { useOwnEnvironment } from './sceneEnvironment';
 
-/** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
-export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
+/** A resolved Environment: what its layer draws, and the pools its own references, such as `glow_map`, resolve in. */
+export interface ResolvedEnvironment extends EnvironmentLayerProps {
+  resources: SceneResources;
+}
 
-const environments = createWorldGroup<{ environment: EnvironmentLayerProps }>();
+/** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
+export type EnvironmentResolution = WorldResolution<{ environment: ResolvedEnvironment }>;
+
+const environments = createWorldGroup<{ environment: ResolvedEnvironment }>();
 
 export const usePublishEnvironment = environments.usePublish;
 
 /** The world's own Environment, which a pass through a camera with none draws. Null for none. */
-const WorldOwnEnvironmentContext = createContext<EnvironmentLayerProps | null>(null);
+const WorldOwnEnvironmentContext = createContext<ResolvedEnvironment | null>(null);
 
 /**
  * One viewport's world: the WorldEnvironments inside publish to it, and its choosers apply the
@@ -144,12 +151,14 @@ export function SharedWorldEnvironmentScope({ children }: { children: ReactNode 
 /**
  * The root viewport's Environment, which falls back to the editor preview environment, and the
  * editor preview sun after the scene, so the scene's own nodes come first. One yield serves both,
- * since each walks the whole live tree.
+ * since each walks the whole live tree. One compositor tonemaps every 3D frame of the canvas with
+ * whichever Environment applies, so a switch or a load keeps its buffer (ADR-0061).
  */
 function RootEnvironment({ children }: { children: ReactNode }) {
   const authored = useViewEnvironment();
   const chosen = environments.useChosen();
   const preview = usePreviewYield();
+  const draws3D = useDraws3D();
   // An authored Environment proves a WorldEnvironment node or a camera's, and takes the preview away.
   const showsPreview = !authored && preview.environment;
   const shown = showsPreview ? previewEnvironment() : resolvedEnvironment(authored);
@@ -157,10 +166,13 @@ function RootEnvironment({ children }: { children: ReactNode }) {
   const own = !chosen && preview.environment ? previewEnvironment() : resolvedEnvironment(chosen);
   return (
     <WorldOwnEnvironmentContext.Provider value={own}>
-      <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
-      <DrawnEnvironments shown={shown} own={own} />
-      {children}
-      {preview.sun && <PreviewSun />}
+      <PassToneMapProvider settings={shown?.settings ?? null} resources={shown?.resources ?? NO_RESOURCES}>
+        {draws3D && <Compositor />}
+        <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
+        <DrawnEnvironments shown={shown} own={own} />
+        {children}
+        {preview.sun && <PreviewSun />}
+      </PassToneMapProvider>
     </WorldOwnEnvironmentContext.Provider>
   );
 }
@@ -223,8 +235,8 @@ function replacesWorld(
 /** The Environment a pass through `camera` draws its world with, null for none. */
 function passEnvironmentOf(
   camera: EnvironmentResolution | null,
-  own: EnvironmentLayerProps | null
-): EnvironmentLayerProps | null {
+  own: ResolvedEnvironment | null
+): ResolvedEnvironment | null {
   return replacesWorld(camera) ? camera.environment : own;
 }
 
@@ -237,13 +249,13 @@ function DrawnEnvironments({
   shown,
   own,
 }: {
-  shown: EnvironmentLayerProps | null;
-  own: EnvironmentLayerProps | null;
+  shown: ResolvedEnvironment | null;
+  own: ResolvedEnvironment | null;
 }) {
   useOwnEnvironment(own?.settings ?? null);
   const cameras = usePassCameraEnvironments();
   const layers = useMemo(() => {
-    const unique = new Map<object, EnvironmentLayerProps>();
+    const unique = new Map<object, ResolvedEnvironment>();
     for (const drawn of [own, ...cameras.map((camera) => passEnvironmentOf(camera, own))]) {
       if (drawn && drawn.settings !== shown?.settings) unique.set(drawn.settings, drawn);
     }
@@ -261,6 +273,6 @@ function useViewEnvironment(): EnvironmentResolution | null {
   return replacesWorld(camera) ? camera : world;
 }
 
-function resolvedEnvironment(authored: EnvironmentResolution | null): EnvironmentLayerProps | null {
+function resolvedEnvironment(authored: EnvironmentResolution | null): ResolvedEnvironment | null {
   return authored?.status === 'resolved' ? authored.environment : null;
 }

@@ -1,8 +1,9 @@
 /**
  * TubeTrailMesh surface, ported from Godot 4.6.3 `TubeTrailMesh::_create_mesh_array`
- * (`scene/resources/3d/primitive_meshes.cpp:2503-2741`, without the bone arrays): a row of
+ * (`scene/resources/3d/primitive_meshes.cpp:2503-2741`): a row of
  * `radial_steps + 1` vertices for each ring down the tube, U round it from +Z towards +X and V down
- * the top half of the atlas, then a fan for each cap in the bottom half.
+ * the top half of the atlas, then a fan for each cap in the bottom half. Each vertex also takes the
+ * bones that skin it.
  *
  * Derived from Godot Engine (`scene/resources/3d/primitive_meshes.cpp`), used under the MIT licence:
  *
@@ -31,18 +32,15 @@
 
 import { CMP_EPSILON } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
-import { BOTTOM_CAP, TOP_CAP, writeCapFan } from '../primitivemesh/capFan.js';
+import { BOTTOM_CAP, TOP_CAP, writeCapFan, type CapFace } from '../primitivemesh/capFan.js';
 import { curveScaleSampler } from '../primitivemesh/curveScale.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { rimColumns, type RimColumn } from '../primitivemesh/rimPoint.js';
-import { rowAt, writeRings } from '../primitivemesh/rows.js';
-import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
+import { rowAt, sectionBones, writeRings } from '../primitivemesh/rows.js';
+import { SurfaceWriter, type VertexBones } from '../primitivemesh/surfaceWriter.js';
 import type { TubeTrailMeshProperties } from './types.js';
 
-/**
- * No UV2: `PrimitiveMesh::_update` makes it from UV. No bone arrays: nothing here skins a primitive,
- * and Godot draws a mesh with no skin at the rest positions.
- */
+/** No UV2: `PrimitiveMesh::_update` makes it from UV. */
 export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurface {
   const depth = storedReal(p.sectionLength * p.sections);
   // A curve with no point scales nothing (`:2552`).
@@ -54,8 +52,9 @@ export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurf
   // A cap is built only where the curve leaves a scale above `CMP_EPSILON` (`:2596`, `:2680`).
   const topRadius = capRadius(p.radius, radiusScale(0));
   const bottomRadius = capRadius(p.radius, radiusScale(1));
-  if (p.capTop && topRadius !== null) writeCapFan(writer, rim, TOP_CAP, depth * 0.5, topRadius);
-  if (p.capBottom && bottomRadius !== null) writeCapFan(writer, rim, BOTTOM_CAP, depth * -0.5, bottomRadius);
+  if (p.capTop && topRadius !== null) writeCap(writer, rim, TOP_CAP, depth * 0.5, topRadius, 0);
+  if (p.capBottom && bottomRadius !== null)
+    writeCap(writer, rim, BOTTOM_CAP, depth * -0.5, bottomRadius, p.sections);
   return writer.surface();
 }
 
@@ -73,10 +72,27 @@ function writeBody(
   writeRings(writer, rowCount, (j) => {
     const { v, y } = rowAt(j, rowCount, depth);
     const rowRadius = storedReal(p.radius * radiusScale(v));
+    const bones = sectionBones(j, p.sections, p.sectionRings);
     for (const { x, z, u } of rim) {
       writer.vertex([x * rowRadius, y, z * rowRadius], [x, 0, z], [z, 0, -x, 1], [u, v * 0.5], [0, 0]);
+      writer.bones(bones);
     }
   });
+}
+
+/** A cap whose every vertex takes `bone` at full weight (`:2600-2723`). */
+function writeCap(
+  writer: SurfaceWriter,
+  rim: readonly RimColumn[],
+  face: CapFace,
+  y: number,
+  radius: number,
+  bone: number
+): void {
+  const firstVertex = writer.vertexCount;
+  writeCapFan(writer, rim, face, y, radius);
+  const bones: VertexBones = { indices: [bone, 0, 0, 0], weights: [1, 0, 0, 0] };
+  for (let remaining = writer.vertexCount - firstVertex; remaining > 0; remaining--) writer.bones(bones);
 }
 
 /** The radius of a cap at a curve scale, or null where the scale leaves no cap. */

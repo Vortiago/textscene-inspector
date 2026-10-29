@@ -17,7 +17,7 @@ import type { Rgba } from '../../godot/math/math';
 import { degToRad } from '../../godot/math/math.js';
 import { BackgroundMode } from '../../godot/scene/environment.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
-import type { EnvironmentLayerProps } from '../environment/EnvironmentLayer';
+import type { ResolvedEnvironment } from '../environment/WorldEnvironmentScope';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 
 /** The node types the editor counts, one independent counter each. */
@@ -105,8 +105,8 @@ function previewHorizonColor(): Rgba {
 
 /**
  * Godot's preview environment, through the same decode and build pipeline as an
- * authored `WorldEnvironment`, so the two cannot diverge. Its glow becomes a
- * bloom pass in `ToneMapLayer`. Built once: the root's layer and a pass that draws it read one
+ * authored `WorldEnvironment`, so the two cannot diverge. Its glow runs in the
+ * tonemap pass (`toneMapPass.ts`). Built once: the root's layer and a pass that draws it read one
  * object, so the pass publishes it once. The preview environment and its sky hold no references.
  */
 export function previewEnvironment(): EnvironmentAndSky {
@@ -116,7 +116,7 @@ export function previewEnvironment(): EnvironmentAndSky {
 /** Written only by `previewEnvironment`. Never cleared, since the preview never changes. */
 let builtPreviewEnvironment: EnvironmentAndSky | undefined;
 
-interface EnvironmentAndSky extends EnvironmentLayerProps {
+interface EnvironmentAndSky extends ResolvedEnvironment {
   sky: Sky;
 }
 

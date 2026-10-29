@@ -1,12 +1,13 @@
 /**
  * Each world draws with the first WorldEnvironment that holds a valid Environment, and the root falls
- * back to the editor preview or to none. Markers stand in for the layers, whose passes need a real
- * GL context.
+ * back to the editor preview or to none. Markers stand in for the layers and the compositor, whose
+ * own tests draw them.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
@@ -28,6 +29,9 @@ vi.mock('./NoEnvironmentLayer', () => ({
 vi.mock('../preview/PreviewEnvironment', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../preview/PreviewEnvironment')>()),
   PreviewEnvironment: () => <group name="PreviewEnvironment" />,
+}));
+vi.mock('./Compositor', () => ({
+  Compositor: () => <group name="Compositor" />,
 }));
 vi.mock('../preview/PreviewSun', () => ({
   PreviewSun: () => <group name="PreviewSun" />,
@@ -107,6 +111,10 @@ function inSubViewport(children: ReactNode) {
 
 function previewSunCount(renderer: Renderer): number {
   return renderer.scene.findAll((node) => node.props.name === 'PreviewSun').length;
+}
+
+function compositorCount(renderer: Renderer): number {
+  return renderer.scene.findAll((node) => node.props.name === 'Compositor').length;
 }
 
 describe('<WorldEnvironmentScope world="root">', () => {
@@ -220,6 +228,26 @@ describe('<WorldEnvironmentScope world="root">', () => {
   });
 });
 
+describe('<WorldEnvironmentScope world="root"> compositor', () => {
+  it('tonemaps the canvas with no Environment', async () => {
+    expect(compositorCount(await ReactThreeTestRenderer.create(inRoot(null, false)))).toBe(1);
+  });
+
+  it('tonemaps the canvas while the Environment loads, as every 3D frame draws through it', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<Publisher resolution={PENDING_RESOLUTION} />)
+    );
+    expect(compositorCount(renderer)).toBe(1);
+  });
+
+  it('mounts no compositor on a 2D canvas, whose canvas items Godot draws after its tonemap pass', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CanvasWorkspaceProvider workspace="2d">{inRoot(null)}</CanvasWorkspaceProvider>
+    );
+    expect(compositorCount(renderer)).toBe(0);
+  });
+});
+
 describe('<WorldEnvironmentScope world="root"> preview sun', () => {
   it('draws the preview sun for a scene with no DirectionalLight3D', async () => {
     expect(previewSunCount(await ReactThreeTestRenderer.create(inRoot(null)))).toBe(1);
@@ -254,6 +282,13 @@ describe('<WorldEnvironmentScope world="subViewport">', () => {
 
   it('draws no preview sun, which belongs to the root world', async () => {
     expect(previewSunCount(await ReactThreeTestRenderer.create(inSubViewport(null)))).toBe(0);
+  });
+
+  it('mounts no compositor, which would draw to the canvas, not the sub-viewport target', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inSubViewport(<Publisher resolution={resolved('a')} />)
+    );
+    expect(compositorCount(renderer)).toBe(0);
   });
 
   it('keeps its WorldEnvironment out of the root world', async () => {

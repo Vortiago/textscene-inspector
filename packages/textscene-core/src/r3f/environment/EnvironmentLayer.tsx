@@ -1,8 +1,9 @@
 /**
  * Applies one Godot `Environment` to its world, authored or the editor preview's (ADR-0025):
- * background, sky, flat ambient, tonemapping, glow, colour adjustments, depth fog and volumetric fog.
- * Each part writes the scene only while its Environment is on it (`sceneEnvironment.tsx`) and
- * restores what it found, because the renderer and scene outlive an environment.
+ * background, sky, flat ambient, depth fog and volumetric fog. Each part writes the scene only while
+ * its Environment is on it (`sceneEnvironment.tsx`) and restores what it found, because the renderer
+ * and scene outlive an environment. The tonemap, the glow and the colour adjustments run in each
+ * viewport's tonemap pass (`toneMapPass.ts`).
  */
 
 import { useEffect } from 'react';
@@ -13,12 +14,10 @@ import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { useDraws3D } from './useCompositorPass';
-import { useWorldKind } from './WorldKindContext';
+import { useDraws3D } from './draws3D';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
-import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 import { registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
@@ -35,21 +34,14 @@ export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: Sky | null;
-  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
-  resources: SceneResources;
   /** The pools the sky material's references, such as a panorama, resolve in. */
   skyResources: SceneResources;
 }
 
-/** The Environment its world's scene shows. Only the root world's tonemaps the canvas. */
+/** The Environment its world's scene shows. */
 export function EnvironmentLayer(props: EnvironmentLayerProps) {
-  // `THREE.ShaderChunk` is module-global, so a sub-viewport world's curve would replace the root's,
-  // and a portal store shares the root's internal state, so its compositor would draw the portal
-  // scene onto the canvas, not into the target.
-  const tonesCanvas = useWorldKind() === 'root';
   return (
     <ShownEnvironment environment={props.settings}>
-      {tonesCanvas && <ToneMapLayer settings={props.settings} resources={props.resources} />}
       <EnvironmentParts {...props} />
     </ShownEnvironment>
   );
@@ -142,15 +134,12 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
 function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
   const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
-  const { mode: curveMode, white: curveWhite, agxContrast: curveAgxContrast } = settings.toneMapping;
   const showsColor = showsBackgroundColor(mode);
   const exposure = useExposureFactor();
   const environment = useEnvironmentKey();
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
-  // A colour draws as a texture, not a clear, since three's clear skips the curve Godot applies to it.
-  // A new texture per curve: three recompiles its background material only for a new texture or a new
-  // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
+  // A colour draws as a texture, not a clear, since three's clear skips the fog (`colorBackground.ts`).
   useEffect(() => {
     if (showsColor) {
       const textureAt = (factor: number) => {
@@ -196,20 +185,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
       };
     }
     return undefined;
-  }, [
-    scene,
-    environment,
-    showsColor,
-    mode,
-    backgroundColor,
-    backgroundEnergy,
-    exposure,
-    hasSky,
-    hasFog,
-    curveMode,
-    curveWhite,
-    curveAgxContrast,
-  ]);
+  }, [scene, environment, showsColor, mode, backgroundColor, backgroundEnergy, exposure, hasSky, hasFog]);
 }
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };

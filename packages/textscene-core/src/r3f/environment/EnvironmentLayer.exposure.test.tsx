@@ -1,7 +1,7 @@
 /**
  * Godot scales a colour background by the exposure in sRGB, before it converts the colour to linear
  * (`render_forward_clustered.cpp:1988-2011`). It scales no flat ambient (`render_scene_data_rd.cpp:174-190`).
- * Markers stand in for the layers that need a real GL context.
+ * A marker stands in for the fog, whose own tests draw it.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -12,14 +12,12 @@ import { WorldExposureScope, usePublishCameraAttributes } from './worldExposure'
 import { drawAtExposure } from '../exposure/sceneExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { NO_RESOURCES } from '../SceneResourcesContext';
-import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
 import { shownAmbientLights } from '../testing/ambientLights';
 
-vi.mock('./Compositor', () => ({ Compositor: () => <group name="Compositor" /> }));
 vi.mock('../fog/FogLayer', () => ({ FogLayer: () => <group name="FogLayer" /> }));
 
 function Exposure({ multiplier }: { multiplier: number }) {
@@ -39,7 +37,6 @@ function layer(properties: Record<string, string>, multiplier: number | null) {
           <EnvironmentLayer
             settings={environmentSettingsOf(properties)}
             sky={null}
-            resources={NO_RESOURCES}
             skyResources={NO_RESOURCES}
           />
         </WorldExposureScope>
@@ -48,11 +45,8 @@ function layer(properties: Record<string, string>, multiplier: number | null) {
   );
 }
 
-async function mount(properties: Record<string, string>, multiplier: number | null, hasGlContext = false) {
-  const renderer = await ReactThreeTestRenderer.create(
-    layer(properties, multiplier),
-    hasGlContext ? { gl: rendererOver(fakeWebGL2Context()) } : undefined
-  );
+async function mount(properties: Record<string, string>, multiplier: number | null) {
+  const renderer = await ReactThreeTestRenderer.create(layer(properties, multiplier));
   return { renderer, scene: renderer.scene.instance as THREE.Scene };
 }
 
@@ -129,8 +123,7 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
   it('scales the colour of a fogged background and its brightness, as Godot scales both', async () => {
     const { scene } = await mount(
       { ...BACKGROUND_COLOR, background_energy_multiplier: '2', fog_enabled: 'true' },
-      2,
-      true
+      2
     );
     const linearTwice = sRGBToLinearRGB(...sRGBToLinearRGB(0.2 * 2 * 2, 0.2 * 2 * 2, 0.2 * 2 * 2));
     const [red] = textureTexel(scene.background as THREE.DataTexture);

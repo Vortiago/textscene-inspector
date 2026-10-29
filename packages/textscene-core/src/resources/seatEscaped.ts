@@ -8,16 +8,12 @@
 import type { SceneScope } from '../parser/types';
 import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
 import { graftAt, placementKey } from './graftInstanceChildren';
-import {
-  endAboveRoot,
-  nodeAt,
-  OUTSIDE,
-  replacedAt,
-  subPathSegments,
-  type ClaimedPath,
-} from './instanceNameTable';
+import { endAboveRoot, OUTSIDE, subPathSegments, type ClaimedPath } from './instanceNameTable';
+import type { HandOffDecision } from '../parser/nodeOwner';
+import { handsOffOwner, withHandOffsSettled } from './ownerHandOff';
+import { nodeAt, replacedAt } from './liveTreeIndex';
 import { reRootedName } from '../godot/scene/packedScene';
-import { simplifiedNodePath } from '../godot/string/nodePath';
+import { simplifiedLivePath } from '../parser/idTrail';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
 import { joinPath, SCENE_ROOT_PATH } from '../utils/nodePath';
 import { perObject } from '../utils/perObject';
@@ -40,17 +36,22 @@ interface SeatedFrame {
   readonly root: LiveNode;
   /** The children that left the frame: a walk that ended above its root, or found nothing. */
   readonly escaped: readonly EscapedChild[];
+  /** What the frame's instances decided for each hand-off their settings carry, which the file settles. */
+  readonly handOffDecisions: readonly HandOffDecision[];
 }
 
 /**
- * Whether a node below `node` states an `instanceSubPath` or a `parentContentTrail`: a host child
- * that an instance's graft may fail to seat. A tree without one takes no part in seating.
+ * Whether an instance at or below `node` may hand the frame something back: a host child below it
+ * that states an `instanceSubPath` or a `parentContentTrail`, which its graft may fail to seat, or a
+ * setting with an owner hand-off. A tree without one takes no part in seating.
  */
-export const holdsDeepChildren = perObject((node: LiveNode): boolean =>
-  node.children.some(
-    (child) =>
-      Boolean(child.instanceSubPath) || child.parentContentTrail !== undefined || holdsDeepChildren(child)
-  )
+export const mayHandBack = perObject(
+  (node: LiveNode): boolean =>
+    handsOffOwner(node) ||
+    node.children.some(
+      (child) =>
+        Boolean(child.instanceSubPath) || child.parentContentTrail !== undefined || mayHandBack(child)
+    )
 );
 
 /** An instance node of the tree with host children that may escape it, where it sits and in which scope. */
@@ -69,7 +70,9 @@ interface Pending {
  *   Call it where a tree's instances collapse. The live tree and the merge both do.
  */
 export function seatInFile(frame: Frame, collapse: CollapseInstance): LiveNode {
-  return seatFrame(frame, collapse, true).root;
+  const children = withHandOffsSettled(frame.root.children, frame.scope, collapse);
+  const root = children === frame.root.children ? frame.root : { ...frame.root, children };
+  return seatFrame({ ...frame, root }, collapse, true).root;
 }
 
 /** `frame` with the children of its instances seated, and the children that its own instance passes on. */
@@ -82,6 +85,7 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
   const handedHosts = new Set(frame.handedBack.map(({ child }) => hostChildOf(child)));
   let tree = withoutHostChildren(frame.root, handedHosts).children;
   const leftovers: EscapedChild[] = [];
+  const handOffDecisions: HandOffDecision[] = [];
   const seatedHostChildren = new Set<LiveNode>();
   const done = new Set<LiveNode>();
 
@@ -118,7 +122,9 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
     pending = nextPending(tree, frame.scope, done)
   ) {
     done.add(pending.node);
-    const escapes = collapse(pending.node, pending.groupScope).escaped ?? [];
+    const collapsed = collapse(pending.node, pending.groupScope);
+    handOffDecisions.push(...(collapsed.handOffDecisions ?? []));
+    const escapes = collapsed.escaped ?? [];
     if (escapes.length === 0) continue;
     const placements = new Map<string, string>();
     for (const escape of escapes) {
@@ -136,9 +142,10 @@ function seatFrame(frame: Frame, collapse: CollapseInstance, isFileRoot: boolean
     tree = replacedAt(tree, pending.names, () => stripped);
   }
 
-  if (tree === frame.root.children && leftovers.length === 0) return { root: frame.root, escaped: [] };
+  if (tree === frame.root.children && leftovers.length === 0)
+    return { root: frame.root, escaped: [], handOffDecisions };
   const { escaped: _graft, ...root } = frame.root;
-  return { root: { ...root, children: tree }, escaped: leftovers };
+  return { root: { ...root, children: tree }, escaped: leftovers, handOffDecisions };
 }
 
 /** Where a child that this frame could not place goes on from it: the frame is an instance, whose owner sits above. */
@@ -154,7 +161,7 @@ function leftoverEnd(walkEnd: string | null, claimed: ClaimedPath): string | nul
  */
 function endInFrame(end: string | null, from: readonly string[]): string | null {
   if (end === null) return null;
-  const simplified = simplifiedNodePath(joinPath(from.join('/'), end));
+  const simplified = simplifiedLivePath(joinPath(from.join('/'), end));
   return simplified === '.' ? SCENE_ROOT_PATH : simplified;
 }
 
@@ -252,7 +259,7 @@ function withPlacements(node: LiveNode, placements: ReadonlyMap<string, string>)
   return { ...node, seatedPlacements: new Map([...(node.seatedPlacements ?? []), ...placements]) };
 }
 
-/** The first instance in `nodes`, in tree order, that holds deep children and is not done yet. */
+/** The first instance in `nodes`, in tree order, that may hand something back and is not done yet. */
 function nextPending(
   nodes: readonly LiveNode[],
   groupScope: SceneScope,
@@ -260,7 +267,7 @@ function nextPending(
   above: readonly string[] = []
 ): Pending | undefined {
   for (const node of nodes) {
-    if (!holdsDeepChildren(node)) continue;
+    if (!mayHandBack(node)) continue;
     const names = [...above, node.name];
     if (!node.instance) {
       const deeper = nextPending(node.children, scopeOf(node, groupScope), done, names);

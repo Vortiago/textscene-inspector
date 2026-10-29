@@ -2,8 +2,8 @@
  * The Environment a viewport pass tonemaps its 3D render with. Godot's tonemap pass reads the
  * environment its render forces: the camera's, else that of the scenario the viewport renders
  * (`renderer_scene_cull.cpp:3594-3613`), the world `find_world_3d()` resolves
- * (`viewport.cpp:4670-4681`). `ViewportPassEnvironment` provides it, and a SubViewport's tonemap
- * pass reads it.
+ * (`viewport.cpp:4670-4681`). `ViewportPassEnvironment` provides it, and each viewport's tonemap
+ * pass reads it (`toneMapPass.ts`).
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';

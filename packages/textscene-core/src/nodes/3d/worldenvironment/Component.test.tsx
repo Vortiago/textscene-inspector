@@ -56,14 +56,14 @@ describe('<WorldEnvironment>', () => {
     expect(new THREE.Color().fromArray(texel).getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 
-  it('leaves the scene without fog in a canvas with no GL context, which the fog passes need', async () => {
+  it('draws the depth fog of fog_enabled', async () => {
     const node = makeNode('SubResource("Env_2")');
     const resource = environmentResource('Env_2', {
       fog_enabled: 'true',
       fog_density: '0.1',
     });
     const renderer = await render(node, [resource]);
-    expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
   });
 
   it('renders nothing extra when environment reference is missing', async () => {

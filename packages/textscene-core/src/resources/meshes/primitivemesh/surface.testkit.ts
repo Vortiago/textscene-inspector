@@ -14,6 +14,14 @@ export function vertexOf(array: ArrayLike<number> | undefined, vertex: number, s
   return Array.from({ length: size }, (_, i) => array![vertex * size + i]!);
 }
 
+/** The bone indices and weights of vertex `vertex`. */
+export function bonesOf(surface: GodotSurface, vertex: number) {
+  return {
+    indices: vertexOf(surface.bones?.indices, vertex, 4),
+    weights: vertexOf(surface.bones?.weights, vertex, 4),
+  };
+}
+
 /** Every position of the surface, one `[x, y, z]` per vertex. */
 export function pointsOf(surface: GodotSurface): number[][] {
   return Array.from({ length: surface.positions.length / 3 }, (_, v) => vertexOf(surface.positions, v));

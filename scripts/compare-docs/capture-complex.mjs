@@ -56,6 +56,8 @@ export const COMPLEX_SCENES = [
     mode: '3d',
     godot: 'scenes/demos/3d/platformer/game.tscn',
     ours: 'demos/3d/platformer/game.tscn',
+    // The GridMap's instanced tiles take seconds a frame under SwiftShader.
+    settleTimeout: 120000,
   },
   {
     // Both sides look through the scene's Camera3D (`?camera=` on ours), not

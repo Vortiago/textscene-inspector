@@ -324,7 +324,7 @@ function oneOf(flag, allowed, raw) {
   return value;
 }
 
-function vec3(flag, raw) {
+export function vec3(flag, raw) {
   const parts = String(raw)
     .split(',')
     .map((n) => Number(n.trim()));
