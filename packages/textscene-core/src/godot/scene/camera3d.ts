@@ -38,24 +38,11 @@ export const CAMERA_3D_KEEP_ASPECT_HINT_NAMES = labelEnumNames(Camera3DKeepAspec
 });
 
 /**
- * The camera a viewport renders through, from its cameras in tree order. Each one entering the
- * tree claims the viewport when it is `current` or the first (`camera_3d.cpp:189-190`), and a
- * claim overwrites (`viewport.cpp:4565`), so the last `current` wins, or else the first.
- *
- * @canonical The camera a viewport renders through
- */
-export function electViewportCamera<T>(cameras: readonly T[], isCurrent: (camera: T) => boolean): T | null {
-  let lastCurrent: T | null = null;
-  for (const camera of cameras) {
-    if (isCurrent(camera)) lastCurrent = camera;
-  }
-  return lastCurrent ?? cameras[0] ?? null;
-}
-
-/**
  * The camera `viewportPath` renders through, from the cameras of its world in tree order. A camera
  * belongs to its nearest viewport above it, null for the root viewport, so a camera of a nested
- * viewport never claims the outer one (`camera_3d.cpp`, `NOTIFICATION_ENTER_WORLD`).
+ * viewport never claims the outer one (`camera_3d.cpp`, `NOTIFICATION_ENTER_WORLD`). Each camera
+ * entering the tree claims its viewport when it is `current` or the first (`camera_3d.cpp:189-190`),
+ * and a claim overwrites (`viewport.cpp:4565`), so the last `current` wins, or else the first.
  *
  * @canonical The camera a viewport renders through
  */
@@ -63,8 +50,10 @@ export function electCameraOfViewport<T extends { viewport: string | null; curre
   cameras: readonly T[],
   viewportPath: string | null
 ): T | null {
-  return electViewportCamera(
-    cameras.filter((camera) => camera.viewport === viewportPath),
-    (camera) => camera.current
-  );
+  const own = cameras.filter((camera) => camera.viewport === viewportPath);
+  let lastCurrent: T | null = null;
+  for (const camera of own) {
+    if (camera.current) lastCurrent = camera;
+  }
+  return lastCurrent ?? own[0] ?? null;
 }

@@ -4,7 +4,6 @@ import {
   CAMERA_3D_KEEP_ASPECT_NAMES,
   CAMERA_3D_PROJECTION_HINT_NAMES,
   CAMERA_3D_PROJECTION_NAMES,
-  electViewportCamera,
   electCameraOfViewport,
 } from './camera3d.js';
 
@@ -23,31 +22,6 @@ describe('Camera3D enum label tables', () => {
 
   it('labels the keep-aspect modes as the inspector hint does (camera_3d.cpp:672)', () => {
     expect(CAMERA_3D_KEEP_ASPECT_HINT_NAMES).toEqual({ 0: 'Keep Width', 1: 'Keep Height' });
-  });
-});
-
-describe('electViewportCamera', () => {
-  const camera = (name: string, current = false) => ({ name, current });
-  const elect = (cameras: { name: string; current: boolean }[]) =>
-    electViewportCamera(cameras, (candidate) => candidate.current);
-
-  it('answers none for a viewport without a camera', () => {
-    expect(elect([])).toBeNull();
-  });
-
-  it('answers the first camera when none is current (camera_3d.cpp:189-190, first_camera)', () => {
-    const [first, second] = [camera('first'), camera('second')];
-    expect(elect([first, second])).toBe(first);
-  });
-
-  it('answers a current camera over an earlier one (camera_3d.cpp:190)', () => {
-    const current = camera('current', true);
-    expect(elect([camera('first'), current])).toBe(current);
-  });
-
-  it('answers the last of two current cameras, since a claim overwrites (viewport.cpp:4565)', () => {
-    const last = camera('last', true);
-    expect(elect([camera('early', true), last])).toBe(last);
   });
 });
 
@@ -75,5 +49,19 @@ describe('electCameraOfViewport', () => {
     expect(electCameraOfViewport([camera('Root/View'), current, camera('Root/View')], 'Root/View')).toBe(
       current
     );
+  });
+
+  it('answers none for a viewport without a camera', () => {
+    expect(electCameraOfViewport([], null)).toBeNull();
+  });
+
+  it('answers the first camera when none is current (camera_3d.cpp:189-190, first_camera)', () => {
+    const [first, second] = [camera('Root/View'), camera('Root/View')];
+    expect(electCameraOfViewport([first, second], 'Root/View')).toBe(first);
+  });
+
+  it('answers the last of two current cameras, since a claim overwrites (viewport.cpp:4565)', () => {
+    const last = camera('Root/View', true);
+    expect(electCameraOfViewport([camera('Root/View', true), last], 'Root/View')).toBe(last);
   });
 });
