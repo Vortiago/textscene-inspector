@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { isBlended, surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
+import { surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
 import {
   DROPS_ALBEDO_ALPHA,
   PROGRAM_OF_TYPE,
@@ -15,23 +15,13 @@ const CUT: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: true }
 
 const ADDITIVE = { transparent: false, blending: THREE.AdditiveBlending };
 
-describe('isBlended', () => {
-  it('blends a transparent surface under the default blending', () => {
-    expect(isBlended({ transparent: true })).toBe(true);
-  });
-
-  it('writes an opaque surface under NormalBlending unblended', () => {
-    expect(isBlended({ transparent: false, blending: THREE.NormalBlending })).toBe(false);
-  });
-
-  it('writes NoBlending unblended even when transparent', () => {
-    expect(isBlended({ transparent: true, blending: THREE.NoBlending })).toBe(false);
-  });
-});
-
 describe('surfaceAlphaProps', () => {
   it('adds nothing to an unblended surface, which three writes at alpha 1', () => {
     expect(surfaceAlphaProps(CUT, { transparent: false })).toEqual({});
+  });
+
+  it('adds nothing to a NoBlending surface, even when transparent', () => {
+    expect(surfaceAlphaProps(CUT, { transparent: true, blending: THREE.NoBlending })).toEqual({});
   });
 
   it('overwrites past the cut of a blended MIX surface', () => {

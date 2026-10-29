@@ -8,7 +8,6 @@ import { findEagerLazyOnlyInputs } from './webviewBudget.mjs';
 const LTC_TABLE = '../../packages/textscene-core/dist/godot/rendering/lights/ltcTable.generated.js';
 const FASTNOISE =
   '../../node_modules/.pnpm/fastnoise-lite@1.1.1/node_modules/fastnoise-lite/FastNoiseLite.js';
-const N8AO = '../../node_modules/.pnpm/n8ao@1.10.1/node_modules/n8ao/dist/N8AO.js';
 const PARSER = '../../packages/textscene-core/dist/parser/sceneTreeBuilder.js';
 const PANEL = '../../packages/textscene-core/dist/r3f/components/SceneTreeViewer/SceneTreeViewer.js';
 
@@ -25,11 +24,10 @@ function metafile(outputs) {
 
 describe('findEagerLazyOnlyInputs', () => {
   it('names each lazy-only module that a closure file holds', () => {
-    const meta = metafile({ 'webview.js': [PARSER, LTC_TABLE], 'chunks/chunk-A.js': [FASTNOISE, N8AO] });
+    const meta = metafile({ 'webview.js': [PARSER, LTC_TABLE], 'chunks/chunk-A.js': [FASTNOISE] });
     expect(findEagerLazyOnlyInputs(meta, new Set(['webview.js', 'chunks/chunk-A.js']))).toEqual([
       LTC_TABLE,
       FASTNOISE,
-      N8AO,
     ]);
   });
 

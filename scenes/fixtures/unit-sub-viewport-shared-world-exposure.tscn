@@ -1,8 +1,7 @@
 ; One variable: `tonemap_exposure` 1.5 under LINEAR inside a shared-world SubViewport's target,
-; while glow mounts the compositor on the main view. Godot tonemaps the target with the environment
-; of its `find_world_3d()`, so the exposure applies inside the target and again on the quad that
-; samples it. `sub-viewport-texture` keeps the default exposure, and no other golden renders a
-; shared-world target while the compositor holds the renderer.
+; with glow on the main view. Godot tonemaps the target with the environment of its
+; `find_world_3d()`, so the exposure applies inside the target and again on the quad that samples
+; it. `sub-viewport-texture` keeps the default exposure.
 
 [gd_scene format=3]
 

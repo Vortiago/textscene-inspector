@@ -1,6 +1,5 @@
-; One variable: an own-world SubViewport whose Environment enables glow, which needs the
-; compositor. Only the root world mounts the compositor: a portal store shares the root's state, so
-; a sub-viewport compositor draws the portal scene through the root camera onto the canvas. Every
+; One variable: an own-world SubViewport whose Environment enables glow. The viewport's own
+; tonemap pass draws that glow into its target, so the root's canvas stays without it. Every
 ; other glow golden has one world, and no other own-world golden has an Environment.
 
 [gd_scene format=3]
