@@ -38,6 +38,13 @@ import type { Gradient } from '../../../../resources/textures/gradienttexture2d/
 import { sampleGradientColor } from '../../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, randFromSeed, type SeedRef } from '../../../shared/cpuparticles/godotRng';
 import {
+  colorAt,
+  colorCount,
+  pickPoint,
+  previewProcessRng,
+  turnedByNormal,
+} from '../../../shared/cpuparticles/emissionPoints';
+import {
   basisDeterminant,
   CMP_EPSILON,
   degToRad,
@@ -135,8 +142,6 @@ const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
 /** `Color()`, which a never-born particle's colours hold (`color.h`). */
 const DEFAULT_COLOR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
 const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 });
-/** The floats of one colour in a `PackedColorArray`. */
-const FLOATS_PER_COLOR = 4;
 const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 interface SimState {
@@ -146,12 +151,8 @@ interface SimState {
   particles: Particle[];
   seed: number;
   rng: GodotRandomPCG;
-  /**
-   * Stands in for `Math::rand()`, which picks each POINTS particle's point. Godot's stream is
-   * process-wide and seeded from the clock (`scene_tree.cpp:2038`), so no scene fixes the pick, and a
-   * fixed seed keeps the render byte-stable.
-   */
-  pointPicks: GodotRandomPCG;
+  /** `Math::rand()`, which picks each POINTS particle's point: see {@link previewProcessRng}. */
+  processRng: GodotRandomPCG;
   /** `emission_xform`: the global transform, or the identity for a local-coords emitter. */
   emissionXform: Transform3D;
 }
@@ -181,7 +182,7 @@ export function settleParticles(input: ParticleSim3DInput): SettledParticles {
     particles: Array.from({ length: sim.amount }, newParticle),
     seed: (sim.useFixedSeed ? sim.seed : DEFAULT_PREVIEW_SEED) >>> 0,
     rng: new GodotRandomPCG(0),
-    pointPicks: new GodotRandomPCG(DEFAULT_PREVIEW_SEED),
+    processRng: previewProcessRng(),
     emissionXform: sim.localCoords ? identityTransform3D() : input.emissionTransform,
   };
   settle(sim, (frameTime) => particlesProcess(state, input, frameTime));
@@ -397,8 +398,8 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
  */
 function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle): number | null {
   const count = vectorCount(sim.emissionPoints);
-  if (count === 0) return null;
-  const index = state.pointPicks.rand() % count;
+  const index = pickPoint(state.processRng, count);
+  if (index === null) return null;
   p.origin = vectorAt(sim.emissionPoints, index);
   if (colorCount(sim.emissionColors) === count) p.baseColor = colorAt(sim.emissionColors, index);
   return index;
@@ -409,15 +410,7 @@ function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle
  * `disable_z` emitter, else into the tangent frame whose third axis is the normal.
  */
 function directedVelocity(sim: CPUParticles3DSimulation, normal: Vector3, velocity: Vector3): Vector3 {
-  if (sim.disableZ) {
-    // `Transform2D` columns `normal_2d` and `normal_2d.orthogonal()`, through `basis_xform`. Not
-    // transform2DXform: its zero origin turns a -0 into a +0, and `basis_xform` adds no origin.
-    return {
-      x: f(f(normal.x * velocity.x) + f(normal.y * velocity.y)),
-      y: f(f(normal.y * velocity.x) + f(-normal.x * velocity.y)),
-      z: velocity.z,
-    };
-  }
+  if (sim.disableZ) return { ...turnedByNormal(normal, velocity), z: velocity.z };
   const v0 = Math.abs(normal.z) < 0.999 ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
   const tangent = normalized(cross(v0, normal));
   const bitangent = normalized(cross(tangent, normal));
@@ -431,15 +424,6 @@ function vectorCount(flat: Float32Array): number {
 function vectorAt(flat: Float32Array, index: number): Vector3 {
   const at = index * FLOATS_PER_VERTEX;
   return { x: flat[at]!, y: flat[at + 1]!, z: flat[at + 2]! };
-}
-
-function colorCount(flat: Float32Array): number {
-  return flat.length / FLOATS_PER_COLOR;
-}
-
-function colorAt(flat: Float32Array, index: number): Rgba {
-  const at = index * FLOATS_PER_COLOR;
-  return { r: flat[at]!, g: flat[at + 1]!, b: flat[at + 2]!, a: flat[at + 3]! };
 }
 
 /** A point on the sphere of `radius`, from a height and an angle drawn in that order (`:888-899`). */

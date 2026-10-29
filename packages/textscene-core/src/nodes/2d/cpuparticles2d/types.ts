@@ -42,6 +42,12 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   emission_rect_extents: Vector2;
   emission_ring_radius: number;
   emission_ring_inner_radius: number;
+  /** `emission_points`, flat x, y pairs. POINTS and DIRECTED_POINTS place particles on them. */
+  emission_points: Float32Array;
+  /** `emission_normals`, flat x, y pairs, one for each point, that DIRECTED_POINTS turns along. */
+  emission_normals: Float32Array;
+  /** `emission_colors`, flat r, g, b, a, one for each point. */
+  emission_colors: Float32Array;
 
   /** `particle_flag_align_y`: orient each quad along its velocity. */
   particle_flag_align_y: boolean;

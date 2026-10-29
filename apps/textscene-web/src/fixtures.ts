@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Directed Points",
+    "file": "unit-cpuparticles2d-directed-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Emission Shapes",
     "file": "unit-cpuparticles2d-emission-shapes.tscn",
     "category": "Other"
@@ -438,13 +443,13 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Cpuparticles2d Unpreprocessed",
-    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
+    "name": "Cpuparticles2d Ring",
+    "file": "unit-cpuparticles2d-ring.tscn",
     "category": "Other"
   },
   {
-    "name": "Cpuparticles2d Unpreviewable",
-    "file": "unit-cpuparticles2d-unpreviewable.tscn",
+    "name": "Cpuparticles2d Unpreprocessed",
+    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
     "category": "Other"
   },
   {

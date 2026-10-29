@@ -37,6 +37,14 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from '../../shared/cpuparticles/godotRng';
+import {
+  colorAt,
+  colorCount,
+  pickPoint,
+  previewProcessRng,
+  turnedByNormal,
+} from '../../shared/cpuparticles/emissionPoints';
+import { DEFAULT_PREVIEW_SEED } from '../../shared/cpuparticles/process';
 import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
@@ -66,17 +74,13 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
 
 /**
- * The seed substituted when a scene does not set `use_fixed_seed`. Godot uses
- * `Math::rand()`, randomised in the constructor and unserialised, so any constant
- * is as faithful as another, and a constant makes this render byte-stable.
- */
-const DEFAULT_PREVIEW_SEED = 0;
-
-/**
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
  * million iterations before the first paint. Real emitters need tens of steps.
  */
 const MAX_SIM_STEPS = 4096;
+
+/** The floats of one point in a `PackedVector2Array`. */
+const FLOATS_PER_VECTOR2 = 2;
 
 /** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
 type ParticleCurves = ReadonlyArray<Curve | null>;
@@ -177,6 +181,7 @@ export function simulateFrozenPose(authored: ParticleSimInput): RenderedParticle
     lifetime,
     seed: (props.use_fixed_seed ? props.seed : DEFAULT_PREVIEW_SEED) >>> 0,
     rng: new GodotRandomPCG(0),
+    processRng: previewProcessRng(),
     emissionXform: props.local_coords ? TRANSFORM2D_IDENTITY : input.emissionTransform,
   };
 
@@ -211,6 +216,8 @@ function storedInput(input: ParticleSimInput): ParticleSimInput {
       gravity: storedVector2(props.gravity),
       emission_sphere_radius: f(props.emission_sphere_radius),
       emission_rect_extents: storedVector2(props.emission_rect_extents),
+      emission_ring_radius: f(props.emission_ring_radius),
+      emission_ring_inner_radius: f(props.emission_ring_inner_radius),
       color: storedColor(props.color),
       params: props.params.map((param) => ({ ...param, min: f(param.min), max: f(param.max) })),
     },
@@ -228,6 +235,8 @@ interface SimState {
   lifetime: number;
   seed: number;
   rng: GodotRandomPCG;
+  /** `Math::rand()` and `Math::randf()`, for the POINTS pick and the RING place: see {@link previewProcessRng}. */
+  processRng: GodotRandomPCG;
   emissionXform: Transform2DColumns;
 }
 
@@ -445,15 +454,12 @@ function restartParticle(
   p.lifetime = state.lifetime * p.custom[3];
   p.baseColor = { r: 1, g: 1, b: 1, a: 1 };
 
-  emitAtShape(props, p, rng);
+  emitAtShape(props, state, p);
 }
 
-/**
- * The emission-shape offset. POINTS / DIRECTED_POINTS / RING draw from Godot's
- * unserialised global RNG (`cpu_particles_2d.cpp:975, 992, 995`), so no frozen
- * pose can match them, and the linter reports them instead.
- */
-function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRandomPCG): void {
+/** The emission-shape offset (`cpu_particles_2d.cpp:912-962`). */
+function emitAtShape(props: CPUParticles2DProperties, state: SimState, p: Particle): void {
+  const { rng } = state;
   switch (props.emission_shape) {
     case CPUParticles2DEmissionShape.SPHERE: {
       const t = f(TAU * rng.randf());
@@ -481,10 +487,53 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
       p.transform.ty = f(y * props.emission_rect_extents.y);
       break;
     }
+    case CPUParticles2DEmissionShape.POINTS:
+    case CPUParticles2DEmissionShape.DIRECTED_POINTS:
+      emitAtPoint(props, state, p);
+      break;
+    case CPUParticles2DEmissionShape.RING:
+      emitOnRing(props, state.processRng, p);
+      break;
     default:
-      // Point, and the three unpreviewable shapes, all leave the origin alone.
+      // POINT emits from the origin, which `restartParticle` sets before the switch.
       break;
   }
+}
+
+/**
+ * Places `p` on one of `emission_points`, turns a DIRECTED_POINTS velocity along that point's
+ * normal, and takes its colour, each only when every point has one (`:929-950`).
+ */
+function emitAtPoint(props: CPUParticles2DProperties, state: SimState, p: Particle): void {
+  const count = vector2Count(props.emission_points);
+  const index = pickPoint(state.processRng, count);
+  if (index === null) return;
+  const point = vector2At(props.emission_points, index);
+  p.transform.tx = point.x;
+  p.transform.ty = point.y;
+  const isDirected = props.emission_shape === CPUParticles2DEmissionShape.DIRECTED_POINTS;
+  if (isDirected && vector2Count(props.emission_normals) === count)
+    p.velocity = turnedByNormal(vector2At(props.emission_normals, index), p.velocity);
+  if (colorCount(props.emission_colors) === count) p.baseColor = colorAt(props.emission_colors, index);
+}
+
+/** A place in the ring, from two draws of Godot's process-wide `Math::randf()` (`:952-957`). */
+function emitOnRing(props: CPUParticles2DProperties, processRng: GodotRandomPCG, p: Particle): void {
+  const t = f(TAU * processRng.randf());
+  const outerSquared = f(props.emission_ring_radius * props.emission_ring_radius);
+  const innerSquared = f(props.emission_ring_inner_radius * props.emission_ring_inner_radius);
+  const radius = f(Math.sqrt(f(f(processRng.randf() * f(outerSquared - innerSquared)) + innerSquared)));
+  p.transform.tx = f(f(Math.cos(t)) * radius);
+  p.transform.ty = f(f(Math.sin(t)) * radius);
+}
+
+function vector2Count(flat: Float32Array): number {
+  return flat.length / FLOATS_PER_VECTOR2;
+}
+
+function vector2At(flat: Float32Array, index: number): Vector2 {
+  const at = index * FLOATS_PER_VECTOR2;
+  return { x: flat[at]!, y: flat[at + 1]! };
 }
 
 /** The alive branch: integrate one step, returning the normalised age `tv`. */

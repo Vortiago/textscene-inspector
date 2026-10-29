@@ -741,3 +741,80 @@ describe('the simulation in real_t float (cpu_particles_2d.cpp:765-1112)', () =>
     });
   });
 });
+
+describe('the POINTS, DIRECTED_POINTS and RING shapes', () => {
+  /** Still particles, so each sits where it was born. */
+  const STILL = { gravity: 'Vector2(0, 0)', initial_velocity_min: '0', initial_velocity_max: '0' };
+  const POINTS = [
+    { x: 10, y: -5 },
+    { x: -20, y: 0 },
+    { x: 0, y: 30 },
+  ];
+  const FLAT_POINTS = 'PackedVector2Array(10, -5, -20, 0, 0, 30)';
+
+  /** Every particle born on the first step, so none still waits at the origin. */
+  function pose(overrides: Record<string, string>) {
+    return simulateFrozenPose(
+      input({ props: props({ amount: '24', explosiveness: '1', preprocess: '0.033', ...overrides }) })
+    );
+  }
+
+  it('places every POINTS particle on one of the points, with that point colour (happy path)', () => {
+    const particles = pose({
+      ...STILL,
+      emission_shape: '4',
+      emission_points: FLAT_POINTS,
+      emission_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)',
+    });
+    for (const { transform, color } of particles) {
+      const index = POINTS.findIndex(({ x, y }) => x === transform.tx && y === transform.ty);
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect([color.r, color.g, color.b][index]).toBeGreaterThan(0.9);
+    }
+    expect(new Set(particles.map(({ transform }) => transform.tx))).toEqual(new Set([10, -20, 0]));
+  });
+
+  it('keeps the colour when the colours do not match the points one for one (edge case)', () => {
+    const particles = pose({
+      ...STILL,
+      emission_shape: '4',
+      emission_points: FLAT_POINTS,
+      emission_colors: 'PackedColorArray(1, 0, 0, 1)',
+    });
+    expect(particles.every(({ color }) => color.r > 0.9 && color.g > 0.9 && color.b > 0.9)).toBe(true);
+  });
+
+  it('emits from the origin for POINTS with no points (edge case)', () => {
+    const particles = pose({ ...STILL, emission_shape: '4' });
+    expect(particles.every(({ transform }) => transform.tx === 0 && transform.ty === 0)).toBe(true);
+  });
+
+  it("turns a DIRECTED_POINTS velocity into the point's normal", () => {
+    // Direction +x through the frame (normal, normal.orthogonal()) of normal +y moves along +y.
+    const [particle] = pose({
+      amount: '1',
+      gravity: 'Vector2(0, 0)',
+      spread: '0',
+      initial_velocity_min: '60',
+      initial_velocity_max: '60',
+      emission_shape: '5',
+      emission_points: 'PackedVector2Array(10, -5)',
+      emission_normals: 'PackedVector2Array(0, 1)',
+    });
+    expect(particle!.transform.tx).toBe(10);
+    expect(particle!.transform.ty).toBeGreaterThan(-5);
+  });
+
+  it('places every RING particle between the inner and the outer radius', () => {
+    const particles = pose({
+      ...STILL,
+      emission_shape: '6',
+      emission_ring_radius: '40',
+      emission_ring_inner_radius: '25',
+    });
+    const radii = particles.map(({ transform }) => Math.hypot(transform.tx, transform.ty));
+    expect(Math.min(...radii)).toBeGreaterThanOrEqual(24.999);
+    expect(Math.max(...radii)).toBeLessThanOrEqual(40.001);
+    expect(new Set(radii).size).toBe(particles.length);
+  });
+});

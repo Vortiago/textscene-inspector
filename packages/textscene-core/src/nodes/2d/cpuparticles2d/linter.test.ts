@@ -1,6 +1,6 @@
 /**
- * CPUParticles2D semantic rules: the advisories for the settings the frozen pose
- * cannot reproduce, and the warning for a `*_min` above its `*_max`.
+ * CPUParticles2D semantic rules: the advisory for a bound the previewer cannot draw, and the
+ * warning for a `*_min` above its `*_max`.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
 } from '../../../linter/testing/testkit';
-import { errorsOf, reportsOf } from '../../../linter/testing/tierLists';
+import { errorsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
 import './linter';
 
@@ -33,60 +33,15 @@ describe('CPUParticles2D preview rule', () => {
     expect(diagnostics).toEqual([]);
   });
 
-  it.each([
-    ['4', 'POINTS'],
-    ['5', 'DIRECTED_POINTS'],
-    ['6', 'RING'],
-  ])('reports at info that emission_shape = %s (%s) draws from the global RNG', (value, label) => {
-    const content = scene(`emission_shape = ${value}\n`);
-    expect(namesOf(content)).toContain('cpuparticles2d-nondeterministic-emission-shape');
-    expect(
-      reportsOf(linter.lint(content), 'cpuparticles2d-nondeterministic-emission-shape', 'info')
-    ).toHaveLength(1);
-    expect(linter.lint(content)[0]!.message).toContain(label);
-  });
-
-  it.each(['4.0', '4e0', ' 4 ', '5.9'])(
-    'reports at info that `emission_shape = %s` is stored as a global-RNG shape',
+  it.each(['0', '1', '2', '3', '4', '5', '6'])(
+    'says nothing about emission_shape = %s, which the pose follows',
     (value) => {
-      // The tokenizer types `4.0`/`4e0` FLOAT (variant_parser.cpp:442-448), and
-      // `_to_int` (variant.h:369-370) truncates toward zero, so
-      // `set_emission_shape` (cpu_particles_2d.cpp:480-481) receives
-      // EMISSION_SHAPE_POINTS, as for `4`.
-      expect(namesOf(scene(`emission_shape = ${value}\n`))).toContain(
-        'cpuparticles2d-nondeterministic-emission-shape'
-      );
+      expect(linter.lint(scene(`emission_shape = ${value}\n`))).toEqual([]);
     }
   );
 
-  it('stays silent for `+4`, which Godot refuses to tokenize at all', () => {
-    // `get_token` takes a leading `-` and nothing else before a digit
-    // (variant_parser.cpp:420-423). A `+` reaches no branch and raises
-    // "Unexpected character" (:508), so the file does not load and this rule
-    // has no shape to report.
-    expect(namesOf(scene('emission_shape = +4\n'))).not.toContain(
-      'cpuparticles2d-nondeterministic-emission-shape'
-    );
-  });
-
-  it.each(['0', '1', '2', '3', '3.9', '0e0'])('stays silent for the previewable shape %s', (value) => {
-    expect(namesOf(scene(`emission_shape = ${value}\n`))).not.toContain(
-      'cpuparticles2d-nondeterministic-emission-shape'
-    );
-  });
-
   it('stays silent when `fract_delta` is explicitly enabled, since the pose honours it', () => {
     expect(namesOf(scene('fract_delta = true\n'))).toEqual([]);
-  });
-
-  it('never raises an ERROR for a global-RNG shape (severity contract)', () => {
-    const diagnostics = linter.lint(scene('emission_shape = 6\n'));
-    expect(errorsOf(diagnostics)).toEqual([]);
-  });
-
-  it('leaves other node types alone (edge case)', () => {
-    const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nemission_shape = 6\n`;
-    expect(namesOf(content)).not.toContain('cpuparticles2d-nondeterministic-emission-shape');
   });
 
   it('does not fire on an emitter with no properties at all (edge case)', () => {

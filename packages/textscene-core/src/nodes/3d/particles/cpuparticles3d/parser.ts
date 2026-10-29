@@ -19,12 +19,11 @@ import { storedColor } from '../../../../godot/math/real';
 import { CPUParticles3DDrawOrder } from '../../../../godot/scene/particles3d';
 import { readParticleEmission } from '../../../../resources/materials/particleprocessmaterial/emission';
 import { parseParticleAmount, parseParticleParams } from '../../../shared/cpuparticles/params';
+import { NO_FLOATS } from '../../../shared/cpuparticles/emissionPoints';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
 
 const DRAW_ORDERS = Object.values(CPUParticles3DDrawOrder);
-/** Godot's default for each emission array. Shared, since a zero-length array holds nothing to write. */
-const NO_FLOATS = new Float32Array(0);
 
 export function parseCPUParticles3D(
   heading: ParsedHeading,

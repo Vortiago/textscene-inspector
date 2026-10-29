@@ -80,20 +80,13 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   CPUParticles2D: {
     linterOnly: [
       ...PARTICLE_PARAM_KEYS,
-      // Only reachable for the POINTS and DIRECTED_POINTS emission shapes, which
-      // sample Godot's global RNG and so are deliberately not previewed.
-      'emission_colors',
-      // The same RNG-driven shapes, so the parser does not read their point
-      // data, but a malformed packed array is still worth reporting.
-      'emission_points',
-      'emission_normals',
       // Per-axis scale curves, not implemented; a particle scales uniformly.
       'split_scale',
       'scale_curve_x',
       'scale_curve_y',
     ],
     reason:
-      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; emission_points/normals/colors and the split-scale curves are validated but deliberately unrendered. draw_order is both parsed and validated now: its enum is 0-1 here, narrower than the 2D and 3D GPU twins, and out-of-range warns rather than errors because the setter bare-assigns.',
+      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; the split-scale curves are validated but unrendered. draw_order is both parsed and validated now: its enum is 0-1 here, narrower than the 2D and 3D GPU twins, and out-of-range warns rather than errors because the setter bare-assigns.',
   },
 
   TileMapLayer: {

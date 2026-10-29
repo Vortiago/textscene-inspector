@@ -55,6 +55,11 @@ describe('parseCPUParticles2D', () => {
     expect(result.emission_rect_extents).toEqual({ x: 1, y: 1 });
     expect(result.emission_ring_radius).toBe(1);
     expect(result.emission_ring_inner_radius).toBeCloseTo(0.8, 6);
+    expect([result.emission_points, result.emission_normals, result.emission_colors]).toEqual([
+      new Float32Array(0),
+      new Float32Array(0),
+      new Float32Array(0),
+    ]);
     expect(result.particle_flag_align_y).toBe(false);
     expect(result.gravity).toEqual({ x: 0, y: 980 });
     expect(result.color).toEqual({ r: 1, g: 1, b: 1, a: 1 });
@@ -206,5 +211,18 @@ describe('parseCPUParticles2D', () => {
     expect(result.parent).toBeUndefined();
     expect(result.position).toEqual({ x: 0, y: 0 });
     expect(result.amount).toBe(8);
+  });
+
+  it('reads the emission arrays the POINTS shapes place particles from', () => {
+    const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
+      emission_points: 'PackedVector2Array(10, -5, 0, 2.5)',
+      emission_normals: 'PackedVector2Array(0, 1, 1, 0)',
+      emission_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 0.5)',
+    });
+    expect([result.emission_points, result.emission_normals, result.emission_colors]).toEqual([
+      new Float32Array([10, -5, 0, 2.5]),
+      new Float32Array([0, 1, 1, 0]),
+      new Float32Array([1, 0, 0, 1, 0, 1, 0, 0.5]),
+    ]);
   });
 });

@@ -133,8 +133,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-cpuparticles2d-properties` | `cpuparticles2d-nondeterministic-emission-shape` | info |
-|  | `cpuparticles2d-non-finite-param-bound` | info |
+| `valid-cpuparticles2d-properties` | `cpuparticles2d-non-finite-param-bound` | info |
 |  | `cpuparticles2d-param-min-above-max` | warning |
 <!-- lint:end -->
 
@@ -158,5 +157,7 @@ A bound that is `inf` or `nan` is not read: the previewer keeps the default for 
   particles sit in plausible places where Godot randomises them on every run.
 - **Approximated** `split_scale`, `scale_curve_x` and `scale_curve_y` are not read, so a
   quad stretched on one axis draws square.
-- **Approximated** `emission_shape` POINTS, DIRECTED_POINTS and RING sample Godot's
-  process-wide RNG, so they emit from the origin here and raise a warning.
+- **Approximated** With more than one point in `emission_points`, the previewer picks from
+  the same set as Godot's unsaved process-wide RNG, but in another order.
+- **Approximated** A RING emitter fills the same ring as Godot, in other places: Godot's
+  unsaved process-wide RNG places each particle.

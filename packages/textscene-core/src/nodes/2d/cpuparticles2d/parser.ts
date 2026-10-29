@@ -6,11 +6,13 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, enumOr, floatOr, intOr, packedOr, vec2Or } from '../../../parser/valueParsers';
+import { parsePackedColorArray, parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { colorOr } from '../../../utils/colorParser';
 import type { CPUParticles2DProperties } from './types';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
 import { parseParticleAmount, parseParticleParams } from '../../shared/cpuparticles/params';
+import { NO_FLOATS } from '../../shared/cpuparticles/emissionPoints';
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,
@@ -62,6 +64,24 @@ export function parseCPUParticles2D(
     emission_rect_extents: vec2Or(properties.emission_rect_extents, { x: 1, y: 1 }, context),
     emission_ring_radius: floatOr(properties.emission_ring_radius, 1, context),
     emission_ring_inner_radius: floatOr(properties.emission_ring_inner_radius, 0.8, context),
+    emission_points: packedOr(
+      properties.emission_points,
+      parsePackedVector2Array,
+      NO_FLOATS,
+      `${context}.emission_points`
+    ),
+    emission_normals: packedOr(
+      properties.emission_normals,
+      parsePackedVector2Array,
+      NO_FLOATS,
+      `${context}.emission_normals`
+    ),
+    emission_colors: packedOr(
+      properties.emission_colors,
+      parsePackedColorArray,
+      NO_FLOATS,
+      `${context}.emission_colors`
+    ),
 
     particle_flag_align_y: boolOr(properties.particle_flag_align_y, false, context),
     direction: vec2Or(properties.direction, { x: 1, y: 0 }, `${context}.direction`),
