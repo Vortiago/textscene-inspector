@@ -7,8 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { curveOf, point } from '../../curves/curve/curve.testkit';
 import { EMPTY_CURVE } from '../../curves/curve/types';
-import { expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
-import type { GodotSurface } from '../godotSurface';
+import { bonesOf, expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
 import { buildRibbonTrailMeshSurface } from './build';
 import type { RibbonTrailMeshProperties } from './types';
 
@@ -33,14 +32,6 @@ const DEFAULT_RIBBON: RibbonTrailMeshProperties = {
   sectionSegments: 3,
   sectionLength: 0.2,
 };
-
-/** The bone indices and weights of vertex `vertex`. */
-function bonesOf(surface: GodotSurface, vertex: number) {
-  return {
-    indices: vertexOf(surface.bones?.indices, vertex, 4),
-    weights: vertexOf(surface.bones?.weights, vertex, 4),
-  };
-}
 
 describe('buildRibbonTrailMeshSurface', () => {
   describe('flat', () => {

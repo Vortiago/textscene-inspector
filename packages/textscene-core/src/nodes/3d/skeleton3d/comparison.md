@@ -40,7 +40,7 @@ The parser reads `show_rest_only` and the bone table: `name`, `parent`, `rest`, 
 ## Known limitations
 
 - **Needs runtime** Godot runs every SkeletonModifier3D type, but here only the bone pose and a CopyTransformModifier3D act.
-- **Approximated** Only a RibbonTrailMesh deforms, as no other mesh writes bone arrays, so every other mesh bound to a skeleton draws in its rest pose.
+- **Approximated** Only a RibbonTrailMesh and a TubeTrailMesh deform, as no other mesh writes bone arrays, so every other mesh bound to a skeleton draws in its rest pose.
 - **Approximated** A bone past the skin's last index collapses its vertices, where Godot's result depends on the GPU driver.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.
 - **Not drawn** A scene override of `show_rest_only`, `motion_scale` or `bones/*` on a `Skeleton3D` in an instanced GLB is ignored with a warning, where Godot reads it.
