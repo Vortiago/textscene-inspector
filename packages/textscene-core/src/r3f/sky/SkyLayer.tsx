@@ -21,7 +21,7 @@ import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { hideShownSky, SkyRadiance } from './skyRadiance';
-import { createEnvironmentSwitch } from './environmentSwitch';
+import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
 import { registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
@@ -108,7 +108,6 @@ export function SkyLayer({
     if (!built) return undefined;
 
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-    const environmentSwitch = createEnvironmentSwitch();
     const radiance = new SkyRadiance(gl, built.layers, {
       energy: intensity * exposure,
       rotation: skyRotation,
@@ -132,7 +131,7 @@ export function SkyLayer({
       const previousBackground = scene.background;
       const previousBackgroundIntensity = scene.backgroundIntensity;
       previousBackgroundRotation.copy(scene.backgroundRotation);
-      scene.environment = environmentSwitch;
+      scene.environment = ENVIRONMENT_SWITCH;
       // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
       const stopShowingRadiance = observeSceneCamera(scene, showRadiance);
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
@@ -161,7 +160,6 @@ export function SkyLayer({
     return () => {
       stopRegistering();
       radiance.hide();
-      environmentSwitch.dispose();
       built.dispose();
     };
   }, [

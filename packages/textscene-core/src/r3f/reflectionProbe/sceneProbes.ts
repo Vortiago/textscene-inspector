@@ -74,8 +74,12 @@ export class SceneProbes {
   private settledFrames = 0;
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
-  /** What the captures saw of the environment, which a sky that bakes later changes. */
-  private seen = { ownEnvironmentChanges: -1, clearColor: -1 };
+  /**
+   * What the captures saw of the environment, which a sky that bakes later changes: the change count
+   * of the world's own Environment and the clear colour. Written only by `markCapturesStale`.
+   */
+  private seenOwnEnvironmentChanges = -1;
+  private seenClearColor = -1;
   /**
    * The exposure each probe last captured at, written only by `capture`, and only while the world
    * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
@@ -178,12 +182,12 @@ export class SceneProbes {
    * A change of exposure marks none: Godot rescales the capture instead.
    */
   private markCapturesStale(clearColor: THREE.Color): void {
-    const now = { ownEnvironmentChanges: ownEnvironmentChanges(this.scene), clearColor: clearColor.getHex() };
-    const { seen } = this;
-    const hasNewEnvironment =
-      now.ownEnvironmentChanges !== seen.ownEnvironmentChanges || now.clearColor !== seen.clearColor;
+    const changes = ownEnvironmentChanges(this.scene);
+    const clearHex = clearColor.getHex();
+    const hasNewEnvironment = changes !== this.seenOwnEnvironmentChanges || clearHex !== this.seenClearColor;
     if (!this.hasNewContent && !hasNewEnvironment) return;
-    this.seen = now;
+    this.seenOwnEnvironmentChanges = changes;
+    this.seenClearColor = clearHex;
     this.hasNewContent = false;
     this.generation += 1;
   }

@@ -46,6 +46,11 @@ const environmentsOf = perObject((_scene: THREE.Scene): SceneEnvironments => ({
   onScene: [],
 }));
 
+/** Counts a change of `environment`, which a probe sees only for the world's own. */
+function noteChangeOf(environments: SceneEnvironments, environment: Environment | null): void {
+  if (environment !== null && environment === environments.own) environments.ownChanges += 1;
+}
+
 /** Takes the parts on the scene off, last first, then puts the parts of `environment` on. */
 function putOn(environments: SceneEnvironments, environment: Environment | null): void {
   const { onScene } = environments;
@@ -71,12 +76,12 @@ export function registerEnvironmentPart(
   const parts = environments.parts.get(environment) ?? new Set<EnvironmentPart>();
   environments.parts.set(environment, parts);
   parts.add(part);
-  if (environment === environments.own) environments.ownChanges += 1;
+  noteChangeOf(environments, environment);
   if (environments.applied === environment) environments.onScene.push({ part, takeOff: part() });
   return () => {
     parts.delete(part);
     if (parts.size === 0) environments.parts.delete(environment);
-    if (environment === environments.own) environments.ownChanges += 1;
+    noteChangeOf(environments, environment);
     const index = environments.onScene.findIndex((entry) => entry.part === part);
     if (index === -1) return;
     environments.onScene[index]!.takeOff();
@@ -158,11 +163,11 @@ export function useOwnEnvironment(environment: Environment | null): void {
   useLayoutEffect(() => {
     const environments = environmentsOf(scene);
     environments.own = environment;
-    environments.ownChanges += 1;
+    noteChangeOf(environments, environment);
     return () => {
       if (environments.own !== environment) return;
+      noteChangeOf(environments, environment);
       environments.own = null;
-      environments.ownChanges += 1;
     };
   }, [scene, environment]);
 }

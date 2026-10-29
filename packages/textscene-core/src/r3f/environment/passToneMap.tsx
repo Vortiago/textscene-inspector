@@ -13,42 +13,42 @@ import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 import { useAutoExposure } from './worldExposure';
 
 /** The Environment a viewport pass draws with, as its tonemap pass reads it. */
-interface WorldEnvironmentToneMap {
-  /** Null for a world with no Environment, whose pass keeps Godot's defaults: LINEAR at exposure 1. */
+interface PassEnvironmentToneMap {
+  /** Null for a pass with no Environment, which keeps Godot's defaults: LINEAR at exposure 1. */
   settings: EnvironmentSettings | null;
   /** The pools the Environment's own references, such as `glow_map`, resolve in. */
   resources: SceneResources;
 }
 
-/** What a tonemap pass reads of its world. */
-export interface WorldToneMap extends WorldEnvironmentToneMap {
-  /** Null when the world's camera attributes hold no auto exposure. */
+/** What a tonemap pass reads of its viewport pass. */
+export interface PassToneMap extends PassEnvironmentToneMap {
+  /** Null when the pass's camera attributes hold no auto exposure. */
   autoExposure: AutoExposure | null;
 }
 
-const WorldToneMapContext = createContext<WorldEnvironmentToneMap>({
+const PassToneMapContext = createContext<PassEnvironmentToneMap>({
   settings: null,
   resources: NO_RESOURCES,
 });
-WorldToneMapContext.displayName = 'WorldToneMapContext';
+PassToneMapContext.displayName = 'PassToneMapContext';
 
 /** Gives the tonemap stage below it the Environment its pass draws with. One per viewport pass. */
-export function WorldToneMapProvider({
+export function PassToneMapProvider({
   settings,
   resources,
   children,
-}: WorldEnvironmentToneMap & { children: ReactNode }) {
+}: PassEnvironmentToneMap & { children: ReactNode }) {
   const value = useMemo(() => ({ settings, resources }), [settings, resources]);
-  return <WorldToneMapContext.Provider value={value}>{children}</WorldToneMapContext.Provider>;
+  return <PassToneMapContext.Provider value={value}>{children}</PassToneMapContext.Provider>;
 }
 
 /**
- * What a tonemap pass of this world reads: its Environment and its auto exposure.
+ * What the tonemap of this viewport pass reads: its Environment and its auto exposure.
  *
  * @canonical The Environment a viewport tonemaps with
  */
-export function useWorldToneMap(): WorldToneMap {
-  const environment = useContext(WorldToneMapContext);
+export function usePassToneMap(): PassToneMap {
+  const environment = useContext(PassToneMapContext);
   const autoExposure = useAutoExposure();
   return useMemo(() => ({ ...environment, autoExposure }), [environment, autoExposure]);
 }

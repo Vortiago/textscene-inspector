@@ -26,7 +26,7 @@ import {
   useRenderCameraEnvironment,
 } from './worldExposure';
 import { createWorldGroup, type WorldResolution } from './worldGroup';
-import { WorldToneMapProvider } from './worldToneMap';
+import { PassToneMapProvider } from './passToneMap';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
@@ -203,9 +203,9 @@ function SubViewportEnvironment({ children }: { children: ReactNode }) {
 export function ViewportPassEnvironment({ children }: { children: ReactNode }) {
   const drawn = passEnvironmentOf(usePassCameraEnvironment(), useContext(WorldOwnEnvironmentContext));
   return (
-    <WorldToneMapProvider settings={drawn?.settings ?? null} resources={drawn?.resources ?? NO_RESOURCES}>
+    <PassToneMapProvider settings={drawn?.settings ?? null} resources={drawn?.resources ?? NO_RESOURCES}>
       {children}
-    </WorldToneMapProvider>
+    </PassToneMapProvider>
   );
 }
 

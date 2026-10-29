@@ -17,7 +17,6 @@ import { TrackedObjects } from '../trackedObjects.js';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
 import { acquireVolumetricFogPass } from './sharedVolumetricFogPass.js';
-import type { VolumetricFogPass } from './volumetricFogPass.js';
 import { perObject } from '../../utils/perObject.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
@@ -64,8 +63,7 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
   }, [scene, environment]);
 
   useEffect(() => {
-    const { pass, release } = acquireVolumetricFogPass(gl);
-    const releaseViews = holdFogViews(pass, scene);
+    const { pass, release } = acquireVolumetricFogPass(gl, scene);
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
     const volumes = new TrackedObjects(scene, isFogVolume);
@@ -96,7 +94,6 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
       lights.dispose();
       casters.dispose();
       volumes.dispose();
-      releaseViews();
       release();
     };
   }, [gl, scene, environment, invalidate]);
@@ -111,19 +108,3 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
  * Environment on would otherwise resolve every program again.
  */
 const sceneFogOf = perObject((_scene: THREE.Scene) => new THREE.FogExp2(0x000000, 0));
-
-/** The FogLayers on each scene, one per fogged Environment. Written only by `holdFogViews`. */
-const fogLayersOf = perObject((_scene: THREE.Scene) => ({ count: 0 }));
-
-/**
- * Keeps the view volumes of `scene` in `pass` until the returned function runs. The last FogLayer
- * of the scene forgets them, so a drawn Environment that unmounts keeps the shown one's history.
- */
-function holdFogViews(pass: VolumetricFogPass, scene: THREE.Scene): () => void {
-  const layers = fogLayersOf(scene);
-  layers.count += 1;
-  return () => {
-    layers.count -= 1;
-    if (layers.count === 0) pass.forget(scene);
-  };
-}

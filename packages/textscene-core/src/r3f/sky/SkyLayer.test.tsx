@@ -322,7 +322,7 @@ describe('SkyLayer', () => {
     expect(observer).toHaveBeenCalled();
   });
 
-  it('gives the scene a new environment on each bake, which tells the reflection probes the sky changed', async () => {
+  it('shows one scene environment across bakes, so three resolves no program again', async () => {
     built.next = skyEnvironment();
     const { scene, update } = await mount(
       <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
@@ -332,7 +332,7 @@ describe('SkyLayer', () => {
     built.next = skyEnvironment();
     await update(<ShownSkyLayer sky={SKY} rotation={{ x: 0, y: 1, z: 0 }} resources={NO_RESOURCES} />);
 
-    expect(scene.environment).not.toBe(firstBake);
+    expect(scene.environment).toBe(firstBake);
   });
 
   it('frees its environment when it unmounts', async () => {

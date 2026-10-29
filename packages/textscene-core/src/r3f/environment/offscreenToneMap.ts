@@ -17,7 +17,7 @@ import { createPassTarget } from './passTarget';
 import { SCENE_BUFFER_TYPE } from './useCompositorPass';
 import { useGodotToneMapEffect } from './useGodotToneMapEffect';
 import type { GodotToneMapEffect } from './GodotToneMapEffect';
-import { useWorldToneMap } from './worldToneMap';
+import { usePassToneMap } from './passToneMap';
 import type { Environment } from './sceneEnvironment';
 import { useOptionalExposureFactor, usePassCameraPath } from './worldExposure';
 
@@ -76,19 +76,19 @@ export function OffscreenToneMapStage({
 
 function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap {
   const { target, msaaMode, width, height, transparentBackground, usesDebanding, name } = options;
-  const world = useWorldToneMap();
+  const passToneMap = usePassToneMap();
   const exposure = useOptionalExposureFactor();
   const cameraPath = usePassCameraPath();
-  const { settings } = world;
+  const { settings } = passToneMap;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
   const effect = useGodotToneMapEffect({
     glow,
     adjustments: settings?.adjustments ?? null,
     toneMapping: settings?.toneMapping ?? NO_ENVIRONMENT_TONE_MAPPING,
-    autoExposure: world.autoExposure,
+    autoExposure: passToneMap.autoExposure,
     transparentBackground,
     usesDebanding,
-    resources: world.resources,
+    resources: passToneMap.resources,
   });
   const createWorldBuffer = useCallback(() => worldBufferOf(width, height, name), [width, height, name]);
   const worldBuffer = useMultisampledTarget(msaaMode, createWorldBuffer);
