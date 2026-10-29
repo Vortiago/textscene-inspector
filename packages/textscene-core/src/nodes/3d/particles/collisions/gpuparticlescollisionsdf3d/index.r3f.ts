@@ -1,13 +1,13 @@
 /**
- * GPUParticlesCollisionSDF3D draws nothing, so the badge reads "not implemented". The
- * Node3D base still mounts, for `visible` and the workspace split.
+ * GPUParticlesCollisionSDF3D draws nothing of its own, so the badge reads "not implemented". Its component mounts the
+ * Node3D base for `visible` and the workspace split, and the editor gizmo.
  */
 
 import { nodeComponentRegistry } from '../../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../../base/node3d/Component';
+import { GPUParticlesCollisionSDF3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'GPUParticlesCollisionSDF3D',
-  Component: Node3D,
+  Component: GPUParticlesCollisionSDF3D,
   renderIntent: 'pending',
 });

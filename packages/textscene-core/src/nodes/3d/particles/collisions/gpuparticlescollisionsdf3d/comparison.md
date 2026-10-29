@@ -9,7 +9,11 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionSDF3D
 
-A baked signed distance field that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw it or apply the collision yet, so the node draws nothing and its children still show.
+A baked signed distance field that particles from nearby `GPUParticles3D` nodes collide with. The previewer draws its editor gizmo. It does not apply the collision yet, so the node draws no volume and its children still show.
+
+## Gizmo
+
+The previewer draws the gizmo of Godot's editor in the collision colour. It draws the 12 edges of the box of `size`, centred on the node, and the grid of its cells at a low opacity. `resolution` sets how many cells divide the longest side. Godot draws it for every node, faint while the node is not selected (ADR-0056). The previewer draws no edit handles.
 
 ## Linting
 
@@ -31,7 +35,7 @@ Strict parsing format-checks these `GPUParticlesCollisionSDF3D` properties, plus
 | `valid-gpuparticlescollisionsdf3d-bake-mask` (type-family match) | `gpuparticlescollisionsdf3d-empty-bake-mask` | warning |
 <!-- lint:end -->
 
-GPUParticlesCollisionSDF3D registers `parseNode3D` directly, which reads only `transform` and `visible`. An out-of-range `resolution` or a malformed `size` is dropped silently rather than substituted or warned on, and only strict reports it.
+The lenient parser reads `size` and `resolution` for the gizmo. A malformed `Vector3` or an out-of-range `resolution` keeps Godot's default, and only strict reports it.
 
 ## Known limitations
 

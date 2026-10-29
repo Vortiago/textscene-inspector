@@ -858,6 +858,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gpu Particles Collision Gizmos",
+    "file": "unit-gpu-particles-collision-gizmos.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpu Particles Collision Height Field 3d",
     "file": "unit-gpu-particles-collision-height-field-3d.tscn",
     "category": "Other"

@@ -9,7 +9,11 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionSphere3D
 
-A sphere that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw the sphere or apply the collision yet, so the node draws nothing and its children still show.
+A sphere that particles from nearby `GPUParticles3D` nodes collide with. The previewer draws its editor gizmo. It does not apply the collision yet, so the node draws no volume and its children still show.
+
+## Gizmo
+
+The previewer draws the gizmo of Godot's editor in the collision colour. It draws three great circles of `radius`, in the XZ, XY and YZ planes. Godot draws it for every node, faint while the node is not selected (ADR-0056). The previewer draws no edit handles.
 
 ## Linting
 
@@ -26,7 +30,7 @@ Strict parsing format-checks these `GPUParticlesCollisionSphere3D` properties, p
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `radius` below `0.01` or a non-numeric one parses with no warning and no fallback, and only strict reports it.
+The lenient parser reads `radius` for the gizmo. A non-numeric `radius` keeps Godot's default. A `radius` below `0.01` stays as Godot's setter keeps it, and only strict reports it.
 
 ## Known limitations
 

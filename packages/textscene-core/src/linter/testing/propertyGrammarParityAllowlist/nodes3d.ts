@@ -217,4 +217,37 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason:
       'The geometry base parser reads only the instance state its drawn leaves share; each leaf parser reads the materials it renders, the bake/cull/draw-order settings are a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on at all.',
   },
+
+  // The collision and attractor nodes draw only their editor gizmo, from the shape they read.
+  // Their effect on a GPUParticles3D is a gap (renderIntent 'pending'), so each key that
+  // shapes that effect is a render gap.
+  GPUParticlesCollision3D: {
+    renderGap: ['cull_mask'],
+    reason:
+      'cull_mask picks which GPUParticles3D a collider affects (gpu_particles_collision_3d.cpp:51). The collision effect is not drawn.',
+  },
+
+  GPUParticlesAttractor3D: {
+    renderGap: ['strength', 'attenuation', 'directionality', 'cull_mask'],
+    reason:
+      'These keys shape the force an attractor puts on a GPUParticles3D (gpu_particles_collision_3d.cpp:900-903). The attraction effect is not drawn.',
+  },
+
+  GPUParticlesCollisionSDF3D: {
+    renderGap: ['thickness', 'bake_mask', 'texture'],
+    reason:
+      'The baked SDF texture is what the collider tests particles against, and thickness and bake_mask shape the bake (gpu_particles_collision_3d.cpp:556-558). The previewer draws the gizmo from size and resolution only.',
+  },
+
+  GPUParticlesCollisionHeightField3D: {
+    renderGap: ['resolution', 'follow_camera_enabled', 'heightfield_mask', 'update_mode'],
+    reason:
+      'These keys shape the height texture the collider renders at runtime (gpu_particles_collision_3d.cpp:734-737). The gizmo draws the box from size alone.',
+  },
+
+  GPUParticlesAttractorVectorField3D: {
+    renderGap: ['texture'],
+    reason:
+      'The vector field texture is the force field the attractor samples (gpu_particles_collision_3d.cpp:1004). The gizmo draws the box from size alone.',
+  },
 };

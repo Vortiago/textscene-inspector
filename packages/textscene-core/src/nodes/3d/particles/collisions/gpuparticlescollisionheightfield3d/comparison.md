@@ -9,7 +9,11 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionHeightField3D
 
-A heightmap, regenerated in real time from the scene's geometry, that particles from nearby `GPUParticles3D` nodes collide with. The previewer neither generates nor draws it yet, so the node draws nothing and its children still show.
+A heightmap, regenerated in real time from the scene's geometry, that particles from nearby `GPUParticles3D` nodes collide with. The previewer draws its editor gizmo. It does not generate the heightmap, so the node draws no volume and its children still show.
+
+## Gizmo
+
+The previewer draws the gizmo of Godot's editor in the collision colour. It draws the 12 edges of the box of `size`, centred on the node. `resolution` does not change the gizmo. Godot draws it for every node, faint while the node is not selected (ADR-0056). The previewer draws no edit handles.
 
 ## Linting
 
@@ -30,7 +34,7 @@ Strict parsing format-checks these `GPUParticlesCollisionHeightField3D` properti
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. An out-of-range `resolution` or a malformed `size` parses with no warning and no fallback, and only strict reports it.
+The lenient parser reads `size` for the gizmo. A malformed `Vector3` keeps Godot's default. A `size` below `0.01` stays as Godot's setter keeps it, and only strict reports it. `resolution` does not change the gizmo, so the lenient parser ignores it.
 
 ## Known limitations
 

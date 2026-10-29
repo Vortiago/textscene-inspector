@@ -9,7 +9,11 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesAttractorVectorField3D
 
-A box-shaped attractor that samples a 3D `texture` to vary attraction strength and direction across its volume. The previewer does not draw the box or sample the texture yet, so the node draws nothing and its children still show.
+A box-shaped attractor that samples a 3D `texture` to vary attraction strength and direction across its volume. The previewer draws its editor gizmo. It does not sample the texture yet, so the node draws no volume and its children still show.
+
+## Gizmo
+
+The previewer draws the gizmo of Godot's editor in the attractor colour. It draws the 12 edges of the box of `size`, centred on the node. Godot draws it for every node, faint while the node is not selected (ADR-0056). The previewer draws no edit handles.
 
 ## Linting
 
@@ -27,7 +31,7 @@ Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properti
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `size` below `0.01` or a `texture` that is not a `Texture3D` parses with no warning. Strict checks only that `texture` is a resource reference.
+The lenient parser reads `size` for the gizmo. A malformed `Vector3` keeps Godot's default. A `size` below `0.01` or a `texture` that is not a `Texture3D` parses with no warning. Strict checks only that `texture` is a resource reference.
 
 ## Known limitations
 
