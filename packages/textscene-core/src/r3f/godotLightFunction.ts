@@ -30,8 +30,8 @@ vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );
 vec3 godotDndu = vec3( 0.0 );
 vec3 godotDndv = vec3( 0.0 );
 if ( roughnessFactor < 1.0 ) {
-	godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );
-	godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );
+	godotDndu = godotPair.x * ( godotMapNormal( GODOT_NORMAL_TEXEL( vec2( godotPair.x, 0.0 ) ), tbn + godotPair.x * godotTbnDx ) - normal );
+	godotDndv = godotPair.y * ( godotMapNormal( GODOT_NORMAL_TEXEL( vec2( 0.0, godotPair.y ) ), tbn + godotPair.y * godotTbnDy ) - normal );
 }
 #else
 vec3 godotDndu = dFdx( normal );

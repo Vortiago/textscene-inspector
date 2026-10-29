@@ -3,8 +3,9 @@
  * `resolveNoiseTexture2D` does for a NoiseTexture2D (ADR-0042).
  */
 
-import type { TscnInternalResource } from '../../../parser/types';
-import { resolveNoiseSources } from '../noiseSources';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import type { LoadedFile } from '../../scopedResource';
+import { noiseRefsOf, noiseSourceResources, resolveNoiseSources } from '../noiseSources';
 import {
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
@@ -16,22 +17,30 @@ import type { NoiseTexture3DInput } from './texels';
 
 export function resolveNoiseTexture3D(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): ProceduralTextureLookup | null {
-  return resolveProceduralSubResourceAsync(ref, internalResources, 'NoiseTexture3D', plan);
+  return resolveProceduralSubResourceAsync(
+    ref,
+    pools.internalResources,
+    'NoiseTexture3D',
+    (properties) => plan(properties, pools, loadedFile),
+    (properties) => noiseSourceResources(noiseRefsOf(properties), pools, loadedFile)
+  );
 }
 
 /**
- * Texture properties and the table their `noise` and `color_ramp` refs resolve in, to a build.
+ * Texture properties and the pools and files their `noise` and `color_ramp` refs resolve in, to a build.
  * Null for an unusable `noise`, for which `_generate_texture` returns no images
  * (`noise_texture_3d.cpp:146-148`), and for a size `noiseTexture3DFits` refuses.
  */
 function plan(
   properties: Record<string, string>,
-  resources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): ProceduralBuildPlan<'noise-texture-3d'> | null {
   const decoded = decodeNoiseTexture3D(properties);
-  const sources = resolveNoiseSources(decoded, resources);
+  const sources = resolveNoiseSources(decoded, pools, loadedFile);
   if (!sources || !noiseTexture3DFits(decoded)) return null;
 
   // The input carries the values the refs name, so a renamed id keeps the same content key.

@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { ViewSampler } from '../../textures/textureView';
 import { godotTextureFilterState, type TextureFilterState } from '../../textures/godotTextureFilter';
-import type { UvWindow } from '../../../r3f/uvWindow';
+import { FULL_UV_WINDOW, type UvWindow } from '../../../r3f/uvWindow';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import { UV2_CHANNEL } from '../../meshes/uv2';
@@ -66,9 +66,8 @@ export interface MaterialTextureState {
 export type UVSetState = MaterialTextureState & { uv: UvWindow };
 
 /**
- * The per-material half of every binding, one state per UV set, which a caller can adjust
- * apart from the per-slot decision, as a triplanar material folds the mesh size into the
- * tiling scale.
+ * The per-material half of every binding, one state per UV set, which a caller adjusts apart from
+ * the per-slot decision, as a mesh's UV orientation needs.
  */
 export interface MaterialTextureStates {
   uv1: UVSetState;
@@ -94,12 +93,21 @@ export function materialTextureStates(
   };
   const uv2 = { ...sampler, uv: { repeat: scalars.uv2Scale, offset: scalars.uv2Offset } };
   return {
-    uv1: { ...sampler, uv: { repeat: scalars.uv1Scale, offset: scalars.uv1Offset } },
-    // A triplanar mapping reads no UV2. three draws it through the first UV set, as for UV1.
+    uv1: scalars.triplanar?.uv1
+      ? projectedState(sampler)
+      : { ...sampler, uv: { repeat: scalars.uv1Scale, offset: scalars.uv1Offset } },
     // Every UV2 attribute keeps Godot's top-down V, so a mesh without one samples the top-left.
-    uv2: scalars.uv2Triplanar ? uv2 : topDownV({ ...uv2, channel: UV2_CHANNEL }),
+    uv2: scalars.triplanar?.uv2 ? projectedState(sampler) : topDownV({ ...uv2, channel: UV2_CHANNEL }),
     uv2Slots: scalars.uv2Slots,
   };
+}
+
+/**
+ * The state of a triplanar UV set: the whole texture, from its top edge. The projected position
+ * carries the set's scale and offset (`material.cpp:1425-1431`), and reads no UV attribute.
+ */
+function projectedState(sampler: MaterialTextureState): UVSetState {
+  return topDownV({ ...sampler, uv: FULL_UV_WINDOW });
 }
 
 /** A state that samples `1 - (v * scale + offset)`, Godot's top-down V on a bottom-up upload. */

@@ -220,6 +220,11 @@ export function rotationAngle(a: THREE.Matrix4, b: THREE.Matrix4): number {
   return rotationOf(a).angleTo(rotationOf(b));
 }
 
+/** Two matrices hold the same elements, to nine decimal places. */
+export function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
+  actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
+}
+
 /** Two world matrices turn the same way, to five decimal places of a radian. */
 export function expectSameRotation(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
   expect(rotationAngle(actual, expected)).toBeCloseTo(0, 5);

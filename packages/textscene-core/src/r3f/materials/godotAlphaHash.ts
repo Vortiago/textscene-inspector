@@ -4,11 +4,11 @@
  * own vertex space.
  */
 
-import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 import { SHADER_ALPHA_HASH_SCALE_DEFAULT } from '../../godot/rendering/materials/defaultMaterial';
-import { recordedOn } from './recordedOnMaterial';
+import { recordedUniform } from './recordedOnMaterial';
+import { NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
 
 const HASH_PARS_CHUNK = '#include <alphahash_pars_fragment>';
 const PROJECT_VERTEX_CHUNK = '#include <project_vertex>';
@@ -47,7 +47,7 @@ float getAlphaHashThreshold( vec3 pos ) {
 /**
  * Godot's `object_pos` (`scene_forward_clustered.glsl:1399`): the vertex after skinning, through a
  * multimesh instance's transform, in the node's object space. A pose the draw hooks give the draw
- * moves three's model away from the node's, and `godotObjectFromModel` maps it back.
+ * moves three's model away from the node's, and `godotObjectFromModel` maps it back (`nodePose.ts`).
  */
 const GODOT_OBJECT_POSITION = /* glsl */ `
 #ifdef USE_ALPHAHASH
@@ -67,40 +67,13 @@ export function alphaHashScaleUserData(scale: number): Record<string, number> {
   return { [ALPHA_HASH_SCALE_KEY]: scale };
 }
 
-function alphaHashScaleOf(material: THREE.Material): number {
-  return recordedOn(material, ALPHA_HASH_SCALE_KEY, SHADER_ALPHA_HASH_SCALE_DEFAULT);
-}
-
-/** The uniforms of one hashed material's program. */
-interface HashUniforms {
-  godotObjectFromModel: THREE.IUniform<THREE.Matrix4>;
-  godotAlphaHashScale: THREE.IUniform<number>;
-}
-
-/**
- * Each hashed material's uniforms. Written by the draw hooks before each draw, and collected with
- * its material.
- */
-// eslint-disable-next-line no-restricted-syntax -- alignAlphaHash reads an entry without building one, and a perObject read always builds
-const hashUniforms = new WeakMap<THREE.Material, HashUniforms>();
-
-function hashUniformsOf(material: THREE.Material): HashUniforms {
-  let uniforms = hashUniforms.get(material);
-  if (!uniforms) {
-    uniforms = {
-      godotObjectFromModel: { value: new THREE.Matrix4() },
-      godotAlphaHashScale: { value: alphaHashScaleOf(material) },
-    };
-    hashUniforms.set(material, uniforms);
-  }
-  return uniforms;
-}
-
 /** What every `alphaHash` material compiles with, which `materialProgramInputs` adds itself. */
 export const GODOT_ALPHA_HASH: ProgramInjection = {
   cacheKey: 'godot-alpha-hash',
   onBeforeCompile(shader) {
-    Object.assign(shader.uniforms, hashUniformsOf(this));
+    Object.assign(shader.uniforms, nodePoseUniforms(this), {
+      [ALPHA_HASH_SCALE_KEY]: recordedUniform(this, ALPHA_HASH_SCALE_KEY, SHADER_ALPHA_HASH_SCALE_DEFAULT),
+    });
     const position = `${PROJECT_VERTEX_CHUNK}\n${GODOT_OBJECT_POSITION}`;
     editedProgram(
       shader,
@@ -110,22 +83,6 @@ export const GODOT_ALPHA_HASH: ProgramInjection = {
       },
       'alpha hash'
     );
-    shader.vertexShader = `uniform mat4 godotObjectFromModel;\n${shader.vertexShader}`;
+    shader.vertexShader = `${NODE_POSE_PARS}${shader.vertexShader}`;
   },
 };
-
-/**
- * Points the hash of `material`'s next draw at the node's object space and the material's scale:
- * `nodeMatrixWorld` is the node's model as Godot holds it, and `modelMatrix` the one three draws
- * with. A material that hashes nothing is left alone.
- */
-export function alignAlphaHash(
-  material: THREE.Material,
-  nodeMatrixWorld: THREE.Matrix4,
-  modelMatrix: THREE.Matrix4
-): void {
-  const uniforms = hashUniforms.get(material);
-  if (!uniforms) return;
-  uniforms.godotObjectFromModel.value.copy(nodeMatrixWorld).invert().multiply(modelMatrix);
-  uniforms.godotAlphaHashScale.value = alphaHashScaleOf(material);
-}

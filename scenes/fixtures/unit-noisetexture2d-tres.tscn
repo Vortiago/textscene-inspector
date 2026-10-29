@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitnoisetexture2dtres"]
+
+[ext_resource type="FastNoiseLite" path="res://textures/noise-ridged.tres" id="1_noise"]
+[ext_resource type="Gradient" path="res://textures/ramp-three-stop.tres" id="2_ramp"]
+
+; One variable: a NoiseTexture2D whose `noise` and `color_ramp` are ExtResources to a saved
+; FastNoiseLite and a saved Gradient (.tres). unit-noisetexture2d inlines both, and nothing else
+; saves either as a file. Losing the file route leaves a texture without noise, so the sprite
+; draws nothing over the backdrop.
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_t"]
+width = 256
+height = 256
+seamless = true
+color_ramp = ExtResource("2_ramp")
+noise = ExtResource("1_noise")
+
+[node name="World" type="Node2D"]
+position = Vector2(576, 324)
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+position = Vector2(-576, -324)
+color = Color(0.85, 0.85, 0.8, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="SavedNoise" type="Sprite2D" parent="."]
+texture = SubResource("NoiseTexture2D_t")
+scale = Vector2(2, 2)

@@ -663,6 +663,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Ramp Tres",
+    "file": "unit-fog-volume-density-ramp-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume Density Volume Tres",
     "file": "unit-fog-volume-density-volume-tres.tscn",
     "category": "Other"
@@ -1430,6 +1435,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Noisetexture2d Tiled",
     "file": "unit-noisetexture2d-tiled.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d Tres",
+    "file": "unit-noisetexture2d-tres.tscn",
     "category": "Other"
   },
   {
@@ -2905,6 +2915,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Gradienttexture Tres",
+    "file": "unit-sprite2d-gradienttexture-tres.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Gradienttexture",
     "file": "unit-sprite2d-gradienttexture.tscn",
     "category": "Unit - 2D Canvas"
@@ -4014,6 +4029,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Billboard Keep Scale",
+    "file": "unit-material-billboard-keep-scale.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Billboard",
     "file": "unit-material-billboard.tscn",
     "category": "Unit - Materials"
@@ -4136,6 +4156,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Uv1 Top Edge",
     "file": "unit-material-uv1-top-edge.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material World Triplanar Floor",
+    "file": "unit-material-world-triplanar-floor.tscn",
     "category": "Unit - Materials"
   },
   {

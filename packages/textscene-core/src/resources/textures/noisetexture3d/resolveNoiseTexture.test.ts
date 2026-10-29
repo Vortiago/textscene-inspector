@@ -3,6 +3,7 @@
  * one. The build runs as a worker job, here through the in-thread runner, which runs the same job.
  */
 import { afterEach, describe, expect, it } from 'vitest';
+import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
@@ -32,7 +33,7 @@ afterEach(() => {
 
 describe('resolveNoiseTexture3D', () => {
   it('builds the texels Godot measures into a 3D texture', async () => {
-    const lookup = resolveNoiseTexture3D(DENSITY, fog.subResources);
+    const lookup = resolveNoiseTexture3D(DENSITY, poolsOf(fog.subResources), NO_FILES);
     if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
     const handle = lookup.start(new WorkerJobRunner());
     const texture = await handle.settled;
@@ -44,12 +45,14 @@ describe('resolveNoiseTexture3D', () => {
   });
 
   it('declines a reference that is not an inline NoiseTexture3D', () => {
-    expect(resolveNoiseTexture3D('SubResource("FastNoiseLite_a")', fog.subResources)).toBeNull();
-    expect(resolveNoiseTexture3D('ExtResource("1")', fog.subResources)).toBeNull();
+    expect(
+      resolveNoiseTexture3D('SubResource("FastNoiseLite_a")', poolsOf(fog.subResources), NO_FILES)
+    ).toBeNull();
+    expect(resolveNoiseTexture3D('ExtResource("1")', poolsOf(fog.subResources), NO_FILES)).toBeNull();
   });
 
   it('declines a texture without noise, for which Godot generates nothing (edge case)', () => {
     const empty = parseTresFile(FOG.replace('noise = SubResource("FastNoiseLite_a")\n', ''));
-    expect(resolveNoiseTexture3D(DENSITY, empty.subResources)).toBeNull();
+    expect(resolveNoiseTexture3D(DENSITY, poolsOf(empty.subResources), NO_FILES)).toBeNull();
   });
 });

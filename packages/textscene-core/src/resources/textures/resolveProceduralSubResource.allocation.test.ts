@@ -4,6 +4,7 @@
  * forced in each rasteriser, since a real one needs gigabytes.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NO_FILES, poolsOf } from '../testing/loadedFiles';
 import * as logger from '../../logger';
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
@@ -75,7 +76,8 @@ function noiseResources(): TscnInternalResource[] {
 }
 
 describe('GradientTexture2D allocation', () => {
-  const resolve = () => resolveGradientTexture2D('SubResource("GradientTexture2D_a")', gradientResources());
+  const resolve = () =>
+    resolveGradientTexture2D('SubResource("GradientTexture2D_a")', poolsOf(gradientResources()), NO_FILES);
 
   it('draws the texture when the pixels allocate', () => {
     expect(resolve()?.texture.image.width).toBe(8);
@@ -101,7 +103,11 @@ describe('GradientTexture2D allocation', () => {
 describe('NoiseTexture2D allocation', () => {
   /** The build's outcome, through the in-thread runner that runs the worker's job. */
   function build(): Promise<THREE.Texture | null> {
-    const lookup = resolveNoiseTexture2D('SubResource("NoiseTexture2D_a")', noiseResources());
+    const lookup = resolveNoiseTexture2D(
+      'SubResource("NoiseTexture2D_a")',
+      poolsOf(noiseResources()),
+      NO_FILES
+    );
     if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
     return lookup.start(new WorkerJobRunner()).settled;
   }
