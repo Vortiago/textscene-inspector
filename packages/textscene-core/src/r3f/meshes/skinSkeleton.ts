@@ -24,12 +24,9 @@ import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
  */
 const MISSING_BONE_MATRIX = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-/** How many bones the geometry's skin indices address: the highest index, plus one. */
+/** How many bones the skin indices of the geometry's surfaces address: the most any one does. */
 function boneCountOf(geometry: THREE.BufferGeometry): number {
-  const indices = geometry.getAttribute('skinIndex');
-  let highest = -1;
-  for (let i = 0; i < indices.array.length; i++) highest = Math.max(highest, indices.array[i]!);
-  return highest + 1;
+  return Math.max(0, ...(surfaceBoneCounts(geometry) ?? []));
 }
 
 /**

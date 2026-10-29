@@ -164,13 +164,13 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skin.weights, 4));
   }
   if (isPoints) geometry.userData[DRAWS_POINTS] = true;
-  if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map(boneCountOfSurface);
+  if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map((s) => boneCountOf(s.bones));
 
   return geometry;
 }
 
-function boneCountOfSurface(surface: GodotSurface): number {
-  return surface.bones!.indices.reduce((highest, bone) => Math.max(highest, bone + 1), 0);
+function boneCountOf(bones: SurfaceBones | undefined): number {
+  return bones?.indices.reduce((highest, bone) => Math.max(highest, bone + 1), 0) ?? 0;
 }
 
 /**
