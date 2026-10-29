@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   vector2Add,
   vector2Length,
-  vector2Scale,
+  vector2Scaled,
   vector2Sub,
   vector3Add,
   vector3Div,
@@ -110,7 +110,7 @@ describe('component-wise Vector2 arithmetic', () => {
   });
 
   it('scales each component by a real_t', () => {
-    expect(vector2Scale(a, storedReal(0.3))).toEqual({
+    expect(vector2Scaled(a, storedReal(0.3))).toEqual({
       x: storedReal(0.030000001192),
       y: storedReal(0.210000008345),
     });

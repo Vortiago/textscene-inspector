@@ -62,6 +62,6 @@ describe('<Node2D> (2D physics body)', () => {
       </Node2D>
     );
     const reader = renderer.scene.findByProps({ name: 'modulate-reader' });
-    expect(reader.instance.userData.modulate).toEqual({ r: 0.5, g: 0.25, b: 1, a: 0.8 });
+    expect(reader.instance.userData.modulate).toEqual({ r: 0.5, g: 0.25, b: 1, a: Math.fround(0.8) });
   });
 });

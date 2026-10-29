@@ -313,7 +313,7 @@ rotation = 0.5
 remote_path = NodePath("../../Target")
 `;
     const props = targetNode2D(placementsOf(content), 'Root/Target');
-    expect(props.scale.x).toBeCloseTo(Math.cos(0.5), 12);
+    expect(props.scale.x).toBeCloseTo(Math.cos(0.5), 5);
     expect(props.scale.y).toBe(0);
   });
 
@@ -348,11 +348,11 @@ position = Vector2(100, 50)
 remote_path = NodePath("../Parent/Target")
 `;
     const props = targetNode2D(placementsOf(content), 'Root/Parent/Target');
-    expect(props.position.x).toBeCloseTo(25, 9);
-    expect(props.position.y).toBeCloseTo(0, 9);
-    expect(props.rotation).toBeCloseTo(-Math.PI / 2, 9);
-    expect(props.scale.x).toBeCloseTo(0.5, 9);
-    expect(props.scale.y).toBeCloseTo(0.5, 9);
+    expect(props.position.x).toBeCloseTo(25, 5);
+    expect(props.position.y).toBeCloseTo(0, 5);
+    expect(props.rotation).toBeCloseTo(-Math.PI / 2, 5);
+    expect(props.scale.x).toBeCloseTo(0.5, 5);
+    expect(props.scale.y).toBeCloseTo(0.5, 5);
     expect(props.skew).toBeUndefined();
   });
 });
@@ -379,8 +379,8 @@ describe('applyRemoteTransforms (2D) across an instance border', () => {
       '[node name="Inst" parent="." instance=ExtResource("1_holder")]\nposition = Vector2(100, 50)'
     );
     const props = targetNode2D(placementsOf(host, { [HOLDER_FILE]: HOLDER_2D }), 'Root/Inst/Target');
-    expect(props.position.x).toBeCloseTo(300, 9);
-    expect(props.position.y).toBeCloseTo(200, 9);
+    expect(props.position.x).toBeCloseTo(300, 5);
+    expect(props.position.y).toBeCloseTo(200, 5);
   });
 
   it('moves a target inside an instance from a relay outside it, in the target’s parent space', () => {
@@ -392,8 +392,8 @@ position = Vector2(300, 200)
 remote_path = NodePath("../Inst/Target")`
     );
     const props = targetNode2D(placementsOf(host, { [HOLDER_FILE]: holder }), 'Root/Inst/Target');
-    expect(props.position.x).toBeCloseTo(200, 9);
-    expect(props.position.y).toBeCloseTo(150, 9);
+    expect(props.position.x).toBeCloseTo(200, 5);
+    expect(props.position.y).toBeCloseTo(150, 5);
   });
 
   it('moves a target outside an instance from a relay inside it', () => {
@@ -403,7 +403,7 @@ remote_path = NodePath("../Inst/Target")`
       '[node name="Outside" type="Polygon2D" parent="."]'
     );
     const props = targetNode2D(placementsOf(host, { [HOLDER_FILE]: holder }), 'Root/Outside');
-    expect(props.position.x).toBeCloseTo(400, 9);
-    expect(props.position.y).toBeCloseTo(250, 9);
+    expect(props.position.x).toBeCloseTo(400, 5);
+    expect(props.position.y).toBeCloseTo(250, 5);
   });
 });

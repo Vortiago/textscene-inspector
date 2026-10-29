@@ -66,7 +66,8 @@ describe('node2dGroupProps', () => {
             .matrix!.elements;
           // `elements` is column-major, so n12 is e[4] and n21 is e[1].
           const baked = [e[0]!, e[4]!, e[1]!, e[5]!].map((n) => n + 0);
-          expect(baked).toEqual(explicit(rotation, sx, sy, skew).map((n) => n + 0));
+          // The transform is `real_t` float, so each entry agrees to single precision.
+          explicit(rotation, sx, sy, skew).forEach((n, i) => expect(baked[i]).toBeCloseTo(n, 5));
         }
       }
     }
