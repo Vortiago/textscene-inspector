@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotAreaLight } from './areaLightChunk';
-import { ltcTables } from '../../godot/rendering/lights/ltc';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
@@ -188,18 +187,6 @@ describe('installGodotAreaLight', () => {
   it("drops three's area light block whole (edge case)", () => {
     expect(patchedChunk('lights_physical_pars_fragment').match(/#if NUM_RECT_AREA_LIGHTS > 0/g)).toHaveLength(
       1
-    );
-  });
-
-  it("samples Godot's LTC tables in place of three's", () => {
-    installGodotAreaLight();
-    const { lut1, lut2 } = ltcTables();
-    const uniforms = THREE.UniformsLib as unknown as Record<string, THREE.DataTexture>;
-
-    expect(uniforms.LTC_FLOAT_1!.image.data).toEqual(lut1);
-    expect(uniforms.LTC_FLOAT_2!.image.data).toEqual(lut2);
-    expect(uniforms.LTC_HALF_1!.image.data).toEqual(
-      new Uint16Array(Array.from(lut1, THREE.DataUtils.toHalfFloat))
     );
   });
 

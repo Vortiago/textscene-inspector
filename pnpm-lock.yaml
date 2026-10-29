@@ -146,6 +146,9 @@ patchedDependencies:
   fastnoise-lite@1.1.1:
     hash: ixba4smauncpcw4rwdgn4b76aa
     path: patches/fastnoise-lite@1.1.1.patch
+  n8ao@2.0.1:
+    hash: 2aacneaffwgu3fcmh45fyzu67m
+    path: patches/n8ao@2.0.1.patch
 
 importers:
 
@@ -4892,7 +4895,7 @@ snapshots:
     dependencies:
       '@react-three/fiber': 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
       maath: 0.10.8(@types/three@0.186.0)(three@0.186.0)
-      n8ao: 2.0.1(postprocessing@6.39.5(three@0.186.0))(three@0.186.0)
+      n8ao: 2.0.1(patch_hash=2aacneaffwgu3fcmh45fyzu67m)(postprocessing@6.39.5(three@0.186.0))(three@0.186.0)
       postprocessing: 6.39.5(three@0.186.0)
       react: 19.3.0
       three: 0.186.0
@@ -6663,7 +6666,7 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
-  n8ao@2.0.1(postprocessing@6.39.5(three@0.186.0))(three@0.186.0):
+  n8ao@2.0.1(patch_hash=2aacneaffwgu3fcmh45fyzu67m)(postprocessing@6.39.5(three@0.186.0))(three@0.186.0):
     dependencies:
       postprocessing: 6.39.5(three@0.186.0)
       three: 0.186.0

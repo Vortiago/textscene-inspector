@@ -194,10 +194,11 @@ if (watch) {
   }
 
   const [extensionResult, extensionWebResult, webviewResult] = await Promise.all(builds);
-  // Persist the host builds' metafiles for the host-bundle guard.
+  // Persist the metafiles for the host-bundle guard and the webview's lazy-only check.
   await Promise.all([
     writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
     writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),
+    writeFile('dist/webview.meta.json', JSON.stringify(webviewResult.metafile)),
   ]);
   // `vsce package` runs this production build, and ships the notices beside package.json.
   if (production) {
