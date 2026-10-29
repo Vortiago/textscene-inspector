@@ -58,9 +58,9 @@ export interface TscnScene<N extends RawNode = TscnNode> {
    * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
    * orphan, and refuses every scene that instances it. True when the scene has no node, the root
    * heading has a `parent=` or states no identifier, a heading spells `parent=""`, or a later
-   * heading has no `parent=`. Absent counts as false, for a scene built by hand.
+   * heading has no `parent=`.
    */
-  refusesToInstantiate?: boolean;
+  refusesToInstantiate: boolean;
   /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.

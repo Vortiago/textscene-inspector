@@ -136,8 +136,9 @@ function loadedInstance(
 
 /**
  * Whether Godot refuses to instantiate `cached`: the parse says so, or its root inherits a base
- * that Godot refuses (`packed_scene.cpp:227-232`). `outer` is the scope that instances `cached`, whose
- * enclosing scenes the walk extends, so a base that inherits itself ends it.
+ * that Godot refuses (`packed_scene.cpp:227-232`), or one of its nodes instances a scene that Godot
+ * refuses (`:262-265`). `outer` is the scope that instances `cached`, whose enclosing scenes the walk
+ * extends, so a scene that instances itself ends it.
  */
 function isRefusedScene(
   cached: CachedScene,
@@ -146,10 +147,23 @@ function isRefusedScene(
   sceneCache: CachedSceneSource
 ): boolean {
   if (cached.refusesToInstantiate) return true;
-  const root = cached.nodes[0];
-  if (!root?.instance) return false;
-  const content = contentScopeOf(cached, [...(outer.instancedScenePaths ?? []), scenePath]);
-  return loadedInstance(root, content, sceneCache)?.isRefused ?? false;
+  const chain = [...(outer.instancedScenePaths ?? []), scenePath];
+  return refusals(cached, chain, { scenes: sceneCache }, ({ scenes }) =>
+    holdsRefusedInstance(cached, chain, scenes)
+  );
+}
+
+/** Whether a node of `cached`, or its root's base, is an instance of a scene that Godot refuses. */
+function holdsRefusedInstance(
+  cached: CachedScene,
+  chain: readonly string[],
+  scenes: CachedSceneSource
+): boolean {
+  const content = contentScopeOf(cached, chain);
+  const isRefusedAt = (node: TscnNode): boolean =>
+    (loadedInstance(node, scopeOf(node, content), scenes)?.isRefused ?? false) ||
+    node.children.some(isRefusedAt);
+  return cached.nodes.some(isRefusedAt);
 }
 
 /** The collapse of `node` over `cached`, the scene at `scenePath` that the caller read once. */
@@ -178,6 +192,16 @@ function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
  * single-path source of a tree row. Two keep each from replacing the other's composition.
  */
 const COMPOSITIONS_PER_CHAIN = 2;
+
+/**
+ * Written only by {@link isRefusedScene}, keyed by the cached scene object. The answer holds for
+ * each chain of scenes that encloses the scene, since a scene that instances itself ends the walk,
+ * and stays valid while the cache answers what the walk read.
+ */
+const refusals = keptWhileAnswered<CachedScene, readonly string[], { scenes: CachedSceneSource }, boolean>({
+  sameVariant: sameElements,
+  perVariant: COMPOSITIONS_PER_CHAIN,
+});
 
 /**
  * Written only by {@link composedSubScene}, keyed by the cached scene object. A scene composes once

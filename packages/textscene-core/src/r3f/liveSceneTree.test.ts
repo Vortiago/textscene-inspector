@@ -16,6 +16,7 @@ import { liveNodeAt, contextOver, sceneCacheOver, stepOver } from './liveSceneTr
 import { NOTHING_CACHED } from './cacheSources';
 import type { TscnNode, TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { subResource } from '../testing/subResource';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
 
@@ -45,6 +46,7 @@ describe('collectLiveNodes', () => {
     // game.tscn instances player.tscn; player.tscn's Target/Camera3D lives
     // inside the instance: absent from flattenedNodes, present in the live tree.
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
           children: [makeNode('Target', 'Node3D', { children: [makeNode('Camera3D', 'Camera3D')] })],
@@ -97,6 +99,7 @@ describe('collectLiveNodes', () => {
 
   it('skips a not-yet-cached sub-scene gracefully, and picks it up once cached', () => {
     const sub: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Sub', 'Node3D', { children: [makeNode('Cam', 'Camera3D')] })],
       externalResources: [],
       internalResources: [],
@@ -157,6 +160,7 @@ describe('the step node — identity contract', () => {
   // every fallback returns the same reference and only a single-root merge
   // returns a fresh node.
   const single = (type: string): TscnScene => ({
+    ...INSTANTIABLE_SCENE,
     nodes: [makeNode('Root', type, { children: [makeNode('Child', 'Node3D')] })],
     externalResources: [],
     internalResources: [],
@@ -206,6 +210,7 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
     // include the collapsed Player (type adopted from the sub-scene root) so an
     // ancestor-transform walk sees the instance node's merged properties.
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('PlayerRoot', 'CharacterBody2D', {
           children: [makeNode('Target', 'Node2D', { children: [makeNode('Cam', 'Camera2D')] })],
@@ -283,6 +288,7 @@ describe('resolveLiveEntry — single-node path resolution (the inspector adapte
 
   it('descends into a collapsed instanced sub-scene interior (ADR-0013: no doubled root segment)', () => {
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('LampBody', 'Node3D', { children: [makeNode('plafoniera', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -304,6 +310,7 @@ describe('resolveLiveEntry — single-node path resolution (the inspector adapte
 
   it('resolves a selected collapsed instance ROOT to the merged (root-typed) node', () => {
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -325,11 +332,13 @@ describe('resolveLiveEntry — single-node path resolution (the inspector adapte
     // ExtResource id, absent from game.tscn. Descent resolves the inner instance
     // against the sub-scene's resource table.
     const subB: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
     };
     const subA: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ARoot', 'Node3D', {
           children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
@@ -378,6 +387,7 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
     // instance ref (the plain root's, undefined here). The tree's 📦 badge reads
     // the originating ref, so resolveLiveEntry surfaces it.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -404,6 +414,7 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
 
   it('returns instanceRef undefined for a collapsed sub-scene INTERIOR (the interior is not itself an instance)', () => {
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('LampBody', 'Node3D', { children: [makeNode('plafoniera', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -442,6 +453,7 @@ describe('the step of a node whose scene is still loading or failed', () => {
     // player.tscn instances player.glb through its own ext id, absent from the
     // outer scene's scope.
     const sub: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
           children: [makeNode('Model', 'Node3D', { instance: 'ExtResource("glb_1")' })],
@@ -511,6 +523,7 @@ describe('the step — origin-tagged child groups with per-group scope', () => {
   it('collapsed single-root instance → one merged group in sub-scene scope', () => {
     const outer = [ext('1', 'res://player.tscn')];
     const sub: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('PlayerRoot', 'CharacterBody3D', {
           children: [makeNode('Camera', 'Camera3D'), makeNode('Mesh', 'MeshInstance3D')],
@@ -581,6 +594,7 @@ describe("the step — internalResources scope (a sub-scene's own SubResource po
     const hostInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'HOST' })];
     const subInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'SUB' })];
     const sub: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('PlayerRoot', 'CharacterBody3D', { children: [makeNode('Panel', 'Panel')] })],
       externalResources: [],
       internalResources: subInternal,
@@ -643,11 +657,13 @@ describe("the step — internalResources scope (a sub-scene's own SubResource po
     const aInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'A' })];
     const bInternal = [subResource('StyleBoxFlat', '1', { bg_color: 'B' })];
     const subB: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'Panel')] })],
       externalResources: [],
       internalResources: bInternal,
     };
     const subA: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ARoot', 'Node3D', {
           children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],

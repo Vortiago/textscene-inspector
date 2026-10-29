@@ -20,6 +20,7 @@ import '../../../nodes/2d/sprite2d/index';
 import * as THREE from 'three';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -69,6 +70,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
 
     // The sub-scene: a root with an interior mesh node.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ceiling_lamp', 'Node3D', {
           children: [makeNode('plafoniera', LAMP_MESH_TYPE)],
@@ -154,6 +156,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
     // The sub-scene lands as the ResourceLoader announces it. The inspector picks
     // it up through the version tick, with no re-selection.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ceiling_lamp', 'Node3D', {
           children: [makeNode('plafoniera', LAMP_MESH_TYPE)],
@@ -212,6 +215,7 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
     // Instance root merge (ADR-0013): the instance node adopts the sub-scene
     // root's type and properties, and the inspector agrees with the tree.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('CoinBody', COIN_ROOT_TYPE)],
       externalResources: [],
       internalResources: [],
@@ -293,6 +297,7 @@ describe('<NodeDetailsPanel> copy node path inside an instance', () => {
     nodeRegistry.register({ typeName: LAMP_MESH_TYPE, parser: () => ({}) });
     const { loader, scenes } = createFakeResourceLoader();
     scenes.seed('res://ceiling_lamp.tscn', {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('ceiling_lamp', 'Node3D', { children: [makeNode('plafoniera', LAMP_MESH_TYPE)] })],
       externalResources: [],
       internalResources: [],

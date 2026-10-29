@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { collectLiveNodes, type LiveTreeContext, type SceneScope } from './liveSceneTree';
 import { contextOver, liveNodeAt, sceneCacheOver, stepOver } from './liveSceneTree.testkit';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
 
@@ -32,12 +33,18 @@ const SELF_ROOTS = [
     ],
   }),
 ];
-const SELF_SCENE: TscnScene = { nodes: SELF_ROOTS, externalResources: SELF_EXT, internalResources: [] };
+const SELF_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
+  nodes: SELF_ROOTS,
+  externalResources: SELF_EXT,
+  internalResources: [],
+};
 const SELF_CTX = contextOver(SELF_SCENE, { 'res://a.tscn': SELF_SCENE });
 
 /** `res://a.tscn` instances `res://b.tscn`, which instances `res://a.tscn`. */
 const A_EXT = [ext('1', 'res://b.tscn')];
 const B_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [
     makeNode('BRoot', 'Node3D', { children: [makeNode('ToA', 'Node3D', { instance: 'ExtResource("2")' })] }),
   ],
@@ -47,7 +54,12 @@ const B_SCENE: TscnScene = {
 const A_ROOTS = [
   makeNode('ARoot', 'Node3D', { children: [makeNode('ToB', 'Node3D', { instance: 'ExtResource("1")' })] }),
 ];
-const A_SCENE: TscnScene = { nodes: A_ROOTS, externalResources: A_EXT, internalResources: [] };
+const A_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
+  nodes: A_ROOTS,
+  externalResources: A_EXT,
+  internalResources: [],
+};
 const INDIRECT_CTX = contextOver(A_SCENE, { 'res://a.tscn': A_SCENE, 'res://b.tscn': B_SCENE });
 
 describe('walkLiveTree over cyclic instancing', () => {
@@ -74,6 +86,7 @@ describe('walkLiveTree over cyclic instancing', () => {
 
   it('expands a scene that two siblings instance, since neither is above the other', () => {
     const leaf: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('LeafRoot', 'Node3D', { children: [makeNode('Mesh', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -123,11 +136,13 @@ describe('the step and instancedScenePaths', () => {
   it("resolves the merged group in the innermost scene's pools when a root instances another scene", () => {
     const innerExt = [ext('7', 'res://deep.tscn')];
     const inner: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('InnerRoot', 'Node3D')],
       externalResources: innerExt,
       internalResources: [],
     };
     const outer: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('OuterRoot', 'Node3D', { instance: 'ExtResource("5")' })],
       externalResources: [ext('5', 'res://inner.tscn')],
       internalResources: [],
@@ -142,6 +157,7 @@ describe('the step and instancedScenePaths', () => {
 
   it("stamps a grafted host child with the host's chain, so it may instance the scene it sits in", () => {
     const leaf: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('LeafRoot', 'Node3D', { children: [makeNode('Mesh', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -172,6 +188,7 @@ describe('the step node and instancedScenePaths', () => {
 
   it('stops a root that instances its own scene after one merge', () => {
     const selfRooted: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Loop', 'Node3D', { instance: 'ExtResource("1")' })],
       externalResources: [ext('1', 'res://loop.tscn')],
       internalResources: [],

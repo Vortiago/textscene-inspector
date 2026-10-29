@@ -17,6 +17,7 @@ import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing'
 
 import '../../nodes/index';
 import { MAGENTA } from '../../../nodes/3d/meshinstance3d/testing/magenta';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 const GLB_PATH = 'res://assets/town.glb';
 const TRES_PATH = 'res://assets/road.tres';
@@ -39,6 +40,7 @@ function makeFakeGlb(importPath?: string): THREE.Object3D {
 
 function makeSynthesisedGlbScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       {
         rawProperties: {},

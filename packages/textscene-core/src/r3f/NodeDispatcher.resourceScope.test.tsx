@@ -16,12 +16,14 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 
 import './nodes/index';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 const SUB_SCENE = 'res://sub.tscn';
 
 /** The instanced scene: one root, and a `1` of its own that must NOT win. */
 function subScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       {
         rawProperties: {},

@@ -11,6 +11,7 @@ import type { RawNode, RawScene } from '../../../parser/types';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 import './linter';
 
 /** Depth-first search for the first node of a type, over a parsed scene tree. */
@@ -30,7 +31,12 @@ function makeContext(rawProperties: Record<string, string>): RuleContext {
     type: 'OccluderInstance3D',
     children: [],
   };
-  const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
+  const scene: RawScene = {
+    ...INSTANTIABLE_SCENE,
+    nodes: [node],
+    externalResources: [],
+    internalResources: [],
+  };
   return { scene, node };
 }
 

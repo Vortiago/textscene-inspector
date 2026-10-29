@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { RuleContext } from '../../../../linter/types';
 import type { RawNode, RawScene } from '../../../../parser/types';
 import { ruleRegistry } from '../../../../linter/RuleRegistry';
+import { INSTANTIABLE_SCENE } from '../../../../parser/sceneDefaults.testkit';
 import './linter';
 
 const codeEditDelimiterCollisionRule = ruleRegistry.getRule('valid-codeedit-properties')!;
@@ -19,7 +20,12 @@ function makeContext(rawProperties: Record<string, string>): RuleContext {
     type: 'CodeEdit',
     children: [],
   };
-  const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
+  const scene: RawScene = {
+    ...INSTANTIABLE_SCENE,
+    nodes: [node],
+    externalResources: [],
+    internalResources: [],
+  };
   return { scene, node };
 }
 

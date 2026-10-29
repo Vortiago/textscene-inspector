@@ -25,6 +25,14 @@ const INHERITS_REFUSED = `${HEADER}[ext_resource type="PackedScene" path="res://
 [node name="Hand" type="Node3D" parent="."]
 `;
 
+/** The text of `res://scene.tscn` that holds a node `Bad` which instances `res://refused.tscn`. */
+const HOLDER = `${HEADER}[ext_resource type="PackedScene" path="res://refused.tscn" id="1"]
+
+[node name="Holder" type="Node3D"]
+
+[node name="Bad" parent="." instance=ExtResource("1")]
+`;
+
 describe('the live tree below an instance of a refused scene', () => {
   const refusals: [string, string][] = [
     ['two parentless headings', TWO_ROOTS],
@@ -73,18 +81,27 @@ describe('the live tree below an instance of a refused scene', () => {
     expect(tree.at('Main/Body')!.step.isRefusedInstance).toBe(false);
   });
 
-  it('fails only the node that instances the refused scene, inside another instanced scene', () => {
-    const holder = `${HEADER}[ext_resource type="PackedScene" path="res://refused.tscn" id="1"]
+  it('fails the instance of a scene that holds an instance of a refused scene, as Godot does', () => {
+    const tree = liveTreeOfText(HOST, { 'res://scene.tscn': HOLDER, 'res://refused.tscn': TWO_ROOTS });
 
-[node name="Holder" type="Node3D"]
+    expect(livePathsOf(tree)).toEqual(['Main', 'Main/Body', 'Main/Body/Mark']);
+    expect(tree.at('Main/Body')!.step.isMerged).toBe(false);
+    expect(tree.at('Main/Body')!.step.isRefusedInstance).toBe(true);
+  });
 
-[node name="Bad" parent="." instance=ExtResource("1")]
+  it('fails the instance through every enclosing scene', () => {
+    const middle = `${HEADER}[ext_resource type="PackedScene" path="res://holder.tscn" id="1"]
+
+[node name="Middle" type="Node3D"]
+
+[node name="Inner" parent="." instance=ExtResource("1")]
 `;
-    const tree = liveTreeOfText(HOST, { 'res://scene.tscn': holder, 'res://refused.tscn': TWO_ROOTS });
+    const tree = liveTreeOfText(HOST, {
+      'res://scene.tscn': middle,
+      'res://holder.tscn': HOLDER,
+      'res://refused.tscn': TWO_ROOTS,
+    });
 
-    expect(livePathsOf(tree)).toEqual(['Main', 'Main/Body', 'Main/Body/Bad', 'Main/Body/Mark']);
-    expect(tree.at('Main/Body')!.step.isMerged).toBe(true);
-    expect(tree.at('Main/Body/Bad')!.step.isMerged).toBe(false);
-    expect(tree.at('Main/Body/Bad')!.step.isRefusedInstance).toBe(true);
+    expect(tree.at('Main/Body')!.step.isRefusedInstance).toBe(true);
   });
 });

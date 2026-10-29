@@ -32,6 +32,7 @@ import { nativeTheme } from './nativeTheme';
 import { themeResource } from './testing/themeResource';
 import { CAPTION_PATH, HOST_LEAF_PATH, hostScene, scenesByPath } from '../../testing/graftedScopeFixture';
 import type { Rect2 } from '../../../godot/math/rect2';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 // Side-effect imports: the node parsers that turn the `.tscn` text below into
 // typed Control properties, and the solvers/minimum-size functions the solved
 // rects come from.
@@ -66,7 +67,7 @@ function scene(
   externalResources: TscnExternalResource[] = [],
   internalResources: TscnInternalResource[] = []
 ): TscnScene {
-  return { nodes, internalResources, externalResources } as TscnScene;
+  return { ...INSTANTIABLE_SCENE, nodes, internalResources, externalResources };
 }
 
 function instanceOf(name: string, id: string, type = 'Node'): TscnNode {

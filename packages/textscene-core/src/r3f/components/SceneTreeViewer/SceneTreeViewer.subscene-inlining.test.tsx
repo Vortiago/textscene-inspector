@@ -18,6 +18,7 @@ import {
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../../../nodes/node/index';
 
@@ -49,6 +50,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
     // Sub-scene's content: a Node3D named "Frame" containing a MeshInstance3D.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Frame', 'Node3D', {
           children: [makeNode('FrameMesh', 'MeshInstance3D')],
@@ -89,11 +91,13 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     // so it resolves against the sub-scene's resource table.
     const fake = createFakeResourceLoader();
     const subB: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
     };
     const subA: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ARoot', 'Node3D', {
           children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
@@ -170,6 +174,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     const fake = createFakeResourceLoader();
 
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('SubRoot', 'Node3D')],
       externalResources: [],
       internalResources: [],
@@ -249,6 +254,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
 
     // The sub-scene root is an Area3D, a type other than the instance node's.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Coin', 'Area3D', {
           children: [makeNode('Circle', 'MeshInstance3D'), makeNode('Animation', 'AnimationPlayer')],
@@ -282,6 +288,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   it('keeps the open-sub-scene affordance on a collapsed (cached, single-root) instance row', () => {
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://coin/coin.tscn', {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Coin', 'Area3D')],
       externalResources: [],
       internalResources: [],
@@ -325,6 +332,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://frame.tscn', {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('FrameRoot', 'Node3D', { children: [makeNode('SpecialMesh', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],

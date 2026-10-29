@@ -13,6 +13,7 @@ import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader, recordSceneRequests } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 import { makeNode, translated } from '../parser/testing/parserKit';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 // The barrel registers every node-type component.
 import './nodes/index';
@@ -30,6 +31,7 @@ function makeBoxScene(meshName = 'TheBox'): TscnScene {
     },
   ];
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [makeNode(meshName, 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } })],
     externalResources: [],
     internalResources,
@@ -106,6 +108,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // Scene C: a single MeshInstance3D rendering a sphere.
     const sceneC: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Inner', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("S_1")' } })],
       externalResources: [],
       internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { radius: '0.5' } }],
@@ -113,6 +116,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // Scene B: a Node3D that instances scene C.
     const sceneB: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('MiddleRoot', 'Node3D', { instance: 'ExtResource("c_ref")' })],
       externalResources: [{ id: 'c_ref', path: 'res://scene_c.tscn', type: 'PackedScene' }],
       internalResources: [],
@@ -171,6 +175,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // mesh. Merging onto a container preserves both the root's own children
     // and the children the host added under the instance node.
     const innerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('InnerRoot', 'Node3D', {
           children: [
@@ -225,12 +230,14 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // The Wrapper's sub-scene, whose own pool does not hold the gadget ref.
     const wrapperScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('WrapperRoot', 'Node3D')],
       externalResources: [],
       internalResources: [],
     };
     // The gadget sub-scene (a sphere), referenced only by a host ExtResource id.
     const gadgetScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('GadgetRoot', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("S_1")' } })],
       externalResources: [],
       internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { radius: '0.5' } }],
@@ -264,6 +271,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // Level 3 (leaf): a single box mesh, no transform.
     const leafScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('LeafBox', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } })],
       externalResources: [],
       internalResources: [
@@ -277,6 +285,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     // Level 2 (middle): a Node3D wrapper translated z=3 that instances leaf.
     const middleScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('MiddleWrapper', 'Node3D', {
           instance: 'ExtResource("leaf_ref")',
