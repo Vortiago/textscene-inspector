@@ -15,7 +15,6 @@ import {
   BonePoses,
   newBone,
   poseUnder,
-  skinMatricesUnder,
   type Bone,
   type BonePose,
   type PoseModifier,
@@ -431,7 +430,7 @@ function expectQuaternionClose(actual: Quaternion, expected: Quaternion): void {
   expect(actual.w).toBeCloseTo(expected.w, 6);
 }
 
-describe('skinMatricesUnder: one BonePoses across frames', () => {
+describe('poseUnder: one BonePoses across frames', () => {
   const posed = (x: number): PoseModifier => ({
     influence: 1,
     edit: (poses) => poses.setPosePosition(0, { x, y: 0.5, z: 0 }),
@@ -440,16 +439,18 @@ describe('skinMatricesUnder: one BonePoses across frames', () => {
   it('starts every frame from the file pose, so an edit of one frame does not reach the next', () => {
     const poses = new BonePoses(CHAIN, false);
 
-    skinMatricesUnder(poses, [posed(3)]);
+    poseUnder(poses, [posed(3)]).skinMatrices();
 
-    skinMatricesUnder(poses, []).forEach(expectIdentity);
+    poseUnder(poses, []).skinMatrices().forEach(expectIdentity);
   });
 
   it('answers what a new BonePoses answers for the same modifiers', () => {
     const poses = new BonePoses(CHAIN, false);
-    skinMatricesUnder(poses, [quarterTurner(2)]);
+    poseUnder(poses, [quarterTurner(2)]).skinMatrices();
 
-    expect(skinMatricesUnder(poses, [posed(1)])).toEqual(automaticSkinMatrices(CHAIN, false, [posed(1)]));
+    expect(poseUnder(poses, [posed(1)]).skinMatrices()).toEqual(
+      automaticSkinMatrices(CHAIN, false, [posed(1)])
+    );
   });
 });
 

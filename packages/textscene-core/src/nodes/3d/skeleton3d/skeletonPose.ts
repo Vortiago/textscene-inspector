@@ -154,18 +154,13 @@ export function automaticSkinMatrices(
   showRestOnly: boolean,
   modifiers: readonly PoseModifier[] = []
 ): Transform3D[] {
-  return skinMatricesUnder(new BonePoses(bones, showRestOnly), modifiers);
+  return poseUnder(new BonePoses(bones, showRestOnly), modifiers).skinMatrices();
 }
 
 /**
- * {@link automaticSkinMatrices} on `poses`, which start again from the file pose. A caller that
- * skins one skeleton every frame keeps its `BonePoses`, and with it the rig.
+ * Starts `poses` again from the file pose and runs `modifiers` on it, in order. Returns `poses`. A
+ * caller that skins one skeleton every frame keeps its `BonePoses`, and with it the rig.
  */
-export function skinMatricesUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): Transform3D[] {
-  return poseUnder(poses, modifiers).skinMatrices();
-}
-
-/** Starts `poses` again from the file pose and runs `modifiers` on it, in order. Returns `poses`. */
 export function poseUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): BonePoses {
   poses.reset();
   for (const modifier of modifiers) runModifier(poses, modifier);

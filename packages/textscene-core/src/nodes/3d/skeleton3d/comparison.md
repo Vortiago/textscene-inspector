@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that poses the meshes bound to it)
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. An AnimationPlayer that plays a clip writes the pose of each bone the clip keys, with the position scaled by `motion_scale`. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton` to the Skin it sets, by bind name or bone index, or to Godot's automatic skin where `skin` is unset. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
+Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. An AnimationPlayer that plays a clip writes the pose of each bone the clip keys, with the position scaled by `motion_scale`. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton`. The mesh takes the Skin it sets, by bind name or bone index, or Godot's automatic skin where `skin` is unset. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
 
 ## Linting
 
