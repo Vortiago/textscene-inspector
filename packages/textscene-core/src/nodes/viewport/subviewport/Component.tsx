@@ -5,69 +5,44 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
-import { createPortal, useThree } from '@react-three/fiber';
-import {
-  CanvasWorldContext,
-  useCanvasWorld,
-  useDrawCanvasWorld,
-} from '../../../r3f/environment/canvasWorldScene';
-import {
-  CanvasWorldScope,
-  SharedWorldEnvironmentScope,
-  WorldEnvironmentScope,
-} from '../../../r3f/environment/WorldEnvironmentScope';
-import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
-import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
-import * as THREE from 'three';
+import { lazy, useMemo } from 'react';
+import { OffscreenViewportPass } from './OffscreenViewportPass';
 
+import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
-import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
+import { useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
-import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
-import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
-import {
-  renderWithShadowAtlas,
-  ViewportShadowAtlas,
-} from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
-import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
-import { createViewportLightPassHost } from './viewportLightPassHost';
-import type { Rgba } from '../../../godot/math/math';
 import { SubViewportSamplerScope } from './SubViewportSamplerScope';
-import {
-  applyOrthoFrame,
-  createCanvasTarget,
-  createSceneTarget,
-  godotCanvasPosition,
-  renderToOffscreenTarget,
-  orthoFrameForCamera2D,
-  orthoFrameForSize,
-  selectViewportCamera,
-  selectViewportCamera2D,
-  viewportAspect,
-  viewportMsaaMode,
-} from './offscreenViewport';
-import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
-import type { Camera2DTag } from '../../2d/camera2d/cameraView';
-import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
-import { useViewportContentKind } from './useViewportContentKind';
-import { usePublishViewportPass } from './usePublishViewportPass';
-import { useCanvasPass } from './useCanvasPass';
+import { useViewportContent } from './useViewportContent';
+import { useInheritedRtl } from './useInheritedRtl';
+import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
-import { viewportTargetSize } from './targetSize';
-import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
-import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
-import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { hideEditorHelpers } from '../../../r3f/editorHelpers';
+import { viewportSize, viewportTargetSize } from './targetSize';
+
+// Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
+const ViewportControls = lazy(() =>
+  import('./ViewportControls.js').then((m) => ({ default: m.ViewportControls }))
+);
+
+/** The Controls of a viewport beside its 2D items; the direction climb runs only for such a viewport. */
+function MixedViewportControls({
+  path,
+  nodes,
+  size,
+}: {
+  path: string;
+  nodes: readonly TscnNode[];
+  size: Vector2;
+}) {
+  const inheritedRtl = useInheritedRtl(path);
+  return <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} />;
+}
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -83,11 +58,11 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // Classified over the resolved subtree: in the parsed graph an `instance=`
   // child is a typeless, childless node, so an untouched 2D sub-scene and an
   // untouched 3D one are indistinguishable until the sub-scene lands.
-  const kind = useViewportContentKind(node);
+  const { kind, holdsControls } = useViewportContent(node);
 
-  // Only content this subsystem can rasterise gets an offscreen pass; Controls
-  // are the native Control-raster pass's (`ControlRasterPass.tsx`), and an
-  // empty viewport has nothing to draw.
+  // Only content this subsystem can rasterise gets an offscreen pass. A Control-only viewport
+  // is the native Control-raster pass's (`ControlRasterPass.tsx`), and an empty one has nothing
+  // to draw.
   const rasterizes = kind === '3d' || kind === '2d';
 
   // The subtree draws inline only for 3D content in a shared world in a 3D
@@ -97,13 +72,30 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
-  const targetSize = viewportTargetSize(properties.size, useViewportRect(path));
+  const forcedRect = useViewportRect(path);
+  const targetSize = viewportTargetSize(properties.size, forcedRect);
+  const authoredSize = viewportSize(properties.size, forcedRect);
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
   const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
+  // Godot lays Controls out by `size` (`viewport.cpp:1202-1210`); only the target is capped.
+  const layoutSize = useMemo(
+    () => ({ x: authoredSize.x, y: authoredSize.y }),
+    [authoredSize.x, authoredSize.y]
+  );
   const canvasModulate = useCanvasModulateColor(node.children);
+  // The Controls of a 2D pass draw in its portal beside the world items, one tree-order draw. A 3D
+  // pass draws them over its world, in a scene of their own (`OffscreenViewportPass`).
+  const drawsControls = kind === '2d' && holdsControls;
   const contents = (
-    <ViewportSizeProvider size={size}>
-      <SubViewportSamplerScope properties={properties}>{children}</SubViewportSamplerScope>
+    <ViewportSizeProvider size={layoutSize}>
+      <SubViewportSamplerScope properties={properties}>
+        {children}
+        {drawsControls ? (
+          <PendingSuspense>
+            <MixedViewportControls path={path} nodes={node.children} size={layoutSize} />
+          </PendingSuspense>
+        ) : null}
+      </SubViewportSamplerScope>
     </ViewportSizeProvider>
   );
 
@@ -113,279 +105,19 @@ export function SubViewport({ node, children }: NodeComponentProps) {
         <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
       ) : null}
       {rasterizes ? (
-        <OffscreenViewport
+        <OffscreenViewportPass
           node={node}
           path={path}
           size={size}
+          layoutSize={layoutSize}
           kind={kind}
           rendersInline={rendersInline}
           canvasModulate={canvasModulate}
+          drawsControlsOverWorld={kind === '3d' && holdsControls}
         >
           {rendersInline ? null : contents}
-        </OffscreenViewport>
+        </OffscreenViewportPass>
       ) : null}
     </Node>
-  );
-}
-
-interface OffscreenViewportProps extends NodeComponentProps {
-  path: string;
-  size: Vector2;
-  kind: '2d' | '3d';
-  rendersInline: boolean;
-  /** The tint of this viewport's own canvas, where its light accumulation starts. */
-  canvasModulate: Rgba;
-}
-
-/**
- * Owns the render target, drives the offscreen pass and publishes the result.
- * A separate component, so a Control-only sub-viewport mounts none of its hooks
- * and leaves the key to `ControlRasterPass.tsx`.
- */
-function OffscreenViewport({
-  node,
-  path,
-  size,
-  kind,
-  rendersInline,
-  canvasModulate,
-  children,
-}: OffscreenViewportProps) {
-  const properties = node.properties as SubViewportProperties;
-  const { transparent_bg: transparentBg, own_world_3d: ownWorld3D } = properties;
-  const { x: width, y: height } = size;
-
-  const gl = useThree((state) => state.gl);
-  const clearColor = useProjectClearColor();
-  const mainScene = useThree((state) => state.scene);
-  const canvasCamera = useThree((state) => state.camera);
-  // A portalled 3D pass in a shared world draws the canvas's world, which owns its scene's lights.
-  const portals3D = kind === '3d' && !rendersInline;
-  const canvasWorld = useCanvasWorld();
-  const drawnCanvasWorld = portals3D && !ownWorld3D ? canvasWorld : null;
-  useDrawCanvasWorld(drawnCanvasWorld);
-  // The scene the pass draws: the parent's for an inline pass, else the one the portal fills.
-  const passScene = useMemo(
-    () => (rendersInline ? mainScene : (drawnCanvasWorld?.scene ?? createOwnScene(node.name))),
-    [rendersInline, mainScene, drawnCanvasWorld, node.name]
-  );
-
-  // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
-  const target = useMemo(
-    () => (kind === '3d' ? createSceneTarget : createCanvasTarget)(width, height, node.name),
-    [kind, width, height, node.name]
-  );
-  useDisposeOnRelease(target);
-  const msaaMode = viewportMsaaMode(properties, kind);
-  // Written only by the stage below while it is mounted.
-  const toneMapStage = useRef<OffscreenToneMap | null>(null);
-  // Godot tonemaps through the Environment of the world `find_world_3d()` resolves, so the stage
-  // mounts in that world: beside an inline pass, and inside a portal, whose scope answers for both.
-  const stage =
-    kind === '3d' ? (
-      <OffscreenToneMapStage
-        stage={toneMapStage}
-        target={target}
-        msaaMode={msaaMode}
-        width={width}
-        height={height}
-        transparentBackground={transparentBg}
-        usesDebanding={properties.use_debanding}
-        name={node.name}
-      />
-    ) : null;
-  // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
-  // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
-  // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
-  const portalLightScene = portals3D && !drawnCanvasWorld ? passScene : null;
-  useSceneShadowFit(portalLightScene);
-  useSceneDepthPrepass(portalLightScene);
-  const shadowAtlas = useViewportShadowAtlas(properties);
-  const projectMipmapBias = useProjectTextureMipmapBias();
-  const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
-
-  // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
-  // the subtree makes itself current, so the pass narrows this camera to that view each frame.
-  const { camera: orthoCamera, frame } = useCanvasPass(width, height, kind === '2d' ? msaaMode : 0);
-  // This viewport's own World2D is lit by its own pass, run below once the camera is framed.
-  // A resize reaches the host through `resize`, which keeps the host and the context it feeds.
-  const firstSize = useRef(size).current;
-  const lightHost = useMemo(
-    () => (kind === '2d' ? createViewportLightPassHost(passScene, orthoCamera, path, firstSize) : null),
-    [kind, passScene, orthoCamera, path, firstSize]
-  );
-  useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
-
-  const renderPass = useCallback(() => {
-    if (kind === '2d') {
-      // The camera's world matrix is what carries an instanced sub-scene's
-      // transform, and nothing has refreshed it yet this frame: `gl.render`
-      // updates matrices, and this pass runs before the main one.
-      passScene.updateMatrixWorld(true);
-      const camera2d = selectViewportCamera2D(passScene);
-      const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
-      applyOrthoFrame(
-        orthoCamera,
-        camera2d && tag
-          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), size)
-          : orthoFrameForSize(size)
-      );
-      lightHost?.run.current?.();
-    }
-
-    // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
-    const toneMap = kind === '3d' ? toneMapStage.current : null;
-    if (kind === '3d' && !toneMap) return;
-    const camera = kind === '3d' ? selectViewportCamera(passScene, path) : orthoCamera;
-
-    // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
-    // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect(size);
-    const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
-    if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
-
-    try {
-      // Neither pass draws a curve: canvas items draw after Godot's 3D tonemap pass, and the 3D world
-      // draws in linear HDR for its tonemap pass.
-      renderToOffscreenTarget(gl, {
-        target: toneMap ? toneMap.worldBuffer : target,
-        clearColor,
-        transparentBg,
-        toneMapping: THREE.NoToneMapping,
-        // No camera is not an error: Godot renders the clear colour and nothing else.
-        draw: () => {
-          // A 3D pass clears its target itself where no render will, as `CanvasFrame.render`
-          // explains. A 2D pass copies over it.
-          const rendersClear = camera !== null && gl.autoClear;
-          if (kind === '3d' && !rendersClear) gl.clear(true, true, true);
-          if (!camera) return;
-          // The pass draws through the viewport's own camera, which no editor gizmo is built for.
-          const showChrome = hideEditorHelpers(passScene);
-          try {
-            renderWithMipmapBias(mipmapBias, () =>
-              renderWithShadowAtlas(shadowAtlas, () =>
-                kind === '2d' ? frame.render(gl, passScene, camera) : gl.render(passScene, camera)
-              )
-            );
-          } finally {
-            showChrome();
-          }
-        },
-      });
-      toneMap?.toneMap();
-    } finally {
-      if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
-    }
-  }, [
-    canvasCamera,
-    passScene,
-    kind,
-    path,
-    orthoCamera,
-    lightHost,
-    gl,
-    target,
-    frame,
-    shadowAtlas,
-    mipmapBias,
-    clearColor,
-    transparentBg,
-    size,
-  ]);
-
-  // Consumers sample the texture directly. The ordered driver runs every
-  // non-cyclic pass before R3F's own render, so a sampler sees this frame's
-  // content, even on the frame the target is first published.
-  usePublishViewportPass({
-    path,
-    node,
-    target,
-    width,
-    height,
-    isTransparent: transparentBg,
-    render: renderPass,
-  });
-
-  if (rendersInline) return stage;
-  const WorldScope = !ownWorld3D
-    ? SharedWorldEnvironmentScope
-    : kind === '2d'
-      ? OwnCanvasWorldScope
-      : OwnWorldEnvironmentScope;
-  // The portal declares the workspace its content needs, not the host's, which
-  // could drop it. The portal scene is detached, so no host CanvasItem transform
-  // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
-  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`). A WorldEnvironment
-  // inside applies to an own world, and to the parent's world through a shared one.
-  const portal = createPortal(
-    <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
-        <WorldRootProvider value={passScene}>
-          <WorldScope>
-            {stage}
-            <CanvasSpaceProvider value={null}>
-              {lightHost ? (
-                <CanvasLightPass host={lightHost} canvasModulate={canvasModulate}>
-                  {children}
-                </CanvasLightPass>
-              ) : (
-                <World2DLightingBoundary canvasModulate={canvasModulate}>{children}</World2DLightingBoundary>
-              )}
-            </CanvasSpaceProvider>
-          </WorldScope>
-        </WorldRootProvider>
-      </AnisotropicFilteringProvider>
-    </CanvasWorkspaceProvider>,
-    passScene
-  );
-  return portal;
-}
-
-/**
- * The viewport's own positional shadow atlas, as Godot keeps one per viewport. A main view and this
- * pass that give an omni light different slots each keep their own cube, so a steady scene never
- * reallocates one per render. One shared cube would reallocate on every render the two disagree on.
- */
-function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShadowAtlas {
-  const {
-    positional_shadow_atlas_size: size,
-    positional_shadow_atlas_quad_0: quad0,
-    positional_shadow_atlas_quad_1: quad1,
-    positional_shadow_atlas_quad_2: quad2,
-    positional_shadow_atlas_quad_3: quad3,
-  } = properties;
-  const atlas = useMemo(
-    () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3])),
-    [size, quad0, quad1, quad2, quad3]
-  );
-  useDisposeOnRelease(atlas);
-  return atlas;
-}
-
-/** The scene a portal of its own fills. */
-function createOwnScene(name: string): THREE.Scene {
-  const scene = new THREE.Scene();
-  scene.name = `${name}::offscreen`;
-  return scene;
-}
-
-/**
- * The world of a viewport with `own_world_3d`. It hides the enclosing canvas's world, so a shared
- * viewport nested below reaches this world, as `find_world_3d()` does (`viewport.cpp:4670-4681`).
- */
-function OwnWorldEnvironmentScope({ children }: { children: ReactNode }) {
-  return (
-    <WorldEnvironmentScope world="subViewport">
-      <CanvasWorldContext.Provider value={null}>{children}</CanvasWorldContext.Provider>
-    </WorldEnvironmentScope>
-  );
-}
-
-/** An own world drawn as a 2D canvas, whose shared viewports draw its World3D, not the parent's. */
-function OwnCanvasWorldScope({ children }: { children: ReactNode }) {
-  return (
-    <OwnWorldEnvironmentScope>
-      <CanvasWorldScope>{children}</CanvasWorldScope>
-    </OwnWorldEnvironmentScope>
   );
 }

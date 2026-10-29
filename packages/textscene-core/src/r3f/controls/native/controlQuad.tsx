@@ -26,6 +26,8 @@ interface ControlQuadProps {
    * which. Without it, `z_index` and `CanvasLayer.layer` are ignored.
    */
   renderOrder: number;
+  /** Writes its texels over what is behind it, alpha included, where a blend would multiply that alpha twice. */
+  replacesBackdrop?: boolean;
   /** The draw hooks of the GeometryInstance3D a Label3D's hex-code box draws for. It casts nothing. */
   drawHooks?: SurfaceDrawHooks;
 }
@@ -37,6 +39,7 @@ export function ControlQuad({
   opacity,
   map = null,
   renderOrder,
+  replacesBackdrop = false,
   drawHooks,
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
@@ -55,6 +58,7 @@ export function ControlQuad({
         opacity,
         transparent: true,
         depthWrite: false,
+        ...(replacesBackdrop && { blending: THREE.NoBlending }),
         clippingPlanes: clippingPlanes as THREE.Plane[],
       },
       // The double-sided, single-pass facing and the lit pixel material of the item around it.
