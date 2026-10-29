@@ -386,6 +386,7 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
       p.origin = ringPoint(emission, rng);
       break;
     default:
+      // POINT emits from the origin, which `restartParticle` sets before the switch.
       break;
   }
 }

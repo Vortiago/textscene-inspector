@@ -77,4 +77,13 @@ describe('useLazyModule', () => {
     mount(loader, load, seen);
     expect([seen[0], loader.pendingResourceCount]).toEqual(['module', 0]);
   });
+
+  it('counts no pending load for a module that has already failed', async () => {
+    const loader = new ResourceLoader();
+    const load = memoisedImport(() => Promise.reject(new Error('chunk lost')));
+    await load().catch(() => {});
+    const seen: (string | null)[] = [];
+    mount(loader, load, seen);
+    expect([seen[0], loader.pendingResourceCount]).toEqual([null, 0]);
+  });
 });

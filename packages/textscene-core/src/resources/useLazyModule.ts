@@ -7,11 +7,13 @@
 import { useEffect, useState } from 'react';
 import { usePendingWhile } from './usePendingWhile';
 
-/** A dynamic import loaded once, which also reads its module once it has landed. */
+/** The module once its import lands, or why a reader has none: still loading, or failed for good. */
+export type LazyState<T> = { module: T } | 'loading' | 'failed';
+
+/** A dynamic import loaded once, which also reports how far it has got. */
 export interface LazyImport<T> {
   (): Promise<T>;
-  /** The module, or undefined before the import lands and after it fails. */
-  landed(): { module: T } | undefined;
+  state(): LazyState<T>;
 }
 
 /**
@@ -21,27 +23,31 @@ export interface LazyImport<T> {
  */
 export function memoisedImport<T>(load: () => Promise<T>): LazyImport<T> {
   let pending: Promise<T> | null = null;
-  let landed: { module: T } | undefined;
+  let state: LazyState<T> = 'loading';
   const memoised = () =>
-    (pending ??= load().then((module) => {
-      landed = { module };
-      return module;
-    }));
-  return Object.assign(memoised, { landed: () => landed });
+    (pending ??= load().then(
+      (module) => {
+        state = { module };
+        return module;
+      },
+      (error: unknown) => {
+        state = 'failed';
+        throw error;
+      }
+    ));
+  return Object.assign(memoised, { state: () => state });
 }
-
-/** The module once its import lands, or why the hook reads null: still loading, or failed for good. */
-type LazyState<T> = { module: T } | 'loading' | 'failed';
 
 /**
  * The module `load` gives, or null before it lands. The caller counts as one pending load until
  * then, so a capture waits for the chunk. A module that fails to load reads null for good, and the
- * caller draws as it does before the load. A module that has landed reads on the first render.
+ * caller draws as it does before the load. An import that has already landed or failed reads so
+ * from the first render.
  *
  * @canonical A component's lazily loaded module
  */
 export function useLazyModule<T>(load: LazyImport<T>): T | null {
-  const [state, setState] = useState<LazyState<T>>(() => load.landed() ?? 'loading');
+  const [state, setState] = useState(load.state);
   const isLoading = state === 'loading';
   useEffect(() => {
     if (!isLoading) return undefined;
