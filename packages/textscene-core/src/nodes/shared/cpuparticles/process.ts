@@ -33,7 +33,7 @@
 
 import { storedReal as f } from '../../../godot/math/real.js';
 import { multiplyColor, type Rgba } from '../../../godot/math/math.js';
-import { idhash } from '../../2d/cpuparticles2d/godotRng';
+import { idhash } from './godotRng';
 
 /**
  * The seed substituted when a scene does not set `use_fixed_seed`. Godot uses
