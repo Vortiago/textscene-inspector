@@ -33,7 +33,7 @@ catalog:
   # Language Server Protocol (tscn-lsp). The VS Code extension uses the editor's
   # own API, so only the standalone server depends on these.
   vscode-languageserver: ^10.1.2
-  vscode-languageserver-textdocument: ^1.0.15
+  vscode-languageserver-textdocument: ^1.0.16
 
   # R3F migration (Phase 14, WI-R3F-1) — spike-validated pins
   react: ^19.3
