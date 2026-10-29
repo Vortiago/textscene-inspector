@@ -38,8 +38,9 @@ export const TRANSFORM2D_IDENTITY: Transform2DColumns = Object.freeze({
 
 /**
  * `Transform2D(rot, scale, skew, pos)` (`transform_2d.cpp:107-113`), as `Node2D::_update_transform`
- * builds it (`node_2d.cpp:135-137`). `c` is `0 - v`, not the engine's `-v`: they differ only in a
- * zero's sign, which no reader here tells apart, and an unrotated transform equals the identity.
+ * builds it (`node_2d.cpp:135-137`), in `real_t` float. `c` is `0 - v`, not the engine's `-v`: they
+ * differ only in a zero's sign, which no reader here tells apart, and an unrotated transform equals
+ * the identity.
  */
 export function transform2DFromParts(
   rotation: number,
@@ -47,45 +48,31 @@ export function transform2DFromParts(
   skew: number,
   position: { readonly x: number; readonly y: number }
 ): Transform2DColumns {
+  const skewed = f(f(rotation) + f(skew));
+  const sx = f(scale.x);
+  const sy = f(scale.y);
   return {
-    a: Math.cos(rotation) * scale.x,
-    b: Math.sin(rotation) * scale.x,
-    c: 0 - Math.sin(rotation + skew) * scale.y,
-    d: Math.cos(rotation + skew) * scale.y,
-    tx: position.x,
-    ty: position.y,
+    a: f(f(Math.cos(f(rotation))) * sx),
+    b: f(f(Math.sin(f(rotation))) * sx),
+    c: 0 - f(f(Math.sin(skewed)) * sy),
+    d: f(f(Math.cos(skewed)) * sy),
+    tx: f(position.x),
+    ty: f(position.y),
   };
 }
 
 /**
- * `Transform2D::operator*` (`transform_2d.cpp:198-218`): `parent * local`, which maps a point
- * through `local`, then `parent`, as `CanvasItem::get_global_transform()` composes a chain.
+ * `Transform2D::operator*` (`transform_2d.cpp:198-218`) in `real_t` float: `parent * local`, which
+ * maps a point through `local`, then `parent`, as `CanvasItem::get_global_transform()` composes a
+ * chain, each multiply and add rounded as C++ rounds a `float`.
+ *
+ * @canonical A Transform2D product in float32
  */
 export function multiplyTransform2D(
   parent: Transform2DColumns,
   local: Transform2DColumns
 ): Transform2DColumns {
-  return {
-    a: parent.a * local.a + parent.c * local.b,
-    b: parent.b * local.a + parent.d * local.b,
-    c: parent.a * local.c + parent.c * local.d,
-    d: parent.b * local.c + parent.d * local.d,
-    tx: parent.a * local.tx + parent.c * local.ty + parent.tx,
-    ty: parent.b * local.tx + parent.d * local.ty + parent.ty,
-  };
-}
-
-/**
- * `Transform2D::operator*` (`transform_2d.cpp:198-218`) in `real_t` float: the same product as
- * {@link multiplyTransform2D}, each multiply and add rounded as C++ rounds a `float`.
- *
- * @canonical A Transform2D product in float32
- */
-export function multiplyTransform2Df(
-  parent: Transform2DColumns,
-  local: Transform2DColumns
-): Transform2DColumns {
-  const origin = transform2DXformf(parent, { x: local.tx, y: local.ty });
+  const origin = transform2DXform(parent, { x: local.tx, y: local.ty });
   return {
     a: f(f(parent.a * local.a) + f(parent.c * local.b)),
     b: f(f(parent.b * local.a) + f(parent.d * local.b)),
@@ -100,7 +87,7 @@ export function multiplyTransform2Df(
  * `Transform2D::xform` (`transform_2d.h`, `tdotx` and `tdoty` plus the origin) in `real_t` float.
  * A transform with a zero origin gives `Transform2D::basis_xform`.
  */
-export function transform2DXformf(t: Transform2DColumns, v: Vector2): Vector2 {
+export function transform2DXform(t: Transform2DColumns, v: Vector2): Vector2 {
   return {
     x: f(f(f(t.a * v.x) + f(t.c * v.y)) + t.tx),
     y: f(f(f(t.b * v.x) + f(t.d * v.y)) + t.ty),
@@ -108,12 +95,15 @@ export function transform2DXformf(t: Transform2DColumns, v: Vector2): Vector2 {
 }
 
 /**
- * `Transform2D::affine_invert` (`transform_2d.cpp:48-66`) in `real_t` float. A singular transform
- * has no inverse: {@link affineInverseTransform2D} explains the identity answered here.
+ * `Transform2D::affine_invert` (`transform_2d.cpp:48-66`) in `real_t` float. A singular transform,
+ * such as a node scaled to zero, has none: the engine's `ERR_FAIL_COND` (`:51`, `MATH_CHECKS` only)
+ * returns it unchanged. Each caller draws through that singular transform, so no answer is visible,
+ * and this returns the identity for a zero or non-finite determinant to keep NaN out of the scene
+ * graph.
  *
  * @canonical A Transform2D inverse in float32
  */
-export function affineInverseTransform2Df(t: Transform2DColumns): Transform2DColumns {
+export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColumns {
   const det = f(f(t.a * t.d) - f(t.b * t.c));
   if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
   const idet = f(1 / det);
@@ -121,25 +111,8 @@ export function affineInverseTransform2Df(t: Transform2DColumns): Transform2DCol
   const b = f(t.b * -idet);
   const c = f(t.c * -idet);
   const d = f(t.a * idet);
-  const origin = transform2DXformf({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
+  const origin = transform2DXform({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
   return { a, b, c, d, tx: origin.x, ty: origin.y };
-}
-
-/**
- * `Transform2D::affine_inverse` (`transform_2d.cpp:48-66`). A singular transform, such as a node
- * scaled to zero, has none: the engine's `ERR_FAIL_COND` (`:51`, `MATH_CHECKS` only) returns it
- * unchanged. Each caller draws through that singular transform, so no answer is visible, and this
- * returns the identity for a zero or non-finite determinant to keep NaN out of the scene graph.
- */
-export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColumns {
-  const det = t.a * t.d - t.b * t.c;
-  if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
-  const idet = 1 / det;
-  const a = t.d * idet;
-  const b = -t.b * idet;
-  const c = -t.c * idet;
-  const d = t.a * idet;
-  return { a, b, c, d, tx: -(a * t.tx + c * t.ty), ty: -(b * t.tx + d * t.ty) };
 }
 
 /**

@@ -41,9 +41,9 @@ import { degToRad, degToRadf, lerpf, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
   TRANSFORM2D_IDENTITY,
-  affineInverseTransform2Df,
-  multiplyTransform2Df,
-  transform2DXformf,
+  affineInverseTransform2D,
+  multiplyTransform2D,
+  transform2DXform,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
 import { type CPUParticles2DProperties } from './types';
@@ -309,8 +309,8 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
       }
       restartParticle(state, input, p, i, tv);
       if (!props.local_coords) {
-        p.velocity = transform2DXformf(velocityXform, p.velocity);
-        p.transform = multiplyTransform2Df(emissionXform, p.transform);
+        p.velocity = transform2DXform(velocityXform, p.velocity);
+        p.transform = multiplyTransform2D(emissionXform, p.transform);
       }
     } else if (!p.active) {
       continue;
@@ -544,7 +544,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
     const rotation = { a: cr, b: sr, c: -sr, d: cr, tx: 0, ty: 0 };
     const orbited = vector2Add(
       vector2Sub({ x: p.transform.tx, y: p.transform.ty }, diff),
-      transform2DXformf(rotation, diff)
+      transform2DXform(rotation, diff)
     );
     p.transform.tx = orbited.x;
     p.transform.ty = orbited.y;
@@ -646,7 +646,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
  * into the emitter node's local space.
  */
 function collectPose(state: SimState, props: CPUParticles2DProperties): RenderedParticle[] {
-  const inverse = affineInverseTransform2Df(state.emissionXform);
+  const inverse = affineInverseTransform2D(state.emissionXform);
 
   const order = state.particles.map((_, index) => index);
   if (props.draw_order === CPUParticles2DDrawOrder.LIFETIME) {
@@ -661,7 +661,7 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
     // point. Omitting it draws the same nothing for a fraction of the vertices.
     if (!p.active) continue;
     pose.push({
-      transform: multiplyTransform2Df(inverse, p.transform),
+      transform: multiplyTransform2D(inverse, p.transform),
       color: p.color,
       anim: p.custom[2],
       age: p.time,
