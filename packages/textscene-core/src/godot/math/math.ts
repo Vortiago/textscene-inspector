@@ -15,6 +15,16 @@ export const TAU = Math.PI * 2;
  */
 export const CMP_EPSILON = 0.00001;
 
+/** `UNIT_EPSILON` (`math_defs.h:65`), the tolerance of `Vector3::is_normalized` in an official build. */
+export const UNIT_EPSILON = 0.001;
+
+/** The times of the key after, the key before and the key past the next, counted from a key. */
+export interface KeyTimes {
+  toT: number;
+  preT: number;
+  postT: number;
+}
+
 /**
  * `Math::is_zero_approx` (math_funcs.h): `abs(s) < CMP_EPSILON`, false for `nan` and `inf`, so a
  * setter guarded by it lets a non-finite value through. Validators depend on that strictness.
@@ -129,6 +139,56 @@ export function cubicInterpolatef(
   const quadratic = f(f(f(f(f(2 * pre) - f(5 * from)) + f(4 * to)) - post) * w2);
   const cubic = f(f(f(f(-pre + f(3 * from)) - f(3 * to)) + post) * w3);
   return f(0.5 * f(f(f(constant + linear) + quadratic) + cubic));
+}
+
+/**
+ * The float overload of `Math::cubic_interpolate_in_time` (`core/math/math_funcs.h:399-409`), the
+ * Barry-Goldman form of a cubic through keys that sit at uneven times: `toT`, `preT` and `postT`
+ * are the times of the next, previous and following key, counted from the key at `from`.
+ */
+export function cubicInterpolateInTimef(
+  from: number,
+  to: number,
+  pre: number,
+  post: number,
+  weight: number,
+  toT: number,
+  preT: number,
+  postT: number
+): number {
+  const t = lerpf(0, toT, weight);
+  const a1 = lerpf(pre, from, preT === 0 ? 0 : f(f(t - preT) / -preT));
+  const a2 = lerpf(from, to, toT === 0 ? 0.5 : f(t / toT));
+  const a3 = lerpf(to, post, f(postT - toT) === 0 ? 1 : f(f(t - toT) / f(postT - toT)));
+  const b1 = lerpf(a1, a2, f(toT - preT) === 0 ? 0 : f(f(t - preT) / f(toT - preT)));
+  const b2 = lerpf(a2, a3, postT === 0 ? 1 : f(t / postT));
+  return lerpf(b1, b2, toT === 0 ? 0.5 : f(t / toT));
+}
+
+/**
+ * `Math::pingpong` for a float (`core/math/math_funcs.h:670-672`): `value` folded back and forth
+ * between 0 and `length`.
+ */
+export function pingpongf(value: number, length: number): number {
+  if (length === 0) return 0;
+  const turns = f(f(value - length) / f(length * 2));
+  const fraction = f(turns - Math.floor(turns));
+  return Math.abs(f(f(f(fraction * length) * 2) - length));
+}
+
+/**
+ * `Math::ease` (`core/math/math_funcs.cpp:96-119`): `x` clamped to 0..1 and bent by the curve `c`.
+ * Above 1 it eases in, between 0 and 1 out, below 0 in and out, and 0 gives 0.
+ */
+export function ease(x: number, c: number): number {
+  const clamped = clamp(x, 0, 1);
+  if (c > 0) return c < 1 ? 1 - Math.pow(1 - clamped, 1 / c) : Math.pow(clamped, c);
+  if (c < 0) {
+    return clamped < 0.5
+      ? Math.pow(clamped * 2, -c) * 0.5
+      : (1 - Math.pow(1 - (clamped - 0.5) * 2, -c)) * 0.5 + 0.5;
+  }
+  return 0;
 }
 
 /**

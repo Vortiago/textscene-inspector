@@ -15,6 +15,10 @@ const CORE_SRC = resolve(findRepoRoot(), 'packages/textscene-core/src');
 /** The readers of a live node that lay no patch over it, each with why its reads need none. */
 const NEEDS_NO_OVERLAY = new Map([
   [
+    'nodes/animation/animationplayer/Component.tsx',
+    'Asks whether the node a track names is a Skeleton3D, by type.',
+  ],
+  [
     'nodes/3d/csg/csgpolygon3d/csgPolygonPaths.ts',
     'A pass: it takes the placements of the pass before it as an argument.',
   ],
