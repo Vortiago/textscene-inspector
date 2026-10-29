@@ -4,10 +4,16 @@ import { sphereCircleLines } from './sphereCircles';
 const SEGMENT_FLOATS = 6;
 const SEGMENTS = 384;
 
+type Point = [x: number, y: number, z: number];
+
 /** The segment `index` as `[from, to]` points. */
-function segment(lines: number[], index: number) {
-  const start = index * SEGMENT_FLOATS;
-  return [lines.slice(start, start + 3), lines.slice(start + 3, start + 6)];
+function segment(lines: number[], index: number): [from: Point, to: Point] {
+  const at = (offset: number): Point => [
+    lines[index * SEGMENT_FLOATS + offset]!,
+    lines[index * SEGMENT_FLOATS + offset + 1]!,
+    lines[index * SEGMENT_FLOATS + offset + 2]!,
+  ];
+  return [at(0), at(3)];
 }
 
 describe('sphereCircleLines', () => {
