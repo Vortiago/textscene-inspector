@@ -11,8 +11,7 @@ import { act, render, renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../parser/types';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
-import type { ResourceLoader } from './ResourceLoader';
-import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
+import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { textureWork } from './textures/textureWork';
 import {
@@ -241,8 +240,7 @@ async function flush(): Promise<void> {
 /** A loader whose job runner the test drives, and a wrapper that provides it. */
 function withRunner(runner: JobRunner, strictMode = false) {
   const fake = createFakeResourceLoader();
-  // Assigned, not spread: a spread would freeze the loader's pending-count getter.
-  const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+  const loader = withJobRunner(fake, runner);
   const wrapper = ({ children }: { children: ReactNode }) => {
     const provided = <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
     return strictMode ? <StrictMode>{provided}</StrictMode> : provided;

@@ -11,7 +11,7 @@ import { parseTresFile } from '../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
-import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
+import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures } from './textures/proceduralBuilds';
 import { useTexture2D } from './useTexture2D';
 import { useTexture3D } from './useTexture3D';
@@ -72,6 +72,12 @@ const SAVED = sceneWith({
   colorRamp: 'ExtResource("1")',
 });
 
+function wrapperFor(loader: ResourceLoader) {
+  return ({ children }: { children: ReactNode }) => (
+    <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
+  );
+}
+
 /** A job runner that records each job a slot starts and never finishes it. */
 function recordingRunner() {
   const jobs: Array<{ name: string; input: unknown }> = [];
@@ -83,6 +89,7 @@ function recordingRunner() {
 }
 
 /** The one job a slot starts on an empty procedural cache, or undefined when it starts none. */
+/** Resets per call: the inline and the saved run must not share a cache entry. */
 function jobStartedBy(slot: () => unknown) {
   resetProceduralTextures();
   const { wrapper, jobs } = setUp();
@@ -95,12 +102,8 @@ function setUp() {
   fake.resources.seed('res://ramp.tres', parseTresFile(GRADIENT_TRES));
   fake.resources.seed('res://noise.tres', parseTresFile(NOISE_TRES));
   const { jobs, runner } = recordingRunner();
-  // Assigned, not spread: a spread would freeze the loader's pending-count getter.
-  const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
-  );
-  return { fake, wrapper, jobs };
+  const loader = withJobRunner(fake, runner);
+  return { fake, wrapper: wrapperFor(loader), jobs };
 }
 
 function pixels(texture: THREE.Texture | null): number[] {
@@ -133,16 +136,14 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
 
   it('draws nothing, and is not missing, while the saved Gradient loads', () => {
     const fake = createFakeResourceLoader();
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-    );
+    const wrapper = wrapperFor(fake.loader);
     const { result } = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
 
-    expect(result.current.texture).toBeNull();
+    expect(result.current).toMatchObject({ texture: null, missing: false, isArriving: true });
 
     act(() => fake.resources._resolve('res://ramp.tres', parseTresFile(GRADIENT_TRES)));
 
-    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current).toMatchObject({ texture: expect.any(THREE.DataTexture), missing: false });
   });
 
   it('draws a new Gradient when the saved file reloads with other colours', () => {

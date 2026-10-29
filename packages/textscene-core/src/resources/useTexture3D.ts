@@ -17,7 +17,7 @@ import { useSavedTextureSources } from './useSavedTextureSources.js';
 
 export function useTexture3D(ref: string | undefined, pools: SceneResources): THREE.Data3DTexture | null {
   const slot = useParsedResourceSlot(ref, pools.externalResources, pools.internalResources);
-  const proceduralResources = useSavedTextureSources(
+  const { internalResources: proceduralResources } = useSavedTextureSources(
     slot.ref,
     slot.externalResources,
     slot.internalResources

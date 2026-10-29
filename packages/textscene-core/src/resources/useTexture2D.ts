@@ -223,7 +223,7 @@ function useTexture2DSlot(
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
-  const proceduralResources = useSavedTextureSources(
+  const { internalResources: proceduralResources, isLoading: isLoadingSources } = useSavedTextureSources(
     sourceRef,
     slot.externalResources,
     slot.internalResources
@@ -259,7 +259,10 @@ function useTexture2DSlot(
     return { ...peeled, result: { texture: source, missing: false, isArriving: false, hasNoImage: true } };
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
-  const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
-  const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
+  const sourceMissing =
+    !procedural.claimed && !isLoadingSources && (!path || loaded.status === 'unavailable');
+  const isArriving = procedural.claimed
+    ? procedural.building
+    : isLoadingSources || (loaded.status === 'pending' && path !== null);
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
 }
