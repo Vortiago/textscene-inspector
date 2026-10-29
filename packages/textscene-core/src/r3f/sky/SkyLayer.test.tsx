@@ -147,7 +147,8 @@ function TwoSkies({ subScene }: { subScene: THREE.Scene }) {
     <>
       <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />
       {createPortal(
-        <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} />,
+        // Another Sky resource: scenes that draw one Sky share its bakes, as Godot shares its radiance.
+        <ShownSkyLayer sky={{ ...panoramaSky }} rotation={NO_ROTATION} resources={NO_RESOURCES} />,
         subScene
       )}
     </>
@@ -508,7 +509,7 @@ describe('SkyLayer under an exposure', () => {
       exposed(
         3,
         <>
-          {sky()}
+          {sky({ sky: proceduralSky })}
           <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
         </>
       )
@@ -522,7 +523,7 @@ describe('SkyLayer under an exposure', () => {
       exposed(
         2,
         <>
-          {sky()}
+          {sky({ sky: proceduralSky })}
           <directionalLight intensity={Math.PI * 3} />
         </>
       )
@@ -577,7 +578,9 @@ describe('SkyLayer under an exposure', () => {
   });
 
   it('bakes the noise of a debanded sky for the brightness Godot bakes at', async () => {
-    const renderer = await ReactThreeTestRenderer.create(exposed(2, sky({ intensity: 1.5 })));
+    const renderer = await ReactThreeTestRenderer.create(
+      exposed(2, sky({ sky: proceduralSky, intensity: 1.5 }))
+    );
     await advance(renderer, 1);
     expect(lastBake()?.energy).toBeCloseTo(3, 10);
   });
@@ -745,6 +748,45 @@ describe('SkyLayer under an exposure', () => {
       ambientDrawnAt(scene, 3);
 
       expect(ambientDrawnAt(scene, 5)).toBeCloseTo(1.5 * 3 * 5, 10);
+    });
+  });
+
+  describe('shared by layers that draw one sky', () => {
+    it('bakes one sky once for two scenes that draw it alike', async () => {
+      built.next = skyEnvironment();
+      const subScene = new THREE.Scene();
+      await mount(
+        <>
+          {sky()}
+          {createPortal(sky(), subScene)}
+        </>
+      );
+
+      expect(bakes).toHaveLength(1);
+    });
+
+    it('keeps the bake while another layer still draws the sky', async () => {
+      const dispose = vi.fn();
+      built.next = skyEnvironment(dispose);
+      const subScene = new THREE.Scene();
+      const { update } = await mount(
+        <>
+          {sky()}
+          {createPortal(sky(), subScene)}
+        </>
+      );
+      await update(<>{sky()}</>);
+
+      expect(dispose).not.toHaveBeenCalled();
+    });
+
+    it('bakes a sky that holds no exposure once for every exposure', async () => {
+      built.next = skyEnvironment();
+      const { scene, advanceFrames } = await mount(exposed(2, sky()));
+      drawAtExposure(scene, 3, () => fireSceneRender(scene, new THREE.PerspectiveCamera()));
+      await advanceFrames(1);
+
+      expect(bakes).toHaveLength(1);
     });
   });
 });

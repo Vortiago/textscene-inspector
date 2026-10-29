@@ -8,8 +8,10 @@
 
 import type * as THREE from 'three';
 import { buildSkyEnvironment, type SkyEnvironmentInput, type SkyLight } from '../../resources/sky/build';
-import type { Sky, SkyProperties } from '../../resources/sky/types';
+import type { Sky } from '../../resources/sky/types';
 import { roughnessLayersOf } from '../../resources/sky/skyLayers';
+import { materialReadsLights } from '../../resources/sky/readsLights';
+import { isDebanded } from '../../resources/sky/debanding';
 import {
   newSkyRadianceUpdate,
   skyUpdateMode,
@@ -19,7 +21,7 @@ import { perObject } from '../../utils/perObject';
 import { SkyRadiance } from './skyRadiance';
 
 /** A sky baked at one exposure: its background and the radiance its readers sample. */
-export interface BakedSky {
+interface BakedSky {
   background: THREE.Texture | null;
   radiance: SkyRadiance;
   /** Frees the background and the radiance layers. */
@@ -27,18 +29,10 @@ export interface BakedSky {
 }
 
 /** What a bake of the sky takes beside the exposure. */
-export interface SkyBakeInput extends Omit<SkyEnvironmentInput, 'energy'> {
+interface SkyBakeInput extends Omit<SkyEnvironmentInput, 'energy'> {
   /** `background_energy_multiplier`, which the exposure scales into the debanding noise. */
   intensity: number;
   rotation: THREE.Euler;
-}
-
-/**
- * Whether a sky material's shader reads the DirectionalLights. The procedural and the physical sky
- * read `LIGHT0` (`sky_material.cpp:326`, `:766`), and the panorama reads only its texture (`:502`).
- */
-export function materialReadsLights(material: SkyProperties): boolean {
-  return material.kind !== 'panorama';
 }
 
 /** How `sky`'s radiance updates. */
@@ -52,21 +46,79 @@ export function skyUpdatePlan(sky: Sky): SkyUpdatePlan {
  */
 export const radianceUpdateOf = perObject((_sky: Sky) => newSkyRadianceUpdate());
 
+/** Bakes that layers hold, and how many hold them. */
+interface HeldBakes {
+  bakes: SkyBakes;
+  holders: number;
+}
+
+/**
+ * The bakes each renderer holds of each sky, by the rest of the input. Written only by
+ * `holdSkyBakes` and its release. An entry leaves with its last holder.
+ */
+const heldBakesOf = perObject((_gl: THREE.WebGLRenderer) =>
+  perObject((_sky: Sky) => new Map<string, HeldBakes>())
+);
+
+/**
+ * The bakes of `input` on `gl`, which every layer that draws the same sky with the same input
+ * shares, as Godot shares one radiance. `lightsKey` names the lights. The caller owns the release.
+ */
+export function holdSkyBakes(
+  gl: THREE.WebGLRenderer,
+  input: SkyBakeInput,
+  lightsKey: string
+): { bakes: SkyBakes; release: () => void } {
+  const held = heldBakesOf(gl)(input.sky);
+  const key = inputKey(input, lightsKey);
+  const entry = held.get(key) ?? { bakes: new SkyBakes(gl, input), holders: 0 };
+  held.set(key, entry);
+  entry.holders++;
+  let isReleased = false;
+  return {
+    bakes: entry.bakes,
+    release: () => {
+      if (isReleased) return;
+      isReleased = true;
+      entry.holders--;
+      if (entry.holders > 0) return;
+      entry.bakes.dispose();
+      held.delete(key);
+    },
+  };
+}
+
+function inputKey({ panorama, asBackground, intensity, rotation }: SkyBakeInput, lightsKey: string): string {
+  return [panorama?.uuid ?? '', asBackground, intensity, rotation.x, rotation.y, rotation.z, lightsKey].join(
+    '|'
+  );
+}
+
+/** The one exposure a bake that holds none bakes at, as every exposure would bake it alike. */
+const ANY_EXPOSURE = 1;
+
 export class SkyBakes {
   /** Each bake by its exposure, null for one the renderer could not make. */
   private readonly bakes = new Map<number, BakedSky | null>();
   /** The exposures a render asked for while it drew, which `bakeWanted` bakes. */
   private readonly wanted = new Set<number>();
+  /** Whether the exposure changes a bake: through a light energy, or the debanding noise. */
+  private readonly holdsExposure: boolean;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly input: SkyBakeInput
-  ) {}
+  ) {
+    const { sky, lights } = input;
+    const lightsScale = materialReadsLights(sky.material) && lights.some((light) => light.energy !== 0);
+    this.holdsExposure = lightsScale || isDebanded(sky.material);
+  }
 
   /** Bakes the sky at `exposure` now, outside any render, or answers the bake it holds. */
   bakeNow(exposure: number): BakedSky | null {
-    if (!this.bakes.has(exposure)) this.bakes.set(exposure, bakeSky(this.gl, this.input, exposure));
-    return this.bakes.get(exposure)!;
+    const key = this.keyOf(exposure);
+    if (!this.bakes.has(key)) this.bakes.set(key, bakeSky(this.gl, this.input, key));
+    return this.bakes.get(key)!;
   }
 
   /**
@@ -74,8 +126,9 @@ export class SkyBakes {
    * another bake for one frame, since a bake renders cubes of its own.
    */
   at(exposure: number): BakedSky | null {
-    if (!this.bakes.has(exposure)) this.wanted.add(exposure);
-    return this.bakes.get(exposure) ?? null;
+    const key = this.keyOf(exposure);
+    if (!this.bakes.has(key)) this.wanted.add(key);
+    return this.bakes.get(key) ?? null;
   }
 
   /** Bakes each exposure a render asked for. Answers whether it baked any. */
@@ -91,8 +144,10 @@ export class SkyBakes {
       baked?.radiance.hide();
       baked?.dispose();
     }
-    this.bakes.clear();
-    this.wanted.clear();
+  }
+
+  private keyOf(exposure: number): number {
+    return this.holdsExposure ? exposure : ANY_EXPOSURE;
   }
 }
 
