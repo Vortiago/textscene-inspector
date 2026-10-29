@@ -58,7 +58,7 @@ export const UNIT_TANGENT_FRAME =
   'return mat3( lengthT == 0.0 ? vec3( 0.0 ) : T / lengthT, lengthB == 0.0 ? vec3( 0.0 ) : B / lengthB, N );';
 
 /** The shader decodes the vertex colour from sRGB to linear, as `vertex_color_is_srgb` asks. */
-export const DECODES_SRGB_VERTEX_COLOR = 'vColor.rgb = mix( pow(';
+export const DECODES_SRGB_VERTEX_COLOR = 'vColor.rgb = mix(\n\t\tpow(';
 
 /** The shader writes a light's specular in toon mode, not BaseMaterial3D's default GGX. */
 export const DRAWS_TOON_SPECULAR = '#define GODOT_SPECULAR_TOON\n';

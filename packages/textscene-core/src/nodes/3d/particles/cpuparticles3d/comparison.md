@@ -9,7 +9,7 @@ renders_as: one instance of the mesh per particle, in a frozen pose
 
 # CPUParticles3D
 
-CPUParticles3D is Godot's CPU-simulated emitter. The previewer runs a port of the engine's own simulation once and draws each particle as an instance of `mesh`, posed, scaled and coloured as Godot's buffer writes it. The particle colour reaches a material only through `vertex_color_use_as_albedo`, as in Godot.
+CPUParticles3D is Godot's CPU-simulated emitter. The previewer runs a port of the engine's own simulation once. It draws each particle as an instance of `mesh`, posed, scaled and coloured as Godot's buffer writes it. The particle colour reaches a material only through `vertex_color_use_as_albedo`, as in Godot.
 
 ## Linting
 
@@ -107,7 +107,7 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 |  | `cpuparticles3d-param-min-above-max` | warning |
 <!-- lint:end -->
 
-Where strict rejects a value, the lenient parser substitutes Godot's constructor default. A `lifetime` at or below `0` reads as `1.0`, an `amount` below `1` as `8`, a malformed `spread` as `45.0`, a malformed `gravity` as `Vector3(0, -9.8, 0)` and an out-of-range `emission_shape` as `POINT`. An unreadable packed emission array reads as empty.
+Where strict rejects a value, the lenient parser substitutes Godot's constructor default. A `lifetime` at or below `0` reads as `1.0`, and an `amount` below `1` as `8`. A malformed `spread` reads as `45.0`, a malformed `gravity` as `Vector3(0, -9.8, 0)` and an out-of-range `emission_shape` as `POINT`. An unreadable packed emission array reads as empty.
 
 ## Particle draw
 

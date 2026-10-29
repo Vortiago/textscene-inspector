@@ -180,6 +180,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/curves/curve/bakedSample.ts` | `scene/resources/curve.cpp` (`Curve::_bake`, `Curve::sample_baked`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (the `_update_internal` preprocess loop and its fixed-step evaluation window) |
+| `packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/simulate.ts` | `scene/3d/cpu_particles_3d.cpp` (`_particles_process`, the emission shapes and `_update_particle_data_buffer`) |
+| `packages/textscene-core/src/nodes/shared/cpuparticles/process.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the `_update_internal` settle loop, the restart instant and the particle colour) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particlesProcess.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`'s per-frame loop: cycle bookkeeping, restart phase, the emission transform) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleRestart.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s restart branch and its emission-shape offsets) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAdvance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s alive branch: the accelerations, orbit, damping and angular integration) |

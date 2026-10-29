@@ -12,7 +12,10 @@ const COLOR_CHUNK = '#include <color_vertex>';
 /** Forward+ draws to a linear target, so Godot's `!OUTPUT_IS_SRGB` branch always runs. */
 const SRGB_DECODE = /* glsl */ `${COLOR_CHUNK}
 #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
-	vColor.rgb = mix( pow( ( vColor.rgb + vec3( 0.055 ) ) * ( 1.0 / ( 1.0 + 0.055 ) ), vec3( 2.4 ) ), vColor.rgb * ( 1.0 / 12.92 ), lessThan( vColor.rgb, vec3( 0.04045 ) ) );
+	vColor.rgb = mix(
+		pow( ( vColor.rgb + vec3( 0.055 ) ) * ( 1.0 / ( 1.0 + 0.055 ) ), vec3( 2.4 ) ),
+		vColor.rgb * ( 1.0 / 12.92 ),
+		lessThan( vColor.rgb, vec3( 0.04045 ) ) );
 #endif`;
 
 /**

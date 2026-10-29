@@ -46,7 +46,7 @@ export const DEFAULT_PREVIEW_SEED = 0;
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
  * million iterations before the first paint. Real emitters need tens of steps.
  */
-export const MAX_SETTLE_STEPS = 4096;
+const MAX_SETTLE_STEPS = 4096;
 
 /** What the settle reads of an emitter. */
 export interface SettledEmitter {
@@ -64,13 +64,13 @@ export interface SettledEmitter {
  * `_update_internal` spends both through one loop (`cpu_particles_3d.cpp:677-688`),
  * so `pnpm ref:godot --particles <seconds>` renders the same instant in Godot.
  */
-export function settleSeconds({ preprocess, lifetime, oneShot }: SettledEmitter): number {
+function settleSeconds({ preprocess, lifetime, oneShot }: SettledEmitter): number {
   if (preprocess > 0) return preprocess;
   return oneShot ? lifetime * 0.5 : lifetime;
 }
 
 /** The step the settle spends its seconds in: `1.0 / fixed_fps`, else `1.0 / 30.0` (`:672-676`). */
-export function settleFrameTime({ fixedFps }: SettledEmitter): number {
+function settleFrameTime({ fixedFps }: SettledEmitter): number {
   return fixedFps > 0 ? 1.0 / fixedFps : 1.0 / 30.0;
 }
 

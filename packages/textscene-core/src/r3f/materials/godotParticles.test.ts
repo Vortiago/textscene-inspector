@@ -68,7 +68,7 @@ it('multiplies the instance colour before the sRGB decode of the vertex colour',
   const srgb = { ...BAG, injection: SRGB_VERTEX_COLOR };
   const { vertexShader } = compiled(UNBILLBOARDED, 'basic', new THREE.MeshBasicMaterial(), srgb);
   expect(vertexShader.indexOf('vColor *= particleColor;')).toBeLessThan(
-    vertexShader.indexOf('vColor.rgb = mix( pow(')
+    vertexShader.indexOf('vColor.rgb = mix(')
   );
 });
 
