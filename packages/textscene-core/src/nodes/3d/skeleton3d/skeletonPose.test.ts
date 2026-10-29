@@ -14,6 +14,7 @@ import {
   automaticSkinMatrices,
   BonePoses,
   newBone,
+  poseUnder,
   skinMatricesUnder,
   type Bone,
   type BonePose,
@@ -498,11 +499,11 @@ function skinUnder(bones: readonly Bone[], binds: readonly SkinBind[], modifiers
   const poses = new BonePoses(bones, false);
   const unresolved: string[] = [];
   const bindings = poses.resolveBinds(binds, (message) => unresolved.push(message));
-  const matrices = skinMatricesUnder(poses, modifiers, bindings);
+  const matrices = poseUnder(poses, modifiers).bindMatrices(bindings);
   return { matrices, unresolved };
 }
 
-describe('skinMatricesUnder: the binds of a Skin', () => {
+describe('bindMatrices: the binds of a Skin', () => {
   it('has one matrix for each bind, not for each bone (`skeleton_3d.cpp:363-403`)', () => {
     expect(skinUnder(CHAIN_UNDER_EXTRA, CHAIN_BINDS_BY_NAME).matrices).toHaveLength(3);
   });

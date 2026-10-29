@@ -14,8 +14,8 @@ const bindValidator = indexedFamilyValidator({
   leaves: {
     // skin.cpp:136, Variant::STRING_NAME. set_bind_name (:55-63) assigns.
     name: v.stringName('name'),
-    // :137, a range hint "0,16384,1,or_greater". set_bind_bone (:65-69) assigns, so the floor warns.
-    bone: v.int('bone', { min: 0, hinted: { min: 'skin.cpp:137' } }),
+    // :137, a range hint "0,16384,1,or_greater". set_bind_bone (:65-69) assigns, so the floor warns. -1 is the default Godot saves beside a name, so it is the floor here.
+    bone: v.int('bone', { min: -1, hinted: { min: 'skin.cpp:137' } }),
     // :138, Variant::TRANSFORM3D. set_bind_pose (:71-75) assigns.
     pose: v.transform3d('pose'),
   },

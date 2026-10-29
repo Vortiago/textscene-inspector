@@ -103,14 +103,14 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
   const skin = useMeshSkin(properties, useNodePath());
-  // A surface with no bone arrays stays unskinned even when the node is bound.
-  const skinnedGeometry = drawnParts[0]?.geometry;
   const bindCount = skin?.matrices.length ?? 0;
+  // The instance has no bounds only where every surface of every part outgrows the skin.
   const isOutgrown = useMemo(
-    () => isOutgrownBySkin(skinnedGeometry, bindCount),
-    [skinnedGeometry, bindCount]
+    () => drawnParts.length > 0 && drawnParts.every((part) => isOutgrownBySkin(part.geometry, bindCount)),
+    [drawnParts, bindCount]
   );
-  const skeleton = useSkinSkeleton(isOutgrown ? undefined : skinnedGeometry, skin);
+  // A surface with no bone arrays stays unskinned even when the node is bound.
+  const skeleton = useSkinSkeleton(isOutgrown ? undefined : drawnParts[0]?.geometry, skin);
 
   const shellProps = {
     name: node.name,

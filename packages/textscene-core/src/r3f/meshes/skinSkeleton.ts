@@ -36,11 +36,14 @@ interface SlotRange {
 function boneCountOf(geometry: THREE.BufferGeometry, range?: SlotRange): number {
   const indices = geometry.getAttribute('skinIndex');
   const triangles = geometry.getIndex();
-  const { start, count } = range ?? { start: 0, count: triangles?.count ?? indices.count };
+  // A whole geometry counts every vertex, drawn or not, as the skeleton must hold what any addresses.
+  const { start, count } = range ?? { start: 0, count: indices.count };
+  const vertexAt = range && triangles ? (slot: number) => triangles.getX(slot) : (slot: number) => slot;
   let highest = -1;
   for (let slot = start; slot < start + count; slot++) {
-    const vertex = triangles ? triangles.getX(slot) : slot;
-    for (let k = 0; k < indices.itemSize; k++) highest = Math.max(highest, indices.getComponent(vertex, k));
+    for (let k = 0; k < indices.itemSize; k++) {
+      highest = Math.max(highest, indices.getComponent(vertexAt(slot), k));
+    }
   }
   return highest + 1;
 }
@@ -53,7 +56,9 @@ function boneCountOf(geometry: THREE.BufferGeometry, range?: SlotRange): number 
  */
 export function isOutgrownBySkin(geometry: THREE.BufferGeometry | undefined, bindCount: number): boolean {
   if (!geometry?.getAttribute('skinIndex') || bindCount === 0) return false;
-  const surfaces = geometry.groups.length ? geometry.groups : [undefined];
+  const surfaces = geometry.groups.length
+    ? geometry.groups
+    : [{ start: 0, count: geometry.getIndex()?.count ?? geometry.getAttribute('position').count }];
   return surfaces.every((surface) => boneCountOf(geometry, surface) > bindCount);
 }
 

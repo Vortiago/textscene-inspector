@@ -37,8 +37,9 @@ describe('Skin properties', () => {
     expect(check('bind_count', '-1')).toBeAtTier('error');
   });
 
-  it('warns on a negative bone index, which the hint floors at 0 (skin.cpp:137)', () => {
-    expect(check('bind/0/bone', '-1')).toBeAtTier('warning');
+  it('takes -1, the bone Godot saves beside a name, and warns below it (skin.cpp:137)', () => {
+    expect(check('bind/0/bone', '-1')).toBeNull();
+    expect(check('bind/0/bone', '-2')).toBeAtTier('warning');
   });
 
   it('errors on a negative bind index, which set_bind_* refuses (skin.cpp:56)', () => {

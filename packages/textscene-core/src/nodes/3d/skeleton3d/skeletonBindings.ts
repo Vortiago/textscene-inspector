@@ -3,8 +3,8 @@
  * the automatic skin of that skeleton, or to the Skin it sets through `skin`
  * (`MeshInstance3D::_resolve_skeleton_path`, `mesh_instance_3d.cpp:175-199`). The component cannot
  * reach the skeleton, so this pass poses each skeleton once and hands the mesh its skin by its live
- * path. The component reads the Skin resource and asks the skin for it with `withSkin`. It runs on the live stage (ADR-0060),
- * as Godot resolves the path on the live tree, across an instance border too. The SkeletonModifier3D
+ * path. The component reads the Skin resource and asks the skin for it with `withSkin`. It runs on
+ * the live stage (ADR-0060), as Godot resolves the path on the live tree, across an instance border too. The SkeletonModifier3D
  * children of the skeleton edit the pose first, in child order, and so do they on the pose that an
  * AnimationPlayer writes to a bone.
  */

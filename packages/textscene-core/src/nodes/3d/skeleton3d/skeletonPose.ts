@@ -145,7 +145,7 @@ function composedTurns(init: Quaternion, initInverse: Quaternion, values: readon
  *
  * `show_rest_only` poses every bone at its rest (`:1104`), as does a disabled bone. A bone that no
  * root reaches, which only a parent cycle makes, keeps the identity Godot allocates for it.
- * A mesh with a `skin` takes {@link skinMatricesUnder} with the binds of that Skin instead.
+ * A mesh with a `skin` takes {@link BonePoses.bindMatrices} with the binds of that Skin instead.
  *
  * @canonical The automatic skin of a Skeleton3D's bones
  */
@@ -159,16 +159,10 @@ export function automaticSkinMatrices(
 
 /**
  * {@link automaticSkinMatrices} on `poses`, which start again from the file pose. A caller that
- * skins one skeleton every frame keeps its `BonePoses`, and with it the rig. With `bindings` of a
- * Skin it gives one matrix for each bind, in bind order, in place of one for each bone.
+ * skins one skeleton every frame keeps its `BonePoses`, and with it the rig.
  */
-export function skinMatricesUnder(
-  poses: BonePoses,
-  modifiers: readonly PoseModifier[],
-  bindings?: readonly SkinBinding[]
-): Transform3D[] {
-  poseUnder(poses, modifiers);
-  return bindings ? poses.bindMatrices(bindings) : poses.skinMatrices();
+export function skinMatricesUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): Transform3D[] {
+  return poseUnder(poses, modifiers).skinMatrices();
 }
 
 /** Starts `poses` again from the file pose and runs `modifiers` on it, in order. Returns `poses`. */
