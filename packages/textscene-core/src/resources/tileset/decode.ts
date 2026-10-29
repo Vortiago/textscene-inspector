@@ -6,7 +6,6 @@
  */
 
 import { isLocalToScene } from '../textures/viewporttexture/localToScene.js';
-import { BEFORE_SETUP, inlineTexture2DSize } from '../texture2DSize.js';
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { slotInt } from '../../godot/variant/intSlots.js';
@@ -196,17 +195,8 @@ function resolveAtlasSource(
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
     // On unless the file says `false` (`tile_set.h:673`).
     usesTexturePadding: boolSlotValue(props.use_texture_padding) !== false,
-    tiles: isSizelessAtLoad(props.texture, data) ? new Map() : resolveTiles(props, tileMaterial),
+    tiles: resolveTiles(props, tileMaterial),
   };
-}
-
-/**
- * Whether the atlas texture reports no area while the scene loads, as a ViewportTexture does
- * (`viewport.cpp:156-160`), so `create_tile` finds room for no tile (`tile_set.cpp:4985`, `:5209`).
- */
-function isSizelessAtLoad(ref: string | undefined, data: TileSetSourceData): boolean {
-  const size = inlineTexture2DSize(ref, data.internalResources, BEFORE_SETUP);
-  return size !== null && (size.x <= 0 || size.y <= 0);
 }
 
 function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileSetSourceData): TileTexture {
