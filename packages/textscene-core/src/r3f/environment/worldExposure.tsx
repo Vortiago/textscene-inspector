@@ -145,19 +145,36 @@ function RenderCameraProvider({ children }: { children: ReactNode }) {
     attributesOf(worldAttributes)?.exposureMultiplier ?? null
   );
   return (
-    <RenderCameraEnvironmentContext.Provider value={renderCamera?.environment ?? null}>
-      <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>
-    </RenderCameraEnvironmentContext.Provider>
+    <RenderCameraScope renderCamera={renderCamera} attributes={attributes}>
+      {children}
+    </RenderCameraScope>
   );
 }
 
 function SharedRenderCameraProvider({ children }: { children: ReactNode }) {
-  const renderCamera = renderCameraOf('subViewport', null, cameras.useAll());
+  const renderCamera = electViewportCamera(cameras.useAll(), (camera) => camera.current);
   const worldAttributes = attributesOf(cameraAttributes.useChosen());
   useSceneExposure(worldAttributes?.exposureMultiplier ?? null, worldAttributes?.exposureMultiplier ?? null);
   return (
+    <RenderCameraScope renderCamera={renderCamera} attributes={worldAttributes}>
+      {children}
+    </RenderCameraScope>
+  );
+}
+
+/** Gives the readers below the Environment of `renderCamera` and the `attributes` their world holds. */
+function RenderCameraScope({
+  renderCamera,
+  attributes,
+  children,
+}: {
+  renderCamera: WorldCamera | null;
+  attributes: CameraAttributes | null;
+  children: ReactNode;
+}) {
+  return (
     <RenderCameraEnvironmentContext.Provider value={renderCamera?.environment ?? null}>
-      <CameraAttributesContext.Provider value={worldAttributes}>{children}</CameraAttributesContext.Provider>
+      <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>
     </RenderCameraEnvironmentContext.Provider>
   );
 }

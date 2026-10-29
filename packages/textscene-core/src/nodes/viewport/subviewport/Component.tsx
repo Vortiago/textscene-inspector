@@ -242,6 +242,7 @@ function OffscreenViewport({
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
     const camera = kind === '3d' ? selectViewportCamera(passScene, path) : orthoCamera;
+    const exposure = toneMap?.exposure ?? null;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
@@ -271,7 +272,7 @@ function OffscreenViewport({
               renderWithShadowAtlas(shadowAtlas, () =>
                 kind === '2d'
                   ? frame.render(gl, passScene, camera)
-                  : drawAtExposure(passScene, toneMap!.exposure, () => gl.render(passScene, camera))
+                  : drawAtExposure(passScene, exposure, () => gl.render(passScene, camera))
               )
             );
           } finally {
