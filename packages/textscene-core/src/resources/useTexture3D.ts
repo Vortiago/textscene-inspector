@@ -17,12 +17,13 @@ import { useSavedTextureSources } from './useSavedTextureSources.js';
 
 export function useTexture3D(ref: string | undefined, pools: SceneResources): THREE.Data3DTexture | null {
   const slot = useParsedResourceSlot(ref, pools.externalResources, pools.internalResources);
-  const { internalResources: proceduralResources } = useSavedTextureSources(
+  const { internalResources: proceduralResources, isLoading: isLoadingSources } = useSavedTextureSources(
     slot.ref,
     slot.externalResources,
     slot.internalResources
   );
-  const procedural = useProceduralTexture3D(slot.ref, proceduralResources);
+  // No build starts until every saved source is in: a build without one would be thrown away.
+  const procedural = useProceduralTexture3D(isLoadingSources ? undefined : slot.ref, proceduralResources);
 
   const imagePath = useMemo(() => {
     const extPath = resolveExtResourcePath(slot.ref, slot.externalResources);

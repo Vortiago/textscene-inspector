@@ -228,7 +228,8 @@ function useTexture2DSlot(
     slot.externalResources,
     slot.internalResources
   );
-  const procedural = useProceduralTexture(sourceRef, proceduralResources);
+  // No build starts until every saved source is in: a build without one would be thrown away.
+  const procedural = useProceduralTexture(isLoadingSources ? undefined : sourceRef, proceduralResources);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.
@@ -261,8 +262,8 @@ function useTexture2DSlot(
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing =
     !procedural.claimed && !isLoadingSources && (!path || loaded.status === 'unavailable');
-  const isArriving = procedural.claimed
-    ? procedural.building
-    : isLoadingSources || (loaded.status === 'pending' && path !== null);
+  const isArriving =
+    isLoadingSources ||
+    (procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null);
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
 }

@@ -54,7 +54,8 @@ export function savedSourcePaths(
 }
 
 interface DerivedTable {
-  files: readonly ParsedResource[];
+  /** The file each source had when the table was built, undefined for one not loaded. */
+  files: ReadonlyArray<ParsedResource | undefined>;
   table: readonly TscnInternalResource[];
 }
 
@@ -76,14 +77,16 @@ export function withSavedSources(
   internalResources: readonly TscnInternalResource[],
   loadedFile: LoadedFile
 ): readonly TscnInternalResource[] {
-  const loaded = savedSources(ref, externalResources, internalResources).flatMap((source) => {
-    const file = loadedFile(source.path);
+  const sources = savedSources(ref, externalResources, internalResources);
+  const files = sources.map(({ path }) => loadedFile(path));
+  const loaded = sources.flatMap((source, index) => {
+    const file = files[index];
     return file ? [{ ...source, file }] : [];
   });
   if (loaded.length === 0) return internalResources;
 
-  const key = loaded.map(({ resource, property, path }) => `${resource.id}.${property}=${path}`).join(' ');
-  const files = loaded.map(({ file }) => file);
+  // The key names every source, loaded or not, so one entry stays per texture.
+  const key = sources.map(({ resource, property, path }) => `${resource.id}.${property}=${path}`).join(' ');
   const derived = derivedTables(internalResources);
   const held = derived.get(key);
   if (held && held.files.every((file, index) => file === files[index])) return held.table;
@@ -91,6 +94,11 @@ export function withSavedSources(
   const table = inlineFiles(internalResources, loaded);
   derived.set(key, { files, table });
   return table;
+}
+
+/** The id a saved file takes in the table: the prefix keeps it from meeting a scene's own id. */
+function savedId(path: string): string {
+  return `saved:${path}`;
 }
 
 /** Dedupes by path: `gradient` and `color_ramp` may name one file. */
@@ -101,10 +109,13 @@ function inlineFiles(
   const added = new Map<string, TscnInternalResource>();
   const rewritten = new Map<TscnInternalResource, Record<string, string>>();
   for (const { resource, property, path, file } of loaded) {
-    added.set(path, findSectionResource(file, path)!);
+    const section = findSectionResource(file, path);
+    // An undeclared sub-resource leaves the reference unresolved, as an unloaded file does.
+    if (!section) continue;
+    added.set(path, { ...section, id: savedId(path) });
     rewritten.set(resource, {
       ...(rewritten.get(resource) ?? resource.data),
-      [property]: `SubResource("${path}")`,
+      [property]: `SubResource("${savedId(path)}")`,
     });
   }
   return [

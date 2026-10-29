@@ -97,9 +97,9 @@ function jobStartedBy(slot: () => unknown) {
   return jobs[0];
 }
 
-function setUp() {
+function setUp({ isRampLoaded = true } = {}) {
   const fake = createFakeResourceLoader();
-  fake.resources.seed('res://ramp.tres', parseTresFile(GRADIENT_TRES));
+  if (isRampLoaded) fake.resources.seed('res://ramp.tres', parseTresFile(GRADIENT_TRES));
   fake.resources.seed('res://noise.tres', parseTresFile(NOISE_TRES));
   const { jobs, runner } = recordingRunner();
   const loader = withJobRunner(fake, runner);
@@ -163,6 +163,16 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
     const { result } = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
 
     expect(result.current.texture).toBeNull();
+  });
+});
+
+describe('a noise texture whose saved sources are still loading', () => {
+  it('starts no build until every source is in, and is arriving meanwhile', () => {
+    const { wrapper, jobs } = setUp({ isRampLoaded: false });
+    const { result } = renderHook(() => useTexture2D(NOISE_TEXTURE, EXTERNAL, SAVED), { wrapper });
+
+    expect(jobs).toEqual([]);
+    expect(result.current).toMatchObject({ texture: null, missing: false, isArriving: true });
   });
 });
 
