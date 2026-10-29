@@ -243,19 +243,15 @@ const TURNED_LAST_VERTEX = [0.6196, -0.0268, 0].map((v) => expect.closeTo(v, 3))
 const REST_FIRST_VERTEX = [-0.2, 0.5, 0].map((v) => expect.closeTo(v, 5));
 
 describe('MeshInstance3D with a skin set', () => {
-  it('binds each bind of the Skin by the name of its bone', async () => {
-    const [skinned] = skinnedMeshes(await renderWithSkin(ribbonSkinText('name')));
+  it.each(['name', 'index'] as const)(
+    'binds each bind of the Skin by the %s of its bone',
+    async (address) => {
+      const [skinned] = skinnedMeshes(await renderWithSkin(ribbonSkinText(address)));
 
-    expect(vertexOf(skinned!, 0)).toEqual(REST_FIRST_VERTEX);
-    expect(vertexOf(skinned!, 31)).toEqual(TURNED_LAST_VERTEX);
-  });
-
-  it('binds each bind of the Skin by the index of its bone where it has no name', async () => {
-    const [skinned] = skinnedMeshes(await renderWithSkin(ribbonSkinText('index')));
-
-    expect(vertexOf(skinned!, 0)).toEqual(REST_FIRST_VERTEX);
-    expect(vertexOf(skinned!, 31)).toEqual(TURNED_LAST_VERTEX);
-  });
+      expect(vertexOf(skinned!, 0)).toEqual(REST_FIRST_VERTEX);
+      expect(vertexOf(skinned!, 31)).toEqual(TURNED_LAST_VERTEX);
+    }
+  );
 
   it('binds bones the automatic skin would miss, with the same skeleton and no skin set', async () => {
     const [byName] = skinnedMeshes(await renderWithSkin(ribbonSkinText('name')));

@@ -14,4 +14,3 @@ registerResourceSlice({
 });
 
 export { decodeSkin } from './decode';
-export type { SkinBind } from './types';

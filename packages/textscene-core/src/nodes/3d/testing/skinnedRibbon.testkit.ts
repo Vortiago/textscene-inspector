@@ -49,8 +49,9 @@ bones/${at}/rotation = ${rotation}
  * moves nothing at the rest.
  */
 export function ribbonSkinText(address: 'name' | 'index', count = RIBBON_BONE_Y.length): string {
-  const binds = RIBBON_BONE_Y.slice(0, count).map((_y, i) => {
-    const restY = RIBBON_BONE_Y.slice(0, i + 1).reduce((sum, y) => sum + y, 0);
+  let restY = 0;
+  const binds = RIBBON_BONE_Y.slice(0, count).map((y, i) => {
+    restY += y;
     const bone = address === 'name' ? `bind/${i}/name = &"b${i}"` : `bind/${i}/bone = ${i + 1}`;
     return `${bone}\nbind/${i}/pose = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, ${-restY}, 0)\n`;
   });

@@ -167,9 +167,15 @@ export function skinMatricesUnder(
   modifiers: readonly PoseModifier[],
   bindings?: readonly SkinBinding[]
 ): Transform3D[] {
+  poseUnder(poses, modifiers);
+  return bindings ? poses.bindMatrices(bindings) : poses.skinMatrices();
+}
+
+/** Starts `poses` again from the file pose and runs `modifiers` on it, in order. Returns `poses`. */
+export function poseUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): BonePoses {
   poses.reset();
   for (const modifier of modifiers) runModifier(poses, modifier);
-  return bindings ? poses.bindMatrices(bindings) : poses.skinMatrices();
+  return poses;
 }
 
 /** The rest of a bone taken apart, which an animated part is measured from. */
@@ -382,10 +388,11 @@ export class BonePoses {
           onUnresolved(`Skin bind #${index} names the bone "${name}", which the Skeleton3D lacks`);
         return { bone: Math.max(found, 0), pose };
       }
+      const isInRange = bone >= 0 && bone < this.boneCount;
       if (bone < 0) onUnresolved(`Skin bind #${index} has neither a name nor a bone index`);
-      else if (bone >= this.boneCount)
+      else if (!isInRange)
         onUnresolved(`Skin bind #${index} names bone ${bone}, past the bone count ${this.boneCount}`);
-      return { bone: bone >= 0 && bone < this.boneCount ? bone : 0, pose };
+      return { bone: isInRange ? bone : 0, pose };
     });
   }
 

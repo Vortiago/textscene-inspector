@@ -152,6 +152,14 @@ ${BONES}
     expect(skin.withSkin(binds).matrices).toHaveLength(1);
   });
 
+  it('hands every mesh that sets one Skin the same skin', () => {
+    const binds: SkinBind[] = [{ bone: 0, name: '', pose: identityTransform3D() }];
+    const automatic = boundSkinAt(scene('skeleton = NodePath("../Skeleton3D")'))!;
+
+    expect(automatic.withSkin(binds)).toBe(automatic.withSkin(binds));
+    expect(automatic.withSkin([...binds])).not.toBe(automatic.withSkin(binds));
+  });
+
   it('binds a skeleton with no bones to an empty skin (edge case)', () => {
     expect(skinAt(scene('skeleton = NodePath("../Skeleton3D")', ''))).toEqual([]);
   });

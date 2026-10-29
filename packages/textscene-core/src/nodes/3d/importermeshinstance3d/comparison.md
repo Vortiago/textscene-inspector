@@ -15,25 +15,27 @@ An import-pipeline node that Godot's importer replaces with a real MeshInstance3
 ## Linting
 
 <!-- lint:begin ImporterMeshInstance3D -->
+
 Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `cast_shadow` | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY) | warning |
-| `layer_mask` | 32-bit layer mask (layers 1-32) |  |
-| `mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `skeleton_path` | NodePath("path/to/node") |  |
-| `skin` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `visibility_range_begin` | float >= 0 | warning below |
-| `visibility_range_begin_margin` | float >= 0 | warning below |
-| `visibility_range_end` | float >= 0 | warning below |
-| `visibility_range_end_margin` | float >= 0 | warning below |
-| `visibility_range_fade_mode` | enum 0-2 (DISABLED/SELF/DEPENDENCIES) | warning |
+| Property                        | Accepts                                                        | Out of range  |
+| ------------------------------- | -------------------------------------------------------------- | ------------- |
+| `cast_shadow`                   | enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)                    | warning       |
+| `layer_mask`                    | 32-bit layer mask (layers 1-32)                                |               |
+| `mesh`                          | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
+| `skeleton_path`                 | NodePath("path/to/node")                                       |               |
+| `skin`                          | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
+| `visibility_range_begin`        | float >= 0                                                     | warning below |
+| `visibility_range_begin_margin` | float >= 0                                                     | warning below |
+| `visibility_range_end`          | float >= 0                                                     | warning below |
+| `visibility_range_end_margin`   | float >= 0                                                     | warning below |
+| `visibility_range_fade_mode`    | enum 0-2 (DISABLED/SELF/DEPENDENCIES)                          | warning       |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| Rule                                          | Reports                     | Severity |
+| --------------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
+
 <!-- lint:end -->
 
 `index.ts` registers the plain `parseNode` reader, which decodes only `transform`. `mesh`, `skin`, `layer_mask`, `cast_shadow` and the `visibility_range_*` keys are never decoded by the lenient parser, and a malformed `transform` warns and substitutes the identity.

@@ -23,32 +23,26 @@ import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
  */
 const MISSING_BONE_MATRIX = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-/** How many bones the geometry's skin indices address: the highest index, plus one. */
-function boneCountOf(geometry: THREE.BufferGeometry): number {
-  const indices = geometry.getAttribute('skinIndex');
-  let highest = -1;
-  for (let i = 0; i < indices.array.length; i++) highest = Math.max(highest, indices.array[i]!);
-  return highest + 1;
+/** A run of index slots of a geometry: one surface, or all of it. */
+interface SlotRange {
+  start: number;
+  count: number;
 }
 
 /**
- * How many bones each surface of the geometry addresses: the highest skin index of the vertices the
- * surface draws, plus one, as `_surface_set_data` counts them (`rendering_server.cpp:925`).
+ * How many bones the skin indices of the vertices in `range` address: the highest index, plus one,
+ * as `_surface_set_data` counts them (`rendering_server.cpp:925`). The whole geometry where no range is given.
  */
-function boneCountsOfSurfaces(geometry: THREE.BufferGeometry): number[] {
+function boneCountOf(geometry: THREE.BufferGeometry, range?: SlotRange): number {
   const indices = geometry.getAttribute('skinIndex');
   const triangles = geometry.getIndex();
-  const surfaces = geometry.groups.length
-    ? geometry.groups
-    : [{ start: 0, count: triangles?.count ?? geometry.getAttribute('position').count }];
-  return surfaces.map(({ start, count }) => {
-    let highest = -1;
-    for (let slot = start; slot < start + count; slot++) {
-      const vertex = triangles ? triangles.getX(slot) : slot;
-      for (let k = 0; k < indices.itemSize; k++) highest = Math.max(highest, indices.getComponent(vertex, k));
-    }
-    return highest + 1;
-  });
+  const { start, count } = range ?? { start: 0, count: triangles?.count ?? indices.count };
+  let highest = -1;
+  for (let slot = start; slot < start + count; slot++) {
+    const vertex = triangles ? triangles.getX(slot) : slot;
+    for (let k = 0; k < indices.itemSize; k++) highest = Math.max(highest, indices.getComponent(vertex, k));
+  }
+  return highest + 1;
 }
 
 /**
@@ -59,7 +53,8 @@ function boneCountsOfSurfaces(geometry: THREE.BufferGeometry): number[] {
  */
 export function isOutgrownBySkin(geometry: THREE.BufferGeometry | undefined, bindCount: number): boolean {
   if (!geometry?.getAttribute('skinIndex') || bindCount === 0) return false;
-  return boneCountsOfSurfaces(geometry).every((boneCount) => boneCount > bindCount);
+  const surfaces = geometry.groups.length ? geometry.groups : [undefined];
+  return surfaces.every((surface) => boneCountOf(geometry, surface) > bindCount);
 }
 
 function writeBoneMatrix(target: THREE.Matrix4, skinMatrix: Transform3D | undefined): void {

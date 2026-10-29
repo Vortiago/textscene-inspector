@@ -28,7 +28,7 @@ import {
   animationPass,
   automaticSkinMatrices,
   BonePoses,
-  skinMatricesUnder,
+  poseUnder,
   type AnimatedPose,
   type PoseModifier,
   type SkinBinding,
@@ -241,6 +241,16 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Auto
       name,
       `[AnimationPlayer] the Skeleton3D at ${skeleton.path} has no bone "${name}", so its track binds nothing`
     );
+  // The pose `poses` holds once the edits of one clip pose ran on it, null for the file pose. Every
+  // skin of the skeleton shares it, so the edits run once for each pose however many skins ask.
+  let preparedFor: AnimatedPose | null | undefined;
+  const prepare = (pose: AnimatedPose | null): BonePoses => {
+    if (pose !== preparedFor) {
+      preparedFor = pose;
+      poseUnder(poses, pose ? [animationPass(pose, motionScale, warnUnknownBone), ...modifiers] : modifiers);
+    }
+    return poses;
+  };
   /** The matrices of `bindings` (the automatic ones where undefined) under each pose, kept for the last. */
   const matricesUnderOf = (bindings?: readonly SkinBinding[]): BoundSkin['matricesUnder'] => {
     let lastPose: AnimatedPose | undefined;
@@ -248,13 +258,26 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Auto
     return (pose) => {
       if (pose === lastPose) return lastMatrices;
       lastPose = pose;
-      lastMatrices = skinMatricesUnder(
-        poses,
-        [animationPass(pose, motionScale, warnUnknownBone), ...modifiers],
-        bindings
-      );
+      const posed = prepare(pose);
+      lastMatrices = bindings ? posed.bindMatrices(bindings) : posed.skinMatrices();
       return lastMatrices;
     };
+  };
+  /** One skin for each decoded Skin, shared by every mesh that sets it. */
+  const skinsOfBinds = new WeakMap<readonly SkinBind[], BoundSkin>();
+  const skinOfBinds = (binds: readonly SkinBind[]): BoundSkin => {
+    const kept = skinsOfBinds.get(binds);
+    if (kept) return kept;
+    const bindings = poses.resolveBinds(binds, (message) =>
+      warnOnce(binds, message, `[MeshInstance3D] the Skeleton3D at ${skeleton.path}: ${message}`)
+    );
+    const bound: BoundSkin = {
+      skeletonPath: skeleton.path,
+      matrices: prepare(null).bindMatrices(bindings),
+      matricesUnder: matricesUnderOf(bindings),
+    };
+    skinsOfBinds.set(binds, bound);
+    return bound;
   };
   const skin: AutomaticSkin = {
     skeletonPath: skeleton.path,
@@ -263,16 +286,7 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Auto
         ? automaticSkinOf(skeleton.step.node)
         : automaticSkinMatrices(bones, showRestOnly, modifiers),
     matricesUnder: matricesUnderOf(),
-    withSkin: (binds) => {
-      const bindings = poses.resolveBinds(binds, (message) =>
-        warnOnce(binds, message, `[MeshInstance3D] the Skeleton3D at ${skeleton.path}: ${message}`)
-      );
-      return {
-        skeletonPath: skeleton.path,
-        matrices: skinMatricesUnder(poses, modifiers, bindings),
-        matricesUnder: matricesUnderOf(bindings),
-      };
-    },
+    withSkin: skinOfBinds,
   };
   return skin;
 }
