@@ -11,6 +11,7 @@
  */
 
 import { bezierInterpolatef } from '../../../godot/math/math';
+import { storedVector2 } from '../../../godot/math/real';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import { signedPolygonArea } from '../../../godot/math/polygonArea';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -19,11 +20,12 @@ import {
   type ContourPoint,
   type GlyphContours,
 } from '../../../r3f/controls/native/text/glyphContours';
-import { triangulateContours, type TriangulatedContour } from './triangulate';
+import { triangulateContours } from './triangulate';
 
-/** A polygon vertex. A point on the curve is sharp, and a point stepped along an arc is smooth. */
 export interface ContourVertex {
+  /** In single precision as Godot stores it: polypartition fails on a glyph by comparisons that a double point can pass. */
   point: Vector2;
+  /** A point on the curve is sharp, and a point stepped along an arc is smooth. */
   isSharp: boolean;
 }
 
@@ -37,7 +39,10 @@ export interface GlyphMeshData {
   /** One polygon per contour, scaled by `pixel_size`, y down. */
   contours: ContourVertex[][];
   contoursInfo: ContourInfo[];
-  /** Three corners per triangle, each wound counter-clockwise on a y-up page, so clockwise once y is negated. */
+  /**
+   * Three corners per triangle, each wound counter-clockwise on a y-up page, so clockwise once y is negated.
+   * Empty where Godot fails to triangulate the glyph.
+   */
   triangles: Vector2[];
   min: Vector2;
   max: Vector2;
@@ -48,6 +53,9 @@ const MIN_ARC_STEP = 0.01;
 const MAX_ARC_STEP = 0.5;
 
 const toFloat = Math.fround;
+
+const scaledPoint = (x: number, y: number, pixelSize: number): Vector2 =>
+  storedVector2({ x: x * pixelSize, y: y * pixelSize });
 
 function emptyGlyphMeshData(): GlyphMeshData {
   return {
@@ -77,7 +85,7 @@ function steppedArc(
   const vertices: ContourVertex[] = [];
   for (let t = step; t < 1; t = toFloat(t + step)) {
     const { x, y } = pointAt(t);
-    vertices.push({ point: { x: x * pixelSize, y: y * pixelSize }, isSharp: false });
+    vertices.push({ point: scaledPoint(x, y, pixelSize), isSharp: false });
   }
   return vertices;
 }
@@ -127,7 +135,7 @@ function contourPolygon(
   for (let j = start; j <= end; j++) {
     const current = points[j]!;
     if (current.tag === ContourPointTag.ON) {
-      polygon.push({ point: { x: current.x * pixelSize, y: current.y * pixelSize }, isSharp: true });
+      polygon.push({ point: scaledPoint(current.x, current.y, pixelSize), isSharp: true });
     } else if (current.tag === ContourPointTag.OFF_CUBIC) {
       // The arc takes the next control point too, so the loop steps past it.
       const second = j === end ? start : j + 1;
@@ -152,11 +160,6 @@ function contourPolygon(
 /** Counter-clockwise on a y-up page, as polypartition reads the shoelace sum. */
 function isCounterClockwise(polygon: readonly ContourVertex[]): boolean {
   return signedPolygonArea(polygon.map((vertex) => vertex.point)) > 0;
-}
-
-function toTriangulatedContour(polygon: readonly ContourVertex[]): TriangulatedContour {
-  const points = polygon.map((vertex) => vertex.point);
-  return { points, isHole: signedPolygonArea(points) < 0 };
 }
 
 function polygonLength(polygon: readonly ContourVertex[]): number {
@@ -196,6 +199,6 @@ export function buildGlyphMeshData(
     });
   }
 
-  data.triangles = triangulateContours(data.contours.map(toTriangulatedContour));
+  data.triangles = triangulateContours(data.contours.map((polygon) => polygon.map((vertex) => vertex.point)));
   return data;
 }

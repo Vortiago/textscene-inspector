@@ -58,16 +58,18 @@ describe('buildGlyphMeshData arcs', () => {
     ]);
   });
 
-  it('scales every point by pixel_size after it steps in font px', () => {
+  it('scales every point by pixel_size after it steps in font px, and stores it in single precision', () => {
     const data = buildGlyphMeshData(oneContour(arch), 0.01, 5);
-    expect(xy(data)).toEqual([
-      [0, 0],
-      [0.05, -0.0375],
-      [0.1, -0.05],
-      [0.15, -0.0375],
-      [0.2, 0],
-      [0.1, 0.05],
-    ]);
+    expect(xy(data)).toEqual(
+      [
+        [0, 0],
+        [0.05, -0.0375],
+        [0.1, -0.05],
+        [0.15, -0.0375],
+        [0.2, 0],
+        [0.1, 0.05],
+      ].map(([x, y]) => [Math.fround(x!), Math.fround(y!)])
+    );
   });
 
   it('caps the step at half the arc, so a curve_step beyond the chord adds one point', () => {
