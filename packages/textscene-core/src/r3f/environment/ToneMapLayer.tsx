@@ -1,7 +1,6 @@
 /**
- * The root world's tone mapping on its canvas: one route per frame. The compositor's tone pass
- * draws the canvas when glow, blending, the adjustments, the auto exposure or MSAA need it, or
- * three draws the curve per material when nothing does.
+ * The root world's tone mapping on its canvas. The compositor's tone pass draws every 3D frame
+ * (ADR-0061). A canvas with no real 3D GL context has three draw the curve in each material.
  */
 
 import { useEffect } from 'react';

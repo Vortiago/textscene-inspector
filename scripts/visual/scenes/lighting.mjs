@@ -25,8 +25,11 @@ export const LIGHTING_SCENES = [
   // unit-glow-authored weights its two coarsest levels. 96 px clamps both, 200 px clamps the last.
   { name: 'glow-small-frame-96', file: 'unit-glow-authored.tscn', canvas: { width: 96, height: 96 } },
   { name: 'glow-small-frame-200', file: 'unit-glow-authored.tscn', canvas: { width: 200, height: 156 } },
-  // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
+  // `tonemap_exposure` under LINEAR with no glow or adjustment: the tone pass applies the exposure alone.
   { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
+  // Levels just above a half step, which the half-float scene buffer rounds below it. The header
+  // states why no other golden shows it.
+  { name: 'scene-buffer-half-float', file: 'unit-scene-buffer-half-float.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
   { name: 'glow-map', file: 'unit-glow-map.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a

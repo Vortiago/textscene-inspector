@@ -1,9 +1,9 @@
 /**
- * Whether the compositor's tone pass mounts on a canvas, whether it carries glow, and how many
- * samples it takes. Godot runs the glow chain whenever the environment enables glow
- * (`renderer_scene_render_rd.cpp:575`, `:686`), blends in linear HDR before it tonemaps, and
- * resolves MSAA before the tonemap pass reads the buffer. A blended surface that loads late
- * still counts, and one a later click adds does not.
+ * What the compositor's tone pass carries on a 3D canvas: glow, samples, auto exposure and
+ * debanding. Godot draws every 3D frame into a half-float buffer and tonemaps it after
+ * (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`), so the pass mounts
+ * whatever the scene draws. Godot runs the glow chain whenever the environment enables glow
+ * (`renderer_scene_render_rd.cpp:575`, `:686`), and resolves MSAA before the tonemap pass reads the buffer.
  */
 import { describe, expect, it } from 'vitest';
 import { Fragment, type ComponentType, type ReactNode } from 'react';
@@ -15,8 +15,6 @@ import { useCompositorPass, type CompositorPass } from './useCompositorPass';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
-import { ResourceLoader } from '../../resources/ResourceLoader';
-import { COMMIT_FRAMES_AFTER_SETTLE, ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
 import { usePublishCameraAttributes, WorldExposureScope } from './worldExposure';
 import { withProject } from '../testing/ProjectFixture';
 import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
@@ -49,7 +47,6 @@ async function mount(
   settings: EnvironmentSettings | null,
   {
     context = glContext() as object | null,
-    loader = new ResourceLoader(),
     content = new THREE.Object3D(),
     Wrapper = Fragment as ComponentType<{ children: ReactNode }>,
     autoExposure = null as AutoExposure | null,
@@ -72,13 +69,11 @@ async function mount(
     );
   }
   const renderer = await ReactThreeTestRenderer.create(
-    <ResourceLoaderContext.Provider value={loader}>
-      <Wrapper>
-        <WorldWithAutoExposure>
-          <Probe />
-        </WorldWithAutoExposure>
-      </Wrapper>
-    </ResourceLoaderContext.Provider>,
+    <Wrapper>
+      <WorldWithAutoExposure>
+        <Probe />
+      </WorldWithAutoExposure>
+    </Wrapper>,
     { gl: rendererOver(context) }
   );
   return { renderer, pass: () => seen.pass };
@@ -93,9 +88,9 @@ describe('useCompositorPass for an Environment', () => {
     expect(pass()?.glow).not.toBeNull();
   });
 
-  it('mounts no pass when glow is disabled and nothing else needs one', async () => {
+  it('mounts a pass without glow when glow is disabled', async () => {
     const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'false' }));
-    expect(pass()).toBeNull();
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 
   it('mounts a pass without glow for the adjustments alone', async () => {
@@ -103,10 +98,10 @@ describe('useCompositorPass for an Environment', () => {
     expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 
-  it('mounts no pass for an enabled glow whose every level weight is zero (edge case)', async () => {
+  it('mounts a pass without glow for an enabled glow whose every level weight is zero (edge case)', async () => {
     const levels = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((level) => [`glow_levels/${level}`, '0.0']));
     const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'true', ...levels }));
-    expect(pass()).toBeNull();
+    expect(pass()?.glow).toBeNull();
   });
 
   it('mounts no pass on a canvas without a real GL context, even for glow (error path)', async () => {
@@ -143,9 +138,9 @@ describe('useCompositorPass for an auto exposure', () => {
 });
 
 describe('useCompositorPass with no Environment', () => {
-  it('mounts no pass when nothing blends and MSAA is off', async () => {
+  it("mounts a pass with Godot's defaults when nothing else asks for one", async () => {
     const { pass } = await mount(null);
-    expect(pass()).toBeNull();
+    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 
   it('mounts a multisampled pass without glow for MSAA alone', async () => {
@@ -164,77 +159,19 @@ describe('useCompositorPass with no Environment', () => {
       expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: true })
     );
   });
-
-  it('mounts a pass without glow for a blended surface', async () => {
-    const { mesh, blend } = switchableMesh();
-    blend();
-    const { renderer, pass } = await mount(null, { content: mesh });
-    await advance(renderer, 1);
-    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
-  });
 });
 
-describe('useCompositorPass over a loading scene', () => {
-  it('finds a blended surface that loads many frames after the mount', async () => {
-    const loader = new ResourceLoader();
-    const release = loader.beginPending();
-    const { mesh, blend } = switchableMesh();
-    const { renderer, pass } = await mount(null, { loader, content: mesh });
-    await advance(renderer, 100);
-    expect(pass()).toBeNull();
-
-    blend();
-    release();
-    await advance(renderer, 1);
-
-    expect(pass()).not.toBeNull();
-  });
-
-  it('finds a blended surface that commits within the frames after the loader settles', async () => {
+describe('useCompositorPass over a blended surface', () => {
+  // A blended draw anywhere, even off-screen, once moved the whole frame by a level (#1081).
+  it('mounts the same pass with and without a blended surface in the scene', async () => {
     const { mesh, blend } = switchableMesh();
     const { renderer, pass } = await mount(null, { content: mesh });
-    await advance(renderer, COMMIT_FRAMES_AFTER_SETTLE - 1);
+    await advance(renderer, 1);
+    const opaque = pass();
 
     blend();
     await advance(renderer, 1);
 
-    expect(pass()).not.toBeNull();
-  });
-
-  it('ignores a blended surface added after the scan stops, such as a selection overlay', async () => {
-    const { mesh, blend } = switchableMesh();
-    const { renderer, pass } = await mount(null, { content: mesh });
-    await advance(renderer, COMMIT_FRAMES_AFTER_SETTLE);
-
-    blend();
-    await advance(renderer, 3);
-
-    expect(pass()).toBeNull();
-  });
-
-  it('scans again while a later load is pending', async () => {
-    const loader = new ResourceLoader();
-    const { mesh, blend } = switchableMesh();
-    const { renderer, pass } = await mount(null, { loader, content: mesh });
-    await advance(renderer, COMMIT_FRAMES_AFTER_SETTLE);
-
-    const release = loader.beginPending();
-    blend();
-    await advance(renderer, 1);
-    release();
-
-    expect(pass()).not.toBeNull();
-  });
-
-  it('keeps the pass after the surface stops blending, so the pipeline never flips back', async () => {
-    const { mesh, blend } = switchableMesh();
-    const { renderer, pass } = await mount(null, { content: mesh });
-    blend();
-    await advance(renderer, 1);
-
-    (mesh.material as THREE.Material).transparent = false;
-    await advance(renderer, 3);
-
-    expect(pass()).not.toBeNull();
+    expect([opaque, pass()]).toEqual([expect.anything(), opaque]);
   });
 });

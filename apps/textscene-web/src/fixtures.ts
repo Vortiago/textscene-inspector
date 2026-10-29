@@ -1803,6 +1803,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Scene Buffer Half Float",
+    "file": "unit-scene-buffer-half-float.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Script Create Dialog",
     "file": "unit-script-create-dialog.tscn",
     "category": "Other"

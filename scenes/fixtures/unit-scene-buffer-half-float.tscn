@@ -1,0 +1,122 @@
+; One variable: the half-float scene buffer. Each unshaded quad's sRGB albedo sits just above a level's
+; half step, where the RGBA16F buffer that Godot draws into (`renderer_scene_render_rd.cpp:1128`) rounds
+; the linear value below it. Godot writes the lower level for every quad. A curve applied in the
+; material, with no buffer, writes the level above. Every other golden crosses a level boundary
+; only by chance, on a few pixels.
+[gd_scene load_steps=14 format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+
+[sub_resource type="QuadMesh" id="Quad_1"]
+size = Vector2(0.9, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="Level_0"]
+shading_mode = 0
+albedo_color = Color(0.213737, 0.213737, 0.213737, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_1"]
+shading_mode = 0
+albedo_color = Color(0.292169, 0.292169, 0.292169, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_2"]
+shading_mode = 0
+albedo_color = Color(0.362757, 0.362757, 0.362757, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_3"]
+shading_mode = 0
+albedo_color = Color(0.449031, 0.449031, 0.449031, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_4"]
+shading_mode = 0
+albedo_color = Color(0.523541, 0.523541, 0.523541, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_5"]
+shading_mode = 0
+albedo_color = Color(0.590208, 0.590208, 0.590208, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_6"]
+shading_mode = 0
+albedo_color = Color(0.656875, 0.656875, 0.656875, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_7"]
+shading_mode = 0
+albedo_color = Color(0.723541, 0.723541, 0.723541, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_8"]
+shading_mode = 0
+albedo_color = Color(0.794129, 0.794129, 0.794129, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_9"]
+shading_mode = 0
+albedo_color = Color(0.860796, 0.860796, 0.860796, 1)
+
+[sub_resource type="StandardMaterial3D" id="Level_10"]
+shading_mode = 0
+albedo_color = Color(0.927463, 0.927463, 0.927463, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+projection = 1
+size = 3.2
+
+[node name="Level54" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_0")
+
+[node name="Level74" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_1")
+
+[node name="Level92" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_2")
+
+[node name="Level114" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_3")
+
+[node name="Level133" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_4")
+
+[node name="Level150" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_5")
+
+[node name="Level167" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_6")
+
+[node name="Level184" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_7")
+
+[node name="Level202" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, -1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_8")
+
+[node name="Level219" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, -1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_9")
+
+[node name="Level236" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, -1, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Level_10")
