@@ -13,7 +13,13 @@ describe('multiplyModulate', () => {
 
   it('treats white as the identity', () => {
     const c = { r: 0.5, g: 0.2, b: 0.8, a: 0.5 };
-    expect(multiplyModulate(WHITE_MODULATE, c)).toEqual(c);
+    // A `Color` holds floats, so the product is each channel as a float.
+    expect(multiplyModulate(WHITE_MODULATE, c)).toEqual({
+      r: 0.5,
+      g: Math.fround(0.2),
+      b: Math.fround(0.8),
+      a: 0.5,
+    });
   });
 
   it('composes hierarchically (a parent dims its children)', () => {

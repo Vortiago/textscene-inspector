@@ -223,7 +223,8 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
-    expect(mat.opacity).toBe(0.8 * HALF_FADE_ALPHA);
+    // The `Color` alpha is a float.
+    expect(mat.opacity).toBe(Math.fround(0.8) * HALF_FADE_ALPHA);
     expect(mat.transparent).toBe(true);
   });
 
