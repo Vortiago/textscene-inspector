@@ -2940,6 +2940,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Atlas Viewport Texture File",
+    "file": "unit-tile-atlas-viewport-texture-file.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Flips",
     "file": "unit-tile-map-layer-flips.tscn",
     "category": "Unit - 2D Canvas"

@@ -457,6 +457,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-tile-atlas-viewport-padding.tscn',
     mode: '2d',
   },
+  // A TileSet atlas over a ViewportTexture, inline and from a .tres: neither creates a tile at load.
+  // Godot 4.6.3 `--mode 2d`: (130,120) and (430,120) rgb(76,76,76), the clear colour.
+  {
+    name: 'tile-atlas-viewport-texture-file',
+    file: 'unit-tile-atlas-viewport-texture-file.tscn',
+    mode: '2d',
+  },
   // A WorldEnvironment inside a shared-world viewport glows its target. Godot 4.6.3 `--mode 2d`:
   // (400,370) rgb(106,63,30) in the bloom below the sphere, and (400,420) rgb(31,22,24).
   {
