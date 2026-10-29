@@ -291,5 +291,8 @@ and CSS side effects, and grows the host bundle about four times. The `languageF
 carries the generated ClassDB property tables, which the webview never loads.
 
 The webview builds ESM with code splitting (`apps/textscene-vscode/esbuild.config.mjs`), and
-loads the dock panels, the Control canvas, drei's `<Text>` and the GLB loader on demand.
-`pnpm check:bundle-size` prints the current sizes.
+loads the dock panels, the Control canvas, drei's `<Text>`, the GLB loader, the area light's LTC
+tables and the in-thread noise jobs on demand. `pnpm check:bundle-size` prints the current sizes,
+and fails when a module on its lazy-only list reaches the canvas-paint path. The DFG and LTC tables
+are stored as residuals of a linear prediction (`tableResiduals.ts`), which gzip packs about three
+times tighter than base64.

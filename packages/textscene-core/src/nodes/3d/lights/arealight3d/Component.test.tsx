@@ -104,13 +104,31 @@ describe('<AreaLight3D>', () => {
 
   it("shows its light with Godot's LTC tables in place of three's", async () => {
     const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
     const { lut1, lut2 } = ltcTables();
     const uniforms = THREE.UniformsLib as unknown as Record<string, THREE.DataTexture>;
 
-    await vi.waitFor(() => expect(uniforms.LTC_FLOAT_1).toBeDefined());
-    expect(renderer.scene.findAllByType('RectAreaLight')).toHaveLength(1);
+    await vi.waitFor(() => expect(light.visible).toBe(true));
     expect(uniforms.LTC_FLOAT_1!.image.data).toEqual(lut1);
     expect(uniforms.LTC_FLOAT_2!.image.data).toEqual(lut2);
+  });
+
+  it('hides its light while the LTC tables load, so three binds them when it first counts the light', async () => {
+    vi.resetModules();
+    let releaseTables = () => {};
+    const tablesLoaded = new Promise<void>((resolve) => (releaseTables = resolve));
+    vi.doMock('../../../../r3f/areaLight/ltcTextures', async () => {
+      await tablesLoaded;
+      return { installLtcTextures: () => {} };
+    });
+    const { AreaLight3D: FreshAreaLight3D } = await import('./Component');
+    const renderer = await ReactThreeTestRenderer.create(<FreshAreaLight3D node={makeNode()} />);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+
+    expect(light.visible).toBe(false);
+    releaseTables();
+    await vi.waitFor(() => expect(light.visible).toBe(true));
+    vi.doUnmock('../../../../r3f/areaLight/ltcTextures');
   });
 
   it('maps area_size width to RectAreaLight width', async () => {

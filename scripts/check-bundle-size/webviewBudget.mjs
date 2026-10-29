@@ -13,7 +13,7 @@ import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 // path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
 // half stays out), so a tighter ceiling fails on the next slice, not on a regression. The report
 // reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
-const MEASURED_GZ = 805_053; // the 13-file closure as last measured
+const MEASURED_GZ = 812_351; // the closure as last measured
 const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. Importing the `@react-three/drei` barrel

@@ -191,9 +191,9 @@ const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
 /**
  * Installs the light function and the attenuation it reads, then replaces three's area light, and
  * gives the area light atlas and the per-light uniforms to every built-in lit material, for every
- * program compiled after the call. `useLtcTextures` installs the tables. A three release that rewrites a replaced text keeps
- * all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call changes
- * nothing.
+ * program compiled after the call. `useLtcTexturesSettled` loads the tables. A three release that
+ * rewrites a replaced text keeps all its own chunks, and `areaLightChunk.test.ts` fails on that
+ * release. A second call changes nothing.
  */
 export function installGodotAreaLight(): void {
   const isPatched = installChunkEdits({
