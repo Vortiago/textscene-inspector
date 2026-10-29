@@ -57,8 +57,11 @@ import {
 } from '../../../../godot/math/basis.js';
 import {
   affineInverseTransform3D,
+  basisOfTransform3D,
   identityTransform3D,
   multiplyTransform3D,
+  transform3DOf,
+  transform3DXform,
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
 import {
@@ -302,9 +305,9 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   emitAtShape(input.emission, p, rng);
 
   if (!sim.localCoords) {
-    p.velocity = basisXform(state.emissionXform, p.velocity);
-    const placed = multiplyTransform3D(state.emissionXform, particleTransform(p));
-    p.basis = basisOf(placed);
+    p.velocity = basisXformRows(basisOfTransform3D(state.emissionXform), p.velocity);
+    const placed = multiplyTransform3D(state.emissionXform, transform3DOf(p.basis, p.origin));
+    p.basis = basisOfTransform3D(placed);
     p.origin = placed.origin;
   }
   if (sim.disableZ) flattenZ(p);
@@ -639,7 +642,7 @@ export function particleRows({ input, state }: SettledParticles): Float32Array {
   state.particles.forEach((p, index) => {
     const at = index * PARTICLE_FLOATS;
     if (p.active) {
-      const local = particleTransform(p);
+      const local = transform3DOf(p.basis, p.origin);
       writeTransformRows(rows, at, sim.localCoords ? local : multiplyTransform3D(inverseEmission, local));
     }
     writeColor(rows, at + PARTICLE_COLOR_OFFSET, p.color);
@@ -688,7 +691,7 @@ function drawOrder(state: SimState, input: ParticleSim3DInput, viewAxis: Vector3
   if (sim.drawOrder !== CPUParticles3DDrawOrder.VIEW_DEPTH || !viewAxis) return null;
   // Far to near. A local-coords emitter takes the axis through its whole inverse, origin and all.
   const axis = sim.localCoords
-    ? normalized(transformXform(inverseEmissionTransform(input.emissionTransform), viewAxis))
+    ? normalized(transform3DXform(inverseEmissionTransform(input.emissionTransform), viewAxis))
     : normalized(viewAxis);
   // Each depth once, not twice per comparison.
   const depths = particles.map((p) => dot(axis, p.origin));
@@ -745,20 +748,6 @@ function lerpParam(
   return lerpf(slot.min, slot.max, randFromSeed(seedRef));
 }
 
-function particleTransform(p: Particle): Transform3D {
-  const b = p.basis;
-  return {
-    basis_x: { x: b[0], y: b[1], z: b[2] },
-    basis_y: { x: b[3], y: b[4], z: b[5] },
-    basis_z: { x: b[6], y: b[7], z: b[8] },
-    origin: p.origin,
-  };
-}
-
-function basisOf({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
-  return [x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z];
-}
-
 function basisOfColumns(x: Vector3, y: Vector3, z: Vector3): BasisComponents {
   return [x.x, y.x, z.x, x.y, y.y, z.y, x.z, y.z, z.z];
 }
@@ -768,23 +757,13 @@ function column(basis: BasisComponents, index: number): Vector3 {
   return { x, y, z };
 }
 
-/** `Basis::xform` (`basis.h:336-341`) of a transform's basis: each row dotted with `v`. */
-function basisXform({ basis_x, basis_y, basis_z }: Transform3D, v: Vector3): Vector3 {
-  return { x: dot(basis_x, v), y: dot(basis_y, v), z: dot(basis_z, v) };
-}
-
-/** `Basis::xform` of a row-major basis. */
+/** `Basis::xform` (`basis.h:336-341`) of a row-major basis: each row dotted with `v`. */
 function basisXformRows(b: BasisComponents, v: Vector3): Vector3 {
   return {
     x: dot({ x: b[0], y: b[1], z: b[2] }, v),
     y: dot({ x: b[3], y: b[4], z: b[5] }, v),
     z: dot({ x: b[6], y: b[7], z: b[8] }, v),
   };
-}
-
-/** `Transform3D::xform` of a point: the basis, then the origin. */
-function transformXform(t: Transform3D, v: Vector3): Vector3 {
-  return vector3Add(basisXform(t, v), t.origin);
 }
 
 function dot(a: Vector3, b: Vector3): number {

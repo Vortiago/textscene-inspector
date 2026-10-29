@@ -290,19 +290,20 @@ function shapeOf(content: string): string[] {
     .sort();
 }
 
-/** Where the predicates live: its own calls are the definition, not a slot. */
-const PREDICATE_MODULE = 'linter/resourceChecker.ts';
+/** Where the predicates live: their own calls are the definition, not a slot. */
+const PREDICATE_MODULES = ['linter/resourceChecker.ts', 'godot/scene/resourceLiteral.ts'];
 
 /**
- * Every function the module exports over a raw slot value, which is a parameter named `resourceRef`. Derived, not
+ * Every function the modules export over a raw slot value, which is a parameter named `resourceRef`. Derived, not
  * listed: a hand-written roster misses the predicate it forgets, and a new one is swept the day it is written.
  */
 function slotPredicates(): string[] {
-  const source = stripComments(readFileSync(join(srcRoot, PREDICATE_MODULE), 'utf8'));
-  return [...source.matchAll(/\bexport function (\w+)\s*\(([^)]*)\)/g)]
-    .filter(([, , params]) => /\bresourceRef\b/.test(params!))
-    .map(([, name]) => name!)
-    .sort();
+  return PREDICATE_MODULES.flatMap((module) => {
+    const source = stripComments(readFileSync(join(srcRoot, module), 'utf8'));
+    return [...source.matchAll(/\bexport function (\w+)\s*\(([^)]*)\)/g)]
+      .filter(([, , params]) => /\bresourceRef\b/.test(params!))
+      .map(([, name]) => name!);
+  }).sort();
 }
 
 const PREDICATES = slotPredicates().join('|');
@@ -320,12 +321,14 @@ const WRAPPED_READ_RE = new RegExp(`^\\s*(?:${PREDICATES})\\(([^()]*)\\)\\s*$`);
 const PROPERTY_KEY_RE = /^[a-z][a-z0-9_]*$/;
 
 /**
- * Every non-test source file under `src`, relative to it. The shared walk, not
- * a local one: it carries the anti-vacuity floor, and a guard that names its
- * own roots answers "anywhere I remembered" rather than "anywhere".
+ * Every non-test linter source under `src`, relative to it: a file under `linter/`, or one a slice names for the
+ * linter. The shared walk, not a local one: it carries the anti-vacuity floor. A renderer parser asks the same
+ * predicates, and its own tests answer for its slots, as no rule branches on them.
  */
 function sourceFiles(): string[] {
-  return allSourceFiles().map((f) => relative(srcRoot, f));
+  return allSourceFiles()
+    .map((f) => relative(srcRoot, f))
+    .filter((file) => file.startsWith('linter/') || /linter[^/]*\.ts$/i.test(file));
 }
 
 /** The `.tscn` property keys among an expression's string literals, ascending. */
@@ -391,7 +394,7 @@ function sweptSlots(): { slots: string[]; unreadable: string[] } {
   const slots = new Set<string>();
   const unreadable: string[] = [];
   for (const file of sourceFiles()) {
-    if (file === PREDICATE_MODULE) continue;
+    if (PREDICATE_MODULES.includes(file)) continue;
     const source = readFileSync(join(srcRoot, file), 'utf8');
     let bracketed = 0;
     for (const [call, rawArg] of source.matchAll(HELPER_CALL_RE)) {
@@ -427,7 +430,7 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
   // One scan for both assertions: it reads every source file in the package.
   const swept = sweptSlots();
 
-  it('derives the predicates from the module, so the one a roster would forget is swept too', () => {
+  it('derives the predicates from the modules, so the one a roster would forget is swept too', () => {
     expect(slotPredicates()).toEqual(
       expect.arrayContaining([
         'checkResourceExists',

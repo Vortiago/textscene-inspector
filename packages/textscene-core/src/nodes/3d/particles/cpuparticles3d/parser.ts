@@ -1,7 +1,7 @@
 /** The render parse of a CPUParticles3D: its instance state, what its box reads, its emission and its simulation. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { holdsResource } from '../../../../godot/scene/resourceLiteral';
+import { heldResource } from '../../../../godot/scene/resourceLiteral';
 import {
   boolOr,
   enumOr,
@@ -29,9 +29,9 @@ export function parseCPUParticles3D(
   return {
     ...parseGeometryInstance3D(heading, properties),
     visibilityAabb: parseNonEmptyAabb(properties.visibility_aabb, 'visibility_aabb'),
-    mesh: heldReference(properties.mesh),
-    materialOverride: heldReference(properties.material_override),
-    materialOverlay: heldReference(properties.material_overlay),
+    mesh: heldResource(properties.mesh),
+    materialOverride: heldResource(properties.material_override),
+    materialOverlay: heldResource(properties.material_overlay),
     emission: readParticleEmission(properties),
     simulation: parseSimulation(properties, heading.attributes.name ?? 'CPUParticles3D'),
   };
@@ -67,16 +67,12 @@ function parseSimulation(properties: Record<string, string>, context: string): C
     params: parseParticleParams(properties),
     splitScale: boolOr(properties.split_scale, false, at('split_scale')),
     scaleCurves: {
-      x: heldReference(properties.scale_curve_x),
-      y: heldReference(properties.scale_curve_y),
-      z: heldReference(properties.scale_curve_z),
+      x: heldResource(properties.scale_curve_x),
+      y: heldResource(properties.scale_curve_y),
+      z: heldResource(properties.scale_curve_z),
     },
     color: storedColor(colorOr(properties.color, { r: 1, g: 1, b: 1, a: 1 })),
-    colorRamp: heldReference(properties.color_ramp),
-    colorInitialRamp: heldReference(properties.color_initial_ramp),
+    colorRamp: heldResource(properties.color_ramp),
+    colorInitialRamp: heldResource(properties.color_initial_ramp),
   };
-}
-
-function heldReference(value: string | undefined): string | undefined {
-  return holdsResource(value) ? value : undefined;
 }

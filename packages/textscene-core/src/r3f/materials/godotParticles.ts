@@ -50,18 +50,31 @@ export function particleDrawOf(scalars: StandardMaterial3DScalars | null): Parti
  */
 const MAIN_CAMERA_WORLD: THREE.IUniform<THREE.Matrix4> = { value: new THREE.Matrix4() };
 
+/**
+ * The world matrix of the camera this pass draws through, which PARTICLES reads as `INV_VIEW_MATRIX`,
+ * a uniform in Godot too. A uniform, not `inverse( viewMatrix )`: no matrix inverse per vertex.
+ * Written only by {@link aimParticleBillboards}.
+ */
+const PASS_CAMERA_WORLD: THREE.IUniform<THREE.Matrix4> = { value: new THREE.Matrix4() };
+
 /** Whether `material` draws a particle emitter's particles, which its program places and billboards. */
 export function drawsParticles(material: THREE.Material): boolean {
   return material.userData[PARTICLE_DRAW_KEY] !== undefined;
 }
 
 /**
- * Aims every ENABLED and FIXED_Y particle billboard at `mainCamera`, before a draw of `material`.
- * Each render writes its own camera, so a SubViewport's draws aim at the SubViewport's.
+ * Aims every ENABLED and FIXED_Y particle billboard at `mainCamera`, and every PARTICLES billboard
+ * at `passCamera`, before a draw of `material`. Each render writes its own cameras, so a
+ * SubViewport's draws aim at the SubViewport's.
  */
-export function aimParticleBillboards(material: THREE.Material, mainCamera: THREE.Camera): void {
+export function aimParticleBillboards(
+  material: THREE.Material,
+  mainCamera: THREE.Camera,
+  passCamera: THREE.Camera
+): void {
   if (!drawsParticles(material)) return;
   MAIN_CAMERA_WORLD.value.copy(mainCamera.matrixWorld);
+  PASS_CAMERA_WORLD.value.copy(passCamera.matrixWorld);
 }
 
 const UV_CHUNK = '#include <uv_vertex>';
@@ -81,11 +94,10 @@ const BILLBOARD_BASES = {
 		vec4( 0.0, 1.0, 0.0, 0.0 ),
 		vec4( normalize( cross( godotMainCameraWorld[ 0 ].xyz, vec3( 0.0, 1.0, 0.0 ) ) ), 0.0 ),
 		godotModel[ 3 ] );`,
-  [BillboardMode.BILLBOARD_PARTICLES]: /* glsl */ `mat4 godotView = inverse( viewMatrix );
-	mat4 godotWorld = mat4(
-		normalize( godotView[ 0 ] ),
-		normalize( godotView[ 1 ] ),
-		normalize( godotView[ 2 ] ),
+  [BillboardMode.BILLBOARD_PARTICLES]: /* glsl */ `mat4 godotWorld = mat4(
+		normalize( godotPassCameraWorld[ 0 ] ),
+		normalize( godotPassCameraWorld[ 1 ] ),
+		normalize( godotPassCameraWorld[ 2 ] ),
 		godotModel[ 3 ] );
 	godotWorld = godotWorld * mat4(
 		vec4( cos( particleCustom.x ), - sin( particleCustom.x ), 0.0, 0.0 ),
@@ -102,6 +114,7 @@ const BILLBOARD_BASES = {
 function billboardWorld(mode: keyof typeof BILLBOARD_BASES): string {
   return /* glsl */ `#ifdef USE_INSTANCING
 uniform mat4 godotMainCameraWorld;
+uniform mat4 godotPassCameraWorld;
 mat4 godotParticleBillboard() {
 	mat4 godotModel = modelMatrix * instanceMatrix;
 	${BILLBOARD_BASES[mode]}
@@ -214,6 +227,7 @@ function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjecti
       if (shader.vertexShader.includes(VERTEX_COLOR_CHUNK)) vertex.push(PARTICLE_COLOR);
       if (billboarded) {
         shader.uniforms.godotMainCameraWorld = MAIN_CAMERA_WORLD;
+        shader.uniforms.godotPassCameraWorld = PASS_CAMERA_WORLD;
         declarations.push(billboardWorld(mode));
         vertex.push({ three: UV_CHUNK, godot: BILLBOARD_POSE });
       }

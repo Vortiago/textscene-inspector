@@ -5,7 +5,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { heldResource } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../godot/scene/resourceLiteral.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {

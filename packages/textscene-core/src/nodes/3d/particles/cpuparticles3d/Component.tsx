@@ -10,7 +10,7 @@ import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'reac
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { EMPTY_AABB } from '../../../../godot/math/aabb';
-import { identityTransform3D, sameTransform3D, type Transform3D } from '../../../../godot/math/transform3d';
+import { sameTransform3D, type Transform3D } from '../../../../godot/math/transform3d';
 import type { Vector3 } from '../../../../godot/math/vector';
 import { CPUParticles3DDrawOrder } from '../../../../godot/scene/particles3d';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
@@ -23,7 +23,7 @@ import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
 import { useMeshContent } from '../../../../r3f/meshes/meshContent';
-import { matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms';
+import { realGlobalTransform3D } from '../../../../r3f/nodeTreeTransforms';
 import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
@@ -57,6 +57,7 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
   const resources = useParticleResources(properties.simulation);
   const settled = useMemo(
     () =>
+      emissionTransform &&
       settleParticles({
         sim: properties.simulation,
         emission: properties.emission,
@@ -66,17 +67,25 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
     [properties, resources, emissionTransform]
   );
   const viewAxis = useViewAxis(properties.simulation.drawOrder === CPUParticles3DDrawOrder.VIEW_DEPTH);
-  const rows = useMemo(() => particleRows(settled), [settled]);
-  const buffer = useMemo(() => particlesInDrawOrder(settled, rows, viewAxis), [settled, rows, viewAxis]);
+  const rows = useMemo(() => settled && particleRows(settled), [settled]);
+  const buffer = useMemo(
+    () => settled && rows && particlesInDrawOrder(settled, rows, viewAxis),
+    [settled, rows, viewAxis]
+  );
 
   const meshAabb = useMeshAabb(properties.mesh, pools);
-  const ownAabb = useMemo(() => particlesAabb(properties, rows, meshAabb), [properties, rows, meshAabb]);
+  const ownAabb = useMemo(
+    () => rows && particlesAabb(properties, rows, meshAabb),
+    [properties, rows, meshAabb]
+  );
   const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [ownAabb]);
   const shadow = useGeometryInstance(placement);
 
   return (
     <Node3D node={node} ref={nodeRef}>
-      <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
+      {settled && buffer && (
+        <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
+      )}
       <PluginGizmo drawnFor="every-node">
         {/* The box the node authors, `AABB()` for none, and not the parser's null (the multimesh box). */}
         <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} />
@@ -91,26 +100,25 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
 
 /**
  * The emitter's global transform: a `local_coords = false` emitter emits from it, and a VIEW_DEPTH
- * emitter sorts through its inverse. The identity before the node is in the tree. three assembles
- * it, so it is sampled again for each parse of the node, and changes identity only when it changes.
+ * emitter sorts through its inverse. three holds the ancestors, so it is sampled again for each
+ * parse of the node, and changes identity only when it changes. Null until the first sample, so the emitter
+ * settles once on mount, from the transform it draws under.
  */
-function useEmissionTransform(nodeRef: RefObject<THREE.Object3D | null>, parsed: TscnNode): Transform3D {
-  const [transform, setTransform] = useState(identityTransform3D);
+function useEmissionTransform(
+  nodeRef: RefObject<THREE.Object3D | null>,
+  parsed: TscnNode
+): Transform3D | null {
+  const [transform, setTransform] = useState<Transform3D | null>(null);
   useLayoutEffect(() => {
     const node = nodeRef.current;
-    if (!node) {
-      setTransform((previous) => (sameTransform3D(previous, IDENTITY) ? previous : IDENTITY));
-      return;
-    }
+    if (!node) return;
     // A layout pass runs before the renderer's own `updateMatrixWorld`, so the ancestors refresh.
     node.updateWorldMatrix(true, false);
-    const next = matrixToTransform3D(node.matrixWorld);
-    setTransform((previous) => (sameTransform3D(previous, next) ? previous : next));
+    const next = realGlobalTransform3D(node);
+    setTransform((previous) => (previous && sameTransform3D(previous, next) ? previous : next));
   }, [nodeRef, parsed]);
   return transform;
 }
-
-const IDENTITY = identityTransform3D();
 
 /**
  * The axis a VIEW_DEPTH emitter sorts along: the global `basis.get_column(2)` of the camera that

@@ -126,7 +126,7 @@ function pose(
   // draw keeps it too: its program billboards each instance toward the main camera of this render,
   // and a billboard about the node would move every particle that a points draw holds.
   if ((object as THREE.InstancedMesh).isInstancedMesh || drawsParticles(material)) {
-    aimParticleBillboards(material, mainCamera);
+    aimParticleBillboards(material, mainCamera, passCamera);
     return false;
   }
   const billboard = billboardOf(material);

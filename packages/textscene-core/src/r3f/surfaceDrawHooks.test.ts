@@ -12,6 +12,7 @@ import { setVisualLayers } from './visualLayers';
 import { testRenderer } from '../testing/recordingWebGL';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering/rendering';
+import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
@@ -260,11 +261,10 @@ describe('surfaceDrawHooks — point shadow', () => {
 
 describe('surfaceDrawHooks — particle instances', () => {
   /** An InstancedMesh of one ENABLED billboard surface, which casts, typed as the mesh the helpers take. */
-  function particleSurface(): THREE.Mesh {
+  function particleSurface(mode: BillboardMode = BillboardMode.BILLBOARD_ENABLED): THREE.Mesh {
     const bag = { materialClass: 'standard' as const, props: {} };
     const draw = particleDrawOf(null);
-    const userData = withParticleDraw(bag, { ...draw, billboard: { mode: 1, keepScale: false } }).props
-      .userData;
+    const userData = withParticleDraw(bag, { ...draw, billboard: { mode, keepScale: false } }).props.userData;
     const particles = new THREE.InstancedMesh(
       new THREE.BufferGeometry(),
       new THREE.MeshStandardMaterial({ userData }),
@@ -293,6 +293,16 @@ describe('surfaceDrawHooks — particle instances', () => {
     shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
     const aimed = shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4;
     expect([aimed.equals(camera.matrixWorld), aimed.equals(shadowCamera.matrixWorld)]).toEqual([true, false]);
+  });
+
+  // PARTICLES reads `INV_VIEW_MATRIX`, the camera of the pass it draws in (`material.cpp:1309-1312`).
+  it('aims a PARTICLES billboard at the light on a shadow pass', () => {
+    const surface = particleSurface(BillboardMode.BILLBOARD_PARTICLES);
+    const shadow = drawShadowGroup(surface, camera, shadowCamera, 0, (s) => s.castMaterial!);
+    const shader = programShader('depth');
+    shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
+    const aimed = shader.uniforms.godotPassCameraWorld!.value as THREE.Matrix4;
+    expect([aimed.equals(shadowCamera.matrixWorld), aimed.equals(camera.matrixWorld)]).toEqual([true, false]);
   });
 
   it('keeps the instanced pose, which the program billboards', () => {

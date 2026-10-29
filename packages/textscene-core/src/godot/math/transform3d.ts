@@ -1,7 +1,7 @@
 /** Godot's `Transform3D` (`core/math/transform_3d.h`) as plain components. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { storedReal as f } from './real.js';
+import { storedReal as f, storedVector3 } from './real.js';
 import {
   basisFromQuaternionScale,
   basisGetRotationQuaternion,
@@ -39,11 +39,13 @@ export function identityTransform3D(): Transform3D {
 }
 
 /** The nine row-major components of the basis. */
-function basisComponents({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
+/** The basis of `transform`, row by row. */
+export function basisOfTransform3D({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
   return [x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z];
 }
 
-function transformOf(n: BasisComponents, origin: Vector3): Transform3D {
+/** The transform of a row-major basis `n` at `origin`. */
+export function transform3DOf(n: BasisComponents, origin: Vector3): Transform3D {
   return {
     basis_x: { x: n[0], y: n[1], z: n[2] },
     basis_y: { x: n[3], y: n[4], z: n[5] },
@@ -52,8 +54,11 @@ function transformOf(n: BasisComponents, origin: Vector3): Transform3D {
   };
 }
 
-/** `Transform3D::xform` (`transform_3d.h:177-182`) of a point: each basis row dotted with it, plus the origin. */
-function xformPoint(transform: Transform3D, point: Vector3): Vector3 {
+/**
+ * `Transform3D::xform` (`transform_3d.h:177-182`) of a point in `real_t` float: each basis row
+ * dotted with it, plus the origin.
+ */
+export function transform3DXform(transform: Transform3D, point: Vector3): Vector3 {
   const rowDot = ({ x, y, z }: Vector3): number => f(f(f(x * point.x) + f(y * point.y)) + f(z * point.z));
   return {
     x: f(rowDot(transform.basis_x) + transform.origin.x),
@@ -89,10 +94,20 @@ function sameVector3(a: Vector3, b: Vector3): boolean {
  *   `multiplyTransform3D`, `affineInverseTransform3D` and `transform3DFromQuaternionScale`, in float32.
  */
 export function multiplyTransform3D(left: Transform3D, right: Transform3D): Transform3D {
-  return transformOf(
-    basisMultiply(basisComponents(left), basisComponents(right)),
-    xformPoint(left, right.origin)
+  return transform3DOf(
+    basisMultiply(basisOfTransform3D(left), basisOfTransform3D(right)),
+    transform3DXform(left, right.origin)
   );
+}
+
+/** The transform a `Transform3D` field holds after `value` is assigned to it: each component a `real_t`. */
+export function storedTransform3D({ basis_x, basis_y, basis_z, origin }: Transform3D): Transform3D {
+  return {
+    basis_x: storedVector3(basis_x),
+    basis_y: storedVector3(basis_y),
+    basis_z: storedVector3(basis_z),
+    origin: storedVector3(origin),
+  };
 }
 
 /**
@@ -100,9 +115,9 @@ export function multiplyTransform3D(left: Transform3D, right: Transform3D): Tran
  * origin taken through it. A singular basis stays as it is, as `Basis::invert` leaves it.
  */
 export function affineInverseTransform3D(transform: Transform3D): Transform3D {
-  const inverse = transformOf(basisInvert(basisComponents(transform)), { x: 0, y: 0, z: 0 });
+  const inverse = transform3DOf(basisInvert(basisOfTransform3D(transform)), { x: 0, y: 0, z: 0 });
   const { x, y, z } = transform.origin;
-  return { ...inverse, origin: xformPoint(inverse, { x: -x, y: -y, z: -z }) };
+  return { ...inverse, origin: transform3DXform(inverse, { x: -x, y: -y, z: -z }) };
 }
 
 /** The transform `Skeleton3D::Bone::update_pose_cache` builds (`skeleton_3d.h:118-124`): `Basis(rotation, scale)` at `position`. */
@@ -111,7 +126,7 @@ export function transform3DFromQuaternionScale(
   scale: Vector3,
   position: Vector3
 ): Transform3D {
-  return transformOf(basisFromQuaternionScale(rotation, scale), { ...position });
+  return transform3DOf(basisFromQuaternionScale(rotation, scale), { ...position });
 }
 
 /**
@@ -121,7 +136,7 @@ export function transform3DFromQuaternionScale(
  * @canonical The rotation and the scale of a Transform3D
  */
 export function decomposeTransform3D(transform: Transform3D): { rotation: Quaternion; scale: Vector3 } {
-  const basis = basisComponents(transform);
+  const basis = basisOfTransform3D(transform);
   const [x, y, z] = basisGetScale(basis);
   return { rotation: basisGetRotationQuaternion(basis), scale: { x, y, z } };
 }

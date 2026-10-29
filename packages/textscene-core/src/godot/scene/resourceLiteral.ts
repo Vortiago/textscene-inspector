@@ -12,3 +12,11 @@ import { isNilLiteral } from '../variant/variantParser.js';
 export function holdsResource(value: string | undefined): boolean {
   return !!value?.trim() && !isNilLiteral(value);
 }
+
+/**
+ * The reference a resource property holds, or `undefined` when it holds nothing: {@link holdsResource}
+ * answered as a value a parser or a rule can use.
+ */
+export function heldResource(resourceRef: string | undefined): string | undefined {
+  return holdsResource(resourceRef) ? resourceRef : undefined;
+}

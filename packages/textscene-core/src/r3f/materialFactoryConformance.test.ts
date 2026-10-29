@@ -7,6 +7,9 @@
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { repoRoot } from '../parser/testing/parserKit';
+import { ShadowCastingSetting } from '../godot/rendering/rendering';
+import { overlayDrawProps } from './materials/materialOverlay';
+import { drawHookProps, shadowCastingEffects } from './shadowCasting';
 import type { JsxTag } from './testing/sourceScan';
 import {
   callSites,
@@ -79,7 +82,27 @@ const PRIMITIVE_TAG_HEAD = /^<primitive(?![A-Za-z0-9])/;
 /** `material={…}`, and the pierced `material-transparent={…}` that writes through one. */
 const MATERIAL_PROP = /(?:^|\s)material(?:-[A-Za-z0-9-]+)?=/;
 /** A spread names nothing, so nothing can be proven about what it carries. */
-const SPREAD = /\{\.\.\./;
+const SPREAD = /\{\.\.\./g;
+
+/**
+ * Prop helpers whose return a test below proves holds no material slot, each with a sample return.
+ * A spread of a call to one is not an offence.
+ */
+const SLOT_FREE_PROP_HELPERS: Readonly<Record<string, object>> = {
+  drawHookProps: drawHookProps(shadowCastingEffects(ShadowCastingSetting.ON)),
+  overlayDrawProps: overlayDrawProps(shadowCastingEffects(ShadowCastingSetting.ON)),
+};
+const SLOT_FREE_SPREAD = new RegExp(
+  `\\{\\.\\.\\.(?:${Object.keys(SLOT_FREE_PROP_HELPERS).join('|')})\\(`,
+  'g'
+);
+/** The props through which R3F could mount a material: `material…`, `object` and `attach`. */
+const MATERIAL_SLOT_KEY = /^(?:material|object$|attach$)/;
+
+/** Whether `tag` spreads anything other than a slot-free prop helper's return. */
+function spreadsUnproven(tag: string): boolean {
+  return (tag.match(SPREAD)?.length ?? 0) > (tag.match(SLOT_FREE_SPREAD)?.length ?? 0);
+}
 /** `attach="…"`: the only spelling that says which slot a `<primitive>` lands in. */
 const LITERAL_ATTACH = /(?:^|\s)attach="([^"]*)"/;
 
@@ -91,7 +114,7 @@ const OFF_TAG_SHAPES: readonly OffTagShape[] = ['material prop', 'spread', 'unsl
 function offTagShape(tag: string): OffTagShape | null {
   if (MATERIAL_TAG_HEAD.test(tag)) return null; // the factory spelling owns these
   if (MATERIAL_PROP.test(tag)) return 'material prop';
-  if (SPREAD.test(tag)) return 'spread';
+  if (spreadsUnproven(tag)) return 'spread';
   if (!PRIMITIVE_TAG_HEAD.test(tag)) return null;
   // R3F derives a missing `attach` from the object (`isMaterial`), so an
   // unnamed slot is the material slot. A computed `attach={a}` cannot be read.
@@ -126,10 +149,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
-    'spreads `drawHookProps`, which carries shadow settings and draw hooks and no material, onto each tile; the material mounts in an `OwnedSurfaceSlot`',
-  'packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/Component.tsx':
-    'spreads `drawHookProps` and `overlayDrawProps`, which carry shadow settings, draw order, picking and draw hooks and no material, onto each particle draw; the materials mount in `SurfaceMaterialSlot`s',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':
@@ -511,6 +530,10 @@ describe('Material factory conformance', () => {
     expect(mounts('  <primitive object={geometry} attach="geometry" />')).toEqual([]);
     // One element, one offence, however many shapes it carries.
     expect(mounts('  <primitive object={m} {...rest} attach={a} />')).toEqual(['1:spread']);
+    // A named prop helper's return is proven slot-free below, so its spread is not an offence.
+    expect(mounts('  <mesh {...drawHookProps(shadow)} {...overlayDrawProps(shadow)} />')).toEqual([]);
+    // Another spread beside it still names nothing.
+    expect(mounts('  <mesh {...drawHookProps(shadow)} {...rest} />')).toEqual(['1:spread']);
     // A component of ours takes its props in its own body, which is scanned there.
     expect(mounts('  <SurfaceMaterialSlot source={source} attach={attach} {...maps} />')).toEqual([]);
     // The factory spelling answers to the tag rule, not to this one.
@@ -599,6 +622,10 @@ describe('Material factory conformance', () => {
     expect(mounts('  const m = new THREE.LineDashedMaterial({ scale: 2 });')).toEqual([]);
     expect(mounts('  const g = new MeshBuilder(geometry, material);')).toEqual([]);
     expect(mounts(' * `new THREE.Mesh(geometry, material)` in a comment is not a use')).toEqual([]);
+  });
+
+  it.each(Object.entries(SLOT_FREE_PROP_HELPERS))('%s returns no material slot', (_name, props) => {
+    expect(Object.keys(props).filter((key) => MATERIAL_SLOT_KEY.test(key))).toEqual([]);
   });
 
   it('finds every shape in the tree, so no scan can pass vacuously', () => {

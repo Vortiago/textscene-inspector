@@ -87,8 +87,8 @@ describe('a BILLBOARD_PARTICLES draw', () => {
 
   // `material.cpp:1309-1324`: the pass camera's normalised axes, at the instance's origin.
   it('faces each instance to the pass camera about its own origin', () => {
-    expect(vertexShader).toContain('mat4 godotView = inverse( viewMatrix );');
-    expect(vertexShader).toContain('normalize( godotView[ 0 ] )');
+    expect(vertexShader).toContain('uniform mat4 godotPassCameraWorld;');
+    expect(vertexShader).toContain('normalize( godotPassCameraWorld[ 0 ] )');
     expect(vertexShader).toContain('godotModel[ 3 ]');
   });
 
@@ -183,7 +183,7 @@ describe.each([
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(1, 2, 3);
     camera.updateMatrixWorld();
-    aimParticleBillboards(material, camera);
+    aimParticleBillboards(material, camera, new THREE.PerspectiveCamera());
     expect((shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4).equals(camera.matrixWorld)).toBe(
       true
     );
