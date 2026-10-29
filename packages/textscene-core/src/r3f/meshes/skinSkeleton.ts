@@ -18,9 +18,8 @@ import { useByValue } from '../hooks/useByValue.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 /**
- * A bone beyond the skin's binds. Godot reads `bone_transforms.data` past the buffer
- * (`skeleton.glsl:262-265`) with robustBufferAccess off (`rendering_device_driver_vulkan.cpp:698`),
- * so the GPU decides. A zero matrix collapses the vertex, as lavapipe does for a skeleton with no bind.
+ * A bone of a skin with no bind at all. The bone buffer Godot allocates for it stays zero
+ * (`mesh_storage.cpp:2358`), and a zero matrix collapses the vertex.
  */
 const MISSING_BONE_MATRIX = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -30,6 +29,37 @@ function boneCountOf(geometry: THREE.BufferGeometry): number {
   let highest = -1;
   for (let i = 0; i < indices.array.length; i++) highest = Math.max(highest, indices.array[i]!);
   return highest + 1;
+}
+
+/**
+ * How many bones each surface of the geometry addresses: the highest skin index of the vertices the
+ * surface draws, plus one, as `_surface_set_data` counts them (`rendering_server.cpp:925`).
+ */
+function boneCountsOfSurfaces(geometry: THREE.BufferGeometry): number[] {
+  const indices = geometry.getAttribute('skinIndex');
+  const triangles = geometry.getIndex();
+  const surfaces = geometry.groups.length
+    ? geometry.groups
+    : [{ start: 0, count: triangles?.count ?? geometry.getAttribute('position').count }];
+  return surfaces.map(({ start, count }) => {
+    let highest = -1;
+    for (let slot = start; slot < start + count; slot++) {
+      const vertex = triangles ? triangles.getX(slot) : slot;
+      for (let k = 0; k < indices.itemSize; k++) highest = Math.max(highest, indices.getComponent(vertex, k));
+    }
+    return highest + 1;
+  });
+}
+
+/**
+ * Whether Godot draws nothing of the mesh: every surface addresses more bones than the skin binds.
+ * `mesh_get_aabb` skips such a surface (`mesh_storage.cpp:729-730`), so an instance whose surfaces
+ * are all skipped has no bounds, and `_update_instance` never places it (`renderer_scene_cull.cpp:1679`).
+ * A skin with no bind keeps the mesh's own bounds (`mesh_storage.cpp:716`), and its vertices collapse.
+ */
+export function isOutgrownBySkin(geometry: THREE.BufferGeometry | undefined, bindCount: number): boolean {
+  if (!geometry?.getAttribute('skinIndex') || bindCount === 0) return false;
+  return boneCountsOfSurfaces(geometry).every((boneCount) => boneCount > bindCount);
 }
 
 function writeBoneMatrix(target: THREE.Matrix4, skinMatrix: Transform3D | undefined): void {
