@@ -22,6 +22,7 @@ import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewp
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
 import { updateAreaLightAtlas } from './areaLight/areaLightAtlas.js';
+import { areAtlasesUpdatedPerFrame } from './textureAtlas/updateTextureAtlases.js';
 import { writeLightSpecularUniforms } from './lightSpecular/lightSpecular.js';
 import { writeLightBakeModeUniforms } from './lightBakeMode/lightBakeMode.js';
 import { writeLightSizeUniforms } from './lightSize/lightSize.js';
@@ -37,7 +38,8 @@ import {
 /**
  * One render's light pass, the directional fit first. It changes no omni, spot or area light, so
  * those read the first walk, and it swaps each declared directional light for a sun, so the writers
- * after it read a second walk. The area atlas rebuilds before the area lights write their rects.
+ * after it read a second walk. The area atlas is current before the area lights write their rects:
+ * the frame loop rebuilt it, or this pass does.
  */
 function prepareSceneLights(
   scene: THREE.Scene,
@@ -48,7 +50,7 @@ function prepareSceneLights(
   const lights = sceneLights(scene);
   fitSceneDirectionalShadows(scene, camera, lights);
   fitScenePositionalShadows(lights, camera, positionalAtlas, tickMsec);
-  updateAreaLightAtlas();
+  if (!areAtlasesUpdatedPerFrame()) updateAreaLightAtlas();
   writeAreaLightUniforms(lights, camera);
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);

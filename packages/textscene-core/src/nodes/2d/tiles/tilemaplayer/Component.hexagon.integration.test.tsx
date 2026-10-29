@@ -16,6 +16,8 @@ import { TileShape } from '../../../../godot/scene/tileSet';
 import { findByType } from './findByType.testkit';
 import type { TileMapLayerProperties } from './types';
 
+const TILESET_PATH = 'res://tileset.tres';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const hexRoot = resolve(here, '../../../../../../../scenes/demos/2d/hexagonal_map');
 const mapContent = readFileSync(resolve(hexRoot, 'map.tscn'), 'utf8');
@@ -33,7 +35,7 @@ describe('hexagonal map integration', () => {
   });
 
   it('resolves the real tileset.tres: HEXAGON, vertical offset axis, 110×94, 26 sources', () => {
-    const model = tileSetFromFile(parseTresFile(tilesetContent));
+    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH);
     expect(model).not.toBeNull();
     expect(model!.shape).toBe(TileShape.TILE_SHAPE_HEXAGON);
     expect(model!.offsetAxis).toBe(1);
@@ -50,7 +52,7 @@ describe('hexagonal map integration', () => {
       alternativeId: 0,
     });
 
-    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH)!;
     // Vertical axis STACKED: odd column ⇒ y += 0.5, then x *= 0.75 (hexagon overlap).
     // x = (5·0.75 + 0.5)·110 = 467.5; y = (−7 + 0.5 + 0.5)·94 = −564.
     expect(mapToLocalPx(model, { x: 5, y: -7 })).toEqual({ x: 467.5, y: -564 });

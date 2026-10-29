@@ -85,14 +85,15 @@ describe('<Sprite2D> with a ViewportTexture', () => {
     target.dispose();
   });
 
-  it('reads its own copy, windowed to the region, when it draws a region of the target', async () => {
+  it("reads its own copy of the region's cell, with a texel of apron, when it draws a region of the target", async () => {
     const target = createCanvasTarget(16, 16, 'SubViewport');
     const material = await spriteMaterial(target.texture, {
       region_enabled: 'true',
       region_rect: 'Rect2(0, 0, 8, 16)',
     });
     expect(material.map).not.toBe(target.texture);
-    expect(material.map!.repeat.x).toBeCloseTo(0.5);
+    expect(material.map!.image).toMatchObject({ width: 9, height: 16 });
+    expect(material.map!.repeat.x).toBeCloseTo(8 / 9);
     target.dispose();
   });
 });

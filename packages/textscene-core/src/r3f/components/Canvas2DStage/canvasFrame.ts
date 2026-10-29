@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { copyTexels } from '../../texelCopy';
+import { copyTexels, type TexelPlacement } from '../../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
 
@@ -22,12 +22,7 @@ function copyToTarget(
 ): void {
   beginStep(gl, 'Canvas copy');
   try {
-    copyTexels(gl, frame.texture, target, {
-      offsetX: 0,
-      offsetY: frame.height - 1,
-      rowStep: -1,
-      bounds: [0, 0, frame.width, frame.height],
-    });
+    copyTexels(gl, frame.texture, target, frame.rowsReversed());
   } finally {
     endStep(gl, 'Canvas copy');
   }
@@ -41,6 +36,7 @@ function copyToTarget(
  */
 class CanvasFrame extends THREE.WebGLRenderTarget {
   private readonly outputSize = new THREE.Vector2();
+  private placement: TexelPlacement = reversedRows(1, 1);
 
   constructor() {
     super(1, 1, { depthBuffer: true, stencilBuffer: false });
@@ -80,6 +76,18 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
       this.setSize(this.outputSize.x, this.outputSize.y);
     }
   }
+
+  /** Each row of the frame from its mirror row, made again only when the frame changes size. */
+  rowsReversed(): TexelPlacement {
+    const [, , width, height] = this.placement.bounds;
+    if (width !== this.width || height !== this.height)
+      this.placement = reversedRows(this.width, this.height);
+    return this.placement;
+  }
+}
+
+function reversedRows(width: number, height: number): TexelPlacement {
+  return { offsetX: 0, offsetY: height - 1, rowStep: -1, bounds: [0, 0, width, height] };
 }
 
 /** The factory `useMultisampledTarget` takes for a 2D canvas frame. */

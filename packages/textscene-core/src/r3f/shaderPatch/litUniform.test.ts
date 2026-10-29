@@ -68,6 +68,13 @@ describe('installedOr', () => {
     expect(installedOr(UNIFORM, Float32Array, () => made)).toBe(made);
   });
 
+  it('makes a buffer when the installed one has another length, as an earlier build shaped it (edge case)', () => {
+    installLitUniform(UNIFORM, new Float32Array(4));
+    const made = new Float32Array(8);
+
+    expect(installedOr(UNIFORM, Float32Array, () => made)).toBe(made);
+  });
+
   it('makes a value before any install (edge case)', () => {
     const made = new Float32Array(1);
 

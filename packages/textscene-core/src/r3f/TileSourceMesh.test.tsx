@@ -15,12 +15,13 @@ import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { TileShape } from '../godot/scene/tileSet';
 import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
 import type { TscnInternalResource } from '../parser/types';
-import { textureSize } from '../resources/textures/textureSize';
+import { imageSize } from '../resources/formats/image/imagePixels';
 import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
 import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { isLocalToScene } from '../resources/textures/viewporttexture/localToScene';
 
 const TEXTURE = 'res://tiles.png';
 const grid: TileGrid = {
@@ -158,7 +159,7 @@ describe('TileSourceMesh texture slot', () => {
     const renderer = await render(source, null);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-    expect(textureSize(map)).toEqual({ width: 8, height: 4 });
+    expect(imageSize(map.image)).toEqual({ width: 8, height: 4 });
   });
 
   /**
@@ -193,7 +194,11 @@ function viewportWindowSource(
   const tileSet = { id: 'TileSet_1', type: 'TileSet', data: { resource_local_to_scene: isTileSetLocal } };
   return {
     ...sourceOf(usesTexturePadding),
-    texture: { ...tileTextureAt('SubResource("Window")'), internalResources: tables, holders: [tileSet] },
+    texture: {
+      ...tileTextureAt('SubResource("Window")'),
+      internalResources: tables,
+      isHeldLocally: isLocalToScene(tileSet),
+    },
   };
 }
 
@@ -236,10 +241,10 @@ describe('TileSourceMesh padding a texture with no image at load', () => {
     expect(distinctTexels(mapTexels(renderer))).toEqual(['0,0,0,0']);
   });
 
-  it('keeps the padded atlas size, as Godot builds it: the grid of padded cells', async () => {
+  it('stands one texel in for the padded atlas, since every texel of it holds the same value', async () => {
     const renderer = await renderBesideViewport(viewportWindowSource(true, 'true'), false);
     const map = (drawnMeshOf(renderer).material as THREE.MeshBasicMaterial).map!;
-    expect(textureSize(map)).toEqual({ width: 36, height: 36 });
+    expect(imageSize(map.image)).toEqual({ width: 1, height: 1 });
   });
 
   it('draws the live target of a source that does not pad', async () => {

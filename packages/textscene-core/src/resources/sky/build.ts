@@ -1,6 +1,6 @@
 /**
  * Sky slice build (ADR-0031): renders decoded sky Data, the scene's directional
- * lights and a panorama texture into a cubemap, prefiltered into an IBL.
+ * lights and a panorama texture into a cubemap, baked into Godot's radiance layers.
  * `skyUniforms.ts` and `skyShaders.ts` are internals: nothing outside the slice
  * reaches past `build.ts`.
  */
@@ -11,6 +11,7 @@ import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
+import { fillLiveCopy } from '../../r3f/liveTargets';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { isDebanded } from './debanding';
 
@@ -30,22 +31,17 @@ const LARGEST_RADIANCE_SIZE = 256;
 
 /**
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
- * they reflect (`Environment.reflection_source` defaults to the background).
- * So a cube render at the radiance size feeds Godot's layers of it and the
- * PMREM-prefiltered `scene.environment`. A sky that paints the background renders
- * a cube for `scene.background` too, the same cube when the sizes match.
+ * they reflect (`Environment.reflection_source` defaults to the background), and
+ * the fogs read it too. So a cube render at the radiance size feeds Godot's layers
+ * of it. A sky that paints the background renders a cube for `scene.background`
+ * too, the same cube when the sizes match.
  */
 export interface SkyEnvironment {
   /** Sharp cubemap for `scene.background`, or null for a sky that does not paint it. */
   background: THREE.Texture | null;
-  /**
-   * PMREM-prefiltered radiance for `scene.environment`, which turns three's environment lighting on
-   * and which the volumetric fog reads. No surface reads it.
-   */
-  environment: THREE.Texture;
-  /** Godot's radiance layers, which its ambient and its reflections read. */
+  /** Godot's radiance layers, which its ambient, its reflections and the fogs read. */
   layers: SkyLayers;
-  /** Frees the background, the environment and the layers. */
+  /** Frees the background and the layers. */
   dispose: () => void;
 }
 
@@ -63,14 +59,17 @@ export interface SkyEnvironmentInput {
  * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
  * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0044). The result is
  * a clone only when the arrival diverges, and `releaseView` frees it
- * only then. Returns null for a sky with no panorama.
+ * only then. A live target's copy is filled now, since the bake samples it
+ * before the target's next render. Returns null for a sky with no panorama.
  */
-function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
+function skyPanoramaTexture(gl: THREE.WebGLRenderer, panorama?: THREE.Texture | null): THREE.Texture | null {
   if (!panorama) return null;
-  return textureView(panorama, {
+  const view = textureView(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
     wrap: THREE.RepeatWrapping,
   });
+  fillLiveCopy(panorama, view, gl);
+  return view;
 }
 
 /**
@@ -82,7 +81,7 @@ export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
   { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const panoramaView = skyPanoramaTexture(panorama);
+  const panoramaView = skyPanoramaTexture(gl, panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
     uniforms: skyUniforms(sky.material, lights, panoramaView),
@@ -103,9 +102,7 @@ export function buildSkyEnvironment(
       ? backgroundTarget
       : cubeTarget(bake.radianceSize);
   const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
-  let pmrem: THREE.PMREMGenerator | null = null;
-  let prefiltered: THREE.WebGLRenderTarget | null = null;
-  let layers: SkyLayers | null = null;
+  let layers: SkyLayers;
 
   try {
     // The cube camera sits at the origin inside the unit box, so each face
@@ -113,21 +110,15 @@ export function buildSkyEnvironment(
     if (backgroundTarget) renderCube(gl, skyScene, backgroundTarget);
     if (hasOwnRadianceCube) renderCube(gl, skyScene, radianceTarget);
     layers = bakeSkyLayers(gl, radianceTarget.texture, bake, radianceDebanding(sky, energy));
-
-    pmrem = new THREE.PMREMGenerator(gl);
-    prefiltered = pmrem.fromCubemap(radianceTarget.texture);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     backgroundTarget?.dispose();
-    prefiltered?.dispose();
-    if (layers) disposeSkyLayers(layers);
     return null;
   } finally {
     // The sky scene renders once, so its mesh and panorama are freed here and
     // not held for the environment's lifetime. A radiance cube of its own
-    // has served the PMREM and the layers by now.
+    // has served the layers by now.
     if (hasOwnRadianceCube) radianceTarget.dispose();
-    pmrem?.dispose();
     geometry.dispose();
     material.dispose();
     releaseView(panoramaView);
@@ -135,11 +126,9 @@ export function buildSkyEnvironment(
 
   return {
     background: backgroundTarget?.texture ?? null,
-    environment: prefiltered.texture,
     layers,
     dispose: () => {
       backgroundTarget?.dispose();
-      prefiltered.dispose();
       disposeSkyLayers(layers);
     },
   };

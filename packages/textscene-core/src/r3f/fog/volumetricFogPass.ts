@@ -34,7 +34,7 @@ import { FogDensityAtlas } from './fogDensityAtlas.js';
 import { RowTexture } from '../rowTexture/rowTexture.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { FOG_VOLUME_TEXELS, FogVolumeRows, type FogVolumeView } from './fogVolumeRows.js';
-import { bindRadiance, skyRadiance } from './fogSky.js';
+import { SHOWN_ENERGY, shownLayers, shownSky, skyRadianceUniforms, skyRotation } from '../sky/skyRadiance.js';
 import { fogUniforms } from './fogUniforms.js';
 import {
   FOG_COPY_FRAGMENT,
@@ -46,10 +46,6 @@ import {
 interface VolumetricFogInputs {
   fog: VolumetricFog;
   project: VolumetricFogProjectSettings;
-  /** World to sky space, which the anisotropic ambient reads the sky in. */
-  worldToSky: THREE.Matrix3;
-  /** The sky's energy, which Godot's radiance carries and three's does not. */
-  skyEnergy: number;
   /** The scene's lights, hidden ones included. */
   lights: readonly THREE.Light[];
   /** The scene's meshes, whose pose moves the shadows the fog reads. */
@@ -90,6 +86,9 @@ function fogVolumeView(camera: THREE.Camera, fog: VolumetricFog, grid: Volumetri
     nearCornerDistance: Math.hypot(x, y, projection.near),
   };
 }
+
+/** Scratch for the shown sky's world to sky space, overwritten by each draw. */
+const worldToSky = new THREE.Matrix3();
 
 /** Written by `densityTexturesOf`, overwritten by each render. */
 const densityTextures: THREE.Data3DTexture[] = [];
@@ -132,40 +131,48 @@ function resize(target: THREE.WebGL3DRenderTarget, { width, height, depth }: Vol
  * render that changes nothing allocates nothing.
  */
 class VolumeKey {
-  /** The camera's world and projection matrices, then world to sky space. */
-  private readonly view = new Float64Array(16 + 16 + 9);
+  /**
+   * The camera's world and projection matrices, then the shown sky's rotation. The volume reads the
+   * sky's energy too, and its layout, which comes with its `layers`, but not its share of the ambient.
+   */
+  private readonly view = new Float64Array(16 + 16 + skyRotation.length);
+  private skyEnergy = 0;
   private width = 0;
   private height = 0;
-  private inputs: Omit<VolumetricFogInputs, 'lights' | 'casters' | 'volumes' | 'worldToSky'> | null = null;
-  private sky: THREE.Texture | null = null;
+  private inputs: Omit<VolumetricFogInputs, 'lights' | 'casters' | 'volumes'> | null = null;
+  private sky: WebGLTexture | undefined;
 
-  /** Takes the render's values, and answers whether any differs from the last ones. */
+  /**
+   * Takes the render's values and the shown sky's `layers`, and answers whether any differs from
+   * the last ones.
+   */
   update(
     camera: THREE.Camera,
     viewport: THREE.Vector4,
     inputs: VolumetricFogInputs,
-    sky: THREE.Texture | null
+    layers: WebGLTexture | undefined
   ): boolean {
     let hasChanged =
       this.inputs === null ||
       this.width !== viewport.z ||
       this.height !== viewport.w ||
-      this.sky !== sky ||
+      this.sky !== layers ||
+      this.skyEnergy !== shownSky[SHOWN_ENERGY] ||
       this.inputs.fog !== inputs.fog ||
-      this.inputs.project !== inputs.project ||
-      this.inputs.skyEnergy !== inputs.skyEnergy;
+      this.inputs.project !== inputs.project;
     if (this.take(0, camera.matrixWorld.elements)) hasChanged = true;
     if (this.take(16, camera.projectionMatrix.elements)) hasChanged = true;
-    if (this.take(32, inputs.worldToSky.elements)) hasChanged = true;
+    if (this.take(32, skyRotation)) hasChanged = true;
     this.width = viewport.z;
     this.height = viewport.w;
-    this.sky = sky;
+    this.sky = layers;
+    this.skyEnergy = shownSky[SHOWN_ENERGY]!;
     this.inputs = inputs;
     return hasChanged;
   }
 
   /** Copies `values` into `view` from `offset`, and answers whether any differed. */
-  private take(offset: number, values: readonly number[]): boolean {
+  private take(offset: number, values: ArrayLike<number>): boolean {
     let hasChanged = false;
     for (let i = 0; i < values.length; i++) {
       if (this.view[offset + i] !== values[i]) hasChanged = true;
@@ -264,9 +271,8 @@ export class VolumetricFogPass {
     ambientColor: { value: new THREE.Color() },
     ambientInject: { value: 0 },
     skyContribution: { value: 0 },
-    skyEnergy: { value: 1 },
     viewToSky: { value: new THREE.Matrix3() },
-    envMap: { value: null },
+    ...skyRadianceUniforms(),
     fogLights: { value: null },
     lightCount: { value: 0 },
     fogVolumes: { value: null },
@@ -327,7 +333,6 @@ export class VolumetricFogPass {
     const grid = volumetricFogGrid({ width: this.viewport.z, height: this.viewport.w }, inputs.project);
     if (grid.width < 1 || grid.height < 1) return false;
     const state = this.viewOf(scene, camera);
-    const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
     if (hasLightsChanged) this.lights.invalidate(state.lights);
     const hasDensityChanged = state.densityAtlas.update(densityTexturesOf(inputs.volumes));
@@ -335,13 +340,13 @@ export class VolumetricFogPass {
     const haveVolumesChanged = state.volumes.pack(inputs.volumes, camera, view, state.densityAtlas);
     if (haveVolumesChanged) this.volumes.invalidate(state.volumes);
     const haveShadowsMoved = state.lights.readsShadowAtlas && state.casters.update(inputs.casters);
-    const hasViewChanged = state.key.update(camera, this.viewport, inputs, sky);
+    const hasViewChanged = state.key.update(camera, this.viewport, inputs, shownLayers(renderer));
     const hasChanged =
       hasViewChanged || hasLightsChanged || haveVolumesChanged || hasDensityChanged || haveShadowsMoved;
     const sampling = samplingFor(hasChanged, inputs.fog.temporalReprojection, state.isSettling);
     if (sampling || this.copied !== state) {
       drawOffscreen(renderer, () => {
-        if (sampling) this.draw(renderer, camera, state, inputs, { sky, sampling, grid });
+        if (sampling) this.draw(renderer, camera, state, inputs, { sampling, grid });
         resize(this.volume, state.grid);
         this.copy(renderer, state.integrated, this.volume, state.grid);
       });
@@ -416,12 +421,11 @@ export class VolumetricFogPass {
     camera: THREE.Camera,
     state: ViewVolume,
     inputs: VolumetricFogInputs,
-    { sky, sampling, grid }: { sky: THREE.Texture | null; sampling: Sampling; grid: VolumetricFogGrid }
+    { sampling, grid }: { sampling: Sampling; grid: VolumetricFogGrid }
   ): void {
     this.fitToGrid(state, grid);
     this.writeMedium(inputs);
     this.writeView(camera, inputs, grid);
-    this.writeSky(sky, inputs.skyEnergy);
     this.writeRows(state);
     this.writeIntegrate(inputs.fog, grid);
     const atlases = this.writeShadowAtlases(state.lights);
@@ -476,11 +480,7 @@ export class VolumetricFogPass {
   }
 
   /** The frustum the grid spans and the camera's turn into the sky. */
-  private writeView(
-    camera: THREE.Camera,
-    { fog, worldToSky }: VolumetricFogInputs,
-    grid: VolumetricFogGrid
-  ): void {
+  private writeView(camera: THREE.Camera, { fog }: VolumetricFogInputs, grid: VolumetricFogGrid): void {
     const uniforms = this.lightMaterial.uniforms;
     const { begin, end } = volumetricFogFrustum(fogProjection(camera), fog.length);
     (uniforms['gridSize']!.value as THREE.Vector3).set(grid.width, grid.height, grid.depth);
@@ -488,12 +488,7 @@ export class VolumetricFogPass {
     (uniforms['frustumEnd']!.value as THREE.Vector2).set(end.x, end.y);
     (uniforms['viewToSky']!.value as THREE.Matrix3)
       .setFromMatrix4(camera.matrixWorld)
-      .premultiply(worldToSky);
-  }
-
-  private writeSky(sky: THREE.Texture | null, energy: number): void {
-    bindRadiance(this.lightMaterial, sky);
-    this.lightMaterial.uniforms['skyEnergy']!.value = energy;
+      .premultiply(worldToSky.fromArray(skyRotation));
   }
 
   private writeRows({ lights, volumes, densityAtlas }: ViewVolume): void {

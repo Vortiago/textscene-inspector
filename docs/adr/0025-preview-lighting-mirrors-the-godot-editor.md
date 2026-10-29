@@ -65,10 +65,12 @@ chain of downsamples to an octmap 10 texels wide, then a GGX filter per layer, o
 for a real-time sky. Each sky keeps them in an octmap array of its own, as Godot does: layer 0 is
 the radiance itself, and each layer has its own mip chain. Every lit material samples the array of
 the sky its scene shows, at the mip the screen derivatives of the direction pick. The diffuse light
-reads the last layer, and a reflection reads the two layers around its roughness. The sky cube also
-feeds `PMREMGenerator` and then `scene.environment`, which turns three's environment lighting on
-and which the volumetric fog reads. No surface reads it, as the PMREM blurs a layer differently
-from Godot's chain, and spherical harmonics of order 2 cannot hold the last layer's sharper terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
+reads the last layer, and a reflection reads the two layers around its roughness. The depth fog's
+aerial perspective and the volumetric fog's ambient read the same array, as Godot binds one
+radiance texture to all three. No reader samples a PMREM, as it blurs a layer differently from
+Godot's chain, and spherical harmonics of order 2 cannot hold the last layer's sharper terms.
+`scene.environment` holds a texture no program samples, which only turns three's environment
+lighting on. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
 rejected: it is diffuse-only, so each metallic or smooth material stays visibly wrong.
 `background_energy_multiplier` sets `scene.environmentIntensity`. `AMBIENT_SOURCE_COLOR` is a
 flat `ambientLight`. `AMBIENT_SOURCE_DISABLED` emits nothing. `AMBIENT_SOURCE_SKY` reads
@@ -109,7 +111,7 @@ the sky IBL must land together.
 
 ## Consequences
 
-- **Lighting needs a GL context.** Sky rendering and PMREM need a real `WebGLRenderer`, so
+- **Lighting needs a GL context.** Sky rendering and the layer bake need a real `WebGLRenderer`, so
   the path must no-op cleanly under `@react-three/test-renderer`. Unit tests assert the
   seam (which sky, which uniforms, whether a preview mounts), and the goldens assert the
   pixels.

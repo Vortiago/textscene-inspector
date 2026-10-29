@@ -392,6 +392,32 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
     );
   });
 
+  it('reads a reference node where a RemoteTransform3D moved it', () => {
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 1
+settings/0/relative = false
+`;
+    const movedTarget = `[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+[node name="Relay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+remote_path = NodePath("../Target")
+`;
+    // The relay puts the Target at (3, 0, 0), so b1 lands at (3, -0.5, 0) below its parent.
+    const twin = BONES.replace(
+      'bones/1/position = Vector3(0, -0.2, 0)',
+      'bones/1/position = Vector3(3, -0.5, 0)'
+    );
+
+    expectSkinClose(
+      skinAt(modified(copyNodePosition, BONES, movedTarget))!,
+      skinAt(modified('active = false', twin))!
+    );
+  });
+
   it('hands back the same skin where a later load leaves the inputs as they are', () => {
     const main = parse(modified(COPY_B2_ROTATION_TO_B1));
     const skinOfLoad = () =>

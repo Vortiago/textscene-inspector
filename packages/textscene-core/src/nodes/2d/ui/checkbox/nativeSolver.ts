@@ -24,7 +24,6 @@ import {
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -195,7 +194,7 @@ export function checkBoxHSeparation(
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
-/** `check_v_offset`, a `theme_override_constants` key CheckBox reads directly (`check_box.cpp:133`). */
+/** `check_v_offset`, a `theme_override_constants` key CheckBox reads directly (`check_box.cpp:137`). */
 export function checkBoxCheckVOffset(constants: SolveNode['constants']): number {
   return constants.check_v_offset ?? DEFAULT_CHECK_V_OFFSET;
 }
@@ -239,7 +238,7 @@ interface CheckBoxContentInput {
   rectSize: Vector2;
   /** `cbx_empty`'s uniform content margin, `theme.contentMargin` on all four sides. Every state shares this `StyleBoxEmpty` (`default_theme.cpp:276-277`), so nothing is drawn. */
   margin: number;
-  /** The check icon's size, already fitted with `fitIconSize` and rounded. */
+  /** The check icon's size, already fitted with `fitIconSize`. */
   iconSize: Vector2;
   checkVOffset: number;
   hSeparation: number;
@@ -251,8 +250,8 @@ interface CheckBoxContentInput {
 }
 
 interface CheckBoxContentLayout {
-  /** Local to the control's own top-left, Godot px. */
-  iconRect: Rect2;
+  /** The icon's top-left, local to the control's own top-left, Godot px. */
+  iconPosition: Vector2;
   /** The text paragraph's box top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. `null` when there is no text. */
   textOffset: Vector2 | null;
 }
@@ -265,11 +264,10 @@ interface CheckBoxContentLayout {
 export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
   const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, rtl } = input;
 
-  const iconRect: Rect2 = {
-    x: Math.floor(rtl ? rectSize.x - margin - iconSize.x : margin),
-    y: Math.floor((rectSize.y - iconSize.y) / 2 + checkVOffset),
-    w: iconSize.x,
-    h: iconSize.y,
+  // `int()` truncates the centring before the offset is added (`check_box.cpp:131-137`).
+  const iconPosition: Vector2 = {
+    x: rtl ? rectSize.x - margin - iconSize.x : margin,
+    y: Math.trunc((rectSize.y - iconSize.y) / 2) + checkVOffset,
   };
 
   let textOffset: Vector2 | null = null;
@@ -291,5 +289,5 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     textOffset = { x, y };
   }
 
-  return { iconRect, textOffset };
+  return { iconPosition, textOffset };
 }

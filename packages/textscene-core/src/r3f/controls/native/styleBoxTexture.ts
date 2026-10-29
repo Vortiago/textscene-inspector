@@ -19,6 +19,7 @@ import type { Rgba } from '../../../godot/math/math';
 import { contentMarginOr, expandMarginOf } from '../../../resources/styles/stylebox/decode';
 import { AxisStretchMode } from '../../../godot/scene/gui';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 export interface StyleBoxTextureData {
   /**
@@ -28,8 +29,8 @@ export interface StyleBoxTextureData {
   texture: string | undefined;
   /** The node's own scope that `texture` resolves ids against, not the top-level scene's. */
   resources: SceneScope;
-  /** The resources between the node and `texture`: a Theme that holds the StyleBoxTexture, then the StyleBoxTexture. */
-  holders: readonly TscnInternalResource[];
+  /** Whether every resource between the node and `texture` is local to scene: a Theme that holds the StyleBoxTexture, then the StyleBoxTexture. */
+  isHeldLocally: boolean;
   /**
    * `texture_margin_*` (`style_box_texture.h`), default `0`: the raw margin the
    * nine-patch samples with (`style_box_texture.cpp:178-179`). It never moves
@@ -66,7 +67,7 @@ export function parseStyleBoxTexture(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  outerHolders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): StyleBoxTextureData | null {
   if (!ref) return null;
   const parsed = parseResourceReference(ref);
@@ -85,7 +86,7 @@ export function parseStyleBoxTexture(
   return {
     texture: data.texture,
     resources: { externalResources, internalResources },
-    holders: [...outerHolders, resource],
+    isHeldLocally: isHeldLocally && isLocalToScene(resource),
     margin,
     contentMargin: {
       left: contentMarginOr(data.content_margin_left, margin.left, CONTEXT),

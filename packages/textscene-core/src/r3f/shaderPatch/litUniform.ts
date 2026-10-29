@@ -57,7 +57,10 @@ export function installedUniformValue(
   return THREE.ShaderLib[program]?.uniforms[name]?.value;
 }
 
-/** The value installed under `name` when it is a `type`, as after a reload, or else `make`'s. */
+/**
+ * The value installed under `name` when it is a `type`, as after a reload, or else `make`'s. An
+ * installed buffer of another length is one an earlier build shaped otherwise, so `make` replaces it.
+ */
 export function installedOr<T>(
   name: string,
   type: abstract new (...args: never[]) => T,
@@ -65,5 +68,12 @@ export function installedOr<T>(
   program: keyof typeof THREE.ShaderLib = 'standard'
 ): T {
   const value = installedUniformValue(name, program);
-  return value instanceof type ? value : make();
+  if (!(value instanceof type)) return make();
+  if (!ArrayBuffer.isView(value)) return value;
+  const made = make();
+  return lengthOf(value) === lengthOf(made) ? value : made;
+}
+
+function lengthOf(buffer: unknown): number | undefined {
+  return (buffer as ArrayLike<number>).length;
 }

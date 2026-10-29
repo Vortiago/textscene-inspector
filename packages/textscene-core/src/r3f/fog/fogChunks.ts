@@ -6,7 +6,7 @@
  */
 
 import {
-  AERIAL_PERSPECTIVE_ROUGHNESS_MIN,
+  AERIAL_PERSPECTIVE_MIP_LEVEL_MIN,
   FOG_SUN_SCATTER_EXPONENT,
   FOG_SUN_SCATTER_MIN,
   FogMode,
@@ -14,7 +14,9 @@ import {
 } from '../../godot/rendering/environment/depthFog.js';
 import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
-import { FOG_RADIANCE_BANDS, FOG_RADIANCE_BAND_HEIGHT, FOG_UNIFORM as U } from './fogUniforms.js';
+import { FOG_UNIFORM as U } from './fogUniforms.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
+import { SKY_RADIANCE_GLSL, SKY_RADIANCE_UNIFORMS } from '../sky/skyRadiance.js';
 
 /** The chunk a shader includes for the fog's uniforms and functions. */
 export const GODOT_FOG_PARS_CHUNK = 'godot_fog_pars_fragment';
@@ -33,13 +35,7 @@ uniform vec4 ${U.depthSky};
 uniform vec4 ${U.sunDirections}[ ${MAX_DIRECTIONAL_LIGHTS} ];
 uniform vec4 ${U.sunSurfaceColors}[ ${MAX_DIRECTIONAL_LIGHTS} ];
 uniform vec4 ${U.sunSkyColors}[ ${MAX_DIRECTIONAL_LIGHTS} ];
-uniform mat3 ${U.skyRotation};
-uniform sampler2D ${U.radiance};
-
-// Its own constants: the cube background includes no <common>.
-const float FOG_INVERSE_PI = 0.3183098861837907;
-const float FOG_INVERSE_TWO_PI = 0.15915494309189535;
-
+${SKY_RADIANCE_GLSL}
 vec2 fogScreenUv() {
 	return ( gl_FragCoord.xy - ${U.viewport}.xy ) * ${U.viewport}.zw;
 }
@@ -52,18 +48,14 @@ vec4 volumetricFogAtDepth( float viewDepth ) {
 	return texture( ${U.volume}, position );
 }
 
-// The radiance atlas's band for a roughness, read along a world direction and blended between bands.
-vec3 fogRadianceAt( vec3 worldDirection, float roughness ) {
-	vec3 skyDirection = normalize( ${U.skyRotation} * worldDirection );
-	float u = atan( skyDirection.z, skyDirection.x ) * FOG_INVERSE_TWO_PI + 0.5;
-	float halfTexel = 0.5 / ${glslFloat(FOG_RADIANCE_BAND_HEIGHT)};
-	float v = clamp( asin( clamp( skyDirection.y, - 1.0, 1.0 ) ) * FOG_INVERSE_PI + 0.5, halfTexel, 1.0 - halfTexel );
-	float band = clamp( roughness * ${glslFloat(FOG_RADIANCE_BANDS)} - 1.0, 0.0, ${glslFloat(FOG_RADIANCE_BANDS - 1)} );
-	float lower = floor( band );
-	float upper = min( lower + 1.0, ${glslFloat(FOG_RADIANCE_BANDS - 1)} );
-	vec3 a = texture( ${U.radiance}, vec2( u, ( lower + v ) / ${glslFloat(FOG_RADIANCE_BANDS)} ) ).rgb;
-	vec3 b = texture( ${U.radiance}, vec2( u, ( upper + v ) / ${glslFloat(FOG_RADIANCE_BANDS)} ) ).rgb;
-	return mix( a, b, band - lower );
+// The sky's radiance along the view-space position view, blurrier the nearer it is: two layers from
+// the second, blended, at the mip of its screen derivatives (scene_forward_clustered.glsl:1105-1117).
+vec3 fogAerialRadiance( vec3 view, vec3 worldView ) {
+	vec3 skyView = ${SKY_RADIANCE_UNIFORMS.rotation} * worldView;
+	float near = ${U.depthSky}.z;
+	float far = ${U.depthSky}.w;
+	float mipLevel = mix( ${glslFloat(AERIAL_PERSPECTIVE_MIP_LEVEL_MIN)}, 1.0, 1.0 - ( abs( view.z ) - near ) / ( far - near ) );
+	return godotSkyBlend( skyView, mipLevel * ${glslFloat(MAX_ROUGHNESS_LOD)} ) * GODOT_SKY_ENERGY;
 }
 
 // How much of sun i's glow a view along direction sees.
@@ -97,12 +89,7 @@ vec4 depthFogAt( vec3 view ) {
 	vec3 worldDirection = normalize( worldView );
 	vec3 color = ${U.depthColor}.rgb;
 	float aerial = ${U.depthLayer}.w;
-	if ( aerial > 0.0 ) {
-		float near = ${U.depthSky}.z;
-		float far = ${U.depthSky}.w;
-		float roughness = mix( ${glslFloat(AERIAL_PERSPECTIVE_ROUGHNESS_MIN)}, 1.0, 1.0 - ( abs( view.z ) - near ) / ( far - near ) );
-		color = mix( color, fogRadianceAt( worldDirection, roughness ), aerial );
-	}
+	if ( aerial > 0.0 ) color = mix( color, fogAerialRadiance( view, worldView ), aerial );
 	if ( ${U.depthSky}.y > ${glslFloat(FOG_SUN_SCATTER_MIN)} ) color += fogSurfaceSunScatter( worldDirection );
 	float distance = length( view );
 	float amount;
@@ -140,7 +127,7 @@ vec4 godotFogAt( vec3 view ) {
 // The sky under both fogs, after its brightness (sky.glsl:281-295).
 vec3 godotSkyFog( vec3 color, vec3 worldDirection ) {
 	if ( ${U.depthColor}.a > 0.0 ) {
-		vec3 skyDirection = normalize( ${U.skyRotation} * worldDirection );
+		vec3 skyDirection = normalize( ${SKY_RADIANCE_UNIFORMS.rotation} * worldDirection );
 		vec3 fogColor = mix( ${U.depthColor}.rgb, color, ${U.depthLayer}.w );
 		if ( ${U.depthSky}.y > ${glslFloat(FOG_SUN_SCATTER_MIN)} ) fogColor += fogSkySunScatter( skyDirection );
 		color = mix( color, fogColor, ${U.depthSky}.x );

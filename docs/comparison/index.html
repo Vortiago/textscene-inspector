@@ -2378,7 +2378,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>fog_enabled</code> in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, <code>fog_sun_scatter</code> and <code>fog_aerial_perspective</code> follow Godot's shader too. <code>fog_sky_affect</code> sets how far the fog covers the background.</p></div>
+        <div class="prose"><p><code>fog_enabled</code> in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, <code>fog_sun_scatter</code> and <code>fog_aerial_perspective</code> follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. <code>fog_sky_affect</code> sets how far the fog covers the background.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Volumetric fog</h3><span class="status st-limitation">Limitation</span></div>
@@ -2395,7 +2395,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>volumetric_fog_enabled</code> over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.</p>
+        <div class="prose"><p><code>volumetric_fog_enabled</code> over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. <code>volumetric_fog_ambient_inject</code> lights the fog with the sky's radiance layers, as Godot does. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.</p>
 <ul><li><strong>Not drawn</strong> <code>volumetric_fog_gi_inject</code> adds no light, because the previewer draws no VoxelGI or SDFGI.</li></ul></div>
       </section>
       <section class="prop">
@@ -5530,14 +5530,14 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>RemoteTransform2D draws nothing and copies its transform onto the node <code>remote_path</code> names. The previewer applies that once on load, the static enter-tree effect, so the target jumps to the relay's position.</p>
+      <div class="prose"><p>RemoteTransform2D draws nothing and copies its transform onto the node <code>remote_path</code> names. The previewer applies that over the live scene tree, so the target jumps to the relay's position, also across an instanced scene boundary.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>RemoteTransform2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>remote_path</code></td><td>NodePath(&quot;path/to/node&quot;)</td><td></td></tr><tr><td><code>update_position</code></td><td>true or false</td><td></td></tr><tr><td><code>update_rotation</code></td><td>true or false</td><td></td></tr><tr><td><code>update_scale</code></td><td>true or false</td><td></td></tr><tr><td><code>use_global_coordinates</code></td><td>true or false</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-remotetransform2d-remote-path</code></td><td><code>remotetransform2d-invalid-remote-path</code></td><td>warning</td></tr></tbody></table></div>
 <p><code>remote_path</code> is stored as whatever string is present, with no NodePath check. <code>update_position</code>, <code>update_rotation</code>, <code>update_scale</code> and <code>use_global_coordinates</code> stay <code>undefined</code> when absent and otherwise become <code>false</code> for any value that does not read as <code>true</code>, with no warning.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> <code>use_global_coordinates = false</code> is a no-op on a static load, so only the default global drive repositions the target.</li><li><strong>Approximated</strong> A <code>remote_path</code> crossing into or out of an instanced sub-scene is left unresolved.</li><li><strong>Approximated</strong> Relay chains resolve in document order, and a feedback loop is not iterated to a fixed point.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>use_global_coordinates = false</code> is a no-op on a static load, so only the default global drive repositions the target.</li><li><strong>Approximated</strong> Relay chains resolve in document order, and a feedback loop is not iterated to a fixed point.</li></ul></div>
     </article>
     <article class="sheet" data-type="RemoteTransform3D" hidden>
       <header class="sheet-head">
@@ -5563,14 +5563,14 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Pushes its own transform onto the node its <code>remote_path</code> names and has no visual of its own. The previewer applies the drive once at load, so the visible cube is the driven target sitting at the relay's position.</p>
+      <div class="prose"><p>Pushes its own transform onto the node its <code>remote_path</code> names and has no visual of its own. The previewer applies the drive over the live scene tree. The visible cube is the driven target sitting at the relay's position, also across an instanced scene boundary.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>RemoteTransform3D</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>remote_path</code></td><td>NodePath(&quot;path/to/node&quot;)</td><td></td></tr><tr><td><code>update_position</code></td><td>true or false</td><td></td></tr><tr><td><code>update_rotation</code></td><td>true or false</td><td></td></tr><tr><td><code>update_scale</code></td><td>true or false</td><td></td></tr><tr><td><code>use_global_coordinates</code></td><td>true or false</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-remotetransform3d-remote-path</code></td><td><code>remotetransform3d-invalid-remote-path</code></td><td>warning</td></tr></tbody></table></div>
 <p><code>remote_path</code> is copied verbatim when present, with no NodePath validation. A malformed literal that strict rejects still parses and drives whatever target string was written. The <code>update_*</code> and <code>use_global_coordinates</code> flags use <code>parseOptionalBool</code>, so anything but the literal <code>&quot;true&quot;</code> becomes <code>false</code> silently.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> The target sits apart from Godot's when the relay is inside an instanced scene, drives its own ancestor, or the target's parent rotates or scales.</li></ul></div>
+<ul><li><strong>Approximated</strong> The target sits apart from Godot's when the relay drives its own ancestor, or the target's parent rotates or scales.</li></ul></div>
     </article>
     <article class="sheet" data-type="ResourcePreloader" hidden>
       <header class="sheet-head">
@@ -5922,14 +5922,14 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Sky" hidden>
       <header class="sheet-head">
         <h2>Sky</h2>
-        <span class="renders">renders as Godot's radiance layers as an octmap array + a THREE PMREM environment + background</span>
+        <span class="renders">renders as Godot's radiance layers as an octmap array + background</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_sky.html" target="_blank" rel="noopener" title="Godot class reference for Sky">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/resources/sky.h" target="_blank" rel="noopener" title="Godot engine source for Sky">source ↗</a>
         
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, baked as Godot bakes them into an octmap array with a mip chain per layer, give every reflection and the ambient light. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>
@@ -6338,7 +6338,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an unlit plane at the texture's pixel size, tinted by <code>modulate</code>. A Sprite2D with no texture draws nothing, as Godot does (<code>sprite_2d.cpp:159</code>). It samples with the <code>texture_filter</code> and <code>texture_repeat</code> inherited from its ancestors (see Node2D). A texture that is set but fails to load draws a placeholder.</p>
+      <div class="prose"><p>Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an unlit plane at the texture's pixel size, tinted by <code>modulate</code>. A Sprite2D with no texture draws nothing, as Godot does (<code>sprite_2d.cpp:159</code>). It samples with the <code>texture_filter</code> and <code>texture_repeat</code> inherited from its ancestors (see Node2D). A frame or region of a ViewportTexture blends its edge texels with the texels past it, as Godot's filter does. A texture that is set but fails to load draws a placeholder.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Sprite2D</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>centered</code></td><td>true or false</td><td></td></tr><tr><td><code>flip_h</code></td><td>true or false</td><td></td></tr><tr><td><code>flip_v</code></td><td>true or false</td><td></td></tr><tr><td><code>frame</code></td><td>integer &gt;= 0</td><td>error below</td></tr><tr><td><code>frame_coords</code></td><td>Vector2i(x, y), both &gt;= 0, or the Vector2 spelling Godot converts</td><td>error below</td></tr><tr><td><code>hframes</code></td><td>integer 1-16384</td><td>error below, warning above</td></tr><tr><td><code>offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>region_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>region_filter_clip_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>region_rect</code></td><td>Rect2(x, y, w, h), or the Rect2i spelling Godot converts</td><td></td></tr><tr><td><code>texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>vframes</code></td><td>integer 1-16384</td><td>error below, warning above</td></tr></tbody></table></div>
@@ -7401,6 +7401,23 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>Two padded layers draw tiles from an AtlasTexture over one ViewportTexture. Only the right TileSet is local to scene. The left samples the placeholder at its padded regions, and the right draws the opaque target as it stands before its first render: black.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Atlas over a ViewportTexture file</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-tile-atlas-viewport-texture-file-godot.png" alt="Godot render of Atlas over a ViewportTexture file">
+          <img class="img-ours" src="images/unit-tile-atlas-viewport-texture-file-ours.png" alt="Our render of Atlas over a ViewportTexture file">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Two layers name a ViewportTexture as their atlas texture, one inline and one from a <code>.tres</code>. A ViewportTexture reports no area while the scene loads, so <code>create_tile</code> finds room for no tile and neither layer draws (<code>tile_set.cpp:4985</code>). The previewer loads the texture's file before it creates any tile.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>TileMapLayer</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>collision_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>collision_visibility_mode</code></td><td>enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)</td><td>warning</td></tr><tr><td><code>enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>navigation_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>navigation_visibility_mode</code></td><td>enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)</td><td>warning</td></tr><tr><td><code>occlusion_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>physics_quadrant_size</code></td><td>integer &gt;= 1</td><td>error below</td></tr><tr><td><code>rendering_quadrant_size</code></td><td>integer &gt;= 1</td><td>error below</td></tr><tr><td><code>tile_map_data</code></td><td>PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray(&quot;…&quot;) (decoded by the tilemaplayer-invalid-tile-data rule)</td><td></td></tr><tr><td><code>tile_set</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>use_kinematic_bodies</code></td><td>true or false</td><td></td></tr><tr><td><code>x_draw_order_reversed</code></td><td>true or false</td><td></td></tr><tr><td><code>y_sort_origin</code></td><td>integer</td><td></td></tr></tbody></table></div>

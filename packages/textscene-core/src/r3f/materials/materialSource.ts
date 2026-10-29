@@ -16,6 +16,7 @@ import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMat
 import { RES_SCHEME } from '../../resources/resPath';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource, type SceneResources } from '../SceneResourcesContext';
+import { NODE_PROPERTY } from '../../resources/useTexture2D';
 
 /** A material body and the resource tables its references resolve in: its owning file's. */
 export interface MaterialResource {
@@ -23,14 +24,14 @@ export interface MaterialResource {
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
   /**
-   * The resources between the node and the material, the node's property first: the mesh that holds
-   * a surface's material. Absent for a material that is the node's property.
+   * False when a resource between the node and the material, such as the mesh that holds a
+   * surface's material, is not local to scene. Absent when every one is, as for the node's property.
    */
-  holders?: readonly TscnInternalResource[];
+  isHeldLocally?: false;
 }
 
-/** The material's `holders`, present only when it has any. */
-type Held = Pick<MaterialResource, 'holders'>;
+/** The material's `isHeldLocally`, present only when false. */
+type Held = Pick<MaterialResource, 'isHeldLocally'>;
 
 export type MaterialSource =
   /** A material the scene already holds, with the scene's tables. */
@@ -43,16 +44,16 @@ export type MaterialSource =
  * scene's tables, or a `res://` path such as a material inside a mesh resource file. Undefined leaves the
  * slot empty, as Godot's invalid RID does, so an override that names nothing keeps what
  * the surface had. A material this previewer cannot build still fills the slot, and
- * `useMaterial` answers with Godot's default surface for it (ADR-0041). `holders` are the
- * material's, as `MaterialResource` names them.
+ * `useMaterial` answers with Godot's default surface for it (ADR-0041). `isHeldLocally` is the
+ * material's, as `MaterialResource` names it.
  */
 export function resolveMaterialSource(
   ref: string | undefined,
   { internalResources, externalResources }: SceneResources,
-  holders: readonly TscnInternalResource[] = []
+  isHeldLocally: boolean = NODE_PROPERTY
 ): MaterialSource | undefined {
   if (!ref) return undefined;
-  if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref, holders);
+  if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref, isHeldLocally);
   const parsed = parseResourceReference(ref);
   if (!parsed) return undefined;
 
@@ -62,36 +63,35 @@ export function resolveMaterialSource(
     return {
       kind: 'inline',
       material: { resource, internalResources, externalResources },
-      ...held(holders),
+      ...held(isHeldLocally),
     };
   }
 
   const ext = findExtResource(externalResources, parsed.id);
-  return ext?.path ? fileMaterialSource(ext.path, holders) : undefined;
+  return ext?.path ? fileMaterialSource(ext.path, isHeldLocally) : undefined;
 }
 
 /**
- * One source per entry of an ArrayMesh's `materialPaths`, held by `holders` as in
+ * One source per entry of an ArrayMesh's `materialPaths`, held as `isHeldLocally` says, as in
  * `resolveMaterialSource`. A null path is Godot's default surface.
  */
 export function fileMaterialSources(
   materialPaths: readonly (string | null)[],
-  holders: readonly TscnInternalResource[] = []
+  isHeldLocally: boolean = NODE_PROPERTY
 ): (MaterialSource | undefined)[] {
-  return materialPaths.map((path) => (path ? fileMaterialSource(path, holders) : undefined));
+  return materialPaths.map((path) => (path ? fileMaterialSource(path, isHeldLocally) : undefined));
 }
 
 /**
  * The source for a material file, or undefined for a path that is no resource file.
  * Minting an address the loader must refuse buys a failed load and the same default surface.
  */
-function fileMaterialSource(
-  path: string,
-  holders: readonly TscnInternalResource[]
-): MaterialSource | undefined {
-  return isResourceFilePath(resourceFilePath(path)) ? { kind: 'file', path, ...held(holders) } : undefined;
+function fileMaterialSource(path: string, isHeldLocally: boolean): MaterialSource | undefined {
+  return isResourceFilePath(resourceFilePath(path))
+    ? { kind: 'file', path, ...held(isHeldLocally) }
+    : undefined;
 }
 
-function held(holders: readonly TscnInternalResource[]): Held {
-  return holders.length > 0 ? { holders } : {};
+export function held(isHeldLocally: boolean): Held {
+  return isHeldLocally ? {} : { isHeldLocally };
 }

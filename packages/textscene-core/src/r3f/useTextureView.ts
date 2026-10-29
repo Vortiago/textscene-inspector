@@ -52,7 +52,8 @@ type MakeView = (source: THREE.Texture, sampler: ViewSampler | null | undefined)
 /**
  * `useOwnedTextureView` that shows `window`. A clone takes the window by a write, so a moving window
  * keeps the clone. A live target takes it in the sampler, so only a reader whose window or sampler
- * differs from the target's reads its own copy.
+ * differs from the target's reads its own copy, which may be of the window's cell and shows the
+ * window in the cell's own coordinates.
  */
 export function useWindowedTextureView(
   source: THREE.Texture | null | undefined,
@@ -61,7 +62,7 @@ export function useWindowedTextureView(
 ): THREE.Texture | null {
   const isLive = source ? isLiveTarget(source) : false;
   const view = useOwnedTextureView(source, sampler && isLive ? { ...sampler, window } : sampler);
-  useUvWindow(view, window);
+  useUvWindow(isLive ? null : view, window);
   return view;
 }
 

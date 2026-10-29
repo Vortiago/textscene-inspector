@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitcsgpolypathinst"]
+
+; The one variable: the polygons and their Path3D nodes sit in an instanced scene. The host
+; instances unit-csg-polygon-path.tscn, whose CSGPolygon3D nodes sweep along a Path3D, so each must
+; draw the extrusion it draws in that scene. No other scene sweeps a polygon inside an instance, so
+; no other golden shows a regression in it.
+
+[ext_resource type="PackedScene" path="res://unit-csg-polygon-path.tscn" id="1_path"]
+
+[node name="Host" type="Node3D"]
+
+[node name="Path" parent="." instance=ExtResource("1_path")]

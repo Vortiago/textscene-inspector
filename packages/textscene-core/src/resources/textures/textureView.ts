@@ -7,10 +7,16 @@
 
 import * as THREE from 'three';
 import { applyUvWindow, type UvWindow } from '../../r3f/uvWindow';
-import { isLiveTarget, liveTargetCopy } from '../../r3f/liveTargets';
+import { isLiveTarget, liveTargetCopies, liveTargetCopy } from '../../r3f/liveTargets';
+import { windowCell, type WindowCell } from '../../r3f/windowCell';
+import { imageSize } from '../formats/image/imagePixels';
 import { isHeld } from '../../r3f/useDisposeOnRelease';
-import { perObject } from '../../utils/perObject';
-import { applyTextureFilterState, textureFilterMatches, type TextureFilterState } from './godotTextureFilter';
+import {
+  applyTextureFilterState,
+  hasMipChain,
+  textureFilterMatches,
+  type TextureFilterState,
+} from './godotTextureFilter';
 
 /** Below this, a repeat or offset is indistinguishable from the one a texture shows. */
 const WINDOW_EPSILON = 1e-6;
@@ -181,26 +187,47 @@ function clonedView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture 
   return clone;
 }
 
-/** Each live target's whole copies, written only by `liveCopyView`. A copy leaves its set when disposed. */
-const copiesOf = perObject<THREE.Texture, Set<THREE.Texture>>(() => new Set());
-
 /**
  * A copy of a live target, filled after each render of the target, shared by every reader that
- * samples it alike, as Godot's readers sample one RID. It keeps the target's tag: the copy's
- * storage, not the tag, decides what a sample decodes, and the tag tells a canvas consumer how the
- * bytes were encoded. Each reader holds the copy, and the last to let go frees it.
+ * samples it alike, as Godot's readers sample one RID. A reader that windows a cell copies only
+ * that cell, so a sprite that steps its frames copies a frame, not the target. The copy keeps the
+ * target's tag: the copy's storage, not the tag, decides what a sample decodes, and the tag tells a
+ * canvas consumer how the bytes were encoded. Each reader holds the copy, and the last to let go
+ * frees it.
  */
 function liveCopyView(source: THREE.Texture, sampler: ViewSampler): THREE.Texture {
-  const copies = copiesOf(source);
-  for (const copy of copies) if (samplesAlike(copy, source, sampler)) return copy;
-  const copy = applyViewSampler(liveTargetCopy(source), {
-    ...sampler,
+  const cell = copiedCell(source, sampler);
+  const cellSampler = cell ? { ...sampler, window: cell.window } : sampler;
+  const shared = liveTargetCopies(source, cell?.layout).find((copy) =>
+    samplesAlike(copy, source, cellSampler)
+  );
+  if (shared) return shared;
+  const copy = applyViewSampler(liveTargetCopy(source, cell?.layout), {
+    ...cellSampler,
     colorSpace: source.colorSpace as THREE.ColorSpace,
   });
   ownedViews.add(copy);
-  copies.add(copy);
-  copy.addEventListener('dispose', () => copies.delete(copy));
   return copy;
+}
+
+/**
+ * The cell of `source` that `sampler`'s window shows, or null to copy the whole. A mip chain reads
+ * past any apron, so a sampler that reads one copies the whole.
+ */
+function copiedCell(source: THREE.Texture, sampler: ViewSampler): WindowCell | null {
+  const size = imageSize(source.image);
+  if (!sampler.window || !size || readsMipChain(source, sampler)) return null;
+  return windowCell(sampler.window, size, isClampedAtEdges(source, sampler));
+}
+
+function readsMipChain(source: THREE.Texture, sampler: ViewSampler): boolean {
+  return hasMipChain(source) && (sampler.filter?.generateMipmaps ?? true);
+}
+
+/** Whether `sampler` clamps `source` at every edge, so a cell's apron stops where the whole's edge does. */
+function isClampedAtEdges(source: THREE.Texture, sampler: ViewSampler): boolean {
+  const wraps = sampler.wrap === undefined ? [source.wrapS, source.wrapT] : [sampler.wrap];
+  return wraps.every((wrap) => wrap === THREE.ClampToEdgeWrapping);
 }
 
 /** Whether `copy` samples as `sampler` reads `source`, where a field left out keeps the source's value. */
