@@ -10,13 +10,13 @@ import { nodeComponentRegistry } from '../../../../../r3f/NodeComponentRegistry'
 import { rendersOwnVisual } from '../../../../../r3f/nodeSupport';
 import './index';
 import './index.r3f';
-import { parseGPUParticlesCollisionSDF3D } from './parser';
+import { parseSdfVolume } from '../../volume/parseSdfVolume';
 
 describe('GPUParticlesCollisionSDF3D registration', () => {
   it('registers the parser that reads the shape of the gizmo', () => {
     const registration = nodeRegistry.getRegistration('GPUParticlesCollisionSDF3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseGPUParticlesCollisionSDF3D);
+    expect(registration!.parser).toBe(parseSdfVolume);
   });
 
   it('registers a base component as a declared gap, so it still reads as not implemented', () => {

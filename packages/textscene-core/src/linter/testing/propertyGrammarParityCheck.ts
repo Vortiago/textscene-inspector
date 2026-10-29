@@ -11,7 +11,9 @@ import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
 import {
   extractNodeType,
+  findParserFile,
   findSliceDirs,
+  isPendingSlice,
   getInheritedParserProps,
   nodesRoot,
   scrapeParserReads,
@@ -34,6 +36,8 @@ export interface SliceInfo {
   parserProps: Set<string>;
   /** Own registered keys + inherited base validator keys. */
   validatorKeys: Set<string>;
+  /** Whether the node's effect is a declared gap (`renderIntent: 'pending'`), so every unread key is one. */
+  isPending: boolean;
 }
 
 let cachedSlices: SliceInfo[] | null = null;
@@ -50,10 +54,11 @@ export function collectSlices(): SliceInfo[] {
       slice: dir.slice(nodesRoot.length + 1),
       nodeType,
       parserProps: new Set([
-        ...scrapeParserReads(join(dir, 'parser.ts')),
+        ...scrapeParserReads(findParserFile(dir)!),
         ...getInheritedParserProps(nodeType),
       ]),
       validatorKeys: getFullValidatorKeys(nodeType),
+      isPending: isPendingSlice(dir),
     });
   }
   return cachedSlices;
@@ -69,7 +74,7 @@ export interface ParityViolation {
 export function checkParity(): ParityViolation[] {
   const violations: ParityViolation[] = [];
 
-  for (const { slice, nodeType, parserProps, validatorKeys } of collectSlices()) {
+  for (const { slice, nodeType, parserProps, validatorKeys, isPending } of collectSlices()) {
     // A base-type entry, such as Node3D.linterOnly, applies to every leaf slice.
     const allowedParserOnly = new Set<string>();
     const allowedLinterOnly = new Set<string>();
@@ -85,9 +90,9 @@ export function checkParity(): ParityViolation[] {
     const parserOnlyNotAllowlisted = [...parserProps]
       .filter((k) => !validatorKeys.has(k) && !allowedParserOnly.has(k))
       .sort();
-    const linterOnlyNotAllowlisted = [...validatorKeys]
-      .filter((k) => !parserProps.has(k) && !allowedLinterOnly.has(k))
-      .sort();
+    const linterOnlyNotAllowlisted = isPending
+      ? []
+      : [...validatorKeys].filter((k) => !parserProps.has(k) && !allowedLinterOnly.has(k)).sort();
 
     if (parserOnlyNotAllowlisted.length > 0 || linterOnlyNotAllowlisted.length > 0) {
       violations.push({ slice, nodeType, parserOnlyNotAllowlisted, linterOnlyNotAllowlisted });

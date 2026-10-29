@@ -5,11 +5,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../../core/NodeRegistry';
-import { parseGPUParticlesCollisionHeightField3D } from './parser';
+import { parseBoxVolume } from '../../volume/parseBoxVolume';
 
 const gPUParticlesCollisionHeightField3DRegistration: NodeTypeRegistration = {
   typeName: 'GPUParticlesCollisionHeightField3D',
-  parser: parseGPUParticlesCollisionHeightField3D,
+  parser: parseBoxVolume,
 };
 
 nodeRegistry.register(gPUParticlesCollisionHeightField3DRegistration);

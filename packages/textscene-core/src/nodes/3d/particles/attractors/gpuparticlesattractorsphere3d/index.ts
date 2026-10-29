@@ -5,11 +5,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../../core/NodeRegistry';
-import { parseGPUParticlesAttractorSphere3D } from './parser';
+import { parseSphereVolume } from '../../volume/parseSphereVolume';
 
 const gPUParticlesAttractorSphere3DRegistration: NodeTypeRegistration = {
   typeName: 'GPUParticlesAttractorSphere3D',
-  parser: parseGPUParticlesAttractorSphere3D,
+  parser: parseSphereVolume,
 };
 
 nodeRegistry.register(gPUParticlesAttractorSphere3DRegistration);

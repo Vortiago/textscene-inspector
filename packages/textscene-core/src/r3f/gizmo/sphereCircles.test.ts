@@ -42,8 +42,9 @@ describe('sphereCircleLines', () => {
     const lines = sphereCircleLines(1);
     // Each iteration writes 24 segments: six PUSH_QUARTER calls of four.
     const [, to] = segment(lines, 15 * 24);
-    expect(to[0]).toBeCloseTo(Math.SQRT1_2, 6);
-    expect(to[2]).toBeCloseTo(Math.SQRT1_2, 6);
+    // The C++ port writes 0.707106769 for both: cosf of the float PI / 4, not of the summed angle.
+    expect(to[0]).toBe(Math.fround(0.707106769));
+    expect(to[2]).toBe(Math.fround(0.707106769));
   });
 
   it('draws the XY circle in the z = 0 plane and the YZ circle in the x = 0 plane', () => {

@@ -59,6 +59,10 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // Every modifier reads `active` and `influence`, and a constraint reads the base `settings/<i>/` leaves.
   SkeletonModifier3D: '3d/skeleton/skeletonmodifier3d/parser.ts',
   BoneConstraint3D: '3d/skeleton/boneconstraint3d/parser.ts',
+  // The H and V flow containers register their base's parse.
+  FlowContainer: '2d/ui/flowcontainer/parser.ts',
+  // The enabler registers its base's parse.
+  VisibleOnScreenNotifier3D: '3d/visibleonscreennotifier3d/parser.ts',
 };
 
 /**
@@ -70,10 +74,46 @@ export function findLinterParserDirs(dir: string): string[] {
   return atLeast(walk(dir, 'linterParser.ts').map(dirname), 150, 'findLinterParserDirs');
 }
 
-/** The directories holding both `parser.ts` and `linterParser.ts`. */
+/** The parser files of the base types: a slice that registers one of these reads no key of its own. */
+const BASE_PARSER_FILES: ReadonlySet<string> = new Set(
+  Object.values(BASE_TYPE_TO_PARSER_SUBPATH).map((subpath) => join(nodesRoot, subpath))
+);
+
+/**
+ * The file of the parser a slice registers, or null when it registers a base parser. It is the
+ * slice's `parser.ts`, or else the module its `index.ts` names in `parser: <name>` and imports from
+ * a relative path, such as a family parser that several slices share.
+ */
+export function findParserFile(dir: string): string | null {
+  const own = join(dir, 'parser.ts');
+  if (existsSync(own)) return own;
+  const indexFile = join(dir, 'index.ts');
+  if (!existsSync(indexFile)) return null;
+  const src = readFileSync(indexFile, 'utf8');
+  const name = /\bparser:\s*(\w+)/.exec(src)?.[1];
+  if (!name) return null;
+  const specifier = new RegExp(`import\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*'(\\.[^']+)'`).exec(
+    src
+  )?.[1];
+  if (!specifier) return null;
+  const file = resolveImport(indexFile, specifier);
+  return BASE_PARSER_FILES.has(file) ? null : file;
+}
+
+/** The directories holding a `linterParser.ts` and a parser of their own. */
 export function findSliceDirs(dir: string): string[] {
-  const dirs = findLinterParserDirs(dir).filter((d) => existsSync(join(d, 'parser.ts')));
+  const dirs = findLinterParserDirs(dir).filter((d) => findParserFile(d) !== null);
   return atLeast(dirs, 50, 'findSliceDirs');
+}
+
+/**
+ * Whether the slice registers its component under `renderIntent: 'pending'`: the previewer does
+ * not draw what the node does, so a key it validates and does not read is a render gap by
+ * definition, and no allowlist entry needs to say so.
+ */
+export function isPendingSlice(dir: string): boolean {
+  const file = join(dir, 'index.r3f.ts');
+  return existsSync(file) && /renderIntent:\s*'pending'/.test(readFileSync(file, 'utf8'));
 }
 
 /**
