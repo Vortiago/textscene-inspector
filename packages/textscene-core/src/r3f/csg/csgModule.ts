@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { memoisedImport } from '../../resources/useLazyModule';
+import { memoisedImport } from '../../resources/memoisedImport';
 
 /** The slice of three-bvh-csg's surface this codebase uses. */
 export interface CsgModule {

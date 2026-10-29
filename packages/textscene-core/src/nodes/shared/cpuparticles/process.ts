@@ -1,6 +1,7 @@
 /**
  * The steps of `_particles_process` and `_update_internal` that `cpu_particles_2d.cpp` and
- * `cpu_particles_3d.cpp` carry alike: the settle, each particle's restart instant, and its colour.
+ * `cpu_particles_3d.cpp` carry alike: the settle, each particle's restart instant, its parameters
+ * and its colour.
  * Every number is the `real_t` or `double` the engine holds, rounded where Godot rounds.
  *
  * Derived from Godot Engine (`scene/2d/cpu_particles_2d.cpp`, `scene/3d/cpu_particles_3d.cpp`), used
@@ -32,8 +33,13 @@
  */
 
 import { storedReal as f } from '../../../godot/math/real.js';
-import { multiplyColor, type Rgba } from '../../../godot/math/math.js';
-import { idhash } from './godotRng';
+import { lerpf, multiplyColor, type Rgba } from '../../../godot/math/math.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import type { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
+import type { Curve } from '../../../resources/curves/curve/types';
+import { sampleCurve } from '../../../resources/curves/curve/sample';
+import { idhash, randFromSeed, type SeedRef } from './godotRng';
+import type { ParticleParam } from './params';
 
 /**
  * The seed substituted when a scene does not set `use_fixed_seed`. Godot uses
@@ -236,4 +242,27 @@ export interface ParticleTint {
  */
 export function particleColor({ base, hueAngle, baseColor, startColorRand }: ParticleTint): Rgba {
   return multiplyColor(rotateHue(base, hueAngle), multiplyColor(baseColor, startColorRand));
+}
+
+/** Each parameter's curve, by `CPUParticlesParameter`, null for none. */
+export type ParticleCurves = ReadonlyArray<Curve | null>;
+
+/** `curve_parameters[param]->sample(tv)` in float, or 1 for a parameter with no curve. */
+export function sampleParam(
+  curves: ParticleCurves,
+  param: EnumValue<typeof CPUParticlesParameter>,
+  tv: number
+): number {
+  const curve = curves[param] ?? null;
+  return curve ? f(sampleCurve(curve, tv)) : 1.0;
+}
+
+/** `Math::lerp(parameters_min[p], parameters_max[p], rand_from_seed(seed))`. */
+export function lerpParam(
+  params: readonly ParticleParam[],
+  param: EnumValue<typeof CPUParticlesParameter>,
+  seedRef: SeedRef
+): number {
+  const slot = params[param]!;
+  return lerpf(slot.min, slot.max, randFromSeed(seedRef));
 }

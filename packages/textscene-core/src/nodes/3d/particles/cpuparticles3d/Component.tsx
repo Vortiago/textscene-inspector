@@ -2,8 +2,6 @@
  * <CPUParticles3D> draws Godot's CPU particle emitter as a frozen pose: the settle of its enter-tree
  * (`simulate.ts`), each particle an instance of the mesh under the node's transform, as Godot writes
  * the buffer in node space (`cpu_particles_3d.cpp:1281-1283`). The cull measures the live particles.
- * Godot's editor gizmos draw on it: the `visibility_aabb` box with its axes for every node, and the
- * emission shape for the selected node.
  */
 
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';

@@ -5,7 +5,7 @@
  * brotli format.
  */
 
-import { memoisedImport } from '../../../../resources/useLazyModule';
+import { memoisedImport } from '../../../../resources/memoisedImport';
 
 /** The Brotli decoder, one import shared by every caller. */
 export const loadBrotliDecoder = memoisedImport(() => import('brotli/decompress').then((m) => m.default));

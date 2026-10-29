@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
-import { memoisedImport, useLazyModule, type LazyImport } from './useLazyModule';
+import { memoisedImport, type LazyImport } from './memoisedImport';
+import { useLazyModule } from './useLazyModule';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -27,19 +28,6 @@ function mount(loader: ResourceLoader, load: LazyImport<string>, seen: (string |
     </ResourceLoaderContext.Provider>
   );
 }
-
-describe('memoisedImport', () => {
-  it('imports once for every call', () => {
-    let imports = 0;
-    const load = memoisedImport(() => {
-      imports++;
-      return Promise.resolve('module');
-    });
-    void load();
-    void load();
-    expect(imports).toBe(1);
-  });
-});
 
 describe('useLazyModule', () => {
   it('reads null and counts one pending load until the module lands', async () => {

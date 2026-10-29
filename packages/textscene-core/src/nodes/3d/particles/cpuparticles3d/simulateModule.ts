@@ -3,6 +3,6 @@
  * simulation on the webview's initial-paint path for every scene, past its budget.
  */
 
-import { memoisedImport } from '../../../../resources/useLazyModule';
+import { memoisedImport } from '../../../../resources/memoisedImport';
 
 export const loadSimulate = memoisedImport(() => import('./simulate'));

@@ -7,7 +7,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, floatOr, intOr, packedOr } from '../../../parser/valueParsers';
-import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
+import { NO_FLOATS, parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import type { Line2DProperties } from './types';
 import { LineJointMode } from '../../../godot/scene/line2d.js';
 
@@ -17,7 +17,7 @@ export function parseLine2D(heading: ParsedHeading, properties: Record<string, s
   const points = packedOr(
     properties.points,
     parsePackedVector2Array,
-    new Float32Array(0),
+    NO_FLOATS,
     `Line2D "${base.name}".points`
   );
 

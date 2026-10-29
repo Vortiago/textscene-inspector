@@ -82,7 +82,8 @@ function sameComponent(a: number, b: number): boolean {
   return a === b || (a !== a && b !== b);
 }
 
-function sameVector3(a: Vector3, b: Vector3): boolean {
+/** @canonical Vector3 equality that holds a NaN equal to a NaN */
+export function sameVector3(a: Vector3, b: Vector3): boolean {
   return sameComponent(a.x, b.x) && sameComponent(a.y, b.y) && sameComponent(a.z, b.z);
 }
 

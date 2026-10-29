@@ -55,8 +55,12 @@ export function basisOrthonormalized(n: BasisComponents): BasisComponents {
   return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
-/** The determinant of `n`, with the nine components `basisDeterminant` takes. */
-function determinantOf(n: BasisComponents): number {
+/**
+ * `Basis::determinant` of `n`, with the nine components `basisDeterminant` takes.
+ *
+ * @canonical Determinant of a row-major basis
+ */
+export function basisDeterminantOf(n: BasisComponents): number {
   return basisDeterminant(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8]);
 }
 
@@ -72,7 +76,7 @@ export function basisGetScaleAbs(n: BasisComponents): [number, number, number] {
  * signs as 0, which leaves the NaN axis NaN and the others exact 0.
  */
 export function basisGetScale(n: BasisComponents): [number, number, number] {
-  const detSign = sign(determinantOf(n));
+  const detSign = sign(basisDeterminantOf(n));
   const abs = basisGetScaleAbs(n);
   return [detSign * abs[0], detSign * abs[1], detSign * abs[2]];
 }
@@ -146,6 +150,30 @@ export function basisMultiply(left: BasisComponents, right: BasisComponents): Ba
         f(right[6 + col]! * left[3 * row + 2]!)
     );
   });
+}
+
+/**
+ * The basis whose columns are `x`, `y` and `z`, as `Basis(x, y, z)` builds it.
+ *
+ * @canonical Basis from three column vectors
+ */
+export function basisFromColumns(x: Vector3, y: Vector3, z: Vector3): BasisComponents {
+  return [x.x, y.x, z.x, x.y, y.y, z.y, x.z, y.z, z.z];
+}
+
+/**
+ * `Basis::xform` (`basis.h:336-341`) in `real_t` float: each row dotted with `v`. Not a
+ * transform with a zero origin, which turns a -0 into +0.
+ *
+ * @canonical A vector through a Basis in float32
+ */
+export function basisXform(n: BasisComponents, v: Vector3): Vector3 {
+  const components: Triple = [v.x, v.y, v.z];
+  return {
+    x: vector3Dot([n[0], n[1], n[2]], components),
+    y: vector3Dot([n[3], n[4], n[5]], components),
+    z: vector3Dot([n[6], n[7], n[8]], components),
+  };
 }
 
 /** The basis whose row-major component `i` is `component(i)`. */
@@ -240,7 +268,7 @@ export function basisGetRotationQuaternion(n: BasisComponents): Quaternion {
   const orthonormal = basisOrthonormalized(n);
   const [a, b, c, d, e, g, h, i, j] = orthonormal;
   return basisGetQuaternion(
-    determinantOf(orthonormal) < 0 ? [-a, -b, -c, -d, -e, -g, -h, -i, -j] : orthonormal
+    basisDeterminantOf(orthonormal) < 0 ? [-a, -b, -c, -d, -e, -g, -h, -i, -j] : orthonormal
   );
 }
 

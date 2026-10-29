@@ -1,9 +1,7 @@
 /**
- * A mesh drawn once at each of several places, as Godot draws a MultiMesh: a GridMap item at its
- * cells, a particle emitter's mesh at its particles. The instanced geometry shares the source's
- * own attributes and carries each place's matrix as `instanceMatrix`. three draws any object whose
- * geometry is an InstancedBufferGeometry instanced (`WebGLRenderer.js:1341-1346`), `THREE.Points`
- * too, and binds that attribute (`WebGLBindingStates.js`). A points draw's program declares it.
+ * A mesh drawn once at each of several places, as Godot draws a MultiMesh. three draws any object
+ * over an InstancedBufferGeometry instanced (`WebGLRenderer.js:1341-1346`), `THREE.Points` too, and
+ * binds its `instanceMatrix` attribute (`WebGLBindingStates.js:169`). A points program declares it.
  */
 
 import * as THREE from 'three';

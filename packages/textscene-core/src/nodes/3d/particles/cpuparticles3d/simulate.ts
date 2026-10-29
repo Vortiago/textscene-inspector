@@ -36,10 +36,9 @@ import { sampleCurve } from '../../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../../resources/textures/gradienttexture2d/types';
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../../resources/textures/gradienttexture2d/sample';
-import { GodotRandomPCG, randFromSeed, type SeedRef } from '../../../shared/cpuparticles/godotRng';
+import { GodotRandomPCG, type SeedRef } from '../../../shared/cpuparticles/godotRng';
 import { pickPoint, previewProcessRng, turnedByNormal } from '../../../shared/cpuparticles/emissionPoints';
 import {
-  basisDeterminant,
   CMP_EPSILON,
   degToRad,
   degToRadf,
@@ -51,16 +50,21 @@ import {
 import { storedReal as f } from '../../../../godot/math/real.js';
 import {
   basisColumn,
+  basisDeterminantOf,
   basisFromAxisAngle,
+  basisFromColumns,
   basisOrthonormalized,
   basisScaledRows,
+  basisXform,
   type BasisComponents,
 } from '../../../../godot/math/basis.js';
+import { transform2DBasisXform } from '../../../../godot/math/transform2d.js';
 import {
   affineInverseTransform3D,
   basisOfTransform3D,
   identityTransform3D,
   multiplyTransform3D,
+  sameVector3,
   transform3DOf,
   transform3DXform,
   type Transform3D,
@@ -81,13 +85,15 @@ import { sortArray } from '../../../../godot/templates/sortArray.js';
 import { colorAt, colorCount, vector3At, vector3Count } from '../../../../resources/shapes/packedArray';
 import { CPUParticlesParameter } from '../../../../godot/scene/cpuParticles';
 import { CPUParticles3DDrawOrder, EmissionShape } from '../../../../godot/scene/particles3d';
-import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import {
   DEFAULT_PREVIEW_SEED,
   firstDrawnSteps,
+  lerpParam,
   particleColor,
   restartStep,
+  sampleParam,
   settle,
+  type ParticleCurves,
   type RestartClock,
 } from '../../../shared/cpuparticles/process';
 import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
@@ -95,7 +101,6 @@ import type { CPUParticles3DSimulation } from './types';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
 /** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
-type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSim3DInput {
   sim: CPUParticles3DSimulation;
@@ -268,8 +273,7 @@ function particlesProcess(state: SimState, input: ParticleSim3DInput, delta: num
 
 /** The `restart` branch: a fresh draw from the per-particle RNG (`cpu_particles_3d.cpp:807-916`). */
 function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle, index: number): void {
-  const { curves, colorInitialRamp } = input;
-  const { sim } = input;
+  const { sim, curves, colorInitialRamp } = input;
   const tv = 0.0;
 
   // Godot samples the angle curve for the anim offset too (`:822-830`). Same curve, same `tv`.
@@ -304,7 +308,7 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   emitAtShape(input, state, p);
 
   if (!sim.localCoords) {
-    p.velocity = basisXformRows(basisOfTransform3D(state.emissionXform), p.velocity);
+    p.velocity = basisXform(basisOfTransform3D(state.emissionXform), p.velocity);
     const placed = multiplyTransform3D(state.emissionXform, transform3DOf(p.basis, p.origin));
     p.basis = basisOfTransform3D(placed);
     p.origin = placed.origin;
@@ -408,7 +412,7 @@ function directedVelocity(sim: CPUParticles3DSimulation, normal: Vector3, veloci
   const v0 = Math.abs(normal.z) < 0.999 ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
   const tangent = normalized(cross(v0, normal));
   const bitangent = normalized(cross(tangent, normal));
-  return basisXformRows(basisOfColumns(tangent, bitangent, normal), velocity);
+  return basisXform(basisFromColumns(tangent, bitangent, normal), velocity);
 }
 
 /** A point on the sphere of `radius`, from a height and an angle drawn in that order (`:888-899`). */
@@ -450,13 +454,13 @@ function ringPoint(emission: ParticleEmission, rng: GodotRandomPCG): Vector3 {
     Math.sqrt(f(f(rng.randf() * f(f(radiusClamped * radiusClamped) - innerSquared)) + innerSquared))
   );
   radius = lerpf(radius, f(radius * f(topRadius / radiusClamped)), yPos);
-  const axis = sameVector(ringAxis, ZERO) ? { x: 0, y: 0, z: 1 } : normalized(ringAxis);
+  const axis = sameVector3(ringAxis, ZERO) ? { x: 0, y: 0, z: 1 } : normalized(ringAxis);
   const absAxis = { x: Math.abs(axis.x), y: Math.abs(axis.y), z: Math.abs(axis.z) };
-  let ortho = sameVector(absAxis, { x: 1, y: 0, z: 0 })
+  let ortho = sameVector3(absAxis, { x: 1, y: 0, z: 0 })
     ? cross({ x: 0, y: 1, z: 0 }, axis)
     : cross({ x: 1, y: 0, z: 0 }, axis);
   ortho = normalized(ortho);
-  ortho = normalized(basisXformRows(basisFromAxisAngle(axis, angle), ortho));
+  ortho = normalized(basisXform(basisFromAxisAngle(axis, angle), ortho));
   // `y_pos * height - height / 2.0` mixes in a double.
   const along = f(f(yPos * ringHeight) - ringHeight / 2.0);
   return vector3Add(vector3Scaled(ortho, radius), vector3Scaled(axis, along));
@@ -469,8 +473,7 @@ function advanceParticle(
   p: Particle,
   localDelta: number
 ): number {
-  const { curves } = input;
-  const { sim } = input;
+  const { sim, curves } = input;
   const seedRef: SeedRef = { value: p.seed };
 
   p.time += localDelta;
@@ -494,12 +497,12 @@ function advanceParticle(
   // Each acceleration sits behind a C++ ternary, so its `rand_from_seed` draw is consumed only
   // when the branch is taken. Drawing unconditionally would desynchronise every later value.
   if (length(p.velocity) > 0.0) {
-    const accel = lerpParam(sim, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
+    const accel = lerpParam(sim.params, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
     force = vector3Add(force, vector3Scaled(vector3Scaled(normalized(p.velocity), texLinearAccel), accel));
   }
   const diff = vector3Sub(position, state.emissionXform.origin);
   if (length(diff) > 0.0) {
-    const radial = lerpParam(sim, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
+    const radial = lerpParam(sim.params, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
     force = vector3Add(force, vector3Scaled(vector3Scaled(normalized(diff), texRadialAccel), radial));
   }
   force = vector3Add(force, tangentialForce(sim, diff, texTangentialAccel, seedRef));
@@ -514,7 +517,7 @@ function advanceParticle(
   }
 
   if (f(sim.params[CPUParticlesParameter.DAMPING]!.max + texDamping) > 0.0) {
-    const damp = f(texDamping * lerpParam(sim, CPUParticlesParameter.DAMPING, seedRef));
+    const damp = f(texDamping * lerpParam(sim.params, CPUParticlesParameter.DAMPING, seedRef));
     // `damp * local_delta` is a double, so the subtraction runs in double and rounds once.
     const speed = f(length(p.velocity) - damp * localDelta);
     p.velocity = speed < 0.0 ? ZERO : vector3Scaled(normalized(p.velocity), speed);
@@ -528,13 +531,13 @@ function advanceParticle(
       p.custom[1] *
         sim.lifetime *
         texAngularVelocity *
-        lerpParam(sim, CPUParticlesParameter.ANGULAR_VELOCITY, seedRef)
+        lerpParam(sim.params, CPUParticlesParameter.ANGULAR_VELOCITY, seedRef)
   );
   p.custom[0] = degToRadf(baseAngle);
 
   const animOffset = sim.params[CPUParticlesParameter.ANIM_OFFSET]!;
   const offset = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
-  const progress = f(f(tv * texAnimSpeed) * lerpParam(sim, CPUParticlesParameter.ANIM_SPEED, seedRef));
+  const progress = f(f(tv * texAnimSpeed) * lerpParam(sim.params, CPUParticlesParameter.ANIM_SPEED, seedRef));
   p.custom[2] = f(offset + progress);
 
   return tv;
@@ -557,7 +560,7 @@ function tangentialForce(
   if (!(length(along) > 0.0)) return ZERO;
   return vector3Scaled(
     normalized(along),
-    f(texTangentialAccel * lerpParam(sim, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef))
+    f(texTangentialAccel * lerpParam(sim.params, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef))
   );
 }
 
@@ -570,25 +573,19 @@ function orbit(
   localDelta: number,
   seedRef: SeedRef
 ): void {
-  const amount = f(texOrbitVelocity * lerpParam(sim, CPUParticlesParameter.ORBIT_VELOCITY, seedRef));
+  const amount = f(texOrbitVelocity * lerpParam(sim.params, CPUParticlesParameter.ORBIT_VELOCITY, seedRef));
   if (amount === 0.0) return;
   // Godot rotates by -ang to match ParticleProcessMaterial's clockwise matrix.
   const ang = f(amount * localDelta * TAU);
   const cos = f(Math.cos(-ang));
   const sin = f(Math.sin(-ang));
-  // `Transform2D(-ang, Vector2()).basis_xform(diff.xy)`: columns `(cos, sin)` and `(-sin, cos)`.
-  const rotated = {
-    x: f(f(cos * diff.x) + f(-sin * diff.y)),
-    y: f(f(sin * diff.x) + f(cos * diff.y)),
-    z: 0,
-  };
-  p.origin = vector3Add(vector3Sub(p.origin, { x: diff.x, y: diff.y, z: 0 }), rotated);
+  const rotated = transform2DBasisXform({ a: cos, b: sin, c: -sin, d: cos, tx: 0, ty: 0 }, diff);
+  p.origin = vector3Add(vector3Sub(p.origin, { x: diff.x, y: diff.y, z: 0 }), { ...rotated, z: 0 });
 }
 
 /** Colour, orientation and scale, run for every particle (`cpu_particles_3d.cpp:1094-1212`). */
 function applyAppearance(input: ParticleSim3DInput, p: Particle, tv: number): void {
-  const { curves, colorRamp } = input;
-  const { sim } = input;
+  const { sim, curves, colorRamp } = input;
 
   const hueCurve = curves[CPUParticlesParameter.HUE_VARIATION] ?? null;
   // Unlike every other slot this one defaults to 0, not 1: with no curve there is no hue rotation.
@@ -609,24 +606,24 @@ function orientedBasis(sim: CPUParticles3DSimulation, p: Particle): BasisCompone
     if (!sim.alignY) {
       const cos = f(Math.cos(p.custom[0]));
       const sin = f(Math.sin(p.custom[0]));
-      return basisOfColumns({ x: cos, y: -sin, z: 0 }, { x: sin, y: cos, z: 0 }, { x: 0, y: 0, z: 1 });
+      return basisFromColumns({ x: cos, y: -sin, z: 0 }, { x: sin, y: cos, z: 0 }, { x: 0, y: 0, z: 1 });
     }
     const y = length(p.velocity) > 0.0 ? normalized(p.velocity) : column(p.basis, 1);
-    return basisOfColumns(normalized(cross(y, column(p.basis, 2))), y, { x: 0, y: 0, z: 1 });
+    return basisFromColumns(normalized(cross(y, column(p.basis, 2))), y, { x: 0, y: 0, z: 1 });
   }
   let basis = p.basis;
   if (sim.alignY) {
     const y = length(p.velocity) > 0.0 ? normalized(p.velocity) : normalized(column(basis, 1));
     let x = column(basis, 0);
     let z = column(basis, 2);
-    if (sameVector(y, x)) {
+    if (sameVector3(y, x)) {
       x = normalized(cross(y, z));
       z = normalized(cross(x, y));
     } else {
       z = normalized(cross(x, y));
       x = normalized(cross(y, z));
     }
-    basis = basisOfColumns(x, y, z);
+    basis = basisFromColumns(x, y, z);
   } else {
     basis = basisOrthonormalized(basis);
   }
@@ -711,8 +708,7 @@ export function particlesInDrawOrder(
  * identity it was built with.
  */
 function inverseEmissionTransform(global: Transform3D): Transform3D {
-  const { basis_x: x, basis_y: y, basis_z: z } = global;
-  if (basisDeterminant(x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z) === 0) return identityTransform3D();
+  if (basisDeterminantOf(basisOfTransform3D(global)) === 0) return identityTransform3D();
   return affineInverseTransform3D(global);
 }
 
@@ -764,41 +760,9 @@ function writeColor(buffer: Float32Array, at: number, { r, g, b, a }: Rgba): voi
   buffer[at + 3] = a;
 }
 
-function sampleParam(
-  curves: ParticleCurves,
-  param: EnumValue<typeof CPUParticlesParameter>,
-  tv: number
-): number {
-  const curve = curves[param] ?? null;
-  return curve ? f(sampleCurve(curve, tv)) : 1.0;
-}
-
-/** `Math::lerp(parameters_min[p], parameters_max[p], rand_from_seed(seed))`. */
-function lerpParam(
-  sim: CPUParticles3DSimulation,
-  param: EnumValue<typeof CPUParticlesParameter>,
-  seedRef: SeedRef
-): number {
-  const slot = sim.params[param]!;
-  return lerpf(slot.min, slot.max, randFromSeed(seedRef));
-}
-
-function basisOfColumns(x: Vector3, y: Vector3, z: Vector3): BasisComponents {
-  return [x.x, y.x, z.x, x.y, y.y, z.y, x.z, y.z, z.z];
-}
-
 function column(basis: BasisComponents, index: number): Vector3 {
   const [x, y, z] = basisColumn(basis, index);
   return { x, y, z };
-}
-
-/** `Basis::xform` (`basis.h:336-341`) of a row-major basis: each row dotted with `v`. */
-function basisXformRows(b: BasisComponents, v: Vector3): Vector3 {
-  return {
-    x: dot({ x: b[0], y: b[1], z: b[2] }, v),
-    y: dot({ x: b[3], y: b[4], z: b[5] }, v),
-    z: dot({ x: b[6], y: b[7], z: b[8] }, v),
-  };
 }
 
 function dot(a: Vector3, b: Vector3): number {
@@ -821,8 +785,4 @@ function length(v: Vector3): number {
 
 function lengthSquared(v: Vector3): number {
   return dot(v, v);
-}
-
-function sameVector(a: Vector3, b: Vector3): boolean {
-  return a.x === b.x && a.y === b.y && a.z === b.z;
 }

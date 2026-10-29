@@ -7,22 +7,21 @@ import {
   enumOr,
   floatOr,
   intOr,
-  packedOr,
   parseNonEmptyAabb,
   realOr,
   realVec3Or,
   settableFloatOr,
 } from '../../../../parser/valueParsers';
 import { colorOr } from '../../../../utils/colorParser';
-import {
-  NO_FLOATS,
-  parsePackedColorArray,
-  parsePackedVector3Array,
-} from '../../../../resources/shapes/packedArray';
+import { parsePackedVector3Array } from '../../../../resources/shapes/packedArray';
 import { storedColor } from '../../../../godot/math/real';
 import { CPUParticles3DDrawOrder } from '../../../../godot/scene/particles3d';
 import { readParticleEmission } from '../../../../resources/materials/particleprocessmaterial/emission';
-import { parseParticleAmount, parseParticleParams } from '../../../shared/cpuparticles/params';
+import {
+  parseEmissionPoints,
+  parseParticleAmount,
+  parseParticleParams,
+} from '../../../shared/cpuparticles/params';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
 
@@ -45,6 +44,7 @@ export function parseCPUParticles3D(
 
 function parseSimulation(properties: Record<string, string>, context: string): CPUParticles3DSimulation {
   const at = (key: string) => `${context}.${key}`;
+  const emission = parseEmissionPoints(properties, parsePackedVector3Array, at);
   return {
     emitting: boolOr(properties.emitting, true, at('emitting')),
     amount: parseParticleAmount(properties.amount, at('amount')),
@@ -66,24 +66,9 @@ function parseSimulation(properties: Record<string, string>, context: string): C
     alignY: boolOr(properties.particle_flag_align_y, false, at('particle_flag_align_y')),
     rotateY: boolOr(properties.particle_flag_rotate_y, false, at('particle_flag_rotate_y')),
     disableZ: boolOr(properties.particle_flag_disable_z, false, at('particle_flag_disable_z')),
-    emissionPoints: packedOr(
-      properties.emission_points,
-      parsePackedVector3Array,
-      NO_FLOATS,
-      at('emission_points')
-    ),
-    emissionNormals: packedOr(
-      properties.emission_normals,
-      parsePackedVector3Array,
-      NO_FLOATS,
-      at('emission_normals')
-    ),
-    emissionColors: packedOr(
-      properties.emission_colors,
-      parsePackedColorArray,
-      NO_FLOATS,
-      at('emission_colors')
-    ),
+    emissionPoints: emission.points,
+    emissionNormals: emission.normals,
+    emissionColors: emission.colors,
     direction: realVec3Or(properties.direction, { x: 1, y: 0, z: 0 }, at('direction')),
     spread: realOr(properties.spread, 45, at('spread')),
     flatness: realOr(properties.flatness, 0, at('flatness')),

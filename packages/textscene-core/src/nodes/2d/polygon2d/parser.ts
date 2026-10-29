@@ -8,6 +8,7 @@ import { parseNode2D } from '../../base/node2d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, floatOr, intOr, packedOr, vec2Or } from '../../../parser/valueParsers';
 import {
+  NO_FLOATS,
   parsePackedColorArray,
   parsePackedInt32Arrays,
   parsePackedVector2Array,
@@ -21,7 +22,7 @@ export function parsePolygon2D(
   const base = parseNode2D(heading, properties);
   const at = (key: string) => `Polygon2D "${base.name}".${key}`;
 
-  const polygon = packedOr(properties.polygon, parsePackedVector2Array, new Float32Array(0), at('polygon'));
+  const polygon = packedOr(properties.polygon, parsePackedVector2Array, NO_FLOATS, at('polygon'));
 
   // `polygons` is an Array of PackedInt32Array index lists. A malformed value
   // degrades to no sub-polygons, so to the stored vertex order.
@@ -30,12 +31,12 @@ export function parsePolygon2D(
   // `uv` and `vertex_colors` degrade to empty, which is Godot's
   // "sizes do not match" branch: point coordinates stand in for UVs, and the
   // flat `color` stands in for per-vertex colours.
-  const uv = packedOr(properties.uv, parsePackedVector2Array, new Float32Array(0), at('uv'));
+  const uv = packedOr(properties.uv, parsePackedVector2Array, NO_FLOATS, at('uv'));
 
   const vertexColors = packedOr(
     properties.vertex_colors,
     parsePackedColorArray,
-    new Float32Array(0),
+    NO_FLOATS,
     at('vertex_colors')
   );
 

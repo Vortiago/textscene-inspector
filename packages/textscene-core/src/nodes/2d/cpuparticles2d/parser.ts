@@ -6,16 +6,16 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { boolOr, enumOr, floatOr, intOr, packedOr, vec2Or } from '../../../parser/valueParsers';
-import {
-  NO_FLOATS,
-  parsePackedColorArray,
-  parsePackedVector2Array,
-} from '../../../resources/shapes/packedArray';
+import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { colorOr } from '../../../utils/colorParser';
 import type { CPUParticles2DProperties } from './types';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
-import { parseParticleAmount, parseParticleParams } from '../../shared/cpuparticles/params';
+import {
+  parseEmissionPoints,
+  parseParticleAmount,
+  parseParticleParams,
+} from '../../shared/cpuparticles/params';
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,
@@ -67,24 +67,7 @@ export function parseCPUParticles2D(
     emission_rect_extents: vec2Or(properties.emission_rect_extents, { x: 1, y: 1 }, context),
     emission_ring_radius: floatOr(properties.emission_ring_radius, 1, context),
     emission_ring_inner_radius: floatOr(properties.emission_ring_inner_radius, 0.8, context),
-    emission_points: packedOr(
-      properties.emission_points,
-      parsePackedVector2Array,
-      NO_FLOATS,
-      `${context}.emission_points`
-    ),
-    emission_normals: packedOr(
-      properties.emission_normals,
-      parsePackedVector2Array,
-      NO_FLOATS,
-      `${context}.emission_normals`
-    ),
-    emission_colors: packedOr(
-      properties.emission_colors,
-      parsePackedColorArray,
-      NO_FLOATS,
-      `${context}.emission_colors`
-    ),
+    ...emissionArrays(properties, context),
 
     particle_flag_align_y: boolOr(properties.particle_flag_align_y, false, context),
     direction: vec2Or(properties.direction, { x: 1, y: 0 }, `${context}.direction`),
@@ -101,4 +84,13 @@ export function parseCPUParticles2D(
   if (properties.color_initial_ramp) result.color_initial_ramp = properties.color_initial_ramp;
 
   return result;
+}
+
+function emissionArrays(properties: Record<string, string>, context: string) {
+  const { points, normals, colors } = parseEmissionPoints(
+    properties,
+    parsePackedVector2Array,
+    (key) => `${context}.${key}`
+  );
+  return { emission_points: points, emission_normals: normals, emission_colors: colors };
 }

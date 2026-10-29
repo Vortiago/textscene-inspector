@@ -1,13 +1,15 @@
 /**
  * The random-range parameter slots CPUParticles2D and CPUParticles3D both declare: each slot's
- * serialised keys, its Godot default and its Inspector label, and the parse of a node's slots.
+ * serialised keys, its Godot default and its Inspector label, and the parse of a node's slots and
+ * of its emission points.
  * Both constructors install the same defaults (`cpu_particles_2d.cpp:1698-1722`,
  * `cpu_particles_3d.cpp:1786-1809`).
  */
 
 import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles.js';
 import { loadedParamRange } from '../../../godot/scene/particleParamRange.js';
-import { settableIntOr } from '../../../parser/valueParsers.js';
+import { packedOr, settableIntOr } from '../../../parser/valueParsers.js';
+import { NO_FLOATS, parsePackedColorArray } from '../../../resources/shapes/packedArray.js';
 import { drawableParamBounds } from './drawableParamBounds.js';
 
 /** `PARAM_MAX`: the length of every parameter array. */
@@ -81,4 +83,29 @@ const MAX_PREVIEWED_AMOUNT = 1_000_000;
 /** `amount` as the setter leaves it: it refuses a count below 1 (`cpu_particles_2d.cpp:68`, `cpu_particles_3d.cpp:72`). */
 export function parseParticleAmount(value: string | undefined, context: string): number {
   return Math.min(MAX_PREVIEWED_AMOUNT, settableIntOr(value, DEFAULT_AMOUNT, { min: 1 }, context));
+}
+
+/** The flat `emission_points`, `emission_normals` and `emission_colors`, each empty when unset. */
+export interface EmissionPoints {
+  points: Float32Array;
+  normals: Float32Array;
+  colors: Float32Array;
+}
+
+/**
+ * The emission arrays of a node whose points and normals `parseVectors` reads, a 2D or a 3D
+ * `PackedVector*Array`. `at` names a key in a warning.
+ */
+export function parseEmissionPoints(
+  properties: Record<string, string>,
+  parseVectors: (value: string) => Float32Array,
+  at: (key: string) => string
+): EmissionPoints {
+  const read = (key: string, parse: (value: string) => Float32Array) =>
+    packedOr(properties[key], parse, NO_FLOATS, at(key));
+  return {
+    points: read('emission_points', parseVectors),
+    normals: read('emission_normals', parseVectors),
+    colors: read('emission_colors', parsePackedColorArray),
+  };
 }

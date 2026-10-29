@@ -1,8 +1,7 @@
 /** Shared basis-column-scale helpers for the physics linter-rule factories. */
 
 import { transform3DBasis } from '../transformBasis.js';
-import { basisGetScale, basisGetScaleAbs } from '../../godot/math/basis.js';
-import { basisDeterminant } from '../../godot/math/math.js';
+import { basisDeterminantOf, basisGetScale, basisGetScaleAbs } from '../../godot/math/basis.js';
 
 /**
  * Basis-column magnitudes of a `Transform3D(...)` literal, or null when it does
@@ -18,7 +17,7 @@ export function basisColumnScales(raw: string): [number, number, number] | null 
   // (0, 0, 0), uniform however unequal the magnitudes are. Exact, like `SIGN`: a
   // determinant of 1e-30 signs to +1 and has a scale, so an epsilon would silence
   // a live warning.
-  const det = basisDeterminant(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8]);
+  const det = basisDeterminantOf(n);
   if (det === 0) return [0, 0, 0];
   return basisGetScaleAbs(n);
 }
