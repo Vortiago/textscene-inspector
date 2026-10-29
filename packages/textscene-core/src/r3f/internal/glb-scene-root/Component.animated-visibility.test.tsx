@@ -12,6 +12,7 @@ import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneStack } from '../../testing/SceneStack';
 import {
   AnimatedValueProvider,
+  animatedValueKey,
   useAnimatedValueRegistry,
   type AnimatedValueRegistry,
 } from '../../contexts/AnimatedValueContext';
@@ -67,7 +68,7 @@ async function renderRig(children: TscnNode[] = [], glb: ArrayBuffer = RIG_GLB) 
   const named = (name: string): THREE.Object3D => renderer.scene.instance.getObjectByName(name)!;
   /** Pushes `value` as the player does, and lets the render it causes settle. */
   const push = async (path: string, value: number[] | null) => {
-    await ReactThreeTestRenderer.act(async () => registry.set(path, 'visible', value));
+    await ReactThreeTestRenderer.act(async () => registry.set(animatedValueKey(path, 'visible'), value));
   };
   return { named, push };
 }
