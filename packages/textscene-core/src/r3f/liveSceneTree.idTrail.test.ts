@@ -10,6 +10,7 @@ import {
   INNER_ID,
   TRAIL_BASE,
   PLAYER_ID,
+  PLAYER_SCENE_ONLY,
   TRAIL_SCENES,
   hostOf,
   inheritingTrailBase,
@@ -91,9 +92,7 @@ describe('a parent_id_path that ends inside instance content', () => {
   it('keeps the heading in the instance, not re-rooted, while a scene the trail enters is not loaded', () => {
     const deepTrail = playerHost(capWithTrail(PLAYER_ID, INNER_ID, 4444));
 
-    expect(
-      pathsEnding(deepTrail, 'Cap', { 'res://player.tscn': TRAIL_SCENES['res://player.tscn']! })
-    ).toEqual(['Main/Player/Cap']);
+    expect(pathsEnding(deepTrail, 'Cap', PLAYER_SCENE_ONLY)).toEqual(['Main/Player/Cap']);
   });
 
   it('seats nothing in the instance while its own scene is not loaded', () => {

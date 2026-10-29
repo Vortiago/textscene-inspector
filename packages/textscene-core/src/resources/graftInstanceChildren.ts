@@ -44,7 +44,7 @@ export interface GraftedInstance {
   readonly uniqueParentPlacements: ReadonlyMap<string, string>;
   /** The host children whose `parent=` walk leaves the instance or finds nothing, as of their headings. */
   readonly escaped: readonly EscapedChild[];
-  /** The hand-offs of the settings whose `owner=` walk found nothing here, in file order. */
+  /** What this graft decided for each hand-off its settings carry, in file order. */
   readonly handOffDecisions: readonly HandOffDecision[];
 }
 

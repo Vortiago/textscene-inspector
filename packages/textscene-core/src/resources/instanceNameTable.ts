@@ -198,14 +198,14 @@ export class InstanceNameTable implements UniqueNameTable {
     // A scene the owner trail enters is still loading, so nothing is decided yet.
     if (walked === OWNER_PENDING) return null;
     const { ownerHandOff: handOff } = authored;
-    // An owner inside a nested instance is that instance's graft to find, which carries the hand-off on.
-    if (handOff && walked && isInNestedInstance(tree, walked.ownerInInstance ?? '')) return walked;
-    const isFound = walked !== null && holdsNode(tree, walked.ownerInInstance ?? '');
+    const place = walked === null ? 'absent' : nodePlace(tree, walked.ownerInInstance ?? '');
     if (handOff) {
-      this.handOffDecisions.push({ handOff, isHandedOff: !isFound });
-      return isFound ? walked : null;
+      // An owner inside a nested instance is that instance's graft to find, which carries the hand-off on.
+      if (place === 'nested') return walked;
+      this.handOffDecisions.push({ handOff, isHandedOff: place === 'absent' });
+      return place === 'absent' ? null : walked;
     }
-    if (isFound || !authored.ownerFallback) return walked;
+    if (place !== 'absent' || !authored.ownerFallback) return walked;
     const fallback = this.ownerWalked(tree, withFallbackOwner(authored));
     return fallback === OWNER_PENDING ? null : fallback;
   }
@@ -364,20 +364,17 @@ function handOutside(
 }
 
 /**
- * Whether the sub-path names a node of `tree`, or one in a nested instance, which that instance's
- * graft finds. A sub-path that climbs out names a node above, which no tree here holds.
+ * Where the sub-path's node is: `here` in `tree`, `nested` in a nested instance, which that
+ * instance's graft finds, or `absent`. A sub-path that climbs out counts as here, as it names a
+ * node above, which no tree here can check.
  */
-function holdsNode(tree: readonly LiveNode[], subPath: string): boolean {
-  if (subPath === '' || subPath.startsWith(OUTSIDE)) return true;
+function nodePlace(tree: readonly LiveNode[], subPath: string): 'here' | 'nested' | 'absent' {
+  if (subPath === '' || subPath.startsWith(OUTSIDE)) return 'here';
   const segments = subPath.split('/');
   const nestedAt = instanceDepth(tree, segments.slice(0, -1));
-  return nestedAt !== null && namesNodeBelow(tree, segments, nestedAt);
-}
-
-/** Whether the sub-path names a node inside a nested instance of `tree`, which that instance's graft finds. */
-function isInNestedInstance(tree: readonly LiveNode[], subPath: string): boolean {
-  if (subPath === '' || subPath.startsWith(OUTSIDE)) return false;
-  return typeof instanceDepth(tree, subPath.split('/').slice(0, -1)) === 'number';
+  if (nestedAt === null) return 'absent';
+  if (nestedAt !== undefined) return 'nested';
+  return nodeAt(tree, segments) === undefined ? 'absent' : 'here';
 }
 
 /** Whether `segments` names a node of `tree`, or lies in the nested instance at `nestedAt` (`instanceDepth` of its parent path). */

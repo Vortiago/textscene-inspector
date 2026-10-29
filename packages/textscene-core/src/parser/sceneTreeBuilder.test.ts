@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { orphanedNodes, sceneSeating, seatedParents, seatScene } from './sceneTreeBuilder';
 import { node, originsOf, withOrigin } from './testing/seatingKit';
-import { TscnParser } from './TscnParser';
+import { inheritingTrailBase } from '../r3f/idTrail.testkit';
 import type { NodeOrigin, TscnNode } from './types';
 
 function build(nodes: TscnNode[]): TscnNode[] {
@@ -1118,13 +1118,7 @@ describe('a heading below a %Name this file claims at a root that inherits a bas
   // The base may claim the name first, and keep it (node.cpp:2222-2233), so only a reader that
   // sees the base can tell where the heading sits.
   const seating = sceneSeating(
-    new TscnParser().parse(`[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
-
-[node name="Main" instance=ExtResource("base")]
-
-[node name="Foo" type="Node3D" parent="."]
+    inheritingTrailBase(`[node name="Foo" type="Node3D" parent="."]
 unique_name_in_owner = true
 
 [node name="Child" type="Node3D" parent="%Foo"]

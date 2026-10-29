@@ -45,8 +45,8 @@ export interface LiveNode extends TscnNode {
    */
   readonly escaped?: readonly EscapedChild[];
   /**
-   * Set by the merge on a collapsed instance: the hand-offs of the settings whose `owner=` walk found
-   * nothing in it. The frame that holds the copy awaiting each lands it (`seatEscaped`).
+   * Set by the merge on a collapsed instance: what its grafts decided for each hand-off. Where one is
+   * handed off, the frame that holds the copy awaiting it lands that copy (`ownerHandOff`).
    */
   readonly handOffDecisions?: readonly HandOffDecision[];
   /**

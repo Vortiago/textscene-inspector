@@ -176,9 +176,9 @@ function seatHeadings<N extends SceneNode<N>>(
     // Only a heading that gets a seat resolves its `owner=`.
     const resolveOwner: OwnerResolver = () =>
       node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
-    rememberUndecidedSeat(tables, node.parent, node.name);
     const end = walkFromRoot(node.parent, tables.tree);
     const parentPath = walkedPath(end);
+    rememberUndecidedSeat(tables, node, typeof end === 'string' ? end : null);
     if (parentPath !== null && seatBelowParent(tables, node, parentPath, resolveOwner)) {
       seatedByPath.add(node);
       rememberTrailFallback(tables, origins, index, isPlaced);
@@ -401,46 +401,44 @@ function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, res
 }
 
 /**
- * Where a heading below a `%Name` that a live reader decides sits: under this file's claimant, and
- * re-rooted, as either may hold it. That claim is a root fallback's, or this file's at an inherited
- * root, whose base may claim the name first (node.cpp:2222-2233).
+ * Where a heading below an undecided `%Name` may sit: under this file's claimant, and re-rooted.
+ * `parentPath` is its parent's path where the walk found one, or null where it ended elsewhere.
  */
 function rememberUndecidedSeat<N extends RawNode>(
   tables: SeatingTables<N>,
-  parent: string,
-  name: string
+  { parent, name }: N,
+  parentPath: string | null
 ): void {
-  const names = nodePathWalkNames(parent);
-  const isInheritedRoot = tables.root.instance !== undefined;
-  const at = names.findIndex(
-    (part) => tables.awaitedKeys.has(part) || (isInheritedRoot && tables.uniquePaths.has(part))
-  );
+  if (tables.undecidedKeys.size === 0 || !parent!.includes(UNIQUE_NODE_PREFIX)) return;
+  const names = nodePathWalkNames(parent!);
+  const at = names.findIndex((part) => tables.undecidedKeys.has(part));
   if (at === -1) return;
-  const claimant = tables.uniquePaths.get(names[at]!)!;
-  const claimedParent = walkedPath(walkFromRoot([claimant, ...names.slice(at + 1)].join('/'), tables.tree));
+  // An inherited root's walk ends unlisted at the claim, so the claimant's own path continues it.
+  const claimedParent =
+    parentPath ??
+    walkedPath(
+      walkFromRoot([tables.uniquePaths.get(names[at]!)!, ...names.slice(at + 1)].join('/'), tables.tree)
+    );
   if (claimedParent !== null) tables.undecidedSeats.add(joinPath(claimedParent, name));
-  tables.undecidedSeats.add(reparentedName(parent, name));
+  tables.undecidedSeats.add(reparentedName(parent!, name));
 }
 
 /**
  * The node a path names over the seated tables. A walk Godot ends in null is missing. One that
- * passes through content this file does not list, onto no heading, through a `%Name` a root
- * fallback awaits, or at or below an undecided seat, is unknowable. The walk keeps only the tables
- * it reads, since the seating cache holds it as long as the tree lives.
+ * passes through content this file does not list, onto no heading, or through an undecided
+ * `%Name` or seat, is unknowable. The walk keeps only the tables it reads, as the seating cache
+ * holds it as long as the tree lives.
  */
 function seatedResolver<N extends RawNode>({
   byPath,
   tree,
-  awaitedKeys,
+  undecidedKeys,
   undecidedSeats,
-}: Pick<SeatingTables<N>, 'byPath' | 'tree' | 'awaitedKeys' | 'undecidedSeats'>): (
+}: Pick<SeatingTables<N>, 'byPath' | 'tree' | 'undecidedKeys' | 'undecidedSeats'>): (
   path: string
 ) => NodePathResolution<N> {
   return (path) => {
-    // The walk's names, not a split on `/`: a `:subname` stays off the last name (node_path.cpp:405-427).
-    const names = nodePathWalkNames(path);
-    if (names.some((name) => awaitedKeys.has(name))) return UNKNOWABLE;
-    if (undecidedSeats.size > 0 && isAtOrBelowAny(simplifiedNames(names), undecidedSeats)) return UNKNOWABLE;
+    if (undecidedKeys.size > 0 && isUndecided(path, undecidedKeys, undecidedSeats)) return UNKNOWABLE;
     const end = walkFromRoot(path, tree);
     if (end === null) return MISSING;
     const node = typeof end === 'string' ? byPath.get(end) : undefined;
@@ -448,9 +446,17 @@ function seatedResolver<N extends RawNode>({
   };
 }
 
-/** Whether the path `names` spells is one of `paths`, or below one. */
-function isAtOrBelowAny(names: readonly string[], paths: ReadonlySet<string>): boolean {
-  return names.some((_, index) => paths.has(names.slice(0, index + 1).join('/')));
+/** Whether `path` passes through an undecided `%Name`, or names an undecided seat or a node below one. */
+function isUndecided(path: string, keys: ReadonlySet<string>, seats: ReadonlySet<string>): boolean {
+  // The walk's names, not a split on `/`: a `:subname` stays off the last name (node_path.cpp:405-427).
+  const names = nodePathWalkNames(path);
+  if (names.some((name) => keys.has(name))) return true;
+  let prefix = '';
+  for (const name of simplifiedNames(names)) {
+    prefix = joinPath(prefix, name);
+    if (seats.has(prefix)) return true;
+  }
+  return false;
 }
 
 /**
@@ -466,8 +472,8 @@ interface SeatingTables<N> {
   readonly ownersFound: ReadonlySet<RawNode> | undefined;
   /** Written only by `claimOnFallback`, in file order. */
   readonly rootFallbacks: RootFallback[];
-  /** The root's `%Name` keys a {@link RootFallback} claims, which a parse cannot answer. */
-  readonly awaitedKeys: Set<string>;
+  /** The root's `%Name` keys whose holder only a live reader decides: a {@link RootFallback}'s, or any at an inherited root. */
+  readonly undecidedKeys: Set<string>;
   /** Written only by `rememberUndecidedSeat`: the paths a heading may hold, which a parse cannot answer. */
   readonly undecidedSeats: Set<string>;
   /** The names of the root's children, which a re-rooted name must not repeat. */
@@ -510,7 +516,7 @@ function newTables<N extends SceneNode<N>>(
     seated: new Map([[rootNode, root]]),
     ownersFound,
     rootFallbacks: [],
-    awaitedKeys: new Set(),
+    undecidedKeys: new Set(),
     undecidedSeats: new Set(),
     rootChildNames: new Set(),
     byPath,
@@ -745,7 +751,7 @@ function claimOnFallback<N extends RawNode>(
   if (!setting.isUnique) return;
   const key = UNIQUE_NODE_PREFIX + claim.node.name;
   claimInRoot(tables, claim, seatPath);
-  if (!tables.ownersFound && tables.uniquePaths.get(key) === seatPath) tables.awaitedKeys.add(key);
+  if (!tables.ownersFound && tables.uniquePaths.get(key) === seatPath) tables.undecidedKeys.add(key);
 }
 
 /** The heading whose node `seat` is a copy of. A scan, as only a rare root fallback asks. */
@@ -867,6 +873,8 @@ function claimInRoot<N extends RawNode>(
   if (tables.uniquePaths.has(key)) return;
   tables.uniquePaths.set(key, seatPath);
   tables.ownership.claims.set(key, claim);
+  // The base of an inherited root may claim the name first (node.cpp:2222-2233).
+  if (tables.root.instance) tables.undecidedKeys.add(key);
 }
 
 /** The instance a node whose path descends into instanced content hangs off, and where it lands. */

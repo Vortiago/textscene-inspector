@@ -35,6 +35,9 @@ export const TRAIL_SCENES: Readonly<Record<string, TscnScene>> = {
   'res://player.tscn': PLAYER,
 };
 
+/** Only `res://player.tscn`, as while the scene it instances loads. */
+export const PLAYER_SCENE_ONLY: Readonly<Record<string, TscnScene>> = { 'res://player.tscn': PLAYER };
+
 /** A host with the root `Main` and an ext_resource `player` for `res://player.tscn`, then `headings`. */
 export function hostOf(headings: string): TscnScene {
   return parseScene(`[gd_scene format=3]

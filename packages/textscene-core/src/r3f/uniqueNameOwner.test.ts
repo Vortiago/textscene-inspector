@@ -11,6 +11,7 @@ import { contextOver } from './liveSceneTree.testkit.js';
 import {
   INNER_ID,
   PLAYER_ID,
+  PLAYER_SCENE_ONLY,
   TRAIL_BASE,
   TRAIL_SCENES,
   inheritingTrailBase,
@@ -754,7 +755,6 @@ unique_name_in_owner = true
 describe('an owner= recovered through an owner_uid_path that enters an instance', () => {
   // The trail names the `Player` heading of this file, then the `Inner` heading of player.tscn
   // (packed_scene.cpp:1947-2005), so the owner is the node at `Player/Inner`, which this file cannot name.
-  const PLAYER_ONLY = { 'res://player.tscn': TRAIL_SCENES['res://player.tscn']! };
   const ownedBy = (owner: string, trail: string) =>
     playerHost(`[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${trail})]
 unique_name_in_owner = true
@@ -806,7 +806,7 @@ unique_name_in_owner = true
   });
 
   it('registers the name once a scene the trail enters has loaded', () => {
-    expect(tableOf('Main/Player/Inner/Box', trailed, PLAYER_ONLY).has('%Lamp')).toBe(false);
+    expect(tableOf('Main/Player/Inner/Box', trailed, PLAYER_SCENE_ONLY).has('%Lamp')).toBe(false);
 
     expect(tableOf('Main/Player/Inner/Box', trailed).get('%Lamp')).toBe('Main/Lamp');
   });

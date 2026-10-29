@@ -36,7 +36,7 @@ interface SeatedFrame {
   readonly root: LiveNode;
   /** The children that left the frame: a walk that ended above its root, or found nothing. */
   readonly escaped: readonly EscapedChild[];
-  /** The hand-offs of the settings that the frame's instances could not land, which the file settles. */
+  /** What the frame's instances decided for each hand-off their settings carry, which the file settles. */
   readonly handOffDecisions: readonly HandOffDecision[];
 }
 
