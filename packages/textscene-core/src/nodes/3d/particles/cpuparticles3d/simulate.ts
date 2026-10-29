@@ -37,13 +37,7 @@ import type { Gradient } from '../../../../resources/textures/gradienttexture2d/
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, randFromSeed, type SeedRef } from '../../../shared/cpuparticles/godotRng';
-import {
-  colorAt,
-  colorCount,
-  pickPoint,
-  previewProcessRng,
-  turnedByNormal,
-} from '../../../shared/cpuparticles/emissionPoints';
+import { pickPoint, previewProcessRng, turnedByNormal } from '../../../shared/cpuparticles/emissionPoints';
 import {
   basisDeterminant,
   CMP_EPSILON,
@@ -72,7 +66,6 @@ import {
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
 import {
-  FLOATS_PER_VERTEX,
   normalizedVector3,
   vector3Add,
   vector3Cross,
@@ -85,6 +78,7 @@ import {
   type Vector3,
 } from '../../../../godot/math/vector.js';
 import { sortArray } from '../../../../godot/templates/sortArray.js';
+import { colorAt, colorCount, vector3At, vector3Count } from '../../../../resources/shapes/packedArray';
 import { CPUParticlesParameter } from '../../../../godot/scene/cpuParticles';
 import { CPUParticles3DDrawOrder, EmissionShape } from '../../../../godot/scene/particles3d';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
@@ -378,8 +372,8 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
       break;
     case EmissionShape.DIRECTED_POINTS: {
       const index = emitAtPoint(sim, state, p);
-      if (index !== null && vectorCount(sim.emissionNormals) === vectorCount(sim.emissionPoints)) {
-        p.velocity = directedVelocity(sim, vectorAt(sim.emissionNormals, index), p.velocity);
+      if (index !== null && vector3Count(sim.emissionNormals) === vector3Count(sim.emissionPoints)) {
+        p.velocity = directedVelocity(sim, vector3At(sim.emissionNormals, index), p.velocity);
       }
       break;
     }
@@ -397,10 +391,10 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
  * returns its index. Null, and the origin kept, for no points (`:904-919`, `:939-941`).
  */
 function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle): number | null {
-  const count = vectorCount(sim.emissionPoints);
+  const count = vector3Count(sim.emissionPoints);
   const index = pickPoint(state.processRng, count);
   if (index === null) return null;
-  p.origin = vectorAt(sim.emissionPoints, index);
+  p.origin = vector3At(sim.emissionPoints, index);
   if (colorCount(sim.emissionColors) === count) p.baseColor = colorAt(sim.emissionColors, index);
   return index;
 }
@@ -415,15 +409,6 @@ function directedVelocity(sim: CPUParticles3DSimulation, normal: Vector3, veloci
   const tangent = normalized(cross(v0, normal));
   const bitangent = normalized(cross(tangent, normal));
   return basisXformRows(basisOfColumns(tangent, bitangent, normal), velocity);
-}
-
-function vectorCount(flat: Float32Array): number {
-  return flat.length / FLOATS_PER_VERTEX;
-}
-
-function vectorAt(flat: Float32Array, index: number): Vector3 {
-  const at = index * FLOATS_PER_VERTEX;
-  return { x: flat[at]!, y: flat[at + 1]!, z: flat[at + 2]! };
 }
 
 /** A point on the sphere of `radius`, from a height and an angle drawn in that order (`:888-899`). */

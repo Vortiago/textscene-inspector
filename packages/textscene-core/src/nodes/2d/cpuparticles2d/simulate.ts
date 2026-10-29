@@ -38,20 +38,20 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from '../../shared/cpuparticles/godotRng';
 import {
-  colorAt,
-  colorCount,
   pickPoint,
   previewProcessRng,
   processRandf,
   turnedByNormal,
 } from '../../shared/cpuparticles/emissionPoints';
 import { DEFAULT_PREVIEW_SEED } from '../../shared/cpuparticles/process';
+import { colorAt, colorCount, vector2At, vector2Count } from '../../../resources/shapes/packedArray';
 import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
   multiplyTransform2D,
+  transform2DBasisXform,
   transform2DXform,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
@@ -79,9 +79,6 @@ type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
  * million iterations before the first paint. Real emitters need tens of steps.
  */
 const MAX_SIM_STEPS = 4096;
-
-/** The floats of one point in a `PackedVector2Array`. */
-const FLOATS_PER_VECTOR2 = 2;
 
 /** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
 type ParticleCurves = ReadonlyArray<Curve | null>;
@@ -528,15 +525,6 @@ function emitOnRing(props: CPUParticles2DProperties, processRng: GodotRandomPCG,
   p.transform.ty = f(f(Math.sin(t)) * radius);
 }
 
-function vector2Count(flat: Float32Array): number {
-  return flat.length / FLOATS_PER_VECTOR2;
-}
-
-function vector2At(flat: Float32Array, index: number): Vector2 {
-  const at = index * FLOATS_PER_VECTOR2;
-  return { x: flat[at]!, y: flat[at + 1]! };
-}
-
 /** The alive branch: integrate one step, returning the normalised age `tv`. */
 function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, localDelta: number): number {
   const { props, curves } = input;
@@ -598,7 +586,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
     const rotation = { a: cr, b: sr, c: -sr, d: cr, tx: 0, ty: 0 };
     const orbited = vector2Add(
       vector2Sub({ x: p.transform.tx, y: p.transform.ty }, diff),
-      transform2DXform(rotation, diff)
+      transform2DBasisXform(rotation, diff)
     );
     p.transform.tx = orbited.x;
     p.transform.ty = orbited.y;

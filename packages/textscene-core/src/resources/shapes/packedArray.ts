@@ -1,10 +1,13 @@
 /**
  * Readers for Godot's packed array slots, THREE-free: a flat float body, the three spellings
- * of a packed tuple slot, and the nested index arrays of a polygon list.
+ * of a packed tuple slot, one element of its flat components, and the nested index arrays of a
+ * polygon list.
  */
 import { parseGodotFloat } from '../../godot/variant/number.js';
 import { int32Elements } from '../../godot/variant/packedInt32.js';
 import { splitTopLevel } from '../../godot/string/string.js';
+import type { Rgba } from '../../godot/math/math.js';
+import type { Vector2, Vector3 } from '../../godot/math/vector.js';
 import {
   packedArrayBody,
   packedArrayCallAnywhere,
@@ -93,14 +96,59 @@ function float32Reader(type: PackedTupleType): (value: string) => Float32Array {
   return (value) => new Float32Array(packedTupleNumbers(value, type));
 }
 
+const PACKED_VECTOR3 = packedTupleType('PackedVector3Array', 3);
+const PACKED_VECTOR2 = packedTupleType('PackedVector2Array', 2);
+const PACKED_COLOR = packedTupleType('PackedColorArray', 4);
+
 /** A Godot `PackedVector3Array` slot as flat components. */
-export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVector3Array', 3));
+export const parsePackedVector3Array = float32Reader(PACKED_VECTOR3);
 
 /** A Godot `PackedVector2Array` slot as flat components. */
-export const parsePackedVector2Array = float32Reader(packedTupleType('PackedVector2Array', 2));
+export const parsePackedVector2Array = float32Reader(PACKED_VECTOR2);
 
 /** A Godot `PackedColorArray` slot as flat components. */
-export const parsePackedColorArray = float32Reader(packedTupleType('PackedColorArray', 4));
+export const parsePackedColorArray = float32Reader(PACKED_COLOR);
+
+/**
+ * The flat components of a packed slot that holds no element. Shared, as a zero-length array holds
+ * nothing to write.
+ *
+ * @canonical Empty flat packed array
+ */
+export const NO_FLOATS = new Float32Array(0);
+
+/** @canonical Element count of a flat PackedVector2Array */
+export function vector2Count(flat: Float32Array): number {
+  return flat.length / PACKED_VECTOR2.groupSize;
+}
+
+/** @canonical Element of a flat PackedVector2Array */
+export function vector2At(flat: Float32Array, index: number): Vector2 {
+  const at = index * PACKED_VECTOR2.groupSize;
+  return { x: flat[at]!, y: flat[at + 1]! };
+}
+
+/** @canonical Element count of a flat PackedVector3Array */
+export function vector3Count(flat: Float32Array): number {
+  return flat.length / PACKED_VECTOR3.groupSize;
+}
+
+/** @canonical Element of a flat PackedVector3Array */
+export function vector3At(flat: Float32Array, index: number): Vector3 {
+  const at = index * PACKED_VECTOR3.groupSize;
+  return { x: flat[at]!, y: flat[at + 1]!, z: flat[at + 2]! };
+}
+
+/** @canonical Element count of a flat PackedColorArray */
+export function colorCount(flat: Float32Array): number {
+  return flat.length / PACKED_COLOR.groupSize;
+}
+
+/** @canonical Element of a flat PackedColorArray */
+export function colorAt(flat: Float32Array, index: number): Rgba {
+  const at = index * PACKED_COLOR.groupSize;
+  return { r: flat[at]!, g: flat[at + 1]!, b: flat[at + 2]!, a: flat[at + 3]! };
+}
 
 /** One `[...]` group nested inside an outer array, its body captured. */
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;

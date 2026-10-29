@@ -7,12 +7,15 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, enumOr, floatOr, intOr, packedOr, vec2Or } from '../../../parser/valueParsers';
-import { parsePackedColorArray, parsePackedVector2Array } from '../../../resources/shapes/packedArray';
+import {
+  NO_FLOATS,
+  parsePackedColorArray,
+  parsePackedVector2Array,
+} from '../../../resources/shapes/packedArray';
 import { colorOr } from '../../../utils/colorParser';
 import type { CPUParticles2DProperties } from './types';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
 import { parseParticleAmount, parseParticleParams } from '../../shared/cpuparticles/params';
-import { NO_FLOATS } from '../../shared/cpuparticles/emissionPoints';
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,

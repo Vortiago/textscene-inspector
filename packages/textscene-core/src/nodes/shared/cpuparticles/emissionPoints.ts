@@ -32,15 +32,8 @@
  */
 
 import { GodotRandomPCG } from './godotRng';
-import type { Rgba } from '../../../godot/math/math.js';
-import { storedReal as f } from '../../../godot/math/real.js';
+import { transform2DBasisXform } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
-
-/** Godot's default for each emission array. Shared, since a zero-length array holds nothing to write. */
-export const NO_FLOATS = new Float32Array(0);
-
-/** The floats of one colour in a `PackedColorArray`. */
-const FLOATS_PER_COLOR = 4;
 
 /**
  * The seed of the process-wide stand-in. Not `DEFAULT_PREVIEW_SEED`: an unseeded emitter's
@@ -73,22 +66,10 @@ export function processRandf(processRng: GodotRandomPCG): number {
   return Math.fround(Math.fround(processRng.rand()) / UINT32_MAX_AS_FLOAT);
 }
 
-/**
- * `Transform2D(normal, normal.orthogonal()).basis_xform(velocity)` in `real_t` float. Not
- * transform2DXform: its zero origin turns a -0 into a +0, and `basis_xform` adds no origin.
- */
+/** `Transform2D(normal, normal.orthogonal()).basis_xform(velocity)` (`cpu_particles_2d.cpp:943-945`). */
 export function turnedByNormal(normal: Vector2, velocity: Vector2): Vector2 {
-  return {
-    x: f(f(normal.x * velocity.x) + f(normal.y * velocity.y)),
-    y: f(f(normal.y * velocity.x) + f(-normal.x * velocity.y)),
-  };
-}
-
-export function colorCount(flat: Float32Array): number {
-  return flat.length / FLOATS_PER_COLOR;
-}
-
-export function colorAt(flat: Float32Array, index: number): Rgba {
-  const at = index * FLOATS_PER_COLOR;
-  return { r: flat[at]!, g: flat[at + 1]!, b: flat[at + 2]!, a: flat[at + 3]! };
+  return transform2DBasisXform(
+    { a: normal.x, b: normal.y, c: normal.y, d: -normal.x, tx: 0, ty: 0 },
+    velocity
+  );
 }

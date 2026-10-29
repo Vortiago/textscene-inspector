@@ -14,12 +14,15 @@ import {
   settableFloatOr,
 } from '../../../../parser/valueParsers';
 import { colorOr } from '../../../../utils/colorParser';
-import { parsePackedColorArray, parsePackedVector3Array } from '../../../../resources/shapes/packedArray';
+import {
+  NO_FLOATS,
+  parsePackedColorArray,
+  parsePackedVector3Array,
+} from '../../../../resources/shapes/packedArray';
 import { storedColor } from '../../../../godot/math/real';
 import { CPUParticles3DDrawOrder } from '../../../../godot/scene/particles3d';
 import { readParticleEmission } from '../../../../resources/materials/particleprocessmaterial/emission';
 import { parseParticleAmount, parseParticleParams } from '../../../shared/cpuparticles/params';
-import { NO_FLOATS } from '../../../shared/cpuparticles/emissionPoints';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
 

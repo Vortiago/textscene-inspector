@@ -4,14 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { GodotRandomPCG } from './godotRng';
 import { DEFAULT_PREVIEW_SEED } from './process';
 import { storedVector2 } from '../../../godot/math/real.js';
-import {
-  colorAt,
-  colorCount,
-  pickPoint,
-  previewProcessRng,
-  processRandf,
-  turnedByNormal,
-} from './emissionPoints';
+import { pickPoint, previewProcessRng, processRandf, turnedByNormal } from './emissionPoints';
 
 describe('processRandf', () => {
   it('takes one `rand()` word over `(float)UINT32_MAX`, not the two `RandomPCG::randf` draws', () => {
@@ -67,12 +60,5 @@ describe('turnedByNormal', () => {
 
   it('keeps the -0 Godot writes, which adding a zero origin would lose (edge case)', () => {
     expect(Object.is(turnedByNormal({ x: 0, y: -1 }, { x: -2, y: 0 }).x, -0)).toBe(true);
-  });
-});
-
-describe('colorAt', () => {
-  it('reads the colour at an index of a flat PackedColorArray', () => {
-    const colors = new Float32Array([1, 0, 0, 1, 0, 0.5, 1, 0.25]);
-    expect([colorCount(colors), colorAt(colors, 1)]).toEqual([2, { r: 0, g: 0.5, b: 1, a: 0.25 }]);
   });
 });

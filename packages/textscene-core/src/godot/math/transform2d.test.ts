@@ -13,6 +13,7 @@ import {
   transform2DFromParts,
   transform2DGetScale,
   transform2DHasZeroSkew,
+  transform2DBasisXform,
   transform2DIsConformal,
   transform2DXform,
   type Transform2DColumns,
@@ -142,6 +143,19 @@ describe('multiplyTransform2D', () => {
   });
 });
 
+describe('transform2DBasisXform', () => {
+  it('turns a vector by the basis, leaving out the origin', () => {
+    // Godot prints `(2.5, 1.5)` for this `basis_xform`.
+    const quarterTurn = { a: 0, b: 1, c: -1, d: 0, tx: 5, ty: -6 };
+    expect(transform2DBasisXform(quarterTurn, { x: 1.5, y: -2.5 })).toEqual({ x: 2.5, y: 1.5 });
+  });
+
+  it('keeps a -0 that an added zero origin would turn into +0 (edge case)', () => {
+    const { x } = transform2DBasisXform(TRANSFORM2D_IDENTITY, { x: -0, y: -0 });
+    expect(Object.is(x, -0)).toBe(true);
+  });
+});
+
 describe('affineInverseTransform2D', () => {
   const skewed = transform2DFromParts(0.7, { x: 2, y: -0.5 }, 0.3, { x: 5, y: -6 });
 
@@ -161,6 +175,12 @@ describe('affineInverseTransform2D', () => {
     const [bx, by] = xform(affineInverseTransform2D(skewed), x, y);
     expect(bx).toBeCloseTo(1.5, 5);
     expect(by).toBeCloseTo(-2.5, 5);
+  });
+
+  it('turns the origin by the basis alone, keeping the -0 Godot writes (edge case)', () => {
+    // Godot's `affine_inverse().origin.x` here is -0: `1.0 / x` prints `-inf`.
+    const sheared = { a: 1, b: 0, c: -1, d: 1, tx: 0, ty: 0 };
+    expect(Object.is(affineInverseTransform2D(sheared).tx, -0)).toBe(true);
   });
 
   it('answers the identity for a transform scaled to zero, which has no inverse', () => {
