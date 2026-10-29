@@ -82,7 +82,7 @@ import { CPUParticles3DDrawOrder, EmissionShape } from '../../../../godot/scene/
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import {
   DEFAULT_PREVIEW_SEED,
-  firstDrawnStep,
+  firstDrawnSteps,
   particleColor,
   restartStep,
   settle,
@@ -175,7 +175,7 @@ export function settleParticles(input: ParticleSim3DInput): SettledParticles {
     emissionXform: sim.localCoords ? identityTransform3D() : input.emissionTransform,
   };
   settle(sim, (frameTime) => particlesProcess(state, input, frameTime));
-  particlesProcess(state, input, firstDrawnStep(sim));
+  for (const delta of firstDrawnSteps(sim)) particlesProcess(state, input, delta);
   return { input, state };
 }
 

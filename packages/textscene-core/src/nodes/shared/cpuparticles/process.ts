@@ -89,14 +89,17 @@ export function settle(emitter: SettledEmitter, step: (frameTime: number) => voi
   }
 }
 
+/** Each zero-delta step orients an align_y particle again, and in float that is not idempotent. */
+const ZERO_DELTA_STEPS: readonly number[] = [0, 0];
+
 /**
- * The step `_update_internal` takes after the settle, before the buffer it draws is written
- * (`cpu_particles_3d.cpp:682-716`). A scene enters the tree at a zero process delta, so an emitter at
- * 30 Hz takes a zero step. A `fixed_fps` emitter writes no buffer until a whole fixed step has
- * accumulated, so the first pose it draws is one fixed step past the settle, at `speed_scale`.
+ * The steps taken after the settle, before the first draw. A 30 Hz emitter steps once in its
+ * enter-tree `_update_internal` and once in the first frame's internal process, before that frame
+ * draws (`cpu_particles_3d.cpp:1354-1360`, `:1374-1375`, `:711`), both at a zero delta here. A
+ * `fixed_fps` emitter draws first after one whole fixed step at `speed_scale` (`:690-707`).
  */
-export function firstDrawnStep(emitter: SettledEmitter): number {
-  return emitter.fixedFps > 0 ? settleFrameTime(emitter) * f(emitter.speedScale) : 0;
+export function firstDrawnSteps(emitter: SettledEmitter): readonly number[] {
+  return emitter.fixedFps > 0 ? [settleFrameTime(emitter) * f(emitter.speedScale)] : ZERO_DELTA_STEPS;
 }
 
 /** What a particle's restart instant reads of the emitter and the step. */

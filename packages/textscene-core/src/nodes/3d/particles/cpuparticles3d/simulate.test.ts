@@ -73,16 +73,6 @@ function oracleBuffer({ properties, parent, camera, curves, ramps }: OracleCase)
   return drawnBuffer(settled, camera ? cameraAxis(emissionTransform, camera) : null);
 }
 
-/**
- * How many float steps of the larger magnitude, floored at 0.5, lie between `a` and `b`. An align_y
- * frame drifts from Godot's by one step once a second step changes the velocity. Its align and
- * orthonormalise steps match GDScript's bit for bit, and the cause of the drift is not found.
- */
-function floatStepsApart(a: number, b: number): number {
-  const step = 2 ** -23 * Math.max(Math.abs(a), Math.abs(b), 0.5);
-  return Math.abs(a - b) / step;
-}
-
 /** The buffer as one array of 20 floats per particle, in draw order. */
 function rows(buffer: Float32Array): number[][] {
   const out: number[][] = [];
@@ -102,15 +92,6 @@ describe('the drawn buffer after settleParticles', () => {
   });
 
   it.each(Object.entries(ORACLE_CASES))('writes the buffer Godot writes for the %s case', (_, oracle) => {
-    const buffer = oracleBuffer(oracle);
-    const expected = new Float32Array(oracle.buffer);
-    if (oracle.floatSteps === undefined) {
-      expect(rows(buffer)).toEqual(rows(expected));
-      return;
-    }
-    expect(buffer.length).toBe(expected.length);
-    buffer.forEach((value, at) =>
-      expect(floatStepsApart(value, expected[at]!)).toBeLessThanOrEqual(oracle.floatSteps!)
-    );
+    expect(rows(oracleBuffer(oracle))).toEqual(rows(new Float32Array(oracle.buffer)));
   });
 });
