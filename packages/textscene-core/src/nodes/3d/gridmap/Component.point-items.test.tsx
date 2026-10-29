@@ -7,6 +7,7 @@ import { Vector3, type Material, type Points } from 'three';
 import { ORTHO_BASES } from './cellData';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { mountGridMap } from './testing/gridMapCorpus';
+import { CELL_POINT_ATTRIBUTES } from '../../../r3f/materials/godotPoint';
 
 const POINT_LIBRARY = `[gd_resource type="MeshLibrary" format=3]
 
@@ -120,19 +121,18 @@ material = SubResource("Projected")
 item/0/mesh = SubResource("Mesh_item")
 `;
 
-  it("draws each cell's points on their own under local triplanar, as Godot projects the mesh's own VERTEX", async () => {
+  it("keeps every cell in one Points under local triplanar, each point carrying its item's space", async () => {
     const grid = await mountGridMap({
       library: triplanarLibrary('uv1_triplanar = true'),
       cells: '0, 0, 0, 1, 0, 0',
     });
-    const points = grid.points();
+    const [points, ...others] = grid.points();
 
-    expect(points).toHaveLength(2);
-    expect(points.map((cell) => cell.geometry.getAttribute('position').count)).toEqual([1, 1]);
-    expect(points.flatMap(vertexPlaces)).toEqual([
-      [1, 1, 1],
-      [3, 1, 1],
+    expect(others).toEqual([]);
+    expect(Array.from(points!.geometry.getAttribute(CELL_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
+      0, 0, 0, 0, 0, 0,
     ]);
+    expect((points!.material as Material).userData.godotPointsAtCells).toBe(true);
   });
 
   it("draws each cell's points on their own when the material billboards, as each turns about its cell", async () => {

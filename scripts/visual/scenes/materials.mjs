@@ -31,6 +31,10 @@ export const MATERIAL_SCENES = [
   // editor orbit. The only golden that pairs a billboard with a DISABLED quad.
   // Sprite edges antialias against the ground.
   { name: 'material-billboard', file: 'unit-material-billboard.tscn' },
+  // A billboard that keeps a non-uniform scale beside an unscaled one: the
+  // squashed sphere lights by normals turned through the scaled basis, as
+  // Godot's MODELVIEW_NORMAL_MATRIX does.
+  { name: 'material-billboard-keep-scale', file: 'unit-material-billboard-keep-scale.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring beside a metallic, emissive body. Pins the
   // additive billboard gradient glow. Additive edges are AA-sensitive.

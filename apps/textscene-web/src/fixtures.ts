@@ -4014,6 +4014,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Billboard Keep Scale",
+    "file": "unit-material-billboard-keep-scale.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Billboard",
     "file": "unit-material-billboard.tscn",
     "category": "Unit - Materials"

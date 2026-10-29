@@ -6,7 +6,7 @@ import { parseStandardMaterial3DScalars } from '../../resources/materials/standa
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 
 const BAG: StandardMaterialBag = { materialClass: 'standard', props: { color: 'red' } };
-const SIZE_6: PointDraw = { pixels: 6, pixelRatio: 1, samplesAlbedoAtPointCoord: false };
+const SIZE_6: PointDraw = { pixels: 6, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'mesh' };
 const SIZE_6_AT_COORD: PointDraw = { ...SIZE_6, samplesAlbedoAtPointCoord: true };
 const BOUND_MAP: StandardMaterialBag = { ...BAG, props: { map: new THREE.Texture() } };
 
@@ -76,18 +76,33 @@ describe('the point size uniform', () => {
 
 describe('pointDrawOf', () => {
   it('is the 1 px default of a material with no point size', () => {
-    expect(pointDrawOf(null, 1)).toEqual({ pixels: 1, pixelRatio: 1, samplesAlbedoAtPointCoord: false });
+    expect(pointDrawOf(null, 1, 'mesh')).toEqual({
+      pixels: 1,
+      pixelRatio: 1,
+      samplesAlbedoAtPointCoord: false,
+      placement: 'mesh',
+    });
   });
 
   it('is point_size under use_point_size, and samples the albedo at the point coordinate', () => {
     const scalars = parseStandardMaterial3DScalars({ use_point_size: 'true', point_size: '12' });
-    expect(pointDrawOf(scalars, 1)).toEqual({ pixels: 12, pixelRatio: 1, samplesAlbedoAtPointCoord: true });
+    expect(pointDrawOf(scalars, 1, 'mesh')).toEqual({
+      pixels: 12,
+      pixelRatio: 1,
+      samplesAlbedoAtPointCoord: true,
+      placement: 'mesh',
+    });
   });
 
   // `material.cpp:1229-1232` writes POINT_SIZE, and `:1612-1615` samples at POINT_COORD, only under the flag.
   it('ignores point_size without use_point_size (edge case)', () => {
     const scalars = parseStandardMaterial3DScalars({ point_size: '12' });
-    expect(pointDrawOf(scalars, 1)).toEqual({ pixels: 1, pixelRatio: 1, samplesAlbedoAtPointCoord: false });
+    expect(pointDrawOf(scalars, 1, 'mesh')).toEqual({
+      pixels: 1,
+      pixelRatio: 1,
+      samplesAlbedoAtPointCoord: false,
+      placement: 'mesh',
+    });
   });
 
   it('carries the canvas pixel ratio beside the size', () => {

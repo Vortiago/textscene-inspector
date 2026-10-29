@@ -4,12 +4,7 @@
  * tangent frame Godot writes for a projecting surface (`material.cpp:1386-1414`).
  */
 import { describe, expect, it } from 'vitest';
-import {
-  readsObjectSpace,
-  triplanarInjection,
-  triplanarUserData,
-  type TriplanarRecord,
-} from './godotTriplanar';
+import { triplanarInjection, triplanarUserData, type TriplanarRecord } from './godotTriplanar';
 import { nodePoseUniforms } from './nodePose';
 import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
@@ -31,7 +26,7 @@ describe('triplanarInjection: the projected position and weights', () => {
     const { vertexShader } = compiled(worldTriplanarRecord()).shader;
 
     expect(vertexShader).toContain('#define GODOT_UV1_WORLD_TRIPLANAR\n');
-    expect(vertexShader).toContain('vec3 godotUv1Position = ( godotModel * vec4( transformed, 1.0 ) ).xyz;');
+    expect(vertexShader).toContain('vec3 godotUv1Position = ( godotModel * vec4( godotVertex, 1.0 ) ).xyz;');
   });
 
   it("projects the mesh's own position under local triplanar", () => {
@@ -71,8 +66,29 @@ describe('triplanarInjection: the projected position and weights', () => {
   it("reads the node's model through the instance, as Godot's MODEL_MATRIX holds a MultiMesh instance", () => {
     const { vertexShader } = compiled(worldTriplanarRecord()).shader;
 
-    expect(vertexShader).toContain('mat4 godotNodeModel = modelMatrix * godotModelFromObject;');
-    expect(vertexShader).toContain('mat4 godotModel = godotNodeModel * instanceMatrix;');
+    expect(vertexShader).toContain('mat4 godotModel = modelMatrix * godotModelFromObject;');
+    expect(vertexShader).toContain('godotModel *= instanceMatrix;');
+    expect(vertexShader).toContain('godotModelNormal *= mat3( instanceMatrix );');
+  });
+
+  it('turns the normal by the cofactors of the basis, MODEL_NORMAL_MATRIX up to a positive scale', () => {
+    const { vertexShader } = compiled(worldTriplanarRecord()).shader;
+
+    expect(vertexShader).toContain(
+      'mat3 cofactors = mat3( cross( m[ 1 ], m[ 2 ] ), cross( m[ 2 ], m[ 0 ] ), cross( m[ 0 ], m[ 1 ] ) );'
+    );
+    expect(vertexShader).toContain('return cofactors * sign( dot( m[ 0 ], cofactors[ 0 ] ) );');
+    expect(vertexShader).toContain('mat3 godotModelNormal = godotNormalMatrix( mat3( godotModel ) );');
+  });
+
+  it("reads a merged GridMap point's item position and normal, placed by its cell as an instance", () => {
+    const { vertexShader } = compiled(worldTriplanarRecord()).shader;
+    const cellPoints = vertexShader.slice(vertexShader.indexOf('#ifdef GODOT_CELL_POINTS'));
+
+    expect(cellPoints).toContain('godotNormal = godotItemNormal;');
+    expect(cellPoints).toContain('godotVertex = godotItemPosition;');
+    expect(cellPoints).toContain('godotModel *= godotCellMatrix;');
+    expect(cellPoints).toContain('godotModelNormal *= mat3( godotCellMatrix );');
   });
 });
 
@@ -196,23 +212,5 @@ describe('triplanarInjection: uniforms and programs', () => {
   it('compiles nothing for a material that records no mapping', () => {
     expect(triplanarInjection({ userData: {} })).toBeUndefined();
     expect(triplanarInjection({})).toBeUndefined();
-  });
-});
-
-describe('readsObjectSpace', () => {
-  it('holds for a local projection', () => {
-    expect(readsObjectSpace(worldTriplanarRecord({ uv1: LOCAL_UV1 }))).toBe(true);
-  });
-
-  it('holds for a local frame under a world projection, as the frame reads the mesh normal', () => {
-    expect(readsObjectSpace(worldTriplanarRecord({ isTangentWorld: false }))).toBe(true);
-  });
-
-  it('fails for a world projection in a world frame', () => {
-    expect(readsObjectSpace(worldTriplanarRecord())).toBe(false);
-  });
-
-  it('fails for no mapping (edge case)', () => {
-    expect(readsObjectSpace(null)).toBe(false);
   });
 });

@@ -83,6 +83,10 @@ export function patchedFragment(material: THREE.Material): string {
   return patchedProgram(material).fragmentShader;
 }
 
+export function patchedVertex(material: THREE.Material): string {
+  return patchedProgram(material).vertexShader;
+}
+
 /** The uniforms `material`'s `onBeforeCompile` adds. */
 export function patchedUniforms(material: THREE.Material): ProgramShader['uniforms'] {
   return patchedProgram(material).uniforms;

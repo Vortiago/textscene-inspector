@@ -38,7 +38,7 @@ export function SurfaceMaterialSlots({ sources, drawsPoints }: SurfaceMaterialSl
           key={i}
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
-          drawsPoints={drawsPoints}
+          points={drawsPoints ? 'mesh' : undefined}
         />
       ))}
     </>

@@ -1,12 +1,15 @@
 /**
- * The world matrix a billboarding StandardMaterial3D surface draws with. Godot writes it in
- * the vertex shader as a new `MODELVIEW_MATRIX` (`scene/resources/material.cpp:1260-1335`),
- * so it replaces the model basis for that surface alone and keeps the model origin.
+ * The world matrix and the normal matrix a billboarding StandardMaterial3D surface draws with.
+ * Godot writes them in the vertex shader as a new `MODELVIEW_MATRIX` and
+ * `MODELVIEW_NORMAL_MATRIX` (`scene/resources/material.cpp:1260-1335`), so they replace the model
+ * basis for that surface alone and keep the model origin.
  */
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
+import type { ProgramInjection } from './materialProgramInputs';
+import { editedProgram, editedShader } from './shaderPatch/chunkPatch';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
@@ -79,3 +82,24 @@ function fixedYBasis(camera: THREE.Matrix4): boolean {
   axisZ.normalize();
   return true;
 }
+
+/**
+ * Godot's billboard turns normals by `mat3(MODELVIEW_MATRIX)` (`material.cpp:1284,1307,1338`), not
+ * by its inverse transpose, so a kept non-uniform scale stretches them as it stretches the surface.
+ * three writes `normalMatrix` after the draw hook (`WebGLRenderer.js:2161`), so the program reads it.
+ */
+export const GODOT_BILLBOARD_NORMAL: ProgramInjection = {
+  cacheKey: 'godot-billboard-normal',
+  onBeforeCompile(shader) {
+    const turn = {
+      three: 'transformedNormal = normalMatrix * transformedNormal;',
+      godot: 'transformedNormal = mat3( modelViewMatrix ) * transformedNormal;',
+    };
+    const chunk = editedShader(THREE.ShaderChunk.defaultnormal_vertex, [turn], 'defaultnormal_vertex');
+    editedProgram(
+      shader,
+      { vertex: [{ three: '#include <defaultnormal_vertex>', godot: chunk }] },
+      'billboard normal'
+    );
+  },
+};

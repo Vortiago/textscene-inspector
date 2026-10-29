@@ -242,7 +242,7 @@ function MaterialOverlayMesh({
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={source} drawsPoints={drawsPoints} />
+      <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
     </Drawn>
   );
 }

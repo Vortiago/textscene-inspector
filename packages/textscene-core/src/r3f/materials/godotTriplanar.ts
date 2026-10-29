@@ -38,18 +38,6 @@ export function triplanarUserData(record: TriplanarRecord | null): Record<string
   return record ? { [TRIPLANAR_KEY]: record } : {};
 }
 
-/**
- * `triplanar` reads the mesh's own space: a UV set projects the local position, or the frame is
- * local. A draw that moves the vertices out of the mesh's space must not draw such a mapping.
- */
-export function readsObjectSpace(triplanar: Triplanar | null): boolean {
-  if (!triplanar) return false;
-  const projectsLocal = [triplanar.uv1, triplanar.uv2].some(
-    (projection) => projection && !projection.isWorld
-  );
-  return projectsLocal || !triplanar.isTangentWorld;
-}
-
 /** The UV sets of Godot's shader, by the prefix of their uniforms. */
 const UV_SETS = ['uv1', 'uv2'] as const;
 type UvSet = (typeof UV_SETS)[number];
@@ -138,13 +126,25 @@ const FRAME_VARYINGS = `varying vec3 vGodotTriplanarTangent;
 varying vec3 vGodotTriplanarBinormal;
 `;
 
-const VERTEX_PARS = `${NODE_POSE_PARS}${UV_SETS.map(projectionVertexPars).join('')}${FRAME_VARYINGS}`;
+/**
+ * MODEL_NORMAL_MATRIX up to a positive scale, which every reader normalises away. Godot inverts per
+ * vertex under a non-uniform scale (`scene_forward_clustered.glsl:256-260`). The cofactors give the
+ * same turn for three cross products.
+ */
+const NORMAL_MATRIX = /* glsl */ `mat3 godotNormalMatrix( const in mat3 m ) {
+	mat3 cofactors = mat3( cross( m[ 1 ], m[ 2 ] ), cross( m[ 2 ], m[ 0 ] ), cross( m[ 0 ], m[ 1 ] ) );
+	return cofactors * sign( dot( m[ 0 ], cofactors[ 0 ] ) );
+}
+`;
+
+const VERTEX_PARS = `${NODE_POSE_PARS}${UV_SETS.map(projectionVertexPars).join('')}${FRAME_VARYINGS}${NORMAL_MATRIX}`;
 
 /**
  * Godot's VERTEX and NORMAL: the mesh's, after skinning and morphs, before an instance's
  * transform. A scope of its own, since three runs the normal chunks in only some programs.
- * Godot's MODEL_MATRIX and MODEL_NORMAL_MATRIX are the node's, through the instance
- * (`scene_forward_clustered.glsl:338-346`).
+ * Godot's MODEL_MATRIX and MODEL_NORMAL_MATRIX are the node's, then the instance's, whose basis
+ * turns the normal as it stands (`scene_forward_clustered.glsl:338-346`). A merged GridMap point
+ * carries its item's space and its cell's matrix, which Godot draws as an instance (`godotPoint.ts`).
  */
 const GODOT_VERTEX_INPUTS = /* glsl */ `
 	vec3 godotNormal;
@@ -154,13 +154,18 @@ const GODOT_VERTEX_INPUTS = /* glsl */ `
 		#include <skinnormal_vertex>
 		godotNormal = objectNormal;
 	}
-	mat4 godotNodeModel = modelMatrix * godotModelFromObject;
+	vec3 godotVertex = transformed;
+	mat4 godotModel = modelMatrix * godotModelFromObject;
+	mat3 godotModelNormal = godotNormalMatrix( mat3( godotModel ) );
 	#ifdef USE_INSTANCING
-		mat4 godotModel = godotNodeModel * instanceMatrix;
-		mat3 godotModelNormal = inverse( transpose( mat3( godotNodeModel ) ) ) * mat3( instanceMatrix );
-	#else
-		mat4 godotModel = godotNodeModel;
-		mat3 godotModelNormal = inverse( transpose( mat3( godotNodeModel ) ) );
+		godotModel *= instanceMatrix;
+		godotModelNormal *= mat3( instanceMatrix );
+	#endif
+	#ifdef GODOT_CELL_POINTS
+		godotNormal = godotItemNormal;
+		godotVertex = godotItemPosition;
+		godotModel *= godotCellMatrix;
+		godotModelNormal *= mat3( godotCellMatrix );
 	#endif
 `;
 
@@ -181,6 +186,7 @@ const GODOT_FRAME = /* glsl */ `
 	godotBinormal += vec3( 0.0, 0.0, - 1.0 ) * abs( godotFrameNormal.y );
 	godotBinormal += vec3( 0.0, 1.0, 0.0 ) * abs( godotFrameNormal.z );
 	#ifdef GODOT_TRIPLANAR_TANGENT_WORLD
+		// Godot's own shader inverts per vertex here, material.cpp:1403.
 		mat3 godotNormalModel = inverse( godotModelNormal );
 		godotTangent = godotNormalModel * normalize( godotTangent );
 		godotBinormal = godotNormalModel * normalize( godotBinormal );
@@ -208,10 +214,10 @@ function projectionVertex(uv: UvSet): string {
 	#ifdef ${projects(uv)}
 		#ifdef ${projectsWorld(uv)}
 			vec3 ${glslName(uv, 'Normal')} = ${worldNormal};
-			vec3 ${glslName(uv, 'Position')} = ( godotModel * vec4( transformed, 1.0 ) ).xyz;
+			vec3 ${glslName(uv, 'Position')} = ( godotModel * vec4( godotVertex, 1.0 ) ).xyz;
 		#else
 			vec3 ${glslName(uv, 'Normal')} = godotNormal;
-			vec3 ${glslName(uv, 'Position')} = transformed;
+			vec3 ${glslName(uv, 'Position')} = godotVertex;
 		#endif
 		${weights} = pow( abs( ${glslName(uv, 'Normal')} ), vec3( ${glslName(uv, 'TriplanarSharpness')} ) );
 		${weights} /= dot( ${weights}, vec3( 1.0 ) );

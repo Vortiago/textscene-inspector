@@ -29,6 +29,7 @@ import {
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection } from '../../../r3f/lightModes';
 import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
+import { GODOT_BILLBOARD_NORMAL } from '../../../r3f/surfaceBillboard';
 import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -288,6 +289,11 @@ export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): Sur
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
 }
 
+/** Godot's billboard normal turn for a surface that billboards, after any patch that inlines `defaultnormal_vertex`. */
+function billboardNormalInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
+  return surfaceBillboard(scalars) === NO_BILLBOARD ? undefined : GODOT_BILLBOARD_NORMAL;
+}
+
 /** The billboard a material was derived with. */
 export function billboardOf(material: THREE.Material): SurfaceBillboard {
   return recordedOn(material, BILLBOARD_KEY, NO_BILLBOARD);
@@ -374,7 +380,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         userData,
         ...blend,
       },
-      injection: heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+      injection: composeInjections([
+        heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+        billboardNormalInjection(scalars),
+      ]),
       heightmapTexture,
     };
   }
@@ -422,6 +431,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),
+    billboardNormalInjection(scalars),
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

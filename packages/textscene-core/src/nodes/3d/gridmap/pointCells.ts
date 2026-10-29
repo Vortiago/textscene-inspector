@@ -1,9 +1,13 @@
 /**
  * The points of a GridMap item at each of its cells as one geometry, since three has no instanced
- * form of `THREE.Points`. Each cell's matrix moves its points and turns their normals.
+ * form of `THREE.Points`. Each cell's matrix moves its points and turns their normals. Each point
+ * also keeps its item's position and normal and its cell's matrix, for a program that reads the
+ * item's space as Godot's instanced draw does.
  */
 
 import * as THREE from 'three';
+import { CELL_POINT_ATTRIBUTES, type PointPlacement } from '../../../r3f/materials/godotPoint';
+import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 
 type TypedArrayConstructor = new (length: number) => THREE.TypedArray;
 
@@ -30,9 +34,57 @@ export function pointsAtCells(
     const { itemSize, normalized } = source.getAttribute(name);
     merged.setAttribute(name, new THREE.BufferAttribute(placed.get(name)!, itemSize, normalized));
   }
+  addItemSpace(merged, source, matrices);
   merged.setIndex(new THREE.BufferAttribute(cellsIndex(source, matrices.length), 1));
   addGroupRanges(merged, source, matrices.length);
   return merged;
+}
+
+/** Where `geometry`'s points sit: merged at cells by `pointsAtCells`, or in the mesh. Undefined for triangles. */
+export function pointPlacementOf(geometry: THREE.BufferGeometry): PointPlacement | undefined {
+  if (!geometryDrawsPoints(geometry)) return undefined;
+  return geometry.getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix) ? 'cells' : 'mesh';
+}
+
+/** Each point's item position and normal, unplaced, and its cell's matrix. */
+function addItemSpace(
+  merged: THREE.BufferGeometry,
+  source: THREE.BufferGeometry,
+  matrices: readonly THREE.Matrix4[]
+): void {
+  const position = source.getAttribute('position');
+  const normal = source.getAttribute('normal') ?? plusZNormals(position.count);
+  const { itemPosition, itemNormal, cellMatrix } = CELL_POINT_ATTRIBUTES;
+  merged.setAttribute(itemPosition, repeatedAttribute(position, matrices.length));
+  merged.setAttribute(itemNormal, repeatedAttribute(normal, matrices.length));
+  const cellMatrices = new Float32Array(position.count * matrices.length * 16);
+  matrices.forEach((matrix, cell) => {
+    for (let i = 0; i < position.count; i++)
+      cellMatrices.set(matrix.elements, (cell * position.count + i) * 16);
+  });
+  merged.setAttribute(cellMatrix, new THREE.BufferAttribute(cellMatrices, 16));
+}
+
+/** A point carries no normal array, so Godot lights it along +Z in node space. */
+function plusZNormals(count: number): THREE.BufferAttribute {
+  const normals = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) normals[i * 3 + 2] = 1;
+  return new THREE.BufferAttribute(normals, 3);
+}
+
+/** `attribute` once for each of `cells`, as it stands. */
+function repeatedAttribute(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  cells: number
+): THREE.BufferAttribute {
+  const values = new Float32Array(attribute.count * attribute.itemSize);
+  for (let i = 0; i < attribute.count; i++) {
+    for (let c = 0; c < attribute.itemSize; c++)
+      values[i * attribute.itemSize + c] = attribute.getComponent(i, c);
+  }
+  const repeated = new Float32Array(values.length * cells);
+  for (let cell = 0; cell < cells; cell++) repeated.set(values, cell * values.length);
+  return new THREE.BufferAttribute(repeated, attribute.itemSize);
 }
 
 /** An empty array of `source`'s attribute `name`, long enough for `cells` copies. */
