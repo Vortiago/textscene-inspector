@@ -28,6 +28,9 @@ export const GEOMETRY_SCENES = [
   // A SoftBody3D draws its box at rest, with no simulation. No other scene shows a regression in
   // it: the box is the only node here that draws.
   { name: 'soft-body-3d', file: 'unit-soft-body-3d.tscn' },
+  // A CPUParticles3D settled to a fixed seed: four boxes in a row, each an instance of the mesh
+  // coloured through `vertex_color_use_as_albedo`.
+  { name: 'cpuparticles3d-row', file: 'unit-cpuparticles3d-row.tscn' },
   // An ArrayMesh triangle-strip surface, read as triangles as Godot reads it.
   { name: 'arraymesh-triangle-strip', file: 'unit-arraymesh-triangle-strip.tscn' },
   // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's

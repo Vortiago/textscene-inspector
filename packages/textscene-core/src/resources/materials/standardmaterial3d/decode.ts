@@ -217,6 +217,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
     specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
+    vertexColorIsSrgb: boolOr(properties['vertex_color_is_srgb'], false, CONTEXT),
     disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
     // The shader reads `ao_light_affect` only with `ao_enabled` (`material.cpp:1959`).
     aoLightAffect: boolOr(properties['ao_enabled'], false, CONTEXT)

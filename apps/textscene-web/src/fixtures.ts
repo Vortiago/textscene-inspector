@@ -463,6 +463,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Row",
+    "file": "unit-cpuparticles3d-row.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Damped Spring Joint 2d",
     "file": "unit-damped-spring-joint-2d.tscn",
     "category": "Other"
@@ -4136,6 +4141,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Uv1 Top Edge",
     "file": "unit-material-uv1-top-edge.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Vertex Color Srgb",
+    "file": "unit-material-vertex-color-srgb.tscn",
     "category": "Unit - Materials"
   },
   {

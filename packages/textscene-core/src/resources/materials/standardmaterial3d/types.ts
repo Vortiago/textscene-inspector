@@ -171,6 +171,8 @@ export interface StandardMaterial3DData {
   specularMode: number;
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
+  /** `vertex_color_is_srgb` (default false): the vertex colour is decoded from sRGB. */
+  vertexColorIsSrgb: boolean;
   /** `disable_specular_occlusion` (default false): a dim ambient leaves the reflection whole. */
   disablesSpecularOcclusion: boolean;
   /** `ao_light_affect`: how far the occlusion also occludes direct light, 0 without `ao_enabled`. Unclamped, as the setter is. */
@@ -278,6 +280,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   diffuseMode: number;
   specularMode: number;
   useVertexColors: boolean;
+  vertexColorIsSrgb: boolean;
   disablesSpecularOcclusion: boolean;
   aoLightAffect: number;
   aoTextureChannelMask: TextureChannelMask;

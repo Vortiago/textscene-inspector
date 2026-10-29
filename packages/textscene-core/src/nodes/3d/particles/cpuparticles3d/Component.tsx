@@ -27,6 +27,7 @@ import { matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms';
 import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
+import { boxlessUserData } from '../../../../r3f/bounds';
 import { boxPlacement } from '../../../../r3f/visibilityRange/placements';
 import { useGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 import { geometryDrawsPoints } from '../../../../resources/meshes/godotSurface';
@@ -196,7 +197,7 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
         args={[geometry, startingMaterial, count]}
         frustumCulled={false}
         {...drawHookProps(shadow)}
-        userData={visualLayersUserData(godotLayers)}
+        userData={drawUserData(godotLayers)}
       >
         <ParticleSlots sources={sources} drawsPoints={false} />
       </instancedMesh>
@@ -209,6 +210,7 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
           frustumCulled={false}
           renderOrder={MATERIAL_OVERLAY_RENDER_ORDER}
           raycast={NO_RAYCAST}
+          userData={boxlessUserData()}
           onBeforeRender={shadow.onBeforeRender}
           onAfterRender={shadow.onAfterRender}
         >
@@ -217,6 +219,11 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
       )}
     </>
   );
+}
+
+/** A particle draw's userData: the node's `layers`, and no box of its own for the editor. */
+function drawUserData(godotLayers: number) {
+  return { ...visualLayersUserData(godotLayers), ...boxlessUserData() };
 }
 
 /** Opts a draw out of picking: the emitter's own draw is the one a pick reports. */
@@ -250,7 +257,7 @@ function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: 
       <points
         args={[geometry, startingMaterial]}
         {...drawHookProps(shadow)}
-        userData={visualLayersUserData(godotLayers)}
+        userData={drawUserData(godotLayers)}
       >
         <ParticleSlots sources={sources} drawsPoints />
       </points>
@@ -259,6 +266,7 @@ function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: 
           args={[geometry]}
           renderOrder={MATERIAL_OVERLAY_RENDER_ORDER}
           raycast={NO_RAYCAST}
+          userData={boxlessUserData()}
           onBeforeRender={shadow.onBeforeRender}
           onAfterRender={shadow.onAfterRender}
         >

@@ -8,6 +8,7 @@ import {
   type ParticleDraw,
 } from './godotParticles';
 import type { ProgramShader } from '../materialProgramInputs';
+import { SRGB_VERTEX_COLOR } from './godotVertexColor';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
@@ -23,13 +24,14 @@ const PARTICLES: ParticleDraw = {
   anim: ONE_CELL,
 };
 
-/** What `draw` leaves of `program`'s shaders, compiled on `material`. */
+/** What `draw` on `bag` leaves of `program`'s shaders, compiled on `material`. */
 function compiled(
   draw: ParticleDraw,
   program: keyof typeof THREE.ShaderLib = 'basic',
-  material: THREE.Material = new THREE.MeshBasicMaterial()
+  material: THREE.Material = new THREE.MeshBasicMaterial(),
+  bag: StandardMaterialBag = BAG
 ): ProgramShader {
-  const drawn = withParticleDraw(BAG, draw);
+  const drawn = withParticleDraw(bag, draw);
   material.userData = drawn.props.userData!;
   const { vertexShader, fragmentShader } = THREE.ShaderLib[program];
   const shader: ProgramShader = { vertexShader, fragmentShader, uniforms: {} };
@@ -59,6 +61,16 @@ describe.each(['basic', 'standard', 'physical'] as const)(
     });
   }
 );
+
+// `scene_forward_clustered.glsl:309` multiplies the instance colour before the material's vertex
+// code runs, and that code decodes an sRGB COLOR (`material.cpp:1218-1227`).
+it('multiplies the instance colour before the sRGB decode of the vertex colour', () => {
+  const srgb = { ...BAG, injection: SRGB_VERTEX_COLOR };
+  const { vertexShader } = compiled(UNBILLBOARDED, 'basic', new THREE.MeshBasicMaterial(), srgb);
+  expect(vertexShader.indexOf('vColor *= particleColor;')).toBeLessThan(
+    vertexShader.indexOf('vColor.rgb = mix( pow(')
+  );
+});
 
 describe('a particle draw with no billboard', () => {
   it('keeps the instance pose', () => {

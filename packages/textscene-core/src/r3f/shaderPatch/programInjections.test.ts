@@ -28,6 +28,7 @@ import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godo
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw } from '../materials/godotPoint';
 import { withParticleDraw } from '../materials/godotParticles';
+import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
@@ -168,6 +169,7 @@ const INJECTIONS: readonly InjectionCase[] = [
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
   injected('materials/godotParticles.ts', 'particle draw', SURFACE_AND_DEPTH, () => particleBag().injection),
+  injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
   ),

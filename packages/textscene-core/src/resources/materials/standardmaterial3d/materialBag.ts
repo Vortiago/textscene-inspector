@@ -15,6 +15,7 @@ import { BillboardMode } from '../../../godot/rendering/materials/billboardMode'
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
+import { SRGB_VERTEX_COLOR } from '../../../r3f/materials/godotVertexColor';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
@@ -138,6 +139,11 @@ function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
  */
 function specularIntensity(specular: number): number {
   return (0.16 * specular * specular) / 0.04;
+}
+
+/** The sRGB decode of a surface whose albedo reads an sRGB vertex colour, else none. */
+function vertexColorInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
+  return scalars.useVertexColors && scalars.vertexColorIsSrgb ? SRGB_VERTEX_COLOR : undefined;
 }
 
 /**
@@ -328,7 +334,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         userData,
         ...blend,
       },
-      injection: heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+      injection: composeInjections([
+        vertexColorInjection(scalars),
+        heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+      ]),
       heightmapTexture,
     };
   }
@@ -370,6 +379,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   // `ao_light_affect` is set.
   const injection = composeInjections([
     lightModesInjection(scalars),
+    vertexColorInjection(scalars),
     aoMap || scalars.aoLightAffect > 0 ? GODOT_AMBIENT_OCCLUSION : undefined,
     pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,

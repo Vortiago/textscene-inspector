@@ -1,0 +1,53 @@
+; The variable: vertex_color_is_srgb. Two rows of particles share one colour, whose green sits on the
+; power arm of the sRGB curve and whose blue on the linear arm. The upper row's material decodes the
+; colour from sRGB and the lower row's reads it as linear, so the upper row draws darker.
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Srgb"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+vertex_color_is_srgb = true
+
+[sub_resource type="StandardMaterial3D" id="Linear"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="SrgbBox"]
+material = SubResource("Srgb")
+size = Vector3(0.2, 0.2, 0.2)
+
+[sub_resource type="BoxMesh" id="LinearBox"]
+material = SubResource("Linear")
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="SrgbRow" type="CPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+amount = 4
+lifetime = 2.0
+preprocess = 1.5
+use_fixed_seed = true
+seed = 7
+mesh = SubResource("SrgbBox")
+direction = Vector3(1, 0, 0)
+spread = 0.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0
+color = Color(1, 0.5, 0.02, 1)
+
+[node name="LinearRow" type="CPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+amount = 4
+lifetime = 2.0
+preprocess = 1.5
+use_fixed_seed = true
+seed = 7
+mesh = SubResource("LinearBox")
+direction = Vector3(1, 0, 0)
+spread = 0.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0
+color = Color(1, 0.5, 0.02, 1)

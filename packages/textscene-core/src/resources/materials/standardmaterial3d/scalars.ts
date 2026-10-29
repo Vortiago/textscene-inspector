@@ -59,6 +59,7 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     diffuseMode: data.diffuseMode,
     specularMode: data.specularMode,
     useVertexColors: data.useVertexColors,
+    vertexColorIsSrgb: data.vertexColorIsSrgb,
     disablesSpecularOcclusion: data.disablesSpecularOcclusion,
     aoLightAffect: data.aoLightAffect,
     aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),

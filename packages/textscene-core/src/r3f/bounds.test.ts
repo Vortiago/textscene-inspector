@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
-import { computeWorldBoundingBox } from './bounds.js';
+import { boxlessUserData, computeWorldBoundingBox } from './bounds.js';
 import { nodeIconUserData } from './editorHelpers.js';
 import { placeSkinnedMeshInSkeletonSpace } from '../resources/formats/glb/skinnedMeshSpace.js';
 
@@ -138,5 +138,14 @@ describe('computeWorldBoundingBox: a node icon', () => {
     node.add(iconMesh());
 
     expect(computeWorldBoundingBox(node).isEmpty()).toBe(true);
+  });
+});
+
+describe('computeWorldBoundingBox of a boxless draw', () => {
+  // `CPUParticles3D::get_aabb` is `AABB()` (`cpu_particles_3d.cpp:43-45`).
+  it('leaves out a draw whose node gives the editor no box', () => {
+    const drawn = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    drawn.userData = boxlessUserData();
+    expect(computeWorldBoundingBox(drawn).isEmpty()).toBe(true);
   });
 });

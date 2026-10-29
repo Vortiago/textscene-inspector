@@ -28,6 +28,9 @@ export const MATERIAL_SCENES = [
   // editor orbit. The only golden that pairs a billboard with a DISABLED quad.
   // Sprite edges antialias against the ground.
   { name: 'material-billboard', file: 'unit-material-billboard.tscn' },
+  // `vertex_color_is_srgb` on two rows of particles with one colour: the upper row decodes it from
+  // sRGB and draws darker than the lower row, which reads it as linear.
+  { name: 'material-vertex-color-srgb', file: 'unit-material-vertex-color-srgb.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring beside a metallic, emissive body. Pins the
   // additive billboard gradient glow. Additive edges are AA-sensitive.
