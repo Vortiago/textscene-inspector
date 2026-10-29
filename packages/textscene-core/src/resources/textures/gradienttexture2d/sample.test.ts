@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { gradientOffsetAt, sampleGradientColor } from './sample';
+import { gradientOffsetAt, sampleGradientColor, storedGradient } from './sample';
 import { rasterizeGradientTexture2D } from './build';
 import { decodeGradientTexture2D } from './decode';
 import { gradientOf } from './gradient.testkit';
@@ -216,5 +216,20 @@ describe('rasterizeGradientTexture2D', () => {
     const corner = at(0, 0);
     expect(corner.r).toBe(255);
     expect(corner.a).toBe(0);
+  });
+});
+
+describe('storedGradient', () => {
+  it('samples the float stops as Godot 4.6.3 does', () => {
+    const gradient: Gradient = {
+      interpolationMode: GradientInterpolationMode.LINEAR,
+      stops: [
+        { offset: 0.1, color: { r: 1, g: 0.2, b: 0.7, a: 1 } },
+        { offset: 0.8, color: { r: 0.1, g: 0.9, b: 0.3, a: 0.4 } },
+      ],
+    };
+
+    // Gradient.sample(0.66).b from the GDScript oracle on Godot 4.6.3.
+    expect(sampleGradientColor(storedGradient(gradient), 0.66).b).toBe(Math.fround(0.379999995));
   });
 });
