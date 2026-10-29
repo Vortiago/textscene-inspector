@@ -51,15 +51,18 @@ const GODOT_UV_GRADIENTS = `${THREE_NON_PERTURBED_NORMAL}
 const THREE_NORMAL_SCALE = 'uniform vec2 normalScale;\n#endif';
 
 /**
- * The tangent-space read as one function of the texel's UV and gradients, so the roughness limiter
- * (`godotLightFunction.ts`) reads a neighbouring texel exactly as the pixel does. `textureGrad`
- * takes the gradients explicitly: the limiter's offset UV has none of its own.
+ * The tangent-space read as one function of a texel, so the roughness limiter
+ * (`godotLightFunction.ts`) reads a neighbouring texel exactly as the pixel does.
+ * `GODOT_NORMAL_TEXEL( step )` reads the map `step` pixels along the screen from this one, at this
+ * pixel's gradients, as `textureGrad` takes them: the limiter's offset UV has none of its own. A
+ * triplanar mapping replaces the read (`godotTriplanar.ts`).
  */
 const GODOT_MAP_NORMAL = /* glsl */ `uniform vec2 normalScale;
 #endif
 #ifdef USE_NORMALMAP_TANGENTSPACE
-	vec3 godotMapNormal( const in vec2 uv, const in vec2 uvDx, const in vec2 uvDy, const in mat3 tbn ) {
-		vec3 mapN = textureGrad( normalMap, uv, uvDx, uvDy ).xyz * 2.0 - 1.0;
+	#define GODOT_NORMAL_TEXEL( step ) textureGrad( normalMap, vNormalMapUv + ( step ).x * godotUvDx + ( step ).y * godotUvDy, godotUvDx, godotUvDy )
+	vec3 godotMapNormal( const in vec4 texel, const in mat3 tbn ) {
+		vec3 mapN = texel.xyz * 2.0 - 1.0;
 		#if defined( USE_PACKED_NORMALMAP )
 			mapN = vec3( mapN.xy, sqrt( saturate( 1.0 - dot( mapN.xy, mapN.xy ) ) ) );
 		#endif
@@ -75,7 +78,7 @@ const THREE_TANGENT_READ = `	vec3 mapN = texture2D( normalMap, vNormalMapUv ).xy
 	mapN.xy *= normalScale;
 	normal = normalize( tbn * mapN );`;
 
-const GODOT_TANGENT_READ = '\tnormal = godotMapNormal( vNormalMapUv, godotUvDx, godotUvDy, tbn );';
+const GODOT_TANGENT_READ = '\tnormal = godotMapNormal( GODOT_NORMAL_TEXEL( vec2( 0.0 ) ), tbn );';
 
 const GODOT_NORMAL_MAP_EDITS: readonly ChunkEdit<
   typeof PARS_CHUNK | typeof MAPS_CHUNK | typeof BEGIN_CHUNK

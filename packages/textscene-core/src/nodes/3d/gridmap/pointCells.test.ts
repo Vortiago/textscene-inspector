@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { pointsAtCells } from './pointCells';
+import { pointsAtCells, pointsAtCellsInItemSpace } from './pointCells';
+import { CELL_POINT_ATTRIBUTES } from '../../../r3f/materials/godotPoint';
 
 /** Two points, drawn in reverse order by an index, in two groups of one point. */
 function twoPoints(): THREE.BufferGeometry {
@@ -73,5 +74,33 @@ describe('pointsAtCells', () => {
 
   it('holds no vertex for no cell (edge case)', () => {
     expect(pointsAtCells(twoPoints(), []).getAttribute('position').count).toBe(0);
+  });
+
+  it('carries no item space for a surface that does not read it, as it costs a mat4 per point', () => {
+    expect(
+      pointsAtCells(twoPoints(), [moved(0)]).getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix)
+    ).toBeUndefined();
+  });
+
+  it("keeps each point's own position and normal, as Godot's VERTEX and NORMAL are the item's", () => {
+    const halfTurn = new THREE.Matrix4().makeRotationY(Math.PI).setPosition(5, 0, 0);
+    const merged = pointsAtCellsInItemSpace(twoPoints(), [new THREE.Matrix4(), halfTurn]);
+
+    expect(Array.from(merged.getAttribute(CELL_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
+      0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
+    ]);
+    expect(Array.from(merged.getAttribute(CELL_POINT_ATTRIBUTES.itemNormal).array)).toEqual([
+      0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+    ]);
+  });
+
+  it("gives each point its cell's matrix, as Godot's MODEL_MATRIX holds the instance", () => {
+    const cell = moved(20);
+    const matrices = pointsAtCellsInItemSpace(twoPoints(), [moved(10), cell]).getAttribute(
+      CELL_POINT_ATTRIBUTES.cellMatrix
+    );
+
+    expect(matrices.itemSize).toBe(16);
+    expect(Array.from(matrices.array.slice(2 * 16, 3 * 16))).toEqual(cell.elements);
   });
 });

@@ -9,7 +9,6 @@ import type * as THREE from 'three';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
-import type { TscnInternalResource } from '../../parser/types';
 import { NODE_PROPERTY, useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { useTextureView } from '../useTextureView';
@@ -28,11 +27,8 @@ import {
   topDownV,
   fromTopEdge,
   type MaterialTextureStates,
-  type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
-import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
-import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource } from './materialSource';
@@ -41,17 +37,13 @@ import { isLocalToScene } from '../../resources/textures/viewporttexture/localTo
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
 
-/**
- * What a material's textures draw on, where the binding cares: the Godot mesh sub-resource a
- * triplanar material tiles against, or a glTF surface. Stable identity, as a memo reads it.
- */
-export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
+/** What a material's textures draw on where the binding cares: a glTF surface, or none for a Godot mesh. */
+export type TexturedSurface = typeof GLTF_SURFACE;
 
 /**
- * Every texture slot of one StandardMaterial3D, resolved in `material`'s own file's tables. A
- * triplanar material tiles per world unit: a PlaneMesh `surface` folds in its size, and CSG or an
- * ArrayMesh passes none and gets `uv1_scale`. Null when a slot never draws, a file that cannot load
- * or a ViewportTexture in a pass cycle: the surface takes `MISSING_TEXTURE_MATERIAL`.
+ * Every texture slot of one StandardMaterial3D, resolved in `material`'s own file's tables. Null
+ * when a slot never draws, a file that cannot load or a ViewportTexture in a pass cycle: the
+ * surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
@@ -176,31 +168,17 @@ function useDrawnSlot(
   return texture || isArriving ? pendingMapStandIn(slot) : undefined;
 }
 
-/** The texture states of `scalars` on `surface`. */
+/**
+ * The texture states of `scalars` on `surface`. A UV1 attribute runs bottom-up on a Godot mesh and
+ * top-down on a glTF surface. A triplanar set reads no attribute, and a UV2 state flips already, in
+ * `materialTextureStates`.
+ */
 function surfaceTextureStates(
   scalars: StandardMaterial3DScalars,
   surface: TexturedSurface | undefined,
   anisotropicFilteringLevel: number
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars, anisotropicFilteringLevel);
-  if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
-  const uv2 = surface && scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2;
-  if (!scalars.triplanar) return { ...states, uv1: fromTopEdge(states.uv1), uv2 };
-  return { ...states, uv1: surface ? planeTiled(states.uv1, surface) : states.uv1, uv2 };
-}
-
-/**
- * A state on a glTF surface. Its first UV set keeps Godot's top-down V, so a state that reads it
- * flips. A state that reads UV2 flips already, in `materialTextureStates`.
- */
-function onGltfUvs(state: UVSetState): UVSetState {
-  return state.channel === UV2_CHANNEL ? state : topDownV(state);
-}
-
-/**
- * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar):
- * three applies `offset` in UV space, Godot's world-triplanar offset is in world units.
- */
-function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
-  return { ...state, uv: { repeat: triplanarPlaneScale(mesh, state.uv.repeat), offset: state.uv.offset } };
+  if (scalars.triplanar?.uv1) return states;
+  return { ...states, uv1: surface === GLTF_SURFACE ? topDownV(states.uv1) : fromTopEdge(states.uv1) };
 }

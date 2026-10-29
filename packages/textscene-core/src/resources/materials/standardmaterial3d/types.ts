@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
-import type { Vector2 } from '../../../godot/math/vector';
+import type { Vector2, Vector3 } from '../../../godot/math/vector';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import type { BlendMode } from '../../../godot/rendering/materials/blendMode';
 import type { CullMode } from '../../../godot/rendering/materials/cullMode';
@@ -29,6 +29,29 @@ export interface Heightmap {
   flip: [tangent: number, binormal: number];
   /** `heightmap_flip_texture`: the texture holds height, where the default holds depth. */
   readsHeight: boolean;
+}
+
+/** Godot's triplanar mapping of one UV set: the vertex position it projects (`material.cpp:1418-1454`). */
+export interface TriplanarProjection {
+  /** `uv<n>_scale`, on each axis of the projected position. */
+  scale: Vector3;
+  /** `uv<n>_offset`, in the units of the projected position. */
+  offset: Vector3;
+  /** `uv<n>_triplanar_sharpness`: the exponent of each axis's blend weight, 0..150. */
+  sharpness: number;
+  /** `uv<n>_world_triplanar`: projects the world position and normal, not the mesh's. */
+  isWorld: boolean;
+}
+
+/** Godot's triplanar mapping of a surface: each UV set that projects, and its tangent frame. */
+export interface Triplanar {
+  uv1: TriplanarProjection | null;
+  uv2: TriplanarProjection | null;
+  /**
+   * `uv1_world_triplanar`: the space of the frame, which Godot takes from UV1's flag even where
+   * only UV2 projects (`material.cpp:1388-1414`).
+   */
+  isTangentWorld: boolean;
 }
 
 /** Godot's height mapping defaults (`material.cpp:3952`, `:3995-3997`). */
@@ -111,8 +134,6 @@ export interface StandardMaterial3DData {
   uv2Scale: Vector2;
   /** `uv2_offset`, identity where Godot never applies it. */
   uv2Offset: Vector2;
-  /** `uv2_triplanar`: triplanar mapping of the second UV set. */
-  uv2Triplanar: boolean;
   /** The slots that sample UV2 (`emission_on_uv2`, `ao_on_uv2`). */
   uv2Slots: readonly TextureSlot[];
   /** The authored `transparency` mode. */
@@ -183,8 +204,8 @@ export interface StandardMaterial3DData {
   metallicTextureChannel: EnumValue<typeof TextureChannel>;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: Vector2;
-  /** `uv1_triplanar`: triplanar mapping of the first UV set. */
-  triplanar: boolean;
+  /** Triplanar mapping, null when neither `uv1_triplanar` nor `uv2_triplanar` is on. */
+  triplanar: Triplanar | null;
   /** `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
   clearcoat: number;
   /** `clearcoat_roughness` (0..1), gated on `clearcoat_enabled`. */
@@ -258,7 +279,6 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   uv1Offset: Vector2;
   uv2Scale: Vector2;
   uv2Offset: Vector2;
-  uv2Triplanar: boolean;
   uv2Slots: readonly TextureSlot[];
   transparent: boolean;
   castsShadow: boolean;
@@ -284,7 +304,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   side: THREE.Side;
   cullModeExplicit: boolean;
   normalScale: Vector2;
-  triplanar: boolean;
+  triplanar: Triplanar | null;
   clearcoat: number;
   clearcoatRoughness: number;
   rim: number;

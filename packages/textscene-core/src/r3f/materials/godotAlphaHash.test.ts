@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { alignAlphaHash, alphaHashScaleUserData, GODOT_ALPHA_HASH } from './godotAlphaHash';
+import { alphaHashScaleUserData, GODOT_ALPHA_HASH } from './godotAlphaHash';
+import { NODE_POSE_PARS } from './nodePose';
 import type { ProgramShader } from '../materialProgramInputs';
 import { programShader, SURFACE_AND_DEPTH_PROGRAMS } from '../testing/patchedFragment';
 
@@ -11,10 +12,6 @@ function compiled(
   const shader: ProgramShader = { ...program, uniforms: {} };
   GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
   return shader;
-}
-
-function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
-  actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
 }
 
 function objectFromModel(material: THREE.Material): THREE.Matrix4 {
@@ -33,7 +30,7 @@ describe.each(SURFACE_AND_DEPTH_PROGRAMS)('GODOT_ALPHA_HASH on the %s program', 
 
   it('hashes the projected vertex in the node object space', () => {
     const { vertexShader } = compiled(new THREE.MeshBasicMaterial(), program);
-    expect(vertexShader.startsWith('uniform mat4 godotObjectFromModel;')).toBe(true);
+    expect(vertexShader.startsWith(NODE_POSE_PARS)).toBe(true);
     expect(vertexShader).toMatch(
       /#include <project_vertex>\s+#ifdef USE_ALPHAHASH[\s\S]*vPosition = \( godotObjectFromModel \* godotObjectPosition \)\.xyz;/
     );
@@ -76,42 +73,12 @@ describe('alphaHashScaleUserData', () => {
   });
 });
 
-describe('alignAlphaHash', () => {
-  it("takes the material's current scale for the draw", () => {
+describe('GODOT_ALPHA_HASH scale', () => {
+  it("reads the material's current scale at each upload, with no recompile", () => {
     const material = new THREE.MeshBasicMaterial();
     const { uniforms } = compiled(material);
     material.userData = alphaHashScaleUserData(1.5);
 
-    alignAlphaHash(material, new THREE.Matrix4(), new THREE.Matrix4());
-
     expect(uniforms.godotAlphaHashScale!.value).toBe(1.5);
-  });
-
-  it('maps the drawn model back to the node object space', () => {
-    const material = new THREE.MeshBasicMaterial();
-    const uniform = objectFromModel(material);
-    const node = new THREE.Matrix4().makeTranslation(1, 2, 3);
-    const drawn = new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(1, 2, 3);
-
-    alignAlphaHash(material, node, drawn);
-
-    expectSameMatrix(uniform, new THREE.Matrix4().makeRotationY(Math.PI / 2));
-  });
-
-  it('is the identity where three draws in the node pose (edge case)', () => {
-    const material = new THREE.MeshBasicMaterial();
-    const uniform = objectFromModel(material);
-    const node = new THREE.Matrix4().makeRotationX(1).setPosition(4, 5, 6);
-
-    alignAlphaHash(material, node, node);
-
-    expectSameMatrix(uniform, new THREE.Matrix4());
-  });
-
-  it('leaves a material that never compiled the hash alone (error case)', () => {
-    const material = new THREE.MeshBasicMaterial();
-    alignAlphaHash(material, new THREE.Matrix4(), new THREE.Matrix4().makeScale(2, 2, 2));
-
-    expect(objectFromModel(material).equals(new THREE.Matrix4())).toBe(true);
   });
 });

@@ -17,7 +17,7 @@ import {
   walkSources,
 } from '../testing/sourceScan';
 import { warningsOf } from '../testing/logWarnings';
-import { programShader, type ProgramName } from '../testing/patchedFragment';
+import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
 import { GODOT_ALPHA_ANTIALIASING } from '../materials/godotAlphaAntialiasing';
@@ -26,8 +26,11 @@ import { GODOT_AMBIENT_OCCLUSION } from '../materials/godotAmbientOcclusion';
 import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRoughnessChannels';
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
-import { withPointDraw } from '../materials/godotPoint';
+import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
+import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
+import { worldTriplanarRecord } from '../testing/triplanarRecord';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
+import { GODOT_BILLBOARD_NORMAL } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
@@ -41,15 +44,6 @@ import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
 import { installToneMapping } from '../../resources/environment/toneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { lightUniforms } from '../lighting2d/testing/lightUniforms';
-
-/** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
-const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
-  basic: () => new THREE.MeshBasicMaterial(),
-  standard: () => new THREE.MeshStandardMaterial(),
-  physical: () => new THREE.MeshPhysicalMaterial(),
-  depth: () => new THREE.MeshDepthMaterial(),
-  distance: () => new THREE.MeshDistanceMaterial(),
-};
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 
@@ -114,10 +108,10 @@ type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
-const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
+const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: PointPlacement = 'mesh') =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
-    { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord }
+    { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }
   ).injection;
 
 const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
@@ -155,6 +149,11 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
+  injected('materials/godotPoint.ts', 'points at cells', COLOUR, () => pointBag(false, 'cells')),
+  injected('surfaceBillboard.ts', 'billboard normal', COLOUR, () => GODOT_BILLBOARD_NORMAL),
+  injected('materials/godotTriplanar.ts', 'triplanar mapping', SURFACE_AND_DEPTH, () =>
+    triplanarInjection({ userData: triplanarUserData(worldTriplanarRecord()) })
+  ),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
   ),

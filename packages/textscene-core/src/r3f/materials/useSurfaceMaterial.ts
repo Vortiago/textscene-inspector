@@ -28,10 +28,7 @@ export interface SurfaceMaterial {
   bags: FadeVariants<StandardMaterialBag> | null;
 }
 
-/**
- * The material `source` draws on `surface`, whichever file it came from. `surface` matters to a
- * material that tiles per world unit, and to a glTF surface's UVs.
- */
+/** The material `source` draws on `surface`, whichever file it came from: a glTF surface's UVs run top-down. */
 export function useSurfaceMaterial(
   source: MaterialSource | undefined,
   surface?: TexturedSurface

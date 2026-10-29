@@ -77,10 +77,18 @@ describe('useSurfaceMaterial on a glTF surface', () => {
     expect([map.channel, map.repeat.y, map.offset.y]).toEqual([UV2_CHANNEL, -1, 1]);
   });
 
-  it("flips a triplanar UV2 map, which reads the glTF's first UV set", () => {
-    const map = emissionMap({ emission_on_uv2: 'true', uv2_triplanar: 'true' }, GLTF_SURFACE);
+  it('binds a triplanar map as on a Godot mesh, as it reads no UV attribute', () => {
+    const onGltf = emissionMap({ uv1_triplanar: 'true' }, GLTF_SURFACE);
+    const onMesh = emissionMap({ uv1_triplanar: 'true' });
 
-    expect([map.channel, map.repeat.y, map.offset.y]).toEqual([0, -1, 1]);
+    expect([onGltf.repeat.y, onGltf.offset.y]).toEqual([onMesh.repeat.y, onMesh.offset.y]);
+  });
+
+  it('binds a triplanar UV2 map as on a Godot mesh (edge case)', () => {
+    const onGltf = emissionMap({ emission_on_uv2: 'true', uv2_triplanar: 'true' }, GLTF_SURFACE);
+    const onMesh = emissionMap({ emission_on_uv2: 'true', uv2_triplanar: 'true' });
+
+    expect([onGltf.repeat.y, onGltf.offset.y]).toEqual([onMesh.repeat.y, onMesh.offset.y]);
   });
 
   it("keeps a Godot mesh's map unflipped, as its UVs are bottom-up (edge case)", () => {

@@ -41,7 +41,6 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     uv1Offset: data.uv1Offset,
     uv2Scale: data.uv2Scale,
     uv2Offset: data.uv2Offset,
-    uv2Triplanar: data.uv2Triplanar,
     uv2Slots: data.uv2Slots,
     transparent: data.transparent,
     castsShadow: data.castsShadow,

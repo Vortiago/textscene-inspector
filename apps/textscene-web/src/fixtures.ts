@@ -4029,6 +4029,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Billboard Keep Scale",
+    "file": "unit-material-billboard-keep-scale.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Billboard",
     "file": "unit-material-billboard.tscn",
     "category": "Unit - Materials"
@@ -4151,6 +4156,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Uv1 Top Edge",
     "file": "unit-material-uv1-top-edge.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material World Triplanar Floor",
+    "file": "unit-material-world-triplanar-floor.tscn",
     "category": "Unit - Materials"
   },
   {
