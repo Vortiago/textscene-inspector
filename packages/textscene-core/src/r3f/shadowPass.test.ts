@@ -152,7 +152,7 @@ describe('installShadowPass', () => {
     const worn: unknown[] = [];
     threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
     installShadowPass(renderer);
-    renderer.shadowMap.render([new SplitSunLight()], scene, new THREE.PerspectiveCamera());
+    runPass(renderer, [new SplitSunLight()], scene);
     expect(worn[1]).toBeInstanceOf(AtlasDepthMaterial);
   });
 
@@ -165,7 +165,7 @@ describe('installShadowPass', () => {
     const worn: unknown[] = [];
     threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
     installShadowPass(renderer);
-    renderer.shadowMap.render([spotLight()], scene, new THREE.PerspectiveCamera());
+    runPass(renderer, [spotLight()], scene);
     expect(worn[0]).toBeUndefined();
     expect(worn[1]).toBeInstanceOf(AtlasDepthMaterial);
     expect(caster.customDepthMaterial).toBeUndefined();
@@ -196,7 +196,7 @@ describe('installShadowPass', () => {
     const worn: unknown[] = [];
     threePass.mockImplementation(() => worn.push(caster.customDepthMaterial, plain.customDepthMaterial));
     installShadowPass(renderer);
-    renderer.shadowMap.render([areaLight()], scene, new THREE.PerspectiveCamera());
+    runPass(renderer, [areaLight()], scene);
     expect(worn.slice(0, 2)).toEqual([ownDepth, undefined]);
     expect(worn.slice(2).map((depth) => depth instanceof ParaboloidDepthMaterial)).toEqual([true, true]);
     expect(caster.customDepthMaterial).toBe(ownDepth);

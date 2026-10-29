@@ -1,9 +1,7 @@
 /**
  * What the compositor's tone pass carries on a 3D canvas: glow, samples, auto exposure and
- * debanding. Godot draws every 3D frame into a half-float buffer and tonemaps it after
- * (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`), so the pass mounts
- * whatever the scene draws. Godot runs the glow chain whenever the environment enables glow
- * (`renderer_scene_render_rd.cpp:575`, `:686`), and resolves MSAA before the tonemap pass reads the buffer.
+ * debanding. The pass mounts whatever the scene draws (ADR-0061). Godot runs the glow chain whenever
+ * the environment enables glow (`renderer_scene_render_rd.cpp:575`, `:686`).
  */
 import { describe, expect, it } from 'vitest';
 import { Fragment, type ComponentType, type ReactNode } from 'react';
@@ -93,11 +91,6 @@ describe('useCompositorPass for an Environment', () => {
     expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 
-  it('mounts a pass without glow for the adjustments alone', async () => {
-    const { pass } = await mount(environmentSettingsOf({ adjustment_enabled: 'true' }));
-    expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
-  });
-
   it('mounts a pass without glow for an enabled glow whose every level weight is zero (edge case)', async () => {
     const levels = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((level) => [`glow_levels/${level}`, '0.0']));
     const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'true', ...levels }));
@@ -114,7 +107,7 @@ const AUTO_EXPOSURE: AutoExposure = { scale: 0.4, minLuminance: 0, maxLuminance:
 
 describe('useCompositorPass for an auto exposure', () => {
   // Godot reduces the luminance whenever the camera attributes enable it (`renderer_scene_render_rd.cpp:551`).
-  it('mounts a pass without glow for the auto exposure alone, and carries it', async () => {
+  it('carries the auto exposure', async () => {
     const { pass } = await mount(environmentSettingsOf({}), { autoExposure: AUTO_EXPOSURE });
     expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: AUTO_EXPOSURE, usesDebanding: false });
   });
@@ -143,7 +136,7 @@ describe('useCompositorPass with no Environment', () => {
     expect(pass()).toEqual({ glow: null, samples: 0, autoExposure: null, usesDebanding: false });
   });
 
-  it('mounts a multisampled pass without glow for MSAA alone', async () => {
+  it('carries the msaa_3d samples', async () => {
     const Wrapper = withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n');
     const { pass } = await mount(null, { Wrapper });
     await waitFor(() =>
@@ -152,7 +145,7 @@ describe('useCompositorPass with no Environment', () => {
   });
 
   /** Godot dithers in its tonemap pass (`renderer_scene_render_rd.cpp:784-797`), which three's curve lacks. */
-  it('mounts a pass that dithers for use_debanding alone', async () => {
+  it('carries use_debanding', async () => {
     const Wrapper = withProject('[rendering]\nanti_aliasing/quality/use_debanding=true\n');
     const { pass } = await mount(null, { Wrapper });
     await waitFor(() =>

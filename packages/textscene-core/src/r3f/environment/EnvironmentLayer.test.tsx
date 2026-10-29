@@ -65,18 +65,14 @@ async function mountLayer(
 }
 
 describe('<EnvironmentLayer> in the root world', () => {
-  it('mounts the compositor for a glowing Environment', async () => {
-    const { compositors } = await mountLayer('root', { glow_enabled: 'true' }, { hasGlContext: true });
+  it('mounts the compositor on a canvas with a real GL context', async () => {
+    const { compositors } = await mountLayer('root', {}, { hasGlContext: true });
     expect(compositors).toBe(1);
   });
 
   it("leaves the renderer's mapping and three's chunk to the compositor", async () => {
     const chunkBefore = THREE.ShaderChunk[TONEMAP_CHUNK];
-    const { gl, unmount } = await mountLayer(
-      'root',
-      { tonemap_mode: FILMIC, glow_enabled: 'true' },
-      { hasGlContext: true }
-    );
+    const { gl, unmount } = await mountLayer('root', { tonemap_mode: FILMIC }, { hasGlContext: true });
     expect(gl.toneMapping).not.toBe(THREE.CustomToneMapping);
     expect(THREE.ShaderChunk[TONEMAP_CHUNK]).toBe(chunkBefore);
     await unmount();

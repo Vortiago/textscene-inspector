@@ -24,8 +24,8 @@ import { beginStep, endStep } from './frameProfile/frameProfile.js';
 import type { RenderStep } from './frameProfile/frameStats.js';
 
 /**
- * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
- * through `camera`. A reader may render, and its renders run the pass again for their own objects.
+ * Reads the maps that a render of its scene has just drawn, through `camera`. A reader may render,
+ * and its renders run the pass again for their own objects.
  */
 type ShadowMapReader = (camera: THREE.Camera) => void;
 
@@ -36,8 +36,8 @@ type ShadowMapReader = (camera: THREE.Camera) => void;
  */
 const READERS = Symbol.for('textscene.shadowPass');
 
-/** Each reader with the scene it reads. A render of any other scene, such as a tone pass quad, calls none. */
-type Readers = Set<{ scene: THREE.Object3D; read: ShadowMapReader }>;
+/** The readers of each scene. A render of any other scene, such as a tone pass quad, calls none. */
+type Readers = Map<THREE.Object3D, Set<ShadowMapReader>>;
 
 /** The render step a frame profile times the readers as: the fog volumes are the only reader. */
 const READ_STEP: RenderStep = 'Fog';
@@ -69,10 +69,11 @@ export function readShadowMaps(
   read: ShadowMapReader
 ): () => void {
   const readers = readersOf(renderer);
-  const reader = { scene, read };
-  readers.add(reader);
+  const reads = readers.get(scene) ?? new Set();
+  readers.set(scene, reads.add(read));
   return () => {
-    readers.delete(reader);
+    reads.delete(read);
+    if (reads.size === 0) readers.delete(scene);
   };
 }
 
@@ -81,7 +82,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   const shadowMap = renderer.shadowMap as WrappedShadowMap;
   const existing = shadowMap[READERS];
   if (existing) return existing;
-  const readers: Readers = new Set();
+  const readers: Readers = new Map();
   shadowMap[READERS] = readers;
   const threePass: ThreeShadowPass = { shadowMap, draw: shadowMap.render.bind(shadowMap) };
   const copy = new OmniShadowCopy();
@@ -121,7 +122,8 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
 }
 
 function readMaps(readers: Readers, scene: THREE.Object3D, camera: THREE.Camera): void {
-  for (const reader of readers) if (reader.scene === scene) reader.read(camera);
+  const reads = readers.get(scene);
+  if (reads) for (const read of reads) read(camera);
 }
 
 /** {@link readMaps}, timed as {@link READ_STEP} when a reader reads `scene`. */
@@ -131,15 +133,10 @@ function readMapsTimed(
   scene: THREE.Object3D,
   camera: THREE.Camera
 ): void {
-  if (!readsScene(readers, scene)) return;
+  if (!readers.has(scene)) return;
   beginStep(renderer, READ_STEP);
   readMaps(readers, scene, camera);
   endStep(renderer, READ_STEP);
-}
-
-function readsScene(readers: Readers, scene: THREE.Object3D): boolean {
-  for (const reader of readers) if (reader.scene === scene) return true;
-  return false;
 }
 
 /** Copies each light's cube into the atlas. Each copy leaves the render target as it found it. */

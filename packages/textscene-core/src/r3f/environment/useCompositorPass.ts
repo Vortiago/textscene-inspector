@@ -18,7 +18,8 @@ import { useSampleCount } from '../multisampledTarget';
 
 /**
  * The scene buffer's texel type, which postprocessing builds at the composer's `frameBufferType`.
- * Godot's colour buffer is RGBA16F (`renderer_scene_render_rd.cpp:1128`), and its rounding shows.
+ * Godot draws every 3D frame into RGBA16F (`renderer_scene_render_rd.cpp:1128`), and its rounding
+ * shows (ADR-0061).
  */
 export const SCENE_BUFFER_TYPE = THREE.HalfFloatType;
 
@@ -34,11 +35,9 @@ export interface CompositorPass {
 }
 
 /**
- * Null when the canvas draws no 3D. Godot draws every 3D frame into a half-float buffer
- * (`renderer_scene_render_rd.cpp:1128`) and tonemaps it in a pass (`render_forward_clustered.cpp:2514`),
- * so the pass mounts whatever the scene draws, and a blended surface or a value that rounds in that
- * buffer reads the same either way. A null `settings` is a root with no Environment. Glow
- * runs on the environment's flag alone, as Godot's glow chain runs (`renderer_scene_render_rd.cpp:575`, `:686`).
+ * Null when the canvas draws no 3D, else the pass whatever the scene draws (ADR-0061). A null
+ * `settings` is a root with no Environment. Glow runs on the environment's flag alone, as Godot's
+ * glow chain runs (`renderer_scene_render_rd.cpp:575`, `:686`).
  */
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
   const autoExposure = useAutoExposure();
