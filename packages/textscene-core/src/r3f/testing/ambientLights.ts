@@ -1,4 +1,7 @@
-/** The flat ambient lights a scene shows, which an Environment adds to the scene while it is on it. */
+/**
+ * The flat ambient lights a scene shows, which an Environment shows while it is on the scene. Only
+ * `AmbientLight`, not every light `isAmbientLight` takes, since a caller reads its one colour.
+ */
 
 import type * as THREE from 'three';
 

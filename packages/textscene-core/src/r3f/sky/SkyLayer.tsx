@@ -24,7 +24,7 @@ import { hideShownSky, SkyRadiance } from './skyRadiance';
 import { createEnvironmentSwitch } from './environmentSwitch';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
-import { registerExposureStage } from '../exposure/sceneExposure';
+import { registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
 import { registerEnvironmentPart, useEnvironmentKey } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { isDebanded } from '../../resources/sky/debanding';
@@ -113,32 +113,35 @@ export function SkyLayer({
       energy: intensity * exposure,
       rotation: skyRotation,
     });
+    // The radiance is baked at the exposure of the view, and a surface reads it at the exposure it
+    // draws at. A draw at another exposure keeps the bake, as Godot rebakes a layer at a time
+    // (`sky.cpp`, `update_radiance_buffers`).
+    const exposeAs = (factor: number) => {
+      scene.environmentIntensity = intensity * exposure * factor;
+      if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
+    };
+    const stage: ExposureStage = (target) => {
+      exposeAs(target ?? 1);
+      return () => exposeAs(exposure);
+    };
+    const showRadiance = () => radiance.show(contributionRef.current);
+    const previousBackgroundRotation = new THREE.Euler();
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       const previousEnvironment = scene.environment;
       const previousIntensity = scene.environmentIntensity;
       const previousBackground = scene.background;
       const previousBackgroundIntensity = scene.backgroundIntensity;
-      const previousBackgroundRotation = scene.backgroundRotation.clone();
-      // The radiance is baked at the exposure of the view, and a surface reads it at the exposure it
-      // draws at. A draw at another exposure keeps the bake, as Godot rebakes a layer at a time
-      // (`sky.cpp`, `update_radiance_buffers`).
-      const exposeAs = (factor: number) => {
-        scene.environmentIntensity = intensity * exposure * factor;
-        if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
-      };
+      previousBackgroundRotation.copy(scene.backgroundRotation);
       scene.environment = environmentSwitch;
       // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-      const stopShowingRadiance = observeSceneCamera(scene, () => radiance.show(contributionRef.current));
+      const stopShowingRadiance = observeSceneCamera(scene, showRadiance);
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       if (asBackground) {
         scene.background = built.background;
         scene.backgroundRotation.copy(skyRotation);
       }
       exposeAs(exposure);
-      const stopStaging = registerExposureStage(scene, (target) => {
-        exposeAs(target ?? 1);
-        return () => exposeAs(exposure);
-      });
+      const stopStaging = registerExposureStage(scene, stage);
       const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
         stopStaging();

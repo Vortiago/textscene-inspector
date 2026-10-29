@@ -18,6 +18,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { makeNode } from '../../../parser/testing/parserKit';
 import { subResource } from '../../../testing/subResource';
+import { textureTexel } from '../../../r3f/testing/backgroundTexel';
 
 const RESOURCES: TscnInternalResource[] = [
   subResource('Environment', 'Red', { background_mode: '1', background_color: 'Color(1, 0, 0, 1)' }),
@@ -60,7 +61,7 @@ async function backgroundOf(
   );
   const background = (renderer.scene.instance as THREE.Scene).background as THREE.DataTexture | null;
   if (!background) return null;
-  const [red, , blue] = background.image.data as Float32Array;
+  const [red, , blue] = textureTexel(background);
   return red! > blue! ? 'red' : 'blue';
 }
 

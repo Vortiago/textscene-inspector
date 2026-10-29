@@ -15,7 +15,7 @@ import {
   ViewportPassEnvironment,
   WorldEnvironmentScope,
 } from '../../../r3f/environment/WorldEnvironmentScope';
-import { drawWithEnvironment } from '../../../r3f/environment/sceneEnvironment';
+import { drawWith } from '../../../r3f/environment/sceneEnvironment';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -50,7 +50,6 @@ import {
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
-import { drawAtExposure } from '../../../r3f/exposure/sceneExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
@@ -243,9 +242,7 @@ export function OffscreenViewportPass({
               renderWithShadowAtlas(shadowAtlas, () =>
                 kind === '2d'
                   ? frame.render(gl, passScene, camera)
-                  : drawWithEnvironment(passScene, toneMap!.environment, () =>
-                      drawAtExposure(passScene, exposure, () => gl.render(passScene, camera))
-                    )
+                  : drawWith(passScene, toneMap!.environment, exposure, () => gl.render(passScene, camera))
               )
             );
           } finally {

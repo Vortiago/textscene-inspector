@@ -15,6 +15,8 @@ import { electCameraOfViewport } from '../../godot/scene/camera3d';
 import { useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
 import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
+import { useByValue } from '../hooks/useByValue';
+import { sameElements } from '../../utils/sameElements';
 import { useWorldKind, type WorldKind } from './WorldKindContext';
 import { createWorldGroup, createWorldPublications, type WorldResolution } from './worldGroup';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
@@ -131,11 +133,9 @@ export function WorldAttributesExposure({ children }: { children: ReactNode }) {
  * draws it, so its lights read the world's and each pass draws at its own (`ViewportPassAttributes`).
  */
 export function SharedWorldExposureScope({ children }: { children: ReactNode }) {
-  const worldAttributes = attributesOf(cameraAttributes.useChosen());
-  useSceneExposure(worldAttributes?.exposureMultiplier ?? null, worldAttributes?.exposureMultiplier ?? null);
-  return (
-    <CameraAttributesContext.Provider value={worldAttributes}>{children}</CameraAttributesContext.Provider>
-  );
+  const factor = attributesOf(cameraAttributes.useChosen())?.exposureMultiplier ?? null;
+  useSceneExposure(factor, factor);
+  return <WorldAttributesExposure>{children}</WorldAttributesExposure>;
 }
 
 /** The Environment of the camera the world renders through, null for none. */
@@ -201,10 +201,12 @@ export function usePassCameraPath(): string | null {
  */
 export function usePassCameraEnvironments(): readonly EnvironmentResolution[] {
   const worldCameras = cameras.useAll();
-  return useMemo(() => {
+  const elected = useMemo(() => {
     const viewports = new Set(worldCameras.map((camera) => camera.viewport).filter((path) => path !== null));
     return [...viewports].map((path) => electCameraOfViewport(worldCameras, path)!.environment);
   }, [worldCameras]);
+  // A camera that toggles `current` publishes again, and mostly elects the same Environments.
+  return useByValue(elected, sameElements);
 }
 
 /** The Environment of the camera the enclosing `ViewportPassAttributes` elects, null for none. */

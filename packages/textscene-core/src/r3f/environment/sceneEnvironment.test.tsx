@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { drawWithEnvironment, registerEnvironmentPart, ShownEnvironment } from './sceneEnvironment';
+import { drawWith, registerEnvironmentPart, ShownEnvironment } from './sceneEnvironment';
 
 /** A part that names the scene after `name` while it is on, and puts the old name back. */
 function namePart(scene: THREE.Scene, name: string) {
@@ -43,7 +43,7 @@ describe('sceneEnvironment', () => {
     const { scene } = await showing(world);
     registerEnvironmentPart(scene, world, namePart(scene, 'world'));
     registerEnvironmentPart(scene, camera, namePart(scene, 'camera'));
-    const drawn = drawWithEnvironment(scene, camera, () => scene.name);
+    const drawn = drawWith(scene, camera, null, () => scene.name);
     expect([drawn, scene.name]).toEqual(['camera', 'world']);
   });
 
@@ -51,7 +51,7 @@ describe('sceneEnvironment', () => {
     const world = {};
     const { scene } = await showing(world);
     registerEnvironmentPart(scene, world, namePart(scene, 'world'));
-    expect(drawWithEnvironment(scene, null, () => scene.name)).toBe('');
+    expect(drawWith(scene, null, null, () => scene.name)).toBe('');
   });
 
   it('takes a part off when it unregisters', async () => {

@@ -5443,7 +5443,8 @@ tr:last-child td{border-bottom:0}
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       
-      <div class="prose intro"><p>Captures the scene around it in six directions and gives each lit surface inside its box the capture's reflection and ambient light. The previewer captures each probe once, after the scene's meshes and textures load.</p></div>
+      <div class="prose intro"><p>Captures the scene around it in six directions and gives each lit surface inside its box the capture's reflection and ambient light. The previewer captures each probe once, after the scene's meshes and textures load.</p>
+<p>A probe captures the scene with the Environment and the exposure of its world, not with those of the camera the view renders through (<code>renderer_scene_cull.cpp:3692</code>).</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Two overlapping probes</h3><span class="status st-unreviewed">Unreviewed</span></div>

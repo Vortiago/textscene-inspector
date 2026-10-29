@@ -10,6 +10,9 @@ Captures the scene around it in six directions and gives each lit surface inside
 capture's reflection and ambient light. The previewer captures each probe once, after the scene's
 meshes and textures load.
 
+A probe captures the scene with the Environment and the exposure of its world, not with those of the
+camera the view renders through (`renderer_scene_cull.cpp:3692`).
+
 ## Two overlapping probes
 <!-- compare: image=unit-reflection-probe-always status=unreviewed fixture=unit-reflection-probe-always.tscn -->
 

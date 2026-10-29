@@ -18,7 +18,7 @@ import { SCENE_BUFFER_TYPE } from './useCompositorPass';
 import { useGodotToneMapEffect } from './useGodotToneMapEffect';
 import type { GodotToneMapEffect } from './GodotToneMapEffect';
 import { useWorldToneMap } from './worldToneMap';
-import type { EnvironmentKey } from './sceneEnvironment';
+import type { Environment } from './sceneEnvironment';
 import { useOptionalExposureFactor, usePassCameraPath } from './worldExposure';
 
 export interface OffscreenToneMap {
@@ -28,8 +28,8 @@ export interface OffscreenToneMap {
   cameraPath: string | null;
   /** The exposure factor the pass draws its world at, null for none. */
   exposure: number | null;
-  /** The Environment the pass draws its world with (`drawWithEnvironment`). */
-  environment: EnvironmentKey;
+  /** The Environment the pass draws its world with (`drawWith`). */
+  environment: Environment | null;
   /** Tonemaps what `worldBuffer` holds into the target, and leaves the renderer as it found it. */
   toneMap: () => void;
 }

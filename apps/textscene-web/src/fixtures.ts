@@ -1743,6 +1743,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Camera Environment",
+    "file": "unit-reflection-probe-camera-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe Camera Exposure",
     "file": "unit-reflection-probe-camera-exposure.tscn",
     "category": "Other"

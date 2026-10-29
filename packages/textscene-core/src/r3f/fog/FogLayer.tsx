@@ -68,21 +68,22 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
     const volumes = new TrackedObjects(scene, isFogVolume);
+    const prepare = (rendered: THREE.Object3D, camera: THREE.Camera) => {
+      if (rendered !== scene) return;
+      const capture = probeCaptureOf(camera);
+      const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
+      const isVolumetric = fog.volumetric !== null;
+      const objects = {
+        lights: lights.current(),
+        casters: isVolumetric ? casters.current() : NO_CASTERS,
+        volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
+      };
+      if (prepareFog(gl, scene, camera, fog, pass, objects)) invalidate();
+    };
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
       // fade for this camera, which the scene's observers wrote before it.
-      const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
-        if (rendered !== scene) return;
-        const capture = probeCaptureOf(camera);
-        const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
-        const isVolumetric = fog.volumetric !== null;
-        const objects = {
-          lights: lights.current(),
-          casters: isVolumetric ? casters.current() : NO_CASTERS,
-          volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
-        };
-        if (prepareFog(gl, scene, camera, fog, pass, objects)) invalidate();
-      });
+      const stopPreparing = readShadowMaps(gl, prepare);
       const stopFinishing = observeSceneRenderEnd(scene, finishFog);
       return () => {
         stopPreparing();

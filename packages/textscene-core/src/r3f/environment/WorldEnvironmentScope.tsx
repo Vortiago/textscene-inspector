@@ -31,7 +31,8 @@ import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
 import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
-import { perObject } from '../../utils/perObject';
+import { identityKey } from '../../utils/identityKey';
+import { useOwnEnvironment } from './sceneEnvironment';
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
 export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
@@ -208,21 +209,27 @@ export function ViewportPassEnvironment({ children }: { children: ReactNode }) {
 }
 
 /**
- * The Environment a pass draws its world with. A camera's resolved Environment replaces the world's
- * `own` (`renderer_scene_cull.cpp:3594-3597`). While it loads the world's holds, since Godot has no
- * load gap to show. Null for none.
+ * Whether a camera's Environment replaces its world's: once it resolves (`renderer_scene_cull.cpp:3594-3597`).
+ * While it loads the world's holds, since Godot has no load gap to show.
  */
+function replacesWorld(
+  camera: EnvironmentResolution | null
+): camera is Extract<EnvironmentResolution, { status: 'resolved' }> {
+  return camera?.status === 'resolved';
+}
+
+/** The Environment a pass through `camera` draws its world with, null for none. */
 function passEnvironmentOf(
   camera: EnvironmentResolution | null,
   own: EnvironmentLayerProps | null
 ): EnvironmentLayerProps | null {
-  return camera?.status === 'resolved' ? camera.environment : own;
+  return replacesWorld(camera) ? camera.environment : own;
 }
 
 /**
- * Mounts each Environment a pass of the world draws with that its scene does not show. Each holds
- * the exposure the scene holds, as the shown one does, and a pass draws it at its own
- * (`drawAtExposure`).
+ * Mounts each Environment a pass or a probe capture of the world draws with that its scene does not
+ * show, and names the world's own on the scene (`drawAsWorld`). Each holds the exposure the scene
+ * holds, as the shown one does, and a draw puts its own on (`drawWith`).
  */
 function DrawnEnvironments({
   shown,
@@ -231,35 +238,25 @@ function DrawnEnvironments({
   shown: EnvironmentLayerProps | null;
   own: EnvironmentLayerProps | null;
 }) {
+  useOwnEnvironment(own?.settings ?? null);
   const cameras = usePassCameraEnvironments();
   const layers = useMemo(() => {
     const unique = new Map<object, EnvironmentLayerProps>();
-    for (const camera of cameras) {
-      const drawn = passEnvironmentOf(camera, own);
+    for (const drawn of [own, ...cameras.map((camera) => passEnvironmentOf(camera, own))]) {
       if (drawn && drawn.settings !== shown?.settings) unique.set(drawn.settings, drawn);
     }
     return [...unique.values()];
   }, [cameras, own, shown]);
   return layers.map((environment) => (
-    <DrawnEnvironmentLayer key={environmentId(environment.settings)} {...environment} />
+    <DrawnEnvironmentLayer key={identityKey(environment.settings)} {...environment} />
   ));
 }
 
-/** Written only by `environmentId`, which counts each Environment it keys. */
-let keyedEnvironments = 0;
-
-/** A React key for each Environment, the same for as long as its settings object lives. */
-const environmentId = perObject((_settings: object) => keyedEnvironments++);
-
-/**
- * The Environment a viewport renders with. A camera's resolved one replaces the world's
- * (`renderer_scene_cull.cpp:3594-3597`). While it loads the world's holds, since Godot has no load
- * gap to show.
- */
+/** The Environment a viewport renders with: its camera's, else the world's (`replacesWorld`). */
 function useViewEnvironment(): EnvironmentResolution | null {
   const camera = useRenderCameraEnvironment();
   const world = environments.useChosen();
-  return camera?.status === 'resolved' ? camera : world;
+  return replacesWorld(camera) ? camera : world;
 }
 
 function resolvedEnvironment(authored: EnvironmentResolution | null): EnvironmentLayerProps | null {

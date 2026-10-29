@@ -21,7 +21,7 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
-import { registerExposureStage } from '../exposure/sceneExposure';
+import { registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
 import { scaledRgb } from '../../utils/colorParser';
 import {
@@ -113,12 +113,19 @@ function useFlatAmbient(ambient: EnvironmentSettings['ambient']): void {
   useEffect(() => {
     if (!color || energy <= 0) return undefined;
     const light = new THREE.AmbientLight(godotColorToLinear(color), energy * LIGHT_INTENSITY_SCALE);
-    return registerEnvironmentPart(scene, environment, () => {
-      scene.add(light);
+    // Shown, not added: an add per pass would tell every tracker of the scene that it changed.
+    light.visible = false;
+    scene.add(light);
+    const stopRegistering = registerEnvironmentPart(scene, environment, () => {
+      light.visible = true;
       return () => {
-        scene.remove(light);
+        light.visible = false;
       };
     });
+    return () => {
+      stopRegistering();
+      scene.remove(light);
+    };
   }, [scene, environment, color, energy]);
 }
 
@@ -150,16 +157,17 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
       const heldTexture = textureAt(exposure);
       // Kept for the next draw: a probe that captures each frame draws at the same exposure each time.
       let stagedTexture: { factor: number; texture: THREE.Texture } | null = null;
+      const stage: ExposureStage = (target) => {
+        const factor = target ?? 1;
+        if (stagedTexture?.factor !== factor) {
+          stagedTexture?.texture.dispose();
+          stagedTexture = { factor, texture: textureAt(factor) };
+        }
+        return showBackground(scene, stagedTexture.texture, intensityAt(factor));
+      };
       const stopRegistering = registerEnvironmentPart(scene, environment, () => {
         const restoreBackground = showBackground(scene, heldTexture, intensityAt(exposure));
-        const stopStaging = registerExposureStage(scene, (target) => {
-          const factor = target ?? 1;
-          if (stagedTexture?.factor !== factor) {
-            stagedTexture?.texture.dispose();
-            stagedTexture = { factor, texture: textureAt(factor) };
-          }
-          return showBackground(scene, stagedTexture.texture, intensityAt(factor));
-        });
+        const stopStaging = registerExposureStage(scene, stage);
         return () => {
           stopStaging();
           restoreBackground();
