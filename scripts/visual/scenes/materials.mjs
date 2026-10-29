@@ -18,6 +18,9 @@ export const MATERIAL_SCENES = [
   // both axes. A tangent frame scaled by the longer axis shades the X tilts flatter.
   { name: 'material-normal-map-uv-density', file: 'unit-material-normal-map-uv-density.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
+  // World-triplanar floor tiles off the origin: each stripe sits at its world position, as Godot
+  // projects it. A sample at the tile's UV shifts the stripes with each tile.
+  { name: 'material-world-triplanar-floor', file: 'unit-material-world-triplanar-floor.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,

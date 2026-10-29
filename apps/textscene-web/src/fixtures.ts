@@ -4139,6 +4139,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material World Triplanar Floor",
+    "file": "unit-material-world-triplanar-floor.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Mipmap Bias Normal",
     "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
     "category": "Unit - Materials",

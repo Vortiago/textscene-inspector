@@ -1,16 +1,17 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
  * populated cells. Each surface draws as one THREE.InstancedMesh, as one mesh per cell when its
- * material billboards, or as one THREE.Points holding every cell's points for a PointMesh. A loading
- * item draws nothing. An item whose mesh or library this previewer cannot read draws cell-sized
- * wireframe boxes in one InstancedMesh.
+ * material billboards, or as one THREE.Points holding every cell's points for a PointMesh, one per
+ * cell when its triplanar mapping reads the mesh's own space. A loading item draws nothing. An item
+ * whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
+ * InstancedMesh.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnNode } from '../../../parser/types';
 import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAssignment';
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
@@ -32,6 +33,7 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { pointsAtCells } from './pointCells';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
+import { readsObjectSpace } from '../../../r3f/materials/godotTriplanar';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
@@ -195,11 +197,11 @@ function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cel
     return <PlaceholderTiles cells={cells} cellSize={cellSize} cellCenter={cellCenter} />;
   }
   if (content.kind !== 'surfaced') return null;
-  const { parts, primitive } = content.mesh;
+  const { parts } = content.mesh;
   return (
     <>
       {parts.map((part, partIndex) => (
-        <GridMapPart key={partIndex} part={part} primitive={primitive} shadow={shadow} matrices={matrices} />
+        <GridMapPart key={partIndex} part={part} shadow={shadow} matrices={matrices} />
       ))}
     </>
   );
@@ -207,18 +209,13 @@ function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cel
 
 interface GridMapPartProps {
   part: SurfacedPart;
-  primitive?: TscnInternalResource;
   shadow: ShadowCastingEffects;
   matrices: THREE.Matrix4[];
 }
 
 /** One part of an item's mesh at every cell: the surfaces that share one primitive type. */
 function GridMapPart(props: GridMapPartProps) {
-  return geometryDrawsPoints(props.part.geometry) ? (
-    <PointsPart {...props} />
-  ) : (
-    <PartSurfaces {...props} geometry={props.part.geometry} />
-  );
+  return geometryDrawsPoints(props.part.geometry) ? <PointsPart {...props} /> : <PartSurfaces {...props} />;
 }
 
 /**
@@ -227,25 +224,25 @@ function GridMapPart(props: GridMapPartProps) {
  */
 function PointsPart(props: GridMapPartProps) {
   const { part, matrices } = props;
-  const geometry = useMemo(() => pointsAtCells(part.geometry, matrices), [part.geometry, matrices]);
-  useDisposeOnRelease(geometry);
-  return <PartSurfaces {...props} geometry={geometry} />;
+  const cellPoints = useMemo(() => pointsAtCells(part.geometry, matrices), [part.geometry, matrices]);
+  useDisposeOnRelease(cellPoints);
+  return <PartSurfaces {...props} cellPoints={cellPoints} />;
 }
 
 function PartSurfaces({
   part,
-  geometry,
-  primitive,
+  cellPoints,
   shadow,
   matrices,
-}: GridMapPartProps & { geometry: THREE.BufferGeometry }) {
+}: GridMapPartProps & { cellPoints?: THREE.BufferGeometry }) {
   const surfaces = surfaceSources(part.materials);
+  const { geometry } = part;
   return (
     <>
       {surfaces.map((source, surface) => (
         <GridMapSurface
           key={surface}
-          draw={{ geometry, primitive, source, surface, surfaceCount: surfaces.length, shadow }}
+          draw={{ geometry, cellPoints, source, surface, surfaceCount: surfaces.length, shadow }}
           matrices={matrices}
         />
       ))}
@@ -255,9 +252,10 @@ function PartSurfaces({
 
 /** One surface of an item's mesh, drawn on its own. */
 interface SurfaceDraw {
+  /** The item's own geometry, in the item's space. */
   geometry: THREE.BufferGeometry;
-  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Absent for an ArrayMesh. */
-  primitive?: TscnInternalResource;
+  /** A points surface's points at every cell, as `pointsAtCells` places them. Undefined for triangles. */
+  cellPoints?: THREE.BufferGeometry;
   /** Undefined for a surface that names no material: Godot's default surface. */
   source: MaterialSource | undefined;
   /** The draw group this draw owns. */
@@ -266,10 +264,10 @@ interface SurfaceDraw {
   shadow: ShadowCastingEffects;
 }
 
-/** Every cell of one surface. A points surface is one `THREE.Points`, whose slot reads its own material. */
+/** Every cell of one surface. */
 function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  return geometryDrawsPoints(draw.geometry) ? (
-    <PointTiles draw={draw} />
+  return draw.cellPoints ? (
+    <PointTiles draw={draw} cellPoints={draw.cellPoints} matrices={matrices} />
   ) : (
     <MeshTiles draw={draw} matrices={matrices} />
   );
@@ -319,12 +317,46 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   );
 }
 
-/** A surface's points at every cell as one THREE.Points. The geometry holds each cell's matrix, so the object keeps the identity. */
-function PointTiles({ draw }: { draw: SurfaceDraw }) {
+/**
+ * A surface's points at every cell: one THREE.Points of `cellPoints`, whose geometry holds each
+ * cell's matrix, so the object keeps the identity. A material that reads the item's own space draws
+ * each cell's points on their own, since the merged points hold the cell's space.
+ */
+function PointTiles({
+  draw,
+  cellPoints,
+  matrices,
+}: {
+  draw: SurfaceDraw;
+  cellPoints: THREE.BufferGeometry;
+  matrices: THREE.Matrix4[];
+}) {
+  const scalars = useSurfaceScalars(draw.source);
+  if (readsObjectSpace(scalars?.triplanar ?? null)) {
+    return (
+      <>
+        {matrices.map((m, i) => (
+          <CellPoints key={i} draw={draw} matrix={m} />
+        ))}
+      </>
+    );
+  }
+  return <CellPoints draw={{ ...draw, geometry: cellPoints }} matrix={IDENTITY} />;
+}
+
+const IDENTITY = new THREE.Matrix4();
+
+/** A surface's points at `matrix`. */
+function CellPoints({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }) {
   const { geometry, shadow } = draw;
   const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   return (
-    <points args={[geometry, startingMaterial]} {...drawHookProps(shadow)}>
+    <points
+      args={[geometry, startingMaterial]}
+      matrix={matrix}
+      matrixAutoUpdate={false}
+      {...drawHookProps(shadow)}
+    >
       <OwnedSurfaceSlot draw={draw} />
     </points>
   );
@@ -356,7 +388,6 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
     <SurfaceMaterialSlot
       source={draw.source}
       attach={surfaceAttach(draw.surface, draw.surfaceCount)}
-      triplanarMesh={draw.primitive}
       drawsPoints={geometryDrawsPoints(draw.geometry)}
     />
   );

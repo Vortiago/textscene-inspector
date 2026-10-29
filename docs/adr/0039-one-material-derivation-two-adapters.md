@@ -165,10 +165,10 @@ Carried:
   state like `texture_filter`.
 - `FLAG_USE_SHADOW_TO_OPACITY` → read by `alphaPassMembership` only, so it reaches the
   program indirectly, and its shading effect is unimplemented.
-- `FLAG_UV1_USE_TRIPLANAR` → one `triplanar` scalar folded into the per-surface UV
-  transform, with its own recorded `uv1_offset` limitation (`surfaceTextures.ts`).
-  It also turns height mapping off. `FLAG_UV1_USE_WORLD_TRIPLANAR` only picks the space of
-  a triplanar mapping, so alone it changes nothing.
+- `FLAG_UV1_USE_TRIPLANAR` and `FLAG_UV2_USE_TRIPLANAR` → a `triplanar` record in `userData`,
+  which a `ProgramInjection` samples at the projected position (`godotTriplanar.ts`). UV1's also
+  turns height mapping off. `FLAG_UV1_USE_WORLD_TRIPLANAR` picks the space of UV1's projection
+  and of the tangent frame, so alone it changes nothing.
 - `FLAG_INVERT_HEIGHTMAP` → a define from the parallax `ProgramInjection`, which reads the
   heightmap as height and not depth.
 - `FLAG_BILLBOARD_KEEP_SCALE` → `userData`, beside the billboard mode. The draw-time

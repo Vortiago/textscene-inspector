@@ -176,7 +176,6 @@ describe('useMeshContent for a TextMesh', () => {
     expect(part.geometry.getAttribute('position').count).toBeGreaterThan(0);
     expect(part.surfaceIndices).toEqual([0]);
     expect(part.materials[0]).toBeDefined();
-    expect(content.mesh.primitive).toBe(TEXT);
     expect(undrawn).toEqual([]);
   });
 

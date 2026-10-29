@@ -7,7 +7,6 @@
 
 import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
-import type { TscnInternalResource } from '../../parser/types';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, withPointDraw } from './godotPoint';
@@ -19,8 +18,6 @@ interface SurfaceMaterialSlotProps {
   source: MaterialSource | undefined;
   /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */
   attach?: string;
-  /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
-  triplanarMesh?: TscnInternalResource;
   /** The surface draws `THREE.Points`, so its material also sizes each point. */
   drawsPoints?: boolean;
 }
@@ -32,13 +29,8 @@ interface SurfaceMaterialSlotProps {
  * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
  * magenta placeholder.
  */
-export function SurfaceMaterialSlot({
-  source,
-  attach,
-  triplanarMesh,
-  drawsPoints,
-}: SurfaceMaterialSlotProps) {
-  const { scalars, bags } = useSurfaceMaterial(source, triplanarMesh);
+export function SurfaceMaterialSlot({ source, attach, drawsPoints }: SurfaceMaterialSlotProps) {
+  const { scalars, bags } = useSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   const pointDraw = useMemo(
     () => (drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined),

@@ -439,6 +439,13 @@ A material prop that decides which shader program a material draws with, so a ch
 A **uniform**, such as a colour, changes freely and stays out of the remount key.
 _Avoid_: bare "key". "recompile" for a React remount.
 
+**Triplanar mapping** (`r3f/materials/godotTriplanar.ts`):
+A UV set that samples each of its textures at the vertex position on the three axis planes and blends the samples by the normal, as Godot's `uv1_triplanar` and `uv2_triplanar` do. The position is the mesh's own, or the world's under `*_world_triplanar`.
+_Avoid_: "triplanar UV", "box mapping".
+
+**Node pose** (`r3f/materials/nodePose.ts`):
+The node's model as Godot holds it, in a program three draws with a moved `modelMatrix`, such as a billboard's. The draw hooks write it before each draw.
+
 **Collision-shape resource**:
 A `[sub_resource]` that carries collision geometry (`BoxShape3D`, `ConvexPolygonShape3D`, `ConcavePolygonShape3D`), referenced by a **CollisionShape3D** Node through `shape`.
 _Avoid_: "collision mesh".

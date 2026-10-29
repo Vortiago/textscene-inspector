@@ -6686,6 +6686,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame. So the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, and an unshaded material shifts its albedo too, as in Godot.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Triplanar mapping</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-world-triplanar-floor-godot.png" alt="Godot render of Triplanar mapping">
+          <img class="img-ours" src="images/unit-material-world-triplanar-floor-ours.png" alt="Our render of Triplanar mapping">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A triplanar UV set samples each of its textures at the vertex position on each of the three axis planes. It blends the samples by the normal raised to <code>uv1_triplanar_sharpness</code>. <code>uv1_scale</code> and <code>uv1_offset</code> scale and move the position on all three axes, as in Godot. Under <code>uv1_world_triplanar</code> the position and the normal are the world's, so a pattern stays put as a mesh moves. UV2 does the same for the slots that read UV2. The normal map reads in the tangent frame Godot writes for a projected surface, and so does height mapping under UV2 triplanar. A shadow cuts its alpha at the projected albedo. The two floor tiles of the golden sit off the origin, and their stripes fall where Godot puts them.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Texture filter</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -6741,7 +6758,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed <code>roughness</code> renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.</li><li><strong>Approximated</strong> Under msaa_3d, <code>ALPHA_TO_COVERAGE_AND_TO_ONE</code> stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.</li><li><strong>Approximated</strong> <code>ALPHA_HASH</code> keeps about Godot's share of pixels but not the same pixels, as the ported hash's <code>fract(1e4 * sin())</code> rounds differently on each GPU (<code>scene_forward_aa_inc.glsl:3-39</code>).</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.</li></ul></div>
+<ul><li><strong>Approximated</strong> Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.</li><li><strong>Approximated</strong> Under msaa_3d, <code>ALPHA_TO_COVERAGE_AND_TO_ONE</code> stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.</li><li><strong>Approximated</strong> <code>ALPHA_HASH</code> keeps about Godot's share of pixels but not the same pixels, as the ported hash's <code>fract(1e4 * sin())</code> rounds differently on each GPU (<code>scene_forward_aa_inc.glsl:3-39</code>).</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li></ul></div>
     </article>
     <article class="sheet" data-type="StaticBody2D" hidden>
       <header class="sheet-head">

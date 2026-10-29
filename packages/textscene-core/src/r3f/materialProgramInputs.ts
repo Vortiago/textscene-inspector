@@ -12,6 +12,7 @@ import {
   GODOT_ALPHA_ANTIALIASING,
 } from './materials/godotAlphaAntialiasing';
 import { mipmapBiasInjection, viewportSamplersUserData } from './materials/godotMipmapBias';
+import { triplanarInjection } from './materials/godotTriplanar';
 import { perObject } from '../utils/perObject';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
@@ -223,14 +224,17 @@ export function viewportProgramInputs<
 }
 
 /**
- * The injections a material's own state turns on: Godot's hash, its edge ramp, then the mipmap
- * bias. The bias comes last, as it inlines the chunks that sample a texture, which the patches
- * before it match by their `#include`.
+ * The injections a material's own state turns on: Godot's hash, its edge ramp, its triplanar
+ * mapping, then the mipmap bias. The triplanar mapping and the bias come last, as each inlines the
+ * chunks that sample a texture, which the patches before them match by their `#include`. The bias
+ * then finds each projection's sample.
  */
 function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
   const injections: ProgramInjection[] = [];
   if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
   if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  const triplanar = triplanarInjection(state);
+  if (triplanar) injections.push(triplanar);
   const bias = mipmapBiasInjection(state);
   if (bias) injections.push(bias);
   return injections;

@@ -106,3 +106,41 @@ item/0/mesh = SubResource("Mesh_item")
     expect(points!.geometry.getAttribute('position').count).toBe(8);
   });
 });
+
+describe('<GridMap> item with a PointMesh under triplanar mapping', () => {
+  const triplanarLibrary = (mapping: string) => `[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="StandardMaterial3D" id="Projected"]
+${mapping}
+
+[sub_resource type="PointMesh" id="Mesh_item"]
+material = SubResource("Projected")
+
+[resource]
+item/0/mesh = SubResource("Mesh_item")
+`;
+
+  it("draws each cell's points on their own under local triplanar, as Godot projects the mesh's own VERTEX", async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('uv1_triplanar = true'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+    const points = grid.points();
+
+    expect(points).toHaveLength(2);
+    expect(points.map((cell) => cell.geometry.getAttribute('position').count)).toEqual([1, 1]);
+    expect(points.flatMap(vertexPlaces)).toEqual([
+      [1, 1, 1],
+      [3, 1, 1],
+    ]);
+  });
+
+  it('keeps every cell in one Points under world triplanar, as the world position reads the same', async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+
+    expect(grid.points()).toHaveLength(1);
+  });
+});

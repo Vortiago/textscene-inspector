@@ -9,7 +9,6 @@
 import * as THREE from 'three';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
@@ -155,15 +154,14 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;
     case 'surfaced': {
-      const { parts, primitive } = content.mesh;
+      const { parts } = content.mesh;
       return (
         <MeshShell {...shellProps}>
-          <MeshSurfaces part={parts[0]} primitive={primitive} overrides={meshOverrides} />
+          <MeshSurfaces part={parts[0]} overrides={meshOverrides} />
           {parts.slice(1).map((part, i) => (
             <FollowingPart
               key={i}
               part={part}
-              primitive={primitive}
               overrides={meshOverrides}
               overlaySource={overlaySource}
               shadow={shadow}
@@ -331,15 +329,7 @@ const UNRESOLVED_MESH = (
  * (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and an extra
  * override is dropped: a PrimitiveMesh takes only surface 0's.
  */
-function MeshSurfaces({
-  part,
-  primitive,
-  overrides,
-}: {
-  part: SurfacedPart;
-  primitive: TscnInternalResource | undefined;
-  overrides: MeshOverrides;
-}) {
+function MeshSurfaces({ part, overrides }: { part: SurfacedPart; overrides: MeshOverrides }) {
   const groupCount = Math.max(part.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
     effectiveMaterialSource(overrides, part.surfaceIndices[i] ?? i, part.materials[i])
@@ -347,11 +337,7 @@ function MeshSurfaces({
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots
-        sources={sources}
-        triplanarMesh={primitive}
-        drawsPoints={geometryDrawsPoints(part.geometry)}
-      />
+      <SurfaceMaterialSlots sources={sources} drawsPoints={geometryDrawsPoints(part.geometry)} />
     </>
   );
 }
@@ -363,14 +349,12 @@ function MeshSurfaces({
  */
 function FollowingPart({
   part,
-  primitive,
   overrides,
   overlaySource,
   shadow,
   godotLayers,
 }: {
   part: SurfacedPart;
-  primitive: TscnInternalResource | undefined;
   overrides: MeshOverrides;
   overlaySource: MaterialSource | undefined;
   shadow: ShadowCastingEffects;
@@ -381,7 +365,7 @@ function FollowingPart({
   const Drawn = drawnTag(drawsPoints);
   return (
     <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
-      <MeshSurfaces part={part} primitive={primitive} overrides={overrides} />
+      <MeshSurfaces part={part} overrides={overrides} />
       {overlaySource && (
         <MaterialOverlayMesh meshRef={ref} drawsPoints={drawsPoints} source={overlaySource} shadow={shadow} />
       )}

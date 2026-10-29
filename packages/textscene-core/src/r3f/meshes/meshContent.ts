@@ -52,8 +52,6 @@ export interface SurfacedPart {
  */
 export interface SurfacedMesh {
   parts: readonly [SurfacedPart, ...SurfacedPart[]];
-  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Absent for an ArrayMesh. */
-  primitive?: TscnInternalResource;
 }
 
 /** The R3F tag that draws a surface: `THREE.Points` for geometry of Godot's `PRIMITIVE_POINTS`, else a `THREE.Mesh`. */
@@ -166,13 +164,7 @@ function usePrimitiveMesh(source: MeshSource | null, isHeldLocally: boolean): Su
     [source, isHeldLocally]
   );
   return useMemo(
-    () =>
-      geometry && source
-        ? {
-            parts: [{ geometry, surfaceIndices: [0], materials: [material] }],
-            primitive: source.resource,
-          }
-        : null,
+    () => (geometry && source ? { parts: [{ geometry, surfaceIndices: [0], materials: [material] }] } : null),
     [geometry, material, source]
   );
 }
