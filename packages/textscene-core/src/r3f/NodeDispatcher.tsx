@@ -429,14 +429,10 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const step = useLiveStepOf(node, scope);
   const effective = step.node;
 
-  const refusal = isCyclic
-    ? 'which already encloses it: Godot refuses cyclic instancing'
-    : step.isRefusedInstance
-      ? 'which Godot refuses to instantiate'
-      : null;
+  const isRefused = isCyclic || step.isRefusedInstance;
   useEffect(() => {
-    if (refusal) warn(`[NodeDispatcher] "${path}" instances ${scenePath}, ${refusal}`);
-  }, [refusal, path, scenePath]);
+    if (isRefused) warn(`[NodeDispatcher] "${path}" instances ${scenePath}, which Godot refuses`);
+  }, [isRefused, path, scenePath]);
 
   const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
   // Loaded here, not by the GLB root, for its objects: the host children move to their `index=`
@@ -455,18 +451,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
-  const injectedOrders = useMemo(() => {
-    const groups = childOrders(order, 2);
-    return {
-      roots: childOrders(groups[GLB_OBJECTS]!, loadedScene?.nodes.length ?? 0),
-      authored: groups[INSTANCING_SCENE_NODES]!,
-    };
-  }, [order, loadedScene?.nodes.length]);
-  // The injected roots draw from the tail of `shallow`'s range. Splitting it
-  // gives each root a run of its own, as an authored child gets.
-  const injectedRanges = useMemo(
+  const groupOrders = useMemo(() => childOrders(order, 2), [order]);
+  // The GLB root draws from the tail of `shallow`'s range, as an authored child gets a run of its own.
+  const glbRange = useMemo(
     () =>
-      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? []).children,
+      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? [])
+        .children[0],
     [paintRange, shallow, loadedScene?.nodes]
   );
 
@@ -503,19 +493,17 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   return (
     <InstanceOwnerProvider path={belowRoot(path)} editablePaths={loadedScene.editableInstances}>
       <GlbInstanceProvider node={node} path={path} glb={glb}>
-        <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
+        <PlainNode node={shallow} path={path} inlineChildrenOrder={groupOrders[INSTANCING_SCENE_NODES]!}>
           <SceneResourcesProvider
             internalResources={loadedScene.internalResources}
             externalResources={loadedScene.externalResources}
           >
             <InstancedScenePathsProvider paths={contentScenePaths}>
-              {loadedScene.nodes.map((child, i) => (
-                <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
-                  <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                    <GlbRootNode node={child} />
-                  </TreeOrderProvider>
-                </PaintRangeProvider>
-              ))}
+              <PaintRangeProvider value={glbRange!}>
+                <TreeOrderProvider order={[...groupOrders[GLB_OBJECTS]!, 0]}>
+                  <GlbRootNode node={loadedScene.nodes[0]!} />
+                </TreeOrderProvider>
+              </PaintRangeProvider>
             </InstancedScenePathsProvider>
           </SceneResourcesProvider>
         </PlainNode>
