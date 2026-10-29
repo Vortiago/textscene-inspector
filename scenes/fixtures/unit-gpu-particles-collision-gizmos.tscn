@@ -1,0 +1,48 @@
+; The seven GPU particles collision and attractor nodes side by side, for the one variable no other
+; golden moves: their editor gizmos (a box, three great circles, or a box with the SDF cell grid).
+; Godot draws them for every node (ADR-0056), so the `unselected` golden shows all seven faint and the
+; `select:` golden shows the SDF node at full alpha. No other scene shows these nodes with their
+; gizmos on; each one draws nothing else. A small box sits at two opposite corners to frame the whole row.
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="CollisionBox" type="GPUParticlesCollisionBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -3)
+size = Vector3(3, 1.5, 3)
+
+[node name="CollisionSphere" type="GPUParticlesCollisionSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -3)
+radius = 1.5
+
+[node name="CollisionSdf" type="GPUParticlesCollisionSDF3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -3)
+size = Vector3(3, 1.5, 3)
+resolution = 0
+
+[node name="CollisionHeightField" type="GPUParticlesCollisionHeightField3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -3)
+size = Vector3(3, 2, 3)
+
+[node name="AttractorBox" type="GPUParticlesAttractorBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 3)
+size = Vector3(2.5, 2, 2.5)
+
+[node name="AttractorSphere" type="GPUParticlesAttractorSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+radius = 1.25
+
+[node name="AttractorVectorField" type="GPUParticlesAttractorVectorField3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 3)
+size = Vector3(2, 3, 2)
+
+[node name="NearCorner" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, -1.5, -5)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5, 5)
+mesh = SubResource("Corner_1")

@@ -6,6 +6,8 @@
 // Choose `linterOnly` or `renderGap` by one question: would Godot draw this
 // scene differently? Never by whether the key looks important. A key every
 // Node2D or Node3D leaf shares sits on that base type and is inherited.
+// A slice registered under `renderIntent: 'pending'` needs no entry: each key Godot declares that
+// it validates and does not read is a render gap already.
 import { mergeDisjoint } from './mergeDisjoint.js';
 import type { AsymmetryEntry } from './propertyGrammarParityAllowlist/types.js';
 import { animationAndAudioAsymmetries } from './propertyGrammarParityAllowlist/animationAndAudio.js';

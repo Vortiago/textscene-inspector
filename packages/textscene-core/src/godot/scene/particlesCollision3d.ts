@@ -48,3 +48,15 @@ export const GPU_PARTICLES_COLLISION_HEIGHT_FIELD_3D_RESOLUTION_NAMES = relabelE
 /** Each update mode by its integer, spelled as its constant without `UPDATE_MODE_` (`gpu_particles_collision_3d.cpp:735`). */
 export const GPU_PARTICLES_COLLISION_HEIGHT_FIELD_3D_UPDATE_MODE_NAMES =
   enumNamesByValue(HeightFieldUpdateMode);
+
+/** `GPUParticlesCollisionSDF3D`'s default resolution (`gpu_particles_collision_3d.h:115`). */
+export const GPU_PARTICLES_COLLISION_SDF_3D_DEFAULT_RESOLUTION = SdfResolution.RESOLUTION_64;
+
+/** The resolutions the SDF gizmo has a cell count for: an index past its table has no Godot value (`gpu_particles_collision_3d_gizmo_plugin.cpp:267`). */
+export const GPU_PARTICLES_COLLISION_SDF_3D_RESOLUTION_VALUES: readonly number[] =
+  Object.values(SdfResolution);
+
+/** The cells along the longest side of a resolution: 16, 32, 64, 128, 256 or 512 (`gpu_particles_collision_3d_gizmo_plugin.cpp:267-268`). */
+export function gpuParticlesCollisionSdfCells(resolution: number): number {
+  return 16 << resolution;
+}

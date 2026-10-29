@@ -16,6 +16,7 @@ import {
   BASE_TYPE_TO_PARSER_SUBPATH,
   extractNodeType,
   findLinterParserDirs,
+  findParserFile,
   findSliceDirs,
   nodesRoot,
   scrapeParserReads,
@@ -158,5 +159,28 @@ describe('scrapeParserReads', () => {
         "import { parseGone } from './gone'; export const p = (properties) => parseGone(properties);",
     });
     expect(() => scrapeParserReads(parser)).toThrow(/gone/);
+  });
+});
+
+describe('the parser a slice registers', () => {
+  const sliceDir = (subpath: string) => join(nodesRoot, subpath);
+
+  it('is the parser.ts beside the slice when there is one', () => {
+    expect(findParserFile(sliceDir('3d/voxelgi'))).toBe(sliceDir('3d/voxelgi/parser.ts'));
+  });
+
+  it('is the shared module the registration names when the slice has no parser.ts', () => {
+    const dir = sliceDir('3d/particles/collisions/gpuparticlescollisionsdf3d');
+    expect(findParserFile(dir)).toBe(sliceDir('3d/particles/volume/parseSdfVolume.ts'));
+  });
+
+  it('is none when the slice registers the parser of a base type', () => {
+    expect(findParserFile(sliceDir('3d/visibleonscreenenabler3d'))).toBeNull();
+  });
+
+  it('counts a slice that registers a shared parser as swept', () => {
+    expect(findSliceDirs(nodesRoot)).toContain(
+      sliceDir('3d/particles/collisions/gpuparticlescollisionbox3d')
+    );
   });
 });

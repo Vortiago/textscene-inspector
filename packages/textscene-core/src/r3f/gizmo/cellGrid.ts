@@ -1,18 +1,17 @@
 /**
- * The cell grid inside the box of a VoxelGI gizmo: on each axis, the planes a cell apart, each drawn
+ * The cell grid inside the box of a VoxelGI or GPU particles SDF gizmo: on each axis, the planes a cell apart, each drawn
  * as four segments across the other two axes.
  */
 
 import { aabbLongestAxisSize, type Aabb } from '../../godot/math/aabb';
+import { storedReal as f } from '../../godot/math/real';
 import { VECTOR3_AXES } from '../../godot/math/vector';
-
-/** The engine holds the cell size and the sizes it compares as `float`: a plane can round onto a size. */
-const f = Math.fround;
 
 /**
  * Flat `xyz` segment ends of the planes `box` has for `subdivisions` cells along its longest axis
  * (`voxel_gi_gizmo_plugin.cpp:117-153`).
- * A plane past the size of a shorter axis is not drawn.
+ * A plane past the size of a shorter axis is not drawn. The engine holds the sizes as `float`, so a
+ * plane can round onto a size.
  */
 export function cellGridLines(box: Aabb, subdivisions: number): number[] {
   const { position, size } = box;
