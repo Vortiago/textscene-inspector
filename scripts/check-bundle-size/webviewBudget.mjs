@@ -7,13 +7,13 @@
 import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
+import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 
 // The ceiling catches an accidental import that pulls a whole library into the canvas-paint
 // path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
 // half stays out), so a tighter ceiling fails on the next slice, not on a regression. The report
 // reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
-const MEASURED_GZ = 805_053; // the 13-file closure as last measured
+const MEASURED_GZ = 812_774; // the closure as last measured
 const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. Importing the `@react-three/drei` barrel
@@ -21,6 +21,47 @@ const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 // `import('hls.js')` and `import('@mediapipe/tasks-vision')` emit about 656 KB of lazy chunks
 // that no code path loads.
 const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
+
+// Modules a dynamic import() does not reach itself but that must stay off the closure: the
+// tables behind the area light's LTC textures, the noise jobs' `fastnoise-lite`, and n8ao, which
+// no code path uses.
+const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/(fastnoise-lite|n8ao)\//;
+
+/** Where esbuild writes the webview, as the metafile's output keys begin. */
+const OUTPUT_PREFIX = 'dist/webview/';
+
+/** Every input that some input reaches through a dynamic import(). */
+function dynamicImportTargets(metafile) {
+  return new Set(
+    Object.values(metafile.inputs ?? {}).flatMap(({ imports = [] }) =>
+      imports.filter(({ kind }) => kind === 'dynamic-import').map(({ path }) => path)
+    )
+  );
+}
+
+/**
+ * The lazy-only inputs that a closure file holds, from the webview build's metafile: each target
+ * of a dynamic import(), and each lazy leaf. `closure` holds paths relative to the webview dir, as
+ * `staticClosure` returns them.
+ */
+export function findEagerLazyOnlyInputs(metafile, closure) {
+  const targets = dynamicImportTargets(metafile);
+  return Object.entries(metafile.outputs)
+    .filter(([output]) => closure.has(output.slice(OUTPUT_PREFIX.length)))
+    .flatMap(([, { inputs }]) =>
+      Object.keys(inputs).filter((input) => targets.has(input) || LAZY_LEAF_RE.test(input))
+    );
+}
+
+/**
+ * The webview build's metafile, or nothing when it is missing or older than `webview.js`. A watch
+ * build writes no metafile, so a stale one would name chunks that are no longer on disk.
+ */
+function currentWebviewMetafile() {
+  if (!existsSync(WEBVIEW_METAFILE)) return null;
+  if (statSync(WEBVIEW_METAFILE).mtimeMs < statSync(join(WEBVIEW_DIR, ENTRY)).mtimeMs) return null;
+  return JSON.parse(readFileSync(WEBVIEW_METAFILE, 'utf8'));
+}
 
 /**
  * Static imports of a JS file. Dynamic `import()` calls become a sentinel first, since those
@@ -87,7 +128,7 @@ function staticClosure(dir, entry) {
  * only `main()` sees both halves.
  *
  * @param {boolean} enforce whether an over-budget closure is an error or a warning
- * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks' | 'unresolved-imports'}
+ * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks' | 'unresolved-imports' | 'eager-lazy-only'}
  */
 export function checkWebviewBudget(enforce) {
   if (!existsSync(join(WEBVIEW_DIR, ENTRY))) {
@@ -112,6 +153,19 @@ export function checkWebviewBudget(enforce) {
       "[bundle-size] the closure walk reproduces the bundler's output layout; update it before trusting the number."
     );
     return 'unresolved-imports';
+  }
+  const metafile = currentWebviewMetafile();
+  if (!metafile) {
+    console.error(`\n[bundle-size] metafile missing or older than the webview build: ${WEBVIEW_METAFILE}`);
+    console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first, not a watch build');
+    return 'missing-entry';
+  }
+  const eager = findEagerLazyOnlyInputs(metafile, closure);
+  if (eager.length > 0) {
+    console.error(`[bundle-size] FAIL: ${eager.length} lazy-only module(s) on the canvas-paint path:`);
+    for (const input of eager) console.error(`  ${input}`);
+    console.error('[bundle-size] reach each one only through a dynamic import().');
+    return 'eager-lazy-only';
   }
   const buffers = [];
   let totalRaw = 0;

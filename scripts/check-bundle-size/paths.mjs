@@ -9,6 +9,8 @@ import { REPO_ROOT } from '../repoRoot.mjs';
 export { REPO_ROOT };
 export const WEBVIEW_DIR = join(REPO_ROOT, 'apps/textscene-vscode/dist/webview');
 export const ENTRY = 'webview.js';
+/** The webview build's metafile, beside the host metafiles that `.vscodeignore` keeps out of the VSIX. */
+export const WEBVIEW_METAFILE = join(REPO_ROOT, 'apps/textscene-vscode/dist/webview.meta.json');
 
 export const HOST_BUNDLE_PATHS = [
   join(REPO_ROOT, 'apps/textscene-vscode/dist/extension.js'),

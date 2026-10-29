@@ -1,0 +1,12 @@
+diff --git a/package.json b/package.json
+index eec80aafdcb35c49243ed6bb5cfbe2808d1fff03..56ed5fc1a73ecf338f732fbbe5e2badb7c0ecd25 100644
+--- a/package.json
++++ b/package.json
+@@ -26,6 +26,7 @@
+         "three": ">=0.137"
+     },
+     "type": "module",
++    "sideEffects": false,
+     "devDependencies": {
+         "cors": "^2.8.5",
+         "express": "^4.18.2",
