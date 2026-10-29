@@ -35,7 +35,7 @@ import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
-import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
+import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
@@ -214,6 +214,8 @@ function storedInput(input: ParticleSimInput): ParticleSimInput {
       params: props.params.map((param) => ({ ...param, min: f(param.min), max: f(param.max) })),
     },
     emissionTransform: storedTransform2D(input.emissionTransform),
+    colorRamp: input.colorRamp && storedGradient(input.colorRamp),
+    colorInitialRamp: input.colorInitialRamp && storedGradient(input.colorInitialRamp),
   };
 }
 
