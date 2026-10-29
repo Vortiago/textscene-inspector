@@ -6,9 +6,9 @@
  */
 
 import type * as THREE from 'three';
+import type { TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { identityKey } from '../../../utils/identityKey';
-import type { TscnInternalResource } from '../../../parser/types';
 import { referencedFilePath, resolveReferencedResource } from '../../resolveReference';
 import type { LoadedFile } from '../../scopedResource';
 import {

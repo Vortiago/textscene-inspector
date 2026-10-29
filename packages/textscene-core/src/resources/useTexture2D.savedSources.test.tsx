@@ -148,6 +148,15 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
     expect(result.current).toMatchObject({ texture: expect.any(THREE.DataTexture), missing: false });
   });
 
+  it('draws the Gradient of a raw res:// path as it draws the ExtResource form', () => {
+    const { wrapper } = setUp();
+    const raw = sceneWith({ gradient: 'res://ramp.tres', noise: '', colorRamp: '' });
+    const rawSlot = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, raw), { wrapper });
+    const extSlot = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
+
+    expect(pixels(rawSlot.result.current.texture)).toEqual(pixels(extSlot.result.current.texture));
+  });
+
   it('draws a new Gradient when the saved file reloads with other colours', () => {
     const { fake, wrapper } = setUp();
     const { result } = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
