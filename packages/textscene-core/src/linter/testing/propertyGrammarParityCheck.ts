@@ -10,6 +10,7 @@ import { classInheritanceChain } from '../../godot/classdb/classBaseTypes.js';
 import { NODE_CLASS_PROPERTIES } from '../../godot/classdb/classProperties.generated.js';
 import { UNCATALOGUED_PROPERTIES } from '../../godot/classdb/uncataloguedProperties.js';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry.js';
+// The registrations the previewer reads: `renderIntentOf` answers 'draws' for a type with none.
 import '../../r3f/nodes/index.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
@@ -67,17 +68,31 @@ export function collectSlices(): SliceInfo[] {
   return cachedSlices;
 }
 
+/** Every property name Godot declares on `nodeType` and its ancestors, by type. */
+const enginePropertyNames = new Map<string, ReadonlySet<string>>();
+
+function enginePropertiesOf(nodeType: string): ReadonlySet<string> {
+  let names = enginePropertyNames.get(nodeType);
+  if (!names) {
+    names = new Set(
+      classInheritanceChain(nodeType).flatMap((type) =>
+        [...(NODE_CLASS_PROPERTIES[type] ?? []), ...(UNCATALOGUED_PROPERTIES[type] ?? [])].map(
+          ([name]) => name
+        )
+      )
+    );
+    enginePropertyNames.set(nodeType, names);
+  }
+  return names;
+}
+
 /**
  * Whether Godot declares `key` on `nodeType` or an ancestor. A wildcard or indexed key names a
- * family of keys, so it passes: its pattern is the validator's own.
+ * family that the ClassDB rows do not list (Skeleton3D has no `bones` row), so it passes.
  */
 export function isEngineProperty(nodeType: string, key: string): boolean {
   if (key.includes('*') || key.includes('#')) return true;
-  return classInheritanceChain(nodeType).some((type) =>
-    [...(NODE_CLASS_PROPERTIES[type] ?? []), ...(UNCATALOGUED_PROPERTIES[type] ?? [])].some(
-      ([name]) => name === key
-    )
-  );
+  return enginePropertiesOf(nodeType).has(key);
 }
 
 interface UnreadKeysInput {

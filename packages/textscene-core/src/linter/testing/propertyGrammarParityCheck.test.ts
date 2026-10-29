@@ -22,7 +22,7 @@ describe('isEngineProperty', () => {
     expect(isEngineProperty('GPUParticlesCollisionSDF3D', 'cull_maks')).toBe(false);
   });
 
-  it('takes a wildcard key as the pattern it is (edge case)', () => {
+  it('takes a wildcard key as the family it names, which the rows do not list (edge case)', () => {
     expect(isEngineProperty('Skeleton3D', 'bones/*')).toBe(true);
   });
 });
