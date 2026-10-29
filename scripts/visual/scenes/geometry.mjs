@@ -34,6 +34,8 @@ export const GEOMETRY_SCENES = [
   // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's
   // normal frame and coloured from `emission_colors`.
   { name: 'cpuparticles3d-directed-points', file: 'unit-cpuparticles3d-directed-points.tscn' },
+  // Points whose emission projects by world triplanar: each particle takes its own colour.
+  { name: 'cpuparticles3d-triplanar-points', file: 'unit-cpuparticles3d-triplanar-points.tscn' },
   // An ArrayMesh triangle-strip surface, read as triangles as Godot reads it.
   { name: 'arraymesh-triangle-strip', file: 'unit-arraymesh-triangle-strip.tscn' },
   // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's

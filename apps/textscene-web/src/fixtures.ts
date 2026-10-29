@@ -478,6 +478,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Triplanar Points",
+    "file": "unit-cpuparticles3d-triplanar-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Damped Spring Joint 2d",
     "file": "unit-damped-spring-joint-2d.tscn",
     "category": "Other"

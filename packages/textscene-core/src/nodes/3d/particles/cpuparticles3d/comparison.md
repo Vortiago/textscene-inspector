@@ -111,7 +111,7 @@ Where strict rejects a value, the lenient parser substitutes Godot's constructor
 
 ## Particle draw
 
-The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. `draw_order` sorts the instances by index, by age or along the camera's view axis. The billboard modes of the material face each particle to the camera, and `PARTICLES` mode reads the particle's rotation and plays the `particles_anim_*` flipbook. `material_override` and `material_overlay` draw on every instance.
+The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. `draw_order` sorts the instances by index, by age or along the camera's view axis. The billboard modes of the material face each particle to the camera, and `PARTICLES` mode reads the particle's rotation and plays the `particles_anim_*` flipbook. `material_override` and `material_overlay` draw on every instance. A `PointMesh` draws one point at each particle, and a triplanar material projects at each particle's own place and rotation.
 
 The scene cull measures an emitter by `visibility_aabb`, else by the box of its live particles. The selection box and the editor framing leave the particles out, as Godot's `get_aabb` does.
 
