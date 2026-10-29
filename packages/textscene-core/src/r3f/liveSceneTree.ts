@@ -16,7 +16,7 @@ import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { followTrailIn } from '../resources/sceneTrail.js';
 import type { TrailWalk } from '../godot/scene/packedScene.js';
-import { holdsDeepChildren, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
+import { mayHandBack, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
@@ -226,7 +226,7 @@ function composedSubScene(
   sceneCache: CachedSceneSource
 ): { nodes: readonly LiveNode[] } {
   const root = cached.nodes[0];
-  if (cached.nodes.length !== 1 || !root || !(root.instance || holdsDeepChildren(root))) return cached;
+  if (cached.nodes.length !== 1 || !root || !(root.instance || mayHandBack(root))) return cached;
   // The recording source also sees the reads of a base's own composition, so a change of any base ends this entry.
   return compositions(cached, content.instancedScenePaths ?? [], { scenes: sceneCache }, ({ scenes }) =>
     composedOverBases(cached, root, content, scenes)
@@ -260,7 +260,7 @@ function seatedFile(
   seating: readonly LiveNode[]
 ): readonly LiveNode[] {
   const root = roots[0];
-  if (roots.length !== 1 || !root || !(holdsDeepChildren(root) || root.escaped)) return roots;
+  if (roots.length !== 1 || !root || !(mayHandBack(root) || root.escaped)) return roots;
   const collapse = collapserOver(sceneCache);
   // A root that inherits a base, not merged over it yet, hands back through its collapse.
   const isUnmerged = root.instance !== undefined && root.uniqueNames === undefined;

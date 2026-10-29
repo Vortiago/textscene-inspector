@@ -6,7 +6,8 @@
  */
 import { scopeOf, type LiveNode } from './liveNode.js';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
-import { holdsDeepChildren, seatInInstance, type CollapseInstance } from './seatEscaped.js';
+import { mayHandBack, seatInInstance, type CollapseInstance } from './seatEscaped.js';
+import { withHandOffsSettled } from './ownerHandOff.js';
 import { WAITING_FOR_SCENES, type FollowTrail } from './sceneTrail.js';
 import { rehomeOverride } from './rehomeOverride.js';
 import { layerRawOverride } from './layerRawOverride.js';
@@ -49,7 +50,7 @@ const NO_CACHE: InstanceCache = { collapse: (node) => node, followTrail: WAITING
  * with no scene cache.
  */
 export function mergeInstanceRoot(
-  instanceNode: LiveNode,
+  authored: LiveNode,
   loadedScene: { nodes: readonly LiveNode[] },
   scopes: InstanceScopes,
   { collapse, followTrail }: InstanceCache = NO_CACHE
@@ -59,6 +60,9 @@ export function mergeInstanceRoot(
   // A GLB's instance children are overrides matched by name through `GlbInstanceProvider`,
   // which a collapse would discard.
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
+
+  // A setting of this instance may await a host child that is an instance, as an inherited root's does.
+  const [instanceNode = authored] = withHandOffsSettled([authored], scopes.outer, collapse);
 
   const merged = mergeProperties(instanceNode, root, scopes);
   // The graft below lands these settings. A root that inherits a base the cache could not
@@ -94,8 +98,9 @@ export function mergeInstanceRoot(
       ? new Map([...graft.uniqueParentPlacements, ...seatedPlacements])
       : graft.uniqueParentPlacements,
     ...(graft.escaped.length > 0 ? { escaped: graft.escaped } : {}),
+    ...(graft.handedOff.length > 0 ? { handedOff: graft.handedOff } : {}),
   };
-  return holdsDeepChildren(instanceNode) ? seatedInstance(grafted, scopes, collapse) : grafted;
+  return mayHandBack(instanceNode) ? seatedInstance(grafted, scopes, collapse) : grafted;
 }
 
 /** `merged` with the host children that its nested instances hand back seated, or passed on in `escaped`. */
@@ -110,7 +115,12 @@ function seatedInstance(merged: LiveNode, scopes: InstanceScopes, collapse: Coll
     },
     collapse
   );
-  if (seated.root === merged) return merged;
+  if (seated.root === merged && seated.handedOff.length === 0) return merged;
   const escaped = [...(merged.escaped ?? []), ...seated.escaped];
-  return escaped.length > 0 ? { ...seated.root, escaped } : seated.root;
+  const handedOff = [...(merged.handedOff ?? []), ...seated.handedOff];
+  return {
+    ...seated.root,
+    ...(escaped.length > 0 ? { escaped } : {}),
+    ...(handedOff.length > 0 ? { handedOff } : {}),
+  };
 }

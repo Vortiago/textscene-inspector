@@ -24,6 +24,7 @@ import {
   type UniqueNameOwnership,
   type InstanceNameSetting,
   type InstanceOwnerFallback,
+  type OwnerHandOff,
 } from './nodeOwner.js';
 import {
   UNIQUE_NODE_PREFIX,
@@ -550,31 +551,39 @@ function handToOwner<N extends RawNode>(
   if (ownerPath === undefined || ownerPath === NO_OWNER) return;
   const owner = instanceHolding(tables, rootRelative(ownerPath));
   if (!owner) return;
-  const ownerFallback = ownerTrailFallback && fallbackIn(tables, owner, ownerTrailFallback);
-  handToInstance(tables, owner.instance, {
+  const setting = {
     pathInInstance: pathBetween(tables.places.get(owner.instance)!.livePath, livePath),
     isUnique,
     ownerInInstance: owner.pathInInstance,
     ...(ownerContentTrail === undefined ? {} : { ownerContentTrail }),
-    ...(ownerFallback ? { ownerFallback } : {}),
+  };
+  const fallback = ownerTrailFallback && instanceHolding(tables, rootRelative(ownerTrailFallback.owner));
+  if (!fallback) {
+    handToInstance(tables, owner.instance, setting);
+    return;
+  }
+  const ownerFallback = asOwnerFallback(fallback.pathInInstance, ownerTrailFallback);
+  if (fallback.instance === owner.instance) {
+    handToInstance(tables, owner.instance, { ...setting, ownerFallback });
+    return;
+  }
+  // Only the graft of the walked owner's instance knows whether the walk finds a node.
+  const handOff: OwnerHandOff = Symbol(livePath);
+  handToInstance(tables, owner.instance, { ...setting, ownerHandOff: handOff });
+  handToInstance(tables, fallback.instance, {
+    pathInInstance: pathBetween(tables.places.get(fallback.instance)!.livePath, livePath),
+    isUnique,
+    ...ownerFallback,
+    awaits: handOff,
   });
 }
 
-/**
- * The owner an `owner_uid_path=` finds, as the instance `held` by the walk reads it. Undefined where
- * that owner is in no instance, or in another one, whose table this instance's graft cannot hand to.
- */
-function fallbackIn<N extends RawNode>(
-  tables: SeatingTables<N>,
-  held: { instance: N; pathInInstance: string },
-  { owner, ownerContentTrail }: OwnerRecovery
-): InstanceOwnerFallback | undefined {
-  const recovered = instanceHolding(tables, rootRelative(owner));
-  if (recovered?.instance !== held.instance) return undefined;
-  return {
-    ownerInInstance: recovered.pathInInstance,
-    ...(ownerContentTrail === undefined ? {} : { ownerContentTrail }),
-  };
+/** The owner an `owner_uid_path=` finds, as the instance at whose path it sits reads it. */
+function asOwnerFallback(
+  ownerInInstance: string,
+  { ownerContentTrail }: OwnerRecovery
+): InstanceOwnerFallback {
+  return { ownerInInstance, ...(ownerContentTrail === undefined ? {} : { ownerContentTrail }) };
 }
 
 /** The root-relative spelling of an owner path: `.` is the root. */

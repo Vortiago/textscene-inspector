@@ -35,18 +35,21 @@ const PLAYER = parse(`[gd_scene format=3]
 
 const SCENES = { 'res://inner.tscn': INNER, 'res://player.tscn': PLAYER };
 
-/** A host that instances `res://player.tscn` as the heading with id `PLAYER_ID`, then states `headings`. */
-function playerHost(headings: string): TscnScene {
+/** A host with the root `Main` and an ext_resource `player` for `res://player.tscn`, then `headings`. */
+function hostOf(headings: string): TscnScene {
   return parse(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://player.tscn" id="player"]
 
 [node name="Main" type="Node3D"]
 
-[node name="Player" parent="." instance=ExtResource("player") unique_id=${PLAYER_ID}]
-
 ${headings}`);
 }
+
+const playerHeading = `[node name="Player" parent="." instance=ExtResource("player") unique_id=${PLAYER_ID}]\n`;
+
+/** A host that instances `res://player.tscn` as the heading with id `PLAYER_ID`, then states `headings`. */
+const playerHost = (headings: string): TscnScene => hostOf(`${playerHeading}\n${headings}`);
 
 const capWithTrail = (...ids: number[]) =>
   `[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(${ids.join(', ')})]`;
@@ -235,6 +238,91 @@ unique_name_in_owner = true
 
       expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
     });
+  });
+});
+
+describe('an owner= walk that finds nothing in one instance, with an owner_uid_path= owner in another', () => {
+  const OTHER_ID = 4444;
+  const other = `[node name="Other" parent="." instance=ExtResource("player") unique_id=${OTHER_ID}]\n`;
+  const lamp = (
+    owner: string,
+    shadeParent: string
+  ) => `[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${OTHER_ID}, ${INNER_ID})]
+unique_name_in_owner = true
+
+[node name="Shade" type="Node3D" parent="${shadeParent}"]
+`;
+
+  it('registers the %Name in the table of the owner the trail finds in the other instance', () => {
+    const host = playerHost(other + lamp('Player/Gone', 'Other/Inner/%Lamp'));
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+  });
+
+  it('registers it there where the other instance comes first in the tree', () => {
+    const host = hostOf(`${other}\n${playerHeading}\n${lamp('Player/Gone', 'Other/Inner/%Lamp')}`);
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+  });
+
+  it('registers it in no table of the other instance where the first instance holds the walked owner', () => {
+    const host = playerHost(other + lamp('Player/Inner', 'Other/Inner/%Lamp'));
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Other_Inner__Lamp#Shade']);
+  });
+
+  it('registers it in the table of the first instance where the walk finds the owner there', () => {
+    const host = playerHost(other + lamp('Player/Inner', 'Player/Inner/%Lamp'));
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+  });
+
+  it('hands it to the other instance where the walk finds nothing in a nested instance of the first', () => {
+    const host = playerHost(other + lamp('Player/Inner/Gone', 'Other/Inner/%Lamp'));
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Lamp/Shade']);
+  });
+
+  it('registers it in no table of the first instance where the walk finds nothing there', () => {
+    const host = playerHost(other + lamp('Player/Gone', 'Player/Inner/%Lamp'));
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Player_Inner__Lamp#Shade']);
+  });
+
+  describe('where the owner_uid_path= owner is the root, which inherits a base', () => {
+    const base = parse(`[gd_scene format=3]
+
+[node name="Base" type="Node3D" unique_id=1]
+`);
+    const inheritingHost = (owner: string) =>
+      parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" instance=ExtResource("base") unique_id=9]
+
+${playerHeading}
+[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(9)]
+unique_name_in_owner = true
+
+[node name="Shade" type="Node3D" parent="%Lamp"]
+`);
+    const scenes = { ...SCENES, 'res://base.tscn': base };
+
+    it('registers the %Name in the table of the root where the walk finds nothing in the instance', () => {
+      expect(pathsEnding(inheritingHost('Player/Gone'), 'Shade', scenes)).toEqual(['Main/Lamp/Shade']);
+    });
+
+    it('registers it in the table of the instance where the walk finds the owner there', () => {
+      expect(pathsEnding(inheritingHost('Player/Inner'), 'Shade', scenes)).toEqual(['Main/_Lamp#Shade']);
+    });
+  });
+
+  it('gives the node no owner where the other instance is written after the heading', () => {
+    const host = playerHost(lamp('Player/Gone', 'Other/Inner/%Lamp') + other);
+
+    expect(pathsEnding(host, 'Shade')).toEqual(['Main/Other_Inner__Lamp#Shade']);
   });
 });
 

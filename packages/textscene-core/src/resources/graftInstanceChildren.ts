@@ -6,6 +6,7 @@
  */
 
 import type { SceneScope } from '../parser/types';
+import type { OwnerHandOff } from '../parser/nodeOwner';
 import { hostChildOf, scopeOf, withFallbackScope, type EscapedChild, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
@@ -42,6 +43,8 @@ export interface GraftedInstance {
   readonly uniqueParentPlacements: ReadonlyMap<string, string>;
   /** The host children whose `parent=` walk leaves the instance or finds nothing, as of their headings. */
   readonly escaped: readonly EscapedChild[];
+  /** The hand-offs of the settings whose `owner=` walk found nothing here, in file order. */
+  readonly handedOff: readonly OwnerHandOff[];
 }
 
 /**
@@ -99,6 +102,7 @@ class Graft {
       uniqueNames: this.table,
       uniqueParentPlacements: this.placements,
       escaped: this.escaped,
+      handedOff: this.table.handedOff,
     };
   }
 

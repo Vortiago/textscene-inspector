@@ -13,7 +13,12 @@ import {
   walkedPath,
   type RootWalkTables,
 } from '../godot/string/nodePath';
-import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
+import {
+  holderAfterSetting,
+  isOutsideInstance,
+  type InstanceNameSetting,
+  type OwnerHandOff,
+} from '../parser/nodeOwner';
 import type { FollowTrail } from './sceneTrail';
 
 /**
@@ -83,6 +88,8 @@ export class InstanceNameTable implements UniqueNameTable {
   private landed = 0;
   /** Written only by `paths`, read once the graft has landed every setting. */
   private finished?: UniqueNamePaths;
+  /** Written only by `ownerChosen`: the settings whose owner this instance lacks, which another lands. */
+  readonly handedOff: OwnerHandOff[] = [];
 
   constructor({ own, settings, nested, followTrail }: InstanceNames) {
     this.own = own;
@@ -129,9 +136,11 @@ export class InstanceNameTable implements UniqueNameTable {
 
   /**
    * `tree` once `setting` lands in this table, or once it is handed to the nested instance whose
-   * table it names. A setting on a node the sub-scene lacks changes nothing.
+   * table it names. A setting on a node the sub-scene lacks, or one that awaits a hand-off, changes
+   * nothing.
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
+    if (authored.awaits) return tree;
     const setting = this.ownerChosen(tree, authored);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
@@ -157,12 +166,16 @@ export class InstanceNameTable implements UniqueNameTable {
 
   /**
    * `authored` with the owner Godot takes: the one its `owner=` walk finds, or its `owner_uid_path=` owner
-   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing.
+   * where that walk finds no node (packed_scene.cpp:159-163). Null where the owner names nothing, or
+   * where the `owner_uid_path=` owner is in another instance, to which the setting is handed off.
    */
   private ownerChosen(tree: readonly LiveNode[], authored: InstanceNameSetting): InstanceNameSetting | null {
     const walked = this.ownerWalked(tree, authored);
-    if (!authored.ownerFallback || (walked && holdsNode(tree, walked.ownerInInstance ?? ''))) return walked;
-    return this.ownerWalked(tree, withFallbackOwner(authored));
+    if (walked && holdsNode(tree, walked.ownerInInstance ?? '')) return walked;
+    if (authored.ownerFallback) return this.ownerWalked(tree, withFallbackOwner(authored));
+    if (!authored.ownerHandOff) return walked;
+    this.handedOff.push(authored.ownerHandOff);
+    return null;
   }
 
   private ownerWalked(tree: readonly LiveNode[], setting: InstanceNameSetting): InstanceNameSetting | null {
@@ -265,7 +278,7 @@ function tableOwner(
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
   if (!ownerSegments.every((name, index) => segments[index] === name)) {
-    return isNestedInstanceAt(tree, ownerSegments) ? OUTSIDE_THE_OWNER : null;
+    return typeof instanceDepth(tree, ownerSegments) === 'number' ? OUTSIDE_THE_OWNER : null;
   }
   const ownerAt = instanceDepth(tree, ownerSegments);
   return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
@@ -286,14 +299,10 @@ function instanceDepth(tree: readonly LiveNode[], path: readonly string[]): numb
   return undefined;
 }
 
-/** Whether the node at `path` is an instance with no instance above it, whose graft this one hands to. */
-function isNestedInstanceAt(tree: readonly LiveNode[], path: readonly string[]): boolean {
-  return instanceDepth(tree, path) === path.length - 1;
-}
-
 /**
- * `tree` with `setting` handed to the nested instance at `owner`, on the node at `nodePath` outside
- * it, which that instance's graft lands in its own table. A node `owner` does not name is no table.
+ * `tree` with `setting`, on the node at `nodePath` outside the nested instance that holds `owner`,
+ * handed to that instance, whose graft walks the rest of `owner` and lands it in its own table. An
+ * owner no nested instance holds is no table this graft reaches.
  */
 function handOutside(
   tree: LiveNode[],
@@ -301,12 +310,16 @@ function handOutside(
   nodePath: string,
   setting: InstanceNameSetting
 ): LiveNode[] {
-  if (!isNestedInstanceAt(tree, owner)) return tree;
-  const { isUnique, hostChildrenBefore } = setting;
-  return handTo(tree, owner, {
-    pathInInstance: pathBetween(owner.join('/'), nodePath),
+  const nestedAt = instanceDepth(tree, owner);
+  if (typeof nestedAt !== 'number') return tree;
+  const instancePath = owner.slice(0, nestedAt + 1);
+  const { isUnique, hostChildrenBefore, ownerHandOff } = setting;
+  return handTo(tree, instancePath, {
+    pathInInstance: pathBetween(instancePath.join('/'), nodePath),
     isUnique,
     hostChildrenBefore,
+    ...(nestedAt < owner.length - 1 ? { ownerInInstance: owner.slice(nestedAt + 1).join('/') } : {}),
+    ...(ownerHandOff ? { ownerHandOff } : {}),
   });
 }
 
@@ -353,19 +366,60 @@ export function replacedAt(
   path: readonly string[],
   replace: (node: LiveNode) => LiveNode
 ): LiveNode[] {
+  return replacedAtIndices(tree, indicesOf(tree, path), replace);
+}
+
+/**
+ * `tree` with the node at `indices`, each a child index below the last, swapped for what `replace`
+ * returns for it, as a copy along that spine that shares every other node.
+ *
+ * @canonical A Live tree with the node at an index path replaced
+ */
+export function replacedAtIndices(
+  tree: readonly LiveNode[],
+  indices: readonly number[],
+  replace: (node: LiveNode) => LiveNode
+): LiveNode[] {
   const replacedBelow = (siblings: readonly LiveNode[], depth: number): LiveNode[] => {
-    const name = path[depth];
-    const index = siblings.findIndex((n) => n.name === name);
-    if (index === -1) throw new Error(`expected a node at "${path.join('/')}", found none named "${name}"`);
+    const index = indices[depth]!;
     const target = siblings[index]!;
     const copy = [...siblings];
     copy[index] =
-      depth === path.length - 1
+      depth === indices.length - 1
         ? replace(target)
         : { ...target, children: replacedBelow(target.children, depth + 1) };
     return copy;
   };
   return replacedBelow(tree, 0);
+}
+
+/** The child indices of the node at the name path `path`, each below the last. */
+function indicesOf(tree: readonly LiveNode[], path: readonly string[]): number[] {
+  let siblings = tree;
+  return path.map((name) => {
+    const index = siblings.findIndex((n) => n.name === name);
+    if (index === -1) throw new Error(`expected a node at "${path.join('/')}", found none named "${name}"`);
+    siblings = siblings[index]!.children;
+    return index;
+  });
+}
+
+/**
+ * The child indices of the first node of `tree`, parents before children, that `isTarget` picks,
+ * or undefined where none is picked.
+ *
+ * @canonical The index path of the first node of a Live tree that a test picks
+ */
+export function indicesWhere(
+  tree: readonly LiveNode[],
+  isTarget: (node: LiveNode) => boolean
+): number[] | undefined {
+  for (const [index, node] of tree.entries()) {
+    if (isTarget(node)) return [index];
+    const below = indicesWhere(node.children, isTarget);
+    if (below) return [index, ...below];
+  }
+  return undefined;
 }
 
 /** `setting` spelt below the nested instance at depth `at` of `segments`, its expanded path. */
