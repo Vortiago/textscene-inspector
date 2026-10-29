@@ -224,7 +224,6 @@ function useTexture2DSlot(
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
   const sources = useTextureSources(sourceRef, slot.externalResources, slot.internalResources);
-  const isLoadingSources = sources.isLoading;
   const procedural = useProceduralTexture(sources.readyRef, sources.pools, sources.loadedFile);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
@@ -257,9 +256,9 @@ function useTexture2DSlot(
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing =
-    !procedural.claimed && !isLoadingSources && (!path || loaded.status === 'unavailable');
+    !procedural.claimed && !sources.isLoading && (!path || loaded.status === 'unavailable');
   const isArriving =
-    isLoadingSources ||
+    sources.isLoading ||
     (procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null);
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
 }

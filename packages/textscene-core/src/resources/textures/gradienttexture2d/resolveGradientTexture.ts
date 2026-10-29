@@ -8,8 +8,8 @@
 import type * as THREE from 'three';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { identityKey } from '../../../utils/identityKey';
-import { parseResourceReference } from '../../SubResourceResolver';
-import { resolveReferencedResource } from '../../resolveReference';
+import type { TscnInternalResource } from '../../../parser/types';
+import { referencedFilePath, resolveReferencedResource } from '../../resolveReference';
 import type { LoadedFile } from '../../scopedResource';
 import {
   findTypedSubResource,
@@ -32,7 +32,7 @@ export function resolveGradientTexture2D(
   if (!texture) return null;
   const gradientRef = texture.data.gradient;
   const gradientResource = resolveReferencedResource(gradientRef, pools, loadedFile);
-  const isSaved = parseResourceReference(gradientRef ?? '')?.type === 'ExtResource';
+  const isSaved = referencedFilePath(gradientRef, pools) !== null;
   return resolveProceduralSubResource(
     ref,
     pools.internalResources,
@@ -45,7 +45,7 @@ export function resolveGradientTexture2D(
 /** Texture properties and their Gradient resource to pixels. Null with no gradient. */
 function rasterize(
   properties: Record<string, string>,
-  gradientResource: ReturnType<typeof resolveReferencedResource>
+  gradientResource: TscnInternalResource | null
 ): THREE.DataTexture | null {
   const gradient = decodeGradientResource(gradientResource);
   if (!gradient) return null;

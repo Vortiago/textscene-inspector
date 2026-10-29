@@ -88,8 +88,10 @@ function recordingRunner() {
   return { jobs, runner: { run } as unknown as ResourceLoader['jobRunner'] };
 }
 
-/** The one job a slot starts on an empty procedural cache, or undefined when it starts none. */
-/** Resets per call: the inline and the saved run must not share a cache entry. */
+/**
+ * The one job a slot starts on an empty procedural cache, or undefined when it starts none. It resets
+ * per call: the inline and the saved run must not share a cache entry.
+ */
 function jobStartedBy(slot: () => unknown) {
   resetProceduralTextures();
   const { wrapper, jobs } = setUp();

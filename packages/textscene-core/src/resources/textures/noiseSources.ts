@@ -18,14 +18,14 @@ interface NoiseSources {
   colorRamp: Gradient | null;
 }
 
-/** The `noise` and `color_ramp` references of a NoiseTexture2D or NoiseTexture3D's properties. */
-export function noiseRefsOf(properties: Record<string, string>): NoiseRefs {
-  return { noise: properties.noise ?? null, colorRamp: properties.color_ramp ?? null };
-}
-
 export interface NoiseRefs {
   noise: string | null;
   colorRamp: string | null;
+}
+
+/** The `noise` and `color_ramp` references of a NoiseTexture2D or NoiseTexture3D's properties. */
+export function noiseRefsOf(properties: Record<string, string>): NoiseRefs {
+  return { noise: properties.noise ?? null, colorRamp: properties.color_ramp ?? null };
 }
 
 /**
