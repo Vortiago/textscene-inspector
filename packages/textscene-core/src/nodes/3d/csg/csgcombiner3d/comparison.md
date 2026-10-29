@@ -37,19 +37,17 @@ A subtraction whose result carries a transparent material, so the hole is seen t
 ## Linting
 
 <!-- lint:begin CSGCombiner3D -->
-
 Strict parsing format-checks the inherited set (6 inherited from CSGShape3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node); `CSGCombiner3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule                                                            | Reports                                                         | Severity |
-| --------------------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)                         | `binary-resource-reference`                                     | info     |
-| `valid-node3d-visibility` (type-family match)                   | `valid-node3d-visibility`                                       | error    |
-| `valid-csgshape3d-own-geometry` (type-family match)             | `csgmesh3d-requires-mesh`                                       | info     |
-|                                                                 | `csgpolygon3d-insufficient-points`                              | info     |
-| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin`          | warning  |
-|                                                                 | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning  |
-|                                                                 | `geometryinstance3d-visibility-range-end-fade-without-margin`   | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-csgshape3d-own-geometry` (type-family match) | `csgmesh3d-requires-mesh` | info |
+|  | `csgpolygon3d-insufficient-points` | info |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 The combiner's only validated property is `operation`. The lenient parser reads it with `parseOptionalInt` and warns neither when absent nor when unparseable. The shared Node3D validator listed above handles its `visible` flag.

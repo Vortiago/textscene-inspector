@@ -15,24 +15,22 @@ Holds a `NavigationMesh` describing walkable area. That mesh is navigation data 
 ## Linting
 
 <!-- lint:begin NavigationRegion3D -->
-
 Strict parsing format-checks these `NavigationRegion3D` properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property               | Accepts                                                        | Out of range |
-| ---------------------- | -------------------------------------------------------------- | ------------ |
-| `enabled`              | true or false                                                  |              |
-| `enter_cost`           | float >= 0                                                     | error below  |
-| `navigation_layers`    | 32-bit layer mask (layers 1-32)                                |              |
-| `navigation_mesh`      | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
-| `travel_cost`          | float >= 0                                                     | error below  |
-| `use_edge_connections` | true or false                                                  |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `enabled` | true or false |  |
+| `enter_cost` | float >= 0 | error below |
+| `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
+| `navigation_mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `travel_cost` | float >= 0 | error below |
+| `use_edge_connections` | true or false |  |
 
-| Rule                                          | Reports                                       | Severity |
-| --------------------------------------------- | --------------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)       | `binary-resource-reference`                   | info     |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`                     | error    |
-| `valid-navigationregion3d-resources`          | `navigationregion3d-requires-navigation-mesh` | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-navigationregion3d-resources` | `navigationregion3d-requires-navigation-mesh` | warning |
 <!-- lint:end -->
 
 The lenient parser assigns `navigation_mesh` straight from the raw property string with no format check. A malformed reference that strict rejects is stored as written and fails only at the resource lookup.
