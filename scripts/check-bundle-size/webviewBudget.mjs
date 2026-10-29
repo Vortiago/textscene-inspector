@@ -54,6 +54,16 @@ export function findEagerLazyOnlyInputs(metafile, closure) {
 }
 
 /**
+ * The webview build's metafile, or nothing when it is missing or older than `webview.js`. A watch
+ * build writes no metafile, so a stale one would name chunks that are no longer on disk.
+ */
+function currentWebviewMetafile() {
+  if (!existsSync(WEBVIEW_METAFILE)) return null;
+  if (statSync(WEBVIEW_METAFILE).mtimeMs < statSync(join(WEBVIEW_DIR, ENTRY)).mtimeMs) return null;
+  return JSON.parse(readFileSync(WEBVIEW_METAFILE, 'utf8'));
+}
+
+/**
  * Static imports of a JS file. Dynamic `import()` calls become a sentinel first, since those
  * chunks load on demand and stay out of the closure.
  */
@@ -144,7 +154,13 @@ export function checkWebviewBudget(enforce) {
     );
     return 'unresolved-imports';
   }
-  const eager = findEagerLazyOnlyInputs(JSON.parse(readFileSync(WEBVIEW_METAFILE, 'utf8')), closure);
+  const metafile = currentWebviewMetafile();
+  if (!metafile) {
+    console.error(`\n[bundle-size] metafile missing or older than the webview build: ${WEBVIEW_METAFILE}`);
+    console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first, not a watch build');
+    return 'missing-entry';
+  }
+  const eager = findEagerLazyOnlyInputs(metafile, closure);
   if (eager.length > 0) {
     console.error(`[bundle-size] FAIL: ${eager.length} lazy-only module(s) on the canvas-paint path:`);
     for (const input of eager) console.error(`  ${input}`);

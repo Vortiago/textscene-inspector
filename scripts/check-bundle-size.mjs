@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Bundle-size guards for the VS Code extension: the webview's initial-paint chunk against its
- * gzipped budget, with no lazy-loaded module in it (`check-bundle-size/webviewBudget.mjs`), and the host bundles
- * (`dist/extension.js`, `extension.web.js`), which must never bundle `react` or `three`
- * (`check-bundle-size/hostBundles.mjs`). `check-bundle-size/paths.mjs` says where dist/ is.
+ * gzipped budget, with no lazy-loaded module in it (`check-bundle-size/webviewBudget.mjs`), and
+ * the host bundles (`dist/extension.js`, `extension.web.js`), which must never bundle `react` or
+ * `three` (`check-bundle-size/hostBundles.mjs`). `check-bundle-size/paths.mjs` says where dist/ is.
  */
 
 import { pathToFileURL } from 'node:url';

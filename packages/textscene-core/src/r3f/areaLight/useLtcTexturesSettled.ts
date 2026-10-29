@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { usePendingWhile } from '../../resources/usePendingWhile.js';
 import { warn } from '../../logger.js';
+import { isGodotAreaLightInstalled } from './areaLightChunk.js';
 
 /** Written only by `loadLtcTextures`, on its first call. It never clears: a failed import stays failed. */
 let ltcTexturesLoad: Promise<void> | null = null;
@@ -15,7 +16,9 @@ let isSettled = false;
 function loadLtcTextures(): Promise<void> {
   ltcTexturesLoad ??= import('./ltcTextures.js')
     .then(
-      (m) => m.installLtcTextures(),
+      (m) => {
+        if (isGodotAreaLightInstalled()) m.installLtcTextures();
+      },
       (error: unknown) => warn(`[useLtcTexturesSettled] Godot's LTC tables failed to load: ${String(error)}`)
     )
     .finally(() => {

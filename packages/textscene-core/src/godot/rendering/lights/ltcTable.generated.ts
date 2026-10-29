@@ -13,8 +13,10 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
+import { LTC_SIZE } from './ltcSize.js';
+
 /** How the residuals lie: RGBA per texel. */
-export const LTC_SHAPE = { width: 64, channels: 4 };
+export const LTC_SHAPE = { width: LTC_SIZE, channels: 4 };
 
 /**
  * The 32-bit floats' bit patterns as residuals (`tableResiduals.ts`): RGBA per texel, a row per

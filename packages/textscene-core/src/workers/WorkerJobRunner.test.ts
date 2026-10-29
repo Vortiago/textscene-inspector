@@ -4,7 +4,7 @@
  * falls back to running the same job in-thread.
  */
 import { createHash } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as logger from '../logger';
 import {
   NOISE_PIXEL_CASES,
@@ -215,6 +215,7 @@ describe('WorkerJobRunner in-thread fallback', () => {
       await jobsLoaded;
       return { WORKER_JOBS: { 'noise-texture-2d': { run, transfer: () => [] } } };
     });
+    onTestFinished(() => vi.doUnmock('./jobs'));
     const { WorkerJobRunner: FreshRunner } = await import('./WorkerJobRunner');
     const controller = new AbortController();
     const result = new FreshRunner().run('noise-texture-2d', firstCase, controller.signal);
@@ -225,7 +226,6 @@ describe('WorkerJobRunner in-thread fallback', () => {
     await expect(result).rejects.toMatchObject({ name: 'AbortError' });
     await settle();
     expect(run).not.toHaveBeenCalled();
-    vi.doUnmock('./jobs');
   });
 
   it.each([

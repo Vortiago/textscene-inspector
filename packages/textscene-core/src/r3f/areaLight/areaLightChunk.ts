@@ -16,6 +16,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
+import * as THREE from 'three';
 import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installGodotLightFunction, RE_DIRECT } from '../godotLightFunction.js';
 import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
@@ -188,6 +189,17 @@ const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   },
 ];
 
+/** Godot's integral, which only the patched `lights_physical_pars_fragment` holds. */
+const AREA_LIGHT_MARK = 'godotLtcIntegral(';
+
+/**
+ * Whether three's chunks hold Godot's area light. Godot's LTC tables go in only then: three's own
+ * area light reads its tables in another layout.
+ */
+export function isGodotAreaLightInstalled(): boolean {
+  return THREE.ShaderChunk.lights_physical_pars_fragment.includes(AREA_LIGHT_MARK);
+}
+
 /**
  * Installs the light function and the attenuation it reads, then replaces three's area light, and
  * gives the area light atlas and the per-light uniforms to every built-in lit material, for every
@@ -199,7 +211,7 @@ export function installGodotAreaLight(): void {
   const isPatched = installChunkEdits({
     requires: [installGodotLightFunction, installGodotLightAttenuation],
     edits: AREA_LIGHT_EDITS,
-    mark: 'godotLtcIntegral(',
+    mark: AREA_LIGHT_MARK,
     patch: 'area light',
   });
   if (!isPatched) return;
