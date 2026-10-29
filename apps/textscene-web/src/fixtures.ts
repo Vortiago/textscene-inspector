@@ -663,6 +663,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Ramp Tres",
+    "file": "unit-fog-volume-density-ramp-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume Density Volume Tres",
     "file": "unit-fog-volume-density-volume-tres.tscn",
     "category": "Other"
@@ -1430,6 +1435,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Noisetexture2d Tiled",
     "file": "unit-noisetexture2d-tiled.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d Tres",
+    "file": "unit-noisetexture2d-tres.tscn",
     "category": "Other"
   },
   {
@@ -2905,6 +2915,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Gradienttexture Tres",
+    "file": "unit-sprite2d-gradienttexture-tres.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Gradienttexture",
     "file": "unit-sprite2d-gradienttexture.tscn",
     "category": "Unit - 2D Canvas"
@@ -4211,6 +4226,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport 3d Controls",
+    "file": "unit-sub-viewport-3d-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Camera 2d Canvas Layer",
     "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
     "category": "Unit - Viewports"
@@ -4218,6 +4238,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Camera Environment",
     "file": "unit-sub-viewport-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Camera Exposure",
+    "file": "unit-sub-viewport-camera-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {
@@ -4306,6 +4331,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Mixed Controls",
+    "file": "unit-sub-viewport-mixed-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Msaa",
     "file": "unit-sub-viewport-msaa.tscn",
     "category": "Unit - Viewports"
@@ -4323,6 +4353,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Camera Exposure",
+    "file": "unit-sub-viewport-shared-world-camera-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {

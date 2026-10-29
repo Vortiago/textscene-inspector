@@ -1,0 +1,70 @@
+; One variable: the `attributes` of the Camera3D of each of two SubViewports that share the 2D
+; canvas's World3D, at exposure_multiplier 2 in ViewA and 0.5 in ViewB. ViewA holds the lit sphere
+; and the colour background, and ViewB reaches them through the shared world. Godot forces each
+; viewport's camera attributes for its own render (`renderer_scene_cull.cpp:2707`, `:3560-3565`),
+; so one frame draws them at two exposures. `sub-viewport-camera-exposure` shows one viewport
+; against the root world.
+
+[gd_scene format=3]
+
+[sub_resource type="CameraAttributesPractical" id="Camera_attributes_bright"]
+exposure_multiplier = 2.0
+
+[sub_resource type="CameraAttributesPractical" id="Camera_attributes_dim"]
+exposure_multiplier = 0.5
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.05, 0.06, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_grey"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 1.0
+metallic_specular = 0.0
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_a"]
+viewport_path = NodePath("ViewA")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_b"]
+viewport_path = NodePath("ViewB")
+
+[node name="Root" type="Node2D"]
+
+[node name="ViewA" type="SubViewport" parent="."]
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="ViewA"]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 3, 0)
+light_energy = 0.5
+
+[node name="Sphere" type="MeshInstance3D" parent="ViewA"]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_grey")
+
+[node name="Camera3D" type="Camera3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 50.0
+attributes = SubResource("Camera_attributes_bright")
+
+[node name="ViewB" type="SubViewport" parent="."]
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="ViewB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 50.0
+attributes = SubResource("Camera_attributes_dim")
+
+[node name="ShowA" type="Sprite2D" parent="."]
+position = Vector2(180, 300)
+texture = SubResource("ViewportTexture_a")
+
+[node name="ShowB" type="Sprite2D" parent="."]
+position = Vector2(420, 300)
+texture = SubResource("ViewportTexture_b")

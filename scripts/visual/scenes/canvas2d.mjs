@@ -186,6 +186,12 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite2d-gradienttexture.tscn',
     mode: '2d',
   },
+  // A GradientTexture2D whose `gradient` is a saved Gradient (.tres). The header states why no
+  // other golden shows it.
+  { name: 'sprite2d-gradienttexture-tres', file: 'unit-sprite2d-gradienttexture-tres.tscn', mode: '2d' },
+  // A NoiseTexture2D whose `noise` and `color_ramp` are saved resources (.tres). The header states
+  // why no other golden shows it.
+  { name: 'noisetexture2d-tres', file: 'unit-noisetexture2d-tres.tscn', mode: '2d' },
   // A Sprite2D whose `texture` is an ImageTexture saved as its own .tres, its pixels an inline
   // Image. The header states why no other golden shows it.
   { name: 'sprite2d-imagetexture-tres', file: 'unit-sprite2d-imagetexture-tres.tscn', mode: '2d' },
@@ -511,6 +517,15 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-control-outer-light.tscn',
     mode: '2d',
   },
+  // A ColorRect and a Polygon2D in one sub-viewport, lit by its own sun. Godot 4.6.3 `--mode 2d`:
+  // (250,200) and (550,200) rgb(0,0,123) the ColorRect and the Polygon2D, (250,500) rgb(0,0,112) the
+  // stage ColorRect under the stage sun alone.
+  { name: 'sub-viewport-mixed-controls', file: 'unit-sub-viewport-mixed-controls.tscn', mode: '2d' },
+  // A ColorRect over a 3D world in one sub-viewport. Godot 4.6.3 `--mode 2d`: (150,180)
+  // rgb(127,153,0) the translucent Veil blended over the quad in sRGB numbers, (250,180)
+  // rgb(255,102,0) the quad alone, (240,240) rgb(51,51,230) the Plate, (110,90) rgb(38,140,38) the
+  // Veil over the clear colour.
+  { name: 'sub-viewport-3d-controls', file: 'unit-sub-viewport-3d-controls.tscn', mode: '2d' },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.

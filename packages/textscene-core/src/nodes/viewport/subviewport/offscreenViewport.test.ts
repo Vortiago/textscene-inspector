@@ -12,7 +12,7 @@ import {
   godotCanvasPosition,
   orthoFrameForCamera2D,
   orthoFrameForSize,
-  selectViewportCamera,
+  cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
   viewportMsaaMode,
@@ -23,10 +23,9 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 /** A camera tagged the way `<Camera3D>` tags one: its dispatcher-absolute path. */
-function camera(tscnPath: string, current = false): THREE.PerspectiveCamera {
+function camera(tscnPath: string): THREE.PerspectiveCamera {
   const cam = new THREE.PerspectiveCamera();
   cam.userData.tscnPath = tscnPath;
-  cam.userData.tscnCurrent = current;
   return cam;
 }
 
@@ -56,82 +55,29 @@ function tagOf(object: THREE.Object3D): Camera2DTag {
   return object.userData.camera2d as Camera2DTag;
 }
 
-describe('selectViewportCamera', () => {
-  /**
-   * Godot renders a viewport through a Camera3D inside it: `scene/3d/camera_3d.cpp`
-   * on `NOTIFICATION_ENTER_WORLD` calls `get_viewport()->_camera_3d_add(this)`. A
-   * camera elsewhere in the shared World3D belongs to another viewport, and the
-   * shared-world render source is the whole main scene.
-   */
-  it('picks a camera that is a descendant of the sub-viewport', () => {
+describe('cameraAtPath', () => {
+  it('finds the camera tagged with the path', () => {
     const scene = new THREE.Scene();
     const mine = camera('Root/SubViewport/Camera3D');
     scene.add(camera('Root/OtherCamera'), mine);
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBe(mine);
+    expect(cameraAtPath(scene, 'Root/SubViewport/Camera3D')).toBe(mine);
   });
 
-  it('ignores a camera outside the sub-viewport entirely', () => {
+  it('is null before the camera mounts', () => {
+    expect(cameraAtPath(new THREE.Scene(), 'Root/SubViewport/Camera3D')).toBeNull();
+  });
+
+  it('is null for no elected camera', () => {
     const scene = new THREE.Scene();
-    scene.add(camera('Root/OtherCamera'));
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBeNull();
-  });
-
-  /**
-   * A path prefix is only a descendant when the next character is a separator:
-   * `Root/SubViewportExtra/Camera3D` is a sibling, not a child.
-   */
-  it('does not mistake a sibling with a shared name prefix for a descendant', () => {
-    const scene = new THREE.Scene();
-    scene.add(camera('Root/SubViewportExtra/Camera3D'));
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBeNull();
-  });
-
-  /**
-   * `camera_3d.cpp`, `NOTIFICATION_ENTER_WORLD`:
-   * `if (current || first_camera) { viewport->_camera_3d_set(this); }`, so a
-   * camera marked `current` claims the viewport whatever the tree order.
-   */
-  it('prefers a camera with current = true over an earlier sibling', () => {
-    const scene = new THREE.Scene();
-    const first = camera('Root/SubViewport/CameraA');
-    const current = camera('Root/SubViewport/CameraB', true);
-    scene.add(first, current);
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBe(current);
-  });
-
-  /**
-   * `Viewport::_camera_3d_set` replaces the incumbent unless it is already the
-   * current one, so when several cameras are marked `current` the last to enter
-   * the tree keeps it, not the first.
-   */
-  it('with several current cameras the last in tree order wins', () => {
-    const scene = new THREE.Scene();
-    const earlier = camera('Root/SubViewport/CameraA', true);
-    const later = camera('Root/SubViewport/CameraB', true);
-    scene.add(earlier, later);
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBe(later);
-  });
-
-  /**
-   * With none marked current, `first_camera` (`_camera_3d_add` returning
-   * "set size is now 1") elects the first camera to enter the tree.
-   */
-  it('falls back to the first camera in tree order', () => {
-    const scene = new THREE.Scene();
-    const first = camera('Root/SubViewport/CameraA');
-    scene.add(first, camera('Root/SubViewport/CameraB'));
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBe(first);
-  });
-
-  it('returns null for an empty scene rather than throwing', () => {
-    expect(selectViewportCamera(new THREE.Scene(), 'Root/SubViewport')).toBeNull();
+    scene.add(camera('Root/SubViewport/Camera3D'));
+    expect(cameraAtPath(scene, null)).toBeNull();
   });
 
   /** An untagged THREE camera (a helper, the editor camera) is not a scene camera. */
   it('ignores cameras carrying no tscnPath tag', () => {
     const scene = new THREE.Scene();
     scene.add(new THREE.PerspectiveCamera());
-    expect(selectViewportCamera(scene, 'Root/SubViewport')).toBeNull();
+    expect(cameraAtPath(scene, 'Root/SubViewport/Camera3D')).toBeNull();
   });
 });
 

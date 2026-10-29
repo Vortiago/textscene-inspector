@@ -7,8 +7,9 @@
  */
 
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types';
-import { resolveNoiseSources } from '../noiseSources';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import type { LoadedFile } from '../../scopedResource';
+import { noiseRefsOf, noiseSourceResources, resolveNoiseSources } from '../noiseSources';
 import {
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
@@ -20,22 +21,30 @@ import type { NoiseTexture2DInput } from './pixels';
 
 export function resolveNoiseTexture2D(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): ProceduralTextureLookup | null {
-  return resolveProceduralSubResourceAsync(ref, internalResources, 'NoiseTexture2D', plan);
+  return resolveProceduralSubResourceAsync(
+    ref,
+    pools.internalResources,
+    'NoiseTexture2D',
+    (properties) => plan(properties, pools, loadedFile),
+    (properties) => noiseSourceResources(noiseRefsOf(properties), pools, loadedFile)
+  );
 }
 
 /**
- * Texture properties and the table their `noise` and `color_ramp` refs resolve in,
+ * Texture properties and the pools and files their `noise` and `color_ramp` refs resolve in,
  * to a build. Null for an unusable `noise`, for which `_generate_texture` returns an
  * empty image (noise_texture_2d.cpp:159-161), and for a size `noiseTextureFits` refuses.
  */
 function plan(
   properties: Record<string, string>,
-  resources: readonly TscnInternalResource[]
+  pools: SceneResources,
+  loadedFile: LoadedFile
 ): ProceduralBuildPlan<'noise-texture-2d'> | null {
   const decoded = decodeNoiseTexture2D(properties);
-  const sources = resolveNoiseSources(decoded, resources);
+  const sources = resolveNoiseSources(decoded, pools, loadedFile);
   if (!sources || !noiseTextureFits(decoded)) return null;
 
   // The input carries the values the refs name, so a renamed id keeps the same content key.

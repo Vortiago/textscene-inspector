@@ -10,11 +10,13 @@ import { resolve } from 'node:path';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnScene } from '../../../parser/types';
 import { repoRoot } from '../../../parser/testing/parserKit';
-import { collectControlRasterViewports } from './controlRasterViewports';
+import { collectControlRasterViewports, inheritedRtlAt } from './controlRasterViewports';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
+import { liveTreeOf } from '../../../r3f/liveSceneTree';
+import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
@@ -367,5 +369,42 @@ layout_direction = 3
 [node name="Panel" type="Panel" parent="SubViewport"]
 `);
     expect(collect(scene)[0]!.inheritedRtl).toBeNull();
+  });
+});
+
+describe('inheritedRtlAt — a sub-viewport that also holds 2D content', () => {
+  function rtlAt(scene: TscnScene, path: string): boolean | null {
+    const tree = liveTreeOf(scene.nodes, {
+      internalResources: scene.internalResources,
+      externalResources: scene.externalResources,
+      sceneCache: NOTHING_CACHED,
+    });
+    return inheritedRtlAt(tree, path, LTR_LAYOUT_ENV);
+  }
+
+  it('takes the direction of the Control around it, though the collector skips it', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="SVC" type="SubViewportContainer" parent="."]
+layout_direction = 3
+
+[node name="SubViewport" type="SubViewport" parent="SVC"]
+
+[node name="Shape" type="Polygon2D" parent="SVC/SubViewport"]
+
+[node name="Panel" type="Panel" parent="SVC/SubViewport"]
+`);
+    expect(collect(scene)).toHaveLength(0);
+    expect(rtlAt(scene, 'Root/SVC/SubViewport')).toBe(true);
+  });
+
+  it('reports no direction at a root, where the climb finds no Control', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="SubViewport" type="SubViewport"]
+`);
+    expect(rtlAt(scene, 'SubViewport')).toBeNull();
   });
 });

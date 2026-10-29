@@ -77,6 +77,9 @@ export const LIGHTING_SCENES = [
   // A FogVolume whose density texture is an ImageTexture3D saved as its own .tres. The header
   // states why no other golden shows it.
   { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
+  // A FogVolume whose NoiseTexture3D names its noise and colour ramp as saved resources (.tres).
+  // The header states why no other golden shows it.
+  { name: 'fog-volume-density-ramp-tres', file: 'unit-fog-volume-density-ramp-tres.tscn' },
   { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
   // A FogVolume whose ShaderMaterial Godot cannot run as fog. The header states why no other
   // golden shows it.

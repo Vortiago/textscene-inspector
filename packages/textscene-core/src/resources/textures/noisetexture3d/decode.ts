@@ -5,6 +5,7 @@
  */
 
 import { boolOr, settableFloatOr, settableIntOr, type SetterRange } from '../../../parser/valueParsers';
+import { noiseRefsOf } from '../noiseSources';
 import type { NoiseTexture3DData } from './types';
 
 /** `width = 64`, `height = 64` and `depth = 64` (`noise_texture_3d.h:52-54`). */
@@ -33,7 +34,6 @@ export function decodeNoiseTexture3D(properties: Record<string, string>): NoiseT
       BLEND_SKIRT_RANGE,
       'NoiseTexture3D seamless_blend_skirt'
     ),
-    noise: properties.noise ?? null,
-    colorRamp: properties.color_ramp ?? null,
+    ...noiseRefsOf(properties),
   };
 }

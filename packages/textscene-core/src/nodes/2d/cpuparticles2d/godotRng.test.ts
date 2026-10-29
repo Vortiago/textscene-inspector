@@ -84,6 +84,14 @@ describe('randFromSeed', () => {
     expect(second).not.toBe(first);
   });
 
+  it('returns a real_t, as the engine function does', () => {
+    const state = { value: 12345 };
+    for (let draw = 0; draw < 20; draw++) {
+      const value = randFromSeed(state);
+      expect(value).toBe(Math.fround(value));
+    }
+  });
+
   it('substitutes Godot’s fixed constant for a zero seed (error path)', () => {
     // `rand_from_seed` maps s == 0 to 305420679 so a zero seed is not a fixed point.
     const zero = { value: 0 };
