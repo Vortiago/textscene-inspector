@@ -12,6 +12,7 @@ import { instanceAs } from '../testing/reactThreeTestInstance';
 import { subResource } from '../../../testing/subResource';
 import { textureTexel } from '../../../r3f/testing/backgroundTexel';
 import { TAU } from '../../../godot/math/math.js';
+import { shownAmbientLights } from '../../../r3f/testing/ambientLights';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
@@ -65,9 +66,9 @@ describe('WorldEnvironment (assertions 81–87)', () => {
         ambient_light_energy: '1',
       }),
     ]);
-    const ambients = renderer.scene.findAllByType('AmbientLight');
+    const ambients = shownAmbientLights(instanceAs<THREE.Scene>(renderer.scene));
     expect(ambients.length).toBeGreaterThan(0);
-    const c = instanceAs<THREE.AmbientLight>(ambients[0]!).color;
+    const c = ambients[0]!.color;
     expect(c.getHexString()).toBe('4d99e6'); // (0.3,0.6,0.9) sRGB
   });
 
@@ -82,9 +83,9 @@ describe('WorldEnvironment (assertions 81–87)', () => {
         ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)',
       }),
     ]);
-    const lights = renderer.scene.findAllByType('AmbientLight');
+    const lights = shownAmbientLights(instanceAs<THREE.Scene>(renderer.scene));
     expect(lights.length).toBe(1);
-    expect(instanceAs<THREE.AmbientLight>(lights[0]!).color.getHexString()).toBe('666666');
+    expect(lights[0]!.color.getHexString()).toBe('666666');
   });
 
   it('#85 ambient_light_energy → ambient light intensity matches', async () => {
@@ -96,9 +97,9 @@ describe('WorldEnvironment (assertions 81–87)', () => {
         ambient_light_energy: '2',
       }),
     ]);
-    const ambients = renderer.scene.findAllByType('AmbientLight');
+    const ambients = shownAmbientLights(instanceAs<THREE.Scene>(renderer.scene));
     expect(ambients.length).toBeGreaterThan(0);
-    const intensity = instanceAs<THREE.AmbientLight>(ambients[0]!).intensity;
+    const intensity = ambients[0]!.intensity;
 
     // Godot adds a constant ambient as `ambient_light * albedo` with no 1/PI, and three multiplies
     // its unscaled irradiance by albedo/PI. So a white energy-2.0 ambient lands a Lambertian surface

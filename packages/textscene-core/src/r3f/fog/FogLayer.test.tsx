@@ -8,6 +8,7 @@ import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { fireSceneRender } from '../testing/fireSceneRender';
 import { FogLayer } from './FogLayer';
+import { ShownEnvironment } from '../environment/sceneEnvironment';
 import { FogVolumeObject } from './fogVolumeObject';
 import { VolumetricFogPass } from './volumetricFogPass';
 
@@ -15,6 +16,9 @@ const volumetric = createEnvironmentSettings(
   decodeEnvironment({ volumetric_fog_enabled: 'true' }),
   DEFAULT_CLEAR_COLOR
 ).volumetricFog;
+
+/** The Environment the fog belongs to, which the scene shows. */
+const ENVIRONMENT = {};
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -29,7 +33,9 @@ async function mountedFog() {
   await ReactThreeTestRenderer.create(
     <>
       <Capture />
-      <FogLayer depth={null} volumetric={volumetric} />
+      <ShownEnvironment environment={ENVIRONMENT}>
+        <FogLayer depth={null} volumetric={volumetric} />
+      </ShownEnvironment>
     </>
   );
   const { gl, scene, camera } = state!;

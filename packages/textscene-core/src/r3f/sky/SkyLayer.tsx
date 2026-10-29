@@ -1,6 +1,7 @@
 /**
  * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its radiance to every
- * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`).
+ * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`),
+ * while its Environment is on the scene (`sceneEnvironment.tsx`).
  * Godot's sky shader draws the discs of the first four DirectionalLights that are not Light Only as
  * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced or GLB light
  * has its real world transform. The world's exposure scales the sky as Godot does: the background
@@ -24,6 +25,7 @@ import { createEnvironmentSwitch } from './environmentSwitch';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
 import { registerExposureStage } from '../exposure/sceneExposure';
+import { registerEnvironmentPart, useEnvironmentKey } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -73,6 +75,7 @@ export function SkyLayer({
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const exposure = useExposureFactor();
+  const environment = useEnvironmentKey();
 
   // The panorama sky samples `source_panorama` as `source_color` (`sky_material.cpp:498`).
   // Every other sky kind passes `undefined` and the hook idles.
@@ -104,59 +107,64 @@ export function SkyLayer({
     });
     if (!built) return undefined;
 
-    const previousEnvironment = scene.environment;
-    const previousIntensity = scene.environmentIntensity;
-    const previousBackground = scene.background;
-    const previousBackgroundIntensity = scene.backgroundIntensity;
-    const previousBackgroundRotation = scene.backgroundRotation.clone();
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-
-    // The radiance is baked at the exposure of the view, and a surface reads it at the exposure it
-    // draws at. A draw at another exposure keeps the bake, as Godot rebakes a layer at a time
-    // (`sky.cpp`, `update_radiance_buffers`).
-    const exposeAs = (factor: number) => {
-      scene.environmentIntensity = intensity * exposure * factor;
-      if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
-    };
-    const environment = createEnvironmentSwitch();
-    scene.environment = environment;
+    const environmentSwitch = createEnvironmentSwitch();
     const radiance = new SkyRadiance(gl, built.layers, {
       energy: intensity * exposure,
       rotation: skyRotation,
     });
-    // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingRadiance = observeSceneCamera(scene, () => radiance.show(contributionRef.current));
-    const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
-    if (asBackground) {
-      scene.background = built.background;
-      scene.backgroundRotation.copy(skyRotation);
-    }
-    exposeAs(exposure);
-    const stopStaging = registerExposureStage(scene, (target) => {
-      exposeAs(target ?? 1);
-      return () => exposeAs(exposure);
+    const stopRegistering = registerEnvironmentPart(scene, environment, () => {
+      const previousEnvironment = scene.environment;
+      const previousIntensity = scene.environmentIntensity;
+      const previousBackground = scene.background;
+      const previousBackgroundIntensity = scene.backgroundIntensity;
+      const previousBackgroundRotation = scene.backgroundRotation.clone();
+      // The radiance is baked at the exposure of the view, and a surface reads it at the exposure it
+      // draws at. A draw at another exposure keeps the bake, as Godot rebakes a layer at a time
+      // (`sky.cpp`, `update_radiance_buffers`).
+      const exposeAs = (factor: number) => {
+        scene.environmentIntensity = intensity * exposure * factor;
+        if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
+      };
+      scene.environment = environmentSwitch;
+      // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
+      const stopShowingRadiance = observeSceneCamera(scene, () => radiance.show(contributionRef.current));
+      const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
+      if (asBackground) {
+        scene.background = built.background;
+        scene.backgroundRotation.copy(skyRotation);
+      }
+      exposeAs(exposure);
+      const stopStaging = registerExposureStage(scene, (target) => {
+        exposeAs(target ?? 1);
+        return () => exposeAs(exposure);
+      });
+      const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
+      return () => {
+        stopStaging();
+        stopShowingRadiance();
+        stopHidingRadiance();
+        stopDebanding?.();
+        scene.environment = previousEnvironment;
+        scene.environmentIntensity = previousIntensity;
+        if (asBackground) {
+          scene.background = previousBackground;
+          scene.backgroundIntensity = previousBackgroundIntensity;
+          scene.backgroundRotation.copy(previousBackgroundRotation);
+        }
+      };
     });
-    const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
 
     return () => {
-      stopStaging();
-      stopShowingRadiance();
-      stopHidingRadiance();
-      stopDebanding?.();
-      scene.environment = previousEnvironment;
-      scene.environmentIntensity = previousIntensity;
-      if (asBackground) {
-        scene.background = previousBackground;
-        scene.backgroundIntensity = previousBackgroundIntensity;
-        scene.backgroundRotation.copy(previousBackgroundRotation);
-      }
+      stopRegistering();
       radiance.hide();
-      environment.dispose();
+      environmentSwitch.dispose();
       built.dispose();
     };
   }, [
     gl,
     scene,
+    environment,
     sky,
     intensity,
     exposure,

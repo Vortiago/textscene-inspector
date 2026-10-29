@@ -25,7 +25,8 @@ vi.mock('./EnvironmentLayer', () => ({
 vi.mock('./NoEnvironmentLayer', () => ({
   NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" />,
 }));
-vi.mock('../preview/PreviewEnvironment', () => ({
+vi.mock('../preview/PreviewEnvironment', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../preview/PreviewEnvironment')>()),
   PreviewEnvironment: () => <group name="PreviewEnvironment" />,
 }));
 vi.mock('../preview/PreviewSun', () => ({

@@ -10,6 +10,7 @@ import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/bu
 import type { Sky } from '../../resources/sky/types';
 import { decodeSkyMaterial } from '../../resources/sky/decode';
 import { SkyLayer } from './SkyLayer';
+import { ShownEnvironment } from '../environment/sceneEnvironment';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
 import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
@@ -38,6 +39,17 @@ vi.mock('../../resources/sky/build', () => ({
 
 const NO_ROTATION = { x: 0, y: 0, z: 0 };
 
+/** The Environment each scene of these tests shows, which the sky belongs to. */
+const ENVIRONMENT = {};
+
+function ShownSkyLayer(props: React.ComponentProps<typeof SkyLayer>) {
+  return (
+    <ShownEnvironment environment={ENVIRONMENT}>
+      <SkyLayer {...props} />
+    </ShownEnvironment>
+  );
+}
+
 const SKY: Sky = {
   material: { kind: 'panorama', panorama: undefined, energy_multiplier: 1 },
   radianceFilter: 'importance-sample',
@@ -47,7 +59,7 @@ const SKY: Sky = {
 function Scene({ lights }: { lights: number }) {
   return (
     <>
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
       {Array.from({ length: lights }, (_, i) => (
         <directionalLight key={i} position={[i + 1, 2, 3]} />
       ))}
@@ -115,8 +127,8 @@ function sampledInRender(gl: THREE.WebGLRenderer, scene: THREE.Scene): unknown {
 function TwoSkies({ subScene }: { subScene: THREE.Scene }) {
   return (
     <>
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
-      {createPortal(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />, subScene)}
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+      {createPortal(<ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />, subScene)}
     </>
   );
 }
@@ -149,7 +161,12 @@ describe('SkyLayer', () => {
     'bakes the background only when the sky paints it (asBackground %s)',
     async (asBackground) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} asBackground={asBackground} />
+        <ShownSkyLayer
+          sky={SKY}
+          rotation={NO_ROTATION}
+          resources={NO_RESOURCES}
+          asBackground={asBackground}
+        />
       );
       await advance(renderer, 1);
 
@@ -167,7 +184,7 @@ describe('SkyLayer', () => {
   it('leaves out a light that declares it draws nothing in the sky', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+        <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight position={[1, 2, 3]} />
         <directionalLight
           position={[3, 2, 1]}
@@ -183,7 +200,7 @@ describe('SkyLayer', () => {
   it('draws a light at its declared energy, though it lights no surface (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+        <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight
           intensity={0}
           userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })}
@@ -198,7 +215,7 @@ describe('SkyLayer', () => {
   it('draws a light’s sun disc at its declared size', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+        <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0.25 })} />
       </>
     );
@@ -210,7 +227,7 @@ describe('SkyLayer', () => {
   it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+        <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight intensity={Math.PI * 3} />
       </>
     );
@@ -240,7 +257,7 @@ describe('SkyLayer', () => {
   it('shows its share of the ambient with its layers', async () => {
     built.next = skyEnvironment();
     const { scene, gl } = await mount(
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.25} />
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.25} />
     );
 
     sampledInRender(gl, scene);
@@ -251,7 +268,7 @@ describe('SkyLayer', () => {
   it('shows the energy and the rotation of its radiance, which the fogs read', async () => {
     built.next = skyEnvironment();
     const { scene, gl } = await mount(
-      <SkyLayer
+      <ShownSkyLayer
         sky={SKY}
         rotation={{ x: 0, y: Math.PI / 2, z: 0 }}
         resources={NO_RESOURCES}
@@ -268,7 +285,9 @@ describe('SkyLayer', () => {
 
   it('leaves the renders after its scene reading a black radiance', async () => {
     built.next = skyEnvironment();
-    const { scene, gl } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />);
+    const { scene, gl } = await mount(
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
     sampledInRender(gl, scene);
 
     fireSceneRenderEnd(scene, new THREE.PerspectiveCamera());
@@ -279,11 +298,13 @@ describe('SkyLayer', () => {
   it('shows a new share of the ambient without a new bake', async () => {
     built.next = skyEnvironment();
     const { scene, gl, update } = await mount(
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.25} />
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.25} />
     );
     const bakeCount = bakes.length;
 
-    await update(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.5} />);
+    await update(
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.5} />
+    );
     sampledInRender(gl, scene);
 
     expect([bakes.length, shownSky[0]]).toEqual([bakeCount, 0.5]);
@@ -304,12 +325,12 @@ describe('SkyLayer', () => {
   it('gives the scene a new environment on each bake, which tells the reflection probes the sky changed', async () => {
     built.next = skyEnvironment();
     const { scene, update } = await mount(
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
     );
     const firstBake = scene.environment;
 
     built.next = skyEnvironment();
-    await update(<SkyLayer sky={SKY} rotation={{ x: 0, y: 1, z: 0 }} resources={NO_RESOURCES} />);
+    await update(<ShownSkyLayer sky={SKY} rotation={{ x: 0, y: 1, z: 0 }} resources={NO_RESOURCES} />);
 
     expect(scene.environment).not.toBe(firstBake);
   });
@@ -376,21 +397,28 @@ describe('SkyLayer debanding', () => {
 
   it('adds the noise to the background of a sky that debands', async () => {
     const { scene } = await mount(
-      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+      <ShownSkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
     );
 
     expect(debandingInRender(scene)).toBe(1);
   });
 
   it('adds none to a panorama sky, which never debands', async () => {
-    const { scene } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />);
+    const { scene } = await mount(
+      <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
 
     expect(debandingInRender(scene)).toBe(0);
   });
 
   it('adds none when the sky paints no background (edge case)', async () => {
     const { scene } = await mount(
-      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} asBackground={false} />
+      <ShownSkyLayer
+        sky={PROCEDURAL_SKY}
+        rotation={NO_ROTATION}
+        resources={NO_RESOURCES}
+        asBackground={false}
+      />
     );
 
     expect(debandingInRender(scene)).toBe(0);
@@ -398,7 +426,7 @@ describe('SkyLayer debanding', () => {
 
   it('adds none once the sky unmounts (error case)', async () => {
     const { scene, update } = await mount(
-      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+      <ShownSkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
     );
 
     await update(<directionalLight />);
@@ -433,7 +461,7 @@ function exposed(multiplier: number, children: React.ReactNode) {
  */
 describe('SkyLayer under an exposure', () => {
   const sky = (props: Partial<React.ComponentProps<typeof SkyLayer>> = {}) => (
-    <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} {...props} />
+    <ShownSkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} {...props} />
   );
 
   it('reads the ambient and the reflection at the exposure squared', async () => {

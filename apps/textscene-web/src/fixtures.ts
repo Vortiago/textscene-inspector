@@ -4356,6 +4356,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Shared Root Camera Environment",
+    "file": "unit-sub-viewport-shared-root-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Camera Environment",
+    "file": "unit-sub-viewport-shared-world-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Shared World Camera Exposure",
     "file": "unit-sub-viewport-shared-world-camera-exposure.tscn",
     "category": "Unit - Viewports"
