@@ -12,7 +12,7 @@ import {
   type IdTrailEnd,
   type TrailHeading,
 } from '../godot/scene/packedScene.js';
-import { simplifiedNodePath } from '../godot/string/nodePath.js';
+import { nodePathNames, simplifiedNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import { firstIndexWith } from '../utils/keyedLookup.js';
 import { joinPath } from '../utils/nodePath.js';
 
@@ -33,23 +33,12 @@ export function passesContentTrail(path: string): boolean {
   return path.includes(CONTENT_TRAIL_MARK);
 }
 
-/** Stands in for a content trail's segment while a path simplifies: a name no NodePath spells. */
-const TRAIL_STAND_IN = '\u0000';
-
 /**
- * `path` simplified as `simplifiedNodePath` simplifies it, with the segment of a content trail kept
- * as a name, where a NodePath would read `:` as the start of its subnames.
+ * `path` simplified as `NodePath::simplify` simplifies its names. A live path holds names only, so
+ * the segment of a content trail stays a name where a NodePath would read `:` as its subnames.
  */
 export function simplifiedLivePath(path: string): string {
-  if (!passesContentTrail(path)) return simplifiedNodePath(path);
-  const trails: string[] = [];
-  const standIns = path
-    .split('/')
-    .map((segment) => (passesContentTrail(segment) ? TRAIL_STAND_IN + (trails.push(segment) - 1) : segment));
-  return simplifiedNodePath(standIns.join('/'))
-    .split('/')
-    .map((segment) => (segment.startsWith(TRAIL_STAND_IN) ? trails[Number(segment.slice(1))]! : segment))
-    .join('/');
+  return simplifiedNames(nodePathNames(path)).join('/');
 }
 
 /** The first heading of a scan carrying an id, the one index the builder and the linter share. */

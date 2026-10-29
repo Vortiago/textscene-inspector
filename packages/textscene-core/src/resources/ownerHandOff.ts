@@ -6,26 +6,32 @@
  */
 
 import type { SceneScope } from '../parser/types';
-import { reseatedRoots, sceneRootFallbacks } from '../parser/sceneTreeBuilder';
+import { reseatedRoots, sceneRootFallbacks, type RootFallback } from '../parser/sceneTreeBuilder';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames';
 import type { UniqueNameTable } from './instanceNameTable';
 import type { InstanceNameSetting, OwnerHandOff } from '../parser/nodeOwner';
 import { scopeOf, type LiveNode } from './liveNode';
-import { indicesWhere, replacedAtIndices } from './instanceNameTable';
+import { indicesWhere, replacedAtIndices } from './liveTreeIndex';
 import type { CollapseInstance } from './seatEscaped';
 import { perObject } from '../utils/perObject';
 
+const holdsSetting = (node: LiveNode, isIt: (setting: InstanceNameSetting) => boolean): boolean =>
+  node.instanceNameSettings?.some(isIt) ?? false;
+
 /** Whether `node` holds a setting that its graft hands off where its `owner=` walk finds nothing. */
 export function handsOffOwner(node: LiveNode): boolean {
-  return node.instanceNameSettings?.some((setting) => setting.ownerHandOff !== undefined) ?? false;
+  return holdsSetting(node, (setting) => setting.ownerHandOff !== undefined);
 }
 
-const awaitsAny = (node: LiveNode): boolean =>
-  node.instanceNameSettings?.some((setting) => setting.awaits !== undefined) ?? false;
+/** Whether a node at or below `node` holds a setting that its graft may hand off. */
+const holdsHandingOff = perObject(
+  (node: LiveNode): boolean => handsOffOwner(node) || node.children.some(holdsHandingOff)
+);
 
 /** Whether a node at or below `node` holds a setting that awaits a hand-off. */
 const holdsAwaiting = perObject(
-  (node: LiveNode): boolean => awaitsAny(node) || node.children.some(holdsAwaiting)
+  (node: LiveNode): boolean =>
+    holdsSetting(node, (setting) => setting.awaits !== undefined) || node.children.some(holdsAwaiting)
 );
 
 /**
@@ -39,15 +45,10 @@ export function withHandOffsSettled(
   collapse: CollapseInstance
 ): LiveNode[] {
   if (!nodes.some(holdsAwaiting)) return nodes;
-  const handedOff = new Map<LiveNode, readonly OwnerHandOff[]>();
-  const handedOffBy = ({ node, scope: groupScope }: Source): readonly OwnerHandOff[] => {
-    if (!handedOff.has(node)) handedOff.set(node, collapse(node, groupScope).handedOff ?? []);
-    return handedOff.get(node)!;
-  };
   let settled = nodes;
   for (const handOff of awaitedIn(nodes)) {
-    const source = sourceOf(nodes, handOff, scope);
-    if (source && handedOffBy(source).includes(handOff)) settled = withHandOffLanded(settled, handOff);
+    if (outcomeOf(nodes, handOff, scope, collapse) === 'handed')
+      settled = withHandOffLanded(settled, handOff);
   }
   return settled;
 }
@@ -70,26 +71,46 @@ export function withRootFallbacksDecided(
   scope: SceneScope,
   collapse: CollapseInstance
 ): readonly LiveNode[] {
-  const found = sceneRootFallbacks(roots)
-    .filter(({ handOff }) => findsWalkedOwner(roots, handOff, scope, collapse))
-    .map(({ heading }) => heading);
+  const fallbacks = sceneRootFallbacks(roots);
+  const found = fallbacks.filter(({ handOff }) => outcomeOf(roots, handOff, scope, collapse) === 'kept');
   if (found.length === 0) return roots;
-  const reseated = reseatedRoots(roots, new Set(found));
+  const key = found.map((fallback) => fallbacks.indexOf(fallback)).join(',');
+  let byFound = reseatings.get(roots);
+  if (!byFound) reseatings.set(roots, (byFound = new Map()));
+  if (!byFound.has(key)) byFound.set(key, reseatedWithTable(roots, found));
+  return byFound.get(key)!;
+}
+
+/**
+ * Written only by {@link withRootFallbacksDecided}: the roots it seated again, keyed by the roots
+ * and the indices of the fallbacks whose walk found an owner. An entry clears with its roots, so a
+ * rebuild over one parse keeps one tree, and the caches keyed by its nodes.
+ */
+// eslint-disable-next-line no-restricted-syntax -- a cache keyed by the parse's roots, never mutated after a write
+const reseatings = new WeakMap<readonly LiveNode[], Map<string, readonly LiveNode[]>>();
+
+/** `roots` seated again with the owners of `found` found, the root carrying that seating's table. */
+function reseatedWithTable(roots: readonly LiveNode[], found: readonly RootFallback[]): readonly LiveNode[] {
+  const reseated = reseatedRoots(roots, new Set(found.map(({ heading }) => heading)));
   const table: UniqueNameTable = { paths: () => cachedUniqueNamesBelowRoot(reseated) };
   return reseated.map((root) => ({ ...root, uniqueNames: table }));
 }
 
-/** Whether the loaded instance whose setting carries `handOff` keeps it, as its `owner=` walk finds a node. */
-function findsWalkedOwner(
-  roots: readonly LiveNode[],
+/**
+ * What the instance whose setting carries `handOff` does with it: `handed` where its `owner=` walk
+ * finds no node, `kept` where it finds one, and `undecided` where no loaded instance carries it.
+ */
+function outcomeOf(
+  nodes: readonly LiveNode[],
   handOff: OwnerHandOff,
   scope: SceneScope,
   collapse: CollapseInstance
-): boolean {
-  const source = sourceOf(roots, handOff, scope);
-  if (!source) return false;
+): 'handed' | 'kept' | 'undecided' {
+  const source = sourceOf(nodes, handOff, scope);
+  if (!source) return 'undecided';
   const collapsed = collapse(source.node, source.scope);
-  return collapsed !== source.node && !(collapsed.handedOff ?? []).includes(handOff);
+  if ((collapsed.handedOff ?? []).includes(handOff)) return 'handed';
+  return collapsed === source.node ? 'undecided' : 'kept';
 }
 
 /** An instance whose setting carries a hand-off, and the scope of its group. */
@@ -105,7 +126,8 @@ function sourceOf(
   groupScope: SceneScope
 ): Source | undefined {
   for (const node of nodes) {
-    if (node.instanceNameSettings?.some((setting) => setting.ownerHandOff === handOff)) {
+    if (!holdsHandingOff(node)) continue;
+    if (holdsSetting(node, (setting) => setting.ownerHandOff === handOff)) {
       return { node, scope: groupScope };
     }
     const below = sourceOf(node.children, handOff, scopeOf(node, groupScope));
@@ -117,7 +139,7 @@ function sourceOf(
 /** `tree` with the setting that awaits `handOff` made to land. It keeps its place among the settings, its file order. */
 function withHandOffLanded(tree: LiveNode[], handOff: OwnerHandOff): LiveNode[] {
   const awaitsIt = (setting: InstanceNameSetting): boolean => setting.awaits === handOff;
-  const at = indicesWhere(tree, (node) => node.instanceNameSettings?.some(awaitsIt) ?? false)!;
+  const at = indicesWhere(tree, (node) => holdsSetting(node, awaitsIt))!;
   return replacedAtIndices(tree, at, (instance) => ({
     ...instance,
     instanceNameSettings: instance.instanceNameSettings!.map((setting) =>

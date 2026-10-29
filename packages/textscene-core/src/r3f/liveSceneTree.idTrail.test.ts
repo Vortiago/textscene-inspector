@@ -5,61 +5,28 @@
  * (packed_scene.cpp:1947-2005). Only the file that holds the instance can follow the rest.
  */
 import { describe, expect, it } from 'vitest';
-import { TscnParser } from '../parser/TscnParser';
-import type { TscnScene } from '../parser/types';
 import { livePathsOver } from './liveSceneTree.testkit';
+import {
+  INNER_ID,
+  TRAIL_BASE,
+  PLAYER_ID,
+  TRAIL_SCENES,
+  hostOf,
+  inheritingTrailBase,
+  parseScene,
+  pathsEnding,
+  playerHeading,
+  playerHost,
+} from './idTrail.testkit';
 import '../nodes/node/index';
 import '../nodes/base/node3d/index';
-
-const parse = (text: string): TscnScene => new TscnParser().parse(text);
-
-const PLAYER_ID = 2222;
-const INNER_ID = 3333;
-
-const INNER = parse(`[gd_scene format=3]
-
-[node name="Inner" type="Node3D" unique_id=1]
-
-[node name="Box" type="Node3D" parent="." unique_id=2]
-`);
-
-/** A sub-scene that instances `Inner` as the heading with id `INNER_ID`. */
-const PLAYER = parse(`[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
-
-[node name="Player" type="Node3D" unique_id=1]
-
-[node name="Inner" parent="." instance=ExtResource("inner") unique_id=${INNER_ID}]
-`);
-
-const SCENES = { 'res://inner.tscn': INNER, 'res://player.tscn': PLAYER };
-
-/** A host with the root `Main` and an ext_resource `player` for `res://player.tscn`, then `headings`. */
-function hostOf(headings: string): TscnScene {
-  return parse(`[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
-
-[node name="Main" type="Node3D"]
-
-${headings}`);
-}
-
-const playerHeading = `[node name="Player" parent="." instance=ExtResource("player") unique_id=${PLAYER_ID}]\n`;
-
-/** A host that instances `res://player.tscn` as the heading with id `PLAYER_ID`, then states `headings`. */
-const playerHost = (headings: string): TscnScene => hostOf(`${playerHeading}\n${headings}`);
 
 const capWithTrail = (...ids: number[]) =>
   `[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(${ids.join(', ')})]`;
 
-const pathsEnding = (host: TscnScene, name: string, scenes: Record<string, TscnScene> = SCENES) =>
-  livePathsOver(host, scenes).filter((path) => path.endsWith(name));
-
 describe('a parent_id_path that ends inside instance content', () => {
   it('seats the heading under the node the trail finds in the instanced scene', () => {
-    const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, INNER_ID)), SCENES);
+    const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, INNER_ID)), TRAIL_SCENES);
 
     expect(paths).toContain('Main/Player/Inner/Cap');
     expect(paths.filter((path) => path.endsWith('Cap'))).toEqual(['Main/Player/Inner/Cap']);
@@ -84,7 +51,7 @@ describe('a parent_id_path that ends inside instance content', () => {
   });
 
   it('finds an id that only the base of the instanced scene holds', () => {
-    const base = parse(`[gd_scene format=3]
+    const base = parseScene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
 
@@ -92,13 +59,13 @@ describe('a parent_id_path that ends inside instance content', () => {
 
 [node name="Inner" parent="." instance=ExtResource("inner") unique_id=${INNER_ID}]
 `);
-    const derived = parse(`[gd_scene format=3]
+    const derived = parseScene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://base.tscn" id="base"]
 
 [node name="Player" instance=ExtResource("base") unique_id=1]
 `);
-    const scenes = { 'res://inner.tscn': INNER, 'res://base.tscn': base, 'res://player.tscn': derived };
+    const scenes = { ...TRAIL_SCENES, 'res://base.tscn': base, 'res://player.tscn': derived };
 
     const host = playerHost(capWithTrail(PLAYER_ID, INNER_ID));
 
@@ -106,7 +73,7 @@ describe('a parent_id_path that ends inside instance content', () => {
   });
 
   it('follows a trail through a second instance into its scene', () => {
-    const deep = parse(`[gd_scene format=3]
+    const deep = parseScene(`[gd_scene format=3]
 
 [node name="Inner" type="Node3D" unique_id=1]
 
@@ -114,7 +81,7 @@ describe('a parent_id_path that ends inside instance content', () => {
 `);
 
     const paths = livePathsOver(playerHost(capWithTrail(PLAYER_ID, INNER_ID, 4444)), {
-      ...SCENES,
+      ...TRAIL_SCENES,
       'res://inner.tscn': deep,
     });
 
@@ -124,7 +91,9 @@ describe('a parent_id_path that ends inside instance content', () => {
   it('keeps the heading in the instance, not re-rooted, while a scene the trail enters is not loaded', () => {
     const deepTrail = playerHost(capWithTrail(PLAYER_ID, INNER_ID, 4444));
 
-    expect(pathsEnding(deepTrail, 'Cap', { 'res://player.tscn': PLAYER })).toEqual(['Main/Player/Cap']);
+    expect(
+      pathsEnding(deepTrail, 'Cap', { 'res://player.tscn': TRAIL_SCENES['res://player.tscn']! })
+    ).toEqual(['Main/Player/Cap']);
   });
 
   it('seats nothing in the instance while its own scene is not loaded', () => {
@@ -212,31 +181,20 @@ unique_name_in_owner = true
 });
 
 describe('a heading below a trail-seated heading, in a file whose root inherits a base', () => {
-  const base = parse(`[gd_scene format=3]
-
-[node name="Base" type="Node3D" unique_id=1]
-
-[node name="Deep" type="Node3D" parent="." unique_id=77]
-
-[node name="Feather" type="Node3D" parent="." unique_id=78]
-unique_name_in_owner = true
-`);
-  const inheriting = (below: string) =>
-    parse(`[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
-
-[node name="Main" instance=ExtResource("base")]
-
-[node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
+  const BASE_SCENES = { 'res://base.tscn': TRAIL_BASE };
+  const quill = (below: string) =>
+    pathsEnding(
+      inheritingTrailBase(`[node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
 unique_name_in_owner = true
 
 [node name="${below}" type="Node3D" parent="%Cap"]
 unique_name_in_owner = true
 
 [node name="Quill" type="Node3D" parent="%${below}"]
-`);
-  const quill = (below: string) => pathsEnding(inheriting(below), 'Quill', { 'res://base.tscn': base });
+`),
+      'Quill',
+      BASE_SCENES
+    );
 
   it('leaves a name the base claimed first with the base node', () => {
     expect(quill('Feather')).toEqual(['Main/Feather/Quill']);
@@ -247,13 +205,7 @@ unique_name_in_owner = true
   });
 
   it('leaves a name the base claimed first with the base node, for a heading seated by its parent=', () => {
-    const host = parse(`[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
-
-[node name="Main" instance=ExtResource("base")]
-
-[node name="Mid" type="Node3D" parent="."]
+    const host = inheritingTrailBase(`[node name="Mid" type="Node3D" parent="."]
 
 [node name="Feather" type="Node3D" parent="Mid"]
 unique_name_in_owner = true
@@ -261,7 +213,7 @@ unique_name_in_owner = true
 [node name="Quill" type="Node3D" parent="%Feather"]
 `);
 
-    expect(pathsEnding(host, 'Quill', { 'res://base.tscn': base })).toEqual(['Main/Feather/Quill']);
+    expect(pathsEnding(host, 'Quill', BASE_SCENES)).toEqual(['Main/Feather/Quill']);
   });
 });
 
@@ -275,7 +227,7 @@ unique_name_in_owner = true
 [node name="Sleeve" type="Node3D" parent="Player/Gone/Q"]
 `);
 
-    const paths = livePathsOver(host, SCENES).filter((path) => /Q|Hat|Sleeve/.test(path));
+    const paths = livePathsOver(host, TRAIL_SCENES).filter((path) => /Q|Hat|Sleeve/.test(path));
 
     expect(paths).toEqual(['Main/Player_Gone#Q', 'Main/_Q#Hat', 'Main/Player_Gone_Q#Sleeve']);
   });
@@ -379,12 +331,12 @@ unique_name_in_owner = true
   });
 
   describe('where the owner_uid_path= owner is the root, which inherits a base', () => {
-    const base = parse(`[gd_scene format=3]
+    const base = parseScene(`[gd_scene format=3]
 
 [node name="Base" type="Node3D" unique_id=1]
 `);
     const inheritingHost = (owner: string) =>
-      parse(`[gd_scene format=3]
+      parseScene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://base.tscn" id="base"]
 [ext_resource type="PackedScene" path="res://player.tscn" id="player"]
@@ -397,7 +349,7 @@ unique_name_in_owner = true
 
 [node name="Shade" type="Node3D" parent="%Lamp"]
 `);
-    const scenes = { ...SCENES, 'res://base.tscn': base };
+    const scenes = { ...TRAIL_SCENES, 'res://base.tscn': base };
 
     it('registers the %Name in the table of the root where the walk finds nothing in the instance', () => {
       expect(pathsEnding(inheritingHost('Player/Gone'), 'Shade', scenes)).toEqual(['Main/Lamp/Shade']);
@@ -447,13 +399,13 @@ describe('a heading whose parent= enters an instance and finds nothing there', (
   });
 
   it('follows the trail in the base of a root that inherits one, where no heading of the file holds the id', () => {
-    const base = parse(`[gd_scene format=3]
+    const base = parseScene(`[gd_scene format=3]
 
 [node name="Base" type="Node3D" unique_id=1]
 
 [node name="Deep" type="Node3D" parent="." unique_id=77]
 `);
-    const inheriting = parse(`[gd_scene format=3]
+    const inheriting = parseScene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://base.tscn" id="base"]
 
@@ -466,7 +418,7 @@ describe('a heading whose parent= enters an instance and finds nothing there', (
   });
 
   it('keeps the heading in the root, not re-rooted, while a scene the trail enters in the base is not loaded', () => {
-    const base = parse(`[gd_scene format=3]
+    const base = parseScene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://deep.tscn" id="deep"]
 
@@ -474,7 +426,7 @@ describe('a heading whose parent= enters an instance and finds nothing there', (
 
 [node name="Deep" parent="." instance=ExtResource("deep") unique_id=77]
 `);
-    const inheriting = parse(`[gd_scene format=3]
+    const inheriting = parseScene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://base.tscn" id="base"]
 

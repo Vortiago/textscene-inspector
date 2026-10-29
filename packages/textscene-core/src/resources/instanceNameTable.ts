@@ -5,6 +5,7 @@
  */
 
 import type { LiveNode } from './liveNode';
+import { nodeAt, replacedAt } from './liveTreeIndex';
 import { joinPath, pathBetween, pathUnder } from '../utils/nodePath';
 import {
   UNIQUE_NODE_PREFIX,
@@ -127,6 +128,7 @@ export class InstanceNameTable implements UniqueNameTable {
    * resolves through the claims as they stand when it lands, so a later claim moves it.
    */
   private placedTrailSeat(path: string): string {
+    if (this.placements.size === 0) return path;
     const segments = path.split('/');
     if (!passesContentTrail(segments[0]!) && path.includes(UNIQUE_NODE_PREFIX)) return path;
     return placedBelow(this.placements, segments).join('/');
@@ -160,7 +162,8 @@ export class InstanceNameTable implements UniqueNameTable {
    */
   private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
     if (authored.awaits) return tree;
-    const placed = { ...authored, pathInInstance: this.placedTrailSeat(authored.pathInInstance) };
+    const pathInInstance = this.placedTrailSeat(authored.pathInInstance);
+    const placed = pathInInstance === authored.pathInInstance ? authored : { ...authored, pathInInstance };
     const setting = this.ownerChosen(tree, placed);
     if (!setting) return tree;
     if (isOutsideInstance(setting)) {
@@ -297,11 +300,11 @@ function tableOwner(
   if (ownerInInstance === '') return THIS_INSTANCE;
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
-  if (!ownerSegments.every((name, index) => segments[index] === name)) {
-    return typeof instanceDepth(tree, ownerSegments) === 'number' ? OUTSIDE_THE_OWNER : null;
-  }
   const ownerAt = instanceDepth(tree, ownerSegments);
-  return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
+  if (typeof ownerAt !== 'number') return null;
+  return ownerSegments.every((name, index) => segments[index] === name)
+    ? { nestedAt: ownerAt }
+    : OUTSIDE_THE_OWNER;
 }
 
 /**
@@ -361,85 +364,6 @@ function namesNodeBelow(
   nestedAt: number | undefined
 ): boolean {
   return nestedAt !== undefined || nodeAt(tree, segments) !== undefined;
-}
-
-/** The node at `path` below the sub-scene root, or undefined where none sits there. */
-export function nodeAt(tree: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
-  let siblings = tree;
-  let found: LiveNode | undefined;
-  for (const name of path) {
-    found = siblings.find((n) => n.name === name);
-    if (!found) return undefined;
-    siblings = found.children;
-  }
-  return found;
-}
-
-/**
- * `tree` with the node at `path` swapped for what `replace` returns for it, as a copy along that
- * spine that shares every other node. The caller passes a path that names a node.
- *
- * @canonical A Live tree with the node at a name path replaced
- */
-export function replacedAt(
-  tree: readonly LiveNode[],
-  path: readonly string[],
-  replace: (node: LiveNode) => LiveNode
-): LiveNode[] {
-  return replacedAtIndices(tree, indicesOf(tree, path), replace);
-}
-
-/**
- * `tree` with the node at `indices`, each a child index below the last, swapped for what `replace`
- * returns for it, as a copy along that spine that shares every other node.
- *
- * @canonical A Live tree with the node at an index path replaced
- */
-export function replacedAtIndices(
-  tree: readonly LiveNode[],
-  indices: readonly number[],
-  replace: (node: LiveNode) => LiveNode
-): LiveNode[] {
-  const replacedBelow = (siblings: readonly LiveNode[], depth: number): LiveNode[] => {
-    const index = indices[depth]!;
-    const target = siblings[index]!;
-    const copy = [...siblings];
-    copy[index] =
-      depth === indices.length - 1
-        ? replace(target)
-        : { ...target, children: replacedBelow(target.children, depth + 1) };
-    return copy;
-  };
-  return replacedBelow(tree, 0);
-}
-
-/** The child indices of the node at the name path `path`, each below the last. */
-function indicesOf(tree: readonly LiveNode[], path: readonly string[]): number[] {
-  let siblings = tree;
-  return path.map((name) => {
-    const index = siblings.findIndex((n) => n.name === name);
-    if (index === -1) throw new Error(`expected a node at "${path.join('/')}", found none named "${name}"`);
-    siblings = siblings[index]!.children;
-    return index;
-  });
-}
-
-/**
- * The child indices of the first node of `tree`, parents before children, that `isTarget` picks,
- * or undefined where none is picked.
- *
- * @canonical The index path of the first node of a Live tree that a test picks
- */
-export function indicesWhere(
-  tree: readonly LiveNode[],
-  isTarget: (node: LiveNode) => boolean
-): number[] | undefined {
-  for (const [index, node] of tree.entries()) {
-    if (isTarget(node)) return [index];
-    const below = indicesWhere(node.children, isTarget);
-    if (below) return [index, ...below];
-  }
-  return undefined;
 }
 
 /**

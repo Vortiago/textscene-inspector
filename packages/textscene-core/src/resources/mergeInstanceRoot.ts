@@ -62,7 +62,7 @@ export function mergeInstanceRoot(
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
   // A setting of this instance may await a host child that is an instance, as an inherited root's does.
-  const [instanceNode = authored] = withHandOffsSettled([authored], scopes.outer, collapse);
+  const instanceNode = withHandOffsSettled([authored], scopes.outer, collapse)[0]!;
 
   const merged = mergeProperties(instanceNode, root, scopes);
   // The graft below lands these settings. A root that inherits a base the cache could not

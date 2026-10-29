@@ -1,7 +1,7 @@
 /**
  * The scene tree builder against every real `.tscn` in the repo. A node whose parent
  * path descends into an instanced sub-scene must not be dropped, so no corpus scene may
- * strand a node, except the one fixture that exists to orphan one.
+ * strand a node, except the fixtures that exist to orphan one.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,6 +18,7 @@ const SCENES = scenesDir();
 /** The fixtures whose whole purpose is an unresolvable parent path. */
 const INTENTIONAL_ORPHANS = new Set([
   'fixtures/edge-missing-parent.tscn',
+  'fixtures/integration-trail-foreign-owner-in-content.tscn',
   'fixtures/integration-trail-name-in-content.tscn',
   'fixtures/integration-trail-parent-in-content.tscn',
   'fixtures/unit-node-parent-id-path.tscn',

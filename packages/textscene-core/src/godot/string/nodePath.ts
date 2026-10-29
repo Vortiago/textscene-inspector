@@ -37,7 +37,7 @@ export function simplifiedNodePath(path: string): string {
 }
 
 /** `NodePath::simplify` over the names alone, a single name never touched (node_path.cpp:336-338). */
-function simplifiedNames(names: string[]): string[] {
+export function simplifiedNames(names: readonly string[]): string[] {
   const kept = [...names];
   for (let i = 0; i < kept.length && kept.length > 1; i++) {
     if (kept[i] === '.') {

@@ -8,16 +8,10 @@
 import type { SceneScope } from '../parser/types';
 import { hostChildOf, scopeOf, type EscapedChild, type LiveNode } from './liveNode';
 import { graftAt, placementKey } from './graftInstanceChildren';
-import {
-  endAboveRoot,
-  nodeAt,
-  OUTSIDE,
-  replacedAt,
-  subPathSegments,
-  type ClaimedPath,
-} from './instanceNameTable';
+import { endAboveRoot, OUTSIDE, subPathSegments, type ClaimedPath } from './instanceNameTable';
 import type { OwnerHandOff } from '../parser/nodeOwner';
 import { handsOffOwner, withHandOffsSettled } from './ownerHandOff';
+import { nodeAt, replacedAt } from './liveTreeIndex';
 import { reRootedName } from '../godot/scene/packedScene';
 import { simplifiedLivePath } from '../parser/idTrail';
 import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';

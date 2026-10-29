@@ -183,9 +183,18 @@ function collapseOver(
   return mergeInstanceRoot(node, subScene, { outer, content: rootContent }, cache) ?? node;
 }
 
-/** `collapseLiveNode` over `sceneCache`, as the seating takes it. */
+/**
+ * `collapseLiveNode` over `sceneCache`, as the seating takes it. It keeps each collapse, as an
+ * owner hand-off asks the instance that hands it off before the frame seats that instance.
+ */
 function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
-  return (node, scope) => collapseLiveNode(node, scope, sceneCache);
+  const collapsed = new WeakMap<LiveNode, Map<SceneScope, LiveNode>>();
+  return (node, scope) => {
+    let byScope = collapsed.get(node);
+    if (!byScope) collapsed.set(node, (byScope = new Map()));
+    if (!byScope.has(scope)) byScope.set(scope, collapseLiveNode(node, scope, sceneCache));
+    return byScope.get(scope)!;
+  };
 }
 
 /**
