@@ -9,6 +9,7 @@ import type { IUniform, Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { editedProgram, rewrittenShader, rewrittenThroughChunks } from '../shaderPatch/chunkPatch';
 import { recordedOn } from './recordedOnMaterial';
+import { perObject } from '../../utils/perObject';
 import { NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
 import type { Triplanar, TriplanarProjection } from '../../resources/materials/standardmaterial3d/types';
 
@@ -397,8 +398,25 @@ function programKey(record: TriplanarRecord): string {
     .toLowerCase();
 }
 
-/** One injection per program state, so a re-parse that changes only a value keeps the program. */
+/**
+ * One injection per program state, so a re-parse that changes only a value keeps the program.
+ * Written only by `programOf`, and never cleared: the defines and map lists bound its size.
+ */
 const programs = new Map<string, ProgramInjection>();
+
+/**
+ * The injection of `record`'s program state, by the record's identity, since `syncSurfaceDepth`
+ * asks on every shadow draw and a key is a string to build.
+ */
+const programOf = perObject((record: TriplanarRecord) => {
+  const key = programKey(record);
+  let program = programs.get(key);
+  if (!program) {
+    program = triplanarProgram(record, key);
+    programs.set(key, program);
+  }
+  return program;
+});
 
 /**
  * What a material whose `userData` records a triplanar mapping compiles with, colour and depth
@@ -407,12 +425,5 @@ const programs = new Map<string, ProgramInjection>();
 export function triplanarInjection(state: { userData?: unknown }): ProgramInjection | undefined {
   const userData = state.userData as Record<string, unknown> | undefined;
   const record = userData?.[TRIPLANAR_KEY] as TriplanarRecord | undefined;
-  if (!record) return undefined;
-  const key = programKey(record);
-  let program = programs.get(key);
-  if (!program) {
-    program = triplanarProgram(record, key);
-    programs.set(key, program);
-  }
-  return program;
+  return record ? programOf(record) : undefined;
 }

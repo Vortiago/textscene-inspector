@@ -135,6 +135,15 @@ item/0/mesh = SubResource("Mesh_item")
     ]);
   });
 
+  it("draws each cell's points on their own when the material billboards, as each turns about its cell", async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('billboard_mode = 1'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+
+    expect(grid.points()).toHaveLength(2);
+  });
+
   it('keeps every cell in one Points under world triplanar, as the world position reads the same', async () => {
     const grid = await mountGridMap({
       library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),

@@ -2,8 +2,8 @@
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
  * populated cells. Each surface draws as one THREE.InstancedMesh, as one mesh per cell when its
  * material billboards, or as one THREE.Points holding every cell's points for a PointMesh, one per
- * cell when its triplanar mapping reads the mesh's own space. A loading item draws nothing. An item
- * whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
+ * cell when its material billboards or reads the mesh's own space. A loading item draws nothing.
+ * An item whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
  * InstancedMesh.
  */
 
@@ -16,7 +16,7 @@ import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAs
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
@@ -252,7 +252,7 @@ function PartSurfaces({
 
 /** One surface of an item's mesh, drawn on its own. */
 interface SurfaceDraw {
-  /** The item's own geometry, in the item's space. */
+  /** The geometry drawn: the item's own, in the item's space, or a points surface's `cellPoints`. */
   geometry: THREE.BufferGeometry;
   /** A points surface's points at every cell, as `pointsAtCells` places them. Undefined for triangles. */
   cellPoints?: THREE.BufferGeometry;
@@ -322,8 +322,9 @@ const MERGED_POINTS_MATRIX = new THREE.Matrix4();
 
 /**
  * A surface's points at every cell: one THREE.Points of `cellPoints`, whose geometry holds each
- * cell's matrix, so the object keeps the identity. A material that reads the item's own space draws
- * each cell's points on their own, since the merged points hold the cell's space.
+ * cell's matrix, so the object keeps the identity. A material that billboards, or that reads the
+ * item's own space, draws each cell's points on their own, since the merged points hold the cell's
+ * space and turn about the GridMap's origin.
  */
 function PointTiles({
   draw,
@@ -335,51 +336,36 @@ function PointTiles({
   matrices: THREE.Matrix4[];
 }) {
   const scalars = useSurfaceScalars(draw.source);
-  if (readsObjectSpace(scalars?.triplanar ?? null)) {
-    return (
-      <>
-        {matrices.map((matrix, cell) => (
-          <CellPoints key={cell} draw={draw} matrix={matrix} />
-        ))}
-      </>
-    );
+  if (drawsAsOneBatch(surfaceBillboard(scalars)) && !readsObjectSpace(scalars?.triplanar ?? null)) {
+    return <CellTile draw={{ ...draw, geometry: cellPoints }} matrix={MERGED_POINTS_MATRIX} />;
   }
-  return <CellPoints draw={{ ...draw, geometry: cellPoints }} matrix={MERGED_POINTS_MATRIX} />;
-}
-
-/** A surface's points at `matrix`. */
-function CellPoints({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }) {
-  const { geometry, shadow } = draw;
-  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   return (
-    <points
-      args={[geometry, startingMaterial]}
-      matrix={matrix}
-      matrixAutoUpdate={false}
-      {...drawHookProps(shadow)}
-    >
-      <OwnedSurfaceSlot draw={draw} />
-    </points>
+    <>
+      {matrices.map((matrix, cell) => (
+        <CellTile key={cell} draw={draw} matrix={matrix} />
+      ))}
+    </>
   );
 }
 
 /**
- * One cell of a billboarding surface. A billboard turns about its own cell as in Godot
- * (`drawsAsOneBatch` says why a batch cannot). Each cell mounts its own slot, since a material
- * element attaches to one parent. Every such material shares one program.
+ * A surface at one `matrix`: one cell, or every cell of merged points. A billboard turns about its
+ * own cell as in Godot (`drawsAsOneBatch` says why a batch cannot). Each draw mounts its own slot,
+ * since a material element attaches to one parent. Every such material shares one program.
  */
 function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }) {
   const { geometry, shadow } = draw;
   const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
+  const Drawn = drawnTag(geometryDrawsPoints(geometry));
   return (
-    <mesh
+    <Drawn
       args={[geometry, startingMaterial]}
       matrix={matrix}
       matrixAutoUpdate={false}
       {...drawHookProps(shadow)}
     >
       <OwnedSurfaceSlot draw={draw} />
-    </mesh>
+    </Drawn>
   );
 }
 
