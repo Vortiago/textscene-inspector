@@ -13,10 +13,10 @@ directly, which skips that rounding.
 
 ## Decision
 
-The root canvas of a 3D world always mounts the compositor (`useCompositorPass`). The world draws
-into the half-float scene buffer, and `GodotToneMapEffect` writes the canvas. A SubViewport's 3D pass
-does the same through `offscreenToneMap.ts`. Only a canvas with no real 3D GL context, such as a 2D
-canvas or test-renderer, applies the curve in each material.
+Every 3D viewport draws through one tonemap pass (`toneMapPass.ts`): the world draws into the
+half-float scene buffer, and `GodotToneMapEffect` writes the viewport's target. The root canvas mounts
+it as the compositor, and a SubViewport mounts it through `offscreenToneMap.ts`. A 2D canvas draws no
+3D frame, so it mounts none. No material applies a tone curve.
 
 ## Considered Options
 
@@ -24,6 +24,8 @@ canvas or test-renderer, applies the curve in each material.
   The frame then rounds differently with and without such a feature, so one off-screen transparent
   quad moved thousands of pixels by a level. Without the buffer, a value that Godot rounds
   down across a level boundary also reads one level high.
+- **Apply the curve in each material on a canvas with no real GL context.** Rejected. The unit
+  tests would then cover a route that no viewport draws.
 - **Draw the compositor into a float buffer.** Rejected. Godot rounds through half precision, and a
   float target costs twice the memory and needs float blending.
 

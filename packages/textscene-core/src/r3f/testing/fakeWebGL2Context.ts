@@ -1,6 +1,6 @@
 /**
- * A fake WebGL 2 context for the hooks that read the device: the 3D passes take it for a real GL
- * context, and the MSAA hooks read the sample counts it lists per renderbuffer format.
+ * A fake WebGL 2 context for the hooks that read the device: the MSAA hooks read the sample counts
+ * it lists per renderbuffer format.
  */
 
 import * as THREE from 'three';

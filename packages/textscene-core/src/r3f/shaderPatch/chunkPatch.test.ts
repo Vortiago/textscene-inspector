@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  applyEdits,
   editedChunk,
   editedProgram,
   editedShader,
   installChunkEdits,
   rewrittenShader,
-  swapChunk,
   type ChunkEdit,
 } from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
@@ -24,42 +22,6 @@ afterEach(() => {
   THREE.ShaderChunk[OTHER_CHUNK] = threeOtherChunk;
   THREE.ShaderLib.basic.fragmentShader = threeBasicShader;
   THREE.ShaderLib.basic.vertexShader = threeBasicVertexShader;
-});
-
-describe('applyEdits', () => {
-  it('replaces each edit’s text, in order', () => {
-    expect(
-      applyEdits('a b', [
-        { three: 'a', godot: 'c' },
-        { three: 'c b', godot: 'd' },
-      ])
-    ).toBe('d');
-  });
-
-  it('is null for a text that a later edit lacks (error case)', () => {
-    expect(
-      applyEdits('a', [
-        { three: 'a', godot: 'c' },
-        { three: 'a', godot: 'd' },
-      ])
-    ).toBeNull();
-  });
-
-  it('is the text itself for no edits (edge case)', () => {
-    expect(applyEdits('a', [])).toBe('a');
-  });
-
-  it('replaces a block from its start through the first end after it', () => {
-    expect(applyEdits('] a [ b ] c ]', [{ three: '[', until: ']', godot: 'd' }])).toBe('] a d c ]');
-  });
-
-  it('is null for a block whose end is missing after its start (error case)', () => {
-    expect(applyEdits('] a [ b', [{ three: '[', until: ']', godot: 'd' }])).toBeNull();
-  });
-
-  it('keeps a `$` in the replacement literal (edge case)', () => {
-    expect(applyEdits('a', [{ three: 'a', godot: "$&$'" }])).toBe("$&$'");
-  });
 });
 
 describe('editedShader', () => {
@@ -83,6 +45,18 @@ describe('editedShader', () => {
     expect(() => editedShader('a b', [{ three: 'x', godot: 'c' }], 'the test program')).toThrow(
       'expected the test program to hold "x" once, got:\na b'
     );
+  });
+
+  it('replaces a block from its start through the first end after it', () => {
+    expect(editedShader('] a [ b ] c ]', [{ three: '[', until: ']', godot: 'd' }], 'test program')).toBe(
+      '] a d c ]'
+    );
+  });
+
+  it('throws for a block whose end is missing after its start (error case)', () => {
+    expect(() =>
+      editedShader('] a [ b', [{ three: '[', until: ']', godot: 'd' }], 'the test program')
+    ).toThrow('expected the test program to hold "[" once');
   });
 
   it('throws for a text that occurs twice (edge case)', () => {
@@ -138,26 +112,6 @@ describe('rewrittenShader', () => {
 
   it('is the text itself for no match, which is no error (edge case)', () => {
     expect(rewrittenShader('b', /a/g, () => 'x')).toBe('b');
-  });
-});
-
-describe('swapChunk', () => {
-  it('writes the text into three', () => {
-    swapChunk(CHUNK, 'two', 'test chunk has no stub');
-    expect(THREE.ShaderChunk[CHUNK]).toBe('two');
-  });
-
-  it('warns nothing for the text the chunk holds (edge case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'two';
-    expect(warningsOf(() => swapChunk(CHUNK, 'two', 'test chunk has no stub'))).toEqual([]);
-  });
-
-  it('keeps the chunk and warns for no text (error case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    expect(warningsOf(() => swapChunk(CHUNK, null, 'test chunk has no stub'))).toEqual([
-      "[Shading] three's test chunk has no stub",
-    ]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
   });
 });
 

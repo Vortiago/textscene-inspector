@@ -302,8 +302,7 @@ function cacheKeyThunk(cacheKey: string): () => string {
   const existing = CACHE_KEY_THUNKS.get(cacheKey);
   if (existing) return existing;
   // A method, not an arrow, since it reads the material three calls it on. This own property
-  // shadows the prototype key, so it appends that key whatever extends it (`installToneMapping`
-  // adds the curve term), read per call as a later patch replaces it.
+  // shadows the prototype key, so it appends that key.
   const thunk = function (this: THREE.Material): string {
     return cacheKey + THREE.Material.prototype.customProgramCacheKey.call(this);
   };

@@ -1,6 +1,6 @@
 /**
- * The canvas's renderer draws the root viewport, so only the root world's Environment sets its tone
- * curve and mounts the compositor. A marker stands in for the compositor, which needs a real GL context.
+ * The canvas's renderer draws the root viewport, so only the root world's Environment mounts the
+ * compositor. A marker stands in for the compositor, whose own tests draw it.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -9,106 +9,66 @@ import { EnvironmentLayer } from './EnvironmentLayer';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { NO_RESOURCES } from '../SceneResourcesContext';
-import { CaptureRenderer } from '../testing/CaptureRenderer';
-import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
 }));
 
-const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
-const FILMIC = '2';
-
-type CapturedRenderer = { current: THREE.WebGLRenderer | null };
+/** `showFog` is the viewport's Fog toggle. */
+interface MountOptions {
+  showFog?: boolean;
+  workspace?: CanvasWorkspace;
+}
 
 function layer(
   world: WorldKind,
   properties: Record<string, string>,
-  captured: CapturedRenderer,
-  showFog = true
+  { showFog = true, workspace = '3d' }: MountOptions
 ) {
   return (
-    <ViewportModeProvider initialShowFog={showFog}>
-      <WorldKindProvider world={world}>
-        <CaptureRenderer captured={captured} />
-        <EnvironmentLayer
-          settings={environmentSettingsOf(properties)}
-          sky={null}
-          resources={NO_RESOURCES}
-          skyResources={NO_RESOURCES}
-        />
-      </WorldKindProvider>
-    </ViewportModeProvider>
+    <CanvasWorkspaceProvider workspace={workspace}>
+      <ViewportModeProvider initialShowFog={showFog}>
+        <WorldKindProvider world={world}>
+          <EnvironmentLayer
+            settings={environmentSettingsOf(properties)}
+            sky={null}
+            resources={NO_RESOURCES}
+            skyResources={NO_RESOURCES}
+          />
+        </WorldKindProvider>
+      </ViewportModeProvider>
+    </CanvasWorkspaceProvider>
   );
 }
 
-/** `hasGlContext` gives the layer a WebGL2 context. `showFog` is the viewport's Fog toggle. */
-interface MountOptions {
-  hasGlContext?: boolean;
-  showFog?: boolean;
-}
-
-async function mountLayer(
-  world: WorldKind,
-  properties: Record<string, string>,
-  { hasGlContext = false, showFog = true }: MountOptions = {}
-) {
-  const captured: CapturedRenderer = { current: null };
-  const renderer = await ReactThreeTestRenderer.create(
-    layer(world, properties, captured, showFog),
-    hasGlContext ? { gl: rendererOver(fakeWebGL2Context()) } : undefined
-  );
+async function mountLayer(world: WorldKind, properties: Record<string, string>, options: MountOptions = {}) {
+  const renderer = await ReactThreeTestRenderer.create(layer(world, properties, options));
   const compositors = renderer.scene.findAll((node) => node.props.name === 'Compositor').length;
   const scene = renderer.scene.instance as THREE.Scene;
-  return { gl: captured.current!, scene, compositors, unmount: () => renderer.unmount() };
+  return { scene, compositors, unmount: () => renderer.unmount() };
 }
 
 describe('<EnvironmentLayer> in the root world', () => {
-  it('mounts the compositor on a canvas with a real GL context', async () => {
-    const { compositors } = await mountLayer('root', {}, { hasGlContext: true });
+  it('mounts the compositor', async () => {
+    const { compositors } = await mountLayer('root', {});
     expect(compositors).toBe(1);
   });
 
-  it("leaves the renderer's mapping and three's chunk to the compositor", async () => {
-    const chunkBefore = THREE.ShaderChunk[TONEMAP_CHUNK];
-    const { gl, unmount } = await mountLayer('root', { tonemap_mode: FILMIC }, { hasGlContext: true });
-    expect(gl.toneMapping).not.toBe(THREE.CustomToneMapping);
-    expect(THREE.ShaderChunk[TONEMAP_CHUNK]).toBe(chunkBefore);
-    await unmount();
-  });
-
-  it("installs the Environment's curve on the renderer", async () => {
-    const chunkBefore = THREE.ShaderChunk[TONEMAP_CHUNK];
-    const { gl, unmount } = await mountLayer('root', { tonemap_mode: FILMIC });
-    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
-    expect(THREE.ShaderChunk[TONEMAP_CHUNK]).not.toBe(chunkBefore);
-    await unmount();
-    expect(THREE.ShaderChunk[TONEMAP_CHUNK]).toBe(chunkBefore);
+  it('mounts no compositor on a 2D canvas, whose canvas items Godot draws after its tonemap pass', async () => {
+    const { compositors } = await mountLayer('root', {}, { workspace: '2d' });
+    expect(compositors).toBe(0);
   });
 });
 
 describe('<EnvironmentLayer> background', () => {
-  it('draws a colour background as a texture, so the tone curve and its exposure reach it', async () => {
-    // Godot tonemaps the clear colour with the frame (`tonemap.glsl:868-898`). three's clear skips the curve.
+  it('draws a colour background as a texture, which the fog can reach', async () => {
     const { scene } = await mountLayer('root', {
       background_mode: '1',
       background_color: 'Color(0.2, 0.3, 0.4, 1)',
-      tonemap_exposure: '2.0',
     });
     expect((scene.background as THREE.DataTexture | null)?.isDataTexture).toBe(true);
-  });
-
-  it('builds a new colour background for a new curve, so three recompiles its background material', async () => {
-    const captured: CapturedRenderer = { current: null };
-    const renderer = await ReactThreeTestRenderer.create(layer('root', { background_mode: '1' }, captured));
-    const scene = renderer.scene.instance as THREE.Scene;
-    const linear = scene.background;
-
-    await renderer.update(layer('root', { background_mode: '1', tonemap_mode: FILMIC }, captured));
-
-    expect(scene.background).not.toBe(linear);
-    await renderer.unmount();
   });
 
   it('restores the background it found on unmount', async () => {
@@ -120,7 +80,7 @@ describe('<EnvironmentLayer> background', () => {
 
 describe('<EnvironmentLayer> fog', () => {
   it('draws the fog of an Environment that enables it', async () => {
-    const { scene } = await mountLayer('root', { volumetric_fog_enabled: 'true' }, { hasGlContext: true });
+    const { scene } = await mountLayer('root', { volumetric_fog_enabled: 'true' });
     expect(scene.fog).not.toBeNull();
   });
 
@@ -128,7 +88,7 @@ describe('<EnvironmentLayer> fog', () => {
     const { scene } = await mountLayer(
       'root',
       { fog_enabled: 'true', volumetric_fog_enabled: 'true' },
-      { hasGlContext: true, showFog: false }
+      { showFog: false }
     );
     expect(scene.fog).toBeNull();
   });
@@ -141,14 +101,7 @@ describe('<EnvironmentLayer> fog', () => {
 
 describe('<EnvironmentLayer> in a sub-viewport world', () => {
   it('mounts no compositor, which would draw to the canvas, not the sub-viewport target', async () => {
-    const { compositors } = await mountLayer('subViewport', { glow_enabled: 'true' }, { hasGlContext: true });
+    const { compositors } = await mountLayer('subViewport', { glow_enabled: 'true' });
     expect(compositors).toBe(0);
-  });
-
-  it("leaves the renderer's curve to the root world (edge case)", async () => {
-    const chunkBefore = THREE.ShaderChunk[TONEMAP_CHUNK];
-    const { gl } = await mountLayer('subViewport', { tonemap_mode: FILMIC });
-    expect(gl.toneMapping).not.toBe(THREE.CustomToneMapping);
-    expect(THREE.ShaderChunk[TONEMAP_CHUNK]).toBe(chunkBefore);
   });
 });

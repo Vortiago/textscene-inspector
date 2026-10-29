@@ -63,7 +63,7 @@ function applyEditsUntilMissing(
 }
 
 /** The text with every edit applied in order, or null when one is missing, as `applyEdit`. */
-export function applyEdits(text: string, edits: readonly TextEdit[]): string | null {
+function applyEdits(text: string, edits: readonly TextEdit[]): string | null {
   const { text: edited, missing } = applyEditsUntilMissing(text, edits);
   return missing === null ? edited : null;
 }
@@ -123,20 +123,6 @@ export function rewrittenShader(
   rewrite: (match: string, group: string) => string
 ): string {
   return text.replace(pattern, rewrite);
-}
-
-/**
- * Puts `text` in three's chunk `name`, for a chunk whose whole text a caller swaps at runtime, as
- * the tone curve is. A null `text`, an edit whose anchor three lacks as `applyEdits` gives it,
- * keeps the chunk and warns that three's `missing`.
- */
-export function swapChunk(name: ChunkName, text: string | null, missing: string): void {
-  if (THREE.ShaderChunk[name] === text) return;
-  if (text === null) {
-    warn(`[Shading] three's ${missing}`);
-    return;
-  }
-  THREE.ShaderChunk[name] = text;
 }
 
 /**

@@ -36,15 +36,6 @@ export function useMultisampledTarget<Target extends THREE.WebGLRenderTarget>(
   return target;
 }
 
-/** The samples for `mode` on a linear RGBA buffer of texel `type` that another library builds. */
-export function useSampleCount(mode: number, type: THREE.TextureDataType): number {
-  const gl = useThree((state) => state.gl);
-  return useMemo(() => {
-    const storage = colourStorage({ type, colorSpace: THREE.NoColorSpace, internalFormat: null });
-    return deviceSampleCount(gl, mode, storage);
-  }, [gl, mode, type]);
-}
-
 /**
  * Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). A target that takes output
  * like the drawing buffer stores an 8-bit sRGB tag linear (`:2120`), so such a target is linear or

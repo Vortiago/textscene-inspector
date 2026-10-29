@@ -12,7 +12,7 @@ import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { useDraws3D } from './useCompositorPass';
+import { useDraws3D } from './draws3D';
 import { useWorldKind } from './WorldKindContext';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
@@ -34,7 +34,7 @@ export interface EnvironmentLayerProps {
   skyResources: SceneResources;
 }
 
-export function EnvironmentLayer({ settings, sky, resources, skyResources }: EnvironmentLayerProps) {
+export function EnvironmentLayer({ settings, sky, skyResources }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. The two are independent: a
   // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
@@ -54,7 +54,7 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
 
   return (
     <>
-      {tonesCanvas && <ToneMapLayer settings={settings} resources={resources} />}
+      {tonesCanvas && <ToneMapLayer />}
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
       {sky && (showsSky || skyAmbient) && (
         <SkyLayer
@@ -90,14 +90,11 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
 function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
   const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
-  const { mode: curveMode, white: curveWhite, agxContrast: curveAgxContrast } = settings.toneMapping;
   const showsColor = showsBackgroundColor(mode);
   const exposure = useExposureFactor();
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
-  // A colour draws as a texture, not a clear, since three's clear skips the curve Godot applies to it.
-  // A new texture per curve: three recompiles its background material only for a new texture or a new
-  // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
+  // A colour draws as a texture, not a clear, since three's clear skips the fog (`colorBackground.ts`).
   useEffect(() => {
     if (showsColor) {
       const textureAt = (factor: number) => {
@@ -135,19 +132,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
       };
     }
     return undefined;
-  }, [
-    scene,
-    showsColor,
-    mode,
-    backgroundColor,
-    backgroundEnergy,
-    exposure,
-    hasSky,
-    hasFog,
-    curveMode,
-    curveWhite,
-    curveAgxContrast,
-  ]);
+  }, [scene, showsColor, mode, backgroundColor, backgroundEnergy, exposure, hasSky, hasFog]);
 }
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };

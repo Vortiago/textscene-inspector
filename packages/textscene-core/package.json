@@ -120,7 +120,6 @@
     "fzstd": "catalog:",
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
-    "@react-three/postprocessing": "catalog:",
     "postprocessing": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

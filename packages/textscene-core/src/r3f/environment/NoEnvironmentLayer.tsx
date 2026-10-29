@@ -5,7 +5,6 @@
  * `renderer_scene_render_rd.cpp:724-731`).
  */
 
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ProjectClearColor } from '../ProjectClearColor';
 import { ToneMapLayer } from './ToneMapLayer';
 
@@ -13,7 +12,7 @@ export function NoEnvironmentLayer() {
   return (
     <>
       <ProjectClearColor />
-      <ToneMapLayer settings={null} resources={NO_RESOURCES} />
+      <ToneMapLayer />
     </>
   );
 }

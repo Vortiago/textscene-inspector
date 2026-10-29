@@ -1,7 +1,7 @@
 /**
  * Godot's `tonemap.glsl` `main()`: one fragment shader from a glow blend, a tone curve and the
  * colour adjustments. Its own module, so asking "does this environment glow?" pulls in no tone
- * curve, and the in-material tonemap path pulls in no glow.
+ * curve.
  */
 
 /*

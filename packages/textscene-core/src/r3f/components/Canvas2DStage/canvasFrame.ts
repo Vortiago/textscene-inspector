@@ -53,7 +53,7 @@ class CanvasFrame extends THREE.WebGLRenderTarget {
   /**
    * Draws `scene` into the frame and copies the result, rows reversed, to the target bound before.
    * The frame clears itself where the render will not: a render clears only while the renderer's
-   * `autoClear` is on, which the tone-map composer turns off. A target of SRGB8_ALPHA8 storage takes
+   * `autoClear` is on, which `drawOffscreen` turns off. A target of SRGB8_ALPHA8 storage takes
    * the `decode` transfer, so its hardware encode writes the frame's bytes back unchanged.
    */
   render(

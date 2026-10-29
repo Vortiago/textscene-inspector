@@ -13,12 +13,11 @@ links every one of them.
 ## Install
 
 ```bash
-npm install @textscene/renderer react react-dom three @react-three/fiber @react-three/drei @react-three/postprocessing postprocessing
+npm install @textscene/renderer react react-dom three @react-three/fiber @react-three/drei postprocessing
 ```
 
 The renderer takes the text of a scene and parses it itself. The peer dependencies are
-`react`, `react-dom`, `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing`
-and `postprocessing`. `package.json` names the supported versions. The renderer patches three.js
+`react`, `react-dom`, `three`, `@react-three/fiber`, `@react-three/drei` and `postprocessing`. `package.json` names the supported versions. The renderer patches three.js
 shaders, so a `three` version outside that range can draw wrongly.
 
 ## Use
