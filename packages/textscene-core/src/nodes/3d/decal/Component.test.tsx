@@ -21,6 +21,7 @@ import {
 } from '../../../r3f/testing/gizmoContract';
 import {
   AnimatedValueProvider,
+  animatedValueKey,
   useAnimatedValueRegistry,
   type AnimatedValueRegistry,
 } from '../../../r3f/contexts/AnimatedValueContext';
@@ -385,9 +386,9 @@ describe('<Decal>', () => {
       return [s.x, s.y, s.z];
     };
     expect(sizingScale()).toEqual([2, 2, 2]); // authored size
-    await ReactThreeTestRenderer.act(async () => registry!.set('D', 'size', [6, 5, 4]));
+    await ReactThreeTestRenderer.act(async () => registry!.set(animatedValueKey('D', 'size'), [6, 5, 4]));
     expect(sizingScale()).toEqual([6, 5, 4]); // driven size
-    await ReactThreeTestRenderer.act(async () => registry!.set('D', 'size', null));
+    await ReactThreeTestRenderer.act(async () => registry!.set(animatedValueKey('D', 'size'), null));
     expect(sizingScale()).toEqual([2, 2, 2]); // released → authored size
   });
 
@@ -409,9 +410,11 @@ describe('<Decal>', () => {
     );
     const modulate = () => decalObjects(renderer)[0]!.look.modulate;
 
-    await ReactThreeTestRenderer.act(async () => registry!.set('D', 'modulate', [1, 0.5, 0.25, 0.1]));
+    await ReactThreeTestRenderer.act(async () =>
+      registry!.set(animatedValueKey('D', 'modulate'), [1, 0.5, 0.25, 0.1])
+    );
     expect(modulate()).toEqual({ r: 1, g: 0.5, b: 0.25, a: 0.1 });
-    await ReactThreeTestRenderer.act(async () => registry!.set('D', 'modulate', null));
+    await ReactThreeTestRenderer.act(async () => registry!.set(animatedValueKey('D', 'modulate'), null));
     expect(modulate()).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 });

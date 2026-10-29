@@ -4,7 +4,7 @@
  */
 
 import type React from 'react';
-import type { TscnInternalResource, TscnNode } from '../parser/types';
+import type { TscnNode } from '../parser/types';
 import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
@@ -56,13 +56,11 @@ export interface NodeComponentRegistration {
   // so a 3D emitter would drag its subtree into the 2D one.
   renderIntent?: 'draws' | 'transform-only' | 'pending';
   /**
-   * A pass for a component that cannot reach the node it names: a RemoteTransform's target, a
-   * CSGPolygon3D's path, a MeshInstance3D's skeleton. A parse stage pass runs over the authored
-   * tree before the graph is built, once per parse in stage order, once even when two types share
-   * it (`useParsedScene`). A `live` registration declares a pass over the Live scene tree, which
-   * its reader names (`useLiveScenePass`, ADR-0060).
+   * Declares that the type drives other nodes through a pass over the Live scene tree, which its
+   * reader names (`useLiveScenePass`, ADR-0060): a RemoteTransform's target, a CSGPolygon3D's path,
+   * a MeshInstance3D's skeleton. The registry runs nothing.
    */
-  scenePass?: ScenePassRegistration;
+  scenePass?: true;
   /**
    * Present for a CanvasItem that the y-sort pass decomposes into per-row
    * groups rather than dispatching whole (a TileMapLayer): what to read off the
@@ -102,34 +100,6 @@ interface YSortGroupRegistration {
   }>;
 }
 
-/** A parse stage pass takes the parsed roots and hands back the roots to build from. */
-export type ParseScenePass = (
-  nodes: TscnNode[],
-  internalResources: readonly TscnInternalResource[]
-) => TscnNode[];
-
-/** A pass and the types whose registrations carry it. */
-interface RegisteredParseScenePass {
-  run: ParseScenePass;
-  typeNames: string[];
-}
-
-/**
- * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
- * every transform pass runs before any path pass whatever the barrel order.
- */
-interface ParseScenePassRegistration {
-  stage: 'transforms' | 'paths';
-  run: ParseScenePass;
-}
-
-/** A drive on the live stage. The reader names the pass, so the registry runs nothing. */
-interface LiveScenePassRegistration {
-  stage: 'live';
-}
-
-type ScenePassRegistration = ParseScenePassRegistration | LiveScenePassRegistration;
-
 /**
  * The badge reads the declared intent, so it must agree with the component: a `pending` gap
  * mounts only an invisible base, and a `draws` type draws. The one exception is the 3D
@@ -153,8 +123,6 @@ function assertIntentMatchesComponent({
     );
   }
 }
-
-const PARSE_STAGES: readonly ParseScenePassRegistration['stage'][] = ['transforms', 'paths'];
 
 class NodeComponentRegistryImpl {
   // The whole registration is stored and answers every flag, so a new flag needs no
@@ -228,25 +196,7 @@ class NodeComponentRegistryImpl {
     return this.registry.getAllTypeNames();
   }
 
-  /**
-   * The registered parse stage passes, each once with the types that share it, in stage order then
-   * registration order.
-   */
-  parseScenePasses(): readonly RegisteredParseScenePass[] {
-    const byRun = new Map<ParseScenePass, RegisteredParseScenePass>();
-    for (const stage of PARSE_STAGES) {
-      for (const typeName of this.registry.getAllTypeNames()) {
-        const pass = this.registry.get(typeName)?.scenePass;
-        if (pass?.stage !== stage) continue;
-        const registered = byRun.get(pass.run) ?? { run: pass.run, typeNames: [] };
-        registered.typeNames.push(typeName);
-        byRun.set(pass.run, registered);
-      }
-    }
-    return [...byRun.values()];
-  }
-
-  /** Every type that registers a pass on either stage: each acts on nodes other than its own. */
+  /** Every type that registers a scene pass: each acts on nodes other than its own. */
   scenePassTypeNames(): ReadonlySet<string> {
     return new Set(
       this.registry.getAllTypeNames().filter((typeName) => this.registry.get(typeName)?.scenePass)

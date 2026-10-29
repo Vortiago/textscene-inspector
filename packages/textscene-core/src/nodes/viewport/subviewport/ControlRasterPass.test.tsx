@@ -239,6 +239,26 @@ offset_bottom = 100.5
     expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
   });
 
+  // Godot lays Controls out by `size` (`viewport.cpp:1202-1210`); a capped target only shrinks the draw.
+  it('frames the authored size when the target is capped', async () => {
+    const { renderer, gl } = await mount(
+      parse(GUI_SCENE.replace('Vector2i(320, 240)', 'Vector2i(20000, 240)'))
+    );
+    const drawn: { camera: THREE.Camera | null } = { camera: null };
+    await withStubbedGl(
+      gl,
+      {
+        onRender: (_, __, camera) => {
+          drawn.camera ??= camera;
+        },
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+
+    drawn.camera!.updateMatrixWorld(true);
+    expect(new THREE.Vector3(20000, 0, 0).project(drawn.camera!).x).toBeCloseTo(1);
+  });
+
   // The frame's render clears the frame and the copy overwrites every texel of the target.
   it('clears no target by hand, since the frame clears and the copy overwrites', async () => {
     const { renderer, gl } = await mount(parse(GUI_SCENE));

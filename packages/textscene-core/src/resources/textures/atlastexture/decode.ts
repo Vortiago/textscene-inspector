@@ -25,6 +25,22 @@ export function decodeAtlasTexture(properties: Record<string, string>): AtlasTex
 }
 
 /**
+ * The size `tex` reports: its region's plus its margin, and the atlas's on a zero axis
+ * (`get_width`/`get_height` :32-52). Null when a zero axis needs `atlasSize` and it is null.
+ */
+export function atlasTextureSize(
+  tex: AtlasTextureData,
+  atlasSize: { width: number; height: number } | null
+): { width: number; height: number } | null {
+  // `set_region` stores `Rect2(position, size.floor())` (:97): the size is whole texels.
+  const roundedW = Math.floor(tex.region.width);
+  const roundedH = Math.floor(tex.region.height);
+  const width = roundedW === 0 ? atlasSize?.width : roundedW + tex.margin.width;
+  const height = roundedH === 0 ? atlasSize?.height : roundedH + tex.margin.height;
+  return width === undefined || height === undefined ? null : { width, height };
+}
+
+/**
  * The atlas rectangle `tex` samples and the size it reports, or null when it
  * describes nothing drawable. `atlasSize` is read only for a zero axis, where
  * Godot uses the atlas's dimension (`get_width`/`get_height` :34-38/:45-49,
@@ -34,17 +50,12 @@ export function atlasTextureLayout(
   tex: AtlasTextureData,
   atlasSize: { width: number; height: number } | null
 ): AtlasTextureLayout | null {
-  // `set_region` stores `Rect2(position, size.floor())` (:97): the size is whole
-  // texels, the position is not.
-  const roundedW = Math.floor(tex.region.width);
-  const roundedH = Math.floor(tex.region.height);
-
-  const sourceW = roundedW === 0 ? atlasSize?.width : roundedW;
-  const sourceH = roundedH === 0 ? atlasSize?.height : roundedH;
-  if (sourceW === undefined || sourceH === undefined) return null;
-
-  const width = roundedW === 0 ? sourceW : roundedW + tex.margin.width;
-  const height = roundedH === 0 ? sourceH : roundedH + tex.margin.height;
+  const size = atlasTextureSize(tex, atlasSize);
+  if (!size) return null;
+  const { width, height } = size;
+  // A zero axis samples the whole atlas, which is then the reported size too.
+  const sourceW = Math.floor(tex.region.width) || width;
+  const sourceH = Math.floor(tex.region.height) || height;
   if (width <= 0 || height <= 0 || sourceW <= 0 || sourceH <= 0) return null;
 
   return {

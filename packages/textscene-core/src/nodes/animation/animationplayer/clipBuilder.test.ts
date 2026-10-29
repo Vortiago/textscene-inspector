@@ -10,7 +10,8 @@ import * as logger from '../../../logger';
 import { bindClip } from '../../../r3f/animation/trackTargets';
 import { resolveRelativePath } from '../../../godot/string/nodePath';
 import { buildClip } from './clipBuilder';
-import { resolveAnimations, type GodotAnimation, type GodotTrack } from './animationResolver';
+import { resolveAnimations, type GodotAnimation } from './animationResolver';
+import type { GodotTrack } from './trackParser';
 import type { TscnInternalResource } from '../../../parser/types';
 import { degToRad } from '../../../godot/math/math.js';
 
@@ -19,7 +20,7 @@ function anim(name: string, length: number, tracks: GodotTrack[]): GodotAnimatio
 }
 
 function track(property: string, keys: GodotTrack['keys'], targetPath = 'Target'): GodotTrack {
-  return { type: 'value', targetPath, property, interp: 1, keys };
+  return { type: 'value', targetPath, subnames: [], property, interp: 1, loopWrap: true, keys };
 }
 
 function findTrack(clip: ReturnType<typeof buildClip>, name: string) {
@@ -129,7 +130,15 @@ describe('buildClip — rotation actually drives the quaternion (regression)', (
 
 describe('buildClip — quaternion (rotation_3d)', () => {
   function quatTrack(keys: GodotTrack['keys'], targetPath = 'Target'): GodotTrack {
-    return { type: 'rotation_3d', targetPath, property: 'quaternion', interp: 1, keys };
+    return {
+      type: 'rotation_3d',
+      targetPath,
+      subnames: [],
+      property: 'quaternion',
+      interp: 1,
+      loopWrap: true,
+      keys,
+    };
   }
 
   it('maps a length-4 quaternion track to a QuaternionKeyframeTrack on <path>.quaternion', () => {

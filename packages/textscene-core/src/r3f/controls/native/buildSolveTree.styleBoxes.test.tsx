@@ -8,7 +8,6 @@ import { renderHook } from '@testing-library/react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { useBuildSolveTree } from './buildSolveTree';
 import { controlNode } from './testing/solveNode';
-import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
 import type { StyleBoxTextureData } from './styleBoxTexture';
 
 const internalResources: TscnInternalResource[] = [
@@ -85,20 +84,19 @@ describe('useBuildSolveTree style boxes', () => {
   });
 
   /** A ViewportTexture in a StyleBoxTexture is set up only when every holder is local to scene (`core/io/resource.cpp:497-503`). */
-  it('holds an override StyleBoxTexture texture through the StyleBoxTexture', () => {
-    const boxes = styleBoxesOf(panelWith({ panel: 'SubResource("Texture_x")' }));
-    expect(textureOf(boxes.panel)?.holders).toEqual([internalResources[2]]);
+  it('holds an override StyleBoxTexture texture local to scene as the StyleBoxTexture says', () => {
+    const held = ['Texture_x', 'Texture_local'].map(
+      (id) => textureOf(styleBoxesOf(panelWith({ panel: `SubResource("${id}")` })).panel)?.isHeldLocally
+    );
+    expect(held).toEqual([false, true]);
   });
 
   it('holds a Theme StyleBoxTexture texture through the Theme too, local to scene as the Theme says', () => {
     const holders = ['Theme_shared', 'Theme_local'].map((id) => {
       const boxes = styleBoxesOf(controlNode('N', 'Panel', { theme: `SubResource("${id}")` }));
-      return textureOf(boxes.panel)?.holders.map(isLocalToScene);
+      return textureOf(boxes.panel)?.isHeldLocally;
     });
-    expect(holders).toEqual([
-      [false, true],
-      [true, true],
-    ]);
+    expect(holders).toEqual([false, true]);
   });
 });
 

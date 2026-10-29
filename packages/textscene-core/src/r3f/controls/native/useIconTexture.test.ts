@@ -136,7 +136,7 @@ describe('useNodeIcon', () => {
     const themed: ThemedIconRef = {
       ref: 'SubResource("G1")',
       resources: { externalResources: [], internalResources: PROCEDURAL },
-      holders: [],
+      isHeldLocally: true,
     };
     const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
 
@@ -157,7 +157,7 @@ describe('useNodeIcon', () => {
           { id: 'Viewport', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
         ],
       },
-      holders: [{ id: '', type: 'Theme', data: {} }],
+      isHeldLocally: false,
     };
     const { result } = renderHook(() => useNodeIcon(themed, ICON));
     expect(result.current?.image).toBe(unconfiguredViewportTexture().image);
@@ -167,7 +167,7 @@ describe('useNodeIcon', () => {
     const themed: ThemedIconRef = {
       ref: 'ExtResource("nope")',
       resources: { externalResources: [], internalResources: [] },
-      holders: [],
+      isHeldLocally: true,
     };
     const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
 

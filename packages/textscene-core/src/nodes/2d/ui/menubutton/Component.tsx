@@ -5,7 +5,7 @@
  * `children` and the transform.
  */
 import { useMemo } from 'react';
-import { buttonIconSize } from '../button/buttonIconSize';
+import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -51,12 +51,16 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   // Icon: resolve and load the referenced texture
   const { externalResources, internalResources } = solveNode.resources;
-  const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
+  const { texture: iconSource, size: iconSize } = useTexture2D(
+    props.icon,
+    externalResources,
+    internalResources
+  );
   const iconTexture = useOwnerCanvas2DTexture(iconSource);
 
   const iconNaturalSize = useMemo(
-    () => (props.icon ? buttonIconSize(iconTexture) : null),
-    [props.icon, iconTexture]
+    () => (props.icon && iconTexture ? sizeWithArea(iconSize) : null),
+    [props.icon, iconTexture, iconSize]
   );
 
   const baseIconColor = buttonIconColor(solveNode.colors, state);

@@ -485,7 +485,7 @@ describe('splitContainerTextureSlots', () => {
       grabber: {
         ref: 'ExtResource("1")',
         resources: { externalResources: [], internalResources: [] },
-        holders: [],
+        isHeldLocally: true,
       },
     };
     expect(splitContainerTextureSlots(node, themed)).toEqual([
@@ -493,7 +493,7 @@ describe('splitContainerTextureSlots', () => {
         key: 'grabber',
         ref: 'ExtResource("1")',
         scope: themed.grabber.resources,
-        holders: themed.grabber.holders,
+        isHeldLocally: themed.grabber.isHeldLocally,
       },
     ]);
   });
@@ -504,7 +504,7 @@ describe('splitContainerTextureSlots', () => {
       v_grabber: {
         ref: 'ExtResource("1")',
         resources: { externalResources: [], internalResources: [] },
-        holders: [],
+        isHeldLocally: true,
       },
     };
     expect(splitContainerTextureSlots(node, themed)).toEqual([
@@ -512,7 +512,7 @@ describe('splitContainerTextureSlots', () => {
         key: 'v_grabber',
         ref: 'ExtResource("1")',
         scope: themed.v_grabber.resources,
-        holders: themed.v_grabber.holders,
+        isHeldLocally: themed.v_grabber.isHeldLocally,
       },
     ]);
   });

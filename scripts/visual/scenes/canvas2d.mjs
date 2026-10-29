@@ -302,6 +302,11 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-checkbox-icon-magnified.tscn',
     mode: '2d',
   },
+  // The one variable: where a check icon lands off the whole pixel. A fitted
+  // CheckBox icon keeps its fractional size, and a CheckButton centres on the
+  // half pixel an odd height leaves. Rounding either moves its edge rows.
+  { name: 'check-box-fitted-icon', file: 'unit-check-box-fitted-icon.tscn', mode: '2d' },
+  { name: 'check-button-half-pixel-icon', file: 'unit-check-button-half-pixel-icon.tscn', mode: '2d' },
   // A TextureRect and a Button icon fed by an inline GradientTexture2D. The
   // texture drives each node's minimum size as well as its pixels, so the
   // sibling below moves too: these report a layout regression as well.
@@ -408,6 +413,20 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
+  // A Sprite2D draws one frame of a ViewportTexture, upright and flipped. Godot 4.6.3 `--mode 2d`:
+  // the left frame's edge pixels blend into rgb(120, 0, 0) and rgb(0, 0, 120), its neighbours' texels.
+  {
+    name: 'sprite-2d-viewport-texture-frame',
+    file: 'unit-sprite-2d-viewport-texture-frame.tscn',
+    mode: '2d',
+  },
+  // A TextureRect at its minimum size takes a ViewportTexture's size only when it holds it directly.
+  // Godot 4.6.3 `--mode 2d`: (130,115) rgb(255,0,0), and nothing at (330,115) or (530,115).
+  {
+    name: 'texture-rect-viewport-texture-wrapped',
+    file: 'unit-texture-rect-viewport-texture-wrapped.tscn',
+    mode: '2d',
+  },
   // A TextureRect samples a ViewportTexture through the Control walker. Godot 4.6.3 `--mode 2d`:
   // (200,150) rgb(255,0,0) and (200,250) rgb(0,0,255), the target's two halves upright.
   {
@@ -436,6 +455,13 @@ export const CANVAS_2D_SCENES = [
   {
     name: 'tile-atlas-viewport-padding',
     file: 'unit-tile-atlas-viewport-padding.tscn',
+    mode: '2d',
+  },
+  // A TileSet atlas over a ViewportTexture, inline and from a .tres: neither creates a tile at load.
+  // Godot 4.6.3 `--mode 2d`: (130,120) and (430,120) rgb(76,76,76), the clear colour.
+  {
+    name: 'tile-atlas-viewport-texture-file',
+    file: 'unit-tile-atlas-viewport-texture-file.tscn',
     mode: '2d',
   },
   // A WorldEnvironment inside a shared-world viewport glows its target. Godot 4.6.3 `--mode 2d`:
@@ -485,6 +511,15 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-control-outer-light.tscn',
     mode: '2d',
   },
+  // A ColorRect and a Polygon2D in one sub-viewport, lit by its own sun. Godot 4.6.3 `--mode 2d`:
+  // (250,200) and (550,200) rgb(0,0,123) the ColorRect and the Polygon2D, (250,500) rgb(0,0,112) the
+  // stage ColorRect under the stage sun alone.
+  { name: 'sub-viewport-mixed-controls', file: 'unit-sub-viewport-mixed-controls.tscn', mode: '2d' },
+  // A ColorRect over a 3D world in one sub-viewport. Godot 4.6.3 `--mode 2d`: (150,180)
+  // rgb(127,153,0) the translucent Veil blended over the quad in sRGB numbers, (250,180)
+  // rgb(255,102,0) the quad alone, (240,240) rgb(51,51,230) the Plate, (110,90) rgb(38,140,38) the
+  // Veil over the clear colour.
+  { name: 'sub-viewport-3d-controls', file: 'unit-sub-viewport-3d-controls.tscn', mode: '2d' },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.

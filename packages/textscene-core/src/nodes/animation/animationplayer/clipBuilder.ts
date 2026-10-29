@@ -3,6 +3,7 @@
  * target's scene path (`Root/Arm.position`), which `r3f/animation/trackTargets.ts` binds to the
  * exact object (ADR-0011). It builds position, scale, rotation and rotation_degrees (as radians) in
  * 3D and 2D, and the `quaternion` of Godot's `rotation_3d` tracks. It drops every other track.
+ * `drivenTracks.ts` takes the bone and value tracks out of the clip first.
  */
 
 import {
@@ -16,7 +17,8 @@ import {
   type InterpolationModes,
   type KeyframeTrack,
 } from 'three';
-import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
+import type { GodotAnimation } from './animationResolver';
+import type { GodotKeyframe, GodotTrack } from './trackParser';
 import { warn } from '../../../logger';
 import { degToRad } from '../../../godot/math/math.js';
 import { VECTOR3_AXES } from '../../../godot/math/vector.js';

@@ -68,3 +68,12 @@ export const AnimationLoopMode = {
   LINEAR: 1,
   PINGPONG: 2,
 } as const;
+
+/** `Animation::InterpolationType` (`scene/resources/animation.h:58-64`). */
+export const AnimationInterpolation = {
+  NEAREST: 0,
+  LINEAR: 1,
+  CUBIC: 2,
+  LINEAR_ANGLE: 3,
+  CUBIC_ANGLE: 4,
+} as const;

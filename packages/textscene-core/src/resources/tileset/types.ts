@@ -39,8 +39,8 @@ export interface TileTexture {
   /** The tables `ref` resolves in: the TileSet's own file's, or the scene's. */
   externalResources: readonly TscnExternalResource[];
   internalResources: readonly TscnInternalResource[];
-  /** The TileSet and the atlas source, which hold the texture for its local-to-scene setup. */
-  holders: readonly TscnInternalResource[];
+  /** Whether the TileSet and the atlas source that hold the texture are local to scene, for its setup. */
+  isHeldLocally: boolean;
 }
 
 export interface AtlasSourceModel {

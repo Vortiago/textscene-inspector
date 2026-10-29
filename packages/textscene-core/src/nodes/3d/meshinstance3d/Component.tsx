@@ -106,12 +106,9 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
   // A mesh that cannot bind asks with no path, so it watches no load and the pass never runs for it.
   const bindingPath = useNodePath();
-  const skinMatrices = useLiveScenePass(
-    bindMeshesToSkeletons,
-    namesSkeletonToBind(properties) ? bindingPath : null
-  );
+  const skin = useLiveScenePass(bindMeshesToSkeletons, namesSkeletonToBind(properties) ? bindingPath : null);
   // A surface with no bone arrays stays unskinned even when the node is bound.
-  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, skinMatrices);
+  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, skin);
 
   const shellProps = {
     name: node.name,
