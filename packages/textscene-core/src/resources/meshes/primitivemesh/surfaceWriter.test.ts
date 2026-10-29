@@ -55,7 +55,7 @@ describe('SurfaceWriter', () => {
   it('refuses bones written for fewer vertices than the surface has (edge case)', () => {
     const writer = new SurfaceWriter(false);
     writeQuad(writer);
-    writer.bones([0, 0, 0, 0], [1, 0, 0, 0]);
+    writer.bones({ indices: [0, 0, 0, 0], weights: [1, 0, 0, 0] });
 
     expect(() => writer.surface()).toThrow('expected bones for each of 4 vertices, got 1');
   });

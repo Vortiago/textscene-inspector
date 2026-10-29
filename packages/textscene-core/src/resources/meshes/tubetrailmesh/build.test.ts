@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { curveOf, point } from '../../curves/curve/curve.testkit';
 import { EMPTY_CURVE } from '../../curves/curve/types';
-import { expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
+import { bonesOf, expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
 import { buildTubeTrailMeshSurface } from './build';
 import type { TubeTrailMeshProperties } from './types';
 
@@ -164,6 +164,88 @@ describe('buildTubeTrailMeshSurface', () => {
       const surface = buildTubeTrailMeshSurface({ ...COARSE, curve: EMPTY_CURVE });
 
       expect(surface.positions).toEqual(buildTubeTrailMeshSurface(COARSE).positions);
+    });
+  });
+
+  describe('bone arrays', () => {
+    /** Godot's defaults: 5 sections of 3 rings, so 16 rings of 9 vertices, then the caps. */
+    const DEFAULT_TUBE: TubeTrailMeshProperties = {
+      ...COARSE,
+      radialSteps: 8,
+      sections: 5,
+      sectionLength: 0.2,
+      sectionRings: 3,
+    };
+    const RING_VERTICES = 9;
+    const TOP_CAP_CENTRE = 16 * RING_VERTICES;
+    const CAP_VERTICES_DEFAULT = 10;
+    const BOTTOM_CAP_CENTRE = TOP_CAP_CENTRE + CAP_VERTICES_DEFAULT;
+    const VERTICES = BOTTOM_CAP_CENTRE + CAP_VERTICES_DEFAULT;
+    const LAST_RING = 15 * RING_VERTICES;
+
+    // Ring `j` takes bone `j / 3` and the one after it, capped at the last bone (`:2545-2580`).
+    it('blends the first ring of a section fully into its bone', () => {
+      const { indices, weights } = bonesOf(buildTubeTrailMeshSurface(DEFAULT_TUBE), 0);
+
+      expect(indices).toEqual([0, 1, 0, 0]);
+      expect(weights).toEqual([1, 0, 0, 0]);
+    });
+
+    it('shifts the weight to the next bone a third at a time down a section', () => {
+      const surface = buildTubeTrailMeshSurface(DEFAULT_TUBE);
+
+      const ringOne = bonesOf(surface, RING_VERTICES);
+      expect(ringOne.indices).toEqual([0, 1, 0, 0]);
+      expect(ringOne.weights[0]).toBeCloseTo(2 / 3, 6);
+      expect(ringOne.weights[1]).toBeCloseTo(1 / 3, 6);
+      const ringTwo = bonesOf(surface, 2 * RING_VERTICES);
+      expect(ringTwo.weights[0]).toBeCloseTo(1 / 3, 6);
+      expect(ringTwo.weights[1]).toBeCloseTo(2 / 3, 6);
+    });
+
+    it('starts the next section on the next bone at full weight', () => {
+      const { indices, weights } = bonesOf(buildTubeTrailMeshSurface(DEFAULT_TUBE), 3 * RING_VERTICES);
+
+      expect(indices).toEqual([1, 2, 0, 0]);
+      expect(weights).toEqual([1, 0, 0, 0]);
+    });
+
+    it('gives every vertex of a ring the same pair', () => {
+      const surface = buildTubeTrailMeshSurface(DEFAULT_TUBE);
+      const ringFour = Array.from({ length: RING_VERTICES }, (_, i) =>
+        bonesOf(surface, 4 * RING_VERTICES + i)
+      );
+
+      expect(new Set(ringFour.map((b) => JSON.stringify(b))).size).toBe(1);
+    });
+
+    it('holds the last ring on the last bone, which has no bone after it', () => {
+      const surface = buildTubeTrailMeshSurface(DEFAULT_TUBE);
+
+      expect(surface.bones!.indices.length).toBe(VERTICES * 4);
+      expect(bonesOf(surface, LAST_RING)).toEqual({ indices: [5, 5, 0, 0], weights: [1, 0, 0, 0] });
+    });
+
+    it('binds every vertex of the top cap, centre and rim, to bone 0 at full weight (`:2600-2655`)', () => {
+      const surface = buildTubeTrailMeshSurface(DEFAULT_TUBE);
+
+      for (let vertex = TOP_CAP_CENTRE; vertex < BOTTOM_CAP_CENTRE; vertex++) {
+        expect(bonesOf(surface, vertex)).toEqual({ indices: [0, 0, 0, 0], weights: [1, 0, 0, 0] });
+      }
+    });
+
+    it('binds every vertex of the bottom cap, centre and rim, to the last bone at full weight (`:2680-2723`)', () => {
+      const surface = buildTubeTrailMeshSurface(DEFAULT_TUBE);
+
+      for (let vertex = BOTTOM_CAP_CENTRE; vertex < VERTICES; vertex++) {
+        expect(bonesOf(surface, vertex)).toEqual({ indices: [5, 0, 0, 0], weights: [1, 0, 0, 0] });
+      }
+    });
+
+    it('writes bones for a tube with no cap', () => {
+      const surface = buildTubeTrailMeshSurface({ ...DEFAULT_TUBE, capTop: false, capBottom: false });
+
+      expect(surface.bones!.indices.length).toBe(TOP_CAP_CENTRE * 4);
     });
   });
 });
