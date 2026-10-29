@@ -102,13 +102,13 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   const shadowOpacity = lightShadowOpacity(properties);
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const userData = useAreaLightUserData(properties);
-  const hasLtcTextures = useLtcTexturesSettled();
+  const isLtcLoadSettled = useLtcTexturesSettled();
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
       <rectAreaLight
         ref={lightRef}
-        visible={hasLtcTextures}
+        visible={isLtcLoadSettled}
         color={parseColorToHex(properties.light_color)}
         intensity={intensity}
         width={properties.area_size.x}

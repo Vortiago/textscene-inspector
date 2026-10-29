@@ -6,51 +6,45 @@
  */
 
 /** How the words lie: `channels` words per texel, `width` texels per row. */
-interface TableShape {
+export interface TableShape {
   width: number;
   channels: number;
 }
 
 /**
- * The prediction for the word at texel `x` of a row: the line through the two words before it, the
- * one word before it, or at a row start the word above it, which `rowStart` holds.
+ * The prediction for word `at` of a channel's plane, which `wordAt` reads in row order: the line
+ * through the two words before it in its row, the one word before it, or at a row start the word
+ * above it.
  */
-function predicted(plane: readonly number[], at: number, x: number, rowStart: number): number {
-  if (x === 0) return rowStart;
-  if (x === 1) return plane[at - 1]!;
-  return 2 * plane[at - 1]! - plane[at - 2]!;
-}
-
-/** The words of one channel, row by row. */
-function planeOf(words: ArrayLike<number>, channel: number, channels: number): number[] {
-  const plane: number[] = [];
-  for (let i = channel; i < words.length; i += channels) plane.push(words[i]!);
-  return plane;
+function predicted(wordAt: (at: number) => number, at: number, width: number): number {
+  const x = at % width;
+  if (x === 0) return at >= width ? wordAt(at - width) : 0;
+  if (x === 1) return wordAt(at - 1);
+  return 2 * wordAt(at - 1) - wordAt(at - 2);
 }
 
 /** The residuals of `words`, interleaved per texel: one plane per channel, each in row order. */
 export function toResiduals(words: ArrayLike<number>, { width, channels }: TableShape): number[] {
   const residuals: number[] = [];
+  const texels = words.length / channels;
   for (let channel = 0; channel < channels; channel += 1) {
-    const plane = planeOf(words, channel, channels);
-    plane.forEach((word, at) => {
-      const rowStart = at >= width ? plane[at - width]! : 0;
-      residuals.push(word - predicted(plane, at, at % width, rowStart));
-    });
+    const wordAt = (at: number) => words[at * channels + channel]!;
+    for (let at = 0; at < texels; at += 1) residuals.push(wordAt(at) - predicted(wordAt, at, width));
   }
   return residuals;
 }
 
-/** The words `toResiduals` took, interleaved per texel again. */
-export function fromResiduals(residuals: readonly number[], { width, channels }: TableShape): number[] {
+/** Writes the words `toResiduals` took into `words`, interleaved per texel again, and returns it. */
+export function fromResiduals<Words extends Uint16Array | Uint32Array>(
+  residuals: readonly number[],
+  { width, channels }: TableShape,
+  words: Words
+): Words {
   const texels = residuals.length / channels;
-  const words = new Array<number>(residuals.length);
   for (let channel = 0; channel < channels; channel += 1) {
-    const plane: number[] = [];
+    const wordAt = (at: number) => words[at * channels + channel]!;
     for (let at = 0; at < texels; at += 1) {
-      const rowStart = at >= width ? plane[at - width]! : 0;
-      plane.push(residuals[channel * texels + at]! + predicted(plane, at, at % width, rowStart));
-      words[at * channels + channel] = plane[at]!;
+      words[at * channels + channel] = residuals[channel * texels + at]! + predicted(wordAt, at, width);
     }
   }
   return words;

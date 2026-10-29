@@ -113,22 +113,19 @@ export class WorkerJobRunner {
     // before the task runs skips the work.
     job.timer = setTimeout(() => {
       job.timer = undefined;
-      void inThreadJobs().then(
-        (jobs) => this.runLoadedJob(job, jobs[job.name] as WorkerJob<unknown, unknown>),
-        (error: unknown) => {
-          if (!job.settled) this.finish(job, () => job.reject(error));
-        }
-      );
+      void this.runInThreadJob(job);
     }, 0);
   }
 
-  private runLoadedJob(job: QueuedJob, entry: WorkerJob<unknown, unknown>): void {
-    if (job.settled) return;
+  private async runInThreadJob(job: QueuedJob): Promise<void> {
     let output: unknown;
     try {
-      output = entry.run(job.input);
+      const jobs = await inThreadJobs();
+      // An abort while the jobs loaded settled the job already.
+      if (job.settled) return;
+      output = (jobs[job.name] as WorkerJob<unknown, unknown>).run(job.input);
     } catch (error) {
-      this.finish(job, () => job.reject(error));
+      if (!job.settled) this.finish(job, () => job.reject(error));
       return;
     }
     this.finish(job, () => job.resolve(output));

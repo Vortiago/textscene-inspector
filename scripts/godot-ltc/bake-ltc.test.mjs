@@ -48,7 +48,7 @@ describe('generatedProblem', () => {
 
   it('names the table whose texels differ from the release (error case)', () => {
     const tampered = committed.replace(
-      /(LTC_LUT2_RESIDUALS: readonly number\[\] = \[)(\d+)/,
+      /(LTC_LUT2_RESIDUALS\b[^=]*= \[)(\d+)/,
       (_, head, word) => `${head}${Number(word) + 1}`
     );
     expect(generatedProblem(tampered)).toContain('ltc_lut2.dds');

@@ -18,6 +18,9 @@ const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/materia
 /** The table's width and height (`render_forward_clustered.cpp:5097-5098`). */
 export const DFG_SIZE = 128;
 
+/** `[fresnel, total]` per texel. */
+const DFG_SHAPE = { width: DFG_SIZE, channels: 2 };
+
 /** `SAMPLE_COUNT` (`integrate_dfg.glsl:13`). */
 const SAMPLE_COUNT = 1024;
 
@@ -135,7 +138,7 @@ function roundedShift(value, shift) {
 /** The generated module: the table's half floats as residuals (`tableResiduals.ts`). */
 export function renderTableModule(table) {
   const halfFloats = Array.from(table, toHalfFloat);
-  const residuals = toResiduals(halfFloats, { width: DFG_SIZE, channels: 2 });
+  const residuals = toResiduals(halfFloats, DFG_SHAPE);
   return `/**
  * Godot 4.6.3's DFG table (\`integrate_dfg.glsl\`), in the half floats Godot stores it in.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm godot:dfg
@@ -143,6 +146,9 @@ export function renderTableModule(table) {
 
 /** The table's width and height (\`render_forward_clustered.cpp:5097-5098\`). */
 export const DFG_SIZE = ${DFG_SIZE};
+
+/** How the residuals lie: \`[fresnel, total]\` per texel. */
+export const DFG_SHAPE = { width: DFG_SIZE, channels: ${DFG_SHAPE.channels} };
 
 /**
  * The half floats as residuals (\`tableResiduals.ts\`): \`[fresnel, total]\` per texel, a row per

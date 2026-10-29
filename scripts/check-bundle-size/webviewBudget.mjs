@@ -13,7 +13,7 @@ import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 // path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
 // half stays out), so a tighter ceiling fails on the next slice, not on a regression. The report
 // reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
-const MEASURED_GZ = 812_351; // the closure as last measured
+const MEASURED_GZ = 812_774; // the closure as last measured
 const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. Importing the `@react-three/drei` barrel
@@ -22,21 +22,35 @@ const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 // that no code path loads.
 const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
 
-// Modules that load on demand, each for a scene that needs it, and so stay off the closure: the
-// area light's LTC tables, the noise jobs' in-thread fallback, and n8ao, which no code path uses.
-const LAZY_ONLY_RE = /\/ltcTable\.generated\.js$|\/node_modules\/(fastnoise-lite|n8ao)\//;
+// Modules a dynamic import() does not reach itself but that must stay off the closure: the
+// tables behind the area light's LTC textures, the noise jobs' `fastnoise-lite`, and n8ao, which
+// no code path uses.
+const LAZY_LEAF_RE = /\/ltcTable\.generated\.js$|\/node_modules\/(fastnoise-lite|n8ao)\//;
 
 /** Where esbuild writes the webview, as the metafile's output keys begin. */
 const OUTPUT_PREFIX = 'dist/webview/';
 
+/** Every input that some input reaches through a dynamic import(). */
+function dynamicImportTargets(metafile) {
+  return new Set(
+    Object.values(metafile.inputs ?? {}).flatMap(({ imports = [] }) =>
+      imports.filter(({ kind }) => kind === 'dynamic-import').map(({ path }) => path)
+    )
+  );
+}
+
 /**
- * The lazy-only inputs that a closure file holds, from the webview build's metafile. `closure`
- * holds paths relative to the webview dir, as `staticClosure` returns them.
+ * The lazy-only inputs that a closure file holds, from the webview build's metafile: each target
+ * of a dynamic import(), and each lazy leaf. `closure` holds paths relative to the webview dir, as
+ * `staticClosure` returns them.
  */
 export function findEagerLazyOnlyInputs(metafile, closure) {
+  const targets = dynamicImportTargets(metafile);
   return Object.entries(metafile.outputs)
     .filter(([output]) => closure.has(output.slice(OUTPUT_PREFIX.length)))
-    .flatMap(([, { inputs }]) => Object.keys(inputs).filter((input) => LAZY_ONLY_RE.test(input)));
+    .flatMap(([, { inputs }]) =>
+      Object.keys(inputs).filter((input) => targets.has(input) || LAZY_LEAF_RE.test(input))
+    );
 }
 
 /**

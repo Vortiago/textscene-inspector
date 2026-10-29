@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { usePendingWhile } from '../../resources/usePendingWhile';
+import { usePendingWhile } from '../../resources/usePendingWhile.js';
 import { warn } from '../../logger.js';
 
 /** Written only by `loadLtcTextures`, on its first call. It never clears: a failed import stays failed. */
@@ -32,14 +32,7 @@ function loadLtcTextures(): Promise<void> {
 export function useLtcTexturesSettled(): boolean {
   const [isLoading, setLoading] = useState(!isSettled);
   useEffect(() => {
-    if (!isLoading) return undefined;
-    let isMounted = true;
-    void loadLtcTextures().then(() => {
-      if (isMounted) setLoading(false);
-    });
-    return () => {
-      isMounted = false;
-    };
+    if (isLoading) void loadLtcTextures().then(() => setLoading(false));
   }, [isLoading]);
   usePendingWhile(isLoading);
   return !isLoading;

@@ -17,13 +17,12 @@ describe('toResiduals', () => {
 
 describe('fromResiduals', () => {
   it('gives back the interleaved words', () => {
-    expect(fromResiduals(RESIDUALS, SHAPE)).toEqual(WORDS);
+    expect(fromResiduals(RESIDUALS, SHAPE, new Uint16Array(WORDS.length))).toEqual(new Uint16Array(WORDS));
   });
 
   it('keeps every 32-bit word exact (edge case)', () => {
-    const words = [0, 0xffffffff, 0x80000000, 1, 0xffffffff, 0];
-    expect(fromResiduals(toResiduals(words, { width: 3, channels: 1 }), { width: 3, channels: 1 })).toEqual(
-      words
-    );
+    const words = new Uint32Array([0, 0xffffffff, 0x80000000, 1, 0xffffffff, 0]);
+    const shape = { width: 3, channels: 1 };
+    expect(fromResiduals(toResiduals(words, shape), shape, new Uint32Array(words.length))).toEqual(words);
   });
 });

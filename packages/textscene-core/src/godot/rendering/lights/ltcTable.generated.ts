@@ -13,6 +13,9 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
+/** How the residuals lie: RGBA per texel. */
+export const LTC_SHAPE = { width: 64, channels: 4 };
+
 /**
  * The 32-bit floats' bit patterns as residuals (`tableResiduals.ts`): RGBA per texel, a row per
  * view angle and a column per roughness. Each texel holds the fit's matrix entries `a, b, c, d`.

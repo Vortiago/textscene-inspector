@@ -66,15 +66,14 @@ async function fetchTexels(name) {
 }
 
 /** Each table texel holds four 32-bit words, RGBA. */
-const SHAPE = { width: LTC_SIZE, channels: 4 };
+const LTC_SHAPE = { width: LTC_SIZE, channels: 4 };
 
 /** The texels the generated text assigns to `constant`, or none when it has no such table. */
 function texelsOf(text, constant) {
-  const residuals = text.match(
-    new RegExp(`export const ${constant}: readonly number\\[\\] = \\[([^\\]]*)\\]`)
-  )?.[1];
+  const residuals = text.match(new RegExp(`export const ${constant}\\b[^=]*= \\[([^\\]]*)\\]`))?.[1];
   if (!residuals) return new Uint8Array();
-  const words = fromResiduals(residuals.split(',').map(Number), SHAPE);
+  const parsed = residuals.split(',').map(Number);
+  const words = fromResiduals(parsed, LTC_SHAPE, new Uint32Array(parsed.length));
   const texels = new Uint8Array(words.length * 4);
   const view = new DataView(texels.buffer);
   words.forEach((word, i) => view.setUint32(i * 4, word, true));
@@ -85,7 +84,7 @@ function texelsOf(text, constant) {
 function residualsOf(texels) {
   const view = new DataView(texels.buffer, texels.byteOffset, texels.byteLength);
   const words = Array.from({ length: texels.byteLength / 4 }, (_, i) => view.getUint32(i * 4, true));
-  return toResiduals(words, SHAPE).join(',');
+  return toResiduals(words, LTC_SHAPE).join(',');
 }
 
 /**
@@ -117,6 +116,9 @@ function render(lut1, lut2) {
  *
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
+
+/** How the residuals lie: RGBA per texel. */
+export const LTC_SHAPE = { width: ${LTC_SIZE}, channels: ${LTC_SHAPE.channels} };
 
 /**
  * The 32-bit floats' bit patterns as residuals (\`tableResiduals.ts\`): RGBA per texel, a row per

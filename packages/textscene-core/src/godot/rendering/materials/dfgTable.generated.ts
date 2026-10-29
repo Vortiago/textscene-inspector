@@ -6,6 +6,9 @@
 /** The table's width and height (`render_forward_clustered.cpp:5097-5098`). */
 export const DFG_SIZE = 128;
 
+/** How the residuals lie: `[fresnel, total]` per texel. */
+export const DFG_SHAPE = { width: DFG_SIZE, channels: 2 };
+
 /**
  * The half floats as residuals (`tableResiduals.ts`): `[fresnel, total]` per texel, a row per
  * roughness and a column per N.V, each at its texel's centre.

@@ -3,8 +3,7 @@
  * (`area_lights_inc.glsl:325-341`, 4.7.2). A read at `(roughness, view angle)` is Godot's read.
  */
 
-import { LTC_LUT1_RESIDUALS, LTC_LUT2_RESIDUALS } from './ltcTable.generated.js';
-import { LTC_SIZE } from './ltcSize.js';
+import { LTC_LUT1_RESIDUALS, LTC_LUT2_RESIDUALS, LTC_SHAPE } from './ltcTable.generated.js';
 import { fromResiduals } from '../tableResiduals.js';
 
 /** The two tables, RGBA floats per texel: a row per view angle and a column per roughness. */
@@ -21,6 +20,6 @@ export function ltcTables(): LtcTables {
 
 /** The floats whose bit patterns the residuals hold. */
 function floatsOf(residuals: readonly number[]): Float32Array {
-  const bits = new Uint32Array(fromResiduals(residuals, { width: LTC_SIZE, channels: 4 }));
+  const bits = fromResiduals(residuals, LTC_SHAPE, new Uint32Array(residuals.length));
   return new Float32Array(bits.buffer);
 }

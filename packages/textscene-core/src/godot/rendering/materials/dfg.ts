@@ -4,7 +4,7 @@
  * for the light that scatters more than once (`scene_forward_clustered.glsl:2224-2231`).
  */
 
-import { DFG_SIZE, DFG_TABLE_RESIDUALS } from './dfgTable.generated.js';
+import { DFG_SHAPE, DFG_TABLE_RESIDUALS } from './dfgTable.generated.js';
 import { fromResiduals } from '../tableResiduals.js';
 
 /**
@@ -13,5 +13,5 @@ import { fromResiduals } from '../tableResiduals.js';
  * Godot's read.
  */
 export function dfgHalfFloats(): Uint16Array {
-  return new Uint16Array(fromResiduals(DFG_TABLE_RESIDUALS, { width: DFG_SIZE, channels: 2 }));
+  return fromResiduals(DFG_TABLE_RESIDUALS, DFG_SHAPE, new Uint16Array(DFG_TABLE_RESIDUALS.length));
 }

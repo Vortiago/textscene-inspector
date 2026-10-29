@@ -10,6 +10,7 @@ const FASTNOISE =
   '../../node_modules/.pnpm/fastnoise-lite@1.1.1/node_modules/fastnoise-lite/FastNoiseLite.js';
 const N8AO = '../../node_modules/.pnpm/n8ao@1.10.1/node_modules/n8ao/dist/N8AO.js';
 const PARSER = '../../packages/textscene-core/dist/parser/sceneTreeBuilder.js';
+const PANEL = '../../packages/textscene-core/dist/r3f/components/SceneTreeViewer/SceneTreeViewer.js';
 
 function metafile(outputs) {
   return {
@@ -30,6 +31,14 @@ describe('findEagerLazyOnlyInputs', () => {
       FASTNOISE,
       N8AO,
     ]);
+  });
+
+  it('names a module that a dynamic import() reaches', () => {
+    const meta = {
+      ...metafile({ 'webview.js': [PARSER, PANEL] }),
+      inputs: { [PARSER]: { imports: [{ path: PANEL, kind: 'dynamic-import' }] }, [PANEL]: {} },
+    };
+    expect(findEagerLazyOnlyInputs(meta, new Set(['webview.js']))).toEqual([PANEL]);
   });
 
   it('passes a lazy-only module that only a chunk outside the closure holds', () => {
