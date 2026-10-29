@@ -153,7 +153,7 @@ function isRefusedScene(
   );
 }
 
-/** Whether a node of `cached`, or its root's base, is an instance of a scene that Godot refuses. */
+/** Whether a node of `cached`, its root included, is an instance of a scene that Godot refuses. */
 function holdsRefusedInstance(
   cached: CachedScene,
   chain: readonly string[],
@@ -194,9 +194,9 @@ function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
 const COMPOSITIONS_PER_CHAIN = 2;
 
 /**
- * Written only by {@link isRefusedScene}, keyed by the cached scene object. The answer holds for
- * each chain of scenes that encloses the scene, since a scene that instances itself ends the walk,
- * and stays valid while the cache answers what the walk read.
+ * Written only by {@link isRefusedScene}, keyed by the cached scene object and the chain of scenes
+ * that encloses it, since the cycle check reads the chain. An answer stays valid while the cache
+ * answers what the walk read.
  */
 const refusals = keptWhileAnswered<CachedScene, readonly string[], { scenes: CachedSceneSource }, boolean>({
   sameVariant: sameElements,
