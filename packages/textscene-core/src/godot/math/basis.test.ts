@@ -13,7 +13,9 @@ import {
   basisInvert,
   basisIsOrthonormal,
   basisMultiply,
+  basisOrthonormalize,
   basisOrthonormalized,
+  type MutableBasis,
 } from './basis.js';
 
 const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -134,6 +136,16 @@ describe('basisOrthonormalized', () => {
 
   it('gives an orthonormal basis for a turned, sheared and scaled one', () => {
     expect(basisIsOrthonormal(basisOrthonormalized([2, 1, 0.3, -1, 3, 0.2, 0.5, 0.1, 4]))).toBe(true);
+  });
+});
+
+describe('basisOrthonormalize', () => {
+  it('writes the orthonormal basis into the one it is given', () => {
+    const basis: MutableBasis = [2, 1, 0.3, -1, 3, 0.2, 0.5, 0.1, 4];
+    const expected = basisOrthonormalized(basis);
+
+    expect(basisOrthonormalize(basis)).toBe(basis);
+    expect(basis).toEqual(expected);
   });
 });
 

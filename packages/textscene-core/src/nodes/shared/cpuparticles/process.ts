@@ -33,7 +33,7 @@
  */
 
 import { storedReal as f } from '../../../godot/math/real.js';
-import { lerpf, multiplyColor, type Rgba } from '../../../godot/math/math.js';
+import { lerpf, type Rgba } from '../../../godot/math/math.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import type { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import type { Curve } from '../../../resources/curves/curve/types';
@@ -158,7 +158,7 @@ function restartTime(clock: RestartClock, i: number): number {
  * restart instant, so same-step births spread into a bar instead of one displacement. The caller
  * still restarts a particle that outlived its lifetime (`:803-805`).
  */
-export function restartStep(clock: RestartClock, i: number): RestartStep {
+export function restartStep(clock: RestartClock, i: number, out: RestartStep): RestartStep {
   const { prevTime, time, lifetime, delta, fractDelta } = clock;
   const restartAt = restartTime(clock, i);
   let restart = false;
@@ -183,7 +183,9 @@ export function restartStep(clock: RestartClock, i: number): RestartStep {
     }
   }
 
-  return { restart, localDelta };
+  out.restart = restart;
+  out.localDelta = localDelta;
+  return out;
 }
 
 /** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_3d.cpp:1136-1138`), as floats. */
@@ -199,37 +201,55 @@ const HUE_SINE_ROWS: readonly (readonly number[])[] = [
   [1.25, -1.05, -0.203],
 ].map((row) => row.map(f));
 
-/** The blended basis as three rows: `mat1[j] + mat2[j] * c + mat3[j] * s` in `real_t` float. */
-function hueBasisRows(angle: number): number[][] {
+/**
+ * The blended basis as three rows, `mat1[j] + mat2[j] * c + mat3[j] * s` in `real_t` float, written
+ * into `rows`.
+ */
+function writeHueRows(rows: number[][], angle: number): number[][] {
   const c = f(Math.cos(angle));
   const s = f(Math.sin(angle));
-  return HUE_COSINE_ROWS.map((cosine, j) =>
-    cosine.map((_, k) => f(f(HUE_LUMINANCE[k]! + f(cosine[k]! * c)) + f(HUE_SINE_ROWS[j]![k]! * s)))
-  );
+  for (let j = 0; j < 3; j++) {
+    for (let k = 0; k < 3; k++) {
+      rows[j]![k] = f(f(HUE_LUMINANCE[k]! + f(HUE_COSINE_ROWS[j]![k]! * c)) + f(HUE_SINE_ROWS[j]![k]! * s));
+    }
+  }
+  return rows;
+}
+
+function hueRowsBuffer(): number[][] {
+  return [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
 }
 
 /** Most particles have no hue curve, so their angle is zero: the basis is built once for them. */
-const UNROTATED_HUE_ROWS = hueBasisRows(0);
+const UNROTATED_HUE_ROWS = writeHueRows(hueRowsBuffer(), 0);
+
+/** Scratch for `rotateHueInto` at a non-zero angle, overwritten by every such call. */
+const rotatedHueRows = hueRowsBuffer();
 
 /**
- * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
- * angle, then applied with `Basis::xform_inv`, the transpose, in `real_t` float. It runs at angle 0
- * too, where the basis is not quite the identity: every particle takes a slight tint.
+ * Godot's YIQ-style hue rotation of `color` into `out`: three constant bases blended by cos/sin of
+ * the angle, then applied with `Basis::xform_inv`, the transpose, in `real_t` float. It runs at
+ * angle 0 too, where the basis is not quite the identity: every particle takes a slight tint.
  */
-function rotateHue(color: Rgba, angle: number): Rgba {
-  const rows = angle === 0 ? UNROTATED_HUE_ROWS : hueBasisRows(angle);
+function rotateHueInto(out: Rgba, color: Rgba, angle: number): Rgba {
+  const rows = angle === 0 ? UNROTATED_HUE_ROWS : writeHueRows(rotatedHueRows, angle);
+  const { r, g, b } = color;
   // `xform_inv` reads down a column of the rows, not across one.
-  const channel = (k: number) =>
-    f(f(f(rows[0]![k]! * color.r) + f(rows[1]![k]! * color.g)) + f(rows[2]![k]! * color.b));
-  return { r: channel(0), g: channel(1), b: channel(2), a: color.a };
+  out.r = f(f(f(rows[0]![0]! * r) + f(rows[1]![0]! * g)) + f(rows[2]![0]! * b));
+  out.g = f(f(f(rows[0]![1]! * r) + f(rows[1]![1]! * g)) + f(rows[2]![1]! * b));
+  out.b = f(f(f(rows[0]![2]! * r) + f(rows[1]![2]! * g)) + f(rows[2]![2]! * b));
+  out.a = color.a;
+  return out;
 }
 
-/** What a particle's colour reads, each a `Color` or a `real_t` as Godot holds it. */
-export interface ParticleTint {
-  /** `color`, times the `color_ramp` sample at the particle's age where there is a ramp. */
-  base: Rgba;
-  /** `hue_rot_angle`, in radians. */
-  hueAngle: number;
+/** The colours of a particle its tint reads and writes, each a `Color` as Godot holds it. */
+export interface TintedParticle {
+  /** `p.color`, which {@link tintParticle} writes. */
+  color: Rgba;
   /** `p.base_color`: the emission colour of its point, else white. */
   baseColor: Rgba;
   /** `p.start_color_rand`: the `color_initial_ramp` sample at birth, else white. */
@@ -237,11 +257,17 @@ export interface ParticleTint {
 }
 
 /**
- * `p.color`: the base hue-rotated, then `p.color *= p.base_color * p.start_color_rand`
- * (`cpu_particles_3d.cpp:1145-1156`), where the right side multiplies first.
+ * Writes `p.color`: `base` hue-rotated by `hueAngle` radians, then `p.color *= p.base_color *
+ * p.start_color_rand` (`cpu_particles_3d.cpp:1145-1156`), where the right side multiplies first.
+ * `base` is `color`, times the `color_ramp` sample at the particle's age where there is a ramp.
  */
-export function particleColor({ base, hueAngle, baseColor, startColorRand }: ParticleTint): Rgba {
-  return multiplyColor(rotateHue(base, hueAngle), multiplyColor(baseColor, startColorRand));
+export function tintParticle(p: TintedParticle, base: Rgba, hueAngle: number): void {
+  const { color, baseColor, startColorRand } = p;
+  rotateHueInto(color, base, hueAngle);
+  color.r = f(color.r * f(baseColor.r * startColorRand.r));
+  color.g = f(color.g * f(baseColor.g * startColorRand.g));
+  color.b = f(color.b * f(baseColor.b * startColorRand.b));
+  color.a = f(color.a * f(baseColor.a * startColorRand.a));
 }
 
 /** Each parameter's curve, by `CPUParticlesParameter`, null for none. */

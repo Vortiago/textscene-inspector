@@ -9,7 +9,7 @@
 import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import type { Quaternion } from './quaternion.js';
-import { normalizedVector3, vector3Dot, type Vector3 } from './vector.js';
+import { vector3Dot, vector3NormalizeInto, type Vector3 } from './vector.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
@@ -31,28 +31,45 @@ export function basisColumn(n: BasisComponents, index: number): Triple {
   return [n[index]!, n[index + 3]!, n[index + 6]!];
 }
 
-function scaled(v: Triple, s: number): Triple {
-  return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
-}
-
-function subtract(a: Triple, b: Triple): Triple {
-  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
-}
+/** A basis a loop writes in place, as Godot's own methods do. */
+export type MutableBasis = [number, number, number, number, number, number, number, number, number];
 
 /**
- * `Basis::orthonormalize` (`basis.cpp:56-72`): Gram-Schmidt over the columns, which drops the scale and
- * the shear.
+ * `Basis::orthonormalized` (`basis.cpp:74-78`): a copy through {@link basisOrthonormalize}.
  * @canonical A basis made orthonormal, column by column
  */
 export function basisOrthonormalized(n: BasisComponents): BasisComponents {
-  const x = normalizedVector3(...basisColumn(n, 0));
-  const yColumn = basisColumn(n, 1);
-  const y = normalizedVector3(...subtract(yColumn, scaled(x, vector3Dot(x, yColumn))));
-  const zColumn = basisColumn(n, 2);
-  const z = normalizedVector3(
-    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
+  return basisOrthonormalize([...n] as MutableBasis);
+}
+
+/** Scratch for `basisOrthonormalize`, overwritten by every call. */
+const unitColumn: Vector3 = { x: 0, y: 0, z: 0 };
+
+/**
+ * `Basis::orthonormalize` (`basis.cpp:56-72`) in place: Gram-Schmidt over the columns, which drops
+ * the scale and the shear. Each column reads the ones already written, as Godot's does.
+ */
+export function basisOrthonormalize(n: MutableBasis): MutableBasis {
+  writeUnitColumn(n, 0, n[0], n[3], n[6]);
+  const xDotY = f(f(f(n[0] * n[1]) + f(n[3] * n[4])) + f(n[6] * n[7]));
+  writeUnitColumn(n, 1, f(n[1] - f(n[0] * xDotY)), f(n[4] - f(n[3] * xDotY)), f(n[7] - f(n[6] * xDotY)));
+  const xDotZ = f(f(f(n[0] * n[2]) + f(n[3] * n[5])) + f(n[6] * n[8]));
+  const yDotZ = f(f(f(n[1] * n[2]) + f(n[4] * n[5])) + f(n[7] * n[8]));
+  writeUnitColumn(
+    n,
+    2,
+    f(f(n[2] - f(n[0] * xDotZ)) - f(n[1] * yDotZ)),
+    f(f(n[5] - f(n[3] * xDotZ)) - f(n[4] * yDotZ)),
+    f(f(n[8] - f(n[6] * xDotZ)) - f(n[7] * yDotZ))
   );
-  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
+  return n;
+}
+
+function writeUnitColumn(n: MutableBasis, index: number, x: number, y: number, z: number): void {
+  const unit = vector3NormalizeInto(unitColumn, x, y, z);
+  n[index] = unit.x;
+  n[index + 3] = unit.y;
+  n[index + 6] = unit.z;
 }
 
 /**

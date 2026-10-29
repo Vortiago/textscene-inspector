@@ -10,6 +10,7 @@ import {
   vector3Sub,
   normalizedVector2,
   normalizedVector3,
+  vector3NormalizeInto,
   vector3Cross,
   vector3Dot,
   vector3Lerp,
@@ -38,6 +39,19 @@ describe('normalizedVector3', () => {
 
   it('leaves a zero vector zero, as Vector3::normalize does (edge case)', () => {
     expect(normalizedVector3(0, 0, 0)).toEqual([0, 0, 0]);
+  });
+});
+
+describe('vector3NormalizeInto', () => {
+  it('writes the unit vector into the one it is given', () => {
+    const out = { x: 9, y: 9, z: 9 };
+
+    expect(vector3NormalizeInto(out, 3, 0, 4)).toBe(out);
+    expect(out).toEqual({ x: Math.fround(0.6), y: 0, z: Math.fround(0.8) });
+  });
+
+  it('writes zero for a zero vector (edge case)', () => {
+    expect(vector3NormalizeInto({ x: 9, y: 9, z: 9 }, 0, 0, 0)).toEqual({ x: 0, y: 0, z: 0 });
   });
 });
 

@@ -91,10 +91,27 @@ export function normalizedVector2({ x, y }: Vector2): Vector2 {
  * @canonical A unit vector
  */
 export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
+  const unit = vector3NormalizeInto(normalizeScratch, x, y, z);
+  return [unit.x, unit.y, unit.z];
+}
+
+/** Scratch for `normalizedVector3`, overwritten by every call. */
+const normalizeScratch: Vector3 = { x: 0, y: 0, z: 0 };
+
+/** {@link normalizedVector3} written into `out`, for a loop that allocates nothing. */
+export function vector3NormalizeInto(out: Vector3, x: number, y: number, z: number): Vector3 {
   const lengthSquared = vector3LengthSquared(x, y, z);
-  if (lengthSquared === 0) return [0, 0, 0];
+  if (lengthSquared === 0) return vector3Set(out, 0, 0, 0);
   const length = f(Math.sqrt(lengthSquared));
-  return [f(x / length), f(y / length), f(z / length)];
+  return vector3Set(out, f(x / length), f(y / length), f(z / length));
+}
+
+/** Writes `x`, `y` and `z` into `out`. */
+export function vector3Set(out: Vector3, x: number, y: number, z: number): Vector3 {
+  out.x = x;
+  out.y = y;
+  out.z = z;
+  return out;
 }
 
 type Components3 = readonly [number, number, number];

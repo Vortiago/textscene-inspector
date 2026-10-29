@@ -35,7 +35,7 @@ import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
-import { GodotRandomPCG, idhash, type SeedRef } from '../../shared/cpuparticles/godotRng';
+import { GodotRandomPCG, type SeedRef } from '../../shared/cpuparticles/godotRng';
 import {
   pickPoint,
   previewProcessRng,
@@ -45,8 +45,11 @@ import {
 import {
   DEFAULT_PREVIEW_SEED,
   lerpParam,
+  restartStep,
   sampleParam,
   type ParticleCurves,
+  type RestartClock,
+  type RestartStep,
 } from '../../shared/cpuparticles/process';
 import { colorAt, colorCount, vector2At, vector2Count } from '../../../resources/shapes/packedElements';
 import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
@@ -280,34 +283,25 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
   const emissionXform = state.emissionXform;
   const velocityXform: Transform2DColumns = { ...emissionXform, tx: 0, ty: 0 };
 
-  const systemPhase = state.time / lifetime;
+  const clock: RestartClock = {
+    pcount,
+    cycle: state.cycle,
+    prevTime,
+    time: state.time,
+    lifetime,
+    delta,
+    randomness: props.randomness,
+    explosiveness: props.explosiveness,
+    fractDelta: props.fract_delta,
+  };
+  const step: RestartStep = { restart: false, localDelta: 0 };
 
   for (let i = 0; i < pcount; i++) {
     const p = state.particles[i]!;
     if (!state.emitting && !p.active) continue;
 
-    // Particle i is born i/pcount of the way through each cycle, so a continuous
-    // emitter shows every age at once.
-    let restartPhase = i / pcount;
-
-    if (props.randomness > 0) {
-      let hashSeed = state.cycle >>> 0;
-      if (restartPhase >= systemPhase) hashSeed = (hashSeed - 1) >>> 0;
-      hashSeed = Math.imul(hashSeed, pcount) >>> 0;
-      hashSeed = (hashSeed + i) >>> 0;
-      const random = (idhash(hashSeed) % 65536) / 65536.0;
-      restartPhase += (props.randomness * random * 1.0) / pcount;
-    }
-
-    // Explosiveness squeezes every birth phase toward 0, so at 1 the whole
-    // emitter fires at once.
-    restartPhase *= 1.0 - props.explosiveness;
-    const restartTime = restartPhase * lifetime;
-
-    const step = restartStep(prevTime, state.time, restartTime, lifetime, delta, props.fract_delta);
-    let restart = step.restart;
-    const localDelta = step.localDelta;
-
+    const { localDelta } = restartStep(clock, i, step);
+    let { restart } = step;
     if (p.time * (1.0 - props.explosiveness) > p.lifetime) restart = true;
 
     let tv = 0.0;
@@ -339,56 +333,6 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     p.transform.tx = f(p.transform.tx + displacement.x);
     p.transform.ty = f(p.transform.ty + displacement.y);
   }
-}
-
-/** Whether particle `i` restarts this step, and the delta its position integrates with. */
-interface RestartStep {
-  restart: boolean;
-  /** `local_delta`: the whole step unless a restart shortens it (fract_delta). */
-  localDelta: number;
-}
-
-/**
- * Whether particle `i` restarts this step, and its `local_delta`
- * (`cpu_particles_2d.cpp:807,829-852`). With `fractionalDelta` (`fract_delta`,
- * default true) a particle born mid-step gets only the remainder after its restart
- * instant, so same-step births spread into a bar instead of one displacement.
- * @param prevTime The emitter's cycle time before this step.
- * @param time The cycle time after this step, wrapped mod `lifetime`.
- * @param restartTime `restartPhase * lifetime` for this particle.
- */
-function restartStep(
-  prevTime: number,
-  time: number,
-  restartTime: number,
-  lifetime: number,
-  delta: number,
-  fractionalDelta: boolean
-): RestartStep {
-  let restart = false;
-  let localDelta = delta;
-
-  if (time > prevTime) {
-    // restartTime >= prevTime is used so particles emit in the first frame
-    // they are processed (`:830`).
-    if (restartTime >= prevTime && restartTime < time) {
-      restart = true;
-      if (fractionalDelta) localDelta = time - restartTime;
-    }
-  } else if (delta > 0.0) {
-    // The step wrapped past `lifetime`. A restart near the tail of the cycle gets
-    // the slice up to the old boundary plus `time`, and one right after zero
-    // gets the ordinary slice.
-    if (restartTime >= prevTime) {
-      restart = true;
-      if (fractionalDelta) localDelta = lifetime - restartTime + time;
-    } else if (restartTime < time) {
-      restart = true;
-      if (fractionalDelta) localDelta = time - restartTime;
-    }
-  }
-
-  return { restart, localDelta };
 }
 
 /**
