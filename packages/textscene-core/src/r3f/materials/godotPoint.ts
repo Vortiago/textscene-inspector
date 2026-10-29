@@ -55,14 +55,13 @@ export function pointDrawOf(
   pixelRatio: number,
   placement: PointPlacement
 ): PointDraw {
-  return scalars?.usesPointSize
-    ? { pixels: scalars.pointSize, pixelRatio, samplesAlbedoAtPointCoord: true, placement }
-    : {
-        pixels: BASE_MATERIAL_3D_DEFAULTS.pointSize,
-        pixelRatio,
-        samplesAlbedoAtPointCoord: false,
-        placement,
-      };
+  const pointSize = scalars?.usesPointSize ? scalars.pointSize : undefined;
+  return {
+    pixels: pointSize ?? BASE_MATERIAL_3D_DEFAULTS.pointSize,
+    pixelRatio,
+    samplesAlbedoAtPointCoord: pointSize !== undefined,
+    placement,
+  };
 }
 
 /** The merged points' attributes, under `GODOT_CELL_POINTS`, which the triplanar mapping reads. */

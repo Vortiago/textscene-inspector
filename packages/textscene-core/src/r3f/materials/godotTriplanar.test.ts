@@ -4,7 +4,12 @@
  * tangent frame Godot writes for a projecting surface (`material.cpp:1386-1414`).
  */
 import { describe, expect, it } from 'vitest';
-import { triplanarInjection, triplanarUserData, type TriplanarRecord } from './godotTriplanar';
+import {
+  readsObjectSpace,
+  triplanarInjection,
+  triplanarUserData,
+  type TriplanarRecord,
+} from './godotTriplanar';
 import { nodePoseUniforms } from './nodePose';
 import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
@@ -212,5 +217,23 @@ describe('triplanarInjection: uniforms and programs', () => {
   it('compiles nothing for a material that records no mapping', () => {
     expect(triplanarInjection({ userData: {} })).toBeUndefined();
     expect(triplanarInjection({})).toBeUndefined();
+  });
+});
+
+describe('readsObjectSpace', () => {
+  it('holds for a local projection', () => {
+    expect(readsObjectSpace(worldTriplanarRecord({ uv1: LOCAL_UV1 }))).toBe(true);
+  });
+
+  it('holds for a local frame under a world projection, as the frame reads the mesh normal', () => {
+    expect(readsObjectSpace(worldTriplanarRecord({ isTangentWorld: false }))).toBe(true);
+  });
+
+  it('fails for a world projection in a world frame', () => {
+    expect(readsObjectSpace(worldTriplanarRecord())).toBe(false);
+  });
+
+  it('fails for no mapping (edge case)', () => {
+    expect(readsObjectSpace(null)).toBe(false);
   });
 });

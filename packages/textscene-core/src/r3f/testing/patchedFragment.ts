@@ -83,6 +83,7 @@ export function patchedFragment(material: THREE.Material): string {
   return patchedProgram(material).fragmentShader;
 }
 
+/** `vertexShader` after `material`'s `onBeforeCompile`, as `patchedFragment`. */
 export function patchedVertex(material: THREE.Material): string {
   return patchedProgram(material).vertexShader;
 }

@@ -152,4 +152,15 @@ item/0/mesh = SubResource("Mesh_item")
 
     expect(grid.points()).toHaveLength(1);
   });
+
+  it('leaves out the item space a surface does not read, as it costs a mat4 per point', async () => {
+    const grid = await mountGridMap({
+      library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),
+      cells: '0, 0, 0, 1, 0, 0',
+    });
+    const [points] = grid.points();
+
+    expect(points!.geometry.getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix)).toBeUndefined();
+    expect((points!.material as Material).userData.godotPointsAtCells).toBe(false);
+  });
 });

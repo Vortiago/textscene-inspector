@@ -30,9 +30,10 @@ import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { pointPlacementOf, pointsAtCells } from './pointCells';
+import { pointPlacementOf, pointsAtCells, pointsAtCellsInItemSpace } from './pointCells';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
+import { readsObjectSpace } from '../../../r3f/materials/godotTriplanar';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
@@ -219,16 +220,25 @@ function GridMapPart(props: GridMapPartProps) {
 
 /**
  * Three cannot instance `THREE.Points`, so every cell's points are one geometry, shared by the
- * part's surfaces. It is built for the first surface that draws it, new for each set of cells, and
- * disposed with them.
+ * part's surfaces. Each form is built for the first surface that draws it, new for each set of
+ * cells, and disposed when the last surface that holds it lets go.
  */
 function PointsPart(props: GridMapPartProps) {
   const { part, matrices } = props;
-  const cellPoints = useMemo(
-    () => lazily(() => pointsAtCells(part.geometry, matrices)),
+  const cellPoints = useMemo<CellPoints>(
+    () => ({
+      placed: lazily(() => pointsAtCells(part.geometry, matrices)),
+      inItemSpace: lazily(() => pointsAtCellsInItemSpace(part.geometry, matrices)),
+    }),
     [part.geometry, matrices]
   );
   return <PartSurfaces {...props} cellPoints={cellPoints} />;
+}
+
+/** A points part at every cell: placed, and placed with each item's space for a surface that reads it. */
+interface CellPoints {
+  placed: () => THREE.BufferGeometry;
+  inItemSpace: () => THREE.BufferGeometry;
 }
 
 /** `build`'s result, built at the first call and kept. */
@@ -242,7 +252,7 @@ function PartSurfaces({
   cellPoints,
   shadow,
   matrices,
-}: GridMapPartProps & { cellPoints?: () => THREE.BufferGeometry }) {
+}: GridMapPartProps & { cellPoints?: CellPoints }) {
   const surfaces = surfaceSources(part.materials);
   const { geometry } = part;
   return (
@@ -262,8 +272,8 @@ function PartSurfaces({
 interface SurfaceDraw {
   /** The geometry drawn: the item's own, in the item's space, or a points surface's merged points. */
   geometry: THREE.BufferGeometry;
-  /** A points surface's points at every cell, as `pointsAtCells` places them. Undefined for triangles. */
-  cellPoints?: () => THREE.BufferGeometry;
+  /** A points surface's points at every cell. Undefined for triangles. */
+  cellPoints?: CellPoints;
   /** Undefined for a surface that names no material: Godot's default surface. */
   source: MaterialSource | undefined;
   /** The draw group this draw owns. */
@@ -288,10 +298,10 @@ function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE
       </>
     );
   }
-  return draw.cellPoints ? (
-    <MergedPoints draw={draw} cellPoints={draw.cellPoints} />
-  ) : (
-    <BatchedTiles draw={draw} matrices={matrices} />
+  if (!draw.cellPoints) return <BatchedTiles draw={draw} matrices={matrices} />;
+  const { placed, inItemSpace } = draw.cellPoints;
+  return (
+    <MergedPoints draw={draw} build={readsObjectSpace(scalars?.triplanar ?? null) ? inItemSpace : placed} />
   );
 }
 
@@ -327,8 +337,8 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
 const MERGED_POINTS_MATRIX = new THREE.Matrix4();
 
 /** A surface's points at every cell as one THREE.Points, which holds the merged points while it draws them. */
-function MergedPoints({ draw, cellPoints }: { draw: SurfaceDraw; cellPoints: () => THREE.BufferGeometry }) {
-  const geometry = cellPoints();
+function MergedPoints({ draw, build }: { draw: SurfaceDraw; build: () => THREE.BufferGeometry }) {
+  const geometry = build();
   useDisposeOnRelease(geometry);
   return <CellTile draw={{ ...draw, geometry }} matrix={MERGED_POINTS_MATRIX} />;
 }

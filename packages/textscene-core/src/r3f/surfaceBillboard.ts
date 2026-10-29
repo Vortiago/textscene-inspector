@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
 import type { ProgramInjection } from './materialProgramInputs';
-import { editedProgram, editedShader } from './shaderPatch/chunkPatch';
+import { editedChunk, editedProgram } from './shaderPatch/chunkPatch';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
@@ -95,7 +95,7 @@ export const GODOT_BILLBOARD_NORMAL: ProgramInjection = {
       three: 'transformedNormal = normalMatrix * transformedNormal;',
       godot: 'transformedNormal = mat3( modelViewMatrix ) * transformedNormal;',
     };
-    const chunk = editedShader(THREE.ShaderChunk.defaultnormal_vertex, [turn], 'defaultnormal_vertex');
+    const chunk = editedChunk('defaultnormal_vertex', turn);
     editedProgram(
       shader,
       { vertex: [{ three: '#include <defaultnormal_vertex>', godot: chunk }] },
