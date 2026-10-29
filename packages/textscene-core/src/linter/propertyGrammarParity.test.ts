@@ -1,5 +1,5 @@
 /**
- * Property-grammar parity: for each slice with `parser.ts` and `linterParser.ts`,
+ * Property-grammar parity: for each slice with a parser of its own and a `linterParser.ts`,
  * the keys the parser reads through `properties.X` match the validator keys, each
  * side widened by its base types. A parser-only key lacks a validator, and a
  * linter-only key is never read, unless `ASYMMETRY_ALLOWLIST` lists it with a reason.
@@ -256,8 +256,8 @@ describe('property-grammar parity guard', () => {
 
   /**
    * Slices this guard does not see, counted so the blind spot moves visibly:
-   * `findSliceDirs` needs both `parser.ts` and `linterParser.ts`, and a slice
-   * that reuses a base parser has no `parser.ts`. Where the question has an
+   * `findSliceDirs` needs a parser of the slice's own, and a slice
+   * that reuses a base parser has none. Where the question has an
    * answer, the fix is a hop in `BASE_TYPE_TO_PARSER_SUBPATH`.
    */
   // Both are ratchets, not derived, or the assertion compares a number to
