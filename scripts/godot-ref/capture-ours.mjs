@@ -9,7 +9,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { probePixels } from './run.mjs';
+import { probePixels, vec3 } from './run.mjs';
 import { freeCameraPath, withFreeCamera } from './ourCamera.mjs';
 import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
@@ -19,14 +19,6 @@ import {
   settleCanvas,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
-
-function vec3(flag, raw) {
-  const parts = String(raw).split(',').map(Number);
-  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
-    throw new Error(`${flag} needs three comma-separated numbers, got "${raw}"`);
-  }
-  return parts;
-}
 
 export function parseArgs(argv) {
   const args = {

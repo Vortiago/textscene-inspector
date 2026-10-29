@@ -4,11 +4,10 @@
  * fetches and opens the scene through it with `?camera=`.
  */
 
+import { EDITOR_FOV } from './run.mjs';
+
 /** The node name the capture opens the scene through. */
 export const OUR_CAMERA_NAME = 'RefCamera';
-
-/** `editors/3d/default_fov`, the fov `run.mjs` gives its camera. */
-const EDITOR_FOV = 70;
 
 const UP = [0, 1, 0];
 
