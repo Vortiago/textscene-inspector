@@ -4,11 +4,13 @@
  * under SwiftShader, probes printed in `run.mjs`'s format. The scene is its
  * filename in `fixtures.ts`, so run `pnpm generate:fixtures` after adding one:
  *   pnpm ref:ours unit-light-transport-direct.tscn --probe 320,200 --patch 5
+ * `--camera x,y,z [--look-at x,y,z]` replaces the editor orbit, as it does for `ref:godot`.
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { probePixels } from './run.mjs';
+import { freeCameraPath, withFreeCamera } from './ourCamera.mjs';
 import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
   createCaptureContext,
@@ -18,8 +20,25 @@ import {
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
 
-function parseArgs(argv) {
-  const args = { fixture: null, out: null, probes: [], patch: 1, frame: false, canvas2D: false };
+function vec3(flag, raw) {
+  const parts = String(raw).split(',').map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
+    throw new Error(`${flag} needs three comma-separated numbers, got "${raw}"`);
+  }
+  return parts;
+}
+
+export function parseArgs(argv) {
+  const args = {
+    fixture: null,
+    out: null,
+    probes: [],
+    patch: 1,
+    frame: false,
+    canvas2D: false,
+    camera: null,
+    lookAt: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     switch (arg) {
@@ -37,6 +56,13 @@ function parseArgs(argv) {
       case '--2d':
         args.canvas2D = true;
         break;
+      // As `ref:godot` takes them: the camera replaces the editor orbit on both sides.
+      case '--camera':
+        args.camera = vec3('--camera', argv[++i]);
+        break;
+      case '--look-at':
+        args.lookAt = vec3('--look-at', argv[++i]);
+        break;
       case '--probe': {
         const raw = argv[++i];
         const parts = String(raw).split(',').map(Number);
@@ -52,10 +78,18 @@ function parseArgs(argv) {
     }
   }
   if (!args.fixture) throw new Error('a fixture filename is required');
+  if (args.lookAt && !args.camera) throw new Error('--look-at needs --camera');
   return args;
 }
 
-export function captureOurs({ fixture, frame = false, canvas2D = false, canvas2DFrame = null }) {
+export function captureOurs({
+  fixture,
+  frame = false,
+  canvas2D = false,
+  canvas2DFrame = null,
+  camera = null,
+  lookAt = null,
+}) {
   return withPreviewBrowser(
     { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
@@ -64,8 +98,12 @@ export function captureOurs({ fixture, frame = false, canvas2D = false, canvas2D
       // a scene too large to read at distance 4.
       const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
       const page = await context.newPage();
+      const cameraPath = camera
+        ? await addFreeCamera(page, baseUrl, fixture, { camera, lookAt: lookAt ?? undefined })
+        : undefined;
       const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
         canvas2D,
+        camera: cameraPath,
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);
@@ -76,6 +114,14 @@ export function captureOurs({ fixture, frame = false, canvas2D = false, canvas2D
   );
 }
 
+/** Serves the fixture with a Camera3D at the pose, and answers the path to open the scene through. */
+async function addFreeCamera(page, baseUrl, fixture, pose) {
+  const url = `${baseUrl.replace(/\/$/, '')}/fixtures/${fixture}`;
+  const sceneText = await (await page.request.get(url)).text();
+  await page.route(url, (route) => route.fulfill({ body: withFreeCamera(sceneText, pose) }));
+  return freeCameraPath(sceneText);
+}
+
 async function main() {
   let args;
   try {
@@ -83,7 +129,7 @@ async function main() {
   } catch (error) {
     console.error(error.message);
     console.error('Usage: pnpm ref:ours <fixture.tscn> [--out file.png]');
-    console.error('       [--probe x,y] [--patch n] [--frame] [--2d]');
+    console.error('       [--probe x,y] [--patch n] [--frame] [--2d] [--camera x,y,z] [--look-at x,y,z]');
     process.exit(2);
   }
 
