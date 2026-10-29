@@ -9,13 +9,17 @@ import { readFileSync } from 'node:fs';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
+  affineInverseTransform2Df,
   multiplyTransform2D,
+  multiplyTransform2Df,
   transform2DFromParts,
   transform2DGetScale,
   transform2DHasZeroSkew,
   transform2DIsConformal,
+  transform2DXformf,
   type Transform2DColumns,
 } from './transform2d.js';
+import { storedReal, storedTransform2D } from './real.js';
 import { allSourceFiles, srcLabel } from '../../linter/testing/ruleNameScrape.js';
 
 /** A point through `t`: `(a*x + c*y + tx, b*x + d*y + ty)`. */
@@ -224,6 +228,48 @@ describe('transform2DHasZeroSkew', () => {
   it('reads a zero axis and parallel axes as unskewed, as get_skew() does', () => {
     expect(transform2DHasZeroSkew({ a: 0, b: 0, c: 0, d: 1, tx: 0, ty: 0 })).toBe(true);
     expect(transform2DHasZeroSkew({ a: 1, b: 0, c: 2, d: 0, tx: 0, ty: 0 })).toBe(true);
+  });
+});
+
+// The expected numbers are Godot 4.6.3's own float `Transform2D`, from
+// /mnt/project-files/cpuparticles2d-995/transform-oracle.gd.
+describe('the real_t float Transform2D', () => {
+  const parent = storedTransform2D({ a: 0.7, b: 0.3, c: -1.1, d: 0.9, tx: 13.3, ty: -7.1 });
+  const local = storedTransform2D({ a: 1.7, b: -0.6, c: 0.45, d: 2.3, tx: -3.9, ty: 5.7 });
+
+  it('multiplies two transforms as Godot rounds the product', () => {
+    expect(multiplyTransform2Df(parent, local)).toEqual(
+      storedTransform2D({
+        a: 1.850000143051,
+        b: -0.02999997139,
+        c: -2.214999914169,
+        d: 2.204999923706,
+        tx: 4.300000190735,
+        ty: -3.140000343323,
+      })
+    );
+  });
+
+  it('maps a point through the basis and the origin', () => {
+    const point = transform2DXformf(parent, { x: storedReal(2.3), y: storedReal(-4.1) });
+    expect(point).toEqual({ x: storedReal(19.420000076294), y: storedReal(-10.099999427795) });
+  });
+
+  it('inverts an affine transform as Godot rounds the inverse', () => {
+    expect(affineInverseTransform2Df(parent)).toEqual(
+      storedTransform2D({
+        a: 0.937499940395,
+        b: -0.3125,
+        c: 1.14583337307,
+        d: 0.72916662693,
+        tx: -4.333332061768,
+        ty: 9.333333015442,
+      })
+    );
+  });
+
+  it('answers the identity for a singular transform (edge case)', () => {
+    expect(affineInverseTransform2Df({ a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5 })).toBe(TRANSFORM2D_IDENTITY);
   });
 });
 

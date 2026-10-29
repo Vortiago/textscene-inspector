@@ -99,7 +99,8 @@ export interface SeedRef {
  * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`): a Park–Miller minimal
  * standard generator using Schrage's trick to stay inside 32-bit arithmetic,
  * threaded through the per-frame update (`cpu_particles_2d.cpp:1072-1109`).
- * Advances `state.value` in place and returns the new state scaled to 0..1.
+ * Advances `state.value` in place and returns the new state scaled to 0..1, rounded as the
+ * `real_t` the engine returns.
  */
 export function randFromSeed(state: SeedRef): number {
   let s = state.value | 0;
@@ -108,7 +109,7 @@ export function randFromSeed(state: SeedRef): number {
   s = 16807 * (s - k * 127773) - 2836 * k;
   if (s < 0) s += 2147483647;
   state.value = s >>> 0;
-  return (state.value % 65536) / 65535.0;
+  return Math.fround((state.value % 65536) / 65535.0);
 }
 
 /**

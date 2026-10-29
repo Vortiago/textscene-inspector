@@ -70,7 +70,7 @@ export function round(value: number): number {
  * Spelled this way rather than as `from * (1 - t) + to * t`: the two differ in
  * the last bits, and every port here is compared against numbers Godot printed.
  */
-export function lerp(from: number, to: number, weight: number): number {
+function lerp(from: number, to: number, weight: number): number {
   return from + (to - from) * weight;
 }
 
@@ -95,6 +95,14 @@ export function lerpColor(from: Rgba, to: Rgba, weight: number): Rgba {
 /** The float overload of `Math::lerp` (`core/math/math_funcs.h:339-341`). */
 export function lerpf(from: number, to: number, weight: number): number {
   return f(from + f(f(to - from) * weight));
+}
+
+/** `(float)PI / 180.0f`, the constant of the float `Math::deg_to_rad`. */
+const DEG_TO_RAD_FLOAT = f(f(Math.PI) / 180);
+
+/** The float overload of `Math::deg_to_rad` (`core/math/math_funcs.h:325-327`). */
+export function degToRadf(degrees: number): number {
+  return f(degrees * DEG_TO_RAD_FLOAT);
 }
 
 /**

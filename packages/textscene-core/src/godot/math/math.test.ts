@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   cubicInterpolatef,
   degToRad,
+  degToRadf,
   radToDeg,
   lerpColor,
   lerpf,
@@ -22,6 +23,16 @@ import {
   posmod,
   fposmodp,
 } from './math.js';
+
+describe('degToRadf', () => {
+  it('multiplies by the float constant, so it can land a float below the rounded double answer', () => {
+    // `(float)PI / 180.0f` (`math_funcs.h:325-327`) is 1.7453292e-2 in float, not the double's
+    // 1.7453292519943295e-2: this degree count rounds to another float under each.
+    const degrees = -682.46417236328125;
+    expect(degToRadf(degrees)).toBe(-11.911246299743652);
+    expect(Math.fround(degToRad(degrees))).toBe(-11.911247253417969);
+  });
+});
 
 describe('degToRad', () => {
   it('turns degrees into radians', () => {
