@@ -34,7 +34,7 @@ export const FOG_SUN_SCATTER_MIN = 0.001;
 export const FOG_SUN_SCATTER_EXPONENT = 8;
 
 /**
- * The radiance mips the aerial perspective spans, as roughness: from the second mip at the far plane
- * to the blurriest at the near plane (`scene_forward_clustered.glsl:1109`).
+ * The radiance layers the aerial perspective spans, as a fraction of the last: from the second layer
+ * at the far plane to the blurriest at the near plane (`scene_forward_clustered.glsl:1109`).
  */
-export const AERIAL_PERSPECTIVE_ROUGHNESS_MIN = 1 / MAX_ROUGHNESS_LOD;
+export const AERIAL_PERSPECTIVE_MIP_LEVEL_MIN = 1 / MAX_ROUGHNESS_LOD;

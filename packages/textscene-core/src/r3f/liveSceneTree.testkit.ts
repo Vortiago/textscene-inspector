@@ -1,8 +1,10 @@
 /** Builds and reads the live scene tree, for tests over a main scene and the scenes it instances. */
 import type * as THREE from 'three';
+import { TscnParser } from '../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../parser/types';
 import {
   LiveTree,
+  liveTreeOf,
   resolveLiveEntry,
   walkLiveTree,
   type CachedGlbSource,
@@ -75,4 +77,16 @@ export function stepOver(
     ...(glbCache ? { glbCache } : {}),
   };
   return new LiveTree([], ctx).stepOf(node, scope);
+}
+
+/**
+ * The live tree of the scene text `content`, with each scene text of `scenes` loaded at its path.
+ *
+ * @canonical In tests, a live tree over scene text
+ */
+export function liveTreeOfText(content: string, scenes: Readonly<Record<string, string>> = {}): LiveTree {
+  const parse = (text: string) => new TscnParser().parse(text);
+  const main = parse(content);
+  const loaded = Object.fromEntries(Object.entries(scenes).map(([path, text]) => [path, parse(text)]));
+  return liveTreeOf(main.nodes, contextOver(main, loaded));
 }

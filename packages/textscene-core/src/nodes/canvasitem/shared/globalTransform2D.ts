@@ -41,16 +41,23 @@ function parseScalar(raw: string | undefined, fallback: number): number {
   return scalarSlotValue(raw) ?? fallback;
 }
 
+/** The parts of a Node2D's pose that something other than its file wrote, such as a RemoteTransform2D. */
+export interface Node2DPose {
+  readonly position?: { readonly x: number; readonly y: number };
+  readonly rotation?: number;
+  readonly scale?: { readonly x: number; readonly y: number };
+}
+
 /**
  * A Node2D's own local `Transform2D`, built as `Node2D::_update_transform` builds it. An
  * absent key takes Node2D's field default (`node_2d.h`): position `(0, 0)`, rotation `0`,
  * scale `(1, 1)` and skew `0`, together the identity.
  */
-function localTransform2D(node: RawNode): Transform2DColumns | null {
+function localTransform2D(node: RawNode, pose: Node2DPose | undefined): Transform2DColumns | null {
   const props = node.rawProperties;
-  const position = readVector2Property(props.position, { x: 0, y: 0 });
-  const rotation = parseScalar(props.rotation, 0);
-  const scale = readVector2Property(props.scale, { x: 1, y: 1 });
+  const position = pose?.position ?? readVector2Property(props.position, { x: 0, y: 0 });
+  const rotation = pose?.rotation ?? parseScalar(props.rotation, 0);
+  const scale = pose?.scale ?? readVector2Property(props.scale, { x: 1, y: 1 });
   if (position === null || scale === null) return null;
   const skew = parseScalar(props.skew, 0);
 
@@ -60,6 +67,8 @@ function localTransform2D(node: RawNode): Transform2DColumns | null {
 function isTopLevel(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.top_level) === true;
 }
+
+const NO_POSES: ReadonlyMap<RawNode, Node2DPose> = new Map();
 
 type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DColumns }
@@ -94,18 +103,19 @@ function canvasChain(node: RawNode, parentOf: (child: RawNode) => ParentLookup):
  * Resolve `node`'s global `Transform2D`. `CanvasItem::get_global_transform()`
  * (`canvas_item.cpp:176-186`) multiplies each local transform into its parent item's
  * global one. `parentOf` is the tree's own parent lookup, so the linter climbs the file
- * and the cameras panel climbs the live tree.
+ * and the cameras panel climbs the live tree. `poses` holds the pose that replaces a node's own.
  */
 export function resolveGlobalTransform2D(
   node: RawNode,
-  parentOf: (child: RawNode) => ParentLookup
+  parentOf: (child: RawNode) => ParentLookup,
+  poses: ReadonlyMap<RawNode, Node2DPose> = NO_POSES
 ): GlobalTransform2DVerdict {
   const chain = canvasChain(node, parentOf);
   if (chain === null) return { kind: 'unknowable' };
 
   let composed = TRANSFORM2D_IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
-    const local = localTransform2D(chain[i]!);
+    const local = localTransform2D(chain[i]!, poses.get(chain[i]!));
     if (local === null) return { kind: 'unknowable' };
     composed = multiplyTransform2D(composed, local);
   }

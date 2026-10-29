@@ -55,13 +55,7 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   return (
     <>
       {tonesCanvas && <ToneMapLayer settings={settings} resources={resources} />}
-      {hasFog && (
-        <FogLayer
-          depth={settings.fog}
-          volumetric={settings.volumetricFog}
-          skyEnergy={settings.background.energyMultiplier}
-        />
-      )}
+      {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
       {sky && (showsSky || skyAmbient) && (
         <SkyLayer
           sky={sky}

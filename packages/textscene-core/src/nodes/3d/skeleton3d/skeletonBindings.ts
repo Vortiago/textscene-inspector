@@ -9,11 +9,14 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import { identityTransform3D, sameTransform3D, type Transform3D } from '../../../godot/math/transform3d.js';
-import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../../../godot/string/nodePath.js';
+import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D } from '../../../r3f/liveGlobalTransform.js';
-import { nodePathUniquePaths } from '../../../r3f/nodePathUniqueNames.js';
+import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
+import { liveNodePatches } from '../../../r3f/liveNodePatches.js';
+import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
+import type { NodePatches } from '../../../r3f/nodePatch.js';
 import { sameElements } from '../../../utils/sameElements.js';
 import { perObject } from '../../../utils/perObject.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
@@ -55,11 +58,11 @@ function boundSkinOf(
   if (node.type !== 'MeshInstance3D') return undefined;
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
-  // Only a `%Name` segment reads the table, which allocates for each bound mesh on each load.
-  const uniquePaths = properties.skeleton.includes(UNIQUE_NODE_PREFIX)
-    ? nodePathUniquePaths(path, tree.roots, tree.ctx)
-    : undefined;
-  const skeletonPath = resolveNodePathLiteral(path, properties.skeleton, uniquePaths);
+  const skeletonPath = resolveNodePathLiteral(
+    path,
+    properties.skeleton,
+    uniquePathsOfLiteral(properties.skeleton, path, tree)
+  );
   const skeleton = skeletonPath === null ? null : tree.at(skeletonPath);
   if (skeleton?.step.node.type !== 'Skeleton3D') return undefined;
   const known = skeletonSkins.get(skeleton.path);
@@ -72,16 +75,18 @@ function boundSkinOf(
 /** The pose edit of each SkeletonModifier3D child of `skeleton` that makes one, in child order. */
 function modifiersOf(skeleton: LiveLink, tree: LiveTree): PoseModifier[] {
   const modifiers: PoseModifier[] = [];
+  // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
+  const placed = liveScenePassResults(liveNodePatches, tree);
   let skeletonGlobal: Transform3D | undefined;
   tree.fold<void, void>(
     undefined,
     ({ step, path }) => {
       const reader = nodeComponentRegistry.poseModifierOf(step.node.type);
       if (!reader) return;
-      skeletonGlobal ??= liveGlobalTransform3D(tree, skeleton.path) ?? identityTransform3D();
+      skeletonGlobal ??= liveGlobalTransform3D(tree, skeleton.path, placed) ?? identityTransform3D();
       const edit = reader(step.node, {
         skeletonGlobal,
-        nodeGlobal: (target) => referenceNodeGlobal(tree, path, target),
+        nodeGlobal: (target) => referenceNodeGlobal(tree, placed, path, target),
       });
       if (edit) modifiers.push(edit);
     },
@@ -91,12 +96,18 @@ function modifiersOf(skeleton: LiveLink, tree: LiveTree): PoseModifier[] {
 }
 
 /** The global transform of the Node3D that `target` names from the modifier at `modifierPath`. */
-function referenceNodeGlobal(tree: LiveTree, modifierPath: string, target: string): Transform3D | null {
-  const uniquePaths = target.includes(UNIQUE_NODE_PREFIX)
-    ? nodePathUniquePaths(modifierPath, tree.roots, tree.ctx)
-    : undefined;
-  const resolved = resolveNodePathLiteral(modifierPath, target, uniquePaths);
-  return resolved === null ? null : liveGlobalTransform3D(tree, resolved);
+function referenceNodeGlobal(
+  tree: LiveTree,
+  placed: NodePatches,
+  modifierPath: string,
+  target: string
+): Transform3D | null {
+  const resolved = resolveNodePathLiteral(
+    modifierPath,
+    target,
+    uniquePathsOfLiteral(target, modifierPath, tree)
+  );
+  return resolved === null ? null : liveGlobalTransform3D(tree, resolved, placed);
 }
 
 /**
