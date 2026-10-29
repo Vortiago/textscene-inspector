@@ -2,9 +2,10 @@
  * The Skeleton3D scene pass. A MeshInstance3D that names a Skeleton3D through `skeleton`, and sets
  * no `skin`, binds to the automatic skin of that skeleton (`MeshInstance3D::_resolve_skeleton_path`,
  * `mesh_instance_3d.cpp:175-199`). The component cannot reach the skeleton, so this pass poses each
- * skeleton once and hands the mesh its skin matrices by its live path. It runs on the live stage
- * (ADR-0060), as Godot resolves the path on the live tree, across an instance border too. The
- * SkeletonModifier3D children of the skeleton edit the pose first, in child order.
+ * skeleton once and hands the mesh its skin by its live path. It runs on the live stage (ADR-0060),
+ * as Godot resolves the path on the live tree, across an instance border too. The SkeletonModifier3D
+ * children of the skeleton edit the pose first, in child order, and so do they on the pose that an
+ * AnimationPlayer writes to a bone.
  */
 
 import type { TscnNode } from '../../../parser/types.js';
@@ -19,20 +20,41 @@ import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { NodePatches } from '../../../r3f/nodePatch.js';
 import { sameElements } from '../../../utils/sameElements.js';
 import { perObject } from '../../../utils/perObject.js';
+import { warnOnce } from '../../../utils/warnOnce.js';
 import type { MeshInstance3DProperties } from '../meshinstance3d/types.js';
-import { automaticSkinMatrices, type PoseModifier } from './skeletonPose.js';
+import {
+  animationPass,
+  automaticSkinMatrices,
+  BonePoses,
+  skinMatricesUnder,
+  type AnimatedPose,
+  type PoseModifier,
+} from './skeletonPose.js';
 import type { Skeleton3DProperties } from './types.js';
 
+/** The skin a Skeleton3D gives the meshes bound to it, in the file pose and under an animation. */
+export interface BoundSkin {
+  /** The live path of the Skeleton3D, which a bone track of an AnimationPlayer resolves to. */
+  skeletonPath: string;
+  /** One matrix for each bone, in the pose of the file. */
+  matrices: readonly Transform3D[];
+  /**
+   * The matrices when `pose` replaces the parts of the bone poses that it writes and the modifiers
+   * run on the result. The same `pose` answers the same array, so meshes bound to one skeleton share it.
+   */
+  matricesUnder(pose: AnimatedPose): readonly Transform3D[];
+}
+
 /**
- * The skin matrices of every MeshInstance3D in `tree` bound to a Skeleton3D, by the mesh's live
- * path. A node that writes no `skeleton` binds nothing, as Godot's default is empty unless the
- * project turns on `default_parent_skeleton_in_mesh_instance_3d` (`mesh_instance_3d.cpp:937`). A
- * path that is empty, absolute, resolves to no node, or names a node that is not a Skeleton3D binds
- * nothing, and so does a node with a `skin`, which this pass does not read.
+ * The skin of every MeshInstance3D in `tree` bound to a Skeleton3D, by the mesh's live path. A node
+ * that writes no `skeleton` binds nothing, as Godot's default is empty unless the project turns on
+ * `default_parent_skeleton_in_mesh_instance_3d` (`mesh_instance_3d.cpp:937`). A path that is empty,
+ * absolute, resolves to no node, or names a node that is not a Skeleton3D binds nothing, and so does
+ * a node with a `skin`, which this pass does not read.
  */
-export function bindMeshesToSkeletons(tree: LiveTree): ReadonlyMap<string, readonly Transform3D[]> {
-  const skins = new Map<string, readonly Transform3D[]>();
-  const skeletonSkins = new Map<string, readonly Transform3D[]>();
+export function bindMeshesToSkeletons(tree: LiveTree): ReadonlyMap<string, BoundSkin> {
+  const skins = new Map<string, BoundSkin>();
+  const skeletonSkins = new Map<string, BoundSkin>();
   tree.fold<void, void>(undefined, ({ step, path }, _, descend) => {
     const skin = boundSkinOf(step.node, path, tree, skeletonSkins);
     if (skin) skins.set(path, skin);
@@ -53,8 +75,8 @@ function boundSkinOf(
   node: TscnNode,
   path: string,
   tree: LiveTree,
-  skeletonSkins: Map<string, readonly Transform3D[]>
-): readonly Transform3D[] | undefined {
+  skeletonSkins: Map<string, BoundSkin>
+): BoundSkin | undefined {
   if (node.type !== 'MeshInstance3D') return undefined;
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
@@ -72,27 +94,63 @@ function boundSkinOf(
   return skin;
 }
 
-/** The pose edit of each SkeletonModifier3D child of `skeleton` that makes one, in child order. */
-function modifiersOf(skeleton: LiveLink, tree: LiveTree): PoseModifier[] {
-  const modifiers: PoseModifier[] = [];
-  // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
-  const placed = liveScenePassResults(liveNodePatches, tree);
-  let skeletonGlobal: Transform3D | undefined;
+/** The global transform of the node that `target` names from the modifier at `modifierPath`, as a modifier read it. */
+interface NodeRead {
+  modifierPath: string;
+  target: string;
+  global: Transform3D | null;
+}
+
+/**
+ * The pose edit of each SkeletonModifier3D child of a skeleton that makes one, in child order, and
+ * what the edits read: the modifier nodes, the global transform of the skeleton, and each node of
+ * the scene they ask for. An edit asks when it runs, so `reads` fills after the edits are made, and
+ * a node asked for again answers what it answered first: the edits of a skin always see one scene.
+ */
+interface Modifiers {
+  edits: PoseModifier[];
+  nodes: TscnNode[];
+  skeletonGlobal: Transform3D | null;
+  reads: NodeRead[];
+}
+
+function modifiersOf(skeleton: LiveLink, tree: LiveTree, placed: NodePatches): Modifiers {
+  const modifiers: Modifiers = { edits: [], nodes: [], skeletonGlobal: null, reads: [] };
   tree.fold<void, void>(
     undefined,
-    ({ step, path }) => {
+    ({ step, path: modifierPath }) => {
       const reader = nodeComponentRegistry.poseModifierOf(step.node.type);
       if (!reader) return;
-      skeletonGlobal ??= liveGlobalTransform3D(tree, skeleton.path, placed) ?? identityTransform3D();
+      modifiers.skeletonGlobal ??=
+        liveGlobalTransform3D(tree, skeleton.path, placed) ?? identityTransform3D();
       const edit = reader(step.node, {
-        skeletonGlobal,
-        nodeGlobal: (target) => referenceNodeGlobal(tree, placed, path, target),
+        skeletonGlobal: modifiers.skeletonGlobal,
+        nodeGlobal: (target) => {
+          const earlier = modifiers.reads.find(
+            (read) => read.modifierPath === modifierPath && read.target === target
+          );
+          if (earlier) return earlier.global;
+          const global = referenceNodeGlobal(tree, placed, modifierPath, target);
+          modifiers.reads.push({ modifierPath, target, global });
+          return global;
+        },
       });
-      if (edit) modifiers.push(edit);
+      modifiers.nodes.push(step.node);
+      if (edit) modifiers.edits.push(edit);
     },
     skeleton
   );
   return modifiers;
+}
+
+/** Whether the scene `tree` holds answers each read of `previous` as it did, so its edits would make the same pose. */
+function readsHold(previous: Modifiers, current: Modifiers, tree: LiveTree, placed: NodePatches): boolean {
+  return (
+    sameWorld(previous.skeletonGlobal, current.skeletonGlobal) &&
+    previous.reads.every((read) =>
+      sameWorld(read.global, referenceNodeGlobal(tree, placed, read.modifierPath, read.target))
+    )
+  );
 }
 
 /** The global transform of the Node3D that `target` names from the modifier at `modifierPath`. */
@@ -110,6 +168,10 @@ function referenceNodeGlobal(
   return resolved === null ? null : liveGlobalTransform3D(tree, resolved, placed);
 }
 
+function sameWorld(a: Transform3D | null, b: Transform3D | null): boolean {
+  return a === b || (a !== null && b !== null && sameTransform3D(a, b));
+}
+
 /**
  * One skin for each Skeleton3D node with no modifier child, shared by every mesh bound to it. A
  * load that leaves the node as it is hands back the same skin, so a bound mesh does not draw again.
@@ -119,22 +181,69 @@ const automaticSkinOf = perObject((skeleton: TscnNode): readonly Transform3D[] =
   return automaticSkinMatrices(bones, showRestOnly);
 });
 
-/**
- * Written only by `skinOf`: the previous skin of each Skeleton3D node with a modifier child, at each
- * live path. A modifier reads the scene around the skeleton, so two instances of one node pose
- * differently. The entries clear when nothing holds the node any more.
- */
-const keptModifiedSkins = perObject(() => new Map<string, readonly Transform3D[]>());
+/** What a bound skin was made of, which a load compares to tell whether the skin is still true. */
+interface KeptSkin {
+  modifiers: Modifiers;
+  skin: BoundSkin;
+}
 
-/** The skin of the Skeleton3D at `skeleton`: the file pose, edited by the modifiers below it. */
-function skinOf(skeleton: LiveLink, tree: LiveTree): readonly Transform3D[] {
-  const modifiers = modifiersOf(skeleton, tree);
-  if (modifiers.length === 0) return automaticSkinOf(skeleton.step.node);
-  const { bones, showRestOnly } = skeleton.step.node.properties as Skeleton3DProperties;
-  const skin = automaticSkinMatrices(bones, showRestOnly, modifiers);
-  const kept = keptModifiedSkins(skeleton.step.node);
+/**
+ * Written only by `skinOf`: the previous skin of each Skeleton3D node at each live path. A modifier
+ * reads the scene around the skeleton, so two instances of one node pose differently. The entries
+ * clear when nothing holds the node any more.
+ */
+const keptSkins = perObject(() => new Map<string, KeptSkin>());
+
+/**
+ * The skin of the Skeleton3D at `skeleton`: the file pose, edited by the modifiers below it. A load
+ * that leaves the node, the modifier nodes and what they read as they were hands back the same
+ * skin, whose animated poses run the modifiers it holds, so they must be the ones the load would make.
+ */
+function skinOf(skeleton: LiveLink, tree: LiveTree): BoundSkin {
+  // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
+  const placed = liveScenePassResults(liveNodePatches, tree);
+  const modifiers = modifiersOf(skeleton, tree, placed);
+  const kept = keptSkins(skeleton.step.node);
   const previous = kept.get(skeleton.path);
-  if (previous && sameElements(previous, skin, sameTransform3D)) return previous;
-  kept.set(skeleton.path, skin);
+  if (
+    previous &&
+    sameElements(previous.modifiers.nodes, modifiers.nodes) &&
+    readsHold(previous.modifiers, modifiers, tree, placed)
+  ) {
+    return previous.skin;
+  }
+  const skin = boundSkin(skeleton, modifiers.edits);
+  kept.set(skeleton.path, { modifiers, skin });
+  return skin;
+}
+
+function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): BoundSkin {
+  const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
+  // One pose editor for the skeleton: each frame starts it again from the file pose.
+  const poses = new BonePoses(bones, showRestOnly);
+  let lastPose: AnimatedPose | undefined;
+  let lastMatrices: readonly Transform3D[] = [];
+  const warnUnknownBone = (name: string) =>
+    warnOnce(
+      skin,
+      name,
+      `[AnimationPlayer] the Skeleton3D at ${skeleton.path} has no bone "${name}", so its track binds nothing`
+    );
+  const skin: BoundSkin = {
+    skeletonPath: skeleton.path,
+    matrices:
+      modifiers.length === 0
+        ? automaticSkinOf(skeleton.step.node)
+        : automaticSkinMatrices(bones, showRestOnly, modifiers),
+    matricesUnder: (pose) => {
+      if (pose === lastPose) return lastMatrices;
+      lastPose = pose;
+      lastMatrices = skinMatricesUnder(poses, [
+        animationPass(pose, motionScale, warnUnknownBone),
+        ...modifiers,
+      ]);
+      return lastMatrices;
+    },
+  };
   return skin;
 }
