@@ -16,11 +16,11 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
+import * as THREE from 'three';
 import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installGodotLightFunction, RE_DIRECT } from '../godotLightFunction.js';
 import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL, LTC_SPECULAR } from './ltcIntegral.js';
-import { installLtcTextures } from './ltcTextures.js';
 import {
   AREA_LIGHT_FACINGS,
   AREA_LIGHT_FALLOFFS,
@@ -189,22 +189,32 @@ const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   },
 ];
 
+/** Godot's integral, which only the patched `lights_physical_pars_fragment` holds. */
+const AREA_LIGHT_MARK = 'godotLtcIntegral(';
+
+/**
+ * Whether three's chunks hold Godot's area light. Godot's LTC tables go in only then: three's own
+ * area light reads its tables in another layout.
+ */
+export function isGodotAreaLightInstalled(): boolean {
+  return THREE.ShaderChunk.lights_physical_pars_fragment.includes(AREA_LIGHT_MARK);
+}
+
 /**
  * Installs the light function and the attenuation it reads, then replaces three's area light, and
- * gives its tables, the area light atlas and the per-light uniforms to every built-in lit material,
- * for every program compiled after the call. A three release that rewrites a replaced text keeps
- * all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call changes
- * nothing.
+ * gives the area light atlas and the per-light uniforms to every built-in lit material, for every
+ * program compiled after the call. `useLtcTexturesSettled` loads the tables. A three release that
+ * rewrites a replaced text keeps all its own chunks, and `areaLightChunk.test.ts` fails on that
+ * release. A second call changes nothing.
  */
 export function installGodotAreaLight(): void {
   const isPatched = installChunkEdits({
     requires: [installGodotLightFunction, installGodotLightAttenuation],
     edits: AREA_LIGHT_EDITS,
-    mark: 'godotLtcIntegral(',
+    mark: AREA_LIGHT_MARK,
     patch: 'area light',
   });
   if (!isPatched) return;
-  installLtcTextures();
   installAreaLightUniforms();
   installAreaLightAtlas();
 }
