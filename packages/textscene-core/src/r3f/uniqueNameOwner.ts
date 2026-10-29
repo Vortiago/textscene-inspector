@@ -127,8 +127,6 @@ interface Candidate {
   group: LiveChildGroup;
   /** Owner of the nodes in `group`. */
   owner: ClaimOwner;
-  /** `subscene` groups: the loaded roots, each the owner of its own descendants. */
-  rootOf?: readonly TscnNode[];
 }
 
 /**
@@ -190,9 +188,6 @@ class OwnerWalk {
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
     const subRoots = link.step.instancePath ? live.tree.sceneNodes(link.step.instancePath) : undefined;
-    const contentOwner: ClaimOwner = found.rootOf
-      ? { path: livePath, roots: found.rootOf, parent: owner, live }
-      : owner;
     // The instance node is the root of what it instances, so it owns the GLB's objects too: they sit
     // directly below it (packed_scene.cpp:261-264).
     const instanceOwner = subRoots && { path: livePath, roots: subRoots, parent: owner, live };
@@ -201,8 +196,7 @@ class OwnerWalk {
       owner:
         instanceOwner && holdsInstanceContent(group)
           ? { ...instanceOwner, composed: link.step.node.uniqueNames }
-          : contentOwner,
-      ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
+          : owner,
     }));
     const into = instanceOwner
       ? (candidates.find((c) => holdsInstanceContent(c.group))?.owner ?? owner)

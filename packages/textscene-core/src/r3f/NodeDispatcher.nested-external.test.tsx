@@ -14,6 +14,7 @@ import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 import { makeNode, translated } from '../parser/testing/parserKit';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 import './nodes/index';
 // The parsers `makeNode` and the Instance root merge build node properties with.
@@ -24,6 +25,7 @@ import '../nodes/3d/meshinstance3d/index';
 // Level 3 (leaf): an orange sphere with no dependencies.
 function makeLeafScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       makeNode('NestedLeaf', 'Node3D', {
         children: [
@@ -44,6 +46,7 @@ function makeLeafScene(): TscnScene {
 // Level 2 (middle): Blue box + references leaf
 function makeMiddleScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       makeNode('NestedMiddle', 'Node3D', {
         children: [
@@ -65,6 +68,7 @@ function makeMiddleScene(): TscnScene {
 // Level 1 (top): Green cylinder + references middle
 function makeTopScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       makeNode('NestedTop', 'Node3D', {
         children: [

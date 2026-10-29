@@ -4,11 +4,11 @@
  * it, and the render ends instead of adding a level per load.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SceneStack } from './testing/SceneStack';
+import { groupNames, magentaCount } from './testing/failedLoadPlaceholders';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { setLogAdapter, type LogAdapter } from '../logger';
 
@@ -16,6 +16,7 @@ import './nodes/index';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
@@ -42,21 +43,9 @@ async function render(scene: TscnScene, seeded: Record<string, TscnScene>) {
   );
 }
 
-type Renderer = Awaited<ReturnType<typeof render>>;
-
-function groupNames(renderer: Renderer): string[] {
-  return renderer.scene.findAllByType('Group').map((g) => g.instance.name);
-}
-
-function magentaCount(renderer: Renderer): number {
-  return renderer.scene.findAllByType('Mesh').filter((m) => {
-    const color = ((m.instance as THREE.Mesh).material as { color?: THREE.Color }).color;
-    return color !== undefined && color.r > 0.9 && color.g < 0.1 && color.b > 0.9;
-  }).length;
-}
-
 /** `res://a.tscn`: a root with two children that each instance `res://a.tscn`. */
 const SELF_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [
     makeNode('Root', 'Node3D', {
       children: [
@@ -71,6 +60,7 @@ const SELF_SCENE: TscnScene = {
 
 /** A one-box scene with no instances. */
 const LEAF_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [
     makeNode('LeafRoot', 'Node3D', {
       children: [
@@ -101,6 +91,7 @@ describe('<NodeDispatcher> cyclic instancing', () => {
 
   it('stops an indirect cycle at the instance that names a scene already above it', async () => {
     const aScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ARoot', 'Node3D', {
           children: [makeNode('ToB', 'Node3D', { instance: 'ExtResource("1")' })],
@@ -110,6 +101,7 @@ describe('<NodeDispatcher> cyclic instancing', () => {
       internalResources: [],
     };
     const bScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('BRoot', 'Node3D', {
           children: [makeNode('ToA', 'Node3D', { instance: 'ExtResource("2")' })],
@@ -126,11 +118,13 @@ describe('<NodeDispatcher> cyclic instancing', () => {
 
   it('stops a root that instances its own scene after one merge', async () => {
     const loop: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Loop', 'Node3D', { instance: 'ExtResource("1")' })],
       externalResources: [ext('1', 'res://loop.tscn')],
       internalResources: [],
     };
     const host: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('L', 'Node3D', { instance: 'ExtResource("1")' })],
       externalResources: [ext('1', 'res://loop.tscn')],
       internalResources: [],
@@ -142,6 +136,7 @@ describe('<NodeDispatcher> cyclic instancing', () => {
 
   it('renders a host child that instances the scene it is grafted into, since that is no cycle', async () => {
     const host: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Gun', 'Node3D', {
           instance: 'ExtResource("1")',

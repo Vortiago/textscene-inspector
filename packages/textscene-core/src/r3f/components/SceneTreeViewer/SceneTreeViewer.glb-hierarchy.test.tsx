@@ -15,6 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 import '../../../nodes/node/index';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
@@ -119,6 +120,7 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
     const fake = createFakeResourceLoader();
     seedGlbInstance(fake, RIG_PATH, fakeGlb());
     fake.scenes.seed('res://wrapper.tscn', {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         {
           rawProperties: {},

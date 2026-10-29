@@ -14,6 +14,7 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).
 import '../../nodes/index';
@@ -42,6 +43,7 @@ function makeFakeGlb(): THREE.Object3D {
 /** The synthesised single-node GLBSceneRoot scene createSceneProcessor produces for a .glb. */
 function makeSynthesisedGlbScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       {
         rawProperties: {},
@@ -69,6 +71,7 @@ function makeCeilingLampScene(): TscnScene {
     ],
   };
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [root],
     externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
     internalResources: [],
@@ -138,6 +141,7 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
     // With no override children the GLB keeps its baked transform: translations are not zeroed
     // globally.
     const noOverrideScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [parsedNode({ name: 'ceiling_lamp', type: 'Node', instance: 'ExtResource("glb_1")' })],
       externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
       internalResources: [],

@@ -11,6 +11,7 @@ import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {
@@ -419,7 +420,11 @@ ${extra}`);
     const node = parsed.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
     const loaded = new TscnParser().parse('[gd_scene format=3]\n\n[node name="S" type="Sprite2D"]\n');
     const cache: CachedSceneSource = {
-      getCached: () => ({ nodes: loaded.nodes, externalResources: loaded.externalResources }),
+      getCached: () => ({
+        ...INSTANTIABLE_SCENE,
+        nodes: loaded.nodes,
+        externalResources: loaded.externalResources,
+      }),
     };
     const resolved = resolveStandaloneViewportSubtree(node, parsed.externalResources, cache);
     // Untouched: the nested viewport's own child is still the raw instance node.

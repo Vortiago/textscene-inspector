@@ -4,11 +4,7 @@
  */
 
 import type { HeadingFacts, IdRecovery, NodeOrigin, RawNode } from '../parser/types.js';
-import {
-  emptyParentHeadings,
-  refusesToInstantiate,
-  rootDeclaringParent,
-} from '../parser/instantiateRefusal.js';
+import { emptyParentHeadings, rootDeclaringParent } from '../parser/instantiateRefusal.js';
 import {
   isReRooted,
   isSeatedAtOwnPathIn,
@@ -25,7 +21,6 @@ type PlacementFacts = Pick<
   | 'seatedOrphans'
   | 'rootWithParent'
   | 'emptyParentHeadings'
-  | 'refusesToInstantiate'
   | 'idRecoveries'
   | 'resolveConnectionEnd'
 >;
@@ -45,7 +40,6 @@ export function placementFacts(
     seatedOrphans: new Set(orphans.filter(({ node }) => seating.seated.has(node))),
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
-    refusesToInstantiate: refusesToInstantiate(origins),
     idRecoveries: idRecoveries(origins, seating),
     resolveConnectionEnd: connectionEndResolver(origins, seating),
   };

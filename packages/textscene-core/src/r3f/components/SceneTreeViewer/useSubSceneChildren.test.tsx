@@ -12,13 +12,19 @@ import {
   type FakeResourceLoader,
 } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 const SCENE_PATH = 'res://frame.tscn';
 const EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [
   { id: '1_frame', path: SCENE_PATH, type: 'PackedScene' },
 ];
 const FRAME: TscnNode = { rawProperties: {}, name: 'Frame', type: 'Node3D', children: [], properties: {} };
-const SUB_SCENE: TscnScene = { nodes: [FRAME], externalResources: [], internalResources: [] };
+const SUB_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
+  nodes: [FRAME],
+  externalResources: [],
+  internalResources: [],
+};
 const INSTANCE_ROW: TscnNode = {
   rawProperties: {},
   name: 'PhotoFrame',
