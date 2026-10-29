@@ -9,32 +9,32 @@ import {
 } from './godotParticles';
 import type { ProgramShader } from '../materialProgramInputs';
 import { SRGB_VERTEX_COLOR } from './godotVertexColor';
+import { programShader, type ProgramName } from '../testing/patchedFragment';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
+import { PARTICLES_ANIM_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 
 const BAG: StandardMaterialBag = { materialClass: 'basic', props: { color: 'red', userData: {} } };
-const ONE_CELL = { hFrames: 1, vFrames: 1, loop: false };
 const UNBILLBOARDED: ParticleDraw = {
   billboard: { mode: BillboardMode.BILLBOARD_DISABLED, keepScale: false },
-  anim: ONE_CELL,
+  anim: PARTICLES_ANIM_DEFAULTS,
 };
 const PARTICLES: ParticleDraw = {
   billboard: { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: false },
-  anim: ONE_CELL,
+  anim: PARTICLES_ANIM_DEFAULTS,
 };
 
 /** What `draw` on `bag` leaves of `program`'s shaders, compiled on `material`. */
 function compiled(
   draw: ParticleDraw,
-  program: keyof typeof THREE.ShaderLib = 'basic',
+  program: ProgramName = 'basic',
   material: THREE.Material = new THREE.MeshBasicMaterial(),
   bag: StandardMaterialBag = BAG
 ): ProgramShader {
   const drawn = withParticleDraw(bag, draw);
   material.userData = drawn.props.userData!;
-  const { vertexShader, fragmentShader } = THREE.ShaderLib[program];
-  const shader: ProgramShader = { vertexShader, fragmentShader, uniforms: {} };
+  const shader = programShader(program);
   drawn.injection!.onBeforeCompile.call(material, shader);
   return shader;
 }
@@ -168,7 +168,7 @@ describe.each([
   ['BILLBOARD_ENABLED', BillboardMode.BILLBOARD_ENABLED],
   ['BILLBOARD_FIXED_Y', BillboardMode.BILLBOARD_FIXED_Y],
 ])('a %s particle draw', (_name, mode) => {
-  const draw: ParticleDraw = { billboard: { mode, keepScale: false }, anim: ONE_CELL };
+  const draw: ParticleDraw = { billboard: { mode, keepScale: false }, anim: PARTICLES_ANIM_DEFAULTS };
 
   // `material.cpp:1263-1264`: MAIN_CAM_INV_VIEW_MATRIX, the main camera even on a shadow pass.
   it('faces the main camera, which a shadow pass keeps', () => {
@@ -178,11 +178,12 @@ describe.each([
   });
 
   it('reads the main camera the draw hooks aim it at', () => {
-    const shader = compiled(draw);
+    const material = new THREE.MeshBasicMaterial();
+    const shader = compiled(draw, 'basic', material);
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(1, 2, 3);
     camera.updateMatrixWorld();
-    aimParticleBillboards(camera);
+    aimParticleBillboards(material, camera);
     expect((shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4).equals(camera.matrixWorld)).toBe(
       true
     );
@@ -229,8 +230,7 @@ describe.each(['depth', 'distance'] as const)('the particle shadow on the %s pro
 
   function shadow(): ProgramShader {
     const injection = particleShadowInjection(userData)!;
-    const { vertexShader, fragmentShader } = THREE.ShaderLib[program];
-    const shader: ProgramShader = { vertexShader, fragmentShader, uniforms: {} };
+    const shader = programShader(program);
     injection.onBeforeCompile.call(new THREE.MeshDepthMaterial({ userData }), shader);
     return shader;
   }

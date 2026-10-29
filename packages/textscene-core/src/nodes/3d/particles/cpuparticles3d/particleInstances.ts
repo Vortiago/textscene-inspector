@@ -24,20 +24,19 @@ export function particleCount(buffer: Float32Array): number {
 /** Particle `i`'s transform as a matrix, written into `target`. */
 function particleMatrix(target: THREE.Matrix4, buffer: Float32Array, i: number): THREE.Matrix4 {
   const at = i * PARTICLE_FLOATS;
-  const r = buffer;
   return target.set(
-    r[at]!,
-    r[at + 1]!,
-    r[at + 2]!,
-    r[at + 3]!,
-    r[at + 4]!,
-    r[at + 5]!,
-    r[at + 6]!,
-    r[at + 7]!,
-    r[at + 8]!,
-    r[at + 9]!,
-    r[at + 10]!,
-    r[at + 11]!,
+    buffer[at]!,
+    buffer[at + 1]!,
+    buffer[at + 2]!,
+    buffer[at + 3]!,
+    buffer[at + 4]!,
+    buffer[at + 5]!,
+    buffer[at + 6]!,
+    buffer[at + 7]!,
+    buffer[at + 8]!,
+    buffer[at + 9]!,
+    buffer[at + 10]!,
+    buffer[at + 11]!,
     0,
     0,
     0,
@@ -45,13 +44,20 @@ function particleMatrix(target: THREE.Matrix4, buffer: Float32Array, i: number):
   );
 }
 
-/** Each particle's four floats at `offset`, each repeated `repeats` times in a row. */
-function particleVec4s(buffer: Float32Array, offset: number, repeats: number): Float32Array {
+/** Each particle's `width` floats at `offset`, each repeated `repeats` times in a row. */
+export function particleSlices(
+  buffer: Float32Array,
+  offset: number,
+  width: number,
+  repeats = 1
+): Float32Array {
   const count = particleCount(buffer);
-  const out = new Float32Array(count * repeats * VEC4_FLOATS);
+  const out = new Float32Array(count * repeats * width);
   for (let i = 0; i < count; i++) {
-    const value = buffer.subarray(i * PARTICLE_FLOATS + offset, i * PARTICLE_FLOATS + offset + VEC4_FLOATS);
-    for (let r = 0; r < repeats; r++) out.set(value, (i * repeats + r) * VEC4_FLOATS);
+    const at = i * PARTICLE_FLOATS + offset;
+    for (let r = 0; r < repeats; r++) {
+      for (let k = 0; k < width; k++) out[(i * repeats + r) * width + k] = buffer[at + k]!;
+    }
   }
   return out;
 }
@@ -90,26 +96,30 @@ export function releaseParticleGeometry(geometry: THREE.BufferGeometry, source: 
 /** Scratch for one particle's matrix, overwritten by every write. */
 const written = new THREE.Matrix4();
 
-/** Writes `buffer` into `mesh`'s instances: their matrices, colours and custom data. */
-export function writeParticleInstances(mesh: THREE.InstancedMesh, buffer: Float32Array): void {
+/** Writes `buffer`'s transforms into `mesh`'s instance matrices. */
+export function writeParticleMatrices(mesh: THREE.InstancedMesh, buffer: Float32Array): void {
   const count = particleCount(buffer);
   for (let i = 0; i < count; i++) mesh.setMatrixAt(i, particleMatrix(written, buffer, i));
   mesh.instanceMatrix.needsUpdate = true;
-  writeVec4s(
-    mesh.geometry.getAttribute(PARTICLE_COLOR_ATTRIBUTE),
-    particleVec4s(buffer, PARTICLE_COLOR_OFFSET, 1)
-  );
-  writeVec4s(
-    mesh.geometry.getAttribute(PARTICLE_CUSTOM_ATTRIBUTE),
-    particleVec4s(buffer, PARTICLE_CUSTOM_OFFSET, 1)
-  );
 }
 
-function writeVec4s(
+/** Writes `buffer`'s colours and custom data into the instance attributes of `geometry`. */
+export function writeParticleData(geometry: THREE.BufferGeometry, buffer: Float32Array): void {
+  writeSlices(geometry.getAttribute(PARTICLE_COLOR_ATTRIBUTE), buffer, PARTICLE_COLOR_OFFSET);
+  writeSlices(geometry.getAttribute(PARTICLE_CUSTOM_ATTRIBUTE), buffer, PARTICLE_CUSTOM_OFFSET);
+}
+
+function writeSlices(
   attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  values: Float32Array
+  buffer: Float32Array,
+  offset: number
 ): void {
-  (attribute.array as Float32Array).set(values);
+  const array = attribute.array as Float32Array;
+  const count = particleCount(buffer);
+  for (let i = 0; i < count; i++) {
+    const at = i * PARTICLE_FLOATS + offset;
+    for (let k = 0; k < VEC4_FLOATS; k++) array[i * VEC4_FLOATS + k] = buffer[at + k]!;
+  }
   (attribute as THREE.BufferAttribute).needsUpdate = true;
 }
 
@@ -124,11 +134,17 @@ export function particlePoints(source: THREE.BufferGeometry, buffer: Float32Arra
   const vertices = source.getAttribute('position').count;
   points.setAttribute(
     PARTICLE_COLOR_ATTRIBUTE,
-    new THREE.BufferAttribute(particleVec4s(buffer, PARTICLE_COLOR_OFFSET, vertices), VEC4_FLOATS)
+    new THREE.BufferAttribute(
+      particleSlices(buffer, PARTICLE_COLOR_OFFSET, VEC4_FLOATS, vertices),
+      VEC4_FLOATS
+    )
   );
   points.setAttribute(
     PARTICLE_CUSTOM_ATTRIBUTE,
-    new THREE.BufferAttribute(particleVec4s(buffer, PARTICLE_CUSTOM_OFFSET, vertices), VEC4_FLOATS)
+    new THREE.BufferAttribute(
+      particleSlices(buffer, PARTICLE_CUSTOM_OFFSET, VEC4_FLOATS, vertices),
+      VEC4_FLOATS
+    )
   );
   return points;
 }

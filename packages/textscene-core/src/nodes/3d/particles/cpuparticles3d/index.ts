@@ -1,9 +1,6 @@
 /**
- * CPUParticles3D registration: parser.
- *
- * Its own parse reads what its box needs, and property knowledge lives in linterParser.ts.
- * Not rendered: index.r3f.ts registers the base under `renderIntent: 'pending'`,
- * so the tree still reports a gap while `visible` and the workspace split work.
+ * CPUParticles3D registration: parser. Its own parse reads what the simulation, the draw and the box
+ * need, and property knowledge lives in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

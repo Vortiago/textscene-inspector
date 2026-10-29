@@ -19,10 +19,8 @@ export interface CPUParticles3DProperties extends GeometryInstance3DProperties {
    * for none, or for `AABB()`, which clears it (`mesh_storage.cpp:2236`).
    */
   visibilityAabb: Aabb | null;
-  /** The raw `mesh` reference each particle draws, or undefined for none. */
+  /** The raw `mesh` reference each particle draws, or undefined for none. A null `mesh` is none. */
   mesh: string | undefined;
-  /** Whether `mesh` holds a mesh, which the multimesh box measures (`mesh_storage.cpp:1832`). */
-  hasMesh: boolean;
   /** GeometryInstance3D's `material_override`, which draws every surface in place of its own material. */
   materialOverride: string | undefined;
   /** GeometryInstance3D's `material_overlay`, which draws every surface a second time. */

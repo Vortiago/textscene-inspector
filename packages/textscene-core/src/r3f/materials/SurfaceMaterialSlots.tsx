@@ -30,9 +30,16 @@ interface SurfaceMaterialSlotsProps {
   triplanarMesh?: TscnInternalResource;
   /** The mesh draws `THREE.Points`, so each material also sizes its points. */
   drawsPoints?: boolean;
+  /** The mesh draws a particle emitter's instances, which each material colours and billboards. */
+  drawsParticles?: boolean;
 }
 
-export function SurfaceMaterialSlots({ sources, triplanarMesh, drawsPoints }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({
+  sources,
+  triplanarMesh,
+  drawsPoints,
+  drawsParticles,
+}: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -43,6 +50,7 @@ export function SurfaceMaterialSlots({ sources, triplanarMesh, drawsPoints }: Su
           attach={surfaceAttach(i, slotSources.length)}
           triplanarMesh={triplanarMesh}
           drawsPoints={drawsPoints}
+          drawsParticles={drawsParticles}
         />
       ))}
     </>

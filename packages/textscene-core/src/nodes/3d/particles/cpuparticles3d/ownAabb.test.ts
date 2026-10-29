@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
 import { EMPTY_AABB, type Aabb } from '../../../../godot/math/aabb';
 import { parseNonEmptyAabb } from '../../../../parser/valueParsers';
-import { identityTransform3D } from '../../../../godot/math/transform3d';
 import { parseCPUParticles3D } from './parser';
 import { particlesAabb } from './ownAabb';
-import { particleDataBuffer, settleParticles } from './simulate';
+import { particleRows, settleParticles } from './simulate';
+import { simInput } from './cpuparticles3d.testkit';
 import { ORACLE_CASES } from './simulateOracle.testkit';
 
 /** The oracle's mesh: a 0.2 BoxMesh, centred. */
@@ -17,16 +17,12 @@ function emitter(properties: Record<string, string>) {
 
 /** The box the emitter's own settled pose gives, under the oracle's mesh. */
 function settledAabb(properties: Record<string, string>): Aabb | null {
-  const props = emitter({ ...properties, mesh: 'SubResource("Box")' });
-  const settled = settleParticles({
-    props,
-    curves: Array.from({ length: 12 }, () => null),
-    scaleCurves: { x: null, y: null, z: null },
-    colorRamp: null,
-    colorInitialRamp: null,
-    emissionTransform: identityTransform3D(),
-  });
-  return particlesAabb(props, particleDataBuffer(settled, null), ORACLE_MESH_AABB);
+  const withMesh = { ...properties, mesh: 'SubResource("Box")' };
+  return particlesAabb(
+    emitter(withMesh),
+    particleRows(settleParticles(simInput(withMesh))),
+    ORACLE_MESH_AABB
+  );
 }
 
 function expectNearAabb(actual: Aabb | null, expected: Aabb | null): void {

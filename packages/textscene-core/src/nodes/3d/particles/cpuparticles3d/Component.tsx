@@ -19,9 +19,9 @@ import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { PluginGizmo, SelectedOnly } from '../../../../r3f/gizmo/PluginGizmo';
 import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlot } from '../../../../r3f/materials/SurfaceMaterialSlot';
-import { surfaceAttach, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
+import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
-import { MATERIAL_OVERLAY_RENDER_ORDER } from '../../../../r3f/materials/materialOverlay';
+import { overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
 import { useMeshContent } from '../../../../r3f/meshes/meshContent';
 import { matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms';
 import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
@@ -42,9 +42,10 @@ import {
   particleGeometry,
   particlePoints,
   releaseParticleGeometry,
-  writeParticleInstances,
+  writeParticleData,
+  writeParticleMatrices,
 } from './particleInstances';
-import { particleDataBuffer, settleParticles, type SettledParticles } from './simulate';
+import { particleRows, particlesInDrawOrder, settleParticles, type SettledParticles } from './simulate';
 import type { CPUParticles3DProperties } from './types';
 
 export function CPUParticles3D({ node, children }: NodeComponentProps) {
@@ -52,23 +53,32 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
   const pools = useSceneResources();
   const nodeRef = useRef<THREE.Group | null>(null);
 
-  const emissionTransform = useEmissionTransform(nodeRef, properties.simulation.localCoords, node);
+  const emissionTransform = useEmissionTransform(nodeRef, node);
   const resources = useParticleResources(properties.simulation);
   const settled = useMemo(
-    () => settleParticles({ props: properties, ...resources, emissionTransform }),
+    () =>
+      settleParticles({
+        sim: properties.simulation,
+        emission: properties.emission,
+        ...resources,
+        emissionTransform,
+      }),
     [properties, resources, emissionTransform]
   );
   const viewAxis = useViewAxis(properties.simulation.drawOrder === CPUParticles3DDrawOrder.VIEW_DEPTH);
-  const buffer = useMemo(() => particleDataBuffer(settled, viewAxis), [settled, viewAxis]);
+  const rows = useMemo(() => particleRows(settled), [settled]);
+  const buffer = useMemo(() => particlesInDrawOrder(settled, rows, viewAxis), [settled, rows, viewAxis]);
 
   const meshAabb = useMeshAabb(properties.mesh, pools);
-  const ownAabb = useMemo(() => particlesAabb(properties, buffer, meshAabb), [properties, buffer, meshAabb]);
+  const ownAabb = useMemo(() => particlesAabb(properties, rows, meshAabb), [properties, rows, meshAabb]);
   const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [ownAabb]);
   const shadow = useGeometryInstance(placement);
 
   return (
     <Node3D node={node} ref={nodeRef}>
-      <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
+      <group userData={boxlessUserData()}>
+        <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
+      </group>
       <PluginGizmo drawnFor="every-node">
         {/* The box the node authors, `AABB()` for none, and not the parser's null (the multimesh box). */}
         <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} />
@@ -82,19 +92,15 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * The emitter's global transform, which a `local_coords = false` emitter emits from. The identity
- * before the node is in the tree, and always for a `local_coords` emitter. three assembles it, so it
- * is sampled again for each parse of the node, and changes identity only when the transform does.
+ * The emitter's global transform: a `local_coords = false` emitter emits from it, and a VIEW_DEPTH
+ * emitter sorts through its inverse. The identity before the node is in the tree. three assembles
+ * it, so it is sampled again for each parse of the node, and changes identity only when it changes.
  */
-function useEmissionTransform(
-  nodeRef: RefObject<THREE.Object3D | null>,
-  localCoords: boolean,
-  parsed: TscnNode
-): Transform3D {
+function useEmissionTransform(nodeRef: RefObject<THREE.Object3D | null>, parsed: TscnNode): Transform3D {
   const [transform, setTransform] = useState(identityTransform3D);
   useLayoutEffect(() => {
     const node = nodeRef.current;
-    if (!node || localCoords) {
+    if (!node) {
       setTransform((previous) => (sameTransform3D(previous, IDENTITY) ? previous : IDENTITY));
       return;
     }
@@ -102,7 +108,7 @@ function useEmissionTransform(
     node.updateWorldMatrix(true, false);
     const next = matrixToTransform3D(node.matrixWorld);
     setTransform((previous) => (sameTransform3D(previous, next) ? previous : next));
-  }, [nodeRef, localCoords, parsed]);
+  }, [nodeRef, parsed]);
   return transform;
 }
 
@@ -185,10 +191,10 @@ interface ParticleDraw {
 function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
   const { sources, overlay, buffer, shadow, godotLayers } = draw;
   const count = particleCount(buffer);
-  const geometry = useParticleGeometry(source, count);
+  const geometry = useParticleGeometry(source, buffer);
   const startingMaterial = useOneSurfaceStartingMaterial(sources.length);
-  const meshRef = useParticleInstances(buffer, geometry);
-  const overlayRef = useParticleInstances(buffer, geometry);
+  const meshRef = useParticleMatrices(buffer, geometry);
+  const overlayRef = useParticleMatrices(buffer, geometry);
   return (
     <>
       <instancedMesh
@@ -197,22 +203,17 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
         args={[geometry, startingMaterial, count]}
         frustumCulled={false}
         {...drawHookProps(shadow)}
-        userData={drawUserData(godotLayers)}
+        userData={visualLayersUserData(godotLayers)}
       >
-        <ParticleSlots sources={sources} drawsPoints={false} />
+        <SurfaceMaterialSlots sources={sources} drawsParticles />
       </instancedMesh>
       {overlay && (
-        // The overlay casts nothing of its own, so only the colour pair of hooks mounts.
         <instancedMesh
           key={`overlay-${count}`}
           ref={overlayRef}
           args={[geometry, undefined, count]}
           frustumCulled={false}
-          renderOrder={MATERIAL_OVERLAY_RENDER_ORDER}
-          raycast={NO_RAYCAST}
-          userData={boxlessUserData()}
-          onBeforeRender={shadow.onBeforeRender}
-          onAfterRender={shadow.onAfterRender}
+          {...overlayDrawProps(shadow)}
         >
           <SurfaceMaterialSlot source={overlay} drawsParticles />
         </instancedMesh>
@@ -221,27 +222,24 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
   );
 }
 
-/** A particle draw's userData: the node's `layers`, and no box of its own for the editor. */
-function drawUserData(godotLayers: number) {
-  return { ...visualLayersUserData(godotLayers), ...boxlessUserData() };
-}
-
-/** Opts a draw out of picking: the emitter's own draw is the one a pick reports. */
-const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
-
-/** `source` as an instanced particle geometry for `count` instances, released with the draw. */
-function useParticleGeometry(source: THREE.BufferGeometry, count: number): THREE.BufferGeometry {
+/**
+ * `source` as an instanced particle geometry for `buffer`'s particles, whose colours and custom data
+ * it holds before each paint, released with the draw. The overlay shares it.
+ */
+function useParticleGeometry(source: THREE.BufferGeometry, buffer: Float32Array): THREE.BufferGeometry {
+  const count = particleCount(buffer);
   const geometry = useMemo(() => particleGeometry(source, count), [source, count]);
   useLayoutEffect(() => () => releaseParticleGeometry(geometry, source), [geometry, source]);
+  useLayoutEffect(() => writeParticleData(geometry, buffer), [geometry, buffer]);
   return geometry;
 }
 
-/** A ref for an InstancedMesh of `geometry`, whose instances hold `buffer` before each paint. */
-function useParticleInstances(buffer: Float32Array, geometry: THREE.BufferGeometry) {
+/** A ref for an InstancedMesh of `geometry`, whose instance matrices hold `buffer` before each paint. */
+function useParticleMatrices(buffer: Float32Array, geometry: THREE.BufferGeometry) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
   useLayoutEffect(() => {
-    if (meshRef.current) writeParticleInstances(meshRef.current, buffer);
+    if (meshRef.current) writeParticleMatrices(meshRef.current, buffer);
   }, [buffer, geometry]);
   return meshRef;
 }
@@ -257,45 +255,15 @@ function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: 
       <points
         args={[geometry, startingMaterial]}
         {...drawHookProps(shadow)}
-        userData={drawUserData(godotLayers)}
+        userData={visualLayersUserData(godotLayers)}
       >
-        <ParticleSlots sources={sources} drawsPoints />
+        <SurfaceMaterialSlots sources={sources} drawsPoints drawsParticles />
       </points>
       {overlay && (
-        <points
-          args={[geometry]}
-          renderOrder={MATERIAL_OVERLAY_RENDER_ORDER}
-          raycast={NO_RAYCAST}
-          userData={boxlessUserData()}
-          onBeforeRender={shadow.onBeforeRender}
-          onAfterRender={shadow.onAfterRender}
-        >
+        <points args={[geometry]} {...overlayDrawProps(shadow)}>
           <SurfaceMaterialSlot source={overlay} drawsPoints drawsParticles />
         </points>
       )}
-    </>
-  );
-}
-
-/** Each draw group's material, colouring and billboarding the particles. */
-function ParticleSlots({
-  sources,
-  drawsPoints,
-}: {
-  sources: readonly (MaterialSource | undefined)[];
-  drawsPoints: boolean;
-}) {
-  return (
-    <>
-      {sources.map((source, i) => (
-        <SurfaceMaterialSlot
-          key={i}
-          source={source}
-          attach={surfaceAttach(i, sources.length)}
-          drawsPoints={drawsPoints}
-          drawsParticles
-        />
-      ))}
     </>
   );
 }

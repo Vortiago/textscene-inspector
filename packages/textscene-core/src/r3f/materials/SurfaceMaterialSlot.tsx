@@ -52,7 +52,7 @@ export function SurfaceMaterialSlot({
     () => (drawsParticles ? particleDrawOf(scalars) : undefined),
     [drawsParticles, scalars]
   );
-  const draws = { pointDraw, particleDraw };
+  const draws = useMemo(() => ({ pointDraw, particleDraw }), [pointDraw, particleDraw]);
   if (!bags) return materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />;
 }

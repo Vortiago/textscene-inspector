@@ -32,6 +32,7 @@ import { ShadingMode } from '../../../godot/rendering/materials/shadingMode';
 import { Transparency } from '../../../godot/rendering/materials/transparency';
 import {
   HEIGHTMAP_DEFAULTS,
+  PARTICLES_ANIM_DEFAULTS,
   TEXTURE_SLOTS,
   type Heightmap,
   type StandardMaterial3DData,
@@ -247,11 +248,10 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     pointSize: floatOr(properties['point_size'], BASE_MATERIAL_3D_DEFAULTS.pointSize, CONTEXT),
     billboardMode: intOr(properties['billboard_mode'], BillboardMode.BILLBOARD_DISABLED, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    // The constructor sets a one-cell flipbook (`material.cpp:3967-3969`).
     particlesAnim: {
-      hFrames: intOr(properties['particles_anim_h_frames'], 1, CONTEXT),
-      vFrames: intOr(properties['particles_anim_v_frames'], 1, CONTEXT),
-      loop: boolOr(properties['particles_anim_loop'], false, CONTEXT),
+      hFrames: intOr(properties['particles_anim_h_frames'], PARTICLES_ANIM_DEFAULTS.hFrames, CONTEXT),
+      vFrames: intOr(properties['particles_anim_v_frames'], PARTICLES_ANIM_DEFAULTS.vFrames, CONTEXT),
+      loop: boolOr(properties['particles_anim_loop'], PARTICLES_ANIM_DEFAULTS.loop, CONTEXT),
     },
     anisotropy: anisotropyEnabled
       ? clamp(floatOr(properties['anisotropy'], BASE_MATERIAL_3D_DEFAULTS.anisotropy, CONTEXT), -1, 1)

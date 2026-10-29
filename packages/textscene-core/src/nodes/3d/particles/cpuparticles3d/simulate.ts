@@ -86,8 +86,7 @@ import {
   type RestartClock,
 } from '../../../shared/cpuparticles/process';
 import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
-import { TRANSFORM_FLOATS } from '../../../../resources/meshes/multimesh/types';
-import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
+import type { CPUParticles3DSimulation } from './types';
 
 /** Floats per particle in the buffer: a 3×4 transform, a colour and the custom data (`cpu_particles_3d.cpp:1279-1312`). */
 export const PARTICLE_FLOATS = 20;
@@ -96,24 +95,13 @@ export const PARTICLE_COLOR_OFFSET = 12;
 /** Where a particle's custom data starts: angle, phase, animation offset and lifetime ratio. */
 export const PARTICLE_CUSTOM_OFFSET = 16;
 
-/** Each particle's 3×4 transform out of `buffer`, `TRANSFORM_FLOATS` apiece, as the multimesh box reads them. */
-export function particleTransforms(buffer: Float32Array): Float32Array {
-  const count = buffer.length / PARTICLE_FLOATS;
-  const transforms = new Float32Array(count * TRANSFORM_FLOATS);
-  for (let i = 0; i < count; i++) {
-    transforms.set(
-      buffer.subarray(i * PARTICLE_FLOATS, i * PARTICLE_FLOATS + TRANSFORM_FLOATS),
-      i * TRANSFORM_FLOATS
-    );
-  }
-  return transforms;
-}
-
 /** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
 type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSim3DInput {
-  props: CPUParticles3DProperties;
+  sim: CPUParticles3DSimulation;
+  /** The emission shape, which places each newborn particle. */
+  emission: ParticleEmission;
   curves: ParticleCurves;
   /** `scale_curve_x`, `_y` and `_z`, read only with `split_scale`. */
   scaleCurves: { x: Curve | null; y: Curve | null; z: Curve | null };
@@ -175,7 +163,7 @@ export interface SettledParticles {
  * no file or reference render can name.
  */
 export function settleParticles(input: ParticleSim3DInput): SettledParticles {
-  const sim = input.props.simulation;
+  const { sim } = input;
   // `_update_internal` bails before touching the buffer when the emitter is neither active nor
   // emitting, and a scene file cannot make `active` true without `emitting`.
   if (!sim.emitting) return { input, state: null };
@@ -221,7 +209,7 @@ function newParticle(): Particle {
  * `speed_scale` is held at 1.
  */
 function particlesProcess(state: SimState, input: ParticleSim3DInput, delta: number): void {
-  const sim = input.props.simulation;
+  const { sim } = input;
   const pcount = state.particles.length;
 
   const prevTime = state.time;
@@ -279,7 +267,7 @@ function particlesProcess(state: SimState, input: ParticleSim3DInput, delta: num
 /** The `restart` branch: a fresh draw from the per-particle RNG (`cpu_particles_3d.cpp:807-916`). */
 function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle, index: number): void {
   const { curves, colorInitialRamp } = input;
-  const sim = input.props.simulation;
+  const { sim } = input;
   const tv = 0.0;
 
   // Godot samples the angle curve for the anim offset too (`:822-830`). Same curve, same `tv`.
@@ -311,7 +299,7 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   p.lifetime = sim.lifetime * p.custom[3];
   p.baseColor = WHITE;
 
-  emitAtShape(input.props.emission, p, rng);
+  emitAtShape(input.emission, p, rng);
 
   if (!sim.localCoords) {
     p.velocity = basisXform(state.emissionXform, p.velocity);
@@ -366,29 +354,13 @@ function initialSpeed(sim: CPUParticles3DSimulation, rng: GodotRandomPCG): numbe
 function emitAtShape(emission: ParticleEmission, p: Particle, rng: GodotRandomPCG): void {
   switch (emission.shape) {
     case EmissionShape.SPHERE: {
-      const s = f(2.0 * rng.randf() - 1.0);
-      const t = f(TAU * rng.randf());
-      const x = rng.randf();
-      const radius = sphereSliceRadius(emission.sphereRadius, s);
-      const surface = {
-        x: f(radius * f(Math.cos(t))),
-        y: f(radius * f(Math.sin(t))),
-        z: f(emission.sphereRadius * s),
-      };
-      p.origin = vector3Lerp(ZERO, surface, x);
+      const surface = sphereSurfacePoint(emission.sphereRadius, rng);
+      p.origin = vector3Lerp(ZERO, surface, rng.randf());
       break;
     }
-    case EmissionShape.SPHERE_SURFACE: {
-      const s = f(2.0 * rng.randf() - 1.0);
-      const t = f(TAU * rng.randf());
-      const radius = sphereSliceRadius(emission.sphereRadius, s);
-      p.origin = {
-        x: f(radius * f(Math.cos(t))),
-        y: f(radius * f(Math.sin(t))),
-        z: f(emission.sphereRadius * s),
-      };
+    case EmissionShape.SPHERE_SURFACE:
+      p.origin = sphereSurfacePoint(emission.sphereRadius, rng);
       break;
-    }
     case EmissionShape.BOX:
       p.origin = vector3Mul(boxCorner(rng), emission.boxExtents);
       break;
@@ -399,6 +371,14 @@ function emitAtShape(emission: ParticleEmission, p: Particle, rng: GodotRandomPC
       // A point, and the point shapes this preview cannot place, leave the origin alone.
       break;
   }
+}
+
+/** A point on the sphere of `radius`, from a height and an angle drawn in that order (`:888-899`). */
+function sphereSurfacePoint(radius: number, rng: GodotRandomPCG): Vector3 {
+  const s = f(2.0 * rng.randf() - 1.0);
+  const t = f(TAU * rng.randf());
+  const slice = sphereSliceRadius(radius, s);
+  return { x: f(slice * f(Math.cos(t))), y: f(slice * f(Math.sin(t))), z: f(radius * s) };
 }
 
 /** `radius * Math::sqrt(1.0 - s * s)`: `1.0 - s * s` mixes a double with a float product. */
@@ -452,7 +432,7 @@ function advanceParticle(
   localDelta: number
 ): number {
   const { curves } = input;
-  const sim = input.props.simulation;
+  const { sim } = input;
   const seedRef: SeedRef = { value: p.seed };
 
   p.time += localDelta;
@@ -532,20 +512,13 @@ function tangentialForce(
   texTangentialAccel: number,
   seedRef: SeedRef
 ): Vector3 {
-  if (sim.disableZ) {
-    // `(yx * Vector2(-1, 1)).normalized()`, with `yx = Vector2(diff.y, diff.x)`.
-    const yx = { x: diff.y, y: diff.x, z: 0 };
-    if (!(length(yx) > 0.0)) return ZERO;
-    const perpendicular = normalized({ x: -yx.x, y: yx.y, z: 0 });
-    return vector3Scaled(
-      perpendicular,
-      f(texTangentialAccel * lerpParam(sim, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef))
-    );
-  }
-  const crossDiff = cross(normalized(diff), normalized(sim.gravity));
-  if (!(length(crossDiff) > 0.0)) return ZERO;
+  // With `disable_z`, `yx * Vector2(-1, 1)` for `yx = Vector2(diff.y, diff.x)`, as long as `yx`.
+  const along = sim.disableZ
+    ? { x: -diff.y, y: diff.x, z: 0 }
+    : cross(normalized(diff), normalized(sim.gravity));
+  if (!(length(along) > 0.0)) return ZERO;
   return vector3Scaled(
-    normalized(crossDiff),
+    normalized(along),
     f(texTangentialAccel * lerpParam(sim, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef))
   );
 }
@@ -577,7 +550,7 @@ function orbit(
 /** Colour, orientation and scale, run for every particle (`cpu_particles_3d.cpp:1094-1212`). */
 function applyAppearance(input: ParticleSim3DInput, p: Particle, tv: number): void {
   const { curves, colorRamp } = input;
-  const sim = input.props.simulation;
+  const { sim } = input;
 
   const hueCurve = curves[CPUParticlesParameter.HUE_VARIATION] ?? null;
   // Unlike every other slot this one defaults to 0, not 1: with no curve there is no hue rotation.
@@ -625,7 +598,7 @@ function orientedBasis(sim: CPUParticles3DSimulation, p: Particle): BasisCompone
 
 /** `tex_scale * lerp(scale range)`, each axis floored at `CMP_EPSILON` (`:1101-1122`, `:1201-1211`). */
 function particleScale(input: ParticleSim3DInput, p: Particle, tv: number): Vector3 {
-  const sim = input.props.simulation;
+  const { sim } = input;
   let texScale: Vector3 = { x: 1, y: 1, z: 1 };
   if (sim.splitScale) {
     const { x, y, z } = input.scaleCurves;
@@ -654,31 +627,44 @@ function flattenZ(p: Particle): void {
 
 /**
  * `_update_particle_data_buffer` (`cpu_particles_3d.cpp:1230-1318`): `PARTICLE_FLOATS` per particle
- * in draw order, relative to the emitter node. An inactive particle writes a zero transform.
- * `viewAxis` is the global Z axis of the camera the viewport renders through, which `VIEW_DEPTH`
- * sorts along. Null for none, where Godot keeps the index order.
+ * in index order, relative to the emitter node. An inactive particle writes a zero transform.
+ * {@link particlesInDrawOrder} sorts them, and no other reader depends on the order.
  */
-export function particleDataBuffer(
-  { input, state }: SettledParticles,
-  viewAxis: Vector3 | null
-): Float32Array {
-  const sim = input.props.simulation;
+export function particleRows({ input, state }: SettledParticles): Float32Array {
+  const { sim } = input;
   // The multimesh keeps the zeroed buffer `multimesh_allocate_data` gave it, every instance drawn.
   if (!state) return new Float32Array(sim.amount * PARTICLE_FLOATS);
   const inverseEmission = inverseEmissionTransform(input.emissionTransform);
-  const order = drawOrder(state, sim, inverseEmission, viewAxis);
-  const buffer = new Float32Array(order.length * PARTICLE_FLOATS);
-  order.forEach((index, slot) => {
-    const p = state.particles[index]!;
-    const at = slot * PARTICLE_FLOATS;
+  const rows = new Float32Array(state.particles.length * PARTICLE_FLOATS);
+  state.particles.forEach((p, index) => {
+    const at = index * PARTICLE_FLOATS;
     if (p.active) {
       const local = particleTransform(p);
-      writeTransformRows(buffer, at, sim.localCoords ? local : multiplyTransform3D(inverseEmission, local));
+      writeTransformRows(rows, at, sim.localCoords ? local : multiplyTransform3D(inverseEmission, local));
     }
-    buffer.set([p.color.r, p.color.g, p.color.b, p.color.a], at + PARTICLE_COLOR_OFFSET);
-    buffer.set(p.custom, at + PARTICLE_CUSTOM_OFFSET);
+    writeColor(rows, at + PARTICLE_COLOR_OFFSET, p.color);
+    rows.set(p.custom, at + PARTICLE_CUSTOM_OFFSET);
   });
-  return buffer;
+  return rows;
+}
+
+/**
+ * `rows` in Godot's draw order (`:1239-1271`), and `rows` itself for the index order. `viewAxis` is
+ * the global Z axis of the camera the viewport renders through, which `VIEW_DEPTH` sorts along.
+ * Null for none, where Godot keeps the index order.
+ */
+export function particlesInDrawOrder(
+  { input, state }: SettledParticles,
+  rows: Float32Array,
+  viewAxis: Vector3 | null
+): Float32Array {
+  const order = state && drawOrder(state, input, viewAxis);
+  if (!order) return rows;
+  const sorted = new Float32Array(rows.length);
+  order.forEach((index, slot) => {
+    sorted.set(rows.subarray(index * PARTICLE_FLOATS, (index + 1) * PARTICLE_FLOATS), slot * PARTICLE_FLOATS);
+  });
+  return sorted;
 }
 
 /**
@@ -692,32 +678,48 @@ function inverseEmissionTransform(global: Transform3D): Transform3D {
   return affineInverseTransform3D(global);
 }
 
-/** The particle indices in draw order (`:1239-1271`). */
-function drawOrder(
-  state: SimState,
-  sim: CPUParticles3DSimulation,
-  inverseEmission: Transform3D,
-  viewAxis: Vector3 | null
-): number[] {
+/** The particle indices in draw order, or null for the index order. */
+function drawOrder(state: SimState, input: ParticleSim3DInput, viewAxis: Vector3 | null): number[] | null {
+  const { sim } = input;
   const { particles } = state;
   const order = particles.map((_, index) => index);
   if (sim.drawOrder === CPUParticles3DDrawOrder.LIFETIME) {
     sortArray(order, (a, b) => particles[a]!.time > particles[b]!.time);
-  } else if (sim.drawOrder === CPUParticles3DDrawOrder.VIEW_DEPTH && viewAxis) {
-    // Far to near. A local-coords emitter takes the axis through its whole inverse, origin and all.
-    const axis = sim.localCoords
-      ? normalized(transformXform(inverseEmission, viewAxis))
-      : normalized(viewAxis);
-    const depth = (index: number) => dot(axis, particles[index]!.origin);
-    sortArray(order, (a, b) => depth(a) < depth(b));
+    return order;
   }
+  if (sim.drawOrder !== CPUParticles3DDrawOrder.VIEW_DEPTH || !viewAxis) return null;
+  // Far to near. A local-coords emitter takes the axis through its whole inverse, origin and all.
+  const axis = sim.localCoords
+    ? normalized(transformXform(inverseEmissionTransform(input.emissionTransform), viewAxis))
+    : normalized(viewAxis);
+  // Each depth once, not twice per comparison.
+  const depths = particles.map((p) => dot(axis, p.origin));
+  sortArray(order, (a, b) => depths[a]! < depths[b]!);
   return order;
 }
 
 /** A transform's three rows and origin as the buffer stores them: each row then its origin component. */
 function writeTransformRows(buffer: Float32Array, at: number, t: Transform3D): void {
   const { basis_x: x, basis_y: y, basis_z: z, origin } = t;
-  buffer.set([x.x, x.y, x.z, origin.x, y.x, y.y, y.z, origin.y, z.x, z.y, z.z, origin.z], at);
+  buffer[at] = x.x;
+  buffer[at + 1] = x.y;
+  buffer[at + 2] = x.z;
+  buffer[at + 3] = origin.x;
+  buffer[at + 4] = y.x;
+  buffer[at + 5] = y.y;
+  buffer[at + 6] = y.z;
+  buffer[at + 7] = origin.y;
+  buffer[at + 8] = z.x;
+  buffer[at + 9] = z.y;
+  buffer[at + 10] = z.z;
+  buffer[at + 11] = origin.z;
+}
+
+function writeColor(buffer: Float32Array, at: number, { r, g, b, a }: Rgba): void {
+  buffer[at] = r;
+  buffer[at + 1] = g;
+  buffer[at + 2] = b;
+  buffer[at + 3] = a;
 }
 
 function sampleParam(

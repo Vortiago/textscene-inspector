@@ -4,7 +4,7 @@ import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } 
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import { withPointDraw } from './materials/godotPoint';
 import { particleDrawOf, withParticleDraw } from './materials/godotParticles';
-import type { ProgramShader } from './materialProgramInputs';
+import { programShader } from './testing/patchedFragment';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { instanceLayers } from './instanceLayers/instanceLayersChunk';
 import { shownProbes } from './reflectionProbe/probeSlots';
@@ -115,7 +115,7 @@ describe('surfaceDrawHooks — shadow pass billboard', () => {
 
 /** The object-space uniform of `material` once it compiles Godot's hash. */
 function hashObjectSpace(material: THREE.Material): THREE.Matrix4 {
-  const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
+  const shader = programShader('standard');
   GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
   return shader.uniforms.godotObjectFromModel!.value as THREE.Matrix4;
 }
@@ -248,7 +248,7 @@ describe('surfaceDrawHooks — point shadow', () => {
   // Godot rasterises a point into its shadow map at the material's point size.
   it("casts a point's shadow with its own depth material, which writes the point size", () => {
     const { cast, castsOwn, threeDraws } = shadowDraw(pointsSurface());
-    const shader = { ...THREE.ShaderLib.depth, uniforms: {} } as unknown as ProgramShader;
+    const shader = programShader('depth');
     cast.onBeforeCompile.call(cast, shader as never, undefined as never);
     expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
       true,
@@ -277,7 +277,7 @@ describe('surfaceDrawHooks — particle instances', () => {
   // Godot's shadow pass runs the billboard of the colour pass on each instance (`material.cpp:1309`).
   it("casts the instances' shadow with its own depth material, which billboards them", () => {
     const { cast, castsOwn, threeDraws } = shadowDraw(particleSurface());
-    const shader = { ...THREE.ShaderLib.depth, uniforms: {} } as unknown as ProgramShader;
+    const shader = programShader('depth');
     cast.onBeforeCompile.call(cast, shader as never, undefined as never);
     expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
       true,
@@ -289,7 +289,7 @@ describe('surfaceDrawHooks — particle instances', () => {
   // `MAIN_CAM_INV_VIEW_MATRIX` is the main camera's on a shadow pass too (`material.cpp:1263-1264`).
   it('aims the billboard at the main camera, not the light', () => {
     const shadow = drawShadowGroup(particleSurface(), camera, shadowCamera, 0, (s) => s.castMaterial!);
-    const shader = { ...THREE.ShaderLib.depth, uniforms: {} } as unknown as ProgramShader;
+    const shader = programShader('depth');
     shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
     const aimed = shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4;
     expect([aimed.equals(camera.matrixWorld), aimed.equals(shadowCamera.matrixWorld)]).toEqual([true, false]);

@@ -23,10 +23,14 @@ export function pointsAtPlaces(
   merged.userData = { ...source.userData };
   const attributes = Object.keys(source.attributes);
   const placed = new Map(attributes.map((name) => [name, repeatedArray(source, name, matrices.length)]));
+  const normalMatrix = new THREE.Matrix3();
   matrices.forEach((matrix, place) => {
-    const placeGeometry = source.clone().applyMatrix4(matrix);
+    normalMatrix.getNormalMatrix(matrix);
     for (const [name, array] of placed) {
-      array.set(placeGeometry.getAttribute(name).array, place * source.getAttribute(name).array.length);
+      const { array: own, itemSize } = source.getAttribute(name);
+      const slice = array.subarray(place * own.length, (place + 1) * own.length);
+      slice.set(own);
+      placeAttribute(name, new THREE.BufferAttribute(slice, itemSize), matrix, normalMatrix);
     }
   });
   for (const name of attributes) {
@@ -36,6 +40,21 @@ export function pointsAtPlaces(
   merged.setIndex(new THREE.BufferAttribute(placesIndex(source, matrices.length), 1));
   addGroupRanges(merged, source, matrices.length);
   return merged;
+}
+
+/**
+ * Moves one place's copy of attribute `name` in place, as `BufferGeometry.applyMatrix4` moves a
+ * geometry's: without a clone of the source for each place.
+ */
+function placeAttribute(
+  name: string,
+  attribute: THREE.BufferAttribute,
+  matrix: THREE.Matrix4,
+  normalMatrix: THREE.Matrix3
+): void {
+  if (name === 'position') attribute.applyMatrix4(matrix);
+  else if (name === 'normal') attribute.applyNormalMatrix(normalMatrix);
+  else if (name === 'tangent') attribute.transformDirection(matrix);
 }
 
 /** An empty array of `source`'s attribute `name`, long enough for `places` copies. */

@@ -17,9 +17,12 @@ import { billboardWorldMatrix } from './surfaceBillboard';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
-import { pointShadowSizeInjection } from './materials/godotPoint';
-import { aimParticleBillboards, particleShadowInjection } from './materials/godotParticles';
-import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
+import { aimParticleBillboards } from './materials/godotParticles';
+import {
+  drawDepthInjections,
+  surfaceDepthMaterial,
+  syncSurfaceDepth,
+} from './materials/surfaceDepthMaterial';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
@@ -120,9 +123,9 @@ function pose(
   passCamera: THREE.Camera
 ): boolean {
   // An InstancedMesh keeps its pose: `drawsAsOneBatch` says why it cannot billboard here. A particle
-  // draw billboards each instance in its program, toward the main camera of this render.
+  // draw billboards each instance in its program instead, toward the main camera of this render.
   if ((object as THREE.InstancedMesh).isInstancedMesh) {
-    aimParticleBillboards(mainCamera);
+    aimParticleBillboards(material, mainCamera);
     return false;
   }
   const billboard = billboardOf(material);
@@ -205,11 +208,8 @@ function cutsShadow(material: THREE.Material): boolean {
  * draws particles.
  */
 function needsOwnDepth(material: THREE.Material): boolean {
-  return (
-    cutsShadow(material) ||
-    pointShadowSizeInjection(material.userData) !== undefined ||
-    particleShadowInjection(material.userData) !== undefined
-  );
+  const { beforeCut, afterCut } = drawDepthInjections(material.userData);
+  return cutsShadow(material) || beforeCut !== undefined || afterCut !== undefined;
 }
 
 function closeDraw(): void {

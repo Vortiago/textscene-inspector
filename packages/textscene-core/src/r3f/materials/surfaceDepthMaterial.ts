@@ -107,8 +107,7 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
     !depth.alphaMap !== !source.alphaMap ||
-    pointShadowSizeInjection(depth.userData) !== pointShadowSizeInjection(surface.userData) ||
-    particleShadowInjection(depth.userData) !== particleShadowInjection(surface.userData);
+    !sameInjections(drawDepthInjections(depth.userData), drawDepthInjections(surface.userData));
   depth.map = source.map ?? null;
   depth.alphaMap = source.alphaMap ?? null;
   depth.opacity = surface.opacity;
@@ -124,15 +123,25 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
   depth.needsUpdate = true;
 }
 
-/**
- * The depth program's own injection, the size of a points surface, the surface's alpha cut and a
- * particle emitter's instances. The instances come after the cut, whose vertex colour they multiply.
- */
+/** The depth program's own injection and the surface's alpha cut, among the draw's own injections. */
 function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
-  return composeInjections([
-    depth.depthInjection,
-    pointShadowSizeInjection(depth.userData),
-    SURFACE_ALPHA,
-    particleShadowInjection(depth.userData),
-  ]);
+  const { beforeCut, afterCut } = drawDepthInjections(depth.userData);
+  return composeInjections([depth.depthInjection, beforeCut, SURFACE_ALPHA, afterCut]);
+}
+
+/** The depth injections a surface's draw adds, which three's own depth material lacks. */
+interface DrawDepthInjections {
+  /** A points surface's size, which the alpha cut does not read. */
+  beforeCut: ProgramInjection | undefined;
+  /** A particle emitter's instances, whose colour multiplies the vertex colour the cut reads. */
+  afterCut: ProgramInjection | undefined;
+}
+
+/** What `userData`'s draw adds to its depth program. Every reader of a draw's depth asks here. */
+export function drawDepthInjections(userData: Record<string, unknown>): DrawDepthInjections {
+  return { beforeCut: pointShadowSizeInjection(userData), afterCut: particleShadowInjection(userData) };
+}
+
+function sameInjections(a: DrawDepthInjections, b: DrawDepthInjections): boolean {
+  return a.beforeCut === b.beforeCut && a.afterCut === b.afterCut;
 }

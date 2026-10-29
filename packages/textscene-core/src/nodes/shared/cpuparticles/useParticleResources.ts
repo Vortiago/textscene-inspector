@@ -36,33 +36,30 @@ export interface ParticleResources {
 export function useParticleResources(references: ParticleResourceReferences): ParticleResources {
   const pools = useSceneResources();
   const { params, colorRamp, colorInitialRamp, scaleCurves } = references;
+  // Every named reference once, so the files to load and the resolve read one list.
+  const named = useMemo(
+    () => ({
+      scaleX: scaleCurves?.x,
+      scaleY: scaleCurves?.y,
+      scaleZ: scaleCurves?.z,
+      colorRamp,
+      colorInitialRamp,
+    }),
+    [scaleCurves, colorRamp, colorInitialRamp]
+  );
   const planFiles = useCallback(
-    () =>
-      particleFiles(
-        [
-          ...paramCurveReferences(params),
-          colorRamp,
-          colorInitialRamp,
-          scaleCurves?.x,
-          scaleCurves?.y,
-          scaleCurves?.z,
-        ],
-        pools
-      ),
-    [params, colorRamp, colorInitialRamp, scaleCurves, pools]
+    () => particleFiles([...paramCurveReferences(params), ...Object.values(named)], pools),
+    [params, named, pools]
   );
   const { loadedFile } = useLoadedFiles(planFiles);
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const curve = (reference: string | undefined) => resolveParticleCurve(reference, pools, loadedFile);
+    const gradient = (reference: string | undefined) => resolveParticleGradient(reference, pools, loadedFile);
+    return {
       curves: resolveParticleCurves(params, pools, loadedFile),
-      scaleCurves: {
-        x: resolveParticleCurve(scaleCurves?.x, pools, loadedFile),
-        y: resolveParticleCurve(scaleCurves?.y, pools, loadedFile),
-        z: resolveParticleCurve(scaleCurves?.z, pools, loadedFile),
-      },
-      colorRamp: resolveParticleGradient(colorRamp, pools, loadedFile),
-      colorInitialRamp: resolveParticleGradient(colorInitialRamp, pools, loadedFile),
-    }),
-    [params, colorRamp, colorInitialRamp, scaleCurves, pools, loadedFile]
-  );
+      scaleCurves: { x: curve(named.scaleX), y: curve(named.scaleY), z: curve(named.scaleZ) },
+      colorRamp: gradient(named.colorRamp),
+      colorInitialRamp: gradient(named.colorInitialRamp),
+    };
+  }, [params, named, pools, loadedFile]);
 }

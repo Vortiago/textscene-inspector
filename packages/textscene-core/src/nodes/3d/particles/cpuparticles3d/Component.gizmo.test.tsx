@@ -8,7 +8,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
-import { heading } from '../../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import {
@@ -18,7 +17,7 @@ import {
 } from '../../../../r3f/testing/gizmoContract';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import './index.r3f';
-import { parseCPUParticles3D } from './parser';
+import { emitterNode } from './cpuparticles3d.testkit';
 
 /** The registered component, which the registry mounts inside the node's place in the scene cull. */
 const CPUParticles3D = nodeComponentRegistry.get('CPUParticles3D')!;
@@ -27,13 +26,7 @@ const BOX_COLOR = godotColorToLinear({ r: 0.8, g: 0.7, b: 0.4 });
 const EMISSION_COLOR = godotColorToLinear({ r: 0.5, g: 0.7, b: 1 });
 
 function emitter(props: Record<string, string>): TscnNode {
-  return {
-    rawProperties: {},
-    name: 'Sparks',
-    type: 'CPUParticles3D',
-    children: [],
-    properties: parseCPUParticles3D(heading('CPUParticles3D', { name: 'Sparks' }), props),
-  } as TscnNode;
+  return emitterNode(props, 'Sparks');
 }
 
 async function render(

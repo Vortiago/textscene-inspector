@@ -45,6 +45,7 @@ function unionSubtree(
   target: THREE.Box3,
   skipsSubtree: ((descendant: THREE.Object3D) => boolean) | undefined
 ): void {
+  if (object.userData[BOXLESS_KEY] === true) return;
   unionOwnBox(object, target);
   for (const child of object.children) {
     if (!skipsSubtree?.(child)) unionSubtree(child, target, skipsSubtree);
@@ -55,8 +56,8 @@ function unionSubtree(
 const BOXLESS_KEY = 'godotBoxless';
 
 /**
- * The userData of a draw whose node's `get_aabb` is `AABB()`, as a CPUParticles3D's is
- * (`cpu_particles_3d.cpp:43-45`): the selection box and the framing leave it out.
+ * The userData of a group of draws whose node's `get_aabb` is `AABB()`, as a CPUParticles3D's is
+ * (`cpu_particles_3d.cpp:43-45`): the selection box and the framing leave the whole group out.
  */
 export function boxlessUserData(): { godotBoxless: true } {
   return { [BOXLESS_KEY]: true };
@@ -65,7 +66,7 @@ export function boxlessUserData(): { godotBoxless: true } {
 function unionOwnBox(object: THREE.Object3D, target: THREE.Box3): void {
   const bearing = object as BoundsBearing;
   const geometry = bearing.geometry;
-  if (!geometry || isNodeIcon(object) || object.userData[BOXLESS_KEY] === true) return;
+  if (!geometry || isNodeIcon(object)) return;
 
   // An InstancedMesh or BatchedMesh box unions every instance matrix and is not
   // posed. Without it a GridMap frames one tile. Any other mesh uses the

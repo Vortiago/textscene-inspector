@@ -7,16 +7,23 @@
 
 import { EMPTY_AABB, type Aabb } from '../../../../godot/math/aabb';
 import { multiMeshAabb } from '../../../../resources/meshes/multimesh/aabb';
-import { particleTransforms } from './simulate';
+import { TRANSFORM_FLOATS } from '../../../../resources/meshes/multimesh/types';
+import { particleSlices } from './particleInstances';
 import type { CPUParticles3DProperties } from './types';
 
-/** The box in node space for the particle `buffer`, or null while the mesh's box is unknown. */
+/**
+ * The box in node space for the particle `rows`, in any order, or null while the mesh's box is
+ * unknown.
+ */
 export function particlesAabb(
-  { visibilityAabb, mesh, hasMesh }: CPUParticles3DProperties,
-  buffer: Float32Array,
+  { visibilityAabb, mesh }: CPUParticles3DProperties,
+  rows: Float32Array,
   meshAabb: Aabb | null
 ): Aabb | null {
   if (visibilityAabb) return visibilityAabb;
-  if (!hasMesh) return EMPTY_AABB;
-  return multiMeshAabb({ customAabb: null, mesh, boundedTransforms: particleTransforms(buffer) }, meshAabb);
+  if (mesh === undefined) return EMPTY_AABB;
+  return multiMeshAabb(
+    { customAabb: null, mesh, boundedTransforms: particleSlices(rows, 0, TRANSFORM_FLOATS) },
+    meshAabb
+  );
 }

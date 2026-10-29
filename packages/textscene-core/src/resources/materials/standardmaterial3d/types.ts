@@ -316,3 +316,6 @@ export interface ParticlesAnim {
   vFrames: number;
   loop: boolean;
 }
+
+/** The constructor's one-cell flipbook (`material.cpp:3967-3969`). */
+export const PARTICLES_ANIM_DEFAULTS: ParticlesAnim = Object.freeze({ hFrames: 1, vFrames: 1, loop: false });

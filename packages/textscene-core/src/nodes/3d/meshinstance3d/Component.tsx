@@ -24,7 +24,7 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { MATERIAL_OVERLAY_RENDER_ORDER } from '../../../r3f/materials/materialOverlay';
+import { MATERIAL_OVERLAY_RENDER_ORDER, NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
 import { useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
@@ -178,9 +178,6 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 }
 
 const NO_PARTS: readonly SurfacedPart[] = [];
-
-/** Opts a mesh out of picking: three calls `raycast` and collects nothing. */
-const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 
 /**
  * `material_overlay`'s draw: the base mesh's geometry a second time, with the

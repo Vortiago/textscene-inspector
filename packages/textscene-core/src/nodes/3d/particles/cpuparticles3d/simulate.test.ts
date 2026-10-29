@@ -5,9 +5,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { heading } from '../../../../parser/testing/parserKit';
-import { parseCPUParticles3D } from './parser';
-import { particleDataBuffer, PARTICLE_FLOATS, settleParticles, type ParticleSim3DInput } from './simulate';
+import { PARTICLE_FLOATS, settleParticles } from './simulate';
+import { drawnBuffer, ROW_OF_FOUR, simInput as input } from './cpuparticles3d.testkit';
 import {
   identityTransform3D,
   multiplyTransform3D,
@@ -15,34 +14,20 @@ import {
 } from '../../../../godot/math/transform3d';
 import { parseTransform3D } from '../../../../utils/transform';
 import { ORACLE_CASES, type OracleCase } from './simulateOracle.testkit';
-import { DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../../resources/curves/curve/types';
+import type { Curve } from '../../../../resources/curves/curve/types';
+import { curveOf, point } from '../../../../resources/curves/curve/curve.testkit';
 import type { Gradient } from '../../../../resources/textures/gradienttexture2d/types';
-import { CurveTangentMode } from '../../../../godot/scene/curve';
 import { GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
 import { PARAM_SLOTS } from '../../../shared/cpuparticles/params';
 import { storedColor, storedReal } from '../../../../godot/math/real';
 
-const NO_CURVES = Array.from({ length: 12 }, () => null);
-
-/**
- * A `Curve` as `Curve.add_point(position, left, right)` builds it: free tangents, the 0..1 box, and
- * every number the `real_t` the decoder stores.
- */
-function curveOf(points: number[][]): Curve {
-  return {
-    points: points.map(([x, y, leftTangent, rightTangent]) => ({
-      position: { x: storedReal(x!), y: storedReal(y!) },
-      leftTangent: storedReal(leftTangent!),
-      rightTangent: storedReal(rightTangent!),
-      leftMode: CurveTangentMode.FREE,
-      rightMode: CurveTangentMode.FREE,
-    })),
-    minValue: 0,
-    maxValue: 1,
-    minDomain: 0,
-    maxDomain: 1,
-    bakeResolution: DEFAULT_BAKE_RESOLUTION,
-  };
+/** A `Curve` as `Curve.add_point(position, left, right)` builds it, in the `real_t` the decoder stores. */
+function curveFrom(points: number[][]): Curve {
+  return curveOf(
+    ...points.map(([x, y, left, right]) =>
+      point(storedReal(x!), storedReal(y!), storedReal(left!), storedReal(right!))
+    )
+  );
 }
 
 /** A linear `Gradient` with the oracle's stops, in the floats the decoder stores. */
@@ -59,19 +44,7 @@ function gradientOf(stops: number[][] | undefined): Gradient | null {
 
 function curveNamed(curves: OracleCase['curves'], name: string): Curve | null {
   const points = curves?.[name];
-  return points ? curveOf(points) : null;
-}
-
-function input(properties: Record<string, string>, overrides: Partial<ParticleSim3DInput> = {}) {
-  return {
-    props: parseCPUParticles3D(heading('CPUParticles3D', { name: 'P' }), properties),
-    curves: NO_CURVES,
-    scaleCurves: { x: null, y: null, z: null },
-    colorRamp: null,
-    colorInitialRamp: null,
-    emissionTransform: identityTransform3D(),
-    ...overrides,
-  } satisfies ParticleSim3DInput;
+  return points ? curveFrom(points) : null;
 }
 
 /** The global `basis.get_column(2)` of a camera beside the emitter, the axis VIEW_DEPTH sorts along. */
@@ -96,7 +69,7 @@ function oracleBuffer({ properties, parent, camera, curves, ramps }: OracleCase)
       emissionTransform,
     })
   );
-  return particleDataBuffer(settled, camera ? cameraAxis(emissionTransform, camera) : null);
+  return drawnBuffer(settled, camera ? cameraAxis(emissionTransform, camera) : null);
 }
 
 /**
@@ -117,25 +90,9 @@ function rows(buffer: Float32Array): number[][] {
   return out;
 }
 
-/** The issue's measured emitter: four particles in a row along +x. */
-const ROW_OF_FOUR = {
-  amount: '4',
-  lifetime: '2.0',
-  preprocess: '1.5',
-  use_fixed_seed: 'true',
-  seed: '7',
-  direction: 'Vector3(1, 0, 0)',
-  spread: '0.0',
-  gravity: 'Vector3(0, 0, 0)',
-  initial_velocity_min: '1.0',
-  initial_velocity_max: '1.0',
-  color: 'Color(1, 0.5, 0, 1)',
-  mesh: 'SubResource("Box")',
-};
-
-describe('particleDataBuffer after settleParticles', () => {
+describe('the drawn buffer after settleParticles', () => {
   it('writes the buffer Godot writes for a point emitter (happy path)', () => {
-    expect(rows(particleDataBuffer(settleParticles(input(ROW_OF_FOUR)), null))).toEqual([
+    expect(rows(drawnBuffer(settleParticles(input(ROW_OF_FOUR)), null))).toEqual([
       [1, 0, 0, 1.4999998807907104, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, 0, 1, 0, 0.7333333492279053, 0, 1],
       [1, 0, 0, 1.0000003576278687, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, 0, 1, 0, 0.4833333194255829, 0, 1],
       [1, 0, 0, 0.5, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.5, 0, 1, 0, 0.23333333432674408, 0, 1],

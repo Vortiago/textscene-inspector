@@ -11,7 +11,7 @@ import { recordedUniform } from './recordedOnMaterial';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
-import { perObject } from '../../utils/perObject';
+import { bagForms } from './bagForms';
 
 const POINT_SIZE_KEY = 'godotPointSize';
 const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
@@ -94,8 +94,8 @@ const GODOT_POINT_COORD_ALBEDO: ProgramInjection = {
   },
 };
 
-/** Each bag's point forms by draw key, filled only by `withPointDraw`, so a render that changes nothing hands R3F the same props. */
-const pointBagsOf = perObject<StandardMaterialBag, Map<string, StandardMaterialBag>>(() => new Map());
+/** Each bag's point forms, filled only by `withPointDraw`. */
+const pointForms = bagForms();
 
 /**
  * `bag` as a material for a points surface, or `bag` itself for no draw. The cull mode does not
@@ -104,12 +104,7 @@ const pointBagsOf = perObject<StandardMaterialBag, Map<string, StandardMaterialB
 export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefined): StandardMaterialBag {
   if (!draw) return bag;
   const drawKey = `${draw.pixels}:${draw.pixelRatio}:${draw.samplesAlbedoAtPointCoord}`;
-  const forms = pointBagsOf(bag);
-  const known = forms.get(drawKey);
-  if (known) return known;
-  const form = pointBag(bag, draw);
-  forms.set(drawKey, form);
-  return form;
+  return pointForms(bag, drawKey, () => pointBag(bag, draw));
 }
 
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {

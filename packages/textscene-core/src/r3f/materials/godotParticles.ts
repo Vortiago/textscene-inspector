@@ -9,17 +9,19 @@ import * as THREE from 'three';
 import { composeInjections, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram, rewrittenShader, type TextEdit } from '../shaderPatch/chunkPatch';
 import { readsUv1 } from './mapUvChannel';
+import { afterVertexColor, VERTEX_COLOR_CHUNK } from './godotVertexColor';
 import {
   surfaceBillboard,
   type StandardMaterialBag,
   type SurfaceBillboard,
 } from '../../resources/materials/standardmaterial3d/materialBag';
-import type {
-  ParticlesAnim,
-  StandardMaterial3DScalars,
+import {
+  PARTICLES_ANIM_DEFAULTS,
+  type ParticlesAnim,
+  type StandardMaterial3DScalars,
 } from '../../resources/materials/standardmaterial3d/types';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
-import { perObject } from '../../utils/perObject';
+import { bagForms } from './bagForms';
 
 /** The instanced attribute that holds each particle's colour, the buffer's floats 12 to 15. */
 export const PARTICLE_COLOR_ATTRIBUTE = 'particleColor';
@@ -36,12 +38,9 @@ export interface ParticleDraw {
   anim: ParticlesAnim;
 }
 
-/** Godot's default flipbook, one cell (`material.cpp:3967-3969`). */
-const ONE_CELL: ParticlesAnim = Object.freeze({ hFrames: 1, vFrames: 1, loop: false });
-
 /** The particle draw of `scalars`, or Godot's default surface for none. */
 export function particleDrawOf(scalars: StandardMaterial3DScalars | null): ParticleDraw {
-  return { billboard: surfaceBillboard(scalars), anim: scalars?.particlesAnim ?? ONE_CELL };
+  return { billboard: surfaceBillboard(scalars), anim: scalars?.particlesAnim ?? PARTICLES_ANIM_DEFAULTS };
 }
 
 /**
@@ -51,12 +50,15 @@ export function particleDrawOf(scalars: StandardMaterial3DScalars | null): Parti
  */
 const MAIN_CAMERA_WORLD: THREE.IUniform<THREE.Matrix4> = { value: new THREE.Matrix4() };
 
-/** Aims every ENABLED and FIXED_Y particle billboard at `mainCamera`, before a draw of its instances. */
-export function aimParticleBillboards(mainCamera: THREE.Camera): void {
+/**
+ * Aims every ENABLED and FIXED_Y particle billboard at `mainCamera`, before a draw of `material`.
+ * Each render writes its own camera, so a SubViewport's draws aim at the SubViewport's.
+ */
+export function aimParticleBillboards(material: THREE.Material, mainCamera: THREE.Camera): void {
+  if (material.userData[PARTICLE_DRAW_KEY] === undefined) return;
   MAIN_CAMERA_WORLD.value.copy(mainCamera.matrixWorld);
 }
 
-const COLOR_CHUNK = '#include <color_vertex>';
 const UV_CHUNK = '#include <uv_vertex>';
 const NORMAL_CHUNK = '#include <defaultnormal_vertex>';
 /** Every run of the normal chunk: a patch may run it again, and each run needs the billboard. */
@@ -170,10 +172,7 @@ function frameCuts(material: THREE.Material): string {
   return `${UV_CHUNK}\n${cuts.join('\n')}`;
 }
 
-const PARTICLE_COLOR = /* glsl */ `${COLOR_CHUNK}
-#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
-	vColor *= ${PARTICLE_COLOR_ATTRIBUTE};
-#endif`;
+const PARTICLE_COLOR = afterVertexColor(`	vColor *= ${PARTICLE_COLOR_ATTRIBUTE};`);
 
 function particleDefines({ billboard, anim }: ParticleDraw): string {
   const defines = [
@@ -196,6 +195,7 @@ function billboards(mode: number): mode is keyof typeof BILLBOARD_BASES {
  */
 function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjection {
   const { mode } = draw.billboard;
+  const billboarded = billboards(mode);
   const cutsFrames = mode === BillboardMode.BILLBOARD_PARTICLES;
   return {
     cacheKey,
@@ -206,9 +206,8 @@ function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjecti
         `attribute vec4 ${PARTICLE_CUSTOM_ATTRIBUTE};`,
       ];
       const vertex: TextEdit[] = [];
-      if (shader.vertexShader.includes(COLOR_CHUNK))
-        vertex.push({ three: COLOR_CHUNK, godot: PARTICLE_COLOR });
-      if (billboards(mode)) {
+      if (shader.vertexShader.includes(VERTEX_COLOR_CHUNK)) vertex.push(PARTICLE_COLOR);
+      if (billboarded) {
         shader.uniforms.godotMainCameraWorld = MAIN_CAMERA_WORLD;
         declarations.push(billboardWorld(mode));
         vertex.push({ three: UV_CHUNK, godot: BILLBOARD_POSE });
@@ -218,7 +217,7 @@ function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjecti
         vertex.push({ three: UV_CHUNK, godot: frameCuts(this) });
       }
       editedProgram(shader, { vertex }, 'particle draw');
-      if (billboards(mode))
+      if (billboarded)
         shader.vertexShader = rewrittenShader(shader.vertexShader, NORMAL_CHUNKS, () => BILLBOARD_NORMAL);
       shader.vertexShader = `${declarations.join('\n')}\n${shader.vertexShader}`;
     },
@@ -239,22 +238,17 @@ function injectionOf(draw: ParticleDraw): ProgramInjection {
   return injection;
 }
 
-/** Each bag's particle forms by draw key, filled only by `withParticleDraw`, so a render that changes nothing hands R3F the same props. */
-const particleBagsOf = perObject<StandardMaterialBag, Map<string, StandardMaterialBag>>(() => new Map());
+/** Each bag's particle forms, filled only by `withParticleDraw`. */
+const particleForms = bagForms();
 
 /** `bag` as a material for the instances of a particle emitter that draws `draw`. */
 export function withParticleDraw(bag: StandardMaterialBag, draw: ParticleDraw): StandardMaterialBag {
   const injection = injectionOf(draw);
-  const forms = particleBagsOf(bag);
-  const known = forms.get(injection.cacheKey);
-  if (known) return known;
-  const form: StandardMaterialBag = {
+  return particleForms(bag, injection.cacheKey, () => ({
     ...bag,
     props: { ...bag.props, userData: { ...bag.props.userData, [PARTICLE_DRAW_KEY]: injection } },
     injection: composeInjections([bag.injection, injection]),
-  };
-  forms.set(injection.cacheKey, form);
-  return form;
+  }));
 }
 
 /**

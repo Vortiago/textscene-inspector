@@ -6,47 +6,18 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
-import { heading } from '../../../../parser/testing/parserKit';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
 import { PARTICLE_COLOR_ATTRIBUTE } from '../../../../r3f/materials/godotParticles';
-import { parseCPUParticles3D } from './parser';
+import { BOX, emitterNode, ROW_OF_FOUR } from './cpuparticles3d.testkit';
 import './index.r3f';
 
 const CPUParticles3D = registeredComponent('CPUParticles3D');
 
-const BOX: TscnInternalResource = { id: 'Box', type: 'BoxMesh', data: { size: 'Vector3(0.2, 0.2, 0.2)' } };
-
-const ROW_OF_FOUR = {
-  amount: '4',
-  lifetime: '2.0',
-  preprocess: '1.5',
-  use_fixed_seed: 'true',
-  seed: '7',
-  direction: 'Vector3(1, 0, 0)',
-  spread: '0.0',
-  gravity: 'Vector3(0, 0, 0)',
-  initial_velocity_min: '1.0',
-  initial_velocity_max: '1.0',
-  color: 'Color(1, 0.5, 0, 1)',
-  mesh: 'SubResource("Box")',
-};
-
-function emitter(properties: Record<string, string>): TscnNode {
-  return {
-    rawProperties: {},
-    name: 'Row',
-    type: 'CPUParticles3D',
-    children: [],
-    properties: parseCPUParticles3D(heading('CPUParticles3D', { name: 'Row' }), properties),
-  } as TscnNode;
-}
-
 async function render(properties: Record<string, string>) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[BOX]} externalResources={[]}>
-      <CPUParticles3D node={emitter(properties)} />
+      <CPUParticles3D node={emitterNode(properties)} />
     </SceneResourcesProvider>
   );
 }
