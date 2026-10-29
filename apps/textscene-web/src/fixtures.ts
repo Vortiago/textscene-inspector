@@ -4216,6 +4216,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Camera Exposure",
+    "file": "unit-sub-viewport-camera-exposure.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container 2d Content",
     "file": "unit-sub-viewport-container-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -4323,6 +4328,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Camera Exposure",
+    "file": "unit-sub-viewport-shared-world-camera-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {
