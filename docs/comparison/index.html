@@ -7043,7 +7043,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-limitation">Limitation</span>
       </header>
       
-      <div class="prose intro"><p>A material's texture slot can point at a Texture2D that the scene or a <code>.tres</code> describes. The previewer rasterises or windows a GradientTexture2D, CanvasTexture, AtlasTexture, NoiseTexture2D or saved ImageTexture on the client. Each reaches every consumer as a <code>THREE.Texture</code>.</p></div>
+      <div class="prose intro"><p>A material's texture slot can point at a Texture2D that the scene or a <code>.tres</code> describes. The previewer rasterises or windows a GradientTexture2D, CanvasTexture, AtlasTexture, NoiseTexture2D or saved ImageTexture on the client. Each reaches every consumer as a <code>THREE.Texture</code>. A GradientTexture2D <code>gradient</code> can name a Gradient saved as a <code>.tres</code>. A NoiseTexture <code>noise</code> and <code>color_ramp</code> can name a FastNoiseLite and a Gradient saved the same way.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>GradientTexture2D</h3><span class="status st-limitation">Limitation</span></div>

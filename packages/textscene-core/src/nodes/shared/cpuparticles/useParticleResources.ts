@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import type { Curve } from '../../../resources/curves/curve/types';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
+import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
 import { useLoadedFiles } from '../../../resources/useLoadedFiles';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { ParticleParam } from './params';
@@ -11,7 +12,6 @@ import {
   particleFiles,
   resolveParticleCurve,
   resolveParticleCurves,
-  resolveParticleGradient,
 } from './sceneResources';
 
 /** The raw references an emitter names for its curves and ramps. */
@@ -54,7 +54,7 @@ export function useParticleResources(references: ParticleResourceReferences): Pa
   const { loadedFile } = useLoadedFiles(planFiles);
   return useMemo(() => {
     const curve = (reference: string | undefined) => resolveParticleCurve(reference, pools, loadedFile);
-    const gradient = (reference: string | undefined) => resolveParticleGradient(reference, pools, loadedFile);
+    const gradient = (reference: string | undefined) => resolveGradient(reference, pools, loadedFile);
     return {
       curves: resolveParticleCurves(params, pools, loadedFile),
       scaleCurves: { x: curve(named.scaleX), y: curve(named.scaleY), z: curve(named.scaleZ) },

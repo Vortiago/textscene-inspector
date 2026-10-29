@@ -40,11 +40,14 @@ const plan = (properties: Record<string, string>): ProceduralBuildPlan<'noise-te
         wrap: ({ levels }) => new THREE.DataTexture(levels[0]!.data, 1, 1),
       };
 
+/** A plan that reads nothing from outside its resource. */
+const NO_SOURCES = () => [];
+
 function lookup(
   resources: TscnInternalResource[],
   ref = 'SubResource("tex")'
 ): ProceduralTextureLookup | null {
-  return resolveProceduralSubResourceAsync(ref, resources, 'FakeTexture', plan);
+  return resolveProceduralSubResourceAsync(ref, resources, 'FakeTexture', plan, NO_SOURCES);
 }
 
 function pendingLookup(resources: TscnInternalResource[]) {
@@ -72,14 +75,30 @@ afterEach(async () => {
 });
 
 describe('resolveProceduralSubResourceAsync', () => {
+  it('plans again when a source the plan reads is another object', () => {
+    const counted = vi.fn(plan);
+    const resources = scene('1');
+    const lookupWith = (source: object) =>
+      resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted, () => [
+        source,
+      ]);
+    const first = {};
+    lookupWith(first);
+    lookupWith(first);
+    expect(counted).toHaveBeenCalledTimes(1);
+
+    lookupWith({});
+    expect(counted).toHaveBeenCalledTimes(2);
+  });
+
   it('plans each sub-resource once per parse, however many consumers look it up', () => {
     const counted = vi.fn(plan);
     const resources = scene('1');
-    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted);
-    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted);
+    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted, NO_SOURCES);
+    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted, NO_SOURCES);
     expect(counted).toHaveBeenCalledTimes(1);
 
-    resolveProceduralSubResourceAsync('SubResource("tex")', scene('1'), 'FakeTexture', counted);
+    resolveProceduralSubResourceAsync('SubResource("tex")', scene('1'), 'FakeTexture', counted, NO_SOURCES);
     expect(counted).toHaveBeenCalledTimes(2);
   });
 
@@ -225,7 +244,7 @@ describe('resolveProceduralSubResourceAsync', () => {
     ['another type', 'SubResource("other")'],
     ['no ref', undefined],
   ])('declines %s', (_label, ref) => {
-    expect(resolveProceduralSubResourceAsync(ref, scene('1'), 'FakeTexture', plan)).toBeNull();
+    expect(resolveProceduralSubResourceAsync(ref, scene('1'), 'FakeTexture', plan, NO_SOURCES)).toBeNull();
   });
 
   it('declines what the plan declines', () => {
@@ -249,7 +268,8 @@ describe('a plan with a derived texture', () => {
       'SubResource("tex")',
       resources,
       'FakeTexture',
-      derivedPlan(derive)
+      derivedPlan(derive),
+      NO_SOURCES
     );
   }
 

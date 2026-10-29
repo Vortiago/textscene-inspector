@@ -673,6 +673,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Ramp Tres",
+    "file": "unit-fog-volume-density-ramp-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume Density Volume Tres",
     "file": "unit-fog-volume-density-volume-tres.tscn",
     "category": "Other"
@@ -1440,6 +1445,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Noisetexture2d Tiled",
     "file": "unit-noisetexture2d-tiled.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d Tres",
+    "file": "unit-noisetexture2d-tres.tscn",
     "category": "Other"
   },
   {
@@ -2912,6 +2922,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Canvastexture",
     "file": "unit-sprite2d-canvastexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Gradienttexture Tres",
+    "file": "unit-sprite2d-gradienttexture-tres.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

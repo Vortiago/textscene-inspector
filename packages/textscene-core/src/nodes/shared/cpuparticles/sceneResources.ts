@@ -9,8 +9,6 @@ import { decodeCurveResource } from '../../../resources/curves/curve/decode';
 import type { Curve } from '../../../resources/curves/curve/types';
 import { referencedFilePath, resolveReferencedResource } from '../../../resources/resolveReference';
 import type { LoadedFile } from '../../../resources/scopedResource';
-import { decodeGradientResource } from '../../../resources/textures/gradienttexture2d/decode';
-import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 
@@ -44,16 +42,4 @@ export function resolveParticleCurves(
   loadedFile: LoadedFile
 ): Array<Curve | null> {
   return paramCurveReferences(params).map((ref) => resolveParticleCurve(ref, pools, loadedFile));
-}
-
-/**
- * The `Gradient` a `color_ramp` / `color_initial_ramp` names, or null. The
- * gradient slice owns the type check.
- */
-export function resolveParticleGradient(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): Gradient | null {
-  return decodeGradientResource(resolveReferencedResource(ref, pools, loadedFile));
 }

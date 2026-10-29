@@ -40,7 +40,7 @@ export interface FileKind<T extends object> {
 }
 
 /** A mesh `.tres` loads on the generic resource bus. */
-const PARSED_RESOURCES: FileKind<ParsedResource> = {
+export const PARSED_RESOURCES: FileKind<ParsedResource> = {
   busTypes: ['resource'],
   cacheOf: (loader) => loader.resources,
 };

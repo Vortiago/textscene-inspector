@@ -5,14 +5,13 @@
  * Godot's `_update_internal` returns early, but the node still positions children.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useLoadedFiles } from '../../../resources/useLoadedFiles';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
@@ -22,12 +21,7 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
 import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
-import {
-  paramCurveReferences,
-  particleFiles,
-  resolveParticleCurves,
-  resolveParticleGradient,
-} from '../../shared/cpuparticles/sceneResources';
+import { useParticleResources } from '../../shared/cpuparticles/useParticleResources';
 import { loadSimulate } from './simulateModule';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -90,8 +84,7 @@ function ParticleField({
   material: CanvasItemMaterialProperties | null;
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
-  const pools = useSceneResources();
-  const { externalResources, internalResources } = pools;
+  const { externalResources, internalResources } = useSceneResources();
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
   const {
     texture: resolvedTexture,
@@ -106,27 +99,11 @@ function ParticleField({
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
 
-  const planFiles = useCallback(
-    () =>
-      particleFiles(
-        [...paramCurveReferences(props.params), props.color_ramp, props.color_initial_ramp],
-        pools
-      ),
-    [props, pools]
-  );
-  const { loadedFile } = useLoadedFiles(planFiles);
-  const curves = useMemo(
-    () => resolveParticleCurves(props.params, pools, loadedFile),
-    [props.params, pools, loadedFile]
-  );
-  const colorRamp = useMemo(
-    () => resolveParticleGradient(props.color_ramp, pools, loadedFile),
-    [props.color_ramp, pools, loadedFile]
-  );
-  const colorInitialRamp = useMemo(
-    () => resolveParticleGradient(props.color_initial_ramp, pools, loadedFile),
-    [props.color_initial_ramp, pools, loadedFile]
-  );
+  const { curves, colorRamp, colorInitialRamp } = useParticleResources({
+    params: props.params,
+    colorRamp: props.color_ramp,
+    colorInitialRamp: props.color_initial_ramp,
+  });
 
   const simulate = useLazyModule(loadSimulate);
   const pose = useMemo(

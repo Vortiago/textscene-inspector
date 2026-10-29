@@ -3,12 +3,7 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { NO_RESOURCES, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { loadedFilesOf, NO_FILES } from '../../../resources/testing/loadedFiles';
-import {
-  paramCurveReferences,
-  particleFiles,
-  resolveParticleCurves,
-  resolveParticleGradient,
-} from './sceneResources';
+import { paramCurveReferences, particleFiles, resolveParticleCurves } from './sceneResources';
 import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
@@ -101,31 +96,6 @@ describe('resolveParticleCurves', () => {
   it('yields an all-null array for an empty resource table (edge case)', () => {
     const curves = resolveParticleCurves(params(), NO_RESOURCES, NO_FILES);
     expect(curves.every((c) => c === null)).toBe(true);
-  });
-});
-
-describe('resolveParticleGradient', () => {
-  it('decodes a Gradient sub-resource (happy path)', () => {
-    const gradient = resolveParticleGradient('SubResource("2")', sceneOf([GRADIENT]), NO_FILES);
-    expect(gradient?.stops).toHaveLength(2);
-    expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
-  });
-
-  it('decodes a Gradient the scene loads from a .tres', () => {
-    const gradient = resolveParticleGradient('ExtResource("8_ramp")', sceneOf([]), loadedFile);
-    expect(gradient?.stops[1]!.color).toEqual({ r: 0, g: 0, b: 1, a: 1 });
-  });
-
-  it('returns null while the .tres has not loaded', () => {
-    expect(resolveParticleGradient('ExtResource("8_ramp")', sceneOf([]), NO_FILES)).toBeNull();
-  });
-
-  it('returns null when the reference names a non-Gradient resource (error path)', () => {
-    expect(resolveParticleGradient('SubResource("4")', sceneOf([CURVE]), NO_FILES)).toBeNull();
-  });
-
-  it('returns null for an absent reference (edge case)', () => {
-    expect(resolveParticleGradient(undefined, sceneOf([GRADIENT]), NO_FILES)).toBeNull();
   });
 });
 
