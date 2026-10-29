@@ -300,30 +300,26 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     expect(onOpenSubScene).toHaveBeenCalledWith('res://coin/coin.tscn');
   });
 
-  it('does NOT collapse a multi-root sub-scene: it keeps the nested form', () => {
+  it('does NOT collapse an instance of a scene Godot refuses: it lists no row of that scene', () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed('res://multi.tscn', {
-      nodes: [makeNode('RootA', 'Node3D'), makeNode('RootB', 'Node3D')],
+    fake.scenes.seed('res://refused.tscn', {
+      nodes: [makeNode('RootA', 'Node3D')],
       externalResources: [],
       internalResources: [],
+      refusesToInstantiate: true,
     });
     const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('MultiHost', 'Node3D', { instance: 'ExtResource("multi")' })],
-      externalResources: [makeExtResource('multi', 'res://multi.tscn')],
+      nodes: [makeNode('Refusing', 'Node3D', { instance: 'ExtResource("refused")' })],
+      externalResources: [makeExtResource('refused', 'res://refused.tscn')],
       internalResources: [],
     });
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
-    // Host keeps its own Node3D type (no single-root to adopt).
-    const hostRow = screen.getByText('MultiHost').closest('[data-node-path]') as HTMLElement;
-    expect(within(hostRow).getByTitle('Node3D')).toBeTruthy();
-
-    expandRow('MultiHost');
-
-    // Both loaded roots render as nested child rows under the instance row.
-    expect(container.querySelector('[data-node-path="MultiHost/RootA"]')).not.toBeNull();
-    expect(container.querySelector('[data-node-path="MultiHost/RootB"]')).not.toBeNull();
+    // The row keeps its own Node3D type: there is no root of the scene to adopt.
+    const row = screen.getByText('Refusing').closest('[data-node-path]') as HTMLElement;
+    expect(within(row).getByTitle('Node3D')).toBeTruthy();
+    expect(container.querySelector('[data-node-path="Refusing/RootA"]')).toBeNull();
   });
 
   it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {

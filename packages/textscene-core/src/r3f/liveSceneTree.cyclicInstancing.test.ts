@@ -120,19 +120,6 @@ describe('the step and instancedScenePaths', () => {
     ]);
   });
 
-  it('records the instanced scene on the subscene group of a multi-root instance', () => {
-    const multi: TscnScene = {
-      nodes: [makeNode('One', 'Node3D'), makeNode('Two', 'Node3D')],
-      externalResources: [],
-      internalResources: [],
-    };
-    const scope: SceneScope = { externalResources: [ext('1', 'res://multi.tscn')], internalResources: [] };
-    const groups = stepOver(instance, scope, sceneCacheOver({ 'res://multi.tscn': multi })).groups;
-    expect(groups.map((g) => [g.origin, g.scope.instancedScenePaths])).toEqual([
-      ['subscene', ['res://multi.tscn']],
-    ]);
-  });
-
   it("resolves the merged group in the innermost scene's pools when a root instances another scene", () => {
     const innerExt = [ext('7', 'res://deep.tscn')];
     const inner: TscnScene = {

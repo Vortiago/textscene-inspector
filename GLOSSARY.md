@@ -628,7 +628,7 @@ _Avoid_: "include", "prefab".
 
 **Instance root merge** (`mergeInstanceRoot`, applied through `LiveTree.stepOf`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer takes the merge from its **Live step** so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
+Every consumer takes the merge from its **Live step** so node paths agree. A lone `.glb` instance is not merged: the node that instances a `.glb` is the **GLB root**. An instance of a scene that Godot refuses to instantiate is not merged either: the node stays as authored, with its own children, and draws as a failed load.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
 **GLB root**:

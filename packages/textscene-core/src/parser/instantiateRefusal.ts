@@ -33,13 +33,13 @@ export function emptyParentHeadings<N extends RawNode>(all: readonly NodeOrigin<
 }
 
 /**
- * Whether Godot gives up on the scene before it re-roots anything: heading 0 declares a
- * parent (`packed_scene.cpp:219`) or states no identifier (`:220`), a later heading declares
- * none (`:207`), or a heading spells `parent=""`, which faults the load.
+ * Whether Godot gives up on the scene before it re-roots anything: the scene has no node
+ * (`packed_scene.cpp:171`), heading 0 declares a parent (`:219`) or states no identifier (`:220`),
+ * a later heading declares none (`:207`), or a heading spells `parent=""`, which faults the load.
  */
 export function refusesToInstantiate<N extends RawNode>(all: readonly NodeOrigin<N>[]): boolean {
   const [root, ...later] = all;
-  if (root === undefined) return false;
+  if (root === undefined) return true;
   return (
     root.declaredParent !== undefined ||
     rootStatesNoIdentifier(root.node) ||

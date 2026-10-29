@@ -147,14 +147,14 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(badge?.node.properties).toMatchObject({ text: 'BADGE' });
   });
 
-  it('a multi-root instance keeps the node with subscene roots beneath it, host children staying inline in OUTER scope', () => {
-    // A multi-root instance never collapses (ADR-0013): the instance node stays,
-    // its loaded roots in sub-scene scope and host-authored children in outer scope.
+  it('an instance of a refused scene keeps the node with its host children only, in OUTER scope', () => {
+    // Godot refuses the scene (`packed_scene.cpp:207`), so the instance node stays as authored and
+    // none of the scene's roots exist.
     const loader = createFakeResourceLoader();
-    loader.scenes.seed(
-      LAYER_PATH,
-      scene([parsedLabel('First', 'FIRST ROOT'), parsedLabel('Second', 'SECOND ROOT')])
-    );
+    loader.scenes.seed(LAYER_PATH, {
+      ...scene([parsedLabel('First', 'FIRST ROOT'), parsedLabel('Second', 'SECOND ROOT')]),
+      refusesToInstantiate: true,
+    });
 
     const hostChild = label('HostAdded', { text: 'HOST TEXT' });
     const nodes = [instanceOf('Hud', '1_layer', 'Control')];
@@ -169,8 +169,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     const hud = result.current.tree[0]!;
     expect(hud.path).toBe('Hud');
     expect(hud.node.type).toBe('Control'); // the instance node itself, un-collapsed
-    const childTexts = hud.children.map((c) => (c.node.properties as { text?: string }).text).sort();
-    expect(childTexts).toEqual(['FIRST ROOT', 'HOST TEXT', 'SECOND ROOT']);
+    const childTexts = hud.children.map((c) => (c.node.properties as { text?: string }).text);
+    expect(childTexts).toEqual(['HOST TEXT']);
   });
 
   it("resolves a sub-scene's StyleBox AND texture in the SUB-SCENE's resource pool, not the host's", () => {

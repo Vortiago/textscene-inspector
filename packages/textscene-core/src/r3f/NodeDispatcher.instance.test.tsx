@@ -217,37 +217,6 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     ).toBeUndefined();
   });
 
-  it('falls back to the nested form when the loaded scene has multiple roots', async () => {
-    const fake = createFakeResourceLoader();
-
-    // A scene with two top-level nodes cannot merge into one instance node, so
-    // the instance node's own group holds both loaded roots as children,
-    // addressed under the instance path.
-    const multiRootScene: TscnScene = {
-      nodes: [
-        makeNode('RootA', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } }),
-        makeNode('RootB', 'MeshInstance3D', { rawProperties: { mesh: 'SubResource("Box_1")' } }),
-      ],
-      externalResources: [],
-      internalResources: [{ id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } }],
-    };
-    fake.scenes.seed('res://multi.tscn', multiRootScene);
-
-    const instancingNode = makeNode('MultiHost', 'Node3D', { instance: 'ExtResource("multi_ref")' });
-
-    const renderer = await renderTree([instancingNode], fake.loader, [
-      { id: 'multi_ref', path: 'res://multi.tscn', type: 'PackedScene' },
-    ]);
-
-    // The instancing node's own group survives (no collapse), and both roots
-    // render under it by their own names.
-    const groups = renderer.scene.findAllByType('Group');
-    expect(groups.find((g) => g.instance.name === 'MultiHost')).toBeDefined();
-    const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes.find((m) => m.instance.name === 'RootA')).toBeDefined();
-    expect(meshes.find((m) => m.instance.name === 'RootB')).toBeDefined();
-  });
-
   it('REGRESSION (hallway): a host-added child of a collapsed instance still resolves HOST ExtResources', async () => {
     // 'Wrapper' merges its sub-scene, and the host gives it a child 'Gadget' that
     // instances another host resource. Under the sub-scene's pool, 'Gadget' must
