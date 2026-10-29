@@ -983,6 +983,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map Billboard Shadow",
+    "file": "unit-grid-map-billboard-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Billboard",
     "file": "unit-grid-map-billboard.tscn",
     "category": "Other"

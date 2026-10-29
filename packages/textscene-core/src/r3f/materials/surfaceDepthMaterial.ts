@@ -12,8 +12,7 @@ import {
   type ProgramInjection,
 } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
-import { pointShadowSizeInjection } from './godotPoint';
-import { particleShadowInjection } from './godotParticles';
+import { drawDepthInjections, type DrawDepthInjections } from './depthInjections';
 
 /** The material state a depth draw of a surface reads. */
 type DepthSurface = THREE.Material & {
@@ -127,19 +126,6 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
 function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
   const { beforeCut, afterCut } = drawDepthInjections(depth.userData);
   return composeInjections([depth.depthInjection, beforeCut, SURFACE_ALPHA, afterCut]);
-}
-
-/** The depth injections a surface's draw adds, which three's own depth material lacks. */
-interface DrawDepthInjections {
-  /** A points surface's size, which the alpha cut does not read. */
-  beforeCut: ProgramInjection | undefined;
-  /** A particle emitter's instances, whose colour multiplies the vertex colour the cut reads. */
-  afterCut: ProgramInjection | undefined;
-}
-
-/** What `userData`'s draw adds to its depth program. Every reader of a draw's depth asks here. */
-export function drawDepthInjections(userData: Record<string, unknown>): DrawDepthInjections {
-  return { beforeCut: pointShadowSizeInjection(userData), afterCut: particleShadowInjection(userData) };
 }
 
 function sameInjections(a: DrawDepthInjections, b: DrawDepthInjections): boolean {

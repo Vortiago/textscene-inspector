@@ -2985,7 +2985,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="GridMap" hidden>
       <header class="sheet-head">
         <h2>GridMap</h2>
-        <span class="renders">renders as a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface, or a mesh per cell when that surface's material billboards</span>
+        <span class="renders">renders as a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_gridmap.html" target="_blank" rel="noopener" title="Godot class reference for GridMap">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/modules/gridmap/grid_map.h" target="_blank" rel="noopener" title="Godot engine source for GridMap">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-grid-map.tscn" target="_blank" rel="noopener" title="Open unit-grid-map.tscn in the previewer"><code>unit-grid-map.tscn</code> ↗</a>
@@ -3006,7 +3006,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Instances each populated cell's <code>MeshLibrary</code> item mesh, batching the cells of each item surface into one <code>THREE.InstancedMesh</code> with that surface's material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own <code>.tres</code>. A surface whose material billboards draws one mesh per cell instead, so it turns about its own cell as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.</p>
+      <div class="prose"><p>Instances each populated cell's <code>MeshLibrary</code> item mesh, batching the cells of each item surface into one <code>THREE.InstancedMesh</code> with that surface's material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own <code>.tres</code>. A surface whose material billboards stays one instanced draw, and its program turns each cell about its own origin as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.</p>
 <p>Each mesh scales by <code>cell_scale</code> round its cell's place. A cell whose item has no mesh draws nothing.</p>
 <p>A PointMesh item draws every cell's points as one <code>THREE.Points</code>, since three has no instanced form of it. Each cell's matrix moves its points and turns their +Z normal, as Godot lights a point that has no normal array. Both engines light an upright point and leave a point turned a half turn about Y in the dark.</p>
 <p>A GridMap that holds <code>baked_meshes</code> draws them in place of its cells, as Godot does once a LightmapGI bakes it. Each baked mesh reads the lightmap the bake gives its index.</p>

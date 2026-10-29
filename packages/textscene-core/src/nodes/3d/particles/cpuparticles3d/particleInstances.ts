@@ -7,14 +7,12 @@
 
 import * as THREE from 'three';
 import {
+  INSTANCE_CUSTOM_ATTRIBUTE,
   instanceMatrices,
   sharedInstances,
   writeInstanceMatrix,
 } from '../../../../r3f/meshes/sharedInstances';
-import {
-  PARTICLE_COLOR_ATTRIBUTE,
-  PARTICLE_CUSTOM_ATTRIBUTE,
-} from '../../../../r3f/materials/godotParticles';
+import { PARTICLE_COLOR_ATTRIBUTE } from '../../../../r3f/materials/godotParticles';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
 /** Floats in a particle's colour and in its custom data. */
@@ -75,7 +73,7 @@ function writeSlicesInto(
  */
 export function particleGeometry(source: THREE.BufferGeometry, count: number): THREE.InstancedBufferGeometry {
   const geometry = sharedInstances(source, count);
-  for (const name of [PARTICLE_COLOR_ATTRIBUTE, PARTICLE_CUSTOM_ATTRIBUTE]) {
+  for (const name of [PARTICLE_COLOR_ATTRIBUTE, INSTANCE_CUSTOM_ATTRIBUTE]) {
     geometry.setAttribute(
       name,
       new THREE.InstancedBufferAttribute(new Float32Array(count * VEC4_FLOATS), VEC4_FLOATS)
@@ -95,7 +93,7 @@ export function writeParticles(geometry: THREE.BufferGeometry, buffer: Float32Ar
   }
   matrices.needsUpdate = true;
   writeSlices(geometry.getAttribute(PARTICLE_COLOR_ATTRIBUTE), buffer, PARTICLE_COLOR_OFFSET);
-  writeSlices(geometry.getAttribute(PARTICLE_CUSTOM_ATTRIBUTE), buffer, PARTICLE_CUSTOM_OFFSET);
+  writeSlices(geometry.getAttribute(INSTANCE_CUSTOM_ATTRIBUTE), buffer, PARTICLE_CUSTOM_OFFSET);
 }
 
 function writeSlices(

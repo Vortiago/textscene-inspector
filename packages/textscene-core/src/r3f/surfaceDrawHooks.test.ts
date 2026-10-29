@@ -3,15 +3,11 @@ import * as THREE from 'three';
 import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from './shadowCasting';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import { withPointDraw } from './materials/godotPoint';
-import { particleDrawOf } from './materials/godotParticles';
-import { withParticleDraw } from './materials/godotParticlesProgram';
 import { programShader } from './testing/patchedFragment';
-import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { instanceLayers } from './instanceLayers/instanceLayersChunk';
 import { shownProbes } from './reflectionProbe/probeSlots';
 import { setVisualLayers } from './visualLayers';
 import { testRenderer } from '../testing/recordingWebGL';
-import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering/rendering';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
@@ -257,36 +253,33 @@ describe('surfaceDrawHooks — point shadow', () => {
   });
 });
 
-describe('surfaceDrawHooks — particle instances', () => {
-  /** An InstancedMesh of one ENABLED billboard surface, which casts, typed as the mesh the helpers take. */
-  function particleSurface(mode: number = BillboardMode.BILLBOARD_ENABLED): THREE.Mesh {
-    const bag = { materialClass: 'standard' as const, props: {} };
-    const draw = particleDrawOf(null);
-    const userData = withParticleDraw(bag, { ...draw, billboard: { mode, keepScale: false } }).props.userData;
-    const particles = new THREE.InstancedMesh(
+describe('surfaceDrawHooks — instanced billboards', () => {
+  /** An InstancedMesh of one billboarding surface in `mode`, which casts, typed as the mesh the helpers take. */
+  function instancedSurface(mode: number = BillboardMode.BILLBOARD_ENABLED): THREE.Mesh {
+    const instances = new THREE.InstancedMesh(
       new THREE.BufferGeometry(),
-      new THREE.MeshStandardMaterial({ userData }),
+      material({ billboard_mode: String(mode) }),
       2
     );
-    applyShadowCasting(particles, shadowCastingEffects(ShadowCastingSetting.ON));
-    return particles;
+    applyShadowCasting(instances, shadowCastingEffects(ShadowCastingSetting.ON));
+    return instances;
   }
 
   // Godot's shadow pass runs the billboard of the colour pass on each instance (`material.cpp:1309`).
   it("casts the instances' shadow with its own depth material, which billboards them", () => {
-    const { cast, castsOwn, threeDraws } = shadowDraw(particleSurface());
+    const { cast, castsOwn, threeDraws } = shadowDraw(instancedSurface());
     const shader = programShader('depth');
     cast.onBeforeCompile.call(cast, shader as never, undefined as never);
     expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
       true,
       false,
-      expect.stringContaining('#define instanceMatrix godotParticleInstance'),
+      expect.stringContaining('#define instanceMatrix godotInstanceLocal'),
     ]);
   });
 
   // `MAIN_CAM_INV_VIEW_MATRIX` is the main camera's on a shadow pass too (`material.cpp:1263-1264`).
   it('aims the billboard at the main camera, not the light', () => {
-    const shadow = drawShadowGroup(particleSurface(), camera, shadowCamera, 0, (s) => s.castMaterial!);
+    const shadow = drawShadowGroup(instancedSurface(), camera, shadowCamera, 0, (s) => s.castMaterial!);
     const shader = programShader('depth');
     shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
     const aimed = shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4;
@@ -295,7 +288,7 @@ describe('surfaceDrawHooks — particle instances', () => {
 
   // PARTICLES reads `INV_VIEW_MATRIX`, the camera of the pass it draws in (`material.cpp:1309-1312`).
   it('aims a PARTICLES billboard at the light on a shadow pass', () => {
-    const surface = particleSurface(BillboardMode.BILLBOARD_PARTICLES);
+    const surface = instancedSurface(BillboardMode.BILLBOARD_PARTICLES);
     const shadow = drawShadowGroup(surface, camera, shadowCamera, 0, (s) => s.castMaterial!);
     const shader = programShader('depth');
     shadow.onBeforeCompile.call(shadow, shader as never, undefined as never);
@@ -304,19 +297,16 @@ describe('surfaceDrawHooks — particle instances', () => {
   });
 
   it('keeps the instanced pose, which the program billboards', () => {
-    const mesh = particleSurface();
+    const mesh = instancedSurface();
     expect(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld.clone()).equals(mesh.matrixWorld)).toBe(
       true
     );
   });
 
-  // Godot billboards each particle about its own origin, so a billboard about the node would move
-  // every particle that one points draw holds (edge case).
-  it('keeps the pose of a points draw, which holds every particle', () => {
-    const billboarded = material({ billboard_mode: '1' });
-    const bag = { materialClass: 'standard' as const, props: { userData: billboarded.userData } };
-    Object.assign(billboarded.userData, withParticleDraw(bag, particleDrawOf(null)).props.userData);
-    const points = new THREE.Points(new THREE.BufferGeometry(), billboarded);
+  // Godot billboards each instance about its own origin, so a billboard about the node would move
+  // every instance of a points draw (edge case).
+  it('keeps the pose of instanced points', () => {
+    const points = new THREE.Points(new THREE.InstancedBufferGeometry(), material({ billboard_mode: '1' }));
     applyShadowCasting(points, shadowCastingEffects(ShadowCastingSetting.ON));
     points.position.set(5, 6, 7);
     points.rotation.set(0, Math.PI / 2, 0);
@@ -378,16 +368,6 @@ describe('surfaceDrawHooks — instanced meshes', () => {
     instanced.updateMatrixWorld(true);
     const drawn = drawColourGroup(instanced, camera, 0, (s) => s.matrixWorld);
     expect(drawn.equals(instanced.matrixWorld)).toBe(true);
-  });
-});
-
-describe('drawsAsOneBatch', () => {
-  it('batches a surface that does not billboard', () => {
-    expect(drawsAsOneBatch(billboardOf(material({})))).toBe(true);
-  });
-
-  it('refuses a surface that billboards, which must turn about each instance', () => {
-    expect(drawsAsOneBatch(billboardOf(material({ billboard_mode: '2' })))).toBe(false);
   });
 });
 

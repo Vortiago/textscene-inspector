@@ -8,21 +8,13 @@
 
 import * as THREE from 'three';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
-import {
-  billboardOf,
-  castsShadowOf,
-  type SurfaceBillboard,
-} from '../resources/materials/standardmaterial3d/materialBag';
-import { billboardWorldMatrix } from './surfaceBillboard';
+import { billboardOf, castsShadowOf } from '../resources/materials/standardmaterial3d/materialBag';
+import { aimInstanceBillboards, billboardWorldMatrix } from './surfaceBillboard';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
 import { alignNodePose } from './materials/nodePose';
 import { opaquePrepassOf } from './materials/opaquePrepass';
-import { aimParticleBillboards, drawsParticles } from './materials/godotParticles';
-import {
-  drawDepthInjections,
-  surfaceDepthMaterial,
-  syncSurfaceDepth,
-} from './materials/surfaceDepthMaterial';
+import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
+import { addsDepthInjections } from './materials/depthInjections';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
@@ -122,11 +114,10 @@ function pose(
   mainCamera: THREE.Camera,
   passCamera: THREE.Camera
 ): boolean {
-  // An InstancedMesh keeps its pose: `drawsAsOneBatch` says why it cannot billboard here. A particle
-  // draw keeps it too: its program billboards each instance toward the main camera of this render,
-  // and a billboard about the node would move every particle that a points draw holds.
-  if ((object as THREE.InstancedMesh).isInstancedMesh || drawsParticles(material)) {
-    aimParticleBillboards(material, mainCamera, passCamera);
+  // An instanced draw keeps its pose: its program billboards each instance about its own origin,
+  // toward the cameras of this render, as Godot's MODEL_MATRIX holds each instance's.
+  if (drawsInstances(object)) {
+    aimInstanceBillboards(mainCamera, passCamera);
     return false;
   }
   const billboard = billboardOf(material);
@@ -140,13 +131,11 @@ function pose(
   return true;
 }
 
-/**
- * Whether one InstancedMesh can draw every instance of a surface with this `billboard`. Godot billboards
- * each instance about its own origin (`scene_forward_clustered.glsl:338-342`), but three
- * multiplies `instanceMatrix` after the `modelMatrix` a draw hook moves, so a billboard cannot.
- */
-export function drawsAsOneBatch(billboard: SurfaceBillboard): boolean {
-  return billboard.mode === BillboardMode.BILLBOARD_DISABLED;
+/** Whether `object` draws its geometry once at each instance: an InstancedMesh, or instanced points. */
+function drawsInstances(object: THREE.Object3D): boolean {
+  if ((object as THREE.InstancedMesh).isInstancedMesh) return true;
+  const { geometry } = object as THREE.Points;
+  return (geometry as THREE.InstancedBufferGeometry | undefined)?.isInstancedBufferGeometry === true;
 }
 
 /** Gives this draw of `material` the node's pose, which Godot's MODEL_MATRIX holds (`nodePose.ts`). */
@@ -168,8 +157,8 @@ function shadowAlphaCut(material: THREE.Material): number {
 
 /**
  * Draws a surface whose shadow needs its own depth material, and makes three's draw draw nothing.
- * three's would cut the texture alpha alone, and at the scissor only, and write no point size and no
- * particle billboard.
+ * three's would cut the texture alpha alone, and at the scissor only, and add none of the depth
+ * injections the draw records (`depthInjections.ts`).
  */
 function castOwnShadow(
   renderer: THREE.WebGLRenderer,
@@ -205,12 +194,11 @@ function cutsShadow(material: THREE.Material): boolean {
 }
 
 /**
- * Whether three's depth material cannot draw `material`'s shadow: it cuts alpha, sizes points or
- * draws particles.
+ * Whether three's depth material cannot draw `material`'s shadow: it cuts alpha, or its draw adds
+ * to the depth program, as a points size, an instance billboard or a particle colour does.
  */
 function needsOwnDepth(material: THREE.Material): boolean {
-  const { beforeCut, afterCut } = drawDepthInjections(material.userData);
-  return cutsShadow(material) || beforeCut !== undefined || afterCut !== undefined;
+  return cutsShadow(material) || addsDepthInjections(material.userData);
 }
 
 function closeDraw(): void {

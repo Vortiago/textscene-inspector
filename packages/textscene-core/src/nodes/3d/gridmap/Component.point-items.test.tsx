@@ -176,13 +176,13 @@ item/0/mesh = SubResource("Mesh_item")
     expect((points!.material as Material).userData.godotPointsAtInstances).toBe(true);
   });
 
-  it("draws each cell's points on their own when the material billboards, as each turns about its cell", async () => {
+  it('instances every cell under a billboard too, which turns each about its cell', async () => {
     const grid = await mountGridMap({
       library: triplanarLibrary('billboard_mode = 1'),
       cells: '0, 0, 0, 1, 0, 0',
     });
 
-    expect(grid.points()).toHaveLength(2);
+    expect(grid.points()).toHaveLength(1);
   });
 
   it('instances every cell under world triplanar too', async () => {

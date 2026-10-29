@@ -12,6 +12,7 @@ import type { StandardMaterialBag } from '../../resources/materials/standardmate
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 import { bagForms } from './bagForms';
+import { withDepthInjection } from './depthInjections';
 import { INSTANCE_MATRIX_ATTRIBUTE } from '../meshes/sharedInstances';
 
 const POINT_SIZE_KEY = 'godotPointSize';
@@ -141,13 +142,17 @@ export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefi
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {
   const readsMap = draw.samplesAlbedoAtPointCoord && Boolean(bag.props.map);
   const isAtInstances = draw.placement === 'instances';
-  const userData = {
-    ...bag.props.userData,
-    [POINT_SIZE_KEY]: draw.pixels,
-    [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
-    [POINT_COORD_ALBEDO_KEY]: readsMap,
-    [POINTS_AT_INSTANCES_KEY]: isAtInstances,
-  };
+  const userData = withDepthInjection(
+    {
+      ...bag.props.userData,
+      [POINT_SIZE_KEY]: draw.pixels,
+      [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
+      [POINT_COORD_ALBEDO_KEY]: readsMap,
+      [POINTS_AT_INSTANCES_KEY]: isAtInstances,
+    },
+    'beforeCut',
+    pointShadowSizeInjection(readsMap, isAtInstances)
+  );
   return {
     ...bag,
     props: { ...bag.props, side: FrontSide, userData },
@@ -167,13 +172,9 @@ const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
 
 /**
  * What a depth draw compiles with to cut a points surface's shadow as its colour pass draws the
- * points: at their size, and across the square where the albedo map is read. Undefined for a
- * surface that draws none.
+ * points: at their size, across the square where the albedo map is read, and at each instance.
  */
-export function pointShadowSizeInjection(userData: Record<string, unknown>): ProgramInjection | undefined {
-  if (!(POINT_SIZE_KEY in userData)) return undefined;
-  const size = userData[POINT_COORD_ALBEDO_KEY]
-    ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD
-    : GODOT_POINT_SHADOW_SIZE;
-  return userData[POINTS_AT_INSTANCES_KEY] ? composeInjections([size, GODOT_INSTANCED_POINTS]) : size;
+function pointShadowSizeInjection(readsMap: boolean, isAtInstances: boolean): ProgramInjection {
+  const size = readsMap ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SHADOW_SIZE;
+  return isAtInstances ? composeInjections([size, GODOT_INSTANCED_POINTS])! : size;
 }

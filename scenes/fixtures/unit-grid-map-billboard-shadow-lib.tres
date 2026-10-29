@@ -1,0 +1,18 @@
+; The unit-grid-map-billboard-shadow tile: a lit QuadMesh set 0.5 m in front of its cell, scaled
+; 1.5 by mesh_transform, with a keep_scale billboard. Godot billboards each MultiMesh instance in
+; the shadow pass too, so each square casts its own camera-facing shadow at its own cell.
+[gd_resource type="MeshLibrary" load_steps=3 format=3 uid="uid://unitgridmapbillboardshadowlib"]
+
+[sub_resource type="StandardMaterial3D" id="M"]
+albedo_color = Color(0.95, 0.55, 0.15, 1)
+billboard_mode = 1
+billboard_keep_scale = true
+
+[sub_resource type="QuadMesh" id="Q"]
+material = SubResource("M")
+center_offset = Vector3(0, 0, 0.5)
+
+[resource]
+item/0/name = "Facing"
+item/0/mesh = SubResource("Q")
+item/0/mesh_transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)

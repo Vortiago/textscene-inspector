@@ -1,8 +1,8 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
- * populated cells. Each surface draws as one THREE.InstancedMesh, as one mesh per cell when its
- * material billboards, or as one THREE.Points instanced at every cell for a PointMesh, one per
- * cell when its material billboards. A loading item draws nothing.
+ * populated cells. Each surface draws as one THREE.InstancedMesh, or as one THREE.Points instanced
+ * at every cell for a PointMesh. A billboarding material turns each cell about its own origin in its
+ * program. A loading item draws nothing.
  * An item whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
  * InstancedMesh.
  */
@@ -16,14 +16,12 @@ import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAs
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import { useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { useSurfaceScalars } from '../../../r3f/materials/useSurfaceMaterial';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
-import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
@@ -37,7 +35,6 @@ import {
   useSharedInstances,
 } from '../../../r3f/meshes/sharedInstances';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
-import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
@@ -280,21 +277,10 @@ interface SurfaceDraw {
 }
 
 /**
- * Every cell of one surface: one batch, or one draw per cell when its material billboards. A
- * billboard turns about its own cell as in Godot (`drawsAsOneBatch` says why a batch cannot). The
- * decoded material decides, as the drawn one exists only inside a slot.
+ * Every cell of one surface as one instanced draw, a billboarding one too: its program billboards
+ * each cell about its own origin, as Godot's multimesh does (`surfaceBillboard.ts`).
  */
 function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  const scalars = useSurfaceScalars(draw.source);
-  if (!drawsAsOneBatch(surfaceBillboard(scalars))) {
-    return (
-      <>
-        {matrices.map((matrix, cell) => (
-          <CellTile key={cell} draw={draw} matrix={matrix} />
-        ))}
-      </>
-    );
-  }
   if (!draw.cellPoints) return <BatchedTiles draw={draw} matrices={matrices} />;
   return <InstancedCellPoints draw={draw} cellPoints={draw.cellPoints} />;
 }
@@ -345,26 +331,6 @@ function InstancedCellPoints({ draw, cellPoints }: { draw: SurfaceDraw; cellPoin
     >
       <OwnedSurfaceSlot draw={{ ...draw, geometry }} />
     </points>
-  );
-}
-
-/**
- * A surface at one `matrix`: one cell, or every cell of merged points. Each draw mounts its own
- * slot, since a material element attaches to one parent. Every such material shares one program.
- */
-function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }) {
-  const { geometry, shadow } = draw;
-  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
-  const Drawn = drawnTag(geometryDrawsPoints(geometry));
-  return (
-    <Drawn
-      args={[geometry, startingMaterial]}
-      matrix={matrix}
-      matrixAutoUpdate={false}
-      {...drawHookProps(shadow)}
-    >
-      <OwnedSurfaceSlot draw={draw} />
-    </Drawn>
   );
 }
 

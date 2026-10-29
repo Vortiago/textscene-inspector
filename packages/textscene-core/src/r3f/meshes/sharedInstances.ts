@@ -12,6 +12,9 @@ import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
 /** The attribute that holds each place's matrix, the name three's instanced programs read. */
 export const INSTANCE_MATRIX_ATTRIBUTE = 'instanceMatrix';
 
+/** The attribute that holds each place's custom data, Godot's `INSTANCE_CUSTOM`. */
+export const INSTANCE_CUSTOM_ATTRIBUTE = 'instanceCustom';
+
 /** The floats of one place's matrix. */
 const MATRIX_FLOATS = 16;
 

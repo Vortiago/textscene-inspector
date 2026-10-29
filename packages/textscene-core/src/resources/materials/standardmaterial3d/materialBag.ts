@@ -30,7 +30,8 @@ import {
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection } from '../../../r3f/lightModes';
 import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
-import { GODOT_BILLBOARD_NORMAL } from '../../../r3f/surfaceBillboard';
+import { billboardInjections } from '../../../r3f/surfaceBillboard';
+import { withDepthInjection } from '../../../r3f/materials/depthInjections';
 import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -214,8 +215,9 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
  * theirs at upload. A fresh object per bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
-  return {
-    [BILLBOARD_KEY]: surfaceBillboard(scalars),
+  const billboard = surfaceBillboard(scalars);
+  const userData = {
+    [BILLBOARD_KEY]: billboard,
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
@@ -228,6 +230,9 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...triplanarUserData(triplanarRecord(scalars)),
     ...viewportSamplersUserData(),
   };
+  // An instanced draw's shadow billboards each instance as its colour pass does.
+  const injections = billboardInjections(billboard);
+  return injections ? withDepthInjection(userData, 'afterCut', injections.depth) : userData;
 }
 
 /**
@@ -300,9 +305,12 @@ export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): Sur
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
 }
 
-/** Godot's billboard normal turn for a surface that billboards, after any patch that adds a `defaultnormal_vertex`. */
-function billboardNormalInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
-  return billboards(scalars) ? GODOT_BILLBOARD_NORMAL : undefined;
+/**
+ * Godot's billboard for a surface that billboards: the instance pose and the normal turn, after any
+ * patch that adds a `defaultnormal_vertex`.
+ */
+function billboardInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
+  return billboardInjections(surfaceBillboard(scalars))?.colour;
 }
 
 /** The billboard a material was derived with. */
@@ -394,7 +402,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
       injection: composeInjections([
         vertexColorInjection(scalars),
         heightmap ? unshadedParallaxInjection(heightmap) : undefined,
-        billboardNormalInjection(scalars),
+        billboardInjection(scalars),
       ]),
       heightmapTexture,
     };
@@ -444,7 +452,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),
-    billboardNormalInjection(scalars),
+    billboardInjection(scalars),
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

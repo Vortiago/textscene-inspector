@@ -1,13 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import {
-  aimParticleBillboards,
-  particleDrawOf,
-  particleShadowInjection,
-  type ParticleDraw,
-} from './godotParticles';
+import { particleDrawOf, type ParticleDraw } from './godotParticles';
 import { withParticleDraw } from './godotParticlesProgram';
-import { withPointDraw } from './godotPoint';
+import { drawDepthInjections } from './depthInjections';
 import type { ProgramShader } from '../materialProgramInputs';
 import { SRGB_VERTEX_COLOR } from './godotVertexColor';
 import { programShader, type ProgramName } from '../testing/patchedFragment';
@@ -74,71 +69,8 @@ it('multiplies the instance colour before the sRGB decode of the vertex colour',
 });
 
 describe('a particle draw with no billboard', () => {
-  it('keeps the instance pose', () => {
-    expect(compiled(UNBILLBOARDED).vertexShader).not.toContain('#define instanceMatrix');
-  });
-
   it('cuts no flipbook frame', () => {
     expect(compiled(UNBILLBOARDED).vertexShader).not.toContain('godotParticleFrame');
-  });
-});
-
-describe('a BILLBOARD_PARTICLES draw', () => {
-  const { vertexShader } = compiled(PARTICLES, 'standard', new THREE.MeshStandardMaterial());
-
-  // `material.cpp:1309-1324`: the pass camera's normalised axes, at the instance's origin.
-  it('faces each instance to the pass camera about its own origin', () => {
-    expect(vertexShader).toContain('uniform mat4 godotPassCameraWorld;');
-    expect(vertexShader).toContain('normalize( godotPassCameraWorld[ 0 ] )');
-    expect(vertexShader).toContain('godotModel[ 3 ]');
-  });
-
-  it('turns the billboard by the angle in the instance custom data', () => {
-    expect(vertexShader).toContain('vec4( cos( particleCustom.x ), - sin( particleCustom.x ), 0.0, 0.0 )');
-  });
-
-  // three multiplies `modelMatrix` after `instanceMatrix`, so the instance carries the inverse.
-  it('poses every chunk that reads the instance, before the first of them', () => {
-    const define = vertexShader.indexOf('#define instanceMatrix godotParticleInstance');
-    expect(define).toBeGreaterThan(-1);
-    expect(define).toBeLessThan(vertexShader.indexOf('#include <uv_vertex>'));
-    expect(vertexShader).toContain('inverse( modelMatrix ) * godotParticleWorld');
-  });
-
-  // three declares `instanceMatrix` only for an InstancedMesh, so any other draw keeps its pose.
-  it('billboards only an instanced draw (edge case)', () => {
-    const define = vertexShader.indexOf('#define instanceMatrix godotParticleInstance');
-    expect(vertexShader.slice(0, define)).toMatch(/#ifdef USE_INSTANCING\s+mat4 godotParticleWorld[^#]*$/);
-  });
-
-  // `material.cpp:1338`: MODELVIEW_NORMAL_MATRIX is `mat3(MODELVIEW_MATRIX)`.
-  it('turns the normal by the billboard model-view', () => {
-    expect(vertexShader).toContain(
-      'transformedNormal = mat3( viewMatrix * godotParticleWorld ) * objectNormal;'
-    );
-  });
-
-  it('keeps no scale unless the material asks', () => {
-    expect(vertexShader).not.toContain('#define GODOT_PARTICLE_KEEP_SCALE');
-  });
-
-  it('keeps the instance scale under billboard_keep_scale', () => {
-    const kept = compiled({ ...PARTICLES, billboard: { ...PARTICLES.billboard, keepScale: true } });
-    expect(kept.vertexShader).toContain('#define GODOT_PARTICLE_KEEP_SCALE');
-  });
-
-  // Instanced points declare `instanceMatrix` at the top of their text, which the billboard reads.
-  it('declares the billboard after the instance matrix of instanced points', () => {
-    const points = withPointDraw(BAG, {
-      pixels: 4,
-      pixelRatio: 1,
-      samplesAlbedoAtPointCoord: false,
-      placement: 'instances',
-    });
-    const { vertexShader } = compiled(PARTICLES, 'basic', new THREE.MeshBasicMaterial(), points);
-    expect(vertexShader.indexOf('mat4 godotParticleBillboard()')).toBeGreaterThan(
-      vertexShader.indexOf('attribute mat4 instanceMatrix;')
-    );
   });
 });
 
@@ -173,6 +105,10 @@ describe('the BILLBOARD_PARTICLES flipbook', () => {
     );
   });
 
+  it('reads the frame from the instance custom data', () => {
+    expect(mapped(0)).toContain('floor( instanceCustom.z * particle_total_frames )');
+  });
+
   it('holds at the last cell without the loop', () => {
     const held = compiled({ ...GRID, anim: { ...GRID.anim, loop: false } }).vertexShader;
     expect(held).not.toContain('#define GODOT_PARTICLE_ANIM_LOOP');
@@ -184,25 +120,6 @@ describe.each([
   ['BILLBOARD_FIXED_Y', BillboardMode.BILLBOARD_FIXED_Y],
 ])('a %s particle draw', (_name, mode) => {
   const draw: ParticleDraw = { billboard: { mode, keepScale: false }, anim: PARTICLES_ANIM_DEFAULTS };
-
-  // `material.cpp:1263-1264`: MAIN_CAM_INV_VIEW_MATRIX, the main camera even on a shadow pass.
-  it('faces the main camera, which a shadow pass keeps', () => {
-    const shader = compiled(draw);
-    expect(shader.vertexShader).toContain('uniform mat4 godotMainCameraWorld;');
-    expect(shader.uniforms.godotMainCameraWorld).toBeDefined();
-  });
-
-  it('reads the main camera the draw hooks aim it at', () => {
-    const material = new THREE.MeshBasicMaterial();
-    const shader = compiled(draw, 'basic', material);
-    const camera = new THREE.PerspectiveCamera();
-    camera.position.set(1, 2, 3);
-    camera.updateMatrixWorld();
-    aimParticleBillboards(material, camera, new THREE.PerspectiveCamera());
-    expect((shader.uniforms.godotMainCameraWorld!.value as THREE.Matrix4).equals(camera.matrixWorld)).toBe(
-      true
-    );
-  });
 
   it('cuts no flipbook frame', () => {
     expect(compiled(draw).vertexShader).not.toContain('godotParticleFrame(');
@@ -243,19 +160,15 @@ describe('particleDrawOf', () => {
 describe.each(['depth', 'distance'] as const)('the particle shadow on the %s program', (program) => {
   const userData = withParticleDraw(BAG, PARTICLES).props.userData!;
 
-  function shadow(): ProgramShader {
-    const injection = particleShadowInjection(userData)!;
+  // Godot's shadow pass runs the same vertex code (`material.cpp:1309`), colour and all.
+  it('records the particle draw after the alpha cut, whose vertex colour it multiplies', () => {
+    const { afterCut } = drawDepthInjections(userData);
     const shader = programShader(program);
-    injection.onBeforeCompile.call(new THREE.MeshDepthMaterial({ userData }), shader);
-    return shader;
-  }
-
-  // Godot's shadow pass runs the same vertex code, with the light's view (`material.cpp:1309`).
-  it('billboards the instances toward the light', () => {
-    expect(shadow().vertexShader).toContain('#define instanceMatrix godotParticleInstance');
+    afterCut!.onBeforeCompile.call(new THREE.MeshDepthMaterial({ userData }), shader);
+    expect(shader.vertexShader).toContain(`attribute vec4 particleColor;`);
   });
 
-  it('is none for a surface that draws no particles', () => {
-    expect(particleShadowInjection(BAG.props.userData!)).toBeUndefined();
+  it('records nothing for a surface that draws no particles', () => {
+    expect(drawDepthInjections(BAG.props.userData!)).toEqual({});
   });
 });

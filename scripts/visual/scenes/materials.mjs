@@ -43,9 +43,12 @@ export const MATERIAL_SCENES = [
   // additive billboard gradient glow. Additive edges are AA-sensitive.
   { name: 'coin-glow', file: 'unit-coin-glow.tscn' },
   // A GridMap tile whose material billboards, in three cells along X: each
-  // square faces the camera about its own cell. The only GridMap golden whose
+  // square faces the camera about its own cell. The only unlit GridMap golden whose
   // tiles billboard.
   { name: 'grid-map-billboard', file: 'unit-grid-map-billboard.tscn' },
+  // The same billboard on a lit, scaled tile under a shadowed sun: each tile's
+  // shadow turns about its own cell, the only GridMap golden with billboard shadows.
+  { name: 'grid-map-billboard-shadow', file: 'unit-grid-map-billboard-shadow.tscn' },
 
   // The noise rasterisation pipeline on a Sprite2D: seeded FastNoiseLite
   // ridged fBm → normalise → seamless blend skirt → Gradient ramp.

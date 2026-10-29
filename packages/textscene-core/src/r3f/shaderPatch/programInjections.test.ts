@@ -33,7 +33,7 @@ import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
-import { GODOT_BILLBOARD_NORMAL } from '../surfaceBillboard';
+import { billboardInjections } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
@@ -117,6 +117,9 @@ const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: PointPlacement 
     { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }
   ).injection;
 
+/** A PARTICLES billboard that keeps the scale, which reaches every chunk the billboard edits. */
+const KEPT_PARTICLES = { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: true };
+
 /** A flipbook particle draw, which reaches every chunk the injection edits. */
 const particleBag = () =>
   withParticleDraw(
@@ -170,7 +173,13 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
   injected('materials/godotPoint.ts', 'points at instances', COLOUR, () => pointBag(false, 'instances')),
-  injected('surfaceBillboard.ts', 'billboard normal', COLOUR, () => GODOT_BILLBOARD_NORMAL),
+  injected('surfaceBillboard.ts', 'billboard', COLOUR, () => billboardInjections(KEPT_PARTICLES)?.colour),
+  injected(
+    'surfaceBillboard.ts',
+    'instance billboard pose',
+    SURFACE_AND_DEPTH,
+    () => billboardInjections(KEPT_PARTICLES)?.depth
+  ),
   injected('materials/godotTriplanar.ts', 'triplanar mapping', SURFACE_AND_DEPTH, () =>
     triplanarInjection({ userData: triplanarUserData(worldTriplanarRecord()) })
   ),

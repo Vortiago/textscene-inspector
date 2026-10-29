@@ -1,0 +1,30 @@
+; A GridMap whose billboarding tile casts onto a floor under a shadowed sun, in three cells along X.
+; Each shadow falls from its own cell and faces the main camera, as Godot billboards every MultiMesh
+; instance about its cell in the shadow pass (`material.cpp:1263-1264`). grid-map-billboard casts
+; nothing, so a shadow that turns about the GridMap origin shows here and nowhere else.
+[gd_scene load_steps=4 format=3 uid="uid://unitgridmapbillboardshadow"]
+
+[ext_resource type="MeshLibrary" path="res://unit-grid-map-billboard-shadow-lib.tres" id="1_lib"]
+
+[sub_resource type="PlaneMesh" id="Floor"]
+size = Vector2(20, 20)
+
+[sub_resource type="StandardMaterial3D" id="FloorMat"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 6, 0)
+shadow_enabled = true
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("Floor")
+surface_material_override/0 = SubResource("FloorMat")
+
+[node name="GridMap" type="GridMap" parent="."]
+mesh_library = ExtResource("1_lib")
+cell_size = Vector3(2, 2, 2)
+data = {
+"cells": PackedInt32Array(0, 0, 0, 65534, 0, 0, 2, 0, 0)
+}
