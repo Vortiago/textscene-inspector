@@ -3,6 +3,7 @@
  * so a `real_t` field, and every Vector, Rect2 and Transform component, holds single precision.
  */
 
+import type { Rgba } from './math.js';
 import type { Transform2DColumns } from './transform2d.js';
 import type { Vector2, Vector3 } from './vector.js';
 
@@ -23,6 +24,11 @@ export function storedVector2(value: Vector2): Vector2 {
 /** The vector a `Vector3` field holds after `value` is assigned to it. */
 export function storedVector3(value: Vector3): Vector3 {
   return { x: storedReal(value.x), y: storedReal(value.y), z: storedReal(value.z) };
+}
+
+/** The colour a `Color` field holds after `value` is assigned to it. */
+export function storedColor(value: Rgba): Rgba {
+  return { r: fround(value.r), g: fround(value.g), b: fround(value.b), a: fround(value.a) };
 }
 
 /** The transform a `Transform2D` field holds after `value` is assigned to it. */

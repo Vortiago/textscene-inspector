@@ -48,7 +48,8 @@ export function vector2Sub(a: Vector2, b: Vector2): Vector2 {
 
 /** `Vector2::operator*` by a `real_t` (`core/math/vector2.h:239`) in `real_t` float. */
 export function vector2Scale({ x, y }: Vector2, scale: number): Vector2 {
-  return { x: f(x * f(scale)), y: f(y * f(scale)) };
+  const real = f(scale);
+  return { x: f(x * real), y: f(y * real) };
 }
 
 /**

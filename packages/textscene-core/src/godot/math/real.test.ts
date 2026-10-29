@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatReal,
   shortestReal,
+  storedColor,
   storedReal,
   storedTransform2D,
   storedVector2,
@@ -96,6 +97,17 @@ describe('storedTransform2D', () => {
       d: 2,
       tx: storedReal(13.3),
       ty: storedReal(-7.1),
+    });
+  });
+});
+
+describe('storedColor', () => {
+  it('rounds each channel to single precision', () => {
+    expect(storedColor({ r: 0.99, g: 0.1, b: 1, a: 0.3 })).toEqual({
+      r: storedReal(0.99),
+      g: storedReal(0.1),
+      b: 1,
+      a: storedReal(0.3),
     });
   });
 });

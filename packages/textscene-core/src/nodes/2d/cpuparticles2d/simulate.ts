@@ -38,7 +38,7 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import { degToRad, degToRadf, lerpf, TAU } from '../../../godot/math/math.js';
-import { storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
+import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2Df,
@@ -132,6 +132,9 @@ interface Particle {
 /** Godot's inspector floor for `lifetime`. Its setter rejects anything lower. */
 const MIN_LIFETIME = 0.01;
 
+/** The smallest scale Godot draws: a zero-scale quad never collapses the basis. */
+const MIN_SCALE = 0.00001;
+
 /**
  * Seconds of settle the frozen pose sits at: the authored `preprocess`, else one
  * lifetime (steady state), halved for a `one_shot` burst to catch it mid-flight.
@@ -206,7 +209,7 @@ function storedInput(input: ParticleSimInput): ParticleSimInput {
       gravity: storedVector2(props.gravity),
       emission_sphere_radius: f(props.emission_sphere_radius),
       emission_rect_extents: storedVector2(props.emission_rect_extents),
-      color: { r: f(props.color.r), g: f(props.color.g), b: f(props.color.b), a: f(props.color.a) },
+      color: storedColor(props.color),
       params: props.params.map((param) => ({ ...param, min: f(param.min), max: f(param.max) })),
     },
     emissionTransform: storedTransform2D(input.emissionTransform),
@@ -500,38 +503,37 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   const texAnimSpeed = sampleParam(curves, CPUParticlesParameter.ANIM_SPEED, tv);
   const texAnimOffset = sampleParam(curves, CPUParticlesParameter.ANIM_OFFSET, tv);
 
-  let force: Vector2 = props.gravity;
-  const pos: Vector2 = { x: p.transform.tx, y: p.transform.ty };
+  const force: Vector2 = { x: props.gravity.x, y: props.gravity.y };
 
   // Each of the three accelerations sits behind a C++ ternary, so its
   // `rand_from_seed` draw is consumed only when the branch is taken. Drawing
   // unconditionally would desynchronise every later value in the same step.
   if (vector2Length(p.velocity) > 0) {
     const accel = lerpParam(props, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
-    const along = vector2Scale(normalizedVector2(p.velocity), texLinearAccel);
-    force = vector2Add(force, vector2Scale(along, accel));
+    addAcceleration(force, normalizedVector2(p.velocity), texLinearAccel, accel);
   }
 
   // Radial and tangential acceleration are both measured from the emitter's
   // own origin, which for a global-coords emitter is its world position.
-  const diff = vector2Sub(pos, { x: state.emissionXform.tx, y: state.emissionXform.ty });
-  const hasDiff = vector2Length(diff) > 0;
-  if (hasDiff) {
+  const diff: Vector2 = {
+    x: f(p.transform.tx - state.emissionXform.tx),
+    y: f(p.transform.ty - state.emissionXform.ty),
+  };
+  if (vector2Length(diff) > 0) {
     const radial = lerpParam(props, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
-    const away = vector2Scale(normalizedVector2(diff), texRadialAccel);
-    force = vector2Add(force, vector2Scale(away, radial));
+    addAcceleration(force, normalizedVector2(diff), texRadialAccel, radial);
+
+    // `yx * Vector2(-1, 1)` is `(-diff.y, diff.x)`: the perpendicular Godot spins
+    // tangential acceleration around. Its length is `diff`'s.
+    const tangential = lerpParam(props, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef);
+    const perpendicular = normalizedVector2({ x: -diff.y, y: diff.x });
+    // `direction * (tex_tangential_accel * lerp)`: one product, not two.
+    addAcceleration(force, perpendicular, 1, f(texTangentialAccel * tangential));
   }
 
-  // `yx * Vector2(-1, 1)` is `(-diff.y, diff.x)`: the perpendicular Godot spins
-  // tangential acceleration around. Its length is `diff`'s.
-  if (hasDiff) {
-    const tangential = f(
-      texTangentialAccel * lerpParam(props, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef)
-    );
-    force = vector2Add(force, vector2Scale(normalizedVector2({ x: -diff.y, y: diff.x }), tangential));
-  }
-
-  p.velocity = vector2Add(p.velocity, vector2Scale(force, localDelta));
+  const step = f(localDelta);
+  p.velocity.x = f(p.velocity.x + f(force.x * step));
+  p.velocity.y = f(p.velocity.y + f(force.y * step));
 
   const orbitAmount = f(texOrbitVelocity * lerpParam(props, CPUParticlesParameter.ORBIT_VELOCITY, seedRef));
   if (orbitAmount !== 0.0) {
@@ -540,7 +542,10 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
     const cr = f(Math.cos(-ang));
     const sr = f(Math.sin(-ang));
     const rotation = { a: cr, b: sr, c: -sr, d: cr, tx: 0, ty: 0 };
-    const orbited = vector2Add(vector2Sub(pos, diff), transform2DXformf(rotation, diff));
+    const orbited = vector2Add(
+      vector2Sub({ x: p.transform.tx, y: p.transform.ty }, diff),
+      transform2DXformf(rotation, diff)
+    );
     p.transform.tx = orbited.x;
     p.transform.ty = orbited.y;
   }
@@ -576,6 +581,15 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   return tv;
 }
 
+/**
+ * `force += direction * texture * random` (`cpu_particles_2d.cpp:1004-1020`), each product and the
+ * sum rounded as C++ rounds a `Vector2` of floats. `force` is the caller's own to change.
+ */
+function addAcceleration(force: Vector2, direction: Vector2, texture: number, random: number): void {
+  force.x = f(force.x + f(f(direction.x * texture) * random));
+  force.y = f(force.y + f(f(direction.y * texture) * random));
+}
+
 /** Scale, colour, hue rotation and the quad's basis, run for every particle. */
 function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void {
   const { props, curves, colorRamp } = input;
@@ -609,25 +623,21 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
     p.transform.a = yAxis.y;
     p.transform.b = -yAxis.x;
   } else {
-    p.transform.a = f(Math.cos(p.rotation));
-    p.transform.b = -f(Math.sin(p.rotation));
-    p.transform.c = f(Math.sin(p.rotation));
-    p.transform.d = f(Math.cos(p.rotation));
+    const cos = f(Math.cos(p.rotation));
+    const sin = f(Math.sin(p.rotation));
+    p.transform.a = cos;
+    p.transform.b = -sin;
+    p.transform.c = sin;
+    p.transform.d = cos;
   }
 
   const scaleParam = props.params[CPUParticlesParameter.SCALE]!;
-  const scale = flooredScale(f(texScale * lerpf(scaleParam.min, scaleParam.max, p.scaleRand)));
+  const drawnScale = f(texScale * lerpf(scaleParam.min, scaleParam.max, p.scaleRand));
+  const scale = drawnScale < MIN_SCALE ? f(MIN_SCALE) : drawnScale;
   p.transform.a = f(p.transform.a * scale);
   p.transform.b = f(p.transform.b * scale);
   p.transform.c = f(p.transform.c * scale);
   p.transform.d = f(p.transform.d * scale);
-}
-
-/** The smallest scale Godot draws: a zero-scale quad never collapses the basis. */
-const MIN_SCALE = 0.00001;
-
-function flooredScale(scale: number): number {
-  return scale < MIN_SCALE ? f(MIN_SCALE) : scale;
 }
 
 /**
@@ -684,33 +694,37 @@ function multiplyColor(a: Rgba, b: Rgba): Rgba {
   return { r: f(a.r * b.r), g: f(a.g * b.g), b: f(a.b * b.b), a: f(a.a * b.a) };
 }
 
-type Triple = readonly [number, number, number];
-
-/** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_2d.cpp:1090-1092`). */
-const HUE_LUMINANCE: Triple = [0.299, 0.587, 0.114];
-const HUE_COSINE_ROWS: readonly Triple[] = [
+/** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_2d.cpp:1090-1092`), as floats. */
+const HUE_LUMINANCE: readonly number[] = [0.299, 0.587, 0.114].map(f);
+const HUE_COSINE_ROWS: readonly (readonly number[])[] = [
   [0.701, -0.587, -0.114],
   [-0.299, 0.413, -0.114],
   [-0.3, -0.588, 0.886],
-];
-const HUE_SINE_ROWS: readonly Triple[] = [
+].map((row) => row.map(f));
+const HUE_SINE_ROWS: readonly (readonly number[])[] = [
   [0.168, 0.33, -0.497],
   [-0.328, 0.035, 0.292],
   [1.25, -1.05, -0.203],
-];
+].map((row) => row.map(f));
+
+/** The blended basis as three rows: `mat1[j] + mat2[j] * c + mat3[j] * s` in `real_t` float. */
+function hueBasisRows(angle: number): number[][] {
+  const c = f(Math.cos(angle));
+  const s = f(Math.sin(angle));
+  return HUE_COSINE_ROWS.map((cosine, j) =>
+    cosine.map((_, k) => f(f(HUE_LUMINANCE[k]! + f(cosine[k]! * c)) + f(HUE_SINE_ROWS[j]![k]! * s)))
+  );
+}
+
+/** Most particles have no hue curve, so their angle is zero: the basis is built once for them. */
+const UNROTATED_HUE_ROWS = hueBasisRows(0);
 
 /**
  * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
  * angle, then applied with `Basis::xform_inv`, the transpose, in `real_t` float.
  */
 function rotateHue(color: Rgba, angle: number): Rgba {
-  const c = f(Math.cos(angle));
-  const s = f(Math.sin(angle));
-
-  // Row j of the blended basis: `mat1[j] + mat2[j] * c + mat3[j] * s`.
-  const rows = HUE_COSINE_ROWS.map((cosine, j) =>
-    cosine.map((_, k) => f(f(f(HUE_LUMINANCE[k]!) + f(f(cosine[k]!) * c)) + f(f(HUE_SINE_ROWS[j]![k]!) * s)))
-  );
+  const rows = angle === 0 ? UNROTATED_HUE_ROWS : hueBasisRows(angle);
   // `xform_inv` reads down a column of the rows, not across one.
   const channel = (k: number) =>
     f(f(f(rows[0]![k]! * color.r) + f(rows[1]![k]! * color.g)) + f(rows[2]![k]! * color.b));
