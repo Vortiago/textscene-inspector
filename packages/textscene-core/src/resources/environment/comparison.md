@@ -23,7 +23,12 @@ A viewport's `use_debanding`, which the root takes from `rendering/anti_aliasing
 ## Tone mapping exposure
 <!-- compare: image=unit-environment-linear-exposure status=done fixture=unit-environment-linear-exposure.tscn -->
 
-`tonemap_exposure = 1.6` under LINEAR, with nothing that needs the tone-map pass. The three boxes and the colour background are 1.6 times their colours, and the brightest box clips at white, as in Godot. The exposure multiplies the colour before every tone mapper, LINEAR included, in the main view and in a shared-world SubViewport alike.
+`tonemap_exposure = 1.6` under LINEAR, with no glow and no adjustment. The three boxes and the colour background are 1.6 times their colours, and the brightest box clips at white, as in Godot. The exposure multiplies the colour before every tone mapper, LINEAR included, in the main view and in a shared-world SubViewport alike.
+
+## Scene buffer
+<!-- compare: image=unit-scene-buffer-half-float status=done fixture=unit-scene-buffer-half-float.tscn -->
+
+Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as Godot's does (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`). The buffer rounds each linear value to half precision first. Each unshaded quad sits just above a level's half step, and both engines write the level below it. A transparent surface changes nothing else in the frame.
 
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
