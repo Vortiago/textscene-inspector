@@ -143,11 +143,9 @@ describe('computeWorldBoundingBox: a node icon', () => {
 
 describe('computeWorldBoundingBox of a boxless draw', () => {
   // `CPUParticles3D::get_aabb` is `AABB()` (`cpu_particles_3d.cpp:43-45`).
-  it('leaves out the draws under a group whose node gives the editor no box', () => {
-    const draws = new THREE.Group();
-    draws.userData = boxlessUserData();
-    draws.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
-    const node = new THREE.Group().add(draws);
-    expect(computeWorldBoundingBox(node).isEmpty()).toBe(true);
+  it('leaves out a draw whose node gives the editor no box', () => {
+    const drawn = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    drawn.userData = boxlessUserData();
+    expect(computeWorldBoundingBox(new THREE.Group().add(drawn)).isEmpty()).toBe(true);
   });
 });

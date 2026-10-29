@@ -76,9 +76,7 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node} ref={nodeRef}>
-      <group userData={boxlessUserData()}>
-        <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
-      </group>
+      <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
       <PluginGizmo drawnFor="every-node">
         {/* The box the node authors, `AABB()` for none, and not the parser's null (the multimesh box). */}
         <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} />
@@ -203,7 +201,7 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
         args={[geometry, startingMaterial, count]}
         frustumCulled={false}
         {...drawHookProps(shadow)}
-        userData={visualLayersUserData(godotLayers)}
+        userData={drawUserData(godotLayers)}
       >
         <SurfaceMaterialSlots sources={sources} drawsParticles />
       </instancedMesh>
@@ -214,12 +212,18 @@ function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; dra
           args={[geometry, undefined, count]}
           frustumCulled={false}
           {...overlayDrawProps(shadow)}
+          userData={boxlessUserData()}
         >
           <SurfaceMaterialSlot source={overlay} drawsParticles />
         </instancedMesh>
       )}
     </>
   );
+}
+
+/** A particle draw's userData: the node's `layers`, and no box of its own for the editor. */
+function drawUserData(godotLayers: number) {
+  return { ...visualLayersUserData(godotLayers), ...boxlessUserData() };
 }
 
 /**
@@ -255,12 +259,12 @@ function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: 
       <points
         args={[geometry, startingMaterial]}
         {...drawHookProps(shadow)}
-        userData={visualLayersUserData(godotLayers)}
+        userData={drawUserData(godotLayers)}
       >
         <SurfaceMaterialSlots sources={sources} drawsPoints drawsParticles />
       </points>
       {overlay && (
-        <points args={[geometry]} {...overlayDrawProps(shadow)}>
+        <points args={[geometry]} {...overlayDrawProps(shadow)} userData={boxlessUserData()}>
           <SurfaceMaterialSlot source={overlay} drawsPoints drawsParticles />
         </points>
       )}

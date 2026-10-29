@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { frameSceneBounds } from './frameSceneBounds';
 import { nodeIconUserData } from './editorHelpers';
+import { boxlessUserData } from './bounds';
 import { editorCameraDirection } from './godotEditorCamera';
 
 /** Mirrors `GroundGrid()` in TscnCanvas.tsx: a large, framing-exempt grid. */
@@ -198,5 +199,24 @@ describe('frameSceneBounds: a node icon', () => {
     frameSceneBounds(withIcon, iconCamera, null);
 
     expect(iconCamera.position.toArray()).toEqual(aloneCamera.position.toArray());
+  });
+});
+
+describe('frameSceneBounds — a boxless draw', () => {
+  // `CPUParticles3D::get_aabb` is `AABB()` (`cpu_particles_3d.cpp:43-45`), so the particles never frame.
+  it('frames the scene without a draw whose node gives the editor no box', () => {
+    const framed = (withParticles: boolean) => {
+      const scene = new THREE.Scene();
+      scene.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+      if (withParticles) {
+        const particles = new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20));
+        particles.userData = boxlessUserData();
+        scene.add(new THREE.Group().add(particles));
+      }
+      const camera = makeCamera();
+      frameSceneBounds(scene, camera, null);
+      return camera.position.toArray();
+    };
+    expect(framed(true)).toEqual(framed(false));
   });
 });
