@@ -22,7 +22,7 @@ canvas or test-renderer, applies the curve in each material.
 
 - **Mount the compositor only when a feature needs it** (glow, a blended surface, MSAA). Rejected.
   The frame then rounds differently with and without such a feature, so one off-screen transparent
-  quad moved thousands of pixels by a level (#1081). Without the buffer, a value that Godot rounds
+  quad moved thousands of pixels by a level. Without the buffer, a value that Godot rounds
   down across a level boundary also reads one level high.
 - **Draw the compositor into a float buffer.** Rejected. Godot rounds through half precision, and a
   float target costs twice the memory and needs float blending.

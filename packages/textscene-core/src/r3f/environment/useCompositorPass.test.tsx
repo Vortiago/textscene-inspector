@@ -162,7 +162,7 @@ describe('useCompositorPass with no Environment', () => {
 });
 
 describe('useCompositorPass over a blended surface', () => {
-  // A blended draw anywhere, even off-screen, once moved the whole frame by a level (#1081).
+  // A blended draw anywhere, even off-screen, must not move the rest of the frame by a level.
   it('mounts the same pass with and without a blended surface in the scene', async () => {
     const { mesh, blend } = switchableMesh();
     const { renderer, pass } = await mount(null, { content: mesh });

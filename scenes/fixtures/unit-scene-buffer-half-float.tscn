@@ -1,4 +1,4 @@
-; One variable: the half-float scene buffer. Each unshaded quad's sRGB albedo sits just above a level's
+; One variable: the half-float scene buffer. Each unshaded quad's sRGB albedo sits close above a level's
 ; half step, where the RGBA16F buffer that Godot draws into (`renderer_scene_render_rd.cpp:1128`) rounds
 ; the linear value below it. Godot writes the lower level for every quad. A curve applied in the
 ; material, with no buffer, writes the level above. Every other golden crosses a level boundary

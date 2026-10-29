@@ -28,7 +28,7 @@ A viewport's `use_debanding`, which the root takes from `rendering/anti_aliasing
 ## Scene buffer
 <!-- compare: image=unit-scene-buffer-half-float status=done fixture=unit-scene-buffer-half-float.tscn -->
 
-Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as Godot's does (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`). The buffer rounds each linear value to half precision first. Each unshaded quad sits just above a level's half step, and both engines write the level below it. A transparent surface changes nothing else in the frame.
+Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as Godot's does (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`). The buffer rounds each linear value to half precision first. Each unshaded quad sits close above a level's half step, and both engines write the level below it. A transparent surface changes nothing else in the frame.
 
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
