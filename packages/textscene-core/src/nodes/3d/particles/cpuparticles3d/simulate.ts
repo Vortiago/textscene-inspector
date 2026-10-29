@@ -51,13 +51,11 @@ import { storedReal as f } from '../../../../godot/math/real.js';
 import {
   basisColumn,
   basisDeterminantOf,
-  basisFromAxisAngle,
   basisFromColumns,
   basisOrthonormalized,
-  basisScaledRows,
-  basisXform,
   type BasisComponents,
 } from '../../../../godot/math/basis.js';
+import { basisFromAxisAngle, basisScaledRows, basisXform } from '../../../../godot/math/basisFloat.js';
 import { transform2DBasisXform } from '../../../../godot/math/transform2d.js';
 import {
   affineInverseTransform3D,
@@ -82,7 +80,7 @@ import {
   type Vector3,
 } from '../../../../godot/math/vector.js';
 import { sortArray } from '../../../../godot/templates/sortArray.js';
-import { colorAt, colorCount, vector3At, vector3Count } from '../../../../resources/shapes/packedArray';
+import { colorAt, colorCount, vector3At, vector3Count } from '../../../../resources/shapes/packedElements';
 import { CPUParticlesParameter } from '../../../../godot/scene/cpuParticles';
 import { CPUParticles3DDrawOrder, EmissionShape } from '../../../../godot/scene/particles3d';
 import {

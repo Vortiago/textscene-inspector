@@ -48,7 +48,7 @@ import {
   sampleParam,
   type ParticleCurves,
 } from '../../shared/cpuparticles/process';
-import { colorAt, colorCount, vector2At, vector2Count } from '../../../resources/shapes/packedArray';
+import { colorAt, colorCount, vector2At, vector2Count } from '../../../resources/shapes/packedElements';
 import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
