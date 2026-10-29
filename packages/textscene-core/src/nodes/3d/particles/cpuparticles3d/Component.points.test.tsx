@@ -1,7 +1,6 @@
 /**
- * A CPUParticles3D whose mesh draws points: every particle's points in one THREE.Points, and the
- * item's own space beside them for a material that reads it, as Godot draws each particle as an
- * instance with its own MODEL_MATRIX.
+ * A CPUParticles3D whose mesh draws points: one THREE.Points instanced at every particle, as Godot
+ * draws each particle as an instance with its own MODEL_MATRIX.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
@@ -9,7 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
-import { PLACED_POINT_ATTRIBUTES } from '../../../../r3f/materials/godotPoint';
+import { instanceMatrices } from '../../../../r3f/meshes/sharedInstances';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { emitterNode, ROW_OF_FOUR } from './cpuparticles3d.testkit';
 import { loadSimulate } from './simulateModule';
@@ -39,19 +38,21 @@ async function drawnPoints(mapping: string): Promise<THREE.Points[]> {
 beforeAll(loadSimulate);
 
 describe('<CPUParticles3D> with a PointMesh', () => {
-  it("gives each particle's point its item's space under local triplanar", async () => {
+  it('instances one Points at every particle, so a local triplanar reads each MODEL_MATRIX', async () => {
     const [points, ...others] = await drawnPoints('uv1_triplanar = true');
+    const geometry = points!.geometry as THREE.InstancedBufferGeometry;
 
     expect(others).toEqual([]);
-    expect(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.itemPosition).count).toBe(4);
-    expect(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.placeMatrix).count).toBe(4);
-    expect((points!.material as THREE.Material).userData.godotPointsAtPlaces).toBe(true);
+    expect([geometry.instanceCount, instanceMatrices(geometry).count]).toEqual([4, 4]);
+    expect((points!.material as THREE.Material).userData.godotPointsAtInstances).toBe(true);
   });
 
-  it('leaves out the item space under world triplanar, as it costs a mat4 per point', async () => {
-    const [points] = await drawnPoints('uv1_triplanar = true\nuv1_world_triplanar = true');
+  it("places each instance at its particle's origin", async () => {
+    const [points] = await drawnPoints('uv1_triplanar = true');
+    const matrices = instanceMatrices(points!.geometry);
+    // The ROW_OF_FOUR buffer holds each origin's x in its first row's last float.
+    const originsX = Array.from({ length: 4 }, (_, i) => matrices.array[i * 16 + 12]);
 
-    expect(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.placeMatrix)).toBeUndefined();
-    expect((points!.material as THREE.Material).userData.godotPointsAtPlaces).toBe(false);
+    expect(originsX).toEqual([1.4999998807907104, 1.0000003576278687, 0.5, 1.3322676295501878e-15]);
   });
 });

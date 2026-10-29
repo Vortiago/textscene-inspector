@@ -328,7 +328,10 @@ function MeshSurfaces({ part, overrides }: { part: SurfacedPart; overrides: Mesh
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} drawsPoints={geometryDrawsPoints(part.geometry)} />
+      <SurfaceMaterialSlots
+        sources={sources}
+        points={geometryDrawsPoints(part.geometry) ? 'mesh' : undefined}
+      />
     </>
   );
 }

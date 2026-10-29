@@ -6,7 +6,11 @@
  */
 
 import * as THREE from 'three';
-import { pointsAtPlaces, pointsAtPlacesInItemSpace } from '../../../../r3f/meshes/pointsAtPlaces';
+import {
+  instanceMatrices,
+  sharedInstances,
+  writeInstanceMatrix,
+} from '../../../../r3f/meshes/sharedInstances';
 import {
   PARTICLE_COLOR_ATTRIBUTE,
   PARTICLE_CUSTOM_ATTRIBUTE,
@@ -44,36 +48,33 @@ function particleMatrix(target: THREE.Matrix4, buffer: Float32Array, i: number):
   );
 }
 
-/** Each particle's `width` floats at `offset`, each repeated `repeats` times in a row. */
-export function particleSlices(
-  buffer: Float32Array,
-  offset: number,
-  width: number,
-  repeats = 1
-): Float32Array {
+/** Each particle's `width` floats at `offset`. */
+export function particleSlices(buffer: Float32Array, offset: number, width: number): Float32Array {
   const count = particleCount(buffer);
-  const out = new Float32Array(count * repeats * width);
-  for (let i = 0; i < count; i++) {
-    const at = i * PARTICLE_FLOATS + offset;
-    for (let r = 0; r < repeats; r++) {
-      for (let k = 0; k < width; k++) out[(i * repeats + r) * width + k] = buffer[at + k]!;
-    }
-  }
+  const out = new Float32Array(count * width);
+  writeSlicesInto(out, buffer, offset, width);
   return out;
 }
 
-/**
- * `source` with a colour and a custom attribute per instance, for `count` instances. It shares the
- * source's own attributes and index, which `releaseParticleGeometry` leaves to their owner.
- */
-export function particleGeometry(source: THREE.BufferGeometry, count: number): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  for (const [name, attribute] of Object.entries(source.attributes)) geometry.setAttribute(name, attribute);
-  geometry.setIndex(source.index);
-  for (const { start, count: groupCount, materialIndex } of source.groups) {
-    geometry.addGroup(start, groupCount, materialIndex);
+function writeSlicesInto(
+  target: THREE.TypedArray,
+  buffer: Float32Array,
+  offset: number,
+  width: number
+): void {
+  const count = particleCount(buffer);
+  for (let i = 0; i < count; i++) {
+    const at = i * PARTICLE_FLOATS + offset;
+    for (let k = 0; k < width; k++) target[i * width + k] = buffer[at + k]!;
   }
-  geometry.userData = { ...source.userData };
+}
+
+/**
+ * `source` at `count` particles, each with a colour and custom data of its own. Its instance
+ * matrices are an InstancedMesh's too, so one write places both a draw and its overlay.
+ */
+export function particleGeometry(source: THREE.BufferGeometry, count: number): THREE.InstancedBufferGeometry {
+  const geometry = sharedInstances(source, count);
   for (const name of [PARTICLE_COLOR_ATTRIBUTE, PARTICLE_CUSTOM_ATTRIBUTE]) {
     geometry.setAttribute(
       name,
@@ -83,28 +84,16 @@ export function particleGeometry(source: THREE.BufferGeometry, count: number): T
   return geometry;
 }
 
-/**
- * Disposes `geometry` without the attributes it shares with `source`. Three frees each attribute
- * of a disposed geometry (`WebGLGeometries.js:8-37`), and the source's draws would read freed buffers.
- */
-export function releaseParticleGeometry(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): void {
-  for (const name of Object.keys(source.attributes)) geometry.deleteAttribute(name);
-  geometry.setIndex(null);
-  geometry.dispose();
-}
-
 /** Scratch for one particle's matrix, overwritten by every write. */
 const written = new THREE.Matrix4();
 
-/** Writes `buffer`'s transforms into `mesh`'s instance matrices. */
-export function writeParticleMatrices(mesh: THREE.InstancedMesh, buffer: Float32Array): void {
-  const count = particleCount(buffer);
-  for (let i = 0; i < count; i++) mesh.setMatrixAt(i, particleMatrix(written, buffer, i));
-  mesh.instanceMatrix.needsUpdate = true;
-}
-
-/** Writes `buffer`'s colours and custom data into the instance attributes of `geometry`. */
-export function writeParticleData(geometry: THREE.BufferGeometry, buffer: Float32Array): void {
+/** Writes `buffer`'s transforms, colours and custom data into `geometry`'s instance attributes. */
+export function writeParticles(geometry: THREE.BufferGeometry, buffer: Float32Array): void {
+  const matrices = instanceMatrices(geometry);
+  for (let i = 0; i < particleCount(buffer); i++) {
+    writeInstanceMatrix(matrices, i, particleMatrix(written, buffer, i));
+  }
+  matrices.needsUpdate = true;
   writeSlices(geometry.getAttribute(PARTICLE_COLOR_ATTRIBUTE), buffer, PARTICLE_COLOR_OFFSET);
   writeSlices(geometry.getAttribute(PARTICLE_CUSTOM_ATTRIBUTE), buffer, PARTICLE_CUSTOM_OFFSET);
 }
@@ -114,48 +103,6 @@ function writeSlices(
   buffer: Float32Array,
   offset: number
 ): void {
-  (attribute.array as Float32Array).set(particleSlices(buffer, offset, VEC4_FLOATS));
+  writeSlicesInto(attribute.array, buffer, offset, VEC4_FLOATS);
   (attribute as THREE.BufferAttribute).needsUpdate = true;
-}
-
-/**
- * `source`'s points once for each particle, placed by its transform, each vertex carrying its
- * particle's colour and custom data. three has no instanced form of `THREE.Points`.
- */
-export function particlePoints(source: THREE.BufferGeometry, buffer: Float32Array): THREE.BufferGeometry {
-  return withParticleData(pointsAtPlaces(source, particleMatrices(buffer)), source, buffer);
-}
-
-/**
- * `particlePoints`, with each point's item position and normal and its particle's matrix, for a
- * material that reads the item's space as Godot's `MODEL_MATRIX` gives it to each instance.
- */
-export function particlePointsInItemSpace(
-  source: THREE.BufferGeometry,
-  buffer: Float32Array
-): THREE.BufferGeometry {
-  return withParticleData(pointsAtPlacesInItemSpace(source, particleMatrices(buffer)), source, buffer);
-}
-
-function particleMatrices(buffer: Float32Array): THREE.Matrix4[] {
-  return Array.from({ length: particleCount(buffer) }, (_, i) =>
-    particleMatrix(new THREE.Matrix4(), buffer, i)
-  );
-}
-
-/** `points`, with each of a particle's `source` vertices carrying its colour and custom data. */
-function withParticleData(
-  points: THREE.BufferGeometry,
-  source: THREE.BufferGeometry,
-  buffer: Float32Array
-): THREE.BufferGeometry {
-  const vertices = source.getAttribute('position').count;
-  for (const [name, offset] of [
-    [PARTICLE_COLOR_ATTRIBUTE, PARTICLE_COLOR_OFFSET],
-    [PARTICLE_CUSTOM_ATTRIBUTE, PARTICLE_CUSTOM_OFFSET],
-  ] as const) {
-    const slices = particleSlices(buffer, offset, VEC4_FLOATS, vertices);
-    points.setAttribute(name, new THREE.BufferAttribute(slices, VEC4_FLOATS));
-  }
-  return points;
 }

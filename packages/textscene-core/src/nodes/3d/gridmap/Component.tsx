@@ -1,7 +1,7 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
  * populated cells. Each surface draws as one THREE.InstancedMesh, as one mesh per cell when its
- * material billboards, or as one THREE.Points holding every cell's points for a PointMesh, one per
+ * material billboards, or as one THREE.Points instanced at every cell for a PointMesh, one per
  * cell when its material billboards. A loading item draws nothing.
  * An item whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
  * InstancedMesh.
@@ -29,16 +29,15 @@ import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import {
+  instancesBounds,
   pointPlacementOf,
-  pointsAtPlaces,
-  pointsAtPlacesInItemSpace,
-} from '../../../r3f/meshes/pointsAtPlaces';
-import { geometryUntilDisposed } from '../../../r3f/meshes/geometryUntilDisposed';
+  raycastInstancedPoints,
+  releaseSharedInstances,
+  sharedInstancesAt,
+} from '../../../r3f/meshes/sharedInstances';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
-import { readsObjectSpace } from '../../../r3f/materials/godotTriplanar';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
@@ -224,26 +223,28 @@ function GridMapPart(props: GridMapPartProps) {
 }
 
 /**
- * Three cannot instance `THREE.Points`, so every cell's points are one geometry, shared by the
- * part's surfaces. Each form is built for the first surface that draws it, new for each set of
- * cells, and disposed when the last surface that holds it lets go.
+ * A points part at every cell as one instanced geometry over the item's own, shared by the part's
+ * surfaces, new for each set of cells, with the box and sphere of every cell.
  */
 function PointsPart(props: GridMapPartProps) {
   const { part, matrices } = props;
   const cellPoints = useMemo<CellPoints>(
     () => ({
-      placed: geometryUntilDisposed(() => pointsAtPlaces(part.geometry, matrices)),
-      inItemSpace: geometryUntilDisposed(() => pointsAtPlacesInItemSpace(part.geometry, matrices)),
+      geometry: sharedInstancesAt(part.geometry, matrices),
+      ...instancesBounds(part.geometry, matrices),
     }),
     [part.geometry, matrices]
+  );
+  useLayoutEffect(
+    () => () => releaseSharedInstances(cellPoints.geometry, part.geometry),
+    [cellPoints, part.geometry]
   );
   return <PartSurfaces {...props} cellPoints={cellPoints} />;
 }
 
-/** A points part at every cell: placed, and placed with each item's space for a surface that reads it. */
-interface CellPoints {
-  placed: () => THREE.BufferGeometry;
-  inItemSpace: () => THREE.BufferGeometry;
+/** A points part at every cell, and the box and sphere three frames and culls it by. */
+interface CellPoints extends ReturnType<typeof instancesBounds> {
+  geometry: THREE.InstancedBufferGeometry;
 }
 
 function PartSurfaces({
@@ -269,7 +270,7 @@ function PartSurfaces({
 
 /** One surface of an item's mesh, drawn on its own. */
 interface SurfaceDraw {
-  /** The geometry drawn: the item's own, in the item's space, or a points surface's merged points. */
+  /** The geometry drawn: the item's own, or a points surface's instances at every cell. */
   geometry: THREE.BufferGeometry;
   /** A points surface's points at every cell. Undefined for triangles. */
   cellPoints?: CellPoints;
@@ -298,10 +299,7 @@ function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE
     );
   }
   if (!draw.cellPoints) return <BatchedTiles draw={draw} matrices={matrices} />;
-  const { placed, inItemSpace } = draw.cellPoints;
-  return (
-    <MergedPoints draw={draw} build={readsObjectSpace(scalars?.triplanar ?? null) ? inItemSpace : placed} />
-  );
+  return <InstancedCellPoints draw={draw} cellPoints={draw.cellPoints} />;
 }
 
 /**
@@ -332,14 +330,25 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   );
 }
 
-/** The merged points already sit at their cells, so their object draws in the GridMap's space. */
-const MERGED_POINTS_MATRIX = new THREE.Matrix4();
-
-/** A surface's points at every cell as one THREE.Points, which holds the merged points while it draws them. */
-function MergedPoints({ draw, build }: { draw: SurfaceDraw; build: () => THREE.BufferGeometry }) {
-  const geometry = build();
-  useDisposeOnRelease(geometry);
-  return <CellTile draw={{ ...draw, geometry }} matrix={MERGED_POINTS_MATRIX} />;
+/** A surface's points at every cell, one instanced THREE.Points picked at each cell. */
+function InstancedCellPoints({ draw, cellPoints }: { draw: SurfaceDraw; cellPoints: CellPoints }) {
+  const { geometry, boundingBox, boundingSphere } = cellPoints;
+  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
+  const pointsRef = useRef<THREE.Points>(null);
+  // Typed props hold no box on THREE.Points, which three and the framing read off the object.
+  useLayoutEffect(() => {
+    if (pointsRef.current) Object.assign(pointsRef.current, { boundingBox, boundingSphere });
+  }, [boundingBox, boundingSphere]);
+  return (
+    <points
+      ref={pointsRef}
+      args={[geometry, startingMaterial]}
+      raycast={raycastInstancedPoints}
+      {...drawHookProps(draw.shadow)}
+    >
+      <OwnedSurfaceSlot draw={{ ...draw, geometry }} />
+    </points>
+  );
 }
 
 /**

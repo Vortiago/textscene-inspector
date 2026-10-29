@@ -4,6 +4,7 @@
  */
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import type { PointPlacement } from './godotPoint';
 
 const DEFAULT_SURFACE: readonly (MaterialSource | undefined)[] = [undefined];
 
@@ -25,13 +26,13 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
-  /** The mesh draws `THREE.Points`, so each material also sizes its points. */
-  drawsPoints?: boolean;
+  /** Where the points sit when the mesh draws `THREE.Points`, so each material also sizes them. */
+  points?: PointPlacement;
   /** The mesh draws a particle emitter's instances, which each material colours and billboards. */
   drawsParticles?: boolean;
 }
 
-export function SurfaceMaterialSlots({ sources, drawsPoints, drawsParticles }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, points, drawsParticles }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -40,7 +41,7 @@ export function SurfaceMaterialSlots({ sources, drawsPoints, drawsParticles }: S
           key={i}
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
-          points={drawsPoints ? 'mesh' : undefined}
+          points={points}
           drawsParticles={drawsParticles}
         />
       ))}

@@ -4,12 +4,7 @@
  * tangent frame Godot writes for a projecting surface (`material.cpp:1386-1414`).
  */
 import { describe, expect, it } from 'vitest';
-import {
-  readsObjectSpace,
-  triplanarInjection,
-  triplanarUserData,
-  type TriplanarRecord,
-} from './godotTriplanar';
+import { triplanarInjection, triplanarUserData, type TriplanarRecord } from './godotTriplanar';
 import { nodePoseUniforms } from './nodePose';
 import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
@@ -84,16 +79,6 @@ describe('triplanarInjection: the projected position and weights', () => {
     );
     expect(vertexShader).toContain('return cofactors * sign( dot( m[ 0 ], cofactors[ 0 ] ) );');
     expect(vertexShader).toContain('mat3 godotModelNormal = godotNormalMatrix( mat3( godotModel ) );');
-  });
-
-  it("reads a merged GridMap point's item position and normal, placed by its cell as an instance", () => {
-    const { vertexShader } = compiled(worldTriplanarRecord()).shader;
-    const cellPoints = vertexShader.slice(vertexShader.indexOf('#ifdef GODOT_PLACED_POINTS'));
-
-    expect(cellPoints).toContain('godotNormal = godotItemNormal;');
-    expect(cellPoints).toContain('godotVertex = godotItemPosition;');
-    expect(cellPoints).toContain('godotModel *= godotPlaceMatrix;');
-    expect(cellPoints).toContain('godotModelNormal *= mat3( godotPlaceMatrix );');
   });
 });
 
@@ -217,23 +202,5 @@ describe('triplanarInjection: uniforms and programs', () => {
   it('compiles nothing for a material that records no mapping', () => {
     expect(triplanarInjection({ userData: {} })).toBeUndefined();
     expect(triplanarInjection({})).toBeUndefined();
-  });
-});
-
-describe('readsObjectSpace', () => {
-  it('holds for a local projection', () => {
-    expect(readsObjectSpace(worldTriplanarRecord({ uv1: LOCAL_UV1 }))).toBe(true);
-  });
-
-  it('holds for a local frame under a world projection, as the frame reads the mesh normal', () => {
-    expect(readsObjectSpace(worldTriplanarRecord({ isTangentWorld: false }))).toBe(true);
-  });
-
-  it('fails for a world projection in a world frame', () => {
-    expect(readsObjectSpace(worldTriplanarRecord())).toBe(false);
-  });
-
-  it('fails for no mapping (edge case)', () => {
-    expect(readsObjectSpace(null)).toBe(false);
   });
 });

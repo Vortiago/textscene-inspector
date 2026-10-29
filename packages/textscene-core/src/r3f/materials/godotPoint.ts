@@ -12,28 +12,19 @@ import type { StandardMaterialBag } from '../../resources/materials/standardmate
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 import { bagForms } from './bagForms';
+import { INSTANCE_MATRIX_ATTRIBUTE } from '../meshes/sharedInstances';
 
 const POINT_SIZE_KEY = 'godotPointSize';
 const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
 const POINT_COORD_ALBEDO_KEY = 'godotPointCoordAlbedo';
-const POINTS_AT_PLACES_KEY = 'godotPointsAtPlaces';
+const POINTS_AT_INSTANCES_KEY = 'godotPointsAtInstances';
 const PROJECT_CHUNK = '#include <project_vertex>';
 
 /**
- * Where a points surface's vertices sit: in the node's own mesh, or merged at every place, a
- * GridMap's cells or a CPUParticles3D's particles, each carrying its item's space (`pointsAtPlaces.ts`).
+ * Where a points surface's points sit: in the node's own mesh, or at each instance of a GridMap's
+ * cells or a CPUParticles3D's particles (`sharedInstances.ts`).
  */
-export type PointPlacement = 'mesh' | 'places';
-
-/**
- * The attributes each merged point carries: its item's position and normal, and its place's
- * matrix, so a program reads Godot's VERTEX, NORMAL and MODEL_MATRIX.
- */
-export const PLACED_POINT_ATTRIBUTES = {
-  itemPosition: 'godotItemPosition',
-  itemNormal: 'godotItemNormal',
-  placeMatrix: 'godotPlaceMatrix',
-} as const;
+export type PointPlacement = 'mesh' | 'instances';
 
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
@@ -64,15 +55,16 @@ export function pointDrawOf(
   };
 }
 
-/** The merged points' attributes, under `GODOT_PLACED_POINTS`, which the triplanar mapping reads. */
-const GODOT_PLACED_POINTS: ProgramInjection = {
-  cacheKey: 'godot-placed-points',
+/**
+ * three defines `USE_INSTANCING` and declares `instanceMatrix` only for an InstancedMesh
+ * (`WebGLPrograms.js:209`), so instanced points declare both. Each instance branch of three's
+ * chunks and of the Godot patches then places, turns and billboards the points.
+ */
+const GODOT_INSTANCED_POINTS: ProgramInjection = {
+  cacheKey: 'godot-instanced-points',
   onBeforeCompile(shader) {
-    const { itemPosition, itemNormal, placeMatrix } = PLACED_POINT_ATTRIBUTES;
-    shader.vertexShader = `#define GODOT_PLACED_POINTS
-attribute vec3 ${itemPosition};
-attribute vec3 ${itemNormal};
-attribute mat4 ${placeMatrix};
+    shader.vertexShader = `#define USE_INSTANCING
+attribute mat4 ${INSTANCE_MATRIX_ATTRIBUTE};
 ${shader.vertexShader}`;
   },
 };
@@ -148,13 +140,13 @@ export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefi
 
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {
   const readsMap = draw.samplesAlbedoAtPointCoord && Boolean(bag.props.map);
-  const isAtPlaces = draw.placement === 'places';
+  const isAtInstances = draw.placement === 'instances';
   const userData = {
     ...bag.props.userData,
     [POINT_SIZE_KEY]: draw.pixels,
     [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
     [POINT_COORD_ALBEDO_KEY]: readsMap,
-    [POINTS_AT_PLACES_KEY]: isAtPlaces,
+    [POINTS_AT_INSTANCES_KEY]: isAtInstances,
   };
   return {
     ...bag,
@@ -163,7 +155,7 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
       bag.injection,
       GODOT_POINT_SIZE,
       readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
-      isAtPlaces ? GODOT_PLACED_POINTS : undefined,
+      isAtInstances ? GODOT_INSTANCED_POINTS : undefined,
     ]),
   };
 }
@@ -183,5 +175,5 @@ export function pointShadowSizeInjection(userData: Record<string, unknown>): Pro
   const size = userData[POINT_COORD_ALBEDO_KEY]
     ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD
     : GODOT_POINT_SHADOW_SIZE;
-  return userData[POINTS_AT_PLACES_KEY] ? composeInjections([size, GODOT_PLACED_POINTS]) : size;
+  return userData[POINTS_AT_INSTANCES_KEY] ? composeInjections([size, GODOT_INSTANCED_POINTS]) : size;
 }

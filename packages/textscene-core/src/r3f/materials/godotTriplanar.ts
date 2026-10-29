@@ -38,18 +38,6 @@ export function triplanarUserData(record: TriplanarRecord | null): Record<string
   return record ? { [TRIPLANAR_KEY]: record } : {};
 }
 
-/**
- * `triplanar` reads the mesh's own space: a UV set projects the local position, or the frame is
- * local. A draw that moves the vertices out of the mesh's space must hand such a mapping the item's.
- */
-export function readsObjectSpace(triplanar: Triplanar | null): boolean {
-  if (!triplanar) return false;
-  const projectsLocal = [triplanar.uv1, triplanar.uv2].some(
-    (projection) => projection && !projection.isWorld
-  );
-  return projectsLocal || !triplanar.isTangentWorld;
-}
-
 /** The UV sets of Godot's shader, by the prefix of their uniforms. */
 const UV_SETS = ['uv1', 'uv2'] as const;
 type UvSet = (typeof UV_SETS)[number];
@@ -173,12 +161,6 @@ const GODOT_VERTEX_INPUTS = /* glsl */ `
 	#ifdef USE_INSTANCING
 		godotModel *= instanceMatrix;
 		godotModelNormal *= mat3( instanceMatrix );
-	#endif
-	#ifdef GODOT_PLACED_POINTS
-		godotNormal = godotItemNormal;
-		godotVertex = godotItemPosition;
-		godotModel *= godotPlaceMatrix;
-		godotModelNormal *= mat3( godotPlaceMatrix );
 	#endif
 `;
 

@@ -164,7 +164,7 @@ const INJECTIONS: readonly InjectionCase[] = [
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
   injected('materials/godotParticles.ts', 'particle draw', SURFACE_AND_DEPTH, () => particleBag().injection),
   injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
-  injected('materials/godotPoint.ts', 'points at places', COLOUR, () => pointBag(false, 'places')),
+  injected('materials/godotPoint.ts', 'points at instances', COLOUR, () => pointBag(false, 'instances')),
   injected('surfaceBillboard.ts', 'billboard normal', COLOUR, () => GODOT_BILLBOARD_NORMAL),
   injected('materials/godotTriplanar.ts', 'triplanar mapping', SURFACE_AND_DEPTH, () =>
     triplanarInjection({ userData: triplanarUserData(worldTriplanarRecord()) })

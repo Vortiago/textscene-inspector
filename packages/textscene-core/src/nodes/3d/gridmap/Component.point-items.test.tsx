@@ -3,11 +3,19 @@
  * (`primitive_meshes.cpp:2388`), one point at each cell's place, never as the placeholder.
  */
 import { describe, expect, it } from 'vitest';
-import { Vector3, type Material, type Points } from 'three';
+import {
+  Matrix3,
+  Matrix4,
+  Raycaster,
+  Vector3,
+  type InstancedBufferGeometry,
+  type Material,
+  type Points,
+} from 'three';
 import { ORTHO_BASES } from './cellData';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { mountGridMap } from './testing/gridMapCorpus';
-import { PLACED_POINT_ATTRIBUTES } from '../../../r3f/materials/godotPoint';
+import { instanceMatrices } from '../../../r3f/meshes/sharedInstances';
 
 const POINT_LIBRARY = `[gd_resource type="MeshLibrary" format=3]
 
@@ -25,11 +33,21 @@ async function onlyPoints(cells: string): Promise<Points> {
   return points[0]!;
 }
 
-/** Where each vertex of `points` sits in the world. */
+/** Each instance's matrix of `points`. */
+function cellMatrices(points: Points): Matrix4[] {
+  const geometry = points.geometry as InstancedBufferGeometry;
+  return Array.from({ length: geometry.instanceCount }, (_, cell) =>
+    new Matrix4().fromArray(instanceMatrices(geometry).array, cell * 16)
+  );
+}
+
+/** Where each vertex of `points` sits in the world, at each cell in turn. */
 function vertexPlaces(points: Points): number[][] {
   const position = points.geometry.getAttribute('position');
-  return Array.from({ length: position.count }, (_, i) =>
-    points.localToWorld(new Vector3().fromBufferAttribute(position, i)).toArray()
+  return cellMatrices(points).flatMap((cell) =>
+    Array.from({ length: position.count }, (_, i) =>
+      points.localToWorld(new Vector3().fromBufferAttribute(position, i).applyMatrix4(cell)).toArray()
+    )
   );
 }
 
@@ -39,7 +57,7 @@ describe('<GridMap> item with an inline PointMesh', () => {
     expect(vertexPlaces(await onlyPoints('0, 0, 0'))).toEqual([[1, 1, 1]]);
   });
 
-  it('draws every cell in one Points, each point at its own place', async () => {
+  it('draws every cell as an instance of one Points, each point at its own place', async () => {
     expect(vertexPlaces(await onlyPoints('0, 0, 0, 1, 0, 0'))).toEqual([
       [1, 1, 1],
       [3, 1, 1],
@@ -49,14 +67,34 @@ describe('<GridMap> item with an inline PointMesh', () => {
   it("turns each point's +Z normal with its cell's basis", async () => {
     // The second cell, at x = 1, holds orientation 10, which `ORTHO_BASES` gives as a half turn about Y.
     const points = await onlyPoints(`0, 0, 0, 1, 0, ${10 << 16}`);
-    const normal = points.geometry.getAttribute('normal');
+    const normal = new Vector3().fromBufferAttribute(points.geometry.getAttribute('normal'), 0);
     const basis = ORTHO_BASES[10]!;
-    const normals = [0, 1].map((i) => new Vector3().fromBufferAttribute(normal, i).toArray());
+    const normals = cellMatrices(points).map((cell) =>
+      normal.clone().applyMatrix3(new Matrix3().getNormalMatrix(cell)).toArray()
+    );
 
     expect(normals).toEqual([
       [0, 0, 1],
       [basis[2], basis[5], basis[8]],
     ]);
+  });
+
+  it('frames and culls by the box of every cell', async () => {
+    const { boundingBox } = (await onlyPoints('0, 0, 0, 1, 0, 0')) as Points & {
+      boundingBox: { min: Vector3; max: Vector3 };
+    };
+    expect([boundingBox.min.toArray(), boundingBox.max.toArray()]).toEqual([
+      [1, 1, 1],
+      [3, 1, 1],
+    ]);
+  });
+
+  it("picks the point at the second cell, as each instance's points are its own", async () => {
+    const points = await onlyPoints('0, 0, 0, 1, 0, 0');
+    const raycaster = new Raycaster(new Vector3(3, 1, 10), new Vector3(0, 0, -1));
+    raycaster.params.Points.threshold = 0.1;
+    const hits = raycaster.intersectObject(points);
+    expect(hits.map(({ instanceId, object }) => [instanceId, object === points])).toEqual([[1, true]]);
   });
 
   it('draws no triangle mesh and no placeholder box', async () => {
@@ -103,8 +141,8 @@ item/0/mesh = SubResource("Mesh_item")
 
     expect(grid.tiles()).toHaveLength(1);
     expect(others).toEqual([]);
-    // The four corners of the wall quad, once for each of the two cells.
-    expect(points!.geometry.getAttribute('position').count).toBe(8);
+    // The four corners of the wall quad, drawn at each of the two cells.
+    expect(vertexPlaces(points!)).toHaveLength(8);
   });
 });
 
@@ -121,7 +159,7 @@ material = SubResource("Projected")
 item/0/mesh = SubResource("Mesh_item")
 `;
 
-  it("keeps every cell in one Points under local triplanar, each point carrying its item's space", async () => {
+  it("instances every cell under local triplanar, so each point reads its cell's instance matrix", async () => {
     const grid = await mountGridMap({
       library: triplanarLibrary('uv1_triplanar = true'),
       cells: '0, 0, 0, 1, 0, 0',
@@ -129,10 +167,7 @@ item/0/mesh = SubResource("Mesh_item")
     const [points, ...others] = grid.points();
 
     expect(others).toEqual([]);
-    expect(Array.from(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.itemPosition).array)).toEqual([
-      0, 0, 0, 0, 0, 0,
-    ]);
-    expect((points!.material as Material).userData.godotPointsAtPlaces).toBe(true);
+    expect((points!.material as Material).userData.godotPointsAtInstances).toBe(true);
   });
 
   it("draws each cell's points on their own when the material billboards, as each turns about its cell", async () => {
@@ -144,23 +179,12 @@ item/0/mesh = SubResource("Mesh_item")
     expect(grid.points()).toHaveLength(2);
   });
 
-  it('keeps every cell in one Points under world triplanar, as the world position reads the same', async () => {
+  it('instances every cell under world triplanar too', async () => {
     const grid = await mountGridMap({
       library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),
       cells: '0, 0, 0, 1, 0, 0',
     });
 
     expect(grid.points()).toHaveLength(1);
-  });
-
-  it('leaves out the item space a surface does not read, as it costs a mat4 per point', async () => {
-    const grid = await mountGridMap({
-      library: triplanarLibrary('uv1_triplanar = true\nuv1_world_triplanar = true'),
-      cells: '0, 0, 0, 1, 0, 0',
-    });
-    const [points] = grid.points();
-
-    expect(points!.geometry.getAttribute(PLACED_POINT_ATTRIBUTES.placeMatrix)).toBeUndefined();
-    expect((points!.material as Material).userData.godotPointsAtPlaces).toBe(false);
   });
 });

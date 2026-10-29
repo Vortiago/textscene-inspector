@@ -1,52 +1,39 @@
 /**
- * The mesh at every particle of a settled CPUParticles3D: one InstancedMesh per triangle part, or one
- * THREE.Points per surface of a points part, each with its overlay.
+ * The mesh at every particle of a settled CPUParticles3D: each part one instanced draw over the
+ * particle buffer, an InstancedMesh or a THREE.Points, with its overlay.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type * as THREE from 'three';
+import type { ThreeElements } from '@react-three/fiber';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlot } from '../../../../r3f/materials/SurfaceMaterialSlot';
-import {
-  SurfaceMaterialSlots,
-  surfaceAttach,
-  surfaceSources,
-} from '../../../../r3f/materials/SurfaceMaterialSlots';
-import { useSurfaceScalars } from '../../../../r3f/materials/useSurfaceMaterial';
-import { readsObjectSpace } from '../../../../r3f/materials/godotTriplanar';
-import { geometryUntilDisposed } from '../../../../r3f/meshes/geometryUntilDisposed';
-import { pointPlacementOf } from '../../../../r3f/meshes/pointsAtPlaces';
+import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
 import { useMeshContent } from '../../../../r3f/meshes/meshContent';
+import {
+  instanceMatrices,
+  raycastInstancedPoints,
+  releaseSharedInstances,
+} from '../../../../r3f/meshes/sharedInstances';
 import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
-import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import { boxlessUserData } from '../../../../r3f/bounds';
 import { geometryDrawsPoints } from '../../../../resources/meshes/godotSurface';
 import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
-import {
-  particleCount,
-  particleGeometry,
-  particlePoints,
-  particlePointsInItemSpace,
-  releaseParticleGeometry,
-  writeParticleData,
-  writeParticleMatrices,
-} from './particleInstances';
-import type { SettledParticles } from './simulate';
+import { particleCount, particleGeometry, writeParticles } from './particleInstances';
 import type { CPUParticles3DProperties } from './types';
 
 interface ParticleMeshProps {
   properties: CPUParticles3DProperties;
-  settled: SettledParticles;
   buffer: Float32Array;
   shadow: ShadowCastingEffects;
 }
 
 /** The mesh at every particle. A node with no mesh, or one that is not loaded yet, draws none. */
-export function ParticleMesh({ properties, settled, buffer, shadow }: ParticleMeshProps) {
+export function ParticleMesh({ properties, buffer, shadow }: ParticleMeshProps) {
   const pools = useSceneResources();
   const content = useMeshContent(useResourceResolution(properties.mesh, pools));
   const override = useMemo(
@@ -57,8 +44,7 @@ export function ParticleMesh({ properties, settled, buffer, shadow }: ParticleMe
     () => resolveMaterialSource(properties.materialOverlay, pools),
     [properties.materialOverlay, pools]
   );
-  // Godot draws no instance while the emitter is off (`cpu_particles_3d.cpp:1338`).
-  if (content.kind !== 'surfaced' || !settled.state) return null;
+  if (content.kind !== 'surfaced') return null;
   return (
     <>
       {content.mesh.parts.map((part, i) => {
@@ -70,11 +56,7 @@ export function ParticleMesh({ properties, settled, buffer, shadow }: ParticleMe
           shadow,
           godotLayers: properties.layers,
         };
-        return geometryDrawsPoints(part.geometry) ? (
-          <ParticlePoints key={i} source={part.geometry} draw={draw} />
-        ) : (
-          <ParticleInstances key={i} source={part.geometry} draw={draw} />
-        );
+        return <ParticlePart key={i} source={part.geometry} draw={draw} />;
       })}
     </>
   );
@@ -92,40 +74,38 @@ interface ParticleDraw {
 }
 
 /**
- * A triangle part as one InstancedMesh, with the overlay's as a second. Each is keyed on the
- * count, as three sizes the instance buffer at construction. three's own frustum cull reads the
+ * A part at every particle: an InstancedMesh for triangles, or one THREE.Points over the instanced
+ * geometry, with the overlay's as a second draw of the same instances. Each is keyed on the count,
+ * as three sizes an InstancedMesh's buffer at construction. three's own frustum cull reads the
  * instance matrices, not the billboards the program draws, so the scene cull's box alone culls them.
  */
-function ParticleInstances({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
+function ParticlePart({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
   const { sources, overlay, buffer, shadow, godotLayers } = draw;
   const count = particleCount(buffer);
   const geometry = useParticleGeometry(source, buffer);
   const startingMaterial = useOneSurfaceStartingMaterial(sources.length);
-  const meshRef = useParticleMatrices(buffer, geometry);
-  const overlayRef = useParticleMatrices(buffer, geometry);
+  const points = geometryDrawsPoints(source) ? 'instances' : undefined;
+  const Drawn = points ? InstancedPoints : SharedInstancedMesh;
   return (
     <>
-      <instancedMesh
+      <Drawn
         key={count}
-        ref={meshRef}
-        args={[geometry, startingMaterial, count]}
-        frustumCulled={false}
+        geometry={geometry}
+        material={startingMaterial}
         {...drawHookProps(shadow)}
         userData={drawUserData(godotLayers)}
       >
-        <SurfaceMaterialSlots sources={sources} drawsParticles />
-      </instancedMesh>
+        <SurfaceMaterialSlots sources={sources} points={points} drawsParticles />
+      </Drawn>
       {overlay && (
-        <instancedMesh
+        <Drawn
           key={`overlay-${count}`}
-          ref={overlayRef}
-          args={[geometry, undefined, count]}
-          frustumCulled={false}
+          geometry={geometry}
           {...overlayDrawProps(shadow)}
           userData={boxlessUserData()}
         >
-          <SurfaceMaterialSlot source={overlay} drawsParticles />
-        </instancedMesh>
+          <SurfaceMaterialSlot source={overlay} points={points} drawsParticles />
+        </Drawn>
       )}
     </>
   );
@@ -137,112 +117,44 @@ function drawUserData(godotLayers: number) {
 }
 
 /**
- * `source` as an instanced particle geometry for `buffer`'s particles, whose colours and custom data
- * it holds before each paint, released with the draw. The overlay shares it.
+ * `source` as an instanced particle geometry for `buffer`'s particles, whose matrices, colours and
+ * custom data it holds before each paint, released with the draw. The overlay shares it.
  */
-function useParticleGeometry(source: THREE.BufferGeometry, buffer: Float32Array): THREE.BufferGeometry {
+function useParticleGeometry(
+  source: THREE.BufferGeometry,
+  buffer: Float32Array
+): THREE.InstancedBufferGeometry {
   const count = particleCount(buffer);
   const geometry = useMemo(() => particleGeometry(source, count), [source, count]);
-  useLayoutEffect(() => () => releaseParticleGeometry(geometry, source), [geometry, source]);
-  useLayoutEffect(() => writeParticleData(geometry, buffer), [geometry, buffer]);
+  useLayoutEffect(() => () => releaseSharedInstances(geometry, source), [geometry, source]);
+  useLayoutEffect(() => writeParticles(geometry, buffer), [geometry, buffer]);
   return geometry;
 }
 
-/** A ref for an InstancedMesh of `geometry`, whose instance matrices hold `buffer` before each paint. */
-function useParticleMatrices(buffer: Float32Array, geometry: THREE.BufferGeometry) {
+interface InstancedDrawProps extends Omit<ThreeElements['mesh'], 'geometry' | 'args'> {
+  geometry: THREE.InstancedBufferGeometry;
+  material?: THREE.Material | THREE.Material[];
+}
+
+/** An InstancedMesh that reads its geometry's instance matrices, so a draw and its overlay share one write. */
+function SharedInstancedMesh({ geometry, material, ...props }: InstancedDrawProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
   useLayoutEffect(() => {
-    if (meshRef.current) writeParticleMatrices(meshRef.current, buffer);
-  }, [buffer, geometry]);
-  return meshRef;
-}
-
-/**
- * A points part as one THREE.Points per surface, holding every particle's points, new for each
- * buffer. Each form is built for the first draw that reads it and disposed when the last lets go.
- */
-function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
-  const { sources, overlay, buffer } = draw;
-  const forms = useMemo<PointForms>(
-    () => ({
-      placed: geometryUntilDisposed(() => particlePoints(source, buffer)),
-      inItemSpace: geometryUntilDisposed(() => particlePointsInItemSpace(source, buffer)),
-    }),
-    [source, buffer]
-  );
+    if (meshRef.current) meshRef.current.instanceMatrix = instanceMatrices(geometry);
+  }, [geometry]);
   return (
-    <>
-      {sources.map((material, surface) => (
-        <PointsSurface
-          key={surface}
-          forms={forms}
-          material={material}
-          attach={surfaceAttach(surface, sources.length)}
-          surfaceCount={sources.length}
-          draw={draw}
-        />
-      ))}
-      {overlay && <PointsOverlay forms={forms} overlay={overlay} draw={draw} />}
-    </>
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, material, geometry.instanceCount]}
+      frustumCulled={false}
+      {...props}
+    />
   );
 }
 
-/** A points part at every particle: placed, and placed with each item's space for a material that reads it. */
-interface PointForms {
-  placed: () => THREE.BufferGeometry;
-  inItemSpace: () => THREE.BufferGeometry;
-}
-
-/** The form `material` draws: the item's space costs a mat4 per point, so only a reader gets it. */
-function usePointForm(forms: PointForms, material: MaterialSource | undefined): THREE.BufferGeometry {
-  const scalars = useSurfaceScalars(material);
-  const geometry = (readsObjectSpace(scalars?.triplanar ?? null) ? forms.inItemSpace : forms.placed)();
-  useDisposeOnRelease(geometry);
-  return geometry;
-}
-
-interface PointsSurfaceProps {
-  forms: PointForms;
-  material: MaterialSource | undefined;
-  attach: string;
-  surfaceCount: number;
-  draw: ParticleDraw;
-}
-
-/** One surface of a points part, drawn on its own, as each surface picks its own form. */
-function PointsSurface({ forms, material, attach, surfaceCount, draw }: PointsSurfaceProps) {
-  const geometry = usePointForm(forms, material);
-  const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
+/** THREE.Points over instanced geometry, picked at each instance. */
+function InstancedPoints({ geometry, material, ...props }: InstancedDrawProps) {
   return (
-    <points
-      args={[geometry, startingMaterial]}
-      {...drawHookProps(draw.shadow)}
-      userData={drawUserData(draw.godotLayers)}
-    >
-      <SurfaceMaterialSlot
-        source={material}
-        attach={attach}
-        points={pointPlacementOf(geometry)}
-        drawsParticles
-      />
-    </points>
-  );
-}
-
-function PointsOverlay({
-  forms,
-  overlay,
-  draw,
-}: {
-  forms: PointForms;
-  overlay: MaterialSource;
-  draw: ParticleDraw;
-}) {
-  const geometry = usePointForm(forms, overlay);
-  return (
-    <points args={[geometry]} {...overlayDrawProps(draw.shadow)} userData={boxlessUserData()}>
-      <SurfaceMaterialSlot source={overlay} points={pointPlacementOf(geometry)} drawsParticles />
-    </points>
+    <points args={[geometry, material]} frustumCulled={false} raycast={raycastInstancedPoints} {...props} />
   );
 }

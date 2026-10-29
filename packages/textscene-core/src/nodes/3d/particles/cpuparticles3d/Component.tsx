@@ -67,9 +67,8 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node} ref={nodeRef}>
-      {settled && buffer && (
-        <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
-      )}
+      {/* Godot draws no instance while the emitter is off (`cpu_particles_3d.cpp:1338`). */}
+      {settled?.state && buffer && <ParticleMesh properties={properties} buffer={buffer} shadow={shadow} />}
       <PluginGizmo drawnFor="every-node">
         {/* The box the node authors, `AABB()` for none, and not the parser's null (the multimesh box). */}
         <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} />
