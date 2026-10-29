@@ -113,6 +113,18 @@ Godot's refraction distorts the background, so the sphere reads bright. `refract
 
 Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame. So the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, and an unshaded material shifts its albedo too, as in Godot.
 
+## Triplanar mapping
+
+<!-- compare: image=unit-material-world-triplanar-floor status=done fixture=unit-material-world-triplanar-floor.tscn -->
+
+A triplanar UV set samples each of its textures at the vertex position on each of the three axis planes. It blends the samples by the normal raised to `uv1_triplanar_sharpness`. `uv1_scale` and `uv1_offset` scale and move the position on all three axes, as in Godot. Under `uv1_world_triplanar` the position and the normal are the world's, so a pattern stays put as a mesh moves. UV2 does the same for the slots that read UV2. The normal map reads in the tangent frame Godot writes for a projected surface, and so does height mapping under UV2 triplanar. A shadow cuts its alpha at the projected albedo. The two floor tiles of the golden sit off the origin, and their stripes fall where Godot puts them.
+
+## Billboard keep scale
+
+<!-- compare: image=unit-material-billboard-keep-scale status=done fixture=unit-material-billboard-keep-scale.tscn -->
+
+A billboard faces the camera. Under `billboard_keep_scale` it keeps the node's scale on each axis. Godot turns the normals by that scaled basis, not by its inverse transpose. The squashed sphere on the left lights as Godot lights it.
+
 ## Texture filter
 
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
@@ -157,6 +169,3 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
-- **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
-- **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
-- **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.

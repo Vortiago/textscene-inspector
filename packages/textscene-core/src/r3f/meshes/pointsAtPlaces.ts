@@ -1,10 +1,14 @@
 /**
  * A points geometry at each of several places as one geometry, since three has no instanced form of
  * `THREE.Points`: a GridMap item at its cells, a particle emitter's mesh at its particles. Each
- * place's matrix moves its points and turns their normals.
+ * place's matrix moves its points and turns their normals. For a program that reads the item's
+ * space, as Godot's instanced draw does, each point also keeps its item's position and normal and
+ * its place's matrix.
  */
 
 import * as THREE from 'three';
+import { CELL_POINT_ATTRIBUTES, type PointPlacement } from '../materials/godotPoint';
+import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
 
 type TypedArrayConstructor = new (length: number) => THREE.TypedArray;
 
@@ -40,6 +44,51 @@ export function pointsAtPlaces(
   merged.setIndex(new THREE.BufferAttribute(placesIndex(source, matrices.length), 1));
   addGroupRanges(merged, source, matrices.length);
   return merged;
+}
+
+/**
+ * `pointsAtPlaces`, with each point's item position and normal, unplaced, and its place's matrix.
+ * They cost a mat4 per point, so only a surface that reads the item's space draws this geometry.
+ */
+export function pointsAtPlacesInItemSpace(
+  source: THREE.BufferGeometry,
+  matrices: readonly THREE.Matrix4[]
+): THREE.BufferGeometry {
+  const merged = pointsAtPlaces(source, matrices);
+  const { itemPosition, itemNormal, cellMatrix } = CELL_POINT_ATTRIBUTES;
+  merged.setAttribute(itemPosition, repeatedAttribute(source, 'position', matrices.length));
+  merged.setAttribute(itemNormal, repeatedAttribute(source, 'normal', matrices.length));
+  merged.setAttribute(cellMatrix, placeMatrices(source.getAttribute('position').count, matrices));
+  return merged;
+}
+
+/** Where `geometry`'s points sit: merged at places by `pointsAtPlacesInItemSpace`, or in the mesh. Undefined for triangles. */
+export function pointPlacementOf(geometry: THREE.BufferGeometry): PointPlacement | undefined {
+  if (!geometryDrawsPoints(geometry)) return undefined;
+  return geometry.getAttribute(CELL_POINT_ATTRIBUTES.cellMatrix) ? 'cells' : 'mesh';
+}
+
+/** `source`'s attribute `name` once for each of `places`, as it stands. */
+function repeatedAttribute(
+  source: THREE.BufferGeometry,
+  name: string,
+  places: number
+): THREE.BufferAttribute {
+  const { array, itemSize, normalized } = source.getAttribute(name);
+  const repeated = repeatedArray(source, name, places);
+  for (let place = 0; place < places; place++) repeated.set(array, place * array.length);
+  return new THREE.BufferAttribute(repeated, itemSize, normalized);
+}
+
+/** Each of `matrices` once for each of a place's `pointCount` points. */
+function placeMatrices(pointCount: number, matrices: readonly THREE.Matrix4[]): THREE.BufferAttribute {
+  const elements = new Float32Array(pointCount * matrices.length * 16);
+  matrices.forEach((matrix, place) => {
+    for (let point = 0; point < pointCount; point++) {
+      elements.set(matrix.elements, (place * pointCount + point) * 16);
+    }
+  });
+  return new THREE.BufferAttribute(elements, 16);
 }
 
 /**

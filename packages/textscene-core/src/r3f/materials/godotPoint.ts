@@ -16,7 +16,24 @@ import { bagForms } from './bagForms';
 const POINT_SIZE_KEY = 'godotPointSize';
 const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
 const POINT_COORD_ALBEDO_KEY = 'godotPointCoordAlbedo';
+const POINTS_AT_CELLS_KEY = 'godotPointsAtCells';
 const PROJECT_CHUNK = '#include <project_vertex>';
+
+/**
+ * Where a points surface's vertices sit: in the node's own mesh, or merged at every cell of a
+ * GridMap, each carrying its item's space (`pointsAtPlaces.ts`).
+ */
+export type PointPlacement = 'mesh' | 'cells';
+
+/**
+ * The attributes each merged GridMap point carries: its item's position and normal, and its cell's
+ * matrix, so a program reads Godot's VERTEX, NORMAL and MODEL_MATRIX.
+ */
+export const CELL_POINT_ATTRIBUTES = {
+  itemPosition: 'godotItemPosition',
+  itemNormal: 'godotItemNormal',
+  cellMatrix: 'godotCellMatrix',
+} as const;
 
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
@@ -29,14 +46,36 @@ export interface PointDraw {
   pixelRatio: number;
   /** `use_point_size` is on: the albedo map is read across the point's square, not at the UV. */
   samplesAlbedoAtPointCoord: boolean;
+  placement: PointPlacement;
 }
 
 /** `scalars` as a points draw on a canvas of `pixelRatio`, or Godot's default surface for none. */
-export function pointDrawOf(scalars: StandardMaterial3DScalars | null, pixelRatio: number): PointDraw {
-  return scalars?.usesPointSize
-    ? { pixels: scalars.pointSize, pixelRatio, samplesAlbedoAtPointCoord: true }
-    : { pixels: BASE_MATERIAL_3D_DEFAULTS.pointSize, pixelRatio, samplesAlbedoAtPointCoord: false };
+export function pointDrawOf(
+  scalars: StandardMaterial3DScalars | null,
+  pixelRatio: number,
+  placement: PointPlacement
+): PointDraw {
+  const pointSize = scalars?.usesPointSize ? scalars.pointSize : undefined;
+  return {
+    pixels: pointSize ?? BASE_MATERIAL_3D_DEFAULTS.pointSize,
+    pixelRatio,
+    samplesAlbedoAtPointCoord: pointSize !== undefined,
+    placement,
+  };
 }
+
+/** The merged points' attributes, under `GODOT_CELL_POINTS`, which the triplanar mapping reads. */
+const GODOT_CELL_POINTS: ProgramInjection = {
+  cacheKey: 'godot-cell-points',
+  onBeforeCompile(shader) {
+    const { itemPosition, itemNormal, cellMatrix } = CELL_POINT_ATTRIBUTES;
+    shader.vertexShader = `#define GODOT_CELL_POINTS
+attribute vec3 ${itemPosition};
+attribute vec3 ${itemNormal};
+attribute mat4 ${cellMatrix};
+${shader.vertexShader}`;
+  },
+};
 
 /** The uniforms of a points colour pass, each with the value it holds until the material's userData records one. */
 const POINT_SIZE_UNIFORMS = {
@@ -103,17 +142,19 @@ const pointForms = bagForms();
  */
 export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefined): StandardMaterialBag {
   if (!draw) return bag;
-  const drawKey = `${draw.pixels}:${draw.pixelRatio}:${draw.samplesAlbedoAtPointCoord}`;
+  const drawKey = `${draw.pixels}:${draw.pixelRatio}:${draw.samplesAlbedoAtPointCoord}:${draw.placement}`;
   return pointForms(bag, drawKey, () => pointBag(bag, draw));
 }
 
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {
   const readsMap = draw.samplesAlbedoAtPointCoord && Boolean(bag.props.map);
+  const isAtCells = draw.placement === 'cells';
   const userData = {
     ...bag.props.userData,
     [POINT_SIZE_KEY]: draw.pixels,
     [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
     [POINT_COORD_ALBEDO_KEY]: readsMap,
+    [POINTS_AT_CELLS_KEY]: isAtCells,
   };
   return {
     ...bag,
@@ -122,6 +163,7 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
       bag.injection,
       GODOT_POINT_SIZE,
       readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
+      isAtCells ? GODOT_CELL_POINTS : undefined,
     ]),
   };
 }
@@ -138,5 +180,8 @@ const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
  */
 export function pointShadowSizeInjection(userData: Record<string, unknown>): ProgramInjection | undefined {
   if (!(POINT_SIZE_KEY in userData)) return undefined;
-  return userData[POINT_COORD_ALBEDO_KEY] ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SHADOW_SIZE;
+  const size = userData[POINT_COORD_ALBEDO_KEY]
+    ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD
+    : GODOT_POINT_SHADOW_SIZE;
+  return userData[POINTS_AT_CELLS_KEY] ? composeInjections([size, GODOT_CELL_POINTS]) : size;
 }

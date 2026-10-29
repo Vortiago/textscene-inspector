@@ -656,7 +656,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     expect(data.transmission).toBe(1);
     expect(data.refractionThickness).toBeCloseTo(0.05, 6);
     // `uv1_world_triplanar` without `uv1_triplanar` maps nothing triplanar.
-    expect(data.triplanar).toBe(false);
+    expect(data.triplanar).toBeNull();
   });
 });
 
@@ -670,11 +670,12 @@ describe('decodeStandardMaterial3D — UV2', () => {
     expect(data.uv2Offset).toEqual({ x: 0.5, y: 0.25 });
   });
 
-  it('reads uv2_scale and uv2_offset under UV2 triplanar mapping', () => {
-    const data = decodeStandardMaterial3D({ ...UV2_TILING, uv2_triplanar: 'true' });
+  it('scales the projected position, not the mesh UV2, under UV2 triplanar mapping', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, uv2_triplanar: 'true', detail_uv_layer: '1' });
 
-    expect(data.uv2Triplanar).toBe(true);
-    expect(data.uv2Scale).toEqual({ x: 4, y: 2 });
+    expect(data.triplanar?.uv2?.scale).toEqual({ x: 4, y: 2, z: 1 });
+    expect(data.triplanar?.uv2?.offset).toEqual({ x: 0.5, y: 0.25, z: 0 });
+    expect(data.uv2Scale).toEqual({ x: 1, y: 1 });
   });
 
   it('reads the UV2 transform as identity elsewhere, as Godot never applies it there', () => {

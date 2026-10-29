@@ -1,40 +1,84 @@
 /**
- * StandardMaterial3D triplanar. Godot's `uv1_triplanar` tiles a texture once per unit × `uv1_scale`,
- * whatever the mesh's UVs, and `uv1_world_triplanar` makes the unit a world one. With no triplanar
- * shader, the `triplanar` flag lets MeshInstance3D reproduce the tiling density on planar
- * meshes (`triplanarPlaneScale`).
+ * StandardMaterial3D triplanar mapping: each UV set that projects the vertex position, with its
+ * scale, offset, blend sharpness and space, and the space of the tangent frame
+ * (`material.cpp:1386-1454`).
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './scalars';
 
-describe('parseStandardMaterial3DScalars — triplanar flag (WI-HALL-5)', () => {
-  it('sets triplanar=true when uv1_triplanar is on', () => {
-    expect(parseStandardMaterial3DScalars({ uv1_triplanar: 'true' }).triplanar).toBe(true);
-  });
-
-  it('leaves triplanar off when uv1_world_triplanar is on alone, as it only picks the space (edge case)', () => {
-    expect(parseStandardMaterial3DScalars({ uv1_world_triplanar: 'true' }).triplanar).toBe(false);
-  });
-
-  it('triplanar defaults to false when neither flag is present or true', () => {
-    expect(parseStandardMaterial3DScalars({}).triplanar).toBe(false);
-    expect(parseStandardMaterial3DScalars({ uv1_triplanar: 'false' }).triplanar).toBe(false);
-  });
-
-  it('does not suppress other scalar parsing when triplanar is on', () => {
-    // The triplanar flag must not short-circuit albedo/metal/roughness parsing: the
-    // texture binding still flows through useResource.
-    const result = parseStandardMaterial3DScalars({
-      uv1_triplanar: 'true',
-      albedo_color: 'Color(0.8, 0.4, 0.2, 1)',
-      metallic: '0.6',
-      roughness: '0.3',
+describe('parseStandardMaterial3DScalars: triplanar mapping', () => {
+  it('projects UV1 at Godot defaults under uv1_triplanar', () => {
+    expect(parseStandardMaterial3DScalars({ uv1_triplanar: 'true' }).triplanar).toEqual({
+      uv1: { scale: { x: 1, y: 1, z: 1 }, offset: { x: 0, y: 0, z: 0 }, sharpness: 1, isWorld: false },
+      uv2: null,
+      isTangentWorld: false,
     });
-    // Albedo went through the sRGB → linear conversion.
-    expect(result.color[0]).toBeGreaterThan(0);
-    expect(result.color[0]).toBeLessThan(0.8);
-    expect(result.metalness).toBeCloseTo(0.6, 4);
-    expect(result.roughness).toBeCloseTo(0.3, 4);
-    expect(result.triplanar).toBe(true);
+  });
+
+  it('keeps every component of uv1_scale and uv1_offset, as Godot scales the position', () => {
+    const { triplanar } = parseStandardMaterial3DScalars({
+      uv1_triplanar: 'true',
+      uv1_scale: 'Vector3(0.5, 3, 2)',
+      uv1_offset: 'Vector3(0.25, -1, 4)',
+    });
+
+    expect(triplanar?.uv1?.scale).toEqual({ x: 0.5, y: 3, z: 2 });
+    expect(triplanar?.uv1?.offset).toEqual({ x: 0.25, y: -1, z: 4 });
+  });
+
+  it('projects the world position under uv1_world_triplanar', () => {
+    const { triplanar } = parseStandardMaterial3DScalars({
+      uv1_triplanar: 'true',
+      uv1_world_triplanar: 'true',
+    });
+
+    expect(triplanar?.uv1?.isWorld).toBe(true);
+    expect(triplanar?.isTangentWorld).toBe(true);
+  });
+
+  it('clamps the sharpness to 0..150, as the setter does (material.cpp:2786)', () => {
+    const sharpness = (value: string) =>
+      parseStandardMaterial3DScalars({ uv1_triplanar: 'true', uv1_triplanar_sharpness: value }).triplanar?.uv1
+        ?.sharpness;
+
+    expect(sharpness('0')).toBe(0);
+    expect(sharpness('150')).toBe(150);
+    expect(sharpness('400')).toBe(150);
+    expect(sharpness('-2')).toBe(0);
+  });
+
+  it('projects UV2 with its own transform, sharpness and space', () => {
+    const { triplanar } = parseStandardMaterial3DScalars({
+      uv2_triplanar: 'true',
+      uv2_world_triplanar: 'true',
+      uv2_scale: 'Vector3(4, 2, 1)',
+      uv2_offset: 'Vector3(0.5, 0.25, 0)',
+      uv2_triplanar_sharpness: '3',
+    });
+
+    expect(triplanar).toEqual({
+      uv1: null,
+      uv2: { scale: { x: 4, y: 2, z: 1 }, offset: { x: 0.5, y: 0.25, z: 0 }, sharpness: 3, isWorld: true },
+      isTangentWorld: false,
+    });
+  });
+
+  it('takes the frame space from uv1_world_triplanar when only UV2 projects (material.cpp:1388-1414)', () => {
+    const { triplanar } = parseStandardMaterial3DScalars({
+      uv2_triplanar: 'true',
+      uv1_world_triplanar: 'true',
+    });
+
+    expect(triplanar?.uv1).toBeNull();
+    expect(triplanar?.isTangentWorld).toBe(true);
+  });
+
+  it('maps nothing when uv1_world_triplanar is on alone, as it only picks the space (edge case)', () => {
+    expect(parseStandardMaterial3DScalars({ uv1_world_triplanar: 'true' }).triplanar).toBeNull();
+  });
+
+  it('maps nothing by default', () => {
+    expect(parseStandardMaterial3DScalars({}).triplanar).toBeNull();
+    expect(parseStandardMaterial3DScalars({ uv1_triplanar: 'false' }).triplanar).toBeNull();
   });
 });

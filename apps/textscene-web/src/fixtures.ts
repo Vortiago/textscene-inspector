@@ -4044,6 +4044,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Billboard Keep Scale",
+    "file": "unit-material-billboard-keep-scale.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Billboard",
     "file": "unit-material-billboard.tscn",
     "category": "Unit - Materials"
@@ -4171,6 +4176,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Vertex Color Srgb",
     "file": "unit-material-vertex-color-srgb.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material World Triplanar Floor",
+    "file": "unit-material-world-triplanar-floor.tscn",
     "category": "Unit - Materials"
   },
   {

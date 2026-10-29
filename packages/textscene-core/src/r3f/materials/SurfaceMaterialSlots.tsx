@@ -2,7 +2,6 @@
  * One `SurfaceMaterialSlot` per surface of a mesh, each attached to its own draw group, and the
  * two rules every per-surface slot keeps: the default surface and the attach key.
  */
-import type { TscnInternalResource } from '../../parser/types';
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 
@@ -26,20 +25,13 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
-  /** The PrimitiveMesh a triplanar material tiles against, if the mesh is one. */
-  triplanarMesh?: TscnInternalResource;
   /** The mesh draws `THREE.Points`, so each material also sizes its points. */
   drawsPoints?: boolean;
   /** The mesh draws a particle emitter's instances, which each material colours and billboards. */
   drawsParticles?: boolean;
 }
 
-export function SurfaceMaterialSlots({
-  sources,
-  triplanarMesh,
-  drawsPoints,
-  drawsParticles,
-}: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, drawsPoints, drawsParticles }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -48,8 +40,7 @@ export function SurfaceMaterialSlots({
           key={i}
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
-          triplanarMesh={triplanarMesh}
-          drawsPoints={drawsPoints}
+          points={drawsPoints ? 'mesh' : undefined}
           drawsParticles={drawsParticles}
         />
       ))}

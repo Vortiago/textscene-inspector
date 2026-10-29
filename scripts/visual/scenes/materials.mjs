@@ -18,6 +18,9 @@ export const MATERIAL_SCENES = [
   // both axes. A tangent frame scaled by the longer axis shades the X tilts flatter.
   { name: 'material-normal-map-uv-density', file: 'unit-material-normal-map-uv-density.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
+  // World-triplanar floor tiles off the origin: each stripe sits at its world position, as Godot
+  // projects it. A sample at the tile's UV shifts the stripes with each tile.
+  { name: 'material-world-triplanar-floor', file: 'unit-material-world-triplanar-floor.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
@@ -31,6 +34,10 @@ export const MATERIAL_SCENES = [
   // `vertex_color_is_srgb` on two rows of particles with one colour: the upper row decodes it from
   // sRGB and draws darker than the lower row, which reads it as linear.
   { name: 'material-vertex-color-srgb', file: 'unit-material-vertex-color-srgb.tscn' },
+  // A billboard that keeps a non-uniform scale beside an unscaled one: the
+  // squashed sphere lights by normals turned through the scaled basis, as
+  // Godot's MODELVIEW_NORMAL_MATRIX does.
+  { name: 'material-billboard-keep-scale', file: 'unit-material-billboard-keep-scale.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring beside a metallic, emissive body. Pins the
   // additive billboard gradient glow. Additive edges are AA-sensitive.

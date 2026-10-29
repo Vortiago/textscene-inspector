@@ -166,7 +166,7 @@ function ParticlePoints({ source, draw }: { source: THREE.BufferGeometry; draw: 
       </points>
       {overlay && (
         <points args={[geometry]} {...overlayDrawProps(shadow)} userData={boxlessUserData()}>
-          <SurfaceMaterialSlot source={overlay} drawsPoints drawsParticles />
+          <SurfaceMaterialSlot source={overlay} points="mesh" drawsParticles />
         </points>
       )}
     </>

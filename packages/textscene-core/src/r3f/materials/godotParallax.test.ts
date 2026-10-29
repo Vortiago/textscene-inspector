@@ -9,6 +9,7 @@ import {
 import type { ProgramShader } from '../materialProgramInputs';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
+import { preprocessorBranch } from '../testing/glslSource';
 
 const HEIGHTMAP: Heightmap = { scale: 3, isDeep: false, layers: [8, 32], flip: [1, -1], readsHeight: false };
 
@@ -53,6 +54,16 @@ describe('parallaxInjection', () => {
 
   it("flips the tangent frame by the material's flips", () => {
     expect(patched(HEIGHTMAP).fragmentShader).toContain('dot( view, bitangent * godotHeightmapFlip.y )');
+  });
+
+  it("reads Godot's triplanar frame on a triplanar surface, as Godot writes TANGENT for UV2 triplanar", () => {
+    const viewDir = preprocessorBranch(
+      patched(HEIGHTMAP).fragmentShader,
+      '#if defined( GODOT_TRIPLANAR_FRAME )'
+    );
+
+    expect(viewDir).toContain('vec3 tangent = vGodotTriplanarTangent;');
+    expect(viewDir).toContain('vec3 bitangent = vGodotTriplanarBinormal;');
   });
 
   it('steps through the layers only for deep parallax', () => {

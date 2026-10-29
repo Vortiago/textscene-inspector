@@ -7,7 +7,7 @@
 
 import { parseColorOrUndefined } from '../../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
-import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
+import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
 import { drawsInShadowPass, type PassMembership } from '../../../godot/rendering/shadowPass';
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/materials/textureChannel';
@@ -38,6 +38,8 @@ import {
   type StandardMaterial3DData,
   type TextureSlot,
   type TextureSlotReferences,
+  type Triplanar,
+  type TriplanarProjection,
 } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
@@ -104,10 +106,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   const heightmapEnabled = boolOr(properties['heightmap_enabled'], false, CONTEXT);
   const anisotropyEnabled = boolOr(properties['anisotropy_enabled'], false, CONTEXT);
   const refractionEnabled = boolOr(properties['refraction_enabled'], false, CONTEXT);
-  // `uv1_world_triplanar` only picks the space of a triplanar mapping (`material.cpp:1386-1421`).
-  // Triplanar mapping overrides height mapping (`:1541`).
-  const triplanar = boolOr(properties['uv1_triplanar'], false, CONTEXT);
-  const uv2Triplanar = boolOr(properties['uv2_triplanar'], false, CONTEXT);
+  const triplanar = decodeTriplanar(properties);
 
   // `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` only when
   // `transparency != TRANSPARENCY_DISABLED` (or shadow-to-opacity, pixel-alpha
@@ -176,8 +175,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
-    ...uv2Transform(properties, uv2Triplanar),
-    uv2Triplanar,
+    ...uv2Transform(properties, triplanar?.uv2 != null),
     uv2Slots: uv2Slots(properties),
     transparency,
     transparent: alphaPass,
@@ -229,7 +227,8 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     metallicTextureChannel: textureChannel(properties, 'metallic_texture_channel'),
     normalScale: { x: normalScale, y: normalScale },
     triplanar,
-    heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
+    // Triplanar mapping of UV1 overrides height mapping (`material.cpp:1541`).
+    heightmap: heightmapEnabled && !triplanar?.uv1 ? decodeHeightmap(properties) : null,
     clearcoat: clearcoatEnabled
       ? clamp(floatOr(properties['clearcoat'], BASE_MATERIAL_3D_DEFAULTS.clearcoat, CONTEXT), 0, 1)
       : 0,
@@ -406,17 +405,16 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
 }
 
 /**
- * `uv2_scale` and `uv2_offset`, where Godot applies them: to UV2 under a UV2 detail layer
- * (`material.cpp:1249-1256`), and to the projected position under UV2 triplanar mapping
- * (:1439-1451). Elsewhere the shader reads UV2 as stored.
+ * `uv2_scale` and `uv2_offset` on the UV2 attribute, where Godot applies them: under a UV2 detail
+ * layer that does not project (`material.cpp:1249-1256`). Elsewhere the shader reads UV2 as stored.
  */
 function uv2Transform(
   properties: Record<string, string>,
-  uv2Triplanar: boolean
+  isProjected: boolean
 ): { uv2Scale: Vector2; uv2Offset: Vector2 } {
   const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
   const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
-  if (!uv2Triplanar && detailUv !== DetailUV.DETAIL_UV_2) return identity;
+  if (isProjected || detailUv !== DetailUV.DETAIL_UV_2) return identity;
   return {
     uv2Scale: vec2FromVector3(properties['uv2_scale'], identity.uv2Scale),
     uv2Offset: vec2FromVector3(properties['uv2_offset'], identity.uv2Offset),
@@ -446,6 +444,37 @@ function vec2FromVector3(raw: string | undefined, fallback: Vector2): Vector2 {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * The triplanar mapping of each UV set that projects, or null for none. `uv1_world_triplanar`
+ * picks the space of UV1's projection and of the tangent frame (`material.cpp:1386-1435`).
+ */
+function decodeTriplanar(properties: Record<string, string>): Triplanar | null {
+  const uv1 = decodeTriplanarProjection(properties, 'uv1');
+  const uv2 = decodeTriplanarProjection(properties, 'uv2');
+  if (!uv1 && !uv2) return null;
+  return { uv1, uv2, isTangentWorld: boolOr(properties['uv1_world_triplanar'], false, CONTEXT) };
+}
+
+/** The projection of UV set `uv` under `<uv>_triplanar`, or null where the set reads its attribute. */
+function decodeTriplanarProjection(
+  properties: Record<string, string>,
+  uv: 'uv1' | 'uv2'
+): TriplanarProjection | null {
+  if (!boolOr(properties[`${uv}_triplanar`], false, CONTEXT)) return null;
+  const sharpness = floatOr(
+    properties[`${uv}_triplanar_sharpness`],
+    BASE_MATERIAL_3D_DEFAULTS.triplanarSharpness,
+    CONTEXT
+  );
+  return {
+    scale: vec3Or(properties[`${uv}_scale`], { x: 1, y: 1, z: 1 }, `${CONTEXT}.${uv}_scale`),
+    offset: vec3Or(properties[`${uv}_offset`], { x: 0, y: 0, z: 0 }, `${CONTEXT}.${uv}_offset`),
+    // `set_uv1_triplanar_blend_sharpness` and its UV2 twin clamp (`material.cpp:2786`, `:2814`).
+    sharpness: clamp(sharpness, 0, 150),
+    isWorld: boolOr(properties[`${uv}_world_triplanar`], false, CONTEXT),
+  };
 }
 
 /** Height mapping over Godot's defaults. The setters check no range. */

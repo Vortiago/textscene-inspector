@@ -7,10 +7,9 @@
 
 import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
-import type { TscnInternalResource } from '../../parser/types';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
-import { pointDrawOf } from './godotPoint';
+import { pointDrawOf, type PointPlacement } from './godotPoint';
 import { particleDrawOf } from './godotParticles';
 import type { MaterialSource } from './materialSource';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
@@ -20,10 +19,8 @@ interface SurfaceMaterialSlotProps {
   source: MaterialSource | undefined;
   /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */
   attach?: string;
-  /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
-  triplanarMesh?: TscnInternalResource;
-  /** The surface draws `THREE.Points`, so its material also sizes each point. */
-  drawsPoints?: boolean;
+  /** The surface draws `THREE.Points`, placed so, and its material also sizes each point. Undefined for triangles. */
+  points?: PointPlacement;
   /** The surface draws a particle emitter's instances, which its material colours and billboards. */
   drawsParticles?: boolean;
 }
@@ -35,18 +32,12 @@ interface SurfaceMaterialSlotProps {
  * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
  * magenta placeholder.
  */
-export function SurfaceMaterialSlot({
-  source,
-  attach,
-  triplanarMesh,
-  drawsPoints,
-  drawsParticles,
-}: SurfaceMaterialSlotProps) {
-  const { scalars, bags } = useSurfaceMaterial(source, triplanarMesh);
+export function SurfaceMaterialSlot({ source, attach, points, drawsParticles }: SurfaceMaterialSlotProps) {
+  const { scalars, bags } = useSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   const pointDraw = useMemo(
-    () => (drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined),
-    [drawsPoints, scalars, pixelRatio]
+    () => (points ? pointDrawOf(scalars, pixelRatio, points) : undefined),
+    [points, scalars, pixelRatio]
   );
   const particleDraw = useMemo(
     () => (drawsParticles ? particleDrawOf(scalars) : undefined),

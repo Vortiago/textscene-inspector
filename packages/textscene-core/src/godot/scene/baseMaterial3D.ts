@@ -22,6 +22,7 @@ export const BASE_MATERIAL_3D_DEFAULTS = {
   anisotropy: 0, // :3951
   heightmapScale: 5, // :3952
   pointSize: 1, // :3959
+  triplanarSharpness: 1, // :3962, :3965
   refractionScale: 0.05, // :3958
   alphaScissorThreshold: 0.5, // :3975, the glTF alpha cutoff
   alphaHashScale: 1, // :3976
