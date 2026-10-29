@@ -32,6 +32,7 @@ import {
 } from './textures/viewporttexture/useViewportTextureSlot.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
+import { useSavedTextureSources } from './useSavedTextureSources.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
 import { isLiveTarget } from '../r3f/liveTargets.js';
 import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
@@ -222,7 +223,12 @@ function useTexture2DSlot(
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
-  const procedural = useProceduralTexture(sourceRef, slot.internalResources);
+  const proceduralResources = useSavedTextureSources(
+    sourceRef,
+    slot.externalResources,
+    slot.internalResources
+  );
+  const procedural = useProceduralTexture(sourceRef, proceduralResources);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.

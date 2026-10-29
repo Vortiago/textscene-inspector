@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitsprite2dgradtextres"]
+
+[ext_resource type="Gradient" path="res://textures/ramp-three-stop.tres" id="1_ramp"]
+
+; One variable: a GradientTexture2D whose `gradient` is an ExtResource to a saved Gradient (.tres)
+; instead of an inline sub-resource. unit-sprite2d-gradienttexture inlines its Gradient, and
+; nothing else saves one as a file. Losing the file route leaves a texture without a gradient, so
+; the sprite draws nothing over the backdrop. Three stops with the middle at 0.4 show that the
+; file's offsets, not an even spread, place the colours.
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_bar"]
+gradient = ExtResource("1_ramp")
+width = 256
+height = 64
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.85, 0.85, 0.8, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="SavedGradient" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+scale = Vector2(3, 3)
+texture = SubResource("GradientTexture2D_bar")

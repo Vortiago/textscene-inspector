@@ -71,8 +71,9 @@ export function decodeGradientResource(resource: TscnInternalResource | null): G
 
 /**
  * The `Gradient` a `SubResource("id")` property names, or null for anything else, an ExtResource
- * included: the texture and noise callers hold no loaded files. {@link decodeGradientResource}
- * decodes a resource a caller resolved itself, as CPUParticles2D does for a `.tres` ramp.
+ * included: `withSavedSources` makes a loaded `.tres` a sub-resource before a texture reads it.
+ * {@link decodeGradientResource} decodes a resource a caller resolved itself, as CPUParticles2D
+ * does for a `.tres` ramp.
  */
 export function resolveGradient(
   ref: string | undefined,

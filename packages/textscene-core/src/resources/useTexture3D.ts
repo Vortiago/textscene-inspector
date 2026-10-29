@@ -13,10 +13,16 @@ import { resolveExtResourcePath } from './SubResourceResolver.js';
 import { useProceduralTexture3D } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
+import { useSavedTextureSources } from './useSavedTextureSources.js';
 
 export function useTexture3D(ref: string | undefined, pools: SceneResources): THREE.Data3DTexture | null {
   const slot = useParsedResourceSlot(ref, pools.externalResources, pools.internalResources);
-  const procedural = useProceduralTexture3D(slot.ref, slot.internalResources);
+  const proceduralResources = useSavedTextureSources(
+    slot.ref,
+    slot.externalResources,
+    slot.internalResources
+  );
+  const procedural = useProceduralTexture3D(slot.ref, proceduralResources);
 
   const imagePath = useMemo(() => {
     const extPath = resolveExtResourcePath(slot.ref, slot.externalResources);
