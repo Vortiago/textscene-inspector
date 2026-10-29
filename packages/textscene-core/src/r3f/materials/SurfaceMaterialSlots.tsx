@@ -5,6 +5,7 @@
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import type { PointPlacement } from './godotPoint';
+import type { ParticleProgram } from './godotParticles';
 
 const DEFAULT_SURFACE: readonly (MaterialSource | undefined)[] = [undefined];
 
@@ -28,11 +29,11 @@ interface SurfaceMaterialSlotsProps {
   sources: readonly (MaterialSource | undefined)[];
   /** Where the points sit when the mesh draws `THREE.Points`, so each material also sizes them. */
   points?: PointPlacement;
-  /** The mesh draws a particle emitter's instances, which each material colours and billboards. */
-  drawsParticles?: boolean;
+  /** The mesh draws a particle emitter's instances: the patch that colours and billboards them. */
+  particles?: ParticleProgram;
 }
 
-export function SurfaceMaterialSlots({ sources, points, drawsParticles }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, points, particles }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -42,7 +43,7 @@ export function SurfaceMaterialSlots({ sources, points, drawsParticles }: Surfac
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
           points={points}
-          drawsParticles={drawsParticles}
+          particles={particles}
         />
       ))}
     </>

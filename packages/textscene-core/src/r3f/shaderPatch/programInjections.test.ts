@@ -27,7 +27,7 @@ import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRou
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
-import { withParticleDraw } from '../materials/godotParticles';
+import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
@@ -162,7 +162,12 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
-  injected('materials/godotParticles.ts', 'particle draw', SURFACE_AND_DEPTH, () => particleBag().injection),
+  injected(
+    'materials/godotParticlesProgram.ts',
+    'particle draw',
+    SURFACE_AND_DEPTH,
+    () => particleBag().injection
+  ),
   injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
   injected('materials/godotPoint.ts', 'points at instances', COLOUR, () => pointBag(false, 'instances')),
   injected('surfaceBillboard.ts', 'billboard normal', COLOUR, () => GODOT_BILLBOARD_NORMAL),

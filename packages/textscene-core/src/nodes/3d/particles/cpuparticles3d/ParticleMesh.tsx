@@ -3,15 +3,15 @@
  * particle buffer, an InstancedMesh or a THREE.Points, with its overlay.
  */
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import type { ThreeElements } from '@react-three/fiber';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlot } from '../../../../r3f/materials/SurfaceMaterialSlot';
 import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
+import { withParticleDraw } from '../../../../r3f/materials/godotParticlesProgram';
 import { useMeshContent } from '../../../../r3f/meshes/meshContent';
 import {
   instanceMatrices,
@@ -74,38 +74,86 @@ interface ParticleDraw {
 }
 
 /**
- * A part at every particle: an InstancedMesh for triangles, or one THREE.Points over the instanced
- * geometry, with the overlay's as a second draw of the same instances. Each is keyed on the count,
- * as three sizes an InstancedMesh's buffer at construction. three's own frustum cull reads the
- * instance matrices, not the billboards the program draws, so the scene cull's box alone culls them.
+ * A part at every particle, as one instanced draw with the overlay's as a second draw of the same
+ * instances. Each is keyed on the count, as three sizes an InstancedMesh's buffer at construction.
+ * three's own frustum cull reads the instance matrices, not the billboards the program draws, so
+ * the scene cull's box alone culls them.
  */
 function ParticlePart({ source, draw }: { source: THREE.BufferGeometry; draw: ParticleDraw }) {
-  const { sources, overlay, buffer, shadow, godotLayers } = draw;
-  const count = particleCount(buffer);
-  const geometry = useParticleGeometry(source, buffer);
-  const startingMaterial = useOneSurfaceStartingMaterial(sources.length);
-  const points = geometryDrawsPoints(source) ? 'instances' : undefined;
-  const Drawn = points ? InstancedPoints : SharedInstancedMesh;
+  const geometry = useParticleGeometry(source, draw.buffer);
+  const startingMaterial = useOneSurfaceStartingMaterial(draw.sources.length);
+  const Drawn = geometryDrawsPoints(source) ? ParticlePoints : ParticleMeshInstances;
+  return (
+    <Drawn
+      key={particleCount(draw.buffer)}
+      geometry={geometry}
+      startingMaterial={startingMaterial}
+      draw={draw}
+    />
+  );
+}
+
+interface InstancedDrawProps {
+  geometry: THREE.InstancedBufferGeometry;
+  startingMaterial: THREE.Material | THREE.Material[] | undefined;
+  draw: ParticleDraw;
+}
+
+/** THREE.Points over the instanced geometry, picked at each instance. */
+function ParticlePoints({ geometry, startingMaterial, draw }: InstancedDrawProps) {
+  const { sources, overlay, shadow, godotLayers } = draw;
   return (
     <>
-      <Drawn
-        key={count}
-        geometry={geometry}
-        material={startingMaterial}
+      <points
+        args={[geometry, startingMaterial]}
+        frustumCulled={false}
+        raycast={raycastInstancedPoints}
         {...drawHookProps(shadow)}
         userData={drawUserData(godotLayers)}
       >
-        <SurfaceMaterialSlots sources={sources} points={points} drawsParticles />
-      </Drawn>
+        <SurfaceMaterialSlots sources={sources} points="instances" particles={withParticleDraw} />
+      </points>
       {overlay && (
-        <Drawn
-          key={`overlay-${count}`}
-          geometry={geometry}
+        <points
+          args={[geometry]}
+          frustumCulled={false}
           {...overlayDrawProps(shadow)}
           userData={boxlessUserData()}
         >
-          <SurfaceMaterialSlot source={overlay} points={points} drawsParticles />
-        </Drawn>
+          <SurfaceMaterialSlot source={overlay} points="instances" particles={withParticleDraw} />
+        </points>
+      )}
+    </>
+  );
+}
+
+/** An InstancedMesh, and the overlay's, each reading the geometry's instance matrices: one write places both. */
+function ParticleMeshInstances({ geometry, startingMaterial, draw }: InstancedDrawProps) {
+  const { sources, overlay, shadow, godotLayers } = draw;
+  const sharesMatrices = (mesh: THREE.InstancedMesh | null) => {
+    if (mesh) mesh.instanceMatrix = instanceMatrices(geometry);
+  };
+  return (
+    <>
+      <instancedMesh
+        ref={sharesMatrices}
+        args={[geometry, startingMaterial, geometry.instanceCount]}
+        frustumCulled={false}
+        {...drawHookProps(shadow)}
+        userData={drawUserData(godotLayers)}
+      >
+        <SurfaceMaterialSlots sources={sources} particles={withParticleDraw} />
+      </instancedMesh>
+      {overlay && (
+        <instancedMesh
+          ref={sharesMatrices}
+          args={[geometry, undefined, geometry.instanceCount]}
+          frustumCulled={false}
+          {...overlayDrawProps(shadow)}
+          userData={boxlessUserData()}
+        >
+          <SurfaceMaterialSlot source={overlay} particles={withParticleDraw} />
+        </instancedMesh>
       )}
     </>
   );
@@ -129,32 +177,4 @@ function useParticleGeometry(
   useLayoutEffect(() => () => releaseSharedInstances(geometry, source), [geometry, source]);
   useLayoutEffect(() => writeParticles(geometry, buffer), [geometry, buffer]);
   return geometry;
-}
-
-interface InstancedDrawProps extends Omit<ThreeElements['mesh'], 'geometry' | 'args'> {
-  geometry: THREE.InstancedBufferGeometry;
-  material?: THREE.Material | THREE.Material[];
-}
-
-/** An InstancedMesh that reads its geometry's instance matrices, so a draw and its overlay share one write. */
-function SharedInstancedMesh({ geometry, material, ...props }: InstancedDrawProps) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    if (meshRef.current) meshRef.current.instanceMatrix = instanceMatrices(geometry);
-  }, [geometry]);
-  return (
-    <instancedMesh
-      ref={meshRef}
-      args={[geometry, material, geometry.instanceCount]}
-      frustumCulled={false}
-      {...props}
-    />
-  );
-}
-
-/** THREE.Points over instanced geometry, picked at each instance. */
-function InstancedPoints({ geometry, material, ...props }: InstancedDrawProps) {
-  return (
-    <points args={[geometry, material]} frustumCulled={false} raycast={raycastInstancedPoints} {...props} />
-  );
 }

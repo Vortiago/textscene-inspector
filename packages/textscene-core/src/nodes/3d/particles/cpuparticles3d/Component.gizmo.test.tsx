@@ -5,7 +5,7 @@
  * (`particles_3d_emission_shape_gizmo_plugin.cpp:218-337`).
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadSimulate } from './simulateModule';
+import { loadParticleEmitter } from './emitterModule';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
@@ -69,7 +69,7 @@ const GIZMO_CASE: GizmoNodeCase = {
 };
 
 // The component loads this chunk lazily, so it lands before the first render.
-beforeAll(loadSimulate);
+beforeAll(loadParticleEmitter);
 
 describeGizmoToggle('<CPUParticles3D>', GIZMO_CASE);
 describeInstantiatedGizmo('<CPUParticles3D>', GIZMO_CASE);

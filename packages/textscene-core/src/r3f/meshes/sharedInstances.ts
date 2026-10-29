@@ -109,8 +109,8 @@ export function raycastInstancedPoints(
 ): void {
   const geometry = this.geometry as THREE.InstancedBufferGeometry;
   const matrices = instanceMatrices(geometry);
+  // `Points.raycast` reads no material, so the scratch takes only the geometry.
   instancePoints.geometry = geometry;
-  instancePoints.material = this.material;
   for (let instanceId = 0; instanceId < geometry.instanceCount; instanceId++) {
     instanceLocal.fromArray(matrices.array, instanceId * MATRIX_FLOATS);
     instancePoints.matrixWorld = instanceWorld.multiplyMatrices(this.matrixWorld, instanceLocal);

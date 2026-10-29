@@ -4,9 +4,9 @@ import {
   aimParticleBillboards,
   particleDrawOf,
   particleShadowInjection,
-  withParticleDraw,
   type ParticleDraw,
 } from './godotParticles';
+import { withParticleDraw } from './godotParticlesProgram';
 import type { ProgramShader } from '../materialProgramInputs';
 import { SRGB_VERTEX_COLOR } from './godotVertexColor';
 import { programShader, type ProgramName } from '../testing/patchedFragment';

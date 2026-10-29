@@ -11,7 +11,7 @@ import { registeredComponent } from '../../../../r3f/testing/registeredComponent
 import { instanceMatrices } from '../../../../r3f/meshes/sharedInstances';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { emitterNode, ROW_OF_FOUR } from './cpuparticles3d.testkit';
-import { loadSimulate } from './simulateModule';
+import { loadParticleEmitter } from './emitterModule';
 import './index.r3f';
 
 const CPUParticles3D = registeredComponent('CPUParticles3D');
@@ -35,7 +35,7 @@ async function drawnPoints(mapping: string): Promise<THREE.Points[]> {
 }
 
 // The component loads this chunk lazily, so it lands before the first render.
-beforeAll(loadSimulate);
+beforeAll(loadParticleEmitter);
 
 describe('<CPUParticles3D> with a PointMesh', () => {
   it('instances one Points at every particle, so a local triplanar reads each MODEL_MATRIX', async () => {

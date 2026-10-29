@@ -3,7 +3,7 @@
  * global transform.
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { loadSimulate } from './simulateModule';
+import { loadParticleEmitter } from './emitterModule';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
@@ -23,7 +23,7 @@ const CPUParticles3D = registeredComponent('CPUParticles3D');
 const MOVED = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)';
 
 // The component loads this chunk lazily, so it lands before the first render.
-beforeAll(loadSimulate);
+beforeAll(loadParticleEmitter);
 
 describe('<CPUParticles3D> settle', () => {
   it.each(['true', 'false'])('settles once on mount, local_coords = %s', async (localCoords) => {

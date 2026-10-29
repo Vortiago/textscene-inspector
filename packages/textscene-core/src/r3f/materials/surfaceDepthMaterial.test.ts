@@ -4,7 +4,8 @@ import { surfaceDepthMaterial, syncSurfaceDepth } from './surfaceDepthMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
 import { alphaAntialiasingUserData } from './godotAlphaAntialiasing';
 import { withPointDraw } from './godotPoint';
-import { particleDrawOf, withParticleDraw } from './godotParticles';
+import { particleDrawOf } from './godotParticles';
+import { withParticleDraw } from './godotParticlesProgram';
 import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/materials/alphaAntialiasing';
 
 const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);

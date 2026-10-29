@@ -10,7 +10,7 @@ import { useThree } from '@react-three/fiber';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, type PointPlacement } from './godotPoint';
-import { particleDrawOf } from './godotParticles';
+import { particleDrawOf, type ParticleProgram } from './godotParticles';
 import type { MaterialSource } from './materialSource';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
@@ -21,8 +21,8 @@ interface SurfaceMaterialSlotProps {
   attach?: string;
   /** The surface draws `THREE.Points`, placed so, and its material also sizes each point. Undefined for triangles. */
   points?: PointPlacement;
-  /** The surface draws a particle emitter's instances, which its material colours and billboards. */
-  drawsParticles?: boolean;
+  /** The surface draws a particle emitter's instances: the patch that colours and billboards them. */
+  particles?: ParticleProgram;
 }
 
 /**
@@ -32,7 +32,7 @@ interface SurfaceMaterialSlotProps {
  * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
  * magenta placeholder.
  */
-export function SurfaceMaterialSlot({ source, attach, points, drawsParticles }: SurfaceMaterialSlotProps) {
+export function SurfaceMaterialSlot({ source, attach, points, particles }: SurfaceMaterialSlotProps) {
   const { scalars, bags } = useSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   const pointDraw = useMemo(
@@ -40,10 +40,10 @@ export function SurfaceMaterialSlot({ source, attach, points, drawsParticles }: 
     [points, scalars, pixelRatio]
   );
   const particleDraw = useMemo(
-    () => (drawsParticles ? particleDrawOf(scalars) : undefined),
-    [drawsParticles, scalars]
+    () => (particles ? { draw: particleDrawOf(scalars), program: particles } : undefined),
+    [particles, scalars]
   );
-  const draws = useMemo(() => ({ pointDraw, particleDraw }), [pointDraw, particleDraw]);
+  const draws = useMemo(() => ({ pointDraw, particles: particleDraw }), [pointDraw, particleDraw]);
   if (!bags) return materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />;
 }
