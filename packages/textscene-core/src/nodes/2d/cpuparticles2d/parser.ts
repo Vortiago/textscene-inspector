@@ -88,7 +88,11 @@ export function parseCPUParticles2D(
 
 function emissionArrays(properties: Record<string, string>, context: string) {
   const { points, normals, colors } = parseEmissionPoints(
-    properties,
+    {
+      emission_points: properties.emission_points,
+      emission_normals: properties.emission_normals,
+      emission_colors: properties.emission_colors,
+    },
     parsePackedVector2Array,
     (key) => `${context}.${key}`
   );

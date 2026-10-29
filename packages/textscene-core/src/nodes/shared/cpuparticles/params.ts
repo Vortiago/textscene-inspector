@@ -93,16 +93,26 @@ export interface EmissionPoints {
 }
 
 /**
+ * The raw emission arrays. A parser reads each from its own properties, where the
+ * property-grammar scan (`propertyGrammarParityScan.ts`) sees the read.
+ */
+export interface EmissionPointValues {
+  emission_points: string | undefined;
+  emission_normals: string | undefined;
+  emission_colors: string | undefined;
+}
+
+/**
  * The emission arrays of a node whose points and normals `parseVectors` reads, a 2D or a 3D
  * `PackedVector*Array`. `at` names a key in a warning.
  */
 export function parseEmissionPoints(
-  properties: Record<string, string>,
+  values: EmissionPointValues,
   parseVectors: (value: string) => Float32Array,
   at: (key: string) => string
 ): EmissionPoints {
-  const read = (key: string, parse: (value: string) => Float32Array) =>
-    packedOr(properties[key], parse, NO_FLOATS, at(key));
+  const read = (key: keyof EmissionPointValues, parse: (value: string) => Float32Array) =>
+    packedOr(values[key], parse, NO_FLOATS, at(key));
   return {
     points: read('emission_points', parseVectors),
     normals: read('emission_normals', parseVectors),

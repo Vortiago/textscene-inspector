@@ -44,7 +44,15 @@ export function parseCPUParticles3D(
 
 function parseSimulation(properties: Record<string, string>, context: string): CPUParticles3DSimulation {
   const at = (key: string) => `${context}.${key}`;
-  const emission = parseEmissionPoints(properties, parsePackedVector3Array, at);
+  const emission = parseEmissionPoints(
+    {
+      emission_points: properties.emission_points,
+      emission_normals: properties.emission_normals,
+      emission_colors: properties.emission_colors,
+    },
+    parsePackedVector3Array,
+    at
+  );
   return {
     emitting: boolOr(properties.emitting, true, at('emitting')),
     amount: parseParticleAmount(properties.amount, at('amount')),
