@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Bundle-size guards for the VS Code extension: the webview's initial-paint chunk against a
- * 700 kB gzipped budget (`check-bundle-size/webviewBudget.mjs`), and the host bundles
+ * Bundle-size guards for the VS Code extension: the webview's initial-paint chunk against its
+ * gzipped budget and its lazy-only list (`check-bundle-size/webviewBudget.mjs`), and the host bundles
  * (`dist/extension.js`, `extension.web.js`), which must never bundle `react` or `three`
  * (`check-bundle-size/hostBundles.mjs`). `check-bundle-size/paths.mjs` says where dist/ is.
  */
@@ -22,7 +22,7 @@ function main() {
 
   // A missing webview build measured nothing, so it fails only --enforce callers, who expect one.
   if (webview === 'missing-entry') process.exit(!hostOk || enforce ? 1 : 0);
-  if (webview === 'dead-chunks' || webview === 'unresolved-imports') process.exit(1);
+  if (['dead-chunks', 'unresolved-imports', 'eager-lazy-only'].includes(webview)) process.exit(1);
   if (!hostOk || (webview === 'over-budget' && enforce)) process.exit(1);
 }
 

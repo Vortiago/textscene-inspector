@@ -7,7 +7,7 @@
 import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
+import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 
 // The ceiling catches an accidental import that pulls a whole library into the canvas-paint
 // path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
@@ -21,6 +21,23 @@ const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
 // `import('hls.js')` and `import('@mediapipe/tasks-vision')` emit about 656 KB of lazy chunks
 // that no code path loads.
 const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
+
+// Modules that load on demand, each for a scene that needs it, and so stay off the closure: the
+// area light's LTC tables, the noise jobs' in-thread fallback, and n8ao, which no code path uses.
+const LAZY_ONLY_RE = /\/ltcTable\.generated\.js$|\/node_modules\/(fastnoise-lite|n8ao)\//;
+
+/** Where esbuild writes the webview, as the metafile's output keys begin. */
+const OUTPUT_PREFIX = 'dist/webview/';
+
+/**
+ * The lazy-only inputs that a closure file holds, from the webview build's metafile. `closure`
+ * holds paths relative to the webview dir, as `staticClosure` returns them.
+ */
+export function findEagerLazyOnlyInputs(metafile, closure) {
+  return Object.entries(metafile.outputs)
+    .filter(([output]) => closure.has(output.slice(OUTPUT_PREFIX.length)))
+    .flatMap(([, { inputs }]) => Object.keys(inputs).filter((input) => LAZY_ONLY_RE.test(input)));
+}
 
 /**
  * Static imports of a JS file. Dynamic `import()` calls become a sentinel first, since those
@@ -87,7 +104,7 @@ function staticClosure(dir, entry) {
  * only `main()` sees both halves.
  *
  * @param {boolean} enforce whether an over-budget closure is an error or a warning
- * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks' | 'unresolved-imports'}
+ * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks' | 'unresolved-imports' | 'eager-lazy-only'}
  */
 export function checkWebviewBudget(enforce) {
   if (!existsSync(join(WEBVIEW_DIR, ENTRY))) {
@@ -112,6 +129,13 @@ export function checkWebviewBudget(enforce) {
       "[bundle-size] the closure walk reproduces the bundler's output layout; update it before trusting the number."
     );
     return 'unresolved-imports';
+  }
+  const eager = findEagerLazyOnlyInputs(JSON.parse(readFileSync(WEBVIEW_METAFILE, 'utf8')), closure);
+  if (eager.length > 0) {
+    console.error(`[bundle-size] FAIL: ${eager.length} lazy-only module(s) on the canvas-paint path:`);
+    for (const input of eager) console.error(`  ${input}`);
+    console.error('[bundle-size] reach each one only through a dynamic import().');
+    return 'eager-lazy-only';
   }
   const buffers = [];
   let totalRaw = 0;
