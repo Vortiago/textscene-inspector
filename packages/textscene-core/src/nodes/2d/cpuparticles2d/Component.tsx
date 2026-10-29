@@ -28,9 +28,10 @@ import {
   resolveParticleCurves,
   resolveParticleGradient,
 } from '../../shared/cpuparticles/sceneResources';
-import { simulateFrozenPose } from './simulate';
+import { loadSimulate } from './simulateModule';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { useLazyModule } from '../../../resources/useLazyModule';
 
 /** The quad of an emitter with no texture (`cpu_particles_2d.cpp:186-192`). */
 const UNTEXTURED_QUAD = { width: 1, height: 1 };
@@ -127,9 +128,12 @@ function ParticleField({
     [props.color_initial_ramp, pools, loadedFile]
   );
 
+  const simulate = useLazyModule(loadSimulate);
   const pose = useMemo(
-    () => simulateFrozenPose({ props, curves, colorRamp, colorInitialRamp, emissionTransform }),
-    [props, curves, colorRamp, colorInitialRamp, emissionTransform]
+    () =>
+      simulate &&
+      simulate.simulateFrozenPose({ props, curves, colorRamp, colorInitialRamp, emissionTransform }),
+    [simulate, props, curves, colorRamp, colorInitialRamp, emissionTransform]
   );
 
   // Godot's quad is the texture's size, falling back to 1x1 when the emitter has none
@@ -138,7 +142,7 @@ function ParticleField({
   const { width, height } = (texture && size) || UNTEXTURED_QUAD;
 
   const geometry = useMemo(
-    () => buildParticleGeometry(pose, width, height, flipbook),
+    () => pose && buildParticleGeometry(pose, width, height, flipbook),
     [pose, width, height, flipbook]
   );
   useDisposeOnRelease(geometry);

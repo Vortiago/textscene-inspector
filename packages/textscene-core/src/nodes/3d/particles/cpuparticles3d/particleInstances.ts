@@ -11,7 +11,7 @@ import {
   PARTICLE_COLOR_ATTRIBUTE,
   PARTICLE_CUSTOM_ATTRIBUTE,
 } from '../../../../r3f/materials/godotParticles';
-import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './simulate';
+import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
 /** Floats in a particle's colour and in its custom data. */
 const VEC4_FLOATS = 4;

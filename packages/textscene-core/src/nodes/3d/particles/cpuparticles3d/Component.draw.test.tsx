@@ -2,7 +2,8 @@
  * What <CPUParticles3D> hands three: one instance of the mesh per particle, posed and coloured as
  * Godot's buffer writes it, under materials that read the instance data.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { loadParticleDraw } from './particleDrawModule';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
@@ -25,6 +26,9 @@ async function render(properties: Record<string, string>) {
 async function particles(properties: Record<string, string> = ROW_OF_FOUR): Promise<THREE.InstancedMesh> {
   return findMesh((await render(properties)).scene) as THREE.InstancedMesh;
 }
+
+// The component loads this chunk lazily, so it lands before the first render.
+beforeAll(loadParticleDraw);
 
 describe('<CPUParticles3D> draw', () => {
   it('draws one instance of the mesh per particle', async () => {
