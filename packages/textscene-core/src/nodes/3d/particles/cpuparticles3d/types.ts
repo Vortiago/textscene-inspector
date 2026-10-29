@@ -55,6 +55,12 @@ export interface CPUParticles3DSimulation {
   alignY: boolean;
   rotateY: boolean;
   disableZ: boolean;
+  /** `emission_points`, flat `x, y, z` floats, that the POINTS and DIRECTED_POINTS shapes emit from. */
+  emissionPoints: Float32Array;
+  /** `emission_normals`, flat `x, y, z` floats, that turn a DIRECTED_POINTS particle's velocity. */
+  emissionNormals: Float32Array;
+  /** `emission_colors`, flat `r, g, b, a` floats, one base colour for each point. */
+  emissionColors: Float32Array;
   direction: Vector3;
   /** Degrees either side of `direction`. */
   spread: number;

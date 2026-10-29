@@ -458,6 +458,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Directed Points",
+    "file": "unit-cpuparticles3d-directed-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles3d Gizmo",
     "file": "unit-cpuparticles3d-gizmo.tscn",
     "category": "Other"

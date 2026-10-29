@@ -65,6 +65,7 @@ import {
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
 import {
+  FLOATS_PER_VERTEX,
   normalizedVector3,
   vector3Add,
   vector3Cross,
@@ -134,6 +135,8 @@ const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
 /** `Color()`, which a never-born particle's colours hold (`color.h`). */
 const DEFAULT_COLOR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
 const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 });
+/** The floats of one colour in a `PackedColorArray`. */
+const FLOATS_PER_COLOR = 4;
 const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 interface SimState {
@@ -143,6 +146,12 @@ interface SimState {
   particles: Particle[];
   seed: number;
   rng: GodotRandomPCG;
+  /**
+   * Stands in for `Math::rand()`, which picks each POINTS particle's point. Godot's stream is
+   * process-wide and seeded from the clock (`scene_tree.cpp:2038`), so no scene fixes the pick, and a
+   * fixed seed keeps the render byte-stable.
+   */
+  pointPicks: GodotRandomPCG;
   /** `emission_xform`: the global transform, or the identity for a local-coords emitter. */
   emissionXform: Transform3D;
 }
@@ -172,6 +181,7 @@ export function settleParticles(input: ParticleSim3DInput): SettledParticles {
     particles: Array.from({ length: sim.amount }, newParticle),
     seed: (sim.useFixedSeed ? sim.seed : DEFAULT_PREVIEW_SEED) >>> 0,
     rng: new GodotRandomPCG(0),
+    pointPicks: new GodotRandomPCG(DEFAULT_PREVIEW_SEED),
     emissionXform: sim.localCoords ? identityTransform3D() : input.emissionTransform,
   };
   settle(sim, (frameTime) => particlesProcess(state, input, frameTime));
@@ -296,7 +306,7 @@ function restartParticle(state: SimState, input: ParticleSim3DInput, p: Particle
   p.lifetime = sim.lifetime * p.custom[3];
   p.baseColor = WHITE;
 
-  emitAtShape(input.emission, p, rng);
+  emitAtShape(input, state, p);
 
   if (!sim.localCoords) {
     p.velocity = basisXformRows(basisOfTransform3D(state.emissionXform), p.velocity);
@@ -347,8 +357,9 @@ function initialSpeed(sim: CPUParticles3DSimulation, rng: GodotRandomPCG): numbe
   return lerpf(velocity.min, velocity.max, rng.randf());
 }
 
-/** Where the emission shape places a newborn particle (`cpu_particles_3d.cpp:883-947`). */
-function emitAtShape(emission: ParticleEmission, p: Particle, rng: GodotRandomPCG): void {
+/** Where the emission shape places a newborn particle (`cpu_particles_3d.cpp:883-963`). */
+function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: Particle): void {
+  const { rng } = state;
   switch (emission.shape) {
     case EmissionShape.SPHERE: {
       const surface = sphereSurfacePoint(emission.sphereRadius, rng);
@@ -361,13 +372,73 @@ function emitAtShape(emission: ParticleEmission, p: Particle, rng: GodotRandomPC
     case EmissionShape.BOX:
       p.origin = vector3Mul(boxCorner(rng), emission.boxExtents);
       break;
+    case EmissionShape.POINTS:
+      emitAtPoint(sim, state, p);
+      break;
+    case EmissionShape.DIRECTED_POINTS: {
+      const index = emitAtPoint(sim, state, p);
+      if (index !== null && vectorCount(sim.emissionNormals) === pointCount(sim)) {
+        p.velocity = directedVelocity(sim, vectorAt(sim.emissionNormals, index), p.velocity);
+      }
+      break;
+    }
     case EmissionShape.RING:
       p.origin = ringPoint(emission, rng);
       break;
     default:
-      // A point, and the point shapes this preview cannot place, leave the origin alone.
       break;
   }
+}
+
+/**
+ * Places `p` on one of `emission_points`, with that point's colour when every point has one, and
+ * returns its index. Null, and the origin kept, for no points (`:904-919`, `:939-941`).
+ */
+function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle): number | null {
+  const count = pointCount(sim);
+  if (count === 0) return null;
+  const index = state.pointPicks.rand() % count;
+  p.origin = vectorAt(sim.emissionPoints, index);
+  if (sim.emissionColors.length / FLOATS_PER_COLOR === count)
+    p.baseColor = colorAt(sim.emissionColors, index);
+  return index;
+}
+
+/**
+ * The velocity turned into the frame of a point's normal (`:915-937`): in the XY plane for a
+ * `disable_z` emitter, else into the tangent frame whose third axis is the normal.
+ */
+function directedVelocity(sim: CPUParticles3DSimulation, normal: Vector3, velocity: Vector3): Vector3 {
+  if (sim.disableZ) {
+    // `Transform2D` columns `normal_2d` and `normal_2d.orthogonal()`, through `basis_xform`.
+    return {
+      x: f(f(normal.x * velocity.x) + f(normal.y * velocity.y)),
+      y: f(f(normal.y * velocity.x) + f(-normal.x * velocity.y)),
+      z: velocity.z,
+    };
+  }
+  const v0 = Math.abs(normal.z) < 0.999 ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
+  const tangent = normalized(cross(v0, normal));
+  const bitangent = normalized(cross(tangent, normal));
+  return basisXformRows(basisOfColumns(tangent, bitangent, normal), velocity);
+}
+
+function pointCount(sim: CPUParticles3DSimulation): number {
+  return vectorCount(sim.emissionPoints);
+}
+
+function vectorCount(flat: Float32Array): number {
+  return flat.length / FLOATS_PER_VERTEX;
+}
+
+function vectorAt(flat: Float32Array, index: number): Vector3 {
+  const at = index * FLOATS_PER_VERTEX;
+  return { x: flat[at]!, y: flat[at + 1]!, z: flat[at + 2]! };
+}
+
+function colorAt(flat: Float32Array, index: number): Rgba {
+  const at = index * FLOATS_PER_COLOR;
+  return { r: flat[at]!, g: flat[at + 1]!, b: flat[at + 2]!, a: flat[at + 3]! };
 }
 
 /** A point on the sphere of `radius`, from a height and an angle drawn in that order (`:888-899`). */

@@ -95,3 +95,33 @@ describe('the drawn buffer after settleParticles', () => {
     expect(rows(oracleBuffer(oracle))).toEqual(rows(new Float32Array(oracle.buffer)));
   });
 });
+
+describe('the POINTS shape with more than one point', () => {
+  // Godot picks each point from its unsaved process-wide RNG, so only the set of places is fixed.
+  const POINTS = { x: [0.5, -1, 2], y: [-0.25, 0.75, 0], z: [1, 0, -2] };
+  const properties = {
+    amount: '12',
+    lifetime: '1.0',
+    initial_velocity_min: '0.0',
+    initial_velocity_max: '0.0',
+    gravity: 'Vector3(0, 0, 0)',
+    emission_shape: '4',
+    emission_points: 'PackedVector3Array(0.5, -0.25, 1, -1, 0.75, 0, 2, 0, -2)',
+    emission_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)',
+  };
+
+  it('places every particle on one of the points, with that point colour', () => {
+    for (const row of rows(drawnBuffer(settleParticles(input(properties)), null))) {
+      const index = POINTS.x.findIndex(
+        (x, i) => x === row[3] && POINTS.y[i] === row[7] && POINTS.z[i] === row[11]
+      );
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(row[12 + index]).toBeGreaterThan(0.9);
+    }
+  });
+
+  it('uses every point', () => {
+    const origins = new Set(rows(drawnBuffer(settleParticles(input(properties)), null)).map((row) => row[3]));
+    expect(origins).toEqual(new Set(POINTS.x));
+  });
+});

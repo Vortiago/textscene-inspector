@@ -42,7 +42,7 @@ const UINT64_MASK = 0xffffffffffffffffn;
 
 /**
  * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state,
- * 32-bit output), exposing only what the emitters use: `seed` and `randf`.
+ * 32-bit output), exposing only what the emitters use: `seed`, `rand` and `randf`.
  * Re-seeded per particle at birth (`cpu_particles_2d.cpp:922`, `cpu_particles_3d.cpp:832`) for everything
  * decided once per particle.
  */
@@ -65,6 +65,11 @@ export class GodotRandomPCG {
     this.step();
     this.state = (this.state + (BigInt(seed) & UINT64_MASK)) & UINT64_MASK;
     this.step();
+  }
+
+  /** `RandomPCG::rand()`: one `pcg32_random_r` output word, a `uint32`. */
+  rand(): number {
+    return this.step();
   }
 
   /**

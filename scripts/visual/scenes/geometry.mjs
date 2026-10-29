@@ -31,6 +31,9 @@ export const GEOMETRY_SCENES = [
   // A CPUParticles3D settled to a fixed seed: four boxes in a row, each an instance of the mesh
   // coloured through `vertex_color_use_as_albedo`.
   { name: 'cpuparticles3d-row', file: 'unit-cpuparticles3d-row.tscn' },
+  // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's
+  // normal frame and coloured from `emission_colors`.
+  { name: 'cpuparticles3d-directed-points', file: 'unit-cpuparticles3d-directed-points.tscn' },
   // An ArrayMesh triangle-strip surface, read as triangles as Godot reads it.
   { name: 'arraymesh-triangle-strip', file: 'unit-arraymesh-triangle-strip.tscn' },
   // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's
