@@ -20,8 +20,8 @@ export function useParentModulate(): Rgba {
 
 /**
  * Component-wise RGBA multiply (Godot composes modulate by multiplication), in double, not
- * `multiplyColor`: the renderer encodes a float 0.9 font colour to 229, where Godot writes
- * 230 (the half step 229.5), so a float product moves `control-scene-font-magnified` away.
+ * `multiplyColor`: the double keeps our sRGB round trip on Godot's output at a half step, so
+ * `font_color` 0.9 writes 230 as Godot does. The test "keeps a 0.9 channel" pins it.
  */
 export function multiplyModulate(a: Rgba, b: Rgba): Rgba {
   return { r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a };
