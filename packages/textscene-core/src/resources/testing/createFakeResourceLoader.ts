@@ -273,6 +273,9 @@ export function recordSceneRequests(fake: FakeResourceLoader): Map<string, boole
  * `fake`'s loader with a job runner a test drives. Assigned, not spread: a spread would freeze the
  * loader's pending-count getter.
  */
-export function withJobRunner(fake: FakeResourceLoader, runner: ResourceLoader['jobRunner']): ResourceLoader {
-  return Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+export function withJobRunner(
+  fake: FakeResourceLoader,
+  runner: Pick<WorkerJobRunner, 'run'>
+): ResourceLoader {
+  return Object.assign(fake.loader, { jobRunner: runner }) as unknown as ResourceLoader;
 }
