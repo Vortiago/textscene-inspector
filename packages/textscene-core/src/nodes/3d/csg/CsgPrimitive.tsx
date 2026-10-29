@@ -24,6 +24,7 @@ import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
+import { useLivePatchesBelow } from '../../../r3f/liveNodePatches';
 import type { CSGShape3DProperties } from './types';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
@@ -118,10 +119,13 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const absorbed =
     subtree !== null && subtree.status !== 'failed' && path !== null && subtree.absorbedPaths.has(path);
 
+  // A root builds the plan over its CSG descendants, which the passes bind by live path.
+  const patches = useLivePatchesBelow(absorbed || skipped ? null : path);
   const plan = useMemo(() => {
     if (absorbed || skipped || path === null) return null;
     return buildCsgPlan(node, path, {
       hiddenPaths: hiddenNodePaths,
+      patches,
       lookup: (type) => {
         const shape = nodeComponentRegistry.getCsgShape(type);
         if (!shape) return null;
@@ -131,7 +135,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
         };
       },
     });
-  }, [absorbed, skipped, node, path, hiddenNodePaths, ctx]);
+  }, [absorbed, skipped, node, path, hiddenNodePaths, patches, ctx]);
 
   // A node with no plan of its own passes the enclosing root's value straight through:
   // what its descendants are is that root's answer, not its own. Mounted by every branch

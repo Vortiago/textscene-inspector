@@ -4,7 +4,8 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import type { LiveTreeContext } from './liveSceneTree.js';
+import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
+import type { LiveTree, LiveTreeContext } from './liveSceneTree.js';
 import { claimOwnerOf, localSceneOf, localSceneUniquePaths, ownerUniquePaths } from './uniqueNameOwner.js';
 
 /**
@@ -25,4 +26,16 @@ export function nodePathUniquePaths(
   return scene.path === nodePath
     ? localSceneUniquePaths(scene)
     : ownerUniquePaths(claimOwnerOf(nodePath, roots, ctx));
+}
+
+/**
+ * The table for a NodePath `literal` on the node at `path`, or undefined where the literal has no
+ * `%Name` segment: only such a segment reads the table, which allocates on each call.
+ */
+export function uniquePathsOfLiteral(
+  literal: string | undefined,
+  path: string,
+  tree: Pick<LiveTree, 'roots' | 'ctx'>
+): ReadonlyMap<string, string> | undefined {
+  return literal?.includes(UNIQUE_NODE_PREFIX) ? nodePathUniquePaths(path, tree.roots, tree.ctx) : undefined;
 }

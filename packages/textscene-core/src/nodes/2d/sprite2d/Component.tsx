@@ -28,11 +28,11 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // means none does. The registry carries a numeric tuple (ADR-0017), here a 1-tuple.
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
-  const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources
-  );
+  const {
+    texture: sourceTexture,
+    size: reportedSize,
+    missing: textureMissing,
+  } = useTexture2D(props.texture, externalResources, internalResources);
 
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles.
@@ -46,13 +46,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   }, [sourceTexture, props, animatedFrame]);
   const drawnTexture = useWindowedCanvas2DTexture(sourceTexture, sampler, frameWindow);
 
-  // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
-  // target reports its rect through the same `image` shape a loaded texture
-  // uses, so the sizing path is shared.
-  const { width, height } = useMemo(
-    () => frameSizePx(sourceTexture ?? undefined, props),
-    [sourceTexture, props]
-  );
+  // Quad size in pixels (1 px = 1 world unit in the 2D canvas).
+  const { width, height } = useMemo(() => frameSizePx(reportedSize, props), [reportedSize, props]);
 
   return (
     <CanvasItem2D

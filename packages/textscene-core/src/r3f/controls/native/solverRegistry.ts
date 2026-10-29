@@ -6,7 +6,7 @@
  */
 
 import { createTypeRegistry } from '../../../core/createTypeRegistry';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnNode } from '../../../parser/types';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
@@ -106,13 +106,13 @@ export interface TextureSlotRequest {
    * addresses that theme file's sub-resource pool, never the node's.
    */
   scope?: SolveNode['resources'];
-  /** The resources between the node and `ref`, none when omitted. A themed icon sets its Theme. */
-  holders?: readonly TscnInternalResource[];
+  /** Whether every resource between the node and `ref` is local to scene, true when omitted. A themed icon sets its Theme's. */
+  isHeldLocally?: boolean;
 }
 
-/** The request for a themed icon: its ref, in its theme's scope, through its holders. */
+/** The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. */
 export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSlotRequest {
-  return { key, ref: themed.ref, scope: themed.resources, holders: themed.holders };
+  return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
 }
 
 /**

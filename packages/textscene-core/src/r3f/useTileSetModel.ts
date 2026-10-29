@@ -5,7 +5,7 @@
  * handling. The sync branches pass `''`, so the hook-call count is constant.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { warn } from '../logger';
 import type { ParsedResource } from '../parser/parsedResource';
 import {
@@ -16,6 +16,8 @@ import {
 import { tileSetFromScene, tileSetFromFile } from '../resources/tileset/decode';
 import type { TileSetModel } from '../resources/tileset/types';
 import { useResource } from '../resources/useResource';
+import { useLoadedFiles } from '../resources/useLoadedFiles';
+import { atlasTextureFiles, withTilesSizedAtLoad } from '../resources/tileset/sizedAtLoad';
 import { useSceneResources } from './SceneResourcesContext';
 
 interface TileSetModelResult {
@@ -23,7 +25,20 @@ interface TileSetModelResult {
   status: 'pending' | 'loaded' | 'unavailable';
 }
 
+/** The TileSet `tileSetRef` names, with the tiles Godot creates once its atlas textures size it. */
 export function useTileSetModel(tileSetRef: string | undefined): TileSetModelResult {
+  const decoded = useDecodedTileSet(tileSetRef);
+  const { model } = decoded;
+  const planFiles = useCallback(() => (model ? atlasTextureFiles(model) : []), [model]);
+  const { loadedFile, isLoading } = useLoadedFiles(planFiles);
+  return useMemo((): TileSetModelResult => {
+    if (!model) return decoded;
+    if (isLoading) return { model: null, status: 'pending' };
+    return { model: withTilesSizedAtLoad(model, loadedFile), status: decoded.status };
+  }, [decoded, model, isLoading, loadedFile]);
+}
+
+function useDecodedTileSet(tileSetRef: string | undefined): TileSetModelResult {
   const { internalResources, externalResources } = useSceneResources();
 
   const ref = tileSetRef ? parseResourceReference(tileSetRef) : null;
@@ -50,7 +65,7 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
     if (fileResult.status === 'unavailable' || !fileResult.value) {
       return { model: null, status: 'unavailable' };
     }
-    const model = tileSetFromFile(fileResult.value);
+    const model = tileSetFromFile(fileResult.value, filePath);
     return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
   }, [
     tileSetRef,

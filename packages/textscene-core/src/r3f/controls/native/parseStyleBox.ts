@@ -60,7 +60,7 @@ export function parseStyleBox(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  holders: readonly TscnInternalResource[]
+  isHeldLocally: boolean
 ): ResolvedStyleBox | null {
   if (!ref) return null;
   const parsed = parseResourceReference(ref);
@@ -73,7 +73,7 @@ export function parseStyleBox(
     return line && styleBoxLineBox(line);
   }
   if (resource.type === 'StyleBoxTexture') {
-    const texture = parseStyleBoxTexture(ref, externalResources, internalResources, holders);
+    const texture = parseStyleBoxTexture(ref, externalResources, internalResources, isHeldLocally);
     return texture && styleBoxTextureBox(texture);
   }
   return decodeStyleBox(resource.type, resource.data);

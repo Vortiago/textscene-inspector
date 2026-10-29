@@ -19,7 +19,10 @@ import { TextureProgressBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TextureProgressBarProperties } from './types';
-import { unconfiguredViewportTexture } from '../../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import {
+  UNSET_VIEWPORT_TEXTURE,
+  UNSET_VIEWPORT_TEXTURE_REF,
+} from '../../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 
 const UNDER = 'res://under.png';
 const PROGRESS = 'res://progress.png';
@@ -204,36 +207,41 @@ describe('<TextureProgressBar>', () => {
  * placeholder's texels.
  */
 describe('<TextureProgressBar> with layers that report size 0', () => {
-  function sizelessLoader() {
-    const fake = createFakeResourceLoader();
-    for (const path of [UNDER, PROGRESS, OVER]) fake.textures.seed(path, unconfiguredViewportTexture());
-    return fake.loader;
+  function sizelessBar(properties: Partial<TextureProgressBarProperties>) {
+    const n = node(properties);
+    const resources = { externalResources: [], internalResources: [UNSET_VIEWPORT_TEXTURE] };
+    return (
+      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+        <TextureProgressBar
+          {...painterEnv()}
+          solveNode={{ ...solveNode(n), resources }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </ResourceLoaderProvider>
+    );
   }
 
   const ALL_LAYERS = {
-    textureUnder: 'ExtResource("1")',
-    textureProgress: 'ExtResource("2")',
-    textureOver: 'ExtResource("3")',
+    textureUnder: UNSET_VIEWPORT_TEXTURE_REF,
+    textureProgress: UNSET_VIEWPORT_TEXTURE_REF,
+    textureOver: UNSET_VIEWPORT_TEXTURE_REF,
     value: 50,
   };
 
   it('draws no plain layer', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      bar(sizelessLoader(), { ...ALL_LAYERS, fillMode: 0 })
-    );
+    const renderer = await ReactThreeTestRenderer.create(sizelessBar({ ...ALL_LAYERS, fillMode: 0 }));
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('draws no radial progress layer', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      bar(sizelessLoader(), { ...ALL_LAYERS, fillMode: 4 })
-    );
+    const renderer = await ReactThreeTestRenderer.create(sizelessBar({ ...ALL_LAYERS, fillMode: 4 }));
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('stretches each nine-patch layer from the placeholder', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      bar(sizelessLoader(), { ...ALL_LAYERS, fillMode: 0, ninePatchStretch: true })
+      sizelessBar({ ...ALL_LAYERS, fillMode: 0, ninePatchStretch: true })
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3);
   });

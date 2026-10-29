@@ -13,6 +13,7 @@ import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { ownedTextureView } from '../../../resources/textures/textureView';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
+import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
 
 type TargetViews = ReturnType<typeof useTargetViews>;
 
@@ -43,7 +44,7 @@ async function mount(target: THREE.WebGLRenderTarget) {
     await withStubbedGl(gl, { onRender: (bound) => drawnInto.push(bound) }, () => views.current!.fill());
     return drawnInto;
   };
-  return { views: views.current!, fill, unmount: () => renderer.unmount() };
+  return { views: views.current!, fill, gl, unmount: () => renderer.unmount() };
 }
 
 /** A reader that samples a view through its own window, so it reads its own copy. */
@@ -147,7 +148,28 @@ describe('useTargetViews', () => {
     const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe'));
     views.decoding.retain();
     const reader = flippedReader(views.decoding.texture);
+    const release = holdUntilReleased(reader);
     expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.decoding.texture, reader]);
+    release();
+  });
+
+  it('fills its views and their readers within one save and restore of the renderer', async () => {
+    const { views, fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    views.decoding.retain();
+    const release = holdUntilReleased(flippedReader(views.decoding.texture));
+    // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
+    const save = vi.spyOn(gl, 'getActiveCubeFace');
+    await fill();
+    expect(save).toHaveBeenCalledTimes(1);
+    release();
+  });
+
+  it('leaves the renderer alone when no reader holds a view or a copy', async () => {
+    const { fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
+    const save = vi.spyOn(gl, 'getActiveCubeFace');
+    await fill();
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('gives a reader the view itself once the target is gone (edge case)', async () => {

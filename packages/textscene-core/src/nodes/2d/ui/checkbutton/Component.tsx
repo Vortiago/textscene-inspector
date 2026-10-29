@@ -104,7 +104,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   return (
     <>
-      <CanvasItemGroup position={[content.iconRect.x, -content.iconRect.y, 0]}>
+      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={drawnIconSize.x}

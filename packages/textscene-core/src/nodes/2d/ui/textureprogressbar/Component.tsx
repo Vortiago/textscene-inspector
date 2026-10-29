@@ -37,23 +37,25 @@ import { TexturedFillMesh } from './TexturedFillMesh';
 import type { TextureProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
-import { textureSize } from '../../../../resources/textures/textureSize';
+import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
-/** The size a plain or radial layer draws at: the size Godot reports for its texture. */
-function reportedSize(texture: THREE.Texture | null): Vector2 | null {
-  return areaOf(textureSize(texture));
-}
-
 /** The size a nine-patch layer cuts its margins from: the sampled image's. */
 function sampledSize(texture: THREE.Texture | null): Vector2 | null {
-  return areaOf(imageSize(texture?.image));
+  return sizeWithArea(imageSize(texture?.image));
 }
 
-function areaOf(size: ImageSize | undefined): Vector2 | null {
-  return size && size.width > 0 && size.height > 0 ? { x: size.width, y: size.height } : null;
+/** A layer's size: the sampled image's for a nine patch, else the size Godot reports. */
+function useLayerSize(
+  { texture, size }: { texture: THREE.Texture | null; size: ImageSize | undefined },
+  ninePatchStretch: boolean
+): Vector2 | null {
+  return useMemo(
+    () => (!texture ? null : ninePatchStretch ? sampledSize(texture) : sizeWithArea(size)),
+    [texture, size, ninePatchStretch]
+  );
 }
 
 /** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
@@ -62,9 +64,9 @@ function useLayerTexture(
   externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
   internalResources: NativeControlComponentProps['solveNode']['resources']['internalResources'],
   sampler: CanvasItemTextureSampler
-): THREE.Texture | null {
-  const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
-  return useCanvas2DTexture(raw, sampler);
+): { texture: THREE.Texture | null; size: ImageSize | undefined } {
+  const { texture: raw, size } = useTexture2D(ref, externalResources, internalResources);
+  return { texture: useCanvas2DTexture(raw, sampler), size };
 }
 
 /** `Texture2D::get_rect_region`'s cropped clone: identity except the UV window (`linearFill.ts`). */
@@ -89,22 +91,19 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
   const { externalResources, internalResources } = solveNode.resources;
-  const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
-  const progressTexture = useLayerTexture(
-    props.textureProgress,
-    externalResources,
-    internalResources,
-    sampler
-  );
-  const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
+  const under = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
+  const progress = useLayerTexture(props.textureProgress, externalResources, internalResources, sampler);
+  const over = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
+  const underTexture = under.texture;
+  const progressTexture = progress.texture;
+  const overTexture = over.texture;
 
   // Memoised, so the geometry and crop memos that read a size rebuild only when its texture changes.
   const ninePatchStretch = props.ninePatchStretch === true;
   // An unset ViewportTexture reports size 0 yet samples the placeholder, which a nine patch stretches.
-  const layerSize = ninePatchStretch ? sampledSize : reportedSize;
-  const underSize = useMemo(() => layerSize(underTexture), [layerSize, underTexture]);
-  const progressSize = useMemo(() => layerSize(progressTexture), [layerSize, progressTexture]);
-  const overSize = useMemo(() => layerSize(overTexture), [layerSize, overTexture]);
+  const underSize = useLayerSize(under, ninePatchStretch);
+  const progressSize = useLayerSize(progress, ninePatchStretch);
+  const overSize = useLayerSize(over, ninePatchStretch);
 
   const stretchMarginLeft = props.stretchMarginLeft ?? 0;
   const stretchMarginTop = props.stretchMarginTop ?? 0;

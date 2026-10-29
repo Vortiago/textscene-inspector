@@ -57,6 +57,9 @@ function mount(children: ReactNode) {
   );
 }
 
+const A_IN_CYCLE: ViewportPass = { dependsOn: ['b'], render: () => {} };
+const B_IN_CYCLE: ViewportPass = { dependsOn: ['a'], render: () => {} };
+
 describe('useRegisterViewportPass (no provider)', () => {
   it('is a safe no-op, returning a cleanup function', async () => {
     let register: ReturnType<typeof useRegisterViewportPass> | null = null;
@@ -163,6 +166,34 @@ describe('<ViewportPassOrchestrator>', () => {
       expect(seenOther.at(-1)).toBeNull();
     });
 
+    it('keeps the cycle its reader holds when an unrelated pass registers', async () => {
+      const seen: (unknown | null)[] = [];
+      const cycle = (
+        <>
+          <Registrar path="a" pass={A_IN_CYCLE} />
+          <Registrar path="b" pass={B_IN_CYCLE} />
+        </>
+      );
+      const renderer = await mount(
+        <>
+          {cycle}
+          <CycleWatch path="b" seen={seen} />
+        </>
+      );
+      const before = seen.at(-1);
+      await renderer.update(
+        <ViewportPassProvider>
+          <>
+            {cycle}
+            <CycleWatch path="b" seen={seen} />
+            <Registrar path="other" pass={{ dependsOn: [], render: () => {} }} />
+          </>
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+      expect(seen.at(-1)).toBe(before);
+    });
+
     it('logs a warning naming the offending sampler', async () => {
       warnCalls.length = 0;
       await mount(
@@ -174,6 +205,29 @@ describe('<ViewportPassOrchestrator>', () => {
       const matched = warnCalls.filter((args) => String(args[0]).includes('b'));
       expect(matched.length).toBeGreaterThan(0);
     });
+  });
+});
+
+/** Counts its renders into `renders`, as a texture slot that names no ViewportTexture reads the cycle. */
+function NoCycleWatch({ renders }: { renders: number[] }) {
+  useViewportPassCycle(null);
+  renders[0]!++;
+  return null;
+}
+
+describe('useViewportPassCycle', () => {
+  it('leaves a reader of no path alone when a pass registers', async () => {
+    const renders = [0];
+    const watch = <NoCycleWatch renders={renders} />;
+    const renderer = await mount(watch);
+    await renderer.update(
+      <ViewportPassProvider>
+        {watch}
+        <Registrar path="a" pass={{ dependsOn: [], render: () => {} }} />
+        <ViewportPassOrchestrator />
+      </ViewportPassProvider>
+    );
+    expect(renders[0]).toBe(1);
   });
 });
 

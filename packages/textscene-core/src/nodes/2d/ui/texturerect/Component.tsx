@@ -28,14 +28,14 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
   const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline
   // procedural texture, which has no path and rasterises out of the scene.
-  const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
+  const { texture: rawTexture, size } = useTexture2D(props.texture, externalResources, internalResources);
 
   const draw = useMemo(
     () =>
-      sampledDraw(rawTexture, (reported) =>
+      sampledDraw(rawTexture, size, (reported) =>
         textureRectDraw({ x: rect.w, y: rect.h }, reported, props.stretchMode)
       ),
-    [rawTexture, rect.w, rect.h, props.stretchMode]
+    [rawTexture, size, rect.w, rect.h, props.stretchMode]
   );
 
   const drawnTexture = useOwnedTextureView(

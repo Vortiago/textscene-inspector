@@ -17,7 +17,6 @@ import { useBuildSolveTree } from './buildSolveTree';
 import type { SolveNode } from './solveTree';
 import { controlNode } from './testing/solveNode';
 import { themeResource } from './testing/themeResource';
-import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
 
 /** A Theme that declares `icons`, in a theme-file scope of its own. */
 function iconTheme(icons: Record<string, Record<string, string>>): ThemeResource {
@@ -135,7 +134,7 @@ describe('useBuildSolveTree icons', () => {
   /** A ViewportTexture in an icon is set up only when every holder is local to scene (`core/io/resource.cpp:497-503`). */
   it('holds a local override icon through the node property alone', () => {
     const leaf = solvedLeaf([], checkBox({ checked: 'SubResource("Local")' }));
-    expect(leaf.icons.checked?.holders).toEqual([]);
+    expect(leaf.icons.checked?.isHeldLocally).toBe(true);
   });
 
   it('holds an ancestor Theme icon through that Theme, local to scene as the Theme says', () => {
@@ -145,10 +144,7 @@ describe('useBuildSolveTree icons', () => {
       [themeResource({ ...iconTheme(icons), properties: { resource_local_to_scene: 'true' } })],
       checkBox()
     );
-    expect([shared, local].map((leaf) => leaf.icons.checked?.holders.map(isLocalToScene))).toEqual([
-      [false],
-      [true],
-    ]);
+    expect([shared, local].map((leaf) => leaf.icons.checked?.isHeldLocally)).toEqual([false, true]);
   });
 
   /** `ThemeDB::initialize_theme` loads the project theme outside every scene (`theme_db.cpp:53-80`). */
@@ -182,6 +178,6 @@ describe('useBuildSolveTree icons', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(result.current.tree[0]!.icons.checked?.holders.map(isLocalToScene)).toEqual([false]);
+    expect(result.current.tree[0]!.icons.checked?.isHeldLocally).toBe(false);
   });
 });

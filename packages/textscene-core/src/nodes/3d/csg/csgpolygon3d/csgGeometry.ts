@@ -58,7 +58,7 @@ function transformKey(t: Transform3D | null): string {
 export function csgPolygon3DGeometryKey(properties: Record<string, unknown>): string {
   const p = properties as unknown as CSGPolygon3DProperties;
   // The resolved curve is part of the shape, so its points belong in the key; the pass
-  // rewrites `resolvedPath` on every reparse, so identity alone would never match. Both
+  // builds a new `resolvedPath` on every reparse, so identity alone would never match. Both
   // Bézier handles ride along because `tessellateCurve3D` consumes them, so a dragged
   // tangent is a shape change with every position left untouched.
   const curve = p.resolvedPath
