@@ -18,7 +18,6 @@ import {
   findLinterParserDirs,
   findParserFile,
   findSliceDirs,
-  isPendingSlice,
   nodesRoot,
   scrapeParserReads,
 } from './propertyGrammarParityScan.js';
@@ -183,15 +182,5 @@ describe('the parser a slice registers', () => {
     expect(findSliceDirs(nodesRoot)).toContain(
       sliceDir('3d/particles/collisions/gpuparticlescollisionbox3d')
     );
-  });
-});
-
-describe('a pending slice', () => {
-  it('registers its component under renderIntent pending', () => {
-    expect(isPendingSlice(join(nodesRoot, '3d/voxelgi'))).toBe(true);
-  });
-
-  it('is not pending when it draws', () => {
-    expect(isPendingSlice(join(nodesRoot, '3d/camera3d'))).toBe(false);
   });
 });

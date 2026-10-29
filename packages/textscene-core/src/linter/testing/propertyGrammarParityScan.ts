@@ -1,8 +1,8 @@
 /**
- * Reads the slices off disk: which directories are slices, which parser each registers, whether
- * its component is pending, and which keys each side names. The parser half is a scrape of
- * `properties.X` and `properties['X']`, since nothing in the build exposes that set. The
- * allowlist records the reads a scrape cannot see, such as a table-driven one.
+ * Reads the slices off disk: which directories are slices, which parser each registers, and which
+ * keys each side names. The parser half is a scrape of `properties.X` and `properties['X']`,
+ * since nothing in the build exposes that set. The allowlist records the reads a scrape cannot
+ * see, such as a table-driven one.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -109,12 +109,6 @@ function locateParserFile(dir: string): string | null {
 export function findSliceDirs(dir: string): string[] {
   const dirs = findLinterParserDirs(dir).filter((d) => findParserFile(d) !== null);
   return atLeast(dirs, 50, 'findSliceDirs');
-}
-
-/** Whether the slice registers its component under `renderIntent: 'pending'`. */
-export function isPendingSlice(dir: string): boolean {
-  const file = join(dir, 'index.r3f.ts');
-  return existsSync(file) && /renderIntent:\s*'pending'/.test(readFileSync(file, 'utf8'));
 }
 
 /**

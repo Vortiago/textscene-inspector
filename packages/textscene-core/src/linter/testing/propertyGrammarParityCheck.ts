@@ -7,13 +7,16 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { classInheritanceChain } from '../../godot/classdb/classBaseTypes.js';
+import { NODE_CLASS_PROPERTIES } from '../../godot/classdb/classProperties.generated.js';
+import { UNCATALOGUED_PROPERTIES } from '../../godot/classdb/uncataloguedProperties.js';
+import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry.js';
+import '../../r3f/nodes/index.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
 import {
   extractNodeType,
   findParserFile,
   findSliceDirs,
-  isPendingSlice,
   getInheritedParserProps,
   nodesRoot,
   scrapeParserReads,
@@ -36,7 +39,7 @@ export interface SliceInfo {
   parserProps: Set<string>;
   /** Own registered keys + inherited base validator keys. */
   validatorKeys: Set<string>;
-  /** Whether the node's effect is a declared gap (`renderIntent: 'pending'`), so every unread key is one. */
+  /** Whether the component registry declares the node's effect a gap (`renderIntent: 'pending'`). */
   isPending: boolean;
 }
 
@@ -58,10 +61,49 @@ export function collectSlices(): SliceInfo[] {
         ...getInheritedParserProps(nodeType),
       ]),
       validatorKeys: getFullValidatorKeys(nodeType),
-      isPending: isPendingSlice(dir),
+      isPending: nodeComponentRegistry.renderIntentOf(nodeType) === 'pending',
     });
   }
   return cachedSlices;
+}
+
+/**
+ * Whether Godot declares `key` on `nodeType` or an ancestor. A wildcard or indexed key names a
+ * family of keys, so it passes: its pattern is the validator's own.
+ */
+export function isEngineProperty(nodeType: string, key: string): boolean {
+  if (key.includes('*') || key.includes('#')) return true;
+  return classInheritanceChain(nodeType).some((type) =>
+    [...(NODE_CLASS_PROPERTIES[type] ?? []), ...(UNCATALOGUED_PROPERTIES[type] ?? [])].some(
+      ([name]) => name === key
+    )
+  );
+}
+
+interface UnreadKeysInput {
+  nodeType: string;
+  validatorKeys: ReadonlySet<string>;
+  parserProps: ReadonlySet<string>;
+  /** The keys the allowlist excuses for this slice. */
+  allowed: ReadonlySet<string>;
+  isPending: boolean;
+}
+
+/**
+ * The validator keys no parser reads and no allowlist entry excuses. A pending slice excuses each
+ * key Godot declares, as a render gap, and still reports a key Godot does not declare: a typo.
+ */
+export function unreadValidatorKeys({
+  nodeType,
+  validatorKeys,
+  parserProps,
+  allowed,
+  isPending,
+}: UnreadKeysInput): string[] {
+  return [...validatorKeys]
+    .filter((key) => !parserProps.has(key) && !allowed.has(key))
+    .filter((key) => !isPending || !isEngineProperty(nodeType, key))
+    .sort();
 }
 
 export interface ParityViolation {
@@ -90,9 +132,13 @@ export function checkParity(): ParityViolation[] {
     const parserOnlyNotAllowlisted = [...parserProps]
       .filter((k) => !validatorKeys.has(k) && !allowedParserOnly.has(k))
       .sort();
-    const linterOnlyNotAllowlisted = isPending
-      ? []
-      : [...validatorKeys].filter((k) => !parserProps.has(k) && !allowedLinterOnly.has(k)).sort();
+    const linterOnlyNotAllowlisted = unreadValidatorKeys({
+      nodeType,
+      validatorKeys,
+      parserProps,
+      allowed: allowedLinterOnly,
+      isPending,
+    });
 
     if (parserOnlyNotAllowlisted.length > 0 || linterOnlyNotAllowlisted.length > 0) {
       violations.push({ slice, nodeType, parserOnlyNotAllowlisted, linterOnlyNotAllowlisted });
