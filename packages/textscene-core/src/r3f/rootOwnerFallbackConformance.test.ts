@@ -1,0 +1,133 @@
+/**
+ * A heading whose `owner=` walk enters an instance, and whose `owner_uid_path=` names the file root.
+ * Godot takes the root as owner only where the walk finds no node (packed_scene.cpp:159-163), so
+ * only a reader that sees the instance can tell. Each reader reads that one decision: the live
+ * seating, the render path's `%Name` table and the parse's own walk.
+ */
+import { describe, expect, it } from 'vitest';
+import { TscnParser } from '../parser/TscnParser';
+import type { TscnScene } from '../parser/types';
+import { sceneSeating } from '../parser/sceneTreeBuilder';
+import { contextOver, livePathsOver } from './liveSceneTree.testkit';
+import { claimOwnerOf, ownerUniquePaths } from './uniqueNameOwner';
+import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+
+const parse = (text: string): TscnScene => new TscnParser().parse(text);
+
+const INNER = parse(`[gd_scene format=3]
+
+[node name="Inner" type="Node3D" unique_id=1]
+`);
+
+const PLAYER = parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
+
+[node name="Player" type="Node3D" unique_id=1]
+
+[node name="Inner" parent="." instance=ExtResource("inner") unique_id=3333]
+`);
+
+const SCENES = { 'res://inner.tscn': INNER, 'res://player.tscn': PLAYER };
+
+/** A host whose `Lamp` names `owner` and the root by its `owner_uid_path=`, then `Shade` below `%Lamp`. */
+const hostOwnedBy = (owner: string) =>
+  parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D" unique_id=5]
+
+[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
+
+[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(5)]
+unique_name_in_owner = true
+
+[node name="Shade" type="Node3D" parent="%Lamp"]
+`);
+
+const shadePaths = (host: TscnScene, scenes = SCENES) =>
+  livePathsOver(host, scenes).filter((path) => path.endsWith('Shade'));
+
+const rootTable = (host: TscnScene, scenes = SCENES) =>
+  ownerUniquePaths(claimOwnerOf('Main/Player', host.nodes, contextOver(host, scenes)));
+
+describe('where the owner= walk finds nothing in the instance', () => {
+  const host = hostOwnedBy('Player/Gone');
+
+  it('seats a heading below the %Name the root claims', () => {
+    expect(shadePaths(host)).toEqual(['Main/Lamp/Shade']);
+  });
+
+  it('gives the root the name in its table', () => {
+    expect(rootTable(host).get('%Lamp')).toBe('Main/Lamp');
+  });
+});
+
+describe('where the owner= walk finds the owner in the instance', () => {
+  const host = hostOwnedBy('Player/Inner');
+
+  it('re-roots a heading below the %Name, which the root does not claim', () => {
+    expect(shadePaths(host)).toEqual(['Main/_Lamp#Shade']);
+  });
+
+  it('gives the root no such name', () => {
+    expect(rootTable(host).has('%Lamp')).toBe(false);
+  });
+});
+
+describe('while the instance is not loaded', () => {
+  const host = hostOwnedBy('Player/Gone');
+
+  it('seats the heading as the trail says, and keeps it there', () => {
+    expect(shadePaths(host, {})).toEqual(['Main/Lamp/Shade']);
+  });
+});
+
+describe('the parse, which cannot see the instance', () => {
+  it('answers a path through the %Name as unknowable', () => {
+    expect(sceneSeating(hostOwnedBy('Player/Gone').nodes).resolve('%Lamp').status).toBe('unknowable');
+  });
+
+  it('answers the path of the node itself', () => {
+    expect(sceneSeating(hostOwnedBy('Player/Gone').nodes).resolve('Lamp').status).toBe('found');
+  });
+});
+
+describe('a scene whose root is the fallback owner, instanced by another', () => {
+  const subOwnedBy = (owner: string) =>
+    parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Sub" type="Node3D" unique_id=5]
+
+[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
+
+[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(5)]
+unique_name_in_owner = true
+`);
+  const host = parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://sub.tscn" id="sub"]
+
+[node name="Main" type="Node3D"]
+
+[node name="S" parent="." instance=ExtResource("sub")]
+
+[node name="X" type="Node3D" parent="S/%Lamp"]
+`);
+  const xPaths = (owner: string) =>
+    livePathsOver(host, { ...SCENES, 'res://sub.tscn': subOwnedBy(owner) }).filter((path) =>
+      path.endsWith('X')
+    );
+
+  it('gives the instance the name where the walk finds nothing', () => {
+    expect(xPaths('Player/Gone')).toEqual(['Main/S/Lamp/X']);
+  });
+
+  it('gives the instance no such name where the walk finds the owner', () => {
+    expect(xPaths('Player/Inner')).toEqual(['Main/S__Lamp#X']);
+  });
+});

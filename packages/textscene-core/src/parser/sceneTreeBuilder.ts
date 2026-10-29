@@ -53,6 +53,19 @@ export interface SeatedPaths<N extends RawNode> {
   readonly ownership: UniqueNameOwnership;
   /** What an id trail that enters this scene reads of each heading, in file order. */
   readonly headings: readonly TrailHeading[];
+  /** The `%Name` claims of the root that wait on an instance's owner walk, in file order. */
+  readonly rootFallbacks: readonly RootFallback[];
+}
+
+/**
+ * A heading whose `owner=` walk enters an instance, and whose `owner_uid_path=` names the root.
+ * The root claims its `%Name` only where that walk finds no node (packed_scene.cpp:159-163), which
+ * only a reader that sees the instance can tell: it re-seats the scene where the walk finds one.
+ */
+export interface RootFallback {
+  readonly heading: RawNode;
+  /** The hand-off the instance's graft reports where its walk finds no node. */
+  readonly handOff: OwnerHandOff;
 }
 
 /** The scene tree, the copy each heading's node became in it, and the one walk over it. */
@@ -72,16 +85,47 @@ export const UNKNOWABLE = { status: 'unknowable' } as const;
  * Written only by {@link seatScene}, once per call, keyed by the roots array it returns. An entry
  * clears when nothing holds that array any more. Nothing mutates a seated tree, so an entry never
  * goes stale. It keeps the walk, the claims and the trail headings, not `seated`, so the heading
- * nodes die with the parse.
+ * nodes die with the parse, except in a scene with a root fallback, which keeps them to re-seat.
  */
 // eslint-disable-next-line no-restricted-syntax -- seatScene writes each entry from outside, and sceneSeating only reads it back
-const seatings = new WeakMap<readonly RawNode[], SeatedPaths<RawNode>>();
+const seatings = new WeakMap<
+  readonly RawNode[],
+  SeatedPaths<RawNode> & { readonly reseat?: (found: ReadonlySet<RawNode>) => readonly RawNode[] }
+>();
 
-export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneSeating<N> {
-  const seating = origins.length === 0 ? noScene<N>() : seatHeadings(origins);
-  const { resolve, ownership, headings } = seating;
-  seatings.set(seating.roots, { resolve, ownership, headings } as SeatedPaths<RawNode>);
+/**
+ * Seats `origins`. The root claims the `%Name` of each {@link RootFallback} whose heading is not in
+ * `ownersFound`, the headings whose `owner=` walk a reader that sees the instance found a node for.
+ * Without `ownersFound`, which only such a reader passes, a walk through such a claim is unknowable.
+ */
+export function seatScene<N extends SceneNode<N>>(
+  origins: readonly NodeOrigin<N>[],
+  ownersFound?: ReadonlySet<RawNode>
+): SceneSeating<N> {
+  const seating = origins.length === 0 ? noScene<N>() : seatHeadings(origins, ownersFound);
+  const { resolve, ownership, headings, rootFallbacks } = seating;
+  const reseat = (found: ReadonlySet<RawNode>) => seatScene(origins, found).roots;
+  seatings.set(seating.roots, {
+    resolve,
+    ownership,
+    headings,
+    rootFallbacks,
+    ...(rootFallbacks.length > 0 ? { reseat } : {}),
+  } as SeatedPaths<RawNode>);
   return seating;
+}
+
+/**
+ * The roots of the scene these roots were seated from, seated again with `ownersFound`
+ * ({@link seatScene}). Only roots with a {@link RootFallback} can be.
+ */
+export function reseatedRoots<N extends RawNode>(
+  roots: readonly N[],
+  ownersFound: ReadonlySet<RawNode>
+): readonly N[] {
+  const { reseat } = seatings.get(roots) ?? {};
+  if (!reseat) throw new Error(`expected roots with a root fallback, got ${roots.length} other root(s)`);
+  return reseat(ownersFound) as readonly N[];
 }
 
 function noScene<N extends RawNode>(): SceneSeating<N> {
@@ -92,16 +136,20 @@ function noScene<N extends RawNode>(): SceneSeating<N> {
     resolve: () => MISSING,
     ownership: emptyOwnership(),
     headings: [],
+    rootFallbacks: [],
   };
 }
 
-function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneSeating<N> {
+function seatHeadings<N extends SceneNode<N>>(
+  origins: readonly NodeOrigin<N>[],
+  ownersFound: ReadonlySet<RawNode> | undefined
+): SceneSeating<N> {
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
   // `i == 0` the root, so no later heading is a root too. Returning the flat list as
   // roots would make every node reachable and silence `orphanedNodes`.
   const rootNode = (origins.find(({ node }) => !node.parent) ?? origins[0]!).node;
 
-  const tables = newTables(rootNode);
+  const tables = newTables(rootNode, ownersFound);
   const reRootsVanished = !refusesToInstantiate(origins);
 
   // One pass in declaration order, as Godot resolves: at heading `i`,
@@ -147,6 +195,7 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     resolve: seatedResolver(tables),
     ownership: tables.ownership,
     headings: trailHeadingsOf(origins),
+    rootFallbacks: tables.rootFallbacks,
   };
 }
 
@@ -159,6 +208,11 @@ const NO_HEADINGS: readonly TrailHeading[] = [];
  */
 export function sceneHeadings(roots: readonly RawNode[]): readonly TrailHeading[] {
   return seatings.get(roots)?.headings ?? NO_HEADINGS;
+}
+
+/** The root fallbacks of the scene {@link seatScene} built these roots from, or none for roots that came from elsewhere. */
+export function sceneRootFallbacks(roots: readonly RawNode[]): readonly RootFallback[] {
+  return seatings.get(roots)?.rootFallbacks ?? [];
 }
 
 /**
@@ -334,6 +388,7 @@ function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, res
   const owner = resolveOwner();
   const seat = { ...node, children: [], ...owner } as N;
   tables.seated.set(node, seat);
+  tables.headingOf.set(seat, node);
   return seat;
 }
 
@@ -345,8 +400,10 @@ function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, res
 function seatedResolver<N extends RawNode>({
   byPath,
   tree,
-}: Pick<SeatingTables<N>, 'byPath' | 'tree'>): (path: string) => NodePathResolution<N> {
+  awaitedKeys,
+}: Pick<SeatingTables<N>, 'byPath' | 'tree' | 'awaitedKeys'>): (path: string) => NodePathResolution<N> {
   return (path) => {
+    if (path.split('/').some((name) => awaitedKeys.has(name))) return UNKNOWABLE;
     const end = walkFromRoot(path, tree);
     if (end === null) return MISSING;
     const node = typeof end === 'string' ? byPath.get(end) : undefined;
@@ -363,6 +420,14 @@ interface SeatingTables<N> {
   readonly root: N;
   /** Written only by `seatCopy`: each heading's node to its copy. */
   readonly seated: Map<N, N>;
+  /** Written only by `seatCopy`: the inverse of `seated`. */
+  readonly headingOf: Map<N, N>;
+  /** The headings whose `owner=` walk a reader that sees the instance found a node for, or undefined in a parse. */
+  readonly ownersFound: ReadonlySet<RawNode> | undefined;
+  /** Written only by `claimOnFallback`, in file order. */
+  readonly rootFallbacks: RootFallback[];
+  /** The root's `%Name` keys a {@link RootFallback} claims, which a parse cannot answer. */
+  readonly awaitedKeys: Set<string>;
   /** The names of the root's children, which a re-rooted name must not repeat. */
   readonly rootChildNames: Set<string>;
   /** Every seated node, keyed by the folded path its own children address it at. */
@@ -388,7 +453,10 @@ interface SeatingTables<N> {
 }
 
 /** Tables holding only the scene root's copy, which sits at the empty path. */
-function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
+function newTables<N extends SceneNode<N>>(
+  rootNode: N,
+  ownersFound: ReadonlySet<RawNode> | undefined
+): SeatingTables<N> {
   const root = { ...rootNode, children: [] } as N;
   const byPath = new Map<string, N>([[SCENE_ROOT_PATH, root]]);
   // The root claims no `%Name`: `set_unique_name_in_owner` registers in the
@@ -398,6 +466,10 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
   return {
     root,
     seated: new Map([[rootNode, root]]),
+    headingOf: new Map([[root, rootNode]]),
+    ownersFound,
+    rootFallbacks: [],
+    awaitedKeys: new Set(),
     rootChildNames: new Set(),
     byPath,
     pathOf: new Map([[root, SCENE_ROOT_PATH]]),
@@ -475,7 +547,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   }
   if (isBelowContent) return;
   if (node.owner !== undefined) {
-    handToOwner(tables, node, place.livePath, setting);
+    handToOwner(tables, { node, ...place }, path, setting);
     return;
   }
   if (instance === undefined) return;
@@ -544,20 +616,29 @@ function recoveredOwner<N extends SceneNode<N>>(
  */
 function handToOwner<N extends RawNode>(
   tables: SeatingTables<N>,
-  { owner: ownerPath, ownerContentTrail, ownerTrailFallback }: N,
-  livePath: string,
+  claim: UniqueNameClaim & { readonly node: N },
+  seatPath: string,
   isUnique: boolean
 ): void {
+  const { owner: ownerPath, ownerContentTrail, ownerTrailFallback } = claim.node;
   if (ownerPath === undefined || ownerPath === NO_OWNER) return;
   const owner = instanceHolding(tables, rootRelative(ownerPath));
   if (!owner) return;
   const setting = {
-    pathInInstance: pathBetween(tables.places.get(owner.instance)!.livePath, livePath),
+    pathInInstance: pathBetween(tables.places.get(owner.instance)!.livePath, claim.livePath),
     isUnique,
     ownerInInstance: owner.pathInInstance,
     ...(ownerContentTrail === undefined ? {} : { ownerContentTrail }),
   };
-  const fallback = ownerTrailFallback && instanceHolding(tables, rootRelative(ownerTrailFallback.owner));
+  if (!ownerTrailFallback) {
+    handToInstance(tables, owner.instance, setting);
+    return;
+  }
+  if (isPlainRoot(tables, ownerTrailFallback)) {
+    claimOnFallback(tables, owner.instance, setting, claim, seatPath);
+    return;
+  }
+  const fallback = instanceHolding(tables, rootRelative(ownerTrailFallback.owner));
   if (!fallback) {
     handToInstance(tables, owner.instance, setting);
     return;
@@ -568,14 +649,48 @@ function handToOwner<N extends RawNode>(
     return;
   }
   // Only the graft of the walked owner's instance knows whether the walk finds a node.
-  const handOff: OwnerHandOff = Symbol(livePath);
+  const handOff: OwnerHandOff = Symbol(claim.livePath);
   handToInstance(tables, owner.instance, { ...setting, ownerHandOff: handOff });
   handToInstance(tables, fallback.instance, {
-    pathInInstance: pathBetween(tables.places.get(fallback.instance)!.livePath, livePath),
+    pathInInstance: pathBetween(tables.places.get(fallback.instance)!.livePath, claim.livePath),
     isUnique,
     ...ownerFallback,
     awaits: handOff,
   });
+}
+
+/** Whether an `owner_uid_path=` owner is the root of a file that inherits no base, whose table is this seating's. */
+function isPlainRoot<N extends RawNode>(
+  tables: SeatingTables<N>,
+  { owner, ownerContentTrail }: OwnerRecovery
+): boolean {
+  return rootRelative(owner) === SCENE_ROOT_PATH && ownerContentTrail === undefined && !tables.root.instance;
+}
+
+/**
+ * Hand a setting to the instance its `owner=` walk enters, and claim its name in the root, which
+ * its `owner_uid_path=` names, where the walk finds no node there ({@link RootFallback}). A seating
+ * that knows the walk finds one hands the setting only.
+ */
+function claimOnFallback<N extends RawNode>(
+  tables: SeatingTables<N>,
+  instance: N,
+  setting: Omit<InstanceNameSetting, 'hostChildrenBefore'>,
+  claim: UniqueNameClaim & { readonly node: N },
+  seatPath: string
+): void {
+  const heading = tables.headingOf.get(claim.node)!;
+  if (tables.ownersFound?.has(heading)) {
+    handToInstance(tables, instance, setting);
+    return;
+  }
+  const handOff: OwnerHandOff = Symbol(claim.livePath);
+  handToInstance(tables, instance, { ...setting, ownerHandOff: handOff });
+  tables.rootFallbacks.push({ heading, handOff });
+  if (!setting.isUnique) return;
+  const key = UNIQUE_NODE_PREFIX + claim.node.name;
+  claimInRoot(tables, claim, seatPath);
+  if (!tables.ownersFound && tables.uniquePaths.get(key) === seatPath) tables.awaitedKeys.add(key);
 }
 
 /** The owner an `owner_uid_path=` finds, as the instance at whose path it sits reads it. */

@@ -337,7 +337,7 @@ function withPlacedLivePaths(paths: UniqueNamePaths, live: PlacedLiveTree): Uniq
  * file's claims. The outer root's own file's table is one shared object per tree.
  */
 export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
-  const composed = owner.composed ?? (owner.parent ? undefined : inheritedRootTable(owner));
+  const composed = owner.composed ?? (owner.parent ? undefined : liveRootTable(owner));
   if (composed) return withPlacedLivePaths(rebased(composed.paths(), owner.path), owner.live);
   if (!owner.parent) return withPlacedLivePaths(cachedUniqueNameLivePaths(owner.roots), owner.live);
   return withPlacedLivePaths(rebased(cachedUniqueNamesBelowRoot(owner.roots), owner.path), owner.live);
@@ -349,11 +349,11 @@ function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
 }
 
 /**
- * The table an inherited outer root's collapse composed over its base, which owns the base's
- * names (packed_scene.cpp:227-231), or undefined for a root that inherits nothing loaded.
+ * The table the live tree gave the outer root, or undefined where its file's own claims stand: an
+ * inherited root's collapse composes one over its base, which owns the base's names
+ * (packed_scene.cpp:227-231), and a root re-seated for a root fallback carries that seating's.
  */
-function inheritedRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
+function liveRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
   const root = outer.roots[0];
-  if (!root?.instance) return undefined;
-  return outer.live.tree.at(root.name)?.step.node.uniqueNames;
+  return root && outer.live.tree.at(root.name)?.step.node.uniqueNames;
 }

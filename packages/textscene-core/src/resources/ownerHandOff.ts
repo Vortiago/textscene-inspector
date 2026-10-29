@@ -6,6 +6,9 @@
  */
 
 import type { SceneScope } from '../parser/types';
+import { reseatedRoots, sceneRootFallbacks } from '../parser/sceneTreeBuilder';
+import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames';
+import type { UniqueNameTable } from './instanceNameTable';
 import type { InstanceNameSetting, OwnerHandOff } from '../parser/nodeOwner';
 import { scopeOf, type LiveNode } from './liveNode';
 import { indicesWhere, replacedAtIndices } from './instanceNameTable';
@@ -55,6 +58,38 @@ function awaitedIn(nodes: readonly LiveNode[]): OwnerHandOff[] {
     ...(node.instanceNameSettings ?? []).flatMap(({ awaits }) => (awaits === undefined ? [] : [awaits])),
     ...(holdsAwaiting(node) ? awaitedIn(node.children) : []),
   ]);
+}
+
+/**
+ * `roots`, seated again where an instance's `owner=` walk finds the owner of a {@link RootFallback},
+ * and with the root carrying the `%Name` table that seating gives it. The same array where every such
+ * walk finds none, or enters an instance whose scene is not loaded yet.
+ */
+export function withRootFallbacksDecided(
+  roots: readonly LiveNode[],
+  scope: SceneScope,
+  collapse: CollapseInstance
+): readonly LiveNode[] {
+  const found = sceneRootFallbacks(roots)
+    .filter(({ handOff }) => findsWalkedOwner(roots, handOff, scope, collapse))
+    .map(({ heading }) => heading);
+  if (found.length === 0) return roots;
+  const reseated = reseatedRoots(roots, new Set(found));
+  const table: UniqueNameTable = { paths: () => cachedUniqueNamesBelowRoot(reseated) };
+  return reseated.map((root) => ({ ...root, uniqueNames: table }));
+}
+
+/** Whether the loaded instance whose setting carries `handOff` keeps it, as its `owner=` walk finds a node. */
+function findsWalkedOwner(
+  roots: readonly LiveNode[],
+  handOff: OwnerHandOff,
+  scope: SceneScope,
+  collapse: CollapseInstance
+): boolean {
+  const source = sourceOf(roots, handOff, scope);
+  if (!source) return false;
+  const collapsed = collapse(source.node, source.scope);
+  return collapsed !== source.node && !(collapsed.handedOff ?? []).includes(handOff);
 }
 
 /** An instance whose setting carries a hand-off, and the scope of its group. */

@@ -17,6 +17,7 @@ import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { followTrailIn } from '../resources/sceneTrail.js';
 import type { TrailWalk } from '../godot/scene/packedScene.js';
 import { mayHandBack, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
+import { withRootFallbacksDecided } from '../resources/ownerHandOff.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
@@ -254,14 +255,17 @@ function composedOverBases(
  * @param seating the nodes as the parse seated them, whose `%Name` claims the file answers a walk with
  */
 function seatedFile(
-  roots: readonly LiveNode[],
+  authored: readonly LiveNode[],
   scope: SceneScope,
   sceneCache: CachedSceneSource,
   seating: readonly LiveNode[]
 ): readonly LiveNode[] {
-  const root = roots[0];
-  if (roots.length !== 1 || !root || !(mayHandBack(root) || root.escaped)) return roots;
+  const first = authored[0];
+  if (authored.length !== 1 || !first || !(mayHandBack(first) || first.escaped)) return authored;
   const collapse = collapserOver(sceneCache);
+  // Only a root that inherits no base claims for a root fallback, and such a root does not collapse.
+  const roots = first === seating[0] ? withRootFallbacksDecided(seating, scope, collapse) : authored;
+  const root = roots[0]!;
   // A root that inherits a base, not merged over it yet, hands back through its collapse.
   const isUnmerged = root.instance !== undefined && root.uniqueNames === undefined;
   const handedBack = (isUnmerged ? collapse(root, scope) : root).escaped ?? [];
