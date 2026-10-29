@@ -12,9 +12,34 @@ import {
   type IdTrailEnd,
   type TrailHeading,
 } from '../godot/scene/packedScene.js';
-import { simplifiedNodePath } from '../godot/string/nodePath.js';
+import { nodePathNames, simplifiedNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import { firstIndexWith } from '../utils/keyedLookup.js';
 import { joinPath } from '../utils/nodePath.js';
+
+/**
+ * The path segment that stands for the node an id trail finds inside an instance, which only that
+ * instance's graft can name. No heading writes it, since `:` ends a name in a NodePath.
+ *
+ * @canonical The path segment of a node a content trail finds
+ */
+export function contentTrailSegment(trail: readonly number[]): string {
+  return CONTENT_TRAIL_MARK + trail.join(',');
+}
+
+const CONTENT_TRAIL_MARK = ':';
+
+/** Whether `path` passes through the segment of a content trail ({@link contentTrailSegment}). */
+export function passesContentTrail(path: string): boolean {
+  return path.includes(CONTENT_TRAIL_MARK);
+}
+
+/**
+ * `path` simplified as `NodePath::simplify` simplifies its names. A live path holds names only, so
+ * the segment of a content trail stays a name where a NodePath would read `:` as its subnames.
+ */
+export function simplifiedLivePath(path: string): string {
+  return simplifiedNames(nodePathNames(path)).join('/');
+}
 
 /** The first heading of a scan carrying an id, the one index the builder and the linter share. */
 const firstOriginWithId = firstIndexWith((origin: NodeOrigin<RawNode>) => origin.uniqueId);

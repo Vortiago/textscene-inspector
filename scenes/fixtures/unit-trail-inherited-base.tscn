@@ -1,0 +1,21 @@
+; The base for `integration-trail-inherited-root-claim`: `Deep` is the heading its trail names, and
+; `Feather` claims `%Feather` first, right of the origin with a blue box.
+
+[gd_scene load_steps=3 format=3 uid="uid://unittrailinheritedbase"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_base"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="M_base"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Base" type="Node3D" unique_id=1]
+
+[node name="Deep" type="Node3D" parent="." unique_id=77]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+
+[node name="Feather" type="MeshInstance3D" parent="." unique_id=78]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("BoxMesh_base")
+surface_material_override/0 = SubResource("M_base")

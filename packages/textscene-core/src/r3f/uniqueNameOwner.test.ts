@@ -8,6 +8,16 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import { contextOver } from './liveSceneTree.testkit.js';
+import {
+  INNER_ID,
+  PLAYER_ID,
+  PLAYER_SCENE_ONLY,
+  TRAIL_BASE,
+  TRAIL_SCENES,
+  inheritingTrailBase,
+  playerHost,
+  tableOf,
+} from './idTrail.testkit.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
 import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
@@ -745,113 +755,62 @@ unique_name_in_owner = true
 describe('an owner= recovered through an owner_uid_path that enters an instance', () => {
   // The trail names the `Player` heading of this file, then the `Inner` heading of player.tscn
   // (packed_scene.cpp:1947-2005), so the owner is the node at `Player/Inner`, which this file cannot name.
-  const parse = (text: string) => new TscnParser().parse(text);
-  const inner = parse(`[gd_scene format=3]
-
-[node name="Inner" type="Node3D" unique_id=1]
-
-[node name="A" type="Node3D" parent="." unique_id=2]
-`);
-  const player = parse(`[gd_scene format=3]
-[ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
-
-[node name="Player" type="Node3D" unique_id=1]
-
-[node name="Inner" parent="." instance=ExtResource("inner") unique_id=3333]
-`);
-  const hostWith = (trail: string) =>
-    parse(`[gd_scene format=3]
-[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
-
-[node name="Main" type="Node3D"]
-
-[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
-
-[node name="Lamp" type="Node3D" parent="." owner="Gone" owner_uid_path=PackedInt32Array(${trail})]
+  const ownedBy = (owner: string, trail: string) =>
+    playerHost(`[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${trail})]
 unique_name_in_owner = true
 `);
-  const trailed = hostWith('2222, 3333');
-  const trailedCtx = contextOver(trailed, { 'res://player.tscn': player, 'res://inner.tscn': inner });
-  const tableOf = (path: string, host: TscnScene, ctx: LiveTreeContext) =>
-    ownerUniquePaths(claimOwnerOf(path, host.nodes, ctx));
+  const hostWith = (trail: string) => ownedBy('Gone', trail);
+  const lampOwner = (host: TscnScene, scenes = TRAIL_SCENES) =>
+    claimOwnerOf('Main/Lamp', host.nodes, contextOver(host, scenes));
+  const trailed = hostWith(`${PLAYER_ID}, ${INNER_ID}`);
+  const missing = hostWith(`${PLAYER_ID}, 9999`);
 
   it('registers the name in the table of the node the trail finds, spelt from outside it', () => {
-    expect(tableOf('Main/Player/Inner/A', trailed, trailedCtx).get('%Lamp')).toBe('Main/Lamp');
+    expect(tableOf('Main/Player/Inner/Box', trailed).get('%Lamp')).toBe('Main/Lamp');
   });
 
   it('owns the heading itself by the node the trail finds', () => {
-    expect(claimOwnerOf('Main/Lamp', trailed.nodes, trailedCtx).path).toBe('Main/Player/Inner');
+    expect(lampOwner(trailed).path).toBe('Main/Player/Inner');
   });
 
   it('owns the heading by no owner where no heading answers the rest of the trail', () => {
-    const missing = hostWith('2222, 9999');
-    const ctx = contextOver(missing, { 'res://player.tscn': player, 'res://inner.tscn': inner });
-
-    expect(ownerUniquePaths(claimOwnerOf('Main/Lamp', missing.nodes, ctx)).size).toBe(0);
+    expect(ownerUniquePaths(lampOwner(missing)).size).toBe(0);
   });
 
   describe('where the owner= walk enters the instance and finds no node', () => {
-    const withOwner = (owner: string, trail: string) => {
-      const host = parse(
-        `[gd_scene format=3]
-[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
-
-[node name="Main" type="Node3D"]
-
-[node name="Player" parent="." instance=ExtResource("player") unique_id=2222]
-
-[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${trail})]
-unique_name_in_owner = true
-`
-      );
-      return { host, ctx: contextOver(host, { 'res://player.tscn': player, 'res://inner.tscn': inner }) };
-    };
-
     it('owns the heading by the node the trail finds', () => {
-      const { host, ctx } = withOwner('Player/Gone', '2222, 3333');
-
-      expect(claimOwnerOf('Main/Lamp', host.nodes, ctx).path).toBe('Main/Player/Inner');
+      expect(lampOwner(ownedBy('Player/Gone', `${PLAYER_ID}, ${INNER_ID}`)).path).toBe('Main/Player/Inner');
     });
 
     it('owns the heading by the node the walk finds, and reads no trail', () => {
-      const { host, ctx } = withOwner('Player/Inner', '2222, 9999');
-
-      expect(claimOwnerOf('Main/Lamp', host.nodes, ctx).path).toBe('Main/Player/Inner');
+      expect(lampOwner(ownedBy('Player/Inner', `${PLAYER_ID}, 9999`)).path).toBe('Main/Player/Inner');
     });
 
     it('owns the heading by no owner where the trail finds nothing either', () => {
-      const { host, ctx } = withOwner('Player/Gone', '2222, 9999');
-
-      expect(ownerUniquePaths(claimOwnerOf('Main/Lamp', host.nodes, ctx)).size).toBe(0);
+      expect(ownerUniquePaths(lampOwner(ownedBy('Player/Gone', `${PLAYER_ID}, 9999`))).size).toBe(0);
     });
 
     it('waits for the scene the walk enters, so the trail is not taken while it loads', () => {
-      const { host } = withOwner('Player/Gone', '2222, 3333');
-      const loading = contextOver(host, {});
+      const host = ownedBy('Player/Gone', `${PLAYER_ID}, ${INNER_ID}`);
 
-      expect(claimOwnerOf('Main/Lamp', host.nodes, loading).path).not.toBe('Main/Player/Inner');
+      expect(lampOwner(host, {}).path).not.toBe('Main/Player/Inner');
     });
   });
 
   it('leaves the table of the instance that holds that node without the name', () => {
-    expect(tableOf('Main/Player/Inner', trailed, trailedCtx).has('%Lamp')).toBe(false);
+    expect(tableOf('Main/Player/Inner', trailed).has('%Lamp')).toBe(false);
   });
 
   it('registers the name in no table where no heading answers the rest of the trail', () => {
-    const missing = hostWith('2222, 9999');
-    const ctx = contextOver(missing, { 'res://player.tscn': player, 'res://inner.tscn': inner });
-
-    expect(tableOf('Main/Player/Inner/A', missing, ctx).has('%Lamp')).toBe(false);
+    expect(tableOf('Main/Player/Inner/Box', missing).has('%Lamp')).toBe(false);
   });
 
   it('registers the name once a scene the trail enters has loaded', () => {
-    const notLoaded = contextOver(trailed, { 'res://player.tscn': player });
-    expect(tableOf('Main/Player/Inner/A', trailed, notLoaded).has('%Lamp')).toBe(false);
+    expect(tableOf('Main/Player/Inner/Box', trailed, PLAYER_SCENE_ONLY).has('%Lamp')).toBe(false);
 
-    expect(tableOf('Main/Player/Inner/A', trailed, trailedCtx).get('%Lamp')).toBe('Main/Lamp');
+    expect(tableOf('Main/Player/Inner/Box', trailed).get('%Lamp')).toBe('Main/Lamp');
   });
 });
-
 describe('the walk an owner= with a %Name takes', () => {
   const hudClaimingWidget = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
@@ -885,5 +844,54 @@ unique_name_in_owner = true
     expect(sceneReads('Root/HudInstance/Lamp')).toBeLessThanOrEqual(
       sceneReads('Root/HudInstance/Widget/Face')
     );
+  });
+});
+
+describe('a %Name that a heading seated through a parent_id_path= into an instance claims', () => {
+  // The trail names the `Player` heading, then the `Inner` heading of player.tscn, so `Cap` sits
+  // below the node at `Player/Inner`, which only the graft of `Player` finds (packed_scene.cpp:1985-2005).
+  const capOwning = (
+    brimOwner: string
+  ) => `[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(${PLAYER_ID}, ${INNER_ID})]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node3D" parent="%Cap" owner="${brimOwner}"]
+unique_name_in_owner = true
+`;
+  const host = playerHost(capOwning('Player'));
+
+  it('reads in the root table the path the graft placed the claimant at', () => {
+    expect(tableOf('Main/Player', host).get('%Cap')).toBe('Main/Player/Inner/Cap');
+  });
+
+  it('reads a claim of a node below it in the table of the instance its owner= names', () => {
+    expect(tableOf('Main/Player/Inner', host).get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
+  });
+
+  it('reads a claim of a node below it in the table of another instance, which climbs out of it', () => {
+    const other = `[node name="Other" parent="." instance=ExtResource("player") unique_id=4444]\n\n`;
+    const otherOwned = playerHost(other + capOwning('Other'));
+
+    expect(tableOf('Main/Other/Inner', otherOwned).get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
+  });
+});
+
+describe('a %Name that an inheriting file and its base both claim', () => {
+  // The base claims first, so it keeps the name (node.cpp:2222-2233).
+  const inheriting =
+    inheritingTrailBase(`[node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
+unique_name_in_owner = true
+
+[node name="Feather" type="Node3D" parent="%Cap"]
+unique_name_in_owner = true
+`);
+  const rootTable = () => tableOf('Main/Deep', inheriting, { 'res://base.tscn': TRAIL_BASE });
+
+  it('keeps the base node in the table of the root', () => {
+    expect(rootTable().get('%Feather')).toBe('Main/Feather');
+  });
+
+  it('places the name a trail-seated heading claims where its trail finds the base node', () => {
+    expect(rootTable().get('%Cap')).toBe('Main/Deep/Cap');
   });
 });
