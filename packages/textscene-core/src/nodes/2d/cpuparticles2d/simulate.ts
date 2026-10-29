@@ -611,6 +611,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   // every particle takes a slight tint.
   const rotated = rotateHue(base, hueRotAngle);
 
+  // `p.color *= p.base_color * p.start_color_rand` (`:1126`): the right side multiplies first.
   p.color = multiplyColor(rotated, multiplyColor(p.baseColor, p.startColorRand));
 
   if (props.particle_flag_align_y) {
