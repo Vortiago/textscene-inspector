@@ -22,7 +22,8 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
 import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
-import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
+import { particleFiles, resolveParticleCurves } from './sceneResources';
+import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
 import { simulateFrozenPose } from './simulate';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -107,11 +108,11 @@ function ParticleField({
     [props.params, pools, loadedFile]
   );
   const colorRamp = useMemo(
-    () => resolveParticleGradient(props.color_ramp, pools, loadedFile),
+    () => resolveGradient(props.color_ramp, pools, loadedFile),
     [props.color_ramp, pools, loadedFile]
   );
   const colorInitialRamp = useMemo(
-    () => resolveParticleGradient(props.color_initial_ramp, pools, loadedFile),
+    () => resolveGradient(props.color_initial_ramp, pools, loadedFile),
     [props.color_initial_ramp, pools, loadedFile]
   );
 

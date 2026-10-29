@@ -32,6 +32,7 @@ import {
 } from './textures/viewporttexture/useViewportTextureSlot.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
+import { useTextureSources } from './useTextureSources.js';
 import { useParsedResourceSlot } from './useParsedResourceSlot.js';
 import { isLiveTarget } from '../r3f/liveTargets.js';
 import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
@@ -222,7 +223,8 @@ function useTexture2DSlot(
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
-  const procedural = useProceduralTexture(sourceRef, slot.internalResources);
+  const sources = useTextureSources(sourceRef, slot.externalResources, slot.internalResources);
+  const procedural = useProceduralTexture(sources.readyRef, sources.pools, sources.loadedFile);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.
@@ -253,7 +255,10 @@ function useTexture2DSlot(
     return { ...peeled, result: { texture: source, missing: false, isArriving: false, hasNoImage: true } };
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
-  const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
-  const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
+  const sourceMissing =
+    !procedural.claimed && !sources.isLoading && (!path || loaded.status === 'unavailable');
+  const isArriving =
+    sources.isLoading ||
+    (procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null);
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
 }

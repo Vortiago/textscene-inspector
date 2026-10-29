@@ -4,6 +4,7 @@
  * `resolveNoiseTexture.ts` resolves them against the owning file's table.
  */
 
+import { noiseRefsOf } from '../noiseSources';
 import {
   boolOr,
   floatOr,
@@ -41,7 +42,6 @@ export function decodeNoiseTexture2D(properties: Record<string, string>): NoiseT
     asNormalMap: boolOr(properties.as_normal_map, false, 'NoiseTexture2D as_normal_map'),
     bumpStrength: floatOr(properties.bump_strength, 8, 'NoiseTexture2D bump_strength'),
     generateMipmaps: boolOr(properties.generate_mipmaps, true, 'NoiseTexture2D generate_mipmaps'),
-    noise: properties.noise ?? null,
-    colorRamp: properties.color_ramp ?? null,
+    ...noiseRefsOf(properties),
   };
 }

@@ -74,20 +74,19 @@ export function resetProceduralTextures(): void {
 /**
  * Resolves `ref` as an inline `[sub_resource]` of `typeName`. Null for every other
  * reference form, and for a resource the plan declines, which leaves the caller's
- * other paths untouched. A ready texture is borrowed: pin `key`, never dispose it.
+ * other paths untouched. `sourcesOf` names the objects the plan reads from outside the resource:
+ * the plan builds again when one of them is another object. A ready texture is borrowed: pin `key`, never dispose it.
  */
 export function resolveProceduralSubResourceAsync(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[],
   typeName: string,
-  plan: (
-    properties: Record<string, string>,
-    resources: readonly TscnInternalResource[]
-  ) => ProceduralBuildPlan | null
+  plan: (properties: Record<string, string>) => ProceduralBuildPlan | null,
+  sourcesOf: (properties: Record<string, string>) => readonly unknown[]
 ): ProceduralTextureLookup | null {
   const resource = findTypedSubResource(ref, internalResources, typeName);
   if (!resource) return null;
-  const build = plannedBuild(resource, internalResources, plan);
+  const build = plannedBuild(resource, internalResources, plan, sourcesOf(resource.data));
   if (!build) return null;
 
   const key = build.contentKey + (build.derived?.suffix ?? '');
@@ -98,25 +97,30 @@ export function resolveProceduralSubResourceAsync(
 }
 
 /**
- * Written by `plannedBuild`, once per parse and sub-resource. Each consumer of a texture
- * looks it up on every parse, and a plan decodes the resource and serialises its input.
+ * Written by `plannedBuild`, once per parse, sub-resource and set of sources. Each consumer of a
+ * texture looks it up on every parse, and a plan decodes the resource and serialises its input.
  */
-const plansByParse = perObject<
-  readonly TscnInternalResource[],
-  Map<TscnInternalResource, ProceduralBuildPlan | null>
->(() => new Map());
+const plansByParse = perObject<readonly TscnInternalResource[], Map<TscnInternalResource, PlannedSources>>(
+  () => new Map()
+);
+
+interface PlannedSources {
+  sources: readonly unknown[];
+  plan: ProceduralBuildPlan | null;
+}
 
 function plannedBuild(
   resource: TscnInternalResource,
   internalResources: readonly TscnInternalResource[],
-  plan: (
-    properties: Record<string, string>,
-    resources: readonly TscnInternalResource[]
-  ) => ProceduralBuildPlan | null
+  plan: (properties: Record<string, string>) => ProceduralBuildPlan | null,
+  sources: readonly unknown[]
 ): ProceduralBuildPlan | null {
   const plans = plansByParse(internalResources);
-  if (!plans.has(resource)) plans.set(resource, plan(resource.data, internalResources));
-  return plans.get(resource) ?? null;
+  const held = plans.get(resource);
+  if (held && held.sources.every((source, index) => source === sources[index])) return held.plan;
+  const planned = { sources, plan: plan(resource.data) };
+  plans.set(resource, planned);
+  return planned.plan;
 }
 
 /**
