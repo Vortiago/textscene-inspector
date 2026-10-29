@@ -12,6 +12,7 @@ import { makeNode } from '../parser/testing/parserKit.js';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
 
@@ -24,11 +25,13 @@ const model = makeNode('Model', 'GLBSceneRoot', {
 });
 
 const kid: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [makeNode('Kid', 'CharacterBody3D')],
   externalResources: [],
   internalResources: [],
 };
 const other: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [makeNode('Other', 'Node3D')],
   externalResources: [],
   internalResources: [],

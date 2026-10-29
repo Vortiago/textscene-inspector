@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { makeRigidBodyLinterRule } from './rigidBodyLinterRule.js';
 import type { PhysicsDim } from './dim.js';
 import type { RawNode, RawScene } from '../../parser/types.js';
+import { INSTANTIABLE_SCENE } from '../../parser/sceneDefaults.testkit';
 
 function contactDiagnostics(dim: PhysicsDim, rawProperties: Record<string, string>) {
   const node: RawNode = {
@@ -17,7 +18,12 @@ function contactDiagnostics(dim: PhysicsDim, rawProperties: Record<string, strin
     rawProperties,
     children: [],
   };
-  const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
+  const scene: RawScene = {
+    ...INSTANTIABLE_SCENE,
+    nodes: [node],
+    externalResources: [],
+    internalResources: [],
+  };
   return makeRigidBodyLinterRule(dim)
     .check({ scene, node })
     .filter((d) => d.ruleName.endsWith('-max-contacts-without-monitor'));

@@ -55,6 +55,13 @@ export interface TscnScene<N extends RawNode = TscnNode> {
   readonly externalResources: readonly TscnExternalResource[];
   readonly internalResources: readonly TscnInternalResource[];
   /**
+   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
+   * orphan, and refuses every scene that instances it. True when the scene has no node, the root
+   * heading has a `parent=` or states no identifier, a heading spells `parent=""`, or a later
+   * heading has no `parent=`.
+   */
+  refusesToInstantiate: boolean;
+  /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
    */
@@ -236,12 +243,6 @@ export interface HeadingFacts {
    * no `node.parent`, so it is seated, not orphaned.
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
-  /**
-   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
-   * orphan. True when `rootWithParent` is set, `emptyParentHeadings` is not empty, a later heading
-   * has no `parent=`, or the root heading states no identifier.
-   */
-  refusesToInstantiate: boolean;
   /**
    * The orphans whose `parent_id_path=` Godot follows to a node, instead of re-rooting them.
    * An orphan absent here is re-rooted, or has no trail.

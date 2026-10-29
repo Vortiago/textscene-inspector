@@ -4,7 +4,7 @@
  * falls back to running the same job in-thread.
  */
 import { createHash } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as logger from '../logger';
 import {
   NOISE_PIXEL_CASES,
@@ -194,6 +194,38 @@ describe('WorkerJobRunner in-thread fallback', () => {
     await expect(result).rejects.toMatchObject({ name: 'AbortError' });
     expect(run).not.toHaveBeenCalled();
     run.mockRestore();
+  });
+
+  it("rejects with the job's own error when it throws in-thread", async () => {
+    const run = vi.spyOn(WORKER_JOBS['noise-texture-2d'], 'run').mockImplementation(() => {
+      throw new RangeError('noise size 0');
+    });
+    const result = new WorkerJobRunner().run('noise-texture-2d', firstCase);
+
+    await expect(result).rejects.toThrow(RangeError);
+    run.mockRestore();
+  });
+
+  it('skips a job aborted while the in-thread jobs load', async () => {
+    vi.resetModules();
+    let releaseJobs = () => {};
+    const jobsLoaded = new Promise<void>((resolve) => (releaseJobs = resolve));
+    const run = vi.fn();
+    vi.doMock('./jobs', async () => {
+      await jobsLoaded;
+      return { WORKER_JOBS: { 'noise-texture-2d': { run, transfer: () => [] } } };
+    });
+    onTestFinished(() => vi.doUnmock('./jobs'));
+    const { WorkerJobRunner: FreshRunner } = await import('./WorkerJobRunner');
+    const controller = new AbortController();
+    const result = new FreshRunner().run('noise-texture-2d', firstCase, controller.signal);
+    await settle();
+    controller.abort();
+    releaseJobs();
+
+    await expect(result).rejects.toMatchObject({ name: 'AbortError' });
+    await settle();
+    expect(run).not.toHaveBeenCalled();
   });
 
   it.each([

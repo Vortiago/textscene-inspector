@@ -10,6 +10,7 @@ import { node2dWorldPosition } from './node2dWorldTransform';
 import '../nodes/node/index';
 import { contextOver } from './liveSceneTree.testkit';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../parser/types';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 function tnode(
   name: string,
@@ -75,6 +76,7 @@ describe('node2dWorldPosition', () => {
     // player.tscn: PlayerRoot → Cam (at 20,10). The instance transform replaces
     // the sub-scene root's (ADR-0013), so the camera sits at 120,60.
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [tnode('PlayerRoot', at(0, 0), [tnode('Cam', at(20, 10), [], { type: 'Camera2D' })])],
       externalResources: [],
       internalResources: [],

@@ -18,6 +18,7 @@ import {
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../../../nodes/node/index';
 
@@ -49,6 +50,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
     // Sub-scene's content: a Node3D named "Frame" containing a MeshInstance3D.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Frame', 'Node3D', {
           children: [makeNode('FrameMesh', 'MeshInstance3D')],
@@ -89,11 +91,13 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     // so it resolves against the sub-scene's resource table.
     const fake = createFakeResourceLoader();
     const subB: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
     };
     const subA: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('ARoot', 'Node3D', {
           children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
@@ -170,6 +174,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     const fake = createFakeResourceLoader();
 
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('SubRoot', 'Node3D')],
       externalResources: [],
       internalResources: [],
@@ -249,6 +254,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
 
     // The sub-scene root is an Area3D, a type other than the instance node's.
     const subScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Coin', 'Area3D', {
           children: [makeNode('Circle', 'MeshInstance3D'), makeNode('Animation', 'AnimationPlayer')],
@@ -282,6 +288,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   it('keeps the open-sub-scene affordance on a collapsed (cached, single-root) instance row', () => {
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://coin/coin.tscn', {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('Coin', 'Area3D')],
       externalResources: [],
       internalResources: [],
@@ -300,35 +307,32 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     expect(onOpenSubScene).toHaveBeenCalledWith('res://coin/coin.tscn');
   });
 
-  it('does NOT collapse a multi-root sub-scene: it keeps the nested form', () => {
+  it('does NOT collapse an instance of a scene Godot refuses: it lists no row of that scene', () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed('res://multi.tscn', {
-      nodes: [makeNode('RootA', 'Node3D'), makeNode('RootB', 'Node3D')],
+    fake.scenes.seed('res://refused.tscn', {
+      nodes: [makeNode('RootA', 'Node3D')],
       externalResources: [],
       internalResources: [],
+      refusesToInstantiate: true,
     });
     const graph = createSceneGraphFromTscnScene({
-      nodes: [makeNode('MultiHost', 'Node3D', { instance: 'ExtResource("multi")' })],
-      externalResources: [makeExtResource('multi', 'res://multi.tscn')],
+      nodes: [makeNode('Refusing', 'Node3D', { instance: 'ExtResource("refused")' })],
+      externalResources: [makeExtResource('refused', 'res://refused.tscn')],
       internalResources: [],
     });
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
-    // Host keeps its own Node3D type (no single-root to adopt).
-    const hostRow = screen.getByText('MultiHost').closest('[data-node-path]') as HTMLElement;
-    expect(within(hostRow).getByTitle('Node3D')).toBeTruthy();
-
-    expandRow('MultiHost');
-
-    // Both loaded roots render as nested child rows under the instance row.
-    expect(container.querySelector('[data-node-path="MultiHost/RootA"]')).not.toBeNull();
-    expect(container.querySelector('[data-node-path="MultiHost/RootB"]')).not.toBeNull();
+    // The row keeps its own Node3D type: there is no root of the scene to adopt.
+    const row = screen.getByText('Refusing').closest('[data-node-path]') as HTMLElement;
+    expect(within(row).getByTitle('Node3D')).toBeTruthy();
+    expect(container.querySelector('[data-node-path="Refusing/RootA"]')).toBeNull();
   });
 
   it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://frame.tscn', {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('FrameRoot', 'Node3D', { children: [makeNode('SpecialMesh', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
