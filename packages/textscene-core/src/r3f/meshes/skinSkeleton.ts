@@ -13,6 +13,7 @@ import type { BoundSkin } from '../../nodes/3d/skeleton3d/skeletonBindings.js';
 import type { AnimatedPose } from '../../nodes/3d/skeleton3d/skeletonPose.js';
 import { useAnimatedBonePoses } from '../contexts/AnimatedBonePosesContext.js';
 import { setMatrixFromTransform3D } from '../nodeTreeTransforms.js';
+import { sameData } from '../../utils/sameData.js';
 import { useByValue } from '../hooks/useByValue.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
@@ -68,7 +69,7 @@ class SkinSkeleton extends THREE.Skeleton {
 }
 
 function sameMatrices(a: readonly Transform3D[] | undefined, b: readonly Transform3D[] | undefined): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return sameData(a, b);
 }
 
 /**

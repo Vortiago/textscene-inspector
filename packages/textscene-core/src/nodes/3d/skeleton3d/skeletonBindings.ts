@@ -10,11 +10,14 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import { identityTransform3D, sameTransform3D, type Transform3D } from '../../../godot/math/transform3d.js';
-import { resolveNodePathLiteral, UNIQUE_NODE_PREFIX } from '../../../godot/string/nodePath.js';
+import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D } from '../../../r3f/liveGlobalTransform.js';
-import { nodePathUniquePaths } from '../../../r3f/nodePathUniqueNames.js';
+import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
+import { liveNodePatches } from '../../../r3f/liveNodePatches.js';
+import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
+import type { NodePatches } from '../../../r3f/nodePatch.js';
 import { sameElements } from '../../../utils/sameElements.js';
 import { perObject } from '../../../utils/perObject.js';
 import { warnOnce } from '../../../utils/warnOnce.js';
@@ -77,11 +80,11 @@ function boundSkinOf(
   if (node.type !== 'MeshInstance3D') return undefined;
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
-  // Only a `%Name` segment reads the table, which allocates for each bound mesh on each load.
-  const uniquePaths = properties.skeleton.includes(UNIQUE_NODE_PREFIX)
-    ? nodePathUniquePaths(path, tree.roots, tree.ctx)
-    : undefined;
-  const skeletonPath = resolveNodePathLiteral(path, properties.skeleton, uniquePaths);
+  const skeletonPath = resolveNodePathLiteral(
+    path,
+    properties.skeleton,
+    uniquePathsOfLiteral(properties.skeleton, path, tree)
+  );
   const skeleton = skeletonPath === null ? null : tree.at(skeletonPath);
   if (skeleton?.step.node.type !== 'Skeleton3D') return undefined;
   const known = skeletonSkins.get(skeleton.path);
@@ -111,14 +114,15 @@ interface Modifiers {
   reads: NodeRead[];
 }
 
-function modifiersOf(skeleton: LiveLink, tree: LiveTree): Modifiers {
+function modifiersOf(skeleton: LiveLink, tree: LiveTree, placed: NodePatches): Modifiers {
   const modifiers: Modifiers = { edits: [], nodes: [], skeletonGlobal: null, reads: [] };
   tree.fold<void, void>(
     undefined,
     ({ step, path: modifierPath }) => {
       const reader = nodeComponentRegistry.poseModifierOf(step.node.type);
       if (!reader) return;
-      modifiers.skeletonGlobal ??= liveGlobalTransform3D(tree, skeleton.path) ?? identityTransform3D();
+      modifiers.skeletonGlobal ??=
+        liveGlobalTransform3D(tree, skeleton.path, placed) ?? identityTransform3D();
       const edit = reader(step.node, {
         skeletonGlobal: modifiers.skeletonGlobal,
         nodeGlobal: (target) => {
@@ -126,7 +130,7 @@ function modifiersOf(skeleton: LiveLink, tree: LiveTree): Modifiers {
             (read) => read.modifierPath === modifierPath && read.target === target
           );
           if (earlier) return earlier.global;
-          const global = referenceNodeGlobal(tree, modifierPath, target);
+          const global = referenceNodeGlobal(tree, placed, modifierPath, target);
           modifiers.reads.push({ modifierPath, target, global });
           return global;
         },
@@ -140,22 +144,28 @@ function modifiersOf(skeleton: LiveLink, tree: LiveTree): Modifiers {
 }
 
 /** Whether the scene `tree` holds answers each read of `previous` as it did, so its edits would make the same pose. */
-function readsHold(previous: Modifiers, current: Modifiers, tree: LiveTree): boolean {
+function readsHold(previous: Modifiers, current: Modifiers, tree: LiveTree, placed: NodePatches): boolean {
   return (
     sameWorld(previous.skeletonGlobal, current.skeletonGlobal) &&
     previous.reads.every((read) =>
-      sameWorld(read.global, referenceNodeGlobal(tree, read.modifierPath, read.target))
+      sameWorld(read.global, referenceNodeGlobal(tree, placed, read.modifierPath, read.target))
     )
   );
 }
 
 /** The global transform of the Node3D that `target` names from the modifier at `modifierPath`. */
-function referenceNodeGlobal(tree: LiveTree, modifierPath: string, target: string): Transform3D | null {
-  const uniquePaths = target.includes(UNIQUE_NODE_PREFIX)
-    ? nodePathUniquePaths(modifierPath, tree.roots, tree.ctx)
-    : undefined;
-  const resolved = resolveNodePathLiteral(modifierPath, target, uniquePaths);
-  return resolved === null ? null : liveGlobalTransform3D(tree, resolved);
+function referenceNodeGlobal(
+  tree: LiveTree,
+  placed: NodePatches,
+  modifierPath: string,
+  target: string
+): Transform3D | null {
+  const resolved = resolveNodePathLiteral(
+    modifierPath,
+    target,
+    uniquePathsOfLiteral(target, modifierPath, tree)
+  );
+  return resolved === null ? null : liveGlobalTransform3D(tree, resolved, placed);
 }
 
 function sameWorld(a: Transform3D | null, b: Transform3D | null): boolean {
@@ -190,13 +200,15 @@ const keptSkins = perObject(() => new Map<string, KeptSkin>());
  * skin, whose animated poses run the modifiers it holds, so they must be the ones the load would make.
  */
 function skinOf(skeleton: LiveLink, tree: LiveTree): BoundSkin {
-  const modifiers = modifiersOf(skeleton, tree);
+  // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
+  const placed = liveScenePassResults(liveNodePatches, tree);
+  const modifiers = modifiersOf(skeleton, tree, placed);
   const kept = keptSkins(skeleton.step.node);
   const previous = kept.get(skeleton.path);
   if (
     previous &&
     sameElements(previous.modifiers.nodes, modifiers.nodes) &&
-    readsHold(previous.modifiers, modifiers, tree)
+    readsHold(previous.modifiers, modifiers, tree, placed)
   ) {
     return previous.skin;
   }

@@ -41,7 +41,11 @@ _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
 **Live scene pass** (`LiveScenePass`, `r3f/liveScenePass.ts`, ADR-0060):
 A scene pass that reads the whole **Live scene tree** and answers per live node path, so a NodePath binds across an instance border as Godot's `get_node_or_null` does.
 A component reads its result by its own node path, because the nodes of a sub-scene are shared by every instance of it.
-_Avoid_: writing a pass's result into a node. A parse-time pass for a path that may cross an instance.
+_Avoid_: writing a pass's result into a node. A pass that runs before the sub-scenes load, for a path that may cross an instance.
+
+**Node patch** (`NodePatch`, `r3f/nodePatch.ts`, ADR-0060):
+The property values a **Live scene pass** lays over one node of the **Live scene tree**, found by the node's live path. `patchedNode` returns the node with its patch over its properties.
+_Avoid_: a pass mutating a node it was handed.
 
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
