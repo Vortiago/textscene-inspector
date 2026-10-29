@@ -1,7 +1,8 @@
 /**
  * The node's pose in a program that reads it. Godot's MODEL_MATRIX is the node's, which a
- * billboard or `fixed_size` never moves, while three draws such a surface with a moved
- * `modelMatrix`. The draw hooks write both maps between the two before each draw.
+ * billboard or `fixed_size` never moves. three draws a node billboard or `fixed_size` with a moved
+ * `modelMatrix`, and the draw hooks write both maps between the two before each draw. A surface
+ * billboard keeps the node's matrices in {@link NODE_MODEL} and {@link NODE_INSTANCE}.
  */
 
 import * as THREE from 'three';
@@ -14,6 +15,12 @@ export interface NodePoseUniforms {
   godotModelFromObject: THREE.IUniform<THREE.Matrix4>;
 }
 
+/** three's `modelMatrix` as the node draws it, before any surface billboard replaces it. */
+export const NODE_MODEL = 'GODOT_NODE_MODEL';
+
+/** three's `instanceMatrix` before any surface billboard folds it into the model. */
+export const NODE_INSTANCE = 'GODOT_NODE_INSTANCE';
+
 /**
  * The declarations, guarded, so a program that two patches give the pose declares it once.
  *
@@ -23,6 +30,8 @@ export const NODE_POSE_PARS = /* glsl */ `#ifndef GODOT_NODE_POSE
 #define GODOT_NODE_POSE
 uniform mat4 godotObjectFromModel;
 uniform mat4 godotModelFromObject;
+#define ${NODE_MODEL} modelMatrix
+#define ${NODE_INSTANCE} instanceMatrix
 #endif
 `;
 

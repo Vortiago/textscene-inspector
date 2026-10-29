@@ -190,7 +190,6 @@ export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
  */
 export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): SurfaceDrawHooks {
   return {
-    // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
     onBeforeRender(this: THREE.Object3D, renderer, _scene, camera, geometry, material) {
       if (!instance.isVisible) {
         skip(geometry);

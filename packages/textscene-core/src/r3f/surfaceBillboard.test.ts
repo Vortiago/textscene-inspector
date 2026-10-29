@@ -58,30 +58,39 @@ describe('a BILLBOARD_PARTICLES billboard', () => {
     );
   });
 
-  it('turns a plain draw, which has no custom data, by no angle (edge case)', () => {
-    expect(vertexShader).toMatch(/#else\s+#define godotInstanceCustom vec4\( 0\.0 \)/);
+  // A declared attribute with no buffer reads the constant the last program left at its location.
+  it('declares the custom data only for a geometry that holds it (edge case)', () => {
+    expect(vertexShader).toMatch(
+      /#ifdef GODOT_READS_INSTANCE_CUSTOM\s+attribute vec4 instanceCustom;[^#]*#define godotInstanceCustom instanceCustom\s+#else\s+#define godotInstanceCustom vec4\( 0\.0 \)/
+    );
   });
 
-  // three multiplies `modelMatrix` after `instanceMatrix`, so the instance carries the inverse.
-  it('poses every chunk that reads the instance, before the first of them', () => {
-    const define = vertexShader.indexOf('#define instanceMatrix godotInstanceLocal');
+  // The billboard holds the instance's origin, so three's instance matrix is the identity after it.
+  it('folds the instance into the billboard, before the first chunk that reads it', () => {
+    const define = vertexShader.indexOf('#define instanceMatrix godotUnitInstance');
     expect(define).toBeGreaterThan(-1);
     expect(define).toBeLessThan(vertexShader.indexOf('#include <uv_vertex>'));
-    expect(vertexShader).toContain('inverse( modelMatrix ) * godotBillboardWorld');
+    expect(vertexShader).not.toContain('inverse(');
+  });
+
+  // Godot's billboard replaces MODELVIEW_MATRIX alone (`material.cpp:1263-1266`).
+  it("keeps the node's matrices for a reader of MODEL_MATRIX", () => {
+    const keep = vertexShader.indexOf('#define GODOT_NODE_MODEL godotNodeModel');
+    expect(keep).toBeGreaterThan(vertexShader.indexOf('mat4 godotNodeModel = modelMatrix;'));
+    expect(keep).toBeLessThan(vertexShader.indexOf('#define modelMatrix godotBillboardWorld'));
+    expect(vertexShader).toContain('#define GODOT_NODE_INSTANCE godotNodeInstance');
   });
 
   it('poses every chunk of a plain draw that reads the model, before the first of them', () => {
     const define = vertexShader.indexOf('#define modelMatrix godotBillboardWorld');
     expect(define).toBeGreaterThan(-1);
     expect(define).toBeLessThan(vertexShader.indexOf('#include <uv_vertex>'));
-    expect(vertexShader).toContain('#define modelViewMatrix ( viewMatrix * godotBillboardWorld )');
+    expect(vertexShader).toContain('#define modelViewMatrix godotBillboardModelView');
   });
 
   // `material.cpp:1338`: MODELVIEW_NORMAL_MATRIX is `mat3(MODELVIEW_MATRIX)`.
   it('turns the normal by the billboard model-view', () => {
-    expect(vertexShader).toContain(
-      'transformedNormal = mat3( viewMatrix * godotBillboardWorld ) * objectNormal;'
-    );
+    expect(vertexShader).toContain('transformedNormal = mat3( godotBillboardModelView ) * objectNormal;');
   });
 
   it('keeps no scale unless the material asks', () => {
@@ -154,13 +163,13 @@ describe.each(['depth', 'distance'] as const)('the billboard on the %s program',
   // Godot's shadow pass runs the same vertex code, with the light's view (`material.cpp:1309`).
   it('billboards a plain draw and each instance toward the light', () => {
     const { vertexShader } = compiled(billboardInjections(PARTICLES)!.depth, program);
-    expect(vertexShader).toContain('#define instanceMatrix godotInstanceLocal');
+    expect(vertexShader).toContain('#define instanceMatrix godotUnitInstance');
     expect(vertexShader).toContain('#define modelMatrix godotBillboardWorld');
   });
 });
 
 describe('the billboard normal of a StandardMaterial3D', () => {
-  const TURNS_BY_BILLBOARD = 'transformedNormal = mat3( viewMatrix * godotBillboardWorld ) * objectNormal;';
+  const TURNS_BY_BILLBOARD = 'transformedNormal = mat3( godotBillboardModelView ) * objectNormal;';
 
   it('turns the normals of every billboarding mode', () => {
     for (const mode of ['1', '2', '3']) {

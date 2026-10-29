@@ -105,6 +105,10 @@ describe('the BILLBOARD_PARTICLES flipbook', () => {
     );
   });
 
+  it('tells the billboard the geometry holds the custom data, at the top of the program', () => {
+    expect(mapped(0).startsWith('#define GODOT_READS_INSTANCE_CUSTOM\n')).toBe(true);
+  });
+
   it('reads the frame from the instance custom data', () => {
     expect(mapped(0)).toContain('floor( godotInstanceCustom.z * particle_total_frames )');
   });

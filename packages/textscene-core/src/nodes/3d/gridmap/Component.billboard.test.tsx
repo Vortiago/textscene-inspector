@@ -22,7 +22,7 @@ const PLAIN_THEN_BILLBOARD = {
 };
 const DOUBLED = 'item/0/mesh_transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)';
 /** The line the instance billboard compiles, as `surfaceBillboard.instances.test.ts` pins it. */
-const POSES_INSTANCES = '#define instanceMatrix godotInstanceLocal';
+const POSES_INSTANCES = '#define instanceMatrix godotUnitInstance';
 const KEEPS_SCALE = 'length( godotModel[ 0 ].xyz )';
 
 const vertexOf = (tile: THREE.Mesh) => patchedVertex(drawnMaterials(tile)[0]!);

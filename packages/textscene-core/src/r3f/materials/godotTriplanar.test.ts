@@ -66,9 +66,16 @@ describe('triplanarInjection: the projected position and weights', () => {
   it("reads the node's model through the instance, as Godot's MODEL_MATRIX holds a MultiMesh instance", () => {
     const { vertexShader } = compiled(worldTriplanarRecord()).shader;
 
-    expect(vertexShader).toContain('mat4 godotModel = modelMatrix * godotModelFromObject;');
-    expect(vertexShader).toContain('godotModel *= instanceMatrix;');
-    expect(vertexShader).toContain('godotModelNormal *= mat3( instanceMatrix );');
+    expect(vertexShader).toContain('mat4 godotModel = GODOT_NODE_MODEL * godotModelFromObject;');
+    expect(vertexShader).toContain('godotModel *= GODOT_NODE_INSTANCE;');
+    expect(vertexShader).toContain('godotModelNormal *= mat3( GODOT_NODE_INSTANCE );');
+  });
+
+  it("reads three's own matrices as the node's where no billboard keeps them", () => {
+    const { vertexShader } = compiled(worldTriplanarRecord()).shader;
+
+    expect(vertexShader).toContain('#define GODOT_NODE_MODEL modelMatrix');
+    expect(vertexShader).toContain('#define GODOT_NODE_INSTANCE instanceMatrix');
   });
 
   it('turns the normal by the cofactors of the basis, MODEL_NORMAL_MATRIX up to a positive scale', () => {
@@ -151,6 +158,7 @@ describe('triplanarInjection: the tangent frame', () => {
     const { vertexShader } = compiled(worldTriplanarRecord({ isBillboard: true })).shader;
 
     expect(vertexShader).toContain('#define GODOT_TRIPLANAR_BILLBOARD\n');
+    expect(vertexShader).toContain('mat3 godotModelViewNormal = mat3( godotBillboardModelView );');
   });
 
   it('turns the frame on whenever a UV set projects, as Godot writes TANGENT for either', () => {

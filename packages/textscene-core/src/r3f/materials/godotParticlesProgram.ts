@@ -14,7 +14,7 @@ import type { StandardMaterialBag } from '../../resources/materials/standardmate
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { bagForms } from './bagForms';
 import { withDepthInjection } from './depthInjections';
-import { INSTANCE_CUSTOM, MAIN_CHUNK, UV_CHUNK } from '../surfaceBillboard';
+import { INSTANCE_CUSTOM, MAIN_CHUNK, READS_INSTANCE_CUSTOM, UV_CHUNK } from '../surfaceBillboard';
 import { PARTICLE_COLOR_ATTRIBUTE, type ParticleDraw } from './godotParticles';
 
 /**
@@ -70,8 +70,8 @@ function cutsFrames(draw: ParticleDraw): boolean {
 
 /**
  * What a program compiles with to draw `draw`'s instances. Each edit lands only where its chunk is:
- * the depth programs read no colour. The billboard declares the custom data the flipbook reads
- * (`surfaceBillboard.ts`).
+ * the depth programs read no colour. The billboard declares the custom data the flipbook reads, as
+ * the particle geometry holds it (`surfaceBillboard.ts`).
  */
 function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjection {
   return {
@@ -87,6 +87,8 @@ function particleInjection(draw: ParticleDraw, cacheKey: string): ProgramInjecti
       // Before `main`, for the reason the billboard's declarations are (`surfaceBillboard.ts`).
       vertex.push({ three: MAIN_CHUNK, godot: `${declarations.join('\n')}\n${MAIN_CHUNK}` });
       editedProgram(shader, { vertex }, 'particle draw');
+      // At the top, before the billboard's declarations wherever they sit.
+      shader.vertexShader = `#define ${READS_INSTANCE_CUSTOM}\n${shader.vertexShader}`;
     },
   };
 }

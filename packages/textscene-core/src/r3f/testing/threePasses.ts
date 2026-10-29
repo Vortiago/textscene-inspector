@@ -230,11 +230,6 @@ export function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4)
   actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
 }
 
-/** Two world matrices turn the same way, to five decimal places of a radian. */
-export function expectSameRotation(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
-  expect(rotationAngle(actual, expected)).toBeCloseTo(0, 5);
-}
-
 function rotationOf(matrix: THREE.Matrix4): THREE.Quaternion {
   const rotation = new THREE.Quaternion();
   matrix.decompose(new THREE.Vector3(), rotation, new THREE.Vector3());

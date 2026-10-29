@@ -11,6 +11,7 @@ import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d
 import { composeInjections, type ProgramInjection } from './materialProgramInputs';
 import { editedProgram, rewrittenShader } from './shaderPatch/chunkPatch';
 import { INSTANCE_CUSTOM_ATTRIBUTE } from './meshes/sharedInstances';
+import { NODE_INSTANCE, NODE_MODEL } from './materials/nodePose';
 
 /** The lines before `main` and at `uv_vertex`, where the billboard and the particle draw edit. */
 export const MAIN_CHUNK = 'void main() {';
@@ -18,10 +19,16 @@ export const UV_CHUNK = '#include <uv_vertex>';
 
 /**
  * Each instance's custom data, which a PARTICLES billboard turns by and the particle flipbook cuts
- * by (`godotParticlesProgram.ts`). A plain draw, and an instanced draw with no custom data as a
- * GridMap's, reads `INSTANCE_CUSTOM` as zero angle and frame.
+ * by (`godotParticlesProgram.ts`). A draw whose program does not define
+ * {@link READS_INSTANCE_CUSTOM}, as a plain draw or a GridMap's, reads it as zero angle and frame.
  */
 export const INSTANCE_CUSTOM = 'godotInstanceCustom';
+
+/**
+ * The define of a program whose geometry holds the custom data attribute. A declared attribute with
+ * no buffer reads whatever constant the last program left at its location, not zero.
+ */
+export const READS_INSTANCE_CUSTOM = 'GODOT_READS_INSTANCE_CUSTOM';
 
 const DEFAULT_NORMAL_INCLUDE = /#include <defaultnormal_vertex>/g;
 
@@ -34,7 +41,7 @@ const BILLBOARD_NORMAL: ProgramInjection = {
   cacheKey: 'godot-billboard-normal',
   onBeforeCompile(shader) {
     const chunk = `#include <defaultnormal_vertex>
-	transformedNormal = mat3( viewMatrix * godotBillboardWorld ) * objectNormal;
+	transformedNormal = mat3( godotBillboardModelView ) * objectNormal;
 	#ifdef FLIP_SIDED
 		transformedNormal = - transformedNormal;
 	#endif`;
@@ -118,7 +125,7 @@ const KEPT_SCALE = /* glsl */ `godotWorld = godotWorld * mat4(
 function billboardFunction({ mode, keepScale }: SurfaceBillboard): string {
   return /* glsl */ `uniform mat4 godotMainCameraWorld;
 uniform mat4 godotPassCameraWorld;
-#ifdef USE_INSTANCING
+#ifdef ${READS_INSTANCE_CUSTOM}
 	attribute vec4 ${INSTANCE_CUSTOM_ATTRIBUTE};
 	#define ${INSTANCE_CUSTOM} ${INSTANCE_CUSTOM_ATTRIBUTE}
 #else
@@ -133,22 +140,28 @@ mat4 godotBillboard() {
 	${BILLBOARD_BASES[mode]}
 	${keepScale ? KEPT_SCALE : ''}
 	return godotWorld;
-}`;
+}
+const mat4 godotUnitInstance = mat4( 1.0 );`;
 }
 
 /**
- * Every later read of the pose takes the billboard. three multiplies `modelMatrix` after
- * `instanceMatrix`, so an instance carries the node's inverse. A plain draw's model and model-view
- * matrices are the billboard itself.
+ * Every later read of three's pose takes the billboard: the model and model-view matrices are the
+ * billboard, and an instance's own matrix is in it. Godot's billboard replaces MODELVIEW_MATRIX
+ * alone, so a reader of MODEL_MATRIX reads the node's, kept before the macros (`nodePose.ts`).
  */
-const BILLBOARD_POSE = /* glsl */ `mat4 godotBillboardWorld = godotBillboard();
+const BILLBOARD_POSE = /* glsl */ `mat4 godotNodeModel = modelMatrix;
+	#undef ${NODE_MODEL}
+	#define ${NODE_MODEL} godotNodeModel
 	#ifdef USE_INSTANCING
-		mat4 godotInstanceLocal = inverse( modelMatrix ) * godotBillboardWorld;
-		#define instanceMatrix godotInstanceLocal
-	#else
-		#define modelMatrix godotBillboardWorld
-		#define modelViewMatrix ( viewMatrix * godotBillboardWorld )
+		mat4 godotNodeInstance = instanceMatrix;
+		#undef ${NODE_INSTANCE}
+		#define ${NODE_INSTANCE} godotNodeInstance
+		#define instanceMatrix godotUnitInstance
 	#endif
+	mat4 godotBillboardWorld = godotBillboard();
+	mat4 godotBillboardModelView = viewMatrix * godotBillboardWorld;
+	#define modelMatrix godotBillboardWorld
+	#define modelViewMatrix godotBillboardModelView
 ${UV_CHUNK}`;
 
 function poseInjection(billboard: SurfaceBillboard): ProgramInjection {
