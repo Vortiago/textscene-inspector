@@ -6,8 +6,6 @@ import { previewEnvironment } from './godotPreviewLighting';
 
 export function PreviewEnvironment() {
   const { settings, sky } = previewEnvironment();
-  // The preview environment and its sky hold no references.
-  return (
-    <EnvironmentLayer settings={settings} sky={sky} resources={NO_RESOURCES} skyResources={NO_RESOURCES} />
-  );
+  // The preview sky holds no references.
+  return <EnvironmentLayer settings={settings} sky={sky} skyResources={NO_RESOURCES} />;
 }

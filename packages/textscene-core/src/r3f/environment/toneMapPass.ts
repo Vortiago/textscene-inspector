@@ -27,6 +27,12 @@ const SCENE_BUFFER_TYPE = THREE.HalfFloatType;
 export interface ToneMapPass {
   /** The buffer the world draws into, at the viewport's `msaa_3d` samples. */
   worldBuffer: THREE.WebGLRenderTarget;
+  /**
+   * Renders `scene` into `worldBuffer`, cleared by the render itself, and leaves the renderer as it
+   * found it. Three applies the clear colour in the bound target's colour space only inside a
+   * render's own clear (`WebGLBackground.js:53`), so a clear before it writes the canvas's sRGB value.
+   */
+  drawWorld: (scene: THREE.Scene, camera: THREE.Camera) => void;
   /** Tonemaps what `worldBuffer` holds into the target, and leaves the renderer as it found it. */
   toneMap: () => void;
 }
@@ -70,20 +76,40 @@ export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
     usesDebanding,
     resources: world.resources,
   });
-  const createWorldBuffer = useCallback(() => worldBufferOf(width, height, name), [width, height, name]);
-  const worldBuffer = useMultisampledTarget(msaaMode, createWorldBuffer);
+  const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
   const gl = useThree((state) => state.gl);
   const pass = useEffectPass(effect, width, height);
   return useMemo(() => {
-    const draw = () => pass.render(gl, worldBuffer, target, NO_ELAPSED_TIME);
-    return { worldBuffer, toneMap: () => drawOffscreen(gl, draw) };
+    const toneMapDraw = () => pass.render(gl, worldBuffer, target, NO_ELAPSED_TIME);
+    return {
+      worldBuffer,
+      drawWorld: (scene, camera) =>
+        drawOffscreen(gl, () => {
+          gl.autoClear = true;
+          gl.setRenderTarget(worldBuffer);
+          gl.render(scene, camera);
+        }),
+      toneMap: () => drawOffscreen(gl, toneMapDraw),
+    };
   }, [gl, pass, worldBuffer, target]);
 }
 
-function worldBufferOf(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+/** The world buffer, resized in place as the viewport resizes. */
+function useWorldBuffer(
+  msaaMode: number,
+  width: number,
+  height: number,
+  name: string
+): THREE.WebGLRenderTarget {
+  const createWorldBuffer = useCallback(() => worldBufferOf(name), [name]);
+  const worldBuffer = useMultisampledTarget(msaaMode, createWorldBuffer);
+  useLayoutEffect(() => worldBuffer.setSize(width, height), [worldBuffer, width, height]);
+  return worldBuffer;
+}
+
+function worldBufferOf(name: string): THREE.WebGLRenderTarget {
   const buffer = createPassTarget(`${name}::world`, { type: SCENE_BUFFER_TYPE });
   buffer.depthBuffer = true;
-  buffer.setSize(width, height);
   return buffer;
 }
 

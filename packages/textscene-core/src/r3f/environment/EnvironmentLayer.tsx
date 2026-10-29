@@ -17,7 +17,7 @@ import { useWorldKind } from './WorldKindContext';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
-import { ToneMapLayer } from './ToneMapLayer';
+import { Compositor } from './Compositor';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 import { registerExposureStage } from '../exposure/sceneExposure';
@@ -28,8 +28,6 @@ export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: Sky | null;
-  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
-  resources: SceneResources;
   /** The pools the sky material's references, such as a panorama, resolve in. */
   skyResources: SceneResources;
 }
@@ -43,9 +41,8 @@ export function EnvironmentLayer({ settings, sky, skyResources }: EnvironmentLay
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
   const draws3D = useDraws3D();
-  // Only the root world tonemaps the canvas. `THREE.ShaderChunk` is module-global, so a sub-viewport
-  // world's curve would replace the root's, and a portal store shares the root's internal state, so
-  // its compositor would draw the portal scene onto the canvas, not into the target.
+  // Only the root world tonemaps the canvas. A portal store shares the root's internal state, so its
+  // compositor would draw the portal scene onto the canvas, not into the target.
   const tonesCanvas = useWorldKind() === 'root';
   const { showFog } = useViewportMode();
   // One value decides the fog programs, the fogged colour background and the fog passes.
@@ -54,7 +51,7 @@ export function EnvironmentLayer({ settings, sky, skyResources }: EnvironmentLay
 
   return (
     <>
-      {tonesCanvas && <ToneMapLayer />}
+      {tonesCanvas && draws3D && <Compositor />}
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
       {sky && (showsSky || skyAmbient) && (
         <SkyLayer

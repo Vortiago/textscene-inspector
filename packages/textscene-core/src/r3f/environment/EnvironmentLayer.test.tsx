@@ -34,7 +34,6 @@ function layer(
           <EnvironmentLayer
             settings={environmentSettingsOf(properties)}
             sky={null}
-            resources={NO_RESOURCES}
             skyResources={NO_RESOURCES}
           />
         </WorldKindProvider>

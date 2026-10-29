@@ -37,7 +37,6 @@ function layer(properties: Record<string, string>, multiplier: number | null) {
           <EnvironmentLayer
             settings={environmentSettingsOf(properties)}
             sky={null}
-            resources={NO_RESOURCES}
             skyResources={NO_RESOURCES}
           />
         </WorldExposureScope>

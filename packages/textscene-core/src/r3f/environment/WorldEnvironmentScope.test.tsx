@@ -1,7 +1,6 @@
 /**
  * Each world draws with the first WorldEnvironment that holds a valid Environment, and the root falls
- * back to the editor preview or to none. Markers stand in for the layers, whose passes need a real
- * GL context.
+ * back to the editor preview or to none. Markers stand in for the layers, whose own tests draw them.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';

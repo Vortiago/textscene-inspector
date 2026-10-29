@@ -133,7 +133,8 @@
       "@vscode/test-web>playwright": "$playwright"
     },
     "patchedDependencies": {
-      "fastnoise-lite@1.1.1": "patches/fastnoise-lite@1.1.1.patch"
+      "fastnoise-lite@1.1.1": "patches/fastnoise-lite@1.1.1.patch",
+      "@react-three/test-renderer@9.1.0": "patches/@react-three__test-renderer@9.1.0.patch"
     }
   },
   "packageManager": "pnpm@9.15.4",

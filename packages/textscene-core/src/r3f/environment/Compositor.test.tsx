@@ -12,7 +12,7 @@ import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { Compositor } from './Compositor';
 import { WorldToneMapProvider } from './worldToneMap';
-import { usePublishCameraAttributes, WorldExposureScope } from './worldExposure';
+import { usePublishCameraAttributes } from './worldExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
@@ -21,6 +21,7 @@ import { NO_RESOURCES } from '../SceneResourcesContext';
 import { withProject } from '../testing/ProjectFixture';
 import { withStubbedGl } from '../testing/stubbedGl';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
+import { InWorld } from '../testing/InWorld';
 import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
@@ -63,13 +64,13 @@ async function mount({
   const renderer = await ReactThreeTestRenderer.create(
     <Wrapper>
       <CaptureRenderer captured={captured} />
-      <WorldExposureScope>
+      <InWorld>
         <PublishedAutoExposure autoExposure={autoExposure} />
         <WorldToneMapProvider settings={settings} resources={NO_RESOURCES}>
           <Content object={content} />
           <Compositor />
         </WorldToneMapProvider>
-      </WorldExposureScope>
+      </InWorld>
     </Wrapper>,
     { gl: rendererOver(context) }
   );
@@ -110,6 +111,21 @@ describe('<Compositor> on the root canvas', () => {
     expect(draws[0]?.bound?.texture.type).toBe(THREE.HalfFloatType);
     expect(draws[0]?.scene).toBe(renderer.scene.instance);
     expect(draws.at(-1)?.bound).toBeNull();
+  });
+
+  it('resizes the world buffer in place when the canvas resizes', async () => {
+    const setSize: { current: ((width: number, height: number) => void) | null } = { current: null };
+    function CaptureSetSize({ children }: { children: ReactNode }) {
+      setSize.current = useThree((state) => state.setSize);
+      return children;
+    }
+    const { nextFrame } = await mount({ Wrapper: CaptureSetSize });
+    const before = (await nextFrame())[0]?.bound;
+    await ReactThreeTestRenderer.act(async () => setSize.current!(64, 32));
+    const after = (await nextFrame())[0]?.bound;
+
+    expect(after).toBe(before);
+    expect([after?.width, after?.height]).toEqual([64, 32]);
   });
 
   it("clears the world buffer in the scene's own render", async () => {

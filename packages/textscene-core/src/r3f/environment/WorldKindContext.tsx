@@ -1,6 +1,6 @@
 /**
  * Which viewport's world a subtree is in. The canvas's renderer draws the root viewport, so only the
- * root world's Environment sets the renderer's tone curve and mounts the compositor. A sub-viewport's
+ * root world mounts the compositor. A sub-viewport's
  * pass renders its own target with its own samples and tone mapping (`subviewport/Component.tsx`).
  */
 import { createContext, useContext, type ReactNode } from 'react';

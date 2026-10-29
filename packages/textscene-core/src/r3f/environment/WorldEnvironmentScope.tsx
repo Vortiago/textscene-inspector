@@ -24,16 +24,21 @@ import {
 import { createWorldGroup, type WorldResolution } from './worldGroup';
 import { WorldToneMapProvider } from './worldToneMap';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
-import { NO_RESOURCES } from '../SceneResourcesContext';
+import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
 import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 
 /** What a WorldEnvironment's `environment` resolves to, when it holds a valid one. */
-export type EnvironmentResolution = WorldResolution<{ environment: EnvironmentLayerProps }>;
+/** A resolved Environment: what its layer draws, and the pools its own references, such as `glow_map`, resolve in. */
+export interface ResolvedEnvironment extends EnvironmentLayerProps {
+  resources: SceneResources;
+}
 
-const environments = createWorldGroup<{ environment: EnvironmentLayerProps }>();
+export type EnvironmentResolution = WorldResolution<{ environment: ResolvedEnvironment }>;
+
+const environments = createWorldGroup<{ environment: ResolvedEnvironment }>();
 
 export const usePublishEnvironment = environments.usePublish;
 
@@ -194,7 +199,7 @@ function EnvironmentToneMap({
   environment,
   children,
 }: {
-  environment: EnvironmentLayerProps | null;
+  environment: ResolvedEnvironment | null;
   children: ReactNode;
 }) {
   return (
@@ -218,6 +223,6 @@ function useViewEnvironment(): EnvironmentResolution | null {
   return camera?.status === 'resolved' ? camera : world;
 }
 
-function resolvedEnvironment(authored: EnvironmentResolution | null): EnvironmentLayerProps | null {
+function resolvedEnvironment(authored: EnvironmentResolution | null): ResolvedEnvironment | null {
   return authored?.status === 'resolved' ? authored.environment : null;
 }

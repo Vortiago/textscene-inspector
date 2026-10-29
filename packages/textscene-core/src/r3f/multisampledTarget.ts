@@ -12,9 +12,6 @@ import { msaaSampleCount, supportedSampleCount } from '../godot/rendering/msaa';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import { perObject } from '../utils/perObject';
 
-/** What decides a target's colour storage, which a texture carries. */
-type TargetTexture = Pick<THREE.Texture, 'type' | 'colorSpace' | 'internalFormat'>;
-
 /** The GL internal format of a target's colour attachment. */
 type ColourStorage = THREE.PixelFormatGPU;
 
@@ -41,7 +38,7 @@ export function useMultisampledTarget<Target extends THREE.WebGLRenderTarget>(
  * like the drawing buffer stores an 8-bit sRGB tag linear (`:2120`), so such a target is linear or
  * pins its format, as `CanvasFrame` pins RGBA8.
  */
-function colourStorage(texture: TargetTexture): ColourStorage {
+function colourStorage(texture: THREE.Texture): ColourStorage {
   if (texture.internalFormat !== null) return texture.internalFormat;
   if (texture.type === THREE.FloatType) return 'RGBA32F';
   if (texture.type === THREE.HalfFloatType) return 'RGBA16F';

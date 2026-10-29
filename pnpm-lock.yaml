@@ -140,6 +140,9 @@ overrides:
   '@vscode/test-web>playwright': ^1.64.1
 
 patchedDependencies:
+  '@react-three/test-renderer@9.1.0':
+    hash: sjdsuf45wabduifr4zvoxtlnli
+    path: patches/@react-three__test-renderer@9.1.0.patch
   fastnoise-lite@1.1.1:
     hash: ixba4smauncpcw4rwdgn4b76aa
     path: patches/fastnoise-lite@1.1.1.patch
@@ -546,7 +549,7 @@ importers:
     devDependencies:
       '@react-three/test-renderer':
         specifier: 'catalog:'
-        version: 9.1.0(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)
+        version: 9.1.0(patch_hash=sjdsuf45wabduifr4zvoxtlnli)(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)
       '@testing-library/dom':
         specifier: 'catalog:'
         version: 10.4.2
@@ -4865,7 +4868,7 @@ snapshots:
       - '@types/react'
       - immer
 
-  '@react-three/test-renderer@9.1.0(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)':
+  '@react-three/test-renderer@9.1.0(patch_hash=sjdsuf45wabduifr4zvoxtlnli)(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)':
     dependencies:
       '@react-three/fiber': 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
       react: 19.3.0

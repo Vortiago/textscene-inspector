@@ -1,7 +1,7 @@
 # MSAA never comes from the drawing buffer
 
 - Status: Accepted
-- Related: ADR-0025 (the preview environment that mounts the compositor), ADR-0033 (SubViewport passes).
+- Related: ADR-0025 (the preview environment), ADR-0033 (SubViewport passes).
 
 ## Context
 

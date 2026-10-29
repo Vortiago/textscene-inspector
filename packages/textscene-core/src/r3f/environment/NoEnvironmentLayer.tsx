@@ -6,13 +6,14 @@
  */
 
 import { ProjectClearColor } from '../ProjectClearColor';
-import { ToneMapLayer } from './ToneMapLayer';
+import { Compositor } from './Compositor';
+import { useDraws3D } from './draws3D';
 
 export function NoEnvironmentLayer() {
   return (
     <>
       <ProjectClearColor />
-      <ToneMapLayer />
+      {useDraws3D() && <Compositor />}
     </>
   );
 }

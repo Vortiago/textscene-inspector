@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CaptureRenderer } from '../r3f/testing/CaptureRenderer';
 
-/** test-renderer's mock context, with the handles the test setup gives it (`mockGlHandles.ts`). */
+/** test-renderer's mock context, which answers handles through `patches/@react-three__test-renderer@9.1.0.patch`. */
 async function mockRenderer(): Promise<THREE.WebGLRenderer> {
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   await ReactThreeTestRenderer.create(<CaptureRenderer captured={captured} />);

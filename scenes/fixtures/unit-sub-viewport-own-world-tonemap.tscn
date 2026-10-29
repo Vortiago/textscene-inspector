@@ -1,7 +1,6 @@
 ; One variable: an own-world SubViewport whose Environment sets a different tone curve, ACES at
-; exposure 4, from the root's LINEAR. `THREE.ShaderChunk` is module-global, so a curve the
-; viewport's world installs tonemaps the root's box too. No other golden has two worlds with
-; different curves.
+; exposure 4, from the root's LINEAR. Each world's tonemap pass reads its own Environment, so the root's
+; box keeps LINEAR. No other golden has two worlds with different curves.
 
 [gd_scene format=3]
 
