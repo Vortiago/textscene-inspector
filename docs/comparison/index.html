@@ -6703,6 +6703,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A triplanar UV set samples each of its textures at the vertex position on each of the three axis planes. It blends the samples by the normal raised to <code>uv1_triplanar_sharpness</code>. <code>uv1_scale</code> and <code>uv1_offset</code> scale and move the position on all three axes, as in Godot. Under <code>uv1_world_triplanar</code> the position and the normal are the world's, so a pattern stays put as a mesh moves. UV2 does the same for the slots that read UV2. The normal map reads in the tangent frame Godot writes for a projected surface, and so does height mapping under UV2 triplanar. A shadow cuts its alpha at the projected albedo. The two floor tiles of the golden sit off the origin, and their stripes fall where Godot puts them.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Billboard keep scale</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-billboard-keep-scale-godot.png" alt="Godot render of Billboard keep scale">
+          <img class="img-ours" src="images/unit-material-billboard-keep-scale-ours.png" alt="Our render of Billboard keep scale">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A billboard faces the camera. Under <code>billboard_keep_scale</code> it keeps the node's scale on each axis. Godot turns the normals by that scaled basis, not by its inverse transpose. The squashed sphere on the left lights as Godot lights it.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Texture filter</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
