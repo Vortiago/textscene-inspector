@@ -41,10 +41,9 @@ const PCG_DEFAULT_INC_64 = 1442695040888963407n;
 const UINT64_MASK = 0xffffffffffffffffn;
 
 /**
- * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state,
- * 32-bit output), exposing only what the emitters use: `seed`, `rand` and `randf`.
- * Re-seeded per particle at birth (`cpu_particles_2d.cpp:922`, `cpu_particles_3d.cpp:832`) for everything
- * decided once per particle.
+ * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state, 32-bit output),
+ * exposing only what the emitters use: `seed`, `rand` and `randf`. Re-seeded per particle at birth
+ * (`cpu_particles_2d.cpp:922`, `cpu_particles_3d.cpp:832`) for everything decided once per particle.
  */
 export class GodotRandomPCG {
   private state = 0n;
@@ -102,11 +101,10 @@ export interface SeedRef {
 }
 
 /**
- * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`, `cpu_particles_3d.cpp:635-648`): a Park–Miller minimal
- * standard generator using Schrage's trick to stay inside 32-bit arithmetic,
- * threaded through the per-frame update (`cpu_particles_2d.cpp:1072-1109`).
- * Advances `state.value` in place and returns the new state scaled to 0..1, rounded as the
- * `real_t` the engine returns.
+ * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`, `cpu_particles_3d.cpp:635-648`): a Park–Miller
+ * minimal standard generator using Schrage's trick to stay inside 32-bit arithmetic, threaded through
+ * the per-frame update (`cpu_particles_2d.cpp:1072-1109`). Advances `state.value` in place and
+ * returns the new state scaled to 0..1, rounded as the `real_t` the engine returns.
  */
 export function randFromSeed(state: SeedRef): number {
   let s = state.value | 0;

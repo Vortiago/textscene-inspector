@@ -3,7 +3,7 @@
  * Godot's buffer writes it, under materials that read the instance data.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadParticleDraw } from './particleDrawModule';
+import { loadSimulate } from './simulateModule';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
@@ -28,7 +28,7 @@ async function particles(properties: Record<string, string> = ROW_OF_FOUR): Prom
 }
 
 // The component loads this chunk lazily, so it lands before the first render.
-beforeAll(loadParticleDraw);
+beforeAll(loadSimulate);
 
 describe('<CPUParticles3D> draw', () => {
   it('draws one instance of the mesh per particle', async () => {

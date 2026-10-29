@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PARTICLE_FLOATS } from './particleBuffer';
+import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 import { settleParticles } from './simulate';
 import { drawnBuffer, ROW_OF_FOUR, simInput as input } from './cpuparticles3d.testkit';
 import {
@@ -110,18 +110,21 @@ describe('the POINTS shape with more than one point', () => {
     emission_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)',
   };
 
+  /** The origin column of a row: the last float of each of its three `Transform3D` rows. */
+  const originOf = (row: number[]) => ({ x: row[3], y: row[7], z: row[11] });
+  const drawnRows = () => rows(drawnBuffer(settleParticles(input(properties)), null));
+
   it('places every particle on one of the points, with that point colour', () => {
-    for (const row of rows(drawnBuffer(settleParticles(input(properties)), null))) {
-      const index = POINTS.x.findIndex(
-        (x, i) => x === row[3] && POINTS.y[i] === row[7] && POINTS.z[i] === row[11]
-      );
+    for (const row of drawnRows()) {
+      const { x, y, z } = originOf(row);
+      const index = POINTS.x.findIndex((px, i) => px === x && POINTS.y[i] === y && POINTS.z[i] === z);
       expect(index).toBeGreaterThanOrEqual(0);
-      expect(row[12 + index]).toBeGreaterThan(0.9);
+      expect(row[PARTICLE_COLOR_OFFSET + index]).toBeGreaterThan(0.9);
     }
   });
 
   it('uses every point', () => {
-    const origins = new Set(rows(drawnBuffer(settleParticles(input(properties)), null)).map((row) => row[3]));
+    const origins = new Set(drawnRows().map((row) => originOf(row).x));
     expect(origins).toEqual(new Set(POINTS.x));
   });
 });

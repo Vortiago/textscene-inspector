@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { ResourceLoader } from './ResourceLoader';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
-import { memoisedImport, useLazyModule } from './useLazyModule';
+import { memoisedImport, useLazyModule, type LazyImport } from './useLazyModule';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -15,12 +15,12 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function Reader({ load, seen }: { load: () => Promise<string>; seen: (string | null)[] }) {
+function Reader({ load, seen }: { load: LazyImport<string>; seen: (string | null)[] }) {
   seen.push(useLazyModule(load));
   return null;
 }
 
-function mount(loader: ResourceLoader, load: () => Promise<string>, seen: (string | null)[]) {
+function mount(loader: ResourceLoader, load: LazyImport<string>, seen: (string | null)[]) {
   return render(
     <ResourceLoaderContext.Provider value={loader}>
       <Reader load={load} seen={seen} />
@@ -46,7 +46,11 @@ describe('useLazyModule', () => {
     const loader = new ResourceLoader();
     const chunk = deferred<string>();
     const seen: (string | null)[] = [];
-    mount(loader, () => chunk.promise, seen);
+    mount(
+      loader,
+      memoisedImport(() => chunk.promise),
+      seen
+    );
     expect([seen.at(-1), loader.pendingResourceCount]).toEqual([null, 1]);
     await act(async () => chunk.resolve('module'));
     expect([seen.at(-1), loader.pendingResourceCount]).toEqual(['module', 0]);
@@ -56,8 +60,21 @@ describe('useLazyModule', () => {
     const loader = new ResourceLoader();
     const chunk = deferred<string>();
     const seen: (string | null)[] = [];
-    mount(loader, () => chunk.promise, seen);
+    mount(
+      loader,
+      memoisedImport(() => chunk.promise),
+      seen
+    );
     await act(async () => chunk.reject(new Error('chunk lost')));
     expect([seen.at(-1), loader.pendingResourceCount]).toEqual([null, 0]);
+  });
+
+  it('reads a module that has already landed on the first render, with no pending load', async () => {
+    const loader = new ResourceLoader();
+    const load = memoisedImport(() => Promise.resolve('module'));
+    await load();
+    const seen: (string | null)[] = [];
+    mount(loader, load, seen);
+    expect([seen[0], loader.pendingResourceCount]).toEqual(['module', 0]);
   });
 });

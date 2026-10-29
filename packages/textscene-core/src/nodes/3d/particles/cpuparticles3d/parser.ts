@@ -7,13 +7,13 @@ import {
   enumOr,
   floatOr,
   intOr,
+  packedOr,
   parseNonEmptyAabb,
   realOr,
   realVec3Or,
   settableFloatOr,
 } from '../../../../parser/valueParsers';
 import { colorOr } from '../../../../utils/colorParser';
-import { warn } from '../../../../logger';
 import { parsePackedColorArray, parsePackedVector3Array } from '../../../../resources/shapes/packedArray';
 import { storedColor } from '../../../../godot/math/real';
 import { CPUParticles3DDrawOrder } from '../../../../godot/scene/particles3d';
@@ -23,6 +23,8 @@ import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties, CPUParticles3DSimulation } from './types';
 
 const DRAW_ORDERS = Object.values(CPUParticles3DDrawOrder);
+/** Godot's default for each emission array. Shared, since a zero-length array holds nothing to write. */
+const NO_FLOATS = new Float32Array(0);
 
 export function parseCPUParticles3D(
   heading: ParsedHeading,
@@ -62,13 +64,24 @@ function parseSimulation(properties: Record<string, string>, context: string): C
     alignY: boolOr(properties.particle_flag_align_y, false, at('particle_flag_align_y')),
     rotateY: boolOr(properties.particle_flag_rotate_y, false, at('particle_flag_rotate_y')),
     disableZ: boolOr(properties.particle_flag_disable_z, false, at('particle_flag_disable_z')),
-    emissionPoints: packedOrEmpty(properties.emission_points, parsePackedVector3Array, at('emission_points')),
-    emissionNormals: packedOrEmpty(
+    emissionPoints: packedOr(
+      properties.emission_points,
+      parsePackedVector3Array,
+      NO_FLOATS,
+      at('emission_points')
+    ),
+    emissionNormals: packedOr(
       properties.emission_normals,
       parsePackedVector3Array,
+      NO_FLOATS,
       at('emission_normals')
     ),
-    emissionColors: packedOrEmpty(properties.emission_colors, parsePackedColorArray, at('emission_colors')),
+    emissionColors: packedOr(
+      properties.emission_colors,
+      parsePackedColorArray,
+      NO_FLOATS,
+      at('emission_colors')
+    ),
     direction: realVec3Or(properties.direction, { x: 1, y: 0, z: 0 }, at('direction')),
     spread: realOr(properties.spread, 45, at('spread')),
     flatness: realOr(properties.flatness, 0, at('flatness')),
@@ -84,19 +97,4 @@ function parseSimulation(properties: Record<string, string>, context: string): C
     colorRamp: heldResource(properties.color_ramp),
     colorInitialRamp: heldResource(properties.color_initial_ramp),
   };
-}
-
-/** A packed array slot as its floats, or none for an unset or unreadable slot, as Godot's default. */
-function packedOrEmpty(
-  value: string | undefined,
-  parse: (value: string) => Float32Array,
-  context: string
-): Float32Array {
-  if (value === undefined) return new Float32Array(0);
-  try {
-    return parse(value);
-  } catch (error) {
-    warn(`${context}: ${error instanceof Error ? error.message : String(error)}, using none`);
-    return new Float32Array(0);
-  }
 }

@@ -377,7 +377,7 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
       break;
     case EmissionShape.DIRECTED_POINTS: {
       const index = emitAtPoint(sim, state, p);
-      if (index !== null && vectorCount(sim.emissionNormals) === pointCount(sim)) {
+      if (index !== null && vectorCount(sim.emissionNormals) === vectorCount(sim.emissionPoints)) {
         p.velocity = directedVelocity(sim, vectorAt(sim.emissionNormals, index), p.velocity);
       }
       break;
@@ -395,12 +395,11 @@ function emitAtShape({ emission, sim }: ParticleSim3DInput, state: SimState, p: 
  * returns its index. Null, and the origin kept, for no points (`:904-919`, `:939-941`).
  */
 function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle): number | null {
-  const count = pointCount(sim);
+  const count = vectorCount(sim.emissionPoints);
   if (count === 0) return null;
   const index = state.pointPicks.rand() % count;
   p.origin = vectorAt(sim.emissionPoints, index);
-  if (sim.emissionColors.length / FLOATS_PER_COLOR === count)
-    p.baseColor = colorAt(sim.emissionColors, index);
+  if (colorCount(sim.emissionColors) === count) p.baseColor = colorAt(sim.emissionColors, index);
   return index;
 }
 
@@ -410,7 +409,8 @@ function emitAtPoint(sim: CPUParticles3DSimulation, state: SimState, p: Particle
  */
 function directedVelocity(sim: CPUParticles3DSimulation, normal: Vector3, velocity: Vector3): Vector3 {
   if (sim.disableZ) {
-    // `Transform2D` columns `normal_2d` and `normal_2d.orthogonal()`, through `basis_xform`.
+    // `Transform2D` columns `normal_2d` and `normal_2d.orthogonal()`, through `basis_xform`. Not
+    // transform2DXform: its zero origin turns a -0 into a +0, and `basis_xform` adds no origin.
     return {
       x: f(f(normal.x * velocity.x) + f(normal.y * velocity.y)),
       y: f(f(normal.y * velocity.x) + f(-normal.x * velocity.y)),
@@ -423,10 +423,6 @@ function directedVelocity(sim: CPUParticles3DSimulation, normal: Vector3, veloci
   return basisXformRows(basisOfColumns(tangent, bitangent, normal), velocity);
 }
 
-function pointCount(sim: CPUParticles3DSimulation): number {
-  return vectorCount(sim.emissionPoints);
-}
-
 function vectorCount(flat: Float32Array): number {
   return flat.length / FLOATS_PER_VERTEX;
 }
@@ -434,6 +430,10 @@ function vectorCount(flat: Float32Array): number {
 function vectorAt(flat: Float32Array, index: number): Vector3 {
   const at = index * FLOATS_PER_VERTEX;
   return { x: flat[at]!, y: flat[at + 1]!, z: flat[at + 2]! };
+}
+
+function colorCount(flat: Float32Array): number {
+  return flat.length / FLOATS_PER_COLOR;
 }
 
 function colorAt(flat: Float32Array, index: number): Rgba {

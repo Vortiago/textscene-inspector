@@ -1,7 +1,6 @@
 /**
  * The mesh at every particle of a settled CPUParticles3D: one InstancedMesh per triangle part, or one
- * THREE.Points per points part, each with its overlay. It loads with the simulation, off the
- * initial-paint path.
+ * THREE.Points per points part, each with its overlay.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';

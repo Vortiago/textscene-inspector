@@ -3,7 +3,7 @@
  * live particle (`mesh_storage.cpp:2233-2245`). Driven by one scene render from 11 units on +Z.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { loadParticleDraw } from './particleDrawModule';
+import { loadSimulate } from './simulateModule';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { drawsColour } from '../../../../r3f/testing/threePasses';
@@ -29,7 +29,7 @@ async function particlesDrawn(range: Record<string, string>): Promise<boolean> {
 }
 
 // The component loads this chunk lazily, so it lands before the first render.
-beforeAll(loadParticleDraw);
+beforeAll(loadSimulate);
 
 describe('<CPUParticles3D> scene cull', () => {
   it('measures an emitter with a mesh and no visibility_aabb, and draws it on the first frame', async () => {

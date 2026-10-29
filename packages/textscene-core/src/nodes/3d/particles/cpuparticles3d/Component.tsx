@@ -26,7 +26,7 @@ import { useMeshAabb } from '../../meshinstance3d/meshAabb';
 import { useParticleResources } from '../../../shared/cpuparticles/useParticleResources';
 import { CPUParticlesBoxGizmo, EmissionShapeGizmo } from '../gizmo/ParticleGizmos';
 import { particlesAabb } from './ownAabb';
-import { loadParticleDraw } from './particleDrawModule';
+import { loadSimulate } from './simulateModule';
 import { ParticleMesh } from './ParticleMesh';
 import type { CPUParticles3DProperties } from './types';
 
@@ -35,26 +35,26 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
   const pools = useSceneResources();
   const nodeRef = useRef<THREE.Group | null>(null);
 
-  const draw = useLazyModule(loadParticleDraw);
+  const simulate = useLazyModule(loadSimulate);
   const emissionTransform = useEmissionTransform(nodeRef, node);
   const resources = useParticleResources(properties.simulation);
   const settled = useMemo(
     () =>
-      draw &&
+      simulate &&
       emissionTransform &&
-      draw.settleParticles({
+      simulate.settleParticles({
         sim: properties.simulation,
         emission: properties.emission,
         ...resources,
         emissionTransform,
       }),
-    [draw, properties, resources, emissionTransform]
+    [simulate, properties, resources, emissionTransform]
   );
   const viewAxis = useViewAxis(properties.simulation.drawOrder === CPUParticles3DDrawOrder.VIEW_DEPTH);
-  const rows = useMemo(() => draw && settled && draw.particleRows(settled), [draw, settled]);
+  const rows = useMemo(() => simulate && settled && simulate.particleRows(settled), [simulate, settled]);
   const buffer = useMemo(
-    () => draw && settled && rows && draw.particlesInDrawOrder(settled, rows, viewAxis),
-    [draw, settled, rows, viewAxis]
+    () => simulate && settled && rows && simulate.particlesInDrawOrder(settled, rows, viewAxis),
+    [simulate, settled, rows, viewAxis]
   );
 
   const meshAabb = useMeshAabb(properties.mesh, pools);
@@ -67,7 +67,7 @@ export function CPUParticles3D({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node} ref={nodeRef}>
-      {draw && settled && buffer && (
+      {settled && buffer && (
         <ParticleMesh properties={properties} settled={settled} buffer={buffer} shadow={shadow} />
       )}
       <PluginGizmo drawnFor="every-node">

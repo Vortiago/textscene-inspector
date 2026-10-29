@@ -6,23 +6,20 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr, packedOr } from '../../../parser/valueParsers';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
-import { warn } from '../../../logger';
 import type { Line2DProperties } from './types';
 import { LineJointMode } from '../../../godot/scene/line2d.js';
 
 export function parseLine2D(heading: ParsedHeading, properties: Record<string, string>): Line2DProperties {
   const base = parseNode2D(heading, properties);
 
-  let points: Float32Array = new Float32Array(0);
-  if (properties.points) {
-    try {
-      points = parsePackedVector2Array(properties.points);
-    } catch (error) {
-      warn(`Line2D "${base.name}": invalid points ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+  const points = packedOr(
+    properties.points,
+    parsePackedVector2Array,
+    new Float32Array(0),
+    `Line2D "${base.name}".points`
+  );
 
   return {
     ...base,
