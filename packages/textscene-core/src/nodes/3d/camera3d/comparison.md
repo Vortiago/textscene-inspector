@@ -47,7 +47,9 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 ## Exposure and Environment
 
-The exposure of a valid `attributes` replaces the world's while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales. A valid `environment` replaces the world's Environment the same way (`renderer_scene_cull.cpp:3594-3597`). A SubViewport that shares a world draws at the exposure of its own camera, or at the world's without one (`renderer_scene_cull.cpp:2707`, `:3562-3565`), so two viewports of one world draw one frame at two exposures.
+A valid `attributes` replaces the exposure of the world while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales. A valid `environment` replaces the Environment of the world the same way (`renderer_scene_cull.cpp:3594-3597`).
+
+A SubViewport that shares a world draws at the exposure of its own camera, or at the exposure of the world without one (`renderer_scene_cull.cpp:2707`, `:3562-3565`). Two viewports of one world so draw one frame at two exposures.
 
 ## Known limitations
 
