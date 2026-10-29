@@ -3,8 +3,9 @@
  * (`area_lights_inc.glsl:325-341`, 4.7.2). A read at `(roughness, view angle)` is Godot's read.
  */
 
-import { LTC_LUT1_BASE64, LTC_LUT2_BASE64 } from './ltcTable.generated.js';
-import { decodeBase64Bytes } from '../../variant/packedBytes.js';
+import { LTC_LUT1_RESIDUALS, LTC_LUT2_RESIDUALS } from './ltcTable.generated.js';
+import { LTC_SIZE } from './ltcSize.js';
+import { fromResiduals } from '../tableResiduals.js';
 
 /** The two tables, RGBA floats per texel: a row per view angle and a column per roughness. */
 interface LtcTables {
@@ -15,13 +16,11 @@ interface LtcTables {
 }
 
 export function ltcTables(): LtcTables {
-  return { lut1: littleEndianFloats(LTC_LUT1_BASE64), lut2: littleEndianFloats(LTC_LUT2_BASE64) };
+  return { lut1: floatsOf(LTC_LUT1_RESIDUALS), lut2: floatsOf(LTC_LUT2_RESIDUALS) };
 }
 
-function littleEndianFloats(base64: string): Float32Array {
-  const bytes = decodeBase64Bytes(base64);
-  const view = new DataView(bytes.buffer);
-  const floats = new Float32Array(bytes.length / 4);
-  for (let i = 0; i < floats.length; i += 1) floats[i] = view.getFloat32(i * 4, true);
-  return floats;
+/** The floats whose bit patterns the residuals hold. */
+function floatsOf(residuals: readonly number[]): Float32Array {
+  const bits = new Uint32Array(fromResiduals(residuals, { width: LTC_SIZE, channels: 4 }));
+  return new Float32Array(bits.buffer);
 }

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { visualLayersOf } from '../../../../r3f/visualLayers';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AreaLight3D } from './Component';
@@ -25,6 +25,7 @@ import { sceneLights } from '../../../../r3f/directionalShadow/lightLists';
 import { slottedLights } from '../../../../r3f/lightSlots';
 import { litUniformArray } from '../../../../r3f/testing/litUniformArray';
 import { BakeMode, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
+import { ltcTables } from '../../../../godot/rendering/lights/ltc';
 
 /** Where the atlas places a light that shows no texture. */
 function untexturedPlacement() {
@@ -99,6 +100,17 @@ describe('<AreaLight3D>', () => {
   it('renders a RectAreaLight', async () => {
     const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
     expect(renderer.scene.findAllByType('RectAreaLight').length).toBe(1);
+  });
+
+  it("shows its light with Godot's LTC tables in place of three's", async () => {
+    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
+    const { lut1, lut2 } = ltcTables();
+    const uniforms = THREE.UniformsLib as unknown as Record<string, THREE.DataTexture>;
+
+    await vi.waitFor(() => expect(uniforms.LTC_FLOAT_1).toBeDefined());
+    expect(renderer.scene.findAllByType('RectAreaLight')).toHaveLength(1);
+    expect(uniforms.LTC_FLOAT_1!.image.data).toEqual(lut1);
+    expect(uniforms.LTC_FLOAT_2!.image.data).toEqual(lut2);
   });
 
   it('maps area_size width to RectAreaLight width', async () => {

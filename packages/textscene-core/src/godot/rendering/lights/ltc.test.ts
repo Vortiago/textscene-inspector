@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ltcTables } from './ltc';
-import { LTC_SIZE } from './ltcTable.generated';
+import { LTC_SIZE } from './ltcSize';
 
 /** The four floats of the texel at `column`, `row`. */
 function texel(table: Float32Array, column: number, row: number): number[] {

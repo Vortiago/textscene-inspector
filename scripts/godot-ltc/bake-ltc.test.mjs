@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { generatedProblem, LTC_SIZE, ltcTexels } from './bake-ltc.mjs';
+import { generatedProblem, ltcTexels } from './bake-ltc.mjs';
+import { LTC_SIZE } from '../../packages/textscene-core/src/godot/rendering/lights/ltcSize.ts';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
 const TEXEL_BYTES = LTC_SIZE * LTC_SIZE * 16;
@@ -46,7 +47,10 @@ describe('generatedProblem', () => {
   });
 
   it('names the table whose texels differ from the release (error case)', () => {
-    const tampered = committed.replace(/(LTC_LUT2_BASE64 =\s*')A/, '$1B');
+    const tampered = committed.replace(
+      /(LTC_LUT2_RESIDUALS: readonly number\[\] = \[)(\d+)/,
+      (_, head, word) => `${head}${Number(word) + 1}`
+    );
     expect(generatedProblem(tampered)).toContain('ltc_lut2.dds');
   });
 

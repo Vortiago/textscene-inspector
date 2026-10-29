@@ -2,7 +2,7 @@
  * <AreaLight3D>: a three.js RectAreaLight sized from `area_size`, which the patched chunks shade
  * with Godot's area light (`r3f/areaLight/`). It carries its range, attenuation, specular and
  * `area_texture` to the shader and its fog energy to the volumetric fog, and casts its shadow
- * through the positional shadow atlas (`AtlasAreaShadow`).
+ * through the positional shadow atlas (`AtlasAreaShadow`). Its first mount loads Godot's LTC tables.
  */
 
 import { useMemo, useRef } from 'react';
@@ -26,6 +26,7 @@ import {
   holdAreaTexture,
   releaseAreaTexture,
 } from '../../../../r3f/areaLight/areaLightAtlas';
+import { useLtcTextures } from '../../../../r3f/areaLight/useLtcTextures';
 
 /**
  * Godot's colour scale: `energy * PI` and the exposure, negated for a negative light, divided by the
@@ -101,6 +102,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   const shadowOpacity = lightShadowOpacity(properties);
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const userData = useAreaLightUserData(properties);
+  useLtcTextures();
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>

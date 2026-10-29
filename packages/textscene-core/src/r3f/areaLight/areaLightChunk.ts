@@ -20,7 +20,6 @@ import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js'
 import { installGodotLightFunction, RE_DIRECT } from '../godotLightFunction.js';
 import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL, LTC_SPECULAR } from './ltcIntegral.js';
-import { installLtcTextures } from './ltcTextures.js';
 import {
   AREA_LIGHT_FACINGS,
   AREA_LIGHT_FALLOFFS,
@@ -191,8 +190,8 @@ const AREA_LIGHT_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
 
 /**
  * Installs the light function and the attenuation it reads, then replaces three's area light, and
- * gives its tables, the area light atlas and the per-light uniforms to every built-in lit material,
- * for every program compiled after the call. A three release that rewrites a replaced text keeps
+ * gives the area light atlas and the per-light uniforms to every built-in lit material, for every
+ * program compiled after the call. `useLtcTextures` installs the tables. A three release that rewrites a replaced text keeps
  * all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call changes
  * nothing.
  */
@@ -204,7 +203,6 @@ export function installGodotAreaLight(): void {
     patch: 'area light',
   });
   if (!isPatched) return;
-  installLtcTextures();
   installAreaLightUniforms();
   installAreaLightAtlas();
 }

@@ -12,6 +12,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { LTC_SIZE } from '../../packages/textscene-core/src/godot/rendering/lights/ltcSize.ts';
+import {
+  fromResiduals,
+  toResiduals,
+} from '../../packages/textscene-core/src/godot/rendering/tableResiduals.ts';
 
 const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts');
 
@@ -23,9 +28,6 @@ export const TEXEL_SHA256 = {
   'ltc_lut1.dds': 'c097ded563f9c13625acb1673e2ab6ffa590efcb954354f311e9d15a61d51dc3',
   'ltc_lut2.dds': '53f93b6a3c097b33be3a47d891cc6fb2b76635dff65cd7c78c01f291d280bc49',
 };
-
-/** `LTC_LUT_DIMENSIONS` (`make_ltc_lut.py:18`). */
-export const LTC_SIZE = 64;
 
 /** The DDS header and its DX10 extension, which `make_ltc_lut.py:4` skips. */
 const HEADER_BYTES = 148;
@@ -63,9 +65,27 @@ async function fetchTexels(name) {
   return pinned(name, ltcTexels(new Uint8Array(await response.arrayBuffer())));
 }
 
-/** The base64 the generated text assigns to `constant`, or an empty string when it has none. */
-function base64Of(text, constant) {
-  return text.match(new RegExp(`export const ${constant} =\\s*'([^']*)'`))?.[1] ?? '';
+/** Each table texel holds four 32-bit words, RGBA. */
+const SHAPE = { width: LTC_SIZE, channels: 4 };
+
+/** The texels the generated text assigns to `constant`, or none when it has no such table. */
+function texelsOf(text, constant) {
+  const residuals = text.match(
+    new RegExp(`export const ${constant}: readonly number\\[\\] = \\[([^\\]]*)\\]`)
+  )?.[1];
+  if (!residuals) return new Uint8Array();
+  const words = fromResiduals(residuals.split(',').map(Number), SHAPE);
+  const texels = new Uint8Array(words.length * 4);
+  const view = new DataView(texels.buffer);
+  words.forEach((word, i) => view.setUint32(i * 4, word, true));
+  return texels;
+}
+
+/** The table's little-endian 32-bit words as residuals (`tableResiduals.ts`). */
+function residualsOf(texels) {
+  const view = new DataView(texels.buffer, texels.byteOffset, texels.byteLength);
+  const words = Array.from({ length: texels.byteLength / 4 }, (_, i) => view.getUint32(i * 4, true));
+  return toResiduals(words, SHAPE).join(',');
 }
 
 /**
@@ -74,8 +94,8 @@ function base64Of(text, constant) {
  */
 export function generatedProblem(text) {
   try {
-    const lut1 = pinned('ltc_lut1.dds', Buffer.from(base64Of(text, 'LTC_LUT1_BASE64'), 'base64'));
-    const lut2 = pinned('ltc_lut2.dds', Buffer.from(base64Of(text, 'LTC_LUT2_BASE64'), 'base64'));
+    const lut1 = pinned('ltc_lut1.dds', texelsOf(text, 'LTC_LUT1_RESIDUALS'));
+    const lut2 = pinned('ltc_lut2.dds', texelsOf(text, 'LTC_LUT2_RESIDUALS'));
     return render(lut1, lut2) === text ? null : 'its text differs from a fresh bake';
   } catch (error) {
     return error.message;
@@ -98,19 +118,14 @@ function render(lut1, lut2) {
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-/** The tables' width and height (\`make_ltc_lut.py:18\`). */
-export const LTC_SIZE = ${LTC_SIZE};
-
 /**
- * Base64 of the little-endian floats: RGBA per texel, a row per view angle and a column per
- * roughness. Each texel holds the fit's matrix entries \`a, b, c, d\`.
+ * The 32-bit floats' bit patterns as residuals (\`tableResiduals.ts\`): RGBA per texel, a row per
+ * view angle and a column per roughness. Each texel holds the fit's matrix entries \`a, b, c, d\`.
  */
-export const LTC_LUT1_BASE64 =
-  '${Buffer.from(lut1).toString('base64')}';
+export const LTC_LUT1_RESIDUALS: readonly number[] = [${residualsOf(lut1)}];
 
 /** The same layout, each texel holding the fit's \`e\` and its two Fresnel weights. */
-export const LTC_LUT2_BASE64 =
-  '${Buffer.from(lut2).toString('base64')}';
+export const LTC_LUT2_RESIDUALS: readonly number[] = [${residualsOf(lut2)}];
 `;
 }
 
