@@ -33,7 +33,8 @@ import { ProbeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
 import { sameElements } from '../../utils/sameElements.js';
-import { drawAtExposure, exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure.js';
+import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure.js';
+import { drawAsWorld, ownEnvironmentChanges } from '../environment/sceneEnvironment.js';
 import { exposureOverBaked } from '../exposure/exposureOverBaked.js';
 
 /** What a probe's capture shows: changed, it captures again. */
@@ -73,12 +74,12 @@ export class SceneProbes {
   private settledFrames = 0;
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
-  /** What the captures saw of the environment, which a sky that bakes later changes. */
-  private seen: { environment: unknown; background: unknown; clearColor: number } = {
-    environment: undefined,
-    background: undefined,
-    clearColor: -1,
-  };
+  /**
+   * What the captures saw of the environment, which a sky that bakes later changes: the change count
+   * of the world's own Environment and the clear colour. Written only by `markCapturesStale`.
+   */
+  private seenOwnEnvironmentChanges = -1;
+  private seenClearColor = -1;
   /**
    * The exposure each probe last captured at, written only by `capture`, and only while the world
    * holds attributes: a capture without exposure leaves it (`render_forward_clustered.cpp:1714-1716`). A
@@ -176,19 +177,17 @@ export class SceneProbes {
   }
 
   /**
-   * Marks every capture stale once new content settles, or once the environment the captures saw
-   * changes. A stale capture still draws, so no probe vanishes until it captures again. A change of
-   * exposure marks none: Godot rescales the capture instead.
+   * Marks every capture stale once new content settles, or once the world's own Environment the
+   * captures saw changes. A stale capture still draws, so no probe vanishes until it captures again.
+   * A change of exposure marks none: Godot rescales the capture instead.
    */
   private markCapturesStale(clearColor: THREE.Color): void {
-    const { environment, background } = this.scene;
-    const { seen } = this;
-    const hasNewEnvironment =
-      environment !== seen.environment ||
-      background !== seen.background ||
-      clearColor.getHex() !== seen.clearColor;
+    const changes = ownEnvironmentChanges(this.scene);
+    const clearHex = clearColor.getHex();
+    const hasNewEnvironment = changes !== this.seenOwnEnvironmentChanges || clearHex !== this.seenClearColor;
     if (!this.hasNewContent && !hasNewEnvironment) return;
-    this.seen = { environment, background, clearColor: clearColor.getHex() };
+    this.seenOwnEnvironmentChanges = changes;
+    this.seenClearColor = clearHex;
     this.hasNewContent = false;
     this.generation += 1;
   }
@@ -220,8 +219,7 @@ export class SceneProbes {
     const capture = { isInterior: probe.interior, hasShadows: probe.enableShadows };
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes, capture);
-    const worldExposure = worldExposureOfScene(this.scene);
-    drawAtExposure(this.scene, worldExposure, () => {
+    drawAsWorld(this.scene, () => {
       const restore = stageCapture(this.scene, probe, clearColor);
       try {
         drawOffscreen(this.renderer, () => {
@@ -240,6 +238,7 @@ export class SceneProbes {
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
     const { generation } = this;
     this.captures.set(object, { layer, generation, probe, matrixWorld: object.matrixWorld.clone() });
+    const worldExposure = worldExposureOfScene(this.scene);
     if (worldExposure !== null) this.bakedExposures.set(object, worldExposure);
   }
 

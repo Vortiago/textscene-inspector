@@ -13,8 +13,55 @@ import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { observeSceneCamera } from '../sceneRenderCamera';
+import { useEffect, useMemo } from 'react';
+import { useThree } from '@react-three/fiber';
+import {
+  DrawnEnvironment,
+  registerEnvironmentPart,
+  ShownEnvironment,
+  useEnvironmentKey,
+  useOwnEnvironment,
+} from '../environment/sceneEnvironment';
 
 const CLEAR = new THREE.Color(0.3, 0.3, 0.3);
+
+/** A part that shows `color` as the background of the Environment around it. */
+function BackgroundPart({ color }: { color: THREE.Color }) {
+  const scene = useThree((state) => state.scene);
+  const environment = useEnvironmentKey();
+  useEffect(
+    () =>
+      registerEnvironmentPart(scene, environment, () => {
+        const previous = scene.background;
+        scene.background = color;
+        return () => {
+          scene.background = previous;
+        };
+      }),
+    [scene, environment, color]
+  );
+  return null;
+}
+
+const WORLD_BACKGROUND = new THREE.Color('blue');
+const CAMERA_BACKGROUND = new THREE.Color('red');
+
+/** A view through a camera with an Environment of its own, over a world that holds another. */
+function ViewedThroughCamera({ world = WORLD_BACKGROUND, camera = CAMERA_BACKGROUND }) {
+  const worldEnvironment = useMemo(() => ({}), []);
+  const cameraEnvironment = useMemo(() => ({}), []);
+  useOwnEnvironment(worldEnvironment);
+  return (
+    <>
+      <ShownEnvironment environment={cameraEnvironment}>
+        <BackgroundPart color={camera} />
+      </ShownEnvironment>
+      <DrawnEnvironment environment={worldEnvironment}>
+        <BackgroundPart color={world} />
+      </DrawnEnvironment>
+    </>
+  );
+}
 
 /** A world that holds `factor` for its view and `world` for its own attributes. */
 function Exposed({ factor, world = factor }: { factor: number; world?: number | null }) {
@@ -373,5 +420,48 @@ describe('SceneProbes exposure normalisation', () => {
 
       expect(facesDrawn()).toBe(6);
     });
+  });
+});
+
+describe('SceneProbes under a camera with an Environment of its own', () => {
+  /** The view through the camera, its probe settled, and the background each render of it shows. */
+  async function settledUnderCamera() {
+    const mounted = await ReactThreeTestRenderer.create(<ViewedThroughCamera />);
+    const scene = mounted.scene.instance as THREE.Scene;
+    const probes = await probesIn(scene, probeObject());
+    const backgroundAtRender: unknown[] = [];
+    observeSceneCamera(scene, () => backgroundAtRender.push(scene.background));
+    probes.settle();
+    return { ...probes, mounted, backgroundAtRender };
+  }
+
+  it("captures with the world's own Environment, not the camera's (renderer_scene_cull.cpp:3692)", async () => {
+    const { facesDrawn, backgroundAtRender } = await settledUnderCamera();
+    facesDrawn();
+
+    expect(new Set(backgroundAtRender)).toEqual(new Set([WORLD_BACKGROUND]));
+  });
+
+  it("puts the camera's Environment back after the capture", async () => {
+    const { facesDrawn, scene } = await settledUnderCamera();
+    facesDrawn();
+
+    expect(scene.background).toBe(CAMERA_BACKGROUND);
+  });
+
+  it("captures again once a part of the world's own Environment changes", async () => {
+    const { facesDrawn, mounted } = await settledUnderCamera();
+    facesDrawn();
+    await mounted.update(<ViewedThroughCamera world={new THREE.Color('green')} />);
+
+    expect(facesDrawn()).toBe(6);
+  });
+
+  it("keeps its capture when only the camera's Environment changes", async () => {
+    const { facesDrawn, mounted } = await settledUnderCamera();
+    facesDrawn();
+    await mounted.update(<ViewedThroughCamera camera={new THREE.Color('green')} />);
+
+    expect(facesDrawn()).toBe(0);
   });
 });

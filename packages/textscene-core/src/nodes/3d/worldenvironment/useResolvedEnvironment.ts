@@ -13,6 +13,21 @@ import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from '../../../r3f/environment/worldGroup';
 import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
+import type { TscnInternalResource } from '../../../parser/types';
+import type { Sky } from '../../../resources/sky/types';
+import { perObject } from '../../../utils/perObject';
+
+/**
+ * One `Sky` for each Sky resource and material, whichever Environment or camera resolves it, as
+ * Godot keeps one radiance for each Sky RID (`sky.h:251`). So viewports that draw one sky share
+ * its bake. Null for a material this previewer cannot decode.
+ */
+const skyOf = perObject((skyResource: TscnInternalResource) =>
+  perObject((material: TscnInternalResource): Sky | null => {
+    const decoded = decodeSkyMaterial(material.type, material.data);
+    return decoded ? decodeSky(skyResource.data, decoded) : null;
+  })
+);
 
 /**
  * A hook, not a pure function, because the external form loads through the resource pipeline.
@@ -38,11 +53,8 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Envi
   const material = scopedMaterial?.resource;
   const skyResources = scopedMaterial?.resources ?? NO_RESOURCES;
 
-  const skyData = skyResource?.resource.data;
-  const sky = useMemo(() => {
-    const decoded = material ? decodeSkyMaterial(material.type, material.data) : null;
-    return decoded && skyData ? decodeSky(skyData, decoded) : null;
-  }, [material, skyData]);
+  const skyOwner = skyResource?.resource;
+  const sky = skyOwner && material ? skyOf(skyOwner)(material) : null;
 
   const clearColor = useProjectClearColorSrgb();
   // Apart from the sky, so a sky `.tres` that loads later keeps `settings`, and with it the

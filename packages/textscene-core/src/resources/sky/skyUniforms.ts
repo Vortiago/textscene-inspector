@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import type { SkyProperties } from './types';
+import { materialReadsLights } from './readsLights';
 import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
 import { degToRad, type Rgba } from '../../godot/math/math';
@@ -86,9 +87,8 @@ export function skyUniforms(
       break;
   }
 
-  // The panorama sky is the one Godot shader with no light slots; giving it
-  // them anyway would declare uniforms its GLSL never reads.
-  if (sky.kind !== 'panorama') {
+  // A sky that reads no lights has no light slots, which would declare uniforms its GLSL never reads.
+  if (materialReadsLights(sky)) {
     for (let i = 0; i < LIGHT_SLOTS; i++) {
       const light = lights[i];
       uniforms[`LIGHT${i}_ENABLED`] = { value: !!light };

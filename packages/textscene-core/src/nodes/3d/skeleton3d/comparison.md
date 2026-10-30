@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that poses the meshes bound to it)
 
 # Skeleton3D
 
-Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. An AnimationPlayer that plays a clip writes the pose of each bone the clip keys, with the position scaled by `motion_scale`. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton`, with `skin` unset, to Godot's automatic skin. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
+Holds the bone hierarchy that deforms attached meshes. It draws nothing itself. The previewer poses the bones at load. An AnimationPlayer that plays a clip writes the pose of each bone the clip keys, with the position scaled by `motion_scale`. It runs the CopyTransformModifier3D children of the skeleton on that pose, in child order. It binds each MeshInstance3D that names the skeleton through `skeleton`. The mesh takes the Skin it sets, by bind name or bone index, or Godot's automatic skin where `skin` is unset. A binding reaches into and out of an instanced scene. The fixture's ribbon bends where its third bone turns.
 
 ## Linting
 
@@ -41,6 +41,5 @@ The parser reads `show_rest_only` and the bone table: `name`, `parent`, `rest`, 
 
 - **Needs runtime** Godot runs every SkeletonModifier3D type, but here only the bone pose and a CopyTransformModifier3D act.
 - **Approximated** Only a RibbonTrailMesh and a TubeTrailMesh write bone arrays, so every other mesh bound to a skeleton draws in its rest pose.
-- **Approximated** A bone past the skin's last index collapses its vertices, where Godot's result depends on the GPU driver.
 - **Editor only** The bone gizmo appears only in Godot's editor, but here it is absent.
 - **Not drawn** A scene override of `show_rest_only`, `motion_scale` or `bones/*` on a `Skeleton3D` in an instanced GLB is ignored with a warning, where Godot reads it.

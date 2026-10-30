@@ -8,12 +8,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Quaternion } from '../../../godot/math/quaternion';
 import { identityTransform3D, multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
+import type { SkinBind } from '../../../resources/skin/types';
 import {
   animationPass,
   automaticSkinMatrices,
   BonePoses,
   newBone,
-  skinMatricesUnder,
+  poseUnder,
   type Bone,
   type BonePose,
   type PoseModifier,
@@ -429,7 +430,7 @@ function expectQuaternionClose(actual: Quaternion, expected: Quaternion): void {
   expect(actual.w).toBeCloseTo(expected.w, 6);
 }
 
-describe('skinMatricesUnder: one BonePoses across frames', () => {
+describe('poseUnder: one BonePoses across frames', () => {
   const posed = (x: number): PoseModifier => ({
     influence: 1,
     edit: (poses) => poses.setPosePosition(0, { x, y: 0.5, z: 0 }),
@@ -438,16 +439,18 @@ describe('skinMatricesUnder: one BonePoses across frames', () => {
   it('starts every frame from the file pose, so an edit of one frame does not reach the next', () => {
     const poses = new BonePoses(CHAIN, false);
 
-    skinMatricesUnder(poses, [posed(3)]);
+    poseUnder(poses, [posed(3)]).skinMatrices();
 
-    skinMatricesUnder(poses, []).forEach(expectIdentity);
+    poseUnder(poses, []).skinMatrices().forEach(expectIdentity);
   });
 
   it('answers what a new BonePoses answers for the same modifiers', () => {
     const poses = new BonePoses(CHAIN, false);
-    skinMatricesUnder(poses, [quarterTurner(2)]);
+    poseUnder(poses, [quarterTurner(2)]).skinMatrices();
 
-    expect(skinMatricesUnder(poses, [posed(1)])).toEqual(automaticSkinMatrices(CHAIN, false, [posed(1)]));
+    expect(poseUnder(poses, [posed(1)]).skinMatrices()).toEqual(
+      automaticSkinMatrices(CHAIN, false, [posed(1)])
+    );
   });
 });
 
@@ -465,5 +468,121 @@ describe('the rig of a BonePoses', () => {
     const { rig } = new BonePoses(CHAIN, false);
 
     expect(rig.decomposedRest(1)).toBe(rig.decomposedRest(1));
+  });
+});
+
+/** A bind of a Skin that names a bone: the inverse of the rest the bone was bound at. */
+function namedBind(name: string, bindOrigin: [number, number, number]): SkinBind {
+  return { bone: -1, name, pose: translation(...bindOrigin) };
+}
+
+/** A bind of a Skin that addresses a bone by its index. */
+function indexedBind(bone: number, bindOrigin: [number, number, number]): SkinBind {
+  return { bone, name: '', pose: translation(...bindOrigin) };
+}
+
+/** The chain of {@link CHAIN} below a root bone `extra`, so the automatic skin would bind the wrong bones. */
+const CHAIN_UNDER_EXTRA: Bone[] = [
+  bone('extra', -1, [0, 0, 0]),
+  { ...CHAIN[0]! },
+  { ...CHAIN[1]!, parent: 1 },
+  { ...CHAIN[2]!, parent: 2 },
+];
+
+/** The binds that put each bone of {@link CHAIN} at the identity while it rests. */
+const CHAIN_BINDS_BY_NAME = [
+  namedBind('b0', [0, -0.5, 0]),
+  namedBind('b1', [0, -0.3, 0]),
+  namedBind('b2', [0, -0.1, 0]),
+];
+
+function skinUnder(bones: readonly Bone[], binds: readonly SkinBind[], modifiers: PoseModifier[] = []) {
+  const poses = new BonePoses(bones, false);
+  const unresolved: string[] = [];
+  const bindings = poses.resolveBinds(binds, (message) => unresolved.push(message));
+  const matrices = poseUnder(poses, modifiers).bindMatrices(bindings);
+  return { matrices, unresolved };
+}
+
+describe('bindMatrices: the binds of a Skin', () => {
+  it('has one matrix for each bind, not for each bone (`skeleton_3d.cpp:363-403`)', () => {
+    expect(skinUnder(CHAIN_UNDER_EXTRA, CHAIN_BINDS_BY_NAME).matrices).toHaveLength(3);
+  });
+
+  it('moves nothing at the rest when each bind pose is the inverse of its bone rest', () => {
+    skinUnder(CHAIN_UNDER_EXTRA, CHAIN_BINDS_BY_NAME).matrices.forEach(expectIdentity);
+  });
+
+  it('finds a bone by the name of its bind, wherever the bone sits in the table', () => {
+    const bones = [...CHAIN_UNDER_EXTRA];
+    bones[2] = { ...bones[2]!, rotation: QUARTER_TURN_Z };
+
+    const { matrices } = skinUnder(bones, CHAIN_BINDS_BY_NAME);
+
+    // The same turn of b1 as the automatic skin of CHAIN alone: the extra root takes no bind.
+    expectIdentity(matrices[0]);
+    expectOrigin(matrices[1], 0.3, 0.3, 0);
+    expectOrigin(matrices[2], 0.3, 0.3, 0);
+  });
+
+  it('finds the bone by its index where the bind has no name', () => {
+    const binds = [indexedBind(1, [0, -0.5, 0]), indexedBind(2, [0, -0.3, 0]), indexedBind(3, [0, -0.1, 0])];
+
+    skinUnder(CHAIN_UNDER_EXTRA, binds).matrices.forEach(expectIdentity);
+  });
+
+  it('prefers the name over the index', () => {
+    const bind: SkinBind = { bone: 0, name: 'b0', pose: translation(0, -0.5, 0) };
+
+    expectIdentity(skinUnder(CHAIN_UNDER_EXTRA, [bind]).matrices[0]);
+  });
+
+  it('takes the first bone of a name', () => {
+    const twins = [bone('twin', -1, [0, 0, 0]), bone('twin', -1, [0, 7, 0])];
+
+    expectIdentity(skinUnder(twins, [namedBind('twin', [0, 0, 0])]).matrices[0]);
+  });
+
+  it('multiplies the global pose of the bone by the bind pose, in that order', () => {
+    const bones = [bone('b', -1, [0, 0, 0], { rotation: QUARTER_TURN_Z })];
+
+    const { matrices } = skinUnder(bones, [namedBind('b', [1, 0, 0])]);
+
+    // The quarter turn takes the bind origin (1, 0, 0) to (0, 1, 0). Bind first would leave (1, 0, 0).
+    expectOrigin(matrices[0], 0, 1, 0);
+  });
+
+  it('binds bone 0 and says so for a name no bone carries (`:379`)', () => {
+    const { matrices, unresolved } = skinUnder(CHAIN_UNDER_EXTRA, [namedBind('ghost', [0, 2, 0])]);
+
+    expectOrigin(matrices[0], 0, 2, 0);
+    expect(unresolved).toEqual([expect.stringContaining('"ghost"')]);
+  });
+
+  it('binds bone 0 and says so for an index at or past the bone count (`:385`)', () => {
+    const bones = [bone('only', -1, [0, 0, 0], { position: { x: 4, y: 0, z: 0 } })];
+
+    const { matrices, unresolved } = skinUnder(bones, [indexedBind(1, [0, 0, 0])]);
+
+    expectOrigin(matrices[0], 4, 0, 0);
+    expect(unresolved).toEqual([expect.stringContaining('bone count')]);
+  });
+
+  it('binds bone 0 and says so for a bind with neither a name nor an index (`:391`)', () => {
+    const { unresolved } = skinUnder(CHAIN_UNDER_EXTRA, [
+      { bone: -1, name: '', pose: identityTransform3D() },
+    ]);
+
+    expect(unresolved).toEqual([expect.stringContaining('neither a name nor a bone')]);
+  });
+
+  it('runs the modifiers before the binds read the global pose', () => {
+    const { matrices } = skinUnder(CHAIN_UNDER_EXTRA, CHAIN_BINDS_BY_NAME, [quarterTurner(2)]);
+
+    expectOrigin(matrices[1], 0.3, 0.3, 0);
+  });
+
+  it('gives a Skin with no bind no matrix (edge case)', () => {
+    expect(skinUnder(CHAIN_UNDER_EXTRA, []).matrices).toEqual([]);
   });
 });

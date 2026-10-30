@@ -1,0 +1,83 @@
+; One variable: the exposures, 2 and 1, of two SubViewports that share the 2D canvas's World3D and
+; its sky. Godot bakes the one radiance in the first render, ViewA's, as children render first
+; (`renderer_viewport.cpp:91-127`, `sky.cpp:1263-1369`), and each view draws its background at its own
+; exposure. No other scene draws one sky at two exposures, so none shows a regression in it.
+
+[gd_scene format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env_world"]
+background_mode = 2
+background_energy_multiplier = 1.5
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_energy = 2.0
+tonemap_mode = 3
+
+[sub_resource type="CameraAttributesPractical" id="Att_a"]
+exposure_multiplier = 2.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_grey"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 0.6
+
+[sub_resource type="ViewportTexture" id="VA"]
+viewport_path = NodePath("ViewA")
+
+[sub_resource type="ViewportTexture" id="VB"]
+viewport_path = NodePath("ViewB")
+
+[node name="Root" type="Node2D"]
+
+[node name="ViewA" type="SubViewport" parent="."]
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="ViewA"]
+environment = SubResource("Env_world")
+
+[node name="Sun" type="DirectionalLight3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 3, 0)
+light_energy = 1.0
+
+[node name="Omni" type="OmniLight3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0.8, 1.2)
+light_color = Color(1, 0.6, 0.3, 1)
+light_energy = 1.0
+
+[node name="Spot" type="SpotLight3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.5, 2.5)
+light_color = Color(0.3, 0.6, 1, 1)
+light_energy = 1.0
+spot_range = 6.0
+
+[node name="Sphere" type="MeshInstance3D" parent="ViewA"]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_grey")
+
+[node name="Camera3D" type="Camera3D" parent="ViewA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 50.0
+attributes = SubResource("Att_a")
+
+[node name="ViewB" type="SubViewport" parent="."]
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="ViewB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 50.0
+
+[node name="ShowA" type="Sprite2D" parent="."]
+position = Vector2(180, 300)
+texture = SubResource("VA")
+
+[node name="ShowB" type="Sprite2D" parent="."]
+position = Vector2(420, 300)
+texture = SubResource("VB")

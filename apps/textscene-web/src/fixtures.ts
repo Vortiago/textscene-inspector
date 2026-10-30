@@ -1773,6 +1773,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Camera Environment",
+    "file": "unit-reflection-probe-camera-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe Camera Exposure",
     "file": "unit-reflection-probe-camera-exposure.tscn",
     "category": "Other"
@@ -1915,6 +1920,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Skeleton Modifier 3d",
     "file": "unit-skeleton-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Ambient Energy",
+    "file": "unit-sky-ambient-energy.tscn",
     "category": "Other"
   },
   {
@@ -3250,6 +3260,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Mesh Instance 3d Skin By Name",
+    "file": "unit-mesh-instance-3d-skin-by-name.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Mesh Instance 3d Skinned Ribbon Instanced",
     "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
     "category": "Unit - Primitive Meshes"
@@ -4451,6 +4466,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Shared Root Camera Environment",
+    "file": "unit-sub-viewport-shared-root-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Camera Environment",
+    "file": "unit-sub-viewport-shared-world-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Shared World Camera Exposure",
     "file": "unit-sub-viewport-shared-world-camera-exposure.tscn",
     "category": "Unit - Viewports"
@@ -4463,6 +4488,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Shared World Glow",
     "file": "unit-sub-viewport-shared-world-glow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Sky Exposure",
+    "file": "unit-sub-viewport-shared-world-sky-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {

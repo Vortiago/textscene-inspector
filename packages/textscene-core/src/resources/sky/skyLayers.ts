@@ -58,10 +58,14 @@ function layerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctma
   return radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
 }
 
-/** The array of a sky baked as `bake`: a real-time sky has seven layers (`sky.cpp:1547-1550`). */
+/** The roughness layers of a sky baked with `radianceFilter`: a real-time sky has seven (`sky.cpp:1547-1550`). */
+export function roughnessLayersOf(radianceFilter: SkyBake['radianceFilter']): number {
+  return radianceFilter === 'fast' ? REAL_TIME_ROUGHNESS_LAYERS : SKY_ROUGHNESS_LAYERS_DEFAULT;
+}
+
+/** The array of a sky baked as `bake`. */
 function skyLayersLayout({ radianceFilter, radianceSize }: SkyBake): SkyRadianceLayout {
-  const layers = radianceFilter === 'fast' ? REAL_TIME_ROUGHNESS_LAYERS : SKY_ROUGHNESS_LAYERS_DEFAULT;
-  return skyOctmapLayout(radianceSize, layers);
+  return skyOctmapLayout(radianceSize, roughnessLayersOf(radianceFilter));
 }
 
 /** An array of `depth` layers laid out as `layout`. The caller owns its target. */
