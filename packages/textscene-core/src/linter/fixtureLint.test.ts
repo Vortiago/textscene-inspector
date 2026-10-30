@@ -36,10 +36,6 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['collisionobject3d-needs-collision-shape'],
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
-  'unit-cpuparticles2d-unpreviewable.tscn': {
-    rules: ['cpuparticles2d-nondeterministic-emission-shape'],
-    reason: 'named for the advisory it carries; it is the fixture',
-  },
   'unit-cpuparticles2d-crossed-range.tscn': {
     rules: ['cpuparticles2d-param-min-above-max'],
     reason: 'the crossed velocity pair is the fixture, held so the range Godot loads can be measured',

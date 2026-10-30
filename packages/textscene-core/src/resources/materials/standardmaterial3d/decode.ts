@@ -32,6 +32,7 @@ import { ShadingMode } from '../../../godot/rendering/materials/shadingMode';
 import { Transparency } from '../../../godot/rendering/materials/transparency';
 import {
   HEIGHTMAP_DEFAULTS,
+  PARTICLES_ANIM_DEFAULTS,
   TEXTURE_SLOTS,
   type Heightmap,
   type StandardMaterial3DData,
@@ -215,6 +216,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
     specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
+    vertexColorIsSrgb: boolOr(properties['vertex_color_is_srgb'], false, CONTEXT),
     disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
     // The shader reads `ao_light_affect` only with `ao_enabled` (`material.cpp:1959`).
     aoLightAffect: boolOr(properties['ao_enabled'], false, CONTEXT)
@@ -245,6 +247,11 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     pointSize: floatOr(properties['point_size'], BASE_MATERIAL_3D_DEFAULTS.pointSize, CONTEXT),
     billboardMode: intOr(properties['billboard_mode'], BillboardMode.BILLBOARD_DISABLED, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
+    particlesAnim: {
+      hFrames: intOr(properties['particles_anim_h_frames'], PARTICLES_ANIM_DEFAULTS.hFrames, CONTEXT),
+      vFrames: intOr(properties['particles_anim_v_frames'], PARTICLES_ANIM_DEFAULTS.vFrames, CONTEXT),
+      loop: boolOr(properties['particles_anim_loop'], PARTICLES_ANIM_DEFAULTS.loop, CONTEXT),
+    },
     anisotropy: anisotropyEnabled
       ? clamp(floatOr(properties['anisotropy'], BASE_MATERIAL_3D_DEFAULTS.anisotropy, CONTEXT), -1, 1)
       : 0,

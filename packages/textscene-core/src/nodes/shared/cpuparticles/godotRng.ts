@@ -1,10 +1,11 @@
 /**
- * The three random sources CPUParticles2D draws from, ported bit-exactly: the
- * frozen pose is one specific draw from the stream, so a uniform substitute puts
- * the sparks in the wrong places.
+ * The three random sources a CPU particle emitter draws from, ported bit-exactly:
+ * the frozen pose is one specific draw from the stream, so a uniform substitute
+ * puts the sparks in the wrong places. CPUParticles2D and CPUParticles3D share them.
  *
  * Derived from Godot Engine (`core/math/random_pcg.h`,
- * `thirdparty/misc/pcg.cpp`, and `scene/2d/cpu_particles_2d.cpp`). The Godot
+ * `thirdparty/misc/pcg.cpp`, `scene/2d/cpu_particles_2d.cpp` and
+ * `scene/3d/cpu_particles_3d.cpp`). The Godot
  * portions are used under the MIT licence:
  *
  *   Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
@@ -40,10 +41,9 @@ const PCG_DEFAULT_INC_64 = 1442695040888963407n;
 const UINT64_MASK = 0xffffffffffffffffn;
 
 /**
- * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state,
- * 32-bit output), exposing only what CPUParticles2D uses: `seed` and `randf`.
- * Re-seeded per particle at birth (`cpu_particles_2d.cpp:922`) for everything
- * decided once per particle.
+ * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state, 32-bit output),
+ * exposing only what the emitters use: `seed`, `rand` and `randf`. Re-seeded per particle at birth
+ * (`cpu_particles_2d.cpp:922`, `cpu_particles_3d.cpp:832`) for everything decided once per particle.
  */
 export class GodotRandomPCG {
   private state = 0n;
@@ -64,6 +64,11 @@ export class GodotRandomPCG {
     this.step();
     this.state = (this.state + (BigInt(seed) & UINT64_MASK)) & UINT64_MASK;
     this.step();
+  }
+
+  /** `RandomPCG::rand()`: one `pcg32_random_r` output word, a `uint32`. */
+  rand(): number {
+    return this.step();
   }
 
   /**
@@ -96,11 +101,10 @@ export interface SeedRef {
 }
 
 /**
- * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`): a Park–Miller minimal
- * standard generator using Schrage's trick to stay inside 32-bit arithmetic,
- * threaded through the per-frame update (`cpu_particles_2d.cpp:1072-1109`).
- * Advances `state.value` in place and returns the new state scaled to 0..1, rounded as the
- * `real_t` the engine returns.
+ * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`, `cpu_particles_3d.cpp:635-648`): a Park–Miller
+ * minimal standard generator using Schrage's trick to stay inside 32-bit arithmetic, threaded through
+ * the per-frame update (`cpu_particles_2d.cpp:1072-1109`). Advances `state.value` in place and
+ * returns the new state scaled to 0..1, rounded as the `real_t` the engine returns.
  */
 export function randFromSeed(state: SeedRef): number {
   let s = state.value | 0;
@@ -113,7 +117,7 @@ export function randFromSeed(state: SeedRef): number {
 }
 
 /**
- * `idhash` (`cpu_particles_2d.cpp:687-692`): the xor-multiply avalanche that
+ * `idhash` (`cpu_particles_2d.cpp:687-692`, `cpu_particles_3d.cpp:628-633`): the xor-multiply avalanche that
  * only `randomness_ratio` uses, to jitter a particle's restart phase
  * (`cpu_particles_2d.cpp:860`).
  */

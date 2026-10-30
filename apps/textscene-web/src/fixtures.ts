@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Directed Points",
+    "file": "unit-cpuparticles2d-directed-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Emission Shapes",
     "file": "unit-cpuparticles2d-emission-shapes.tscn",
     "category": "Other"
@@ -438,13 +443,13 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Cpuparticles2d Unpreprocessed",
-    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
+    "name": "Cpuparticles2d Ring",
+    "file": "unit-cpuparticles2d-ring.tscn",
     "category": "Other"
   },
   {
-    "name": "Cpuparticles2d Unpreviewable",
-    "file": "unit-cpuparticles2d-unpreviewable.tscn",
+    "name": "Cpuparticles2d Unpreprocessed",
+    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
     "category": "Other"
   },
   {
@@ -458,8 +463,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Directed Points",
+    "file": "unit-cpuparticles3d-directed-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles3d Gizmo",
     "file": "unit-cpuparticles3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles3d Row",
+    "file": "unit-cpuparticles3d-row.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles3d Triplanar Points",
+    "file": "unit-cpuparticles3d-triplanar-points.tscn",
     "category": "Other"
   },
   {
@@ -858,6 +878,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gpu Particles Collision Gizmos",
+    "file": "unit-gpu-particles-collision-gizmos.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpu Particles Collision Height Field 3d",
     "file": "unit-gpu-particles-collision-height-field-3d.tscn",
     "category": "Other"
@@ -965,6 +990,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Graph Node",
     "file": "unit-graph-node.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Grid Map Billboard Shadow",
+    "file": "unit-grid-map-billboard-shadow.tscn",
     "category": "Other"
   },
   {
@@ -4201,6 +4231,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Uv1 Top Edge",
     "file": "unit-material-uv1-top-edge.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Vertex Color Srgb",
+    "file": "unit-material-vertex-color-srgb.tscn",
     "category": "Unit - Materials"
   },
   {

@@ -5,56 +5,11 @@
  */
 
 import type { Node2DProperties } from '../../base/node2d/types';
-import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles';
+import type { ParticleParam } from '../../shared/cpuparticles/params';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 import { CPUParticles2DEmissionShape, CPUParticles2DDrawOrder } from '../../../godot/scene/particles2d';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-
-/** `PARAM_MAX`: the length of every parameter array. */
-export const CPU_PARTICLES_2D_PARAM_COUNT = CPU_PARTICLES_PARAMS.length;
-
-/** The Inspector label, the Godot default of `_min` and `_max`, and whether Godot exposes a curve. */
-interface SlotDetails {
-  label: string;
-  def: number;
-  curve: boolean;
-}
-
-const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, SlotDetails>> = {
-  initial_velocity: { label: 'Initial Velocity', def: 0, curve: false },
-  angular_velocity: { label: 'Angular Velocity', def: 0, curve: true },
-  orbit_velocity: { label: 'Orbit Velocity', def: 0, curve: true },
-  linear_accel: { label: 'Linear Accel', def: 0, curve: true },
-  radial_accel: { label: 'Radial Accel', def: 0, curve: true },
-  tangential_accel: { label: 'Tangential Accel', def: 0, curve: true },
-  damping: { label: 'Damping', def: 0, curve: true },
-  angle: { label: 'Angle', def: 0, curve: true },
-  scale_amount: { label: 'Scale Amount', def: 1, curve: true },
-  hue_variation: { label: 'Hue Variation', def: 0, curve: true },
-  anim_speed: { label: 'Anim Speed', def: 0, curve: true },
-  anim_offset: { label: 'Anim Offset', def: 0, curve: true },
-};
-
-/**
- * The parameter slots, in `CPUParticlesParameter` order: the serialised prefix
- * (`<prefix>_min` / `_max` / `_curve`) and its {@link SLOT_DETAILS}. The parser applies
- * `def` and the formatter hides a slot that holds it, so one table keeps them agreed.
- */
-export const PARAM_SLOTS: ReadonlyArray<{ prefix: CpuParticlesParam } & SlotDetails> =
-  CPU_PARTICLES_PARAMS.map((prefix) => ({ prefix, ...SLOT_DETAILS[prefix] }));
-
-/** One parameter slot: the random range plus the optional shaping curve. */
-export interface ParticleParam {
-  min: number;
-  max: number;
-  /**
-   * Raw `SubResource("id")` reference to a `Curve`, resolved at render time.
-   * `InitialLinearVelocity` has no serialised curve property in Godot, so its
-   * slot is always absent.
-   */
-  curve?: string;
-}
 
 export interface CPUParticles2DProperties extends Node2DProperties {
   /** When false the emitter draws nothing at all (`cpu_particles_2d.cpp:717-728`). */
@@ -87,6 +42,12 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   emission_rect_extents: Vector2;
   emission_ring_radius: number;
   emission_ring_inner_radius: number;
+  /** `emission_points`, flat x, y pairs. POINTS and DIRECTED_POINTS place particles on them. */
+  emission_points: Float32Array;
+  /** `emission_normals`, flat x, y pairs, one for each point, that DIRECTED_POINTS turns along. */
+  emission_normals: Float32Array;
+  /** `emission_colors`, flat r, g, b, a, one for each point. */
+  emission_colors: Float32Array;
 
   /** `particle_flag_align_y`: orient each quad along its velocity. */
   particle_flag_align_y: boolean;
@@ -95,7 +56,7 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   spread: number;
   gravity: Vector2;
 
-  /** Indexed by `CPUParticlesParameter`. Always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
+  /** Indexed by `CPUParticlesParameter`. Always `CPU_PARTICLES_PARAM_COUNT` long. */
   params: ParticleParam[];
 
   color: Rgba;

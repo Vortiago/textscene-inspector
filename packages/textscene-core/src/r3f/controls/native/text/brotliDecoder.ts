@@ -5,7 +5,7 @@
  * brotli format.
  */
 
-/** Loads the Brotli decoder. The module system memoises the import, so every caller shares one. */
-export async function loadBrotliDecoder() {
-  return (await import('brotli/decompress')).default;
-}
+import { memoisedImport } from '../../../../resources/memoisedImport';
+
+/** The Brotli decoder, one import shared by every caller. */
+export const loadBrotliDecoder = memoisedImport(() => import('brotli/decompress').then((m) => m.default));

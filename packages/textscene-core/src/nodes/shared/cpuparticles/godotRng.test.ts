@@ -21,7 +21,19 @@ const GODOT_RANDF: ReadonlyArray<{ seed: number; values: number[] }> = [
   },
 ];
 
+/** `RandomNumberGenerator.randi()` after `seed = s`, printed by Godot 4.6.3. */
+const GODOT_RANDI: ReadonlyArray<{ seed: number; values: number[] }> = [
+  { seed: 0, values: [881477183, 1327520283, 692503688, 2153658078, 2046399657, 3080186220] },
+  { seed: 1, values: [1811587497, 683407368, 2033395789, 2375931748, 2873319489, 2189615729] },
+  { seed: 12345, values: [1321476956, 17539747, 3348728241, 2863338820, 85463406, 1024873269] },
+];
+
 describe('GodotRandomPCG', () => {
+  it.each(GODOT_RANDI)("matches Godot's rand() stream for seed $seed", ({ seed, values }) => {
+    const rng = new GodotRandomPCG(seed);
+    expect(values.map(() => rng.rand())).toEqual(values);
+  });
+
   for (const { seed, values } of GODOT_RANDF) {
     it(`matches Godot's randf() stream for seed ${seed}`, () => {
       const rng = new GodotRandomPCG(seed);

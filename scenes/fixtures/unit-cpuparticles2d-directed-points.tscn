@@ -1,0 +1,36 @@
+[gd_scene load_steps=2 format=3]
+
+; The variable: a DIRECTED_POINTS CPUParticles2D emits from its one point, turns its velocity
+; along the point's normal and takes the point's colour from emission_colors. Velocity +x turns
+; to (0.6, 0.8) under the normal (0.6, 0.8), so eight cyan balls stand in a line from the point
+; at (-120, -120), one born each quarter second.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Line" type="CPUParticles2D" parent="."]
+position = Vector2(576, 324)
+amount = 8
+texture = ExtResource("1_ball")
+lifetime = 2.0
+preprocess = 1.9
+use_fixed_seed = true
+seed = 7
+fixed_fps = 30
+local_coords = true
+emission_shape = 5
+emission_points = PackedVector2Array(-120, -120)
+emission_normals = PackedVector2Array(0.6, 0.8)
+emission_colors = PackedColorArray(0, 1, 1, 1)
+direction = Vector2(1, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 140.0
+initial_velocity_max = 140.0
+scale_amount_min = 2.0
+scale_amount_max = 2.0

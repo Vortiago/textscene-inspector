@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { heldResource } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../godot/scene/resourceLiteral.js';
 import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
 import {
   CURVE3D_DATA,

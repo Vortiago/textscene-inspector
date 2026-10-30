@@ -10,14 +10,14 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
  * `CPUParticles3D::DrawOrder` (`scene/3d/cpu_particles_3d.h:43-48`), `DRAW_ORDER_MAX` left out.
  * It has no `REVERSE_LIFETIME`, unlike {@link GPU_PARTICLES_3D_DRAW_ORDER_NAMES}.
  */
-const CpuDrawOrder = {
+export const CPUParticles3DDrawOrder = {
   INDEX: 0,
   LIFETIME: 1,
   VIEW_DEPTH: 2,
 } as const;
 
 /** Each CPUParticles3D draw order by its integer, spelled as its constant. */
-export const CPU_PARTICLES_3D_DRAW_ORDER_NAMES = enumNamesByValue(CpuDrawOrder);
+export const CPU_PARTICLES_3D_DRAW_ORDER_NAMES = enumNamesByValue(CPUParticles3DDrawOrder);
 
 /** `GPUParticles3D::DrawOrder` (`scene/3d/gpu_particles_3d.h:41-46`). */
 const GpuDrawOrder = {
