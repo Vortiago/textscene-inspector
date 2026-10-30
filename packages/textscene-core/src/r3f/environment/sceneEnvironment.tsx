@@ -28,7 +28,10 @@ interface SceneEnvironments {
   shown: Environment | null;
   /** The world's own Environment, which a probe captures with. Written only by `useOwnEnvironment`. */
   own: Environment | null;
-  /** Grows each time `own` or one of its parts changes, written by `useOwnEnvironment` and `registerEnvironmentPart`. */
+  /**
+   * Grows each time `own` or one of its parts changes, written by `useOwnEnvironment`,
+   * `registerEnvironmentPart` and `noteEnvironmentChange`.
+   */
   ownChanges: number;
   /** The Environment whose parts are on the scene now, written only by `putOn`. */
   applied: Environment | null;
@@ -87,6 +90,16 @@ export function registerEnvironmentPart(
     environments.onScene[index]!.takeOff();
     environments.onScene.splice(index, 1);
   };
+}
+
+/**
+ * Counts a change of what a part of `environment` draws on `scene` that no registration shows, such
+ * as a sky bake that lands a frame after the render that asked for it.
+ *
+ * @canonical A part of an Environment on its scene
+ */
+export function noteEnvironmentChange(scene: THREE.Scene, environment: Environment): void {
+  noteChangeOf(environmentsOf(scene), environment);
 }
 
 /**

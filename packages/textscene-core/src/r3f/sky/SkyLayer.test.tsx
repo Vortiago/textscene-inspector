@@ -10,7 +10,7 @@ import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/bu
 import type { Sky } from '../../resources/sky/types';
 import { decodeSkyMaterial } from '../../resources/sky/decode';
 import { SkyLayer } from './SkyLayer';
-import { ShownEnvironment } from '../environment/sceneEnvironment';
+import { ownEnvironmentChanges, ShownEnvironment, useOwnEnvironment } from '../environment/sceneEnvironment';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
 import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
@@ -533,19 +533,31 @@ describe('SkyLayer under an exposure', () => {
   });
 
   describe('drawn at another exposure', () => {
-    it('reads the radiance the view baked at that exposure, and puts it back', async () => {
+    const camera = new THREE.PerspectiveCamera();
+    /** What `read` sees in a render of `scene` at `exposure`. */
+    const drawnAt = <T,>(scene: THREE.Scene, exposure: number | null, read: () => T) =>
+      drawAtExposure(scene, exposure, () => {
+        fireSceneRender(scene, camera);
+        return read();
+      });
+
+    it('reads the radiance the view baked at that exposure, and its own in its next render', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ intensity: 1.5 })));
-      fireSceneRender(scene, new THREE.PerspectiveCamera());
-      const inside = drawAtExposure(scene, 3, () => scene.environmentIntensity);
+      fireSceneRender(scene, camera);
+      const inside = drawnAt(scene, 3, () => scene.environmentIntensity);
+      fireSceneRender(scene, camera);
+
       expect(inside).toBeCloseTo(1.5 * 2 * 3, 10);
       expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4, 10);
     });
 
-    it('draws the background at that exposure, and puts it back', async () => {
+    it('draws the background at that exposure, and its own in its next render', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ backgroundIntensity: 1.5 })));
-      const inside = drawAtExposure(scene, 3, () => scene.backgroundIntensity);
+      const inside = drawnAt(scene, 3, () => scene.backgroundIntensity);
+      fireSceneRender(scene, camera);
+
       expect(inside).toBeCloseTo(1.5 * 3, 10);
       expect(scene.backgroundIntensity).toBeCloseTo(1.5 * 2, 10);
     });
@@ -553,11 +565,8 @@ describe('SkyLayer under an exposure', () => {
     it('draws at no exposure as at 1', async () => {
       built.next = skyEnvironment();
       const { scene } = await mount(exposed(2, sky({ intensity: 1.5, backgroundIntensity: 1.5 })));
-      fireSceneRender(scene, new THREE.PerspectiveCamera());
-      const inside = drawAtExposure(scene, null, () => [
-        scene.environmentIntensity,
-        scene.backgroundIntensity,
-      ]);
+      fireSceneRender(scene, camera);
+      const inside = drawnAt(scene, null, () => [scene.environmentIntensity, scene.backgroundIntensity]);
       expect(inside).toEqual([3, 1.5]);
     });
 
@@ -749,6 +758,25 @@ describe('SkyLayer under an exposure', () => {
 
       expect(ambientDrawnAt(scene, 5)).toBeCloseTo(1.5 * 3 * 5, 10);
     });
+
+    it('counts a bake that lands a frame late as a change of the world Environment, which a probe captures again', async () => {
+      built.next = skyEnvironment();
+      const { scene, advanceFrames } = await mount(
+        exposed(
+          2,
+          <>
+            <OwnEnvironment />
+            {sky({ sky: proceduralSky })}
+            {skyLight}
+          </>
+        )
+      );
+      const changes = ownEnvironmentChanges(scene);
+      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
+      await advanceFrames(1);
+
+      expect(ownEnvironmentChanges(scene)).toBeGreaterThan(changes);
+    });
   });
 
   describe('shared by layers that draw one sky', () => {
@@ -780,6 +808,35 @@ describe('SkyLayer under an exposure', () => {
       expect(dispose).not.toHaveBeenCalled();
     });
 
+    it('bakes a sky that is not debanded once for two intensities', async () => {
+      built.next = skyEnvironment();
+      const subScene = new THREE.Scene();
+      await mount(
+        <>
+          {sky({ intensity: 1 })}
+          {createPortal(sky({ intensity: 2 }), subScene)}
+        </>
+      );
+
+      expect(bakes).toHaveLength(1);
+    });
+
+    it('frees a bake that no render read in a frame after the one that baked it, as Godot keeps one radiance', async () => {
+      const dispose = vi.fn();
+      built.next = skyEnvironment(dispose);
+      const camera = new THREE.PerspectiveCamera();
+      const { scene, advanceFrames } = await mount(exposed(2, sky({ sky: proceduralSky })));
+      fireSceneRender(scene, camera);
+      drawAtExposure(scene, 3, () => fireSceneRender(scene, camera));
+      await advanceFrames(1);
+      for (const _frame of [1, 2]) {
+        fireSceneRender(scene, camera);
+        await advanceFrames(1);
+      }
+
+      expect(dispose).toHaveBeenCalledOnce();
+    });
+
     it('bakes a sky that holds no exposure once for every exposure', async () => {
       built.next = skyEnvironment();
       const { scene, advanceFrames } = await mount(exposed(2, sky()));
@@ -788,5 +845,22 @@ describe('SkyLayer under an exposure', () => {
 
       expect(bakes).toHaveLength(1);
     });
+
+    it('keeps its bakes when a new exposure runs its effect again', async () => {
+      const dispose = vi.fn();
+      built.next = skyEnvironment(dispose);
+      const { update, advanceFrames } = await mount(exposed(2, sky()));
+      await update(exposed(5, sky()));
+      await advanceFrames(1);
+
+      expect(bakes).toHaveLength(1);
+      expect(dispose).not.toHaveBeenCalled();
+    });
   });
 });
+
+/** Names the Environment of these tests the world's own, as a probe captures with. */
+function OwnEnvironment() {
+  useOwnEnvironment(ENVIRONMENT);
+  return null;
+}

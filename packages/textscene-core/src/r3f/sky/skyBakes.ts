@@ -18,6 +18,7 @@ import {
   type SkyUpdatePlan,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { perObject } from '../../utils/perObject';
+import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
 
 /** A sky baked at one exposure: its background and the radiance its readers sample. */
@@ -46,109 +47,148 @@ export function skyUpdatePlan(sky: Sky): SkyUpdatePlan {
  */
 export const radianceUpdateOf = perObject((_sky: Sky) => newSkyRadianceUpdate());
 
-/** Bakes that layers hold, and how many hold them. */
-interface HeldBakes {
-  bakes: SkyBakes;
-  holders: number;
-}
-
 /**
  * The bakes each renderer holds of each sky, by the rest of the input. Written only by
- * `holdSkyBakes` and its release. An entry leaves with its last holder.
+ * `holdSkyBakes`, and an entry leaves when its bakes are disposed.
  */
 const heldBakesOf = perObject((_gl: THREE.WebGLRenderer) =>
-  perObject((_sky: Sky) => new Map<string, HeldBakes>())
+  perObject((_sky: Sky) => new Map<string, SkyBakes>())
 );
 
 /**
  * The bakes of `input` on `gl`, which every layer that draws the same sky with the same input
- * shares, as Godot shares one radiance. `lightsKey` names the lights. The caller owns the release.
+ * shares, as Godot shares one radiance. `lightsKey` names the lights, and `contextRestores` the
+ * context the bakes live in. The caller owns the release.
  */
 export function holdSkyBakes(
   gl: THREE.WebGLRenderer,
   input: SkyBakeInput,
-  lightsKey: string
+  lightsKey: string,
+  contextRestores: number
 ): { bakes: SkyBakes; release: () => void } {
   const held = heldBakesOf(gl)(input.sky);
-  const key = inputKey(input, lightsKey);
-  const entry = held.get(key) ?? { bakes: new SkyBakes(gl, input), holders: 0 };
-  held.set(key, entry);
-  entry.holders++;
-  let isReleased = false;
-  return {
-    bakes: entry.bakes,
-    release: () => {
-      if (isReleased) return;
-      isReleased = true;
-      entry.holders--;
-      if (entry.holders > 0) return;
-      entry.bakes.dispose();
-      held.delete(key);
-    },
-  };
+  const key = `${inputKey(input, lightsKey)}|${contextRestores}`;
+  const bakes = held.get(key) ?? new SkyBakes(gl, input, () => held.delete(key));
+  held.set(key, bakes);
+  return { bakes, release: holdUntilReleased(bakes) };
 }
 
-function inputKey({ panorama, asBackground, intensity, rotation }: SkyBakeInput, lightsKey: string): string {
-  return [panorama?.uuid ?? '', asBackground, intensity, rotation.x, rotation.y, rotation.z, lightsKey].join(
-    '|'
-  );
+/** The input a bake reads besides the sky. Only a debanded sky reads the intensity. */
+function inputKey(
+  { sky, panorama, asBackground, intensity, rotation }: SkyBakeInput,
+  lightsKey: string
+): string {
+  const debandedIntensity = isDebanded(sky.material) ? intensity : '';
+  return [
+    panorama?.uuid ?? '',
+    asBackground,
+    debandedIntensity,
+    rotation.x,
+    rotation.y,
+    rotation.z,
+    lightsKey,
+  ].join('|');
 }
 
 /** The one exposure a bake that holds none bakes at, as every exposure would bake it alike. */
 const ANY_EXPOSURE = 1;
 
+/**
+ * The bakes of one input by exposure. Godot keeps one radiance for a sky, so a bake that no render
+ * read since the last sweep is freed, and a render whose bake waits draws with the latest one.
+ */
 export class SkyBakes {
   /** Each bake by its exposure, null for one the renderer could not make. */
   private readonly bakes = new Map<number, BakedSky | null>();
   /** The exposures a render asked for while it drew, which `bakeWanted` bakes. */
   private readonly wanted = new Set<number>();
+  /** The exposures read since the last sweep, written by `at` and `bakeNow`, cleared by each sweep. */
+  private readonly read = new Set<number>();
+  /** The bake read last, which a render whose bake waits draws with, and which no sweep frees. */
+  private latest: { exposure: number; baked: BakedSky } | null = null;
   /** Whether the exposure changes a bake: through a light energy, or the debanding noise. */
   private readonly holdsExposure: boolean;
+  /** Grows by one with each bake made, so a reader tells a new one. */
+  bakeCount = 0;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
-    private readonly input: SkyBakeInput
+    private readonly input: SkyBakeInput,
+    private readonly onDispose: () => void
   ) {
     const { sky, lights } = input;
-    const lightsScale = materialReadsLights(sky.material) && lights.some((light) => light.energy !== 0);
-    this.holdsExposure = lightsScale || isDebanded(sky.material);
+    const exposureScalesLights =
+      materialReadsLights(sky.material) && lights.some((light) => light.energy !== 0);
+    this.holdsExposure = exposureScalesLights || isDebanded(sky.material);
   }
 
   /** Bakes the sky at `exposure` now, outside any render, or answers the bake it holds. */
   bakeNow(exposure: number): BakedSky | null {
     const key = this.keyOf(exposure);
-    if (!this.bakes.has(key)) this.bakes.set(key, bakeSky(this.gl, this.input, key));
-    return this.bakes.get(key)!;
+    if (!this.bakes.has(key)) this.bake(key);
+    return this.readOf(key);
   }
 
   /**
-   * The bake at `exposure`, or null while it waits for `bakeWanted`. A render that asks draws with
-   * another bake for one frame, since a bake renders cubes of its own.
+   * The bake at `exposure`, else the latest while it waits for `bakeWanted`, since a bake renders
+   * cubes of its own. Null only before any bake.
    */
   at(exposure: number): BakedSky | null {
     const key = this.keyOf(exposure);
     if (!this.bakes.has(key)) this.wanted.add(key);
-    return this.bakes.get(key) ?? null;
+    return this.readOf(key) ?? (this.latest && this.readOf(this.latest.exposure));
   }
 
-  /** Bakes each exposure a render asked for. Answers whether it baked any. */
+  /**
+   * Frees each bake no render read since the last sweep, then bakes each exposure a render asked
+   * for. Answers whether it baked any. A sweep with no read between runs nothing, so several
+   * holders can call this in one frame.
+   */
   bakeWanted(): boolean {
+    if (this.read.size > 0) this.sweep();
     if (this.wanted.size === 0) return false;
-    for (const exposure of this.wanted) this.bakeNow(exposure);
+    for (const exposure of this.wanted) this.bake(exposure);
     this.wanted.clear();
     return true;
   }
 
   dispose(): void {
-    for (const baked of this.bakes.values()) {
-      baked?.radiance.hide();
-      baked?.dispose();
+    for (const baked of this.bakes.values()) free(baked);
+    this.onDispose();
+  }
+
+  private bake(exposure: number): void {
+    const baked = bakeSky(this.gl, this.input, exposure);
+    this.bakes.set(exposure, baked);
+    this.read.add(exposure);
+    if (baked) this.bakeCount++;
+  }
+
+  private readOf(exposure: number): BakedSky | null {
+    const baked = this.bakes.get(exposure) ?? null;
+    if (!baked) return null;
+    this.read.add(exposure);
+    this.latest = { exposure, baked };
+    return baked;
+  }
+
+  private sweep(): void {
+    for (const [exposure, baked] of this.bakes) {
+      if (this.read.has(exposure) || exposure === this.latest?.exposure) continue;
+      free(baked);
+      this.bakes.delete(exposure);
     }
+    this.read.clear();
   }
 
   private keyOf(exposure: number): number {
     return this.holdsExposure ? exposure : ANY_EXPOSURE;
   }
+}
+
+function free(baked: BakedSky | null): void {
+  baked?.radiance.hide();
+  baked?.dispose();
 }
 
 /** The sky baked at `exposure`, which scales the energy of each light and the debanding noise. */

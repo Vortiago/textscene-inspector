@@ -27,8 +27,12 @@ import { stepSkyRadiance } from '../../godot/rendering/environment/skyRadianceUp
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
-import { drawnExposureOf, registerExposureStage, type ExposureStage } from '../exposure/sceneExposure';
-import { registerEnvironmentPart, useEnvironmentKey } from '../environment/sceneEnvironment';
+import { drawnExposureOf } from '../exposure/sceneExposure';
+import {
+  noteEnvironmentChange,
+  registerEnvironmentPart,
+  useEnvironmentKey,
+} from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -99,9 +103,10 @@ export function SkyLayer({
   const contributionRef = useRef(contribution);
   contributionRef.current = contribution;
 
-  const bakesRef = useRef<SkyBakes | null>(null);
+  // Written only by the effect below, while it holds bakes.
+  const bakeWantedRef = useRef<(() => boolean) | null>(null);
   useFrame(({ invalidate }) => {
-    if (bakesRef.current?.bakeWanted()) invalidate();
+    if (bakeWantedRef.current?.()) invalidate();
   });
 
   useEffect(() => {
@@ -112,42 +117,36 @@ export function SkyLayer({
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
     const input = { sky, lights, panorama, asBackground, intensity, rotation: skyRotation };
-    const { bakes, release } = holdSkyBakes(gl, input, lightsKey);
+    const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky);
     const readsLights = (materialReadsLights(sky.material) || fogScattersSun) && lights.length > 0;
     const lightData = readsLights ? lightsKey : NO_SKY_LIGHTS;
     // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
-    const lightsScale = readsLights && lights.some((light) => light.energy !== 0);
+    const exposureScalesLights = readsLights && lights.some((light) => light.energy !== 0);
     const first = bakes.bakeNow(update.baked?.exposure ?? exposure);
     if (!first) {
       release();
       return undefined;
     }
     let radiance = first;
-    let background = first;
-    bakesRef.current = bakes;
+    bakeWantedRef.current = bakeWantedOf(bakes, () => noteEnvironmentChange(scene, environment));
 
     // A render draws the background live at its own exposure, and reads the radiance at its own
     // exposure times the brightness that baked it (`render_forward_clustered.cpp:1993`, `:2045`).
     const bakedBrightness = (drawn: number) => update.baked?.brightness ?? intensity * drawn;
     const showAt = (drawn: number) => {
       radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
-      background = bakes.at(drawn) ?? background;
       scene.environmentIntensity = bakedBrightness(drawn) * drawn;
       if (asBackground) {
-        scene.background = background.background;
+        scene.background = (bakes.at(drawn) ?? radiance).background;
         scene.backgroundIntensity = backgroundIntensity * drawn;
       }
     };
-    const showHeld = () => showAt(exposure);
-    const stage: ExposureStage = (target) => {
-      showAt(target ?? 1);
-      return showHeld;
-    };
+    // Each render shows the sky at the exposure it draws at, a staged draw too (`drawAtExposure`).
     const showForRender = () => {
       const drawn = drawnExposureOf(scene);
-      const isDirtied = noteSkyLights(gl, lightData, lightsScale ? drawn : 1);
+      const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
       stepSkyRadiance(update, plan, { exposure: drawn, brightness: intensity * drawn }, isDirtied);
       showAt(drawn);
       radiance.radiance.show(contributionRef.current, bakedBrightness(drawn));
@@ -164,11 +163,9 @@ export function SkyLayer({
       const stopShowingRadiance = observeSceneCamera(scene, showForRender);
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       if (asBackground) scene.backgroundRotation.copy(skyRotation);
-      showHeld();
-      const stopStaging = registerExposureStage(scene, stage);
+      showAt(exposure);
       const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
       return () => {
-        stopStaging();
         stopShowingRadiance();
         stopHidingRadiance();
         stopDebanding?.();
@@ -184,7 +181,7 @@ export function SkyLayer({
 
     return () => {
       stopRegistering();
-      bakesRef.current = null;
+      bakeWantedRef.current = null;
       release();
     };
   }, [
@@ -206,6 +203,22 @@ export function SkyLayer({
   ]);
 
   return null;
+}
+
+/**
+ * Bakes each exposure a render of `bakes` asked for, and answers whether a frame should draw. A bake
+ * that lands, whichever layer baked it, runs `noteBake`: a reflection probe captured the bake it
+ * replaces, and captures again only for a change of its Environment (`sceneProbes.ts`).
+ */
+function bakeWantedOf(bakes: SkyBakes, noteBake: () => void): () => boolean {
+  let seenCount = bakes.bakeCount;
+  return () => {
+    const isBaked = bakes.bakeWanted();
+    if (bakes.bakeCount === seenCount) return isBaked;
+    seenCount = bakes.bakeCount;
+    noteBake();
+    return true;
+  };
 }
 
 /**
