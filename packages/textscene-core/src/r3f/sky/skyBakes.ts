@@ -32,7 +32,7 @@ interface BakedSky {
 /** What a bake of the sky takes beside the exposure. */
 interface SkyBakeInput extends Omit<SkyEnvironmentInput, 'energy'> {
   /** `background_energy_multiplier`, which the exposure scales into the debanding noise. */
-  intensity: number;
+  energyMultiplier: number;
   rotation: THREE.Euler;
 }
 
@@ -73,16 +73,16 @@ export function holdSkyBakes(
   return { bakes, release: holdUntilReleased(bakes) };
 }
 
-/** The input a bake reads besides the sky. Only a debanded sky reads the intensity. */
+/** The input a bake reads besides the sky. Only a debanded sky reads the energy multiplier. */
 function inputKey(
-  { sky, panorama, asBackground, intensity, rotation }: SkyBakeInput,
+  { sky, panorama, asBackground, energyMultiplier, rotation }: SkyBakeInput,
   lightsKey: string
 ): string {
-  const debandedIntensity = isDebanded(sky.material) ? intensity : '';
+  const debandedEnergy = isDebanded(sky.material) ? energyMultiplier : '';
   return [
     panorama?.uuid ?? '',
     asBackground,
-    debandedIntensity,
+    debandedEnergy,
     rotation.x,
     rotation.y,
     rotation.z,
@@ -193,8 +193,8 @@ function free(baked: BakedSky | null): void {
 
 /** The sky baked at `exposure`, which scales the energy of each light and the debanding noise. */
 function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number): BakedSky | null {
-  const { intensity, rotation, lights, ...sky } = input;
-  const energy = intensity * exposure;
+  const { energyMultiplier, rotation, lights, ...sky } = input;
+  const energy = energyMultiplier * exposure;
   const built = buildSkyEnvironment(gl, { ...sky, lights: exposed(lights, exposure), energy });
   if (!built) return null;
   const radiance = new SkyRadiance(gl, built.layers, rotation);

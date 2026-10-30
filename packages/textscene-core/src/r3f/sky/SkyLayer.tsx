@@ -40,10 +40,10 @@ import type { Vector3 } from '../../godot/math/vector';
 interface SkyLayerProps {
   sky: Sky;
   /**
-   * The sky's full reflection strength (`background_energy_multiplier`), which the radiance bakes
-   * in and each surface reads again: a surface reflects the whole sky whatever the ambient source.
+   * `background_energy_multiplier`, which scales the drawn background once and the radiance twice:
+   * the bake holds it, and each surface reads the radiance at it again, whatever the ambient source.
    */
-  intensity?: number;
+  energyMultiplier?: number;
   /**
    * `ambient_light_sky_contribution`: the sky's share of the ambient, 0 when the ambient
    * comes from elsewhere.
@@ -55,11 +55,6 @@ interface SkyLayerProps {
    * over a colour background).
    */
   asBackground?: boolean;
-  /**
-   * Godot's `background_energy_multiplier` applied to the drawn sky, so a doubled
-   * multiplier brightens the sky as well as the surfaces it lights.
-   */
-  backgroundIntensity?: number;
   /** `sky_rotation`, which turns the background and the light the sky gives. */
   rotation: Vector3;
   /** The pools the sky material's references, such as a panorama, resolve in. */
@@ -73,10 +68,9 @@ const LIGHT_SLOTS = 4;
 
 export function SkyLayer({
   sky,
-  intensity = 1,
+  energyMultiplier = 1,
   contribution = 1,
   asBackground = true,
-  backgroundIntensity = 1,
   rotation,
   resources,
   fogScattersSun = false,
@@ -115,7 +109,7 @@ export function SkyLayer({
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-    const input = { sky, lights, panorama, asBackground, intensity, rotation: skyRotation };
+    const input = { sky, lights, panorama, asBackground, energyMultiplier, rotation: skyRotation };
     const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky);
@@ -135,20 +129,21 @@ export function SkyLayer({
     // brightness that baked it, times its own exposure and its `background_energy_multiplier`
     // (`render_forward_clustered.cpp:2045`, `render_scene_data_rd.cpp:169`,
     // `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads it without the multiplier (`:1121`).
-    const bakedBrightness = (drawn: number) => update.baked?.brightness ?? intensity * drawn;
+    const brightnessAt = (drawn: number) => energyMultiplier * drawn;
+    const bakedBrightness = (drawn: number) => update.baked?.brightness ?? brightnessAt(drawn);
     const showAt = (drawn: number) => {
       radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
-      scene.environmentIntensity = bakedBrightness(drawn) * drawn * intensity;
+      scene.environmentIntensity = bakedBrightness(drawn) * brightnessAt(drawn);
       if (asBackground) {
         scene.background = (bakes.at(drawn) ?? radiance).background;
-        scene.backgroundIntensity = backgroundIntensity * drawn;
+        scene.backgroundIntensity = brightnessAt(drawn);
       }
     };
     // Each render shows the sky at the exposure it draws at, a staged draw too (`drawAtExposure`).
     const showForRender = () => {
       const drawn = drawnExposureOf(scene);
       const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
-      stepSkyRadiance(update, plan, { exposure: drawn, brightness: intensity * drawn }, isDirtied);
+      stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
       showAt(drawn);
       radiance.radiance.show(contributionRef.current, bakedBrightness(drawn));
     };
@@ -191,11 +186,10 @@ export function SkyLayer({
     environment,
     sky,
     fogScattersSun,
-    intensity,
+    energyMultiplier,
     exposure,
     panorama,
     asBackground,
-    backgroundIntensity,
     lightsKey,
     contextRestores,
     rotationX,

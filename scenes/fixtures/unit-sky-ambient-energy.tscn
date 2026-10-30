@@ -1,8 +1,7 @@
-; One variable: the sky's `background_energy_multiplier`, 2, with the sky as the only light. Godot
-; bakes the radiance at the multiplier and each surface reads it at the multiplier again
-; (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`), so the rough
-; sphere's ambient and the smooth sphere's reflection draw at four times the sky, and the
-; background at twice.
+; One variable: the sky's `background_energy_multiplier`, 2, with the sky as the only light. The
+; radiance bakes at the multiplier and each surface reads it at the multiplier again
+; (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`), so the spheres
+; draw the ambient and the reflection at four times the sky, and the background at twice.
 
 [gd_scene format=3]
 

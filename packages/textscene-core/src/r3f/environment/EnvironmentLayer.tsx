@@ -81,10 +81,8 @@ function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps
         <SkyLayer
           sky={sky}
           asBackground={showsSky}
-          backgroundIntensity={settings.background.energyMultiplier}
+          energyMultiplier={settings.background.energyMultiplier}
           rotation={settings.skyRotation}
-          // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
-          intensity={skyAmbient ? skyAmbient.energy : 0}
           contribution={skyAmbient ? skyAmbient.contribution : 1}
           resources={skyResources}
           fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
