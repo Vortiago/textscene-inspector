@@ -1,0 +1,30 @@
+; The variable: CPUParticles3D draws its particles, each an instance of its mesh coloured by the
+; particle colour through vertex_color_use_as_albedo. No other golden shows it: the other emitter
+; scenes fall under gravity and spread, so no probe sits on a particle Godot and the previewer both
+; place. Four particles, one born each half second at 1 unit a second along +x, sit in a row at
+; x = 0, 0.5, 1 and 1.5 after the 1.5 s preprocess.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Unshaded"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="Box"]
+material = SubResource("Unshaded")
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="Row" type="CPUParticles3D" parent="."]
+amount = 4
+lifetime = 2.0
+preprocess = 1.5
+use_fixed_seed = true
+seed = 7
+mesh = SubResource("Box")
+direction = Vector3(1, 0, 0)
+spread = 0.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0
+color = Color(1, 0.5, 0, 1)

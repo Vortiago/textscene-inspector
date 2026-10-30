@@ -107,6 +107,10 @@ export const CANVAS_2D_SCENES = [
   // is one exact draw.
   { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', mode: '2d' },
   { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', mode: '2d' },
+  // One point, its normal and its colour: the velocity turns along the normal (cpu_particles_2d.cpp:940-946).
+  { name: 'cpuparticles2d-directed-points', file: 'unit-cpuparticles2d-directed-points.tscn', mode: '2d' },
+  // A RING fills the band between its radii, in other places than Godot's unsaved RNG picks.
+  { name: 'cpuparticles2d-ring', file: 'unit-cpuparticles2d-ring.tscn', mode: '2d' },
   { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d' },
   // A crossed `_min`/`_max` pair and a lone `_min` load as Godot's paired setters leave them:
   // 100 and 100 for the velocity, 6 and 6 for the scale.

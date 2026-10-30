@@ -16,6 +16,7 @@ import {
   basisInvert,
   basisMultiply,
   basisOrthonormalized,
+  IDENTITY_BASIS,
   type BasisComponents,
   type Triple,
 } from '../math/basis.js';
@@ -26,8 +27,6 @@ export interface GltfNodeTransform {
   rotation?: readonly number[];
   scale?: readonly number[];
 }
-
-export const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
  * The node's basis as `_parse_nodes` sets it (`gltf_document.cpp:586-597`): a matrix by columns

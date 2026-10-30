@@ -37,6 +37,11 @@ function groupMaterial(mesh: THREE.Mesh, group: THREE.Group | null): THREE.Mater
   return material[(group as { materialIndex?: number } | null)?.materialIndex ?? 0]!;
 }
 
+/** The material three draws the mesh's group at `groupIndex` with (0 for a single material). */
+export function groupMaterialAt(mesh: THREE.Mesh, groupIndex = 0): THREE.Material {
+  return groupMaterial(mesh, groupAt(mesh, groupIndex));
+}
+
 function snapshot(mesh: THREE.Mesh, material: THREE.Material, drawn: THREE.Material): DrawState {
   return {
     material,
@@ -223,11 +228,6 @@ export function rotationAngle(a: THREE.Matrix4, b: THREE.Matrix4): number {
 /** Two matrices hold the same elements, to nine decimal places. */
 export function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
   actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
-}
-
-/** Two world matrices turn the same way, to five decimal places of a radian. */
-export function expectSameRotation(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
-  expect(rotationAngle(actual, expected)).toBeCloseTo(0, 5);
 }
 
 function rotationOf(matrix: THREE.Matrix4): THREE.Quaternion {

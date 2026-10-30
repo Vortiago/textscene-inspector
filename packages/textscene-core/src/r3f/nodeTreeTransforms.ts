@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
-import type { Transform3D } from '../godot/math/transform3d.js';
+import { multiplyTransform3D, storedTransform3D, type Transform3D } from '../godot/math/transform3d.js';
 import { isTopLevelItem } from './canvasPaintOrder.js';
 import { nodeEscapesParent } from './nodeEscapesParent.js';
 
@@ -48,6 +48,16 @@ export function matrixToTransform3D(m: THREE.Matrix4): Transform3D {
     basis_z: { x: e[2]!, y: e[6]!, z: e[10]! },
     origin: { x: e[12]!, y: e[13]!, z: e[14]! },
   };
+}
+
+/**
+ * `Node3D::get_global_transform` (`node_3d.cpp:655-660`) of `object`: each ancestor's local
+ * transform as a `real_t` field holds it, composed from the root in float. Not `matrixWorld`,
+ * which three composes in double. Each `matrix` must be current.
+ */
+export function realGlobalTransform3D(object: THREE.Object3D): Transform3D {
+  const local = storedTransform3D(matrixToTransform3D(object.matrix));
+  return object.parent ? multiplyTransform3D(realGlobalTransform3D(object.parent), local) : local;
 }
 
 /** Local Transform3D of a node as a Matrix4 (identity when absent). */

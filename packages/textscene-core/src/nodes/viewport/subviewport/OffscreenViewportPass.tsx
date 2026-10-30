@@ -12,8 +12,10 @@ import {
 import {
   CanvasWorldScope,
   SharedWorldEnvironmentScope,
+  ViewportPassEnvironment,
   WorldEnvironmentScope,
 } from '../../../r3f/environment/WorldEnvironmentScope';
+import { drawWith } from '../../../r3f/environment/sceneEnvironment';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -48,7 +50,6 @@ import {
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
-import { drawAtExposure } from '../../../r3f/exposure/sceneExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
@@ -130,20 +131,22 @@ export function OffscreenViewportPass({
   const toneMapStage = useRef<OffscreenToneMap | null>(null);
   // Godot tonemaps through the Environment of the world `find_world_3d()` resolves, so the stage
   // mounts in that world: beside an inline pass, and inside a portal, whose scope answers for both.
-  // It reads the attributes of this pass's own camera, which scale the world it draws.
+  // It reads the attributes and the Environment of this pass's own camera, which the world draws with.
   const stage =
     kind === '3d' ? (
       <ViewportPassAttributes path={path}>
-        <OffscreenToneMapStage
-          stage={toneMapStage}
-          target={target}
-          msaaMode={msaaMode}
-          width={width}
-          height={height}
-          transparentBackground={transparentBg}
-          usesDebanding={properties.use_debanding}
-          name={node.name}
-        />
+        <ViewportPassEnvironment>
+          <OffscreenToneMapStage
+            stage={toneMapStage}
+            target={target}
+            msaaMode={msaaMode}
+            width={width}
+            height={height}
+            transparentBackground={transparentBg}
+            usesDebanding={properties.use_debanding}
+            name={node.name}
+          />
+        </ViewportPassEnvironment>
       </ViewportPassAttributes>
     ) : null;
   // A 3D portal of its own world renders its lights only through this pass, so it fits them itself
@@ -254,7 +257,7 @@ export function OffscreenViewportPass({
               renderWithShadowAtlas(shadowAtlas, () =>
                 kind === '2d'
                   ? frame.render(gl, passScene, camera)
-                  : drawAtExposure(passScene, exposure, () => gl.render(passScene, camera))
+                  : drawWith(passScene, toneMap!.environment, exposure, () => gl.render(passScene, camera))
               )
             );
           } finally {

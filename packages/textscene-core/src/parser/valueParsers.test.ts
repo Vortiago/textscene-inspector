@@ -29,7 +29,9 @@ import {
   realOr,
   realVec2Or,
   realVec3Or,
+  packedOr,
 } from './valueParsers';
+import { parsePackedVector2Array } from '../resources/shapes/packedArray';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 
@@ -82,6 +84,24 @@ describe('floatOr', () => {
     expect(floatOr('abc', 0.01, 'Sprite3D.pixel_size')).toBe(0.01);
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0]?.[0]).toContain('Sprite3D.pixel_size');
+  });
+});
+
+describe('packedOr', () => {
+  const NONE = new Float32Array(0);
+  it('parses a valid packed array', () => {
+    expect(packedOr('PackedVector2Array(1, 2)', parsePackedVector2Array, NONE)).toEqual(
+      new Float32Array([1, 2])
+    );
+  });
+  it('falls back silently when absent', () => {
+    expect(packedOr(undefined, parsePackedVector2Array, NONE)).toBe(NONE);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+  it('warns then falls back when present but invalid', () => {
+    expect(packedOr('PackedVector2Array(1, abc)', parsePackedVector2Array, NONE, 'Line2D.points')).toBe(NONE);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toContain('Line2D.points');
   });
 });
 

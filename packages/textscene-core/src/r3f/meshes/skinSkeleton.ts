@@ -15,21 +15,30 @@ import { useAnimatedBonePoses } from '../contexts/AnimatedBonePosesContext.js';
 import { setMatrixFromTransform3D } from '../nodeTreeTransforms.js';
 import { sameData } from '../../utils/sameData.js';
 import { useByValue } from '../hooks/useByValue.js';
+import { surfaceBoneCounts } from '../../resources/meshes/godotSurface.js';
 import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 /**
- * A bone beyond the skin's binds. Godot reads `bone_transforms.data` past the buffer
- * (`skeleton.glsl:262-265`) with robustBufferAccess off (`rendering_device_driver_vulkan.cpp:698`),
- * so the GPU decides. A zero matrix collapses the vertex, as lavapipe does for a skeleton with no bind.
+ * A bone of a skin with no bind at all. The bone buffer Godot allocates for it stays zero
+ * (`mesh_storage.cpp:2358`), and a zero matrix collapses the vertex.
  */
 const MISSING_BONE_MATRIX = new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-/** How many bones the geometry's skin indices address: the highest index, plus one. */
+/** How many bones the skin indices of the geometry's surfaces address: the most any one does. */
 function boneCountOf(geometry: THREE.BufferGeometry): number {
-  const indices = geometry.getAttribute('skinIndex');
-  let highest = -1;
-  for (let i = 0; i < indices.array.length; i++) highest = Math.max(highest, indices.array[i]!);
-  return highest + 1;
+  return Math.max(0, ...(surfaceBoneCounts(geometry) ?? []));
+}
+
+/**
+ * Whether Godot draws nothing of the mesh: every surface addresses more bones than the skin binds.
+ * `mesh_get_aabb` skips such a surface (`mesh_storage.cpp:729-730`), so an instance whose surfaces
+ * are all skipped has no bounds, and `_update_instance` never places it (`renderer_scene_cull.cpp:1679`).
+ * A skin with no bind keeps the mesh's own bounds (`mesh_storage.cpp:716`), and its vertices collapse.
+ */
+export function isOutgrownBySkin(geometry: THREE.BufferGeometry | undefined, bindCount: number): boolean {
+  const boneCounts = geometry && surfaceBoneCounts(geometry);
+  if (!boneCounts || bindCount === 0) return false;
+  return boneCounts.every((boneCount) => boneCount > bindCount);
 }
 
 function writeBoneMatrix(target: THREE.Matrix4, skinMatrix: Transform3D | undefined): void {

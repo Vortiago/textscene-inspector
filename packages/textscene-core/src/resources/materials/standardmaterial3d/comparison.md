@@ -145,6 +145,12 @@ A PointMesh draws one square per vertex, and `use_point_size` with `point_size` 
 
 A 40 px point that draws shadows only hangs under an omni light, above a floor the camera looks straight down at. Both engines cast a faint square of the point's size on the floor, beside the darker square of the previewer's sun.
 
+## Vertex colour in sRGB
+
+<!-- compare: image=unit-material-vertex-color-srgb status=unreviewed fixture=unit-material-vertex-color-srgb.tscn -->
+
+`vertex_color_use_as_albedo` reads the vertex colour into the albedo, and `vertex_color_is_srgb` decodes that colour from sRGB to linear first. Two rows of particles share one colour: the upper row's material decodes it and draws darker, and the lower row's reads it as linear. A particle's colour multiplies the vertex colour before the decode, as in Godot.
+
 ## Linting
 
 <!-- lint:begin StandardMaterial3D -->

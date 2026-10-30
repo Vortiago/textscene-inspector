@@ -177,10 +177,9 @@ function ambientFor(
   const contribution = fromCubemap ? properties.ambient_light_sky_contribution : 0;
 
   // `reflection_source` defaults to the background, so a sky is reflected whenever it
-  // is the background or the ambient, independent of `ambient_light_source`. `energy`
-  // carries the reflection, `contribution` the diffuse share, scaled apart per material.
-  const skyAmbient =
-    fromCubemap || overSky ? { energy: properties.background_energy_multiplier, contribution } : null;
+  // is the background or the ambient, independent of `ambient_light_source`. `contribution` is
+  // the diffuse share, which scales the ambient apart from the reflection in each material.
+  const skyAmbient = fromCubemap || overSky ? { contribution } : null;
 
   if (!fromCubemap && source !== AmbientSource.COLOR) {
     return { ambient: null, skyAmbient };

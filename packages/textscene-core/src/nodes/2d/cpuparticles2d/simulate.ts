@@ -31,22 +31,39 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
-import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
+import { GodotRandomPCG, type SeedRef } from '../../shared/cpuparticles/godotRng';
+import {
+  pickPoint,
+  previewProcessRng,
+  processRandf,
+  turnedByNormal,
+} from '../../shared/cpuparticles/emissionPoints';
+import {
+  DEFAULT_PREVIEW_SEED,
+  lerpParam,
+  restartStep,
+  sampleParam,
+  tintParticle,
+  type ParticleCurves,
+  type RestartClock,
+  type RestartStep,
+} from '../../shared/cpuparticles/process';
+import { colorAt, colorCount, vector2At, vector2Count } from '../../../resources/shapes/packedElements';
 import { degToRad, degToRadf, lerpf, multiplyColor, TAU } from '../../../godot/math/math.js';
 import { storedColor, storedReal as f, storedTransform2D, storedVector2 } from '../../../godot/math/real.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
   multiplyTransform2D,
+  transform2DBasisXform,
   transform2DXform,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-import { type CPUParticles2DProperties, type ParticleParam } from './types';
+import type { CPUParticles2DProperties } from './types';
 import type { Rgba } from '../../../godot/math/math.js';
 import {
   normalizedVector2,
@@ -59,26 +76,15 @@ import {
 } from '../../../godot/math/vector.js';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
-import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** A particle's `Transform2D`, which the process loop writes in place, as Godot's `Particle`. */
 type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
-
-/**
- * The seed substituted when a scene does not set `use_fixed_seed`. Godot uses
- * `Math::rand()`, randomised in the constructor and unserialised, so any constant
- * is as faithful as another, and a constant makes this render byte-stable.
- */
-const DEFAULT_PREVIEW_SEED = 0;
 
 /**
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
  * million iterations before the first paint. Real emitters need tens of steps.
  */
 const MAX_SIM_STEPS = 4096;
-
-/** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
-type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSimInput {
   props: CPUParticles2DProperties;
@@ -176,6 +182,7 @@ export function simulateFrozenPose(authored: ParticleSimInput): RenderedParticle
     lifetime,
     seed: (props.use_fixed_seed ? props.seed : DEFAULT_PREVIEW_SEED) >>> 0,
     rng: new GodotRandomPCG(0),
+    processRng: previewProcessRng(),
     emissionXform: props.local_coords ? TRANSFORM2D_IDENTITY : input.emissionTransform,
   };
 
@@ -210,6 +217,8 @@ function storedInput(input: ParticleSimInput): ParticleSimInput {
       gravity: storedVector2(props.gravity),
       emission_sphere_radius: f(props.emission_sphere_radius),
       emission_rect_extents: storedVector2(props.emission_rect_extents),
+      emission_ring_radius: f(props.emission_ring_radius),
+      emission_ring_inner_radius: f(props.emission_ring_inner_radius),
       color: storedColor(props.color),
       params: props.params.map((param) => ({ ...param, min: f(param.min), max: f(param.max) })),
     },
@@ -227,6 +236,8 @@ interface SimState {
   lifetime: number;
   seed: number;
   rng: GodotRandomPCG;
+  /** `Math::rand()` and `Math::randf()`, for the POINTS pick and the RING place: see {@link previewProcessRng}. */
+  processRng: GodotRandomPCG;
   emissionXform: Transform2DColumns;
 }
 
@@ -273,35 +284,26 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
   const emissionXform = state.emissionXform;
   const velocityXform: Transform2DColumns = { ...emissionXform, tx: 0, ty: 0 };
 
-  const systemPhase = state.time / lifetime;
+  const clock: RestartClock = {
+    pcount,
+    cycle: state.cycle,
+    prevTime,
+    time: state.time,
+    lifetime,
+    delta,
+    randomness: props.randomness,
+    explosiveness: props.explosiveness,
+    fractDelta: props.fract_delta,
+  };
+  const step: RestartStep = { restart: false, localDelta: 0 };
 
   for (let i = 0; i < pcount; i++) {
     const p = state.particles[i]!;
     if (!state.emitting && !p.active) continue;
 
-    // Particle i is born i/pcount of the way through each cycle, so a continuous
-    // emitter shows every age at once.
-    let restartPhase = i / pcount;
-
-    if (props.randomness > 0) {
-      let hashSeed = state.cycle >>> 0;
-      if (restartPhase >= systemPhase) hashSeed = (hashSeed - 1) >>> 0;
-      hashSeed = Math.imul(hashSeed, pcount) >>> 0;
-      hashSeed = (hashSeed + i) >>> 0;
-      const random = (idhash(hashSeed) % 65536) / 65536.0;
-      restartPhase += (props.randomness * random * 1.0) / pcount;
-    }
-
-    // Explosiveness squeezes every birth phase toward 0, so at 1 the whole
-    // emitter fires at once.
-    restartPhase *= 1.0 - props.explosiveness;
-    const restartTime = restartPhase * lifetime;
-
-    const step = restartStep(prevTime, state.time, restartTime, lifetime, delta, props.fract_delta);
-    let restart = step.restart;
-    const localDelta = step.localDelta;
-
-    if (p.time * (1.0 - props.explosiveness) > p.lifetime) restart = true;
+    restartStep(clock, i, step);
+    const { localDelta } = step;
+    const restart = step.restart || p.time * (1.0 - props.explosiveness) > p.lifetime;
 
     let tv = 0.0;
 
@@ -332,56 +334,6 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     p.transform.tx = f(p.transform.tx + displacement.x);
     p.transform.ty = f(p.transform.ty + displacement.y);
   }
-}
-
-/** Whether particle `i` restarts this step, and the delta its position integrates with. */
-interface RestartStep {
-  restart: boolean;
-  /** `local_delta`: the whole step unless a restart shortens it (fract_delta). */
-  localDelta: number;
-}
-
-/**
- * Whether particle `i` restarts this step, and its `local_delta`
- * (`cpu_particles_2d.cpp:807,829-852`). With `fractionalDelta` (`fract_delta`,
- * default true) a particle born mid-step gets only the remainder after its restart
- * instant, so same-step births spread into a bar instead of one displacement.
- * @param prevTime The emitter's cycle time before this step.
- * @param time The cycle time after this step, wrapped mod `lifetime`.
- * @param restartTime `restartPhase * lifetime` for this particle.
- */
-function restartStep(
-  prevTime: number,
-  time: number,
-  restartTime: number,
-  lifetime: number,
-  delta: number,
-  fractionalDelta: boolean
-): RestartStep {
-  let restart = false;
-  let localDelta = delta;
-
-  if (time > prevTime) {
-    // restartTime >= prevTime is used so particles emit in the first frame
-    // they are processed (`:830`).
-    if (restartTime >= prevTime && restartTime < time) {
-      restart = true;
-      if (fractionalDelta) localDelta = time - restartTime;
-    }
-  } else if (delta > 0.0) {
-    // The step wrapped past `lifetime`. A restart near the tail of the cycle gets
-    // the slice up to the old boundary plus `time`, and one right after zero
-    // gets the ordinary slice.
-    if (restartTime >= prevTime) {
-      restart = true;
-      if (fractionalDelta) localDelta = lifetime - restartTime + time;
-    } else if (restartTime < time) {
-      restart = true;
-      if (fractionalDelta) localDelta = time - restartTime;
-    }
-  }
-
-  return { restart, localDelta };
 }
 
 /**
@@ -429,30 +381,27 @@ function restartParticle(
   );
   const direction = { x: f(Math.cos(angle1Rad)), y: f(Math.sin(angle1Rad)) };
   const velocityParam = props.params[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]!;
-  p.velocity = vector2Scaled(direction, lerpSlot(velocityParam, rng.randf()));
+  p.velocity = vector2Scaled(direction, lerpf(velocityParam.min, velocityParam.max, rng.randf()));
 
   const angleParam = props.params[CPUParticlesParameter.ANGLE]!;
-  p.rotation = degToRadf(f(texAngle * lerpSlot(angleParam, p.angleRand)));
+  p.rotation = degToRadf(f(texAngle * lerpf(angleParam.min, angleParam.max, p.angleRand)));
 
   const animOffset = props.params[CPUParticlesParameter.ANIM_OFFSET]!;
   p.custom[0] = 0.0;
   p.custom[1] = 0.0;
-  p.custom[2] = f(texAnimOffset * lerpSlot(animOffset, p.animOffsetRand));
+  p.custom[2] = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
   p.custom[3] = f(1.0 - rng.randf() * props.lifetime_randomness);
   p.transform = { ...TRANSFORM2D_IDENTITY };
   p.time = 0;
   p.lifetime = state.lifetime * p.custom[3];
   p.baseColor = { r: 1, g: 1, b: 1, a: 1 };
 
-  emitAtShape(props, p, rng);
+  emitAtShape(props, state, p);
 }
 
-/**
- * The emission-shape offset. POINTS / DIRECTED_POINTS / RING draw from Godot's
- * unserialised global RNG (`cpu_particles_2d.cpp:975, 992, 995`), so no frozen
- * pose can match them, and the linter reports them instead.
- */
-function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRandomPCG): void {
+/** The emission-shape offset (`cpu_particles_2d.cpp:912-962`). */
+function emitAtShape(props: CPUParticles2DProperties, state: SimState, p: Particle): void {
+  const { rng } = state;
   switch (props.emission_shape) {
     case CPUParticles2DEmissionShape.SPHERE: {
       const t = f(TAU * rng.randf());
@@ -480,10 +429,44 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
       p.transform.ty = f(y * props.emission_rect_extents.y);
       break;
     }
+    case CPUParticles2DEmissionShape.POINTS:
+    case CPUParticles2DEmissionShape.DIRECTED_POINTS:
+      emitAtPoint(props, state, p);
+      break;
+    case CPUParticles2DEmissionShape.RING:
+      emitOnRing(props, state.processRng, p);
+      break;
     default:
-      // Point, and the three unpreviewable shapes, all leave the origin alone.
+      // POINT emits from the origin, which `restartParticle` sets before the switch.
       break;
   }
+}
+
+/**
+ * Places `p` on one of `emission_points`, turns a DIRECTED_POINTS velocity along that point's
+ * normal, and takes its colour, each only when every point has one (`:929-950`).
+ */
+function emitAtPoint(props: CPUParticles2DProperties, state: SimState, p: Particle): void {
+  const count = vector2Count(props.emission_points);
+  const index = pickPoint(state.processRng, count);
+  if (index === null) return;
+  const point = vector2At(props.emission_points, index);
+  p.transform.tx = point.x;
+  p.transform.ty = point.y;
+  const isDirected = props.emission_shape === CPUParticles2DEmissionShape.DIRECTED_POINTS;
+  if (isDirected && vector2Count(props.emission_normals) === count)
+    p.velocity = turnedByNormal(vector2At(props.emission_normals, index), p.velocity);
+  if (colorCount(props.emission_colors) === count) p.baseColor = colorAt(props.emission_colors, index);
+}
+
+/** A place in the ring, from two draws of Godot's process-wide `Math::randf()` (`:952-957`). */
+function emitOnRing(props: CPUParticles2DProperties, processRng: GodotRandomPCG, p: Particle): void {
+  const t = f(TAU * processRandf(processRng));
+  const outerSquared = f(props.emission_ring_radius * props.emission_ring_radius);
+  const innerSquared = f(props.emission_ring_inner_radius * props.emission_ring_inner_radius);
+  const radius = f(Math.sqrt(f(f(processRandf(processRng) * f(outerSquared - innerSquared)) + innerSquared)));
+  p.transform.tx = f(f(Math.cos(t)) * radius);
+  p.transform.ty = f(f(Math.sin(t)) * radius);
 }
 
 /** The alive branch: integrate one step, returning the normalised age `tv`. */
@@ -512,7 +495,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   // `rand_from_seed` draw is consumed only when the branch is taken. Drawing
   // unconditionally would desynchronise every later value in the same step.
   if (vector2LengthSquared(p.velocity) > 0) {
-    const accel = lerpParam(props, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
+    const accel = lerpParam(props.params, CPUParticlesParameter.LINEAR_ACCEL, seedRef);
     addAcceleration(force, normalizedVector2(p.velocity), texLinearAccel, accel);
   }
 
@@ -523,13 +506,13 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
     y: f(p.transform.ty - state.emissionXform.ty),
   };
   if (vector2LengthSquared(diff) > 0) {
-    const radial = lerpParam(props, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
+    const radial = lerpParam(props.params, CPUParticlesParameter.RADIAL_ACCEL, seedRef);
     const outward = normalizedVector2(diff);
     addAcceleration(force, outward, texRadialAccel, radial);
 
     // `yx * Vector2(-1, 1)` is `(-diff.y, diff.x)`, the perpendicular Godot spins tangential
     // acceleration around. It has `diff`'s length, so its unit vector is `outward` turned.
-    const tangential = lerpParam(props, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef);
+    const tangential = lerpParam(props.params, CPUParticlesParameter.TANGENTIAL_ACCEL, seedRef);
     // `direction * (tex_tangential_accel * lerp)`: one product, not two.
     addAcceleration(force, { x: -outward.y, y: outward.x }, 1, f(texTangentialAccel * tangential));
   }
@@ -538,7 +521,9 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   p.velocity.x = f(p.velocity.x + f(force.x * delta));
   p.velocity.y = f(p.velocity.y + f(force.y * delta));
 
-  const orbitAmount = f(texOrbitVelocity * lerpParam(props, CPUParticlesParameter.ORBIT_VELOCITY, seedRef));
+  const orbitAmount = f(
+    texOrbitVelocity * lerpParam(props.params, CPUParticlesParameter.ORBIT_VELOCITY, seedRef)
+  );
   if (orbitAmount !== 0.0) {
     // Godot rotates by -ang to match ParticleProcessMaterial's clockwise matrix.
     const ang = f(orbitAmount * localDelta * TAU);
@@ -547,7 +532,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
     const rotation = { a: cr, b: sr, c: -sr, d: cr, tx: 0, ty: 0 };
     const orbited = vector2Add(
       vector2Sub({ x: p.transform.tx, y: p.transform.ty }, diff),
-      transform2DXform(rotation, diff)
+      transform2DBasisXform(rotation, diff)
     );
     p.transform.tx = orbited.x;
     p.transform.ty = orbited.y;
@@ -559,7 +544,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   }
 
   if (f(props.params[CPUParticlesParameter.DAMPING]!.max + texDamping) > 0.0) {
-    const damp = f(texDamping * lerpParam(props, CPUParticlesParameter.DAMPING, seedRef));
+    const damp = f(texDamping * lerpParam(props.params, CPUParticlesParameter.DAMPING, seedRef));
     const length = vector2Length(p.velocity);
     // `damp * local_delta` is a double, so the subtraction runs in double and rounds once.
     const speed = f(length - damp * localDelta);
@@ -571,19 +556,21 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   }
 
   const angleParam = props.params[CPUParticlesParameter.ANGLE]!;
-  let baseAngle = f(texAngle * lerpSlot(angleParam, p.angleRand));
+  let baseAngle = f(texAngle * lerpf(angleParam.min, angleParam.max, p.angleRand));
   baseAngle = f(
     baseAngle +
       p.custom[1] *
         state.lifetime *
         texAngularVelocity *
-        lerpParam(props, CPUParticlesParameter.ANGULAR_VELOCITY, seedRef)
+        lerpParam(props.params, CPUParticlesParameter.ANGULAR_VELOCITY, seedRef)
   );
   p.rotation = degToRadf(baseAngle);
 
   const animOffset = props.params[CPUParticlesParameter.ANIM_OFFSET]!;
-  const offset = f(texAnimOffset * lerpSlot(animOffset, p.animOffsetRand));
-  const progress = f(f(tv * texAnimSpeed) * lerpParam(props, CPUParticlesParameter.ANIM_SPEED, seedRef));
+  const offset = f(texAnimOffset * lerpf(animOffset.min, animOffset.max, p.animOffsetRand));
+  const progress = f(
+    f(tv * texAnimSpeed) * lerpParam(props.params, CPUParticlesParameter.ANIM_SPEED, seedRef)
+  );
   p.custom[2] = f(offset + progress);
 
   return tv;
@@ -611,16 +598,11 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const texHueVariation = hueCurve ? f(sampleCurve(hueCurve, tv)) : 0.0;
 
   const hueParam = props.params[CPUParticlesParameter.HUE_VARIATION]!;
-  const hueRotAngle = f(texHueVariation * TAU * lerpSlot(hueParam, p.hueRotRand));
+  const hueRotAngle = f(texHueVariation * TAU * lerpf(hueParam.min, hueParam.max, p.hueRotRand));
 
   const base = colorRamp ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color) : props.color;
-  // Called unconditionally, not short-circuited at angle 0: Godot's basis is not
-  // quite the identity there. The blue column comes out at -0.001/-0.001/1, so
-  // every particle takes a slight tint.
-  const rotated = rotateHue(base, hueRotAngle);
-
-  // `p.color *= p.base_color * p.start_color_rand` (`:1126`): the right side multiplies first.
-  p.color = multiplyColor(rotated, multiplyColor(p.baseColor, p.startColorRand));
+  // `cpu_particles_2d.cpp:1090-1126` tints as 3D does.
+  tintParticle(p, base, hueRotAngle);
 
   if (props.particle_flag_align_y) {
     const yAxis = normalizedVector2(
@@ -641,7 +623,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   }
 
   const scaleParam = props.params[CPUParticlesParameter.SCALE]!;
-  const drawnScale = f(texScale * lerpSlot(scaleParam, p.scaleRand));
+  const drawnScale = f(texScale * lerpf(scaleParam.min, scaleParam.max, p.scaleRand));
   const scale = drawnScale < MIN_SCALE ? f(MIN_SCALE) : drawnScale;
   p.transform.a = f(p.transform.a * scale);
   p.transform.b = f(p.transform.b * scale);
@@ -677,75 +659,4 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
     });
   }
   return pose;
-}
-
-function sampleParam(
-  curves: ParticleCurves,
-  param: EnumValue<typeof CPUParticlesParameter>,
-  tv: number
-): number {
-  const curve = curves[param] ?? null;
-  return curve ? f(sampleCurve(curve, tv)) : 1.0;
-}
-
-/**
- * `Math::lerp(min, max, weight)` over a parameter slot. A slot with equal bounds answers that
- * bound without the four float roundings: `min + (max - min) * weight` is `min` for a finite weight.
- */
-function lerpSlot(slot: ParticleParam, weight: number): number {
-  return slot.min === slot.max ? slot.min : lerpf(slot.min, slot.max, weight);
-}
-
-/** `Math::lerp(parameters_min[p], parameters_max[p], rand_from_seed(seed))`. */
-function lerpParam(
-  props: CPUParticles2DProperties,
-  param: EnumValue<typeof CPUParticlesParameter>,
-  seedRef: SeedRef
-): number {
-  const slot = props.params[param]!;
-  return lerpSlot(slot, randFromSeed(seedRef));
-}
-
-/** The three `Basis` constants Godot blends into its hue rotation (`cpu_particles_2d.cpp:1090-1092`), as floats. */
-const HUE_LUMINANCE: readonly number[] = [0.299, 0.587, 0.114].map(f);
-const HUE_COSINE_ROWS: readonly (readonly number[])[] = [
-  [0.701, -0.587, -0.114],
-  [-0.299, 0.413, -0.114],
-  [-0.3, -0.588, 0.886],
-].map((row) => row.map(f));
-const HUE_SINE_ROWS: readonly (readonly number[])[] = [
-  [0.168, 0.33, -0.497],
-  [-0.328, 0.035, 0.292],
-  [1.25, -1.05, -0.203],
-].map((row) => row.map(f));
-
-/** The blended basis as three rows: `mat1[j] + mat2[j] * c + mat3[j] * s` in `real_t` float. */
-function hueBasisRows(angle: number): number[][] {
-  const c = f(Math.cos(angle));
-  const s = f(Math.sin(angle));
-  return HUE_COSINE_ROWS.map((cosine, j) =>
-    cosine.map((_, k) => f(f(HUE_LUMINANCE[k]! + f(cosine[k]! * c)) + f(HUE_SINE_ROWS[j]![k]! * s)))
-  );
-}
-
-/** Most particles have no hue curve, so their angle is zero: the basis is built once for them. */
-const UNROTATED_HUE_ROWS = hueBasisRows(0);
-
-/**
- * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
- * angle, then applied with `Basis::xform_inv`, the transpose, in `real_t` float.
- */
-function rotateHue(color: Rgba, angle: number): Rgba {
-  const rows = angle === 0 ? UNROTATED_HUE_ROWS : hueBasisRows(angle);
-  return {
-    r: hueChannel(rows, 0, color),
-    g: hueChannel(rows, 1, color),
-    b: hueChannel(rows, 2, color),
-    a: color.a,
-  };
-}
-
-/** `xform_inv` reads down column `k` of the rows, not across one. */
-function hueChannel(rows: readonly number[][], k: number, color: Rgba): number {
-  return f(f(f(rows[0]![k]! * color.r) + f(rows[1]![k]! * color.g)) + f(rows[2]![k]! * color.b));
 }

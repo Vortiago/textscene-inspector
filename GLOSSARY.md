@@ -545,6 +545,14 @@ _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A world holds one **Exposure factor** for its lights, and a pass draws the world at the factor of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
 _Avoid_: "viewport exposure", "camera exposure".
 
+**Pass Environment** (`ViewportPassEnvironment` in `r3f/environment/WorldEnvironmentScope.tsx`):
+The Environment a viewport pass draws with: that of the camera it elects, else its world's own. A world's scene shows one Environment, and a pass puts its own **Pass Environment** on the scene for its draw only, so two viewports of one world draw one frame with two backgrounds.
+_Avoid_: "camera environment" for the choice, "view environment".
+
+**Environment part** (`registerEnvironmentPart` in `r3f/environment/sceneEnvironment.tsx`):
+One piece of state an Environment writes on its scene, such as the background, the sky, the flat ambient or the fog, which goes on with its Environment and comes off with a restore.
+_Avoid_: "environment layer" for one piece, "environment effect".
+
 **Auto exposure** (`r3f/environment/LuminanceReduction.ts`):
 The exposure divided by the **Frame luminance** over `auto_exposure_scale`, in the tone-map pass and the glow's bright pass. A still frame shows the settled value, so `auto_exposure_speed` has no part.
 _Avoid_: "eye adaptation", "adaptive exposure".
@@ -664,7 +672,11 @@ _Avoid_: A stand-in object. A path segment for the group.
 
 **Automatic skin** (`automaticSkinMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the **Live scene pass** in `skeletonBindings.ts` hands the matrices to the mesh by its live path, so the mesh draws as a SkinnedMesh.
-_Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose kept in three bones.
+_Avoid_: A CPU bake of the vertices. A pose kept in three bones.
+
+**Skin binding** (`resolveBinds`, `bindMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The skin of a MeshInstance3D that sets `skin`: one matrix for each bind of the Skin resource, the global pose of the bind's bone times the bind pose (`skeleton_3d.cpp:363-403`). A bind finds its bone by name, else by index, and a bind that finds none takes bone 0. The **Automatic skin** is the same product, with bind `i` on bone `i` and the inverse of its global rest as the bind pose.
+_Avoid_: A second composition for the automatic skin. A bind matched on bone order.
 
 **Pose modifier** (`PoseModifier`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The edit a SkeletonModifier3D child makes to the bone poses of its Skeleton3D, and its `influence`. The Skeleton3D pass runs the edits in child order on a copy of the file pose, before it makes the **Automatic skin**, as `Skeleton3D::_process_modifiers` does (`skeleton_3d.cpp:1166-1204`). The file pose is kept. A type registers a reader from its node to its edit as `poseModifier`.

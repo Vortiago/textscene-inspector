@@ -21,7 +21,7 @@ describe('sky ambient', () => {
   it('takes ambient from the sky for the default source over a sky background', () => {
     // AMBIENT_SOURCE_BG (the default) over BG_SKY, the most common environment.
     const settings = createEnvironmentSettings(base(), DEFAULT_CLEAR_COLOR);
-    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 1 });
+    expect(settings.skyAmbient).toEqual({ contribution: 1 });
   });
 
   it('takes ambient from the sky for AMBIENT_SOURCE_SKY whatever the background is', () => {
@@ -29,15 +29,7 @@ describe('sky ambient', () => {
       base({ ambient_light_source: 3, background_mode: BackgroundMode.BG_COLOR }),
       DEFAULT_CLEAR_COLOR
     );
-    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 1 });
-  });
-
-  it('scales the sky contribution by background_energy_multiplier, not ambient_light_energy', () => {
-    const settings = createEnvironmentSettings(
-      base({ background_energy_multiplier: 3, ambient_light_energy: 7 }),
-      DEFAULT_CLEAR_COLOR
-    );
-    expect(settings.skyAmbient?.energy).toBe(3);
+    expect(settings.skyAmbient).toEqual({ contribution: 1 });
   });
 
   it('blends the flat colour out entirely at the default sky contribution', () => {
@@ -65,7 +57,7 @@ describe('sky ambient', () => {
       DEFAULT_CLEAR_COLOR
     );
     expect(settings.ambient).toEqual({ color: { r: 1, g: 0, b: 0, a: 1 }, energy: 1.5 });
-    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0.25 });
+    expect(settings.skyAmbient).toEqual({ contribution: 0.25 });
   });
 
   it('reflects the sky for a colour source but takes no diffuse from it', () => {
@@ -80,7 +72,7 @@ describe('sky ambient', () => {
       }),
       DEFAULT_CLEAR_COLOR
     );
-    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0 });
+    expect(settings.skyAmbient).toEqual({ contribution: 0 });
     expect(settings.ambient).toEqual({ color: { r: 0.4, g: 0.4, b: 0.4, a: 1 }, energy: 1 });
   });
 
@@ -89,7 +81,7 @@ describe('sky ambient', () => {
     // reflection source, so a metal keeps reflecting it.
     const settings = createEnvironmentSettings(base({ ambient_light_source: 1 }), DEFAULT_CLEAR_COLOR);
     expect(settings.ambient).toBeNull();
-    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0 });
+    expect(settings.skyAmbient).toEqual({ contribution: 0 });
   });
 
   it('leaves a colour background on the flat path, with no sky term', () => {

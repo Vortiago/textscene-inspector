@@ -183,12 +183,12 @@ export async function renderGridMapTiles(corpus: GridMapCorpus = {}): Promise<TH
   return (await mountGridMap(corpus)).tiles();
 }
 
-/** Every InstancedMesh the GridMap batches into: one per surface that does not billboard. */
+/** Every InstancedMesh the GridMap batches into: one per surface. */
 export async function renderInstancedTiles(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh[]> {
   return (await renderGridMapTiles(corpus)).filter(isInstancedMesh);
 }
 
-/** The one InstancedMesh a one-surface, non-billboarded item batches into, or a thrown error. */
+/** The one InstancedMesh a one-surface item batches into, or a thrown error. */
 export async function renderInstancedTile(corpus: GridMapCorpus = {}): Promise<THREE.InstancedMesh> {
   const instanced = await renderInstancedTiles(corpus);
   if (instanced.length !== 1) {

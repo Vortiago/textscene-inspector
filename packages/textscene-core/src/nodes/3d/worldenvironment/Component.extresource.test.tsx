@@ -248,3 +248,32 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
     expect(resolved).toEqual({ status: 'none' });
   });
 });
+
+describe('useResolvedEnvironment — one Sky for each Sky resource', () => {
+  const SKY: TscnInternalResource = {
+    id: 'Sky_1',
+    type: 'Sky',
+    data: { sky_material: 'SubResource("Mat_1")' },
+  };
+
+  it('resolves one Sky for every Environment that draws the same Sky resource, as viewports share its radiance', async () => {
+    const internals = [ENVIRONMENT_WITH_SKY, SKY, PROCEDURAL_MATERIAL];
+    const first = await resolve('SubResource("Environment_1")', internals, []);
+    const second = await resolve('SubResource("Environment_1")', internals, []);
+
+    expect(second?.settings).not.toBe(first?.settings);
+    expect(second?.sky).toBe(first?.sky);
+  });
+
+  it('resolves a new Sky for a new material', async () => {
+    const first = await resolve(
+      'SubResource("Environment_1")',
+      [ENVIRONMENT_WITH_SKY, SKY, PROCEDURAL_MATERIAL],
+      []
+    );
+    const edited = { ...PROCEDURAL_MATERIAL, data: { sky_top_color: 'Color(1, 0, 0, 1)' } };
+    const second = await resolve('SubResource("Environment_1")', [ENVIRONMENT_WITH_SKY, SKY, edited], []);
+
+    expect(second?.sky).not.toBe(first?.sky);
+  });
+});

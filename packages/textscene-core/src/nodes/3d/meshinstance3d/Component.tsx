@@ -23,10 +23,10 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
-import { useLiveScenePass } from '../../../r3f/liveScenePass';
+import { MATERIAL_OVERLAY_RENDER_ORDER, NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
+import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { bindMeshesToSkeletons, namesSkeletonToBind } from '../skeleton3d/skeletonBindings';
+import { useMeshSkin } from './useMeshSkin';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
@@ -103,11 +103,15 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
-  // A mesh that cannot bind asks with no path, so it watches no load and the pass never runs for it.
-  const bindingPath = useNodePath();
-  const skin = useLiveScenePass(bindMeshesToSkeletons, namesSkeletonToBind(properties) ? bindingPath : null);
+  const skin = useMeshSkin(properties, useNodePath());
+  const bindCount = skin?.matrices.length ?? 0;
+  // The instance has no bounds only where every surface of every part outgrows the skin.
+  const isOutgrown = useMemo(
+    () => drawnParts.length > 0 && drawnParts.every((part) => isOutgrownBySkin(part.geometry, bindCount)),
+    [drawnParts, bindCount]
+  );
   // A surface with no bone arrays stays unskinned even when the node is bound.
-  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, skin);
+  const skeleton = useSkinSkeleton(isOutgrown ? undefined : drawnParts[0]?.geometry, skin);
 
   const shellProps = {
     name: node.name,
@@ -154,6 +158,13 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;
     case 'surfaced': {
+      // The skin leaves the instance without bounds, so Godot places none of its surfaces.
+      if (isOutgrown)
+        return (
+          <MeshShell {...shellProps} overlay={null}>
+            {null}
+          </MeshShell>
+        );
       const { parts } = content.mesh;
       return (
         <MeshShell {...shellProps}>
@@ -175,16 +186,6 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 }
 
 const NO_PARTS: readonly SurfacedPart[] = [];
-
-/**
- * The overlay's draw-order key. Any value above the 3D default (0) puts it after
- * its own surface; 1 keeps it as close to that surface as three allows, since
- * every step also steps it past unrelated content at the same depth.
- */
-const MATERIAL_OVERLAY_RENDER_ORDER = 1;
-
-/** Opts a mesh out of picking: three calls `raycast` and collects nothing. */
-const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 
 /**
  * `material_overlay`'s draw: the base mesh's geometry a second time, with the
@@ -337,7 +338,10 @@ function MeshSurfaces({ part, overrides }: { part: SurfacedPart; overrides: Mesh
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} drawsPoints={geometryDrawsPoints(part.geometry)} />
+      <SurfaceMaterialSlots
+        sources={sources}
+        points={geometryDrawsPoints(part.geometry) ? 'mesh' : undefined}
+      />
     </>
   );
 }

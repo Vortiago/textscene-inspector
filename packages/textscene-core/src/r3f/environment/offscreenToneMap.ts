@@ -1,10 +1,12 @@
 /**
  * A SubViewport's tonemap pass (`toneMapPass.ts`), mounted in the world the viewport draws, with the
- * camera and the exposure the pass draws that world through.
+ * camera, the exposure and the Environment the pass draws that world through.
  */
 
 import { useLayoutEffect, useMemo, type MutableRefObject } from 'react';
 import { useToneMapPass, type ToneMapPass, type ToneMapPassOptions } from './toneMapPass';
+import { usePassToneMap } from './passToneMap';
+import type { Environment } from './sceneEnvironment';
 import { useOptionalExposureFactor, usePassCameraPath } from './worldExposure';
 
 export interface OffscreenToneMap extends ToneMapPass {
@@ -12,6 +14,8 @@ export interface OffscreenToneMap extends ToneMapPass {
   cameraPath: string | null;
   /** The exposure factor the pass draws its world at, null for none. */
   exposure: number | null;
+  /** The Environment the pass draws its world with (`drawWith`). */
+  environment: Environment | null;
 }
 
 type OffscreenToneMapOptions = ToneMapPassOptions & { target: NonNullable<ToneMapPassOptions['target']> };
@@ -19,8 +23,8 @@ type OffscreenToneMapOptions = ToneMapPassOptions & { target: NonNullable<ToneMa
 /**
  * Mounts the world buffer and the tonemap pass of one offscreen viewport in the world it sits in,
  * and hands them to `stage` while it stays mounted. A pass in a portal of its own world mounts it
- * inside the portal, so it reads that world's Environment. It reads the camera, the exposure and the
- * auto exposure of the attributes around it (`ViewportPassAttributes`).
+ * inside the portal. It reads the camera, the exposure and the auto exposure of the attributes around
+ * it (`ViewportPassAttributes`), and the Environment the pass draws with (`ViewportPassEnvironment`).
  *
  * @canonical Godot's tonemap pass into a render target
  */
@@ -42,5 +46,9 @@ function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap
   const pass = useToneMapPass(options);
   const exposure = useOptionalExposureFactor();
   const cameraPath = usePassCameraPath();
-  return useMemo(() => ({ ...pass, cameraPath, exposure }), [pass, cameraPath, exposure]);
+  const environment = usePassToneMap().settings;
+  return useMemo(
+    () => ({ ...pass, cameraPath, exposure, environment }),
+    [pass, cameraPath, exposure, environment]
+  );
 }

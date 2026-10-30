@@ -10,7 +10,6 @@ import type { TscnNode } from '../../parser/types';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { lerpColor } from '../../godot/math/math';
-import type { EnvironmentSettings } from '../../resources/environment/types';
 import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
@@ -18,6 +17,8 @@ import type { Rgba } from '../../godot/math/math';
 import { degToRad } from '../../godot/math/math.js';
 import { BackgroundMode } from '../../godot/scene/environment.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import type { ResolvedEnvironment } from '../environment/WorldEnvironmentScope';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';
@@ -105,7 +106,8 @@ function previewHorizonColor(): Rgba {
 /**
  * Godot's preview environment, through the same decode and build pipeline as an
  * authored `WorldEnvironment`, so the two cannot diverge. Its glow runs in the
- * tonemap pass (`toneMapPass.ts`). Built once: the root's chooser and its layer read the same one.
+ * tonemap pass (`toneMapPass.ts`). Built once: the root's layer and a pass that draws it read one
+ * object, so the pass publishes it once. The preview environment and its sky hold no references.
  */
 export function previewEnvironment(): EnvironmentAndSky {
   return (builtPreviewEnvironment ??= buildPreviewEnvironment());
@@ -114,8 +116,7 @@ export function previewEnvironment(): EnvironmentAndSky {
 /** Written only by `previewEnvironment`. Never cleared, since the preview never changes. */
 let builtPreviewEnvironment: EnvironmentAndSky | undefined;
 
-interface EnvironmentAndSky {
-  settings: EnvironmentSettings;
+interface EnvironmentAndSky extends ResolvedEnvironment {
   sky: Sky;
 }
 
@@ -137,6 +138,8 @@ function buildPreviewEnvironment(): EnvironmentAndSky {
 
   return {
     settings,
+    resources: NO_RESOURCES,
+    skyResources: NO_RESOURCES,
     // The editor's Sky keeps every default but its material (`node_3d_editor_plugin.cpp:10394`).
     sky: decodeSky(
       {},

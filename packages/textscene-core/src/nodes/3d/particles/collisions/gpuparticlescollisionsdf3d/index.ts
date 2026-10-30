@@ -1,17 +1,15 @@
 /**
- * GPUParticlesCollisionSDF3D registration: parser.
- *
- * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
- * Not rendered: index.r3f.ts registers Node3D under `renderIntent: 'pending'`,
- * so the tree still reports a gap while `visible` and the workspace split work.
+ * GPUParticlesCollisionSDF3D registration: the parser, which reads the shape for the gizmo. Property knowledge lives in
+ * linterParser.ts. It is not rendered: index.r3f.ts registers a base component under
+ * `renderIntent: 'pending'`, so the tree reports a gap while `visible` and the workspace split work.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../../base/node3d/parser';
+import { parseSdfVolume } from '../../volume/parseSdfVolume';
 
 const gPUParticlesCollisionSDF3DRegistration: NodeTypeRegistration = {
   typeName: 'GPUParticlesCollisionSDF3D',
-  parser: parseNode3D,
+  parser: parseSdfVolume,
 };
 
 nodeRegistry.register(gPUParticlesCollisionSDF3DRegistration);

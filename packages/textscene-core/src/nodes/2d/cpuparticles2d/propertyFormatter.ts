@@ -7,7 +7,8 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
-import { type CPUParticles2DProperties, PARAM_SLOTS } from './types';
+import type { CPUParticles2DProperties } from './types';
+import { PARAM_SLOTS } from '../../shared/cpuparticles/params';
 import {
   CPU_PARTICLES_2D_DRAW_ORDER_HINT_NAMES,
   CPU_PARTICLES_2D_EMISSION_SHAPE_HINT_NAMES,

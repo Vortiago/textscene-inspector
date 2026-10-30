@@ -6,13 +6,13 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr, packedOr, vec2Or } from '../../../parser/valueParsers';
 import {
+  NO_FLOATS,
   parsePackedColorArray,
   parsePackedInt32Arrays,
   parsePackedVector2Array,
 } from '../../../resources/shapes/packedArray';
-import { warn } from '../../../logger';
 import type { Polygon2DProperties } from './types';
 
 export function parsePolygon2D(
@@ -20,53 +20,25 @@ export function parsePolygon2D(
   properties: Record<string, string>
 ): Polygon2DProperties {
   const base = parseNode2D(heading, properties);
+  const at = (key: string) => `Polygon2D "${base.name}".${key}`;
 
-  let polygon: Float32Array = new Float32Array(0);
-  if (properties.polygon) {
-    try {
-      polygon = parsePackedVector2Array(properties.polygon);
-    } catch (error) {
-      warn(
-        `Polygon2D "${base.name}": invalid polygon ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
+  const polygon = packedOr(properties.polygon, parsePackedVector2Array, NO_FLOATS, at('polygon'));
 
   // `polygons` is an Array of PackedInt32Array index lists. A malformed value
   // degrades to no sub-polygons, so to the stored vertex order.
-  let polygons: number[][] = [];
-  if (properties.polygons) {
-    try {
-      polygons = parsePackedInt32Arrays(properties.polygons);
-    } catch (error) {
-      warn(
-        `Polygon2D "${base.name}": invalid polygons ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
+  const polygons = packedOr(properties.polygons, parsePackedInt32Arrays, [], at('polygons'));
 
   // `uv` and `vertex_colors` degrade to empty, which is Godot's
   // "sizes do not match" branch: point coordinates stand in for UVs, and the
-  // flat `color` stands in for per-vertex colors.
-  let uv: Float32Array = new Float32Array(0);
-  if (properties.uv) {
-    try {
-      uv = parsePackedVector2Array(properties.uv);
-    } catch (error) {
-      warn(`Polygon2D "${base.name}": invalid uv ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+  // flat `color` stands in for per-vertex colours.
+  const uv = packedOr(properties.uv, parsePackedVector2Array, NO_FLOATS, at('uv'));
 
-  let vertexColors: Float32Array = new Float32Array(0);
-  if (properties.vertex_colors) {
-    try {
-      vertexColors = parsePackedColorArray(properties.vertex_colors);
-    } catch (error) {
-      warn(
-        `Polygon2D "${base.name}": invalid vertex_colors ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
+  const vertexColors = packedOr(
+    properties.vertex_colors,
+    parsePackedColorArray,
+    NO_FLOATS,
+    at('vertex_colors')
+  );
 
   const result: Polygon2DProperties = {
     ...base,

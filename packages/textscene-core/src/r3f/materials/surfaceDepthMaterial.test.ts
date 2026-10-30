@@ -4,6 +4,8 @@ import { surfaceDepthMaterial, syncSurfaceDepth } from './surfaceDepthMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
 import { alphaAntialiasingUserData } from './godotAlphaAntialiasing';
 import { withPointDraw } from './godotPoint';
+import { particleDrawOf } from './godotParticles';
+import { withParticleDraw } from './godotParticlesProgram';
 import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/materials/alphaAntialiasing';
 
 const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
@@ -178,6 +180,33 @@ describe('syncSurfaceDepth', () => {
     syncSurfaceDepth(depth, surface, 0.1);
 
     expect(depth.version).toBe(version);
+  });
+
+  it('recompiles when the surface starts drawing particles (edge case)', () => {
+    const surface = new THREE.MeshBasicMaterial();
+    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    syncSurfaceDepth(depth, surface, 0.5);
+    const version = depth.version;
+    surface.userData = withParticleDraw(
+      { materialClass: 'basic', props: {} },
+      particleDrawOf(null)
+    ).props.userData!;
+
+    syncSurfaceDepth(depth, surface, 0.5);
+
+    expect(depth.version).toBeGreaterThan(version);
+    expect(compiled(depth).vertexShader).toContain('vColor *= particleColor;');
+  });
+
+  // Godot's depth pass cuts the whole ALPHA, COLOR's alpha with the instance's in it.
+  it("multiplies a particle's colour into the alpha the shadow cuts", () => {
+    const surface = new THREE.MeshBasicMaterial({
+      userData: withParticleDraw({ materialClass: 'basic', props: {} }, particleDrawOf(null)).props.userData!,
+    });
+    const { vertexShader } = compiled(surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial()));
+    expect(vertexShader.indexOf('vColor *= particleColor;')).toBeGreaterThan(
+      vertexShader.indexOf('#include <color_vertex>')
+    );
   });
 
   it('recompiles when the surface starts drawing points (edge case)', () => {
