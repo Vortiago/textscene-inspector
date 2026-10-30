@@ -21,7 +21,7 @@ import {
   resetCamera,
   selectScene,
   uploadResource,
-  useThisCamera,
+  previewCamera,
 } from './record/helpers.mjs';
 
 const OUT_DIR = process.env.SHOWCASE_OUT || join(REPO_ROOT, 'docs/showcase/web');
@@ -64,7 +64,7 @@ export async function recordShowcase(browser, baseUrl, { name, file, run: scenar
     expandTree,
     clickNode,
     cameraNodePaths,
-    useThisCamera,
+    previewCamera,
     resetCamera,
     fillSearch,
     openDetailTab,

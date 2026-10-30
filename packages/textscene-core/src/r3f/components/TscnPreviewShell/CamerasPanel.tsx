@@ -1,8 +1,8 @@
 /**
  * The "Cameras" detail tab lists the camera nodes of the **live scene tree**,
- * so a camera inside a sub-scene appears. A Camera3D row swaps the 3D viewport
- * camera. A Camera2D row frames the 2D stage on the camera's view and opens
- * the 2D workspace.
+ * so a camera inside a sub-scene appears. A Camera3D row previews that camera
+ * in the 3D viewport. A Camera2D row of the root viewport frames the 2D stage
+ * on the camera's view and opens the 2D workspace.
  */
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
@@ -16,10 +16,18 @@ import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
+import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
+import type { LiveTreeEntry } from '../../liveSceneTree.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** A stable predicate, so the memo of `useLiveSceneNodes` does not recompute each render. */
-const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamera2DType(n.type);
+/** Module level, so it stays stable and the memo of `useLiveSceneNodes` holds. */
+const isCameraOrViewport = (n: TscnNode): boolean =>
+  isCamera3DType(n.type) || isCamera2DType(n.type) || isViewportBoundary(n.type);
+
+/** Whether `entry` sits under any of the viewports at `viewportPaths`. */
+function isInsideViewport(entry: LiveTreeEntry, viewportPaths: readonly string[]): boolean {
+  return viewportPaths.some((viewport) => entry.path.startsWith(`${viewport}/`));
+}
 
 export function CamerasPanel() {
   const cam = useOptionalViewportActions();
@@ -27,9 +35,12 @@ export function CamerasPanel() {
   const liveTree = useSharedLiveTree();
   const { viewportSize } = useProjectSettings();
 
-  const cameras = useLiveSceneNodes(isCameraNode);
-  const cameras3d = cameras.filter((c) => isCamera3DType(c.node.type));
-  const cameras2d = cameras.filter((c) => isCamera2DType(c.node.type));
+  // One walk for both kinds. A Camera2D inside a SubViewport is that viewport's camera
+  // (`camera_2d.cpp:342`), not the stage's.
+  const entries = useLiveSceneNodes(isCameraOrViewport);
+  const viewportPaths = entries.filter((e) => isViewportBoundary(e.node.type)).map((e) => e.path);
+  const cameras3d = entries.filter((e) => isCamera3DType(e.node.type));
+  const cameras2d = entries.filter((e) => isCamera2DType(e.node.type) && !isInsideViewport(e, viewportPaths));
 
   if (cameras3d.length === 0 && cameras2d.length === 0) {
     return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
@@ -48,17 +59,19 @@ export function CamerasPanel() {
     setMode('2D');
   }
 
-  const activePath = cam?.activeCameraPath ?? null;
+  const activePath = cam?.previewedCameraPath ?? null;
+  // A path that names no listed camera previews nothing, so the editor camera draws.
+  const isEditorActive = !cameras3d.some((c) => c.path === activePath);
   return (
     <div className={styles.camList}>
       <button
         type="button"
         className={styles.camRow}
-        data-active={activePath === null}
-        onClick={() => cam?.returnToFreeView()}
+        data-active={isEditorActive}
+        onClick={() => cam?.endCameraPreview()}
       >
-        <span className={styles.camName}>Free orbit</span>
-        <span className={styles.camTag}>{activePath === null ? 'active' : 'use'}</span>
+        <span className={styles.camName}>Editor camera</span>
+        <span className={styles.camTag}>{isEditorActive ? 'active' : 'use'}</span>
       </button>
       {cameras3d.map((c) => {
         const active = activePath === c.path;
@@ -68,7 +81,7 @@ export function CamerasPanel() {
             type="button"
             className={styles.camRow}
             data-active={active}
-            onClick={() => cam?.switchToCamera(c.path)}
+            onClick={() => cam?.previewCamera(c.path)}
           >
             <span className={styles.camName}>{c.node.name}</span>
             <span className={styles.camTag}>{active ? 'active' : 'use'}</span>

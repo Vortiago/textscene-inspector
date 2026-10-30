@@ -34,7 +34,7 @@ const RESOURCES: TscnInternalResource[] = [
 async function exposureOf(world: 'root' | 'subViewport', viewed: string | null, nodes: TscnNode[]) {
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
-      <ViewportActionsProvider initialActiveCameraPath={viewed}>
+      <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
         <WorldEnvironmentScope world={world}>
           {nodes.map((node) => (
             <Camera3D key={node.name} node={node} />
@@ -52,7 +52,7 @@ describe('Camera3D attributes', () => {
     expect(await exposureOf('root', 'Main', [cameraNode('Main', 'SubResource("Cam")')])).toBe(3);
   });
 
-  it('leaves the frame alone in the free view', async () => {
+  it('leaves the frame alone with no camera preview', async () => {
     expect(await exposureOf('root', null, [cameraNode('Main', 'SubResource("Cam")')])).toBe(1);
   });
 

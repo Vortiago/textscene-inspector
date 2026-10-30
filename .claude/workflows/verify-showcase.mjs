@@ -40,7 +40,7 @@ const CLIPS = [
     'A self-contained CSG hallway mockup: a corridor (floor/walls/ceiling) with portrait frames and Label3D name plates.',
   ],
   ['dcc-layout', 'The 3-column DCC chrome showing the CSG hallway mockup in the center viewport.'],
-  ['multi-camera', 'A multi-camera scene; the poster shows a free-orbit overview of the scene geometry.'],
+  ['multi-camera', 'A multi-camera scene; the poster shows an editor-camera overview of the scene geometry.'],
 ];
 
 const SCHEMA = {

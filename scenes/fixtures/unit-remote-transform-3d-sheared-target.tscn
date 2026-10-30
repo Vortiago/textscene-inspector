@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitremotetransform3dshr"]
+
+; The one variable: the target's parent is scaled (2, 1, 1) and the target is turned 45° about Z, so
+; its global basis is sheared. A position-only relay leaves that basis as it is and moves only the
+; origin (remote_transform_3d.cpp:63-99). Every other RemoteTransform golden drives a target under
+; an unscaled parent, so none of them shows a regression in it.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(8, 8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_target"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Parent" type="Node3D" parent="."]
+transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Box" type="MeshInstance3D" parent="Parent"]
+transform = Transform3D(0.70710678, -0.70710678, 0, 0.70710678, 0.70710678, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("BoxMesh_target")
+surface_material_override/0 = SubResource("StandardMaterial3D_target")
+
+[node name="Relay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.3, 0)
+remote_path = NodePath("../Parent/Box")
+update_rotation = false
+update_scale = false

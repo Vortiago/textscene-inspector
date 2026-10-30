@@ -65,7 +65,7 @@ export function R3FApp() {
   });
 
   // `?camera=<node path>` deep-link: look through a scene Camera3D on open.
-  const initialActiveCameraPath = useCameraDeepLink();
+  const initialPreviewedCameraPath = useCameraDeepLink();
 
   // One provider, bus, loader and job worker for the app's lifetime, so an uploaded
   // texture survives a fixture switch.
@@ -311,7 +311,7 @@ export function R3FApp() {
             onCopyNodePath={copyToClipboard}
             // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
             onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
-            initialActiveCameraPath={initialActiveCameraPath}
+            initialPreviewedCameraPath={initialPreviewedCameraPath}
             toolbar={
               <Toolbar
                 fixtureFile={fixtureFile}

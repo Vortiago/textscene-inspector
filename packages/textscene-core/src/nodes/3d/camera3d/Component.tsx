@@ -16,6 +16,7 @@ import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
 import { CameraGizmo } from './Gizmo';
 import { usePublishCamera } from '../../../r3f/environment/worldExposure';
 import { useResolvedCameraAttributes } from '../../../r3f/environment/useResolvedCameraAttributes';
+import { useRegisterSceneCamera } from '../../../r3f/sceneCameras';
 import { useResolvedEnvironment } from '../worldenvironment/useResolvedEnvironment';
 
 const DEFAULT_ASPECT = 16 / 9;
@@ -117,9 +118,10 @@ function SceneCamera({
   children,
 }: SceneCameraProps) {
   const cameraRef = useRef<FiberCamera>(null);
+  useRegisterSceneCamera(tscnPath, cameraRef);
   useEffect(() => {
     if (cameraRef.current) {
-      // Tag the camera with its TSCN path so ActiveCameraSwitcher and a SubViewport pass can find it.
+      // Tag the camera with its TSCN path so a SubViewport pass can find it.
       cameraRef.current.userData.tscnPath = tscnPath;
     }
   }, [tscnPath]);

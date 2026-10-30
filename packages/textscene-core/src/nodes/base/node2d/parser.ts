@@ -10,6 +10,7 @@ import { parseColor } from '../../../utils/colorParser';
 import { enumOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { TRANSFORM2D_SLOT_RE, matchedFloat, allFinite } from '../../../godot/variant/number.js';
 import { degToRad } from '../../../godot/math/math.js';
+import { transform2DDecompose } from '../../../godot/math/transform2d.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -111,22 +112,5 @@ export function decomposeTransform2D(
     return null;
   }
 
-  const rotation = Math.atan2(xy, xx);
-  const det = xx * yy - xy * yx;
-  const lenX = Math.hypot(xx, xy);
-  const lenY = Math.hypot(yx, yy);
-  const scaleX = lenX;
-  // Negative determinant ⇒ a flip; Godot folds it into scale.y's sign.
-  const sign = det < 0 ? -1 : 1;
-  const scaleY = lenY * sign;
-  // Godot Transform2D::get_skew(): the signed deviation of the (flip-corrected)
-  // Y axis from perpendicular to X. acos(X̂ · sign·Ŷ) − π/2 (0 when the axes are
-  // orthogonal). Guard the degenerate zero-length case → 0.
-  let skew = 0;
-  if (lenX > 0 && lenY > 0) {
-    const dot = Math.max(-1, Math.min(1, (xx * sign * yx + xy * sign * yy) / (lenX * lenY)));
-    skew = Math.acos(dot) - Math.PI / 2;
-  }
-
-  return { position: { x: ox, y: oy }, rotation, scale: { x: scaleX, y: scaleY }, skew };
+  return transform2DDecompose({ a: xx, b: xy, c: yx, d: yy, tx: ox, ty: oy });
 }

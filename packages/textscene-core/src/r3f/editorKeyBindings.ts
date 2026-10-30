@@ -29,23 +29,28 @@ export const FREELOOK_KEYS: Readonly<Record<string, keyof FreelookKeys>> = {
 };
 
 /**
+ * Consumes a numpad view key, so it scrolls no page: without NumLock the numpad emits
+ * End/PageUp/…. Returns whether `event` is one.
+ */
+export function consumeEditorViewKey(event: KeyboardEvent): boolean {
+  const isViewKey = event.code in VIEW_SNAP_KEYS || event.code === 'Numpad5';
+  if (isViewKey) event.preventDefault();
+  return isViewKey;
+}
+
+/**
  * Numpad 1/3/7 (+ Ctrl for the opposite face) and Numpad 5. Returns whether the
  * view moved, so the caller owns the single `invalidate()`.
  */
 export function applyEditorViewKey(event: KeyboardEvent, handle: EditorControlsHandle): boolean {
+  if (!consumeEditorViewKey(event)) return false;
   const view = VIEW_SNAP_KEYS[event.code];
   if (view) {
-    // Without NumLock the numpad emits End/PageUp/…, which scroll the page.
-    event.preventDefault();
     handle.applyCursor(viewSnapCursor(handle.cursor(), event.ctrlKey ? OPPOSITE_VIEW[view] : view));
-    return true;
-  }
-  if (event.code === 'Numpad5') {
-    event.preventDefault();
+  } else {
     handle.toggleProjection();
-    return true;
   }
-  return false;
+  return true;
 }
 
 /** The directions a set of held key codes asks freelook flight to move in. */

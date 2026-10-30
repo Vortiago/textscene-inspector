@@ -10,8 +10,11 @@ import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import type { Quaternion } from './quaternion.js';
 import {
+  normalizedVector3,
   vector3Dot,
   vector3DotComponents,
+  vector3Length,
+  vector3Scaled,
   vector3NormalizeInto,
   vector3Set,
   type Vector3,
@@ -210,6 +213,20 @@ export function basisMultiply(left: BasisComponents, right: BasisComponents): Ba
         f(right[6 + col]! * left[3 * row + 2]!)
     );
   });
+}
+
+/**
+ * The basis whose column `i` points along column `i` of `directions` and has the length of column `i`
+ * of `lengths`, the column rule of `RemoteTransform3D::_update_remote` (`remote_transform_3d.cpp:78-89`):
+ * `directions.get_column(i).normalized() * lengths.get_column(i).length()`. A shear or a mirror in
+ * either basis stays in the column it sits in.
+ */
+export function basisColumnsAlong(directions: BasisComponents, lengths: BasisComponents): BasisComponents {
+  const [x, y, z] = [0, 1, 2].map((i) => {
+    const [dx, dy, dz] = normalizedVector3(...basisColumn(directions, i));
+    return vector3Scaled({ x: dx, y: dy, z: dz }, vector3Length(...basisColumn(lengths, i)));
+  }) as [Vector3, Vector3, Vector3];
+  return basisFromColumns(x, y, z);
 }
 
 /**
