@@ -95,7 +95,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): nothing (a transform-only group)
 - [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md): nothing yet, Godot remaps a reference value onto an apply bone, the previewer does not
 - [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): nothing (a transform-only modifier that edits the pose of the Skeleton3D above it)
-- [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md): nothing yet, not implemented
+- [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md): one instance of the mesh per particle, in a frozen pose
 - [CSGBox3D](../../packages/textscene-core/src/nodes/3d/csg/csgbox3d/comparison.md): a solid box mesh
 - [CSGCombiner3D](../../packages/textscene-core/src/nodes/3d/csg/csgcombiner3d/comparison.md): a grouping node whose children fold into one solid
 - [CSGCylinder3D](../../packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/comparison.md): a solid cylinder or cone mesh
@@ -117,7 +117,7 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [GPUParticlesCollisionHeightField3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionheightfield3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSDF3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md): nothing yet, not implemented
-- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface, or a mesh per cell when that surface's material billboards
+- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): nothing (a transform-only group)
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not

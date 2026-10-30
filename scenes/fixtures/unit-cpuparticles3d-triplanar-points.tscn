@@ -1,0 +1,51 @@
+; The variable: a CPUParticles3D PointMesh whose emission texture projects by world triplanar. Each
+; particle is an instance, so its point reads its own MODEL_MATRIX (`scene_forward_clustered.glsl:338-346`)
+; and takes one colour from the gradient at its place, turned by its own rotate_y angle. Albedo
+; reads POINT_COORD instead (`material.cpp:1612-1615`), so the albedo is black. No other golden shows it.
+[gd_scene load_steps=5 format=3 uid="uid://unitcpuparticles3dtriplanarpoints"]
+
+[sub_resource type="Gradient" id="G"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 0.1, 0.1, 1, 0.1, 1, 0.1, 1, 0.1, 0.2, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="T"]
+gradient = SubResource("G")
+width = 64
+height = 64
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="M"]
+use_point_size = true
+point_size = 24.0
+albedo_color = Color(0, 0, 0, 1)
+metallic_specular = 0.0
+roughness = 1.0
+emission_enabled = true
+emission_texture = SubResource("T")
+uv1_triplanar = true
+uv1_world_triplanar = true
+uv1_scale = Vector3(0.3, 0.3, 0.3)
+uv1_triplanar_sharpness = 8.0
+
+[sub_resource type="PointMesh" id="P"]
+material = SubResource("M")
+
+[node name="Root" type="Node3D"]
+
+[node name="Dots" type="CPUParticles3D" parent="."]
+transform = Transform3D(0.866025, 0.17101, 0.469846, 0, 0.939693, -0.34202, -0.5, 0.296198, 0.813798, 0, 0.5, 0)
+amount = 24
+lifetime = 10.0
+preprocess = 1.0
+explosiveness = 1.0
+use_fixed_seed = true
+seed = 11
+mesh = SubResource("P")
+emission_shape = 3
+emission_box_extents = Vector3(2.5, 1.5, 1)
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 0.0
+initial_velocity_max = 0.0
+particle_flag_rotate_y = true
+angle_min = -180.0
+angle_max = 180.0

@@ -5,6 +5,7 @@
  */
 
 import type * as THREE from 'three';
+import { memoisedImport } from '../../resources/memoisedImport';
 
 /** The slice of three-bvh-csg's surface this codebase uses. */
 export interface CsgModule {
@@ -18,14 +19,10 @@ export interface CsgModule {
   INTERSECTION: number;
 }
 
-/** Written only by `loadCsgModule`, on its first call. It never clears: a failed import stays failed. */
-let pending: Promise<CsgModule> | null = null;
-
-/** Load the CSG library, memoized so every caller shares one import. */
-export function loadCsgModule(): Promise<CsgModule> {
-  pending ??= import('three-bvh-csg').then((m) => m as unknown as CsgModule);
-  return pending;
-}
+/** Load the CSG library once, shared by every caller. A failed import stays failed. */
+export const loadCsgModule = memoisedImport(() =>
+  import('three-bvh-csg').then((m) => m as unknown as CsgModule)
+);
 
 /**
  * Starts the load without waiting, as soon as a parsed scene holds any CSG type, so the boolean
