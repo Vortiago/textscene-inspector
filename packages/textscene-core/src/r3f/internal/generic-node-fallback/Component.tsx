@@ -6,12 +6,12 @@
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../nodeTransform';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
 import { placeholderUserData } from './placeholderUserData';
 
 export function GenericNodeFallback({ node, children }: NodeComponentProps) {
-  const { position, rotation, scale } = useMemo(
+  const transform = useMemo(
     () => transformFromNode3DProperties(node.properties as Node3DProperties),
     [node.properties]
   );
@@ -32,7 +32,7 @@ export function GenericNodeFallback({ node, children }: NodeComponentProps) {
   // paint-order-safe: children only, as above. The lenient parser falls back to the base `Node`
   // parse, which reads `transform` (nodes/node/parser.ts), so an unknown 3D type places children.
   return (
-    <group name={node.name} position={position} rotation={rotation} scale={scale} userData={userData}>
+    <group name={node.name} {...node3dGroupSpread(transform)} userData={userData}>
       {children}
     </group>
   );

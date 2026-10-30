@@ -9,7 +9,7 @@ import { lazy, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { Label3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -29,17 +29,14 @@ const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
   const properties = node.properties as Label3DProperties;
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   const groupRef = useRef<THREE.Group | null>(null);
 
   // `label_3d.cpp:396` hands the flag to the same cached shader the billboard
   // mode does; both are per-frame effects on the label's own group. Fixed size first:
   // the billboard freezes the world matrix, so a scale set after it lands a frame late.
-  useFixedSize(groupRef, properties.fixed_size, scale);
+  useFixedSize(groupRef, properties.fixed_size, transform.scale);
 
   // Shared with Sprite3D, so both implement Godot's billboard modes identically.
   useBillboard(groupRef, properties.billboard);
@@ -48,7 +45,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
   // hides it, and a marker group still positions any children and stays selectable.
   if (!showLabels) {
     return (
-      <group name={node.name} position={position} rotation={rotation} scale={scale}>
+      <group name={node.name} {...node3dGroupSpread(transform)}>
         {children}
       </group>
     );
@@ -59,9 +56,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
       <group
         ref={groupRef}
         name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
+        {...node3dGroupSpread(transform)}
         userData={{ billboardMode: properties.billboard, isLabel3D: true }}
       >
         <group scale={properties.pixel_size}>
@@ -81,11 +76,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
       {/* Descendants sit in a sibling group with the same transform: `billboard`
           rewrites the label group's world matrix every frame, and in Godot it is a
           shader effect that never spins the node's children. */}
-      {children === undefined ? null : (
-        <group position={position} rotation={rotation} scale={scale}>
-          {children}
-        </group>
-      )}
+      {children === undefined ? null : <group {...node3dGroupSpread(transform)}>{children}</group>}
     </>
   );
 }

@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { applyBillboard } from './nodeBillboard';
+import { decomposeForR3F, node3dGroupSpread } from '../nodeTransform';
+import { parseTransform3D } from '../../utils/transform';
 
 /** A camera at `position` whose rotation is `rotation`, with its world matrix current. */
 function cameraAt(position: [number, number, number], rotation: [number, number, number]): THREE.Camera {
@@ -132,5 +134,28 @@ describe('applyBillboard', () => {
 
     const model = new THREE.Matrix4().multiplyMatrices(object.parent!.matrixWorld, object.matrix);
     expect(object.matrixWorld.equals(model)).toBe(true);
+  });
+});
+
+describe('applyBillboard on a node with a sheared local basis', () => {
+  it('keeps the model matrix column lengths and drops the shear, as KEEP_SCALE does', () => {
+    const transform = decomposeForR3F(parseTransform3D('Transform3D(1, 0, 0, 0.8, 1, 0, 0, 0, 1, 0, 0, -4)'));
+    const spread = node3dGroupSpread(transform);
+    const object = new THREE.Object3D();
+    object.position.set(...spread.position);
+    object.rotation.set(...spread.rotation);
+    object.scale.set(...spread.scale);
+    object.updateMatrix = spread.updateMatrix;
+    object.updateMatrix();
+    const columnLengths = [0, 1, 2].map((column) =>
+      new THREE.Vector3().setFromMatrixColumn(object.matrix, column).length()
+    );
+
+    applyBillboard(object, cameraAt([0, 0, 5], [0, 0, 0]), BillboardMode.BILLBOARD_ENABLED);
+
+    expect([0, 1, 2].map((column) => axis(object, column as 0 | 1 | 2).length())).toEqual(
+      columnLengths.map((length) => expect.closeTo(length, 6))
+    );
+    expect(axis(object, 0).dot(axis(object, 1))).toBeCloseTo(0, 6);
   });
 });

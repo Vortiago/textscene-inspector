@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import type { CollisionShape3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
@@ -20,17 +20,14 @@ export function CollisionShape3D({ node, children }: NodeComponentProps) {
   const sceneResources = useSceneResources();
   const { showCollisions } = useViewportMode();
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   const shapeResource = useSubOrExtResource(properties.shape, sceneResources)?.resource;
   // Godot draws the shape in the node's own `debug_color`. The literal is sRGB.
   const debugColor = useGodotLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
 
   return (
-    <group name={node.name} position={position} rotation={rotation} scale={scale}>
+    <group name={node.name} {...node3dGroupSpread(transform)}>
       {showCollisions && shapeResource ? <CollisionGizmo shape={shapeResource} color={debugColor} /> : null}
       {children}
     </group>

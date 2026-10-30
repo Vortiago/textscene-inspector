@@ -9,7 +9,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { AnimationClip, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
@@ -67,10 +67,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   const transport = useAnimationTransport();
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   const animations = useMemo(
     () => resolveAnimations(properties.libraries, internalResources),
@@ -225,13 +222,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   usePushedWrites(useAnimatedBonePoses(), boneClip, isPlaying, actionsRef);
 
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      userData={{ nodeType: 'AnimationPlayer' }}
-    >
+    <group name={node.name} {...node3dGroupSpread(transform)} userData={{ nodeType: 'AnimationPlayer' }}>
       {children}
     </group>
   );

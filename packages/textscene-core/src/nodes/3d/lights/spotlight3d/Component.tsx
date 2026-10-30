@@ -19,10 +19,7 @@ import { positionalLightRange, usePositionalLight } from '../shared/positionalLi
 export function SpotLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as SpotLight3DProperties;
   const lightRef = useRef<THREE.SpotLight | null>(null);
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
   const color = parseColorToHex(properties.light_color);
   const { distance, shadowNear, shadowFar } = positionalLightRange(properties.spot_range);
   const angleRadians = degToRad(properties.spot_angle);
@@ -38,9 +35,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   return (
     <LightWithTarget
       name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
+      transform={transform}
       renderLight={(target) => (
         <>
           <spotLight
