@@ -819,9 +819,10 @@ tr:last-child td{border-bottom:0}
 <p>The numeric keys (<code>fov</code>, <code>size</code>, <code>near</code>, <code>far</code>, <code>h_offset</code>, <code>v_offset</code>, <code>frustum_offset</code>) warn and fall back to Godot's defaults through <code>floatOr</code> and <code>vec2Or</code>, and <code>cull_mask</code> and <code>doppler_tracking</code> to <code>1048575</code> and <code>0</code>. <code>projection</code> and <code>keep_aspect</code> silently treat any unrecognised value as the default. <code>current</code> reads every spelling a BOOL slot converts, so <code>1</code> makes the camera current. Text no BOOL slot reads leaves the camera inactive without a warning.</p>
 <h3>Exposure and Environment</h3>
 <p>A valid <code>attributes</code> replaces the exposure of the world while the world renders through that camera (<code>renderer_scene_cull.cpp</code>). The WorldEnvironment sheet lists what the exposure scales. A valid <code>environment</code> replaces the Environment of the world the same way (<code>renderer_scene_cull.cpp:3594-3597</code>).</p>
-<p>A SubViewport that shares a world draws at the exposure of its own camera, or at the exposure of the world without one (<code>renderer_scene_cull.cpp:2707</code>, <code>:3562-3565</code>). Two viewports of one world so draw one frame at two exposures.</p>
+<p>A SubViewport that shares a world draws with the exposure and the Environment of its own camera (<code>renderer_scene_cull.cpp:2707</code>, <code>:3562-3565</code>, <code>:3594-3597</code>). Where the camera holds none, it draws with those of the world. Two viewports of one world so draw one frame with two backgrounds, two ambients, two fogs, two tone curves and two exposures.</p>
+<p>The radiance of a sky that two such viewports draw is baked once, at the exposure of the first. The Sky sheet gives the rule.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> A CameraAttributesPhysical sets no <code>fov</code>, <code>near</code> or <code>far</code>, and no depth of field draws.</li><li><strong>Not drawn</strong> A Camera3D in a SubViewport that shares the root world of a 3D scene keeps the root world's Environment.</li><li><strong>Not drawn</strong> In a shared world of a 2D scene, a Camera3D's <code>environment</code> sets only the tone mapping.</li><li><strong>Editor only</strong> The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.</li></ul></div>
+<ul><li><strong>Not drawn</strong> A CameraAttributesPhysical sets no <code>fov</code>, <code>near</code> or <code>far</code>, and no depth of field draws.</li><li><strong>Editor only</strong> The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.</li></ul></div>
     </article>
     <article class="sheet" data-type="CanvasGroup" hidden>
       <header class="sheet-head">
@@ -5489,7 +5490,8 @@ tr:last-child td{border-bottom:0}
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       
-      <div class="prose intro"><p>Captures the scene around it in six directions and gives each lit surface inside its box the capture's reflection and ambient light. The previewer captures each probe once, after the scene's meshes and textures load.</p></div>
+      <div class="prose intro"><p>Captures the scene around it in six directions and gives each lit surface inside its box the capture's reflection and ambient light. The previewer captures each probe once, after the scene's meshes and textures load.</p>
+<p>A probe captures the scene with the Environment and the exposure of its world, not with those of the camera the view renders through (<code>renderer_scene_cull.cpp:3692</code>).</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Two overlapping probes</h3><span class="status st-unreviewed">Unreviewed</span></div>
@@ -5976,7 +5978,9 @@ tr:last-child td{border-bottom:0}
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p>
+<p>Viewports that draw one Sky share one radiance, as in Godot (<code>sky.h:251</code>). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (<code>renderer_viewport.cpp:91-127</code>). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (<code>sky.cpp:1263-1369</code>). Each viewport draws the background at its own exposure.</p>
+<p>The Environment's <code>background_energy_multiplier</code> scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (<code>render_scene_data_rd.cpp:169</code>, <code>scene_forward_clustered.glsl:1732</code>, <code>:1756</code>). A fog reads the radiance as baked.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>

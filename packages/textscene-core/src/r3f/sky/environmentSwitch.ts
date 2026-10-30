@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { releasedOnUnmount } from '../sharedTexture';
 
 /**
  * The height of the smallest CubeUV layout three makes, from a cube of 16 (r186 `PMREMGenerator.js:289`).
@@ -13,13 +14,15 @@ import * as THREE from 'three';
  */
 const CUBE_UV_HEIGHT = 4 * 16;
 
-/**
- * A new switch for each bake, so a reader that compares `scene.environment`, as the reflection
- * probes do (`sceneProbes.ts`), sees the sky change. The caller disposes it with the bake.
- */
-export function createEnvironmentSwitch(): THREE.DataTexture {
+function createEnvironmentSwitch(): THREE.DataTexture {
   const environment = new THREE.DataTexture(new Uint8Array(4 * CUBE_UV_HEIGHT), 1, CUBE_UV_HEIGHT);
   environment.mapping = THREE.CubeUVReflectionMapping;
   environment.needsUpdate = true;
   return environment;
 }
+
+/**
+ * The one switch every sky shows. three compares `scene.environment` by identity, so a pass that puts
+ * another sky on resolves no program again. Each canvas that unmounts frees it from its renderer.
+ */
+export const ENVIRONMENT_SWITCH = releasedOnUnmount(createEnvironmentSwitch());

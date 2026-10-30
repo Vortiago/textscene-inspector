@@ -16,7 +16,7 @@ import { drawOffscreen } from '../offscreen';
 import { createPassTarget } from './passTarget';
 import { useGodotToneMapEffect } from './useGodotToneMapEffect';
 import type { GodotToneMapEffect } from './GodotToneMapEffect';
-import { useWorldToneMap } from './worldToneMap';
+import { usePassToneMap } from './passToneMap';
 
 /**
  * The world buffer's texel type. Godot draws every 3D frame into RGBA16F
@@ -57,24 +57,24 @@ const NO_ELAPSED_TIME = 0;
 
 /**
  * The world buffer and the tonemap pass of one viewport, tonemapped with the Environment and the
- * auto exposure of the world it mounts in. Glow runs on the Environment's flag alone, as Godot's
+ * auto exposure its pass draws with (`usePassToneMap`). Glow runs on the Environment's flag alone, as Godot's
  * glow chain runs (`renderer_scene_render_rd.cpp:575`, `:686`).
  *
  * @canonical Godot's tonemap pass of a viewport
  */
 export function useToneMapPass(options: ToneMapPassOptions): ToneMapPass {
   const { target, msaaMode, width, height, transparentBackground, usesDebanding, name } = options;
-  const world = useWorldToneMap();
-  const { settings } = world;
+  const passToneMap = usePassToneMap();
+  const { settings } = passToneMap;
   const glow = useMemo(() => settings && glowParamsFor(settings), [settings]);
   const effect = useGodotToneMapEffect({
     glow,
     adjustments: settings?.adjustments ?? null,
     toneMapping: settings?.toneMapping ?? NO_ENVIRONMENT_TONE_MAPPING,
-    autoExposure: world.autoExposure,
+    autoExposure: passToneMap.autoExposure,
     transparentBackground,
     usesDebanding,
-    resources: world.resources,
+    resources: passToneMap.resources,
   });
   const worldBuffer = useWorldBuffer(msaaMode, width, height, name);
   const gl = useThree((state) => state.gl);

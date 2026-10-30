@@ -11,7 +11,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { Compositor } from './Compositor';
-import { WorldToneMapProvider } from './worldToneMap';
+import { PassToneMapProvider } from './passToneMap';
 import { usePublishCameraAttributes } from './worldExposure';
 import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import type { EnvironmentSettings } from '../../resources/environment/types';
@@ -66,10 +66,10 @@ async function mount({
       <CaptureRenderer captured={captured} />
       <InWorld>
         <PublishedAutoExposure autoExposure={autoExposure} />
-        <WorldToneMapProvider settings={settings} resources={NO_RESOURCES}>
+        <PassToneMapProvider settings={settings} resources={NO_RESOURCES}>
           <Content object={content} />
           <Compositor />
-        </WorldToneMapProvider>
+        </PassToneMapProvider>
       </InWorld>
     </Wrapper>,
     { gl: rendererOver(context) }

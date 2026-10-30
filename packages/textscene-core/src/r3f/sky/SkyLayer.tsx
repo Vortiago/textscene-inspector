@@ -1,12 +1,13 @@
 /**
  * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its radiance to every
- * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`).
+ * lit material and both fogs before each render of the scene, and black after it (`skyRadiance.ts`),
+ * while its Environment is on the scene (`sceneEnvironment.tsx`).
  * Godot's sky shader draws the discs of the first four DirectionalLights that are not Light Only as
  * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced or GLB light
- * has its real world transform. The world's exposure scales the sky as Godot does: the background
- * and each disc once, and the ambient and the reflection twice, since Godot bakes the radiance at
- * the exposure and a surface reads it at the exposure again
- * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:241-246`, `sky.cpp:1086`).
+ * has its real world transform. The world's exposure and `background_energy_multiplier` scale the
+ * sky as Godot does: the background and each disc once, and the ambient and the reflection twice,
+ * since Godot bakes the radiance at both and a surface reads it at both again
+ * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:169`, `:241-246`, `sky.cpp:1086`).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -16,14 +17,22 @@ import { useFrame, useThree } from '@react-three/fiber';
 import type { Sky } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
 import type { SceneResources } from '../SceneResourcesContext';
-import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
-import { skyLightEnergy, skyLightSize } from './skyLight';
+import type { SkyLight } from '../../resources/sky/build';
+import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
-import { hideShownSky, SkyRadiance } from './skyRadiance';
-import { createEnvironmentSwitch } from './environmentSwitch';
+import { hideShownSky } from './skyRadiance';
+import { holdSkyBakes, radianceUpdateOf, type SkyBakes, skyUpdatePlan } from './skyBakes';
+import { materialReadsLights } from '../../resources/sky/readsLights';
+import { stepSkyRadiance } from '../../godot/rendering/environment/skyRadianceUpdate';
+import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera';
 import { useExposureFactor } from '../environment/worldExposure';
-import { registerExposureStage } from '../exposure/sceneExposure';
+import { drawnExposureOf } from '../exposure/sceneExposure';
+import {
+  noteEnvironmentChange,
+  registerEnvironmentPart,
+  useEnvironmentKey,
+} from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -31,11 +40,10 @@ import type { Vector3 } from '../../godot/math/vector';
 interface SkyLayerProps {
   sky: Sky;
   /**
-   * The sky's full reflection strength (`background_energy_multiplier`), as
-   * `scene.environmentIntensity`: a surface reflects the whole sky whatever the
-   * ambient source.
+   * `background_energy_multiplier`, which scales the drawn background once and the radiance twice:
+   * the bake holds it, and each surface reads the radiance at it again, whatever the ambient source.
    */
-  intensity?: number;
+  energyMultiplier?: number;
   /**
    * `ambient_light_sky_contribution`: the sky's share of the ambient, 0 when the ambient
    * comes from elsewhere.
@@ -47,15 +55,12 @@ interface SkyLayerProps {
    * over a colour background).
    */
   asBackground?: boolean;
-  /**
-   * Godot's `background_energy_multiplier` applied to the drawn sky, so a doubled
-   * multiplier brightens the sky as well as the surfaces it lights.
-   */
-  backgroundIntensity?: number;
   /** `sky_rotation`, which turns the background and the light the sky gives. */
   rotation: Vector3;
   /** The pools the sky material's references, such as a panorama, resolve in. */
   resources: SceneResources;
+  /** Whether the fog scatters the sun, which reads the lights for any sky (`sky.cpp:1053`). */
+  fogScattersSun?: boolean;
 }
 
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
@@ -63,16 +68,17 @@ const LIGHT_SLOTS = 4;
 
 export function SkyLayer({
   sky,
-  intensity = 1,
+  energyMultiplier = 1,
   contribution = 1,
   asBackground = true,
-  backgroundIntensity = 1,
   rotation,
   resources,
+  fogScattersSun = false,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const exposure = useExposureFactor();
+  const environment = useEnvironmentKey();
 
   // The panorama sky samples `source_panorama` as `source_color` (`sky_material.cpp:498`).
   // Every other sky kind passes `undefined` and the hook idles.
@@ -90,79 +96,100 @@ export function SkyLayer({
   const contributionRef = useRef(contribution);
   contributionRef.current = contribution;
 
+  // Written only by the effect below, while it holds bakes.
+  const bakeWantedRef = useRef<(() => boolean) | null>(null);
+  useFrame(({ invalidate }) => {
+    if (bakeWantedRef.current?.()) invalidate();
+  });
+
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
     // is seen, and each bake costs a six-face cube render and the layer passes.
     if (lightsKey === null) return undefined;
 
-    const built = buildSkyEnvironment(gl, {
-      sky,
-      lights: directionalLights(scene).map((light) => ({ ...light, energy: light.energy * exposure })),
-      panorama,
-      asBackground,
-      energy: intensity * exposure,
-    });
-    if (!built) return undefined;
-
-    const previousEnvironment = scene.environment;
-    const previousIntensity = scene.environmentIntensity;
-    const previousBackground = scene.background;
-    const previousBackgroundIntensity = scene.backgroundIntensity;
-    const previousBackgroundRotation = scene.backgroundRotation.clone();
+    const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-
-    // The radiance is baked at the exposure of the view, and a surface reads it at the exposure it
-    // draws at. A draw at another exposure keeps the bake, as Godot rebakes a layer at a time
-    // (`sky.cpp`, `update_radiance_buffers`).
-    const exposeAs = (factor: number) => {
-      scene.environmentIntensity = intensity * exposure * factor;
-      if (asBackground) scene.backgroundIntensity = backgroundIntensity * factor;
-    };
-    const environment = createEnvironmentSwitch();
-    scene.environment = environment;
-    const radiance = new SkyRadiance(gl, built.layers, {
-      energy: intensity * exposure,
-      rotation: skyRotation,
-    });
-    // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingRadiance = observeSceneCamera(scene, () => radiance.show(contributionRef.current));
-    const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
-    if (asBackground) {
-      scene.background = built.background;
-      scene.backgroundRotation.copy(skyRotation);
+    const input = { sky, lights, panorama, asBackground, energyMultiplier, rotation: skyRotation };
+    const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
+    const update = radianceUpdateOf(sky);
+    const plan = skyUpdatePlan(sky);
+    const readsLights = (materialReadsLights(sky.material) || fogScattersSun) && lights.length > 0;
+    const lightData = readsLights ? lightsKey : NO_SKY_LIGHTS;
+    // The exposure scales the light data, and so dirties the sky, unless every energy is 0.
+    const exposureScalesLights = readsLights && lights.some((light) => light.energy !== 0);
+    const first = bakes.bakeNow(update.baked?.exposure ?? exposure);
+    if (!first) {
+      release();
+      return undefined;
     }
-    exposeAs(exposure);
-    const stopStaging = registerExposureStage(scene, (target) => {
-      exposeAs(target ?? 1);
-      return () => exposeAs(exposure);
+    let radiance = first;
+    bakeWantedRef.current = bakeWantedOf(bakes, () => noteEnvironmentChange(scene, environment));
+
+    // A render draws the background live at its own exposure. A surface reads the radiance at the
+    // brightness that baked it, times its own exposure and its `background_energy_multiplier`
+    // (`render_forward_clustered.cpp:2045`, `render_scene_data_rd.cpp:169`,
+    // `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads it without the multiplier (`:1121`).
+    const brightnessAt = (drawn: number) => energyMultiplier * drawn;
+    const bakedBrightness = (drawn: number) => update.baked?.brightness ?? brightnessAt(drawn);
+    const showAt = (drawn: number) => {
+      radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
+      scene.environmentIntensity = bakedBrightness(drawn) * brightnessAt(drawn);
+      if (asBackground) {
+        scene.background = (bakes.at(drawn) ?? radiance).background;
+        scene.backgroundIntensity = brightnessAt(drawn);
+      }
+    };
+    // Each render shows the sky at the exposure it draws at, a staged draw too (`drawAtExposure`).
+    const showForRender = () => {
+      const drawn = drawnExposureOf(scene);
+      const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
+      stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
+      showAt(drawn);
+      radiance.radiance.show(contributionRef.current, bakedBrightness(drawn));
+    };
+    const previousBackgroundRotation = new THREE.Euler();
+    const stopRegistering = registerEnvironmentPart(scene, environment, () => {
+      const previousEnvironment = scene.environment;
+      const previousIntensity = scene.environmentIntensity;
+      const previousBackground = scene.background;
+      const previousBackgroundIntensity = scene.backgroundIntensity;
+      previousBackgroundRotation.copy(scene.backgroundRotation);
+      scene.environment = ENVIRONMENT_SWITCH;
+      // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
+      const stopShowingRadiance = observeSceneCamera(scene, showForRender);
+      const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
+      if (asBackground) scene.backgroundRotation.copy(skyRotation);
+      showAt(exposure);
+      const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
+      return () => {
+        stopShowingRadiance();
+        stopHidingRadiance();
+        stopDebanding?.();
+        scene.environment = previousEnvironment;
+        scene.environmentIntensity = previousIntensity;
+        if (asBackground) {
+          scene.background = previousBackground;
+          scene.backgroundIntensity = previousBackgroundIntensity;
+          scene.backgroundRotation.copy(previousBackgroundRotation);
+        }
+      };
     });
-    const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
 
     return () => {
-      stopStaging();
-      stopShowingRadiance();
-      stopHidingRadiance();
-      stopDebanding?.();
-      scene.environment = previousEnvironment;
-      scene.environmentIntensity = previousIntensity;
-      if (asBackground) {
-        scene.background = previousBackground;
-        scene.backgroundIntensity = previousBackgroundIntensity;
-        scene.backgroundRotation.copy(previousBackgroundRotation);
-      }
-      radiance.hide();
-      environment.dispose();
-      built.dispose();
+      stopRegistering();
+      bakeWantedRef.current = null;
+      release();
     };
   }, [
     gl,
     scene,
+    environment,
     sky,
-    intensity,
+    fogScattersSun,
+    energyMultiplier,
     exposure,
     panorama,
     asBackground,
-    backgroundIntensity,
     lightsKey,
     contextRestores,
     rotationX,
@@ -171,6 +198,22 @@ export function SkyLayer({
   ]);
 
   return null;
+}
+
+/**
+ * Bakes each exposure a render of `bakes` asked for, and answers whether a frame should draw. A bake
+ * that lands, whichever layer baked it, runs `noteBake`: a reflection probe captured the bake it
+ * replaces, and captures again only for a change of its Environment (`sceneProbes.ts`).
+ */
+function bakeWantedOf(bakes: SkyBakes, noteBake: () => void): () => boolean {
+  let seenCount = bakes.bakeCount;
+  return () => {
+    const isBaked = bakes.bakeWanted();
+    if (bakes.bakeCount === seenCount) return isBaked;
+    seenCount = bakes.bakeCount;
+    noteBake();
+    return true;
+  };
 }
 
 /**

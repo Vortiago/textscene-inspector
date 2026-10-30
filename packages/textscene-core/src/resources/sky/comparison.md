@@ -8,6 +8,10 @@ renders_as: Godot's radiance layers as an octmap array + background
 
 A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
 
+Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (`renderer_viewport.cpp:91-127`). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (`sky.cpp:1263-1369`). Each viewport draws the background at its own exposure.
+
+The Environment's `background_energy_multiplier` scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads the radiance as baked.
+
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 

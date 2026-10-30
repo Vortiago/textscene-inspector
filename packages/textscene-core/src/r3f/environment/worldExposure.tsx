@@ -15,6 +15,8 @@ import { electCameraOfViewport } from '../../godot/scene/camera3d';
 import { useEnclosingViewportPath } from '../contexts/EnclosingViewportContext';
 import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
+import { useByValue } from '../hooks/useByValue';
+import { sameElements } from '../../utils/sameElements';
 import { useWorldKind, type WorldKind } from './WorldKindContext';
 import { createWorldGroup, createWorldPublications, type WorldResolution } from './worldGroup';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
@@ -103,14 +105,21 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
   );
 }
 
-/** Gathers a world's CameraAttributes for the viewports that draw it, with no camera of its own. */
-export function WorldCameraAttributesScope({ children }: { children: ReactNode }) {
-  return <cameraAttributes.Provider>{children}</cameraAttributes.Provider>;
+/**
+ * Gathers the CameraAttributes and the cameras of a world that only its shared viewports draw, as a
+ * 2D canvas's World3D. Each viewport elects its own camera by its path (`ViewportPassAttributes`).
+ */
+export function WorldCamerasScope({ children }: { children: ReactNode }) {
+  return (
+    <cameraAttributes.Provider>
+      <cameras.Provider>{children}</cameras.Provider>
+    </cameraAttributes.Provider>
+  );
 }
 
 /**
  * Gives the readers below the exposure of the world's own CameraAttributes, for a world that no one
- * camera renders. It reads the chooser of the enclosing `WorldCameraAttributesScope`.
+ * camera renders. It reads the chooser of the enclosing `WorldCamerasScope`.
  */
 export function WorldAttributesExposure({ children }: { children: ReactNode }) {
   const attributes = attributesOf(cameraAttributes.useChosen());
@@ -118,17 +127,15 @@ export function WorldAttributesExposure({ children }: { children: ReactNode }) {
 }
 
 /**
- * Chooses the camera of a viewport that shares its parent's world. The world's CameraAttributes
- * group is the parent's, keyed by its scenario (`world_environment.cpp:87-93`), so a node inside
- * publishes to the parent's chooser. The scene holds the world's exposure for every viewport that
+ * The exposure of a viewport that shares its parent's world. The world's CameraAttributes group and
+ * its cameras are the parent's, keyed by its scenario (`world_environment.cpp:87-93`), so a node
+ * inside publishes to the parent's. The scene holds the world's exposure for every viewport that
  * draws it, so its lights read the world's and each pass draws at its own (`ViewportPassAttributes`).
  */
 export function SharedWorldExposureScope({ children }: { children: ReactNode }) {
-  return (
-    <cameras.Provider>
-      <SharedRenderCameraProvider>{children}</SharedRenderCameraProvider>
-    </cameras.Provider>
-  );
+  const factor = attributesOf(cameraAttributes.useChosen())?.exposureMultiplier ?? null;
+  useSceneExposure(factor, factor);
+  return <WorldAttributesExposure>{children}</WorldAttributesExposure>;
 }
 
 /** The Environment of the camera the world renders through, null for none. */
@@ -153,34 +160,6 @@ function RenderCameraProvider({ children }: { children: ReactNode }) {
     attributesOf(worldAttributes)?.exposureMultiplier ?? null
   );
   return (
-    <RenderCameraScope renderCamera={renderCamera} attributes={attributes}>
-      {children}
-    </RenderCameraScope>
-  );
-}
-
-function SharedRenderCameraProvider({ children }: { children: ReactNode }) {
-  const renderCamera = electCameraOfViewport(cameras.useAll(), useEnclosingViewportPath());
-  const worldAttributes = attributesOf(cameraAttributes.useChosen());
-  useSceneExposure(worldAttributes?.exposureMultiplier ?? null, worldAttributes?.exposureMultiplier ?? null);
-  return (
-    <RenderCameraScope renderCamera={renderCamera} attributes={worldAttributes}>
-      {children}
-    </RenderCameraScope>
-  );
-}
-
-/** Gives the readers below the Environment of `renderCamera` and the `attributes` their world holds. */
-function RenderCameraScope({
-  renderCamera,
-  attributes,
-  children,
-}: {
-  renderCamera: WorldCamera | null;
-  attributes: CameraAttributes | null;
-  children: ReactNode;
-}) {
-  return (
     <RenderCameraEnvironmentContext.Provider value={renderCamera?.environment ?? null}>
       <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>
     </RenderCameraEnvironmentContext.Provider>
@@ -188,7 +167,7 @@ function RenderCameraScope({
 }
 
 /** The camera the pass of the viewport above draws through, null for none. */
-const PassCameraPathContext = createContext<string | null>(null);
+const PassCameraContext = createContext<WorldCamera | null>(null);
 
 /**
  * Gives `children`, the tonemap stage of the viewport pass at `path`, the attributes the pass draws
@@ -204,15 +183,35 @@ export function ViewportPassAttributes({ path, children }: { path: string; child
   const camera = useMemo(() => electCameraOfViewport(worldCameras, path), [worldCameras, path]);
   const attributes = drawnAttributes(camera, worldAttributes);
   return (
-    <PassCameraPathContext.Provider value={camera?.path ?? null}>
+    <PassCameraContext.Provider value={camera}>
       <CameraAttributesContext.Provider value={attributes}>{children}</CameraAttributesContext.Provider>
-    </PassCameraPathContext.Provider>
+    </PassCameraContext.Provider>
   );
 }
 
 /** The path of the camera the enclosing `ViewportPassAttributes` elects, null for none. */
 export function usePassCameraPath(): string | null {
-  return useContext(PassCameraPathContext);
+  return useContext(PassCameraContext)?.path ?? null;
+}
+
+/**
+ * The Environment of the camera each viewport pass of the world elects. A viewport with no camera
+ * draws nothing of the world. The root viewport's own camera is the view's
+ * (`useRenderCameraEnvironment`).
+ */
+export function usePassCameraEnvironments(): readonly EnvironmentResolution[] {
+  const worldCameras = cameras.useAll();
+  const elected = useMemo(() => {
+    const viewports = new Set(worldCameras.map((camera) => camera.viewport).filter((path) => path !== null));
+    return [...viewports].map((path) => electCameraOfViewport(worldCameras, path)!.environment);
+  }, [worldCameras]);
+  // A camera that toggles `current` publishes again, and mostly elects the same Environments.
+  return useByValue(elected, sameElements);
+}
+
+/** The Environment of the camera the enclosing `ViewportPassAttributes` elects, null for none. */
+export function usePassCameraEnvironment(): EnvironmentResolution | null {
+  return useContext(PassCameraContext)?.environment ?? null;
 }
 
 /**

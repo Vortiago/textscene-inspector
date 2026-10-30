@@ -5,6 +5,7 @@
  */
 
 import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
+import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
 import type { Rgba } from '../../godot/math/math';
 
 export interface ProceduralSkyProperties {
@@ -50,9 +51,6 @@ export interface PhysicalSkyProperties {
 
 export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;
 
-/** `Sky.process_mode` (`scene/resources/sky.h:51-56`). */
-export type SkyProcessMode = 'automatic' | 'quality' | 'incremental' | 'real-time';
-
 /** The `Sky` resource's own properties, which decide how Godot bakes its radiance layers. */
 export interface SkyProcessing {
   processMode: SkyProcessMode;
@@ -70,4 +68,4 @@ export type SkyBake =
   | { radianceFilter: 'importance-sample'; radianceSize: number };
 
 /** A Godot `Sky` as the renderer draws it: its material, and how its radiance layers bake. */
-export type Sky = { material: SkyProperties } & SkyBake;
+export type Sky = { material: SkyProperties; processMode: SkyProcessMode } & SkyBake;
