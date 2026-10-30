@@ -10,7 +10,7 @@ import type { ProgramInjection } from '../materialProgramInputs';
 import { editedProgram, rewrittenShader, rewrittenThroughChunks } from '../shaderPatch/chunkPatch';
 import { recordedOn } from './recordedOnMaterial';
 import { perObject } from '../../utils/perObject';
-import { NODE_INSTANCE, NODE_MODEL, NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
+import { DRAWN_INSTANCE, DRAWN_MODEL, NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
 import type { Triplanar, TriplanarProjection } from '../../resources/materials/standardmaterial3d/types';
 
 /** three's maps that a Godot slot draws through, and so that a triplanar UV set can serve. */
@@ -155,19 +155,19 @@ const GODOT_VERTEX_INPUTS = /* glsl */ `
 		godotNormal = objectNormal;
 	}
 	vec3 godotVertex = transformed;
-	mat4 godotModel = ${NODE_MODEL} * godotModelFromObject;
+	mat4 godotModel = ${DRAWN_MODEL} * godotModelFromObject;
 	mat3 godotModelNormal = godotNormalMatrix( mat3( godotModel ) );
 	#ifdef USE_INSTANCING
-		godotModel *= ${NODE_INSTANCE};
-		godotModelNormal *= mat3( ${NODE_INSTANCE} );
+		godotModel *= ${DRAWN_INSTANCE};
+		godotModelNormal *= mat3( ${DRAWN_INSTANCE} );
 	#endif
 `;
 
 /**
  * Godot's TANGENT and BINORMAL for a triplanar surface (`material.cpp:1386-1414`), carried to view
  * space as Godot's `modelview_normal` carries them (`scene_forward_clustered.glsl:461-470`). A
- * billboard's is the model-view its pose writes for a plain and an instanced draw alike
- * (`surfaceBillboard.ts`).
+ * billboard's is the model-view its pose writes for a plain and an instanced draw alike, which
+ * `modelViewMatrix` reads after the pose (`surfaceBillboard.ts`).
  */
 const GODOT_FRAME = /* glsl */ `
 	#ifdef GODOT_TRIPLANAR_TANGENT_WORLD
@@ -191,7 +191,7 @@ const GODOT_FRAME = /* glsl */ `
 		godotBinormal = normalize( godotBinormal );
 	#endif
 	#ifdef GODOT_TRIPLANAR_BILLBOARD
-		mat3 godotModelViewNormal = mat3( godotBillboardModelView );
+		mat3 godotModelViewNormal = mat3( modelViewMatrix );
 	#else
 		mat3 godotModelViewNormal = mat3( viewMatrix ) * godotModelNormal;
 	#endif

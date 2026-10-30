@@ -8,7 +8,7 @@ import type { ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 import { SHADER_ALPHA_HASH_SCALE_DEFAULT } from '../../godot/rendering/materials/defaultMaterial';
 import { recordedUniform } from './recordedOnMaterial';
-import { NODE_INSTANCE, NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
+import { DRAWN_INSTANCE, NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
 
 const HASH_PARS_CHUNK = '#include <alphahash_pars_fragment>';
 const PROJECT_VERTEX_CHUNK = '#include <project_vertex>';
@@ -53,7 +53,7 @@ const GODOT_OBJECT_POSITION = /* glsl */ `
 #ifdef USE_ALPHAHASH
 	vec4 godotObjectPosition = vec4( transformed, 1.0 );
 	#ifdef USE_INSTANCING
-		godotObjectPosition = ${NODE_INSTANCE} * godotObjectPosition;
+		godotObjectPosition = ${DRAWN_INSTANCE} * godotObjectPosition;
 	#endif
 	vPosition = ( godotObjectFromModel * godotObjectPosition ).xyz;
 #endif

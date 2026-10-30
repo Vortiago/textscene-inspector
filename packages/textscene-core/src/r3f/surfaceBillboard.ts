@@ -11,7 +11,7 @@ import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d
 import { composeInjections, type ProgramInjection } from './materialProgramInputs';
 import { editedProgram, rewrittenShader } from './shaderPatch/chunkPatch';
 import { INSTANCE_CUSTOM_ATTRIBUTE } from './meshes/sharedInstances';
-import { NODE_INSTANCE, NODE_MODEL } from './materials/nodePose';
+import { DRAWN_INSTANCE, DRAWN_MODEL } from './materials/nodePose';
 
 /** The lines before `main` and at `uv_vertex`, where the billboard and the particle draw edit. */
 export const MAIN_CHUNK = 'void main() {';
@@ -120,7 +120,8 @@ const KEPT_SCALE = /* glsl */ `godotWorld = godotWorld * mat4(
 /**
  * Godot's MODEL_MATRIX for an instance is the node's times the instance's
  * (`scene_forward_clustered.glsl:341`), and the billboard replaces its basis. Declared before the
- * pose's macros, so it reads three's own matrices.
+ * pose's macros, so it reads three's own matrices, beside the unit instance the pose folds an
+ * instance into: a global must come before `main`.
  */
 function billboardFunction({ mode, keepScale }: SurfaceBillboard): string {
   return /* glsl */ `uniform mat4 godotMainCameraWorld;
@@ -147,15 +148,15 @@ const mat4 godotUnitInstance = mat4( 1.0 );`;
 /**
  * Every later read of three's pose takes the billboard: the model and model-view matrices are the
  * billboard, and an instance's own matrix is in it. Godot's billboard replaces MODELVIEW_MATRIX
- * alone, so a reader of MODEL_MATRIX reads the node's, kept before the macros (`nodePose.ts`).
+ * alone, so a reader of MODEL_MATRIX reads three's own matrices, kept before the macros (`nodePose.ts`).
  */
 const BILLBOARD_POSE = /* glsl */ `mat4 godotNodeModel = modelMatrix;
-	#undef ${NODE_MODEL}
-	#define ${NODE_MODEL} godotNodeModel
+	#undef ${DRAWN_MODEL}
+	#define ${DRAWN_MODEL} godotNodeModel
 	#ifdef USE_INSTANCING
 		mat4 godotNodeInstance = instanceMatrix;
-		#undef ${NODE_INSTANCE}
-		#define ${NODE_INSTANCE} godotNodeInstance
+		#undef ${DRAWN_INSTANCE}
+		#define ${DRAWN_INSTANCE} godotNodeInstance
 		#define instanceMatrix godotUnitInstance
 	#endif
 	mat4 godotBillboardWorld = godotBillboard();

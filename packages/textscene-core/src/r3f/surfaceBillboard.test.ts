@@ -75,10 +75,10 @@ describe('a BILLBOARD_PARTICLES billboard', () => {
 
   // Godot's billboard replaces MODELVIEW_MATRIX alone (`material.cpp:1263-1266`).
   it("keeps the node's matrices for a reader of MODEL_MATRIX", () => {
-    const keep = vertexShader.indexOf('#define GODOT_NODE_MODEL godotNodeModel');
+    const keep = vertexShader.indexOf('#define GODOT_DRAWN_MODEL godotNodeModel');
     expect(keep).toBeGreaterThan(vertexShader.indexOf('mat4 godotNodeModel = modelMatrix;'));
     expect(keep).toBeLessThan(vertexShader.indexOf('#define modelMatrix godotBillboardWorld'));
-    expect(vertexShader).toContain('#define GODOT_NODE_INSTANCE godotNodeInstance');
+    expect(vertexShader).toContain('#define GODOT_DRAWN_INSTANCE godotNodeInstance');
   });
 
   it('poses every chunk of a plain draw that reads the model, before the first of them', () => {
