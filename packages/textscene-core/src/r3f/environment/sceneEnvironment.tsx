@@ -231,3 +231,19 @@ export function DrawnEnvironment({
 }) {
   return <EnvironmentKeyContext.Provider value={environment}>{children}</EnvironmentKeyContext.Provider>;
 }
+
+/**
+ * Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found.
+ *
+ * @canonical A texture shown as the background of a scene
+ */
+export function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
+  const previousBackground = scene.background;
+  const previousIntensity = scene.backgroundIntensity;
+  scene.background = texture;
+  scene.backgroundIntensity = intensity;
+  return () => {
+    scene.background = previousBackground;
+    scene.backgroundIntensity = previousIntensity;
+  };
+}

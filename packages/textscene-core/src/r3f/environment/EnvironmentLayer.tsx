@@ -28,6 +28,7 @@ import {
   DrawnEnvironment,
   registerEnvironmentPart,
   ShownEnvironment,
+  showBackground,
   useEnvironmentKey,
 } from './sceneEnvironment';
 
@@ -185,18 +186,6 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
 }
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
-
-/** Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found. */
-function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
-  const previousBackground = scene.background;
-  const previousIntensity = scene.backgroundIntensity;
-  scene.background = texture;
-  scene.backgroundIntensity = intensity;
-  return () => {
-    scene.background = previousBackground;
-    scene.backgroundIntensity = previousIntensity;
-  };
-}
 
 function showsBackgroundColor(mode: number): boolean {
   return mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;

@@ -41,6 +41,7 @@ export function createEnvironmentSettings(
       mode: properties.background_mode,
       color: scaledRgb(backgroundColor, properties.background_energy_multiplier),
       energyMultiplier: properties.background_energy_multiplier,
+      canvasMaxLayer: properties.background_canvas_max_layer,
     },
     ...ambientFor(properties, backgroundColor),
     toneMapping: {

@@ -1,0 +1,160 @@
+/**
+ * Under BG_KEEP a viewport draws its 3D render over the colour its buffer already holds
+ * (`render_forward_clustered.cpp:2020-2030`), so it clears none.
+ * Under BG_CANVAS a viewport draws the canvas layers up to `background_canvas_max_layer` as the
+ * background of its 3D render, and the layers above over it (`renderer_viewport.cpp:339-380`, `:650-715`).
+ */
+import { beforeAll, describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { drawsOf, type PassDraw } from './viewportPasses.testkit';
+
+import '../../../r3f/nodes/index';
+import '../../../r3f/controls/index';
+
+const WORLD_SCENE = 'Canvas::world';
+
+/** A 3D viewport under background mode `mode`: an item in the world canvas, and one in a CanvasLayer at layer 5. */
+function viewportWith(mode: number, maxLayer = 0): string {
+  return `[gd_scene format=3]
+
+[sub_resource type="Environment" id="Canvas"]
+background_mode = ${mode}
+background_canvas_max_layer = ${maxLayer}
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(200, 150)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="View"]
+environment = SubResource("Canvas")
+
+[node name="Camera3D" type="Camera3D" parent="View"]
+
+[node name="Box" type="MeshInstance3D" parent="View"]
+
+[node name="Behind" type="Polygon2D" parent="View"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+
+[node name="Layer" type="CanvasLayer" parent="View"]
+layer = 5
+
+[node name="Front" type="Polygon2D" parent="View/Layer"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+`;
+}
+
+const drawing = (draws: PassDraw[], name: string): number =>
+  draws.findIndex((d) => d.scene.name !== WORLD_SCENE && d.reached.includes(name));
+
+describe('a 3D SubViewport under the Canvas background mode', () => {
+  beforeAll(() => import('./CanvasOverWorld'));
+
+  it('draws the layers up to the max layer behind the world and the rest over it', async () => {
+    const draws = await drawsOf(viewportWith(3, 0));
+    const behind = drawing(draws, 'Behind');
+    const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
+    const front = drawing(draws, 'Front');
+    expect(behind, 'a draw of the world canvas').toBeGreaterThanOrEqual(0);
+    expect(world, 'a draw of the world').toBeGreaterThan(behind);
+    expect(front, 'a draw of the layer').toBeGreaterThan(world);
+    expect(draws[behind]!.reached).not.toContain('Front');
+    expect(draws[front]!.reached).not.toContain('Behind');
+  });
+
+  it('shows the world the target of the canvas it drew behind it as its background', async () => {
+    const draws = await drawsOf(viewportWith(3, 0));
+    const world = draws.find((d) => d.scene.name === WORLD_SCENE)!;
+    expect((world.background as THREE.Texture).name).toBe('View::canvas::target');
+  });
+
+  it('draws a layer above the max layer over the world even when the max layer is low', async () => {
+    const draws = await drawsOf(viewportWith(3, -3));
+    const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
+    expect(drawing(draws, 'Behind')).toBeGreaterThan(world);
+  });
+
+  it('draws every layer behind the world when the max layer is above them all', async () => {
+    const draws = await drawsOf(viewportWith(3, 9));
+    const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
+    expect(drawing(draws, 'Front')).toBeLessThan(world);
+  });
+});
+
+/**
+ * Layers outside the viewport rank differently from the viewport's own, which holds a Control under
+ * layer 3, the first at or above the max layer, and one under layer 7. Godot gives each viewport its
+ * own canvas map, so the first draws behind the world and the second over it.
+ */
+const OUTER_LAYERS_AND_INNER_CONTROLS = `[gd_scene format=3]
+
+[sub_resource type="Environment" id="Canvas"]
+background_mode = 3
+background_canvas_max_layer = 3
+
+[node name="Root" type="Node2D"]
+
+[node name="One" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="Two" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Four" type="CanvasLayer" parent="."]
+layer = 4
+
+[node name="Five" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Six" type="CanvasLayer" parent="."]
+layer = 6
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(200, 150)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="View"]
+environment = SubResource("Canvas")
+
+[node name="Camera3D" type="Camera3D" parent="View"]
+
+[node name="Box" type="MeshInstance3D" parent="View"]
+
+[node name="Three" type="CanvasLayer" parent="View"]
+layer = 3
+
+[node name="Behind" type="ColorRect" parent="View/Three"]
+offset_right = 100.0
+offset_bottom = 100.0
+
+[node name="Seven" type="CanvasLayer" parent="View"]
+layer = 7
+
+[node name="Over" type="ColorRect" parent="View/Seven"]
+offset_right = 100.0
+offset_bottom = 100.0
+`;
+
+describe('a 3D SubViewport whose scene declares other canvas layers', () => {
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+
+  it('ranks the Controls of its layers by its own layers', async () => {
+    const draws = await drawsOf(OUTER_LAYERS_AND_INNER_CONTROLS);
+    const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
+    expect(drawing(draws, 'ColorRect:Behind')).toBeLessThan(world);
+    expect(drawing(draws, 'ColorRect:Over')).toBeGreaterThan(world);
+  });
+});
+
+describe('a 3D SubViewport under the Keep background mode', () => {
+  it('draws its world over the colour its buffer holds, clearing none', async () => {
+    const draws = await drawsOf(viewportWith(4));
+    const world = draws.find((d) => d.scene.name === WORLD_SCENE)!;
+    expect(world.clearsColor).toBe(false);
+  });
+
+  it('clears the colour of its world under every other mode', async () => {
+    const draws = await drawsOf(viewportWith(1));
+    const world = draws.find((d) => d.scene.name === WORLD_SCENE)!;
+    expect(world.clearsColor).toBe(true);
+  });
+});

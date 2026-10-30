@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { useSelection } from '../../../r3f/contexts/SelectionContext';
 import { CanvasWorldScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -16,7 +17,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { compareKeys, paintKey } from '../../../r3f/testing/paintOrder';
-import { ViewportPassStack } from './viewportPasses.testkit';
+import { drawsOf, ViewportPassStack } from './viewportPasses.testkit';
 
 import '../../../r3f/nodes/index';
 import '../../../r3f/controls/index';
@@ -102,7 +103,7 @@ polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 
 describe('a SubViewport with 2D content and Controls', () => {
   // The Control painters load lazily; a loaded module lets one settled tick mount them.
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./ControlsOverWorld')]));
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
 
   it('draws a Control into its own pass', async () => {
     const portal = await portalSceneOf(scene('control-first'));
@@ -132,53 +133,71 @@ describe('a SubViewport with 2D content and Controls', () => {
   });
 });
 
-const CONTROLS_SCENE = 'View::controls';
+const CANVAS_SCENE = 'View::canvas';
+/** The scene a shared-world 3D pass draws: the canvas's World3D. */
+const WORLD_SCENE = 'Canvas::world';
 
-/** A Camera3D, a mesh and a ColorRect in one viewport, under the 2D stage that shows it. */
-const SCENE_3D = `[gd_scene format=3]
+/** A viewport of `size` holding a Camera3D and a mesh, then `nodes`, under the 2D stage that shows it. */
+function scene3d(size: string, nodes: string): string {
+  return `[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
 [node name="View" type="SubViewport" parent="."]
-size = Vector2i(200, 150)
+size = Vector2i(${size})
 
 [node name="Camera3D" type="Camera3D" parent="View"]
+${nodes}`;
+}
 
+const POLYGON = `
+[node name="Shape" type="Polygon2D" parent="View"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+`;
+
+const SCENE_3D = scene3d(
+  '200, 150',
+  `
 [node name="Box" type="MeshInstance3D" parent="View"]
 
 [node name="Panel" type="ColorRect" parent="View"]
 offset_right = 200.0
 offset_bottom = 150.0
 color = Color(0, 0, 0.4, 1)
-`;
+`
+);
 
-/** The scenes one frame draws, in order, each with the target bound at that moment. */
-async function drawsOf(
-  tscn: string
-): Promise<{ scene: THREE.Object3D; bound: THREE.WebGLRenderTarget | null }[]> {
-  const parsed = new TscnParser().parse(tscn);
-  const fake = createFakeResourceLoader();
-  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-  const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ViewportModeProvider initialShowPreviewEnvironment={false}>
-        <ViewportPassStack captured={captured}>
-          <CanvasWorldScope>
-            <NodeDispatcher nodes={parsed.nodes} />
-          </CanvasWorldScope>
-        </ViewportPassStack>
-      </ViewportModeProvider>
-    </SceneStack>
-  );
-  await settleLoads();
-  const draws: { scene: THREE.Object3D; bound: THREE.WebGLRenderTarget | null }[] = [];
-  await withStubbedGl(
-    captured.current!,
-    { onRender: (bound, drawn) => draws.push({ scene: drawn, bound }) },
-    () => renderer.advanceFrames(1, 16)
-  );
-  return draws;
-}
+const SCENE_3D_WITH_ITEM = scene3d(
+  '200, 150',
+  `
+[node name="Box" type="MeshInstance3D" parent="View"]
+${POLYGON}`
+);
+
+/** A Camera2D at (100, 80) at zoom 2, so it frames x 50..150 of a 200x200 viewport. */
+const SCENE_3D_WITH_CAMERA_2D = scene3d(
+  '200, 200',
+  `
+[node name="Box" type="MeshInstance3D" parent="View"]
+
+[node name="Cam" type="Camera2D" parent="View"]
+position = Vector2(100, 80)
+zoom = Vector2(2, 2)
+${POLYGON}`
+);
+
+/** A plain Node holding a mesh and a Polygon2D, so both workspaces mount it. */
+const SCENE_3D_WITH_SHARED_CONTAINER = scene3d(
+  '200, 150',
+  `
+[node name="Group" type="Node" parent="View"]
+
+[node name="Box" type="MeshInstance3D" parent="View/Group"]
+
+[node name="Shape" type="Polygon2D" parent="View/Group"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+`
+);
 
 /** The mesh that copies the world into the Controls' pass: the one drawn before every Control. */
 function backdropOf(root: THREE.Object3D): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
@@ -190,20 +209,76 @@ function backdropOf(root: THREE.Object3D): THREE.Mesh<THREE.BufferGeometry, THRE
   return found;
 }
 
+function SelectionProbe({ out }: { out: { current: Map<string, THREE.Object3D> | null } }) {
+  out.current = useSelection().nodeObjectMap;
+  return null;
+}
+
+/** The scene an object draws in: the root of its ancestors. */
+function sceneOf(object: THREE.Object3D): THREE.Object3D {
+  let root = object;
+  while (root.parent) root = root.parent;
+  return root;
+}
+
+describe('a SubViewport with 3D content and a 2D item', () => {
+  beforeAll(() => import('./CanvasOverWorld'));
+
+  it('draws the item in a pass of its own, after the world', async () => {
+    const draws = await drawsOf(SCENE_3D_WITH_ITEM);
+    const canvas = draws.find((d) => d.scene.name === CANVAS_SCENE);
+    expect(canvas, `expected a draw of ${CANVAS_SCENE}`).toBeDefined();
+    expect(meshOf(canvas!.scene, 'Shape')).toBeDefined();
+    const worldIndex = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
+    expect(draws.indexOf(canvas!)).toBeGreaterThan(worldIndex);
+  });
+
+  it('keeps the world on the whole target under a Camera2D', async () => {
+    const draws = await drawsOf(SCENE_3D_WITH_CAMERA_2D);
+    const canvas = draws.find((d) => d.scene.name === CANVAS_SCENE)!;
+    canvas.scene.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(backdropOf(canvas.scene));
+    // The camera frames x 50..150 and world y -130..-30, so the backdrop covers that view.
+    expect([bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y]).toEqual([50, -130, 150, -30]);
+  });
+
+  it('selects a container that both workspaces mount through the world it holds', async () => {
+    const parsed = new TscnParser().parse(SCENE_3D_WITH_SHARED_CONTAINER);
+    const registered: { current: Map<string, THREE.Object3D> | null } = { current: null };
+    const captured: { current: THREE.WebGLRenderer | null } = { current: null };
+    const renderer = await ReactThreeTestRenderer.create(
+      <SceneStack workspace="2d" loader={createFakeResourceLoader().loader} scene={parsed}>
+        <ViewportModeProvider initialShowPreviewEnvironment={false}>
+          <ViewportPassStack captured={captured}>
+            <SelectionProbe out={registered} />
+            <CanvasWorldScope>
+              <NodeDispatcher nodes={parsed.nodes} />
+            </CanvasWorldScope>
+          </ViewportPassStack>
+        </ViewportModeProvider>
+      </SceneStack>
+    );
+    await settleLoads();
+    await withStubbedGl(captured.current!, {}, () => renderer.advanceFrames(1, 16));
+    const group = [...registered.current!].find(([path]) => path.endsWith('/Group'));
+    expect(sceneOf(group![1]).name).toBe(WORLD_SCENE);
+  });
+});
+
 describe('a SubViewport with 3D content and Controls', () => {
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./ControlsOverWorld')]));
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
 
   it('draws its Controls in a pass of their own, after the world', async () => {
     const draws = await drawsOf(SCENE_3D);
-    const controls = draws.find((d) => d.scene.name === CONTROLS_SCENE);
-    expect(controls, `expected a draw of ${CONTROLS_SCENE}`).toBeDefined();
-    expect(meshOf(controls!.scene, 'Panel')).toBeDefined();
+    const canvas = draws.find((d) => d.scene.name === CANVAS_SCENE);
+    expect(canvas, `expected a draw of ${CANVAS_SCENE}`).toBeDefined();
+    expect(meshOf(canvas!.scene, 'Panel')).toBeDefined();
   });
 
   it('replaces the target with the world, so a transparent world keeps its alpha', async () => {
     const draws = await drawsOf(SCENE_3D);
-    const controls = draws.find((d) => d.scene.name === CONTROLS_SCENE)!;
-    const backdrop = backdropOf(controls.scene);
+    const canvas = draws.find((d) => d.scene.name === CANVAS_SCENE)!;
+    const backdrop = backdropOf(canvas.scene);
     expect(backdrop.material.blending).toBe(THREE.NoBlending);
   });
 });

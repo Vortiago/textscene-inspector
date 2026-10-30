@@ -279,15 +279,31 @@ describe('viewportContent — Controls beside the drawn kind', () => {
   const PANEL = '\n[node name="Panel" type="ColorRect" parent="Viewport"]';
 
   it('finds a Control that follows the first 3D node', () => {
-    expect(viewportContent(viewport(MESH + PANEL))).toEqual({ kind: '3d', holdsControls: true });
+    expect(viewportContent(viewport(MESH + PANEL))).toEqual({
+      kind: '3d',
+      holdsControls: true,
+      holdsCanvasItems: false,
+    });
   });
 
   it('finds a Control beside 2D content', () => {
-    expect(viewportContent(viewport(SPRITE + PANEL))).toEqual({ kind: '2d', holdsControls: true });
+    expect(viewportContent(viewport(SPRITE + PANEL))).toEqual({
+      kind: '2d',
+      holdsControls: true,
+      holdsCanvasItems: true,
+    });
   });
 
   it('finds none in a viewport without a Control', () => {
     expect(viewportContent(viewport(MESH + SPRITE)).holdsControls).toBe(false);
+  });
+
+  it('finds a 2D item beside 3D content', () => {
+    expect(viewportContent(viewport(MESH + SPRITE))).toEqual({
+      kind: '3d',
+      holdsControls: false,
+      holdsCanvasItems: true,
+    });
   });
 });
 

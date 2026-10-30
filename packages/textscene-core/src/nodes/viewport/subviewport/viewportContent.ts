@@ -77,18 +77,23 @@ export type ViewportContentKind =
   | 'dom'
   | 'empty';
 
-/** What a sub-viewport holds: the kind its pass draws, and whether Controls sit beside that kind. */
+/**
+ * What a sub-viewport holds: the kind its pass draws, and whether Controls and 2D-world items sit
+ * beside that kind.
+ */
 export interface ViewportContent {
   kind: ViewportContentKind;
   /** Whether the subtree holds a Control. */
   holdsControls: boolean;
+  /** Whether the subtree holds a CanvasItem that is no Control. A 3D pass draws it over its world. */
+  holdsCanvasItems: boolean;
 }
 
 /**
- * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and the pass draws one kind
- * where Godot composites all (`comparison.md`). Controls beside that content are the exception:
- * `holdsControls` sends them into the pass. A nested sub-viewport draws into its own target,
- * so it is not descended into.
+ * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and the world pass draws one
+ * kind. Controls and 2D items beside a 3D world draw over it in a canvas pass, as Godot's canvas
+ * items draw after its 3D render (`renderer_viewport.cpp:380-715`). A nested sub-viewport draws
+ * into its own target, so it is not descended into.
  */
 export function viewportContent(node: TscnNode): ViewportContent {
   let sawCanvasItem = false;
@@ -138,7 +143,11 @@ export function viewportContent(node: TscnNode): ViewportContent {
     return hasNode3DContent(child.children);
   };
 
-  const found = (kind: ViewportContentKind): ViewportContent => ({ kind, holdsControls: sawDom });
+  const found = (kind: ViewportContentKind): ViewportContent => ({
+    kind,
+    holdsControls: sawDom,
+    holdsCanvasItems: sawCanvasItem,
+  });
   if (hasNode3DContent(node.children)) return found('3d');
   if (sawCanvasItem) return found('2d');
   // Godot's viewport demos instance 3D sub-scenes, so an untyped instance reads as

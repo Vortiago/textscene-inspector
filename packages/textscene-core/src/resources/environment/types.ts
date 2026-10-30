@@ -13,6 +13,7 @@ export interface EnvironmentProperties {
   // Background
   background_mode: EnumValue<typeof BackgroundMode>;
   background_color: Rgba;
+  background_canvas_max_layer: number;
   background_energy_multiplier: number;
 
   /**
@@ -208,6 +209,8 @@ export interface EnvironmentSettings {
     color: Rgba;
     /** The sky's intensity under BG_SKY. `color` already carries it. */
     energyMultiplier: number;
+    /** The highest canvas layer drawn behind the 3D render under BG_CANVAS. */
+    canvasMaxLayer: number;
   };
   /**
    * Flat ambient. Null when the source emits none (DISABLED) or when the ambient is
