@@ -7,7 +7,7 @@ TextScene Inspector renders Godot `.tscn` scenes in 3D and 2D from the text alon
 
 **Try it:** [vortiago.github.io/textscene-inspector](https://vortiago.github.io/textscene-inspector/)
 
-![The web previewer rendering a CSG hallway](./docs/showcase/web/hallway.png)
+![The VS Code extension previewing Godot's isometric dungeon demo beside its .tscn source](./docs/screenshots/vscode/vscode-dungeon.png)
 
 ## Get it
 
@@ -25,6 +25,10 @@ Dev edition, with the test scenes: [textscene-inspector.pages.dev](https://texts
 ## What it renders
 
 All 240 of Godot 4.6.3's instantiable node types are parsed and linted, and most render. The [parity gallery](https://textscene-inspector.pages.dev/parity/index.html) lists what renders and where it differs from Godot.
+
+An AnimationPlayer plays its clips in the preview, skinned glTF meshes included. Here the enemy from Godot's 3D platformer demo plays its `walk` clip:
+
+![The VS Code preview playing the 3D platformer enemy's walk animation](./docs/screenshots/vscode/vscode-animation.gif)
 
 ## Build from source
 

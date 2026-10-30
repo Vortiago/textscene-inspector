@@ -77,6 +77,15 @@ export function killPortOrphan(port) {
 }
 
 /**
+ * A pinned theme, so a new VS Code release that changes its default theme does not restyle the
+ * screenshots. Only the screenshots pin it: the CSP gate's pixel floors assume the default.
+ */
+const SCREENSHOT_USER_SETTINGS = {
+  ...THROWAWAY_USER_SETTINGS,
+  'workbench.colorTheme': 'Default Dark Modern',
+};
+
+/**
  * Seeds the throwaway user-data-dir before the dev-host reads it. The window comes up 1440x900 on
  * the 1920x1080 Xvfb screen whatever `window.newWindowDimensions` says: Electron has no
  * `Browser.setWindowBounds` and Xvfb no window manager. The editor split (`widenPreview`) is the lever.
@@ -84,7 +93,7 @@ export function killPortOrphan(port) {
 export function seedUserData(userDataDir) {
   const userDir = `${userDataDir}/User`;
   mkdirSync(userDir, { recursive: true });
-  writeFileSync(`${userDir}/settings.json`, JSON.stringify(THROWAWAY_USER_SETTINGS, null, 2));
+  writeFileSync(`${userDir}/settings.json`, JSON.stringify(SCREENSHOT_USER_SETTINGS, null, 2));
 }
 
 /** Kills the launched process group: xvfb-run, Xvfb and the dev-host it wraps. */

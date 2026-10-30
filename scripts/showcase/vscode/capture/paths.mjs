@@ -10,6 +10,11 @@ export const EXT = `${REPO_ROOT}/apps/textscene-vscode`;
 // The fixtures res:// root, which the web previewer mirrors, so `res://` resolves the same on both
 // sides. It holds no .csproj or .cs, so the C# Dev Kit never activates and takes focus.
 export const FIXTURES = `${REPO_ROOT}/scenes/fixtures`;
+// Vendored demos that `pnpm vendor:demos` writes. A shot that names one as its `corpus` gets a copy
+// in the workspace, under the folder's own name. The platformer holds a project.godot. The dungeon
+// has none, so res:// resolves against the scene's own directory.
+export const ISOMETRIC = `${REPO_ROOT}/scenes/isometric`;
+export const PLATFORMER_3D = `${REPO_ROOT}/scenes/demos/3d/platformer`;
 export const TMP = `${REPO_ROOT}/.tmp`;
 // A throwaway copy, since the hot-reload and camera-survival shots rewrite a scene on disk. The
 // leaf is named `fixtures`, so the Explorer header reads as the real directory in every shot.
