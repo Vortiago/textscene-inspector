@@ -192,6 +192,8 @@ export interface StandardMaterial3DData {
   specularMode: number;
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
+  /** `vertex_color_is_srgb` (default false): the vertex colour is decoded from sRGB. */
+  vertexColorIsSrgb: boolean;
   /** `disable_specular_occlusion` (default false): a dim ambient leaves the reflection whole. */
   disablesSpecularOcclusion: boolean;
   /** `ao_light_affect`: how far the occlusion also occludes direct light, 0 without `ao_enabled`. Unclamped, as the setter is. */
@@ -230,6 +232,8 @@ export interface StandardMaterial3DData {
    * billboarding (`material.cpp:1274-1281`). It rides the built material's `userData`.
    */
   billboardKeepScale: boolean;
+  /** `particles_anim_*`: the flipbook a `BILLBOARD_PARTICLES` shader cuts each particle's UV to. */
+  particlesAnim: ParticlesAnim;
   /**
    * `anisotropy` (−1..1), gated on `anisotropy_enabled`. The sign picks the axis the highlight
    * stretches along: the tangent when positive, the bitangent when negative.
@@ -296,6 +300,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   diffuseMode: number;
   specularMode: number;
   useVertexColors: boolean;
+  vertexColorIsSrgb: boolean;
   disablesSpecularOcclusion: boolean;
   aoLightAffect: number;
   aoTextureChannelMask: TextureChannelMask;
@@ -314,9 +319,23 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   pointSize: number;
   billboardMode: number;
   billboardKeepScale: boolean;
+  particlesAnim: ParticlesAnim;
   anisotropy: number;
   transmission: number;
   refractionThickness: number;
   /** Slot → raw reference string, carried through for the loader's resolution. */
   textureSlots: TextureSlotReferences;
 }
+
+/**
+ * A particle flipbook: `particles_anim_h_frames` by `_v_frames` cells, which the setters store
+ * unchecked, and whether a particle's frame wraps or holds at the last cell.
+ */
+export interface ParticlesAnim {
+  hFrames: number;
+  vFrames: number;
+  loop: boolean;
+}
+
+/** The constructor's one-cell flipbook (`material.cpp:3967-3969`). */
+export const PARTICLES_ANIM_DEFAULTS: ParticlesAnim = Object.freeze({ hFrames: 1, vFrames: 1, loop: false });

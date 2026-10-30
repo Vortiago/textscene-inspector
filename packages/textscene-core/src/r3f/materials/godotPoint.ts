@@ -11,29 +11,21 @@ import { recordedUniform } from './recordedOnMaterial';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
-import { perObject } from '../../utils/perObject';
+import { bagForms } from './bagForms';
+import { withDepthInjection } from './depthInjections';
+import { INSTANCE_MATRIX_ATTRIBUTE } from '../meshes/sharedInstances';
 
 const POINT_SIZE_KEY = 'godotPointSize';
 const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
 const POINT_COORD_ALBEDO_KEY = 'godotPointCoordAlbedo';
-const POINTS_AT_CELLS_KEY = 'godotPointsAtCells';
+const POINTS_AT_INSTANCES_KEY = 'godotPointsAtInstances';
 const PROJECT_CHUNK = '#include <project_vertex>';
 
 /**
- * Where a points surface's vertices sit: in the node's own mesh, or merged at every cell of a
- * GridMap, each carrying its item's space (`pointCells.ts`).
+ * Where a points surface's points sit: in the node's own mesh, or at each instance of a GridMap's
+ * cells or a CPUParticles3D's particles (`sharedInstances.ts`).
  */
-export type PointPlacement = 'mesh' | 'cells';
-
-/**
- * The attributes each merged GridMap point carries: its item's position and normal, and its cell's
- * matrix, so a program reads Godot's VERTEX, NORMAL and MODEL_MATRIX.
- */
-export const CELL_POINT_ATTRIBUTES = {
-  itemPosition: 'godotItemPosition',
-  itemNormal: 'godotItemNormal',
-  cellMatrix: 'godotCellMatrix',
-} as const;
+export type PointPlacement = 'mesh' | 'instances';
 
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
@@ -64,15 +56,16 @@ export function pointDrawOf(
   };
 }
 
-/** The merged points' attributes, under `GODOT_CELL_POINTS`, which the triplanar mapping reads. */
-const GODOT_CELL_POINTS: ProgramInjection = {
-  cacheKey: 'godot-cell-points',
+/**
+ * three defines `USE_INSTANCING` and declares `instanceMatrix` only for an InstancedMesh
+ * (`WebGLPrograms.js:209`), so instanced points declare both. Each instance branch of three's
+ * chunks and of the Godot patches then places, turns and billboards the points.
+ */
+const GODOT_INSTANCED_POINTS: ProgramInjection = {
+  cacheKey: 'godot-instanced-points',
   onBeforeCompile(shader) {
-    const { itemPosition, itemNormal, cellMatrix } = CELL_POINT_ATTRIBUTES;
-    shader.vertexShader = `#define GODOT_CELL_POINTS
-attribute vec3 ${itemPosition};
-attribute vec3 ${itemNormal};
-attribute mat4 ${cellMatrix};
+    shader.vertexShader = `#define USE_INSTANCING
+attribute mat4 ${INSTANCE_MATRIX_ATTRIBUTE};
 ${shader.vertexShader}`;
   },
 };
@@ -133,8 +126,8 @@ const GODOT_POINT_COORD_ALBEDO: ProgramInjection = {
   },
 };
 
-/** Each bag's point forms by draw key, filled only by `withPointDraw`, so a render that changes nothing hands R3F the same props. */
-const pointBagsOf = perObject<StandardMaterialBag, Map<string, StandardMaterialBag>>(() => new Map());
+/** Each bag's point forms, filled only by `withPointDraw`. */
+const pointForms = bagForms();
 
 /**
  * `bag` as a material for a points surface, or `bag` itself for no draw. The cull mode does not
@@ -143,24 +136,23 @@ const pointBagsOf = perObject<StandardMaterialBag, Map<string, StandardMaterialB
 export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefined): StandardMaterialBag {
   if (!draw) return bag;
   const drawKey = `${draw.pixels}:${draw.pixelRatio}:${draw.samplesAlbedoAtPointCoord}:${draw.placement}`;
-  const forms = pointBagsOf(bag);
-  const known = forms.get(drawKey);
-  if (known) return known;
-  const form = pointBag(bag, draw);
-  forms.set(drawKey, form);
-  return form;
+  return pointForms(bag, drawKey, () => pointBag(bag, draw));
 }
 
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {
   const readsMap = draw.samplesAlbedoAtPointCoord && Boolean(bag.props.map);
-  const isAtCells = draw.placement === 'cells';
-  const userData = {
-    ...bag.props.userData,
-    [POINT_SIZE_KEY]: draw.pixels,
-    [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
-    [POINT_COORD_ALBEDO_KEY]: readsMap,
-    [POINTS_AT_CELLS_KEY]: isAtCells,
-  };
+  const isAtInstances = draw.placement === 'instances';
+  const userData = withDepthInjection(
+    {
+      ...bag.props.userData,
+      [POINT_SIZE_KEY]: draw.pixels,
+      [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
+      [POINT_COORD_ALBEDO_KEY]: readsMap,
+      [POINTS_AT_INSTANCES_KEY]: isAtInstances,
+    },
+    'beforeCut',
+    pointShadowSizeInjection(readsMap, isAtInstances)
+  );
   return {
     ...bag,
     props: { ...bag.props, side: FrontSide, userData },
@@ -168,7 +160,7 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
       bag.injection,
       GODOT_POINT_SIZE,
       readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
-      isAtCells ? GODOT_CELL_POINTS : undefined,
+      isAtInstances ? GODOT_INSTANCED_POINTS : undefined,
     ]),
   };
 }
@@ -180,13 +172,9 @@ const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
 
 /**
  * What a depth draw compiles with to cut a points surface's shadow as its colour pass draws the
- * points: at their size, and across the square where the albedo map is read. Undefined for a
- * surface that draws none.
+ * points: at their size, across the square where the albedo map is read, and at each instance.
  */
-export function pointShadowSizeInjection(userData: Record<string, unknown>): ProgramInjection | undefined {
-  if (!(POINT_SIZE_KEY in userData)) return undefined;
-  const size = userData[POINT_COORD_ALBEDO_KEY]
-    ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD
-    : GODOT_POINT_SHADOW_SIZE;
-  return userData[POINTS_AT_CELLS_KEY] ? composeInjections([size, GODOT_CELL_POINTS]) : size;
+function pointShadowSizeInjection(readsMap: boolean, isAtInstances: boolean): ProgramInjection {
+  const size = readsMap ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SHADOW_SIZE;
+  return isAtInstances ? composeInjections([size, GODOT_INSTANCED_POINTS])! : size;
 }

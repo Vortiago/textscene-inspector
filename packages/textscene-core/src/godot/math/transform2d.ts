@@ -84,8 +84,29 @@ export function multiplyTransform2D(
 }
 
 /**
+ * `Transform2D::basis_xform` (`transform_2d.h`, `tdotx` and `tdoty`) in `real_t` float. Not
+ * transform2DXform with a zero origin: adding +0 turns a -0 component into +0.
+ *
+ * @canonical A vector through a Transform2D basis in float32
+ */
+export function transform2DBasisXform(t: Transform2DColumns, v: Vector2): Vector2 {
+  return transform2DBasisXformInto({ x: 0, y: 0 }, t, v);
+}
+
+/**
+ * {@link transform2DBasisXform} written into `out`, for a loop that allocates nothing. `out` may be `v`.
+ *
+ * @canonical A vector through a Transform2D basis in float32, written in place
+ */
+export function transform2DBasisXformInto(out: Vector2, t: Transform2DColumns, v: Vector2): Vector2 {
+  const x = f(f(t.a * v.x) + f(t.c * v.y));
+  out.y = f(f(t.b * v.x) + f(t.d * v.y));
+  out.x = x;
+  return out;
+}
+
+/**
  * `Transform2D::xform` (`transform_2d.h`, `tdotx` and `tdoty` plus the origin) in `real_t` float.
- * A transform with a zero origin gives `Transform2D::basis_xform`.
  *
  * @canonical A point through a Transform2D in float32
  */
@@ -113,7 +134,7 @@ export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColu
   const b = f(t.b * -idet);
   const c = f(t.c * -idet);
   const d = f(t.a * idet);
-  const origin = transform2DXform({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
+  const origin = transform2DBasisXform({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
   return { a, b, c, d, tx: origin.x, ty: origin.y };
 }
 

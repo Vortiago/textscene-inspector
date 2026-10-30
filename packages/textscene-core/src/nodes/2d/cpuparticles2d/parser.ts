@@ -7,14 +7,15 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { colorOr } from '../../../utils/colorParser';
-import { type CPUParticles2DProperties, type ParticleParam, PARAM_SLOTS } from './types';
+import type { CPUParticles2DProperties } from './types';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
-import { loadedParamRange } from '../../../godot/scene/particleParamRange';
-import { drawableParamBounds } from './drawableParamBounds';
-
-/** Godot's inspector range for `amount` is `1,1000000,1,exp` (`cpu_particles_2d.cpp:1492`). */
-const MAX_PARTICLE_AMOUNT = 1_000_000;
+import {
+  parseEmissionPoints,
+  parseParticleAmount,
+  parseParticleParams,
+} from '../../shared/cpuparticles/params';
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,
@@ -22,12 +23,11 @@ export function parseCPUParticles2D(
 ): CPUParticles2DProperties {
   const base = parseNode2D(heading, properties);
   const context = base.name || 'CPUParticles2D';
-  const drawableBounds = drawableParamBounds(properties).drawable;
 
   const result: CPUParticles2DProperties = {
     ...base,
     emitting: boolOr(properties.emitting, true, context),
-    amount: clampAmount(intOr(properties.amount, 8, `${context}.amount`)),
+    amount: parseParticleAmount(properties.amount, `${context}.amount`),
     lifetime: floatOr(properties.lifetime, 1, `${context}.lifetime`),
     one_shot: boolOr(properties.one_shot, false, context),
     preprocess: floatOr(properties.preprocess, 0, `${context}.preprocess`),
@@ -67,18 +67,14 @@ export function parseCPUParticles2D(
     emission_rect_extents: vec2Or(properties.emission_rect_extents, { x: 1, y: 1 }, context),
     emission_ring_radius: floatOr(properties.emission_ring_radius, 1, context),
     emission_ring_inner_radius: floatOr(properties.emission_ring_inner_radius, 0.8, context),
+    ...emissionArrays(properties, context),
 
     particle_flag_align_y: boolOr(properties.particle_flag_align_y, false, context),
     direction: vec2Or(properties.direction, { x: 1, y: 0 }, `${context}.direction`),
     spread: floatOr(properties.spread, 45, `${context}.spread`),
     gravity: vec2Or(properties.gravity, { x: 0, y: 980 }, `${context}.gravity`),
 
-    params: PARAM_SLOTS.map(({ prefix, def, curve }) => {
-      const param: ParticleParam = loadedParamRange(drawableBounds, prefix, def);
-      const ref = curve ? properties[`${prefix}_curve`] : undefined;
-      if (ref) param.curve = ref;
-      return param;
-    }),
+    params: parseParticleParams(properties),
 
     color: colorOr(properties.color, { r: 1, g: 1, b: 1, a: 1 }),
   };
@@ -90,8 +86,15 @@ export function parseCPUParticles2D(
   return result;
 }
 
-/** Godot refuses `amount < 1` outright and its inspector stops at a million. */
-function clampAmount(amount: number): number {
-  if (!Number.isFinite(amount)) return 8;
-  return Math.min(MAX_PARTICLE_AMOUNT, Math.max(1, Math.floor(amount)));
+function emissionArrays(properties: Record<string, string>, context: string) {
+  const { points, normals, colors } = parseEmissionPoints(
+    {
+      emission_points: properties.emission_points,
+      emission_normals: properties.emission_normals,
+      emission_colors: properties.emission_colors,
+    },
+    parsePackedVector2Array,
+    (key) => `${context}.${key}`
+  );
+  return { emission_points: points, emission_normals: normals, emission_colors: colors };
 }

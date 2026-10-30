@@ -1,0 +1,32 @@
+; The variable: a DIRECTED_POINTS CPUParticles3D emits from its one point, turns its velocity into
+; the point's normal frame and takes the point's colour from emission_colors. No other golden shows
+; it. Velocity +x turns to +y under the normal (0.6, 0, 0.8), so four cyan boxes stand in a column
+; above the point at (0.5, -0.5, 0), one born each half second.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Unshaded"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="Box"]
+material = SubResource("Unshaded")
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="Column" type="CPUParticles3D" parent="."]
+amount = 4
+lifetime = 2.0
+preprocess = 1.5
+use_fixed_seed = true
+seed = 7
+mesh = SubResource("Box")
+emission_shape = 5
+emission_points = PackedVector3Array(0.5, -0.5, 0)
+emission_normals = PackedVector3Array(0.6, 0, 0.8)
+emission_colors = PackedColorArray(0, 1, 1, 1)
+direction = Vector3(1, 0, 0)
+spread = 0.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0

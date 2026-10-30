@@ -178,13 +178,11 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/radialFill.ts` | `scene/gui/texture_progress_bar.cpp` (`get_relative_center`, `draw_circular_progress` and its `radial_initial_angle`/`radial_fill_degrees` fan) and `core/math/math_funcs.h` (`Math::fposmod`) |
 | `packages/textscene-core/src/resources/curves/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
 | `packages/textscene-core/src/resources/curves/curve/bakedSample.ts` | `scene/resources/curve.cpp` (`Curve::_bake`, `Curve::sample_baked`) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (the `_update_internal` preprocess loop and its fixed-step evaluation window) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particlesProcess.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`'s per-frame loop: cycle bookkeeping, restart phase, the emission transform) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleRestart.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s restart branch and its emission-shape offsets) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAdvance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s alive branch: the accelerations, orbit, damping and angular integration) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAppearance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s appearance pass) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleBuffer.ts` | `scene/2d/cpu_particles_2d.cpp` (`_update_particle_data_buffer`, `SortLifetime`) |
+| `packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below), `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (`idhash`, `rand_from_seed`) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`: the cycle bookkeeping, the restart branch and its emission shapes, the alive branch, the appearance pass, `_update_particle_data_buffer` with `SortLifetime`, and the `_update_internal` preprocess loop) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
+| `packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/simulate.ts` | `scene/3d/cpu_particles_3d.cpp` (`_particles_process`, the emission shapes and `_update_particle_data_buffer`) |
+| `packages/textscene-core/src/nodes/shared/cpuparticles/process.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the `_update_internal` settle loop, the restart instant and the particle colour) |
+| `packages/textscene-core/src/nodes/shared/cpuparticles/emissionPoints.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the POINTS and DIRECTED_POINTS point pick, the normal turn and the point colour) and `core/math/math_funcs.h` (`Math::randf`) |
 | `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
 | `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
@@ -488,7 +486,7 @@ SOFTWARE.
 
 <https://www.pcg-random.org>
 
-`packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` reproduces the minimal
+`packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` reproduces the minimal
 PCG32 generator (`pcg32_random_r` / `pcg32_srandom_r`), because CPUParticles2D's particle
 layout IS that generator's output and a statistically-equivalent substitute would put
 every particle somewhere else. Godot vendors the same implementation under

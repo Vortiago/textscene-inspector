@@ -12,7 +12,7 @@ import {
   type ProgramInjection,
 } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
-import { pointShadowSizeInjection } from './godotPoint';
+import { drawDepthInjections, type DrawDepthInjections } from './depthInjections';
 
 /** The material state a depth draw of a surface reads. */
 type DepthSurface = THREE.Material & {
@@ -96,8 +96,8 @@ function copiesOf(surface: THREE.Material): Map<DepthMaterial, DepthMaterial> {
 
 /**
  * Gives `depth` the alpha state of `surface` for one draw, cut at `alphaTest`. A change three keys
- * no program on, a slot's presence, the hash, the edge ramp or the size of a points surface,
- * recompiles it.
+ * no program on, a slot's presence, the hash, the edge ramp, the size of a points surface or a
+ * particle draw, recompiles it.
  */
 export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, alphaTest: number): void {
   const source = surface as DepthSurface;
@@ -106,7 +106,7 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
     !depth.alphaMap !== !source.alphaMap ||
-    pointShadowSizeInjection(depth.userData) !== pointShadowSizeInjection(surface.userData);
+    !sameInjections(drawDepthInjections(depth.userData), drawDepthInjections(surface.userData));
   depth.map = source.map ?? null;
   depth.alphaMap = source.alphaMap ?? null;
   depth.opacity = surface.opacity;
@@ -122,7 +122,12 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
   depth.needsUpdate = true;
 }
 
-/** The depth program's own injection, the size of a points surface and the surface's alpha cut. */
+/** The depth program's own injection and the surface's alpha cut, among the draw's own injections. */
 function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
-  return composeInjections([depth.depthInjection, pointShadowSizeInjection(depth.userData), SURFACE_ALPHA]);
+  const { beforeCut, afterCut } = drawDepthInjections(depth.userData);
+  return composeInjections([depth.depthInjection, beforeCut, SURFACE_ALPHA, afterCut]);
+}
+
+function sameInjections(a: DrawDepthInjections, b: DrawDepthInjections): boolean {
+  return a.beforeCut === b.beforeCut && a.afterCut === b.afterCut;
 }

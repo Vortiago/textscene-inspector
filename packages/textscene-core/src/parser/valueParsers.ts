@@ -92,6 +92,27 @@ export function parseNonEmptyAabb(value: string | undefined, context: string): A
   return box && !isEmptyAabb(box) ? box : null;
 }
 
+/**
+ * A packed array slot through `parse`, or `fallback` for an unset or empty slot. An unreadable
+ * slot warns and reads `fallback` too.
+ *
+ * @canonical A packed array slot with a fallback
+ */
+export function packedOr<T>(
+  value: string | undefined,
+  parse: (value: string) => T,
+  fallback: T,
+  context = 'value'
+): T {
+  if (!value) return fallback;
+  try {
+    return parse(value);
+  } catch (error) {
+    warn(`${context}: ${error instanceof Error ? error.message : String(error)}, using the default`);
+    return fallback;
+  }
+}
+
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {
   if (value === undefined) return fallback;
   // Anchored, so `1.2.3` and `1abc` are refused, not read as 1.2 and 1. A non-finite

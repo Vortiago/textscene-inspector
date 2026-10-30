@@ -78,22 +78,3 @@ describe('a scene spelling a prototype name lints without throwing', () => {
     }
   });
 });
-
-describe('a prototype name as a VALUE invents no diagnostic', () => {
-  it.each(PROTOTYPE_KEYS)('reports no emission-shape diagnostic for %s', (key) => {
-    // The table holds '4'/'5'/'6', so every prototype hit is a fabricated row.
-    const rule = 'cpuparticles2d-nondeterministic-emission-shape';
-    const fired = lint(scene(node('CPUParticles2D', { emission_shape: key }))).filter(
-      (d) => d.ruleName === rule
-    );
-    expect(fired).toEqual([]);
-  });
-
-  it('still reports the shapes the table does declare', () => {
-    const rule = 'cpuparticles2d-nondeterministic-emission-shape';
-    const fired = lint(scene(node('CPUParticles2D', { emission_shape: '4' }))).filter(
-      (d) => d.ruleName === rule
-    );
-    expect(fired).toHaveLength(1);
-  });
-});

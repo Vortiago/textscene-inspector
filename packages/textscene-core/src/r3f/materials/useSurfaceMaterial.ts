@@ -42,11 +42,6 @@ export function useSurfaceMaterial(
   return { scalars, isAbsent: loaded.status === 'absent', bags };
 }
 
-/** The decoded scalars of the material `source` loads to, with no textures: null for Godot's default surface. */
-export function useSurfaceScalars(source: MaterialSource | undefined): StandardMaterial3DScalars | null {
-  return useDecodedScalars(readyMaterial(useMaterial(source)));
-}
-
 function useDecodedScalars(material: MaterialResource | null): StandardMaterial3DScalars | null {
   const resource = material?.resource;
   return useMemo(() => (resource ? parseStandardMaterial3DScalars(resource.data) : null), [resource]);

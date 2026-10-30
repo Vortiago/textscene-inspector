@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-; The four emission shapes the previewer reproduces, frozen one frame after birth (preprocess = 1/30)
-; so each cloud keeps its birth shape. POINTS, DIRECTED_POINTS and RING are absent: they sample
-; Godot's global RNG, which the scene file does not carry.
+; Four emission shapes that every particle follows exactly, frozen one frame after birth
+; (preprocess = 1/30) so each cloud keeps its birth shape. POINTS, DIRECTED_POINTS and RING pick
+; with Godot's process-wide RNG, so other fixtures show them.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

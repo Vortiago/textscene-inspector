@@ -15,6 +15,7 @@ import { BillboardMode } from '../../../godot/rendering/materials/billboardMode'
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
+import { SRGB_VERTEX_COLOR } from '../../../r3f/materials/godotVertexColor';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
@@ -29,7 +30,8 @@ import {
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection } from '../../../r3f/lightModes';
 import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
-import { GODOT_BILLBOARD_NORMAL } from '../../../r3f/surfaceBillboard';
+import { billboardInjections } from '../../../r3f/surfaceBillboard';
+import { withDepthInjection } from '../../../r3f/materials/depthInjections';
 import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -152,6 +154,11 @@ function specularIntensity(specular: number): number {
   return (0.16 * specular * specular) / 0.04;
 }
 
+/** The sRGB decode of a surface whose albedo reads an sRGB vertex colour, else none. */
+function vertexColorInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
+  return scalars.useVertexColors && scalars.vertexColorIsSrgb ? SRGB_VERTEX_COLOR : undefined;
+}
+
 /**
  * Whether the surface draws anisotropic, and so samples `anisotropyMap`. `anisotropy` is signed,
  * and either sign scales by the flowmap's strength (`material.cpp:1932`).
@@ -208,8 +215,9 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
  * theirs at upload. A fresh object per bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
-  return {
-    [BILLBOARD_KEY]: surfaceBillboard(scalars),
+  const billboard = surfaceBillboard(scalars);
+  const userData = {
+    [BILLBOARD_KEY]: billboard,
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
@@ -222,6 +230,9 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...triplanarUserData(triplanarRecord(scalars)),
     ...viewportSamplersUserData(),
   };
+  // A billboard's shadow billboards as its colour pass does (`material.cpp:1309`).
+  const injections = billboardInjections(billboard);
+  return injections ? withDepthInjection(userData, 'afterCut', injections.depth) : userData;
 }
 
 /**
@@ -294,9 +305,12 @@ export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): Sur
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
 }
 
-/** Godot's billboard normal turn for a surface that billboards, after any patch that adds a `defaultnormal_vertex`. */
-function billboardNormalInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
-  return billboards(scalars) ? GODOT_BILLBOARD_NORMAL : undefined;
+/**
+ * Godot's billboard for a surface that billboards: the pose and the normal turn, after any
+ * patch that adds a `defaultnormal_vertex`.
+ */
+function billboardInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
+  return billboardInjections(surfaceBillboard(scalars))?.colour;
 }
 
 /** The billboard a material was derived with. */
@@ -386,8 +400,9 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         ...blend,
       },
       injection: composeInjections([
+        vertexColorInjection(scalars),
         heightmap ? unshadedParallaxInjection(heightmap) : undefined,
-        billboardNormalInjection(scalars),
+        billboardInjection(scalars),
       ]),
       heightmapTexture,
     };
@@ -430,13 +445,14 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   // `ao_light_affect` is set.
   const injection = composeInjections([
     lightModesInjection(scalars),
+    vertexColorInjection(scalars),
     aoMap || scalars.aoLightAffect > 0 ? GODOT_AMBIENT_OCCLUSION : undefined,
     pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),
-    billboardNormalInjection(scalars),
+    billboardInjection(scalars),
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };
