@@ -123,26 +123,20 @@ export function canvasLayerOf(node: TscnNode): number {
   return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER;
 }
 
-/** Every canvas layer declared in the given trees, below each node `descend` accepts. */
-export function declaredCanvasLayers(
-  nodes: readonly TscnNode[],
-  descend: (node: TscnNode) => boolean = () => true
-): number[] {
+/** Every canvas layer declared in the given trees, down to a nested viewport, which holds canvases of its own. */
+function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
   const found: number[] = [];
   const visit = (node: TscnNode): void => {
     if (isCanvasLayerType(node.type)) found.push(canvasLayerOf(node));
-    if (descend(node)) node.children.forEach(visit);
+    if (!isViewportBoundary(node.type)) node.children.forEach(visit);
   };
   for (const node of nodes) visit(node);
   return found;
 }
 
-/**
- * The ranks of the layers one canvas set declares: a viewport's own, which stop at a nested viewport
- * as it holds canvases of its own (`hostsOwnCanvas`). Items and Controls rank by the same set.
- */
+/** The ranks of the layers one viewport declares. Its items and Controls rank their keys by the same set. */
 export function canvasLayerRanks(nodes: readonly TscnNode[]): readonly number[] {
-  return layerRanks(declaredCanvasLayers(nodes, (node) => !isViewportBoundary(node.type)));
+  return layerRanks(declaredCanvasLayers(nodes));
 }
 
 /**

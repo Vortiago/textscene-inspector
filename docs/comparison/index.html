@@ -2308,8 +2308,9 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>background_mode = BG_CANVAS</code> in a SubViewport. The canvas layers up to <code>background_canvas_max_layer</code> draw first and the 3D render draws over them, so the world's canvas and a layer below it show beside the quad and under it. A layer above the max layer draws over the quad. The 3D render draws first when every layer is above the max layer, and last when none reaches it (<code>renderer_viewport.cpp:650-715</code>). The canvas goes through the tone mapper with the 3D render.</p>
-<p>The root viewport keeps its 2D and 3D content in separate workspaces (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0006-viewport-mode-seam.md" target="_blank" rel="noopener">ADR-0006</a>), so its Canvas mode shows the 3D clear colour, as Godot's editor viewport does.</p></div>
+        <div class="prose"><p><code>background_mode = BG_CANVAS</code> in a SubViewport. The canvas layers up to <code>background_canvas_max_layer</code> draw first. The 3D render draws over them, so they show beside the quad and under it. A layer above the max layer draws over the quad.</p>
+<p>The 3D render draws first when every layer is above the max layer. It draws last when none reaches it (<code>renderer_viewport.cpp:650-715</code>). The canvas goes through the tone mapper with the 3D render.</p>
+<p>The root viewport keeps its 2D and 3D content in separate workspaces (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0006-viewport-mode-seam.md" target="_blank" rel="noopener">ADR-0006</a>). Its Canvas mode shows the 3D clear colour, as Godot's editor viewport does.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Background keep</h3><span class="status st-done">Done</span></div>
@@ -2326,7 +2327,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>background_mode = BG_KEEP</code> in a SubViewport. The 3D render loads the colour its buffer holds and clears none (<code>render_forward_clustered.cpp:2020-2030</code>), so where it draws nothing the buffer is black and not the clear colour. The canvas layers draw over it.</p></div>
+        <div class="prose"><p><code>background_mode = BG_KEEP</code> in a SubViewport. The 3D render loads the colour its buffer holds and clears none (<code>render_forward_clustered.cpp:2020-2030</code>). Where it draws nothing, the buffer is black and not the clear colour. The canvas layers draw over it.</p>
+<p>Moving content leaves ghost trails, as the Environment class documentation says of BG_KEEP.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Tone mapping</h3><span class="status st-done">Done</span></div>

@@ -16,14 +16,18 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 ## Background canvas
 <!-- compare: image=unit-sub-viewport-3d-canvas-background status=done fixture=unit-sub-viewport-3d-canvas-background.tscn -->
 
-`background_mode = BG_CANVAS` in a SubViewport. The canvas layers up to `background_canvas_max_layer` draw first and the 3D render draws over them, so the world's canvas and a layer below it show beside the quad and under it. A layer above the max layer draws over the quad. The 3D render draws first when every layer is above the max layer, and last when none reaches it (`renderer_viewport.cpp:650-715`). The canvas goes through the tone mapper with the 3D render.
+`background_mode = BG_CANVAS` in a SubViewport. The canvas layers up to `background_canvas_max_layer` draw first. The 3D render draws over them, so they show beside the quad and under it. A layer above the max layer draws over the quad.
 
-The root viewport keeps its 2D and 3D content in separate workspaces (ADR-0006), so its Canvas mode shows the 3D clear colour, as Godot's editor viewport does.
+The 3D render draws first when every layer is above the max layer. It draws last when none reaches it (`renderer_viewport.cpp:650-715`). The canvas goes through the tone mapper with the 3D render.
+
+The root viewport keeps its 2D and 3D content in separate workspaces (ADR-0006). Its Canvas mode shows the 3D clear colour, as Godot's editor viewport does.
 
 ## Background keep
 <!-- compare: image=unit-sub-viewport-3d-keep-background status=done fixture=unit-sub-viewport-3d-keep-background.tscn -->
 
-`background_mode = BG_KEEP` in a SubViewport. The 3D render loads the colour its buffer holds and clears none (`render_forward_clustered.cpp:2020-2030`), so where it draws nothing the buffer is black and not the clear colour. The canvas layers draw over it.
+`background_mode = BG_KEEP` in a SubViewport. The 3D render loads the colour its buffer holds and clears none (`render_forward_clustered.cpp:2020-2030`). Where it draws nothing, the buffer is black and not the clear colour. The canvas layers draw over it.
+
+Moving content leaves ghost trails, as the Environment class documentation says of BG_KEEP.
 
 ## Tone mapping
 <!-- compare: image=unit-tonemap-agx-shadow status=done fixture=unit-tonemap-agx-shadow.tscn -->
