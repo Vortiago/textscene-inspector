@@ -811,7 +811,7 @@ SOFTWARE.
 
 <https://github.com/google/brotli>
 
-The `brotli` npm package (1.3.3) is a JavaScript port of Google's Brotli decoder. The previewer
+The `brotli` npm package (2.1.0) is a JavaScript port of Google's Brotli decoder. The previewer
 uses it to decompress the tables of a `.woff2` scene font. The package ships Google's licence as
 a comment in its decoder files, which a bundler strips, so a bundle that holds the package carries
 the notice here. The decoder is by Google and is licensed Apache-2.0, and the package is licensed
