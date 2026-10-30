@@ -17,7 +17,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { compareKeys, paintKey } from '../../../r3f/testing/paintOrder';
-import { ViewportPassStack } from './viewportPasses.testkit';
+import { drawsOf, ViewportPassStack } from './viewportPasses.testkit';
 
 import '../../../r3f/nodes/index';
 import '../../../r3f/controls/index';
@@ -198,34 +198,6 @@ const SCENE_3D_WITH_SHARED_CONTAINER = scene3d(
 polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 `
 );
-
-/** The scenes one frame draws, in order, each with the target bound at that moment. */
-async function drawsOf(
-  tscn: string
-): Promise<{ scene: THREE.Object3D; bound: THREE.WebGLRenderTarget | null }[]> {
-  const parsed = new TscnParser().parse(tscn);
-  const fake = createFakeResourceLoader();
-  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-  const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ViewportModeProvider initialShowPreviewEnvironment={false}>
-        <ViewportPassStack captured={captured}>
-          <CanvasWorldScope>
-            <NodeDispatcher nodes={parsed.nodes} />
-          </CanvasWorldScope>
-        </ViewportPassStack>
-      </ViewportModeProvider>
-    </SceneStack>
-  );
-  await settleLoads();
-  const draws: { scene: THREE.Object3D; bound: THREE.WebGLRenderTarget | null }[] = [];
-  await withStubbedGl(
-    captured.current!,
-    { onRender: (bound, drawn) => draws.push({ scene: drawn, bound }) },
-    () => renderer.advanceFrames(1, 16)
-  );
-  return draws;
-}
 
 /** The mesh that copies the world into the Controls' pass: the one drawn before every Control. */
 function backdropOf(root: THREE.Object3D): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {

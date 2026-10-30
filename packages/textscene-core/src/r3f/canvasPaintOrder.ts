@@ -66,6 +66,11 @@ export function canvasRenderOrder({ layerRank, zFinal, sequence }: CanvasPlaceme
   return bucket * PAINT_SEQUENCE_STRIDE + bounded;
 }
 
+/** The first key of layer rank `rank`: every item of a lower rank has a lower key. */
+export function canvasKeyBound(rank: number): number {
+  return rank * Z_BUCKET_COUNT * PAINT_SEQUENCE_STRIDE;
+}
+
 /**
  * `key` moved from the `zFinal` bucket to the `itemZFinal` one, its layer and sequence kept: the key
  * of a child canvas item with a `z_index` of its own, which the walk reaches at its parent's place,

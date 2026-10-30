@@ -7,6 +7,7 @@ import type { RefObject } from 'react';
 import * as THREE from 'three';
 
 import { ControlQuad } from '../../../r3f/controls/native/controlQuad.js';
+import { OVER_EVERY_LAYER } from '../../../r3f/canvasKeyWindow.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
 const OPAQUE_WHITE = new THREE.Color(1, 1, 1);
@@ -21,7 +22,7 @@ interface CanvasOverWorldProps {
 
 export function CanvasOverWorld({ size, world, anchor }: CanvasOverWorldProps) {
   return (
-    <group ref={anchor} matrixAutoUpdate={false}>
+    <group ref={anchor} matrixAutoUpdate={false} userData={{ [OVER_EVERY_LAYER]: true }}>
       <ControlQuad
         width={size.x}
         height={size.y}

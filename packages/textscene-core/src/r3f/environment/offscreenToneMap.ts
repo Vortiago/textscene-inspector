@@ -7,6 +7,7 @@ import { useLayoutEffect, useMemo, type MutableRefObject } from 'react';
 import { useToneMapPass, type ToneMapPass, type ToneMapPassOptions } from './toneMapPass';
 import { usePassToneMap } from './passToneMap';
 import type { Environment } from './sceneEnvironment';
+import type { EnvironmentSettings } from '../../resources/environment/types';
 import { useOptionalExposureFactor, usePassCameraPath } from './worldExposure';
 
 export interface OffscreenToneMap extends ToneMapPass {
@@ -16,6 +17,8 @@ export interface OffscreenToneMap extends ToneMapPass {
   exposure: number | null;
   /** The Environment the pass draws its world with (`drawWith`). */
   environment: Environment | null;
+  /** How that Environment draws its background, null for none. */
+  background: EnvironmentSettings['background'] | null;
 }
 
 type OffscreenToneMapOptions = ToneMapPassOptions & { target: NonNullable<ToneMapPassOptions['target']> };
@@ -47,8 +50,9 @@ function useOffscreenToneMap(options: OffscreenToneMapOptions): OffscreenToneMap
   const exposure = useOptionalExposureFactor();
   const cameraPath = usePassCameraPath();
   const environment = usePassToneMap().settings;
+  const background = environment?.background ?? null;
   return useMemo(
-    () => ({ ...pass, cameraPath, exposure, environment }),
-    [pass, cameraPath, exposure, environment]
+    () => ({ ...pass, cameraPath, exposure, environment, background }),
+    [pass, cameraPath, exposure, environment, background]
   );
 }
