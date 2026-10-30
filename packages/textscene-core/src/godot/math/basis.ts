@@ -155,11 +155,10 @@ export function basisMultiply(left: BasisComponents, right: BasisComponents): Ba
  * either basis stays in the column it sits in.
  */
 export function basisColumnsAlong(directions: BasisComponents, lengths: BasisComponents): BasisComponents {
-  const columns = [0, 1, 2].map((i) => {
-    const direction = normalizedVector3(...basisColumn(directions, i));
-    return scaled(direction, vector3Length(...basisColumn(lengths, i)));
-  });
-  return basisFrom((i) => columns[i % 3]![Math.floor(i / 3)]!);
+  const [x, y, z] = [0, 1, 2].map((i) =>
+    scaled(normalizedVector3(...basisColumn(directions, i)), vector3Length(...basisColumn(lengths, i)))
+  ) as [Triple, Triple, Triple];
+  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
 /** The basis whose row-major component `i` is `component(i)`. */

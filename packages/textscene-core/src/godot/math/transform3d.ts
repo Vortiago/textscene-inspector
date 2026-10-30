@@ -3,6 +3,7 @@
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from './real.js';
 import {
+  basisColumnsAlong,
   basisFromQuaternionScale,
   basisGetRotationQuaternion,
   basisGetScale,
@@ -39,11 +40,11 @@ export function identityTransform3D(): Transform3D {
 }
 
 /** The nine row-major components of the basis. */
-export function basisComponents({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
+function basisComponents({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
   return [x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z];
 }
 
-export function transformOf(n: BasisComponents, origin: Vector3): Transform3D {
+function transformOf(n: BasisComponents, origin: Vector3): Transform3D {
   return {
     basis_x: { x: n[0], y: n[1], z: n[2] },
     basis_y: { x: n[3], y: n[4], z: n[5] },
@@ -103,6 +104,17 @@ export function affineInverseTransform3D(transform: Transform3D): Transform3D {
   const inverse = transformOf(basisInvert(basisComponents(transform)), { x: 0, y: 0, z: 0 });
   const { x, y, z } = transform.origin;
   return { ...inverse, origin: xformPoint(inverse, { x: -x, y: -y, z: -z }) };
+}
+
+/**
+ * The basis of `directions` with each column set to the length of the same column of `lengths`
+ * ({@link basisColumnsAlong}), at the origin of `directions`.
+ */
+export function transformColumnsAlong(directions: Transform3D, lengths: Transform3D): Transform3D {
+  return transformOf(
+    basisColumnsAlong(basisComponents(directions), basisComponents(lengths)),
+    directions.origin
+  );
 }
 
 /** The transform `Skeleton3D::Bone::update_pose_cache` builds (`skeleton_3d.h:118-124`): `Basis(rotation, scale)` at `position`. */

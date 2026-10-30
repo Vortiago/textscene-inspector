@@ -27,13 +27,11 @@ import {
   transform2DSetScale,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-import { basisColumnsAlong } from '../../../godot/math/basis.js';
 import {
   affineInverseTransform3D,
-  basisComponents,
   identityTransform3D,
   multiplyTransform3D,
-  transformOf,
+  transformColumnsAlong,
   type Transform3D,
 } from '../../../godot/math/transform3d.js';
 
@@ -128,6 +126,9 @@ function placementOf(
   // measured). `_update_remote` keys off the relay's transform-changed notification, which the
   // global path satisfies on load and the local path does not.
   if (!flags.useGlobal) return null;
+  // Godot's 2D relay returns here (`remote_transform_2d.cpp:55-57`). The 3D relay would write the
+  // target's own transform back, so the two agree.
+  if (!(flags.updatePosition || flags.updateRotation || flags.updateScale)) return null;
 
   return {
     target,
@@ -170,19 +171,16 @@ function composeSelected3D(target: Transform3D, relay: Transform3D, flags: Remot
   if (updatePosition && updateRotation && updateScale) return relay;
 
   const origin = updatePosition ? relay.origin : target.origin;
-  const targetBasis = basisComponents(target);
-  const relayBasis = basisComponents(relay);
-  if (updateRotation && updateScale) return transformOf(relayBasis, origin);
-  if (updateRotation) return transformOf(basisColumnsAlong(relayBasis, targetBasis), origin);
-  if (updateScale) return transformOf(basisColumnsAlong(targetBasis, relayBasis), origin);
-  return transformOf(targetBasis, origin);
+  if (updateRotation && updateScale) return { ...relay, origin };
+  if (updateRotation) return { ...transformColumnsAlong(relay, target), origin };
+  if (updateScale) return { ...transformColumnsAlong(target, relay), origin };
+  return { ...target, origin };
 }
 
 function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
   const placement = placementOf(relay, tree, placed, 'Node2D');
   if (!placement) return;
   const { target, flags, relayChain, targetChain, parentPath } = placement;
-  if (!(flags.updatePosition || flags.updateRotation || flags.updateScale)) return;
 
   const desired = composeSelected2D(
     globalTransform2D(target.path, targetChain),
