@@ -3929,6 +3929,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Node3d Sheared Basis",
+    "file": "unit-node3d-sheared-basis.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Node3d Top Level",
     "file": "unit-node3d-top-level.tscn",
     "category": "Unit - Basic Nodes"

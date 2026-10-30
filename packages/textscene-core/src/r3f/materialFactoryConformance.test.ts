@@ -10,6 +10,8 @@ import { repoRoot } from '../parser/testing/parserKit';
 import { ShadowCastingSetting } from '../godot/rendering/rendering';
 import { overlayDrawProps } from './materials/materialOverlay';
 import { drawHookProps, shadowCastingEffects } from './shadowCasting';
+import { decomposeForR3F, node3dGroupSpread, node3dPosedGroupSpread } from './nodeTransform';
+import { parseTransform3D } from '../utils/transform';
 import type { JsxTag } from './testing/sourceScan';
 import {
   callSites,
@@ -88,9 +90,15 @@ const SPREAD = /\{\.\.\./g;
  * Prop helpers whose return a test below proves holds no material slot, each with a sample return.
  * A spread of a call to one is not an offence.
  */
+const SHEARED_BASIS = parseTransform3D('Transform3D(1, 0, 0, 0.6, 1, 0, 0, 0, 1, 0, 0, 0)');
 const SLOT_FREE_PROP_HELPERS: Readonly<Record<string, object>> = {
   drawHookProps: drawHookProps(shadowCastingEffects(ShadowCastingSetting.ON)),
   overlayDrawProps: overlayDrawProps(shadowCastingEffects(ShadowCastingSetting.ON)),
+  node3dGroupSpread: node3dGroupSpread(decomposeForR3F(SHEARED_BASIS)),
+  node3dPosedGroupSpread: node3dPosedGroupSpread(decomposeForR3F(SHEARED_BASIS), {
+    billboard: 0,
+    fixed_size: false,
+  }),
 };
 const SLOT_FREE_SPREAD = new RegExp(
   `\\{\\.\\.\\.(?:${Object.keys(SLOT_FREE_PROP_HELPERS).join('|')})\\(`,

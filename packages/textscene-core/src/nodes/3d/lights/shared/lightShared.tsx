@@ -6,12 +6,11 @@
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
+import { node3dGroupSpread, type NodeTransform } from '../../../../r3f/nodeTransform';
 
 interface LightWithTargetProps {
   name: string;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale: [number, number, number];
+  transform: NodeTransform;
   /**
    * Render-prop returning the light element. Receives the target object
    * the light should point at; pass it as the light's `target` prop.
@@ -25,14 +24,7 @@ interface LightWithTargetProps {
   children?: ReactNode;
 }
 
-export function LightWithTarget({
-  name,
-  position,
-  rotation,
-  scale,
-  renderLight,
-  children,
-}: LightWithTargetProps) {
+export function LightWithTarget({ name, transform, renderLight, children }: LightWithTargetProps) {
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
 
   // A ref, not state, keeps the target's identity stable across renders.
@@ -41,7 +33,7 @@ export function LightWithTarget({
   }, [name]);
 
   return (
-    <group name={name} position={position} rotation={rotation} scale={scale}>
+    <group name={name} {...node3dGroupSpread(transform)}>
       {renderLight(targetRef.current)}
       <primitive object={targetRef.current} position={[0, 0, -1]} />
       {children}

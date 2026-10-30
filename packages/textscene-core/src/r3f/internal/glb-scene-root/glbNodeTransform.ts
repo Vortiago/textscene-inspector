@@ -12,7 +12,7 @@ import { godotBoneRest } from '../../../resources/formats/glb/godotNodes';
  */
 export function writeNodeTransform(
   target: THREE.Object3D,
-  { position, rotation, scale }: NodeTransform
+  { position, rotation, scale, matrix }: NodeTransform
 ): void {
   const rest = godotBoneRest(target);
   if (rest) {
@@ -22,6 +22,10 @@ export function writeNodeTransform(
       scale: new THREE.Vector3(...scale),
     };
     composeOntoRest(rest, local, target);
+  } else if (matrix) {
+    target.matrixAutoUpdate = false;
+    target.matrix.copy(matrix);
+    return;
   } else {
     target.position.set(...position);
     target.rotation.set(...rotation);

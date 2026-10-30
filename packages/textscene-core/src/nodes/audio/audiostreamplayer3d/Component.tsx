@@ -8,7 +8,7 @@
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import type { AudioStreamPlayer3DProperties } from './types';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
@@ -24,10 +24,7 @@ const GIZMO_COLOR = 0xffff00;
 export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AudioStreamPlayer3DProperties;
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // Godot's AudioStreamPlayer3DGizmoPlugin draws the audible range whenever the node attenuates
   // at all or declares a hard cutoff. It reads `unit_size` only for the radius.
@@ -38,9 +35,7 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
   return (
     <group
       name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
+      {...node3dGroupSpread(transform)}
       userData={{ isAudioGizmo: true, nodeType: 'AudioStreamPlayer3D' }}
     >
       <PluginGizmo drawnFor="selected-only">

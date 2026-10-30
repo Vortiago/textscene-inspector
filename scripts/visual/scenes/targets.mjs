@@ -60,6 +60,8 @@ export const TILE_AND_TARGET_SCENES = [
   // The same relays and targets inside an instanced scene stand where they do in their own files.
   { name: 'remote-transform-3d-instanced', file: 'unit-remote-transform-3d-instanced.tscn' },
   { name: 'remote-transform-2d-instanced', file: 'unit-remote-transform-2d-instanced.tscn', mode: '2d' },
+  // A box with a sheared local basis under a scaled parent is a parallelepiped, not a rotated box.
+  { name: 'node3d-sheared-basis', file: 'unit-node3d-sheared-basis.tscn' },
   // A relay that names its own parent drives nothing: the box stays where the scene puts it.
   { name: 'remote-transform-3d-ancestor', file: 'unit-remote-transform-3d-ancestor.tscn' },
   // A position-only relay moves a target whose global basis is sheared and leaves that basis alone.

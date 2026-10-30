@@ -10,7 +10,11 @@ import * as THREE from 'three';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import {
+  node3dGroupSpread,
+  transformFromNode3DProperties,
+  type NodeTransform,
+} from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import {
@@ -63,10 +67,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const pools = useSceneResources();
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // A `.glb` resolves to nothing and falls through to the placeholder.
   const content = useMeshContent(useResourceResolution(properties.mesh, pools));
@@ -118,9 +119,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     meshRef,
     drawsPoints,
     skeleton,
-    position,
-    rotation,
-    scale,
+    transform,
     shadow,
     godotLayers: properties.layers,
     subtree:
@@ -256,9 +255,7 @@ interface MeshShellProps {
   drawsPoints: boolean;
   /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
   skeleton: THREE.Skeleton | null;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale: [number, number, number];
+  transform: NodeTransform;
   /** `cast_shadow`, with the per-surface draw hooks: billboard, shadow pass, SHADOWS_ONLY. */
   shadow: ShadowCastingEffects;
   /** `layers`: the VisualInstance3D render mask a Decal's and a ReflectionProbe's masks test. */
@@ -281,9 +278,7 @@ function MeshShell({
   meshRef,
   drawsPoints,
   skeleton,
-  position,
-  rotation,
-  scale,
+  transform,
   shadow,
   godotLayers,
   subtree,
@@ -296,9 +291,7 @@ function MeshShell({
       {...skin}
       ref={meshRef}
       name={name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
+      {...node3dGroupSpread(transform)}
       {...drawHookProps(shadow)}
       // Godot's `layers`, for the decal and probe masks. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.

@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { NodeProperties } from './types';
 import type { NodeComponentProps } from '../../r3f/NodeComponentRegistry';
 import { invisibleBase } from '../../r3f/invisibleBase';
-import { transformFromNode3DProperties } from '../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../r3f/nodeTransform';
 
 export function Node({ node, children }: NodeComponentProps) {
   // The base Node parser populates `transform` on Node3D-derived
@@ -17,9 +17,9 @@ export function Node({ node, children }: NodeComponentProps) {
   // Node3DProperties superset, which includes the `transform?` slot
   // that NodeProperties shares. Identity transform when absent.
   const props = node.properties as NodeProperties;
-  const { position, rotation, scale } = useMemo(() => transformFromNode3DProperties(props), [props]);
+  const transform = useMemo(() => transformFromNode3DProperties(props), [props]);
   return (
-    <group name={node.name} position={position} rotation={rotation} scale={scale}>
+    <group name={node.name} {...node3dGroupSpread(transform)}>
       {children}
     </group>
   );

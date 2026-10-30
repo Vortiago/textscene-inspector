@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AnimationMixer, type AnimationAction } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
@@ -33,10 +33,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   const nodePath = useNodePath();
   const isSelected = useIsSelected();
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // Resolve the tree and evaluate it at the authored `parameters/*` state, since a static
   // previewer has no game script driving the parameters. Both are pure, so the blend program is
@@ -200,13 +197,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   });
 
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      userData={{ nodeType: 'AnimationTree' }}
-    >
+    <group name={node.name} {...node3dGroupSpread(transform)} userData={{ nodeType: 'AnimationTree' }}>
       {children}
     </group>
   );

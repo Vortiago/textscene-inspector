@@ -10,7 +10,11 @@ import { visualLayersUserData } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import {
+  node3dGroupSpread,
+  node3dPosedGroupSpread,
+  transformFromNode3DProperties,
+} from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
 import { useWindowedTextureView } from '../../../r3f/useTextureView';
@@ -44,15 +48,12 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Sprite3DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
   // mode does. Both are per-frame effects on the sprite quad itself. Fixed size first:
   // the billboard freezes the world matrix, so a scale set after it lands a frame late.
-  useFixedSize(spriteRef, properties.fixed_size, scale);
+  useFixedSize(spriteRef, properties.fixed_size, transform.scale);
   // Godot's billboard is a material-side effect on the sprite quad. The shared
   // hook applies the same modes Label3D uses.
   useBillboard(spriteRef, properties.billboard);
@@ -147,12 +148,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // Descendants ride in a sibling group with the same transform, not inside the quad: in Godot
   // `billboard` is a shader-side effect that never spins the node's children. Every branch below
   // renders it, placeholder and pending included, so a missing or slow texture keeps the subtree.
-  const subtree =
-    children === undefined ? null : (
-      <group position={position} rotation={rotation} scale={scale}>
-        {children}
-      </group>
-    );
+  const subtree = children === undefined ? null : <group {...node3dGroupSpread(transform)}>{children}</group>;
 
   // Texture failed to load: a magenta-quad placeholder. The DOM `<MissingResourcesPanel>` names the
   // path.
@@ -162,9 +158,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         <MissingResourcePlaceholder
           shape="plane"
           name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
+          position={transform.position}
+          rotation={transform.rotation}
+          scale={transform.scale}
         />
         {subtree}
       </>
@@ -176,7 +172,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   if (!displayedTexture) {
     return (
       <>
-        <group ref={spriteRef} name={node.name} position={position} rotation={rotation} scale={scale} />
+        <group ref={spriteRef} name={node.name} {...node3dPosedGroupSpread(transform, properties)} />
         {subtree}
       </>
     );
@@ -212,9 +208,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         // cull skipping the quad's draws skips nothing else.
         ref={spriteRef}
         name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
+        {...node3dPosedGroupSpread(transform, properties)}
         renderOrder={properties.render_priority}
         castShadow={castsShadow}
         receiveShadow

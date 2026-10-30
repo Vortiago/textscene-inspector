@@ -38,10 +38,7 @@ import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
   const lightRef = useRef<THREE.DirectionalLight | null>(null);
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
   const color = parseColorToHex(properties.light_color);
   const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.skyMode;
   // A Sky Only light lights no surface. It keeps its energy for the sky, which reads it from `userData`.
@@ -85,9 +82,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   return (
     <LightWithTarget
       name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
+      transform={transform}
       renderLight={(target) => (
         <>
           <directionalLight

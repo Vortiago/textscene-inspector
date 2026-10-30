@@ -9,7 +9,7 @@ import { useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
-import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { lightFogEnergy, lightShadowOpacity, useLightIntensity } from '../shared/lightStrength';
 import { useLightDistanceFade } from '../shared/lightDistanceFade';
@@ -94,10 +94,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AreaLight3DProperties;
   const lightRef = useRef<AreaShadowLight | null>(null);
   const shadow = useMemo(() => new AtlasAreaShadow(), []);
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
   const intensity = useAreaLightIntensity(properties);
   const shadowOpacity = lightShadowOpacity(properties);
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
@@ -105,7 +102,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   const isLtcLoadSettled = useLtcTexturesSettled();
 
   return (
-    <group name={node.name} position={position} rotation={rotation} scale={scale}>
+    <group name={node.name} {...node3dGroupSpread(transform)}>
       <rectAreaLight
         ref={lightRef}
         visible={isLtcLoadSettled}

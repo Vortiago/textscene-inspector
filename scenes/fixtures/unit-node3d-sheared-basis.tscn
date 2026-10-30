@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitnode3dshearedbasis"]
+
+; The one variable: the box's local basis is sheared, under a parent scaled (1.5, 1, 1). Godot keeps
+; the whole basis, so the box is a parallelepiped. A position, rotation and scale decomposition
+; draws a different box. Every other golden has an orthogonal local basis, so none shows it.
+
+[sub_resource type="BoxMesh" id="BoxMesh_sheared"]
+size = Vector3(1, 0.5, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sheared"]
+albedo_color = Color(0.9, 0.45, 0.2, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="P" type="Node3D" parent="."]
+transform = Transform3D(1.5, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Box" type="MeshInstance3D" parent="P"]
+transform = Transform3D(0.835518, 0.307015, 0, -0.529877, 1.08924, 0, 0, 0, 1, 0.666667, 0.5, 0)
+mesh = SubResource("BoxMesh_sheared")
+surface_material_override/0 = SubResource("StandardMaterial3D_sheared")

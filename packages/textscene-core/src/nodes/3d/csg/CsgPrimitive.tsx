@@ -9,7 +9,7 @@ import { visualLayersUserData } from '../../../r3f/visualLayers';
 import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
-import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
@@ -73,10 +73,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // full box. Decided before the work below, which a skipped node would only throw away.
   const skipped = subtree !== null && path !== null && subtree.invisiblePaths.has(path);
 
-  const { position, rotation, scale } = useMemo(
-    () => transformFromNode3DProperties(properties),
-    [properties]
-  );
+  const nodeTransform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // The node's own solid comes from the registered builder the evaluator calls, so a slice
   // defines its geometry once. Memoized on the registered `geometryKey`, not on the properties
@@ -164,7 +161,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
   const shadow = useGeometryInstance(placement);
 
-  const transform = { ref: nodeRef, name: node.name, position, rotation, scale } as const;
+  const transform = { ref: nodeRef, name: node.name, ...node3dGroupSpread(nodeTransform) } as const;
 
   // A. Contributor: its solid belongs to an ancestor's boolean. D. Skipped: invisible, so its CSG
   // parent's boolean never reached it. Neither draws a solid, and both stay mounted so
