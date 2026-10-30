@@ -88,9 +88,9 @@ describe('installGodotSkyLighting', () => {
     );
   });
 
-  it("blends Godot's two layers around sqrt( roughness ) times the last layer's index", () => {
+  it("blends Godot's two layers around sqrt( roughness ) times the last layer's index, for a sky the surfaces reflect", () => {
     expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      'return godotSkyBlend( reflectVec, sqrt( roughness ) * 7.0 ) * envMapIntensity;'
+      'return godotSkyBlend( reflectVec, sqrt( roughness ) * 7.0 ) * envMapIntensity * GODOT_SKY_REFLECTION;'
     );
   });
 
