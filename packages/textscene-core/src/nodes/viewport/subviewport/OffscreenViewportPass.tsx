@@ -64,12 +64,10 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { hideEditorHelpers } from '../../../r3f/editorHelpers';
 import { viewAnchorMatrix } from '../../../r3f/viewportLayerAnchor';
 import { drawCanvasKeys } from '../../../r3f/canvasKeyWindow';
-import { useLayerRanks } from '../../../r3f/contexts/PaintOrderContext';
 import { BackgroundMode } from '../../../godot/scene/environment';
-import { canvasBackdropBound, drawOverBackground } from './canvasBackdrop';
+import { canvasBackdropBound, drawOverBackground, isBehindWorld, isOverWorld } from './canvasBackdrop';
 import { useBackdropTarget } from './useBackdropTarget';
-import { declaredCanvasLayers, layerRanks } from '../../../r3f/canvasPaintOrder';
-import { keepsChildrenInViewport } from './viewportBoundary';
+import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
 
 const CanvasOverWorld = lazy(() =>
   import('./CanvasOverWorld.js').then((m) => ({ default: m.CanvasOverWorld }))
@@ -174,11 +172,7 @@ export function OffscreenViewportPass({
     kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0
   );
   const backdropTarget = useBackdropTarget(width, height, node.name);
-  const sceneRanks = useLayerRanks();
-  const drawnLayers = useMemo(
-    () => layerRanks(declaredCanvasLayers(node.children, keepsChildrenInViewport)),
-    [node]
-  );
+  const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);
   // The scene the canvas of a 3D pass draws into, apart from the world's.
   const canvasScene = useMemo(
     () => (drawsCanvasOverWorld ? createPassScene(node.name, 'canvas') : null),
@@ -251,11 +245,9 @@ export function OffscreenViewportPass({
     const exposure = toneMap?.exposure ?? null;
     if (canvasScene) frameCanvas(canvasScene);
     // Under BG_CANVAS the layers below `behindTo` draw first, and the world shows them as its background.
-    const behindTo = canvasScene
-      ? canvasBackdropBound(toneMap?.environment?.background, drawnLayers, sceneRanks)
-      : null;
-    const backdrop = behindTo === null ? null : backdropTarget();
-    if (backdrop) renderCanvas(backdrop, (key) => key < behindTo!);
+    const behindTo = canvasScene ? canvasBackdropBound(toneMap?.environment?.background, canvasLayers) : null;
+    const backdrop = backdropTarget(behindTo !== null);
+    if (backdrop) renderCanvas(backdrop, isBehindWorld(behindTo!));
     const keepsColor = toneMap?.environment?.background.mode === BackgroundMode.BG_KEEP;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
@@ -297,7 +289,7 @@ export function OffscreenViewportPass({
         },
       });
       toneMap?.toneMap();
-      if (canvasScene) renderCanvas(target, behindTo === null ? null : (key) => key >= behindTo);
+      if (canvasScene) renderCanvas(target, behindTo === null ? null : isOverWorld(behindTo));
     } finally {
       if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
@@ -318,8 +310,7 @@ export function OffscreenViewportPass({
     frameCanvas,
     renderCanvas,
     backdropTarget,
-    drawnLayers,
-    sceneRanks,
+    canvasLayers,
   ]);
 
   // Consumers sample the texture directly. The ordered driver runs every

@@ -88,8 +88,8 @@ const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
  * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
- * alpha and colour auto-clear. `draw` clears whatever it needs cleared. three draws no tone curve into a target
- * (`WebGLPrograms.js:180`).
+ * alpha and colour auto-clear. `draw` clears whatever it needs cleared. three draws no tone curve
+ * into a target (`WebGLPrograms.js:180`).
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,

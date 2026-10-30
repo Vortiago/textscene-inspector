@@ -14,21 +14,26 @@ import { BackgroundMode } from '../../../godot/scene/environment';
 /**
  * The paint-order key below which an item draws behind the 3D render, or null when nothing does:
  * another mode, or a lowest layer above the max layer. Plus infinity when the 3D render comes last.
- * `drawnLayers` are this viewport's canvas layers, lowest first (`layerRanks`), and `sceneRanks`
- * are the ranks the items' keys were built from (`useLayerRanks`).
+ * `layers` are the viewport's canvas layers, lowest first, which its items and Controls rank their
+ * keys by (`canvasLayerRanks`).
  */
 export function canvasBackdropBound(
   background: EnvironmentSettings['background'] | undefined,
-  drawnLayers: readonly number[],
-  sceneRanks: readonly number[]
+  layers: readonly number[]
 ): number | null {
   if (background?.mode !== BackgroundMode.BG_CANVAS) return null;
   const { canvasMaxLayer } = background;
-  if (drawnLayers[0]! > canvasMaxLayer) return null;
-  const firstAtOrAboveMax = drawnLayers.find((layer) => layer >= canvasMaxLayer);
+  if (layers[0]! > canvasMaxLayer) return null;
+  const firstAtOrAboveMax = layers.find((layer) => layer >= canvasMaxLayer);
   if (firstAtOrAboveMax === undefined) return Number.POSITIVE_INFINITY;
-  return canvasKeyBound(layerRankOf(sceneRanks, firstAtOrAboveMax) + 1);
+  return canvasKeyBound(layerRankOf(layers, firstAtOrAboveMax) + 1);
 }
+
+/** Whether an item with this paint-order key draws behind the 3D render. */
+export const isBehindWorld = (bound: number) => (key: number) => key < bound;
+
+/** Whether an item with this paint-order key draws over the 3D render. */
+export const isOverWorld = (bound: number) => (key: number) => key >= bound;
 
 /** Runs `draw` with `texture` as the background of `scene`, and puts the scene back. */
 export function drawOverBackground<T>(scene: THREE.Scene, texture: THREE.Texture, draw: () => T): T {

@@ -15,6 +15,8 @@ import { useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext
 import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
+import { LayerRanksProvider } from '../../../r3f/contexts/PaintOrderContext';
+import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
@@ -60,6 +62,8 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // child is a typeless, childless node, so an untouched 2D sub-scene and an
   // untouched 3D one are indistinguishable until the sub-scene lands.
   const { kind, holdsControls, holdsCanvasItems } = useViewportContent(node);
+  // Each viewport holds canvases of its own, so its items and Controls rank by its own layers.
+  const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);
 
   // Only content this subsystem can rasterise gets an offscreen pass. A Control-only viewport
   // is the native Control-raster pass's (`ControlRasterPass.tsx`), and an empty one has nothing
@@ -89,7 +93,9 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // so the world's portal holds the children alone and each workspace drops the other's nodes.
   const inViewport = (inner: ReactNode) => (
     <ViewportSizeProvider size={layoutSize}>
-      <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+      <LayerRanksProvider value={canvasLayers}>
+        <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+      </LayerRanksProvider>
     </ViewportSizeProvider>
   );
   const canvasContents = inViewport(

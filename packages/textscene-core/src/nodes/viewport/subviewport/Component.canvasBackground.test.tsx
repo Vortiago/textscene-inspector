@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { drawsOf, type PassDraw } from './viewportPasses.testkit';
 
 import '../../../r3f/nodes/index';
+import '../../../r3f/controls/index';
 
 const WORLD_SCENE = 'Canvas::world';
 
@@ -77,6 +78,70 @@ describe('a 3D SubViewport under the Canvas background mode', () => {
     const draws = await drawsOf(viewportWith(3, 9));
     const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
     expect(drawing(draws, 'Front')).toBeLessThan(world);
+  });
+});
+
+/**
+ * Layers outside the viewport rank differently from the viewport's own, which holds a Control under
+ * layer 3, the first at or above the max layer, and one under layer 7. Godot gives each viewport its
+ * own canvas map, so the first draws behind the world and the second over it.
+ */
+const OUTER_LAYERS_AND_INNER_CONTROLS = `[gd_scene format=3]
+
+[sub_resource type="Environment" id="Canvas"]
+background_mode = 3
+background_canvas_max_layer = 3
+
+[node name="Root" type="Node2D"]
+
+[node name="One" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="Two" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Four" type="CanvasLayer" parent="."]
+layer = 4
+
+[node name="Five" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Six" type="CanvasLayer" parent="."]
+layer = 6
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(200, 150)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="View"]
+environment = SubResource("Canvas")
+
+[node name="Camera3D" type="Camera3D" parent="View"]
+
+[node name="Box" type="MeshInstance3D" parent="View"]
+
+[node name="Three" type="CanvasLayer" parent="View"]
+layer = 3
+
+[node name="Behind" type="ColorRect" parent="View/Three"]
+offset_right = 100.0
+offset_bottom = 100.0
+
+[node name="Seven" type="CanvasLayer" parent="View"]
+layer = 7
+
+[node name="Over" type="ColorRect" parent="View/Seven"]
+offset_right = 100.0
+offset_bottom = 100.0
+`;
+
+describe('a 3D SubViewport whose scene declares other canvas layers', () => {
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+
+  it('ranks the Controls of its layers by its own layers', async () => {
+    const draws = await drawsOf(OUTER_LAYERS_AND_INNER_CONTROLS);
+    const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
+    expect(drawing(draws, 'ColorRect:Behind')).toBeLessThan(world);
+    expect(drawing(draws, 'ColorRect:Over')).toBeGreaterThan(world);
   });
 });
 

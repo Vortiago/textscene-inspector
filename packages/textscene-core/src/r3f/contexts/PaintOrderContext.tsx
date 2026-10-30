@@ -57,11 +57,6 @@ export function CanvasRootRangesProvider({
 const LayerRankContext = createContext<readonly number[]>(layerRanks([]));
 LayerRankContext.displayName = 'LayerRankContext';
 
-/** The canvas layers this scene declares, lowest first, as `layerRanks` ranks them. */
-export function useLayerRanks(): readonly number[] {
-  return useContext(LayerRankContext);
-}
-
 /** The rank of `layer` among the canvas layers this scene declares. */
 export function useLayerRank(layer: number): number {
   return layerRankOf(useContext(LayerRankContext), layer);

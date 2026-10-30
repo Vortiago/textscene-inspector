@@ -138,6 +138,14 @@ export function declaredCanvasLayers(
 }
 
 /**
+ * The ranks of the layers one canvas set declares: a viewport's own, which stop at a nested viewport
+ * as it holds canvases of its own (`hostsOwnCanvas`). Items and Controls rank by the same set.
+ */
+export function canvasLayerRanks(nodes: readonly TscnNode[]): readonly number[] {
+  return layerRanks(declaredCanvasLayers(nodes, (node) => !isViewportBoundary(node.type)));
+}
+
+/**
  * Whether a node draws pieces the tree does not list: a tile layer, which a
  * y-sort pass splits into one group per tile row once the tileset loads, and an
  * `instance=` node, whose sub-scene roots arrive once the PackedScene loads.
