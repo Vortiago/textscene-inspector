@@ -50,7 +50,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
     ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
     : [];
 
-  const isPreviewed = viewportActions?.activeCameraPath === path;
+  const isPreviewed = viewportActions?.previewedCameraPath === path;
 
   return (
     <div className={styles.root}>
@@ -114,8 +114,8 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
               checked={isPreviewed}
               onChange={(event) =>
                 event.target.checked
-                  ? viewportActions.switchToCamera(path)
-                  : viewportActions.returnToFreeView()
+                  ? viewportActions.previewCamera(path)
+                  : viewportActions.endCameraPreview()
               }
             />
             Preview

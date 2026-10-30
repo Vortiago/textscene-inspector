@@ -126,7 +126,7 @@ export const scenarios = {
   'multi-camera': {
     label: 'Multi Camera',
     caption:
-      'Selecting each Camera3D node and checking "Preview" switches the viewport between the cameras’ points of view (perspective, top-down, side, orthographic) in the video, then resets to free orbit.',
+      'Selecting each Camera3D node and checking "Preview" switches the viewport between the cameras’ points of view (perspective, top-down, side, orthographic) in the video, then resets to the editor camera.',
     run: async (page, h) => {
       await h.orbit(page, { dx: 130, dy: 22, steps: 28 }); // overview of the camera setup
       await h.poster();

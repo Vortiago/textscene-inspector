@@ -110,10 +110,10 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     // The CameraFit guard: under a camera preview, state.camera is the authored
     // Camera3D, and framing would overwrite its position, near and far.
     function ActivateAuthoredCamera() {
-      const { switchToCamera } = useViewportActions();
+      const { previewCamera } = useViewportActions();
       useEffect(() => {
-        switchToCamera('Root/Camera3D');
-      }, [switchToCamera]);
+        previewCamera('Root/Camera3D');
+      }, [previewCamera]);
       return null;
     }
     const renderer = await ReactThreeTestRenderer.create(

@@ -6,27 +6,20 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
-import { useThree, type RootState } from '@react-three/fiber';
+import type { RootState } from '@react-three/fiber';
+import { r3fStateProbe } from './testing/R3FStateProbe';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls';
 import { editorCameraPosition } from './godotEditorCamera';
 import { degToRad } from '../godot/math/math.js';
 
-let getState: (() => RootState) | null = null;
-
-function StateProbe() {
-  getState = useThree((s) => s.get);
-  return null;
-}
-
 async function mount() {
+  const { Probe, state: get } = r3fStateProbe();
   const renderer = await ReactThreeTestRenderer.create(
     <>
-      <StateProbe />
+      <Probe />
       <GodotEditorControls />
     </>
   );
-  const get = getState;
-  if (!get) throw new Error('probe never rendered');
   const state = get();
   const controls = state.controls;
   if (!(controls instanceof EditorControlsHandle)) {

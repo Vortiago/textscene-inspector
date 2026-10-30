@@ -47,7 +47,7 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 ## Preview
 
-The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends.
+The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does, also for a camera inside a SubViewport. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends.
 
 ## Exposure
 

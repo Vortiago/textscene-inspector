@@ -8,7 +8,7 @@
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { previewPort, readViewportMode, settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
-import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
+import { installViewMatrixProbe, matricesEqual, formatMatrix, readViewProbe } from './cameraProbe.mjs';
 import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
 import { openFixture } from './openFixture.mjs';
@@ -33,9 +33,6 @@ import {
   checkCameraPreview,
   runCameraPreviewScenario,
 } from './cameraPreviewScenario.mjs';
-
-/* global window */
-// `window` exists only in the browser that runs the `page.evaluate` calls.
 
 // No external resource, so the geometry and node set are deterministic. The
 // order is the fixture's authored child order, which TreeNode renders.
@@ -74,19 +71,19 @@ async function run3DScenario(browser, baseUrl) {
   const dims = await canvas.evaluate((el) => ({ width: el.width, height: el.height }));
   const stage = await readViewportMode(page);
 
-  const before = await page.evaluate(() => window.__tscnReadViewMatrix());
+  const before = await readViewProbe(page);
 
   await expandAllTreeRows(page);
   const paths = await readOutlinerPaths(page);
 
   await selectOutlinerNode(page, SELECT_A);
   await page.waitForTimeout(SELECT_SETTLE_MS);
-  const afterA = await page.evaluate(() => window.__tscnReadViewMatrix());
+  const afterA = await readViewProbe(page);
   const inspectorA = await readInspectorPanel(page);
 
   await selectOutlinerNode(page, SELECT_B);
   await page.waitForTimeout(SELECT_SETTLE_MS);
-  const afterB = await page.evaluate(() => window.__tscnReadViewMatrix());
+  const afterB = await readViewProbe(page);
 
   await context.close();
 

@@ -121,10 +121,10 @@ function PublishingCamera({
   return null;
 }
 
-function inRoot(children: ReactNode, activeCameraPath: string | null = null) {
+function inRoot(children: ReactNode, previewedCameraPath: string | null = null) {
   return (
     <ViewportModeProvider>
-      <ViewportActionsProvider initialActiveCameraPath={activeCameraPath}>
+      <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
         <WorldEnvironmentScope world="root">
           {children}
           <Reader />
@@ -288,7 +288,7 @@ describe('the exposure of a world seen through a Camera3D', () => {
     expect(read(renderer)).toEqual({ optionalFactor: 3, factor: 3 });
   });
 
-  it('leaves the WorldEnvironment attributes in force in the free view', async () => {
+  it('leaves the WorldEnvironment attributes in force with no camera preview', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <>

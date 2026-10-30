@@ -11,7 +11,7 @@ import { useOptionalViewportActions } from '../../contexts/ViewportActionsContex
 
 export function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { clearAll } = useSelection();
-  const returnToFreeView = useOptionalViewportActions()?.returnToFreeView;
+  const endCameraPreview = useOptionalViewportActions()?.endCameraPreview;
   const prevSceneGraphRef = useRef<SceneGraph | null>(sceneGraph);
 
   useEffect(() => {
@@ -19,11 +19,11 @@ export function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | n
     if (prev !== null && sceneGraph !== null && prev !== sceneGraph) {
       clearAll();
       // The old scene's Camera3D is gone. Ending the preview lets CameraFit, gated on
-      // `activeCameraPath === null`, frame the new scene.
-      returnToFreeView?.();
+      // `previewedCameraPath === null`, frame the new scene.
+      endCameraPreview?.();
     }
     prevSceneGraphRef.current = sceneGraph;
-  }, [sceneGraph, clearAll, returnToFreeView]);
+  }, [sceneGraph, clearAll, endCameraPreview]);
 
   return null;
 }

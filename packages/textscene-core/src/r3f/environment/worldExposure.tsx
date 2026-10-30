@@ -40,9 +40,9 @@ export function usePublishCamera(
 }
 
 /**
- * The camera `world` renders through. The root viewport renders through the camera the viewer
- * looks through, and none in the free view, whose editor camera holds no attributes. A sub-viewport
- * elects one of its own (`electViewportCamera`).
+ * The camera `world` renders through. The root viewport renders through the previewed camera,
+ * and through none without a preview, since the editor camera holds no attributes. A
+ * sub-viewport elects one of its own (`electViewportCamera`).
  */
 function renderCameraOf(
   world: WorldKind,
@@ -74,7 +74,7 @@ export function WorldExposureScope({ children }: { children: ReactNode }) {
 
 function ExposureProvider({ children }: { children: ReactNode }) {
   const world = useWorldKind();
-  const viewedPath = useOptionalViewportActions()?.activeCameraPath ?? null;
+  const viewedPath = useOptionalViewportActions()?.previewedCameraPath ?? null;
   const renderCamera = renderCameraOf(world, viewedPath, cameras.useAll());
   const worldAttributes = cameraAttributes.useChosen();
   // A camera's resolved attributes replace the world's: Godot forces them over the scenario's

@@ -28,6 +28,7 @@ import { ScreenshotBridge } from './ScreenshotBridge.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { CameraFit } from './CameraFit.js';
+import { SceneCamerasProvider } from './sceneCameras.js';
 import { CanvasServices } from './CanvasServices.js';
 import styles from './TscnCanvas.module.css';
 
@@ -139,8 +140,10 @@ export function TscnCanvas() {
         onCreated={installShaderPatches}
       >
         <CanvasServices />
-        <TscnSceneContents />
-        <ActiveCameraSwitcher />
+        <SceneCamerasProvider>
+          <TscnSceneContents />
+          <ActiveCameraSwitcher />
+        </SceneCamerasProvider>
         <CameraFit />
         <FrameSelectedShortcut />
         <GodotEditorControls />

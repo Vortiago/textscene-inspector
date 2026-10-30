@@ -1,7 +1,7 @@
 /**
  * `resetCamera` drives the registered handler, the `reset()` of the canvas's
- * `<GodotEditorControls>`. The camera switch (`switchToCamera`,
- * `returnToFreeView`, `activeCameraPath`) and the 2D framing claim are pinned too.
+ * `<GodotEditorControls>`. The camera switch (`previewCamera`,
+ * `endCameraPreview`, `previewedCameraPath`) and the 2D framing claim are pinned too.
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -25,40 +25,42 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('ViewportActionsContext', () => {
-  it('exposes activeCameraPath/switchToCamera/returnToFreeView from main', () => {
+  it('exposes previewedCameraPath/previewCamera/endCameraPreview from main', () => {
     const { result } = renderHook(() => useViewportActions(), { wrapper });
-    expect(result.current.activeCameraPath).toBeNull();
+    expect(result.current.previewedCameraPath).toBeNull();
 
     act(() => {
-      result.current.switchToCamera('Root/Camera3D');
+      result.current.previewCamera('Root/Camera3D');
     });
-    expect(result.current.activeCameraPath).toBe('Root/Camera3D');
+    expect(result.current.previewedCameraPath).toBe('Root/Camera3D');
 
     act(() => {
-      result.current.returnToFreeView();
+      result.current.endCameraPreview();
     });
-    expect(result.current.activeCameraPath).toBeNull();
+    expect(result.current.previewedCameraPath).toBeNull();
   });
 
-  it('seeds activeCameraPath from initialActiveCameraPath (?camera= deep-link)', () => {
+  it('seeds previewedCameraPath from initialPreviewedCameraPath (?camera= deep-link)', () => {
     const { result } = renderHook(() => useViewportActions(), {
       wrapper: ({ children }) => (
-        <ViewportActionsProvider initialActiveCameraPath="Root/Camera3D">{children}</ViewportActionsProvider>
+        <ViewportActionsProvider initialPreviewedCameraPath="Root/Camera3D">
+          {children}
+        </ViewportActionsProvider>
       ),
     });
     // The canvas looks through this camera on open without any user action.
-    expect(result.current.activeCameraPath).toBe('Root/Camera3D');
+    expect(result.current.previewedCameraPath).toBe('Root/Camera3D');
 
-    // Free view still clears it, since the seed is only the initial value.
+    // Ending the preview still clears it, since the seed is only the initial value.
     act(() => {
-      result.current.returnToFreeView();
+      result.current.endCameraPreview();
     });
-    expect(result.current.activeCameraPath).toBeNull();
+    expect(result.current.previewedCameraPath).toBeNull();
   });
 
-  it('defaults activeCameraPath to null when no initial path is given', () => {
+  it('defaults previewedCameraPath to null when no initial path is given', () => {
     const { result } = renderHook(() => useViewportActions(), { wrapper });
-    expect(result.current.activeCameraPath).toBeNull();
+    expect(result.current.previewedCameraPath).toBeNull();
   });
 
   it('exposes resetCamera() that calls the registered handler (WI-UX-7)', () => {
@@ -91,14 +93,14 @@ describe('ViewportActionsContext', () => {
   it('resetCamera() ends a camera preview, so the reset pose is the one on screen', () => {
     const { result } = renderHook(() => useViewportActions(), { wrapper });
     act(() => {
-      result.current.switchToCamera('Root/Camera3D');
+      result.current.previewCamera('Root/Camera3D');
     });
 
     act(() => {
       result.current.resetCamera();
     });
 
-    expect(result.current.activeCameraPath).toBeNull();
+    expect(result.current.previewedCameraPath).toBeNull();
   });
 
   it('resetCamera() is a no-op when no handler is registered', () => {

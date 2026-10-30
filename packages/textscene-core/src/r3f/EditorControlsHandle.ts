@@ -6,7 +6,7 @@
 
 import type { Camera as R3FCamera } from '@react-three/fiber';
 import * as THREE from 'three';
-import { editorCameraPosition, EDITOR_CAMERA_FOV } from './godotEditorCamera.js';
+import { editorCameraPosition } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
   cursorFromCamera,
@@ -36,13 +36,9 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The orbit focus point. One persistent vector: `frameSceneBounds` copies into it. */
   readonly target = new THREE.Vector3();
 
-  /**
-   * The editor camera, never an authored Camera3D: Godot keeps its editor camera
-   * apart from the one it previews (`node_3d_editor_plugin.cpp:4486-4502`).
-   */
-  camera: R3FCamera;
-
-  private readonly perspectiveCamera: THREE.PerspectiveCamera | null;
+  /** Written only by the projection swap: one of the pair below. */
+  private editorCamera: R3FCamera;
+  private readonly perspectiveCamera: THREE.PerspectiveCamera;
   private orthographicCamera: THREE.OrthographicCamera | null = null;
   private aspect = 1;
 
@@ -52,8 +48,24 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     private readonly setActiveCamera: (camera: R3FCamera) => void
   ) {
     super();
-    this.camera = camera;
-    this.perspectiveCamera = isPerspectiveCamera(camera) ? camera : null;
+    if (!isPerspectiveCamera(camera)) {
+      throw new Error(`expected a perspective editor camera, got ${camera.type}`);
+    }
+    this.editorCamera = camera;
+    this.perspectiveCamera = camera;
+  }
+
+  /**
+   * The editor camera, never an authored Camera3D: Godot keeps its editor camera
+   * apart from the one it previews (`node_3d_editor_plugin.cpp:4486-4502`).
+   */
+  get camera(): R3FCamera {
+    return this.editorCamera;
+  }
+
+  /** Whether R3F draws through a previewed Camera3D instead of the editor camera. */
+  isPreviewing(rendered: R3FCamera): boolean {
+    return rendered !== this.editorCamera;
   }
 
   setAspect(aspect: number): void {
@@ -69,7 +81,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
 
   /** The perspective fov, which also sizes the orthographic frustum through `orthographicHeight`. */
   fovDegrees(): number {
-    return this.perspectiveCamera?.fov ?? EDITOR_CAMERA_FOV;
+    return this.perspectiveCamera.fov;
   }
 
   /** The zoom range Godot derives from the camera's clip planes. */
@@ -116,24 +128,20 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
 
   /** Numpad 5. */
   toggleProjection(): void {
-    if (this.isOrthographic) {
-      this.usePerspective();
-    } else {
-      this.useOrthographic();
-    }
+    if (this.isOrthographic) this.usePerspective();
+    else this.useOrthographic();
   }
 
   private usePerspective(): void {
-    if (!this.perspectiveCamera || this.camera === this.perspectiveCamera) return;
+    if (this.editorCamera === this.perspectiveCamera) return;
     const cursor = this.cursor();
-    this.camera = this.perspectiveCamera;
+    this.editorCamera = this.perspectiveCamera;
     this.setActiveCamera(this.perspectiveCamera);
     this.applyCursor(cursor);
   }
 
   private useOrthographic(): void {
     const perspective = this.perspectiveCamera;
-    if (!perspective) return;
     const cursor = this.cursor();
     if (!this.orthographicCamera) {
       // R3F resizes an orthographic camera into PIXEL units unless the camera
@@ -145,7 +153,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     }
     this.orthographicCamera.near = perspective.near;
     this.orthographicCamera.far = perspective.far;
-    this.camera = this.orthographicCamera;
+    this.editorCamera = this.orthographicCamera;
     this.setActiveCamera(this.orthographicCamera);
     this.applyCursor(cursor);
   }
@@ -157,8 +165,8 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
    */
   private applyProjection(cursor: EditorCursor): void {
     const ortho = this.orthographicCamera;
-    if (!ortho || this.camera !== ortho || !this.perspectiveCamera) return;
-    const height = orthographicHeight(cursor.distance, this.perspectiveCamera.fov);
+    if (!ortho || this.editorCamera !== ortho) return;
+    const height = orthographicHeight(cursor.distance, this.fovDegrees());
     const width = height * this.aspect;
     ortho.left = -width / 2;
     ortho.right = width / 2;

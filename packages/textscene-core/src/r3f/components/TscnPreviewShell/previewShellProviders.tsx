@@ -31,7 +31,7 @@ export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
-  initialActiveCameraPath?: string | null;
+  initialPreviewedCameraPath?: string | null;
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode?: ViewportMode;
@@ -47,7 +47,7 @@ interface PreviewShellProviderOptions {
  */
 export function previewShellProviders({
   hierarchyValue,
-  initialActiveCameraPath,
+  initialPreviewedCameraPath,
   onMissingPathsChange,
   initialViewportMode,
   initialViewport = DEFAULT_VIEWPORT,
@@ -58,7 +58,7 @@ export function previewShellProviders({
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => (
-      <ViewportActionsProvider initialActiveCameraPath={initialActiveCameraPath}>
+      <ViewportActionsProvider initialPreviewedCameraPath={initialPreviewedCameraPath}>
         {children}
       </ViewportActionsProvider>
     ),

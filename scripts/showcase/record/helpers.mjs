@@ -85,14 +85,14 @@ export async function cameraNodePaths(page) {
 
 /** Check the inspector's Preview checkbox if the selected node is a Camera3D. */
 export async function previewCamera(page) {
-  const btn = page.getByRole('checkbox', { name: 'Preview' });
-  if ((await btn.count()) === 0) return false;
-  if (!(await tryClick(btn.first()))) return false;
+  const checkbox = page.getByRole('checkbox', { name: 'Preview' });
+  if ((await checkbox.count()) === 0) return false;
+  if (!(await tryClick(checkbox.first()))) return false;
   await page.waitForTimeout(1300); // hold on this camera's POV
   return true;
 }
 
-/** Return to free-orbit (toolbar Reset Camera). */
+/** End any camera preview (toolbar Reset Camera). */
 export async function resetCamera(page) {
   const btn = page.getByRole('button', { name: /reset camera/i });
   if ((await btn.count()) === 0) return false;

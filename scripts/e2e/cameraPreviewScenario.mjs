@@ -5,27 +5,44 @@
  * and puts its editor camera back, untouched, when the preview ends.
  */
 import { settleCanvas } from '../visual/previewServer.mjs';
-import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
+import { installViewMatrixProbe, matricesEqual, formatMatrix, readViewProbe } from './cameraProbe.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
 import { openFixture } from './openFixture.mjs';
 
 /* global window */
-// `window` exists only in the browser that runs the `page.evaluate` calls.
+// `window` exists only in the browser that runs the `page.waitForFunction` callback.
 
 export const CAMERA_PREVIEW_FIXTURE = 'unit-multi-camera.tscn';
 const PREVIEWED_CAMERA = 'TopCamera';
 const EDITOR_CAMERA_ROW = 'Editor camera';
 
-// A row click re-renders through React state and draws on the next frame, as a selection does.
-const SWITCH_SETTLE_MS = 400;
+// Navigation that moves nothing draws no frame to wait for, so it waits a fixed time, as a
+// selection does in `webAppGate.mjs`.
+const NAVIGATION_SETTLE_MS = 400;
+// Each camera switch draws a new view in a frame or two. A switch that never draws one
+// times out here, and the check below reports the unchanged matrix.
+const SWITCH_TIMEOUT_MS = 5000;
 
-function readViewMatrix(page) {
-  return page.evaluate(() => window.__tscnReadViewMatrix()?.matrix ?? null);
+async function readViewMatrix(page) {
+  return (await readViewProbe(page))?.matrix ?? null;
 }
 
-async function clickCameraRow(page, name) {
-  await page.getByRole('button', { name: new RegExp(`^${name}`) }).click();
-  await page.waitForTimeout(SWITCH_SETTLE_MS);
+/** Runs `step`, then waits until the GPU receives a view matrix other than the one before it. */
+async function switchView(page, step) {
+  const before = await readViewMatrix(page);
+  await step();
+  await page
+    .waitForFunction(
+      (previous) => JSON.stringify(window.__tscnReadViewMatrix()?.matrix) !== JSON.stringify(previous),
+      before,
+      { timeout: SWITCH_TIMEOUT_MS }
+    )
+    .catch(() => {});
+  return readViewMatrix(page);
+}
+
+function clickCameraRow(page, name) {
+  return page.getByRole('button', { name: new RegExp(`^${name}`) }).click();
 }
 
 /** An orbit, a pan and a wheel zoom over the middle of the canvas. */
@@ -40,7 +57,7 @@ async function navigate(page, canvas) {
   await page.mouse.wheel(0, 120);
   await page.keyboard.up('Shift');
   await page.mouse.wheel(0, -300);
-  await page.waitForTimeout(SWITCH_SETTLE_MS);
+  await page.waitForTimeout(NAVIGATION_SETTLE_MS);
 }
 
 export async function runCameraPreviewScenario(browser, baseUrl) {
@@ -53,19 +70,13 @@ export async function runCameraPreviewScenario(browser, baseUrl) {
   const editor = await readViewMatrix(page);
 
   await page.getByRole('tab', { name: 'Cameras' }).click();
-  await clickCameraRow(page, PREVIEWED_CAMERA);
-  const preview = await readViewMatrix(page);
+  const preview = await switchView(page, () => clickCameraRow(page, PREVIEWED_CAMERA));
   await navigate(page, canvas);
   const previewAfterNavigation = await readViewMatrix(page);
 
-  await clickCameraRow(page, EDITOR_CAMERA_ROW);
-  const editorAfterPreview = await readViewMatrix(page);
-  await clickCameraRow(page, PREVIEWED_CAMERA);
-  const previewAgain = await readViewMatrix(page);
-
-  await page.getByTestId('reset-camera-button').click();
-  await page.waitForTimeout(SWITCH_SETTLE_MS);
-  const editorAfterReset = await readViewMatrix(page);
+  const editorAfterPreview = await switchView(page, () => clickCameraRow(page, EDITOR_CAMERA_ROW));
+  const previewAgain = await switchView(page, () => clickCameraRow(page, PREVIEWED_CAMERA));
+  const editorAfterReset = await switchView(page, () => page.getByTestId('reset-camera-button').click());
 
   await context.close();
 

@@ -9,7 +9,7 @@ import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 
 /**
- * Frames the scene on load when `frameOnOpen` is on, in free orbit only. It is
+ * Frames the scene on load when `frameOnOpen` is on, with no camera preview. It is
  * off by default, since Godot's editor opens at a fixed orbit and leaves framing
  * to F. A short settle window catches async content without fighting the orbit.
  * A selection never moves the camera: FrameSelectedShortcut re-frames on request.
@@ -21,12 +21,12 @@ export function CameraFit() {
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
-  const activeCameraPath = control?.activeCameraPath ?? null;
+  const previewedCameraPath = control?.previewedCameraPath ?? null;
 
   const loader = useContext(ResourceLoaderContext);
 
   useEffect(() => {
-    if (!frameOnOpen || !hasScene || activeCameraPath) return undefined;
+    if (!frameOnOpen || !hasScene || previewedCameraPath) return undefined;
 
     // The settle-fit stands down when the camera has left this position, so
     // the user's own orbit wins.
@@ -54,7 +54,7 @@ export function CameraFit() {
       timers.forEach(clearTimeout);
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, activeCameraPath, frameOnOpen, get, loader]);
+  }, [rootKey, hasScene, previewedCameraPath, frameOnOpen, get, loader]);
 
   return null;
 }

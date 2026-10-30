@@ -13,14 +13,12 @@ import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
-import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { keepsChildrenInViewport } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
 import styles from './TscnPreviewShell.module.css';
 
 // Module-level predicates are stable, so the memo of `useLiveSceneNodes` does not recompute each render.
 const isCamera3DNode = (n: TscnNode): boolean => isCamera3DType(n.type);
 const isCamera2DNode = (n: TscnNode): boolean => isCamera2DType(n.type);
-/** A Camera2D inside a SubViewport is that viewport's camera (`camera_2d.cpp:342`), not the stage's. */
-const isOutsideViewports = (n: TscnNode): boolean => !descendsFromClass(n.type, 'Viewport');
 
 export function CamerasPanel() {
   const cam = useOptionalViewportActions();
@@ -29,7 +27,8 @@ export function CamerasPanel() {
   const { viewportSize } = useProjectSettings();
 
   const cameras3d = useLiveSceneNodes(isCamera3DNode);
-  const cameras2d = useLiveSceneNodes(isCamera2DNode, isOutsideViewports);
+  // A Camera2D inside a SubViewport is that viewport's camera (`camera_2d.cpp:342`), not the stage's.
+  const cameras2d = useLiveSceneNodes(isCamera2DNode, keepsChildrenInViewport);
 
   if (cameras3d.length === 0 && cameras2d.length === 0) {
     return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
@@ -47,14 +46,14 @@ export function CamerasPanel() {
     setMode('2D');
   }
 
-  const activePath = cam?.activeCameraPath ?? null;
+  const activePath = cam?.previewedCameraPath ?? null;
   return (
     <div className={styles.camList}>
       <button
         type="button"
         className={styles.camRow}
         data-active={activePath === null}
-        onClick={() => cam?.returnToFreeView()}
+        onClick={() => cam?.endCameraPreview()}
       >
         <span className={styles.camName}>Editor camera</span>
         <span className={styles.camTag}>{activePath === null ? 'active' : 'use'}</span>
@@ -67,7 +66,7 @@ export function CamerasPanel() {
             type="button"
             className={styles.camRow}
             data-active={active}
-            onClick={() => cam?.switchToCamera(c.path)}
+            onClick={() => cam?.previewCamera(c.path)}
           >
             <span className={styles.camName}>{c.node.name}</span>
             <span className={styles.camTag}>{active ? 'active' : 'use'}</span>

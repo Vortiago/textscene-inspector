@@ -43,7 +43,7 @@ export function useEditorNavigation(
 
     // Godot ignores every navigation input while it previews a Camera3D
     // (`node_3d_editor_plugin.cpp:1826-1829`), so neither camera moves.
-    const isPreviewing = (): boolean => get().camera !== handle.camera;
+    const isPreviewing = (): boolean => handle.isPreviewing(get().camera);
 
     /**
      * The invariant every touch path keeps: no fingers, no gesture origin. A stale

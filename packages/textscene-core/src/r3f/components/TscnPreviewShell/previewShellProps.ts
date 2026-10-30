@@ -40,9 +40,9 @@ export interface TscnPreviewShellProps {
   initialViewportMode?: ViewportMode;
   /**
    * A Camera3D node path to look through once the scene loads, such as the web
-   * previewer's `?camera=` parameter. Without it the view opens in free orbit.
+   * previewer's `?camera=` parameter. Without it the view opens on the editor camera.
    */
-  initialActiveCameraPath?: string | null;
+  initialPreviewedCameraPath?: string | null;
   /**
    * Fired on mount and on each change of whether the viewport can capture a PNG. The
    * `ready` state carries the capture, which the host saves or hands to an agent tool.
