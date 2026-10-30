@@ -22,9 +22,10 @@ import { viewportActionsProbe } from './testing/ViewportActionsProbe';
 import { r3fStateProbe } from './testing/R3FStateProbe';
 import { SceneCamerasProvider } from './sceneCameras';
 
-function graph() {
+function graph(scenePath = 'res://test.tscn') {
   return createSceneGraphFromTscnScene(
-    new TscnParser().parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n')
+    new TscnParser().parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n'),
+    scenePath
   );
 }
 
@@ -37,13 +38,18 @@ function cameraNode(projection: '0' | '1'): TscnNode {
 }
 
 /** The switcher over one Camera3D, as `<TscnCanvas>` mounts it, with any extra canvas children. */
-function switcherTree(camera: TscnNode | null, initialPreviewedCameraPath?: string, extra?: ReactNode) {
+function switcherTree(
+  camera: TscnNode | null,
+  initialPreviewedCameraPath?: string,
+  extra?: ReactNode,
+  scenePath?: string
+) {
   return (
-    <HierarchyProvider value={{ sceneGraph: graph(), panelId: 'p' }}>
+    <HierarchyProvider value={{ sceneGraph: graph(scenePath), panelId: 'p' }}>
       <ViewportActionsProvider initialPreviewedCameraPath={initialPreviewedCameraPath}>
         <SceneCamerasProvider>
           {extra}
-          {camera && <Camera3DInWorld node={camera} />}
+          {camera && <Camera3DInWorld key={scenePath} node={camera} />}
           <ActiveCameraSwitcher />
         </SceneCamerasProvider>
       </ViewportActionsProvider>
@@ -85,7 +91,7 @@ describe('ActiveCameraSwitcher', () => {
 async function mountWithEditorCamera() {
   const { Probe: ActionsProbe, actions } = viewportActionsProbe();
   const { Probe: StateProbe, state } = r3fStateProbe();
-  const tree = (camera: TscnNode | null) =>
+  const tree = (camera: TscnNode | null, scenePath?: string) =>
     switcherTree(
       camera,
       undefined,
@@ -93,15 +99,16 @@ async function mountWithEditorCamera() {
         <ActionsProbe />
         <StateProbe />
         <GodotEditorControls />
-      </>
+      </>,
+      scenePath
     );
   const renderer = await ReactThreeTestRenderer.create(tree(cameraNode('0')));
-  /** Re-renders the scene with `camera` in place of the Camera3D, or with none. */
-  const rerender = async (camera: TscnNode | null) => {
-    await renderer.update(tree(camera));
+  /** Re-renders with `camera` in place of the Camera3D, or with none, in the scene at `scenePath`. */
+  const rerender = async (camera: TscnNode | null, scenePath?: string) => {
+    await renderer.update(tree(camera, scenePath));
     await act(async () => renderer.advanceFrames(1, 16));
   };
-  return { state, actions, rerender };
+  return { renderer, state, actions, rerender };
 }
 
 describe('ActiveCameraSwitcher camera preview', () => {
@@ -147,6 +154,20 @@ describe('ActiveCameraSwitcher camera preview', () => {
 
     expect(state().camera).toBe(editor);
     expect(actions().previewedCameraPath).toBeNull();
+  });
+
+  // SceneChangeResetter ends the preview after a scene switch. Until it does, a camera of the new
+  // scene at the previewed path is not the previewed camera.
+  it('does not follow the previewed path onto a camera of another scene', async () => {
+    const { renderer, state, actions, rerender } = await mountWithEditorCamera();
+    await act(async () => actions().previewCamera('Camera3D'));
+
+    await rerender(cameraNode('0'), 'res://other.tscn');
+
+    const otherSceneCamera = instanceAs<THREE.PerspectiveCamera>(
+      renderer.scene.findByType('PerspectiveCamera')
+    );
+    expect(state().camera).not.toBe(otherSceneCamera);
   });
 
   it('previews a Camera3D that a SubViewport mounts in its own scene', async () => {

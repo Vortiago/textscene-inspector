@@ -4,7 +4,7 @@ import { useContext, useEffect } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
-import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
+import { isDrawingPreview } from './EditorControlsHandle.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 
@@ -16,23 +16,23 @@ import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
  */
 export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
-  const control = useOptionalViewportActions();
   const { frameOnOpen } = useViewportMode();
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
-  const previewedCameraPath = control?.previewedCameraPath ?? null;
 
   const loader = useContext(ResourceLoaderContext);
 
   useEffect(() => {
-    if (!frameOnOpen || !hasScene || previewedCameraPath) return undefined;
+    if (!frameOnOpen || !hasScene) return undefined;
 
     // The settle-fit stands down when the camera has left this position, so
     // the user's own orbit wins.
     let lastSet: THREE.Vector3 | null = null;
     const fit = () => {
       const state = get();
+      // A preview draws through the authored Camera3D, which framing would move.
+      if (isDrawingPreview(state)) return;
       frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
       lastSet = state.camera.position.clone();
     };
@@ -54,7 +54,7 @@ export function CameraFit() {
       timers.forEach(clearTimeout);
       unsubscribe?.();
     };
-  }, [rootKey, hasScene, previewedCameraPath, frameOnOpen, get, loader]);
+  }, [rootKey, hasScene, frameOnOpen, get, loader]);
 
   return null;
 }

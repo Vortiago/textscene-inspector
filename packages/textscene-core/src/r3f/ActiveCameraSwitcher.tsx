@@ -2,8 +2,8 @@
 import { useThree, type RootState } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
-import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
+import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { fitToAspect, fittedAspect } from '../nodes/3d/camera3d/projectionFit.js';
 import { EditorControlsHandle } from './EditorControlsHandle.js';
 import { useSceneCamera } from './sceneCameras.js';
@@ -23,11 +23,10 @@ export function ActiveCameraSwitcher() {
   const control = useOptionalViewportActions();
   const previewedCameraPath = control?.previewedCameraPath ?? null;
   const endCameraPreview = control?.endCameraPreview;
-  const hierarchy = useOptionalHierarchy();
-  // Re-run when the scene loads: a deep-linked (`?camera=`) path is set before
-  // any Camera3D has mounted, so the first pass finds nothing.
-  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
+  // A deep-linked (`?camera=`) path is set before its Camera3D mounts. The store
+  // re-renders this when the camera registers, and the seed activates it then.
   const target = useSceneCamera(previewedCameraPath);
+  const sceneKey = useOptionalHierarchy()?.sceneGraph?.rootScene ?? '';
   const camera = useThree((s) => s.camera);
   const set = useThree((s) => s.set);
   const get = useThree((s) => s.get);
@@ -35,6 +34,8 @@ export function ActiveCameraSwitcher() {
   // Tells an intentional activation from an incidental effect re-run.
   const prevPathRef = useRef<string | null>(previewedCameraPath);
   const seedConsumedRef = useRef(false);
+  /** Written only on an activation: the scene whose camera the preview draws through. */
+  const previewedSceneRef = useRef<string | null>(null);
 
   useEffect(() => {
     const pathChanged = prevPathRef.current !== previewedCameraPath;
@@ -57,14 +58,16 @@ export function ActiveCameraSwitcher() {
     fitToCanvas(target, size);
 
     // Swap on a pick, on the one-shot deep-link seed, and onto a previewed camera that a
-    // projection change remounted. A scene switch re-runs this with a stale path that may name
-    // a camera in the new scene, before SceneChangeResetter clears it.
-    const shouldActivate = pathChanged || !seedConsumedRef.current || isPreviewing;
+    // projection change remounted in the same scene. A scene switch re-runs this with a stale
+    // path that may name a camera in the new scene, before SceneChangeResetter clears it.
+    const isRemount = isPreviewing && previewedSceneRef.current === sceneKey;
+    const shouldActivate = pathChanged || !seedConsumedRef.current || isRemount;
     seedConsumedRef.current = true;
     if (shouldActivate && target !== camera) {
+      previewedSceneRef.current = sceneKey;
       set({ camera: target });
     }
-  }, [previewedCameraPath, rootKey, target, camera, get, set, size, endCameraPreview]);
+  }, [previewedCameraPath, target, sceneKey, camera, get, set, size, endCameraPreview]);
 
   return null;
 }

@@ -3,7 +3,7 @@
  * ignores (plain left-drag, keys typed into a field), that it stops on unmount, and
  * that its published `state.controls` honours the `frameSceneBounds` contract.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
 import type { RootState } from '@react-three/fiber';
@@ -11,6 +11,16 @@ import { r3fStateProbe } from './testing/R3FStateProbe';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls';
 import { editorCameraPosition } from './godotEditorCamera';
 import { degToRad } from '../godot/math/math.js';
+
+type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** Written only by `mount`. Each test's canvases unmount after it, so no window listener leaks. */
+const mounted = new Set<Renderer>();
+
+afterEach(async () => {
+  for (const renderer of mounted) await act(async () => renderer.unmount());
+  mounted.clear();
+});
 
 async function mount() {
   const { Probe, state: get } = r3fStateProbe();
@@ -20,6 +30,7 @@ async function mount() {
       <GodotEditorControls />
     </>
   );
+  mounted.add(renderer);
   const state = get();
   const controls = state.controls;
   if (!(controls instanceof EditorControlsHandle)) {
@@ -500,6 +511,16 @@ async function previewAuthoredCamera(get: () => RootState): Promise<THREE.Perspe
 }
 
 describe('<GodotEditorControls> camera preview', () => {
+  it('still consumes a numpad view key during a preview, so it scrolls no page', async () => {
+    const { get } = await mount();
+    await previewAuthoredCamera(get);
+    const event = new KeyboardEvent('keydown', { code: 'Numpad7', bubbles: true, cancelable: true });
+
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('moves neither camera on any navigation input while a Camera3D is previewed', async () => {
     const { get, controls, element } = await mount();
     const editor = get().camera;
@@ -520,6 +541,21 @@ describe('<GodotEditorControls> camera preview', () => {
     expect(editor.matrixWorld.equals(editorPose)).toBe(true);
     expect(get().camera).toBe(authored);
     expect(controls.isOrthographic).toBe(false);
+  });
+
+  it('stops an orbit that began before the preview from moving the editor camera', async () => {
+    const { get, element } = await mount();
+    const editor = get().camera;
+    const pointer = { pointerId: 1, button: 1, bubbles: true, cancelable: true };
+    element.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 100, clientY: 100 }));
+    editor.updateMatrixWorld();
+    const editorPose = editor.matrixWorld.clone();
+    await previewAuthoredCamera(get);
+
+    element.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 180, clientY: 120 }));
+
+    editor.updateMatrixWorld();
+    expect(editor.matrixWorld.equals(editorPose)).toBe(true);
   });
 
   it('reset() poses the editor camera and leaves the previewed Camera3D where it was authored', async () => {

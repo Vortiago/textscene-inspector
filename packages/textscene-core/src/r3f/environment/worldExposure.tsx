@@ -17,6 +17,7 @@ import { useOptionalViewportActions } from '../contexts/ViewportActionsContext';
 import { useSceneExposure } from '../exposure/sceneExposure';
 import { useWorldKind, type WorldKind } from './WorldKindContext';
 import { createWorldGroup, createWorldPublications, type WorldResolution } from './worldGroup';
+import { useRegisterSceneCameraResources, useSceneCameraResources } from '../sceneCameras';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 
 /** What a WorldEnvironment's `camera_attributes` resolves to, when it holds a valid one. */
@@ -45,6 +46,10 @@ const cameras = createWorldPublications<WorldCamera>();
 /** Puts a Camera3D and what it holds in its world, whether or not the world renders through it. */
 export function usePublishCamera(path: string, current: boolean, held: CameraResources): void {
   const { attributes, environment } = held;
+  useRegisterSceneCameraResources(
+    path,
+    useMemo(() => ({ attributes, environment }), [attributes, environment])
+  );
   const viewport = useEnclosingViewportPath();
   cameras.usePublish(
     useMemo(
@@ -56,17 +61,18 @@ export function usePublishCamera(path: string, current: boolean, held: CameraRes
 
 /**
  * The camera `world` renders through. The root viewport renders through the previewed camera,
- * and through none without a preview, since the editor camera holds no attributes. A
- * sub-viewport elects one of its own (`electCameraOfViewport`).
+ * whichever world holds it (`previewed`), and through none without a preview, since the editor
+ * camera holds no attributes. A sub-viewport elects one of its own (`electCameraOfViewport`).
  */
 function renderCameraOf(
   world: WorldKind,
   viewedPath: string | null,
+  previewed: CameraResources | null,
   viewportPath: string | null,
   worldCameras: readonly WorldCamera[]
-): WorldCamera | null {
+): CameraResources | null {
   if (world === 'subViewport') return electCameraOfViewport(worldCameras, viewportPath);
-  return worldCameras.find((camera) => camera.path === viewedPath) ?? null;
+  return previewed ?? worldCameras.find((camera) => camera.path === viewedPath) ?? null;
 }
 
 /** The attributes of a resolution, or null while there are none to read. */
@@ -80,7 +86,7 @@ function attributesOf(resolution: CameraAttributesResolution | null): CameraAttr
  * camera's `.tres` loads, the world's hold, since Godot has no load gap to show.
  */
 function drawnAttributes(
-  camera: WorldCamera | null,
+  camera: CameraResources | null,
   worldAttributes: CameraAttributesResolution | null
 ): CameraAttributes | null {
   return attributesOf(camera?.attributes.status === 'resolved' ? camera.attributes : worldAttributes);
@@ -145,7 +151,13 @@ export function useRenderCameraEnvironment(): EnvironmentResolution | null {
 function RenderCameraProvider({ children }: { children: ReactNode }) {
   const world = useWorldKind();
   const viewedPath = useOptionalViewportActions()?.previewedCameraPath ?? null;
-  const renderCamera = renderCameraOf(world, viewedPath, useEnclosingViewportPath(), cameras.useAll());
+  const renderCamera = renderCameraOf(
+    world,
+    viewedPath,
+    useSceneCameraResources(viewedPath),
+    useEnclosingViewportPath(),
+    cameras.useAll()
+  );
   const worldAttributes = cameraAttributes.useChosen();
   const attributes = drawnAttributes(renderCamera, worldAttributes);
   useSceneExposure(
@@ -176,7 +188,7 @@ function RenderCameraScope({
   attributes,
   children,
 }: {
-  renderCamera: WorldCamera | null;
+  renderCamera: CameraResources | null;
   attributes: CameraAttributes | null;
   children: ReactNode;
 }) {

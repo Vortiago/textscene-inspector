@@ -44,12 +44,12 @@ function Probe() {
   );
 }
 
-function renderPanel(scene = SCENE) {
+function renderPanel(scene = SCENE, previewedCameraPath?: string) {
   const parsed = new TscnParser().parse(scene);
   const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://test.tscn');
   return render(
     <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
-      <ViewportActionsProvider>
+      <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
         <ViewportModeProvider>
           <Probe />
           <CamerasPanel />
@@ -137,6 +137,14 @@ position = Vector2(20, 10)
 `);
     fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
     expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('20,10@1');
+  });
+});
+
+describe('<CamerasPanel> editor camera row', () => {
+  // A `?camera=` path that names no camera previews nothing, so the editor camera draws.
+  it('marks the editor camera active while the previewed path names no camera', () => {
+    renderPanel(SCENE, 'World/Missing');
+    expect(screen.getByRole('button', { name: /Editor camera/ }).getAttribute('data-active')).toBe('true');
   });
 });
 

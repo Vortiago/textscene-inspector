@@ -175,3 +175,11 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     ortho.updateProjectionMatrix();
   }
 }
+
+/**
+ * Whether the canvas draws through a previewed Camera3D instead of its editor camera. A canvas
+ * with no editor controls has no preview to draw.
+ */
+export function isDrawingPreview(state: { camera: R3FCamera; controls: unknown }): boolean {
+  return state.controls instanceof EditorControlsHandle && state.controls.isPreviewing(state.camera);
+}
