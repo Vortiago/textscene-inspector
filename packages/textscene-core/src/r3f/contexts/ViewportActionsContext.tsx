@@ -1,7 +1,7 @@
 /**
  * What a panel's toolbar and panels do to its viewport: look through a camera,
- * frame the 2D stage, reset the view and take a screenshot. `activeCameraPath ===
- * null` means free orbit with the canvas's own camera. A node path makes the canvas
+ * frame the 2D stage, reset the view and take a screenshot. `previewedCameraPath ===
+ * null` means the canvas draws through the editor camera. A node path makes the canvas
  * look through the Camera3D there.
  */
 
@@ -28,9 +28,9 @@ interface Frame2DRequest {
 }
 
 export interface ViewportActionsContextValue {
-  activeCameraPath: string | null;
-  switchToCamera: (path: string) => void;
-  returnToFreeView: () => void;
+  previewedCameraPath: string | null;
+  previewCamera: (path: string) => void;
+  endCameraPreview: () => void;
   /**
    * The latest 2D framing request, null until a 2D camera is used. The stage
    * applies it once per requestId, and free pan and zoom follow.
@@ -43,8 +43,8 @@ export interface ViewportActionsContextValue {
    */
   claimFrame2D: (requestId: number) => boolean;
   /**
-   * Frames the camera back to its initial state. Does nothing until a canvas
-   * registers a reset handler.
+   * Ends any camera preview and returns the editor camera to its initial pose.
+   * The pose waits until a canvas registers a reset handler.
    */
   resetCamera: () => void;
   /** `<TscnCanvas>` registers its `<GodotEditorControls>` reset here, and gets the cleanup. */
@@ -115,23 +115,23 @@ export interface ViewportActionsProviderProps {
   children: ReactNode;
   /**
    * A Camera3D node path to activate on mount, from a deep link. A scene
-   * switch drops back to free orbit, so it frames only the linked scene.
+   * switch ends the preview, so it frames only the linked scene.
    */
-  initialActiveCameraPath?: string | null;
+  initialPreviewedCameraPath?: string | null;
 }
 
 export function ViewportActionsProvider({
   children,
-  initialActiveCameraPath = null,
+  initialPreviewedCameraPath = null,
 }: ViewportActionsProviderProps) {
-  const [activeCameraPath, setActiveCameraPath] = useState<string | null>(initialActiveCameraPath);
+  const [previewedCameraPath, setPreviewedCameraPath] = useState<string | null>(initialPreviewedCameraPath);
   const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
   const frame2DIdRef = useRef(0);
   /** Written only by `claimFrame2D`. Request ids start at 1, so 0 claims nothing. */
   const claimedFrame2DIdRef = useRef(0);
 
-  const switchToCamera = useCallback((path: string) => {
-    setActiveCameraPath(path);
+  const previewCamera = useCallback((path: string) => {
+    setPreviewedCameraPath(path);
   }, []);
 
   const requestFrame2D = useCallback((view: { center: { x: number; y: number }; zoom: number }) => {
@@ -145,14 +145,15 @@ export function ViewportActionsProvider({
     return true;
   }, []);
 
-  const returnToFreeView = useCallback(() => {
-    setActiveCameraPath(null);
+  const endCameraPreview = useCallback(() => {
+    setPreviewedCameraPath(null);
   }, []);
 
   const { ref: resetHandlerRef, register: registerResetHandler } = useHandlerSlot<() => void>();
   const resetCamera = useCallback(() => {
+    endCameraPreview();
     resetHandlerRef.current?.();
-  }, [resetHandlerRef]);
+  }, [endCameraPreview, resetHandlerRef]);
 
   const {
     ref: screenshotSourceRef,
@@ -175,9 +176,9 @@ export function ViewportActionsProvider({
 
   const value = useMemo<ViewportActionsContextValue>(
     () => ({
-      activeCameraPath,
-      switchToCamera,
-      returnToFreeView,
+      previewedCameraPath,
+      previewCamera,
+      endCameraPreview,
       frame2D,
       requestFrame2D,
       claimFrame2D,
@@ -190,9 +191,9 @@ export function ViewportActionsProvider({
       subscribeScreenshotHandler,
     }),
     [
-      activeCameraPath,
-      switchToCamera,
-      returnToFreeView,
+      previewedCameraPath,
+      previewCamera,
+      endCameraPreview,
       frame2D,
       requestFrame2D,
       claimFrame2D,

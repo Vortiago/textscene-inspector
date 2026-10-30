@@ -7,9 +7,8 @@
  * instance border too. Semantics are measured on Godot 4.6.3.
  */
 
-import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
-import { parentPathOf } from '../../../utils/nodePath.js';
+import { parentPathOf, relativeTo } from '../../../utils/nodePath.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
@@ -23,11 +22,18 @@ import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
   multiplyTransform2D,
-  transform2DFromParts,
+  transform2DDecompose,
   transform2DGetScale,
+  transform2DSetScale,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import {
+  affineInverseTransform3D,
+  identityTransform3D,
+  multiplyTransform3D,
+  transformColumnsAlong,
+  type Transform3D,
+} from '../../../godot/math/transform3d.js';
 
 interface RemoteFlags {
   updatePosition: boolean;
@@ -47,8 +53,8 @@ interface RelayProps {
 /**
  * The properties every RemoteTransform of `tree` pushes onto its target, by the target's live path.
  * A relay reads the transforms the relays before it, in tree order, have already pushed, as Godot's
- * enter-tree order applies a one-direction chain. A relay that drives its own ancestor is not
- * iterated to a fixed point. A target that is not a Node3D (for a RemoteTransform3D) or a Node2D
+ * enter-tree order applies a one-direction chain. A feedback loop between relays is not iterated
+ * to a fixed point. A target that is not a Node3D (for a RemoteTransform3D) or a Node2D
  * (for a RemoteTransform2D) takes nothing, as the cast fails (`remote_transform_3d.cpp:54`).
  */
 export function applyRemoteTransforms(tree: LiveTree): NodePatches {
@@ -62,7 +68,18 @@ export function applyRemoteTransforms(tree: LiveTree): NodePatches {
   return placed;
 }
 
-/** The node `relay`'s `remote_path` names, when it descends from `targetClass`, else null. */
+/**
+ * Whether the live paths put one node on the other's line of the tree: the same node, or one
+ * above the other. Godot refuses such a target (`remote_transform_3d.cpp:37`).
+ */
+function isOnOneLine(path: string, otherPath: string): boolean {
+  return relativeTo(path, otherPath) !== undefined || relativeTo(otherPath, path) !== undefined;
+}
+
+/**
+ * The node `relay`'s `remote_path` names, when it descends from `targetClass` and is not the relay,
+ * its ancestor or its descendant, else null.
+ */
 function remoteTargetOf(relay: LiveLink, tree: LiveTree, targetClass: 'Node3D' | 'Node2D'): LiveLink | null {
   const remotePath = (relay.step.node.properties as RelayProps).remote_path;
   const targetPath = resolveNodePathLiteral(
@@ -71,7 +88,8 @@ function remoteTargetOf(relay: LiveLink, tree: LiveTree, targetClass: 'Node3D' |
     uniquePathsOfLiteral(remotePath, relay.path, tree)
   );
   const target = targetPath === null ? null : tree.at(targetPath);
-  return target && descendsFromClass(target.step.node.type, targetClass) ? target : null;
+  if (!target || isOnOneLine(relay.path, target.path)) return null;
+  return descendsFromClass(target.step.node.type, targetClass) ? target : null;
 }
 
 /** Parse a relay's flags, each defaulting to Godot's `true`. */
@@ -104,10 +122,9 @@ function placementOf(
   if (!target) return null;
 
   const flags = readFlags(relay.step.node.properties as RelayProps);
-  // Local mode leaves the target at its authored transform in a static render (a matched pair,
-  // measured). `_update_remote` keys off the relay's transform-changed notification, which the
-  // global path satisfies on load and the local path does not.
-  if (!flags.useGlobal) return null;
+  // With no part flagged, the 2D relay returns (`remote_transform_2d.cpp:55-57`) and the 3D relay
+  // writes the target's own transform back, so neither moves the target.
+  if (!(flags.updatePosition || flags.updateRotation || flags.updateScale)) return null;
 
   return {
     target,
@@ -122,58 +139,80 @@ function placeTarget3D(relay: LiveLink, tree: LiveTree, placed: Map<string, Node
   const placement = placementOf(relay, tree, placed, 'Node3D');
   if (!placement) return;
   const { target, flags, relayChain, targetChain, parentPath } = placement;
+  // A 3D relay in local coordinates pushes on a change of its own local transform, which a load
+  // does not make (measured on Godot 4.6.3), so the target stays where the scene puts it.
+  if (!flags.useGlobal) return;
 
   const desired = composeSelected3D(
-    globalMatrix3D(target.path, targetChain),
-    globalMatrix3D(relay.path, relayChain),
+    globalTransform3D(target.path, targetChain),
+    globalTransform3D(relay.path, relayChain),
     flags
   );
-  const parentGlobal = parentPath ? globalMatrix3D(parentPath, targetChain) : new THREE.Matrix4();
-  const newLocal = parentGlobal.clone().invert().multiply(desired);
+  const parentGlobal = parentPath ? globalTransform3D(parentPath, targetChain) : identityTransform3D();
 
-  placed.set(target.path, { transform: matrixToTransform3D(newLocal) });
+  placed.set(target.path, {
+    transform: multiplyTransform3D(affineInverseTransform3D(parentGlobal), desired),
+  });
+}
+
+function globalTransform3D(path: string, nodeByPath: Map<string, TscnNode>): Transform3D {
+  return matrixToTransform3D(globalMatrix3D(path, nodeByPath));
 }
 
 /**
- * `base` with each flagged component (position, rotation, scale) taken from `source`, composed in
- * global space, as the 2D path is too. This matches Godot exactly when the target's parent has no
- * rotation or scale. Under a rotated or scaled parent, Godot's `set_rotation`/`set_scale` quirk diverges.
+ * The global transform `target` takes from `relay` (`_update_remote`, `remote_transform_3d.cpp:63-99`).
+ * The flagged parts come from the relay: the whole basis for rotation and scale, the direction of
+ * each column for rotation, the length of each column for scale, the origin for position. The basis
+ * is never decomposed, so a shear and a mirror stay as they are.
  */
-function composeSelected3D(base: THREE.Matrix4, source: THREE.Matrix4, flags: RemoteFlags): THREE.Matrix4 {
-  if (flags.updatePosition && flags.updateRotation && flags.updateScale) {
-    return source.clone();
-  }
-  const bp = new THREE.Vector3();
-  const bq = new THREE.Quaternion();
-  const bs = new THREE.Vector3();
-  base.decompose(bp, bq, bs);
-  const sp = new THREE.Vector3();
-  const sq = new THREE.Quaternion();
-  const ss = new THREE.Vector3();
-  source.decompose(sp, sq, ss);
-  return new THREE.Matrix4().compose(
-    flags.updatePosition ? sp : bp,
-    flags.updateRotation ? sq : bq,
-    flags.updateScale ? ss : bs
-  );
+function composeSelected3D(target: Transform3D, relay: Transform3D, flags: RemoteFlags): Transform3D {
+  const { updatePosition, updateRotation, updateScale } = flags;
+  if (updatePosition && updateRotation && updateScale) return relay;
+
+  const origin = updatePosition ? relay.origin : target.origin;
+  if (updateRotation && updateScale) return { ...relay, origin };
+  if (updateRotation) return { ...transformColumnsAlong(relay, target), origin };
+  if (updateScale) return { ...transformColumnsAlong(target, relay), origin };
+  return { ...target, origin };
 }
 
-function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
-  const placement = placementOf(relay, tree, placed, 'Node2D');
-  if (!placement) return;
+/** The target's local transform when the relay and the target meet in global coordinates. */
+function newLocalFromGlobals(relay: LiveLink, placement: Placement): Transform2DColumns {
   const { target, flags, relayChain, targetChain, parentPath } = placement;
-
   const desired = composeSelected2D(
     globalTransform2D(target.path, targetChain),
     globalTransform2D(relay.path, relayChain),
     flags
   );
   const parentGlobal = parentPath ? globalTransform2D(parentPath, targetChain) : TRANSFORM2D_IDENTITY;
-  const newLocal = multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
+  return multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
+}
 
-  // Godot's RemoteTransform2D pushes position, rotation and scale only. The target keeps its `skew`.
-  const { position, rotation, scale } = decomposeTransform2D(newLocal);
-  placed.set(target.path, { position, rotation, scale });
+/** The target's local transform when the relay and the target meet in local coordinates. */
+function newLocalFromLocals(
+  relay: LiveLink,
+  { target, flags, relayChain, targetChain }: Placement
+): Transform2DColumns {
+  return composeSelected2D(
+    localTransform2D(targetChain.get(target.path)!),
+    localTransform2D(relayChain.get(relay.path)!),
+    flags
+  );
+}
+
+function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
+  const placement = placementOf(relay, tree, placed, 'Node2D');
+  if (!placement) return;
+  const { target, flags } = placement;
+
+  // Unlike a 3D relay, a 2D relay in local coordinates pushes on load (measured on Godot 4.6.3).
+  const newLocal = flags.useGlobal
+    ? newLocalFromGlobals(relay, placement)
+    : newLocalFromLocals(relay, placement);
+
+  // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
+  const { position, rotation, scale, skew } = transform2DDecompose(newLocal);
+  placed.set(target.path, { position, rotation, scale, skew });
 }
 
 function localTransform2D(node: TscnNode): Transform2DColumns {
@@ -193,33 +232,27 @@ function globalTransform2D(path: string, nodeByPath: Map<string, TscnNode>): Tra
   return result;
 }
 
+/**
+ * The transform `target` takes from `relay`, in global or in local coordinates, whichever the two
+ * arguments are in (`remote_transform_2d.cpp:63-107`). It starts from the relay's matrix when the rotation is flagged,
+ * else from the target's. Position then differs by an exclusive-or against rotation, and scale
+ * likewise: a flag that differs from the rotation flag swaps that part to the flagged side.
+ */
 function composeSelected2D(
-  base: Transform2DColumns,
-  source: Transform2DColumns,
+  target: Transform2DColumns,
+  relay: Transform2DColumns,
   flags: RemoteFlags
 ): Transform2DColumns {
-  const b = decomposeTransform2D(base);
-  const s = decomposeTransform2D(source);
-  return transform2DFromParts(
-    flags.updateRotation ? s.rotation : b.rotation,
-    flags.updateScale ? s.scale : b.scale,
-    0,
-    flags.updatePosition ? s.position : b.position
-  );
-}
+  const { updatePosition, updateRotation, updateScale } = flags;
+  if (updatePosition && updateRotation && updateScale) return relay;
 
-/**
- * Godot Transform2D decomposition into position, rotation (`get_rotation`, `transform_2d.cpp:82-84`)
- * and scale. Skew is dropped.
- */
-function decomposeTransform2D(m: Transform2DColumns): {
-  position: Vector2;
-  rotation: number;
-  scale: Vector2;
-} {
-  return {
-    position: { x: m.tx, y: m.ty },
-    rotation: Math.atan2(m.b, m.a),
-    scale: transform2DGetScale(m),
-  };
+  let composed = updateRotation ? relay : target;
+  if (updateRotation !== updatePosition) {
+    const origin = updatePosition ? relay : target;
+    composed = { ...composed, tx: origin.tx, ty: origin.ty };
+  }
+  if (updateRotation !== updateScale) {
+    composed = transform2DSetScale(composed, transform2DGetScale(updateScale ? relay : target));
+  }
+  return composed;
 }

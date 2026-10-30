@@ -3,6 +3,7 @@
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f, storedVector3 } from './real.js';
 import {
+  basisColumnsAlong,
   basisFromQuaternionScale,
   basisGetRotationQuaternion,
   basisGetScale,
@@ -119,6 +120,17 @@ export function affineInverseTransform3D(transform: Transform3D): Transform3D {
   const inverse = transform3DOf(basisInvert(basisOfTransform3D(transform)), { x: 0, y: 0, z: 0 });
   const { x, y, z } = transform.origin;
   return { ...inverse, origin: transform3DXform(inverse, { x: -x, y: -y, z: -z }) };
+}
+
+/**
+ * The basis of `directions` with each column set to the length of the same column of `lengths`
+ * ({@link basisColumnsAlong}), at the origin of `directions`.
+ */
+export function transformColumnsAlong(directions: Transform3D, lengths: Transform3D): Transform3D {
+  return transform3DOf(
+    basisColumnsAlong(basisOfTransform3D(directions), basisOfTransform3D(lengths)),
+    directions.origin
+  );
 }
 
 /** The transform `Skeleton3D::Bone::update_pose_cache` builds (`skeleton_3d.h:118-124`): `Basis(rotation, scale)` at `position`. */

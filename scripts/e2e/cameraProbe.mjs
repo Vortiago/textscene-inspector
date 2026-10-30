@@ -81,3 +81,8 @@ export function formatMatrix(matrix) {
   if (!Array.isArray(matrix)) return String(matrix);
   return `[${matrix.map((value) => value.toFixed(6)).join(', ')}]`;
 }
+
+/** What the probe last captured on the viewport's canvas, or null before any upload. */
+export function readViewProbe(page) {
+  return page.evaluate(() => window.__tscnReadViewMatrix());
+}

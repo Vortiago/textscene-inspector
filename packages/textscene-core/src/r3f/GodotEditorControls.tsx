@@ -21,7 +21,6 @@ export { EditorControlsHandle } from './EditorControlsHandle.js';
 // a camera that stops dead settles at once for the capture harnesses.
 export function GodotEditorControls() {
   const gl = useThree((s) => s.gl);
-  const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
   const get = useThree((s) => s.get);
   const set = useThree((s) => s.set);
@@ -33,10 +32,6 @@ export function GodotEditorControls() {
     () => new EditorControlsHandle(get().camera, (next) => set({ camera: next })),
     [get, set]
   );
-
-  useEffect(() => {
-    handle.setCamera(camera);
-  }, [handle, camera]);
 
   useEffect(() => {
     handle.setAspect(size.width / size.height);

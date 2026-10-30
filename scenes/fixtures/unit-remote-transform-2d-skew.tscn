@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+; The one variable: the target has a skew of 0.5 and the relay has none. A full-flag RemoteTransform2D
+; sets the target's whole global matrix to the relay's (remote_transform_2d.cpp:63-67), so Godot draws
+; an unskewed square. Every other RemoteTransform golden drives a target without a skew, so none of
+; them shows a regression in it.
+
+[node name="Root" type="Node2D"]
+
+[node name="Target" type="Polygon2D" parent="."]
+position = Vector2(420, 324)
+skew = 0.5
+color = Color(0.2, 0.7, 0.9, 1)
+polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
+
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(640, 324)
+rotation = 0.3
+remote_path = NodePath("../Target")

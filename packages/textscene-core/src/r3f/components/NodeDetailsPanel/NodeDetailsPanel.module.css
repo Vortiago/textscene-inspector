@@ -194,3 +194,14 @@
   flex-shrink: 0;
   margin: 0;
 }
+
+.previewToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  margin: 0 var(--tsi-space-3);
+  color: var(--tsi-fg-muted);
+  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-sm);
+  cursor: pointer;
+}

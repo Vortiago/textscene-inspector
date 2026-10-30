@@ -148,7 +148,7 @@ async function passEnergies(
 
 function RootWorldScope({ children }: { children: React.ReactNode }) {
   return (
-    <ViewportActionsProvider initialActiveCameraPath="Root/Main">
+    <ViewportActionsProvider initialPreviewedCameraPath="Root/Main">
       <WorldEnvironmentScope world="root">{children}</WorldEnvironmentScope>
     </ViewportActionsProvider>
   );

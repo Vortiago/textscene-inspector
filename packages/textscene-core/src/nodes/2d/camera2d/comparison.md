@@ -11,7 +11,9 @@ renders_as: a 2D view frame with no drawn geometry
 
 Camera2D defines which slice of the canvas the viewport shows, and the previewer draws
 no geometry for it. A sub-viewport's 2D pass frames through it, while the main 2D stage
-frames the whole scene (ADR-0006).
+frames the whole scene (ADR-0006). The Cameras tab frames the main stage on a Camera2D of
+the root viewport. A Camera2D inside a SubViewport frames only that SubViewport, so the tab
+does not list it.
 
 ## Linting
 

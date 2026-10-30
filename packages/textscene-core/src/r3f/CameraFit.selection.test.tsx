@@ -96,10 +96,10 @@ describe('CameraFit ignores selection changes', () => {
     const graph = makeGraph();
 
     function ActivateAuthoredCamera() {
-      const { switchToCamera } = useViewportActions();
+      const { previewCamera } = useViewportActions();
       useEffect(() => {
-        switchToCamera('Root/Camera3D');
-      }, [switchToCamera]);
+        previewCamera('Root/Camera3D');
+      }, [previewCamera]);
       return null;
     }
 
