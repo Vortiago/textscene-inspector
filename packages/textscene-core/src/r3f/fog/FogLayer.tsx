@@ -1,7 +1,8 @@
 /**
  * Draws an Environment's depth fog and volumetric fog into its scene. The fog readies itself for
  * each render of the scene, through whichever camera renders it, so the main view, a SubViewport
- * pass, a screenshot and a reflection probe capture each get their own.
+ * pass, a screenshot and a reflection probe capture each get their own, while its Environment is on
+ * the scene (`sceneEnvironment.tsx`).
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -10,11 +11,13 @@ import * as THREE from 'three';
 import { projectVolumetricFogSettings } from '../../parser/projectSettingsParser.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { registerEnvironmentPart, useEnvironmentKey } from '../environment/sceneEnvironment.js';
 import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
 import { acquireVolumetricFogPass } from './sharedVolumetricFogPass.js';
+import { perObject } from '../../utils/perObject.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 
@@ -39,6 +42,7 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
+  const environment = useEnvironmentKey();
   const { settings: projectSettings } = useProjectSettings();
   const project = useMemo(() => projectVolumetricFogSettings(projectSettings), [projectSettings]);
   // Read at each render, so a new setting reaches the next render with the pass and the
@@ -48,23 +52,22 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
   settings.current = current;
 
   useEffect(() => {
-    const previousFog = scene.fog;
-    // three compiles its fog chunks only under a scene fog. Its own terms stay unread, since the
-    // patched chunks draw Godot's fog from the shared fog uniforms.
-    scene.fog = new THREE.FogExp2(0x000000, 0);
-    return () => {
-      scene.fog = previousFog;
-    };
-  }, [scene]);
+    const fog = sceneFogOf(scene);
+    return registerEnvironmentPart(scene, environment, () => {
+      const previousFog = scene.fog;
+      scene.fog = fog;
+      return () => {
+        scene.fog = previousFog;
+      };
+    });
+  }, [scene, environment]);
 
   useEffect(() => {
-    const { pass, release } = acquireVolumetricFogPass(gl);
+    const { pass, release } = acquireVolumetricFogPass(gl, scene);
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
     const volumes = new TrackedObjects(scene, isFogVolume);
-    // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
-    // fade for this camera, which the scene's observers wrote before it.
-    const stopPreparing = readShadowMaps(gl, scene, (camera) => {
+    const prepare = (camera: THREE.Camera) => {
       const capture = probeCaptureOf(camera);
       const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
       const isVolumetric = fog.volumetric !== null;
@@ -74,18 +77,33 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
         volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
       };
       if (prepareFog(gl, scene, camera, fog, pass, objects)) invalidate();
+    };
+    const stopRegistering = registerEnvironmentPart(scene, environment, () => {
+      // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
+      // fade for this camera, which the scene's observers wrote before it.
+      const stopPreparing = readShadowMaps(gl, scene, prepare);
+      const stopFinishing = observeSceneRenderEnd(scene, finishFog);
+      return () => {
+        stopPreparing();
+        stopFinishing();
+      };
     });
-    const stopFinishing = observeSceneRenderEnd(scene, finishFog);
     return () => {
-      stopPreparing();
-      stopFinishing();
+      stopRegistering();
       lights.dispose();
       casters.dispose();
       volumes.dispose();
-      pass.forget(scene);
       release();
     };
-  }, [gl, scene, invalidate]);
+  }, [gl, scene, environment, invalidate]);
 
   return null;
 }
+
+/**
+ * The fog every Environment of a scene shows. three compiles its fog chunks only under a scene fog,
+ * and its own terms stay unread, since the patched chunks draw Godot's fog from the shared fog
+ * uniforms. One per scene: three compares the fog by identity, so a pass that puts another fogged
+ * Environment on would otherwise resolve every program again.
+ */
+const sceneFogOf = perObject((_scene: THREE.Scene) => new THREE.FogExp2(0x000000, 0));

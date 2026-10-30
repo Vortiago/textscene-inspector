@@ -116,6 +116,16 @@ export function drawnExposureRatio(scene: THREE.Scene): number {
   return drawn === undefined || held === 0 ? 1 : drawn / held;
 }
 
+/**
+ * The factor the draw of `scene` takes: the one `drawAtExposure` draws at, else the held one, and 1
+ * without either. A sky reads it in each render to tell which exposure bakes it.
+ *
+ * @canonical The state a scene draws for another exposure
+ */
+export function drawnExposureOf(scene: THREE.Scene): number {
+  return drawnExposures.get(scene) ?? exposureOfScene(scene) ?? 1;
+}
+
 /** Scales the energy of each Light3D of `scene` by `ratio`: the flat ambient takes no exposure. */
 function scaleLights(scene: THREE.Scene, ratio: number): () => void {
   const lights = sceneLights(scene)

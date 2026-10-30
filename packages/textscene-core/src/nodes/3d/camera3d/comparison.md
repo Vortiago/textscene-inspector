@@ -49,11 +49,11 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 A valid `attributes` replaces the exposure of the world while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales. A valid `environment` replaces the Environment of the world the same way (`renderer_scene_cull.cpp:3594-3597`).
 
-A SubViewport that shares a world draws at the exposure of its own camera, or at the exposure of the world without one (`renderer_scene_cull.cpp:2707`, `:3562-3565`). Two viewports of one world so draw one frame at two exposures.
+A SubViewport that shares a world draws with the exposure and the Environment of its own camera (`renderer_scene_cull.cpp:2707`, `:3562-3565`, `:3594-3597`). Where the camera holds none, it draws with those of the world. Two viewports of one world so draw one frame with two backgrounds, two ambients, two fogs, two tone curves and two exposures.
+
+The radiance of a sky that two such viewports draw is baked once, at the exposure of the first. The Sky sheet gives the rule.
 
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.
-- **Not drawn** A Camera3D in a SubViewport that shares the root world of a 3D scene keeps the root world's Environment.
-- **Not drawn** In a shared world of a 2D scene, a Camera3D's `environment` sets only the tone mapping.
 - **Editor only** The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.

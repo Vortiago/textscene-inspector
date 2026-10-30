@@ -7,6 +7,7 @@
 import type * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
+import { perObject } from '../../utils/perObject.js';
 
 interface SkyLightDeclaration {
   /** False for a Light Only light, which the sky shader skips (`sky.cpp:1069`). */
@@ -42,4 +43,25 @@ export function skyLightEnergy(light: THREE.DirectionalLight): number | null {
 /** The sun disc size the sky reads from `light`. A light that declares none is a point sun. */
 export function skyLightSize(light: THREE.DirectionalLight): number {
   return declaration.read(light)?.size ?? 0;
+}
+
+/** The light data of a render whose sky reads no lights: Godot gives it a count of 0. */
+export const NO_SKY_LIGHTS = '';
+
+/**
+ * The sky light data of the last render with a sky on each renderer, which Godot keeps for every sky
+ * at once (`sky.cpp:1105-1143`). Written only by `noteSkyLights`.
+ */
+const lastSkyLightsOf = perObject((_gl: THREE.WebGLRenderer) => ({ lights: NO_SKY_LIGHTS, exposure: 1 }));
+
+/**
+ * Notes a render's sky light data, `lights` at `exposure`, which scales each energy. Answers whether
+ * it differs from the last render's, which dirties the sky the render draws.
+ */
+export function noteSkyLights(gl: THREE.WebGLRenderer, lights: string, exposure: number): boolean {
+  const last = lastSkyLightsOf(gl);
+  if (last.lights === lights && last.exposure === exposure) return false;
+  last.lights = lights;
+  last.exposure = exposure;
+  return true;
 }

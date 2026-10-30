@@ -16,6 +16,7 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
+import { shownAmbientLights } from '../testing/ambientLights';
 
 vi.mock('../fog/FogLayer', () => ({ FogLayer: () => <group name="FogLayer" /> }));
 
@@ -133,7 +134,7 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
 describe('<EnvironmentLayer> flat ambient under an exposure', () => {
   const ambientIntensity = async (properties: Record<string, string>, multiplier: number) => {
     const { renderer } = await mount(properties, multiplier);
-    return (renderer.scene.findByType('AmbientLight').instance as THREE.AmbientLight).intensity;
+    return shownAmbientLights(renderer.scene.instance as THREE.Object3D)[0]!.intensity;
   };
 
   it('leaves a COLOR ambient unscaled', async () => {
