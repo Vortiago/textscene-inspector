@@ -66,6 +66,10 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'remote-transform-3d-sheared-target', file: 'unit-remote-transform-3d-sheared-target.tscn' },
   // A full-flag relay replaces the target's skew with the relay's, so the square is unskewed.
   { name: 'remote-transform-2d-skew', file: 'unit-remote-transform-2d-skew.tscn', mode: '2d' },
+  // A 2D relay in local coordinates sets the target's local transform from its own when the scene loads.
+  { name: 'remote-transform-2d-local', file: 'unit-remote-transform-2d-local.tscn', mode: '2d' },
+  // A 3D relay in local coordinates pushes nothing on load, so the box stays where the scene puts it.
+  { name: 'remote-transform-3d-local', file: 'unit-remote-transform-3d-local.tscn' },
 
   // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
   // environment applies inside the target and again on the consuming quad (curve squared). The

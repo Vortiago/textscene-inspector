@@ -546,12 +546,19 @@ remote_path = NodePath("../P/Target")
 ${flags}
 `;
 
+/** Node2D parts of the parent `P` of a target. */
+const TURNED_AND_SCALED_PARENT = {
+  rotation: 0.5235987755982988,
+  scale: { x: 2, y: 1 },
+  position: { x: 0, y: 0 },
+};
+
 /** The global matrix of `Root/P/Target` after the relays, as [x, y, origin] columns. */
-function globalTarget2D(content: string): number[][] {
+function globalTarget2D(content: string, parent = TURNED_AND_SCALED_PARENT): number[][] {
   const props = targetNode2D(placementsOf(content), 'Root/P/Target');
-  const parent = transform2DFromParts(0.5235987755982988, { x: 2, y: 1 }, 0, { x: 0, y: 0 });
+  const parentTransform = transform2DFromParts(parent.rotation, parent.scale, 0, parent.position);
   const local = transform2DFromParts(props.rotation, props.scale, props.skew, props.position);
-  const g = multiplyTransform2D(parent, local);
+  const g = multiplyTransform2D(parentTransform, local);
   return [
     [g.a, g.b],
     [g.c, g.d],
@@ -618,6 +625,80 @@ update_rotation = false
     const props = targetNode2D(placementsOf(content), 'Root/Target');
     const g = transform2DFromParts(props.rotation, props.scale, props.skew, props.position);
     expectCloseTo([g.a, g.b, g.c, g.d, g.tx, g.ty], [0.955337, 0.29552, 0.14776, -0.477668, 50, 50]);
+  });
+});
+
+/**
+ * A relay inside a parent turned 0.4 and scaled (2, 1) at (30, 0), in local coordinates, driving a
+ * target under another parent. Godot 4.6.3 pushes the relay's local transform onto the target's
+ * local transform when a 2D scene loads, which `remote_transform_2d.cpp:89-107` computes.
+ */
+const localRelayScene2D = (flags: string): string => `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Off" type="Node2D" parent="."]
+position = Vector2(30, 0)
+rotation = 0.4
+scale = Vector2(2, 1)
+[node name="P" type="Node2D" parent="."]
+position = Vector2(7, 8)
+rotation = -0.6
+scale = Vector2(1, 3)
+[node name="Target" type="Node2D" parent="P"]
+position = Vector2(-10, 4)
+rotation = 0.3
+scale = Vector2(1, 2)
+skew = 0.2
+[node name="Relay" type="RemoteTransform2D" parent="Off"]
+position = Vector2(200, 50)
+rotation = 0.78539816339
+scale = Vector2(0.5, 1.5)
+skew = 0.2
+remote_path = NodePath("../../P/Target")
+use_global_coordinates = false
+${flags}
+`;
+
+const LOCAL_PARENT = { rotation: -0.6, scale: { x: 1, y: 3 }, position: { x: 7, y: 8 } };
+
+describe('applyRemoteTransforms (2D) in local coordinates', () => {
+  it('all flags give the relay local transform to the target local transform', () => {
+    expectMatrix(globalTarget2D(localRelayScene2D(''), LOCAL_PARENT), [
+      [0.890694, 0.675769],
+      [0.372056, 2.758045],
+      [256.76349, 18.87185],
+    ]);
+  });
+
+  it('rotation only takes the local relay direction at the local target scale', () => {
+    const flags = 'update_position = false\nupdate_scale = false';
+    expectMatrix(globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT), [
+      [1.781388, 1.351539],
+      [0.496074, 3.677393],
+      [5.522354, 23.55045],
+    ]);
+  });
+
+  it('scale only takes the local relay scale along the local target axes', () => {
+    const flags = 'update_position = false\nupdate_rotation = false';
+    expectMatrix(globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT), [
+      [0.644531, 0.096143],
+      [1.636312, 3.665407],
+      [5.522354, 23.55045],
+    ]);
+  });
+
+  it('position only takes the local relay origin', () => {
+    const flags = 'update_rotation = false\nupdate_scale = false';
+    expectMatrix(globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT), [
+      [1.289063, 0.192287],
+      [2.181748, 4.887209],
+      [256.76349, 18.87185],
+    ]);
+  });
+
+  it('no flag leaves the target where the scene puts it', () => {
+    const flags = 'update_position = false\nupdate_rotation = false\nupdate_scale = false';
+    expect(placementsOf(localRelayScene2D(flags)).size).toBe(0);
   });
 });
 

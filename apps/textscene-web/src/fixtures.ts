@@ -1768,6 +1768,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform 2d Local",
+    "file": "unit-remote-transform-2d-local.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d Skew",
     "file": "unit-remote-transform-2d-skew.tscn",
     "category": "Other"
@@ -1785,6 +1790,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Remote Transform 3d Instanced",
     "file": "unit-remote-transform-3d-instanced.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Local",
+    "file": "unit-remote-transform-3d-local.tscn",
     "category": "Other"
   },
   {

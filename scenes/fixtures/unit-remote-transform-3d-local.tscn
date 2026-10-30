@@ -1,0 +1,34 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitremotetransform3dloc"]
+
+; The one variable: use_global_coordinates is false on a relay under a parent at x +3. A 3D relay in
+; local coordinates pushes when its own local transform changes, which a load does not do (measured
+; on Godot 4.6.3), so the box stays at x -2. Every other RemoteTransform golden relays in global
+; coordinates, so none of them shows a regression in it.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(8, 8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_target"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("BoxMesh_target")
+surface_material_override/0 = SubResource("StandardMaterial3D_target")
+
+[node name="Offset" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+
+[node name="Relay" type="RemoteTransform3D" parent="Offset"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+remote_path = NodePath("../../Box")
+use_global_coordinates = false

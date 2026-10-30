@@ -122,10 +122,6 @@ function placementOf(
   if (!target) return null;
 
   const flags = readFlags(relay.step.node.properties as RelayProps);
-  // Local mode leaves the target at its authored transform in a static render (a matched pair,
-  // measured). `_update_remote` keys off the relay's transform-changed notification, which the
-  // global path satisfies on load and the local path does not.
-  if (!flags.useGlobal) return null;
   // With no part flagged, the 2D relay returns (`remote_transform_2d.cpp:55-57`) and the 3D relay
   // writes the target's own transform back, so neither moves the target.
   if (!(flags.updatePosition || flags.updateRotation || flags.updateScale)) return null;
@@ -143,6 +139,9 @@ function placeTarget3D(relay: LiveLink, tree: LiveTree, placed: Map<string, Node
   const placement = placementOf(relay, tree, placed, 'Node3D');
   if (!placement) return;
   const { target, flags, relayChain, targetChain, parentPath } = placement;
+  // A 3D relay in local coordinates pushes on a change of its own local transform, which a load
+  // does not make (measured on Godot 4.6.3), so the target stays where the scene puts it.
+  if (!flags.useGlobal) return;
 
   const desired = composeSelected3D(
     globalTransform3D(target.path, targetChain),
@@ -177,18 +176,30 @@ function composeSelected3D(target: Transform3D, relay: Transform3D, flags: Remot
   return { ...target, origin };
 }
 
-function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
-  const placement = placementOf(relay, tree, placed, 'Node2D');
-  if (!placement) return;
+/** The target's local transform when the relay and the target meet in global coordinates. */
+function newLocalFromGlobals(relay: LiveLink, placement: Placement): Transform2DColumns {
   const { target, flags, relayChain, targetChain, parentPath } = placement;
-
   const desired = composeSelected2D(
     globalTransform2D(target.path, targetChain),
     globalTransform2D(relay.path, relayChain),
     flags
   );
   const parentGlobal = parentPath ? globalTransform2D(parentPath, targetChain) : TRANSFORM2D_IDENTITY;
-  const newLocal = multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
+  return multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
+}
+
+function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
+  const placement = placementOf(relay, tree, placed, 'Node2D');
+  if (!placement) return;
+  const { target, flags, relayChain, targetChain } = placement;
+
+  const newLocal = flags.useGlobal
+    ? newLocalFromGlobals(relay, placement)
+    : composeSelected2D(
+        localTransform2D(targetChain.get(target.path)!),
+        localTransform2D(relayChain.get(relay.path)!),
+        flags
+      );
 
   // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
   const { position, rotation, scale, skew } = transform2DDecompose(newLocal);
@@ -213,8 +224,8 @@ function globalTransform2D(path: string, nodeByPath: Map<string, TscnNode>): Tra
 }
 
 /**
- * The global transform `target` takes from `relay` in global coordinates
- * (`remote_transform_2d.cpp:63-87`). It starts from the relay's matrix when the rotation is flagged,
+ * The transform `target` takes from `relay`, in global or in local coordinates, whichever the two
+ * arguments are in (`remote_transform_2d.cpp:63-107`). It starts from the relay's matrix when the rotation is flagged,
  * else from the target's. Position then differs by an exclusive-or against rotation, and scale
  * likewise: a flag that differs from the rotation flag swaps that part to the flagged side.
  */

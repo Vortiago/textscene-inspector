@@ -41,7 +41,5 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 
 ## Known limitations
 
-- **Approximated** `use_global_coordinates = false` is a no-op on a static load, so only
-  the default global drive repositions the target.
 - **Approximated** Relay chains resolve in document order, and a feedback loop is not
   iterated to a fixed point.

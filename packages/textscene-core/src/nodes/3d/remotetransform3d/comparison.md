@@ -9,7 +9,7 @@ renders_as: nothing (a transform-only group that drives its target)
 
 # RemoteTransform3D
 
-Pushes its own transform onto the node its `remote_path` names and has no visual of its own. The previewer applies the drive over the live scene tree. The visible cube is the driven target sitting at the relay's position, also across an instanced scene boundary.
+Pushes its own transform onto the node its `remote_path` names and has no visual of its own. The previewer applies the drive over the live scene tree. The visible cube is the driven target sitting at the relay's position, also across an instanced scene boundary. A relay with `use_global_coordinates = false` pushes nothing when the scene loads, as in Godot.
 
 ## Linting
 
@@ -35,7 +35,5 @@ Strict parsing format-checks these `RemoteTransform3D` properties, plus 17 inher
 
 ## Known limitations
 
-- **Approximated** `use_global_coordinates = false` is a no-op on a static load, so only
-  the default global drive repositions the target.
 - **Approximated** Relay chains resolve in document order, and a feedback loop is not
   iterated to a fixed point.
