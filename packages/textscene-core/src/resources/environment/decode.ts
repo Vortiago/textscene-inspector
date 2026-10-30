@@ -46,6 +46,11 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       BackgroundMode.BG_CLEAR_COLOR,
       'background_mode'
     ) as EnumValue<typeof BackgroundMode>,
+    background_canvas_max_layer: intOr(
+      properties.background_canvas_max_layer,
+      0,
+      'background_canvas_max_layer'
+    ),
     background_color: colorOr(properties.background_color, { r: 0, g: 0, b: 0, a: 1 }),
     background_energy_multiplier: floatOr(
       properties.background_energy_multiplier,

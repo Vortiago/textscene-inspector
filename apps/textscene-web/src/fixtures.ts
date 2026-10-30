@@ -4351,8 +4351,23 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport 3d Canvas Background",
+    "file": "unit-sub-viewport-3d-canvas-background.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 3d Canvas Item",
+    "file": "unit-sub-viewport-3d-canvas-item.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport 3d Controls",
     "file": "unit-sub-viewport-3d-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 3d Keep Background",
+    "file": "unit-sub-viewport-3d-keep-background.tscn",
     "category": "Unit - Viewports"
   },
   {

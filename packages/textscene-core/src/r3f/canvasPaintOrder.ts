@@ -66,6 +66,11 @@ export function canvasRenderOrder({ layerRank, zFinal, sequence }: CanvasPlaceme
   return bucket * PAINT_SEQUENCE_STRIDE + bounded;
 }
 
+/** The first key of layer rank `rank`: every item of a lower rank has a lower key. */
+export function canvasKeyBound(rank: number): number {
+  return rank * Z_BUCKET_COUNT * PAINT_SEQUENCE_STRIDE;
+}
+
 /**
  * `key` moved from the `zFinal` bucket to the `itemZFinal` one, its layer and sequence kept: the key
  * of a child canvas item with a `z_index` of its own, which the walk reaches at its parent's place,
@@ -118,15 +123,20 @@ export function canvasLayerOf(node: TscnNode): number {
   return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER;
 }
 
-/** Every canvas layer declared anywhere in the given trees. */
-export function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
+/** Every canvas layer declared in the given trees, down to a nested viewport, which holds canvases of its own. */
+function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
   const found: number[] = [];
   const visit = (node: TscnNode): void => {
     if (isCanvasLayerType(node.type)) found.push(canvasLayerOf(node));
-    for (const child of node.children) visit(child);
+    if (!isViewportBoundary(node.type)) node.children.forEach(visit);
   };
   for (const node of nodes) visit(node);
   return found;
+}
+
+/** The ranks of the layers one viewport declares. Its items and Controls rank their keys by the same set. */
+export function canvasLayerRanks(nodes: readonly TscnNode[]): readonly number[] {
+  return layerRanks(declaredCanvasLayers(nodes));
 }
 
 /**

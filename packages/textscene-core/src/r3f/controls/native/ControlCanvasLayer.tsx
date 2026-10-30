@@ -13,7 +13,7 @@ import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { useCanvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
-import { declaredCanvasLayers, layerRanks } from '../../canvasPaintOrder';
+import { canvasLayerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
 
@@ -51,7 +51,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   // The ranks `NodeDispatcher` derives: this walk is its sibling, so it cannot
   // inherit them, and a different layer set would order Controls against the
   // world wrongly.
-  const ranks = useMemo(() => layerRanks(declaredCanvasLayers(rootNodes)), [rootNodes]);
+  const ranks = useMemo(() => canvasLayerRanks(rootNodes), [rootNodes]);
 
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>

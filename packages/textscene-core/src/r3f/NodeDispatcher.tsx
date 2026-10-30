@@ -15,9 +15,8 @@ import {
   allocatePaintRange,
   canvasRootRanges,
   isCanvasLayerType,
-  declaredCanvasLayers,
+  canvasLayerRanks,
   hostsOwnCanvas,
-  layerRanks,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
@@ -107,7 +106,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
 
   const canvasModulate = useCanvasModulateColor(nodes);
   // Pure functions of the tree, so the Control walk derives the same numbers on its own.
-  const ranks = useMemo(() => layerRanks(declaredCanvasLayers(nodes)), [nodes]);
+  const ranks = useMemo(() => canvasLayerRanks(nodes), [nodes]);
   const rootRanges = useMemo(() => allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children, [nodes]);
   // Where each canvas root of the viewport's own canvas draws: an item whose
   // parent is not a CanvasItem is drawn in its pre-order rank among the
