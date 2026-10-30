@@ -668,7 +668,11 @@ _Avoid_: A stand-in object. A path segment for the group.
 
 **Automatic skin** (`automaticSkinMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the **Live scene pass** in `skeletonBindings.ts` hands the matrices to the mesh by its live path, so the mesh draws as a SkinnedMesh.
-_Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose kept in three bones.
+_Avoid_: A CPU bake of the vertices. A pose kept in three bones.
+
+**Skin binding** (`resolveBinds`, `bindMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The skin of a MeshInstance3D that sets `skin`: one matrix for each bind of the Skin resource, the global pose of the bind's bone times the bind pose (`skeleton_3d.cpp:363-403`). A bind finds its bone by name, else by index, and a bind that finds none takes bone 0. The **Automatic skin** is the same product, with bind `i` on bone `i` and the inverse of its global rest as the bind pose.
+_Avoid_: A second composition for the automatic skin. A bind matched on bone order.
 
 **Pose modifier** (`PoseModifier`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The edit a SkeletonModifier3D child makes to the bone poses of its Skeleton3D, and its `influence`. The Skeleton3D pass runs the edits in child order on a copy of the file pose, before it makes the **Automatic skin**, as `Skeleton3D::_process_modifiers` does (`skeleton_3d.cpp:1166-1204`). The file pose is kept. A type registers a reader from its node to its edit as `poseModifier`.

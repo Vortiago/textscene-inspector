@@ -14,8 +14,13 @@ import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
-import { instanceAs } from '../testing/reactThreeTestInstance';
-import { RIBBON_BONE_Y, ribbonBonesText, ribbonScene } from '../testing/skinnedRibbon.testkit';
+import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
+import {
+  RIBBON_BONE_Y,
+  ribbonBonesText,
+  ribbonScene,
+  ribbonSkinText,
+} from '../testing/skinnedRibbon.testkit';
 import type { Bone } from '../skeleton3d/skeletonPose';
 import { automaticSkinMatrices } from '../skeleton3d/skeletonPose';
 import '../../../r3f/nodes/index';
@@ -189,14 +194,23 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
     expect(material.color.g).toBeLessThan(0.1);
   });
 
-  it('lets a bone past the skin collapse its vertices, as an empty bone buffer does (edge case)', async () => {
-    const [skinned] = skinnedMeshes(await render({ bones: ribbonBonesText(3) }));
+  it('draws nothing when the bones of the mesh reach past the skin, as Godot gives the instance no bounds (edge case)', async () => {
+    // Six bones are asked for, three are bound: `mesh_get_aabb` skips the surface
+    // (`mesh_storage.cpp:730`) and `_update_instance` never places an instance without a surface
+    // in its bounds (`renderer_scene_cull.cpp:1679`).
+    const renderer = await render({ bones: ribbonBonesText(3) });
 
-    // Six bones are asked for, three are bound: the three missing bones are zero matrices.
-    expect(skinned!.skeleton.bones).toHaveLength(6);
-    expect(vertexOf(skinned!, 31)).toEqual([0, 0, 0]);
-    // The first row is all b0, so it holds.
-    expect(vertexOf(skinned!, 0)[1]).toBeCloseTo(0.5, 5);
+    expect(skinnedMeshes(renderer)).toEqual([]);
+    expect(findMesh(renderer.scene).geometry.attributes.position).toBeUndefined();
+  });
+
+  it('keeps the descendants of a mesh the skin leaves undrawn', async () => {
+    const renderer = await render({
+      bones: ribbonBonesText(3),
+      extraNodes: '[node name="Child" type="Node3D" parent="Mesh"]',
+    });
+
+    expect(renderer.scene.findAll((node) => node.instance.name === 'Child')).toHaveLength(1);
   });
 
   it('collapses the mesh of a skeleton with no bone to the origin, which Godot draws as nothing (edge case)', async () => {
@@ -207,14 +221,92 @@ describe('MeshInstance3D bound to a Skeleton3D', () => {
   });
 });
 
+/** The ribbon chain behind an extra root bone, bound to a Skin that sets `skinLines`. */
+function renderWithSkin(
+  skinLines: string,
+  {
+    meshLines = SKIN_MESH_LINES,
+    extra = '',
+    files = {},
+  }: { meshLines?: string; extra?: string; files?: Record<string, string> } = {}
+) {
+  return renderContent(
+    ribbonScene({ bones: ribbonBonesText(6, {}, { extraRoot: true }), skinLines, meshLines, extra }),
+    files
+  );
+}
+
+const SKIN_MESH_LINES = 'skeleton = NodePath("../Skeleton3D")\nskin = SubResource("Skin_1")';
+
+/** The last vertex of the ribbon on its own skeleton: all b5, which turns with b2. */
+const TURNED_LAST_VERTEX = [0.6196, -0.0268, 0].map((v) => expect.closeTo(v, 3));
+const REST_FIRST_VERTEX = [-0.2, 0.5, 0].map((v) => expect.closeTo(v, 5));
+
 describe('MeshInstance3D with a skin set', () => {
-  it('draws unskinned, as the Skin resource is not read here', async () => {
-    const renderer = await render({
-      meshLines: 'skeleton = NodePath("../Skeleton3D")\nskin = SubResource("Skin_1")',
+  it.each(['name', 'index'] as const)(
+    'binds each bind of the Skin by the %s of its bone',
+    async (address) => {
+      const [skinned] = skinnedMeshes(await renderWithSkin(ribbonSkinText(address)));
+
+      expect(vertexOf(skinned!, 0)).toEqual(REST_FIRST_VERTEX);
+      expect(vertexOf(skinned!, 31)).toEqual(TURNED_LAST_VERTEX);
+    }
+  );
+
+  it('binds bones the automatic skin would miss, with the same skeleton and no skin set', async () => {
+    const [byName] = skinnedMeshes(await renderWithSkin(ribbonSkinText('name')));
+    const [automatic] = skinnedMeshes(
+      await renderWithSkin('', { meshLines: 'skeleton = NodePath("../Skeleton3D")' })
+    );
+
+    // Mesh bone 2 is b1 under the automatic skin, which stays, and b2 under the Skin, which turns.
+    expect(vertexOf(automatic!, 10)).not.toEqual(vertexOf(byName!, 10));
+  });
+
+  it('loads a Skin from a .tres', async () => {
+    const tres = `[gd_resource type="Skin" format=3]\n\n[resource]\n${ribbonSkinText('name')}`;
+    const [skinned] = skinnedMeshes(
+      await renderWithSkin('', {
+        meshLines: 'skeleton = NodePath("../Skeleton3D")\nskin = ExtResource("1_skin")',
+        extra: '[ext_resource type="Skin" path="res://rig.tres" id="1_skin"]\n',
+        files: { 'res://rig.tres': tres },
+      })
+    );
+
+    expect(vertexOf(skinned!, 31)).toEqual(TURNED_LAST_VERTEX);
+  });
+
+  it('collapses the mesh for a Skin with no bind, as the bone buffer stays zero (edge case)', async () => {
+    const [skinned] = skinnedMeshes(await renderWithSkin('bind_count = 0'));
+
+    expect(vertexOf(skinned!, 0)).toEqual([0, 0, 0]);
+  });
+
+  it('draws nothing for a Skin with fewer binds than the bones of the mesh (edge case)', async () => {
+    const renderer = await renderWithSkin(ribbonSkinText('name', 3));
+
+    expect(skinnedMeshes(renderer)).toEqual([]);
+    expect(findMesh(renderer.scene).geometry.attributes.position).toBeUndefined();
+  });
+
+  it('uses the automatic skin when the skin is a resource of another type (edge case)', async () => {
+    const [skinned] = skinnedMeshes(
+      await renderContent(
+        ribbonScene({
+          meshLines: 'skeleton = NodePath("../Skeleton3D")\nskin = SubResource("Box")',
+        })
+      )
+    );
+
+    expect(vertexOf(skinned!, 31)).toEqual(TURNED_LAST_VERTEX);
+  });
+
+  it('draws unskinned when the node names no skeleton, whatever the Skin binds', async () => {
+    const renderer = await renderWithSkin(ribbonSkinText('name'), {
+      meshLines: 'skin = SubResource("Skin_1")',
     });
 
     expect(skinnedMeshes(renderer)).toEqual([]);
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });
 });
 

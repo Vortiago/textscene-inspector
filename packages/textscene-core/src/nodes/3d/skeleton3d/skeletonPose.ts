@@ -23,6 +23,7 @@ import {
   type Quaternion,
 } from '../../../godot/math/quaternion.js';
 import { vector3Add, vector3Scaled, vector3Sub, type Vector3 } from '../../../godot/math/vector.js';
+import type { SkinBind } from '../../../resources/skin/types.js';
 
 /** One entry of `bones/<i>/…` (`skeleton_3d.h:105-113`). */
 export interface Bone {
@@ -58,6 +59,23 @@ export interface BonePose {
   rotation?: readonly Quaternion[];
   scale?: readonly Vector3[];
 }
+
+/** A bind of a Skin once its bone is found: the bone it moves with, and its bind pose. */
+export interface SkinBinding {
+  bone: number;
+  pose: Transform3D;
+}
+
+/**
+ * The matrix of a bind whose bone the skeleton lacks: Godot skips it (`skeleton_3d.cpp:401`) and the
+ * zeroed bone buffer keeps zeros (`mesh_storage.cpp:2358`), which collapse the vertices bound to it.
+ */
+const COLLAPSED_BIND_MATRIX: Transform3D = {
+  basis_x: { x: 0, y: 0, z: 0 },
+  basis_y: { x: 0, y: 0, z: 0 },
+  basis_z: { x: 0, y: 0, z: 0 },
+  origin: { x: 0, y: 0, z: 0 },
+};
 
 /** The poses a clip writes to a skeleton, by bone name. */
 export type AnimatedPose = ReadonlyMap<string, BonePose>;
@@ -127,6 +145,7 @@ function composedTurns(init: Quaternion, initInverse: Quaternion, values: readon
  *
  * `show_rest_only` poses every bone at its rest (`:1104`), as does a disabled bone. A bone that no
  * root reaches, which only a parent cycle makes, keeps the identity Godot allocates for it.
+ * A mesh with a `skin` takes {@link BonePoses.bindMatrices} with the binds of that Skin instead.
  *
  * @canonical The automatic skin of a Skeleton3D's bones
  */
@@ -135,17 +154,17 @@ export function automaticSkinMatrices(
   showRestOnly: boolean,
   modifiers: readonly PoseModifier[] = []
 ): Transform3D[] {
-  return skinMatricesUnder(new BonePoses(bones, showRestOnly), modifiers);
+  return poseUnder(new BonePoses(bones, showRestOnly), modifiers).skinMatrices();
 }
 
 /**
- * {@link automaticSkinMatrices} on `poses`, which start again from the file pose. A caller that
- * skins one skeleton every frame keeps its `BonePoses`, and with it the rig.
+ * Starts `poses` again from the file pose and runs `modifiers` on it, in order. Returns `poses`. A
+ * caller that skins one skeleton every frame keeps its `BonePoses`, and with it the rig.
  */
-export function skinMatricesUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): Transform3D[] {
+export function poseUnder(poses: BonePoses, modifiers: readonly PoseModifier[]): BonePoses {
   poses.reset();
   for (const modifier of modifiers) runModifier(poses, modifier);
-  return poses.skinMatrices();
+  return poses;
 }
 
 /** The rest of a bone taken apart, which an animated part is measured from. */
@@ -165,8 +184,11 @@ class SkeletonRig {
   readonly order: number[];
   /** The global rest of each bone. */
   readonly globalRests: Transform3D[];
-  /** The inverse of each global rest. */
-  readonly inverseGlobalRests: Transform3D[];
+  /**
+   * The Skin `create_skin_from_rest_transforms` makes: bind `i` is bone `i`, posed at the inverse of
+   * its global rest (`skeleton_3d.cpp:975-1014`). A mesh with no `skin` binds to it.
+   */
+  readonly automaticBindings: SkinBinding[];
   private readonly boneIndexByName = new Map<string, number>();
   /** Written only by `decomposedRest`, which fills an entry the first time a bone asks. */
   private readonly decomposedRests: (DecomposedRest | undefined)[];
@@ -178,7 +200,10 @@ class SkeletonRig {
       const parent = parentOf(bones[index]!, bones.length);
       this.globalRests[index] = standOn(parent < 0 ? null : this.globalRests[parent]!, bones[index]!.rest);
     }
-    this.inverseGlobalRests = this.globalRests.map(affineInverseTransform3D);
+    this.automaticBindings = this.globalRests.map((rest, bone) => ({
+      bone,
+      pose: affineInverseTransform3D(rest),
+    }));
     // The first bone of a name wins, as `find_bone` does.
     bones.forEach(({ name }, index) => {
       if (!this.boneIndexByName.has(name)) this.boneIndexByName.set(name, index);
@@ -336,8 +361,37 @@ export class BonePoses {
 
   /** The skin matrix of every bone: its global pose times the inverse of its global rest. */
   skinMatrices(): Transform3D[] {
-    const { inverseGlobalRests } = this.rig;
-    return this.globals().map((pose, i) => multiplyTransform3D(pose, inverseGlobalRests[i]!));
+    return this.bindMatrices(this.rig.automaticBindings);
+  }
+
+  /**
+   * The bone each bind of a Skin moves with (`skeleton_3d.cpp:363-396`): the first bone of its name,
+   * else the bone at its index. A name no bone carries, an index past the last bone, and a bind with
+   * neither all take bone 0, and each reports to `onUnresolved` as Godot prints an error.
+   */
+  resolveBinds(binds: readonly SkinBind[], onUnresolved: (message: string) => void): SkinBinding[] {
+    return binds.map(({ bone, name, pose }, index) => {
+      if (name !== '') {
+        const found = this.findBone(name);
+        if (found < 0)
+          onUnresolved(`Skin bind #${index} names the bone "${name}", which the Skeleton3D lacks`);
+        return { bone: Math.max(found, 0), pose };
+      }
+      const isInRange = bone >= 0 && bone < this.boneCount;
+      if (bone < 0) onUnresolved(`Skin bind #${index} has neither a name nor a bone index`);
+      else if (!isInRange)
+        onUnresolved(`Skin bind #${index} names bone ${bone}, past the bone count ${this.boneCount}`);
+      return { bone: isInRange ? bone : 0, pose };
+    });
+  }
+
+  /** The matrix of every bind: the global pose of its bone times its bind pose (`:398-403`). */
+  bindMatrices(bindings: readonly SkinBinding[]): Transform3D[] {
+    const globals = this.globals();
+    return bindings.map(({ bone, pose }) => {
+      const global = globals[bone];
+      return global ? multiplyTransform3D(global, pose) : COLLAPSED_BIND_MATRIX;
+    });
   }
 
   private write(index: number, change: Partial<Pick<Bone, 'position' | 'rotation' | 'scale'>>): void {

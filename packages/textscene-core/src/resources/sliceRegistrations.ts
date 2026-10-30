@@ -74,6 +74,7 @@ import './noise/fastnoiselite/index.js';
 // Collections
 import './tileset/index.js';
 import './meshlibrary/index.js';
+import './skin/index.js';
 
 // Foreign formats
 import './formats/binaryresource/index.js';

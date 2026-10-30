@@ -3235,6 +3235,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Mesh Instance 3d Skin By Name",
+    "file": "unit-mesh-instance-3d-skin-by-name.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Mesh Instance 3d Skinned Ribbon Instanced",
     "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
     "category": "Unit - Primitive Meshes"
