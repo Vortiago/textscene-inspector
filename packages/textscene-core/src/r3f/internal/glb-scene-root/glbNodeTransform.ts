@@ -8,7 +8,8 @@ import { godotBoneRest } from '../../../resources/formats/glb/godotNodes';
 
 /**
  * Writes `transform` as the local transform of `target`. A node Godot makes a bone holds the glTF
- * transform as the bone's rest pose, so its own transform composes onto that pose.
+ * transform as the bone's rest pose, so its own transform composes onto that pose and a shear
+ * drops out, as a bone pose holds none. Any other node takes a sheared basis whole, as the matrix.
  */
 export function writeNodeTransform(
   target: THREE.Object3D,
@@ -27,6 +28,8 @@ export function writeNodeTransform(
     target.matrix.copy(matrix);
     return;
   } else {
+    // A sheared override may have switched it off, and these parts must compose again.
+    target.matrixAutoUpdate = true;
     target.position.set(...position);
     target.rotation.set(...rotation);
     target.scale.set(...scale);
