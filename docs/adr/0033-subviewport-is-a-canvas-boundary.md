@@ -115,6 +115,8 @@ which display real content.
   over the tonemapped render as the canvas over world, in a scene of their own, through a canvas
   frame whose bytes return to the target. Each workspace drops the other's nodes, so the subtree
   mounts in both the world's portal and the canvas's.
+  Under `BG_CANVAS` the layers up to the max layer draw first into a target of their own, which the
+  world shows as its background and tonemaps with it. Under `BG_KEEP` the world clears no colour.
 - A target that holds canvas content, the 2D-world pass's or the Control pass's, stores
   sRGB bytes in RGBA8, as Godot's non-HDR `R8G8B8A8_UNORM` target does
   (`texture_storage.cpp:3568-3569`). The pass encodes and blends its sRGB numbers there, as

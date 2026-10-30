@@ -417,6 +417,10 @@ _Avoid_: bare "viewport" or the unhyphenated "subviewport" for the Godot node. "
 The pass of a 3D **sub-viewport** that draws its 2D items and Controls over the tonemapped world, in the same target (`CanvasOverWorld.tsx`, ADR-0033).
 _Avoid_: "overlay". "HUD pass".
 
+**Canvas backdrop**:
+The canvas layers a 3D **sub-viewport** under `BG_CANVAS` draws first, up to `background_canvas_max_layer`, into a target the world shows as its background (`canvasBackdrop.ts`).
+_Avoid_: "background canvas".
+
 **Viewport surface**:
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.

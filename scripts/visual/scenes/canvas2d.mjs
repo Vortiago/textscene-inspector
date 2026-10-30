@@ -535,6 +535,14 @@ export const CANVAS_2D_SCENES = [
   // (240,240) rgb(51,51,229) Plate over Under, (260,260) rgb(229,25,25) Under, on a CanvasLayer
   // below the world's canvas, over the quad all the same.
   { name: 'sub-viewport-3d-canvas-item', file: 'unit-sub-viewport-3d-canvas-item.tscn', mode: '2d' },
+  // A 3D viewport under the Canvas background mode draws the layers up to the max layer behind its
+  // 3D render. Godot 4.6.3 `--mode 2d`: (120,100) rgb(25,127,25) Ground, (120,250) rgb(152,50,50)
+  // Under, (162,200) rgb(255,102,0) the quad over Under, (200,180) rgb(133,72,137) Plate over the quad.
+  { name: 'sub-viewport-3d-canvas-background', file: 'unit-sub-viewport-3d-canvas-background.tscn', mode: '2d' },
+  // The same scene under the Keep background mode, where the 3D buffer is black. Godot 4.6.3
+  // `--mode 2d`: (120,250) rgb(114,12,12) Under over black, (162,200) rgb(242,63,12) Under over the
+  // quad, (200,180) rgb(128,56,142) Plate over both.
+  { name: 'sub-viewport-3d-keep-background', file: 'unit-sub-viewport-3d-keep-background.tscn', mode: '2d' },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
