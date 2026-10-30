@@ -2,15 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
-import {
-  hideShownSky,
-  SHOWN_ENERGY,
-  SHOWN_REFLECTION,
-  SkyRadiance,
-  shownSky,
-  skyRotation,
-} from './skyRadiance';
-import { skyLayersSlot } from './skyRadiance.testkit';
+import { hideShownSky, SHOWN_ENERGY, SkyRadiance, shownSky, skyRotation } from './skyRadiance';
+import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, testRenderer } from '../../testing/recordingWebGL';
 
 /** A sky's layer array at radiance `radianceSize`, set up on `renderer` as a bake leaves it. */
@@ -125,10 +118,10 @@ describe('SkyRadiance', () => {
     const radiance = radianceOf(renderer);
 
     radiance.show(1, false, 1);
-    const unreflected = shownSky[SHOWN_REFLECTION];
+    const unreflected = shownSky[REFLECTION_SLOT];
     radiance.show(1, true, 1);
 
-    expect([unreflected, shownSky[SHOWN_REFLECTION]]).toEqual([0, 1]);
+    expect([unreflected, shownSky[REFLECTION_SLOT]]).toEqual([0, 1]);
   });
 
   it("shows world to sky space, the inverse of the sky's rotation", async () => {

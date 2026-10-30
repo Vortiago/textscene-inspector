@@ -13,8 +13,8 @@ import { SkyLayer } from './SkyLayer';
 import { ownEnvironmentChanges, ShownEnvironment, useOwnEnvironment } from '../environment/sceneEnvironment';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { SHOWN_ENERGY, SHOWN_REFLECTION, shownSky, skyRotation } from './skyRadiance';
-import { skyLayersSlot } from './skyRadiance.testkit';
+import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
+import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
@@ -295,7 +295,7 @@ describe('SkyLayer', () => {
 
     sampledInRender(gl, scene);
 
-    expect([shownSky[SHOWN_REFLECTION], shownSky[0]]).toEqual([0, 1]);
+    expect([shownSky[REFLECTION_SLOT], shownSky[0]]).toEqual([0, 1]);
   });
 
   it('shows the energy and the rotation of its radiance, which the fogs read', async () => {

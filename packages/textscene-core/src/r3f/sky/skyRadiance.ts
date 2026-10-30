@@ -48,7 +48,7 @@ const IDENTITY_BASIS = Float32Array.of(1, 0, 0, 0, 1, 0, 0, 0, 1);
 export const SHOWN_ENERGY = 4;
 
 /** Where `shownSky` holds 1 when a surface reflects the sky and 0 when it reflects nothing. */
-export const SHOWN_REFLECTION = 5;
+const SHOWN_REFLECTION = 5;
 
 /** World to sky space, column-major, read as `shownSky` is. Identity while no sky shows. */
 export const skyRotation = installedOr(ROTATION, Float32Array, () => IDENTITY_BASIS.slice());
