@@ -23,6 +23,7 @@ import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { MATERIAL_OVERLAY_RENDER_ORDER, NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
 import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useMeshSkin } from './useMeshSkin';
@@ -187,16 +188,6 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 const NO_PARTS: readonly SurfacedPart[] = [];
 
 /**
- * The overlay's draw-order key. Any value above the 3D default (0) puts it after
- * its own surface; 1 keeps it as close to that surface as three allows, since
- * every step also steps it past unrelated content at the same depth.
- */
-const MATERIAL_OVERLAY_RENDER_ORDER = 1;
-
-/** Opts a mesh out of picking: three calls `raycast` and collects nothing. */
-const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
-
-/**
  * `material_overlay`'s draw: the base mesh's geometry a second time, with the
  * overlay material. A separate mesh, not a material array entry: Godot's
  * overlay covers every surface (`_geometry_instance_add_surface` runs per
@@ -347,7 +338,10 @@ function MeshSurfaces({ part, overrides }: { part: SurfacedPart; overrides: Mesh
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} drawsPoints={geometryDrawsPoints(part.geometry)} />
+      <SurfaceMaterialSlots
+        sources={sources}
+        points={geometryDrawsPoints(part.geometry) ? 'mesh' : undefined}
+      />
     </>
   );
 }

@@ -102,6 +102,14 @@ export const parsePackedVector2Array = float32Reader(packedTupleType('PackedVect
 /** A Godot `PackedColorArray` slot as flat components. */
 export const parsePackedColorArray = float32Reader(packedTupleType('PackedColorArray', 4));
 
+/**
+ * The flat components of a packed slot that holds no element. Shared, as a zero-length array holds
+ * nothing to write.
+ *
+ * @canonical Empty flat packed array
+ */
+export const NO_FLOATS = new Float32Array(0);
+
 /** One `[...]` group nested inside an outer array, its body captured. */
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;
 

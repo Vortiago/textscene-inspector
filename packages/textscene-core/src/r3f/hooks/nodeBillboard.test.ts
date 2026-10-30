@@ -114,4 +114,23 @@ describe('applyBillboard', () => {
 
     expectClose(new THREE.Vector3().setFromMatrixPosition(object.matrixWorld), [5, 6, 7]);
   });
+
+  // `normalize(cross(up, camZ))` of an exactly zero vector has no direction.
+  it('keeps the model basis under FIXED_Y while the camera looks straight down (edge case)', () => {
+    const object = nodeUnderParent(0.5, 2);
+
+    const lookingDown = new THREE.PerspectiveCamera();
+    lookingDown.matrixAutoUpdate = false;
+    lookingDown.matrix.makeBasis(
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(0, 1, 0)
+    );
+    lookingDown.matrixWorldNeedsUpdate = true;
+
+    applyBillboard(object, lookingDown, BillboardMode.BILLBOARD_FIXED_Y);
+
+    const model = new THREE.Matrix4().multiplyMatrices(object.parent!.matrixWorld, object.matrix);
+    expect(object.matrixWorld.equals(model)).toBe(true);
+  });
 });

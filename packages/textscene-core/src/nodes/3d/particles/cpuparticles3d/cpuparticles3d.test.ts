@@ -1,8 +1,4 @@
-/**
- * CPUParticles3D registration: parsed and validated, not rendered. The slice
- * registers a base component under `renderIntent: 'pending'`, so the badge
- * reads a gap while `visible` and the workspace split still behave.
- */
+/** CPUParticles3D registration: parsed, validated and drawn. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
@@ -19,8 +15,8 @@ describe('CPUParticles3D registration', () => {
     expect(registration!.parser).toBe(parseCPUParticles3D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('CPUParticles3D')).toBe('pending');
-    expect(rendersOwnVisual('CPUParticles3D')).toBe('not-implemented');
+  it('registers a component that draws the particles', () => {
+    expect(nodeComponentRegistry.renderIntentOf('CPUParticles3D')).toBe('draws');
+    expect(rendersOwnVisual('CPUParticles3D')).toBe('draws');
   });
 });

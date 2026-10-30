@@ -10,7 +10,7 @@ import type { ProgramInjection } from '../materialProgramInputs';
 import { editedProgram, rewrittenShader, rewrittenThroughChunks } from '../shaderPatch/chunkPatch';
 import { recordedOn } from './recordedOnMaterial';
 import { perObject } from '../../utils/perObject';
-import { NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
+import { DRAWN_INSTANCE, DRAWN_MODEL, NODE_POSE_PARS, nodePoseUniforms } from './nodePose';
 import type { Triplanar, TriplanarProjection } from '../../resources/materials/standardmaterial3d/types';
 
 /** three's maps that a Godot slot draws through, and so that a triplanar UV set can serve. */
@@ -36,18 +36,6 @@ const TRIPLANAR_KEY = 'godotTriplanar';
 /** The `userData` that gives a material its triplanar mapping, none for `null`. */
 export function triplanarUserData(record: TriplanarRecord | null): Record<string, unknown> {
   return record ? { [TRIPLANAR_KEY]: record } : {};
-}
-
-/**
- * `triplanar` reads the mesh's own space: a UV set projects the local position, or the frame is
- * local. A draw that moves the vertices out of the mesh's space must hand such a mapping the item's.
- */
-export function readsObjectSpace(triplanar: Triplanar | null): boolean {
-  if (!triplanar) return false;
-  const projectsLocal = [triplanar.uv1, triplanar.uv2].some(
-    (projection) => projection && !projection.isWorld
-  );
-  return projectsLocal || !triplanar.isTangentWorld;
 }
 
 /** The UV sets of Godot's shader, by the prefix of their uniforms. */
@@ -155,8 +143,8 @@ const VERTEX_PARS = `${NODE_POSE_PARS}${UV_SETS.map(projectionVertexPars).join('
  * Godot's VERTEX and NORMAL: the mesh's, after skinning and morphs, before an instance's
  * transform. A scope of its own, since three runs the normal chunks in only some programs.
  * Godot's MODEL_MATRIX and MODEL_NORMAL_MATRIX are the node's, then the instance's, whose basis
- * turns the normal as it stands (`scene_forward_clustered.glsl:338-346`). A merged GridMap point
- * carries its item's space and its cell's matrix, which Godot draws as an instance (`godotPoint.ts`).
+ * turns the normal as it stands (`scene_forward_clustered.glsl:338-346`). Points at a GridMap's
+ * cells or a CPUParticles3D's particles are instances too (`godotPoint.ts`).
  */
 const GODOT_VERTEX_INPUTS = /* glsl */ `
 	vec3 godotNormal;
@@ -167,23 +155,19 @@ const GODOT_VERTEX_INPUTS = /* glsl */ `
 		godotNormal = objectNormal;
 	}
 	vec3 godotVertex = transformed;
-	mat4 godotModel = modelMatrix * godotModelFromObject;
+	mat4 godotModel = ${DRAWN_MODEL} * godotModelFromObject;
 	mat3 godotModelNormal = godotNormalMatrix( mat3( godotModel ) );
 	#ifdef USE_INSTANCING
-		godotModel *= instanceMatrix;
-		godotModelNormal *= mat3( instanceMatrix );
-	#endif
-	#ifdef GODOT_CELL_POINTS
-		godotNormal = godotItemNormal;
-		godotVertex = godotItemPosition;
-		godotModel *= godotCellMatrix;
-		godotModelNormal *= mat3( godotCellMatrix );
+		godotModel *= ${DRAWN_INSTANCE};
+		godotModelNormal *= mat3( ${DRAWN_INSTANCE} );
 	#endif
 `;
 
 /**
  * Godot's TANGENT and BINORMAL for a triplanar surface (`material.cpp:1386-1414`), carried to view
- * space as Godot's `modelview_normal` carries them (`scene_forward_clustered.glsl:461-470`).
+ * space as Godot's `modelview_normal` carries them (`scene_forward_clustered.glsl:461-470`). A
+ * billboard's is the model-view its pose writes for a plain and an instanced draw alike, which
+ * `modelViewMatrix` reads after the pose (`surfaceBillboard.ts`).
  */
 const GODOT_FRAME = /* glsl */ `
 	#ifdef GODOT_TRIPLANAR_TANGENT_WORLD

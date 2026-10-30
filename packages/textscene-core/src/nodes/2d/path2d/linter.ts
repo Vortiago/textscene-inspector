@@ -8,7 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../godot/scene/resourceLiteral.js';
 import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
 import {
   CURVE2D_DATA,

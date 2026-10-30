@@ -31,11 +31,13 @@ import {
   DRAWS_LAMBERT_DIFFUSE,
   KEEPS_REFLECTION_UNOCCLUDED,
   DRAWS_TOON_SPECULAR,
+  DECODES_SRGB_VERTEX_COLOR,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
   REBUILDS_NORMAL_MAP_BLUE,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
+  patchedVertex,
 } from '../../../r3f/testing/patchedFragment';
 
 function bag(properties: Record<string, string>, textures?: ResolvedTextures) {
@@ -324,6 +326,24 @@ describe('standardMaterialBags — specular occlusion', () => {
 
   it('patches nothing on an unshaded surface, which has no reflection (edge case)', () => {
     expect(bag({ disable_specular_occlusion: 'true', shading_mode: '0' }).injection).toBeUndefined();
+  });
+});
+
+describe('standardMaterialBags — sRGB vertex colours', () => {
+  const SRGB_ALBEDO = { vertex_color_use_as_albedo: 'true', vertex_color_is_srgb: 'true' };
+
+  it('decodes the vertex colour of a lit surface from sRGB', () => {
+    expect(patchedVertex(materialFromBag(bag(SRGB_ALBEDO)))).toContain(DECODES_SRGB_VERTEX_COLOR);
+  });
+
+  it('decodes the vertex colour of an unshaded surface from sRGB', () => {
+    expect(patchedVertex(materialFromBag(bag({ ...SRGB_ALBEDO, shading_mode: '0' })))).toContain(
+      DECODES_SRGB_VERTEX_COLOR
+    );
+  });
+
+  it('patches nothing on a surface that does not read its vertex colour (edge case)', () => {
+    expect(bag({ vertex_color_is_srgb: 'true', shading_mode: '0' }).injection).toBeUndefined();
   });
 });
 

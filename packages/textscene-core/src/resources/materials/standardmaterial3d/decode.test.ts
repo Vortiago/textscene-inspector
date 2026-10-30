@@ -596,6 +596,19 @@ describe('decodeStandardMaterial3D — value-decoder edges', () => {
       BillboardMode.BILLBOARD_DISABLED
     );
   });
+
+  it('reads the particle flipbook a BILLBOARD_PARTICLES shader cuts', () => {
+    const data = decodeStandardMaterial3D({
+      particles_anim_h_frames: '4',
+      particles_anim_v_frames: '2',
+      particles_anim_loop: 'true',
+    });
+    expect(data.particlesAnim).toEqual({ hFrames: 4, vFrames: 2, loop: true });
+  });
+
+  it('gives the one-cell flipbook the constructor sets (material.cpp:3967-3969, edge case)', () => {
+    expect(decodeStandardMaterial3D({}).particlesAnim).toEqual({ hFrames: 1, vFrames: 1, loop: false });
+  });
 });
 
 describe('decodeStandardMaterial3D — corpus materials', () => {

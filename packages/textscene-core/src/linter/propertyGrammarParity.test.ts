@@ -1,5 +1,5 @@
 /**
- * Property-grammar parity: for each slice with `parser.ts` and `linterParser.ts`,
+ * Property-grammar parity: for each slice with a parser of its own and a `linterParser.ts`,
  * the keys the parser reads through `properties.X` match the validator keys, each
  * side widened by its base types. A parser-only key lacks a validator, and a
  * linter-only key is never read, unless `ASYMMETRY_ALLOWLIST` lists it with a reason.
@@ -35,7 +35,7 @@ interface StaleScanInput {
 function findStaleEntries({ allowlist, slices, baseChainOf, validatorKeysOf }: StaleScanInput): string[] {
   const staleSections: string[] = [];
   // An entry answers for its own slice and every slice below it: a base class
-  // reuses the base parser, has no parser.ts, and is absent from `collectSlices`.
+  // registers a base parser, and is absent from `collectSlices`.
   const coveredSlices = (nodeType: string) =>
     slices.filter((s) => s.nodeType === nodeType || baseChainOf(s.nodeType).includes(nodeType));
 
@@ -44,7 +44,7 @@ function findStaleEntries({ allowlist, slices, baseChainOf, validatorKeysOf }: S
     if (covered.length === 0) {
       // Node type has no slice pair, so the allowlist entry is stale.
       staleSections.push(
-        `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
+        `${nodeType}: no slice with its own parser and a linterParser found, and no slice inherits from it`
       );
       continue;
     }
@@ -192,7 +192,7 @@ describe('property-grammar parity guard', () => {
 
     it('an entry no slice answers for is stale', () => {
       expect(scan({}, { linterOnly: [KEY], reason })).toEqual([
-        `${BASE}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`,
+        `${BASE}: no slice with its own parser and a linterParser found, and no slice inherits from it`,
       ]);
     });
   });
@@ -242,7 +242,7 @@ describe('property-grammar parity guard', () => {
   // equality: it moves only when a slice is added or a gap closes. A new
   // validator makes an unread key visible, so a rise usually means the list
   // became honest.
-  const EXPECTED_RENDER_GAP_KEYS = 224;
+  const EXPECTED_RENDER_GAP_KEYS = 157;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -256,15 +256,15 @@ describe('property-grammar parity guard', () => {
 
   /**
    * Slices this guard does not see, counted so the blind spot moves visibly:
-   * `findSliceDirs` needs both `parser.ts` and `linterParser.ts`, and a slice
-   * that reuses a base parser has no `parser.ts`. Where the question has an
+   * `findSliceDirs` needs a parser of the slice's own, and a slice
+   * that reuses a base parser has none. Where the question has an
    * answer, the fix is a hop in `BASE_TYPE_TO_PARSER_SUBPATH`.
    */
   // Both are ratchets, not derived, or the assertion compares a number to
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
-  const SWEPT_SLICES = 122;
-  const PARSER_REUSING_SLICES = 129;
+  const SWEPT_SLICES = 129;
+  const PARSER_REUSING_SLICES = 122;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
@@ -276,7 +276,7 @@ describe('property-grammar parity guard', () => {
     expect(
       withLinterParser.length - collectSlices().length,
       'Slices outside this guard changed. Update the count, and say in the commit ' +
-        'whether the new ones are base-parser reusers (expected) or are missing a parser.ts they should have.'
+        'whether the new ones are base-parser reusers (expected) or have no parser of their own that they should have.'
     ).toBe(PARSER_REUSING_SLICES);
   });
 });

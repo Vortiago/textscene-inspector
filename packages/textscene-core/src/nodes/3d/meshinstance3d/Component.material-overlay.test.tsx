@@ -10,7 +10,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { drawColourGroup, expectSameRotation, TEST_CAMERA } from '../../../r3f/testing/threePasses';
+import { compiledBillboard } from '../../../r3f/testing/compiledBillboard';
+import { groupMaterialAt } from '../../../r3f/testing/threePasses';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { YAWED } from './testing/yawedTransform';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
@@ -134,7 +136,6 @@ describe('MeshInstance3D — material_overlay billboard_mode', () => {
     ...INTERNALS,
     { id: 'Mat_facing', type: 'StandardMaterial3D', data: { billboard_mode: '1' } },
   ];
-  const camera = TEST_CAMERA;
 
   async function overlayOf(properties: Partial<MeshInstance3DProperties>): Promise<THREE.Mesh> {
     const renderer = await ReactThreeTestRenderer.create(
@@ -149,8 +150,7 @@ describe('MeshInstance3D — material_overlay billboard_mode', () => {
 
   it('turns an overlay whose material billboards', async () => {
     const overlay = await overlayOf({ materialOverlay: 'SubResource("Mat_facing")' });
-    const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
-    expectSameRotation(drawn, camera.matrixWorld);
+    expect(compiledBillboard(groupMaterialAt(overlay))?.mode).toBe(BillboardMode.BILLBOARD_ENABLED);
   });
 
   it('keeps an overlay whose material does not billboard in the node pose', async () => {
@@ -158,7 +158,6 @@ describe('MeshInstance3D — material_overlay billboard_mode', () => {
       materialOverride: 'SubResource("Mat_facing")',
       materialOverlay: 'SubResource("Mat_overlay")',
     });
-    const drawn = drawColourGroup(overlay, camera, 0, (s) => s.matrixWorld);
-    expect(drawn.equals(overlay.matrixWorld)).toBe(true);
+    expect(compiledBillboard(groupMaterialAt(overlay))).toBeNull();
   });
 });

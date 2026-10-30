@@ -86,9 +86,19 @@ export interface Rgba {
  * `Color::operator*` (`core/math/color.h`) in `float`: each channel product rounded.
  *
  * @canonical A Color product in float32
+ *   `multiplyColor` into a new colour, `multiplyColorInto` into one the caller owns.
  */
 export function multiplyColor(a: Rgba, b: Rgba): Rgba {
-  return { r: f(a.r * b.r), g: f(a.g * b.g), b: f(a.b * b.b), a: f(a.a * b.a) };
+  return multiplyColorInto({ r: 0, g: 0, b: 0, a: 0 }, a, b);
+}
+
+/** {@link multiplyColor} written into `out`, for a loop that allocates nothing. `out` may be `a` or `b`. */
+export function multiplyColorInto(out: Rgba, a: Rgba, b: Rgba): Rgba {
+  out.r = f(a.r * b.r);
+  out.g = f(a.g * b.g);
+  out.b = f(a.b * b.b);
+  out.a = f(a.a * b.a);
+  return out;
 }
 
 /** `Color::lerp` (`core/math/color.h:110-117`): {@link lerp} on each channel, alpha included. */
