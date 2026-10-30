@@ -60,3 +60,18 @@ export function drawOverBackground<T>(scene: THREE.Scene, texture: THREE.Texture
     scene.backgroundIntensity = backgroundIntensity;
   }
 }
+
+/**
+ * Runs `draw` with `gl` clearing no colour when `kept`, and restores it. Under BG_KEEP the 3D render
+ * loads the colour its buffer holds (`render_forward_clustered.cpp:2020-2030`); depth clears as ever.
+ */
+export function drawKeepingColor<T>(gl: THREE.WebGLRenderer, kept: boolean, draw: () => T): T {
+  if (!kept) return draw();
+  const { autoClearColor } = gl;
+  gl.autoClearColor = false;
+  try {
+    return draw();
+  } finally {
+    gl.autoClearColor = autoClearColor;
+  }
+}

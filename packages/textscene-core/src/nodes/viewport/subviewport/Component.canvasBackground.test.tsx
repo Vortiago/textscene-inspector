@@ -1,4 +1,6 @@
 /**
+ * Under BG_KEEP a viewport draws its 3D render over the colour its buffer already holds
+ * (`render_forward_clustered.cpp:2020-2030`), so it clears none.
  * Under BG_CANVAS a viewport draws the canvas layers up to `background_canvas_max_layer` as the
  * background of its 3D render, and the layers above over it (`renderer_viewport.cpp:339-380`, `:650-715`).
  */
@@ -10,12 +12,12 @@ import '../../../r3f/nodes/index';
 
 const WORLD_SCENE = 'Canvas::world';
 
-/** A 3D viewport under BG_CANVAS: an item in the world canvas, and one in a CanvasLayer at layer 5. */
-function canvasBackground(maxLayer: number): string {
+/** A 3D viewport under background mode `mode`: an item in the world canvas, and one in a CanvasLayer at layer 5. */
+function viewportWith(mode: number, maxLayer = 0): string {
   return `[gd_scene format=3]
 
 [sub_resource type="Environment" id="Canvas"]
-background_mode = 3
+background_mode = ${mode}
 background_canvas_max_layer = ${maxLayer}
 
 [node name="Root" type="Node2D"]
@@ -48,7 +50,7 @@ describe('a 3D SubViewport under the Canvas background mode', () => {
   beforeAll(() => import('./CanvasOverWorld'));
 
   it('draws the layers up to the max layer behind the world and the rest over it', async () => {
-    const draws = await drawsOf(canvasBackground(0));
+    const draws = await drawsOf(viewportWith(3, 0));
     const behind = drawing(draws, 'Behind');
     const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
     const front = drawing(draws, 'Front');
@@ -60,20 +62,34 @@ describe('a 3D SubViewport under the Canvas background mode', () => {
   });
 
   it('shows the world the target of the canvas it drew behind it as its background', async () => {
-    const draws = await drawsOf(canvasBackground(0));
+    const draws = await drawsOf(viewportWith(3, 0));
     const world = draws.find((d) => d.scene.name === WORLD_SCENE)!;
     expect((world.background as THREE.Texture).name).toBe('View::canvas::target');
   });
 
   it('draws a layer above the max layer over the world even when the max layer is low', async () => {
-    const draws = await drawsOf(canvasBackground(-3));
+    const draws = await drawsOf(viewportWith(3, -3));
     const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
     expect(drawing(draws, 'Behind')).toBeGreaterThan(world);
   });
 
   it('draws every layer behind the world when the max layer is above them all', async () => {
-    const draws = await drawsOf(canvasBackground(9));
+    const draws = await drawsOf(viewportWith(3, 9));
     const world = draws.findIndex((d) => d.scene.name === WORLD_SCENE);
     expect(drawing(draws, 'Front')).toBeLessThan(world);
+  });
+});
+
+describe('a 3D SubViewport under the Keep background mode', () => {
+  it('draws its world over the colour its buffer holds, clearing none', async () => {
+    const draws = await drawsOf(viewportWith(4));
+    const world = draws.find((d) => d.scene.name === WORLD_SCENE)!;
+    expect(world.clearsColor).toBe(false);
+  });
+
+  it('clears the colour of its world under every other mode', async () => {
+    const draws = await drawsOf(viewportWith(1));
+    const world = draws.find((d) => d.scene.name === WORLD_SCENE)!;
+    expect(world.clearsColor).toBe(true);
   });
 });

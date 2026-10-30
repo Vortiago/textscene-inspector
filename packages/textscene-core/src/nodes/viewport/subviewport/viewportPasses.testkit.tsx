@@ -43,6 +43,8 @@ export interface PassDraw {
   bound: THREE.WebGLRenderTarget | null;
   /** The scene's background when the draw ran, which the pass sets and restores around it. */
   background: THREE.Scene['background'];
+  /** Whether the renderer cleared the colour of its target at the start of this draw. */
+  clearsColor: boolean;
   /** The names of the objects above each mesh this draw reaches: visible, and on the camera's layers. */
   reached: string[];
 }
@@ -86,6 +88,7 @@ export async function drawsOf(tscn: string): Promise<PassDraw[]> {
           camera,
           bound,
           background: (scene as THREE.Scene).background,
+          clearsColor: captured.current!.autoClearColor,
           reached: meshesReached(scene, camera),
         }),
     },

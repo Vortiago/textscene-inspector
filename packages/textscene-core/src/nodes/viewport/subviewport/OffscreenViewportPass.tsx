@@ -66,7 +66,12 @@ import { viewAnchorMatrix } from '../../../r3f/viewportLayerAnchor';
 import { drawCanvasKeys } from '../../../r3f/canvasKeyWindow';
 import { useLayerRanks } from '../../../r3f/contexts/PaintOrderContext';
 import { BackgroundMode } from '../../../godot/scene/environment';
-import { canvasBackdropBound, drawOverBackground, viewportCanvasLayers } from './canvasBackdrop';
+import {
+  canvasBackdropBound,
+  drawKeepingColor,
+  drawOverBackground,
+  viewportCanvasLayers,
+} from './canvasBackdrop';
 
 const CanvasOverWorld = lazy(() =>
   import('./CanvasOverWorld.js').then((m) => ({ default: m.CanvasOverWorld }))
@@ -270,6 +275,7 @@ export function OffscreenViewportPass({
         ? canvasBackdropBound(toneMap.background.canvasMaxLayer, canvasLayers, sceneRanks)
         : Number.NEGATIVE_INFINITY;
     const backdrop = behindTo > Number.NEGATIVE_INFINITY ? backdropTarget : null;
+    const keepsColor = toneMap?.background?.mode === BackgroundMode.BG_KEEP;
     if (backdrop) {
       frameCanvas(canvasScene!);
       renderCanvasBehindWorld(behindTo);
@@ -291,7 +297,7 @@ export function OffscreenViewportPass({
           // A 3D pass clears its target itself where no render will, as `CanvasFrame.render`
           // explains. A 2D pass copies over it.
           const rendersClear = camera !== null && gl.autoClear;
-          if (kind === '3d' && !rendersClear) gl.clear(true, true, true);
+          if (kind === '3d' && !rendersClear) gl.clear(!keepsColor, true, true);
           if (!camera) return;
           // The pass draws through the viewport's own camera, which no editor gizmo is built for.
           const showChrome = hideEditorHelpers(passScene);
@@ -302,7 +308,7 @@ export function OffscreenViewportPass({
                   ? frame.render(gl, passScene, camera)
                   : drawWith(passScene, toneMap!.environment, exposure, () =>
                       drawOverBackground(passScene, backdrop?.texture ?? null, () =>
-                        gl.render(passScene, camera)
+                        drawKeepingColor(gl, keepsColor, () => gl.render(passScene, camera))
                       )
                     )
               )
