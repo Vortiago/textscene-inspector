@@ -9,7 +9,7 @@ renders_as: the baked lightmap on each mesh its data names
 
 # LightmapGI
 
-Applies a lightmap baked in Godot. Each mesh that `light_data` names reads its light from the bake's atlas through its second UV, not from its ambient light. A Static light no longer lights that mesh in real time. With a shadowmask mode, the bake's shadowmask replaces (Replace), darkens (Overlay) or alone gives (Only) the shadow of each sun that is not Static. The previewer reads the bake. It does not bake.
+Applies a lightmap baked in Godot. Each mesh that `light_data` names reads its light from the bake's atlas through its second UV, not from its ambient light. A Static light no longer lights that mesh in real time. With a shadowmask mode, the bake's shadowmask replaces (Replace), darkens (Overlay) or alone gives (Only) the shadow of each sun that is not Static. The previewer reads the bake. It does not bake. With the Gizmos toggle on, Godot's billboard icon marks its origin.
 
 ## Linting
 

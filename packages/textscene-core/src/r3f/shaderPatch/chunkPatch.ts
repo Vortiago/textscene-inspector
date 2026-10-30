@@ -63,7 +63,7 @@ function applyEditsUntilMissing(
 }
 
 /** The text with every edit applied in order, or null when one is missing, as `applyEdit`. */
-export function applyEdits(text: string, edits: readonly TextEdit[]): string | null {
+function applyEdits(text: string, edits: readonly TextEdit[]): string | null {
   const { text: edited, missing } = applyEditsUntilMissing(text, edits);
   return missing === null ? edited : null;
 }
@@ -125,19 +125,25 @@ export function rewrittenShader(
   return text.replace(pattern, rewrite);
 }
 
+/** three's own pattern for a chunk include (`WebGLProgram.js`). */
+const INCLUDE = /^[ \t]*#include +<([\w./]+)>/gm;
+
 /**
- * Puts `text` in three's chunk `name`, for a chunk whose whole text a caller swaps at runtime, as
- * the tone curve is. True when the chunk changed. A null `text`, an edit whose anchor three lacks
- * as `applyEdits` gives it, keeps the chunk and warns that three's `missing`.
+ * `source` with `rewrite` applied to its own text and to every chunk an include names whose text
+ * the rewrite changes, nested chunks too, inlined in place of the include. A chunk the rewrite
+ * leaves as it is stays an include, so a later patch still finds it. `rewrite` must leave its own
+ * output as it is.
+ *
+ * @canonical A rewrite of every sample a program draws
  */
-export function swappedChunk(name: ChunkName, text: string | null, missing: string): boolean {
-  if (THREE.ShaderChunk[name] === text) return false;
-  if (text === null) {
-    warn(`[Shading] three's ${missing}`);
-    return false;
-  }
-  THREE.ShaderChunk[name] = text;
-  return true;
+export function rewrittenThroughChunks(source: string, rewrite: (text: string) => string): string {
+  const inlined = rewrittenShader(source, INCLUDE, (include, name) => {
+    const chunk = THREE.ShaderChunk[name as ChunkName];
+    if (chunk === undefined) return include;
+    const rewritten = rewrittenThroughChunks(chunk, rewrite);
+    return rewritten === chunk ? include : rewritten;
+  });
+  return rewrite(inlined);
 }
 
 /**
@@ -164,8 +170,12 @@ function applyChunkEdits<Name extends ChunkName>(
 
 /** A patch made of chunk edits, as `installChunkEdits` installs it. */
 export interface ChunkEditsPatch<Name extends ChunkName> {
-  edits: readonly ChunkEdit<Name>[];
-  /** The text that proves the patch installed. An edit writes it, and that edit's chunk is checked. */
+  /** The chunk edits. A patch of program edits only leaves them out. */
+  edits?: readonly ChunkEdit<Name>[];
+  /**
+   * The text that proves the patch installed. An edit writes it, and that edit's chunk is checked, or
+   * its program's fragment shader, then its vertex shader, when no chunk edit writes it.
+   */
   mark: string;
   /** The patch's name in the warning, before "patch". */
   patch: string;
@@ -178,26 +188,39 @@ export interface ChunkEditsPatch<Name extends ChunkName> {
    * They install with the chunks or not at all.
    */
   fragmentShaders?: Partial<Record<ProgramName, readonly TextEdit[]>>;
+  /** Edits to a program's own vertex shader in `THREE.ShaderLib`, as `fragmentShaders` edits its fragment shader. */
+  vertexShaders?: Partial<Record<ProgramName, readonly TextEdit[]>>;
   /** The install functions of the patches whose text this one reads. They run first, in order. */
   requires?: readonly (() => boolean)[];
 }
 
-/** A program and its fragment shader with the patch's edits applied. */
+/** A program with its two stages as the patch's edits leave them. */
 interface PatchedProgram {
   program: THREE.ShaderLibShader;
+  vertexShader: string;
   fragmentShader: string;
 }
 
 /** Each program with its edits applied, or null when a program or an edit's text is missing. */
-function patchedPrograms(edits: Partial<Record<ProgramName, readonly TextEdit[]>>): PatchedProgram[] | null {
+function patchedPrograms(patch: ChunkEditsPatch<ChunkName>): PatchedProgram[] | null {
+  const { fragmentShaders = {}, vertexShaders = {} } = patch;
   const patched: PatchedProgram[] = [];
-  for (const [name, programEdits] of Object.entries(edits) as [ProgramName, readonly TextEdit[]][]) {
+  for (const name of programNames(patch)) {
     const program = THREE.ShaderLib[name];
-    const fragmentShader = program ? applyEdits(program.fragmentShader, programEdits) : null;
-    if (!program || fragmentShader === null) return null;
-    patched.push({ program, fragmentShader });
+    const vertexShader = program ? applyEdits(program.vertexShader, vertexShaders[name] ?? []) : null;
+    const fragmentShader = program ? applyEdits(program.fragmentShader, fragmentShaders[name] ?? []) : null;
+    if (!program || vertexShader === null || fragmentShader === null) return null;
+    patched.push({ program, vertexShader, fragmentShader });
   }
   return patched;
+}
+
+/** Each program the patch edits in either stage, once. */
+function programNames({
+  fragmentShaders = {},
+  vertexShaders = {},
+}: Pick<ChunkEditsPatch<ChunkName>, 'fragmentShaders' | 'vertexShaders'>): ProgramName[] {
+  return [...new Set([...Object.keys(fragmentShaders), ...Object.keys(vertexShaders)])] as ProgramName[];
 }
 
 /** The items as an English list that ends with "or". */
@@ -205,16 +228,27 @@ function alternatives(items: readonly string[]): string {
   return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} or ${items.at(-1)}`;
 }
 
-/** The chunk whose edit writes the mark, which an installed patch holds. */
-function markedChunk<Name extends ChunkName>({ edits, mark, patch }: ChunkEditsPatch<Name>): Name {
-  const marked = edits.find((edit) => edit.godot.includes(mark));
-  if (!marked)
-    throw new Error(`expected an edit of the ${patch} patch to write its mark "${mark}", got none`);
-  return marked.chunk;
+/** The text of the chunk or program, the first of them, whose edit writes the mark. */
+function markedText<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): string {
+  const { edits = [], mark, fragmentShaders = {}, vertexShaders = {} } = patch;
+  const chunkEdit = edits.find((edit) => edit.godot.includes(mark));
+  if (chunkEdit) return THREE.ShaderChunk[chunkEdit.chunk];
+  const stages = [
+    [fragmentShaders, 'fragmentShader'],
+    [vertexShaders, 'vertexShader'],
+  ] as const;
+  for (const [shaders, stage] of stages)
+    for (const [name, programEdits] of Object.entries(shaders) as [ProgramName, readonly TextEdit[]][])
+      if (programEdits.some((edit) => edit.godot.includes(mark))) return THREE.ShaderLib[name]![stage];
+  throw new Error(`expected an edit of the ${patch.patch} patch to write its mark "${mark}", got none`);
 }
 
 /** Each chunk the patch edits, prepends to or appends to, once. */
-function patchedChunkNames({ edits, prepend = {}, append = {} }: ChunkEditsPatch<ChunkName>): ChunkName[] {
+function patchedChunkNames({
+  edits = [],
+  prepend = {},
+  append = {},
+}: ChunkEditsPatch<ChunkName>): ChunkName[] {
   const names = [...edits.map((edit) => edit.chunk), ...Object.keys(prepend), ...Object.keys(append)];
   return [...new Set(names as ChunkName[])];
 }
@@ -222,7 +256,7 @@ function patchedChunkNames({ edits, prepend = {}, append = {} }: ChunkEditsPatch
 /** The chunks with every edit applied and each added text in, or null as `applyChunkEdits`. */
 function appliedEdits(
   chunks: Chunks<ChunkName>,
-  { edits, prepend = {}, append = {} }: ChunkEditsPatch<ChunkName>
+  { edits = [], prepend = {}, append = {} }: ChunkEditsPatch<ChunkName>
 ): Chunks<ChunkName> | null {
   const patched = applyChunkEdits(chunks, edits);
   if (patched === null) return null;
@@ -234,9 +268,12 @@ function appliedEdits(
 
 /** The warning for a three that lacks an edit's text: each edited chunk and program, and the patch. */
 function missingTextWarning<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): string {
-  const edited = [...new Set(patch.edits.map((edit) => edit.chunk))];
-  const programs = Object.keys(patch.fragmentShaders ?? {}).map((name) => `${name} fragment shader`);
-  return `[Shading] three's ${alternatives([...edited, ...programs])} lacks a line the ${patch.patch} patch replaces`;
+  const edited = [...new Set((patch.edits ?? []).map((edit) => edit.chunk))];
+  const stages = [
+    ...Object.keys(patch.fragmentShaders ?? {}).map((name) => `${name} fragment shader`),
+    ...Object.keys(patch.vertexShaders ?? {}).map((name) => `${name} vertex shader`),
+  ];
+  return `[Shading] three's ${alternatives([...edited, ...stages])} lacks a line the ${patch.patch} patch replaces`;
 }
 
 /**
@@ -247,10 +284,12 @@ const failedOnText = new Map<string, string>();
 
 /** Every chunk and program text the patch edits, as one string to compare. */
 function editedText(patch: ChunkEditsPatch<ChunkName>): string {
-  const programs = Object.keys(patch.fragmentShaders ?? {}) as ProgramName[];
   return [
     ...patchedChunkNames(patch).map((name) => THREE.ShaderChunk[name]),
-    ...programs.map((name) => THREE.ShaderLib[name]?.fragmentShader),
+    ...programNames(patch).flatMap((name) => [
+      THREE.ShaderLib[name]?.vertexShader,
+      THREE.ShaderLib[name]?.fragmentShader,
+    ]),
   ].join('\0');
 }
 
@@ -263,7 +302,7 @@ function editedText(patch: ChunkEditsPatch<ChunkName>): string {
  * @canonical A text edit on three's shader chunks
  */
 export function installChunkEdits<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): boolean {
-  if (THREE.ShaderChunk[markedChunk(patch)].includes(patch.mark)) return true;
+  if (markedText(patch).includes(patch.mark)) return true;
   if (!(patch.requires ?? []).every((install) => install())) {
     warn(`[Shading] the ${patch.patch} patch is skipped, as a patch it reads did not install`);
     return false;
@@ -274,13 +313,16 @@ export function installChunkEdits<Name extends ChunkName>(patch: ChunkEditsPatch
     patchedChunkNames(patch).map((name) => [name, THREE.ShaderChunk[name]])
   ) as Chunks<ChunkName>;
   const patched = appliedEdits(current, patch);
-  const programs = patchedPrograms(patch.fragmentShaders ?? {});
+  const programs = patchedPrograms(patch);
   if (patched === null || programs === null) {
     failedOnText.set(patch.patch, text);
     warn(missingTextWarning(patch));
     return false;
   }
   Object.assign(THREE.ShaderChunk, patched);
-  for (const { program, fragmentShader } of programs) program.fragmentShader = fragmentShader;
+  for (const { program, vertexShader, fragmentShader } of programs) {
+    program.vertexShader = vertexShader;
+    program.fragmentShader = fragmentShader;
+  }
   return true;
 }

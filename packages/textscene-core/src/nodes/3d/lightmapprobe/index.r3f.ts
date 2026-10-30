@@ -10,4 +10,5 @@ nodeComponentRegistry.register({
   typeName: 'LightmapProbe',
   Component: Node3D,
   renderIntent: 'pending',
+  editorIcon: { icon: 'GizmoLightmapProbe' },
 });

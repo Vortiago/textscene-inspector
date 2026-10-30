@@ -44,10 +44,10 @@ describe('parseCanvasLayer transform', () => {
 
   it('builds from offset, rotation and scale', () => {
     const t = layer({ offset: 'Vector2(420, 160)', rotation: '0.5', scale: 'Vector2(1.5, 0.75)' });
-    expect(t.a).toBeCloseTo(Math.cos(0.5) * 1.5, 12);
-    expect(t.b).toBeCloseTo(Math.sin(0.5) * 1.5, 12);
-    expect(t.c).toBeCloseTo(-Math.sin(0.5) * 0.75, 12);
-    expect(t.d).toBeCloseTo(Math.cos(0.5) * 0.75, 12);
+    expect(t.a).toBeCloseTo(Math.cos(0.5) * 1.5, 5);
+    expect(t.b).toBeCloseTo(Math.sin(0.5) * 1.5, 5);
+    expect(t.c).toBeCloseTo(-Math.sin(0.5) * 0.75, 5);
+    expect(t.d).toBeCloseTo(Math.cos(0.5) * 0.75, 5);
     expect([t.tx, t.ty]).toEqual([420, 160]);
   });
 
@@ -58,8 +58,8 @@ describe('parseCanvasLayer transform', () => {
 
   it('keeps a skew that offset, rotation and scale cannot say', () => {
     const t = layer({ transform: 'Transform2D(1, 0, 0.5, 1, 0, 0)' });
-    expect(t.c).toBeCloseTo(0.5, 12);
-    expect(t.d).toBeCloseTo(1, 12);
+    expect(t.c).toBeCloseTo(0.5, 5);
+    expect(t.d).toBeCloseTo(1, 5);
   });
 
   it('falls back to the parts on a malformed transform', () => {

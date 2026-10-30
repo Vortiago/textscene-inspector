@@ -4,6 +4,9 @@
  */
 
 export const MATERIAL_SCENES = [
+  // `uv1_scale` on a clamped texture scales V from the image's top edge, as Godot's top-down V
+  // does: the bottom third holds the clamped blue row. Godot 4.6.3: (477,420) rgb(0,0,255).
+  { name: 'material-uv1-top-edge', file: 'unit-material-uv1-top-edge.tscn' },
   { name: 'material-ao', file: 'unit-material-ao.tscn' },
   { name: 'material-diffuse-mode', file: 'unit-material-diffuse-mode.tscn' },
   { name: 'material-specular-mode', file: 'unit-material-specular-mode.tscn' },
@@ -15,6 +18,9 @@ export const MATERIAL_SCENES = [
   // both axes. A tangent frame scaled by the longer axis shades the X tilts flatter.
   { name: 'material-normal-map-uv-density', file: 'unit-material-normal-map-uv-density.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
+  // World-triplanar floor tiles off the origin: each stripe sits at its world position, as Godot
+  // projects it. A sample at the tile's UV shifts the stripes with each tile.
+  { name: 'material-world-triplanar-floor', file: 'unit-material-world-triplanar-floor.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
@@ -25,6 +31,10 @@ export const MATERIAL_SCENES = [
   // editor orbit. The only golden that pairs a billboard with a DISABLED quad.
   // Sprite edges antialias against the ground.
   { name: 'material-billboard', file: 'unit-material-billboard.tscn' },
+  // A billboard that keeps a non-uniform scale beside an unscaled one: the
+  // squashed sphere lights by normals turned through the scaled basis, as
+  // Godot's MODELVIEW_NORMAL_MATRIX does.
+  { name: 'material-billboard-keep-scale', file: 'unit-material-billboard-keep-scale.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring beside a metallic, emissive body. Pins the
   // additive billboard gradient glow. Additive edges are AA-sensitive.

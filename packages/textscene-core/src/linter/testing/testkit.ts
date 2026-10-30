@@ -92,6 +92,11 @@ export function lint(content: string): Diagnostic[] {
   return new Linter().lint(content);
 }
 
+/** The diagnostics one rule raises for the content, none when it stays silent. */
+export function lintRule(content: string, ruleName: string): Diagnostic[] {
+  return lint(content).filter((d) => d.ruleName === ruleName);
+}
+
 /** Assert the scene is clean (no diagnostics). */
 export function expectClean(content: string): void {
   expect(lint(content)).toHaveLength(0);

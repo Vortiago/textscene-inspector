@@ -4,11 +4,17 @@
  */
 
 import { storedReal } from '../../../godot/math/real.js';
-import type { GodotSurface } from '../godotSurface.js';
+import type { GodotSurface, SurfaceBones } from '../godotSurface.js';
 
 export type Vec2 = readonly [number, number];
 export type Vec3 = readonly [number, number, number];
 export type Vec4 = readonly [number, number, number, number];
+
+/** The four bones that skin one vertex, and the four weights they take. */
+export interface VertexBones {
+  indices: Vec4;
+  weights: Vec4;
+}
 
 /**
  * The thirds a `create_mesh_array` splits its UV atlas into: the columns of a BoxMesh or PrismMesh,
@@ -23,6 +29,8 @@ export class SurfaceWriter {
   private readonly tangents: number[] = [];
   private readonly uvs: number[] = [];
   private readonly uv2s: number[] = [];
+  private readonly boneIndices: number[] = [];
+  private readonly boneWeights: number[] = [];
   private readonly indices: number[] = [];
 
   /** `hasUv2` is Godot's `p_add_uv2`: without it, `vertex` drops its UV2. */
@@ -40,6 +48,16 @@ export class SurfaceWriter {
     this.tangents.push(tangent[0], tangent[1], tangent[2], tangent[3]);
     this.uvs.push(uv[0], uv[1]);
     if (this.hasUv2) this.uv2s.push(uv2[0], uv2[1]);
+  }
+
+  /**
+   * The bones of the vertex just written, Godot's `bone_indices` and `bone_weights` pushed beside
+   * its position. Call it for every vertex or for none.
+   */
+  bones({ indices, weights }: VertexBones): void {
+    // Indexed, not spread, as in `vertex`.
+    this.boneIndices.push(indices[0], indices[1], indices[2], indices[3]);
+    this.boneWeights.push(weights[0], weights[1], weights[2], weights[3]);
   }
 
   /**
@@ -69,13 +87,26 @@ export class SurfaceWriter {
   }
 
   surface(): GodotSurface {
+    const bones = this.surfaceBones();
     return {
       positions: new Float32Array(this.positions),
       normals: new Float32Array(this.normals),
       tangents: new Float32Array(this.tangents),
       uvs: new Float32Array(this.uvs),
       uv2s: this.hasUv2 ? new Float32Array(this.uv2s) : undefined,
+      bones,
       indices: new Uint32Array(this.indices),
     };
+  }
+
+  /** The bones of every vertex, or undefined when none was written. */
+  private surfaceBones(): SurfaceBones | undefined {
+    if (this.boneIndices.length === 0) return undefined;
+    if (this.boneIndices.length !== this.vertexCount * 4) {
+      throw new Error(
+        `expected bones for each of ${this.vertexCount} vertices, got ${this.boneIndices.length / 4}`
+      );
+    }
+    return { indices: new Uint16Array(this.boneIndices), weights: new Float32Array(this.boneWeights) };
   }
 }

@@ -9,7 +9,8 @@ import skippedDirectories from '../packages/textscene-dev-kit/skippedDirectories
 
 const SOURCE_RE = /\.tsx?$/;
 const IMPORTER_RE = /\.(tsx?|m?js)$/;
-const TEST_RE = /\.(test|spec|testkit)\.(tsx?|m?js)$|(^|\/)testing\//;
+const TEST_SUITE_RE = /\.(test|spec)\.(tsx?|m?js)$/;
+const TEST_KIT_RE = /\.testkit\.(tsx?|m?js)$|(^|\/)testing\//;
 
 /** Never walked: the list `sourceScan.ts` reads, so both scans see the same files. */
 const SKIPPED_DIRECTORIES = new Set(skippedDirectories);
@@ -20,7 +21,17 @@ const SKIPPED_DIRECTORIES = new Set(skippedDirectories);
  * @canonical Whether a script reads a file as a test file
  */
 export function isTestFile(path) {
-  return TEST_RE.test(path);
+  return isTestSuite(path) || TEST_KIT_RE.test(path);
+}
+
+/**
+ * A `.test` or `.spec` file is a test suite. A test kit or a file under `testing/` is not, since
+ * it holds helpers that suites share.
+ *
+ * @canonical Whether a script reads a file as a test suite
+ */
+export function isTestSuite(path) {
+  return TEST_SUITE_RE.test(path);
 }
 
 /**

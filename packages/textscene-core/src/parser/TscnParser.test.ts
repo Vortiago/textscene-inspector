@@ -259,6 +259,25 @@ size = Vector3(1, 1, 1)
     });
   });
 
+  describe('refusal to instantiate', () => {
+    const refusesText = (body: string) =>
+      new TscnParser().parse(`[gd_scene format=3]\n\n${body}`).refusesToInstantiate;
+
+    it('is false for a scene with one root', () => {
+      expect(
+        refusesText('[node name="Root" type="Node3D"]\n\n[node name="A" type="Node3D" parent="."]\n')
+      ).toBe(false);
+    });
+
+    it('is true for a second heading with no parent', () => {
+      expect(refusesText('[node name="One" type="Node3D"]\n\n[node name="Two" type="Node3D"]\n')).toBe(true);
+    });
+
+    it('is true for a scene with no node', () => {
+      expect(refusesText('')).toBe(true);
+    });
+  });
+
   describe('stranded nodes', () => {
     afterEach(() => {
       vi.restoreAllMocks();
@@ -291,6 +310,20 @@ size = Vector3(1, 1, 1)
       expect(messages).toHaveLength(1);
       expect(messages[0]).toContain('"Landed" seated under the heading its parent_id_path names');
       expect(messages[0]).not.toContain('re-rooted');
+    });
+
+    it('warns that a heading its parent_id_path seated inside an instance keeps its name', () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+      new TscnParser().parse(
+        '[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://player.tscn" id="1"]\n\n[node name="Root" type="Node3D"]\n\n[node name="Player" parent="." instance=ExtResource("1") unique_id=7]\n\n[node name="Landed" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7, 9)]\n'
+      );
+
+      const messages = warn.mock.calls
+        .map(([message]) => String(message))
+        .filter((m) => m.includes('Orphaned node'));
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain('"Landed" seated inside the instance its parent_id_path enters');
     });
 
     it('warns that a heading Godot does not re-root is dropped', () => {

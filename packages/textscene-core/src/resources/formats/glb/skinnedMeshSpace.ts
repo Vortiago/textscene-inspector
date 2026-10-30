@@ -12,6 +12,7 @@ import * as THREE from 'three';
  * The value is the mesh's frame, which `skeletonFrame` writes on its first ask, because a skeleton
  * does not change once the GLB loads. Undefined until then, and null for a skeleton with no bone.
  */
+// eslint-disable-next-line no-restricted-syntax -- placeSkinnedMeshInSkeletonSpace writes an entry from outside, and skeletonFrame replaces it
 const frameOfPlacedMesh = new WeakMap<THREE.Object3D, THREE.Object3D | null | undefined>();
 
 const frameInverse = new THREE.Matrix4();

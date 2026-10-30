@@ -17,6 +17,7 @@ interface Preloadable {
 }
 
 /** Written only by `preloadResource`. One map per processor, so each is patched once. */
+// eslint-disable-next-line no-restricted-syntax -- the first build patches the processor with the loader and type, which a build from the key alone cannot reach
 const preloadedByProcessor = new WeakMap<ResourceProcessor<unknown>, Map<string, unknown>>();
 
 export function preloadResource<K extends keyof Preloadable>(

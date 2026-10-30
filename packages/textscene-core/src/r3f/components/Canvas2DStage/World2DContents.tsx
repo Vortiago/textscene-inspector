@@ -4,7 +4,7 @@
  * it inside its `<Canvas>`.
  */
 
-import { lazy, useLayoutEffect, useMemo } from 'react';
+import { lazy, useLayoutEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
@@ -13,9 +13,10 @@ import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.j
 import { EditedRootProvider } from '../../contexts/InstanceOwnersContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
+import { CanvasWorldScope } from '../../environment/WorldEnvironmentScope.js';
 import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
-import { canvasModulateColor } from '../../canvasModulate.js';
+import { useCanvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
@@ -62,7 +63,7 @@ export function World2DContents({
   pan,
   zoom,
 }: World2DCanvasProps) {
-  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+  const canvasModulate = useCanvasModulateColor(nodes);
   return (
     <TiledUploadDriver>
       <CanvasWorkspaceProvider workspace="2d">
@@ -74,7 +75,9 @@ export function World2DContents({
             {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
             <CanvasLighting2DProvider canvasModulate={canvasModulate}>
-              <NodeDispatcher nodes={nodes} />
+              <CanvasWorldScope>
+                <NodeDispatcher nodes={nodes} />
+              </CanvasWorldScope>
               {/* Inside the lighting provider, so a 2D light reaches a Control. */}
               <PendingSuspense>
                 <ControlCanvasLayer nodes={nodes} />

@@ -52,7 +52,7 @@ export const NO_OWNER = '';
  * (resource_format_text.cpp:2024-2025), for a node that instanced content owns.
  */
 export function hasForeignOwner(node: RawNode): boolean {
-  return node.owner !== undefined && node.owner !== '.';
+  return node.owner !== undefined && (node.owner !== '.' || node.ownerContentTrail !== undefined);
 }
 
 /**
@@ -79,6 +79,23 @@ export interface UniqueNameClaim {
 }
 
 /**
+ * Ties a setting whose `owner=` walk enters one instance to its copy in the instance its
+ * `owner_uid_path=` enters, since only the first instance's graft knows whether that walk finds a
+ * node (packed_scene.cpp:159-163). A symbol, as only its identity counts.
+ */
+export type OwnerHandOff = symbol;
+
+/** What a graft decided for an {@link OwnerHandOff}: handed off where its `owner=` walk finds no node, kept where it finds one. */
+export interface HandOffDecision {
+  readonly handOff: OwnerHandOff;
+  readonly isHandedOff: boolean;
+}
+
+/** The owner an `owner_uid_path=` finds in the instance, in the fields of {@link InstanceNameSetting} that name an owner. */
+export type InstanceOwnerFallback = Required<Pick<InstanceNameSetting, 'ownerInInstance'>> &
+  Pick<InstanceNameSetting, 'ownerContentTrail'>;
+
+/**
  * A `unique_name_in_owner` a heading writes inside an instance this file seats, as that instance
  * reads it: true acquires a free name, and false releases the node's own (node.cpp:2236-2249).
  */
@@ -91,6 +108,23 @@ export interface InstanceNameSetting {
   readonly isUnique: boolean;
   /** An explicit `owner=` below the instance, `''` for the instance itself. Absent: the nearest owner. */
   readonly ownerInInstance?: string;
+  /**
+   * The ids of an `owner_uid_path=` that continue inside the node `ownerInInstance` names, which the
+   * graft follows to the owner (`RawNode.ownerContentTrail`).
+   */
+  readonly ownerContentTrail?: readonly number[];
+  /**
+   * The owner to take where the `ownerInInstance` walk finds nothing, from the heading's
+   * `owner_uid_path=`, in this instance. Absent where the trail names an owner in no instance.
+   */
+  readonly ownerFallback?: InstanceOwnerFallback;
+  /**
+   * Set where the `owner_uid_path=` owner sits in another instance: where the `ownerInInstance` walk
+   * finds nothing, the graft hands this back, and the copy of the setting that awaits it lands there.
+   */
+  readonly ownerHandOff?: OwnerHandOff;
+  /** Set on that copy: it lands only once the instance its `owner=` walk enters hands this off. */
+  readonly awaits?: OwnerHandOff;
   /**
    * How many of the instance node's children the file seats before the setting lands, its own
    * heading included: a host child's `%Name` parent reads the table as of its heading.

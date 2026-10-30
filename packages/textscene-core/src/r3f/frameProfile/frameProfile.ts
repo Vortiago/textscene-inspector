@@ -23,6 +23,7 @@ const STATS_WINDOW_MS = 500;
 const STEP_KEYS: readonly StepKey[] = [...RENDER_STEPS, 'Other'];
 
 /** Written only by `startFrameProfile` and `Profile.stop`. */
+// eslint-disable-next-line no-restricted-syntax -- startFrameProfile replaces an entry and Profile.stop deletes it
 const profiles = new WeakMap<THREE.WebGLRenderer, Profile>();
 
 /** Starts timing `step` on `renderer`, when a profile runs there and a frame is open. */

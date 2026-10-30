@@ -5,7 +5,6 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
-  hsvToRgb,
   invertRgb,
   extractHsv,
   colorPickerScale,
@@ -39,21 +38,6 @@ function node(properties: Record<string, unknown>): SolveNode {
 function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
   return result.y;
 }
-
-describe('hsvToRgb', () => {
-  // core/math/color.cpp:182-227 (Color::set_hsv), case i:0 h in [0,1/6).
-  it('is pure red at h=0, s=1, v=1', () => {
-    expect(hsvToRgb(0, 1, 1)).toEqual({ r: 1, g: 0, b: 0, a: 1 });
-  });
-
-  it('is achromatic grey at s=0, independent of h', () => {
-    expect(hsvToRgb(0.42, 0, 0.5)).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
-  });
-
-  it('wraps h past 1 the same as Math::fmod on a negative-safe range', () => {
-    expect(hsvToRgb(1, 1, 1)).toEqual(hsvToRgb(0, 1, 1));
-  });
-});
 
 describe('invertRgb', () => {
   it('flips rgb and leaves alpha — core/math/color.h Color::inverted()', () => {

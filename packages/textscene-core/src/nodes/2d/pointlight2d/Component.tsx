@@ -4,12 +4,13 @@
  * (`r3f/lighting2d/CanvasLighting2D`). CanvasItem2D supplies transform, `visible` and z.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { applyTextureState, releaseBoundTexture } from '../../../resources/textures/applyTextureState';
+import type { ViewSampler } from '../../../resources/textures/textureView';
+import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
@@ -42,20 +43,30 @@ const OPTIONAL_ROLES = [
   'unshadowedFade',
 ] as const satisfies readonly (keyof LightQuadMaterials & PassMeshRole)[];
 
+/**
+ * Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED default
+ * (`viewport.h:419-420`, `renderer_canvas_render_rd.cpp:2344`), and the light-texture
+ * tap uses that item sampler (`canvas.glsl:774-782`). The cookie states clamp and never
+ * inherits a Repeat from the shared producer; a clamp-tagged entry is reused as-is.
+ */
+const COOKIE_SAMPLER: ViewSampler = { colorSpace: THREE.SRGBColorSpace, wrap: THREE.ClampToEdgeWrapping };
+
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
   // The cookie is often a GradientTexture2D, a radial falloff described inline,
   // not an image. `useTexture2D` resolves either kind.
-  const { texture: displayedTexture, missing } = useTexture2D(
+  const { texture: cookieSource, missing } = useTexture2D(
     props.texture,
     externalResources,
     internalResources
   );
+  // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
+  const cookie = useTextureView(props.enabled && !missing ? cookieSource : null, COOKIE_SAMPLER);
 
   // With no texture the light adds nothing and draws no placeholder: measured with `pnpm ref:godot`.
-  const lights = props.enabled && !!displayedTexture;
+  const lights = props.enabled && !!cookieSource;
   // `canvas.glsl:806` shadows only an item whose `light_mask` meets `shadow_item_cull_mask`. With
   // no reached item meeting it, the shadow lands nowhere, so the light casts nothing.
   const shadowReachesItem = (props.range_item_cull_mask & props.shadow_item_cull_mask) !== 0;
@@ -98,9 +109,9 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
       body={() =>
         !props.enabled ? null : missing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
-        ) : displayedTexture ? (
+        ) : cookie ? (
           <QuadMesh
-            texture={displayedTexture}
+            cookie={cookie}
             color={props.color}
             energy={props.energy}
             scale={props.texture_scale}
@@ -169,7 +180,7 @@ function LightQuad({
 }
 
 function QuadMesh({
-  texture,
+  cookie,
   color,
   energy,
   scale,
@@ -184,7 +195,7 @@ function QuadMesh({
   reachesUnshadowedItem,
   casters,
 }: {
-  texture: THREE.Texture;
+  cookie: THREE.Texture;
   color: Rgba;
   energy: number;
   scale: number;
@@ -207,23 +218,8 @@ function QuadMesh({
   /** The occluders this light is allowed to see, in world space. */
   casters: readonly WorldShadowCaster[];
 }) {
-  const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
-  const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
-
-  // Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED default
-  // (`viewport.h:419-420`, `renderer_canvas_render_rd.cpp:2344`), and the light-texture
-  // tap uses that item sampler (`canvas.glsl:774-782`). The cookie states clamp and never
-  // inherits a Repeat from the shared producer; a clamp-tagged entry is reused as-is.
-  const cookie = useMemo(
-    () => applyTextureState(texture, { repeat: false, colorSpace: THREE.SRGBColorSpace }),
-    [texture]
-  );
-  useEffect(
-    () => () => {
-      releaseBoundTexture(cookie);
-    },
-    [cookie]
-  );
+  const width = (cookie.image as { width?: number } | null | undefined)?.width ?? 1;
+  const height = (cookie.image as { height?: number } | null | undefined)?.height ?? 1;
 
   // A callback ref, not useRef, so the pose sampler starts once the quad is in
   // the tree: the world matrix it needs does not exist before that.

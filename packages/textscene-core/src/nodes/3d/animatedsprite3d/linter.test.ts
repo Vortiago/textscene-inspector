@@ -12,6 +12,7 @@ import { danglingResourceDiagnostics } from '../../../linter/danglingResources';
 import './linterParser';
 import './linter';
 import { errorsOf, reportsOf } from '../../../linter/testing/tierLists';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 const RULE_NAME = 'valid-animatedsprite3d-properties';
 
@@ -27,6 +28,7 @@ function context(rawProperties: Record<string, string>, declared: string[] = ['f
     children: [],
   };
   const scene: RawScene = {
+    ...INSTANTIABLE_SCENE,
     nodes: [node],
     externalResources: [],
     internalResources: declared.map((id) => ({ id, type: 'SpriteFrames', data: {} })),

@@ -1,0 +1,57 @@
+; One variable: a SubViewport with its own PointLight2D and CanvasModulate. Every Viewport keeps its
+; own World2D, so the light and the tint act on the Floor inside and on nothing outside, and the
+; Polygon2D outside the container stays untinted and unlit. Regress the pass and the Floor draws
+; flat grey, or the tint reaches the outside polygon. No other scene lights a SubViewport.
+
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="Gradient_cookie"]
+offsets = PackedFloat32Array(0.02, 0.65)
+colors = PackedColorArray(0.85, 0.85, 0.85, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cookie"]
+gradient = SubResource("Gradient_cookie")
+width = 160
+height = 160
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+; stretch is off, so the surface is exactly the sub-viewport's 200x150 and each probe addresses one
+; target pixel: screen = target pixel + (100, 80).
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Floor" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 150, 0, 150)
+
+[node name="Torch" type="PointLight2D" parent="Booth/SubViewport"]
+position = Vector2(60, 75)
+texture = SubResource("GradientTexture2D_cookie")
+color = Color(1, 0.55, 0.2, 1)
+
+[node name="Tint" type="CanvasModulate" parent="Booth/SubViewport"]
+color = Color(0.4, 0.5, 0.85, 1)
+
+; Outside the container, on the main canvas: no light, no tint.
+[node name="Outside" type="Polygon2D" parent="."]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(500, 80, 700, 80, 700, 230, 500, 230)

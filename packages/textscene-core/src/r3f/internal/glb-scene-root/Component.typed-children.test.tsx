@@ -21,6 +21,7 @@ import { settleLoads } from '../../testing/settleLoads';
 import { lineOpacities } from '../../testing/GizmoScene';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../../nodes/physics/shared/debugColor';
 import * as logger from '../../../logger';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 import '../../nodes/index';
 import '../../../nodes/node/index';
@@ -165,6 +166,7 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
   it('mounts under the GLB a sub-scene instances, at any instance depth', async () => {
     const LAMP_PATH = 'res://lamp.tscn';
     const lamp: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         {
           ...parsedNode({ name: 'LampRoot', type: 'Node3D' }),
@@ -196,6 +198,7 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
   it('registers the GLB objects at the merged node when a sub-scene’s root instances the GLB', async () => {
     const LAMP_PATH = 'res://lamp.tscn';
     const lamp: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [parsedNode({ name: 'LampRoot', type: 'Node', instance: 'ExtResource("rig")' })],
       externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }],
       internalResources: [],
@@ -344,6 +347,7 @@ describe('GLBSceneRoot — the gizmo of a typed node attached into the GLB', () 
   it('draws in its own colour when a sub-scene instances the GLB', async () => {
     const LAMP_PATH = 'res://lamp.tscn';
     const lamp: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         {
           ...parsedNode({ name: 'LampRoot', type: 'Node3D' }),

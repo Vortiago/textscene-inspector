@@ -5,6 +5,7 @@
  */
 
 import { darkened } from '../../godot/math/color';
+import { FLOATS_PER_VERTEX } from '../../godot/math/vector';
 import { Vector3Axis } from '../../godot/math/vector3Axis';
 import { godotColorToLinear } from '../godotColor';
 
@@ -17,7 +18,6 @@ const AXIS_COLORS = [
   { r: 0.16, g: 0.55, b: 0.96 },
 ];
 const NEGATIVE_ARM_DARKENING = 0.5;
-export const FLOATS_PER_VERTEX = 3;
 const VERTICES_PER_AXIS = 4;
 
 /**

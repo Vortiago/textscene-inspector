@@ -16,6 +16,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 const SCENE = `[gd_scene format=3]
 
@@ -72,6 +73,41 @@ describe('<CamerasPanel> with 2D cameras', () => {
     // World position (120, 60), DRAG_CENTER default, zoom 2.
     expect(probe.getAttribute('data-frame')).toBe('120,60@2');
     expect(probe.getAttribute('data-mode')).toBe('2D');
+  });
+
+  it('frames a Camera2D that a RemoteTransform2D moved at the relay’s position', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+
+[node name="Cam" type="Camera2D" parent="."]
+position = Vector2(20, 10)
+
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(500, 200)
+remote_path = NodePath("../Cam")
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('500,200@1');
+  });
+
+  it('frames a Camera2D under a Node2D that a RemoteTransform2D moved with its parent', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+
+[node name="Player" type="Node2D" parent="."]
+position = Vector2(100, 50)
+
+[node name="Cam" type="Camera2D" parent="Player"]
+position = Vector2(20, 10)
+
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(300, 0)
+remote_path = NodePath("../Player")
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('320,10@1');
   });
 
   it('frames a top_level Camera2D under a translated Node2D at its own position', () => {
@@ -157,6 +193,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
 [node name="Player" parent="." instance=ExtResource("4_ray")]
 `;
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
           children: [makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] })],

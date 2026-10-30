@@ -4,7 +4,17 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useThree } from '@react-three/fiber';
 import { useEffect, type ReactNode } from 'react';
+import type * as THREE from 'three';
+import { readableLiveTarget } from '../liveTargets.testkit';
+import {
+  decalAtlasRect,
+  decalAtlasTexture,
+  holdDecalTexture,
+  releaseDecalTexture,
+} from '../../nodes/3d/decal/decalAtlas';
+import { areaLightAtlasTexture, holdAreaTexture, releaseAreaTexture } from '../areaLight/areaLightAtlas';
 
 const warnCalls: unknown[][] = [];
 vi.mock('../../logger.js', async (importOriginal) => {
@@ -46,6 +56,9 @@ function mount(children: ReactNode) {
     </ViewportPassProvider>
   );
 }
+
+const A_IN_CYCLE: ViewportPass = { dependsOn: ['b'], render: () => {} };
+const B_IN_CYCLE: ViewportPass = { dependsOn: ['a'], render: () => {} };
 
 describe('useRegisterViewportPass (no provider)', () => {
   it('is a safe no-op, returning a cleanup function', async () => {
@@ -153,6 +166,34 @@ describe('<ViewportPassOrchestrator>', () => {
       expect(seenOther.at(-1)).toBeNull();
     });
 
+    it('keeps the cycle its reader holds when an unrelated pass registers', async () => {
+      const seen: (unknown | null)[] = [];
+      const cycle = (
+        <>
+          <Registrar path="a" pass={A_IN_CYCLE} />
+          <Registrar path="b" pass={B_IN_CYCLE} />
+        </>
+      );
+      const renderer = await mount(
+        <>
+          {cycle}
+          <CycleWatch path="b" seen={seen} />
+        </>
+      );
+      const before = seen.at(-1);
+      await renderer.update(
+        <ViewportPassProvider>
+          <>
+            {cycle}
+            <CycleWatch path="b" seen={seen} />
+            <Registrar path="other" pass={{ dependsOn: [], render: () => {} }} />
+          </>
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+      expect(seen.at(-1)).toBe(before);
+    });
+
     it('logs a warning naming the offending sampler', async () => {
       warnCalls.length = 0;
       await mount(
@@ -166,3 +207,86 @@ describe('<ViewportPassOrchestrator>', () => {
     });
   });
 });
+
+/** Counts its renders into `renders`, as a texture slot that names no ViewportTexture reads the cycle. */
+function NoCycleWatch({ renders }: { renders: number[] }) {
+  useViewportPassCycle(null);
+  renders[0]!++;
+  return null;
+}
+
+describe('useViewportPassCycle', () => {
+  it('leaves a reader of no path alone when a pass registers', async () => {
+    const renders = [0];
+    const watch = <NoCycleWatch renders={renders} />;
+    const renderer = await mount(watch);
+    await renderer.update(
+      <ViewportPassProvider>
+        {watch}
+        <Registrar path="a" pass={{ dependsOn: [], render: () => {} }} />
+        <ViewportPassOrchestrator />
+      </ViewportPassProvider>
+    );
+    expect(renders[0]).toBe(1);
+  });
+});
+
+/**
+ * Godot rebuilds its decal and area light atlases before it draws the viewports
+ * (`renderer_rd/storage_rd/utilities.cpp:256-258`, `rendering_server_default.cpp:102`), so an atlas
+ * copies a target as it stood before this frame's passes.
+ */
+describe('<ViewportPassOrchestrator> and the texture atlases', () => {
+  const BLUE = [0, 0, 255, 255];
+  const GREEN = [0, 255, 0, 255];
+
+  /** A target that reads blue until its pass paints it green, and the pass that paints it. */
+  function paintedTarget() {
+    const target = readableLiveTarget(2, BLUE, BLUE);
+    const pass: ViewportPass = { dependsOn: [], render: () => target.paint(GREEN, GREEN) };
+    return { target, pass };
+  }
+
+  it('rebuilds the decal atlas before the passes draw', async () => {
+    const { target, pass } = paintedTarget();
+    holdDecalTexture(target.texture);
+    const renderer = await mount(
+      <>
+        <GpuTextureLimit />
+        <Registrar path="a" pass={pass} />
+      </>
+    );
+    await renderer.advanceFrames(1, 16);
+    expect(decalAtlasTexel(target.texture)).toEqual(BLUE);
+    releaseDecalTexture(target.texture);
+    target.withdraw();
+    await renderer.unmount();
+  });
+
+  it('rebuilds the area light atlas before the passes draw', async () => {
+    const { target, pass } = paintedTarget();
+    holdAreaTexture(target.texture);
+    const renderer = await mount(<Registrar path="a" pass={pass} />);
+    await renderer.advanceFrames(1, 16);
+    const atlas = areaLightAtlasTexture() as THREE.DataTexture;
+    expect([...(atlas.image.data as Uint8Array).subarray(0, 4)]).toEqual(BLUE);
+    releaseAreaTexture(target.texture);
+    target.withdraw();
+    await renderer.unmount();
+  });
+});
+
+/** The fake renderer reports no texture size limit, which the decal atlas fits against. */
+function GpuTextureLimit() {
+  useThree((state) => state.gl).capabilities.maxTextureSize = 4096;
+  return null;
+}
+
+/** The first level 0 texel the decal atlas holds for `texture`. */
+function decalAtlasTexel(texture: THREE.Texture): number[] {
+  const atlas = decalAtlasTexture();
+  const { width, height } = atlas.image as { width: number; height: number };
+  const rect = decalAtlasRect(texture)!;
+  const offset = (Math.round(rect.y * height) * width + Math.round(rect.x * width)) * 4;
+  return [...(atlas.mipmaps[0] as unknown as { data: Uint8Array }).data.subarray(offset, offset + 4)];
+}

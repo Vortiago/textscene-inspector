@@ -10,8 +10,10 @@ import * as THREE from 'three';
 import { createCanvasTarget, createSceneTarget } from './offscreenViewport';
 import { useTargetViews } from './targetViews';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
+import { ownedTextureView } from '../../../resources/textures/textureView';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
+import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
 
 type TargetViews = ReturnType<typeof useTargetViews>;
 
@@ -22,7 +24,7 @@ function Probe({
   target: THREE.WebGLRenderTarget;
   views: { current: TargetViews | null };
 }) {
-  views.current = useTargetViews(target);
+  views.current = useTargetViews(target, false);
   return null;
 }
 
@@ -30,7 +32,7 @@ function Probe({
 async function mount(target: THREE.WebGLRenderTarget) {
   const views: { current: TargetViews | null } = { current: null };
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-  await ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(
     <>
       <Probe target={target} views={views} />
       <CaptureRenderer captured={captured} />
@@ -42,8 +44,15 @@ async function mount(target: THREE.WebGLRenderTarget) {
     await withStubbedGl(gl, { onRender: (bound) => drawnInto.push(bound) }, () => views.current!.fill());
     return drawnInto;
   };
-  return { views: views.current!, fill };
+  return { views: views.current!, fill, gl, unmount: () => renderer.unmount() };
 }
+
+/** A reader that samples a view through its own window, so it reads its own copy. */
+const flippedReader = (view: THREE.Texture) =>
+  ownedTextureView(view, {
+    colorSpace: THREE.SRGBColorSpace,
+    window: { repeat: { x: -1, y: 1 }, offset: { x: 1, y: 0 } },
+  });
 
 describe('useTargetViews', () => {
   it("serves a 3D-content target's own texture as its decoding view, which its storage decodes already", async () => {
@@ -133,5 +142,39 @@ describe('useTargetViews', () => {
     expect(await fill()).toHaveLength(1);
     releaseSecond();
     expect(await fill()).toEqual([]);
+  });
+
+  it("fills a reader's own copy of a view after the view", async () => {
+    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    views.decoding.retain();
+    const reader = flippedReader(views.decoding.texture);
+    const release = holdUntilReleased(reader);
+    expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.decoding.texture, reader]);
+    release();
+  });
+
+  it('fills its views and their readers within one save and restore of the renderer', async () => {
+    const { views, fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    views.decoding.retain();
+    const release = holdUntilReleased(flippedReader(views.decoding.texture));
+    // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
+    const save = vi.spyOn(gl, 'getActiveCubeFace');
+    await fill();
+    expect(save).toHaveBeenCalledTimes(1);
+    release();
+  });
+
+  it('leaves the renderer alone when no reader holds a view or a copy', async () => {
+    const { fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
+    const save = vi.spyOn(gl, 'getActiveCubeFace');
+    await fill();
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('gives a reader the view itself once the target is gone (edge case)', async () => {
+    const { views, unmount } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    await unmount();
+    expect(flippedReader(views.plain.texture)).toBe(views.plain.texture);
   });
 });

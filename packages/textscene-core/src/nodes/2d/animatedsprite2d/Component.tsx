@@ -11,7 +11,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
 import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { useCanvas2DTexture, useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
+import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -24,6 +24,7 @@ import { frameAtTime, clipDuration } from '../../../resources/textures/spritefra
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
 const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
@@ -140,21 +141,23 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
 
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
   // against those pools: the scene's, or the .tres's.
-  const { texture: frameTexture, missing: frameMissing } = useTexture2D(
+  const {
+    texture: frameTexture,
+    size: frameSize,
+    missing: frameMissing,
+  } = useTexture2D(
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
-    resolved?.subResources ?? NO_INTERNAL_RESOURCES
+    resolved?.subResources ?? NO_INTERNAL_RESOURCES,
+    'plain',
+    resolved ? isLocalToScene(resolved.resource) : undefined
   );
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
   // once it no longer draws, so playback leaks no GPU texture.
   const sampler = useNode2DTextureSampler(props);
   const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
-  const srgbDefines = useCanvasSrgbDefines(displayedTexture);
-  const { width, height } = useMemo(
-    () => frameSizePx(frameTexture ?? undefined, WHOLE_FRAME),
-    [frameTexture]
-  );
+  const { width, height } = useMemo(() => frameSizePx(frameSize, WHOLE_FRAME), [frameSize]);
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
   // and so does a `.tres` still loading. The placeholder is for a resource that is set but failed.
@@ -177,12 +180,11 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
         // this remounts when the map appears, not per frame.
         const program = materialProgramInputs({
           props: {
-            map: displayedTexture,
+            ...canvasMapProps(displayedTexture),
             color,
             opacity,
             transparent: true,
             depthWrite: false,
-            defines: srgbDefines,
           },
           merge: [pixelMaterial],
         });

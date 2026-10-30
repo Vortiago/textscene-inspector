@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittextmeshwoff2"]
+
+; The one variable: a TextMesh with a `.woff2` scene font, whose `glyf` table is transformed
+; (WOFF2 section 5.1) and which is a variable font drawn at its `fvar` defaults. No other TextMesh
+; golden names a WOFF2. The scene is that of unit-text-mesh.tscn otherwise, with the glyphs b, e, a and d, which
+; the subset holds and which carry the holes and the curves.
+
+[ext_resource type="FontFile" path="res://fonts/recursive-vf-subset.woff2" id="1_font"]
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_deep"]
+material = SubResource("StandardMaterial3D_uv")
+text = "bead"
+font = ExtResource("1_font")
+font_size = 64
+depth = 0.2
+
+[sub_resource type="TextMesh" id="TextMesh_flat"]
+material = SubResource("StandardMaterial3D_uv")
+text = "bead"
+font = ExtResource("1_font")
+font_size = 64
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Deep" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_deep")
+
+[node name="Flat" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_flat")

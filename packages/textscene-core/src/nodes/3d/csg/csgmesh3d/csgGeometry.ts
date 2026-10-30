@@ -22,7 +22,7 @@ import {
 } from '../../../../resources/meshes/meshSource';
 import {
   primitiveMeshFiles,
-  isAwaitingFontMetrics,
+  isAwaitingFont,
   primitiveMeshFontFiles,
   referencesKey,
 } from '../../../../resources/meshes/primitivemesh/surface';
@@ -51,8 +51,8 @@ export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const mesh = meshOf(properties, ctx);
   // A mesh that names nothing builds Godot's empty brush (`csg_shape.cpp:1126-1128`).
   if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
-  // Not built while the metrics of its font settle, and the context changes when they have.
-  if (!isDrawableMesh(mesh) || isAwaitingFontMetrics(mesh)) return null;
+  // Not built while the outlines and metrics of its font settle, and the context changes when they have.
+  if (!isDrawableMesh(mesh) || isAwaitingFont(mesh)) return null;
   return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
 
@@ -80,12 +80,9 @@ export function csgMesh3DReadsFonts(properties: Record<string, unknown>, ctx: Cs
   return mesh ? primitiveMeshFontFiles(mesh, ctx.loadedFont) : [];
 }
 
-export function csgMesh3DAwaitsFontMetrics(
-  properties: Record<string, unknown>,
-  ctx: CsgGeometryContext
-): boolean {
+export function csgMesh3DAwaitsFont(properties: Record<string, unknown>, ctx: CsgGeometryContext): boolean {
   const mesh = meshOf(properties, ctx);
-  return mesh !== null && isAwaitingFontMetrics(mesh);
+  return mesh !== null && isAwaitingFont(mesh);
 }
 
 export function csgMesh3DReadsFiles(

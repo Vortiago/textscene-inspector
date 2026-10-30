@@ -338,7 +338,7 @@ describe('comparison sheets', () => {
    * useful pair, and a RigidBody3D draws nothing but its capture shows its mesh.
    */
   describe('status agrees with the render registration', () => {
-    const scenePassTypes = new Set(nodeComponentRegistry.scenePasses().flatMap((pass) => pass.typeNames));
+    const scenePassTypes = nodeComponentRegistry.scenePassTypeNames();
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))

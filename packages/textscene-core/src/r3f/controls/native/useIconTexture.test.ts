@@ -5,9 +5,10 @@
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { createElement, type ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
+import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { canvasMapProps } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import { fakeCanvasRenderer } from '../../testing/fakeCanvasRenderer';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
@@ -45,9 +46,9 @@ describe('useIconTexture', () => {
   });
 
   it('turns on the sRGB multiply every painter draws it through', () => {
-    const { result } = renderHook(() => useCanvasSrgbDefines(useIconTexture(ICON)));
+    const { result } = renderHook(() => canvasMapProps(useIconTexture(ICON)));
 
-    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    expect(result.current.defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('memoises on the url, so a re-render with the same icon does not reload', () => {
@@ -104,7 +105,7 @@ describe('useIconTexture', () => {
     expect(canvas.gl.texParameterf).toHaveBeenCalledTimes(1);
   });
 
-  it('disposes the texture when the icon turns off, rather than leaking it', () => {
+  it('disposes the texture when the icon turns off, rather than leaking it', async () => {
     const { result, rerender } = renderHook(({ url }) => useOptionalIconTexture(url), {
       initialProps: { url: ICON as string | null },
     });
@@ -112,6 +113,7 @@ describe('useIconTexture', () => {
     const dispose = vi.spyOn(texture, 'dispose');
 
     rerender({ url: null });
+    await act(async () => Promise.resolve());
 
     expect(result.current).toBeNull();
     expect(dispose).toHaveBeenCalled();
@@ -134,6 +136,7 @@ describe('useNodeIcon', () => {
     const themed: ThemedIconRef = {
       ref: 'SubResource("G1")',
       resources: { externalResources: [], internalResources: PROCEDURAL },
+      isHeldLocally: true,
     };
     const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
 
@@ -144,10 +147,27 @@ describe('useNodeIcon', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  /** Godot sets the ViewportTexture up only when every holder is local to scene (`core/io/resource.cpp:497-503`). */
+  it("draws Godot's placeholder for a ViewportTexture icon a Theme holds that is not local to scene", () => {
+    const themed: ThemedIconRef = {
+      ref: 'SubResource("Viewport")',
+      resources: {
+        externalResources: [],
+        internalResources: [
+          { id: 'Viewport', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+        ],
+      },
+      isHeldLocally: false,
+    };
+    const { result } = renderHook(() => useNodeIcon(themed, ICON));
+    expect(result.current?.image).toBe(unconfiguredViewportTexture().image);
+  });
+
   it("falls back to the vendored default when the themed ref cannot resolve — `Control::_set`'s NIL branch removes an invalid icon override, matching an absent one", () => {
     const themed: ThemedIconRef = {
       ref: 'ExtResource("nope")',
       resources: { externalResources: [], internalResources: [] },
+      isHeldLocally: true,
     };
     const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
 

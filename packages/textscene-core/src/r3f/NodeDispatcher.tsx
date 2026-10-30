@@ -16,9 +16,11 @@ import {
   canvasRootRanges,
   isCanvasLayerType,
   declaredCanvasLayers,
+  hostsOwnCanvas,
   layerRanks,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {
   CanvasRootRangesProvider,
   LayerRanksProvider,
@@ -39,14 +41,17 @@ import {
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
-import { collapseLiveNode, singlePathCache } from './liveSceneTree.js';
+import { useLiveStepOf } from './useLiveSceneTree.js';
+import { useLivePatchedNode } from './liveNodePatches.js';
+import { useResourceLoader } from '../resources/useResource.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { GuardedNodeComponent } from './components/GuardedNodeComponent.js';
-import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
+import { NodeEditorIcon } from './nodeIcon/NodeEditorIcon.js';
+import { useCanvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
 import { CanvasRootScope } from './canvasRootScope.js';
@@ -59,8 +64,7 @@ import {
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { liftedWithoutOverrides } from './internal/glb-scene-root/glbNodeOverrides.js';
-import { glbSceneRootChildCount } from './internal/glb-scene-root/glbHierarchy.js';
-import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
+import { glbHostChildrenInOrder } from './internal/glb-scene-root/glbHierarchy.js';
 import { useGlb } from '../resources/useGlb.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
@@ -101,7 +105,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
     if (nodes.some(containsCsgShape)) prefetchCsgModule();
   }, [nodes]);
 
-  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+  const canvasModulate = useCanvasModulateColor(nodes);
   // Pure functions of the tree, so the Control walk derives the same numbers on its own.
   const ranks = useMemo(() => layerRanks(declaredCanvasLayers(nodes)), [nodes]);
   const rootRanges = useMemo(() => allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children, [nodes]);
@@ -237,7 +241,15 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * component, with its inline children and the `extraChildren` of the instance
  * fallback. A merged instance root renders here like an authored node.
  */
-function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }: PlainNodeProps): ReactNode {
+function PlainNode({
+  node: authored,
+  path,
+  children: extraChildren,
+  inlineChildrenOrder,
+}: PlainNodeProps): ReactNode {
+  // A RemoteTransform target and a path-mode CSGPolygon3D read what the live scene passes bind
+  // at their path, since a sub-scene's node is shared by every instance of it (ADR-0060).
+  const node = useLivePatchedNode(authored, path);
   const ownOrder = useTreeOrder();
   const inlineBase = inlineChildrenOrder ?? ownOrder;
   const inlineOrders = useMemo(
@@ -249,17 +261,22 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
   const paintRange = usePaintRange();
   // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
   // walks each child's whole subtree, which on every render is quadratic in depth.
-  const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
+  // A sub-viewport is a canvas of its own, whose runs start at the beginning, as its Control walk's do.
+  const allocated = useMemo(
+    () => allocateNodePaintRange(isViewportBoundary(node.type) ? WHOLE_CANVAS_RANGE : paintRange, node),
+    [paintRange, node]
+  );
   // A pushed `visible` takes the place of the authored one, as a GLB node's does.
   const animatedVisible = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
   const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node, animatedVisible);
   const inheritedCanvasRoots = useCanvasRootRanges();
   // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
-  // its counter over its children (`canvas_layer.cpp:261-267`).
+  // its counter over its children (`canvas_layer.cpp:261-267`). So is a sub-viewport.
   const startsCanvas = isCanvasLayerType(node.type);
+  const hostsCanvas = hostsOwnCanvas(node);
   const canvasRoots = useMemo(
-    () => (startsCanvas ? canvasRootRanges(node.children, allocated.children) : inheritedCanvasRoots),
-    [startsCanvas, node.children, allocated.children, inheritedCanvasRoots]
+    () => (hostsCanvas ? canvasRootRanges(node.children, allocated.children) : inheritedCanvasRoots),
+    [hostsCanvas, node.children, allocated.children, inheritedCanvasRoots]
   );
 
   // Whether `Object::cast_to<CanvasItem>(get_parent())` succeeds for this node.
@@ -290,6 +307,11 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
   ));
 
   const children: ReactNode[] = [];
+  // Inside the node's own group, as a child, so the icon sits at its origin whatever the component draws.
+  const editorIcon = nodeComponentRegistry.editorIconOf(node.type);
+  if (editorIcon) {
+    children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
+  }
   if (inlineChildren.length > 0) {
     children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
   }
@@ -340,6 +362,8 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
                               </CanvasRootRangesProvider>
                             </WorldRoot>
                           </CanvasLayerScope>
+                        ) : hostsCanvas ? (
+                          <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
                         ) : (
                           <>{children}</>
                         )}
@@ -357,19 +381,19 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
 }
 
 /**
- * The two groups of an injected instance's children in tree order. Godot adds the sub-scene's own
+ * The two groups of a GLB instance's children in tree order. Godot adds the sub-scene's own
  * nodes when it instantiates the sub-scene, before the instancing scene adds its children
  * (`packed_scene.cpp:231-264`, `:535-541`).
  */
-const SUB_SCENE_NODES = 0;
+const GLB_OBJECTS = 0;
 const INSTANCING_SCENE_NODES = 1;
 
 /**
  * Loads the PackedScene a node's `instance` ref names and composes it into the
  * tree. A single-root `.tscn` merges into the instance node at the same path
- * (ADR-0013). A `.glb` is the instance node's own content, mounted at its path. A multi-root
- * scene injects its roots as children. Either way the loaded scene's resources are scoped to the
- * subtree. An instance of a scene that already encloses it (cyclic instancing) renders as a failed load.
+ * (ADR-0013). A `.glb` is the instance node's own content, mounted at its path. Either way the
+ * loaded scene's resources are scoped to the subtree. An instance of a scene that already encloses
+ * it (cyclic instancing), or of one Godot refuses to instantiate, renders as a failed load.
  */
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const ambientScope = useSceneResources();
@@ -382,19 +406,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Null for a scene this node never loads: an unresolvable ref or a cycle.
   const loadPath = isCyclic ? null : scenePath;
 
-  useEffect(() => {
-    if (!isCyclic) return;
-    warn(
-      `[NodeDispatcher] "${path}" instances ${scenePath}, which already encloses it: Godot refuses cyclic instancing`
-    );
-  }, [isCyclic, path, scenePath]);
-
   // Registered here, not in a parent: React runs a parent's effect after this
   // component's load effect.
   const result = useInstancedScene(instanceRef, externalResources, loadPath);
   const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
 
-  // The scenes that enclose the content of a `.glb` or multi-root instance. A stable identity,
+  // The scenes that enclose the content of a `.glb` instance. A stable identity,
   // since it keys the provider below.
   const contentScenePaths = useMemo(
     () => (loadPath ? [...enclosingScenePaths, loadPath] : enclosingScenePaths),
@@ -402,48 +419,51 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   );
 
   // The same merge the tree, inspector and panels make. `effective !== node`
-  // means a single root `.tscn` merged in. A `.glb` or multi-root scene returns `node`.
-  // Memoized ahead of the early returns, so a hover elsewhere does not re-merge
-  // this subtree every frame.
-  const effective = useMemo(() => {
-    if (!loadedScene) return node;
-    const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
-    return collapseLiveNode(node, scope, singlePathCache(loadPath, loadedScene));
-  }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
+  // means a single root `.tscn` merged in. A `.glb` or a refused scene returns `node`.
+  // The live tree hands back the same step until a load changes it, so a hover elsewhere
+  // does not re-merge this subtree.
+  const scope = useMemo<SceneScope>(
+    () => ({ ...ambientScope, instancedScenePaths: enclosingScenePaths }),
+    [ambientScope, enclosingScenePaths]
+  );
+  const step = useLiveStepOf(node, scope);
+  const effective = step.node;
+
+  const isRefused = isCyclic || step.isRefusedInstance;
+  useEffect(() => {
+    if (isRefused) warn(`[NodeDispatcher] "${path}" instances ${scenePath}, which Godot refuses`);
+  }, [isRefused, path, scenePath]);
 
   const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
-  // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
-  // move to their `index=` among them (`packed_scene.cpp:541-544`). The root takes this load.
+  // Loaded here, not by the GLB root, for its objects: the host children move to their `index=`
+  // among them (`packed_scene.cpp:541-544`). The root takes this load.
   const glb = useGlb(glbPath);
+  const loader = useResourceLoader();
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a stripped node is a new
-  // object. The objects are counted only for a child that states an `index=`.
+  // object. The order is read only for a child that states an `index=`, from the loader's template,
+  // whose children every consumer of the GLB shares.
   const shallow = useMemo(() => {
     const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
     if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
-    return { ...stripped, children: orderAmongPlaced(stripped.children, glbSceneRootChildCount(glb.value)) };
-  }, [node, glbPath, glb.value]);
+    const objects = (glbPath && loader?.glbMeshes.getCached(glbPath)) || glb.value;
+    return { ...stripped, children: glbHostChildrenInOrder(objects, stripped.children) };
+  }, [node, glbPath, glb.value, loader]);
   // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
-  const injectedOrders = useMemo(() => {
-    const groups = childOrders(order, 2);
-    return {
-      roots: childOrders(groups[SUB_SCENE_NODES]!, loadedScene?.nodes.length ?? 0),
-      authored: groups[INSTANCING_SCENE_NODES]!,
-    };
-  }, [order, loadedScene?.nodes.length]);
-  // The injected roots draw from the tail of `shallow`'s range. Splitting it
-  // gives each root a run of its own, as an authored child gets.
-  const injectedRanges = useMemo(
+  const groupOrders = useMemo(() => childOrders(order, 2), [order]);
+  // The GLB root draws from the tail of `shallow`'s range, as an authored child gets a run of its own.
+  const glbRange = useMemo(
     () =>
-      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? []).children,
+      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? [])
+        .children[0],
     [paintRange, shallow, loadedScene?.nodes]
   );
 
-  // Unresolvable ref, cycle or failed load: keep the node visible with a magenta placeholder
-  // child, matching the missing-texture UX. Godot's editor makes a `MissingNode` here
+  // Unresolvable ref, cycle, refused scene or failed load: keep the node visible with a magenta
+  // placeholder child, matching the missing-texture UX. Godot's editor makes a `MissingNode` here
   // (`packed_scene.cpp:267-269`), which the host's own children hang below.
-  if (!loadPath || result.status === 'unavailable') {
+  if (!loadPath || result.status === 'unavailable' || step.isRefusedInstance) {
     return (
       <PlainNode node={held} path={path}>
         <MissingResourcePlaceholder shape="box" />
@@ -465,27 +485,25 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     );
   }
 
-  // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
+  // Not merged and not a GLB, so the live tree and the loader disagree on this scene: draw the
+  // node as authored, not a non-GLB root through the GLB mount.
+  if (glbPath === undefined) return <PlainNode node={held} path={path} />;
+
+  // A `.glb` mounts at this node's path.
   return (
     <InstanceOwnerProvider path={belowRoot(path)} editablePaths={loadedScene.editableInstances}>
-      <GlbInstanceProvider node={node} path={path} glb={glbPath !== undefined ? glb : undefined}>
-        <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
+      <GlbInstanceProvider node={node} path={path} glb={glb}>
+        <PlainNode node={shallow} path={path} inlineChildrenOrder={groupOrders[INSTANCING_SCENE_NODES]!}>
           <SceneResourcesProvider
             internalResources={loadedScene.internalResources}
             externalResources={loadedScene.externalResources}
           >
             <InstancedScenePathsProvider paths={contentScenePaths}>
-              {loadedScene.nodes.map((child, i) => (
-                <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
-                  <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                    {glbPath !== undefined ? (
-                      <GlbRootNode node={child} />
-                    ) : (
-                      <DispatchedNode node={child} path={joinPath(path, child.name)} />
-                    )}
-                  </TreeOrderProvider>
-                </PaintRangeProvider>
-              ))}
+              <PaintRangeProvider value={glbRange!}>
+                <TreeOrderProvider order={[...groupOrders[GLB_OBJECTS]!, 0]}>
+                  <GlbRootNode node={loadedScene.nodes[0]!} />
+                </TreeOrderProvider>
+              </PaintRangeProvider>
             </InstancedScenePathsProvider>
           </SceneResourcesProvider>
         </PlainNode>

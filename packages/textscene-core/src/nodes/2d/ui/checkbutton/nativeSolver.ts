@@ -15,6 +15,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   buttonTextAlignShiftPx,
@@ -23,7 +24,6 @@ import {
   swapAlignmentSide,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -129,7 +129,7 @@ export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {})
   const requests: TextureSlotRequest[] = [];
   for (const name of CHECK_BUTTON_ICON_THEME_NAMES) {
     const themed = themedIcons[name];
-    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+    if (themed) requests.push(themedSlotRequest(name, themed));
   }
   return requests;
 };
@@ -159,6 +159,18 @@ export function checkButtonIconNaturalSize(
     h = Math.max(h, size.y);
   }
   return { x: w, y: h };
+}
+
+/**
+ * The size Godot draws the current icon at: its own, fitted, at the offset the larger icon sets
+ * (`check_button.cpp:133-145`). An icon that reports size 0 draws nothing.
+ */
+export function checkButtonDrawnIconSize(
+  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
+  key: CheckButtonIconKey
+): Vector2 {
+  const own = n.textureSlots[CHECK_BUTTON_ICON_THEME_NAME[key]] ?? CHECK_BUTTON_ICON_NATURAL_SIZE;
+  return fitIconSize(own, checkButtonIconMaxWidth(n.constants));
 }
 
 /** `button_checked_color` and `button_unchecked_color`, both `Color(1, 1, 1)` (`default_theme.cpp:352-353`) and overridable. Read whatever `disabled` says: the `_disabled` icons carry the dimming (`check_button.cpp:139-141`). */
@@ -253,8 +265,8 @@ interface CheckButtonContentInput {
 }
 
 interface CheckButtonContentLayout {
-  /** Local to the control's own top-left, Godot px. */
-  iconRect: Rect2;
+  /** The icon's top-left, local to the control's own top-left, Godot px. */
+  iconPosition: Vector2;
   /** The text paragraph's box top-left, local Godot px. `null` when there is no text. */
   textOffset: Vector2 | null;
 }
@@ -279,11 +291,10 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     rtl,
   } = input;
 
-  const iconRect: Rect2 = {
-    x: Math.floor(rtl ? marginX : rectSize.x - (iconSize.x + marginX)),
-    y: Math.floor((rectSize.y - iconSize.y) / 2 + checkVOffset),
-    w: iconSize.x,
-    h: iconSize.y,
+  // Unrounded: an odd height leaves the icon on a half pixel (`check_button.cpp:135-140`).
+  const iconPosition: Vector2 = {
+    x: rtl ? marginX : rectSize.x - (iconSize.x + marginX),
+    y: (rectSize.y - iconSize.y) / 2 + checkVOffset,
   };
 
   let textOffset: Vector2 | null = null;
@@ -298,5 +309,5 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     textOffset = { x, y };
   }
 
-  return { iconRect, textOffset };
+  return { iconPosition, textOffset };
 }

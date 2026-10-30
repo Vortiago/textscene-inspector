@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
+import { MAX_LIGHTS_PER_ITEM, MAX_LIGHTS_PER_RENDER } from '../../godot/rendering/rendering';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import type { CanvasLightDeclaration, ItemPlacement } from './itemLightList';
 import type { PassMesh } from './lightAccumulationPass';
@@ -19,9 +19,9 @@ const CAP = MAX_LIGHTS_PER_ITEM - 1;
 /** A viewport no light misses. */
 const EVERYWHERE: Rect2 = { x: -1e6, y: -1e6, w: 2e6, h: 2e6 };
 
-const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
-function positional(sequence: number): CanvasLightDeclaration {
+function positional(sequence: number | null): CanvasLightDeclaration {
   return { reach: DEFAULT_LIGHT_CULL_KEY, sequence, shadowItemCullMask: null, tintsShadow: false };
 }
 
@@ -47,12 +47,16 @@ function litQuads(count: number, x: (ordinal: number) => number = () => 0): Set<
 
 type SpiedItem = CappedItem & { take: ReturnType<typeof vi.fn<CappedItem['take']>> };
 
-function item(x = 0): SpiedItem {
+function item(x = 0, layer = 0): SpiedItem {
   const geometry = new THREE.Object3D();
   geometry.add(quad(0));
   geometry.position.set(x, 0, 0);
   geometry.updateMatrixWorld();
-  return { placement: PLACEMENT, geometry: { current: geometry }, take: vi.fn<CappedItem['take']>() };
+  return {
+    placement: { ...PLACEMENT, layer },
+    geometry: { current: geometry },
+    take: vi.fn<CappedItem['take']>(),
+  };
 }
 
 /**
@@ -84,6 +88,13 @@ describe('capItemLights', () => {
     const lit = item();
     step(lights(CAP + 2), [lit], litQuads(CAP + 2));
     expect(lit.take).toHaveBeenCalledWith([...Array(CAP).keys()]);
+  });
+
+  it("keeps the directional lights on the list it hands, which is the item's whole list", () => {
+    const lit = item();
+    const declared = lights(CAP + 2).set(1000, { ...positional(null), slot: 0 });
+    step(declared, [lit], litQuads(CAP + 2));
+    expect(lit.take).toHaveBeenCalledWith([...Array(CAP).keys(), 1000]);
   });
 
   it('measures each item, so items at one placement can hold different lists', () => {
@@ -129,7 +140,7 @@ describe('capItemLights', () => {
     const left = item(-4);
     const right = item(4);
     const { windows } = step(lights(CAP + 1), [left, right], litQuads(CAP + 1));
-    const capped = placementId({ ...PLACEMENT, positionalLights: [...Array(CAP).keys()] });
+    const capped = placementId({ ...PLACEMENT, takenLights: [...Array(CAP).keys()] });
     expect([...windows]).toEqual([[capped, { x: -9, y: -5, w: 18, h: 10 }]]);
   });
 
@@ -143,6 +154,111 @@ describe('capItemLights', () => {
     const lit = item(5);
     const quads = litQuads(CAP + 1, (ordinal) => (ordinal === 0 ? 12 : 0));
     step(lights(CAP + 1), [lit], quads, { x: -5, y: -5, w: 10, h: 10 });
+    expect(lit.take).not.toHaveBeenCalled();
+  });
+});
+
+/** A light past `MAX_LIGHTS_PER_RENDER` is off every item's list, and it does not count against the 15 an item takes. */
+describe('capItemLights, past the lights of one render', () => {
+  /** Light `n` of `count` sits at x = n * 100, so each light meets one item only. */
+  const spread = (count: number) => litQuads(count, (ordinal) => ordinal * 100);
+
+  /** `count` directional lights, ordinal `1000 + n` at slot `n`. */
+  const directional = (count: number): Map<number, CanvasLightDeclaration> =>
+    new Map(Array.from({ length: count }, (_, n) => [1000 + n, { ...positional(null), slot: n }]));
+
+  const directionalOrdinals = (count: number) => Array.from({ length: count }, (_, n) => 1000 + n);
+
+  const kept = (count: number) => [...Array(count).keys()];
+
+  it('takes the first 256 positional lights by sequence, and no item lists the others', () => {
+    const last = item(MAX_LIGHTS_PER_RENDER * 100);
+    step(lights(MAX_LIGHTS_PER_RENDER + 1), [last], spread(MAX_LIGHTS_PER_RENDER + 1));
+    expect(last.take).toHaveBeenCalledWith(kept(MAX_LIGHTS_PER_RENDER));
+  });
+
+  it('leaves the positional lights what the directional lights leave', () => {
+    const lit = item();
+    const declared = new Map([...lights(200), ...directional(100)]);
+    step(declared, [lit], spread(200));
+    expect(lit.take).toHaveBeenCalledWith([
+      ...kept(MAX_LIGHTS_PER_RENDER - 100),
+      ...directionalOrdinals(100),
+    ]);
+  });
+
+  it('takes no positional light while the directional lights fill the render', () => {
+    const lit = item();
+    step(new Map([...lights(5), ...directional(MAX_LIGHTS_PER_RENDER + 20)]), [lit], spread(5));
+    expect(lit.take).toHaveBeenCalledWith(directionalOrdinals(MAX_LIGHTS_PER_RENDER));
+  });
+
+  it('lists the first 256 directional lights by slot, not by ordinal', () => {
+    const lit = item();
+    const declared = directional(MAX_LIGHTS_PER_RENDER + 1);
+    declared.set(1000, { ...declared.get(1000)!, slot: MAX_LIGHTS_PER_RENDER + 1 });
+    step(declared, [lit], litQuads(0));
+    expect(lit.take).toHaveBeenCalledWith(directionalOrdinals(MAX_LIGHTS_PER_RENDER + 1).slice(1));
+  });
+
+  /** The same light, handed to the canvas layers `layerMin` to `layerMax` (`range_layer_min` and `_max`). */
+  const onLayers = (light: CanvasLightDeclaration, layerMin: number, layerMax: number) => ({
+    ...light,
+    reach: { ...light.reach, layerMin, layerMax },
+  });
+
+  const onLayerOnly = (declared: Map<number, CanvasLightDeclaration>, layer: number) =>
+    new Map([...declared].map(([ordinal, light]) => [ordinal, onLayers(light, layer, layer)]));
+
+  /** The lights of `declared`, ordinal, sequence and slot all `by` further on. */
+  const shifted = (declared: Map<number, CanvasLightDeclaration>, by: number) =>
+    new Map(
+      [...declared].map(([ordinal, light]): [number, CanvasLightDeclaration] => [
+        ordinal + by,
+        light.sequence === null
+          ? { ...light, slot: (light.slot ?? 0) + by }
+          : { ...light, sequence: light.sequence + by },
+      ])
+    );
+
+  // Godot hands each canvas the lights in range of its layer, and counts 256 over that list alone
+  // (`renderer_viewport.cpp:667-690`).
+  it('counts the lights of each canvas layer apart', () => {
+    const world = item(0, 0);
+    const hud = item(250 * 100, 1);
+    const declared = new Map([...onLayerOnly(lights(200), 0), ...shifted(onLayerOnly(lights(100), 1), 200)]);
+    step(declared, [world, hud], spread(300));
+    expect(world.take).not.toHaveBeenCalled();
+    expect(hud.take).not.toHaveBeenCalled();
+  });
+
+  it('leaves a layer the directional lights of other layers do not reach its whole budget', () => {
+    const world = item(0, 0);
+    const declared = new Map([...onLayerOnly(lights(200), 0), ...onLayerOnly(directional(100), 1)]);
+    step(declared, [world], spread(200));
+    expect(world.take).not.toHaveBeenCalled();
+  });
+
+  // The 256 are counted over the lights in range of a layer, so a light a layer does not reach
+  // leaves room for the lights after it (`renderer_viewport.cpp:667-690`).
+  it('counts the directional lights of each canvas layer apart', () => {
+    const [world, hud] = [item(0, 0), item(0, 1)];
+    const others = onLayerOnly(directional(200), 1);
+    const shared = new Map(
+      [...shifted(directional(100), 200)].map(([ordinal, light]) => [ordinal, onLayers(light, 0, 1)])
+    );
+    step(new Map([...others, ...shared]), [world, hud], litQuads(0));
+    expect(world.take).not.toHaveBeenCalled();
+    expect(hud.take).toHaveBeenCalledWith([
+      ...directionalOrdinals(200),
+      ...directionalOrdinals(300).slice(200, 256),
+    ]);
+  });
+
+  it('does not count a light whose rect misses the viewport', () => {
+    const lit = item();
+    const inView: Rect2 = { x: -50, y: -50, w: 200 * 100, h: 100 };
+    step(lights(MAX_LIGHTS_PER_RENDER + 1), [lit], spread(MAX_LIGHTS_PER_RENDER + 1), inView);
     expect(lit.take).not.toHaveBeenCalled();
   });
 });

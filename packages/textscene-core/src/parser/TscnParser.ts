@@ -287,6 +287,7 @@ function warnOrphanedNodes(origins: readonly NodeOrigin<TscnNode>[], seating: Sc
 
 function orphanOutcome(node: TscnNode, seat: TscnNode | undefined): string {
   if (seat === undefined) return `dropped from the scene tree: "${node.name}"`;
+  if (seat.parentContentTrail) return `"${node.name}" seated inside the instance its parent_id_path enters`;
   if (seat.landedByIdTrail) return `"${node.name}" seated under the heading its parent_id_path names`;
   return `"${node.name}" re-rooted as "${seat.name}"`;
 }

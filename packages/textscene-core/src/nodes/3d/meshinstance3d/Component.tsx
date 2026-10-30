@@ -3,35 +3,63 @@
  * or a magenta wireframe placeholder for a GLB, a mesh type no slice builds, or an
  * unresolvable mesh. A node with no `mesh` draws nothing.
  * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
- * missing-texture placeholder.
+ * missing-texture placeholder. A node bound to a Skeleton3D draws its triangles as a THREE.SkinnedMesh.
  */
 
 import * as THREE from 'three';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
-import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import {
+  drawnTag,
+  useMeshContent,
+  type SurfacedMesh,
+  type SurfacedPart,
+} from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
+import { useLiveScenePass } from '../../../r3f/liveScenePass';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { bindMeshesToSkeletons, namesSkeletonToBind } from '../skeleton3d/skeletonBindings';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
-/** What a MeshInstance3D mounts: a mesh draws triangles, and a PointMesh draws points. */
+/** What a MeshInstance3D mounts: a mesh draws triangles, a PointMesh draws points. */
 type DrawnMesh = THREE.Mesh | THREE.Points;
+
+/**
+ * The element of the node's own draw and the props that bind it. A skeleton makes it a
+ * THREE.SkinnedMesh, drawn detached so the skin matrices stay in mesh space and the node's
+ * transform applies after them.
+ */
+function drawOf(drawsPoints: boolean, skeleton: THREE.Skeleton | null | undefined) {
+  // A PointMesh stays `<points>`: a SkinnedMesh would draw its one index per point as triangles.
+  return skeleton && !drawsPoints
+    ? { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } }
+    : { Drawn: drawnTag(drawsPoints), skin: {} };
+}
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
-export function MeshInstance3D({ node, children }: NodeComponentProps) {
+interface MeshInstance3DProps extends NodeComponentProps {
+  /**
+   * A subclass's editor gizmo. It mounts inside the mesh object, so it takes the node's transform, and
+   * only for a mesh that resolved, with the surfaces this node draws: no second decode.
+   */
+  gizmo?: (mesh: SurfacedMesh) => ReactNode;
+}
+
+export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const pools = useSceneResources();
 
@@ -75,21 +103,36 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
+  // A mesh that cannot bind asks with no path, so it watches no load and the pass never runs for it.
+  const bindingPath = useNodePath();
+  const skin = useLiveScenePass(bindMeshesToSkeletons, namesSkeletonToBind(properties) ? bindingPath : null);
+  // A surface with no bone arrays stays unskinned even when the node is bound.
+  const skeleton = useSkinSkeleton(drawnParts[0]?.geometry, skin);
 
   const shellProps = {
     name: node.name,
     meshRef,
     drawsPoints,
+    skeleton,
     position,
     rotation,
     scale,
     shadow,
     godotLayers: properties.layers,
-    subtree: children,
+    subtree:
+      gizmo && content.kind === 'surfaced' ? (
+        <>
+          {gizmo(content.mesh)}
+          {children}
+        </>
+      ) : (
+        children
+      ),
     overlay: overlaySource ? (
       <MaterialOverlayMesh
         meshRef={meshRef}
         drawsPoints={drawsPoints}
+        skeleton={skeleton}
         source={overlaySource}
         shadow={shadow}
       />
@@ -111,15 +154,14 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;
     case 'surfaced': {
-      const { parts, primitive } = content.mesh;
+      const { parts } = content.mesh;
       return (
         <MeshShell {...shellProps}>
-          <MeshSurfaces part={parts[0]} primitive={primitive} overrides={meshOverrides} />
+          <MeshSurfaces part={parts[0]} overrides={meshOverrides} />
           {parts.slice(1).map((part, i) => (
             <FollowingPart
               key={i}
               part={part}
-              primitive={primitive}
               overrides={meshOverrides}
               overlaySource={overlaySource}
               shadow={shadow}
@@ -153,12 +195,15 @@ const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
 function MaterialOverlayMesh({
   meshRef,
   drawsPoints,
+  skeleton,
   source,
   shadow,
 }: {
   meshRef: RefObject<DrawnMesh | null>;
   /** The base draws points, so the overlay does too. */
   drawsPoints: boolean;
+  /** The base is skinned, so the overlay is skinned by the same skeleton. */
+  skeleton?: THREE.Skeleton | null;
   source: MaterialSource;
   /**
    * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
@@ -181,9 +226,10 @@ function MaterialOverlayMesh({
   useEffect(readBack);
 
   if (!geometry) return null;
-  const Drawn = drawnTag(drawsPoints);
+  const { Drawn, skin } = drawOf(drawsPoints, skeleton);
   return (
     <Drawn
+      {...skin}
       geometry={geometry}
       // Explicit: three breaks ties by creation order, so a re-parse that remounts one
       // material would draw the overlay under its surface. Godot appends the overlay
@@ -196,7 +242,7 @@ function MaterialOverlayMesh({
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={source} drawsPoints={drawsPoints} />
+      <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
     </Drawn>
   );
 }
@@ -207,6 +253,8 @@ interface MeshShellProps {
   meshRef: RefObject<DrawnMesh | null>;
   /** The mesh draws `PRIMITIVE_POINTS`, so the shell mounts `<points>`. */
   drawsPoints: boolean;
+  /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
+  skeleton: THREE.Skeleton | null;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -231,6 +279,7 @@ function MeshShell({
   name,
   meshRef,
   drawsPoints,
+  skeleton,
   position,
   rotation,
   scale,
@@ -240,9 +289,10 @@ function MeshShell({
   overlay,
   children,
 }: MeshShellProps) {
-  const Drawn = drawnTag(drawsPoints);
+  const { Drawn, skin } = drawOf(drawsPoints, skeleton);
   return (
     <Drawn
+      {...skin}
       ref={meshRef}
       name={name}
       position={position}
@@ -279,15 +329,7 @@ const UNRESOLVED_MESH = (
  * (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and an extra
  * override is dropped: a PrimitiveMesh takes only surface 0's.
  */
-function MeshSurfaces({
-  part,
-  primitive,
-  overrides,
-}: {
-  part: SurfacedPart;
-  primitive: TscnInternalResource | undefined;
-  overrides: MeshOverrides;
-}) {
+function MeshSurfaces({ part, overrides }: { part: SurfacedPart; overrides: MeshOverrides }) {
   const groupCount = Math.max(part.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
     effectiveMaterialSource(overrides, part.surfaceIndices[i] ?? i, part.materials[i])
@@ -295,11 +337,7 @@ function MeshSurfaces({
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots
-        sources={sources}
-        triplanarMesh={primitive}
-        drawsPoints={geometryDrawsPoints(part.geometry)}
-      />
+      <SurfaceMaterialSlots sources={sources} drawsPoints={geometryDrawsPoints(part.geometry)} />
     </>
   );
 }
@@ -311,14 +349,12 @@ function MeshSurfaces({
  */
 function FollowingPart({
   part,
-  primitive,
   overrides,
   overlaySource,
   shadow,
   godotLayers,
 }: {
   part: SurfacedPart;
-  primitive: TscnInternalResource | undefined;
   overrides: MeshOverrides;
   overlaySource: MaterialSource | undefined;
   shadow: ShadowCastingEffects;
@@ -329,7 +365,7 @@ function FollowingPart({
   const Drawn = drawnTag(drawsPoints);
   return (
     <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
-      <MeshSurfaces part={part} primitive={primitive} overrides={overrides} />
+      <MeshSurfaces part={part} overrides={overrides} />
       {overlaySource && (
         <MaterialOverlayMesh meshRef={ref} drawsPoints={drawsPoints} source={overlaySource} shadow={shadow} />
       )}

@@ -186,6 +186,24 @@ describe('brightPassGlsl', () => {
   });
 });
 
+describe('brightPassGlsl — the auto exposure', () => {
+  // `copy.glsl:187-198`: strength, then the auto exposure, then the tonemap exposure, then the knee.
+  it('divides by the luminance over the scale after the strength and before the exposure and the knee', () => {
+    const glsl = brightPassGlsl(glowOn({ glow_strength: '1.5', tonemap_exposure: '2' }));
+    const strengthAt = glsl.indexOf('color *= 1.5;');
+    const gainAt = glsl.indexOf('color *= godotAutoExposureGain();');
+    const exposureAt = glsl.indexOf('color *= 2.0;');
+    expect(strengthAt).toBeGreaterThan(-1);
+    expect(gainAt).toBeGreaterThan(strengthAt);
+    expect(exposureAt).toBeGreaterThan(gainAt);
+    expect(glsl.indexOf('smoothstep(')).toBeGreaterThan(exposureAt);
+  });
+
+  it('leaves the definition of the gain to its caller', () => {
+    expect(brightPassGlsl(glowOn())).not.toContain('float godotAutoExposureGain');
+  });
+});
+
 describe('glowLevelSize', () => {
   it('puts level 0 at half the frame', () => {
     // `render_scene_buffers_rd.cpp:531`: the glow texture is `blur_size >> 1`, and

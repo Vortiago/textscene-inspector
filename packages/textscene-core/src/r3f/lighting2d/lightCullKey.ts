@@ -51,6 +51,11 @@ export function directionalLightCullKey(layerMin: number, layerMax: number): Lig
   return { itemCullMask: null, zMin: CANVAS_ITEM_Z_MIN, zMax: CANVAS_ITEM_Z_MAX, layerMin, layerMax };
 }
 
+/** Whether `layer` lies in the key's layer window, inclusive: `min > max` is empty. */
+export function reachesCanvasLayer(key: LightCullKey, layer: number): boolean {
+  return layer >= key.layerMin && layer <= key.layerMax;
+}
+
 /**
  * `itemZ` is Godot's accumulated, clamped `z_final` (`canvasItemPlacement`), and `itemLayer` is the
  * layer of the item's canvas. Bounds are inclusive and `min > max` is empty: the four setters
@@ -67,7 +72,6 @@ export function lightReachesItem(
     (key.itemCullMask === null || (key.itemCullMask & itemLightMask) !== 0) &&
     itemZ >= key.zMin &&
     itemZ <= key.zMax &&
-    itemLayer >= key.layerMin &&
-    itemLayer <= key.layerMax
+    reachesCanvasLayer(key, itemLayer)
   );
 }

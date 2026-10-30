@@ -414,6 +414,7 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
     modulate: { r: 1, g: 1, b: 1, a: 1 },
     z: [],
     sampler: ROOT_TEXTURE_SAMPLER,
+    material: { kind: 'none' },
   };
 
   function promoted(path: string, properties: Props, children: SolveNode[] = []): SolveNode {

@@ -10,6 +10,7 @@ import {
 } from './areaLightAtlas';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch';
 import { installedUniformValue } from '../shaderPatch/litUniform';
+import { readableLiveTarget } from '../liveTargets.testkit';
 
 /** Where the atlas places a light that shows no texture. */
 function untexturedPlacement() {
@@ -72,6 +73,16 @@ describe('the area light atlas', () => {
     updateAreaLightAtlas();
 
     expect(atlasCorner()).toEqual([0, 0, 255, 255]);
+  });
+
+  it("copies a live target's bytes, top row first, when it rebuilds (4.7.2 texture_storage.cpp:3524)", () => {
+    const target = readableLiveTarget(2, [255, 0, 0, 255], [0, 0, 255, 255]);
+    hold(target.texture);
+
+    updateAreaLightAtlas();
+
+    expect(atlasCorner()).toEqual([0, 0, 255, 255]);
+    target.withdraw();
   });
 
   it("keeps a flipped texture's first row at the atlas's top, as a decoded image uploads (edge case)", () => {

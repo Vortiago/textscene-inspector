@@ -1,0 +1,28 @@
+; The sub-scene of unit-instanced-gizmo-grey.tscn. A CPUParticles3D draws its box and three axes, a
+; SpringArm3D one line along its +Z, and a Marker3D its axis cross, which keeps its colours
+; in a locked instance. A small box sits at two opposite corners of the emitter's visibility_aabb to frame it.
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Body" type="Node3D"]
+
+[node name="Emitter" type="CPUParticles3D" parent="."]
+visibility_aabb = AABB(-1, -1, -1, 2, 2, 2)
+mesh = SubResource("Corner_1")
+
+[node name="NearCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, -1, -1)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)
+mesh = SubResource("Corner_1")
+
+[node name="Arm" type="SpringArm3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1, -1.6, 0)
+spring_length = 2.0
+
+[node name="Marker" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)

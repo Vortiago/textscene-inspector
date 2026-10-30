@@ -1,0 +1,56 @@
+[gd_scene load_steps=9 format=3 uid="uid://unittextmeshembolden"]
+
+; The variable: the `FontVariation` on the font of a TextMesh. Godot grows each outline by
+; `embolden * size / 16` px with FT_Outline_Embolden and shears it by `variation_transform` before it
+; extrudes it. The left text is emboldened, and the right text is emboldened and sheared. The scene is that
+; of unit-text-mesh-cff.tscn otherwise: an OpenType-CFF font, so the unemboldened outlines match
+; Godot exactly, a left text with depth and a right text with none. Both emboldens stay below the point
+; where Godot fails to triangulate the a and draws no face for it.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-extra-bold.otf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_embolden"]
+base_font = ExtResource("1_font")
+variation_embolden = 0.6
+
+[sub_resource type="FontVariation" id="FontVariation_embolden_skew"]
+base_font = ExtResource("1_font")
+variation_embolden = 0.6
+variation_transform = Transform2D(1, 0.3, 0, 1, 0, 0)
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_embolden"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font = SubResource("FontVariation_embolden")
+font_size = 64
+depth = 0.2
+
+[sub_resource type="TextMesh" id="TextMesh_embolden_skew"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font = SubResource("FontVariation_embolden_skew")
+font_size = 64
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Deep" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_embolden")
+
+[node name="Flat" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_embolden_skew")

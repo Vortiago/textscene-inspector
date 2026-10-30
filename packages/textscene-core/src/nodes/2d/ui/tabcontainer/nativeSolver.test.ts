@@ -20,6 +20,7 @@ import {
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { TabBarProperties } from '../tabbar/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 
 const tabContainerLayout = controlSolverRegistry.containerLayout('TabContainer')!;
@@ -111,6 +112,7 @@ describe('deriveTabContainerTabs', () => {
         modulate: { r: 1, g: 1, b: 1, a: 1 },
         z: [],
         sampler: ROOT_TEXTURE_SAMPLER,
+        material: { kind: 'none' },
       },
     };
     const tabs = deriveTabContainerTabs(
@@ -495,7 +497,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
       ...solveNode(),
       path: 'Tabs',
       node: controlNode('Tabs', 'TabContainer', { name: 'Tabs', ...props }),
-      projectTheme,
+      projectFonts: { ...NO_PROJECT_FONTS, projectTheme },
     };
   }
 

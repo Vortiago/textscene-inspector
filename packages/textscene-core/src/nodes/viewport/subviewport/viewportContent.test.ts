@@ -6,11 +6,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { TscnParser } from '../../../parser/TscnParser';
-import { resolveStandaloneViewportSubtree, viewportContentKind } from './viewportContent';
+import { resolveStandaloneViewportSubtree, viewportContent, viewportContentKind } from './viewportContent';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 import { sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {
@@ -272,6 +273,24 @@ z_index = 3
  * childless `Node` whichever world its sub-scene lives in. Once the sub-scene is
  * cached, Instance root merge gives the node its real identity.
  */
+describe('viewportContent — Controls beside the drawn kind', () => {
+  const MESH = '\n[node name="Box" type="MeshInstance3D" parent="Viewport"]';
+  const SPRITE = '\n[node name="Sprite" type="Sprite2D" parent="Viewport"]';
+  const PANEL = '\n[node name="Panel" type="ColorRect" parent="Viewport"]';
+
+  it('finds a Control that follows the first 3D node', () => {
+    expect(viewportContent(viewport(MESH + PANEL))).toEqual({ kind: '3d', holdsControls: true });
+  });
+
+  it('finds a Control beside 2D content', () => {
+    expect(viewportContent(viewport(SPRITE + PANEL))).toEqual({ kind: '2d', holdsControls: true });
+  });
+
+  it('finds none in a viewport without a Control', () => {
+    expect(viewportContent(viewport(MESH + SPRITE)).holdsControls).toBe(false);
+  });
+});
+
 describe('resolveStandaloneViewportSubtree', () => {
   /** `[gd_scene]` with one instanced child, plus the sub-scene it points at. */
   function scene(subScene: string, extra = '') {
@@ -351,7 +370,7 @@ ${extra}`);
 
   /**
    * Each group carries the scope its children resolve their own refs against,
-   * so the resolver goes through `liveStep`: this inner ref exists only in
+   * so the resolver goes through `LiveTree.stepOf`: this inner ref exists only in
    * the sub-scene's pool.
    */
   it('resolves a sub-scene’s own nested instance against the SUB-SCENE’s resources', () => {
@@ -401,7 +420,11 @@ ${extra}`);
     const node = parsed.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
     const loaded = new TscnParser().parse('[gd_scene format=3]\n\n[node name="S" type="Sprite2D"]\n');
     const cache: CachedSceneSource = {
-      getCached: () => ({ nodes: loaded.nodes, externalResources: loaded.externalResources }),
+      getCached: () => ({
+        ...INSTANTIABLE_SCENE,
+        nodes: loaded.nodes,
+        externalResources: loaded.externalResources,
+      }),
     };
     const resolved = resolveStandaloneViewportSubtree(node, parsed.externalResources, cache);
     // Untouched: the nested viewport's own child is still the raw instance node.

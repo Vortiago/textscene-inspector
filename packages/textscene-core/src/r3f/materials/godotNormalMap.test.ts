@@ -22,9 +22,15 @@ describe('importedNormalMapRead', () => {
 });
 
 describe('the installed normal map read', () => {
-  it('decodes a tangent-space texel in one function that takes its own gradients', () => {
+  it("reads a texel a step along the screen at the pixel's own gradients", () => {
+    expect(installedShaderChunks().normalmap_pars_fragment).toContain(
+      '#define GODOT_NORMAL_TEXEL( step ) textureGrad( normalMap, vNormalMapUv + ( step ).x * godotUvDx + ( step ).y * godotUvDy, godotUvDx, godotUvDy )'
+    );
+  });
+
+  it('decodes a tangent-space texel in one function', () => {
     const decode = functionBody(installedShaderChunks().normalmap_pars_fragment, 'godotMapNormal');
-    expect(decode).toContain('textureGrad( normalMap, uv, uvDx, uvDy )');
+    expect(decode).toContain('vec3 mapN = texel.xyz * 2.0 - 1.0;');
     expect(decode).toContain('mapN.xy *= normalScale;');
     expect(decode).toContain('return normalize( tbn * mapN );');
   });
@@ -34,7 +40,7 @@ describe('the installed normal map read', () => {
       installedShaderChunks().normal_fragment_maps,
       '#elif defined( USE_NORMALMAP_TANGENTSPACE )'
     );
-    expect(tangentRead).toContain('normal = godotMapNormal( vNormalMapUv, godotUvDx, godotUvDy, tbn );');
+    expect(tangentRead).toContain('normal = godotMapNormal( GODOT_NORMAL_TEXEL( vec2( 0.0 ) ), tbn );');
     expect(tangentRead).not.toContain('texture2D');
   });
 

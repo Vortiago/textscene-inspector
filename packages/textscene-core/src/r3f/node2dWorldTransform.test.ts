@@ -10,6 +10,7 @@ import { node2dWorldPosition } from './node2dWorldTransform';
 import '../nodes/node/index';
 import { contextOver } from './liveSceneTree.testkit';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../parser/types';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 function tnode(
   name: string,
@@ -32,6 +33,13 @@ describe('node2dWorldPosition', () => {
   it('composes nested translations', () => {
     const roots = [tnode('A', at(100, 50), [tnode('B', at(10, 20))])];
     expect(node2dWorldPosition(roots, emptyCtx, 'A/B')).toEqual({ x: 110, y: 70 });
+  });
+
+  it('places a node where the live scene passes moved its parent', () => {
+    const roots = [tnode('A', at(100, 50), [tnode('B', at(10, 20))])];
+    const placed = new Map([['A', { position: { x: 300, y: 0 }, rotation: 0, scale: { x: 1, y: 1 } }]]);
+
+    expect(node2dWorldPosition(roots, emptyCtx, 'A/B', placed)).toEqual({ x: 310, y: 20 });
   });
 
   it('applies an ancestor rotation to the child offset (Godot +Y-down, CW-positive)', () => {
@@ -68,6 +76,7 @@ describe('node2dWorldPosition', () => {
     // player.tscn: PlayerRoot → Cam (at 20,10). The instance transform replaces
     // the sub-scene root's (ADR-0013), so the camera sits at 120,60.
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [tnode('PlayerRoot', at(0, 0), [tnode('Cam', at(20, 10), [], { type: 'Camera2D' })])],
       externalResources: [],
       internalResources: [],

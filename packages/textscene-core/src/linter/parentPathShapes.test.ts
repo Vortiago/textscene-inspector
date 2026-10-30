@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { instanced, lint, node, override, packedScene, scene } from './testing/testkit.js';
+import { instanced, lintRule, node, override, packedScene, scene } from './testing/testkit.js';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnNode } from '../parser/types.js';
 import './index.js';
@@ -145,7 +145,7 @@ describe('every parent= shape, against a headless Godot run', () => {
     const reRooted = godot.includes('#');
 
     it(`${label} → ${godot}${divergence ? ' (we are lenient)' : ''}`, () => {
-      const orphans = lint(source).filter((d) => d.ruleName === ORPHAN);
+      const orphans = lintRule(source, ORPHAN);
 
       if (reRooted && !divergence) {
         // The rename encodes the path Godot could not walk, spelled through

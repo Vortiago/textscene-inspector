@@ -20,6 +20,8 @@ The scenes in `scenes/fixtures/` that test `[ext_resource]` loading and sub-scen
 | `integration-instanced-subscene.tscn` | Instanced roots collapse into the parent (ADR-0013). It has a golden image. |
 | `integration-instanced-unique-parent.tscn`, `unit-unique-name-pivot.tscn` | A host node seated through a `%Name` inside an instance (`parent="Player/%Pivot"`). It has a golden image. |
 | `integration-instanced-unique-parent-released.tscn` | A `%Name` claim seated through `Player/%Pivot`, which a later heading releases. It has a golden image. |
+| `integration-escaped-heading-reroot.tscn`, `unit-escaped-heading-player.tscn`, `unit-escaped-heading-inner.tscn` | A host heading whose `parent=` walk finds nothing inside an instance, so Godot re-roots it under the file root. It has a golden image. |
+| `integration-escaped-heading-lamp.tscn`, `unit-escaped-heading-hud.tscn` | A host heading whose `%Name` walk leaves the instance for a node of the host. It has a golden image. |
 | `integration-instanced-inherited-unique-viewport.tscn`, `unit-unique-viewport-inherited.tscn`, `unit-unique-viewport-base.tscn` | An instance of an inherited scene reads its base's `%View`. It has a golden image. |
 
 ## Missing on purpose

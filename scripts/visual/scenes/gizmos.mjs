@@ -20,6 +20,9 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', gizmos: true, select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', gizmos: true, select: 'Root/MySpringArm3D' },
+  // The SoftBody3D wireframe: the triangle edges of its mesh in the collision debug colour.
+  { name: 'softbody3d-selected', file: 'unit-softbody3d.tscn', gizmos: true, select: 'Root/SoftBody3D' },
+  { name: 'softbody3d-unselected', file: 'unit-softbody3d.tscn', gizmos: true },
   // The particle emitters: the visibility_aabb box and the emission shape lines, with the axes from
   // the box centre on CPUParticles3D. The GPUParticles3D scene gives its box shape the offset and
   // scale only a ParticleProcessMaterial has.
@@ -34,14 +37,15 @@ export const GIZMO_SCENES = [
   // axes for every node (`cpu_particles_3d_gizmo_plugin.cpp:98`) but not the solid box or the
   // emission shape, and Path3D draws its curve (`path_3d_editor_plugin.cpp:320`).
   { name: 'cpuparticles3d-unselected', file: 'unit-cpuparticles3d-gizmo.tscn', gizmos: true },
-  // The same emitter inside two instances. `Locked` is a plain instance, so Godot draws its gizmo in the
-  // grey of a node the edited scene does not own (`node_3d_editor_gizmos.cpp:907-917`). `Editable` is
-  // listed by `[editable]` and keeps the particles colour. One golden has nothing selected, and one
-  // selects the locked emitter.
-  { name: 'cpuparticles3d-instanced-unselected', file: 'unit-gizmo-instance.tscn', gizmos: true },
+  // The gizmo nodes inside two instances of one sub-scene. `Locked` is a plain instance, so Godot draws
+  // its gizmos in the grey of a node the edited scene does not own (`node_3d_editor_gizmos.cpp:907-917`).
+  // `Editable` is listed by `[editable]` and keeps the plugin colours. A Marker3D keeps its axis colours
+  // in both (`marker_3d_gizmo_plugin.cpp:80-92`). One golden has nothing selected, and one selects the locked
+  // emitter.
+  { name: 'instanced-gizmo-grey-unselected', file: 'unit-instanced-gizmo-grey.tscn', gizmos: true },
   {
-    name: 'cpuparticles3d-instanced-selected',
-    file: 'unit-gizmo-instance.tscn',
+    name: 'instanced-gizmo-grey-selected',
+    file: 'unit-instanced-gizmo-grey.tscn',
     gizmos: true,
     select: 'Root/Locked/Emitter',
   },
@@ -63,6 +67,15 @@ export const GIZMO_SCENES = [
   { name: 'reflectionprobe-selected', file: 'unit-reflectionprobe-gizmo.tscn', gizmos: true, select: 'Root/Probe' },
   { name: 'voxelgi-selected', file: 'unit-voxelgi-gizmo.tscn', gizmos: true, select: 'Root/Voxels' },
   { name: 'fogvolume-selected', file: 'unit-fogvolume-gizmo.tscn', gizmos: true, select: 'Root/Fog' },
+  // The GPU particles collision and attractor nodes: a box, three great circles, or a box with the SDF cell grid.
+  // Godot draws all seven for every node, so one golden shows them faint and one selects the SDF node.
+  { name: 'gpu-particles-collision-gizmos-unselected', file: 'unit-gpu-particles-collision-gizmos.tscn', gizmos: true },
+  {
+    name: 'gpu-particles-collision-gizmos-selected',
+    file: 'unit-gpu-particles-collision-gizmos.tscn',
+    gizmos: true,
+    select: 'Root/CollisionSdf',
+  },
 
   // Lights, Camera3D and AudioStreamPlayer3D gizmos. Unselected: the render
   // with ground and shading only, no helper.
@@ -120,4 +133,9 @@ export const GIZMO_SCENES = [
     gizmos: true,
     select: 'Scene/Speaker_Cone',
   },
+  // The node icons: Godot's billboard icon at the origin of a light, a camera, both particle emitters
+  // and an audio player. The tinted lights show the light colour, and the selected spot light shows an
+  // icon at full colour beside the dimmed rest.
+  { name: 'node-icons', file: 'unit-node-icons.tscn', gizmos: true },
+  { name: 'node-icons-selected', file: 'unit-node-icons.tscn', gizmos: true, select: 'Root/Spot' },
 ];

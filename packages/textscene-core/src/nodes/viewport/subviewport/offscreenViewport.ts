@@ -6,22 +6,22 @@
 
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import { electViewportCamera } from '../../../godot/scene/camera3d';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
-import { pinColorSpace } from '../../../resources/textures/applyTextureState';
+import { pinColorSpace } from '../../../resources/textures/textureView';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 /**
- * The target of a pass that draws the 3D world. Godot tonemaps each viewport into its own target as
- * sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
+ * The target the tonemap pass of a 3D world writes, which holds no depth: the world draws into its
+ * own buffer (`r3f/environment/offscreenToneMap.ts`). Godot tonemaps each viewport into its own
+ * target as sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
  * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from encoding
  * too: an sRGB tag would stack a shader encode on the hardware encode.
  */
 export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   const target = createTarget(width, height, name);
-  target.depthBuffer = true;
   // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
   // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
   pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);
@@ -87,9 +87,9 @@ export function viewportMsaaMode(
 const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
- * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
- * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the pass. `draw`
- * clears whatever it needs cleared.
+ * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour and
+ * alpha. `draw` clears whatever it needs cleared. three draws no tone curve into a target
+ * (`WebGLPrograms.js:180`).
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -98,44 +98,37 @@ export function renderToOffscreenTarget(
     /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
     clearColor: THREE.Color;
     transparentBg: boolean;
-    toneMapping?: THREE.ToneMapping;
     draw: () => void;
   }
 ): void {
   const previousTarget = gl.getRenderTarget();
   const previousAlpha = gl.getClearAlpha();
-  const previousToneMapping = gl.toneMapping;
   gl.getClearColor(PREVIOUS_CLEAR_COLOR);
 
   try {
-    if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
     options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
-    gl.toneMapping = previousToneMapping;
   }
 }
 
 /**
- * The camera a sub-viewport renders through, or null when it has none. Only a
- * descendant counts: a `Camera3D` joins `get_viewport()` on ENTER_WORLD, and a
- * shared-world source holds every viewport's cameras.
+ * The scene's camera at `cameraPath`, or null before it mounts. The world elects the camera
+ * (`electCameraOfViewport`) from what the cameras publish, so the pass draws through the one whose
+ * attributes it draws at.
  */
-export function selectViewportCamera(root: THREE.Object3D, viewportPath: string): THREE.Camera | null {
-  const prefix = `${viewportPath}/`;
-  const cameras: THREE.Camera[] = [];
-
-  // Depth-first pre-order, which is the order nodes enter the tree.
+export function cameraAtPath(root: THREE.Object3D, cameraPath: string | null): THREE.Camera | null {
+  if (cameraPath === null) return null;
+  let found: THREE.Camera | null = null;
   root.traverse((object) => {
-    if (!(object as THREE.Camera).isCamera) return;
-    const path = object.userData?.tscnPath;
-    if (typeof path === 'string' && path.startsWith(prefix)) cameras.push(object as THREE.Camera);
+    if (!found && (object as THREE.Camera).isCamera && object.userData?.tscnPath === cameraPath) {
+      found = object as THREE.Camera;
+    }
   });
-
-  return electViewportCamera(cameras, (camera) => camera.userData?.tscnCurrent === true);
+  return found;
 }
 
 /**
@@ -214,6 +207,18 @@ export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFr
   camera.bottom = frame.bottom;
   camera.position.set(...frame.position);
   if (moved) camera.updateProjectionMatrix();
+}
+
+/**
+ * The world rect `camera` frames, written into `out`: a per-frame reader allocates nothing. `y` is
+ * the bottom edge, since the previewer's world is +Y up.
+ */
+export function orthoViewRect(camera: THREE.OrthographicCamera, out: Rect2): Rect2 {
+  out.x = camera.position.x + camera.left;
+  out.y = camera.position.y + camera.bottom;
+  out.w = camera.right - camera.left;
+  out.h = camera.top - camera.bottom;
+  return out;
 }
 
 /**

@@ -6,7 +6,7 @@
  */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { storedReal as f } from '../../../godot/math/real';
+import { storedColor, storedReal as f } from '../../../godot/math/real';
 import { cubicInterpolatef, lerpf } from '../../../godot/math/math';
 
 import type { Gradient, GradientTexture2D } from './types';
@@ -57,6 +57,21 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
   // Mirror.
   ofs = Math.abs(ofs) % 2;
   return ofs > 1 ? 2 - ofs : ofs;
+}
+
+/**
+ * The gradient as Godot holds it: each stop offset is a `float` and each stop colour a `Color`
+ * of floats, so a scene file's double is rounded before any sample reads it.
+ */
+export function storedGradient(gradient: Gradient): Gradient {
+  return {
+    ...gradient,
+    stops: gradient.stops.map((stop) => ({
+      ...stop,
+      offset: f(stop.offset),
+      color: storedColor(stop.color),
+    })),
+  };
 }
 
 /**

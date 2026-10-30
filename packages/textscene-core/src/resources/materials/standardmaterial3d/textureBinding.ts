@@ -1,16 +1,14 @@
 /**
  * Binding a texture to a StandardMaterial3D slot, the one place that knows what a Godot
- * slot needs of its texture: its colour space, and when a shared cache entry must clone.
+ * slot needs of its texture: the sampler its view states (`textureView.ts`).
  * `useSurfaceMaterial` crosses it once, for `<StandardMaterialSlot>` and the GLB override. It
  * value-imports `three`, so `index.ts` never reaches it (ADR-0031).
  */
 
 import * as THREE from 'three';
-import {
-  applyTextureState,
-  type MaterialTextureState,
-  type UVTransform,
-} from '../../textures/applyTextureState';
+import type { ViewSampler } from '../../textures/textureView';
+import { godotTextureFilterState, type TextureFilterState } from '../../textures/godotTextureFilter';
+import { FULL_UV_WINDOW, type UvWindow } from '../../../r3f/uvWindow';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import { UV2_CHANNEL } from '../../meshes/uv2';
@@ -47,13 +45,29 @@ export function slotReadsSourceColor(slot: TextureSlot): boolean {
   return SLOT_READS_SOURCE_COLOR[slot];
 }
 
-/** The texture state of the slots that sample one UV set, whose transform is always known. */
-export type UVSetState = MaterialTextureState & { uv: UVTransform };
+/**
+ * The half of a binding that comes from the material, the same for every slot. It applies where a
+ * slot binds: `createTextureFromBuffer` knows no material or slot.
+ */
+export interface MaterialTextureState {
+  /** three's UV channel the slot samples, `UV2_CHANNEL` for Godot's UV2. Omitted means UV1. */
+  channel?: number;
+  /** The authored `texture_filter` at the viewport's anisotropy level. Omitted when the material keeps the default. */
+  filter?: TextureFilterState;
+  /**
+   * Both axes. Godot's `texture_repeat` is `repeat_enable` on the sampler, and three defaults to
+   * clamp-to-edge, which smears UVs outside 0..1 into stripes. The loader leaves wrapping at that
+   * clamp default (ADR-0044), so this field is the binding's only source of Repeat.
+   */
+  wrap: THREE.Wrapping;
+}
+
+/** The texture state of the slots that sample one UV set, whose window is always known. */
+export type UVSetState = MaterialTextureState & { uv: UvWindow };
 
 /**
- * The per-material half of every binding, one state per UV set, which a caller can adjust
- * apart from the per-slot decision, as a triplanar material folds the mesh size into the
- * tiling scale.
+ * The per-material half of every binding, one state per UV set, which a caller adjusts apart from
+ * the per-slot decision, as a mesh's UV orientation needs.
  */
 export interface MaterialTextureStates {
   uv1: UVSetState;
@@ -72,38 +86,54 @@ export function materialTextureStates(
 ): MaterialTextureStates {
   const sampler = {
     filter:
-      scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter ? undefined : scalars.textureFilter,
-    anisotropicFilteringLevel,
-    repeat: scalars.textureRepeat,
+      scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter
+        ? undefined
+        : godotTextureFilterState(scalars.textureFilter, anisotropicFilteringLevel),
+    wrap: scalars.textureRepeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping,
   };
-  const uv2 = { ...sampler, uv: { scale: scalars.uv2Scale, offset: scalars.uv2Offset } };
+  const uv2 = { ...sampler, uv: { repeat: scalars.uv2Scale, offset: scalars.uv2Offset } };
   return {
-    uv1: { ...sampler, uv: { scale: scalars.uv1Scale, offset: scalars.uv1Offset } },
-    // A triplanar mapping reads no UV2. three draws it through the first UV set, as for UV1.
+    uv1: scalars.triplanar?.uv1
+      ? projectedState(sampler)
+      : { ...sampler, uv: { repeat: scalars.uv1Scale, offset: scalars.uv1Offset } },
     // Every UV2 attribute keeps Godot's top-down V, so a mesh without one samples the top-left.
-    uv2: scalars.uv2Triplanar ? uv2 : topDownV({ ...uv2, channel: UV2_CHANNEL }),
+    uv2: scalars.triplanar?.uv2 ? projectedState(sampler) : topDownV({ ...uv2, channel: UV2_CHANNEL }),
     uv2Slots: scalars.uv2Slots,
   };
 }
 
+/**
+ * The state of a triplanar UV set: the whole texture, from its top edge. The projected position
+ * carries the set's scale and offset (`material.cpp:1425-1431`), and reads no UV attribute.
+ */
+function projectedState(sampler: MaterialTextureState): UVSetState {
+  return topDownV({ ...sampler, uv: FULL_UV_WINDOW });
+}
+
 /** A state that samples `1 - (v * scale + offset)`, Godot's top-down V on a bottom-up upload. */
 export function topDownV(state: UVSetState): UVSetState {
-  const { scale, offset } = state.uv;
+  const { repeat, offset } = state.uv;
   return {
     ...state,
-    uv: { scale: { x: scale.x, y: -scale.y }, offset: { x: offset.x, y: bottomUpV(offset.y) } },
+    uv: { repeat: { x: repeat.x, y: -repeat.y }, offset: { x: offset.x, y: bottomUpV(offset.y) } },
   };
 }
 
 /**
- * The texture this slot must sample: the original when it carries everything the
- * binding needs, otherwise one clone that does, marked so `releaseBoundTexture` frees it.
+ * A state on a bottom-up UV set, as a Godot mesh's first set: Godot scales and offsets V from the
+ * image's top edge, so the window samples `1 - ((1 - v) * scale + offset)`.
  */
-export function bindSlotTexture(
+export function fromTopEdge(state: UVSetState): UVSetState {
+  const { repeat, offset } = state.uv;
+  return { ...state, uv: { repeat, offset: { x: offset.x, y: bottomUpV(repeat.y + offset.y) } } };
+}
+
+/** What `slot` samples of `texture`: the sampler and window of the slot's UV set, in the slot's colour space. */
+export function slotViewSampler(
   texture: THREE.Texture,
   slot: TextureSlot,
   states: MaterialTextureStates
-): THREE.Texture {
-  const material = states.uv2Slots.includes(slot) ? states.uv2 : states.uv1;
-  return applyTextureState(texture, { ...material, colorSpace: slotColorSpace(slot, texture) });
+): ViewSampler {
+  const { filter, wrap, uv, channel } = states.uv2Slots.includes(slot) ? states.uv2 : states.uv1;
+  return { colorSpace: slotColorSpace(slot, texture), filter, wrap, window: uv, channel };
 }

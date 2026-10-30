@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { texelTexture, textureMipChain } from './texelTexture';
+import { carryMipChain, texelTexture, textureMipChain } from './texelTexture';
 import { mipChain } from '../processing/mipChain';
 
 function base(): { data: Uint8Array; width: number; height: number } {
@@ -39,6 +39,36 @@ describe('texelTexture', () => {
 
   it('refuses an empty chain', () => {
     expect(() => texelTexture(new THREE.Texture(), [])).toThrow('expected at least one level, got none');
+  });
+});
+
+describe('carryMipChain', () => {
+  const twoLevels = () => mipChain(base(), false);
+
+  it('hands three every level, asks the GPU for none, and minifies as stated', () => {
+    const texture = new THREE.DataTexture(base().data, 2, 1);
+    const levels = twoLevels();
+
+    carryMipChain(texture, levels, THREE.NearestMipmapNearestFilter);
+
+    expect([texture.mipmaps, texture.generateMipmaps, texture.minFilter]).toEqual([
+      levels,
+      false,
+      THREE.NearestMipmapNearestFilter,
+    ]);
+  });
+
+  it('leaves a texture of one level as it is, since one level is no chain (edge case)', () => {
+    const texture = new THREE.DataTexture(base().data, 2, 1);
+    texture.generateMipmaps = true;
+
+    carryMipChain(texture, [base()], THREE.LinearMipmapLinearFilter);
+
+    expect([texture.mipmaps, texture.generateMipmaps, texture.minFilter]).toEqual([
+      [],
+      true,
+      THREE.NearestFilter,
+    ]);
   });
 });
 

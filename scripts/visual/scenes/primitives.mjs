@@ -19,10 +19,33 @@ export const PRIMITIVE_SCENES = [
   { name: 'quadmesh-orientation', file: 'unit-quadmesh-orientation.tscn' },
   { name: 'sphere-mesh-texture-uv', file: 'unit-sphere-mesh-texture-uv.tscn' },
   { name: 'text-mesh', file: 'unit-text-mesh.tscn' },
+  // The same scene under an OpenType-CFF font, whose outlines are cubic.
+  { name: 'text-mesh-cff', file: 'unit-text-mesh-cff.tscn' },
+  // The same scene with a FontVariation embolden on the font, which grows each outline before it is extruded.
+  { name: 'text-mesh-embolden', file: 'unit-text-mesh-embolden.tscn' },
+  // The same font at an embolden where Godot fails to triangulate the a and draws no face for it.
+  { name: 'text-mesh-triangulation-failure', file: 'unit-text-mesh-triangulation-failure.tscn' },
+  // The same scene under a variable `.woff2`, whose transformed `glyf` the reader rebuilds.
+  { name: 'text-mesh-woff2', file: 'unit-text-mesh-woff2.tscn' },
+  // The same scene with no `font`, which draws Godot's default font, and again in a project whose
+  // `gui/theme/custom_font` names a CFF font.
+  { name: 'text-mesh-default-font', file: 'unit-text-mesh-default-font.tscn' },
+  { name: 'text-mesh-project-default-font', file: 'project-default-font/unit-text-mesh-project-default-font.tscn' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
   { name: 'torus-mesh-texture-uv', file: 'unit-torus-mesh-texture-uv.tscn' },
   { name: 'tube-trail-mesh-texture-uv', file: 'unit-tube-trail-mesh-texture-uv.tscn' },
   { name: 'ribbon-trail-mesh-texture-uv', file: 'unit-ribbon-trail-mesh-texture-uv.tscn' },
+  // A MeshInstance3D bound to a Skeleton3D bends the ribbon along the posed bones.
+  { name: 'mesh-instance-3d-skinned-ribbon', file: 'unit-mesh-instance-3d-skinned-ribbon.tscn' },
+  // The same skeleton bends a TubeTrailMesh, whose caps follow the first and the last bone.
+  { name: 'mesh-instance-3d-skinned-tube', file: 'unit-mesh-instance-3d-skinned-tube.tscn' },
+  // A CopyTransformModifier3D copies the rotation of b2 onto b4, so the ribbon bends a second time.
+  { name: 'copy-transform-modifier-3d-ribbon', file: 'unit-copy-transform-modifier-3d-ribbon.tscn' },
+  // The same ribbon and skeleton inside an instanced scene bend as they do in the host file.
+  {
+    name: 'mesh-instance-3d-skinned-ribbon-instanced',
+    file: 'unit-mesh-instance-3d-skinned-ribbon-instanced.tscn',
+  },
   // The tangent frame every ported builder writes, under a normal map and each light type.
   { name: 'primitive-mesh-normal-map', file: 'unit-primitive-mesh-normal-map.tscn' },
   // The steps PrimitiveMesh applies after every builder: the UV2 layout and `flip_faces`.
@@ -64,6 +87,8 @@ export const PRIMITIVE_SCENES = [
   // with the curve tessellation, and it covers both NodePath shapes the corpus
   // writes: a sibling and a child.
   { name: 'csg-polygon-path', file: 'unit-csg-polygon-path.tscn' },
+  // The same polygons and Path3D nodes inside an instanced scene draw the same extrusions.
+  { name: 'csg-polygon-path-instanced', file: 'unit-csg-polygon-path-instanced.tscn' },
   // Real boolean evaluation (ADR-0027). If the three groups render the same, a
   // solid block beside a solid ball, the evaluator has stopped running.
   { name: 'csg-boolean-ops', file: 'unit-csg-boolean-ops.tscn' },

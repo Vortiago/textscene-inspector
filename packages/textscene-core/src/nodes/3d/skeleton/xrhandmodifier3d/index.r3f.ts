@@ -1,14 +1,6 @@
-/**
- * XRHandModifier3D writes tracked hand poses into the bones of its parent Skeleton3D, through a
- * live XR session. That drive is a gap here (ADR-0045), so it registers `pending` on the Node3D
- * component and its children still land in the right transform space.
- */
+/** XRHandModifier3D is a modifier that writes tracked hand poses. With no XR tracker it makes no edit. */
 
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { registerSkeletonModifier } from '../shared/registerSkeletonModifier';
+import { noPoseEdit } from '../../skeleton3d/poseModifier';
 
-nodeComponentRegistry.register({
-  typeName: 'XRHandModifier3D',
-  Component: Node3D,
-  renderIntent: 'pending',
-});
+registerSkeletonModifier('XRHandModifier3D', noPoseEdit);

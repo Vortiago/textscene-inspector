@@ -25,6 +25,7 @@ export function isDrivenByAnimationAudioTrack(scene: RawScene, node: RawNode): b
  * the tree and the animations and nothing else. Written only by `audioTrackTargets`. A rule asks
  * once per player, and a resolution per call repeats every animation parse.
  */
+// eslint-disable-next-line no-restricted-syntax -- the entry also holds the resource table it was read from, a second key that a numeric stamp cannot carry
 const audioTargetsByTree = new WeakMap<
   RawNode[],
   { internalResources: readonly TscnInternalResource[]; targets: ReadonlySet<RawNode> }

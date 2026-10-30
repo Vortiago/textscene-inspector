@@ -1,0 +1,58 @@
+[gd_scene load_steps=7 format=3 uid="uid://unitdecalroughnessreceiver"]
+
+; One variable: a Decal over a receiver whose `roughness_texture` is a horizontal gradient. Godot
+; replaces only the receiver's albedo under a decal, so the highlight of the gradient's smooth end
+; continues unbroken through the footprint. The decal's albedo is the floor's own flat grey, so
+; the footprint shows nothing but a change of roughness, where a decal that shaded with a scalar
+; roughness would cut the highlight off at the box. `unit-decal`, `unit-decal-gradienttexture` and
+; `unit-decal-cull-mask` use a receiver with no roughness texture, so none of them shows it.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(8, 8)
+
+[sub_resource type="Gradient" id="Gradient_roughness"]
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_roughness"]
+gradient = SubResource("Gradient_roughness")
+width = 128
+height = 128
+fill_from = Vector2(0, 0)
+fill_to = Vector2(1, 0)
+
+[sub_resource type="Gradient" id="Gradient_flat"]
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_flat"]
+gradient = SubResource("Gradient_flat")
+width = 16
+height = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 1.0
+roughness_texture = SubResource("GradientTexture2D_roughness")
+
+[sub_resource type="Environment" id="Environment_dim"]
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.2
+
+[node name="Scene" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_dim")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -1)
+light_energy = 3.0
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")
+surface_material_override/0 = SubResource("Material_floor")
+
+[node name="Decal" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+texture_albedo = SubResource("GradientTexture2D_flat")
+size = Vector3(6, 2, 6)
+albedo_mix = 1.0

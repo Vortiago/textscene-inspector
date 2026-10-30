@@ -6,8 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
-import { collectLiveNodes, liveStep, rootScope, walkLiveTree, type LiveTreeContext } from './liveSceneTree';
-import { contextOver } from './liveSceneTree.testkit';
+import { collectLiveNodes, rootScope, walkLiveTree, type LiveTreeContext } from './liveSceneTree';
+import { contextOver, stepOver } from './liveSceneTree.testkit';
 import { recordingReads } from './cacheSources';
 
 const BASE = `[gd_scene format=3]
@@ -189,7 +189,7 @@ describe('the composition of an inherited sub-scene', () => {
     const ctx = { ...full, sceneCache: recordingReads(full.sceneCache, (path) => reads.push(path)) };
     const instance = main.nodes[0]!.children.find((n) => n.name === 'K0')!;
 
-    liveStep(instance, rootScope(ctx), ctx.sceneCache);
+    stepOver(instance, rootScope(ctx), ctx.sceneCache);
 
     expect(reads.filter((path) => path === 'res://kid.tscn')).toHaveLength(1);
   });

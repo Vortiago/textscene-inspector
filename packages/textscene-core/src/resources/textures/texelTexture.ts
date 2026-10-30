@@ -10,8 +10,6 @@ import { isBottomUp } from '../../utils/reversedRows';
  * A `DataTexture` of `levels` that samples, tags and flips as `source`. Several levels are the
  * whole chain, so three uploads them as they stand and builds none. A single level asks the GPU
  * for a chain wherever `source` samples one. The caller keeps `source`.
- *
- * @canonical A `DataTexture` that carries a CPU mip chain
  */
 export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.DataTexture {
   const [base] = levels;
@@ -20,7 +18,7 @@ export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.D
     new THREE.DataTexture(base.data, base.width, base.height, THREE.RGBAFormat),
     source
   );
-  carryMipChain(texture, levels);
+  carryMipChain(texture, levels, texture.minFilter);
   texture.colorSpace = source.colorSpace;
   // The bytes keep the source's row order, so the source's flip decides which way is up.
   texture.flipY = source.flipY;
@@ -36,26 +34,28 @@ export interface TextureLevel {
 }
 
 /**
- * Hands three the whole chain `levels` holds, so it uploads them as they stand and builds none.
- * One level is no chain: `texture` keeps its sampler and the GPU's choice. The first level holds
- * `texture`'s own bytes. Returns whether a chain was attached.
+ * The minification of Godot's default sampler (`LINEAR_WITH_MIPMAPS`, `material.h:573`), for a
+ * texture no material has sampled yet. A binding that authors `texture_filter` rewrites it.
  */
-function carryMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): boolean {
-  if (levels.length < 2) return false;
-  texture.mipmaps = levels;
-  texture.generateMipmaps = false;
-  return true;
-}
+export const GODOT_DEFAULT_MIN_FILTER = godotTextureFilterState(undefined).minFilter;
 
 /**
- * {@link carryMipChain} for a texture no material has sampled yet: with a chain it also takes the
- * minification of Godot's default sampler (`LINEAR_WITH_MIPMAPS`, `material.h:573`), so the
- * levels are read between. A binding that authors `texture_filter` rewrites it.
+ * The one way a texture takes a CPU mip chain: three uploads every level of `levels` as it stands
+ * and builds none, and the texture minifies as `minFilter`, which reads the levels between. The
+ * first level holds `texture`'s own bytes. One level is no chain, so `texture` keeps its sampler
+ * and the GPU's choice.
  *
  * @canonical A `DataTexture` that carries a CPU mip chain
  */
-export function carryDefaultMipChain(texture: THREE.DataTexture, levels: TextureLevel[]): void {
-  if (carryMipChain(texture, levels)) texture.minFilter = godotTextureFilterState(undefined).minFilter;
+export function carryMipChain(
+  texture: THREE.DataTexture,
+  levels: TextureLevel[],
+  minFilter: THREE.MinificationTextureFilter
+): void {
+  if (levels.length < 2) return;
+  texture.mipmaps = levels;
+  texture.generateMipmaps = false;
+  texture.minFilter = minFilter;
 }
 
 /**

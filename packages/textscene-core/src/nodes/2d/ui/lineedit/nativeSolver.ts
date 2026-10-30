@@ -15,6 +15,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -183,7 +184,7 @@ export const lineEditTextureSlots: TextureSlotsFn = (
   const requests: TextureSlotRequest[] = [];
   if (props.rightIcon !== undefined) requests.push({ key: 'right_icon', ref: props.rightIcon });
   const clear = themedIcons.clear;
-  if (clear) requests.push({ key: 'clear', ref: clear.ref, scope: clear.resources });
+  if (clear) requests.push(themedSlotRequest('clear', clear));
   return requests;
 };
 

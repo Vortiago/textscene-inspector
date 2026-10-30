@@ -14,9 +14,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
+import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import { projectLayoutDirectionEnv, type ProjectSettings } from '../../../parser/projectSettingsParser';
+import type { ProjectSettings } from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -29,10 +30,25 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
-import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
+import { NODE_PROPERTY } from '../../../resources/useTexture2D';
+import {
+  extResourceTexture2DSize,
+  inlineTexture2DSize,
+  type ViewportTextureSizing,
+} from '../../../resources/texture2DSize';
+import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
+import {
+  recordingSizes,
+  sizesStillAnswered,
+  viewportTargetSizes,
+  type ViewportSizeRead,
+  type ViewportTargetSize,
+} from '../../../resources/textures/viewporttexture/viewportTargetSize';
+import { useViewportTextures } from '../../contexts/ViewportTextureContext';
+import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
-import { resolveProjectDefaultFont } from '../../../resources/fonts/font/projectDefaultFont';
+import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -47,8 +63,9 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
-import { useFontMetricsSettleCount } from './text/useFontMetricsSettleCount';
+import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
   isInjected,
@@ -64,9 +81,12 @@ import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import type { SkippedAncestors, SkippedMaterial, SolveNode, ThemedIconRef } from './solveTree';
 import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
 import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
+import { liveNodePatches } from '../../liveNodePatches';
+import { liveScenePassResults } from '../../liveScenePass';
+import { patchedNode } from '../../nodePatch';
 import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
@@ -102,30 +122,22 @@ const NO_THEME_SCOPE: ThemeResolutionScope = {
  * never the querying node's: a Theme's StyleBoxes live in the theme file. Keyed by
  * the `ThemeResource` object, which every referencing node shares.
  */
-const themeStyleBoxCache = new WeakMap<
-  ThemeResource,
-  Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>>
->();
-
-function resolvedStylesOfTheme(
-  theme: ThemeResource
-): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> {
-  const cached = themeStyleBoxCache.get(theme);
-  if (cached) return cached;
-  const { externalResources, internalResources } = theme.resources ?? {
-    externalResources: [],
-    internalResources: [],
-  };
-  const out: Record<string, Record<string, ResolvedStyleBox>> = {};
-  for (const [type, byName] of Object.entries(theme.styles ?? {})) {
-    for (const [name, ref] of Object.entries(byName)) {
-      const resolved = parseStyleBox(ref, externalResources, internalResources);
-      if (resolved) (out[type] ??= {})[name] = resolved;
+const resolvedStylesOfTheme = perObject(
+  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> => {
+    const { externalResources, internalResources } = theme.resources ?? {
+      externalResources: [],
+      internalResources: [],
+    };
+    const out: Record<string, Record<string, ResolvedStyleBox>> = {};
+    for (const [type, byName] of Object.entries(theme.styles ?? {})) {
+      for (const [name, ref] of Object.entries(byName)) {
+        const resolved = parseStyleBox(ref, externalResources, internalResources, isThemeLocalToScene(theme));
+        if (resolved) (out[type] ??= {})[name] = resolved;
+      }
     }
+    return out;
   }
-  themeStyleBoxCache.set(theme, out);
-  return out;
-}
+);
 
 /**
  * Every StyleBox slot, keyed as `Control::get_theme_stylebox` keys them. A
@@ -142,7 +154,7 @@ function resolveStyleBoxes(
   const local: Record<string, ResolvedStyleBox> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources);
+      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources, NODE_PROPERTY);
       if (resolved) local[key] = resolved;
     }
   }
@@ -179,26 +191,18 @@ function resolveThemedConstants(
  * theme like `resolvedStylesOfTheme`. Left unresolved: loading a texture needs a
  * `useTexture2D` subscription only a component can hold.
  */
-const themeIconRefCache = new WeakMap<
-  ThemeResource,
-  Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>>
->();
-
-function iconRefsOfTheme(
-  theme: ThemeResource
-): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> {
-  const cached = themeIconRefCache.get(theme);
-  if (cached) return cached;
-  const resources = theme.resources ?? { externalResources: [], internalResources: [] };
-  const out: Record<string, Record<string, ThemedIconRef>> = {};
-  for (const [type, byName] of Object.entries(theme.icons ?? {})) {
-    for (const [name, ref] of Object.entries(byName)) {
-      (out[type] ??= {})[name] = { ref, resources };
+const iconRefsOfTheme = perObject(
+  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> => {
+    const resources = theme.resources ?? { externalResources: [], internalResources: [] };
+    const out: Record<string, Record<string, ThemedIconRef>> = {};
+    for (const [type, byName] of Object.entries(theme.icons ?? {})) {
+      for (const [name, ref] of Object.entries(byName)) {
+        (out[type] ??= {})[name] = { ref, resources, isHeldLocally: isThemeLocalToScene(theme) };
+      }
     }
+    return out;
   }
-  themeIconRefCache.set(theme, out);
-  return out;
-}
+);
 
 /**
  * `Control::get_theme_icon`'s override-then-chain walk. A local
@@ -214,7 +218,7 @@ function resolveThemedIcons(
   const local: Record<string, ThemedIconRef> = {};
   if (overrides) {
     for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope };
+      local[key] = { ref, resources: scope, isHeldLocally: NODE_PROPERTY };
     }
   }
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
@@ -316,6 +320,8 @@ interface ForestResult {
   pendingFonts: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
+  /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
+  viewportSizeReads: readonly ViewportSizeRead[];
 }
 
 /**
@@ -345,7 +351,8 @@ function isSortableChild(live: TscnNode): boolean {
  */
 function nextSkippedAncestors(
   collapsed: TscnNode,
-  previous: SkippedAncestors | null
+  previous: SkippedAncestors | null,
+  material: SkippedMaterial
 ): SkippedAncestors | null {
   if (!isCanvasItem(collapsed)) return null;
   const props = collapsed.properties as Node2DProperties;
@@ -365,7 +372,31 @@ function nextSkippedAncestors(
       { filter: props.texture_filter, repeat: props.texture_repeat },
       previous?.sampler ?? ROOT_TEXTURE_SAMPLER
     ),
+    material,
   };
+}
+
+const INHERIT_MATERIAL: SkippedMaterial = { kind: 'inherit' };
+const NO_MATERIAL: SkippedMaterial = { kind: 'none' };
+
+/**
+ * The material a promoted Control's parent item has through the skipped `collapsed`: its own
+ * `material`, or with `use_parent_material` the one above it. A chain that starts on the Control
+ * above defers to that Control. A `top_level` or canvas-root link has no parent item, so it defers
+ * to nothing (`CanvasItem::get_parent_item`, `canvas_item.cpp:565-571`).
+ */
+function skippedMaterialOf(
+  collapsed: TscnNode,
+  scope: SceneScope,
+  previous: SkippedAncestors | null,
+  canvasChainBroken: boolean
+): SkippedMaterial {
+  const props = collapsed.properties as Node2DProperties;
+  if (props.use_parent_material) {
+    if (previous) return previous.material;
+    return canvasChainBroken || isTopLevelItem(collapsed) ? NO_MATERIAL : INHERIT_MATERIAL;
+  }
+  return props.materialPath ? { kind: 'own', ref: props.materialPath, resources: scope } : NO_MATERIAL;
 }
 
 /**
@@ -403,7 +434,8 @@ function buildForest(
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  inheritedRtl: boolean | null
+  inheritedRtl: boolean | null,
+  viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
   const pendingTextures = new Set<string>();
@@ -412,6 +444,8 @@ function buildForest(
   const pendingFonts = new Set<string>();
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
+  const viewportSizeReads: ViewportSizeRead[] = [];
+  const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = { externalResources, internalResources, sceneCache };
@@ -496,20 +530,12 @@ function buildForest(
     return out;
   }
 
-  /** The project's default theme (`gui/theme/custom`), resolved once for every node. */
-  const projectTheme: ThemeResource | null = (() => {
-    const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim();
-    if (!projectThemeRef) return null;
-    const cached = themeCache.getCached(projectThemeRef);
-    if (cached === undefined) {
-      pendingThemes.add(projectThemeRef);
-      return null;
-    }
-    return cached;
-  })();
-
-  /** The project's default font (`gui/theme/custom_font`), resolved once for every node. */
-  const projectDefaultFont = resolveProjectDefaultFont(projectSettings, fontCache, pendingFonts);
+  /** The project's theme and default font, resolved once for every node. */
+  const projectFonts = resolveProjectFonts(
+    projectSettings,
+    { themes: themeCache, fonts: fontCache },
+    { themes: pendingThemes, fonts: pendingFonts }
+  );
 
   /**
    * A Texture2D ref's pixel size, or null until known. `textureSize` and every
@@ -518,11 +544,17 @@ function buildForest(
   function resolveTextureRefSize(
     ref: string,
     ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[]
+    int: readonly TscnInternalResource[],
+    consumerPath: string,
+    isHeldLocally: boolean
   ): Vector2 | null {
-    // An inline procedural texture or a region cell states its size here, with no
-    // load. This walk is no component, so it cannot call `useTexture2D`.
-    const inline = inlineTexture2DSize(ref, int);
+    const sizing: ViewportTextureSizing = {
+      isHeldLocally,
+      viewportSize: (viewportTexture) => readViewportSize(consumerPath, viewportTexture),
+    };
+    // An inline procedural texture, a region cell or a ViewportTexture states its size here, with
+    // no load. This walk is no component, so it cannot call `useTexture2D`.
+    const inline = inlineTexture2DSize(ref, int, sizing);
     if (inline) return inline;
 
     // A texture in its own resource file loads on the resource bus, not the texture
@@ -536,7 +568,7 @@ function buildForest(
         return null;
       }
       if (cached === null) return null;
-      return extResourceTexture2DSize(cached);
+      return extResourceTexture2DSize(cached, sizing);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`
@@ -564,6 +596,7 @@ function buildForest(
    */
   function resolveTextureSize(
     node: TscnNode,
+    path: string,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     themedIcons: Readonly<Record<string, ThemedIconRef>>
@@ -572,9 +605,15 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope } of requests) {
+      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY } of requests) {
         slots[key] = ref
-          ? resolveTextureRefSize(ref, scope?.externalResources ?? ext, scope?.internalResources ?? int)
+          ? resolveTextureRefSize(
+              ref,
+              scope?.externalResources ?? ext,
+              scope?.internalResources ?? int,
+              path,
+              isHeldLocally
+            )
           : null;
       }
       // The first request stands in for `textureSize`, Godot's first-priority
@@ -587,7 +626,10 @@ function buildForest(
     // type carries at most one of.
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
-    const size = typeof ref === 'string' && ref !== '' ? resolveTextureRefSize(ref, ext, int) : null;
+    const size =
+      typeof ref === 'string' && ref !== ''
+        ? resolveTextureRefSize(ref, ext, int, path, NODE_PROPERTY)
+        : null;
     return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 
@@ -700,9 +742,21 @@ function buildForest(
     const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
 
+    // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
+    // The passes run for the first such Node2D only, so a scene of Controls alone never runs them.
+    const placed =
+      !isControl && isCanvasItem(collapsed)
+        ? patchedNode(collapsed, liveScenePassResults(liveNodePatches, tree).get(path))
+        : collapsed;
     // A real Control's descendants start a fresh accumulation. A skipped node
     // folds its own CanvasItem transform into what they inherit.
-    const childSkippedAncestors = isControl ? null : nextSkippedAncestors(collapsed, skippedAncestors);
+    const childSkippedAncestors = isControl
+      ? null
+      : nextSkippedAncestors(
+          placed,
+          skippedAncestors,
+          skippedMaterialOf(collapsed, ownScope, skippedAncestors, canvasChainBroken)
+        );
     // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
     // so the flag ends it on the Control itself or on any CanvasItem above.
     const topLevel = isTopLevelItem(collapsed);
@@ -761,12 +815,12 @@ function buildForest(
       collapsed.type,
       (collapsed.properties as ControlProperties).themeTypeVariation,
       nodeThemeChain,
-      projectTheme,
-      projectDefaultFont
+      projectFonts
     );
     const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
     const texture = resolveTextureSize(
       collapsed,
+      path,
       ownScope.externalResources,
       ownScope.internalResources,
       themedIcons
@@ -805,8 +859,7 @@ function buildForest(
       icons: themedIcons,
       resources: ownScope,
       themeChain: nodeThemeChain,
-      projectTheme,
-      projectDefaultFont,
+      projectFonts,
     };
     const hoistedBelow = isBoundary ? [] : childHoisted;
     return canvasChainBroken || topLevel
@@ -842,6 +895,7 @@ function buildForest(
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
     readKeys,
+    viewportSizeReads,
   };
 }
 
@@ -860,17 +914,31 @@ export function useBuildSolveTree(
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   // With or without a loader: `peekSceneFontMetrics` starts font loads from the
   // solve itself and answers with the bundled fallback until the metrics settle.
-  const fontMetricsVersion = useFontMetricsSettleCount(true);
+  const fontMetricsVersion = useSceneFontSettleCount(true);
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
-  // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
-  const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
+  const layoutDirectionEnv = useLayoutDirectionEnv();
 
   const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
   // Both counters only grow, so their sum moves whenever either does.
   const generation = fontMetricsVersion + cacheVersion;
+  const viewportTargets = useViewportTextures();
+  const live = useSharedLiveTree();
+  const viewportTargetSize = useMemo(
+    () => viewportTargetSizes(viewportTargets, live),
+    [viewportTargets, live]
+  );
+  // The lookup the last forest was keyed on stays the key while it answers every size that forest
+  // read alike, so a publish or a live-tree load no slot reads rebuilds nothing.
+  const lastSizes = useRef<{ key: ViewportTargetSize; reads: readonly ViewportSizeRead[] } | null>(null);
+  // Key first: an unchanged lookup answers every read alike, so a render with none re-reads nothing.
+  const last = lastSizes.current;
+  const sizesKey =
+    last && (last.key === viewportTargetSize || sizesStillAnswered(last.reads, viewportTargetSize))
+      ? last.key
+      : viewportTargetSize;
 
   const forest = useMemo(
     () =>
@@ -882,7 +950,8 @@ export function useBuildSolveTree(
         projectSettings,
         hiddenNodePaths,
         layoutDirectionEnv,
-        inheritedRtl
+        inheritedRtl,
+        viewportTargetSize
       ),
     // `generation` is a cache-buster, not read inside: the loader's caches are
     // outside React's dependency graph.
@@ -896,13 +965,15 @@ export function useBuildSolveTree(
       hiddenNodePaths,
       layoutDirectionEnv,
       inheritedRtl,
+      sizesKey,
       generation,
     ]
   );
   const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
   useEffect(() => {
     readKeys.current = forest.readKeys;
-  }, [forest]);
+    lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };
+  }, [forest, sizesKey]);
 
   // Requests what the walk found uncached after render, not during it, as
   // `useResource` does.

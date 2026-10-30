@@ -16,6 +16,7 @@ import {
   type PersistedViewport,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
+import { AnimatedBonePosesProvider } from '../../contexts/AnimatedBonePosesContext.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
@@ -100,6 +101,7 @@ export function previewShellProviders({
     // makes the container's rect the viewport's size. It wraps both canvases too.
     (children) => <ViewportRectProvider>{children}</ViewportRectProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>,
+    (children) => <AnimatedBonePosesProvider>{children}</AnimatedBonePosesProvider>,
     // Outermost of the Control-facing providers, since both theme-scale consumers,
     // `<Canvas2DStage>` and `<ControlRasterHosts>`, sit under it.
     // The key carries `panelId`: `rootScenePath` is relative to the **Corpus root**,

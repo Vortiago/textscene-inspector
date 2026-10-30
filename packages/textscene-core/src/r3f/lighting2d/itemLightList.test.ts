@@ -11,6 +11,7 @@ import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import {
   itemPositionalLights,
   positionalCandidates,
+  positionalListOrder,
   drawsInPass,
   planLightLists,
   placementId,
@@ -29,7 +30,7 @@ function light(overrides: Partial<CanvasLightDeclaration> = {}): CanvasLightDecl
   return { reach: key(), sequence: 0, shadowItemCullMask: null, tintsShadow: false, ...overrides };
 }
 
-const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
 function lights(...declarations: CanvasLightDeclaration[]): ReadonlyMap<number, CanvasLightDeclaration> {
   return new Map(declarations.map((declaration, ordinal) => [ordinal, declaration]));
@@ -98,14 +99,20 @@ describe('the light list of an item', () => {
 
 describe('the light list of an item under the per-item cap', () => {
   it('leaves out a positional light the item does not take', () => {
-    const list = listAt(lights(light(), light()), { ...ITEM, positionalLights: [1] });
+    const list = listAt(lights(light(), light()), { ...ITEM, takenLights: [1] });
     expect(list.map((entry) => entry.ordinal)).toEqual([1]);
   });
 
-  it('keeps a directional light, which the cap does not count', () => {
+  it('keeps a directional light the item takes, which the cap does not count', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    const list = listAt(lights(sun, light()), { ...ITEM, positionalLights: [] });
+    const list = listAt(lights(sun, light()), { ...ITEM, takenLights: [0] });
     expect(list.map((entry) => entry.ordinal)).toEqual([0]);
+  });
+
+  it('leaves out a directional light the item does not take', () => {
+    const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
+    const list = listAt(lights(sun, light()), { ...ITEM, takenLights: [1] });
+    expect(list.map((entry) => entry.ordinal)).toEqual([1]);
   });
 });
 
@@ -128,29 +135,31 @@ function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, Re
   return new Map([...ordinals].map((ordinal) => [ordinal, rect]));
 }
 
+function candidatesAt(declared: ReadonlyMap<number, CanvasLightDeclaration>, item: ItemPlacement): number[] {
+  return positionalCandidates(declared, positionalListOrder(declared), item);
+}
+
 describe('positionalCandidates', () => {
   it('lists every positional light that reaches the placement, past the cap too', () => {
-    expect(positionalCandidates(positionalLights(CAP + 1), ITEM)).toHaveLength(CAP + 1);
+    expect(candidatesAt(positionalLights(CAP + 1), ITEM)).toHaveLength(CAP + 1);
   });
 
   it('orders by sequence, not by ordinal', () => {
-    expect(positionalCandidates(lights(light({ sequence: 1 }), light({ sequence: 0 })), ITEM)).toEqual([
-      1, 0,
-    ]);
+    expect(candidatesAt(lights(light({ sequence: 1 }), light({ sequence: 0 })), ITEM)).toEqual([1, 0]);
   });
 
   it('breaks a sequence tie by ordinal', () => {
-    expect(positionalCandidates(lights(light(), light()), ITEM)).toEqual([0, 1]);
+    expect(candidatesAt(lights(light(), light()), ITEM)).toEqual([0, 1]);
   });
 
   it('leaves out a light the cull test rejects', () => {
     const all = lights(light({ reach: key({ itemCullMask: 2 }) }), light({ sequence: 1 }));
-    expect(positionalCandidates(all, ITEM)).toEqual([1]);
+    expect(candidatesAt(all, ITEM)).toEqual([1]);
   });
 
   it('leaves out a directional light, which the cap does not count', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    expect(positionalCandidates(lights(sun), ITEM)).toEqual([]);
+    expect(candidatesAt(lights(sun), ITEM)).toEqual([]);
   });
 });
 
@@ -201,13 +210,13 @@ describe('itemPositionalLights', () => {
 
 describe('placementId', () => {
   it('separates two placements that take different positional lights', () => {
-    expect(placementId({ ...ITEM, positionalLights: [0, 1] })).not.toBe(
-      placementId({ ...ITEM, positionalLights: [0] })
+    expect(placementId({ ...ITEM, takenLights: [0, 1] })).not.toBe(
+      placementId({ ...ITEM, takenLights: [0] })
     );
   });
 
   it('separates a capped placement from an uncapped one', () => {
-    expect(placementId({ ...ITEM, positionalLights: [] })).not.toBe(placementId(ITEM));
+    expect(placementId({ ...ITEM, takenLights: [] })).not.toBe(placementId(ITEM));
   });
 });
 

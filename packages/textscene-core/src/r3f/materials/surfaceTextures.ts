@@ -9,13 +9,9 @@ import type * as THREE from 'three';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
-import type { TscnInternalResource } from '../../parser/types';
-import {
-  isViewportTextureRef,
-  useViewportTextureSlot,
-} from '../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
-import { useTiledUpload } from '../tiledUpload/useTiledUpload';
+import { NODE_PROPERTY, useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
+import { NO_RESOURCES } from '../SceneResourcesContext';
+import { useTextureView } from '../useTextureView';
 import type {
   ResolvedTextures,
   StandardMaterial3DScalars,
@@ -25,56 +21,47 @@ import type {
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
 import { isAnisotropic } from '../../resources/materials/standardmaterial3d/materialBag';
 import {
-  bindSlotTexture,
   materialTextureStates,
   slotReadsSourceColor,
+  slotViewSampler,
   topDownV,
+  fromTopEdge,
   type MaterialTextureStates,
-  type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
-import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
-import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
-import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource } from './materialSource';
-
-/** The resource tables a material's references resolve in: its owning file's. */
-type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
-
-const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
+import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene.js';
 
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
 
-/**
- * What a material's textures draw on, where the binding cares: the Godot mesh sub-resource a
- * triplanar material tiles against, or a glTF surface. Stable identity, as a memo reads it.
- */
-export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
+/** What a material's textures draw on where the binding cares: a glTF surface, or none for a Godot mesh. */
+export type TexturedSurface = typeof GLTF_SURFACE;
 
 /**
- * Every texture slot of one StandardMaterial3D, resolved in `tables`, the material's own file. A
- * triplanar material tiles per world unit: a PlaneMesh `surface` folds in its size, and CSG or an
- * ArrayMesh passes none and gets `uv1_scale`. Null when a slot's file cannot load or a
- * ViewportTexture albedo is cyclic: the surface takes `MISSING_TEXTURE_MATERIAL`.
+ * Every texture slot of one StandardMaterial3D, resolved in `material`'s own file's tables. Null
+ * when a slot never draws, a file that cannot load or a ViewportTexture in a pass cycle: the
+ * surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
-  tables: MaterialTables | null,
+  material: MaterialResource | null,
   surface?: TexturedSurface
 ): ResolvedTextures | null {
-  const resourceTables = tables ?? NO_TABLES;
-
   // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
   // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`), so a
   // `normal_texture` without `normal_enabled` reaches no shader.
   const references = scalars?.textureSlots;
 
-  const sources = useEachSlot(useSlotTexture, references, resourceTables);
+  // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
+  const isHeldLocally = material
+    ? (material.isHeldLocally ?? true) && isLocalToScene(material.resource)
+    : NODE_PROPERTY;
+  const sources = useEachSlot(useSlotTexture, references, material, isHeldLocally);
   // The per-material half of every binding: UV set and transform, sampler filter and
-  // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
+  // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const states = useMemo(
     (): MaterialTextureStates | null =>
@@ -85,16 +72,15 @@ export function useSurfaceTextures(
   const flowmap = useRepackedFlowmap(sources.anisotropy_flowmap, scalars !== null && isAnisotropic(scalars));
   const drawn = useEachSlot(useDrawnSlot, { ...sources, anisotropy_flowmap: flowmap }, states);
 
-  const albedoTargetUv = drawn.albedo_texture?.isRenderTargetTexture ? states?.uv1.uv : undefined;
   const maps = TEXTURE_SLOTS.map((slot) => drawn[slot]);
   const textures = useMemo(
-    (): ResolvedTextures => ({ ...drawn, albedoTargetUv }),
+    (): ResolvedTextures => ({ ...drawn }),
     // `maps` has one entry per slot, a fixed length, and stands for `drawn`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [...maps, albedoTargetUv]
+    maps
   );
 
-  const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing || sources[slot].cyclic);
+  const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing);
   return isUnresolved ? null : textures;
 }
 
@@ -115,34 +101,29 @@ function useEachSlot<Args extends unknown[], T>(
   return results as Record<TextureSlot, T>;
 }
 
-interface SlotTexture extends Texture2DResult {
-  /** The slot names a ViewportTexture whose target sits in a pass cycle, so it is never written. */
-  cyclic: boolean;
-}
-
 /** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
-type SlotMap = Pick<SlotTexture, 'texture' | 'isArriving'>;
+type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 
 /**
  * One slot's texture in every form a Texture2D slot takes, null while it arrives. A material binds
  * a texture by RID: an AtlasTexture's is its whole sheet (`scene/resources/atlas_texture.cpp:55-58`),
- * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target, from the
- * live registry.
+ * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target.
  */
 function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
-  { externalResources, internalResources }: MaterialTables
-): SlotTexture {
-  const ref = textureSlotReference(references, slot);
-  const isViewport = isViewportTextureRef(ref, internalResources);
+  material: MaterialResource | null,
+  isHeldLocally: boolean
+): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
-  const viewport = useViewportTextureSlot(isViewport ? ref : undefined, internalResources, view);
-  const result = useTexture2DRid(isViewport ? undefined : ref, externalResources, internalResources);
-  if (isViewport)
-    return { texture: viewport.texture, missing: false, isArriving: false, cyclic: viewport.cyclic };
-  const texture = result.namesTexture ? result.texture : defaultWhiteTexture();
-  return { texture, missing: result.missing, isArriving: result.isArriving, cyclic: false };
+  const result = useTexture2DRid(
+    textureSlotReference(references, slot),
+    material?.externalResources ?? NO_RESOURCES.externalResources,
+    material?.internalResources ?? NO_RESOURCES.internalResources,
+    view,
+    isHeldLocally
+  );
+  return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }
 
 function textureSlotReference(
@@ -158,7 +139,7 @@ function textureSlotReference(
  * samples it, so only that one repacks (a canvas readback, a buffer copy and a GPU re-upload) and
  * waits for an arriving map. The memo depends on the two values the repack reads, not their wrapper.
  */
-function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
+function useRepackedFlowmap(flowmap: SlotMap, isSampled: boolean): SlotMap {
   const { texture } = flowmap;
   const repacked = useMemo(
     () => (isSampled && texture ? repackAnisotropyFlowmap(texture) : undefined),
@@ -170,10 +151,9 @@ function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
 }
 
 /**
- * The map a slot draws: its texture with the material's texture state applied, once on the GPU. A
+ * The map a slot draws: its texture as the material's texture state samples it, once on the GPU. A
  * large map uploads in bands and the slot keeps its old map meanwhile. With none, a stand-in fills
- * the slot while a map uploads or arrives (`pendingMapStandIn.ts`). The upload releases each map
- * the slot stops drawing.
+ * the slot while a map uploads or arrives (`pendingMapStandIn.ts`).
  */
 function useDrawnSlot(
   slot: TextureSlot,
@@ -181,52 +161,24 @@ function useDrawnSlot(
   states: MaterialTextureStates | null
 ): THREE.Texture | undefined {
   const { texture, isArriving } = maps[slot];
-  const bound = useMemo(() => transformedTexture(texture, states, slot), [texture, states, slot]);
-  const drawn = useTiledUpload(bound ?? null, releaseBoundTexture) ?? undefined;
+  // White samples the same under any wrap, filter, window or colour space, so a clone buys nothing.
+  const isSampledAsIs = !texture || !states || texture === defaultWhiteTexture();
+  const drawn = useTextureView(texture, isSampledAsIs ? null : slotViewSampler(texture, slot, states));
   if (drawn) return drawn;
-  return bound || isArriving ? pendingMapStandIn(slot) : undefined;
+  return texture || isArriving ? pendingMapStandIn(slot) : undefined;
 }
 
-/** The slot's texture with the material's texture state applied. Undefined while nothing is loaded. */
-function transformedTexture(
-  texture: THREE.Texture | null,
-  states: MaterialTextureStates | null,
-  slot: TextureSlot
-): THREE.Texture | undefined {
-  if (!texture) return undefined;
-  // White samples the same under any wrap, filter, UV transform or colour space, so a clone buys nothing.
-  if (!states || texture === defaultWhiteTexture()) return texture;
-  return bindSlotTexture(texture, slot, states);
-}
-
-/** The texture states of `scalars` on `surface`. */
+/**
+ * The texture states of `scalars` on `surface`. A UV1 attribute runs bottom-up on a Godot mesh and
+ * top-down on a glTF surface. A triplanar set reads no attribute, and a UV2 state flips already, in
+ * `materialTextureStates`.
+ */
 function surfaceTextureStates(
   scalars: StandardMaterial3DScalars,
   surface: TexturedSurface | undefined,
   anisotropicFilteringLevel: number
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars, anisotropicFilteringLevel);
-  if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
-  if (!surface) return states;
-  return {
-    ...states,
-    uv1: scalars.triplanar ? planeTiled(states.uv1, surface) : states.uv1,
-    uv2: scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
-  };
-}
-
-/**
- * A state on a glTF surface. Its first UV set keeps Godot's top-down V, so a state that reads it
- * flips. A state that reads UV2 flips already, in `materialTextureStates`.
- */
-function onGltfUvs(state: UVSetState): UVSetState {
-  return state.channel === UV2_CHANNEL ? state : topDownV(state);
-}
-
-/**
- * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar):
- * three applies `offset` in UV space, Godot's world-triplanar offset is in world units.
- */
-function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
-  return { ...state, uv: { scale: triplanarPlaneScale(mesh, state.uv.scale), offset: state.uv.offset } };
+  if (scalars.triplanar?.uv1) return states;
+  return { ...states, uv1: surface === GLTF_SURFACE ? topDownV(states.uv1) : fromTopEdge(states.uv1) };
 }

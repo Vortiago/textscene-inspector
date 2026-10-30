@@ -55,6 +55,13 @@ export interface TscnScene<N extends RawNode = TscnNode> {
   readonly externalResources: readonly TscnExternalResource[];
   readonly internalResources: readonly TscnInternalResource[];
   /**
+   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
+   * orphan, and refuses every scene that instances it. True when the scene has no node, the root
+   * heading has a `parent=` or states no identifier, a heading spells `parent=""`, or a later
+   * heading has no `parent=`.
+   */
+  refusesToInstantiate: boolean;
+  /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
    */
@@ -69,6 +76,12 @@ export interface TscnScene<N extends RawNode = TscnNode> {
    * (`resource_format_text.cpp:723-728`).
    */
   mainResource?: TscnMainResource;
+}
+
+/** The owner an `owner_uid_path=` finds: a root-relative path, and the ids still to follow inside the instance at it. */
+export interface OwnerRecovery {
+  readonly owner: string;
+  readonly ownerContentTrail?: readonly number[];
 }
 
 /**
@@ -117,6 +130,27 @@ export interface RawNode {
    * because its `parent` path vanished (`packed_scene.cpp:161-163`). The node keeps its name.
    */
   landedByIdTrail?: true;
+  /**
+   * On a node seated below the instance heading its `parent_id_path=` enters: the ids that continue in
+   * that instance's scene. Its graft follows them and places the node (`packed_scene.cpp:1947-2005`).
+   */
+  parentContentTrail?: readonly number[];
+  /**
+   * On a node seated below an instance for a `parent=` path into its content, whose `parent_id_path=`
+   * names a heading of this file: where Godot seats the node should the content lack the path.
+   * `contentTrail` holds the ids that continue inside that heading, where it is an instance.
+   */
+  parentTrailFallback?: { readonly path: string; readonly contentTrail?: readonly number[] };
+  /**
+   * On a node whose `owner_uid_path=` enters an instance: the ids that continue in the scene the node
+   * at `owner` holds. Where it is set, `owner` names the instance heading, not the owner itself.
+   */
+  ownerContentTrail?: readonly number[];
+  /**
+   * On a node whose `owner=` walk enters an instance's content, where it may find nothing, and whose
+   * `owner_uid_path=` names an owner: the owner Godot takes then (`packed_scene.cpp:159-163`).
+   */
+  ownerTrailFallback?: OwnerRecovery;
   /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
@@ -186,7 +220,7 @@ export interface ConnectionHeading {
   toIdTrail: readonly number[] | undefined;
 }
 
-/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
+/** The **Heading facts**: what the `[node]`, `[connection]` and `[editable]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
    * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which `reRootedNames`
@@ -210,12 +244,6 @@ export interface HeadingFacts {
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
   /**
-   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
-   * orphan. True when `rootWithParent` is set, `emptyParentHeadings` is not empty, a later heading
-   * has no `parent=`, or the root heading states no identifier.
-   */
-  refusesToInstantiate: boolean;
-  /**
    * The orphans whose `parent_id_path=` Godot follows to a node, instead of re-rooting them.
    * An orphan absent here is re-rooted, or has no trail.
    */
@@ -224,6 +252,8 @@ export interface HeadingFacts {
   resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
+  /** The line of each `[editable]` heading that states no `path=`, which the loader refuses. */
+  pathlessEditableLines: readonly number[];
   /**
    * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
    * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`

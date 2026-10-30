@@ -80,6 +80,13 @@ export interface ControlProperties {
    */
   lightMask?: number;
   /**
+   * CanvasItem `material`, the raw reference a `CanvasItemMaterial` resolves from
+   * (`useCanvasItemMaterial`). Undefined when unset.
+   */
+  materialPath?: string;
+  /** CanvasItem `use_parent_material` (`scene/main/canvas_item.h`), default `false`. */
+  useParentMaterial?: boolean;
+  /**
    * CanvasItem `texture_filter` (`scene/main/canvas_item.h:52-60`). Default `0` is
    * `TEXTURE_FILTER_PARENT_NODE` (`scene/main/canvas_item.h:123`): the ancestor's filter,
    * and at the top the viewport's.

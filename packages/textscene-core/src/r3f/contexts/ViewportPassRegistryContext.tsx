@@ -4,20 +4,18 @@
  * samples a nested `SubViewport` would render one frame stale. The registrant
  * supplies `dependsOn`: the orchestrator never inspects scene content.
  */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as logger from '../../logger.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
+import { updateTextureAtlases, useTextureAtlasFrame } from '../textureAtlas/updateTextureAtlases.js';
+import {
+  createExternalStore,
+  useExternalStoreSelection,
+  useExternalStoreValue,
+  type ExternalStore,
+} from '../hooks/createExternalStore.js';
 
 export interface ViewportPass {
   /** ids (dispatcher-absolute node paths) of the OTHER passes this pass's content samples. */
@@ -35,31 +33,74 @@ interface PassRegistryState {
   cycles: ReadonlyMap<string, ViewportPassCycle>;
 }
 
-const EMPTY_PASSES: ReadonlyMap<string, ViewportPass> = new Map();
-const EMPTY_CYCLES: ReadonlyMap<string, ViewportPassCycle> = new Map();
-const EMPTY_STATE: PassRegistryState = { passes: EMPTY_PASSES, order: [], cycles: EMPTY_CYCLES };
+const EMPTY_STATE: PassRegistryState = registryState(new Map());
 
-const NO_OP_REGISTER: RegisterViewportPass = () => () => {};
+/** Without a provider, a registration sets nothing and no pass is ever driven. */
+const NO_PROVIDER: ExternalStore<PassRegistryState> = {
+  get: () => EMPTY_STATE,
+  set: () => {},
+  subscribe: () => () => {},
+};
 
-const RegisterContext = createContext<RegisterViewportPass>(NO_OP_REGISTER);
-RegisterContext.displayName = 'RegisterViewportPassContext';
-
-const StateContext = createContext<PassRegistryState>(EMPTY_STATE);
+/**
+ * Written only by `registerPass`, through a provider's own store. A store, not a context value,
+ * since every Texture2D slot reads its cycles and a registration re-renders only the readers of
+ * a cycle it changes.
+ */
+const StateContext = createContext<ExternalStore<PassRegistryState>>(NO_PROVIDER);
 StateContext.displayName = 'ViewportPassStateContext';
 
 /** Stable publisher, for a `<SubViewport>`-style offscreen pass. */
 export function useRegisterViewportPass(): RegisterViewportPass {
-  return useContext(RegisterContext);
+  const state = useContext(StateContext);
+  return useCallback<RegisterViewportPass>((path, pass) => registerPass(state, path, pass), [state]);
+}
+
+/** Sets `pass` at `path` in `state`, with the order and cycles it leads to, and returns the cleanup. */
+function registerPass(state: ExternalStore<PassRegistryState>, path: string, pass: ViewportPass): () => void {
+  if (state === NO_PROVIDER) return () => {};
+  setPasses(state, new Map(state.get().passes).set(path, pass));
+  return () => {
+    // Only this exact pass, so a remount that re-registered first survives.
+    if (state.get().passes.get(path) !== pass) return;
+    const next = new Map(state.get().passes);
+    next.delete(path);
+    setPasses(state, next);
+  };
+}
+
+function setPasses(state: ExternalStore<PassRegistryState>, passes: ReadonlyMap<string, ViewportPass>): void {
+  state.set(registryState(passes, state.get().cycles));
+}
+
+/** The state for `passes`. A cycle equal to one in `previous` stays that object, so its readers keep it. */
+function registryState(
+  passes: ReadonlyMap<string, ViewportPass>,
+  previous: ReadonlyMap<string, ViewportPassCycle> = new Map()
+): PassRegistryState {
+  const result = orderViewportPasses([...passes].map(([id, pass]) => ({ id, dependsOn: pass.dependsOn })));
+  const cycles = new Map<string, ViewportPassCycle>();
+  for (const cycle of result.cycles) {
+    const kept = previous.get(cycle.sampler);
+    cycles.set(cycle.sampler, kept && isSameCycle(kept, cycle) ? kept : cycle);
+  }
+  const isUnchanged = cycles.size === previous.size && [...cycles].every(([id, c]) => previous.get(id) === c);
+  return { passes, order: result.order, cycles: isUnchanged ? previous : cycles };
+}
+
+function isSameCycle(a: ViewportPassCycle, b: ViewportPassCycle): boolean {
+  return a.path.length === b.path.length && a.path.every((id, i) => id === b.path[i]);
 }
 
 /**
  * The cycle that blocks the pass at `path`, or null. A pass in a cycle is never
  * driven and its target keeps its last frame, so a surface that samples it
- * shows its own placeholder instead.
+ * shows its own placeholder instead. A reader of no path never re-renders.
  */
 export function useViewportPassCycle(path: string | null): ViewportPassCycle | null {
-  const { cycles } = useContext(StateContext);
-  return path === null ? null : (cycles.get(path) ?? null);
+  return useExternalStoreSelection(useContext(StateContext), ({ cycles }) =>
+    path === null ? null : (cycles.get(path) ?? null)
+  );
 }
 
 /** An order-independent key for a cycle set, so each set warns once. */
@@ -71,31 +112,14 @@ function cycleSetKey(cycles: readonly ViewportPassCycle[]): string {
 }
 
 export function ViewportPassProvider({ children }: { children: ReactNode }) {
-  const [passes, setPasses] = useState<ReadonlyMap<string, ViewportPass>>(() => new Map());
+  const [state] = useState(() => createExternalStore(EMPTY_STATE));
+  useCycleWarnings(state);
+  return <StateContext.Provider value={state}>{children}</StateContext.Provider>;
+}
 
-  const register = useCallback<RegisterViewportPass>((path, pass) => {
-    setPasses((prev) => {
-      const next = new Map(prev);
-      next.set(path, pass);
-      return next;
-    });
-    return () => {
-      setPasses((prev) => {
-        if (prev.get(path) !== pass) return prev;
-        const next = new Map(prev);
-        next.delete(path);
-        return next;
-      });
-    };
-  }, []);
-
-  const { order, cycles } = useMemo(() => {
-    const result = orderViewportPasses([...passes].map(([id, pass]) => ({ id, dependsOn: pass.dependsOn })));
-    const cycleMap = new Map<string, ViewportPassCycle>();
-    for (const cycle of result.cycles) cycleMap.set(cycle.sampler, cycle);
-    return { order: result.order, cycles: cycleMap };
-  }, [passes]);
-
+/** Warns once for each set of cycles the registry holds. */
+function useCycleWarnings(state: ExternalStore<PassRegistryState>): void {
+  const cycles = useExternalStoreSelection(state, (registry) => registry.cycles);
   const lastWarnedKey = useRef<string>('');
   useEffect(() => {
     const cycleList = [...cycles.values()];
@@ -108,26 +132,21 @@ export function ViewportPassProvider({ children }: { children: ReactNode }) {
       );
     }
   }, [cycles]);
-
-  const state = useMemo<PassRegistryState>(() => ({ passes, order, cycles }), [passes, order, cycles]);
-
-  return (
-    <RegisterContext.Provider value={register}>
-      <StateContext.Provider value={state}>{children}</StateContext.Provider>
-    </RegisterContext.Provider>
-  );
 }
 
 /**
  * Mounted in each `<Canvas>` that hosts offscreen passes, under one provider,
  * so a pass drives from whichever canvas is mounted. Default priority runs
  * before R3F's automatic main render, which fills every target first. Another
- * priority would turn that render off.
+ * priority would turn that render off. The texture atlases rebuild once a frame,
+ * before the passes, as Godot's do (`updateTextureAtlases`), with or without a pass.
  */
 export function ViewportPassOrchestrator(): null {
-  const { passes, order, cycles } = useContext(StateContext);
+  const { passes, order, cycles } = useExternalStoreValue(useContext(StateContext));
+  useTextureAtlasFrame();
 
   useFrame(({ gl }) => {
+    updateTextureAtlases(gl);
     if (order.length === 0) return;
     beginStep(gl, 'SubViewports');
     for (const id of order) {

@@ -1,9 +1,16 @@
 /**
- * Skeleton3D poses its bones and runs its modifiers every frame, deforming any mesh bound to it.
- * That drive is a gap here (ADR-0045), so it registers `pending` on the Node3D component.
+ * Skeleton3D poses its bones and deforms every mesh bound to it. The static pose is implemented
+ * as a live `scenePass`, `bindMeshesToSkeletons` (`skeletonBindings.ts`), which each MeshInstance3D
+ * reads by its live path, so it registers `transform-only` on the Node3D component: it draws
+ * nothing of its own.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 
-nodeComponentRegistry.register({ typeName: 'Skeleton3D', Component: Node3D, renderIntent: 'pending' });
+nodeComponentRegistry.register({
+  typeName: 'Skeleton3D',
+  Component: Node3D,
+  renderIntent: 'transform-only',
+  scenePass: true,
+});

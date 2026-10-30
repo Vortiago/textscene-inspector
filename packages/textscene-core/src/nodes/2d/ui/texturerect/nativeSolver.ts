@@ -85,9 +85,9 @@ export function textureRectDraw(
     tile: false,
   };
 
-  // A zero-dimension texture would divide by zero below. Godot's `texture.is_valid()`
-  // (`:36-38`) implies positive dimensions, so this guard only stops NaN geometry.
-  if (textureSize.x <= 0 || textureSize.y <= 0) return fullRect;
+  // An unset ViewportTexture reports size 0 (`viewport.cpp:156-160`). The aspect modes divide by
+  // it, which Godot's `int` cast of NaN leaves undefined (`:63-69`), so they fill the rect here.
+  const isSizeless = textureSize.x <= 0 || textureSize.y <= 0;
 
   switch (stretchMode ?? TextureStretchMode.STRETCH_SCALE) {
     case TextureStretchMode.STRETCH_SCALE:
@@ -114,6 +114,7 @@ export function textureRectDraw(
 
     case TextureStretchMode.STRETCH_KEEP_ASPECT:
     case TextureStretchMode.STRETCH_KEEP_ASPECT_CENTERED: {
+      if (isSizeless) return fullRect;
       // `int tex_width` / `int tex_height` (`texture_rect.cpp:63-69`): both
       // sides of the aspect fit truncate, and so does the `size.height` /
       // `size.width` each falls back to. The offsets below stay fractional:
@@ -139,6 +140,7 @@ export function textureRectDraw(
     }
 
     case TextureStretchMode.STRETCH_KEEP_ASPECT_COVERED: {
+      if (isSizeless) return fullRect;
       const scaleX = rectSize.x / textureSize.x;
       const scaleY = rectSize.y / textureSize.y;
       const scale = Math.max(scaleX, scaleY);

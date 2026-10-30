@@ -23,6 +23,7 @@ import {
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectAnisotropicFilteringLevel,
+  projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
   projectTextureMipmapBias,
   projectViewportSize,
@@ -622,6 +623,33 @@ describe('projectAnisotropicFilteringLevel', () => {
 
   it.each(['5', '-1', '99'])('keeps the default for level %s, which the enum does not name', (level) => {
     expect(projectAnisotropicFilteringLevel({ [KEY]: level })).toBe(2);
+  });
+});
+
+describe('projectDecalFilter', () => {
+  const KEY = 'rendering/textures/decals/filter';
+
+  it('reads the filter from a project.godot line', () => {
+    const settings = parseProjectSettings('[rendering]\n\ntextures/decals/filter=5\n');
+
+    expect(projectDecalFilter(settings)).toBe(5);
+  });
+
+  it("is 3 (Linear Mipmap) with no project or no key, Godot's default (rendering_server.cpp:3804)", () => {
+    expect(projectDecalFilter(null)).toBe(3);
+    expect(projectDecalFilter({ 'rendering/other': '1' })).toBe(3);
+  });
+
+  it('reads 0 as Nearest, not as the default', () => {
+    expect(projectDecalFilter({ [KEY]: '0' })).toBe(0);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectDecalFilter({ [KEY]: 'sharp' })).toBe(3);
+  });
+
+  it.each(['6', '-1', '99'])('keeps the default for filter %s, which the enum does not name', (filter) => {
+    expect(projectDecalFilter({ [KEY]: filter })).toBe(3);
   });
 });
 

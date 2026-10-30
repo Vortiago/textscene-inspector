@@ -5,7 +5,9 @@
  */
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
+import { perObject } from '../../../utils/perObject';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
@@ -24,6 +26,8 @@ import type { Vector2 } from '../../../godot/math/vector.js';
 export interface ThemedIconRef {
   ref: string;
   resources: SceneScope;
+  /** Whether every resource between the node and `ref` is local to scene: true for an override, the Theme's for a theme item. */
+  isHeldLocally: boolean;
 }
 
 /**
@@ -32,8 +36,6 @@ export interface ThemedIconRef {
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
  * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}.
  */
-// One facet is missing, so a skipped ancestor that sets it diverges: the material owner (no
-// native painter reads `CanvasItemMaterialContext`).
 export interface SkippedAncestors {
   /**
    * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
@@ -54,7 +56,17 @@ export interface SkippedAncestors {
    * and the viewport default under them.
    */
   sampler: AmbientTextureSampler;
+  /** What a `use_parent_material` Control under the skipped ancestors takes (`canvas_item.cpp`). */
+  material: SkippedMaterial;
 }
+
+/**
+ * The material of a promoted Control's parent item: the innermost skipped ancestor that names one,
+ * a chain that names none, or the Control above the chain where every skipped ancestor defers.
+ * `own` carries the scope of that ancestor, since an instanced sub-scene names its materials in its file.
+ */
+export type SkippedMaterial =
+  { kind: 'own'; ref: string; resources: SceneScope } | { kind: 'inherit' } | { kind: 'none' };
 
 /** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
 interface CanvasItemZStep {
@@ -155,15 +167,10 @@ export interface SolveNode {
    */
   themeChain: readonly ThemeResource[];
   /**
-   * The project's default theme (`gui/theme/custom`), or `null` when unset or
-   * unresolved. Required, like `fontOverrides`.
+   * The project's theme and default font. Every font lookup ends at them, before the bundled font.
+   * Required, like `fontOverrides`.
    */
-  projectTheme: ThemeResource | null;
-  /**
-   * The font `gui/theme/custom_font` names, or `null` when unset, still loading or failed. Every font
-   * lookup ends at it, before the bundled one. Required, like `fontOverrides`.
-   */
-  projectDefaultFont: FontResource | null;
+  projectFonts: ProjectFonts;
   /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
@@ -236,18 +243,16 @@ type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
  * One view per property bag, so repeated calls return the same object: painters
  * memoise on props identity. Weak, so a re-parse's discarded bags go with it.
  */
-const PAINTER_VIEWS = new WeakMap<object, object>();
-
-/** This node's properties as its own type, in the painter view. */
-export function painterView<T extends ControlProperties>(n: SolveNode): PainterView<T> {
-  const bag = n.node.properties;
-  const cached = PAINTER_VIEWS.get(bag);
-  if (cached) return cached as PainterView<T>;
+const viewOf = perObject((bag: object): object => {
   // Rest-destructured, not assigned `undefined`: a helper handed the whole
   // object must not find the key at all. Shallow: nested values stay shared.
   const { modulate: _modulate, selfModulate: _selfModulate, ...view } = bag as ControlProperties;
-  PAINTER_VIEWS.set(bag, view);
-  return view as unknown as PainterView<T>;
+  return view;
+});
+
+/** This node's properties as its own type, in the painter view. */
+export function painterView<T extends ControlProperties>(n: SolveNode): PainterView<T> {
+  return viewOf(n.node.properties) as PainterView<T>;
 }
 
 /**

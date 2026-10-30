@@ -53,6 +53,20 @@ export function readImagePixels(image: unknown): ImagePixels | undefined {
 }
 
 /**
+ * The RGBA8 bytes `renderer` holds in `target`, bottom row first as GL stores them, read back
+ * unconverted: an sRGB storage gives its encoded bytes.
+ */
+export function readRenderTargetPixels(
+  renderer: THREE.WebGLRenderer,
+  target: THREE.WebGLRenderTarget
+): ImagePixels {
+  const { width, height } = target;
+  const data = new Uint8Array(width * height * 4);
+  renderer.readRenderTargetPixels(target, 0, 0, width, height, data);
+  return { data, width, height };
+}
+
+/**
  * Written only by `readbackContext`. One context serves every readback. A lost one, or a
  * `getContext` that failed, is retried on the next read, since a browser refuses a context
  * only while it is at its limit.

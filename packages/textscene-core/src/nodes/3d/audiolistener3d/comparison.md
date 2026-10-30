@@ -5,12 +5,12 @@ status: linter-only
 fixture: unit-audio-listener-3d.tscn
 # image: unit-audio-listener-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a billboard icon on a transform-only group
 ---
 
 # AudioListener3D
 
-Sets the point 3D audio is heard from. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
+Sets the point 3D audio is heard from. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show. With the Gizmos toggle on, Godot's billboard icon marks its origin.
 
 ## Linting
 

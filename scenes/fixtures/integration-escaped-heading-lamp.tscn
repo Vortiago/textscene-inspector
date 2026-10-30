@@ -1,0 +1,27 @@
+; The one variable: a host heading whose `%Name` walk leaves the instance. `HudInstance/%Lamp`
+; names a node of the host that the instance's owner table holds, so Godot seats Shade under
+; Lamp, up and to the right of the origin, not under the instance. No other golden seats a
+; heading outside the instance it walked into.
+
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-escaped-heading-hud.tscn" id="1_hud"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_shade"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shade"]
+albedo_color = Color(0.95, 0.5, 0.15, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1_hud")]
+
+[node name="Lamp" type="Node3D" parent="." owner="HudInstance"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+
+[node name="Shade" type="MeshInstance3D" parent="HudInstance/%Lamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_shade")
+surface_material_override/0 = SubResource("StandardMaterial3D_shade")

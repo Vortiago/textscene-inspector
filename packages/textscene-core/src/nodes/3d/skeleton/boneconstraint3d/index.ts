@@ -1,15 +1,11 @@
-/**
- * BoneConstraint3D registration: the parser. A non-visual node whose Godot effect is not
- * implemented here yet (ADR-0045), it parses through the Node3D transform parse, and
- * index.r3f.ts reuses the Node3D component as `pending`.
- */
+/** BoneConstraint3D registration: the parser, which reads `active` and `influence` and the base `settings/<i>/` leaves. index.r3f.ts holds its effect on the pose. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseBoneConstraint3D } from './parser';
 
-const boneConstraint3DRegistration: NodeTypeRegistration = {
+const registration: NodeTypeRegistration = {
   typeName: 'BoneConstraint3D',
-  parser: parseNode3D,
+  parser: parseBoneConstraint3D,
 };
 
-nodeRegistry.register(boneConstraint3DRegistration);
+nodeRegistry.register(registration);

@@ -7,6 +7,11 @@
  */
 
 import { brightPassGlsl, type GlowParams } from './godotGlow';
+import {
+  AUTO_EXPOSURE_GAIN_GLSL,
+  AUTO_EXPOSURE_UNIFORMS_GLSL,
+  NO_AUTO_EXPOSURE_GAIN_GLSL,
+} from './godotLuminance';
 import { bicubicFilterGlsl } from '../../utils/bicubicFilterGlsl';
 import { glslFloat } from '../../utils/glslLiterals';
 
@@ -119,9 +124,18 @@ export interface LevelBlurGlsl {
  * pass undoes the weight, then runs the bright pass.
  */
 export function firstLevelBlurGlsl(params: GlowParams): LevelBlurGlsl {
+  return firstLevelBlur(params, NO_AUTO_EXPOSURE_GAIN_GLSL);
+}
+
+/** Level 0's blur under an auto exposure, whose bright pass divides the colour by the luminance. */
+export function autoExposedFirstLevelBlurGlsl(params: GlowParams): LevelBlurGlsl {
+  return firstLevelBlur(params, AUTO_EXPOSURE_UNIFORMS_GLSL + AUTO_EXPOSURE_GAIN_GLSL);
+}
+
+function firstLevelBlur(params: GlowParams, gainGlsl: string): LevelBlurGlsl {
   return {
     horizontal: horizontalGlsl((color) => `${color} / (1.0 + dot(${color}, ${fireflyLumaGlsl(params)}))`),
-    vertical: `${brightPassGlsl(params)}${verticalGlsl(
+    vertical: `${gainGlsl}${brightPassGlsl(params)}${verticalGlsl(
       `  color = color / (1.0 - dot(color, ${fireflyLumaGlsl(params)}));\n  color = godotGlowBrightPass(color);`
     )}`,
   };

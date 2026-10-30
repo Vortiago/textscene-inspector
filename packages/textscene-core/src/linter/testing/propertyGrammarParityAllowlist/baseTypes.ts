@@ -241,13 +241,11 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Control: {
     linterOnly: [
-      // From the CanvasItem tier: the UI overlay is DOM (ADR-0003), with no 2D
-      // draw order or lighting. The Node2D family renders these, so they sit
-      // on Control, not the shared tier.
+      // From the CanvasItem tier: a Control draws relative to its parent and never
+      // y-sorts. The Node2D family renders these, so they sit on Control, not the
+      // shared tier.
       'z_as_relative',
       'y_sort_enabled',
-      'material',
-      'use_parent_material',
       // Input routing and assistive tech touch no frozen frame: accessibility,
       // focus order, shortcut context, the mouse keys and the tooltip.
       'accessibility_name',

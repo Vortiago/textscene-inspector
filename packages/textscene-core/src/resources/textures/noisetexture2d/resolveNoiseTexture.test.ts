@@ -6,13 +6,14 @@
  * job, here through the in-thread runner, which runs the same job.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
 import { resetProceduralTextures, type JobRunner } from '../proceduralBuilds';
 import { resolveNoiseTexture2D } from './resolveNoiseTexture';
-import { applyTextureState } from '../applyTextureState';
+import { textureView } from '../textureView';
 import { godotTextureFilterState, samplesMipChain } from '../godotTextureFilter';
 
 const ICE = `[gd_resource type="StandardMaterial3D" format=3]
@@ -71,7 +72,7 @@ const NORMAL = 'SubResource("NoiseTexture2D_gyhec")';
 
 /** Builds the texture `ref` names, and its cache key. */
 async function built(ref: string, resources: readonly TscnInternalResource[] = ice.subResources) {
-  const lookup = resolveNoiseTexture2D(ref, resources);
+  const lookup = resolveNoiseTexture2D(ref, poolsOf(resources), NO_FILES);
   if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
   const handle = lookup.start(runner);
   const texture = await handle.settled;
@@ -123,12 +124,16 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
 
   it('is ready with the same texture once built', async () => {
     const { texture, key } = await built(ALBEDO);
-    expect(resolveNoiseTexture2D(ALBEDO, ice.subResources)).toEqual({ status: 'ready', texture, key });
+    expect(resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES)).toEqual({
+      status: 'ready',
+      texture,
+      key,
+    });
   });
 
   it('reuses the texture after a re-parse of an unchanged file', async () => {
     const { texture } = await built(ALBEDO);
-    const reparsed = resolveNoiseTexture2D(ALBEDO, parseTresFile(ICE).subResources);
+    const reparsed = resolveNoiseTexture2D(ALBEDO, poolsOf(parseTresFile(ICE).subResources), NO_FILES);
     expect(reparsed?.status === 'ready' && reparsed.texture).toBe(texture);
   });
 
@@ -143,15 +148,15 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
   });
 
   it('keys the texture without a chain apart from the one the job builds', () => {
-    const chained = resolveNoiseTexture2D(ALBEDO, ice.subResources);
-    const unchained = resolveNoiseTexture2D(ALBEDO, withoutMipmaps().subResources);
+    const chained = resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES);
+    const unchained = resolveNoiseTexture2D(ALBEDO, poolsOf(withoutMipmaps().subResources), NO_FILES);
     expect(unchained?.key).toBe(`${chained?.key}:without-mipmaps`);
   });
 
   it('drops the chain without sampling again when generate_mipmaps goes off', async () => {
     const { texture } = await built(ALBEDO);
     const run = vi.fn(runner.run.bind(runner)) as JobRunner['run'];
-    const lookup = resolveNoiseTexture2D(ALBEDO, withoutMipmaps().subResources);
+    const lookup = resolveNoiseTexture2D(ALBEDO, poolsOf(withoutMipmaps().subResources), NO_FILES);
     if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
 
     const unchained = await lookup.start({ run }).settled;
@@ -165,7 +170,7 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
 
   it('is ready at once, with the chain, when generate_mipmaps goes on', async () => {
     const { texture } = await built(ALBEDO, withoutMipmaps().subResources);
-    const lookup = resolveNoiseTexture2D(ALBEDO, ice.subResources);
+    const lookup = resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES);
     expect(lookup?.status === 'ready' && lookup.texture.mipmaps).toHaveLength(6);
     expect(lookup?.status === 'ready' && lookup.texture).not.toBe(texture);
   });
@@ -177,26 +182,29 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
         'frequency = 0.004\nfractal_type = 2\nfractal_lacunarity = 2.5'
       )
     );
-    const before = resolveNoiseTexture2D(ALBEDO, ice.subResources);
-    const after = resolveNoiseTexture2D(ALBEDO, edited.subResources);
+    const before = resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES);
+    const after = resolveNoiseTexture2D(ALBEDO, poolsOf(edited.subResources), NO_FILES);
     expect(after?.key).not.toBe(before?.key);
   });
 
   it('keys on content, not on the sub-resource id', () => {
     const renamed = parseTresFile(ICE.replaceAll('NoiseTexture2D_m8iqd', 'NoiseTexture2D_renamed'));
-    expect(resolveNoiseTexture2D('SubResource("NoiseTexture2D_renamed")', renamed.subResources)?.key).toBe(
-      resolveNoiseTexture2D(ALBEDO, ice.subResources)?.key
-    );
+    expect(
+      resolveNoiseTexture2D('SubResource("NoiseTexture2D_renamed")', poolsOf(renamed.subResources), NO_FILES)
+        ?.key
+    ).toBe(resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES)?.key);
   });
 
   it('declines every reference that is not an inline NoiseTexture2D', () => {
-    expect(resolveNoiseTexture2D(undefined, ice.subResources)).toBeNull();
-    expect(resolveNoiseTexture2D('ExtResource("1")', ice.subResources)).toBeNull();
-    expect(resolveNoiseTexture2D('res://noise.png', ice.subResources)).toBeNull();
+    expect(resolveNoiseTexture2D(undefined, poolsOf(ice.subResources), NO_FILES)).toBeNull();
+    expect(resolveNoiseTexture2D('ExtResource("1")', poolsOf(ice.subResources), NO_FILES)).toBeNull();
+    expect(resolveNoiseTexture2D('res://noise.png', poolsOf(ice.subResources), NO_FILES)).toBeNull();
     // A Gradient sub-resource is not a texture, and the gradient slice declines it
     // too, so the dispatch falls through to the async path.
-    expect(resolveNoiseTexture2D('SubResource("Gradient_16ij7")', ice.subResources)).toBeNull();
-    expect(resolveNoiseTexture2D('SubResource("nope")', ice.subResources)).toBeNull();
+    expect(
+      resolveNoiseTexture2D('SubResource("Gradient_16ij7")', poolsOf(ice.subResources), NO_FILES)
+    ).toBeNull();
+    expect(resolveNoiseTexture2D('SubResource("nope")', poolsOf(ice.subResources), NO_FILES)).toBeNull();
   });
 
   it('declines a texture whose noise reference is missing or of another Noise type', () => {
@@ -213,8 +221,12 @@ noise = SubResource("missing")
 
 [resource]
 `);
-    expect(resolveNoiseTexture2D('SubResource("no_noise")', broken.subResources)).toBeNull();
-    expect(resolveNoiseTexture2D('SubResource("dangling")', broken.subResources)).toBeNull();
+    expect(
+      resolveNoiseTexture2D('SubResource("no_noise")', poolsOf(broken.subResources), NO_FILES)
+    ).toBeNull();
+    expect(
+      resolveNoiseTexture2D('SubResource("dangling")', poolsOf(broken.subResources), NO_FILES)
+    ).toBeNull();
   });
 
   it("declines a texture wider than the previewer's texture ceiling, before any build", () => {
@@ -230,14 +242,19 @@ noise = SubResource("n")
 [resource]
 albedo_texture = SubResource("wide")
 `);
-    expect(resolveNoiseTexture2D('SubResource("wide")', oversized.subResources)).toBeNull();
+    expect(
+      resolveNoiseTexture2D('SubResource("wide")', poolsOf(oversized.subResources), NO_FILES)
+    ).toBeNull();
   });
 });
 
 describe('a NoiseTexture2D in a 3D texture slot', () => {
+  const filterState = (filter?: number) =>
+    filter === undefined ? undefined : godotTextureFilterState(filter);
+
   const bound = async (filter?: number) => {
     const { texture } = await built(ALBEDO);
-    return applyTextureState(texture, { colorSpace: THREE.SRGBColorSpace, filter });
+    return textureView(texture, { colorSpace: THREE.SRGBColorSpace, filter: filterState(filter) });
   };
 
   it('samples between its levels under the default texture_filter (LINEAR_WITH_MIPMAPS)', async () => {
@@ -266,7 +283,7 @@ describe('a NoiseTexture2D in a 3D texture slot', () => {
     'uploads no levels under texture_filter %i, and the shared texture keeps its chain',
     async (filter) => {
       const { texture: shared } = await built(ALBEDO);
-      const texture = applyTextureState(shared, { colorSpace: THREE.SRGBColorSpace, filter });
+      const texture = textureView(shared, { colorSpace: THREE.SRGBColorSpace, filter: filterState(filter) });
       expect([texture.mipmaps.length, shared.mipmaps.length]).toEqual([0, 6]);
     }
   );

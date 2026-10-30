@@ -40,7 +40,10 @@ function tileMesh({
   materialLines,
   secondMaterialLines,
   subResources,
-}: Required<Pick<GridMapCorpus, 'materialLines' | 'secondMaterialLines' | 'subResources'>>): string {
+  meshLines,
+}: Required<
+  Pick<GridMapCorpus, 'materialLines' | 'secondMaterialLines' | 'subResources' | 'meshLines'>
+>): string {
   const surfaces = [
     tileSurface('tile', materialLines),
     ...(secondMaterialLines === null ? [] : [tileSurface('second', secondMaterialLines)]),
@@ -50,6 +53,7 @@ function tileMesh({
 ${subResources}${surfaces.map((s) => s.materialText).join('')}[resource]
 _surfaces = ${wallQuadSurfaces(...surfaces.map((s) => s.keys))}
 blend_shape_mode = 0
+${meshLines}
 `;
 }
 
@@ -74,8 +78,10 @@ export interface GridMapCorpus {
   library?: string;
   /** Further files the loader serves, by path. */
   files?: Record<string, string>;
-  /** Extra `item/0/…` lines for the library, such as `mesh_cast_shadow`. */
+  /** Extra lines for the library's `[resource]`, such as `item/0/mesh_cast_shadow`. */
   itemLines?: string;
+  /** Extra lines for the tile mesh's `[resource]`, such as `resource_local_to_scene`. */
+  meshLines?: string;
   /** The tile material's body, or null for a surface with no material. */
   materialLines?: string | null;
   /** The body of a second surface's material, or null for a one-surface tile. */
@@ -131,6 +137,7 @@ export async function mountGridMap({
   itemLines = '',
   materialLines = null,
   secondMaterialLines = null,
+  meshLines = '',
   cells = '0, 0, 0',
   gridMapProperties = {},
   subResources = '',
@@ -140,7 +147,7 @@ export async function mountGridMap({
   const loader = loaderServing(
     {
       [LIBRARY_PATH]: library ?? meshLibrary(itemLines),
-      [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
+      [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources, meshLines }),
       ...files,
     },
     held ? [HELD_PATHS[held]] : []

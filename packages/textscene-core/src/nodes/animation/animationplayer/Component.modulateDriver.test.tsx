@@ -81,9 +81,9 @@ function Capture() {
 // Stands in for the Decal target: subscribes to the SAME `modulate` value seam
 // the Decal component uses, so it receives whatever the driver pushes for
 // `Holder/Decal:modulate`.
-let probedModulate: number[] | null = null;
+let probedModulate: readonly number[] | null = null;
 function ModulateProbe() {
-  probedModulate = useAnimatedValue<number[]>('modulate', (v) => v);
+  probedModulate = useAnimatedValue<readonly number[]>('modulate', (v) => v);
   return null;
 }
 

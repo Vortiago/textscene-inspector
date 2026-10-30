@@ -5,6 +5,7 @@
  */
 
 import type * as THREE from 'three';
+import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
 import { isClosedBrush, type ShadedBrush } from '../../nodes/3d/csg/brushManifold';
@@ -18,6 +19,8 @@ export interface CsgGeometryContext extends SceneResources {
   loadedFile: LoadedFile;
   /** Looks up a font file the shape's `readsFonts` named: undefined while it loads or after it failed. */
   loadedFont: LoadedFont;
+  /** The theme and default font a shape's font lookup ends at. */
+  projectFonts: ProjectFonts;
 }
 
 /**
@@ -83,10 +86,10 @@ export interface CsgShapeRegistration {
   /** The font file paths `geometry` reads through `ctx.loadedFont`, which load before it can build. */
   readsFonts?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => readonly string[];
   /**
-   * Whether a font `geometry` builds from awaits its metrics, which arrive after the font file
-   * does. A root builds once no shape does.
+   * Whether a font `geometry` builds from awaits its outlines or metrics, which arrive after the font
+   * file does. A root builds once no shape does.
    */
-  awaitsFontMetrics?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => boolean;
+  awaitsFont?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => boolean;
   /**
    * The type of the mesh `geometry` reads while this previewer cannot draw it, which the node's
    * details name. Null for a mesh it draws, and for a shape with none.

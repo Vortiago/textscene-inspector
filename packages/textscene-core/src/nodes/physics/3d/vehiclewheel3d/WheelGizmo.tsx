@@ -6,9 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { GizmoLine } from '../../../../r3f/components/GizmoLine';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
+import { CollisionDebugLines } from '../../shared/CollisionDebugLines';
 import { degToRad } from '../../../../godot/math/math.js';
 
 /** Godot's `skip`: degrees per circle segment. */
@@ -27,8 +25,7 @@ interface WheelGizmoProps {
 
 export function WheelGizmo({ radius, restLength }: WheelGizmoProps) {
   const positions = useMemo(() => buildWheelGizmo(radius, restLength), [radius, restLength]);
-  const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
-  return <GizmoLine positions={positions} color={color} opacity={DEFAULT_COLLISION_DEBUG_COLOR.a} />;
+  return <CollisionDebugLines positions={positions} />;
 }
 
 function buildWheelGizmo(radius: number, restLength: number): Float32Array {

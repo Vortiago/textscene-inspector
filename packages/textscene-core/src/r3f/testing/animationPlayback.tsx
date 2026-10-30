@@ -6,8 +6,9 @@
 import { afterEach } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { NodeDispatcher } from '../NodeDispatcher';
-import { SceneStack } from './SceneStack';
+import { DispatchedScene } from './DispatchedScene';
+import { useOptionalSelection, type SelectionContextValue } from '../contexts/SelectionContext';
+import { AnimatedBonePosesProvider } from '../contexts/AnimatedBonePosesContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -19,7 +20,6 @@ import {
 } from '../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../parser/TscnParser';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
-import { HierarchyProvider } from '../contexts/HierarchyContext';
 
 import '../nodes/index';
 
@@ -29,8 +29,10 @@ afterEach(async () => {
 });
 
 let transport: AnimationTransport;
+let selection: SelectionContextValue | null;
 function Capture() {
   transport = useAnimationTransport();
+  selection = useOptionalSelection();
   return null;
 }
 
@@ -62,16 +64,23 @@ export const PLAYER_BODY = 'libraries/ = SubResource("Lib")';
 export async function mountWithPlayer(tscn: string, playerPath: string) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
-  // The scene graph gives the `%Name` table a track resolves through.
   const renderer = await ReactThreeTestRenderer.create(
-    <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-      <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath={playerPath}>
-        <AnimationTransportProvider>
-          <Capture />
-          <NodeDispatcher nodes={parsed.nodes} />
-        </AnimationTransportProvider>
-      </SceneStack>
-    </HierarchyProvider>
+    <AnimationTransportProvider>
+      <AnimatedBonePosesProvider>
+        <DispatchedScene
+          sceneGraph={createSceneGraphFromTscnScene(parsed)}
+          loader={fake.loader}
+          workspace="3d"
+          selectedPath={playerPath}
+          around={(nodes) => (
+            <>
+              <Capture />
+              {nodes}
+            </>
+          )}
+        />
+      </AnimatedBonePosesProvider>
+    </AnimationTransportProvider>
   );
   mounted.push(renderer);
   return { renderer, fake };
@@ -89,6 +98,15 @@ export function sceneRoot(renderer: Awaited<ReturnType<typeof mountWithPlayer>>[
 
 export async function play(): Promise<void> {
   await ReactThreeTestRenderer.act(async () => transport.play());
+}
+
+/** Selects the node at `path`, or none. */
+export async function select(path: string | null): Promise<void> {
+  await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
+}
+
+export async function stop(): Promise<void> {
+  await ReactThreeTestRenderer.act(async () => transport.stop());
 }
 
 /**

@@ -1,13 +1,14 @@
 /**
  * The context a CSG root builds its plan's solids against: the scene's pools, each `.tres` and each
- * font a shape in its plan reads, and the metrics of those fonts once they settle. A node inside an
+ * font a shape in its plan reads, and the outlines and metrics of those fonts once they settle. A node inside an
  * ancestor's plan passes null and takes the root's context from `CsgSubtreeContext`, so only the
  * root loads.
  */
 
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
-import { useFontMetricsSettleCount } from '../controls/native/text/useFontMetricsSettleCount';
+import { useSceneFontSettleCount } from '../controls/native/text/useSceneFontSettleCount';
+import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import { useLoadedFilesAndFonts } from '../../resources/useLoadedFilesAndFonts';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
@@ -16,8 +17,10 @@ import type { CsgGeometryContext, CsgShapeRegistration } from './csgRegistration
 
 export interface CsgGeometrySetup {
   context: CsgGeometryContext;
-  /** True while a file the plan reads has neither loaded nor failed, or a font awaits its metrics. */
+  /** True while a file the plan reads has neither loaded nor failed, or a font awaits its outlines or metrics. */
   isLoading: boolean;
+  /** True while a font file or a project font loads: a TextMesh builds nothing yet, as the bundled font is not its font. */
+  isLoadingFonts: boolean;
 }
 
 export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
@@ -27,36 +30,37 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
     (loadedFile: LoadedFile) => subtreeFiles(shapes, pools, loadedFile),
     [shapes, pools]
   );
-  const fontsPlan = useCallback(
-    (loadedFont: LoadedFont, loadedFile: LoadedFile) =>
-      subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont }),
-    [shapes, pools]
-  );
   // A plan with no shape that can read a font names no font bus, so it listens to none.
   const readsFonts = shapes.some(({ shape }) => shape.readsFonts);
-  const {
-    loadedFile,
-    loadedFont,
-    isLoading: isLoadingFiles,
-  } = useLoadedFilesAndFonts(filesPlan, fontsPlan, readsFonts);
+  const fontsPlan = useCallback(
+    (loadedFont: LoadedFont, loadedFile: LoadedFile, projectFonts: ProjectFonts) =>
+      subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts }),
+    [shapes, pools]
+  );
+  const { loadedFile, loadedFont, projectFonts, isLoading, isLoadingFonts } = useLoadedFilesAndFonts(
+    filesPlan,
+    fontsPlan,
+    readsFonts
+  );
 
   const loaded = useMemo(
-    (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont }),
-    [pools, loadedFile, loadedFont]
+    (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont, projectFonts }),
+    [pools, loadedFile, loadedFont, projectFonts]
   );
-  const isAwaitingMetrics = shapes.some(({ properties, shape }) =>
-    shape.awaitsFontMetrics?.(properties, loaded)
-  );
-  useFontMetricsSettleCount(isAwaitingMetrics);
+  const isAwaitingFont = shapes.some(({ properties, shape }) => shape.awaitsFont?.(properties, loaded));
+  useSceneFontSettleCount(isAwaitingFont);
   // The meshes of a context hold the metrics they read, so a context that read them before they
   // settled gives way to a copy, with meshes of its own, when they have.
   const context = useMemo(
     () => ({ ...loaded }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `isAwaitingMetrics` only re-keys the copy.
-    [loaded, isAwaitingMetrics]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `isAwaitingFont` only re-keys the copy.
+    [loaded, isAwaitingFont]
   );
-  const isLoading = isLoadingFiles || isAwaitingMetrics;
-  return useMemo(() => ({ context, isLoading }), [context, isLoading]);
+  const isLoadingBuild = isLoading || isAwaitingFont;
+  return useMemo(
+    () => ({ context, isLoading: isLoadingBuild, isLoadingFonts }),
+    [context, isLoadingBuild, isLoadingFonts]
+  );
 }
 
 /** A CSG node of the plan, with the registration of its shape. */

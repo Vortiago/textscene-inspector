@@ -4,6 +4,7 @@ import type { TscnInternalResource } from '../parser/types';
 import { NO_RESOURCES } from '../r3f/SceneResourcesContext';
 import type { ResolvableResource } from './scopedResource';
 import { NO_FILES, NO_FONTS } from './testing/loadedFiles';
+import { NO_PROJECT_FONTS } from './fonts/font/projectFonts';
 import { meshContentKey } from './meshes/meshSource';
 import { useContentMemo } from './useContentMemo';
 
@@ -12,6 +13,7 @@ const box = (size: string): ResolvableResource => ({
   resources: NO_RESOURCES,
   loadedFile: NO_FILES,
   loadedFont: NO_FONTS,
+  projectFonts: NO_PROJECT_FONTS,
 });
 
 function renderMemo(initial: ResolvableResource | null) {
@@ -43,6 +45,7 @@ describe('useContentMemo', () => {
       resources: { ...NO_RESOURCES, internalResources: [curve] },
       loadedFile: NO_FILES,
       loadedFont: NO_FONTS,
+      projectFonts: NO_PROJECT_FONTS,
     });
     const curve = (bakeResolution: string): TscnInternalResource => ({
       id: 'c',

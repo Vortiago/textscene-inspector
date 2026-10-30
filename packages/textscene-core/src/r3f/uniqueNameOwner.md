@@ -10,3 +10,5 @@
 The collapse composes each instance's table in file order (`resources/instanceNameTable.ts`), because a heading's `parent=` reads the table as of that heading. `uniqueNameOwner.ts` reads the composed table off the merged node and does not compose one of its own.
 
 An explicit `owner=` names a node from the root of the file the heading is in. Instantiate walks it from that root with `get_node_or_null` when it sets the owner (`packed_scene.cpp:159-161`, `:565-568`), so a `%Name` in it reads the tables as of that heading. The seating resolves the part its own headings answer (`resolvedOwner` in `parser/sceneTreeBuilder.ts`). The instance graft resolves the rest, inside the instance, through its own table. `claimOwnerOf` reads that rest through the instance's composed table, which holds the same claims.
+
+A heading whose `parent=` walk leaves the instance, or finds nothing, seats outside it (**Re-rooted node**). The file that seats it records where each went in `LiveNode.seatedPlacements`, which the merge adds to `uniqueParentPlacements`, so a claim below the heading resolves at the node it renders under.

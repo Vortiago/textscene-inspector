@@ -24,6 +24,7 @@ import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
+import { useLivePatchesBelow } from '../../../r3f/liveNodePatches';
 import type { CSGShape3DProperties } from './types';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
@@ -59,8 +60,10 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     (subtree.absorbedPaths.has(path) || subtree.invisiblePaths.has(path));
   const ownSetup = useCsgGeometryContext(inAncestorPlan ? null : node);
   // A failed ancestor makes this node a root again, whose boolean reads the files that root loaded.
-  const setup = inAncestorPlan ? { context: subtree.context, isLoading: false } : ownSetup;
-  const ctx = setup.context;
+  const setup = inAncestorPlan
+    ? { context: subtree.context, isLoading: false, isLoadingFonts: false }
+    : ownSetup;
+  const { context: ctx, isLoadingFonts } = setup;
   // Optional: a CSG node renders outside the shell in tests and in the
   // subtree-conformance probe, where nothing can be hidden anyway.
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
@@ -87,7 +90,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   useUndrawnMeshReport(isRootLoading ? null : (registration?.undrawnMeshType?.(builderProps, ctx) ?? null));
   const { ownSolid, isOpen, hasNoFaces } = useMemo(
     () => {
-      const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
+      const built = skipped || isLoadingFonts ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
       // An open brush, or one with no face, is empty: it draws nothing and bounds to a point.
       // Only that fact is kept, not an open geometry. Null is no brush yet.
       const isOpen = built !== null && !built.isClosed;
@@ -95,7 +98,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       return { ownSolid: built && !isOpen && !hasNoFaces ? built : null, isOpen, hasNoFaces };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
-    [ownKey, properties.materialPath, skipped]
+    [ownKey, properties.materialPath, skipped, isLoadingFonts]
   );
   // Godot warns on a shape whose folded brush has no face (`csg_shape.cpp:981`). An open brush
   // empties its whole fold, but a node with no face of its own is filled by its CSG children.
@@ -116,10 +119,13 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const absorbed =
     subtree !== null && subtree.status !== 'failed' && path !== null && subtree.absorbedPaths.has(path);
 
+  // A root builds the plan over its CSG descendants, which the passes bind by live path.
+  const patches = useLivePatchesBelow(absorbed || skipped ? null : path);
   const plan = useMemo(() => {
     if (absorbed || skipped || path === null) return null;
     return buildCsgPlan(node, path, {
       hiddenPaths: hiddenNodePaths,
+      patches,
       lookup: (type) => {
         const shape = nodeComponentRegistry.getCsgShape(type);
         if (!shape) return null;
@@ -129,7 +135,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
         };
       },
     });
-  }, [absorbed, skipped, node, path, hiddenNodePaths, ctx]);
+  }, [absorbed, skipped, node, path, hiddenNodePaths, patches, ctx]);
 
   // A node with no plan of its own passes the enclosing root's value straight through:
   // what its descendants are is that root's answer, not its own. Mounted by every branch

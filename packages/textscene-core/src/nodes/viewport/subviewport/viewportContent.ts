@@ -1,7 +1,7 @@
 /**
  * The kind of content a sub-viewport holds, which decides its one publisher: the
- * 3D/2D offscreen pass owns `'3d'` and `'2d'`, `ControlRasterPass.tsx` owns `'dom'`,
- * and nothing publishes `'empty'`. Both write the same `ViewportTextureRegistry`
+ * 3D/2D offscreen pass owns `'3d'` and `'2d'` (with the Controls beside that content),
+ * `ControlRasterPass.tsx` owns `'dom'`, and nothing publishes `'empty'`. Both write the same `ViewportTextureRegistry`
  * key, so the split is decided here alone.
  */
 
@@ -77,58 +77,79 @@ export type ViewportContentKind =
   | 'dom'
   | 'empty';
 
+/** What a sub-viewport holds: the kind its pass draws, and whether Controls sit beside that kind. */
+export interface ViewportContent {
+  kind: ViewportContentKind;
+  /** Whether the subtree holds a Control. */
+  holdsControls: boolean;
+}
+
 /**
- * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and one kind is
- * drawn where Godot composites all (`comparison.md`). A nested sub-viewport draws
- * into its own target, so it is not descended into.
+ * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and the pass draws one kind
+ * where Godot composites all (`comparison.md`). Controls beside that content are the exception:
+ * `holdsControls` sends them into the pass. A nested sub-viewport draws into its own target,
+ * so it is not descended into.
  */
-export function viewportContentKind(node: TscnNode): ViewportContentKind {
+export function viewportContent(node: TscnNode): ViewportContent {
   let sawCanvasItem = false;
   let sawDom = false;
   let sawUntypedInstance = false;
 
-  const hasNode3DContent = (nodes: readonly TscnNode[]): boolean =>
-    nodes.some((child) => {
-      if (child.type === 'SubViewport') return false;
-      // Godot's question (`is2DUIType`), not the component registry's: a Control
-      // with no component of its own, such as `ProgressBar`, still gets a pass.
-      if (is2DUIType(child.type)) {
-        sawDom = true;
-        return hasNode3DContent(child.children);
-      }
-      if (nodeComponentRegistry.isCanvasItem(child.type)) {
+  // Every child is visited, so `sawDom` is complete when a 3D node comes first.
+  const hasNode3DContent = (nodes: readonly TscnNode[]): boolean => {
+    let found = false;
+    for (const child of nodes) {
+      if (isNode3DContent(child)) found = true;
+    }
+    return found;
+  };
+
+  const isNode3DContent = (child: TscnNode): boolean => {
+    if (child.type === 'SubViewport') return false;
+    // Godot's question (`is2DUIType`), not the component registry's: a Control
+    // with no component of its own, such as `ProgressBar`, still gets a pass.
+    if (is2DUIType(child.type)) {
+      sawDom = true;
+      return hasNode3DContent(child.children);
+    }
+    if (nodeComponentRegistry.isCanvasItem(child.type)) {
+      sawCanvasItem = true;
+      return hasNode3DContent(child.children);
+    }
+    if (child.instance) {
+      const override = instanceOverrideKind(child);
+      if (override === '2d') {
         sawCanvasItem = true;
-        return hasNode3DContent(child.children);
-      }
-      if (child.instance) {
-        const override = instanceOverrideKind(child);
-        if (override === '2d') {
-          sawCanvasItem = true;
-          return false;
-        }
-        if (override === '3d') return true;
-        sawUntypedInstance = true;
         return false;
       }
-      // A workspace-neutral container (`Node`, `Timer`, …) may hold either kind,
-      // so descend. `Node` is registered with `container: true`, so `get()` alone
-      // would read every plain-Node-rooted sub-scene as 3D.
-      if (nodeComponentRegistry.isContainer(child.type)) {
-        return hasNode3DContent(child.children);
-      }
-      // A registered non-container type is Node3D content by elimination:
-      // CanvasItems and Controls were both matched above.
-      if (nodeComponentRegistry.get(child.type)) return true;
+      if (override === '3d') return true;
+      sawUntypedInstance = true;
+      return false;
+    }
+    // A workspace-neutral container (`Node`, `Timer`, …) may hold either kind,
+    // so descend. `Node` is registered with `container: true`, so `get()` alone
+    // would read every plain-Node-rooted sub-scene as 3D.
+    if (nodeComponentRegistry.isContainer(child.type)) {
       return hasNode3DContent(child.children);
-    });
+    }
+    // A registered non-container type is Node3D content by elimination:
+    // CanvasItems and Controls were both matched above.
+    if (nodeComponentRegistry.get(child.type)) return true;
+    return hasNode3DContent(child.children);
+  };
 
-  if (hasNode3DContent(node.children)) return '3d';
-  if (sawCanvasItem) return '2d';
+  const found = (kind: ViewportContentKind): ViewportContent => ({ kind, holdsControls: sawDom });
+  if (hasNode3DContent(node.children)) return found('3d');
+  if (sawCanvasItem) return found('2d');
   // Godot's viewport demos instance 3D sub-scenes, so an untyped instance reads as
   // 3D, but only when nothing decisive was found: anything typed, or an instance
   // whose overrides name a world, outranks it.
-  if (sawUntypedInstance) return '3d';
-  return sawDom ? 'dom' : 'empty';
+  if (sawUntypedInstance) return found('3d');
+  return found(sawDom ? 'dom' : 'empty');
+}
+
+export function viewportContentKind(node: TscnNode): ViewportContentKind {
+  return viewportContent(node).kind;
 }
 
 /** The children below `from` (the roots without it) with their instances resolved. */

@@ -10,19 +10,16 @@ import { painterView, type SolveNode } from '../../../../r3f/controls/native/sol
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
 import type { Rect2 } from '../../../../godot/math/rect2.js';
-import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker.js';
-import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree.js';
-import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping.js';
 import { useViewportTargetSlot } from '../../../../resources/textures/viewporttexture/useViewportTextureSlot.js';
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
-import { useViewportContentKind } from '../../../viewport/subviewport/useViewportContentKind.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
+import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -46,17 +43,15 @@ interface ViewportSurfaceNativeProps {
    */
   tint: NativeControlComponentProps['tint'];
   /**
-   * The container's `is_layout_rtl()`. The climb casts each ancestor to `Control`, then to `Window`,
-   * then takes `get_parent()` (`control.cpp:3584-3598`). A `SubViewport` is neither, so the
-   * viewport's Controls inherit from this container.
+   * The container's `is_layout_rtl()`, passed to the viewport's Controls: the climb skips a
+   * `SubViewport` (`control.cpp:3584-3598`), so they inherit from this container.
    */
   rtl: boolean;
 }
 
 /**
- * One nested `SubViewport`'s surface: the pixel arm (a quad sampling its texture, or the fallback)
- * and the Controls arm (its direct Control children, drawn live over a mixed viewport, since the
- * offscreen pass renders only one non-Control content kind).
+ * One nested `SubViewport`'s surface: a quad sampling its texture, or the fallback outline. The
+ * sub-viewport's own pass draws its Controls into that texture (`subviewport_container.cpp:134-144`).
  */
 function ViewportSurfaceNative({
   viewport,
@@ -97,17 +92,10 @@ function ViewportSurfaceNative({
   // the same "content unavailable" fact. `warnAs` is `null`: the pass driver logs the cycle once.
   const { texture, cyclic } = useViewportTargetSlot(path, null, 'plain');
 
-  // Controls anchor against Godot's viewport size, not the capped render target: the Controls arm
-  // draws live, and the quad stretches whatever pixels the target holds over the same rect.
+  // The quad is Godot's viewport size, not the capped render target: it stretches whatever pixels the
+  // target holds over the same rect.
   const { x: viewportWidth, y: viewportHeight } = viewportSize(authoredSize, forcedSize);
 
-  const contentKind = useViewportContentKind(viewport);
-  const { tree, generation } = useBuildSolveTree(
-    viewport.children,
-    externalResources,
-    internalResources,
-    rtl
-  );
   const viewportRect: Rect2 = useMemo(
     () => ({ x: 0, y: 0, w: viewportWidth, h: viewportHeight }),
     [viewportWidth, viewportHeight]
@@ -141,8 +129,7 @@ function ViewportSurfaceNative({
       fontOverrides: {},
       labelSettings: null,
       themeChain: [],
-      projectTheme: null,
-      projectDefaultFont: null,
+      projectFonts: NO_PROJECT_FONTS,
       colors: {},
       constants: {},
       icons: {},
@@ -158,63 +145,40 @@ function ViewportSurfaceNative({
   const scaleX = stretch ? containerRect.w / viewportWidth : 1;
   const scaleY = stretch ? containerRect.h / viewportHeight : 1;
 
-  // Godot's viewport has only `viewportWidth`x`viewportHeight` pixels, so it clips by never
-  // rendering past its edge. The Controls arm draws three.js objects with no such edge and needs
-  // an explicit clip (`ScrollContainer`'s mechanism). The pixel arm's quad is already this size.
-  const { anchorRef, clip } = useWorldClipPlanes(viewportRect);
-
   return (
-    <CanvasItemGroup ref={anchorRef} scale={[scaleX, scaleY, 1]}>
-      <ControlClipProvider value={clip}>
-        {cyclic ? (
-          <ControlFallback
-            solveNode={fallbackSolveNode}
-            rect={viewportRect}
-            renderOrder={renderOrder}
-            effectiveZ={effectiveZ}
-            // The cycle branch renders no subtree, so the fallback's slot is its subtree's last.
-            subtreeChromeRenderOrder={renderOrder}
-            theme={theme}
-            // Threaded for the contract; the outline is a diagnostic and
-            // deliberately draws in its own colour, untinted.
-            tint={tint}
-            // A SubViewport is never the root window, so it keeps
-            // `Viewport::snap_controls_to_pixels`' own `= true` initialiser
-            // (`scene/main/viewport.h`) whatever the project setting says.
-            snapToPixels
-            measureText={measureText}
-            childRects={NO_CHILD_RECTS}
-            meta={undefined}
-          />
-        ) : texture ? (
-          <ControlQuad
-            width={viewportWidth}
-            height={viewportHeight}
-            // Measured in Godot 4.6.3: 0.8 grey reads 204, 102 under
-            // `self_modulate` 0.5 and 51 with an ancestor `modulate` 0.5 on top, a plain multiply.
-            color={tint.color}
-            opacity={tint.opacity}
-            map={texture}
-            renderOrder={renderOrder}
-          />
-        ) : null}
-        {/* `ControlRasterPass` draws a `'dom'` viewport into the texture the quad samples, and only
-            the quad carries the tint, so a live draw would composite it twice. This arm serves a
-            mixed viewport, whose offscreen pass renders the non-Control half (`viewportContent.ts`). */}
-        {contentKind === 'dom' ? null : (
-          <ControlCanvasWalker
-            tree={tree}
-            generation={generation}
-            viewport={viewportRect}
-            theme={theme}
-            measurer={measureText}
-            // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and
-            // only the root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so
-            // the project's opt-out never reaches the sub-viewport's Controls.
-            snapToPixels
-          />
-        )}
-      </ControlClipProvider>
+    <CanvasItemGroup scale={[scaleX, scaleY, 1]}>
+      {cyclic ? (
+        <ControlFallback
+          solveNode={fallbackSolveNode}
+          rect={viewportRect}
+          renderOrder={renderOrder}
+          effectiveZ={effectiveZ}
+          // The cycle branch renders no subtree, so the fallback's slot is its subtree's last.
+          subtreeChromeRenderOrder={renderOrder}
+          theme={theme}
+          // Threaded for the contract; the outline is a diagnostic and
+          // deliberately draws in its own colour, untinted.
+          tint={tint}
+          // A SubViewport is never the root window, so it keeps
+          // `Viewport::snap_controls_to_pixels`' own `= true` initialiser
+          // (`scene/main/viewport.h`) whatever the project setting says.
+          snapToPixels
+          measureText={measureText}
+          childRects={NO_CHILD_RECTS}
+          meta={undefined}
+        />
+      ) : texture ? (
+        <ControlQuad
+          width={viewportWidth}
+          height={viewportHeight}
+          // Measured in Godot 4.6.3: 0.8 grey reads 204, 102 under
+          // `self_modulate` 0.5 and 51 with an ancestor `modulate` 0.5 on top, a plain multiply.
+          color={tint.color}
+          opacity={tint.opacity}
+          map={texture}
+          renderOrder={renderOrder}
+        />
+      ) : null}
     </CanvasItemGroup>
   );
 }

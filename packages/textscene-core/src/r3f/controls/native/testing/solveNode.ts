@@ -7,6 +7,7 @@
 
 import type { TscnNode } from '../../../../parser/types';
 import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
+import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 import type { SolveNode } from '../solveTree';
 import { allocatePaintRange, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../canvasPaintOrder';
 
@@ -42,8 +43,7 @@ export function solveNode(): Pick<
   | 'fontOverrides'
   | 'labelSettings'
   | 'themeChain'
-  | 'projectTheme'
-  | 'projectDefaultFont'
+  | 'projectFonts'
   | 'colors'
   | 'constants'
   | 'icons'
@@ -65,8 +65,7 @@ export function solveNode(): Pick<
     fontOverrides: NO_FONT_OVERRIDES,
     labelSettings: null,
     themeChain: NO_THEME_CHAIN,
-    projectTheme: null,
-    projectDefaultFont: null,
+    projectFonts: NO_PROJECT_FONTS,
     colors: NO_COLORS,
     constants: NO_CONSTANTS,
     icons: NO_ICONS,

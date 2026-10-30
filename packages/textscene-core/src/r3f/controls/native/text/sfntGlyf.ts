@@ -10,60 +10,41 @@
 
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { ftMulFix, getFontOutlineScale } from './fontMetrics';
+import {
+  transformOutline,
+  type GlyphOutlineReader,
+  type Matrix2x2,
+  type ScaledOutline,
+} from './glyphContours';
+import {
+  COMPONENT_ARGS_ARE_WORDS,
+  COMPONENT_ARGS_ARE_XY_VALUES,
+  COMPONENT_HAS_2X2,
+  COMPONENT_HAS_SCALE,
+  COMPONENT_HAS_XY_SCALE,
+  COMPONENT_MORE,
+  LONG_LOCA_FORMAT,
+  SIMPLE_ON_CURVE,
+  SIMPLE_REPEAT,
+  SIMPLE_X_SAME_OR_POSITIVE,
+  SIMPLE_X_SHORT,
+  SIMPLE_Y_SAME_OR_POSITIVE,
+  SIMPLE_Y_SHORT,
+  componentArgumentByteCount,
+  componentMatrixByteCount,
+} from './glyfFormat';
 import { readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
-
-/** One outline point, in px from the glyph origin with y down, as `font_get_glyph_contours` returns it. */
-export interface ContourPoint {
-  x: number;
-  y: number;
-  tag: (typeof ContourPointTag)[keyof typeof ContourPointTag];
-}
-
-/** What `TextServer::font_get_glyph_contours` returns for one glyph (`text_server_adv.cpp:3597-3652`). */
-export interface GlyphContours {
-  points: readonly ContourPoint[];
-  /** The index of the last point of each contour. */
-  contourEnds: readonly number[];
-  /** `FT_Outline_Get_Orientation` is `FT_ORIENTATION_FILL_RIGHT`: the outer contours wind clockwise. */
-  isFillRight: boolean;
-}
-
-/** The contours of a glyph at `fontSizePx`, or null for a glyph with no outline. */
-type GlyphContourReader = (glyphIndex: number, fontSizePx: number) => GlyphContours | null;
-
-/** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
-interface ScaledOutline {
-  x: number[];
-  y: number[];
-  isOn: boolean[];
-  contourEnds: number[];
-}
 
 const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
 const HEAD_TABLE_MIN_LENGTH = 52;
 const MAXP_NUM_GLYPHS_OFFSET = 4;
 const MAXP_TABLE_MIN_LENGTH = 6;
-const LONG_LOCA_FORMAT = 1;
 
 /**
  * The deepest chain of composite glyphs read. FreeType refuses a loop through its own recursion
  * limit (`ttgload.c`, `loader->recurse_count`), and a font that nests deeper is corrupt.
  */
 const MAX_COMPOSITE_DEPTH = 16;
-
-const SIMPLE_X_SHORT = 0x02;
-const SIMPLE_Y_SHORT = 0x04;
-const SIMPLE_REPEAT = 0x08;
-const SIMPLE_X_SAME_OR_POSITIVE = 0x10;
-const SIMPLE_Y_SAME_OR_POSITIVE = 0x20;
-const SIMPLE_ON_CURVE = 0x01;
-
-const COMPONENT_ARGS_ARE_WORDS = 0x0001;
-const COMPONENT_ARGS_ARE_XY_VALUES = 0x0002;
-const COMPONENT_HAS_SCALE = 0x0008;
-const COMPONENT_MORE = 0x0020;
-const COMPONENT_HAS_XY_SCALE = 0x0040;
-const COMPONENT_HAS_2X2 = 0x0080;
 
 /** An F2Dot14 matrix entry as the 16.16 `FT_Fixed` FreeType multiplies by (`ttgload.c`, `* 4`). */
 const F2DOT14_TO_16_16 = 4;
@@ -131,13 +112,10 @@ function readSimpleGlyph(dv: DataView, glyph: number, contourCount: number, scal
   return {
     x: x.coordinates.map((value) => ftMulFix(value, scale)),
     y: y.coordinates.map((value) => ftMulFix(value, scale)),
-    isOn: flags.map((flag) => (flag & SIMPLE_ON_CURVE) !== 0),
+    tags: flags.map((flag) => (flag & SIMPLE_ON_CURVE ? ContourPointTag.ON : ContourPointTag.OFF_CONIC)),
     contourEnds,
   };
 }
-
-/** A 2x2 matrix as 16.16 fixed point, `[xx, xy, yx, yy]`. */
-type Matrix2x2 = readonly [number, number, number, number];
 
 /** A component's matrix, or null for the identity. */
 function readComponentMatrix(
@@ -148,23 +126,15 @@ function readComponentMatrix(
   const entry = (offset: number) => dv.getInt16(at + offset, false) * F2DOT14_TO_16_16;
   if (flags & COMPONENT_HAS_SCALE) {
     const scale = entry(0);
-    return { matrix: [scale, 0, 0, scale], next: at + 2 };
+    return { matrix: [scale, 0, 0, scale], next: at + componentMatrixByteCount(flags) };
   }
-  if (flags & COMPONENT_HAS_XY_SCALE) return { matrix: [entry(0), 0, 0, entry(2)], next: at + 4 };
+  if (flags & COMPONENT_HAS_XY_SCALE) {
+    return { matrix: [entry(0), 0, 0, entry(2)], next: at + componentMatrixByteCount(flags) };
+  }
   if (flags & COMPONENT_HAS_2X2) {
-    return { matrix: [entry(0), entry(4), entry(2), entry(6)], next: at + 8 };
+    return { matrix: [entry(0), entry(4), entry(2), entry(6)], next: at + componentMatrixByteCount(flags) };
   }
   return { matrix: null, next: at };
-}
-
-/** `FT_Vector_Transform` of every point of `outline` by `[xx, xy, yx, yy]`. */
-function transformOutline(outline: ScaledOutline, [xx, xy, yx, yy]: Matrix2x2): void {
-  for (let i = 0; i < outline.x.length; i++) {
-    const x = outline.x[i]!;
-    const y = outline.y[i]!;
-    outline.x[i] = ftMulFix(x, xx) + ftMulFix(y, xy);
-    outline.y[i] = ftMulFix(x, yx) + ftMulFix(y, yy);
-  }
 }
 
 class GlyphReader {
@@ -207,7 +177,7 @@ class GlyphReader {
   }
 
   private loadComposite(start: number, scale: number, depth: number): ScaledOutline {
-    const whole: ScaledOutline = { x: [], y: [], isOn: [], contourEnds: [] };
+    const whole: ScaledOutline = { x: [], y: [], tags: [], contourEnds: [] };
     let at = start;
     let flags: number;
     do {
@@ -239,10 +209,10 @@ class GlyphReader {
     if (flags & COMPONENT_ARGS_ARE_WORDS) {
       const read = (offset: number) =>
         isXyOffset ? this.dv.getInt16(offset, false) : this.dv.getUint16(offset, false);
-      return { values: [read(at), read(at + 2)], next: at + 4 };
+      return { values: [read(at), read(at + 2)], next: at + componentArgumentByteCount(flags) };
     }
     const read = (offset: number) => (isXyOffset ? this.dv.getInt8(offset) : this.dv.getUint8(offset));
-    return { values: [read(at), read(at + 1)], next: at + 2 };
+    return { values: [read(at), read(at + 1)], next: at + componentArgumentByteCount(flags) };
   }
 }
 
@@ -251,49 +221,17 @@ function appendOutline(whole: ScaledOutline, part: ScaledOutline, dx: number, dy
   for (let i = 0; i < part.x.length; i++) {
     whole.x.push(part.x[i]! + dx);
     whole.y.push(part.y[i]! + dy);
-    whole.isOn.push(part.isOn[i]!);
+    whole.tags.push(part.tags[i]!);
   }
   for (const end of part.contourEnds) whole.contourEnds.push(firstPoint + end);
 }
 
 /**
- * `FT_Outline_Get_Orientation` is `FT_ORIENTATION_FILL_RIGHT` (`ftoutln.c`): the sign of the
- * area the control polygon spans over every contour. Collapsed in x or y, it is neither.
- */
-function isFillRight(outline: ScaledOutline): boolean {
-  const hasWidth = Math.max(...outline.x) !== Math.min(...outline.x);
-  const hasHeight = Math.max(...outline.y) !== Math.min(...outline.y);
-  if (!hasWidth || !hasHeight) return false;
-  let area = 0;
-  let first = 0;
-  for (const last of outline.contourEnds) {
-    let previous = last;
-    for (let i = first; i <= last; i++) {
-      area += (outline.y[i]! - outline.y[previous]!) * (outline.x[i]! + outline.x[previous]!);
-      previous = i;
-    }
-    first = last + 1;
-  }
-  return area < 0;
-}
-
-const FIXED_26_6 = 64;
-
-function toContours(outline: ScaledOutline): GlyphContours {
-  const points = outline.x.map((x, i): ContourPoint => ({
-    x: x / FIXED_26_6,
-    y: -outline.y[i]! / FIXED_26_6,
-    tag: outline.isOn[i] ? ContourPointTag.ON : ContourPointTag.OFF_CONIC,
-  }));
-  return { points, contourEnds: outline.contourEnds, isFillRight: isFillRight(outline) };
-}
-
-/**
- * The glyph-contour reader of a font's `glyf` outlines, or null for a font with no `glyf` or `loca`
+ * The glyph-outline reader of a font's `glyf` outlines, or null for a font with no `glyf` or `loca`
  * table, or a `head` or `maxp` that does not fit. A corrupt table that puts an offset past the
  * buffer reads as a glyph with no outline.
  */
-export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader | null {
+export function glyphOutlineReader({ dv, tables }: SfntFile): GlyphOutlineReader | null {
   const head = tables.get('head');
   const maxp = tables.get('maxp');
   if (!head || !maxp || !tables.has('glyf') || !tables.has('loca')) return null;
@@ -306,6 +244,6 @@ export function glyphContourReader({ dv, tables }: SfntFile): GlyphContourReader
   const glyphs = new GlyphReader(dv, glyphCount, tables, isLongLoca);
   return (glyphIndex, fontSizePx) => {
     const outline = glyphs.load(glyphIndex, getFontOutlineScale(unitsPerEm, fontSizePx));
-    return outline && outline.x.length > 0 ? toContours(outline) : null;
+    return outline && outline.x.length > 0 ? outline : null;
   };
 }

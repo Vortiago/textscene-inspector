@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
-import type { ResolvedTextureSlots } from './types';
+import type { ResolvedTextures } from './types';
 import { patchedFragment } from '../../../r3f/testing/patchedFragment';
 
 const BIASED_ALBEDO = 'godotMipmapBiased( map,';
@@ -20,7 +20,7 @@ function loadedTexture(): THREE.Texture {
   return texture;
 }
 
-function fragmentOf(properties: Record<string, string>, textures: ResolvedTextureSlots): string {
+function fragmentOf(properties: Record<string, string>, textures: ResolvedTextures): string {
   return patchedFragment(buildMaterial(parseStandardMaterial3DScalars(properties), textures));
 }
 

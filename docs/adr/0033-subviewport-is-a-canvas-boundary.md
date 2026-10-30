@@ -110,7 +110,9 @@ which display real content.
 
 - The 3D half needs no new rendering machinery, only the `own_world_3d` flag.
 - A container draws its sub-viewport's target on a quad that samples the published
-  texture, and a mixed sub-viewport's Controls draw live over it.
+  texture. A sub-viewport draws its own Controls into its target (`viewport.cpp:5344-5345`). With
+  2D content they share one tree-order draw. With a 3D world they draw over the tonemapped render,
+  in a scene of their own, through a canvas frame whose bytes return to the target.
 - A target that holds canvas content, the 2D-world pass's or the Control pass's, stores
   sRGB bytes in RGBA8, as Godot's non-HDR `R8G8B8A8_UNORM` target does
   (`texture_storage.cpp:3568-3569`). The pass encodes and blends its sRGB numbers there, as
@@ -129,6 +131,11 @@ which display real content.
   A `ParallaxBackground` is a `CanvasLayer` whose layer transform tracks the viewport's
   canvas transform (`parallax_background.cpp::_camera_moved` → `set_scroll_offset`), so
   it covers a Camera2D-framed surface wherever the camera goes.
+- A sub-viewport with 2D content runs its own Light2D pass, because its World2D owns the
+  lights, occluders and CanvasModulate (`viewport.cpp:5345`). The pass draws through the
+  target's camera into buffers of the target's size, and a DirectionalLight2D shadow map
+  spans `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`). The canvas around the
+  sub-viewport lights nothing inside it, and the sub-viewport lights nothing outside.
 - Node paths inside a sub-viewport stay in the one path space, so the boundary does not
   affect selection, the scene tree or the inspector.
 - **Deliberate non-changes**, each of which looks like an inconsistency:

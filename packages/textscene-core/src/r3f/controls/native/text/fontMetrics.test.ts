@@ -8,11 +8,14 @@
 // units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888): each `ceil(units / 2) / 64`.
 import { describe, expect, it } from 'vitest';
 import {
+  ftDivFix,
+  ftMulDiv,
   fontUsesSubpixelPositioning,
   getFontAscentPx,
   getFontGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  withOutlines,
   withVariation,
   type FontMetrics,
 } from './fontMetrics';
@@ -107,6 +110,14 @@ describe('getFontKerningAdjustmentPx', () => {
 });
 
 describe('withVariation', () => {
+  it('keeps the outlines of each font apart for one face and one variation', () => {
+    const a = { glyphIndex: () => 1, glyphContours: () => null };
+    const b = { glyphIndex: () => 2, glyphContours: () => null };
+
+    expect(withVariation(METRICS, { embolden: 1, outlines: a }).outlines).toBe(a);
+    expect(withVariation(METRICS, { embolden: 1, outlines: b }).outlines).toBe(b);
+  });
+
   it('is the face itself with no embolden and no skew', () => {
     expect(withVariation(METRICS, {})).toBe(METRICS);
     expect(withVariation(METRICS, { embolden: 0, skew: 0 })).toBe(METRICS);
@@ -126,5 +137,55 @@ describe('withVariation', () => {
   it('returns one object per face, embolden and skew, so a layout memoised on it keeps its hits', () => {
     expect(withVariation(METRICS, { embolden: 1.2 })).toBe(withVariation(METRICS, { embolden: 1.2 }));
     expect(withVariation(METRICS, { embolden: 1.2 })).not.toBe(withVariation(METRICS, { skew: 1.2 }));
+  });
+});
+
+describe('ftMulDiv', () => {
+  it('rounds half up on the magnitude and signs the quotient', () => {
+    expect(ftMulDiv(3, 5, 2)).toBe(8);
+    expect(ftMulDiv(-3, 5, 2)).toBe(-8);
+    expect(ftMulDiv(-3, -5, 2)).toBe(8);
+  });
+
+  it('gives the largest 32-bit magnitude for a zero divisor, signed by the product', () => {
+    expect(ftMulDiv(3, 5, 0)).toBe(0x7fffffff);
+    expect(ftMulDiv(-3, 5, 0)).toBe(-0x7fffffff);
+  });
+});
+
+describe('ftDivFix', () => {
+  it('rounds the quotient half up on the magnitude', () => {
+    expect(ftDivFix(1, 3)).toBe(21845);
+    expect(ftDivFix(-1, 3)).toBe(-21845);
+  });
+
+  it('gives the largest 32-bit magnitude for a zero divisor, signed by the dividend', () => {
+    expect(ftDivFix(5, 0)).toBe(0x7fffffff);
+    expect(ftDivFix(-5, 0)).toBe(-0x7fffffff);
+  });
+});
+
+describe('withOutlines', () => {
+  const outlines = { glyphIndex: () => 1, glyphContours: () => null };
+
+  it('carries the outlines on a plain face, and keeps the face as the prototype', () => {
+    const face = withOutlines(METRICS, outlines);
+
+    expect(face.outlines).toBe(outlines);
+    expect(face.unitsPerEm).toBe(METRICS.unitsPerEm);
+    expect(face.embolden).toBe(0);
+  });
+
+  it('keeps the embolden and skew of a varied face', () => {
+    const face = withOutlines(withVariation(METRICS, { embolden: 1.2, skew: 0.3 }), outlines);
+
+    expect(face).toMatchObject({ embolden: 1.2, skew: 0.3 });
+  });
+
+  it('answers one face for one set of outlines, and the face itself once it carries them', () => {
+    const face = withOutlines(METRICS, outlines);
+
+    expect(withOutlines(METRICS, outlines)).toBe(face);
+    expect(withOutlines(face, outlines)).toBe(face);
   });
 });

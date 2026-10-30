@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../../parser/types';
@@ -176,7 +176,6 @@ describe('useMeshContent for a TextMesh', () => {
     expect(part.geometry.getAttribute('position').count).toBeGreaterThan(0);
     expect(part.surfaceIndices).toEqual([0]);
     expect(part.materials[0]).toBeDefined();
-    expect(content.mesh.primitive).toBe(TEXT);
     expect(undrawn).toEqual([]);
   });
 
@@ -185,21 +184,25 @@ describe('useMeshContent for a TextMesh', () => {
 
     await act(async () => fake.fonts._resolve(FONT_PATH, NOT_AN_SFNT_FILE));
 
-    expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] });
+    await vi.waitFor(() =>
+      expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] })
+    );
   });
 
-  it('stays undrawn, and names its type, for a font file that failed to load', () => {
+  it('draws the bundled font for a font file that failed to load, as Godot falls back to its default font', async () => {
     const { fake, result } = renderText('SubResource("text")');
 
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
 
-    expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] });
+    await vi.waitFor(() => expect(result.current.content.kind).toBe('surfaced'));
+    expect(result.current.undrawn).toEqual([]);
   });
 
-  it('stays undrawn, and names its type, for a TextMesh with no font', () => {
+  it('draws the bundled font for a TextMesh with no font', async () => {
     const { result } = renderText('SubResource("plain")');
 
-    expect(result.current).toEqual({ content: { kind: 'unresolved' }, undrawn: ['TextMesh'] });
+    await vi.waitFor(() => expect(result.current.content.kind).toBe('surfaced'));
+    expect(result.current.undrawn).toEqual([]);
   });
 });
 

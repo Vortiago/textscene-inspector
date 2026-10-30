@@ -19,19 +19,6 @@ vi.mock('../../../../logger.js', async (importOriginal) => {
   };
 });
 
-// `gui/common/snap_controls_to_pixels` is the root window's setting, and this painter's
-// Controls live in a SubViewport, which never receives it.
-const projectSettingsMock = vi.hoisted(() => ({
-  settings: null as Record<string, string> | null,
-  viewportSize: { width: 1152, height: 648 },
-  themeScale: 1,
-}));
-
-vi.mock('../../../../r3f/contexts/ProjectSettingsContext', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../r3f/contexts/ProjectSettingsContext')>();
-  return { ...actual, useProjectSettings: () => projectSettingsMock };
-});
-
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -130,48 +117,6 @@ describe('<SubViewportContainer>', () => {
     expect(textured).toHaveLength(0);
   });
 
-  /**
-   * `scene/main/viewport.h` sets `snap_controls_to_pixels = true` on every Viewport, and
-   * `main/main.cpp` hands the project setting to `sml->get_root()` alone. Godot 4.6.3 on
-   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn` draws a four-deep chain of
-   * 0.5 offsets at (102, 62) in the unsnapped root and at (104, 64) inside the sub-viewport.
-   */
-  it('snaps its sub-viewport’s own Controls even when the project opts out', async () => {
-    projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
-    try {
-      // Mixed, so this container's live arm is under test. `ControlRasterPass` draws a
-      // Control-only viewport, and its suite asserts the same rule for that route.
-      const mesh = node('Mesh', 'MeshInstance3D', {});
-      const bar = node('Bar', 'ColorRect', {
-        anchorLeft: 0,
-        anchorTop: 0,
-        anchorRight: 0,
-        anchorBottom: 0,
-        offsetLeft: 100.5,
-        offsetTop: 60.5,
-        offsetRight: 140.5,
-        offsetBottom: 100.5,
-      });
-      const renderer = await mount(
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode({}, {}, [mesh, bar])}
-          rect={RECT}
-          renderOrder={0}
-        />
-      );
-      const group = renderer.scene
-        .findAll(() => true)
-        .map((n) => n.instance as THREE.Object3D)
-        .find((o) => o.name === 'ColorRect:Bar');
-
-      expect(group?.position.x).toBeCloseTo(101);
-      expect(group?.position.y).toBeCloseTo(-61);
-    } finally {
-      projectSettingsMock.settings = null;
-    }
-  });
-
   describe('a cyclic pass', () => {
     /**
      * A registry where "Booth/View" and "Other" depend on each other. "Other" registers first, so
@@ -231,51 +176,32 @@ describe('<SubViewportContainer>', () => {
 });
 
 /**
- * A sub-viewport's Controls reach the canvas by one route. `viewportContentKind`
- * (`viewport/subviewport/viewportContent.ts`) sends a Control-only (`'dom'`) viewport to
- * `ControlRasterPass`, whose texture alone carries `self_modulate`, so a live draw would composite
- * it twice. The live arm serves a mixed viewport, whose offscreen pass renders the non-Control half.
+ * A sub-viewport draws its own Controls into its target (`subviewport_container.cpp:134-144`), so
+ * the container draws the quad alone. A live draw would composite them twice, since only the quad
+ * carries the container's tint.
  */
-describe('<SubViewportContainer> — one route per sub-viewport', () => {
-  /** Every named group the walk emitted, so a live-drawn Control is visible by name. */
-  function groupNames(renderer: Awaited<ReturnType<typeof mount>>): string[] {
-    return renderer.scene
-      .findAll(() => true)
-      .map((n) => (n.instance as THREE.Object3D).name)
-      .filter((name) => name.length > 0);
-  }
+describe('<SubViewportContainer> — the surface draws the target only', () => {
+  const CONTENT: Record<string, [string, string]> = {
+    'Control-only': ['Backdrop', 'ColorRect'],
+    '2D': ['Shape', 'Polygon2D'],
+    '3D': ['Mesh', 'MeshInstance3D'],
+  };
 
-  it('does not ALSO draw a Control-only sub-viewport live — the raster texture is the whole picture', async () => {
+  it.each(Object.keys(CONTENT))('draws no Control of a %s viewport live', async (kind) => {
+    const [name, type] = CONTENT[kind]!;
     const renderer = await mount(
       <>
         <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
         <SubViewportContainer
           {...painterEnv()}
-          solveNode={containerSolveNode({}, {}, [node('Backdrop', 'ColorRect', {})])}
+          solveNode={containerSolveNode({}, {}, [node(name, type, {}), node('Backdrop', 'ColorRect', {})])}
           rect={RECT}
           renderOrder={0}
         />
       </>
     );
-    expect(groupNames(renderer).filter((n) => n.includes('Backdrop'))).toEqual([]);
-  });
-
-  it('still draws a MIXED viewport’s Controls live, over the pass that rendered its 3D half', async () => {
-    const renderer = await mount(
-      <>
-        <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode({}, {}, [
-            node('Mesh', 'MeshInstance3D', {}),
-            node('Backdrop', 'ColorRect', {}),
-          ])}
-          rect={RECT}
-          renderOrder={0}
-        />
-      </>
-    );
-    expect(groupNames(renderer).filter((n) => n.includes('Backdrop')).length).toBeGreaterThan(0);
+    const names = renderer.scene.findAll(() => true).map((n) => (n.instance as THREE.Object3D).name);
+    expect(names.filter((n) => n.includes('Backdrop'))).toEqual([]);
   });
 });
 

@@ -12,6 +12,7 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { CanvasItem2D } from './CanvasItem2D';
 import {
   AnimatedValueProvider,
+  animatedValueKey,
   useAnimatedValueRegistry,
   type AnimatedValueRegistry,
 } from '../contexts/AnimatedValueContext';
@@ -86,7 +87,7 @@ describe('CanvasItem2D', () => {
         </AnimatedValueProvider>
       );
     const push = (value: number[] | null) =>
-      ReactThreeTestRenderer.act(async () => registry.set('CI', 'visible', value));
+      ReactThreeTestRenderer.act(async () => registry.set(animatedValueKey('CI', 'visible'), value));
 
     it('hides the group, and shows it again when released', async () => {
       const r = await mount(makeNode());

@@ -7,7 +7,7 @@ import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useSharedLiveTree } from '../../useLiveSceneTree.js';
+import { useSeatedRoots, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { walkLiveTree } from '../../liveSceneTree.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
@@ -20,6 +20,8 @@ import styles from './SceneTreeViewer.module.css';
 function nodePathFor(row: HTMLElement): string | null {
   return row.closest<HTMLElement>('[data-node-path]')?.dataset.nodePath ?? null;
 }
+
+const NO_NODES: readonly TscnNode[] = [];
 
 export interface SceneTreeViewerProps {
   /** Fired when a row is double-clicked, so the host can jump to the source. */
@@ -42,10 +44,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const rootNodes = useMemo<readonly TscnNode[]>(() => {
-    if (!sceneGraph) return [];
-    return sceneGraph.scenes.get(sceneGraph.rootScene)?.nodes ?? [];
-  }, [sceneGraph]);
+  const rootNodes = useSeatedRoots() ?? NO_NODES;
 
   // Every TreeNode resolves `ExtResource("id")` against these, with no
   // re-read of the sceneGraph.

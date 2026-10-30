@@ -53,9 +53,17 @@ export interface ControlOwnTint {
  */
 // An argument, not a context read: the walker runs this above the provider it
 // publishes, where the context holds the parent's value without this `modulate`.
-export function useControlOwnTint(inherited: Rgba, solveNode: SolveNode): ControlOwnTint {
+export function useControlOwnTint(
+  inherited: Rgba,
+  solveNode: SolveNode,
+  /** The canvas tint this Control's light mode admits (`useCanvasModulateFor`), multiplied into its own pixels only. */
+  canvasModulate: Rgba
+): ControlOwnTint {
   const selfModulate = modulateOrWhite(controlProps(solveNode).selfModulate);
-  const own = useMemo(() => multiplyModulate(inherited, selfModulate), [inherited, selfModulate]);
+  const own = useMemo(
+    () => multiplyModulate(multiplyModulate(inherited, selfModulate), canvasModulate),
+    [inherited, selfModulate, canvasModulate]
+  );
   const color = useGodotLinearColor(own);
   // Memoised as a whole: it is a prop, and painters memoise on it.
   return useMemo(() => ({ own, color, opacity: own.a }), [own, color]);

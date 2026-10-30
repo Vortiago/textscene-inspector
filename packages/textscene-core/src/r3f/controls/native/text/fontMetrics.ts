@@ -6,6 +6,7 @@
  */
 
 import { perObject } from '../../../../utils/perObject';
+import type { SfntOutlines } from './sfntOutlines';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
@@ -42,6 +43,12 @@ export interface FontMetrics {
    * the baseline. Absent is 0, upright.
    */
   readonly skew?: number;
+  /**
+   * The glyph outlines that the text of an emboldened or sheared canvas face follows. Absent for
+   * a face that needs none. Null for a font whose outlines this previewer cannot read: its text
+   * stays on `fillText` and `strokeText`.
+   */
+  readonly outlines?: SfntOutlines | null;
 }
 
 /**
@@ -86,24 +93,38 @@ export function getFontLinePitchPx(
 }
 
 /** 1.0 in FreeType's 16.16 fixed point (`FT_Fixed`). */
-const FIXED_16_16_ONE = 65536;
+export const FIXED_16_16_ONE = 65536;
+
+/** 1.0 px in FreeType's 26.6 fixed point (`FT_F26Dot6`). */
+export const FIXED_26_6_ONE = 64;
 
 /**
  * `freetype/include/freetype/fttypes.h`'s `FT_DivFix` (`freetype/src/base/ftcalc.c`):
  * `a / b` in 16.16, rounded half up on the magnitude (`q = ( ( (FT_UInt64)a << 16 ) +
  * ( b >> 1 ) ) / b`), then signed. A division, not a shift: the intermediate exceeds 32 bits.
+ * A zero divisor gives the largest 32-bit magnitude, signed by `a`, not infinity.
  */
-function ftDivFix(a: number, b: number): number {
+export function ftDivFix(a: number, b: number): number {
+  if (b === 0) return a < 0 ? -0x7fffffff : 0x7fffffff;
   const sign = Math.sign(a) * Math.sign(b);
   const magnitude = Math.floor((Math.abs(a) * FIXED_16_16_ONE + Math.floor(Math.abs(b) / 2)) / Math.abs(b));
   return sign * magnitude;
 }
 
+/**
+ * `freetype/src/base/ftcalc.c`'s `FT_MulDiv`: `a * b / c`, rounded half up on the magnitude. A zero
+ * `c` gives the largest 32-bit magnitude, signed by `a * b`.
+ * @canonical FreeType's `a * b / c` in integers
+ */
+export function ftMulDiv(a: number, b: number, c: number): number {
+  if (c === 0) return a * b < 0 ? -0x7fffffff : 0x7fffffff;
+  const sign = Math.sign(a) * Math.sign(b) * Math.sign(c);
+  return sign * Math.floor((Math.abs(a) * Math.abs(b) + Math.floor(Math.abs(c) / 2)) / Math.abs(c));
+}
+
 /** `freetype/src/base/ftcalc.c`'s `FT_MulFix`: `a * b / 65536`, rounded half up on the magnitude. */
 export function ftMulFix(a: number, b: number): number {
-  const sign = Math.sign(a) * Math.sign(b);
-  const magnitude = Math.floor((Math.abs(a) * Math.abs(b) + FIXED_16_16_ONE / 2) / FIXED_16_16_ONE);
-  return sign * magnitude;
+  return ftMulDiv(a, b, FIXED_16_16_ONE);
 }
 
 /**
@@ -117,7 +138,7 @@ export function ftMulFix(a: number, b: number): number {
 // which `text_server_adv.cpp:1509` divides by for `fd->scale`.
 function freeTypeSizeRequest(unitsPerEm: number, fontSizePx: number): { xScale: number; ppem: number } {
   // `req.width = sz * 64.0` lands in an `FT_Long`, truncating toward zero.
-  const requested26_6 = Math.trunc(fontSizePx * 64);
+  const requested26_6 = Math.trunc(fontSizePx * FIXED_26_6_ONE);
   return { xScale: ftDivFix(requested26_6, unitsPerEm), ppem: (requested26_6 + 32) >> 6 };
 }
 
@@ -163,33 +184,68 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   // The error only adds width, so a run of odd advances can push
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
   const advance26_6 = Math.floor((advance16_16 + 512) / 1024);
-  return advance26_6 / 64;
+  return advance26_6 / FIXED_26_6_ONE;
+}
+
+/** The embolden and the shear of a `FontVariation`: absent is none. */
+export type GlyphVariation = Pick<FontMetrics, 'embolden' | 'skew'>;
+
+/** Whether the variation changes the glyph outline at all. */
+export function isGlyphVaried({ embolden = 0, skew = 0 }: GlyphVariation): boolean {
+  return embolden !== 0 || skew !== 0;
+}
+
+/** One string for a variation, with an absent embolden and skew equal to 0: the key of every cache that varies by it. */
+export function variationKey({ embolden = 0, skew = 0 }: GlyphVariation): string {
+  return `${embolden}/${skew}`;
 }
 
 /**
- * The wrappers of one face, by embolden and skew: one each, so a layout memoised on `FontMetrics`
- * identity keeps its hits.
+ * The wrappers of one face, by embolden and skew, then by outlines: one each, so a layout memoised on
+ * `FontMetrics` identity keeps its hits.
  */
-const variationsOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
+const variationsOf = perObject(
+  (_face: FontMetrics) => new Map<string, Map<FontMetrics['outlines'], FontMetrics>>()
+);
 
 /**
- * `metrics` with a `FontVariation`'s `embolden` and `skew` set. The wrapper reads every other field
- * through the face, so a live getter stays live. With neither, it is the face itself.
+ * `metrics` with a `FontVariation`'s `embolden` and `skew` set, and the `outlines` its text follows.
+ * The wrapper reads every other field through the face, so a live getter stays live. With neither
+ * embolden nor skew and no outlines, it is the face itself. Two fonts that share a face and a variation keep
+ * their own outlines, each on its own wrapper.
  */
-export function withVariation(
-  metrics: FontMetrics,
-  { embolden = 0, skew = 0 }: { embolden?: number; skew?: number }
-): FontMetrics {
-  if (embolden === 0 && skew === 0) return metrics;
+export function withVariation<Metrics extends FontMetrics>(
+  metrics: Metrics,
+  { embolden = 0, skew = 0, outlines }: GlyphVariation & Pick<FontMetrics, 'outlines'>
+): Metrics {
+  if (!outlines && !isGlyphVaried({ embolden, skew })) return metrics;
   const byVariation = variationsOf(metrics);
-  const key = `${embolden}/${skew}`;
-  let wrapped = byVariation.get(key);
+  const key = variationKey({ embolden, skew });
+  let byOutlines = byVariation.get(key);
+  if (!byOutlines) byVariation.set(key, (byOutlines = new Map()));
+  let wrapped = byOutlines.get(outlines);
   if (!wrapped)
-    byVariation.set(
-      key,
-      (wrapped = Object.create(metrics, { embolden: { value: embolden }, skew: { value: skew } }))
+    byOutlines.set(
+      outlines,
+      (wrapped = Object.create(metrics, {
+        embolden: { value: embolden },
+        skew: { value: skew },
+        ...(outlines !== undefined && { outlines: { value: outlines } }),
+      }))
     );
-  return wrapped!;
+  return wrapped as Metrics;
+}
+
+/** `metrics` carrying `outlines`, keeping its own embolden and skew. */
+export function withOutlines<Metrics extends FontMetrics>(
+  metrics: Metrics,
+  outlines: SfntOutlines
+): Metrics & { readonly outlines: SfntOutlines } {
+  return (
+    metrics.outlines === outlines
+      ? metrics
+      : withVariation(metrics, { embolden: metrics.embolden, skew: metrics.skew, outlines })
+  ) as Metrics & { readonly outlines: SfntOutlines };
 }
 
 /**
@@ -209,11 +265,20 @@ export function getFontEmboldenedAdvancePx(metrics: FontMetrics, ch: string, fon
 
 /**
  * The px `FT_Outline_Embolden` grows an outline by: `strength = embolden * size.x / 16` in 26.6
- * (`text_server_adv.cpp:1313-1314`). The ink keeps its left and bottom edges and gains this much
+ * (`text_server_adv.cpp:1314-1315`). The ink keeps its left and bottom edges and gains this much
  * at the right and top.
  */
 export function getFontEmboldenGrowthPx(embolden: number, fontSizePx: number): number {
   return (embolden * fontSizePx) / 16;
+}
+
+/**
+ * The strength Godot passes to `FT_Outline_Embolden`: `embolden * size.x / 16`, truncated, in 26.6
+ * units, with `size.x` the font size in 26.6 (`text_server_adv.cpp:1314`). A float product, as
+ * `embolden` is a `float`. `getFontEmboldenGrowthPx` is the same strength before the truncation.
+ */
+export function getFontEmboldenStrength(embolden: number, fontSizePx: number): number {
+  return Math.trunc(Math.fround(Math.fround(embolden) * fontSizePx * FIXED_26_6_ONE) / 16);
 }
 
 /** `metrics.getKerningAdjustmentUnits(a, b)` scaled to `fontSizePx`. `0` short-circuits without a scale. */

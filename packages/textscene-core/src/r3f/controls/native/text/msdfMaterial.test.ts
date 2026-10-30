@@ -6,6 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { createMsdfMaterial } from './msdfMaterial';
+import { patchedShader } from '../../../testing/patchedFragment';
+import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 
 const RED = { r: 1, g: 0, b: 0 };
 
@@ -110,5 +112,50 @@ describe('createMsdfMaterial', () => {
     // three only expands `TONE_MAPPING` for a material that opts in; the
     // default is `true` and nothing here may turn it off.
     expect(mat.toneMapped).toBe(true);
+  });
+
+  describe('inside a lit Control', () => {
+    const fragmentOf = (material: THREE.ShaderMaterial) =>
+      patchedShader(
+        (shader) => material.onBeforeCompile(shader as never, undefined as never),
+        material.fragmentShader
+      );
+    const lit = () =>
+      createMsdfMaterial({
+        map: new THREE.Texture(),
+        color: RED,
+        opacity: 1,
+        pxRange: 4,
+        pixelMaterial: litPixelMaterial(),
+      });
+
+    it('samples the light list before the colour encode', () => {
+      expect(fragmentOf(lit())).toContain('uLightList');
+    });
+
+    it('keeps an explicit side over the facing of the Control material', () => {
+      const material = createMsdfMaterial({
+        map: new THREE.Texture(),
+        color: RED,
+        opacity: 1,
+        pxRange: 4,
+        side: THREE.FrontSide,
+        pixelMaterial: litPixelMaterial(),
+      });
+
+      expect(material.side).toBe(THREE.FrontSide);
+    });
+
+    it('takes the blend state of the Control material', () => {
+      const material = lit();
+
+      expect(material.blending).toBe(THREE.CustomBlending);
+      expect(material.blendDst).toBe(THREE.OneFactor);
+    });
+
+    it('stays unlit without a pixel material', () => {
+      const plain = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
+      expect(fragmentOf(plain)).not.toContain('uLightList');
+    });
   });
 });

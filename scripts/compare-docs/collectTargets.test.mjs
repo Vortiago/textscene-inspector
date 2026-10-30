@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { collectTargets } from './recapture/targets.mjs';
+import { collectTargets, settleTimeoutOf } from './recapture/targets.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
 
 describe('collectTargets', () => {
@@ -84,5 +84,30 @@ describe('collectTargets', () => {
       sampled++;
     }
     expect(sampled).toBeGreaterThan(0);
+  });
+});
+
+describe('settleTimeoutOf', () => {
+  const scene = (file, settleTimeout) => ({ name: file, file, settleTimeout });
+
+  it('gives a fixture the limit its golden scene declares, as the golden run does', () => {
+    expect(settleTimeoutOf('a.tscn', [scene('a.tscn', 90000)])).toBe(90000);
+  });
+
+  it('gives a fixture shown by several scenes the longest limit', () => {
+    const scenes = [scene('a.tscn', undefined), scene('a.tscn', 90000), scene('a.tscn', 60000)];
+    expect(settleTimeoutOf('a.tscn', scenes)).toBe(90000);
+  });
+
+  it('leaves a fixture whose scenes declare none to the default', () => {
+    expect(settleTimeoutOf('a.tscn', [scene('a.tscn', undefined)])).toBeUndefined();
+  });
+
+  it('leaves a fixture no golden scene shows to the default', () => {
+    expect(settleTimeoutOf('b.tscn', [scene('a.tscn', 90000)])).toBeUndefined();
+  });
+
+  it('reads the committed manifest by default', () => {
+    expect(settleTimeoutOf('unit-directionallight2d-render-budget.tscn')).toBeGreaterThan(30000);
   });
 });

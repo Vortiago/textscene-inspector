@@ -9,7 +9,7 @@ renders_as: Godot's editor frustum gizmo, drawn for every camera
 
 # Camera3D
 
-An authored viewpoint that draws nothing at runtime. The previewer matches that, so a capture with the Gizmos toggle off shows no camera in either image. With the toggle on, the previewer draws Godot's editor gizmo (`camera_3d_gizmo_plugin.cpp`) for every camera, faint while the camera is not selected (ADR-0056). The gizmo sits on the node, and it takes the aspect of the viewport that holds the camera.
+An authored viewpoint that draws nothing at runtime. The previewer matches that, so a capture with the Gizmos toggle off shows no camera in either image. With the toggle on, the previewer draws Godot's editor gizmo (`camera_3d_gizmo_plugin.cpp`) for every camera, faint while the camera is not selected (ADR-0056). Godot's billboard icon marks the origin. The gizmo sits on the node, and it takes the aspect of the viewport that holds the camera.
 
 ## Linting
 
@@ -49,12 +49,15 @@ The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum
 
 The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does, also for a camera inside a SubViewport. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends.
 
-## Exposure
+## Exposure and Environment
 
-The exposure of a valid `attributes` replaces the world's while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales.
+A valid `attributes` replaces the exposure of the world while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales. A valid `environment` replaces the Environment of the world the same way (`renderer_scene_cull.cpp:3594-3597`).
+
+A SubViewport that shares a world draws at the exposure of its own camera, or at the exposure of the world without one (`renderer_scene_cull.cpp:2707`, `:3562-3565`). Two viewports of one world so draw one frame at two exposures.
 
 ## Known limitations
 
 - **Not drawn** A CameraAttributesPhysical sets no `fov`, `near` or `far`, and no depth of field draws.
-- **Not drawn** A Camera3D in a SubViewport that shares the root world leaves that SubViewport at the exposure of the root world.
-- **Editor only** The frustum gizmo appears only in Godot's editor, and here it draws for every camera when the Gizmos toggle is on.
+- **Not drawn** A Camera3D in a SubViewport that shares the root world of a 3D scene keeps the root world's Environment.
+- **Not drawn** In a shared world of a 2D scene, a Camera3D's `environment` sets only the tone mapping.
+- **Editor only** The frustum gizmo and the icon appear only in Godot's editor, and here they draw for every camera when the Gizmos toggle is on.

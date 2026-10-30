@@ -85,7 +85,7 @@ async function spriteAnisotropy(source: string, project: string | null): Promise
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
     <ProjectFixture>
-      <SceneStack loader={fake.loader} scene={parsed} workspace="3d">
+      <SceneStack loader={fake.loader} scene={parsed} workspace="3d" showGizmos={false}>
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <InWorld>

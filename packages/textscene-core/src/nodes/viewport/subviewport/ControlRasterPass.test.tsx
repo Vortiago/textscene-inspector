@@ -132,28 +132,6 @@ describe('<ControlRasterPasses>', () => {
     expect(bindings).toEqual(['plain', 'frame', 'plain', 'decoding']);
   });
 
-  it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
-    const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
-    const renderer = await ReactThreeTestRenderer.create(
-      <ViewportTextureProvider>
-        <ViewportPassProvider>
-          <ControlRasterPasses viewports={walk(parse(GUI_SCENE))} />
-          <CaptureRenderer captured={capturedGl} />
-          <ViewportPassOrchestrator />
-        </ViewportPassProvider>
-      </ViewportTextureProvider>
-    );
-    const gl = capturedGl.current!;
-    gl.toneMapping = THREE.CustomToneMapping;
-    let seenAtBind: THREE.ToneMapping | null = null;
-    await advanceFrameWithStubbedGl(renderer, gl, (target) => {
-      if (seenAtBind === null && target !== null) seenAtBind = gl.toneMapping;
-    });
-    expect(seenAtBind).toBe(THREE.NoToneMapping);
-    // Restored after the pass, as the 3D/2D pass restores its own.
-    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
-  });
-
   /**
    * `scene/main/viewport.h` sets `snap_controls_to_pixels` true on every Viewport,
    * and `main/main.cpp` hands the project setting to the root alone. Measured on
@@ -237,6 +215,26 @@ offset_bottom = 100.5
     const canvasBottom = new THREE.Vector3(160, -240, 0).project(drawn.camera!);
 
     expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
+  });
+
+  // Godot lays Controls out by `size` (`viewport.cpp:1202-1210`); a capped target only shrinks the draw.
+  it('frames the authored size when the target is capped', async () => {
+    const { renderer, gl } = await mount(
+      parse(GUI_SCENE.replace('Vector2i(320, 240)', 'Vector2i(20000, 240)'))
+    );
+    const drawn: { camera: THREE.Camera | null } = { camera: null };
+    await withStubbedGl(
+      gl,
+      {
+        onRender: (_, __, camera) => {
+          drawn.camera ??= camera;
+        },
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+
+    drawn.camera!.updateMatrixWorld(true);
+    expect(new THREE.Vector3(20000, 0, 0).project(drawn.camera!).x).toBeCloseTo(1);
   });
 
   // The frame's render clears the frame and the copy overwrites every texel of the target.

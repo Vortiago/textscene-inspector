@@ -12,6 +12,7 @@
 import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
 import { lightReachesItem, type LightCullKey } from './lightCullKey.js';
 import { rect2Intersects, type Rect2 } from '../../godot/math/rect2.js';
+import { perObject } from '../../utils/perObject.js';
 
 /** What a light tells the pass about itself. */
 export interface CanvasLightDeclaration {
@@ -22,6 +23,11 @@ export interface CanvasLightDeclaration {
    * sits on a list of its own that the per-item cap does not count.
    */
   readonly sequence: number | null;
+  /**
+   * A directional light's place in the directional list, its draw order. Absent for a positional
+   * light. A directional light without one ranks first, ahead of the lights that have one.
+   */
+  readonly slot?: number;
   /**
    * `Light2D.shadow_item_cull_mask` while a positional light casts a shadow, else null. A
    * directional light's shadow reaches every item, so it declares null.
@@ -37,31 +43,53 @@ export interface ItemPlacement {
   readonly z: number;
   readonly layer: number;
   /**
-   * The ordinals of the positional lights on the item's list (`itemPositionalLights`) while more
-   * than 15 meet its rect. Null while they fit: the item then reads its placement's list.
+   * The ordinals of the lights on the item's list, the positional ones from `itemPositionalLights`,
+   * while more than 15 meet its rect or the render's budget drops one. Null otherwise: the item then
+   * reads its placement's list.
    */
-  readonly positionalLights: readonly number[] | null;
+  readonly takenLights: readonly number[] | null;
 }
 
 /** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
 export const MAX_POSITIONAL_LIGHTS_PER_ITEM = MAX_LIGHTS_PER_ITEM - 1;
 
+/** The ordinals of the lights `rankOf` ranks, in list order: rank, then ordinal. */
+function listOrder(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  rankOf: (light: CanvasLightDeclaration) => number | null
+): number[] {
+  const listed: { ordinal: number; rank: number }[] = [];
+  for (const [ordinal, light] of lights) {
+    const rank = rankOf(light);
+    if (rank !== null) listed.push({ ordinal, rank });
+  }
+  listed.sort((a, b) => a.rank - b.rank || a.ordinal - b.ordinal);
+  return listed.map((light) => light.ordinal);
+}
+
+/** The positional lights in list order: sequence, then ordinal. */
+export function positionalListOrder(lights: ReadonlyMap<number, CanvasLightDeclaration>): number[] {
+  return listOrder(lights, (light) => light.sequence);
+}
+
+/** The directional lights in list order: slot, then ordinal. */
+export function directionalListOrder(lights: ReadonlyMap<number, CanvasLightDeclaration>): number[] {
+  return listOrder(lights, (light) => (light.sequence === null ? (light.slot ?? 0) : null));
+}
+
 /**
- * The positional lights that pass the cull test at `item`, in list order: sequence, then ordinal.
+ * The positional lights of `positionalOrder` that pass the cull test at `item`, in list order.
  * More than `MAX_POSITIONAL_LIGHTS_PER_ITEM` crowds the placement, so each item's rect picks.
  */
 export function positionalCandidates(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  positionalOrder: readonly number[],
   item: ItemPlacement
 ): number[] {
-  const candidates: { ordinal: number; sequence: number }[] = [];
-  for (const [ordinal, light] of lights) {
-    if (light.sequence === null) continue;
-    if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) continue;
-    candidates.push({ ordinal, sequence: light.sequence });
-  }
-  candidates.sort((a, b) => a.sequence - b.sequence || a.ordinal - b.ordinal);
-  return candidates.map((candidate) => candidate.ordinal);
+  return positionalOrder.filter((ordinal) => {
+    const { reach } = lights.get(ordinal)!;
+    return lightReachesItem(reach, item.lightMask, item.z, item.layer);
+  });
 }
 
 /**
@@ -96,10 +124,15 @@ export interface LightListEntry {
   readonly unshadowed: boolean;
 }
 
-/** Whether `light` is on `item`'s list: it passes the cull test and, if capped, the item takes it. */
-function itemTakesLight(light: CanvasLightDeclaration, ordinal: number, item: ItemPlacement): boolean {
+/** Whether `light` is on `item`'s list: it passes the cull test and, if the list is capped, the item takes it. */
+function itemTakesLight(
+  light: CanvasLightDeclaration,
+  ordinal: number,
+  item: ItemPlacement,
+  taken: ReadonlySet<number> | null
+): boolean {
   if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) return false;
-  return light.sequence === null || item.positionalLights === null || item.positionalLights.includes(ordinal);
+  return taken === null || taken.has(ordinal);
 }
 
 /** The lights on `item`'s list, in ordinal order. */
@@ -108,8 +141,9 @@ function itemLightList(
   item: ItemPlacement
 ): LightListEntry[] {
   const list: LightListEntry[] = [];
+  const taken = item.takenLights && new Set(item.takenLights);
   for (const [ordinal, light] of lights) {
-    if (!itemTakesLight(light, ordinal, item)) continue;
+    if (!itemTakesLight(light, ordinal, item, taken)) continue;
     const shadowMask = light.shadowItemCullMask;
     list.push({ ordinal, unshadowed: shadowMask !== null && (shadowMask & item.lightMask) === 0 });
   }
@@ -121,10 +155,13 @@ function lightListId(list: readonly LightListEntry[]): string {
   return list.map((entry) => `${entry.ordinal}${entry.unshadowed ? 'u' : 's'}`).join(',');
 }
 
+/** The list as a string, once per list: the lists of one frame are shared between items. */
+const takenLightsId = perObject((takenLights: readonly number[]) => takenLights.join(','));
+
 /** A string for a placement, for use as a Map key. */
 export function placementId(item: ItemPlacement): string {
-  const positional = item.positionalLights?.join(',') ?? '*';
-  return `${item.lightMask}|${item.z}|${item.layer}|${positional}`;
+  const taken = item.takenLights ? takenLightsId(item.takenLights) : '*';
+  return `${item.lightMask}|${item.z}|${item.layer}|${taken}`;
 }
 
 /** One placement the canvas holds a lit item at, and whether a Light Only item sits there. */

@@ -14,6 +14,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -71,7 +72,7 @@ export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => 
   const requests: TextureSlotRequest[] = [];
   for (const name of SPIN_BOX_ICON_NAMES) {
     const themed = themedIcons[name];
-    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+    if (themed) requests.push(themedSlotRequest(name, themed));
   }
   return requests;
 };
@@ -249,16 +250,8 @@ export function spinBoxIconColor(
  * variation falls through to the native chain (`buildThemeTypeChain`). `n`'s `"SpinBox"` scope
  * would miss `"LineEdit"`'s defaults and any project `"SpinBoxInnerLineEdit"` entry.
  */
-function spinBoxFieldThemeScope(
-  n: Pick<SolveNode, 'themeChain' | 'projectTheme' | 'projectDefaultFont'>
-): ThemeResolutionScope {
-  return themeResolutionScope(
-    'LineEdit',
-    'SpinBoxInnerLineEdit',
-    n.themeChain,
-    n.projectTheme,
-    n.projectDefaultFont
-  );
+function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectFonts'>): ThemeResolutionScope {
+  return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectFonts);
 }
 
 interface SpinBoxFieldTextTheme {
@@ -270,7 +263,7 @@ interface SpinBoxFieldTextTheme {
 
 /** The field's font (face + size, ancestor-walked) and colour (override-less default), for `editable` state. */
 export function spinBoxFieldTextTheme(
-  n: Pick<SolveNode, 'themeChain' | 'projectTheme' | 'projectDefaultFont' | 'path'>,
+  n: Pick<SolveNode, 'themeChain' | 'projectFonts' | 'path'>,
   ctx: Pick<SolveContext, 'theme'>,
   editable: boolean
 ): SpinBoxFieldTextTheme {

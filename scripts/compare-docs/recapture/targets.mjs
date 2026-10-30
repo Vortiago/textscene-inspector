@@ -3,6 +3,7 @@
 import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import { join } from 'node:path';
 import { CANVAS_2D_CAPTURE } from '../../visual/previewServer.mjs';
+import { GOLDEN_SCENES } from '../../visual/scenes.mjs';
 import { COMPLEX_SCENES } from '../capture-complex.mjs';
 import {
   IMAGES_DIR as IMAGES,
@@ -65,6 +66,19 @@ export function collectTargets() {
 // The Godot-side scene path for a sheet's `fixture` value, the ours-side
 // `?fixture=` id. Shared with the sheets test so both agree on what resolves.
 export const godotScenePath = (fixture) => findScene(fixture) ?? join(REPO_ROOT, 'scenes/fixtures', fixture);
+
+/**
+ * The limit the golden scenes of `fixture` give each screenshot, the longest of them, or undefined
+ * for Playwright's default. A scene whose one frame outlasts the default says so in the manifest, and
+ * its sheet image takes that limit, so the two need no second figure.
+ */
+export const settleTimeoutOf = (fixture, scenes = GOLDEN_SCENES) => {
+  const limits = scenes
+    .filter((scene) => scene.file === fixture && scene.settleTimeout !== undefined)
+    .map((scene) => scene.settleTimeout);
+  return limits.length ? Math.max(...limits) : undefined;
+};
+
 export const imgPath = (image, side) => join(IMAGES, `${image}-${side}.png`);
 
 /**

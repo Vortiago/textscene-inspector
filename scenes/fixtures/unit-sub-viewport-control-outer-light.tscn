@@ -1,0 +1,41 @@
+; One variable: a Control-only SubViewport on a canvas with a light and a CanvasModulate. The
+; ColorRect inside lives in the viewport's own World2D (`viewport.cpp:5345`), so the canvas around
+; it neither lights nor tints it. The container draws the target as a CanvasItem of the outer canvas,
+; and the light and the tint reach that surface once. No other golden has an outer light over a
+; Control-only SubViewport.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+; stretch is off, so screen = target pixel + (100, 80).
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Inner" type="ColorRect" parent="Booth/SubViewport"]
+offset_right = 200.0
+offset_bottom = 150.0
+color = Color(0.4, 0.4, 0.4, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+color = Color(0.2, 1, 0.2, 1)
+energy = 0.5
+
+[node name="Tint" type="CanvasModulate" parent="."]
+color = Color(0.7, 0.8, 0.9, 1)

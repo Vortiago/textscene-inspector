@@ -1,6 +1,6 @@
 /**
  * What the 2D light pass publishes to the canvas beneath it: the accumulation each item placement
- * reads, and the declarations a light or an item makes to shape them. `CanvasLighting2D.tsx` says
+ * reads, and the declarations a light or an item makes to shape them. `CanvasLightPass.tsx` says
  * why each light list has its own buffer.
  */
 
@@ -8,6 +8,7 @@ import { createContext, useContext } from 'react';
 import * as THREE from 'three';
 import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
 import type { CappedItem } from './itemLightCap.js';
+import type { CanvasClip } from './lightPassHost.js';
 
 /** The accumulations of one item light list. */
 export interface CanvasLightList {
@@ -37,6 +38,9 @@ export interface CanvasLightSlot {
   release(): void;
 }
 
+/** Runs ahead of a pass's draws, with the camera it is about to draw through and its clip. */
+export type LightPassStep = (camera: THREE.Camera, clip: CanvasClip) => void;
+
 export interface CanvasLighting2D {
   /**
    * The accumulation each placement reads, by `placementId`. A placement no light reaches is
@@ -56,6 +60,12 @@ export interface CanvasLighting2D {
   registerCappedItem(item: CappedItem): () => void;
   /** Hands the pass one of light `ordinal`'s meshes, which it shows only in the passes `role` draws in. */
   registerPassMesh(mesh: THREE.Object3D, ordinal: number, role: PassMeshRole): () => void;
+  /**
+   * Hands the pass a step to run now and ahead of the draws of every frame, once the host has framed
+   * the camera. What depends on the camera's frame belongs here, not in a frame subscriber, which
+   * may run before the host frames it.
+   */
+  registerPassStep(step: LightPassStep): () => void;
 }
 
 /** The lighting outside a 2D light pass: no lists, and every declaration a no-op. */
@@ -66,6 +76,7 @@ export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   registerItem: (_placement: ItemPlacement, _lightOnly: boolean) => () => {},
   registerCappedItem: (_item: CappedItem) => () => {},
   registerPassMesh: (_mesh: THREE.Object3D, _ordinal: number, _role: PassMeshRole) => () => {},
+  registerPassStep: (_step: LightPassStep) => () => {},
 };
 
 export const CanvasLighting2DContext = createContext<CanvasLighting2D>(INERT_CANVAS_LIGHTING);

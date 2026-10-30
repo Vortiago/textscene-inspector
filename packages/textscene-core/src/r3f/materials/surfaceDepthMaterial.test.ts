@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './surfaceDepthMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
-import { renderTargetMapUserData } from './renderTargetMap';
 import { alphaAntialiasingUserData } from './godotAlphaAntialiasing';
 import { withPointDraw } from './godotPoint';
 import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/materials/alphaAntialiasing';
@@ -77,7 +76,7 @@ describe('surfaceDepthMaterial', () => {
       new THREE.MeshBasicMaterial({
         userData: withPointDraw(
           { materialClass: 'basic', props: {} },
-          { pixels, pixelRatio, samplesAlbedoAtPointCoord: false }
+          { pixels, pixelRatio, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
         ).props.userData,
       });
 
@@ -96,7 +95,7 @@ describe('surfaceDepthMaterial', () => {
         map: new THREE.Texture(),
         userData: withPointDraw(
           { materialClass: 'basic', props: { map: new THREE.Texture() } },
-          { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: true }
+          { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: true, placement: 'mesh' }
         ).props.userData,
       });
       const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
@@ -181,43 +180,6 @@ describe('syncSurfaceDepth', () => {
     expect(depth.version).toBe(version);
   });
 
-  it("cuts a render-target albedo where the surface samples it, through Godot's sampler", () => {
-    const sampler = {
-      uv: { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } },
-      repeats: true,
-      isNearest: true,
-    };
-    const surface = new THREE.MeshBasicMaterial({
-      map: new THREE.WebGLRenderTarget(4, 4).texture,
-      userData: renderTargetMapUserData(sampler),
-    });
-    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
-
-    syncSurfaceDepth(depth, surface, 0.5);
-
-    const { vertexShader, fragmentShader } = compiled(depth);
-    expect(vertexShader).toContain('godotTargetMapTransform');
-    expect(fragmentShader).toContain('#define GODOT_TARGET_MAP_NEAREST');
-    expect(fragmentShader).toContain('godotTargetMapSample( vMapUv )');
-  });
-
-  it('recompiles when the sampler of a render-target albedo changes', () => {
-    const uv = { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
-    const surface = new THREE.MeshBasicMaterial({
-      map: new THREE.WebGLRenderTarget(4, 4).texture,
-      userData: renderTargetMapUserData({ uv, repeats: true, isNearest: false }),
-    });
-    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
-    syncSurfaceDepth(depth, surface, 0.5);
-    const version = depth.version;
-    surface.userData = renderTargetMapUserData({ uv, repeats: false, isNearest: false });
-
-    syncSurfaceDepth(depth, surface, 0.5);
-
-    expect(depth.version).toBeGreaterThan(version);
-    expect(compiled(depth).fragmentShader).toContain('#include <map_fragment>');
-  });
-
   it('recompiles when the surface starts drawing points (edge case)', () => {
     const surface = new THREE.MeshBasicMaterial();
     const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
@@ -225,7 +187,7 @@ describe('syncSurfaceDepth', () => {
     const version = depth.version;
     surface.userData = withPointDraw(
       { materialClass: 'basic', props: {} },
-      { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: false }
+      { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: false, placement: 'mesh' }
     ).props.userData!;
 
     syncSurfaceDepth(depth, surface, 0.5);

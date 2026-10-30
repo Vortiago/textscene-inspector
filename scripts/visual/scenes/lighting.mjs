@@ -19,12 +19,17 @@ export const LIGHTING_SCENES = [
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
   // The Linear upscale mode, from a Fixture project's project.godot: a bilinear read of each level.
   { name: 'glow-linear-upscale', file: 'glow-linear-upscale/unit-glow-linear-upscale.tscn' },
+  // The root's debanding, from a Fixture project's project.godot: Godot's dither on the sky.
+  { name: 'debanding', file: 'debanding/unit-debanding.tscn' },
   // A frame under 256 px has fewer glow levels, and a weighted level past the last reads that one:
   // unit-glow-authored weights its two coarsest levels. 96 px clamps both, 200 px clamps the last.
   { name: 'glow-small-frame-96', file: 'unit-glow-authored.tscn', canvas: { width: 96, height: 96 } },
   { name: 'glow-small-frame-200', file: 'unit-glow-authored.tscn', canvas: { width: 200, height: 156 } },
-  // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
+  // `tonemap_exposure` under LINEAR with no glow or adjustment: the tone pass applies the exposure alone.
   { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
+  // Levels close above a half step, which the half-float scene buffer rounds below it. The header
+  // states why no other golden shows it.
+  { name: 'scene-buffer-half-float', file: 'unit-scene-buffer-half-float.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
   { name: 'glow-map', file: 'unit-glow-map.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a
@@ -45,6 +50,9 @@ export const LIGHTING_SCENES = [
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
   { name: 'depth-fog-orthographic', file: 'unit-depth-fog-orthographic.tscn', camera: 'Root/Camera3D' },
+  // Depth fog whose aerial perspective reads the sky's radiance layers. The header states why no
+  // other golden shows it.
+  { name: 'depth-fog-aerial-sky', file: 'unit-depth-fog-aerial-sky.tscn', camera: 'Root/Camera' },
   // The Environment's brightness, contrast and saturation over an unshaded box. The header states
   // why no other golden shows them.
   { name: 'environment-adjustments', file: 'unit-environment-adjustments.tscn' },
@@ -62,6 +70,8 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-spot-origin', file: 'unit-volumetric-fog-spot-origin.tscn', camera: 'Root/Camera' },
   // A colour background under thin volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
+  // Volumetric fog lit by the sky's radiance layers. The header states why no other golden shows it.
+  { name: 'volumetric-fog-sky-ambient', file: 'unit-volumetric-fog-sky-ambient.tscn', camera: 'Root/Camera' },
   // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
   { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
   // A FogVolume whose density texture is an imported 3D texture. The header states why no other
@@ -70,6 +80,9 @@ export const LIGHTING_SCENES = [
   // A FogVolume whose density texture is an ImageTexture3D saved as its own .tres. The header
   // states why no other golden shows it.
   { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
+  // A FogVolume whose NoiseTexture3D names its noise and colour ramp as saved resources (.tres).
+  // The header states why no other golden shows it.
+  { name: 'fog-volume-density-ramp-tres', file: 'unit-fog-volume-density-ramp-tres.tscn' },
   { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
   // A FogVolume whose ShaderMaterial Godot cannot run as fog. The header states why no other
   // golden shows it.
@@ -143,6 +156,22 @@ export const LIGHTING_SCENES = [
   // The same exposure over a procedural sky: the sky's background scales by the factor, its ambient and
   // reflection by its square.
   { name: 'camera-attributes-exposure-sky', file: 'unit-camera-attributes-exposure-sky.tscn', camera: 'Root/Camera3D' },
+  // CameraAttributesPractical auto exposure over a procedural sky: Godot divides the exposure by the
+  // luminance of the frame's top left region, which holds the sky.
+  {
+    name: 'camera-attributes-auto-exposure',
+    file: 'unit-camera-attributes-auto-exposure.tscn',
+    camera: 'Root/Camera3D',
+  },
+  // CameraAttributesPhysical with a luminance range above the frame's luminance: Godot holds the
+  // luminance at the minimum.
+  {
+    name: 'camera-attributes-auto-exposure-physical',
+    file: 'unit-camera-attributes-auto-exposure-physical.tscn',
+    camera: 'Root/Camera3D',
+  },
+  // Auto exposure under glow: the bright pass judges the exposed values.
+  { name: 'glow-auto-exposure', file: 'unit-glow-auto-exposure.tscn', camera: 'Root/Camera3D' },
   // A LightmapGI bake lights a box and the ground: a Static sun's light, its shadow and a red
   // bounce, all read from the atlas through UV2. The headers state why no other golden shows it.
   { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },

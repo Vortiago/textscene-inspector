@@ -15,7 +15,8 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { resolveNodeFont } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 // A 2D Control outlines text through the same TextServer path as Label3D.
 // `outlineRadiusPx` is the outward-only expansion for `<TextRun>`'s
 // `outlineWidthPx`. `outlineStrokeWidthPx` is the centred canvas stroke width.
@@ -34,6 +35,13 @@ import {
 } from './nativeSolver';
 import type { ProgressBarProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+
+/**
+ * The percentage draws above its stroked outline, as `progress_bar.cpp:180` draws it. Two runs of one
+ * renderOrder sort by creation, and the stroke's mesh can be created after the fill's. Less than the
+ * step between two Controls' render orders, so the percentage stays below the next Control.
+ */
+const PERCENT_ABOVE_OUTLINE = 0.05;
 
 export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ProgressBarProperties>(solveNode);
@@ -63,7 +71,8 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const { fontSizePx, color: fontColorSrgb } = progressBarTextTheme(solveNode, props, { theme });
   const outlineColorSrgb = progressBarOutlineColor(solveNode.colors);
   const outlineSize = progressBarOutlineSize(solveNode.constants);
-  const fontMetrics = resolveNodeFontMetrics(solveNode, PROGRESS_BAR_THEME_FONT_KEY);
+  const font = resolveNodeFont(solveNode, PROGRESS_BAR_THEME_FONT_KEY);
+  const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
 
   const percentText = showPercentage
     ? `${Math.round(progressBarPercentRatio(props, orderedKeys) * 100)}%`
@@ -138,7 +147,7 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
             outlineColor={drawMsdfOutline ? tintedOutlineColor : undefined}
             outlineWidthPx={drawMsdfOutline ? outlineRadiusPx(outlineSize) : 0}
             clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
+            renderOrder={drawCanvasOutline ? renderOrder + PERCENT_ABOVE_OUTLINE : renderOrder}
           />
         </CanvasItemGroup>
       )}

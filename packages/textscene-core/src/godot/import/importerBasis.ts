@@ -7,8 +7,18 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from '../math/real.js';
-import { normalizedVector3, vector3Dot } from '../math/vector.js';
-import { basisInvert, type BasisComponents } from '../math/basis.js';
+import { normalizedVector3, vector3Length } from '../math/vector.js';
+import {
+  basisColumn,
+  basisDiagonal,
+  basisFrom,
+  basisFromQuaternion,
+  basisInvert,
+  basisMultiply,
+  basisOrthonormalized,
+  type BasisComponents,
+  type Triple,
+} from '../math/basis.js';
 
 /** The transform fields of a glTF node. */
 export interface GltfNodeTransform {
@@ -16,8 +26,6 @@ export interface GltfNodeTransform {
   rotation?: readonly number[];
   scale?: readonly number[];
 }
-
-type Triple = [number, number, number];
 
 export const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
@@ -29,8 +37,8 @@ export function gltfNodeBasis(node: GltfNodeTransform): BasisComponents {
   if (node.matrix) return basisFromColumns(node.matrix);
   let basis = IDENTITY_BASIS;
   // `set_quaternion_scale(q, get_scale())`, and the identity's scale is exactly one.
-  if (node.rotation) basis = multiply(quaternionBasis(node.rotation), IDENTITY_BASIS);
-  if (node.scale) basis = multiply(orthonormalized(basis), diagonal(node.scale));
+  if (node.rotation) basis = basisMultiply(quaternionBasis(node.rotation), IDENTITY_BASIS);
+  if (node.scale) basis = basisMultiply(basisOrthonormalized(basis), diagonal(node.scale));
   return basis;
 }
 
@@ -44,8 +52,8 @@ export function rowScaledBasis(basis: BasisComponents, rowScales: readonly numbe
  * (`resource_importer_scene.cpp:2683-2689`).
  */
 export function transformChainScale(chain: readonly BasisComponents[]): Triple {
-  const basis = chain.reduce<BasisComponents>((xf, node) => multiply(node, xf), IDENTITY_BASIS);
-  return [0, 1, 2].map((axis) => length(column(basis, axis))) as Triple;
+  const basis = chain.reduce<BasisComponents>((xf, node) => basisMultiply(node, xf), IDENTITY_BASIS);
+  return [0, 1, 2].map((axis) => vector3Length(...basisColumn(basis, axis))) as Triple;
 }
 
 /**
@@ -94,84 +102,11 @@ function basisFromColumns(matrix: readonly number[]): BasisComponents {
   return [at(0), at(4), at(8), at(1), at(5), at(9), at(2), at(6), at(10)];
 }
 
-function diagonal(scale: readonly number[]): BasisComponents {
-  const [x = 1, y = 1, z = 1] = scale.map(f);
-  return [x, 0, 0, 0, y, 0, 0, 0, z];
+/** `Basis::set_quaternion` for a glTF rotation: `[x, y, z, w]`, each defaulting to the identity's. */
+function quaternionBasis([x = 0, y = 0, z = 0, w = 1]: readonly number[]): BasisComponents {
+  return basisFromQuaternion({ x, y, z, w });
 }
 
-/** `Basis::set_quaternion` (`basis.cpp:828-838`). */
-function quaternionBasis(rotation: readonly number[]): BasisComponents {
-  const [x = 0, y = 0, z = 0, w = 1] = rotation.map(f);
-  const d = f(f(f(f(x * x) + f(y * y)) + f(z * z)) + f(w * w));
-  const s = f(2 / d);
-  const xs = f(x * s);
-  const ys = f(y * s);
-  const zs = f(z * s);
-  const [wx, wy, wz] = [f(w * xs), f(w * ys), f(w * zs)];
-  const [xx, xy, xz] = [f(x * xs), f(x * ys), f(x * zs)];
-  const [yy, yz, zz] = [f(y * ys), f(y * zs), f(z * zs)];
-  return [
-    f(1 - f(yy + zz)),
-    f(xy - wz),
-    f(xz + wy),
-    f(xy + wz),
-    f(1 - f(xx + zz)),
-    f(yz - wx),
-    f(xz - wy),
-    f(yz + wx),
-    f(1 - f(xx + yy)),
-  ];
-}
-
-/** `Basis::operator*` (`basis.h:281-286`): each component is `tdot` of the right over the left's row. */
-function multiply(left: BasisComponents, right: BasisComponents): BasisComponents {
-  return basisFrom((i) => {
-    const row = Math.floor(i / 3);
-    const col = i % 3;
-    const terms = [0, 1, 2].map((k) => f(right[3 * k + col]! * left[3 * row + k]!));
-    return f(f(terms[0]! + terms[1]!) + terms[2]!);
-  });
-}
-
-/** The basis whose row-major component `i` is `component(i)`. */
-function basisFrom(component: (i: number) => number): BasisComponents {
-  return [
-    component(0),
-    component(1),
-    component(2),
-    component(3),
-    component(4),
-    component(5),
-    component(6),
-    component(7),
-    component(8),
-  ];
-}
-
-/** `Basis::orthonormalize` (`basis.cpp:56-72`), Gram-Schmidt over the columns. */
-function orthonormalized(basis: BasisComponents): BasisComponents {
-  const x = normalizedVector3(...column(basis, 0));
-  const y = normalizedVector3(...subtract(column(basis, 1), scaled(x, vector3Dot(x, column(basis, 1)))));
-  const zColumn = column(basis, 2);
-  const z = normalizedVector3(
-    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
-  );
-  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
-}
-
-function column(basis: BasisComponents, axis: number): Triple {
-  return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
-}
-
-function scaled(v: Triple, s: number): Triple {
-  return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
-}
-
-function subtract(a: Triple, b: Triple): Triple {
-  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
-}
-
-/** `Vector3::length` (`vector3.h:532-538`). */
-function length(v: Triple): number {
-  return f(Math.sqrt(vector3Dot(v, v)));
+function diagonal([x = 1, y = 1, z = 1]: readonly number[]): BasisComponents {
+  return basisDiagonal(x, y, z);
 }

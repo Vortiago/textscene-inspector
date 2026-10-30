@@ -259,33 +259,11 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 
 ### Texture units
 
-WebGL 2 guarantees 16 texture units per program (`MAX_TEXTURE_IMAGE_UNITS`). Measured from the
-active samplers of programs three r186 linked in the visual harness's Chromium, with every chunk
-patch `installShaderPatches` installs, for a light with four splits. A scene with no sky of its own
-takes the preview sky:
+WebGL 2 guarantees only 16 texture units per program (`MAX_TEXTURE_IMAGE_UNITS`), and a physical material with many maps nears that limit. So the suns share the one unit of the sun shadow atlas, and the omni and spot shadows share the one unit of the positional shadow atlas (`../positionalShadow/positionalShadow.md`). A sampler for each sun would exceed 16 units, so the program would fail to link and the scene would draw nothing lit.
 
-| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, a sky and transmission | The same, with an omni and a spot shadow |
-| ------------- | ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| 1             | 6                      | 13                                                             | 14                                       |
-| 4             | 6                      | 13                                                             | 14                                       |
-| 8             | 6                      | 13                                                             | 14                                       |
+A program adds a unit for the atlas colour when it compiles with the soft shadow's define, and one for a lightmap atlas, whose alpha holds the shadowmask (`../../resources/lightmapgidata/build.ts`). Each shared per-scene table takes a unit too: the sky layers, the DFG table, the atlases of the reflection probes and the decals, and the scene rows that those two share. A patch that needs a table reads one that exists, or adds rows to a texture that exists.
 
-A light with one split counts the same. The suns share the one unit of the sun shadow atlas. A plain
-material's other five units are three's `dfgLUT`, Godot's DFG table, the sky's layer array, and the
-reflection atlas and its rows. The omni and spot shadows share the one unit of the positional shadow
-atlas (`../positionalShadow/positionalShadow.md`). A program compiled with the soft shadow's define
-adds one unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than
-eight suns without it.
-
-A lightmapped program adds one unit, the lightmap atlas. The shadowmask rides in the alpha of that
-atlas, so it adds none (`../../resources/lightmapgidata/build.ts`). Measured the same way, an opaque
-`MeshPhysicalMaterial` with five maps, clearcoat, a sky, fog, a soft sun and an omni and a spot
-shadow with search takes 18 units with the lightmap and 17 without. A GPU with only 16 units fails
-to link that program.
-
-A sampler per sun would take 13 units with eight suns and the plain material, 20 with the physical
-one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the physical
-one, and the scene draws nothing lit.
+To count a program's units, call `getActiveUniform` on each uniform of a linked program and count the sampler types, in a page that installs `installShaderPatches`. Count before and after a patch that adds a sampler.
 
 ### The other designs
 

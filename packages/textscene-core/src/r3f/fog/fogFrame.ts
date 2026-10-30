@@ -1,6 +1,7 @@
 /**
  * Readies the fog for one render of a scene: the depth fog's terms for its camera, the directional
- * lights its sun scatter reads, the scene's sky rotation and radiance, and the volumetric fog's volume.
+ * lights its sun scatter reads, and the volumetric fog's volume. Both fogs read the sky that
+ * `<SkyLayer>` shows (`../sky/skyRadiance.ts`).
  * `finishFog` clears them after that render, so a scene without fog draws none.
  */
 
@@ -11,12 +12,10 @@ import type { DepthFog, VolumetricFog } from '../../resources/environment/types.
 import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { skyLightEnergy } from '../sky/skyLight.js';
-import { worldToSky } from '../sky/skyRotation.js';
 import { visibleInTree } from '../visibleInTree.js';
-import type { FogPasses } from './fogPasses.js';
+import type { VolumetricFogPass } from './volumetricFogPass.js';
 import { shineDirection } from './fogLights.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
-import { skyRadiance } from './fogSky.js';
 import { fogUniforms } from './fogUniforms.js';
 import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { writeVec4 } from '../writeVec4.js';
@@ -25,8 +24,6 @@ export interface FogSettings {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
   project: VolumetricFogProjectSettings;
-  /** The sky's energy, which Godot's radiance carries and three's does not. */
-  skyEnergy: number;
 }
 
 /**
@@ -45,9 +42,6 @@ interface FogObjects {
   volumes: readonly FogVolumeObject[];
 }
 
-/** World to sky space for the render being prepared. */
-const toSky = new THREE.Matrix3();
-
 /** Scratch for one render's depth fog colour. */
 const depthColor = new THREE.Color();
 
@@ -63,21 +57,15 @@ export function prepareFog(
   scene: THREE.Scene,
   camera: THREE.Camera,
   settings: FogSettings,
-  passes: FogPasses,
+  pass: VolumetricFogPass,
   { lights, casters, volumes }: FogObjects
 ): boolean {
-  fogUniforms.skyRotation.set(worldToSky(scene.environmentRotation, toSky).elements);
   writeDepthFog(settings.depth, camera);
   writeSuns(lights);
-  if (settings.depth && settings.depth.aerialPerspective > 0) {
-    passes.radiance.bake(renderer, skyRadiance(scene), settings.skyEnergy);
-  }
   if (!settings.volumetric) return false;
-  return passes.volume.prepare(renderer, scene, camera, {
+  return pass.prepare(renderer, scene, camera, {
     fog: settings.volumetric,
     project: settings.project,
-    worldToSky: toSky,
-    skyEnergy: settings.skyEnergy,
     lights,
     casters,
     volumes,

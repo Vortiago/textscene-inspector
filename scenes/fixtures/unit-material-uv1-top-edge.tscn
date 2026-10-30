@@ -1,0 +1,31 @@
+; One variable: `uv1_scale` on a clamped texture. Godot scales V from the image's top edge, so the
+; top two thirds of the quad show the red-to-blue gradient and the bottom third holds the clamped
+; blue row. Godot 4.6.3: (477,300) rgb(212,0,93), (477,360) rgb(115,0,199), (477,420)
+; rgb(0,0,255).
+
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="Gradient_1"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_1"]
+gradient = SubResource("Gradient_1")
+width = 32
+height = 32
+fill_to = Vector2(0, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="M"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_1")
+uv1_scale = Vector3(1, 1.5, 1)
+texture_repeat = false
+
+[node name="Root" type="Node3D"]
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("M")

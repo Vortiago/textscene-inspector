@@ -4,7 +4,7 @@
  */
 
 import type React from 'react';
-import type { TscnInternalResource, TscnNode } from '../parser/types';
+import type { TscnNode } from '../parser/types';
 import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
@@ -13,6 +13,8 @@ import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
 import { isInvisibleBase } from './invisibleBase';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent';
+import type { EditorIconRegistration } from './nodeIcon/editorIconRegistration';
+import type { PoseModifierReader } from '../nodes/3d/skeleton3d/poseModifier';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -54,18 +56,28 @@ export interface NodeComponentRegistration {
   // so a 3D emitter would drag its subtree into the 2D one.
   renderIntent?: 'draws' | 'transform-only' | 'pending';
   /**
-   * A pass over the authored tree before the graph is built, for a component that
-   * cannot reach the node it names: a RemoteTransform's target, a CSGPolygon3D's path.
-   * Runs once per parse in stage order, once even when two types share it. See
-   * `useParsedScene`.
+   * Declares that the type drives other nodes through a pass over the Live scene tree, which its
+   * reader names (`useLiveScenePass`, ADR-0060): a RemoteTransform's target, a CSGPolygon3D's path,
+   * a MeshInstance3D's skeleton. The registry runs nothing.
    */
-  scenePass?: ScenePassRegistration;
+  scenePass?: true;
   /**
    * Present for a CanvasItem that the y-sort pass decomposes into per-row
    * groups rather than dispatching whole (a TileMapLayer): what to read off the
    * node, and the component that draws one group. See `YSortDispatcher`.
    */
   ySortGroup?: YSortGroupRegistration;
+  /**
+   * The billboard icon Godot's 3D editor draws at the node's origin (ADR-0056). The dispatcher
+   * mounts it inside the node's transform for every render intent, so a `pending` or `transform-only`
+   * type keeps its status.
+   */
+  editorIcon?: EditorIconRegistration;
+  /**
+   * Present for a SkeletonModifier3D type: reads the node into the edit the Skeleton3D pass runs on
+   * its pose. The type also registers a `live` scene pass, because the edit reads other nodes.
+   */
+  poseModifier?: PoseModifierReader;
 }
 
 export interface YSortGroupDescription {
@@ -86,24 +98,6 @@ interface YSortGroupRegistration {
     sequence: number;
     node: TscnNode;
   }>;
-}
-
-/** Every pass takes the parsed roots and hands back the roots to build from. */
-export type ScenePass = (nodes: TscnNode[], internalResources: readonly TscnInternalResource[]) => TscnNode[];
-
-/** A pass and the types whose registrations carry it. */
-interface RegisteredScenePass {
-  run: ScenePass;
-  typeNames: string[];
-}
-
-/**
- * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
- * every transform pass runs before any path pass whatever the barrel order.
- */
-interface ScenePassRegistration {
-  stage: 'transforms' | 'paths';
-  run: ScenePass;
 }
 
 /**
@@ -129,8 +123,6 @@ function assertIntentMatchesComponent({
     );
   }
 }
-
-const SCENE_PASS_STAGES: readonly ScenePassRegistration['stage'][] = ['transforms', 'paths'];
 
 class NodeComponentRegistryImpl {
   // The whole registration is stored and answers every flag, so a new flag needs no
@@ -181,6 +173,16 @@ class NodeComponentRegistryImpl {
     return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
   }
 
+  /** The icon registration of a type, or undefined when Godot's editor draws no icon for it. */
+  editorIconOf(typeName: string): EditorIconRegistration | undefined {
+    return this.registry.get(typeName)?.editorIcon;
+  }
+
+  /** The pose modifier reader of a type, or undefined when it is not a SkeletonModifier3D. */
+  poseModifierOf(typeName: string): PoseModifierReader | undefined {
+    return this.registry.get(typeName)?.poseModifier;
+  }
+
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {
     return this.registry.get(typeName)?.ySortGroup;
   }
@@ -194,19 +196,11 @@ class NodeComponentRegistryImpl {
     return this.registry.getAllTypeNames();
   }
 
-  /** The registered passes, each once with the types that share it, in stage order then registration order. */
-  scenePasses(): readonly RegisteredScenePass[] {
-    const byRun = new Map<ScenePass, RegisteredScenePass>();
-    for (const stage of SCENE_PASS_STAGES) {
-      for (const typeName of this.registry.getAllTypeNames()) {
-        const pass = this.registry.get(typeName)?.scenePass;
-        if (!pass || pass.stage !== stage) continue;
-        const registered = byRun.get(pass.run) ?? { run: pass.run, typeNames: [] };
-        registered.typeNames.push(typeName);
-        byRun.set(pass.run, registered);
-      }
-    }
-    return [...byRun.values()];
+  /** Every type that registers a scene pass: each acts on nodes other than its own. */
+  scenePassTypeNames(): ReadonlySet<string> {
+    return new Set(
+      this.registry.getAllTypeNames().filter((typeName) => this.registry.get(typeName)?.scenePass)
+    );
   }
 
   clear(): void {

@@ -34,8 +34,8 @@ describe('refusesToInstantiate', () => {
     expect(refusesToInstantiate([origin('Root', undefined), origin('A', '.')])).toBe(false);
   });
 
-  it('accepts an empty scene (edge case)', () => {
-    expect(refusesToInstantiate([])).toBe(false);
+  it('refuses a scene with no node (edge case)', () => {
+    expect(refusesToInstantiate([])).toBe(true);
   });
 });
 

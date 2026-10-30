@@ -12,12 +12,12 @@ import {
   ROOT_TEXTURE_SAMPLER,
   TextureSampler2DContext,
   ViewportSamplerProvider,
-  applyCanvasItemSampler,
-  canvasItemCloneSampler,
+  canvasItemViewSampler,
   inheritTextureSampler,
   useInheritedTextureSampler,
   type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
+import { applyViewSampler } from '../resources/textures/textureView';
 
 // The root viewport takes its default from the project settings; nothing here needs the real provider's load.
 const projectSettingsMock = vi.hoisted(() => ({ settings: null as Record<string, string> | null }));
@@ -143,11 +143,9 @@ function singleLevelTexture(): THREE.Texture {
   return texture;
 }
 
-describe('applyCanvasItemSampler', () => {
-  const sampleWith = (texture: THREE.Texture, filter: number, repeat = REPEAT_DISABLED) => {
-    applyCanvasItemSampler(texture, { filter, repeat });
-    return texture;
-  };
+describe('canvasItemViewSampler applied to a texture', () => {
+  const sampleWith = (texture: THREE.Texture, filter: number, repeat = REPEAT_DISABLED) =>
+    applyViewSampler(texture, canvasItemViewSampler({ filter, repeat }));
 
   it('samples Nearest and Linear without mipmaps, even from a mipmapped texture (material_storage.cpp:2467-2476)', () => {
     const nearest = sampleWith(mipmappedTexture(), NEAREST);
@@ -213,15 +211,15 @@ describe('applyCanvasItemSampler', () => {
   });
 });
 
-describe('canvasItemCloneSampler', () => {
+describe('canvasItemViewSampler', () => {
   it('samples the undecoded bytes the 2D canvas filters', () => {
-    expect(canvasItemCloneSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }).colorSpace).toBe(
+    expect(canvasItemViewSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }).colorSpace).toBe(
       THREE.NoColorSpace
     );
   });
 
   it("writes the item's filter and repeat", () => {
-    const { filter, wrap } = canvasItemCloneSampler({ filter: NEAREST, repeat: REPEAT_MIRROR });
+    const { filter, wrap } = canvasItemViewSampler({ filter: NEAREST, repeat: REPEAT_MIRROR });
     expect([filter?.magFilter, wrap]).toEqual([THREE.NearestFilter, THREE.MirroredRepeatWrapping]);
   });
 });

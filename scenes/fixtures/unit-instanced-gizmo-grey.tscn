@@ -1,0 +1,17 @@
+; Two instances of unit-instanced-gizmo-grey-child.tscn, for the one variable no other golden instances a
+; gizmo node for: the grey Godot gives the gizmo of a node the edited scene does not own (ADR-0056).
+; `Locked` is a plain instance, so every gizmo in it is grey. `Editable` is listed by `[editable]`, so
+; its gizmos keep the plugin colours, as nodes of this scene's own would.
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-instanced-gizmo-grey-child.tscn" id="1_child"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Locked" parent="." instance=ExtResource("1_child")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0)
+
+[node name="Editable" parent="." instance=ExtResource("1_child")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0)
+
+[editable path="Editable"]

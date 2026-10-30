@@ -12,8 +12,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
-import { rectTextureSampler } from '../texturerect/rectTexture';
-import { drawnClone } from '../../../../r3f/drawnClone';
+import { rectTextureSampler, sampledDraw } from '../texturerect/rectTexture';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -21,12 +20,7 @@ import {
   type TextureButtonSlot,
 } from './nativeSolver';
 import type { TextureButtonProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-
-interface ImageLike {
-  width?: number;
-  height?: number;
-}
+import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 
 export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureButtonProperties>(solveNode);
@@ -52,27 +46,22 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     textureHover: hoverTex,
     textureDisabled: disabledTex,
   };
-  const rawTexture = slot ? bySlot[slot].texture : null;
+  const drawn = slot ? bySlot[slot] : null;
+  const rawTexture = drawn?.texture ?? null;
+  const size = drawn?.size;
 
-  const draw = useMemo(() => {
-    const image = rawTexture?.image as ImageLike | undefined;
-    const textureSize = { x: image?.width ?? 0, y: image?.height ?? 0 };
-    if (!rawTexture || textureSize.x <= 0 || textureSize.y <= 0) return null;
-    return { textureSize, ...textureButtonDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
-  }, [rawTexture, rect.w, rect.h, props.stretchMode]);
+  const draw = useMemo(
+    () =>
+      sampledDraw(rawTexture, size, (reported) =>
+        textureButtonDraw({ x: rect.w, y: rect.h }, reported, props.stretchMode)
+      ),
+    [rawTexture, size, rect.w, rect.h, props.stretchMode]
+  );
 
-  const preparedTexture = useMemo(() => {
-    if (!rawTexture || !draw) return null;
-    return drawnClone(
-      rawTexture,
-      rectTextureSampler(draw, sampler, {
-        flipH: props.flipH === true,
-        flipV: props.flipV === true,
-      })
-    );
-  }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
-
-  const drawnTexture = useUploadedClone(preparedTexture);
+  const drawnTexture = useOwnedTextureView(
+    rawTexture,
+    draw && rectTextureSampler(draw, sampler, { flipH: props.flipH === true, flipV: props.flipV === true })
+  );
 
   if (!draw || !drawnTexture) return null;
 

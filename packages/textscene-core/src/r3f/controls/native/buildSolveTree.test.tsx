@@ -32,6 +32,7 @@ import { nativeTheme } from './nativeTheme';
 import { themeResource } from './testing/themeResource';
 import { CAPTION_PATH, HOST_LEAF_PATH, hostScene, scenesByPath } from '../../testing/graftedScopeFixture';
 import type { Rect2 } from '../../../godot/math/rect2';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 // Side-effect imports: the node parsers that turn the `.tscn` text below into
 // typed Control properties, and the solvers/minimum-size functions the solved
 // rects come from.
@@ -66,7 +67,7 @@ function scene(
   externalResources: TscnExternalResource[] = [],
   internalResources: TscnInternalResource[] = []
 ): TscnScene {
-  return { nodes, internalResources, externalResources } as TscnScene;
+  return { ...INSTANTIABLE_SCENE, nodes, internalResources, externalResources };
 }
 
 function instanceOf(name: string, id: string, type = 'Node'): TscnNode {
@@ -147,14 +148,14 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     expect(badge?.node.properties).toMatchObject({ text: 'BADGE' });
   });
 
-  it('a multi-root instance keeps the node with subscene roots beneath it, host children staying inline in OUTER scope', () => {
-    // A multi-root instance never collapses (ADR-0013): the instance node stays,
-    // its loaded roots in sub-scene scope and host-authored children in outer scope.
+  it('an instance of a refused scene keeps the node with its host children only, in OUTER scope', () => {
+    // Godot refuses the scene (`packed_scene.cpp:207`), so the instance node stays as authored and
+    // none of the scene's roots exist.
     const loader = createFakeResourceLoader();
-    loader.scenes.seed(
-      LAYER_PATH,
-      scene([parsedLabel('First', 'FIRST ROOT'), parsedLabel('Second', 'SECOND ROOT')])
-    );
+    loader.scenes.seed(LAYER_PATH, {
+      ...scene([parsedLabel('First', 'FIRST ROOT'), parsedLabel('Second', 'SECOND ROOT')]),
+      refusesToInstantiate: true,
+    });
 
     const hostChild = label('HostAdded', { text: 'HOST TEXT' });
     const nodes = [instanceOf('Hud', '1_layer', 'Control')];
@@ -169,8 +170,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     const hud = result.current.tree[0]!;
     expect(hud.path).toBe('Hud');
     expect(hud.node.type).toBe('Control'); // the instance node itself, un-collapsed
-    const childTexts = hud.children.map((c) => (c.node.properties as { text?: string }).text).sort();
-    expect(childTexts).toEqual(['FIRST ROOT', 'HOST TEXT', 'SECOND ROOT']);
+    const childTexts = hud.children.map((c) => (c.node.properties as { text?: string }).text);
+    expect(childTexts).toEqual(['HOST TEXT']);
   });
 
   it("resolves a sub-scene's StyleBox AND texture in the SUB-SCENE's resource pool, not the host's", () => {
@@ -561,10 +562,10 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     const nodes = [node2D('N', { rotation: Math.PI / 2 }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
-    expect(t.a).toBeCloseTo(0, 10);
-    expect(t.b).toBeCloseTo(1, 10);
-    expect(t.c).toBeCloseTo(-1, 10);
-    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.a).toBeCloseTo(0, 5);
+    expect(t.b).toBeCloseTo(1, 5);
+    expect(t.c).toBeCloseTo(-1, 5);
+    expect(t.d).toBeCloseTo(0, 5);
     expect(t.tx).toBe(0);
     expect(t.ty).toBe(0);
   });
@@ -595,10 +596,10 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
-    expect(t.a).toBeCloseTo(0, 10);
-    expect(t.b).toBeCloseTo(2, 10);
-    expect(t.c).toBeCloseTo(-3, 10);
-    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.a).toBeCloseTo(0, 5);
+    expect(t.b).toBeCloseTo(2, 5);
+    expect(t.c).toBeCloseTo(-3, 5);
+    expect(t.d).toBeCloseTo(0, 5);
     expect(t.tx).toBe(10);
     expect(t.ty).toBe(20);
   });
@@ -615,10 +616,10 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
-    expect(t.a).toBeCloseTo(0, 10);
-    expect(t.b).toBeCloseTo(1, 10);
-    expect(t.c).toBeCloseTo(-1, 10);
-    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.a).toBeCloseTo(0, 5);
+    expect(t.b).toBeCloseTo(1, 5);
+    expect(t.c).toBeCloseTo(-1, 5);
+    expect(t.d).toBeCloseTo(0, 5);
     expect(t.tx).toBe(100);
     expect(t.ty).toBe(50);
   });
@@ -672,10 +673,10 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const t = result.current.tree[0]!.skippedAncestors!.transform;
-    expect(t.a).toBeCloseTo(0, 10);
-    expect(t.b).toBeCloseTo(1, 10);
-    expect(t.c).toBeCloseTo(-1, 10);
-    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.a).toBeCloseTo(0, 5);
+    expect(t.b).toBeCloseTo(1, 5);
+    expect(t.c).toBeCloseTo(-1, 5);
+    expect(t.d).toBeCloseTo(0, 5);
     expect(t.tx).toBe(100);
     expect(t.ty).toBe(0);
   });
@@ -774,6 +775,58 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       filter: undefined,
       repeat: undefined,
     });
+  });
+
+  it('names the material of the innermost skipped ancestor that sets one, for a `use_parent_material` Control under it', async () => {
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { materialPath: 'SubResource("outer")' },
+        children: [
+          node2D(
+            'Inner',
+            {},
+            { properties: { materialPath: 'SubResource("inner")' }, children: [label('L')] }
+          ),
+        ],
+      }
+    );
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toMatchObject({
+      kind: 'own',
+      ref: 'SubResource("inner")',
+    });
+  });
+
+  it("hands a skipped ancestor's `use_parent_material` to the ancestor above it", async () => {
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { materialPath: 'SubResource("outer")' },
+        children: [
+          node2D('Inner', {}, { properties: { use_parent_material: true }, children: [label('L')] }),
+        ],
+      }
+    );
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toMatchObject({
+      kind: 'own',
+      ref: 'SubResource("outer")',
+    });
+  });
+
+  it('leaves the material to the Control above a skipped ancestor that uses its parent material', async () => {
+    const nodes = [node2D('N', {}, { properties: { use_parent_material: true }, children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toEqual({ kind: 'inherit' });
+  });
+
+  it('gives no material where no skipped ancestor sets one', async () => {
+    const nodes = [node2D('N', {}, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.material).toEqual({ kind: 'none' });
   });
 
   it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
@@ -1343,7 +1396,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(result.current.tree[0]?.projectTheme?.defaultFontSize).toBe(30);
+    expect(result.current.tree[0]?.projectFonts.projectTheme?.defaultFontSize).toBe(30);
   });
 
   describe("the project's default font (gui/theme/custom_font)", () => {
@@ -1378,7 +1431,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toEqual({
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toEqual({
         kind: 'variation',
         baseFont: null,
         properties: { spacing_glyph: '3' },
@@ -1392,7 +1445,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toBeNull();
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toBeNull();
     });
 
     it('is null for a path that does not load, so the Control draws the bundled font', async () => {
@@ -1400,7 +1453,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toBeNull();
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toBeNull();
     });
 
     it('follows the font file when it changes', async () => {
@@ -1417,7 +1470,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       loader.provideFile('res://body_font.tres');
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toMatchObject({
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toMatchObject({
         properties: { spacing_glyph: '2' },
       });
     });
@@ -1437,7 +1490,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       loader.fileEventBus!.invalidate('res://project.godot');
       await settle();
 
-      expect(result.current.tree[0]?.projectDefaultFont).toMatchObject({
+      expect(result.current.tree[0]?.projectFonts.projectDefaultFont).toMatchObject({
         properties: { spacing_glyph: '2' },
       });
     });

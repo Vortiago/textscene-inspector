@@ -1,14 +1,11 @@
 /**
  * SpinBox's vendored default-theme icons: `scene/theme/icons/value_up.svg`/`value_down.svg` (Godot
- * 4.6.3, MIT), the `"up"`/`"down"` theme icons (`default_theme.cpp:616-619,620-623`). They stay local,
- * as `checkbox`'s `CHECK_BOX_ICONS` do, since `native/themeIcons.ts` does not export `svgDataUrl`.
+ * 4.6.3, MIT), the `"up"`/`"down"` theme icons (`default_theme.cpp:616-619,620-623`).
  *
  * Licence: Godot Engine, MIT. See THIRD-PARTY-NOTICES.md.
  */
 
-function svgDataUrl(base64: string): string {
-  return `data:image/svg+xml;base64,${base64}`;
-}
+import { svgDataUrl } from '../../../../r3f/controls/native/themeIcons';
 
 /** `scene/theme/icons/value_up.svg` (16x8). */
 const VALUE_UP_B64 =

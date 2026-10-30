@@ -31,6 +31,11 @@ export interface ScannedTheme<T> {
   constants?: Readonly<Record<string, Readonly<Record<string, number>>>>;
   typeVariations: Readonly<Record<string, string>>;
   properties: Readonly<Record<string, string>>;
+  /**
+   * True for the project theme (`gui/theme/custom`), which `ThemeDB::initialize_theme` loads outside
+   * every scene (`theme_db.cpp:53-80`), so no scene sets a ViewportTexture in it up.
+   */
+  isOutsideScenes?: true;
   /** This theme file's own sub-resource pools, which a `styles` or icon ref addresses, never the node's. Optional, as `styles`. */
   resources?: SceneScope;
 }

@@ -5,28 +5,26 @@
  * absent properties, warn-then-skip on malformed ones, never throws.
  */
 
+import { isLocalToScene } from '../textures/viewporttexture/localToScene.js';
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { slotInt } from '../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
+import { fileResources, findSectionResource } from '../resourceSection';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';
 import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-// Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
-import {
-  findSubResource as findSubResourceById,
-  parseResourceReference,
-  resolveExtResourcePath,
-} from '../SubResourceResolver';
+import { findSubResource, parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
 import { defaultTileData } from './types';
 import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 import type {
   AlternativeTileModel,
   AtlasSourceModel,
   AtlasTileModel,
+  TileTexture,
   TileMaterial,
   TileSetModel,
 } from './types';
@@ -36,11 +34,11 @@ import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 interface TileSetSourceData {
-  /** The TileSet resource's own properties (raw value strings). */
-  properties: Record<string, string>;
-  findSubResource(id: string): TscnInternalResource | undefined;
-  /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
-  resolveResourcePath(ref: string): string | null;
+  /** The TileSet itself, whose `data` holds its properties as raw value strings. */
+  tileSet: TscnInternalResource;
+  /** The tables the TileSet's references resolve in. */
+  externalResources: readonly TscnExternalResource[];
+  internalResources: readonly TscnInternalResource[];
 }
 
 /**
@@ -56,7 +54,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
 
   // `sources/1`, `sources/01` and `sources/+1` are one source: `_set` drops the id
   // before re-adding (tile_set.cpp:3965-3968), so the last value wins, as `Map.set` does.
-  for (const [key, value] of Object.entries(data.properties)) {
+  for (const [key, value] of Object.entries(data.tileSet.data)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
     const sourceId = stringToInt(sourceMatch[1]!);
@@ -69,7 +67,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     }
 
     const ref = parseResourceReference(value);
-    const sub = ref?.type === 'SubResource' ? data.findSubResource(ref.id) : undefined;
+    const sub = ref?.type === 'SubResource' ? findSubResource(data.internalResources, ref.id) : undefined;
     if (!sub) {
       warn(`[TileSet] source ${key}: unresolvable reference "${value}" — skipped`);
       continue;
@@ -79,10 +77,11 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       continue;
     }
 
-    sources.set(sourceId, resolveAtlasSource(sub.data, data, tileMaterial));
+    sources.set(sourceId, resolveAtlasSource(sub, data, tileMaterial));
   }
 
-  const shape = intEnumOr(data.properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
+  const properties = data.tileSet.data;
+  const shape = intEnumOr(properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
   if (shape < TileShape.TILE_SHAPE_SQUARE || shape > TileShape.TILE_SHAPE_HEXAGON) {
     warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
@@ -90,17 +89,15 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   // `set_tile_layout` and `set_tile_offset_axis` store any int (`tile_set.cpp:368-371`, `:376-379`).
   return {
     shape,
-    layout: intEnumOr(
-      data.properties.tile_layout,
-      TileLayout.TILE_LAYOUT_STACKED,
-      'tile_layout'
-    ) as EnumValue<typeof TileLayout>,
+    layout: intEnumOr(properties.tile_layout, TileLayout.TILE_LAYOUT_STACKED, 'tile_layout') as EnumValue<
+      typeof TileLayout
+    >,
     offsetAxis: intEnumOr(
-      data.properties.tile_offset_axis,
+      properties.tile_offset_axis,
       TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
       'tile_offset_axis'
     ) as EnumValue<typeof TileOffsetAxis>,
-    tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
+    tileSize: tileSetVec2i(properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
   };
 }
@@ -115,14 +112,14 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
   return n;
 }
 
-/** Adapter: a TileSet from its own resource file, or null for another type. */
-export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
-  if (parsed.resourceType !== 'TileSet') return null;
-  return resolveTileSetModel({
-    properties: parsed.properties,
-    findSubResource: (id) => findSubResourceById(parsed.subResources, id),
-    resolveResourcePath: (ref) => resolveExtResourcePath(ref, parsed.extResources),
-  });
+/**
+ * Adapter: the TileSet `path` addresses in its resource file, the file's `[resource]` or one of its
+ * sub-resources, or null for another type.
+ */
+export function tileSetFromFile(parsed: ParsedResource, path: string): TileSetModel | null {
+  const tileSet = findSectionResource(parsed, path);
+  if (tileSet?.type !== 'TileSet') return null;
+  return resolveTileSetModel({ tileSet, ...fileResources(parsed) });
 }
 
 /**
@@ -136,13 +133,13 @@ export function tileSetFromScene(
 ): TileSetModel | null {
   const ref = parseResourceReference(tileSetRef);
   if (!ref || ref.type !== 'SubResource') return null;
-  const tileSet = findSubResourceById(internalResources, ref.id);
+  const tileSet = findSubResource(internalResources, ref.id);
   if (!tileSet || tileSet.type !== 'TileSet') return null;
 
   return resolveTileSetModel({
-    properties: tileSet.data,
-    findSubResource: (id) => findSubResourceById(internalResources, id),
-    resolveResourcePath: (ref) => resolveExtResourcePath(ref, externalResources),
+    tileSet,
+    externalResources,
+    internalResources,
   });
 }
 
@@ -174,10 +171,10 @@ function loadTileMaterial(
   data: TileSetSourceData
 ): TileMaterial | null {
   if (parsed?.type !== 'SubResource') {
-    const path = data.resolveResourcePath(ref);
+    const path = resolveExtResourcePath(ref, data.externalResources);
     return path ? { path } : null;
   }
-  const sub = data.findSubResource(parsed.id);
+  const sub = findSubResource(data.internalResources, parsed.id);
   if (!sub) {
     warn(`[TileSet] material ${ref} names nothing — no material`);
     return null;
@@ -186,19 +183,28 @@ function loadTileMaterial(
 }
 
 function resolveAtlasSource(
-  props: Record<string, string>,
+  atlasSource: TscnInternalResource,
   data: TileSetSourceData,
   tileMaterial: TileMaterialResolver
 ): AtlasSourceModel {
-  const textureRef = props.texture ?? null;
+  const props = atlasSource.data;
   return {
-    texturePath: textureRef ? data.resolveResourcePath(textureRef) : null,
+    texture: props.texture ? tileTexture(props.texture, atlasSource, data) : null,
     margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
     separation: tileSetVec2i(props.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
     // On unless the file says `false` (`tile_set.h:673`).
     usesTexturePadding: boolSlotValue(props.use_texture_padding) !== false,
     tiles: resolveTiles(props, tileMaterial),
+  };
+}
+
+function tileTexture(ref: string, atlasSource: TscnInternalResource, data: TileSetSourceData): TileTexture {
+  return {
+    ref,
+    externalResources: data.externalResources,
+    internalResources: data.internalResources,
+    isHeldLocally: isLocalToScene(data.tileSet) && isLocalToScene(atlasSource),
   };
 }
 

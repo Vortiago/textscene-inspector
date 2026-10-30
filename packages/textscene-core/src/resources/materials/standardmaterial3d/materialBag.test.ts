@@ -16,10 +16,6 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { metallicRoughnessChannelsUserData } from '../../../r3f/materials/godotMetallicRoughnessChannels';
-import { lightModesUserData } from '../../../r3f/lightModes';
-import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
-import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
-import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -31,7 +27,6 @@ import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextures } from './types';
-import { renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';
 import {
   DRAWS_LAMBERT_DIFFUSE,
   KEEPS_REFLECTION_UNOCCLUDED,
@@ -217,63 +212,6 @@ describe('standardMaterialBags — texture slots', () => {
   });
 });
 
-describe('standardMaterialBags — render-target albedo', () => {
-  const target = new THREE.WebGLRenderTarget(4, 4).texture;
-  const FLIPPED_V = { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } };
-
-  it.each([
-    ['a lit', {}],
-    ['an unshaded', { shading_mode: '0' }],
-  ])('samples a render-target albedo through its UV transform on %s material', (_kind, properties) => {
-    const derived = bag(properties, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
-
-    expect(derived.injection?.cacheKey).toContain('godot-target-map-uv');
-    expect(derived.props.userData).toMatchObject(
-      renderTargetMapUserData({ uv: FLIPPED_V, repeats: true, isNearest: false })
-    );
-  });
-
-  it("wraps a render-target albedo under Godot's default texture_repeat", () => {
-    expect(bag({}, { albedo_texture: target, albedoTargetUv: FLIPPED_V }).injection?.cacheKey).toContain(
-      'godot_target_map_wraps'
-    );
-  });
-
-  it('keeps a render-target albedo clamped under texture_repeat off', () => {
-    const derived = bag({ texture_repeat: 'false' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
-
-    expect(derived.injection?.cacheKey).not.toContain('godot_target_map_wraps');
-  });
-
-  it.each(['0', '2', '4'])(
-    'reads the nearest texel of a render-target albedo under texture_filter %s',
-    (filter) => {
-      const derived = bag({ texture_filter: filter }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
-
-      expect(derived.injection?.cacheKey).toContain('godot_target_map_nearest');
-    }
-  );
-
-  it('filters a render-target albedo linearly under a linear texture_filter', () => {
-    const derived = bag({ texture_filter: '5' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
-
-    expect(derived.injection?.cacheKey).not.toContain('godot_target_map_nearest');
-  });
-
-  it("samples after the parallax shift, whose anchor the sample's inlined chunk replaces", () => {
-    const derived = bag(
-      { heightmap_enabled: 'true' },
-      { albedo_texture: target, albedoTargetUv: FLIPPED_V, heightmap_texture: new THREE.Texture() }
-    );
-
-    expect(derived.injection?.cacheKey).toMatch(/godot-parallax.*godot-target-map-sample/);
-  });
-
-  it('patches nothing for an albedo that carries its own transform', () => {
-    expect(bag({}, { albedo_texture: new THREE.Texture() }).injection).toBeUndefined();
-  });
-});
-
 describe('standardMaterialBags — fragment alpha', () => {
   it('patches nothing on an opaque surface', () => {
     expect(bag({}).injection).toBeUndefined();
@@ -329,9 +267,13 @@ describe('standardMaterialBags — AO on direct light', () => {
     expect(patchedFragment(materialFromBag(physical))).toContain(OCCLUDES_DIRECT_LIGHT);
   });
 
-  it('patches nothing on a surface with no AO map, whose sampler reads white', () => {
+  it('patches nothing on a surface with no AO map and no light affect, whose sampler reads white', () => {
     // `material.cpp:1128`: `hint_default_white`, so AO is 1.
-    expect(bag(AO).injection).toBeUndefined();
+    expect(bag({ ao_enabled: 'true' }).injection).toBeUndefined();
+  });
+
+  it('occludes the direct light of a surface with no AO map, as a decal ORM map can occlude it', () => {
+    expect(patchedFragment(materialFromBag(bag(AO)))).toContain(OCCLUDES_DIRECT_LIGHT);
   });
 
   it('patches nothing on an unshaded surface, which has no lighting', () => {
@@ -383,32 +325,9 @@ describe('standardMaterialBags — specular occlusion', () => {
   it('patches nothing on an unshaded surface, which has no reflection (edge case)', () => {
     expect(bag({ disable_specular_occlusion: 'true', shading_mode: '0' }).injection).toBeUndefined();
   });
-
-  it('records the setting, for a decal to shade its projection with', () => {
-    const material = materialFromBag(bag({ disable_specular_occlusion: 'true' }));
-    expect(disablesSpecularOcclusion(material)).toBe(true);
-  });
 });
 
 describe('standardMaterialBags — light modes', () => {
-  it('records the modes, for a decal to shade its projection with', () => {
-    expect(materialFromBag(bag({ diffuse_mode: '2', specular_mode: '1' })).userData).toMatchObject(
-      lightModesUserData({
-        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT_WRAP,
-        specularMode: SpecularMode.SPECULAR_TOON,
-      })
-    );
-  });
-
-  it("records Lambert and GGX on Godot's default surface", () => {
-    expect(materialFromBag(standardMaterialBags(null).unfaded).userData).toMatchObject(
-      lightModesUserData({
-        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT,
-        specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
-      })
-    );
-  });
-
   it('patches nothing for Burley and GGX, the terms the lighting chunk writes by default', () => {
     // `material.h:608-609`.
     expect(bag({}).injection).toBeUndefined();
@@ -665,5 +584,59 @@ describe('isAnisotropic', () => {
 
   it('draws a strength without anisotropy_enabled isotropic (error case)', () => {
     expect(anisotropic({ anisotropy: '0.5' })).toBe(false);
+  });
+});
+
+/** The first projection of `map` in UV set `uv`'s blend, as the program samples it through the mipmap bias. */
+const projectedSample = (map: string, uv: 'Uv1' | 'Uv2') =>
+  `( ${map}, godotTriplanarUv( ${map}Transform, vGodot${uv}TriplanarPos.xy ) ) * vGodot${uv}PowerNormal.z`;
+
+describe('standardMaterialBags — triplanar mapping', () => {
+  const texture = () => new THREE.Texture();
+
+  it('samples a UV1 map at the projected vertex position, not at the mesh UV', () => {
+    const fragment = patchedFragment(
+      materialFromBag(
+        bag({ uv1_triplanar: 'true' }, { albedo_texture: texture(), roughness_texture: texture() })
+      )
+    );
+
+    expect(fragment).toContain(projectedSample('map', 'Uv1'));
+    expect(fragment).toContain(projectedSample('roughnessMap', 'Uv1'));
+    expect(fragment).not.toContain('( map, vMapUv )');
+  });
+
+  it('samples a UV2 slot in the UV2 projection, and keeps a UV1 slot on its UV', () => {
+    const fragment = patchedFragment(
+      materialFromBag(
+        bag(
+          { uv2_triplanar: 'true', emission_enabled: 'true', emission_on_uv2: 'true' },
+          { albedo_texture: texture(), emission_texture: texture() }
+        )
+      )
+    );
+
+    expect(fragment).toContain(projectedSample('emissiveMap', 'Uv2'));
+    expect(fragment).toContain('( map, vMapUv )');
+  });
+
+  it('reads the albedo at the mesh UV under use_point_size, as Godot reads POINT_COORD (material.cpp:1612-1620)', () => {
+    const fragment = patchedFragment(
+      materialFromBag(
+        bag(
+          { uv1_triplanar: 'true', use_point_size: 'true' },
+          { albedo_texture: texture(), metallic_texture: texture() }
+        )
+      )
+    );
+
+    expect(fragment).toContain('( map, vMapUv )');
+    expect(fragment).toContain(projectedSample('metalnessMap', 'Uv1'));
+  });
+
+  it('samples nothing projected without triplanar mapping (edge case)', () => {
+    expect(patchedFragment(materialFromBag(bag({}, { albedo_texture: texture() })))).not.toContain(
+      'godotTriplanarUv'
+    );
   });
 });

@@ -11,9 +11,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { settleLoads } from '../../testing/settleLoads';
-import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { NodeDispatcher } from '../../NodeDispatcher';
-import { SceneStack } from '../../testing/SceneStack';
+import { DispatchedScene } from '../../testing/DispatchedScene';
 import { manualCameraAt, renderScene } from '../../testing/renderScene';
 import { drawsColour } from '../../testing/threePasses';
 
@@ -54,11 +52,7 @@ async function renderDetail(): Promise<THREE.Mesh> {
   seedGlbInstance(fake, GLB_PATH, glb);
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
-    <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(scene), panelId: 'p' }}>
-      <SceneStack loader={fake.loader} scene={scene}>
-        <NodeDispatcher nodes={scene.nodes} />
-      </SceneStack>
-    </HierarchyProvider>,
+    <DispatchedScene sceneGraph={createSceneGraphFromTscnScene(scene)} loader={fake.loader} />,
     { camera }
   );
   await settleLoads();

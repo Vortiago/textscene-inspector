@@ -225,3 +225,62 @@ export function lightened<C extends ColorChannels>(color: C, amount: number): C 
   const { r, g, b } = color;
   return { ...color, r: r + (1 - r) * amount, g: g + (1 - g) * amount, b: b + (1 - b) * amount };
 }
+
+/**
+ * `Color::get_h` (`core/math/color.cpp:136-163`): the hue as a fraction of the circle, 0 for a grey.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export function colorHue({ r, g, b }: ColorChannels): number {
+  const max = Math.max(r, g, b);
+  const delta = max - Math.min(r, g, b);
+  if (delta === 0) return 0;
+
+  let hue: number;
+  if (r === max) hue = (g - b) / delta;
+  else if (g === max) hue = 2 + (b - r) / delta;
+  else hue = 4 + (r - g) / delta;
+
+  hue /= 6;
+  return hue < 0 ? hue + 1 : hue;
+}
+
+/**
+ * `Color::get_s` (`core/math/color.cpp:165-174`): 0 for black, where the brightest channel is 0.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export function colorSaturation({ r, g, b }: ColorChannels): number {
+  const max = Math.max(r, g, b);
+  return max !== 0 ? (max - Math.min(r, g, b)) / max : 0;
+}
+
+/**
+ * `Color::from_hsv` (`core/math/color.cpp:458-461`, delegating to `set_hsv`, `:182-227`). The alpha
+ * is 1, the default of `set_hsv`.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export function hsvToRgb(h: number, s: number, v: number): Rgba {
+  if (s === 0) return { r: v, g: v, b: v, a: 1 };
+  const hh = (((h * 6) % 6) + 6) % 6;
+  const i = Math.floor(hh);
+  const f = hh - i;
+  const p = v * (1 - s);
+  const q = v * (1 - s * f);
+  const t = v * (1 - s * (1 - f));
+  switch (i) {
+    case 0:
+      return { r: v, g: t, b: p, a: 1 };
+    case 1:
+      return { r: q, g: v, b: p, a: 1 };
+    case 2:
+      return { r: p, g: v, b: t, a: 1 };
+    case 3:
+      return { r: p, g: q, b: v, a: 1 };
+    case 4:
+      return { r: t, g: p, b: v, a: 1 };
+    default:
+      return { r: v, g: p, b: q, a: 1 };
+  }
+}

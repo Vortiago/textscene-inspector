@@ -9,6 +9,7 @@ import { resolveNodePath } from './nodePathResolve.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
 import { byName } from './testing/sceneNodes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 /** A strict-parser node: the **Raw view**, with `rawProperties` and no typed bag. */
 function node(name: string, children: RawNode[] = [], extra: Partial<RawNode> = {}): RawNode {
@@ -16,6 +17,7 @@ function node(name: string, children: RawNode[] = [], extra: Partial<RawNode> = 
 }
 
 const sceneOf = (...roots: RawNode[]): RawScene => ({
+  ...INSTANTIABLE_SCENE,
   nodes: roots,
   externalResources: [],
   internalResources: [],

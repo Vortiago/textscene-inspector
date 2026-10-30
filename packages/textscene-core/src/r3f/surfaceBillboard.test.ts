@@ -4,6 +4,8 @@ import { billboardWorldMatrix } from './surfaceBillboard';
 import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
 import { TEST_CAMERA } from './testing/threePasses';
+import { patchedVertex } from './testing/patchedFragment';
+import { standardMaterial } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 
 /** A billboard that keeps the model scale, so a test can compare the full basis. */
 const keepingScale = (mode: number): SurfaceBillboard => ({ mode, keepScale: true });
@@ -166,5 +168,36 @@ describe('billboardWorldMatrix — DISABLED', () => {
     expect(
       billboardWorldMatrix(new THREE.Matrix4(), yawedScaledModel(), camera.matrixWorld, keepingScale(7))
     ).toBe(false);
+  });
+});
+
+describe('the billboard normal matrix', () => {
+  const TURNS_BY_MODEL_VIEW = 'transformedNormal = mat3( modelViewMatrix ) * transformedNormal;';
+
+  it("turns a billboard's normals by mat3(MODELVIEW_MATRIX), as Godot's billboard writes MODELVIEW_NORMAL_MATRIX", () => {
+    const vertex = patchedVertex(standardMaterial({ billboard_mode: '1', billboard_keep_scale: 'true' }));
+
+    expect(vertex).toContain(TURNS_BY_MODEL_VIEW);
+    expect(vertex).not.toContain('normalMatrix * transformedNormal');
+  });
+
+  it('turns the normals of every billboarding mode so', () => {
+    for (const mode of ['2', '3']) {
+      expect(patchedVertex(standardMaterial({ billboard_mode: mode }))).toContain(TURNS_BY_MODEL_VIEW);
+    }
+  });
+
+  it('turns the normals the unshaded parallax adds too, as its program includes the chunk twice', () => {
+    const vertex = patchedVertex(
+      standardMaterial({ shading_mode: '0', heightmap_enabled: 'true', billboard_mode: '1' })
+    );
+
+    expect(vertex).not.toContain('normalMatrix * transformedNormal');
+  });
+
+  it("keeps three's normal matrix for a surface that does not billboard (edge case)", () => {
+    expect(patchedVertex(standardMaterial({ albedo_color: 'Color(1, 0, 0, 1)' }))).not.toContain(
+      TURNS_BY_MODEL_VIEW
+    );
   });
 });

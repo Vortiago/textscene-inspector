@@ -27,7 +27,7 @@ import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 type LightMode = EnumValue<typeof CanvasItemMaterialLightMode>;
 
-const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, takenLights: null };
 
 /** A lighting context publishing `list` at `placement`, with spied item registrars. */
 function lighting(list: CanvasLightList, placement = PLACEMENT) {
@@ -176,13 +176,13 @@ describe('useCanvasItemLighting under the per-item cap', () => {
     expect(capped.geometry).toBe(result.current.geometryRef);
   });
 
-  it('declares the positional lights the cap hands it', () => {
+  it('declares the light list the cap hands it', () => {
     const { capped, registerItem } = mountCapped(list(), PLACEMENT);
     act(() => capped.take([0, 2]));
-    expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, positionalLights: [0, 2] }, false);
+    expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, takenLights: [0, 2] }, false);
   });
 
-  it('drops the positional lights it was handed when its placement changes', () => {
+  it('drops the light list it was handed when its placement changes', () => {
     const { wrapper, registerItem, registerCappedItem } = lighting(list());
     const hook = renderHook(({ lightMask }) => useCanvasItemLighting(null, lightMask), {
       wrapper,
@@ -190,15 +190,12 @@ describe('useCanvasItemLighting under the per-item cap', () => {
     });
     act(() => registerCappedItem.mock.calls.at(-1)![0].take([0, 2]));
     hook.rerender({ lightMask: 2 });
-    expect(registerItem).toHaveBeenLastCalledWith(
-      { ...PLACEMENT, lightMask: 2, positionalLights: null },
-      false
-    );
+    expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, lightMask: 2, takenLights: null }, false);
   });
 
   it('binds the buffer of the list its capped placement reads', () => {
     const published = list();
-    const { result, capped } = mountCapped(published, { ...PLACEMENT, positionalLights: [1] });
+    const { result, capped } = mountCapped(published, { ...PLACEMENT, takenLights: [1] });
     expect(boundUniforms(result.current).uLit!.value).toBe(0);
     act(() => capped.take([1]));
     expect(boundUniforms(result.current).uLightList!.value).toBe(published.buffer);

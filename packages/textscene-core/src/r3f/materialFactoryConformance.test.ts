@@ -140,8 +140,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'passes its caller props through to a `<group>`, typed as R3F group props, which carry no material',
   'packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx':
     'one material per built text run, replaced and disposed together with the run geometry it was built with',
-  'packages/textscene-core/src/r3f/environment/Compositor.tsx':
-    'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
   'packages/textscene-core/src/r3f/lighting2d/fullScreenQuad.tsx':
@@ -169,8 +167,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
     'the depth prepass base, cloned per surface and never drawn itself, and the sentinel, which writes nothing; neither is ever mutated',
-  'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
-    'one material per receiver shading, each built with its program fixed and disposed with the projection; the only later write is `opacity`, which no program parameter reads',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
@@ -250,8 +246,6 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'lends the shared quad, which is not React state, the material of the pass it draws, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'lends each caster, which is not React state, the atlas depth material for one shadow draw and gives its own back after it, so no mount ever sees the swap',
-  'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
-    'moves a projection mesh, which is not React state, to the material built for its receiver’s new shading, each built with its program fixed, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/r3f/materials/fadedMeshMaterials.ts':
     'puts a GLB surface’s own material or its alpha-pass copy on the mesh, which is not React state, and the copy is built once from its source, so only its opacity moves',
   'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
@@ -267,8 +261,6 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
     'the depth prepass sentinel: its material writes nothing and is never mutated, and the sentinel is removed with its scene',
-  'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
-    'the projection meshes and the materials they carry are built by one effect and disposed together, so neither can outlive an input the other was built from',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
 };

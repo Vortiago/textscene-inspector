@@ -12,8 +12,8 @@ import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
 import { resourceRef } from '../godot/variant/resourceRef';
-import { LiveTree, liveStep, rootScope } from './liveSceneTree';
-import { contextOver } from './liveSceneTree.testkit';
+import { LiveTree, rootScope } from './liveSceneTree';
+import { contextOver, stepOver } from './liveSceneTree.testkit';
 import type { SceneScope } from '../parser/types';
 import type { LiveNode } from '../resources/liveNode';
 
@@ -80,7 +80,7 @@ material_override = SubResource("2")
 
   it('resolves it to the root scene’s resource, as the viewport does', () => {
     const hostCtx = contextOver(host, { 'res://sub.tscn': sub });
-    const { node: merged, scope } = liveStep(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
+    const { node: merged, scope } = stepOver(host.nodes[0]!, rootScope(hostCtx), hostCtx.sceneCache);
     const id = resourceRef(merged.rawProperties.material_override!)!.id;
 
     expect(findSubResource(scope.internalResources, id)?.data.albedo_color).toBe('Color(1, 0, 0, 1)');

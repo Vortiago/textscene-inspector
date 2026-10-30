@@ -9,7 +9,7 @@ renders_as: nothing yet, Godot samples it to light dynamic objects, the previewe
 
 # LightmapProbe
 
-A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits. The previewer does not use it yet, so the node draws nothing and its children still show.
+A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits. The previewer does not use it yet, so the node draws only Godot's billboard icon and its children still show.
 
 ## Linting
 

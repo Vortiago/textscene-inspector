@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3 uid="uid://unittextmeshprojfont"]
+
+; The one variable: no `font` on the TextMesh, in a project whose `gui/theme/custom_font` is an
+; OpenType-CFF font. The TextMesh then draws that project font (`primitive_meshes.cpp:3779-3809`).
+; No other scene shows it: only this directory has a project.godot that sets the project font. The scene
+; is that of unit-text-mesh-default-font.tscn otherwise.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_deep"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font_size = 64
+depth = 0.2
+
+[sub_resource type="TextMesh" id="TextMesh_flat"]
+material = SubResource("StandardMaterial3D_uv")
+text = "8aA"
+font_size = 64
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Deep" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_deep")
+
+[node name="Flat" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_flat")

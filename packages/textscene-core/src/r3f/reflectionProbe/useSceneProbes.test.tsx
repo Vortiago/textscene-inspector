@@ -6,7 +6,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { fontWork } from '../controls/native/text/sceneFontLoader';
+import { fontWork } from '../controls/native/text/settledChannel';
 import { textureWork } from '../../resources/textures/textureWork';
 import { useSceneProbes } from './useSceneProbes';
 

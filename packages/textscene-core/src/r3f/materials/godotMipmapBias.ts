@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
-import { rewrittenShader } from '../shaderPatch/chunkPatch';
+import { rewrittenShader, rewrittenThroughChunks } from '../shaderPatch/chunkPatch';
 import { samplesMipChain } from '../../resources/textures/godotTextureFilter';
 
 const BIAS_UNIFORM = 'godotMipmapBias';
@@ -48,8 +48,6 @@ const BIASED_SAMPLES = new RegExp(
   String.raw`(?:texture2D|textureGrad)\(\s*(${BIASED_SLOTS.join('|')})\s*,`,
   'g'
 );
-/** three's own pattern for a chunk include (`WebGLProgram.js`). */
-const INCLUDE = /^[ \t]*#include +<([\w./]+)>/gm;
 
 /** Shared by every program, so one write reaches every material. Written only by this module. */
 const biasUniform: THREE.IUniform<number> = { value: 0 };
@@ -72,6 +70,11 @@ export function renderWithMipmapBias(bias: number, render: () => void): void {
     activePassBias = previousPassBias;
     biasUniform.value = previousValue;
   }
+}
+
+/** The bias the render now under way samples at: its pass's, or the root viewport's. */
+export function currentMipmapBias(): number {
+  return biasUniform.value;
 }
 
 /**
@@ -101,24 +104,12 @@ function biasedSamples(source: string): string {
   });
 }
 
-/**
- * `source` with each chunk that samples a biased slot inlined, since `onBeforeCompile` sees only
- * the `#include`. A chunk without such a sample stays an include, which a later patch matches.
- */
-function inlineBiasedChunks(source: string): string {
-  return rewrittenShader(source, INCLUDE, (include, name) => {
-    const chunk = THREE.ShaderChunk[name as keyof typeof THREE.ShaderChunk];
-    if (chunk === undefined) return include;
-    const biased = biasedSamples(chunk);
-    return biased === chunk ? include : inlineBiasedChunks(biased);
-  });
-}
-
 const GODOT_MIPMAP_BIAS: ProgramInjection = {
   cacheKey: 'godot-mipmap-bias',
   onBeforeCompile(shader) {
     shader.uniforms[BIAS_UNIFORM] = biasUniform;
-    shader.fragmentShader = SAMPLER_FUNCTION + biasedSamples(inlineBiasedChunks(shader.fragmentShader));
+    // `onBeforeCompile` sees a chunk's `#include`, not its samples.
+    shader.fragmentShader = SAMPLER_FUNCTION + rewrittenThroughChunks(shader.fragmentShader, biasedSamples);
   },
 };
 

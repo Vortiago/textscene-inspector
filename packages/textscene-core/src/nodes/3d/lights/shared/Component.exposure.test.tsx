@@ -64,7 +64,7 @@ const area = (properties: Record<string, unknown> = {}) =>
 function Exposure({ multiplier }: { multiplier: number }) {
   const resolution: CameraAttributesResolution = {
     status: 'resolved',
-    attributes: { exposureMultiplier: multiplier },
+    attributes: { exposureMultiplier: multiplier, autoExposure: null },
   };
   usePublishCameraAttributes(resolution);
   return null;

@@ -219,7 +219,7 @@ describe('createTextureFromBuffer', () => {
     // The loader ships the shared cache entry with three's own default, NOT
     // Repeat. Godot has two defaults for one image (`BaseMaterial3D` repeat,
     // `CanvasItem` clamp), so neither belongs on the shared entry. Each
-    // consumer states its own at bind time (`applyTextureState.ts`).
+    // consumer states its own at bind time (`textureView.ts`).
     const texture = await createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
     expect(texture.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(texture.wrapT).toBe(THREE.ClampToEdgeWrapping);

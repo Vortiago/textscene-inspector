@@ -35,7 +35,7 @@ A selected probe draws the gizmo of Godot's editor in the probe colour. Godot's 
 - Eight lines at half opacity, from each corner of the inset box to the matching corner of the outer box.
 - A cross of three segments of 0.5 centred on `origin_offset`, drawn only when the offset is not 0.
 
-Godot draws no edge of the outer box. An axis where the inset passes the middle of the box collapses to the middle, with a size of 0. The previewer draws no edit handles and no billboard icon.
+Godot draws no edge of the outer box. An axis where the inset passes the middle of the box collapses to the middle, with a size of 0. The previewer draws no edit handles. Godot's billboard icon marks the origin, and the previewer draws it too.
 
 ## Linting
 

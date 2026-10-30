@@ -9,14 +9,16 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../../parser/TscnParser';
-import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
-import { LIGHT_PASS_LAYER, directionalRenderOrder } from '../../../r3f/lighting2d/lightPassLayers';
+import {
+  LIGHT_PASS_LAYER,
+  SEED_RENDER_ORDER,
+  directionalRenderOrder,
+} from '../../../r3f/lighting2d/lightPassLayers';
 import { itemUniforms, ownerName, recordLightPass } from '../../../r3f/lighting2d/testing/lightPassProbe';
 import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
-import { SceneStack } from '../../../r3f/testing/SceneStack';
-import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
+import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
+import { underWhiteCanvasLighting } from '../../../r3f/lighting2d/testing/whiteCanvasLighting';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import '../../../r3f/nodes'; // side-effect: registers every node's r3f component
@@ -57,14 +59,12 @@ async function render(tscn: string) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      {/* The live tree the directional list is walked from. */}
-      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-        <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-          <NodeDispatcher nodes={parsed.nodes} />
-        </CanvasLighting2DProvider>
-      </HierarchyProvider>
-    </SceneStack>,
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      loader={fake.loader}
+      workspace="2d"
+      around={underWhiteCanvasLighting}
+    />,
     // An orthographic view of the canvas around the origin, as the 2D stage has.
     { orthographic: true, camera: { position: [0, 0, 10] } }
   );
@@ -128,6 +128,10 @@ describe('DirectionalLight2D Component', () => {
       directionalRenderOrder(1),
     ]);
     expect(directionalRenderOrder(1)).toBeLessThan(0);
+    // The list has no fixed length: a CanvasLayer lists its lights past the eighth.
+    expect(directionalRenderOrder(1000)).toBeGreaterThan(directionalRenderOrder(999));
+    expect(directionalRenderOrder(1000)).toBeLessThan(0);
+    expect(directionalRenderOrder(0)).toBeGreaterThan(SEED_RENDER_ORDER);
   });
 
   it('draws nothing while disabled, and its children still draw', async () => {

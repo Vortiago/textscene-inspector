@@ -1,3 +1,7 @@
+; A SoftBody3D with a 2 x 2 PlaneMesh of 12 x 12 subdivisions for the one variable no other golden
+; moves: its wireframe gizmo, the three edges of each triangle in the collision debug colour. The
+; previewer draws it for every node, faint while unselected (ADR-0056), so only a golden with
+; `gizmos: true` has it, and the rest-mesh draw of soft-body-3d stays unchanged.
 [gd_scene format=3]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_1"]

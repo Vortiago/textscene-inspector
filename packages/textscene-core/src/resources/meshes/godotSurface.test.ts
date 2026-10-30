@@ -10,6 +10,7 @@ import {
   geometryDrawsPoints,
   godotSurfaceParts,
   godotSurfacesGeometry,
+  godotTriangleVertices,
   type GodotSurface,
 } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
@@ -152,6 +153,51 @@ describe('godotSurfacesGeometry', () => {
     expect(geometry.getAttribute('tangent')).toBeUndefined();
   });
 
+  it("writes Godot's bone indices and weights as three's skin attributes", () => {
+    const boneIndices = new Uint16Array([0, 1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 0]);
+    const boneWeights = new Float32Array([1, 0, 0, 0, 0.25, 0.75, 0, 0, 1, 0, 0, 0]);
+
+    const geometry = godotSurfacesGeometry([
+      triangle({ bones: { indices: boneIndices, weights: boneWeights } }),
+    ]);
+
+    expect(Array.from(geometry.getAttribute('skinIndex').array)).toEqual(Array.from(boneIndices));
+    expect(Array.from(geometry.getAttribute('skinWeight').array)).toEqual(Array.from(boneWeights));
+    expect(geometry.getAttribute('skinIndex').itemSize).toBe(4);
+  });
+
+  it("keeps each surface's bones at its own vertices when surfaces merge", () => {
+    const first = triangle({
+      bones: { indices: new Uint16Array(12).fill(3), weights: new Float32Array(12).fill(0.5) },
+    });
+    const second = triangle({
+      bones: { indices: new Uint16Array(12).fill(7), weights: new Float32Array(12).fill(0.25) },
+    });
+
+    const geometry = godotSurfacesGeometry([first, second]);
+
+    expect(geometry.getAttribute('skinIndex').getX(0)).toBe(3);
+    expect(geometry.getAttribute('skinIndex').getX(3)).toBe(7);
+    expect(geometry.getAttribute('skinWeight').getX(5)).toBe(0.25);
+  });
+
+  it('writes no skin attribute unless every surface has bones, so a mesh never skins half (edge case)', () => {
+    const skinned = triangle({
+      bones: { indices: new Uint16Array(12), weights: new Float32Array(12) },
+    });
+
+    const geometry = godotSurfacesGeometry([skinned, triangle()]);
+
+    expect(geometry.getAttribute('skinIndex')).toBeUndefined();
+    expect(geometry.getAttribute('skinWeight')).toBeUndefined();
+  });
+
+  it('gives a surface without bones no skin attribute', () => {
+    const geometry = godotSurfacesGeometry([triangle()]);
+
+    expect(geometry.getAttribute('skinIndex')).toBeUndefined();
+  });
+
   it('adds one draw group per surface for per-surface materials', () => {
     const geo = godotSurfacesGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces);
 
@@ -275,5 +321,33 @@ describe('godotSurfaceParts', () => {
 
   it('draws no part for a mesh with no surface', () => {
     expect(godotSurfaceParts([])).toEqual([]);
+  });
+});
+
+describe('godotTriangleVertices', () => {
+  const quad = (indices: number[]): GodotSurface => ({
+    positions: new Float32Array(12),
+    indices,
+  });
+
+  it("gives each triangle's vertices in the order Godot stored them", () => {
+    const geometry = godotSurfacesGeometry([quad([0, 1, 2, 0, 2, 3])]);
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2, 0, 2, 3]);
+  });
+
+  it('offsets the vertices of a later surface into the merged geometry', () => {
+    const geometry = godotSurfacesGeometry([quad([0, 1, 2]), quad([0, 1, 2])]);
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2, 4, 5, 6]);
+  });
+
+  it('reads a geometry with no index three vertices at a time, in the stored winding', () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 2, 1]);
+  });
+
+  it('drops the vertices of an incomplete triangle', () => {
+    const geometry = godotSurfacesGeometry([quad([0, 1, 2, 3])]);
+    expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2]);
   });
 });

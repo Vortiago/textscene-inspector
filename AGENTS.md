@@ -77,6 +77,9 @@ and prints exact pixels. It is a tool, not a gate.
   rounds it: Godot clears `Color(0.3)` (76.5) to 76 under vulkan and to 77 under opengl3
   (measured, `run.test.mjs`). Compare `--rendering-driver opengl3` with the default vulkan before
   you believe one.
+- A 1/255 split on a sampled sRGB 8-bit texture is lavapipe's polynomial decode, not a parity
+  defect. See "Why a sampled sRGB texture can read one step off in Godot" in
+  `docs/comparison/README.md`.
 
 ## Vertical slices
 

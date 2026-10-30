@@ -1,0 +1,62 @@
+; One variable: a Camera3D's `attributes` in a SubViewport that shares the root world, at
+; exposure_multiplier 2 while the world holds none. Godot forces the camera's attributes over the
+; scenario's for that pass (`renderer_scene_cull.cpp:2707`, `:3560-3565`), so the target shows the
+; light, the sphere and the colour background at twice the exposure the canvas around it draws.
+; `camera-attributes-exposure-camera` sets the camera of the root view alone.
+
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.05, 0.06, 0.2, 1)
+
+[sub_resource type="CameraAttributesPractical" id="Camera_attributes_pass"]
+exposure_multiplier = 2.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(1.2, 1.2)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="Mat_screen"]
+resource_local_to_scene = true
+shading_mode = 0
+billboard_mode = 1
+albedo_texture = SubResource("ViewportTexture_1")
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_grey"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+roughness = 1.0
+metallic_specular = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 3, 0)
+light_energy = 0.5
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_grey")
+
+; The world is shared, so the target shows the sphere above. The quad sits outside the view of
+; the target's camera, so the target never samples itself.
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 50.0
+attributes = SubResource("Camera_attributes_pass")
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Mat_screen")

@@ -7,12 +7,11 @@
 import type { ConnectionHeading, StrictScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { armDiagnostic } from './ruleArms.js';
+import { armDiagnostic, headingSubject } from './ruleArms.js';
 
 const REQUIRED_FIELDS = ['from', 'to', 'signal', 'method'] as const;
 
-/** The stand-in for a node: a connection belongs to none, and a diagnostic names a subject. */
-const CONNECTION_SUBJECT = { name: '<connection>', type: 'connection' } as const;
+const CONNECTION_SUBJECT = headingSubject('connection');
 
 function missingFieldDiagnostic(connection: ConnectionHeading): Diagnostic[] {
   const missing = REQUIRED_FIELDS.filter((field) => connection[field] === undefined);

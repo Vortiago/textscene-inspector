@@ -34,7 +34,7 @@ texture's sampler state.
 **The loader leaves wrapping at three's clamp-to-edge default and states nothing
 about repeat. A consumer that needs a wrapping states it at bind time.**
 
-- A 3D material reads `texture_repeat` through `applyTextureState`, which
+- A 3D material reads `texture_repeat` through `textureView`, which
   compares the wanted wrapping with what the texture carries. Default or `true`
   asks for Repeat, and `false` asks for clamp. Only a texture already wrapped as
   the binding wants stays shared. Anything else becomes a source-shared clone
@@ -44,15 +44,15 @@ about repeat. A consumer that needs a wrapping states it at bind time.**
   procedural producer can hand over Repeat (a seamless `NoiseTexture2D`), so the
   force stays.
 - The panorama sky samples with `fract(atan(...))`, so u wraps 0..1 and must
-  tile. It states Repeat through the same `applyTextureState` rule
+  tile. It states Repeat through the same `textureView` rule
   (`skyPanoramaTexture`), frees its clone once the cube is rendered, and never
   mutates the shared entry.
 
-`Decal` and `PointLight2D` state clamp through `applyTextureState` too. That is
-what Godot draws for them: a light texture and a canvas draw clamp, and a decal
-projects box-local UVs in 0..1. A clamped entry stays shared, and a tiled one
-from a procedural producer becomes a clone that the consumer frees. The
-`PointLight2D` test pins this on a loader-produced texture.
+`PointLight2D` states clamp through `textureView` too. That is what Godot draws
+for a light texture. A clamped entry stays shared, and a tiled one from a
+procedural producer becomes a clone that the consumer frees. The `PointLight2D`
+test pins this on a loader-produced texture. A `Decal` samples a shared atlas
+that is built clamped, since a decal projects box-local UVs in 0..1.
 
 ## Consequences
 

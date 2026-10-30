@@ -1,7 +1,7 @@
 /**
- * <AudioStreamPlayer3D>: the previewer plays no audio, so the node renders an editor-only speaker
- * gizmo and its audible range at its transform, as the light gizmos in
- * `lights/shared/lightHelpers.tsx` do. `userData.isAudioGizmo` marks the cone group as an editor
+ * <AudioStreamPlayer3D>: the previewer plays no audio, so the node renders an editor-only audible
+ * range and emission cone at its transform, as the light gizmos in `lights/shared/lightHelpers.tsx`
+ * do. The node icon is the dispatcher's. `userData.isAudioGizmo` marks the group as an editor
  * widget. Children render beside the gizmo, so the node behaves like a transform node.
  */
 
@@ -11,8 +11,6 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import type { AudioStreamPlayer3DProperties } from './types';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
-import { useGizmoLook } from '../../../r3f/gizmo/useGizmoLook';
-import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { degToRad, TAU } from '../../../godot/math/math.js';
@@ -22,13 +20,6 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
-
-/** Body of the speaker cone (small wireframe-friendly silhouette). */
-const SPEAKER_BODY_RADIUS = 0.12;
-const SPEAKER_BODY_HEIGHT = 0.18;
-/** Front disk that gives the cone its "speaker" silhouette. */
-const SPEAKER_FRONT_RADIUS = 0.18;
-const SPEAKER_FRONT_THICKNESS = 0.02;
 
 export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AudioStreamPlayer3DProperties;
@@ -42,8 +33,8 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
   // at all or declares a hard cutoff. It reads `unit_size` only for the radius.
   const rangeRadius = audibleRangeRadius(properties);
 
-  // Godot adds the speaker and range gizmos only for the selected node (`audio_stream_player_3d_gizmo_plugin.cpp:127`),
-  // as for Camera3D and the lights. The `<group>` stays mounted, so the children keep their transform context.
+  // Godot adds the range and cone gizmos only for the selected node (`audio_stream_player_3d_gizmo_plugin.cpp:127`),
+  // as for the lights. The `<group>` stays mounted, so the children keep their transform context.
   return (
     <group
       name={node.name}
@@ -53,35 +44,12 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
       userData={{ isAudioGizmo: true, nodeType: 'AudioStreamPlayer3D' }}
     >
       <PluginGizmo drawnFor="selected-only">
-        <SpeakerGizmo />
         {rangeRadius !== null && <RangeCircle radius={rangeRadius} />}
         {rangeRadius !== null && properties.emission_angle_enabled && (
           <EmissionCone radius={rangeRadius} angleDegrees={properties.emission_angle_degrees} />
         )}
       </PluginGizmo>
       {children}
-    </group>
-  );
-}
-
-/**
- * The speaker silhouette: a small cone whose narrow end points away from the camera-ward (-Z)
- * direction, and a thin disk for the front baffle. It casts no shadow. It is no Godot gizmo part, and
- * takes the look of the node's gizmo, grey inside an instance.
- */
-function SpeakerGizmo() {
-  const { color, opacity } = useGizmoLook(GIZMO_COLOR, 1);
-  const material = useMemo(() => wireGizmoProgram(color, opacity), [color, opacity]);
-  return (
-    <group userData={{ isAudioGizmoBody: true }}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[SPEAKER_BODY_RADIUS, SPEAKER_BODY_HEIGHT, 16, 1, true]} />
-        <meshBasicMaterial key={material.key} {...material.props} />
-      </mesh>
-      <mesh position={[0, 0, -SPEAKER_BODY_HEIGHT / 2]}>
-        <cylinderGeometry args={[SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_THICKNESS, 24]} />
-        <meshBasicMaterial key={material.key} {...material.props} />
-      </mesh>
     </group>
   );
 }

@@ -12,7 +12,11 @@ renders_as: a clipped surface showing its SubViewport children's targets
 SubViewportContainer shows its SubViewport children's render targets, drawn as a
 surface in the canvas (ADR-0033). It samples each target's plain view, as Godot draws it
 (`subviewport_container.cpp:142,144`). It filters the stored sRGB bytes of a canvas-content
-target and multiplies them by its modulate in sRGB.
+target and multiplies them by its modulate in sRGB. The content inside is lit by the lights
+inside its sub-viewport and by none on the canvas around it. The surface is a canvas item of the
+canvas around the container, so that canvas's lights and CanvasModulate reach it once. It draws
+the target only (`subviewport_container.cpp:134-144`): the Controls of a sub-viewport are in that
+target.
 
 ## Linting
 

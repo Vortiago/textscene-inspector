@@ -31,14 +31,11 @@ const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`bundledFontLoader.ts`'s
-// own doc). Mocking the two functions `LabelGlyphs` actually calls is what
-// lets both sides of the gate be exercised.
+// own doc). Mocking the function `LabelGlyphs` reads through is what lets both sides of the gate
+// be exercised.
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
   peekBundledCanvasFontMetrics: () => loader.metrics,
-}));
-vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
-  onSceneFontMetricsSettled: () => () => {},
 }));
 
 beforeEach(() => {

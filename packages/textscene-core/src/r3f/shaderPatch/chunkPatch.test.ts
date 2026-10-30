@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  applyEdits,
   editedChunk,
   editedProgram,
   editedShader,
   installChunkEdits,
   rewrittenShader,
-  swappedChunk,
+  rewrittenThroughChunks,
   type ChunkEdit,
 } from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
@@ -17,47 +16,13 @@ const OTHER_CHUNK = 'alphamap_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
 const threeOtherChunk = THREE.ShaderChunk[OTHER_CHUNK];
 const threeBasicShader = THREE.ShaderLib.basic.fragmentShader;
+const threeBasicVertexShader = THREE.ShaderLib.basic.vertexShader;
 
 afterEach(() => {
   THREE.ShaderChunk[CHUNK] = threeChunk;
   THREE.ShaderChunk[OTHER_CHUNK] = threeOtherChunk;
   THREE.ShaderLib.basic.fragmentShader = threeBasicShader;
-});
-
-describe('applyEdits', () => {
-  it('replaces each edit’s text, in order', () => {
-    expect(
-      applyEdits('a b', [
-        { three: 'a', godot: 'c' },
-        { three: 'c b', godot: 'd' },
-      ])
-    ).toBe('d');
-  });
-
-  it('is null for a text that a later edit lacks (error case)', () => {
-    expect(
-      applyEdits('a', [
-        { three: 'a', godot: 'c' },
-        { three: 'a', godot: 'd' },
-      ])
-    ).toBeNull();
-  });
-
-  it('is the text itself for no edits (edge case)', () => {
-    expect(applyEdits('a', [])).toBe('a');
-  });
-
-  it('replaces a block from its start through the first end after it', () => {
-    expect(applyEdits('] a [ b ] c ]', [{ three: '[', until: ']', godot: 'd' }])).toBe('] a d c ]');
-  });
-
-  it('is null for a block whose end is missing after its start (error case)', () => {
-    expect(applyEdits('] a [ b', [{ three: '[', until: ']', godot: 'd' }])).toBeNull();
-  });
-
-  it('keeps a `$` in the replacement literal (edge case)', () => {
-    expect(applyEdits('a', [{ three: 'a', godot: "$&$'" }])).toBe("$&$'");
-  });
+  THREE.ShaderLib.basic.vertexShader = threeBasicVertexShader;
 });
 
 describe('editedShader', () => {
@@ -81,6 +46,18 @@ describe('editedShader', () => {
     expect(() => editedShader('a b', [{ three: 'x', godot: 'c' }], 'the test program')).toThrow(
       'expected the test program to hold "x" once, got:\na b'
     );
+  });
+
+  it('replaces a block from its start through the first end after it', () => {
+    expect(editedShader('] a [ b ] c ]', [{ three: '[', until: ']', godot: 'd' }], 'test program')).toBe(
+      '] a d c ]'
+    );
+  });
+
+  it('throws for a block whose end is missing after its start (error case)', () => {
+    expect(() =>
+      editedShader('] a [ b', [{ three: '[', until: ']', godot: 'd' }], 'the test program')
+    ).toThrow('expected the test program to hold "[" once');
   });
 
   it('throws for a text that occurs twice (edge case)', () => {
@@ -139,25 +116,29 @@ describe('rewrittenShader', () => {
   });
 });
 
-describe('swappedChunk', () => {
-  it('writes the text into three and is true', () => {
-    expect(swappedChunk(CHUNK, 'two', 'test chunk has no stub')).toBe(true);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('two');
+describe('rewrittenThroughChunks', () => {
+  const marked = (text: string) => text.replaceAll('discard;', 'return;');
+
+  it('inlines a chunk whose text the rewrite changes, rewritten', () => {
+    const source = `#include <${CHUNK}>`;
+
+    expect(rewrittenThroughChunks(source, marked)).toBe(marked(threeChunk));
   });
 
-  it('is false and warns nothing for the text the chunk holds (edge case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'two';
-    expect(
-      warningsOf(() => expect(swappedChunk(CHUNK, 'two', 'test chunk has no stub')).toBe(false))
-    ).toEqual([]);
+  it('inlines a chunk that includes a chunk the rewrite changes', () => {
+    THREE.ShaderChunk[OTHER_CHUNK] = `#include <${CHUNK}>`;
+
+    expect(rewrittenThroughChunks(`#include <${OTHER_CHUNK}>`, marked)).toBe(marked(threeChunk));
   });
 
-  it('keeps the chunk, warns and is false for no text (error case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    expect(warningsOf(() => swappedChunk(CHUNK, null, 'test chunk has no stub'))).toEqual([
-      "[Shading] three's test chunk has no stub",
-    ]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
+  it('keeps the include of a chunk the rewrite leaves as it is', () => {
+    const source = '#include <common>\nvoid main() { discard; }';
+
+    expect(rewrittenThroughChunks(source, marked)).toBe('#include <common>\nvoid main() { return; }');
+  });
+
+  it('keeps an include that names no chunk (edge case)', () => {
+    expect(rewrittenThroughChunks('#include <no_such_chunk>', marked)).toBe('#include <no_such_chunk>');
   });
 });
 
@@ -255,6 +236,59 @@ describe('installChunkEdits', () => {
     const fragmentShaders = { basic: [{ three: 'basic', godot: 'godot' }] };
     installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', fragmentShaders });
     expect(THREE.ShaderLib.basic.fragmentShader).toBe('godot');
+  });
+
+  it("writes a program's vertex shader edits with the chunks", () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[OTHER_CHUNK] = 'three';
+    THREE.ShaderLib.basic.vertexShader = 'basic';
+    const vertexShaders = { basic: [{ three: 'basic', godot: 'godot' }] };
+    installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', vertexShaders });
+    expect(THREE.ShaderLib.basic.vertexShader).toBe('godot');
+  });
+
+  it('installs a patch of program edits alone, proved by its mark in the program', () => {
+    THREE.ShaderLib.basic.fragmentShader = 'basic';
+    const patch = {
+      edits: [],
+      mark: 'godot',
+      patch: 'programs',
+      fragmentShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
+    };
+    expect([installChunkEdits(patch), installChunkEdits(patch)]).toEqual([true, true]);
+    expect(THREE.ShaderLib.basic.fragmentShader).toBe('godot');
+  });
+
+  it("proves a patch of program edits by the mark in a program's vertex shader", () => {
+    THREE.ShaderLib.basic.vertexShader = 'basic';
+    const patch = {
+      edits: [],
+      mark: 'godot',
+      patch: 'programs',
+      vertexShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
+    };
+    expect([installChunkEdits(patch), installChunkEdits(patch)]).toEqual([true, true]);
+    expect(THREE.ShaderLib.basic.vertexShader).toBe('godot');
+  });
+
+  it('throws for a mark that no edit writes (error case)', () => {
+    const patch = { edits: [], mark: 'godot', patch: 'programs' };
+    expect(() => installChunkEdits(patch)).toThrow(/expected an edit of the programs patch to write/);
+  });
+
+  it("leaves the chunks and both stages alone when a program's vertex shader lacks an edit's text (error case)", () => {
+    THREE.ShaderLib.basic.fragmentShader = 'basic';
+    const patch = {
+      edits: [],
+      mark: 'godot',
+      patch: 'programs',
+      fragmentShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
+      vertexShaders: { basic: [{ three: 'absent', godot: 'godot' }] },
+    };
+    expect(warningsOf(() => installChunkEdits(patch))).toEqual([
+      "[Shading] three's basic fragment shader or basic vertex shader lacks a line the programs patch replaces",
+    ]);
+    expect(THREE.ShaderLib.basic.fragmentShader).toBe('basic');
   });
 
   it("leaves the chunks alone when a program lacks an edit's text (error case)", () => {

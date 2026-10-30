@@ -123,6 +123,15 @@ describe('parseControl', () => {
       expect(p.textureRepeat).toBe(1);
     });
 
+    it('keeps the material reference and use_parent_material for the walker to resolve', () => {
+      const p = parseControl(heading('Control', { name: 'Lit' }), {
+        material: 'SubResource("CanvasItemMaterial_a")',
+        use_parent_material: 'true',
+      });
+      expect(p.materialPath).toBe('SubResource("CanvasItemMaterial_a")');
+      expect(p.useParentMaterial).toBe(true);
+    });
+
     it('defaults to Godot values when absent (scene/main/canvas_item.h:98,101,113,123-124)', () => {
       const p = parseControl(heading('Control', { name: 'Plain' }), {});
       // z_index (canvas_item.h:101): `int z_index = 0;`
@@ -135,6 +144,8 @@ describe('parseControl', () => {
       expect(p.textureFilter).toBe(0);
       // texture_repeat (canvas_item.h:124): `TextureRepeat texture_repeat = TEXTURE_REPEAT_PARENT_NODE;` (0)
       expect(p.textureRepeat).toBe(0);
+      expect(p.materialPath).toBeUndefined();
+      expect(p.useParentMaterial).toBe(false);
     });
   });
 });

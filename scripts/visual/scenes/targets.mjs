@@ -49,7 +49,7 @@ export const TILE_AND_TARGET_SCENES = [
   },
 
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
-  // remote_path names, resolved once at parse time (r3f/remoteTransforms.ts).
+  // remote_path names, resolved over the Live scene tree (remoteTransforms.ts).
   // Each target is authored away from its relay. Verified against Godot 4.6.3.
 
   // The cube is authored at -2 X and driven to the relay's +2.
@@ -57,6 +57,9 @@ export const TILE_AND_TARGET_SCENES = [
   // The pentagon is authored at the grey ghost and driven to the relay's
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
+  // The same relays and targets inside an instanced scene stand where they do in their own files.
+  { name: 'remote-transform-3d-instanced', file: 'unit-remote-transform-3d-instanced.tscn' },
+  { name: 'remote-transform-2d-instanced', file: 'unit-remote-transform-2d-instanced.tscn', mode: '2d' },
 
   // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
   // environment applies inside the target and again on the consuming quad (curve squared). The
@@ -72,14 +75,31 @@ export const TILE_AND_TARGET_SCENES = [
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },
-  // `tonemap_exposure` under LINEAR inside the target while glow holds the renderer for the
-  // compositor: the exposure applies inside the target and again on the quad.
+  // `tonemap_exposure` under LINEAR inside the target, with glow on the main view: the exposure
+  // applies inside the target and again on the quad.
   { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
+  // The shared world's glow runs inside the target: the quad shows the bloom around the emissive
+  // sphere that only the target sees.
+  { name: 'sub-viewport-shared-world-glow', file: 'unit-sub-viewport-shared-world-glow.tscn' },
+  // A Camera3D's own Environment glows its own-world target, with no WorldEnvironment in the world.
+  { name: 'sub-viewport-camera-environment', file: 'unit-sub-viewport-camera-environment.tscn' },
+  // A Camera3D's `attributes` at exposure_multiplier 2 in a shared-world SubViewport over a world with
+  // none: the pass draws the light, the sphere and the colour background at its camera's exposure.
+  { name: 'sub-viewport-camera-exposure', file: 'unit-sub-viewport-camera-exposure.tscn' },
+  // Two shared-world SubViewports of a 2D canvas, whose cameras hold exposure 2 and 0.5: one frame
+  // draws the one lit sphere at both.
+  {
+    name: 'sub-viewport-shared-world-camera-exposure',
+    file: 'unit-sub-viewport-shared-world-camera-exposure.tscn',
+    mode: '2d',
+  },
+  // A SubViewport's `use_debanding` dithers the bloom its camera's Environment adds.
+  { name: 'sub-viewport-debanding', file: 'unit-sub-viewport-debanding.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
-  // An own-world SubViewport's Environment stays in its world: its glow mounts no compositor
-  // over the canvas, and its tone curve leaves the root's LINEAR box untouched.
+  // An own-world SubViewport's Environment stays in its world: its glow stays off the canvas, and
+  // its tone curve leaves the root's LINEAR box untouched.
   { name: 'sub-viewport-own-world-glow', file: 'unit-sub-viewport-own-world-glow.tscn' },
   { name: 'sub-viewport-own-world-tonemap', file: 'unit-sub-viewport-own-world-tonemap.tscn' },
   // MSAA, each from the setting that turns it on: the root viewport's msaa_3d and msaa_2d, from a

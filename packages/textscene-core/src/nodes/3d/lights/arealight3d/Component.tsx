@@ -2,12 +2,11 @@
  * <AreaLight3D>: a three.js RectAreaLight sized from `area_size`, which the patched chunks shade
  * with Godot's area light (`r3f/areaLight/`). It carries its range, attenuation, specular and
  * `area_texture` to the shader and its fog energy to the volumetric fog, and casts its shadow
- * through the positional shadow atlas (`AtlasAreaShadow`).
+ * through the positional shadow atlas (`AtlasAreaShadow`). It shows once Godot's LTC tables load.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
-import type * as THREE from 'three';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
@@ -21,13 +20,13 @@ import { positionalShadowUserData } from '../../../../r3f/positionalShadow/decla
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
 import { AREA_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { positionalShadowDeclaration } from '../shared/positionalShadowDeclaration';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useTexture2DRid } from '../../../../resources/useTexture2D';
+import { useHeldTexture } from '../../../../r3f/textureAtlas/useHeldTexture';
 import {
   areaTextureUserData,
   holdAreaTexture,
   releaseAreaTexture,
 } from '../../../../r3f/areaLight/areaLightAtlas';
+import { useLtcTexturesSettled } from '../../../../r3f/areaLight/useLtcTexturesSettled';
 
 /**
  * Godot's colour scale: `energy * PI` and the exposure, negated for a negative light, divided by the
@@ -41,17 +40,12 @@ function useAreaLightIntensity(properties: AreaLight3DProperties): number {
   return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
 }
 
-/** The `area_texture`, held in the area light atlas while the light shows it. */
-function useAreaTexture(ref: string | undefined): THREE.Texture | null {
-  const { externalResources, internalResources } = useSceneResources();
-  const { texture } = useTexture2DRid(ref, externalResources, internalResources);
-  useEffect(() => {
-    if (!texture) return;
-    holdAreaTexture(texture);
-    return () => releaseAreaTexture(texture);
-  }, [texture]);
-  return texture;
-}
+/**
+ * The `area_texture`, held in the area light atlas while the light shows it. The atlas copies its
+ * sRGB view (4.7.2 `texture_storage.cpp:3524`).
+ */
+const useAreaTexture = (ref: string | undefined) =>
+  useHeldTexture(ref, 'decoding', holdAreaTexture, releaseAreaTexture);
 
 /**
  * The falloff and texture the shader reads, the shadow the fitter reads and the energy the fog
@@ -108,11 +102,13 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   const shadowOpacity = lightShadowOpacity(properties);
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const userData = useAreaLightUserData(properties);
+  const isLtcLoadSettled = useLtcTexturesSettled();
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
       <rectAreaLight
         ref={lightRef}
+        visible={isLtcLoadSettled}
         color={parseColorToHex(properties.light_color)}
         intensity={intensity}
         width={properties.area_size.x}

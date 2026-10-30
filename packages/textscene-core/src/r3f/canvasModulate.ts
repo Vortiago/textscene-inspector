@@ -2,42 +2,37 @@
  * Which `CanvasModulate` colour is in force for a canvas. Godot sets it with
  * `RS::canvas_set_modulate` on ENTER_CANVAS, so it tints the whole canvas wherever
  * it sits. The last one in pre-order wins, and a hidden one (`is_visible_in_tree()`)
- * does not apply. A `CanvasLayer` is its own canvas, so the walk does not enter one.
+ * does not apply.
  */
 
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
+import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
+import { useSharedLiveTree } from './useLiveSceneTree.js';
+import { canvasScopesOf } from './canvasScopes.js';
+import { NOTHING_CACHED } from './cacheSources.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types.js';
 import type { Rgba } from '../godot/math/math.js';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial.js';
 
-interface CanvasModulateLike {
-  color?: Rgba;
-  visible?: boolean;
-}
+/** The sub-scenes the loader holds, which is none before a scene graph exists. */
+const NO_SCENES: LiveTreeContext = {
+  externalResources: [],
+  internalResources: [],
+  sceneCache: NOTHING_CACHED,
+};
 
 /**
- * The canvas-wide tint for a scene's root nodes, white with no visible
- * CanvasModulate. A CanvasModulate inside an instanced sub-scene is not found,
- * though Godot applies it.
+ * The canvas-wide tint for the nodes of one canvas, white with no visible CanvasModulate. It reads
+ * the live tree over the scenes the loader holds now, so a CanvasModulate inside an instanced
+ * sub-scene counts the moment that sub-scene is loaded: it joins the group of the canvas it sits
+ * in, whichever file declares it (`canvas_modulate.cpp:33-45`).
  */
-export function canvasModulateColor(nodes: readonly TscnNode[]): Rgba {
-  let found: Rgba | null = null;
-
-  const walk = (node: TscnNode, visible: boolean): void => {
-    const props = node.properties as CanvasModulateLike;
-    const shown = visible && props.visible !== false;
-    // Not a CanvasItem: a CanvasLayer hosts its own canvas, which any
-    // CanvasModulate inside it would tint instead of this one.
-    if (node.type === 'CanvasLayer') return;
-    if (node.type === 'CanvasModulate' && shown && props.color) found = props.color;
-    for (const child of node.children) walk(child, shown);
-  };
-
-  for (const node of nodes) walk(node, true);
-  return found ?? WHITE_MODULATE;
+export function useCanvasModulateColor(nodes: readonly TscnNode[]): Rgba {
+  const ctx = useSharedLiveTree()?.ctx ?? NO_SCENES;
+  return useMemo(() => canvasScopesOf(liveTreeOf(nodes, ctx)).modulate ?? WHITE_MODULATE, [nodes, ctx]);
 }
 
 /**

@@ -1,0 +1,74 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitprogressbaroutlinevariation"]
+
+; The one variable: the FontVariation of a ProgressBar percentage that has an outline. Godot grows the
+; outline of each glyph by `embolden * size / 16` px, shears it by `variation_transform`, and strokes
+; the result, so the line keeps its width in every direction. The bars are plain, emboldened,
+; sheared, and both. The font is OpenType-CFF, so the plain outline matches Godot exactly.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-extra-bold.otf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_embolden"]
+base_font = ExtResource("1_font")
+variation_embolden = 1.2
+
+[sub_resource type="FontVariation" id="FontVariation_skew"]
+base_font = ExtResource("1_font")
+variation_transform = Transform2D(1, 0.3, 0, 1, 0, 0)
+
+[sub_resource type="FontVariation" id="FontVariation_embolden_skew"]
+base_font = ExtResource("1_font")
+variation_embolden = 1.2
+variation_transform = Transform2D(1, 0.3, 0, 1, 0, 0)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Plain" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 220.0
+offset_bottom = 90.0
+value = 42.0
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("1_font")
+theme_override_font_sizes/font_size = 40
+
+[node name="Emboldened" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 220.0
+offset_bottom = 180.0
+value = 42.0
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = SubResource("FontVariation_embolden")
+theme_override_font_sizes/font_size = 40
+
+[node name="Sheared" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 200.0
+offset_right = 220.0
+offset_bottom = 270.0
+value = 42.0
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = SubResource("FontVariation_skew")
+theme_override_font_sizes/font_size = 40
+
+[node name="EmboldenedSheared" type="ProgressBar" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 290.0
+offset_right = 220.0
+offset_bottom = 360.0
+value = 42.0
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = SubResource("FontVariation_embolden_skew")
+theme_override_font_sizes/font_size = 40

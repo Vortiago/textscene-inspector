@@ -5,7 +5,7 @@
  * dropped write.
  */
 
-import { addBoneRefusal, boneNameText } from './boneNameOrder.js';
+import { addBoneRefusal, boneNameText } from './boneTable.js';
 import {
   VECTOR3_REGEX,
   makeFloatTupleRegex,

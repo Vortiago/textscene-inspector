@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { layerQuadrants } from './renderingQuadrants';
 import { defaultTileData, type TileSetModel } from './types';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import { tileTextureAt } from './testing/tileTexture';
 
 /** A square 16 px tileset whose source 0 holds tile (0, 0). */
 const SQUARE: TileSetModel = {
@@ -13,7 +14,7 @@ const SQUARE: TileSetModel = {
     [
       0,
       {
-        texturePath: 'res://tiles.png',
+        texture: tileTextureAt('res://tiles.png'),
         margins: { x: 0, y: 0 },
         separation: { x: 0, y: 0 },
         textureRegionSize: { x: 16, y: 16 },

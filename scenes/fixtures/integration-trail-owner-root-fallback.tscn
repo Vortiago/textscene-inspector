@@ -1,0 +1,27 @@
+; The one variable: an `owner=` walk that finds nothing in an instance, with an `owner_uid_path`
+; that names the file root. `Player/Gone` does not exist, so Godot takes the root as owner
+; (packed_scene.cpp:159-163), and `Lamp` claims `%Lamp` in the root's table: Shade sits under Lamp,
+; left of the origin and up. No other golden has a trail owner that is the root.
+
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-trail-player.tscn" id="1_player"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_a"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="M_a"]
+albedo_color = Color(0.95, 0.5, 0.15, 1)
+
+[node name="Main" type="Node3D" unique_id=402771955]
+
+[node name="Player" parent="." instance=ExtResource("1_player") unique_id=948136725]
+
+[node name="Lamp" type="Node3D" parent="." owner="Player/Gone" owner_uid_path=PackedInt32Array(402771955)]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+
+[node name="Shade" type="MeshInstance3D" parent="%Lamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_a")
+surface_material_override/0 = SubResource("M_a")

@@ -33,7 +33,7 @@ interface Memoised<T> {
  * generation's nodes and a replaced theme take their entries with them.
  */
 // Node identity is a sound key: `useBuildSolveTree` rebuilds the forest on every scene,
-// texture, resource, theme or font arrival, and on each `onSceneFontMetricsSettled` tick
+// texture, resource, theme or font arrival, and on each `onSceneFontSettled` tick
 // from `text/sceneFontLoader.ts`.
 // A `SolveNode` survives a theme change, so the key needs the theme too.
 export function defineShare<T>(compute: Share<T>): Share<T> {

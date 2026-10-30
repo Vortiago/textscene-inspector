@@ -46,8 +46,9 @@ const MAP_UVS = [
 
 /**
  * The view direction in the surface's tangent frame, with Godot's flips, and the shifted
- * coordinate. Without mesh tangents the frame comes from the screen derivatives, as three's
- * `getTangentFrame` builds it.
+ * coordinate. A triplanar surface reads the frame Godot writes for it (`godotTriplanar.ts`). Without
+ * mesh tangents the frame comes from the screen derivatives, as three's `getTangentFrame` builds it.
+ * The coordinate runs bottom-up, which takes the place of Godot's `-BINORMAL` (`material.cpp:1546`).
  */
 const PARALLAX_PARS = /* glsl */ `${PARS_ANCHOR}
 uniform sampler2D godotHeightmap;
@@ -73,7 +74,10 @@ vec3 godotHeightmapViewDir( const in vec2 uv ) {
 			normal *= gl_FrontFacing ? 1.0 : - 1.0;
 		#endif
 	#endif
-	#ifdef USE_TANGENT
+	#if defined( GODOT_TRIPLANAR_FRAME )
+		vec3 tangent = vGodotTriplanarTangent;
+		vec3 bitangent = vGodotTriplanarBinormal;
+	#elif defined( USE_TANGENT )
 		vec3 tangent = normalize( vTangent );
 		vec3 bitangent = normalize( vBitangent );
 	#else
@@ -152,6 +156,7 @@ export function heightmapUserData(heightmap: Heightmap | null): Record<string, u
  * The heightmap texture of each material. Written only by `bindHeightmap`, and collected with its
  * material. Not `userData`, which a material's clone copies through JSON.
  */
+// eslint-disable-next-line no-restricted-syntax -- bindHeightmap writes or deletes an entry from outside
 const heightmapTextures = new WeakMap<Material, THREE.Texture>();
 
 /** Gives `material` the texture its heightmap samples, or none. A rebind needs no recompile. */

@@ -8,6 +8,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Linter } from './Linter.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
+import { lintRule } from './testing/testkit.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { triangleGlb } from '../resources/formats/glb/testing/triangleGlb.js';
 import { PLAIN_PROJECT_FILE, memoryProject, unlistableProject } from './testing/memoryProject.js';
@@ -225,7 +226,7 @@ item/0/name = "Tree"
   });
 
   it('leaves the file-local lint silent, since it reads no other file', () => {
-    expect(new Linter().lint(sceneUsing('res://tree.glb')).filter((d) => d.ruleName === RULE)).toEqual([]);
+    expect(lintRule(sceneUsing('res://tree.glb'), RULE)).toEqual([]);
   });
 
   it('keeps the file-local diagnostics and sorts the merged list errors first', async () => {

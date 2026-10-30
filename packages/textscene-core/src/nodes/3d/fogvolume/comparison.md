@@ -20,9 +20,9 @@ A `ShaderMaterial` fills the volume with Godot's default fog, as Godot does, whe
 A volume draws the gizmo of Godot's editor, faint while unselected, the 12 edges of its box in the fog colour. Godot's source is `fog_volume_gizmo_plugin.cpp:92-125`.
 
 - The ellipsoid, cone, cylinder and box shapes all draw the box of `size`, centred on the node.
-- The WORLD shape draws nothing, because it ignores the size.
+- The WORLD shape draws no box and no icon, because it ignores the size.
 
-The previewer draws no edit handles and no billboard icon.
+The previewer draws no edit handles. Godot's billboard icon marks the origin of the other shapes, and the previewer draws it too.
 
 ## Linting
 

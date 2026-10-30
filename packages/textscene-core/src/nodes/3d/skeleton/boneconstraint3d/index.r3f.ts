@@ -1,14 +1,6 @@
-/**
- * BoneConstraint3D constrains the bones of its parent Skeleton3D against other bones. That drive
- * is a gap here (ADR-0045), so it registers `pending` on the Node3D component and its children
- * still land in the right transform space.
- */
+/** BoneConstraint3D is the base of the bone constraints. The base makes no edit. */
 
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { registerSkeletonModifier } from '../shared/registerSkeletonModifier';
+import { noPoseEdit } from '../../skeleton3d/poseModifier';
 
-nodeComponentRegistry.register({
-  typeName: 'BoneConstraint3D',
-  Component: Node3D,
-  renderIntent: 'pending',
-});
+registerSkeletonModifier('BoneConstraint3D', noPoseEdit);

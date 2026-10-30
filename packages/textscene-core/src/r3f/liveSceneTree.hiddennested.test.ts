@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
-import { collapseLiveNode, liveStep, type CachedSceneSource } from './liveSceneTree';
+import type { CachedSceneSource } from './liveSceneTree';
+import { stepOver } from './liveSceneTree.testkit';
 import '../parser/TscnParser';
 
 const LEAF = `[gd_scene load_steps=1 format=3]
@@ -55,15 +56,11 @@ describe('an instance chain collapses to fixed point', () => {
   const hidden = host.nodes[0]!.children.find((c) => c.name === 'HiddenInstance')!;
 
   it('keeps the host’s visible=false through a nested instance root', () => {
-    const collapsed = collapseLiveNode(hidden, scope, cache);
+    const collapsed = stepOver(hidden, scope, cache).node;
     expect(collapsed.properties.visible).toBe(false);
   });
 
   it('leaves no instance ref behind to collapse', () => {
-    expect(collapseLiveNode(hidden, scope, cache).instance).toBeFalsy();
-  });
-
-  it('reports the same collapsed node through liveStep', () => {
-    expect(liveStep(hidden, scope, cache).node.properties.visible).toBe(false);
+    expect(stepOver(hidden, scope, cache).node.instance).toBeFalsy();
   });
 });

@@ -76,6 +76,7 @@ interface SceneInstances {
 }
 
 /** Written only by `registerVisibilityInstance`. A scene leaves it with its last instance. */
+// eslint-disable-next-line no-restricted-syntax -- a scene's last instance deletes its entry
 const scenes = new WeakMap<THREE.Scene, SceneInstances>();
 
 /** Adds `instance` to the cull of `scene` until the returned function runs. */

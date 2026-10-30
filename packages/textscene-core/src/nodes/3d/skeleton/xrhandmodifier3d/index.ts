@@ -1,15 +1,11 @@
-/**
- * XRHandModifier3D registration: the parser. It reuses the Node3D parse, and linterParser.ts holds
- * the property knowledge. XRHandModifier3D's Godot effect is not implemented here yet (ADR-0045),
- * so index.r3f.ts registers Node3D as `pending` to keep its children in the right transform space.
- */
+/** XRHandModifier3D registration: the parser, which reads `active` and `influence`. index.r3f.ts holds its effect on the pose. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseSkeletonModifier3D } from '../skeletonmodifier3d/parser';
 
-const xRHandModifier3DRegistration: NodeTypeRegistration = {
+const registration: NodeTypeRegistration = {
   typeName: 'XRHandModifier3D',
-  parser: parseNode3D,
+  parser: parseSkeletonModifier3D,
 };
 
-nodeRegistry.register(xRHandModifier3DRegistration);
+nodeRegistry.register(registration);

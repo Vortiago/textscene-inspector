@@ -106,6 +106,13 @@ export interface TextureSlotRequest {
    * addresses that theme file's sub-resource pool, never the node's.
    */
   scope?: SolveNode['resources'];
+  /** Whether every resource between the node and `ref` is local to scene, true when omitted. A themed icon sets its Theme's. */
+  isHeldLocally?: boolean;
+}
+
+/** The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. */
+export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSlotRequest {
+  return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
 }
 
 /**

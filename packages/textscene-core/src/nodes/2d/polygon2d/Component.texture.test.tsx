@@ -16,8 +16,12 @@ import {
   type FakeResourceLoader,
 } from '../../../resources/testing/createFakeResourceLoader';
 import type { ParsedHeading } from '../../../parser/utils';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
+import {
+  UNSET_VIEWPORT_TEXTURE,
+  UNSET_VIEWPORT_TEXTURE_REF,
+} from '../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 
 const TEX = 'res://shadow_gradient.png';
 /** Deliberately non-square, so an x/y swap in the divide cannot pass. */
@@ -49,11 +53,15 @@ function loadedTexture(): THREE.Texture {
   return tex;
 }
 
-async function mount(rawProps: Record<string, string>, fake: FakeResourceLoader) {
+async function mount(
+  rawProps: Record<string, string>,
+  fake: FakeResourceLoader,
+  internalResources: readonly TscnInternalResource[] = []
+) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
-        internalResources={[]}
+        internalResources={internalResources}
         externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
       >
         <Polygon2D node={node(rawProps)} />
@@ -124,6 +132,25 @@ describe('<Polygon2D> textured fill', () => {
       [1, 1],
       [1, 0],
       [0, 0],
+    ]);
+  });
+
+  /**
+   * Godot divides by the size 0 an unset ViewportTexture reports (`polygon_2d.cpp:224-237`), and
+   * Godot 4.6.3 fills the polygon with the placeholder's top-left texel.
+   */
+  it('maps every vertex to the top-left texel of a texture that reports size 0', async () => {
+    const renderer = await mount(
+      { polygon: SQUARE, texture: UNSET_VIEWPORT_TEXTURE_REF },
+      createFakeResourceLoader(),
+      [UNSET_VIEWPORT_TEXTURE]
+    );
+    await settleLoads();
+    expect(uvs(mesh(renderer).geometry)).toEqual([
+      [0, 1],
+      [0, 1],
+      [0, 1],
+      [0, 1],
     ]);
   });
 

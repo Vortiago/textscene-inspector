@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  followContentTrail,
   parseIdTrail,
   parseUniqueId,
   recoverByIdTrail,
   reparentedName,
   type IdHeading,
+  type SceneLookup,
+  type TrailHeading,
+  type TrailScene,
 } from './packedScene.js';
 import { firstIndexWith } from '../../utils/keyedLookup.js';
 
@@ -103,6 +107,19 @@ describe('recoverByIdTrail', () => {
     expect(recoverIn([99], [plain(10), orphan], 1)).toBeUndefined();
   });
 
+  it('continues the whole trail in the base scene where the root inherits one and no heading carries the id', () => {
+    const inheritingRoot: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: true };
+    expect(recoverIn([99, 5], [inheritingRoot, orphan], 1)).toEqual({
+      kind: 'inBase',
+      heading: 0,
+      rest: [99, 5],
+    });
+  });
+
+  it('fails when the id is no heading and the root inherits nothing', () => {
+    expect(recoverIn([99, 5], [plain(10), orphan], 1)).toBeUndefined();
+  });
+
   it('fails when the named heading comes after the orphan', () => {
     expect(recoverIn([20], [plain(10), orphan, plain(20)], 1)).toBeUndefined();
   });
@@ -139,9 +156,103 @@ describe('recoverByIdTrail', () => {
     expect(recoverIn([10, 5], [instance, orphan], 1)).toBeUndefined();
   });
 
-  it('reports the instance a middle hop names, as the rest lives in its scene', () => {
+  it('reports the instance a middle hop names, with the rest of the trail that lives in its scene', () => {
     const instance: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: true };
-    expect(recoverIn([10, 5], [instance, orphan], 1)).toEqual({ kind: 'inBase', heading: 0 });
+    expect(recoverIn([10, 5, 6], [instance, orphan], 1)).toEqual({
+      kind: 'inBase',
+      heading: 0,
+      rest: [5, 6],
+    });
+  });
+});
+
+describe('followContentTrail', () => {
+  const heading = (uniqueId: number, path: string, instance?: TrailHeading['instance']): TrailHeading => ({
+    uniqueId,
+    path,
+    instance,
+    instanceRef: undefined,
+  });
+
+  /** A scene state over `headings`, whose instances and base answer from `lookups`. */
+  function sceneOf(
+    headings: readonly TrailHeading[],
+    lookups: { instanced?: Record<number, SceneLookup>; base?: SceneLookup } = {}
+  ): TrailScene {
+    const firstIndexWithId = firstIndexWith((entry: TrailHeading) => entry.uniqueId);
+    return {
+      indexWithId: (id) => firstIndexWithId(headings, id),
+      headingAt: (index) => headings[index]!,
+      instancedScene: (index) => lookups.instanced?.[index] ?? 'missing',
+      baseScene: () => lookups.base,
+    };
+  }
+
+  it('gives the authored path of the heading a one-id trail names', () => {
+    const scene = sceneOf([heading(1, ''), heading(5, 'Mid/Inner')]);
+    expect(followContentTrail([5], scene)).toEqual({ status: 'found', path: 'Mid/Inner' });
+  });
+
+  it('joins the paths of the headings each hop names, through the instance in between', () => {
+    const inner = sceneOf([heading(1, ''), heading(7, 'Deep')]);
+    const outer = sceneOf([heading(1, ''), heading(5, 'Mid', 'scene')], { instanced: { 1: inner } });
+    expect(followContentTrail([5, 7], outer)).toEqual({ status: 'found', path: 'Mid/Deep' });
+  });
+
+  it('finds an id that only the base scene holds', () => {
+    const base = sceneOf([heading(1, ''), heading(9, 'Core')]);
+    const derived = sceneOf([heading(1, '')], { base });
+    expect(followContentTrail([9], derived)).toEqual({ status: 'found', path: 'Core' });
+  });
+
+  it('finds an id in the base of the scene a middle hop instances', () => {
+    const base = sceneOf([heading(1, ''), heading(9, 'Core')]);
+    const derived = sceneOf([heading(1, '')], { base });
+    const outer = sceneOf([heading(1, ''), heading(5, 'Mid', 'scene')], { instanced: { 1: derived } });
+    expect(followContentTrail([5, 9], outer)).toEqual({ status: 'found', path: 'Mid/Core' });
+  });
+
+  it('takes the first heading that carries the id', () => {
+    const scene = sceneOf([heading(1, ''), heading(5, 'First'), heading(5, 'Second')]);
+    expect(followContentTrail([5], scene)).toEqual({ status: 'found', path: 'First' });
+  });
+
+  it('matches id 0 to the first heading without a unique_id', () => {
+    const scene = sceneOf([heading(3, 'Tagged'), heading(0, 'Bare')]);
+    expect(followContentTrail([0], scene)).toEqual({ status: 'found', path: 'Bare' });
+  });
+
+  it('fails where no heading, and no base, carries the id', () => {
+    const base = sceneOf([heading(1, '')]);
+    expect(followContentTrail([9], sceneOf([heading(1, '')], { base }))).toEqual({ status: 'missing' });
+  });
+
+  it('fails for an empty trail', () => {
+    expect(followContentTrail([], sceneOf([heading(1, '')]))).toEqual({ status: 'missing' });
+  });
+
+  it.each<[string, TrailHeading['instance']]>([
+    ['is no instance', undefined],
+    ['is a placeholder (packed_scene.cpp:1997)', 'placeholder'],
+  ])('fails where a middle hop %s', (_name, instance) => {
+    const scene = sceneOf([heading(1, ''), heading(5, 'Mid', instance)]);
+    expect(followContentTrail([5, 7], scene)).toEqual({ status: 'missing' });
+  });
+
+  it('waits for an instanced scene that is not loaded yet', () => {
+    const scene = sceneOf([heading(1, ''), heading(5, 'Mid', 'scene')], { instanced: { 1: 'pending' } });
+    expect(followContentTrail([5, 7], scene)).toEqual({ status: 'pending' });
+  });
+
+  it('waits for a base that is not loaded yet', () => {
+    expect(followContentTrail([9], sceneOf([heading(1, '')], { base: 'pending' }))).toEqual({
+      status: 'pending',
+    });
+  });
+
+  it('fails where the instanced scene failed to load', () => {
+    const scene = sceneOf([heading(1, ''), heading(5, 'Mid', 'scene')], { instanced: { 1: 'missing' } });
+    expect(followContentTrail([5, 7], scene)).toEqual({ status: 'missing' });
   });
 });
 

@@ -18,10 +18,17 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 
 `tonemap_mode = AGX`. The lit grass and the crushed shadow match Godot.
 
+A viewport's `use_debanding`, which the root takes from `rendering/anti_aliasing/quality/use_debanding`, adds Godot's screen-space dither to the sRGB value the tone-map pass writes (`tonemap.glsl:950-957`). The pattern matches Godot's pixel for pixel.
+
 ## Tone mapping exposure
 <!-- compare: image=unit-environment-linear-exposure status=done fixture=unit-environment-linear-exposure.tscn -->
 
-`tonemap_exposure = 1.6` under LINEAR, with nothing that needs the tone-map pass. The three boxes and the colour background are 1.6 times their colours, and the brightest box clips at white, as in Godot. The exposure multiplies the colour before every tone mapper, LINEAR included, in the main view and in a shared-world SubViewport alike.
+`tonemap_exposure = 1.6` under LINEAR, with no glow and no adjustment. The three boxes and the colour background are 1.6 times their colours, and the brightest box clips at white, as in Godot. The exposure multiplies the colour before every tone mapper, LINEAR included, in the main view and in a shared-world SubViewport alike.
+
+## Scene buffer
+<!-- compare: image=unit-scene-buffer-half-float status=done fixture=unit-scene-buffer-half-float.tscn -->
+
+Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as Godot's does (`renderer_scene_render_rd.cpp:1128`, `render_forward_clustered.cpp:2514`). The buffer rounds each linear value to half precision first. Each unshaded quad sits close above a level's half step, and both engines write the level below it.
 
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
@@ -43,12 +50,12 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Depth fog
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
 
-`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. `fog_sky_affect` sets how far the fog covers the background.
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. The aerial perspective reads the sky's radiance layers, the ones the surfaces read. `fog_sky_affect` sets how far the fog covers the background.
 
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
-`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera adds one of Godot's 16 jitters a render and shows their mean so far. After all 16, it is the mean Godot converges to. `volumetric_fog_ambient_inject` lights the fog with the sky's radiance layers, as Godot does. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 

@@ -7,6 +7,10 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import {
+  UNSET_VIEWPORT_TEXTURE,
+  UNSET_VIEWPORT_TEXTURE_REF,
+} from '../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { parseCPUParticles2D } from './parser';
@@ -45,10 +49,12 @@ function node(raw: Record<string, string> = {}, children: TscnNode[] = []): Tscn
 
 async function render(
   rootNode: TscnNode,
-  options: { seedTexture?: boolean; internalResources?: TscnInternalResource[] } = {}
+  options: { seedTexture?: boolean; texture?: THREE.Texture; internalResources?: TscnInternalResource[] } = {}
 ) {
   const fake = createFakeResourceLoader();
-  if (options.seedTexture !== false) {
+  if (options.texture) {
+    fake.textures.seed(TEX, options.texture);
+  } else if (options.seedTexture !== false) {
     const texture = new THREE.Texture();
     (texture as unknown as { image: { width: number; height: number } }).image = {
       width: 8,
@@ -100,6 +106,23 @@ describe('<CPUParticles2D>', () => {
     // An 8x8 texture at the default scale_amount of 1.
     expect(box.max.x - box.min.x).toBeCloseTo(8, 4);
     expect(box.max.y - box.min.y).toBeCloseTo(8, 4);
+  });
+
+  /** An unset ViewportTexture reports size 0 (`viewport.cpp:156-160`), and Godot 4.6.3 draws nothing. */
+  it('gives each quad no area for a texture that reports size 0', async () => {
+    const renderer = await render(
+      node({
+        amount: '1',
+        explosiveness: '1',
+        gravity: 'Vector2(0, 0)',
+        texture: UNSET_VIEWPORT_TEXTURE_REF,
+      }),
+      { internalResources: [UNSET_VIEWPORT_TEXTURE] }
+    );
+    const geometry = particleMesh(renderer)!.geometry;
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox!;
+    expect([box.max.x - box.min.x, box.max.y - box.min.y]).toEqual([0, 0]);
   });
 
   it('carries a four-component vertex colour so a ramp can fade alpha', async () => {

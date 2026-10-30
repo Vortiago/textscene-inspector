@@ -1,11 +1,11 @@
 ---
 type: SkeletonModifier3D
 category: 3D
-status: unimplemented
+status: done
 fixture: unit-skeleton-modifier-3d.tscn
 # image: unit-skeleton-modifier-3d
 visual: false
-renders_as: nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
+renders_as: nothing (the base class makes no edit to the pose)
 ---
 
 # SkeletonModifier3D
@@ -29,4 +29,4 @@ Strict parsing format-checks these `SkeletonModifier3D` properties, plus 17 inhe
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-SkeletonModifier3D registers `parseNode3D` directly, so `active` and `influence` are never read. An `influence = 5.0` or an `active = "maybe"` is dropped silently, and only strict reports it.
+Every derived modifier inherits `active` and `influence`, which the parser reads. Strict warns on an `influence` outside 0 to 1. The pose keeps it, as Godot's setter does, and the full edit runs at or above 1.

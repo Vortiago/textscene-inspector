@@ -21,11 +21,35 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'data is a packed cell dictionary decoded by a bespoke helper (extractCells), and baked_meshes draw in place of the cells (grid_map.cpp:688). The physics/navigation/octant keys never reach a frame.',
   },
 
+  Skeleton3D: {
+    linterOnly: [
+      // A wildcard validator. `readBones` reads it in a loop over Object.keys, which the
+      // properties.X scrape cannot see.
+      'bones/*',
+      // Physics bones and the modifier schedule never move a frozen frame.
+      'animate_physical_bones',
+      'modifier_callback_mode_process',
+    ],
+    reason:
+      'The bone table is read through readBones, a loop over the bones/<index>/<leaf> keys. The other two keys shape physics and modifier timing, not the rest or the pose.',
+  },
+
+  BoneConstraint3D: {
+    linterOnly: ['settings/#/*'],
+    reason:
+      'The settings table is read through readConstraintSettings, a loop over the settings/<index>/<leaf> keys, which the properties.X scrape cannot see.',
+  },
+
+  CopyTransformModifier3D: {
+    linterOnly: ['setting_count', 'settings/#/*'],
+    reason:
+      'The settings table is read through readConstraintSettings, a loop over setting_count and the settings/<index>/<leaf> keys, which the properties.X scrape cannot see.',
+  },
+
   Label3D: {
     renderGap: [
-      // Text shaping: the font, the locale and BiDi settings the TextServer
-      // shapes glyphs by, and the case transform.
-      'font',
+      // Text shaping: the locale and BiDi settings the TextServer shapes
+      // glyphs by, and the case transform.
       'language',
       'text_direction',
       'structured_text_bidi_override',
@@ -82,16 +106,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Camera3D: {
-    renderGap: [
-      // Per-camera override of the world's environment, and the Compositor stack.
-      // The previewer draws through the editor camera, which holds neither, so a
-      // scene's Camera3D overrides nothing there. `attributes` is read: the camera
-      // the viewer looks through replaces the world's exposure.
-      'environment',
-      'compositor',
-    ],
-    reason:
-      'A camera can override the environment and run a compositor stack; the editor camera the previewer draws through holds neither.',
+    renderGap: ['compositor'],
+    reason: 'A camera can run a Compositor stack, and the previewer runs none.',
   },
 
   WorldEnvironment: {

@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3]
+
+; One variable: the normal of a billboard that keeps a non-uniform scale. The left sphere keeps
+; scale (2.2, 0.5, 1) and the right one is unscaled. Godot turns the normals by the scaled
+; MODELVIEW_MATRIX itself, so the squashed sphere lights as a stretched surface, not as its inverse.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_keep"]
+albedo_color = Color(0.9, 0.8, 0.7, 1)
+billboard_mode = 1
+billboard_keep_scale = true
+roughness = 0.4
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+material = SubResource("StandardMaterial3D_keep")
+radius = 0.6
+height = 1.2
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 3, 0)
+
+[node name="Squashed" type="MeshInstance3D" parent="."]
+transform = Transform3D(2.2, 0, 0, 0, 0.5, 0, 0, 0, 1, 0.3, 0.5, -0.2)
+mesh = SubResource("SphereMesh_ball")
+
+[node name="Unscaled" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0.5, -0.8)
+mesh = SubResource("SphereMesh_ball")

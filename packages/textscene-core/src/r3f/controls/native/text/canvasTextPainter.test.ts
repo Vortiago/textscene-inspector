@@ -11,7 +11,10 @@ import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
 import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
+import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
+import type { GlyphContours } from './glyphContours';
+import type { SfntOutlines } from './sfntOutlines';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -77,6 +80,84 @@ describe('computeCanvasTextCanvasLayout', () => {
   });
 });
 
+/** `layout` shaped against a face that carries `outlines`, as the font loader hands it to a run. */
+function carrying(layout: ReturnType<typeof layoutFor>, skew: number, outlines: SfntOutlines | null) {
+  if (!outlines) return layout;
+  const { embolden } = layout.fontMetrics;
+  return { ...layout, fontMetrics: withVariation(layout.fontMetrics, { embolden, skew, outlines }) };
+}
+
+interface Call {
+  op: string;
+  args: unknown[];
+  lineWidth: number;
+  /** The horizontal shear (`c`) of the transform in force. */
+  shear: number;
+}
+
+/** The grown outline of a glyph: a triangle, whose points the tests read back from the path. */
+const GROWN_TRIANGLE: GlyphContours = {
+  points: [
+    { x: 1, y: 0, tag: ContourPointTag.ON },
+    { x: 5, y: 0, tag: ContourPointTag.ON },
+    { x: 3, y: -6, tag: ContourPointTag.ON },
+  ],
+  contourEnds: [2],
+  isFillRight: true,
+};
+
+function outlinesStub(glyphIndex = 7) {
+  const glyphContours = vi.fn(() => GROWN_TRIANGLE);
+  return {
+    outlines: { glyphIndex: () => glyphIndex, glyphContours } satisfies SfntOutlines,
+    glyphContours,
+  };
+}
+
+/** Records every draw call of one paint: happy-dom has no 2D context. A `strokeWidthPx` of 0 paints the fill. */
+function paintRecording(
+  layout: ReturnType<typeof layoutFor>,
+  strokeWidthPx: number,
+  { skew = 0, outlines = null }: { skew?: number; outlines?: SfntOutlines | null } = {}
+) {
+  const calls: Call[] = [];
+  let matrix = new DOMMatrix();
+  const saved: DOMMatrix[] = [];
+  const record =
+    (op: string) =>
+    (...args: unknown[]) =>
+      calls.push({ op, args, lineWidth: ctx.lineWidth, shear: matrix.c });
+  const ctx = {
+    lineWidth: 1,
+    save: () => saved.push(matrix),
+    restore: () => {
+      matrix = saved.pop()!;
+    },
+    transform: (a: number, b: number, c: number, d: number, e: number, f: number) => {
+      matrix = matrix.multiply(new DOMMatrix([a, b, c, d, e, f]));
+    },
+    fillText: record('fillText'),
+    strokeText: record('strokeText'),
+    beginPath: record('beginPath'),
+    moveTo: record('moveTo'),
+    lineTo: record('lineTo'),
+    closePath: record('closePath'),
+    fill: record('fill'),
+    stroke: record('stroke'),
+  };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
+  const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
+  paintSceneFontCanvas(
+    carrying(layout, skew, outlines),
+    16,
+    { r: 1, g: 1, b: 1, a: 1 },
+    skew,
+    canvasLayout,
+    strokeWidthPx
+  );
+  return { calls, canvasLayout };
+}
+
 function boldLayoutFor(text: string, embolden: number) {
   return shapeText(text, {
     fontSizePx: 16,
@@ -88,7 +169,7 @@ function boldLayoutFor(text: string, embolden: number) {
 }
 
 // `FT_Outline_Embolden` grows the outline by `embolden * size / 16` px and anchors it at the left
-// and bottom (`text_server_adv.cpp:1313-1314`): half the growth on each side, then a shift of half.
+// and bottom (`text_server_adv.cpp:1314-1315`): half the growth on each side, then a shift of half.
 describe('embolden padding', () => {
   it('pads the raster by the outline growth on every side, so the grown ink stays inside it', () => {
     const plain = computeCanvasTextCanvasLayout(layoutFor('AB', 0), 0);
@@ -108,31 +189,14 @@ describe('embolden padding', () => {
 describe('paintSceneFontCanvas — embolden', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  /** Records the fill and stroke calls of one paint, since happy-dom has no 2D context. */
-  function paintRecording(layout: ReturnType<typeof layoutFor>) {
-    const calls: { op: string; args: unknown[]; lineWidth: number }[] = [];
-    const ctx = {
-      lineWidth: 1,
-      save: () => {},
-      restore: () => {},
-      transform: () => {},
-      fillText: (...args: unknown[]) => calls.push({ op: 'fillText', args, lineWidth: ctx.lineWidth }),
-      strokeText: (...args: unknown[]) => calls.push({ op: 'strokeText', args, lineWidth: ctx.lineWidth }),
-    };
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never);
-    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    paintSceneFontCanvas(layout, 16, { r: 1, g: 1, b: 1, a: 1 }, 0, canvasLayout);
-    return { calls, canvasLayout };
-  }
-
   it('draws a plain glyph with one fill and no stroke', () => {
-    const { calls } = paintRecording(layoutFor('A', 0));
+    const { calls } = paintRecording(layoutFor('A', 0), 0);
     expect(calls.map((c) => c.op)).toEqual(['fillText']);
   });
 
   it('draws a bold glyph filled and stroked by the growth, shifted right and up by half of it', () => {
     const layout = boldLayoutFor('A', 1.2);
-    const { calls, canvasLayout } = paintRecording(layout);
+    const { calls, canvasLayout } = paintRecording(layout, 0);
     const growthPx = 1.2;
     const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
     const expectedArgs = ['A', canvasLayout.offsetXPx + growthPx / 2, baselineY - growthPx / 2];
@@ -140,6 +204,168 @@ describe('paintSceneFontCanvas — embolden', () => {
     expect(calls[0]!.args).toEqual(expectedArgs);
     expect(calls[1]!.args).toEqual(expectedArgs);
     expect(calls[1]!.lineWidth).toBeCloseTo(growthPx, 10);
+  });
+});
+
+describe('paintSceneFontCanvas — embolden fill from the grown contour', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // Chromium snaps the baseline of `fillText` to a whole pixel, so a fill at half the growth above
+  // the baseline lands a pixel off its own shift. FreeType fills the contour, which has no snap.
+  it('fills the grown outline of a bold glyph from its pen, in place of the text', () => {
+    const layout = boldLayoutFor('A', 1.2);
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls, canvasLayout } = paintRecording(layout, 0, { skew: 0, outlines });
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'fill',
+    ]);
+    expect(calls[1]!.args).toEqual([canvasLayout.offsetXPx + 1, baselineY]);
+  });
+
+  // A negative embolden shrinks the outline (`FT_Outline_Embolden`); a stroke of a negative width cannot.
+  it('fills the shrunk outline of a glyph with a negative embolden', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls } = paintRecording(boldLayoutFor('A', -0.5), 0, { skew: 0, outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: -0.5, skew: 0 });
+    expect(calls.at(-1)!.op).toBe('fill');
+  });
+
+  it('fills a bold and sheared glyph by one outline that carries both, under the identity transform', () => {
+    const { outlines, glyphContours } = outlinesStub();
+    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 0, { skew: 0.3, outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0.3 });
+    expect(calls.at(-1)!.op).toBe('fill');
+    expect(calls.every((call) => call.shear === 0)).toBe(true);
+  });
+
+  it('shears the text of a bold and sheared glyph that the font has no contour for', () => {
+    const empty: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
+    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 0, { skew: 0.3, outlines: empty });
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText', 'strokeText']);
+    expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
+  });
+
+  it('fills the text of a plain glyph, which has no grown outline to follow', () => {
+    const { outlines } = outlinesStub();
+    const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0, outlines });
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+  });
+
+  it('fills the text of a sheared glyph in the sheared space, as a shear alone leaves the fill be', () => {
+    const { outlines } = outlinesStub();
+    const { calls } = paintRecording(layoutFor('A', 0), 0, { skew: 0.3, outlines });
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+  });
+});
+
+describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('strokes a plain glyph once, centred on its contour at its pen', () => {
+    const layout = layoutFor('A', 0);
+    const { outlines } = outlinesStub();
+    const { calls, canvasLayout } = paintRecording(layout, 4, { outlines });
+
+    expect(calls).toEqual([
+      {
+        op: 'strokeText',
+        args: ['A', canvasLayout.offsetXPx, canvasLayout.offsetYPx + layout.baselineOffsetPx],
+        lineWidth: 4,
+        shear: 0,
+      },
+    ]);
+  });
+
+  // FreeType strokes the emboldened contour (`text_server_adv.cpp:1314-1315`, then `:1383-1390`),
+  // which `FT_Outline_Embolden` has already shifted right and up.
+  it('strokes the grown outline of a bold glyph from its pen, in place of the text', () => {
+    const layout = boldLayoutFor('A', 1.2);
+    const { outlines, glyphContours } = outlinesStub(7);
+    const { calls, canvasLayout } = paintRecording(layout, 4, { outlines });
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+    const penX = canvasLayout.offsetXPx;
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0 });
+    expect(calls.map((call) => call.op)).toEqual([
+      'beginPath',
+      'moveTo',
+      'lineTo',
+      'lineTo',
+      'closePath',
+      'stroke',
+    ]);
+    expect(calls[1]!.args).toEqual([penX + 1, baselineY]);
+    expect(calls[3]!.args).toEqual([penX + 3, baselineY - 6]);
+    expect(calls.at(-1)!.lineWidth).toBe(4);
+  });
+
+  it('grows the outline of a repeated character once for the whole paint', () => {
+    const { outlines, glyphContours } = outlinesStub();
+
+    paintRecording(boldLayoutFor('AAA', 1.2), 4, { outlines });
+
+    expect(glyphContours).toHaveBeenCalledTimes(1);
+  });
+
+  // Godot strokes the sheared outline (`text_server_adv.cpp:1318-1320`, then `:1383-1390`), so the
+  // shear is in the path points and the line keeps its width in every direction.
+  it('strokes the sheared outline of a sheared glyph under the identity transform', () => {
+    const { outlines, glyphContours } = outlinesStub(7);
+    const { calls } = paintRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0.3 });
+    expect(calls.map((call) => call.op)).toContain('stroke');
+    expect(calls.every((call) => call.shear === 0)).toBe(true);
+  });
+
+  it('strokes a bold and sheared glyph by one outline that carries both', () => {
+    const { outlines, glyphContours } = outlinesStub(7);
+
+    paintRecording(boldLayoutFor('A', 1.2), 4, { skew: 0.3, outlines });
+
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 1.2, skew: 0.3 });
+  });
+
+  it('strokes the text of a sheared glyph in the sheared space where the label has no outlines', () => {
+    const { calls } = paintRecording(layoutFor('A', 0), 4, { skew: 0.3 });
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+  });
+
+  it('strokes the text of a sheared glyph that the font has no glyph for in the sheared space', () => {
+    const { outlines } = outlinesStub(0);
+    const { calls } = paintRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
+  });
+
+  it('strokes the text of a bold glyph where the label has no outlines', () => {
+    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 4);
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+  });
+
+  it('strokes the text of a bold glyph that the font has no glyph for', () => {
+    const { outlines } = outlinesStub(0);
+    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 4, { outlines });
+
+    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
   });
 });
 
@@ -220,6 +446,33 @@ describe('createCanvasTextMaterial mipmapped', () => {
   });
 });
 
+describe('createCanvasTextMaterial inside a lit Control', () => {
+  const lit = () =>
+    createCanvasTextMaterial({ map: mipmappedTexture(), opacity: 1, pixelMaterial: litPixelMaterial() });
+
+  it('samples the light list before the colour encode', () => {
+    expect(patchedFragment(lit())).toContain('uLightList');
+  });
+
+  it('keeps an explicit side over the facing of the Control material', () => {
+    const material = createCanvasTextMaterial({
+      map: mipmappedTexture(),
+      opacity: 1,
+      side: THREE.FrontSide,
+      pixelMaterial: litPixelMaterial(),
+    });
+
+    expect(material.side).toBe(THREE.FrontSide);
+  });
+
+  it('takes the blend state of the Control material', () => {
+    const material = lit();
+
+    expect(material.blending).toBe(THREE.CustomBlending);
+    expect(material.blendDst).toBe(THREE.OneFactor);
+  });
+});
+
 describe('createCanvasTextMaterial', () => {
   it('is transparent, depth-write disabled, samples the given texture, and applies opacity directly (tint is pre-baked into the raster, unlike the MSDF uColor uniform)', () => {
     const texture = new THREE.CanvasTexture(document.createElement('canvas'));
@@ -261,7 +514,7 @@ describe('createCanvasTextMaterial', () => {
   it(
     'leaves `defines` unset for a `map` NOT tagged NoColorSpace, so a caller that ever passes an ' +
       'already-linear map (a SubViewport render target, say) is not double-decoded -- the same ' +
-      'auto-detection `useCanvasSrgbDefines`/`ControlQuad` already apply to every other ' +
+      'auto-detection `canvasMapProps`/`ControlQuad` already apply to every other ' +
       '2D-canvas-drawn `map`.',
     () => {
       const texture = new THREE.CanvasTexture(document.createElement('canvas'));

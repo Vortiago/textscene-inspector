@@ -10,7 +10,7 @@ import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 // whichever canvas, if any, imported them first.
 import '../../nodes/index.js';
 import { isClaimedByCanvasItemEditor } from '../../nodeWorkspaceVisibility.js';
-import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
+import { useLiveSceneNodes, useSeatedRoots } from '../../useLiveSceneTree.js';
 import { keepsChildrenInViewport } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
@@ -31,6 +31,7 @@ export function ViewportArea({
 }) {
   const { mode, setMode } = useViewportMode();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  const rootNodes = useSeatedRoots() ?? rootScene?.nodes ?? [];
   // The live tree finds 2D content inside a sub-scene too. The walk stops at a
   // sub-viewport, whose Controls show only through a viewport surface. A
   // SubViewportContainer still counts, since it draws in 2D (ADR-0033).
@@ -40,7 +41,7 @@ export function ViewportArea({
     return (
       <>
         <Canvas2DStage
-          nodes={rootScene?.nodes ?? []}
+          nodes={rootNodes}
           internalResources={rootScene?.internalResources ?? []}
           externalResources={rootScene?.externalResources ?? []}
           editableInstances={rootScene?.editableInstances}

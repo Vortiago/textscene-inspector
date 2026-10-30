@@ -16,8 +16,7 @@ import {
   repoPath,
   walkSources,
 } from '../testing/sourceScan';
-import { warningsOf } from '../testing/logWarnings';
-import { programShader, type ProgramName } from '../testing/patchedFragment';
+import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
 import { GODOT_ALPHA_ANTIALIASING } from '../materials/godotAlphaAntialiasing';
@@ -26,9 +25,11 @@ import { GODOT_AMBIENT_OCCLUSION } from '../materials/godotAmbientOcclusion';
 import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRoughnessChannels';
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
-import { withPointDraw } from '../materials/godotPoint';
-import { renderTargetMapInjection, renderTargetMapUserData } from '../materials/renderTargetMap';
+import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
+import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
+import { worldTriplanarRecord } from '../testing/triplanarRecord';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
+import { GODOT_BILLBOARD_NORMAL } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
@@ -37,18 +38,9 @@ import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
-import { installToneMapping } from '../../resources/environment/toneMapping';
-import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
-import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
-
-/** The three material class whose program `name` is. three calls `onBeforeCompile` as its method. */
-const MATERIAL_OF_PROGRAM: Record<ProgramName, () => THREE.Material> = {
-  basic: () => new THREE.MeshBasicMaterial(),
-  standard: () => new THREE.MeshStandardMaterial(),
-  physical: () => new THREE.MeshPhysicalMaterial(),
-  depth: () => new THREE.MeshDepthMaterial(),
-  distance: () => new THREE.MeshDistanceMaterial(),
-};
+import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
+import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
+import { lightUniforms } from '../lighting2d/testing/lightUniforms';
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
 
@@ -113,13 +105,10 @@ type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
-const targetMapOf = (repeats: boolean, isNearest: boolean) =>
-  renderTargetMapUserData({ uv: { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }, repeats, isNearest });
-
-const pointBag = (samplesAlbedoAtPointCoord: boolean) =>
+const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: PointPlacement = 'mesh') =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
-    { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord }
+    { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }
   ).injection;
 
 const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
@@ -127,15 +116,6 @@ const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
   surface.userData = userData;
   return surface;
 };
-
-const lightUniforms = () => ({
-  lightBuffer: { value: new THREE.Texture() },
-  shadowTintBuffer: { value: new THREE.Texture() },
-  isLit: { value: 0 },
-  resolution: { value: new THREE.Vector2(2, 2) },
-  canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-  lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
-});
 
 const INJECTIONS: readonly InjectionCase[] = [
   injected('materials/godotAlphaHash.ts', 'alpha hash', SURFACE_AND_DEPTH, () => GODOT_ALPHA_HASH),
@@ -166,11 +146,10 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
-  injected('materials/renderTargetMap.ts', 'render target map transform', SURFACE_AND_DEPTH, () =>
-    renderTargetMapInjection(targetMapOf(false, false))
-  ),
-  injected('materials/renderTargetMap.ts', 'render target map sampler', SURFACE_AND_DEPTH, () =>
-    renderTargetMapInjection(targetMapOf(true, true))
+  injected('materials/godotPoint.ts', 'points at cells', COLOUR, () => pointBag(false, 'cells')),
+  injected('surfaceBillboard.ts', 'billboard normal', COLOUR, () => GODOT_BILLBOARD_NORMAL),
+  injected('materials/godotTriplanar.ts', 'triplanar mapping', SURFACE_AND_DEPTH, () =>
+    triplanarInjection({ userData: triplanarUserData(worldTriplanarRecord()) })
   ),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
@@ -227,7 +206,7 @@ function compiled(injection: InjectionCase, program: ProgramName): ProgramShader
 const THREE_CHUNK_NAMES = new Set(Object.keys(THREE.ShaderChunk));
 
 /** The chunks the patches add. A chunk three later ships under the same name would be overwritten silently. */
-const ADDED_CHUNKS = [GODOT_FOG_PARS_CHUNK];
+const ADDED_CHUNKS = [INSTANCE_LAYERS_CHUNK, SCENE_ROWS_CHUNK, 'godot_decal_pars', GODOT_FOG_PARS_CHUNK];
 
 let restoreGlobals: () => void;
 
@@ -273,23 +252,6 @@ describe('the chunks the patches add', () => {
   it('are all named in the list', () => {
     const added = Object.keys(installedShaderChunks()).filter((name) => !THREE_CHUNK_NAMES.has(name));
     expect(added).toEqual(ADDED_CHUNKS);
-  });
-});
-
-describe('the tone mapping curve', () => {
-  const EVERY_TONE_MAPPER = Object.values(ToneMapper);
-
-  it.each(EVERY_TONE_MAPPER)('splices into three’s chunk without a warning for mode %s', (mode) => {
-    const before = THREE.ShaderChunk.tonemapping_pars_fragment;
-    const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
-    let restore = (): void => {};
-    const warnings = warningsOf(() => {
-      restore = installToneMapping(gl, { mode }, 'material');
-    });
-    const spliced = THREE.ShaderChunk.tonemapping_pars_fragment;
-    restore();
-    expect(warnings).toEqual([]);
-    expect(spliced).not.toBe(before);
   });
 });
 

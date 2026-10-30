@@ -1,0 +1,36 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitmatworldtriplanar"]
+
+; One variable: the pattern's phase in world space. Two world-triplanar floor tiles sit off the
+; origin at different offsets, and each stripe falls where the world position puts it, not where
+; the tile's UV starts. No other golden projects a texture, so none shows the phase.
+
+[sub_resource type="Gradient" id="Gradient_bands"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.25, 0.5, 0.75)
+colors = PackedColorArray(0.9, 0.2, 0.15, 1, 0.2, 0.7, 0.3, 1, 0.15, 0.3, 0.85, 1, 0.95, 0.95, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_bands"]
+gradient = SubResource("Gradient_bands")
+fill_to = Vector2(1, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_bands")
+uv1_scale = Vector3(0.75, 0.75, 0.75)
+uv1_triplanar = true
+uv1_world_triplanar = true
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_tile"]
+material = SubResource("Material_floor")
+size = Vector2(2.2, 1.7)
+
+[node name="Root" type="Node3D"]
+
+[node name="TileNear" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.83, 0, 0.61)
+mesh = SubResource("PlaneMesh_tile")
+
+[node name="TileFar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.52, 0, -0.37)
+mesh = SubResource("PlaneMesh_tile")
+

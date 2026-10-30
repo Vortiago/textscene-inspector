@@ -22,12 +22,14 @@ import { useResolvableMesh } from '../../resources/meshes/useResolvableMesh';
 import type { ScopedResource } from '../../resources/scopedResource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
 import { useResource } from '../../resources/useResource';
+import { NODE_PROPERTY } from '../../resources/useTexture2D';
 import type { ResourceResolution } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useUndrawnMeshReport } from '../contexts/UndrawnMeshesContext';
 import { primitiveMeshGeometry } from './primitiveMeshGeometry';
+import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene.js';
 
 /** `items` as a list known to hold one, or null for none. */
 function nonEmpty<T>(items: readonly T[]): readonly [T, ...T[]] | null {
@@ -50,8 +52,6 @@ export interface SurfacedPart {
  */
 export interface SurfacedMesh {
   parts: readonly [SurfacedPart, ...SurfacedPart[]];
-  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Absent for an ArrayMesh. */
-  primitive?: TscnInternalResource;
 }
 
 /** The R3F tag that draws a surface: `THREE.Points` for geometry of Godot's `PRIMITIVE_POINTS`, else a `THREE.Mesh`. */
@@ -83,26 +83,37 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
 }
 
 /**
+ * `isHeldLocally` is false when a resource between the node and the mesh, such as a GridMap's
+ * MeshLibrary, is not local to scene. A mesh that is a node's property has none between.
+ *
  * @canonical Mesh content and its disposal
  */
-export function useMeshContent(resolution: ResourceResolution): MeshContent {
+export function useMeshContent(
+  resolution: ResourceResolution,
+  isHeldLocally: boolean = NODE_PROPERTY
+): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
+  const isMaterialHeldLocally = scoped ? isHeldLocally && isLocalToScene(scoped.resource) : isHeldLocally;
   const processorPath = arrayMeshPath(resolution);
   // `''` requests nothing.
   const fileArrayMesh = useResource<ArrayMeshResource>(processorPath ?? '', 'arraymesh');
   const fileSurfaced = useMemo(
-    () => fileArrayMesh.value && withFileMaterials(fileArrayMesh.value),
-    [fileArrayMesh.value]
+    () => fileArrayMesh.value && withFileMaterials(fileArrayMesh.value, isMaterialHeldLocally),
+    [fileArrayMesh.value, isMaterialHeldLocally]
   );
-  const sceneSurfaced = useSceneArrayMesh(kind === 'arrayMesh' && !processorPath ? scoped : null);
+  const sceneSurfaced = useSceneArrayMesh(
+    kind === 'arrayMesh' && !processorPath ? scoped : null,
+    isMaterialHeldLocally
+  );
   const { mesh: resolvable, isLoading: isLoadingReferences } = useResolvableMesh(
     kind === 'primitive' ? scoped : null
   );
   const undrawnType = scoped ? undrawnMeshType(scoped, resolvable) : null;
   useUndrawnMeshReport(undrawnType);
   const primitiveSurfaced = usePrimitiveMesh(
-    useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath])
+    useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath]),
+    isMaterialHeldLocally
   );
 
   if (resolution.isNone) return NONE;
@@ -120,36 +131,40 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
   return fileSurfaced ? { kind: 'surfaced', mesh: fileSurfaced } : EMPTY;
 }
 
-/** An ArrayMesh the processor decoded, each material a file the loader fetches. Null for one with no surface. */
-function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh | null {
+/**
+ * An ArrayMesh the processor decoded, each material a file the loader fetches, held as `isHeldLocally` says.
+ * Null for one with no surface.
+ */
+function withFileMaterials(mesh: ArrayMeshResource, isHeldLocally: boolean): SurfacedMesh | null {
   const parts = nonEmpty(
     mesh.parts.map(({ geometry, surfaceIndices, materialPaths }) => ({
       geometry,
       surfaceIndices,
-      materials: fileMaterialSources(materialPaths),
+      materials: fileMaterialSources(materialPaths, isHeldLocally),
     }))
   );
   return parts && { parts };
 }
 
-/** A PrimitiveMesh's one surface under its own material, or null for a mesh Godot builds no surface for. */
-function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
+/**
+ * A PrimitiveMesh's one surface under its own material, held as `isHeldLocally` says, or null for a mesh Godot
+ * builds no surface for.
+ */
+function usePrimitiveMesh(source: MeshSource | null, isHeldLocally: boolean): SurfacedMesh | null {
   const geometry = usePrimitiveMeshGeometry(source);
   const material = useMemo(
     () =>
       source
-        ? resolveMaterialSource(primitiveMaterialAddress(source, source.path), source.resources)
+        ? resolveMaterialSource(
+            primitiveMaterialAddress(source, source.path),
+            source.resources,
+            isHeldLocally
+          )
         : undefined,
-    [source]
+    [source, isHeldLocally]
   );
   return useMemo(
-    () =>
-      geometry && source
-        ? {
-            parts: [{ geometry, surfaceIndices: [0], materials: [material] }],
-            primitive: source.resource,
-          }
-        : null,
+    () => (geometry && source ? { parts: [{ geometry, surfaceIndices: [0], materials: [material] }] } : null),
     [geometry, material, source]
   );
 }
@@ -167,9 +182,9 @@ function usePrimitiveMeshGeometry(source: MeshSource | null): THREE.BufferGeomet
 
 /**
  * An ArrayMesh in the scene's tables, with each surface's material resolved against the tables
- * that hold the mesh. Null for no mesh or for unreadable surfaces.
+ * that hold the mesh and held as `isHeldLocally` says. Null for no mesh or for unreadable surfaces.
  */
-function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
+function useSceneArrayMesh(mesh: ScopedResource | null, isHeldLocally: boolean): SurfacedMesh | null {
   const decoded = useSceneArrayMeshGeometry(mesh?.resource);
   const resources = mesh?.resources;
   // Apart from the decode: an edit to a material's body or to an `ext_resource`
@@ -180,11 +195,11 @@ function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
       decoded.parts.map(({ geometry, surfaceIndices, materialRefs }) => ({
         geometry,
         surfaceIndices,
-        materials: materialRefs.map((ref) => resolveMaterialSource(ref, resources)),
+        materials: materialRefs.map((ref) => resolveMaterialSource(ref, resources, isHeldLocally)),
       }))
     );
     return parts && { parts };
-  }, [decoded, resources]);
+  }, [decoded, resources, isHeldLocally]);
 }
 
 interface DecodedSceneArrayMesh {

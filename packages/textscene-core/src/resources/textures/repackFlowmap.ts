@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { readImagePixels, type ImagePixels } from '../formats/image/imagePixels';
+import { carriesMipLevels } from './godotTextureFilter';
 import { texelTexture } from './texelTexture';
 import type { MipLevel } from '../processing/mipChain';
 
@@ -23,7 +24,7 @@ export function repackAnisotropyFlowmap(texture: THREE.Texture): THREE.Texture |
  * is no bytes, so such a flowmap reads its top level through `readImagePixels`, which clamps it.
  */
 function flowmapLevels(texture: THREE.Texture): ImagePixels[] | undefined {
-  if (texture.mipmaps.length > 1 && texture.type === THREE.UnsignedByteType) {
+  if (carriesMipLevels(texture) && texture.type === THREE.UnsignedByteType) {
     return texture.mipmaps as ImagePixels[];
   }
   const pixels = readImagePixels(texture.image);

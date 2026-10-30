@@ -1,13 +1,10 @@
-/**
- * GPUParticlesCollisionBox3D draws nothing, so the badge reads "not implemented". The
- * Node3D base still mounts, for `visible` and the workspace split.
- */
+/** GPUParticlesCollisionBox3D draws only its editor gizmo, so the badge reads "not implemented". */
 
 import { nodeComponentRegistry } from '../../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../../base/node3d/Component';
+import { boxVolumeNode } from '../../volume/volumeNode';
 
 nodeComponentRegistry.register({
   typeName: 'GPUParticlesCollisionBox3D',
-  Component: Node3D,
+  Component: boxVolumeNode('collision'),
   renderIntent: 'pending',
 });

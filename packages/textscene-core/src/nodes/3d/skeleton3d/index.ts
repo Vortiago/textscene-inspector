@@ -1,15 +1,21 @@
 /**
- * Skeleton3D registration: the parser. Godot poses its bones and deforms bound meshes; the
- * previewer does not yet (ADR-0045), so both this parse and index.r3f.ts reuse Node3D's as
- * `pending`. The previewer shows where the skeleton sits, not its bones.
+ * Skeleton3D registration: parser + property formatter. The parse reads the bone table and
+ * `show_rest_only`, which the scene pass in `skeletonBindings.ts` poses to bind each MeshInstance3D
+ * that names the skeleton. index.r3f.ts registers the transform-only component.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseSkeleton3D } from './parser';
+import { formatSkeleton3DProperties } from './propertyFormatter';
 
 const skeleton3DRegistration: NodeTypeRegistration = {
   typeName: 'Skeleton3D',
-  parser: parseNode3D,
+  parser: parseSkeleton3D,
+  propertyFormatter: formatSkeleton3DProperties,
 };
 
 nodeRegistry.register(skeleton3DRegistration);
+
+export * from './parser';
+export * from './propertyFormatter';
+export * from './types';

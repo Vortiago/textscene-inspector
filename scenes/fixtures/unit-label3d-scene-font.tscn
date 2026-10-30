@@ -1,0 +1,51 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitlabel3dscenefont"]
+
+; The one variable: the `font` of a Label3D. The top label has none and draws Godot's default font. The
+; middle label is a `FontVariation` with no `base_font` at embolden 0.6, which grows the glyphs and
+; their outline ring by FreeType's embolden. The bottom label is an OpenType-CFF font file. Every
+; label has an outline, so the ring shows how each font is stroked. No other golden gives a Label3D
+; a font, so none shows a regression in it.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-extra-bold.otf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_bold"]
+variation_embolden = 0.6
+
+[sub_resource type="QuadMesh" id="QuadMesh_backdrop"]
+size = Vector2(6, 4.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_backdrop"]
+shading_mode = 0
+albedo_color = Color(0.85, 0.8, 0.55, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Backdrop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2, -0.05)
+mesh = SubResource("QuadMesh_backdrop")
+surface_material_override/0 = SubResource("StandardMaterial3D_backdrop")
+
+[node name="Default" type="Label3D" parent="."]
+pixel_size = 0.005
+shaded = false
+font_size = 128
+outline_size = 16
+text = "Hog Wave"
+
+[node name="Embolden" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2, 0)
+pixel_size = 0.005
+shaded = false
+font = SubResource("FontVariation_bold")
+font_size = 128
+outline_size = 16
+text = "Hog Wave"
+
+[node name="FontFile" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.4, 0)
+pixel_size = 0.005
+shaded = false
+font = ExtResource("1_font")
+font_size = 128
+outline_size = 16
+text = "Hog Wave"

@@ -4,12 +4,12 @@ category: 3D
 status: done
 fixture: unit-audio-stream-player.tscn
 image: unit-audio-stream-player
-renders_as: a speaker gizmo for the selected node
+renders_as: a billboard icon, and a range and cone gizmo for the selected node
 ---
 
 # AudioStreamPlayer3D
 
-A positional audio source with no runtime visual. The previewer draws a speaker gizmo with a range circle and emission cone, for the selected node only, like the camera and light gizmos (ADR-0056). Both images show only the ground plane and the preview sky.
+A positional audio source with no runtime visual. The previewer draws Godot's billboard icon at its origin, faint while it is not selected (ADR-0056). It draws a range circle and an emission cone for the selected node only. Both images show only the ground plane and the preview sky.
 
 ## Linting
 
@@ -52,4 +52,4 @@ Every numeric property defaults through `floatOr` without strict's range checks:
 
 ## Known limitations
 
-- **Editor only** The speaker gizmo draws for the selected node when the Gizmos toggle is on, which a capture keeps off.
+- **Editor only** The icon, the range circle and the cone draw when the Gizmos toggle is on, which a capture keeps off.

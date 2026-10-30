@@ -76,6 +76,14 @@ describe('parseDecal', () => {
     expect(result.lower_fade).toBe(0);
   });
 
+  it('parses sorting_offset, which Decal serialises (decal.cpp:169)', () => {
+    expect(parseDecal(heading('Decal', { name: 'D' }), { sorting_offset: '-2.5' }).sorting_offset).toBe(-2.5);
+  });
+
+  it('defaults sorting_offset to zero', () => {
+    expect(parseDecal(heading('Decal', { name: 'D' }), {}).sorting_offset).toBe(0);
+  });
+
   it('falls back to the default size on a malformed size (error path)', () => {
     const result = parseDecal(heading('Decal', { name: 'Bad' }), {
       size: 'Vector3(not, valid)',

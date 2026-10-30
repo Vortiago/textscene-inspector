@@ -13,7 +13,7 @@ import { useResourceLoader } from '../../../resources/useResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { textureWork } from '../../../resources/textures/textureWork';
-import { fontWork } from '../../controls/native/text/sceneFontLoader';
+import { fontWork } from '../../controls/native/text/settledChannel';
 import type { PreviewCaptureState } from './previewCaptureState';
 import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 import type { SceneGraph } from '../../../core/SceneGraph';

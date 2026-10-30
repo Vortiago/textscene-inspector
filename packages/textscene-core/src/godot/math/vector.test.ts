@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { normalizedVector2, normalizedVector3, vector3Cross, vector3Dot, vector3Maxf } from './vector';
+import {
+  vector2Add,
+  vector2Length,
+  vector2Scaled,
+  vector2Sub,
+  vector3Add,
+  vector3Div,
+  vector3Mul,
+  vector3Sub,
+  normalizedVector2,
+  normalizedVector3,
+  vector3Cross,
+  vector3Dot,
+  vector3Lerp,
+  vector3Maxf,
+} from './vector';
+import { storedReal } from './real';
 
 describe('normalizedVector2', () => {
   it('scales a vector to unit length in single precision', () => {
@@ -49,5 +65,58 @@ describe('vector3Cross', () => {
 describe('vector3Maxf', () => {
   it('raises each component below the floor to it, on its own', () => {
     expect(vector3Maxf({ x: 0.5, y: -3, z: 7 }, 1)).toEqual({ x: 1, y: 1, z: 7 });
+  });
+});
+
+describe('vector3Lerp', () => {
+  it('moves each component the given share of the way, in single precision', () => {
+    expect(vector3Lerp({ x: 1, y: 2, z: 3 }, { x: -1, y: 0.5, z: 4 }, 0.35)).toEqual({
+      x: Math.fround(0.3),
+      y: Math.fround(1.475),
+      z: Math.fround(3.35),
+    });
+  });
+
+  it('extrapolates past the end for a weight above one (edge case)', () => {
+    expect(vector3Lerp({ x: 0, y: 0, z: 0 }, { x: 1, y: 2, z: 3 }, 2)).toEqual({ x: 2, y: 4, z: 6 });
+  });
+});
+
+describe('component-wise Vector3 arithmetic', () => {
+  const a = { x: 0.1, y: 2, z: -3 };
+  const b = { x: 0.2, y: 4, z: 0.5 };
+
+  it('adds, subtracts, multiplies and divides each component, rounded to float', () => {
+    expect(vector3Add(a, b)).toEqual({ x: Math.fround(0.1 + 0.2), y: 6, z: -2.5 });
+    expect(vector3Sub(a, b)).toEqual({ x: Math.fround(0.1 - 0.2), y: -2, z: -3.5 });
+    expect(vector3Mul(a, b)).toEqual({ x: Math.fround(0.1 * 0.2), y: 8, z: -1.5 });
+    expect(vector3Div(a, b)).toEqual({ x: Math.fround(0.1 / 0.2), y: 0.5, z: -6 });
+  });
+
+  it('divides by zero to an infinity, as float division does (edge case)', () => {
+    expect(vector3Div({ x: 1, y: -1, z: 0 }, { x: 0, y: 0, z: 0 }).y).toBe(-Infinity);
+  });
+});
+
+// The expected numbers are Godot 4.6.3's float `Vector2`
+// (/mnt/project-files/cpuparticles2d-995/transform-oracle.gd).
+describe('component-wise Vector2 arithmetic', () => {
+  const a = { x: storedReal(0.1), y: storedReal(0.7) };
+  const b = { x: storedReal(0.2), y: storedReal(0.3) };
+
+  it('adds and subtracts each component, rounded to float', () => {
+    expect(vector2Add(a, b)).toEqual({ x: storedReal(0.300000011921), y: 1 });
+    expect(vector2Sub(a, b)).toEqual({ x: storedReal(-0.10000000149), y: storedReal(0.399999976158) });
+  });
+
+  it('scales each component by a real_t', () => {
+    expect(vector2Scaled(a, storedReal(0.3))).toEqual({
+      x: storedReal(0.030000001192),
+      y: storedReal(0.210000008345),
+    });
+  });
+
+  it('measures the length in float', () => {
+    expect(vector2Length({ x: storedReal(3.3), y: storedReal(-4.7) })).toBe(storedReal(5.742821216583));
   });
 });

@@ -9,14 +9,12 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
-import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import { itemUniforms, ownerName, recordLightPass, type RecordedDraw } from './testing/lightPassProbe';
 import { litQuadRenderOrder, litQuadStencilProps } from './ShadowVolumeMask';
-import { SceneStack } from '../testing/SceneStack';
-import { HierarchyProvider } from '../contexts/HierarchyContext';
+import { DispatchedScene } from '../testing/DispatchedScene';
+import { underWhiteCanvasLighting } from './testing/whiteCanvasLighting';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
@@ -80,13 +78,12 @@ async function render(tscn: string) {
   fake.textures.seed(COOKIE, cookie);
 
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
-        <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-          <NodeDispatcher nodes={parsed.nodes} />
-        </CanvasLighting2DProvider>
-      </HierarchyProvider>
-    </SceneStack>
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      loader={fake.loader}
+      workspace="2d"
+      around={underWhiteCanvasLighting}
+    />
   );
   // No frame is advanced: the world matrices are sampled in a layout effect
   // as well, so a still tree settles inside React's own commit loop.

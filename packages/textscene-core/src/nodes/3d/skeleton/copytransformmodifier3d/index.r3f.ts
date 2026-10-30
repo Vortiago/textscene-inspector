@@ -1,14 +1,6 @@
-/**
- * CopyTransformModifier3D copies bone transforms onto other bones and nodes. That drive is a gap
- * here (ADR-0045), so it registers `pending` on the Node3D component and its children still land
- * in the right transform space.
- */
+/** CopyTransformModifier3D is a modifier that copies the pose of a reference bone or node onto an apply bone. */
 
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { registerSkeletonModifier } from '../shared/registerSkeletonModifier';
+import { readCopyTransformModifier } from './copyTransformModifier';
 
-nodeComponentRegistry.register({
-  typeName: 'CopyTransformModifier3D',
-  Component: Node3D,
-  renderIntent: 'pending',
-});
+registerSkeletonModifier('CopyTransformModifier3D', readCopyTransformModifier);

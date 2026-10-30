@@ -6,11 +6,20 @@ import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext.js';
 import type { ParsedResource } from '../../../parser/parsedResource.js';
 import type { ResolvableResource } from '../../scopedResource.js';
 import { loadedFilesOf, NO_FILES, NO_FONTS } from '../../testing/loadedFiles.js';
+import { NO_PROJECT_FONTS } from '../../fonts/font/projectFonts.js';
 import type { GodotSurface } from '../godotSurface.js';
 
 /** Vertex `vertex` of an array that holds `size` numbers per vertex. */
 export function vertexOf(array: ArrayLike<number> | undefined, vertex: number, size = 3): number[] {
   return Array.from({ length: size }, (_, i) => array![vertex * size + i]!);
+}
+
+/** The bone indices and weights of vertex `vertex`. */
+export function bonesOf(surface: GodotSurface, vertex: number) {
+  return {
+    indices: vertexOf(surface.bones?.indices, vertex, 4),
+    weights: vertexOf(surface.bones?.weights, vertex, 4),
+  };
 }
 
 /** Every position of the surface, one `[x, y, z]` per vertex. */
@@ -52,6 +61,7 @@ export function scopedMesh(
     resources: { ...NO_RESOURCES, internalResources },
     loadedFile: NO_FILES,
     loadedFont: NO_FONTS,
+    projectFonts: NO_PROJECT_FONTS,
   };
 }
 

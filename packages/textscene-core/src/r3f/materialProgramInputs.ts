@@ -12,6 +12,8 @@ import {
   GODOT_ALPHA_ANTIALIASING,
 } from './materials/godotAlphaAntialiasing';
 import { mipmapBiasInjection, viewportSamplersUserData } from './materials/godotMipmapBias';
+import { triplanarInjection } from './materials/godotTriplanar';
+import { perObject } from '../utils/perObject';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -222,14 +224,17 @@ export function viewportProgramInputs<
 }
 
 /**
- * The injections a material's own state turns on: Godot's hash, its edge ramp, then the mipmap
- * bias. The bias comes last, as it inlines the chunks that sample a texture, which the patches
- * before it match by their `#include`.
+ * The injections a material's own state turns on: Godot's hash, its edge ramp, its triplanar
+ * mapping, then the mipmap bias. The triplanar mapping and the bias come last, as each inlines the
+ * chunks that sample a texture, which the patches before them match by their `#include`. The bias
+ * then finds each projection's sample.
  */
 function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
   const injections: ProgramInjection[] = [];
   if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
   if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  const triplanar = triplanarInjection(state);
+  if (triplanar) injections.push(triplanar);
   const bias = mipmapBiasInjection(state);
   if (bias) injections.push(bias);
   return injections;
@@ -264,7 +269,7 @@ export function composeInjections(
 ): ProgramInjection | undefined {
   let composed: ProgramInjection | undefined;
   for (const part of parts) {
-    if (part) composed = composed ? composedPair(composed, part) : part;
+    if (part) composed = composed ? pairsWith(composed)(part) : part;
   }
   return composed;
 }
@@ -272,30 +277,21 @@ export function composeInjections(
 /**
  * Each pair composed so far, keyed by its parts' identity rather than their cache keys, since
  * `useCanvasItemLighting` gives each instance its own patch under one key. Stable parts then
- * compose to a stable injection on every render. Written only by `composedPair`, and collected
- * with the first part.
+ * compose to a stable injection on every render. Collected with the first part.
  */
-const composedPairs = new WeakMap<ProgramInjection, WeakMap<ProgramInjection, ProgramInjection>>();
+const pairsWith = perObject((first: ProgramInjection) =>
+  perObject((second: ProgramInjection) => pairOf(first, second))
+);
 
-function composedPair(first: ProgramInjection, second: ProgramInjection): ProgramInjection {
-  let pairs = composedPairs.get(first);
-  if (!pairs) {
-    pairs = new WeakMap();
-    composedPairs.set(first, pairs);
-  }
-  let composed = pairs.get(second);
-  if (!composed) {
-    // A method, so each part reads the material three compiles.
-    composed = {
-      cacheKey: `${first.cacheKey}+${second.cacheKey}`,
-      onBeforeCompile(shader) {
-        first.onBeforeCompile.call(this, shader);
-        second.onBeforeCompile.call(this, shader);
-      },
-    };
-    pairs.set(second, composed);
-  }
-  return composed;
+function pairOf(first: ProgramInjection, second: ProgramInjection): ProgramInjection {
+  // A method, so each part reads the material three compiles.
+  return {
+    cacheKey: `${first.cacheKey}+${second.cacheKey}`,
+    onBeforeCompile(shader) {
+      first.onBeforeCompile.call(this, shader);
+      second.onBeforeCompile.call(this, shader);
+    },
+  };
 }
 
 /**
@@ -310,8 +306,7 @@ function cacheKeyThunk(cacheKey: string): () => string {
   const existing = CACHE_KEY_THUNKS.get(cacheKey);
   if (existing) return existing;
   // A method, not an arrow, since it reads the material three calls it on. This own property
-  // shadows the prototype key, so it appends that key whatever extends it (`installToneMapping`
-  // adds the curve term), read per call as a later patch replaces it.
+  // shadows the prototype key, so it appends that key.
   const thunk = function (this: THREE.Material): string {
     return cacheKey + THREE.Material.prototype.customProgramCacheKey.call(this);
   };

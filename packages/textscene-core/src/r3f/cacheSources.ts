@@ -15,23 +15,6 @@ export interface CacheSource<T> {
 export const NOTHING_CACHED: CacheSource<never> = { getCached: () => undefined };
 
 /**
- * A source that answers each path from the first of `sources` that holds it.
- *
- * @canonical A `getCached` reader for a walk
- */
-export function firstCached<T>(...sources: readonly CacheSource<T>[]): CacheSource<T> {
-  return {
-    getCached: (path) => {
-      for (const source of sources) {
-        const answer = source.getCached(path);
-        if (answer !== null && answer !== undefined) return answer;
-      }
-      return undefined;
-    },
-  };
-}
-
-/**
  * `source`, with each path it is asked for handed to `onRead` with the answer it gave.
  *
  * @canonical A `getCached` reader for a walk
@@ -47,6 +30,69 @@ export function recordingReads<T>(
       return answer;
     },
   };
+}
+
+/** The named sources a build reads, as {@link keptWhileAnswered} hands them to it. */
+type Sources = Readonly<Record<string, CacheSource<unknown>>>;
+
+interface KeptValue<V, T> {
+  readonly variant: V;
+  /** Each source the build asked, to each path it read there and the last answer it got. */
+  readonly reads: ReadonlyMap<string, ReadonlyMap<string, unknown>>;
+  readonly value: T;
+}
+
+/** How {@link keptWhileAnswered} tells two variants of a key apart, and how many of one it keeps. */
+interface KeptWhileAnsweredOptions<V> {
+  readonly sameVariant: (a: V, b: V) => boolean;
+  /** The values one variant keeps, the oldest dropped first, for asks that alternate between sources. */
+  readonly perVariant: number;
+}
+
+/**
+ * A cache of a value for each key object and variant, which `build` makes over recording copies of
+ * `sources`. A later ask gets the kept value while each read the build made still answers the
+ * same in the sources of that ask, so a value outlives the snapshot it was built over.
+ *
+ * @canonical A value kept while every cache read it made answers the same
+ */
+export function keptWhileAnswered<K extends object, V, S extends Sources, T>({
+  sameVariant,
+  perVariant,
+}: KeptWhileAnsweredOptions<V>): (key: K, variant: V, sources: S, build: (recording: S) => T) => T {
+  /** Written only by the returned lookup. The entries clear when nothing holds the key any more. */
+  const kept = new WeakMap<K, KeptValue<V, T>[]>();
+  return (key, variant, sources, build) => {
+    const stored = kept.get(key) ?? [];
+    const known = stored.find(
+      (entry) => sameVariant(entry.variant, variant) && stillAnswered(entry.reads, sources)
+    );
+    if (known) return known.value;
+
+    const same = stored.filter((entry) => sameVariant(entry.variant, variant));
+    const reads = new Map<string, Map<string, unknown>>();
+    const recording = Object.fromEntries(
+      Object.entries(sources).map(([name, source]) => {
+        const answers = new Map<string, unknown>();
+        reads.set(name, answers);
+        return [name, recordingReads(source, (path, answer) => answers.set(path, answer))];
+      })
+    ) as S;
+    const value = build(recording);
+    const others = stored.filter((entry) => !same.includes(entry));
+    const younger = same.slice(Math.max(0, same.length - (perVariant - 1)));
+    kept.set(key, [...others, ...younger, { variant, reads, value }]);
+    return value;
+  };
+}
+
+function stillAnswered(reads: KeptValue<unknown, unknown>['reads'], sources: Sources): boolean {
+  for (const [name, answers] of reads) {
+    for (const [path, answer] of answers) {
+      if (sources[name]!.getCached(path) !== answer) return false;
+    }
+  }
+  return true;
 }
 
 /**

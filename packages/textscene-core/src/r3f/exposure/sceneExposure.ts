@@ -12,6 +12,8 @@ import { isAmbientLight } from '../ambientLight.js';
 import { sceneLights } from '../directionalShadow/lightLists.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { EMISSION_EXPOSURE } from './emissionExposure.js';
+import { scaleLightIntensities } from './scaleLightIntensities.js';
+import { perObject } from '../../utils/perObject.js';
 
 /**
  * What a consumer draws for `exposure`, in place of what it draws for the exposure the scene holds.
@@ -19,16 +21,30 @@ import { EMISSION_EXPOSURE } from './emissionExposure.js';
  */
 export type ExposureStage = (exposure: number | null) => () => void;
 
+/** What a scene's world holds: the factor its scene renders with, and the factor of its own attributes. */
+interface HeldExposure {
+  view: number | null;
+  world: number | null;
+}
+
 /**
- * What a scene's world holds: the factor its scene renders with, and the factor of the world's own
- * attributes. Written only by `useSceneExposure`, and cleared when that scene's world unmounts.
+ * Each scene's held exposures, the latest last. A list, not one entry: the shared-world viewports of
+ * a 2D canvas all hold its one scene. Written only by `useSceneExposure`, each entry removed when its
+ * world unmounts.
  */
-const held = new WeakMap<THREE.Scene, { view: number | null; world: number | null }>();
+const heldOf = perObject<THREE.Scene, HeldExposure[]>(() => []);
+
+function latestHeld(scene: THREE.Scene): HeldExposure | undefined {
+  const entries = heldOf(scene);
+  return entries[entries.length - 1];
+}
 
 /** The exposure `drawAtExposure` draws a scene at, written only by it and cleared when the draw ends. */
+// eslint-disable-next-line no-restricted-syntax -- drawAtExposure writes an entry for one draw and deletes it after the draw
 const drawnExposures = new WeakMap<THREE.Scene, number>();
 
-const stages = new WeakMap<THREE.Scene, Set<ExposureStage>>();
+/** Each scene's exposure stages, filled only by `registerExposureStage`. */
+const stagesOf = perObject<THREE.Scene, Set<ExposureStage>>(() => new Set());
 
 /**
  * The factor `scene` renders with, or null without a world that holds an exposure.
@@ -36,7 +52,7 @@ const stages = new WeakMap<THREE.Scene, Set<ExposureStage>>();
  * @canonical The exposure a scene renders with
  */
 export function exposureOfScene(scene: THREE.Scene): number | null {
-  return held.get(scene)?.view ?? null;
+  return latestHeld(scene)?.view ?? null;
 }
 
 /**
@@ -46,7 +62,7 @@ export function exposureOfScene(scene: THREE.Scene): number | null {
  * @canonical The exposure a scene renders with
  */
 export function worldExposureOfScene(scene: THREE.Scene): number | null {
-  return held.get(scene)?.world ?? null;
+  return latestHeld(scene)?.world ?? null;
 }
 
 /**
@@ -56,8 +72,7 @@ export function worldExposureOfScene(scene: THREE.Scene): number | null {
  * @canonical The state a scene draws for another exposure
  */
 export function registerExposureStage(scene: THREE.Scene, stage: ExposureStage): () => void {
-  const registered = stages.get(scene) ?? new Set<ExposureStage>();
-  stages.set(scene, registered);
+  const registered = stagesOf(scene);
   registered.add(stage);
   return () => {
     registered.delete(stage);
@@ -79,7 +94,7 @@ export function drawAtExposure<T>(scene: THREE.Scene, exposure: number | null, d
     drawnExposures.set(scene, factor);
     EMISSION_EXPOSURE[0] = factor;
     restores.push(scaleLights(scene, drawnExposureRatio(scene)));
-    for (const stage of stages.get(scene) ?? []) restores.push(stage(exposure));
+    for (const stage of stagesOf(scene)) restores.push(stage(exposure));
     return draw();
   } finally {
     for (const restore of restores.reverse()) restore();
@@ -103,13 +118,10 @@ export function drawnExposureRatio(scene: THREE.Scene): number {
 
 /** Scales the energy of each Light3D of `scene` by `ratio`: the flat ambient takes no exposure. */
 function scaleLights(scene: THREE.Scene, ratio: number): () => void {
-  const scaled = sceneLights(scene)
-    .filter(({ light }) => !isAmbientLight(light))
-    .map(({ light }) => ({ light, intensity: light.intensity }));
-  for (const { light, intensity } of scaled) light.intensity = intensity * ratio;
-  return () => {
-    for (const { light, intensity } of scaled) light.intensity = intensity;
-  };
+  const lights = sceneLights(scene)
+    .map(({ light }) => light)
+    .filter((light) => !isAmbientLight(light));
+  return scaleLightIntensities(lights, ratio);
 }
 
 /** Writes `factor` to the emission buffer for each render of `scene` until the returned function runs. */
@@ -137,11 +149,13 @@ export function useSceneExposure(factor: number | null, worldFactor: number | nu
   const scene = useThree((state) => state.scene);
   // A layout effect, so the buffer changes in the commit that changes every light's intensity.
   useLayoutEffect(() => {
-    held.set(scene, { view: factor, world: worldFactor });
+    const entry: HeldExposure = { view: factor, world: worldFactor };
+    const entries = heldOf(scene);
+    entries.push(entry);
     const stopWriting = factor === null ? undefined : writeEmissionExposure(scene, factor);
     return () => {
       stopWriting?.();
-      held.delete(scene);
+      entries.splice(entries.indexOf(entry), 1);
     };
   }, [scene, factor, worldFactor]);
 }

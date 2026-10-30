@@ -19,6 +19,7 @@ import { withVariation, type FontMetrics } from './fontMetrics';
 import * as logger from '../../../../logger';
 import * as themeLookup from '../../../../resources/styles/theme/lookup';
 import * as sceneFontLoader from './sceneFontLoader';
+import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 
 // A fresh object per test: the warn dedupe in `sceneFontLoader.ts` is a module-level `WeakSet`
 // keyed by resource identity, so a shared constant lets an earlier warn suppress a later one.
@@ -92,7 +93,7 @@ describe('resolveNodeFontMetrics', () => {
 
   it('(edge) falls back to the project theme when no ancestor theme resolves the key', () => {
     const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: systemFont() } } };
-    const n = labelNode({ themeChain: [], projectTheme: theme });
+    const n = labelNode({ themeChain: [], projectFonts: { ...NO_PROJECT_FONTS, projectTheme: theme } });
     resolveNodeFontMetrics(n, 'font');
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
@@ -112,7 +113,12 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
   const projectFont: FontResource = { kind: 'variation', baseFont: null, properties: { project: '1' } };
 
   it('is the project default font for a Control that no theme gives a font', () => {
-    expect(resolveNodeFont(labelNode({ projectDefaultFont: projectFont }), 'font')).toBe(projectFont);
+    expect(
+      resolveNodeFont(
+        labelNode({ projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont } }),
+        'font'
+      )
+    ).toBe(projectFont);
   });
 
   it('is null with no project default font, so the painter draws the bundled font', () => {
@@ -122,17 +128,20 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
   it("a gui/theme/custom theme's default_font wins over it", () => {
     const themeFont = systemFont();
     const project: ThemeResource = { ...emptyTheme(), defaultFont: themeFont };
-    const n = labelNode({ projectTheme: project, projectDefaultFont: projectFont });
+    const n = labelNode({ projectFonts: { projectTheme: project, projectDefaultFont: projectFont } });
     expect(resolveNodeFont(n, 'font')).toBe(themeFont);
   });
 
   it("a node's own override authored to nothing wins over it", () => {
-    const n = labelNode({ fontOverrides: { font: null }, projectDefaultFont: projectFont });
+    const n = labelNode({
+      fontOverrides: { font: null },
+      projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont },
+    });
     expect(resolveNodeFont(n, 'font')).toBeNull();
   });
 
   it("answers for RichTextLabel's normal_font key too, which bold and italic synthesise over", () => {
-    const n = labelNode({ projectDefaultFont: projectFont });
+    const n = labelNode({ projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: projectFont } });
     expect(resolveNodeFont(n, 'normal_font')).toBe(projectFont);
   });
 });
@@ -157,7 +166,7 @@ describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme
   it("answers the last rung where nothing defines the key, and gives it the project default font's face", () => {
     const rung = lastRung();
     const metrics = resolveNodeFontMetricsOr(
-      labelNode({ projectDefaultFont: embolden('0.5') }),
+      labelNode({ projectFonts: { ...NO_PROJECT_FONTS, projectDefaultFont: embolden('0.5') } }),
       'bold_font',
       rung.build
     );
@@ -180,7 +189,9 @@ describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme
     const emboldenOf = (n: SolveNode) => resolveNodeFontMetricsOr(n, 'bold_font', rung.build).embolden;
     expect(emboldenOf(labelNode({ fontOverrides: { bold_font: embolden('1') } }))).toBe(1);
     expect(emboldenOf(labelNode({ themeChain: [themeWith('2')] }))).toBe(2);
-    expect(emboldenOf(labelNode({ projectTheme: themeWith('4') }))).toBe(4);
+    expect(
+      emboldenOf(labelNode({ projectFonts: { ...NO_PROJECT_FONTS, projectTheme: themeWith('4') } }))
+    ).toBe(4);
     expect(rung.received).toEqual([]);
   });
 
@@ -231,7 +242,7 @@ describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveTheme
 
   it('(edge) falls back to the project theme when no ancestor theme in the chain resolves the key', () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 20 } } };
-    const n = labelNode({ themeChain: [], projectTheme: theme });
+    const n = labelNode({ themeChain: [], projectFonts: { ...NO_PROJECT_FONTS, projectTheme: theme } });
     expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(20);
   });
 });

@@ -1,0 +1,72 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitcopytransformmodifier3dribbon"]
+
+; The one variable: a CopyTransformModifier3D under the Skeleton3D copies the rotation of b2 onto b4
+; (copy = 2, axes = 7, relative = true), so the ribbon bends a second time, below the first turn.
+; unit-mesh-instance-3d-skinned-ribbon.tscn is the same scene without the modifier.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 1)
+cull_mode = 2
+
+[sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_flat"]
+material = SubResource("StandardMaterial3D_red")
+shape = 0
+size = 0.4
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+bones/0/name = "b0"
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+bones/0/enabled = true
+bones/0/position = Vector3(0, 0.5, 0)
+bones/0/rotation = Quaternion(0, 0, 0, 1)
+bones/0/scale = Vector3(1, 1, 1)
+bones/1/name = "b1"
+bones/1/parent = 0
+bones/1/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/1/enabled = true
+bones/1/position = Vector3(0, -0.2, 0)
+bones/1/rotation = Quaternion(0, 0, 0, 1)
+bones/1/scale = Vector3(1, 1, 1)
+bones/2/name = "b2"
+bones/2/parent = 1
+bones/2/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/2/enabled = true
+bones/2/position = Vector3(0, -0.2, 0)
+bones/2/rotation = Quaternion(0, 0, 0.5, 0.866025)
+bones/2/scale = Vector3(1, 1, 1)
+bones/3/name = "b3"
+bones/3/parent = 2
+bones/3/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/3/enabled = true
+bones/3/position = Vector3(0, -0.2, 0)
+bones/3/rotation = Quaternion(0, 0, 0, 1)
+bones/3/scale = Vector3(1, 1, 1)
+bones/4/name = "b4"
+bones/4/parent = 3
+bones/4/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/4/enabled = true
+bones/4/position = Vector3(0, -0.2, 0)
+bones/4/rotation = Quaternion(0, 0, 0, 1)
+bones/4/scale = Vector3(1, 1, 1)
+bones/5/name = "b5"
+bones/5/parent = 4
+bones/5/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/5/enabled = true
+bones/5/position = Vector3(0, -0.2, 0)
+bones/5/rotation = Quaternion(0, 0, 0, 1)
+bones/5/scale = Vector3(1, 1, 1)
+
+[node name="CopyTransformModifier3D" type="CopyTransformModifier3D" parent="Skeleton3D"]
+setting_count = 1
+settings/0/apply_bone_name = "b4"
+settings/0/reference_bone_name = "b2"
+settings/0/copy = 2
+settings/0/axes = 7
+settings/0/relative = true
+
+[node name="Ribbon" type="MeshInstance3D" parent="."]
+mesh = SubResource("RibbonTrailMesh_flat")
+skeleton = NodePath("../Skeleton3D")

@@ -9,3 +9,9 @@ export const GODOT_DEFAULT_VISUAL_LAYERS = 1;
  * (`reflection_probe.h:65-66`).
  */
 export const GODOT_EDITOR_LAYERS_MASK = (1 << 20) - 1;
+
+/**
+ * The layer Godot's editor draws every gizmo on (`node_3d_editor_gizmos.cpp:222`), layer 27 of 1 to
+ * 32 (`node_3d_editor_plugin.h:187-190`), past the 20 every scene mask defaults to.
+ */
+export const GODOT_EDITOR_GIZMO_LAYERS = 1 << 26;

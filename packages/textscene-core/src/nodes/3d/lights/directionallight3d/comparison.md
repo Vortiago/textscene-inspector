@@ -52,5 +52,6 @@ Godot draws the first eight visible directional lights in the scene and stops. A
 
 ## Known limitations
 
+- **Editor only** The light-tinted billboard icon appears only in Godot's editor, and here it draws when the Gizmos toggle is on.
 - **Approximated** A caster more than one view diameter towards the sun casts no shadow, where Godot still draws it.
 - **Approximated** The editor camera's clip planes follow the framing, so the shadow's splits and fade can end nearer or further than in Godot's editor.

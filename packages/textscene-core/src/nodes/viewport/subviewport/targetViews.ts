@@ -3,25 +3,27 @@
  * with an `R8G8B8A8_SRGB` view. The target serves the view its storage is, and a copy serves the
  * other (a canvas target is the plain view, a 3D target the decoding view).
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
-import { drawFullScreen, fullScreenPass } from '../../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
-import { perObject } from '../../../utils/perObject.js';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
+import { hasLiveCopies, publishLiveTargets, refillLiveCopies } from '../../../r3f/liveTargets';
+import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
 import { storeSrgbBytes } from './offscreenViewport.js';
 
-/** A view as its pass holds it: `fill` runs after each render of the pass. */
+/** A view as its pass holds it: `fill` runs after each render of the pass, inside one offscreen draw. */
 interface PassView extends TargetView {
+  /** Whether `fill` has a copy to refresh: one a consumer holds. */
+  isFilled(): boolean;
   fill(): void;
   dispose(): void;
 }
 
-/** Both views of a target, filled and disposed together. */
+/** Both views of a target, filled and disposed together. `fill` fills each reader's copy after. */
 interface PassTargetViews {
   plain: PassView;
   decoding: PassView;
@@ -29,8 +31,8 @@ interface PassTargetViews {
   dispose(): void;
 }
 
-/** The views of `target`, disposed with it. */
-export function useTargetViews(target: THREE.WebGLRenderTarget): PassTargetViews {
+/** The views of `target`, live while it is mounted and disposed with it. `isTransparent` is `transparent_bg`. */
+export function useTargetViews(target: THREE.WebGLRenderTarget, isTransparent: boolean): PassTargetViews {
   const gl = useThree((state) => state.gl);
   const views = useMemo(() => {
     const holdsBytes = holdsSrgbBytes(target.texture);
@@ -39,9 +41,15 @@ export function useTargetViews(target: THREE.WebGLRenderTarget): PassTargetViews
     return {
       plain,
       decoding,
+      // One save and restore of the renderer for the views and every copy a reader holds, and none
+      // for a pass with nothing to fill.
       fill: () => {
-        plain.fill();
-        decoding.fill();
+        const views = [plain, decoding];
+        if (!views.some((view) => view.isFilled() || hasLiveCopies(view.texture))) return;
+        drawOffscreen(gl, () => {
+          views.forEach((view) => view.fill());
+          views.forEach((view) => refillLiveCopies(view.texture, gl));
+        });
       },
       dispose: () => {
         plain.dispose();
@@ -50,46 +58,17 @@ export function useTargetViews(target: THREE.WebGLRenderTarget): PassTargetViews
     };
   }, [gl, target]);
   useDisposeOnRelease(views);
+  useEffect(
+    () => publishLiveTargets([views.plain.texture, views.decoding.texture], gl, isTransparent),
+    [views, gl, isTransparent]
+  );
   return views;
 }
 
 /** The view of a target whose storage is that view already, so it needs no copy. */
 function ownStorageView(texture: THREE.Texture): PassView {
-  return { texture, retain: () => () => {}, fill: () => {}, dispose: () => {} };
+  return { texture, retain: () => () => {}, isFilled: () => false, fill: () => {}, dispose: () => {} };
 }
-
-/**
- * Reads canvas bytes and writes their decode, which the SRGB8_ALPHA8 storage encodes back to the
- * same byte. The pass does not blend, so the alpha copies unchanged.
- */
-const DECODE_FRAGMENT = /* glsl */ `
-uniform sampler2D source;
-varying vec2 vUv;
-void main() {
-  vec4 texel = texture2D( source, vUv );
-  gl_FragColor = vec4( sRGBTransferEOTF( texel ).rgb, texel.a );
-}`;
-
-/**
- * Reads a texel that the SRGB8_ALPHA8 storage decoded on sampling and writes its encode, which is
- * the stored byte again.
- */
-const ENCODE_FRAGMENT = /* glsl */ `
-uniform sampler2D source;
-varying vec2 vUv;
-void main() {
-  vec4 texel = texture2D( source, vUv );
-  gl_FragColor = vec4( sRGBTransferOETF( texel ).rgb, texel.a );
-}`;
-
-/** The pass a renderer fills every copy of one kind with. `fill` binds the source before each draw. */
-const copyPassFor = (name: string, fragment: string) =>
-  perObject<THREE.WebGLRenderer, THREE.ShaderMaterial>(() =>
-    fullScreenPass(name, fragment, { source: { value: null } })
-  );
-type CopyPassFor = ReturnType<typeof copyPassFor>;
-const decodePassFor = copyPassFor('DecodingViewCopy', DECODE_FRAGMENT);
-const encodePassFor = copyPassFor('PlainViewCopy', ENCODE_FRAGMENT);
 
 /**
  * A view that is a copy of the target, which `fill` refreshes while a consumer retains it. WebGL2
@@ -98,62 +77,56 @@ const encodePassFor = copyPassFor('PlainViewCopy', ENCODE_FRAGMENT);
 class ViewCopy implements PassView {
   readonly texture: THREE.Texture;
   private readonly copy: THREE.WebGLRenderTarget;
-  /**
-   * Written only by `retain` and its release. The copy fills above zero. Its storage is freed when
-   * a task ends at zero, since three uploads again after a dispose in the same task.
-   */
-  private retainers = 0;
+  private readonly whole: TexelPlacement;
 
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly source: THREE.WebGLRenderTarget,
-    private readonly passFor: CopyPassFor
+    private readonly transfer: TexelTransfer
   ) {
     this.copy = new THREE.WebGLRenderTarget(source.width, source.height, { depthBuffer: false });
+    this.whole = wholeTexels(source.width, source.height);
     copySampling(this.copy.texture, source.texture);
     this.texture = this.copy.texture;
   }
 
+  /** The copy fills while a consumer holds it, and frees its storage once none does. */
   retain(): () => void {
-    this.retainers++;
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      this.retainers--;
-      // Deferred, as `useDisposeOnRelease` does: StrictMode and a swapped consumer release and retain in one task.
-      if (this.retainers === 0) queueMicrotask(() => this.disposeIfUnretained());
-    };
+    return holdUntilReleased(this);
   }
 
+  isFilled(): boolean {
+    return isHeld(this);
+  }
+
+  /** Refreshes the copy while a consumer holds it. The caller draws offscreen. */
   fill(): void {
-    if (this.retainers === 0) return;
-    const pass = this.passFor(this.gl);
-    pass.uniforms.source!.value = this.source.texture;
-    drawOffscreen(this.gl, () => drawFullScreen(this.gl, pass, this.copy));
+    if (this.isFilled()) copyTexels(this.gl, this.source.texture, this.copy, this.whole, this.transfer);
   }
 
   dispose(): void {
     this.copy.dispose();
   }
-
-  private disposeIfUnretained(): void {
-    if (this.retainers === 0) this.copy.dispose();
-  }
 }
 
-/** The copy a canvas-content target serves as its decoding view. */
+/**
+ * The copy a canvas-content target serves as its decoding view: the decode of each byte, which the
+ * SRGB8_ALPHA8 storage encodes back to the same byte.
+ */
 function decodingCopy(gl: THREE.WebGLRenderer, plain: THREE.WebGLRenderTarget): PassView {
-  const view = new ViewCopy(gl, plain, decodePassFor);
+  const view = new ViewCopy(gl, plain, 'decode');
   view.texture.name = `${plain.texture.name}::decoding`;
   view.texture.colorSpace = THREE.SRGBColorSpace;
   view.texture.internalFormat = 'SRGB8_ALPHA8';
   return view;
 }
 
-/** The copy a 3D-content target serves as its plain view, which a canvas consumer filters raw. */
+/**
+ * The copy a 3D-content target serves as its plain view, which a canvas consumer filters raw: the
+ * encode of each decoded texel, which is the stored byte again.
+ */
 function plainCopy(gl: THREE.WebGLRenderer, decoding: THREE.WebGLRenderTarget): PassView {
-  const view = new ViewCopy(gl, decoding, encodePassFor);
+  const view = new ViewCopy(gl, decoding, 'encode');
   view.texture.name = `${decoding.texture.name}::plain`;
   storeSrgbBytes(view.texture);
   return view;

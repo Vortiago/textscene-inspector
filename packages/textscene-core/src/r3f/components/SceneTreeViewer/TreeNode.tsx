@@ -8,6 +8,9 @@ import { scopeOf } from '../../../resources/liveNode.js';
 import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
 
+/** One empty pool for every row, so a row that mounts again asks the live tree in a scope it knows. */
+const NO_SUB_RESOURCES: SceneScope['internalResources'] = [];
+
 const TYPE_BADGE_CLASS: Record<string, string> = {
   Node3D: styles.typeNode3d!,
   MeshInstance3D: styles.typeMesh!,
@@ -96,7 +99,7 @@ function TreeNodeImpl({
   // The tree renders rows and resolves instance refs. It never reads a SubResource id, so it
   // declares an empty pool explicitly. A grafted node's own scope replaces the group's.
   const scope = useMemo(
-    () => scopeOf(node, { externalResources, internalResources: [], instancedScenePaths }),
+    () => scopeOf(node, { externalResources, internalResources: NO_SUB_RESOURCES, instancedScenePaths }),
     [node, externalResources, instancedScenePaths]
   );
   // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the

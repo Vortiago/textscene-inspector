@@ -10,9 +10,7 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { msaaSampleCount, supportedSampleCount } from '../godot/rendering/msaa';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
-
-/** What decides a target's colour storage, which a texture carries. */
-type TargetTexture = Pick<THREE.Texture, 'type' | 'colorSpace' | 'internalFormat'>;
+import { perObject } from '../utils/perObject';
 
 /** The GL internal format of a target's colour attachment. */
 type ColourStorage = THREE.PixelFormatGPU;
@@ -35,21 +33,12 @@ export function useMultisampledTarget<Target extends THREE.WebGLRenderTarget>(
   return target;
 }
 
-/** The samples for `mode` on a linear RGBA buffer of texel `type` that another library builds. */
-export function useSampleCount(mode: number, type: THREE.TextureDataType): number {
-  const gl = useThree((state) => state.gl);
-  return useMemo(() => {
-    const storage = colourStorage({ type, colorSpace: THREE.NoColorSpace, internalFormat: null });
-    return deviceSampleCount(gl, mode, storage);
-  }, [gl, mode, type]);
-}
-
 /**
  * Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). A target that takes output
  * like the drawing buffer stores an 8-bit sRGB tag linear (`:2120`), so such a target is linear or
  * pins its format, as `CanvasFrame` pins RGBA8.
  */
-function colourStorage(texture: TargetTexture): ColourStorage {
+function colourStorage(texture: THREE.Texture): ColourStorage {
   if (texture.internalFormat !== null) return texture.internalFormat;
   if (texture.type === THREE.FloatType) return 'RGBA32F';
   if (texture.type === THREE.HalfFloatType) return 'RGBA16F';
@@ -61,11 +50,13 @@ function colourStorage(texture: TargetTexture): ColourStorage {
 }
 
 /**
- * The counts colour and depth share, per context and colour storage. Written only by
+ * The counts colour and depth share, per context and colour storage. Filled only by
  * `sharedSampleCounts`. A context lists the same counts for its life, and the entry goes with the
  * context.
  */
-const sharedCounts = new WeakMap<WebGL2RenderingContext, Map<ColourStorage, readonly number[]>>();
+const sharedCountsOf = perObject<WebGL2RenderingContext, Map<ColourStorage, readonly number[]>>(
+  () => new Map()
+);
 
 /** 0, one sample per pixel, where the context lists no counts: WebGL 1 has no multisampled target. */
 function deviceSampleCount(gl: THREE.WebGLRenderer, mode: number, storage: ColourStorage): number {
@@ -76,7 +67,7 @@ function deviceSampleCount(gl: THREE.WebGLRenderer, mode: number, storage: Colou
 }
 
 function sharedSampleCounts(context: WebGL2RenderingContext, storage: ColourStorage): readonly number[] {
-  const perStorage = sharedCounts.get(context) ?? new Map<ColourStorage, readonly number[]>();
+  const perStorage = sharedCountsOf(context);
   const cached = perStorage.get(storage);
   if (cached) return cached;
   const depthCounts = renderbufferSampleCounts(context, context.DEPTH_COMPONENT24);
@@ -85,7 +76,7 @@ function sharedSampleCounts(context: WebGL2RenderingContext, storage: ColourStor
     depthCounts.includes(count)
   );
   // A lost context lists no counts, and would keep MSAA off after the browser restores it.
-  if (!context.isContextLost()) sharedCounts.set(context, perStorage.set(storage, shared));
+  if (!context.isContextLost()) perStorage.set(storage, shared);
   return shared;
 }
 

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
 import { computeWorldBoundingBox } from './bounds.js';
+import { nodeIconUserData } from './editorHelpers.js';
 import { placeSkinnedMeshInSkeletonSpace } from '../resources/formats/glb/skinnedMeshSpace.js';
 
 function unitBoxGeometry(): THREE.BufferGeometry {
@@ -75,6 +76,19 @@ describe('computeWorldBoundingBox', () => {
     expect(box.max.x).toBeCloseTo(6, 5); //  5 + 1
   });
 
+  it('leaves out the subtree of a descendant the caller skips', () => {
+    const parent = new THREE.Group();
+    parent.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
+    const skipped = new THREE.Group();
+    skipped.position.set(50, 0, 0);
+    skipped.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
+    parent.add(skipped);
+
+    const box = computeWorldBoundingBox(parent, new THREE.Box3(), (child) => child === skipped);
+
+    expect(box.max.x).toBeCloseTo(1, 5);
+  });
+
   it('returns an empty box when no descendant has geometry', () => {
     const parent = new THREE.Group();
     parent.add(new THREE.Object3D(), new THREE.Group());
@@ -98,5 +112,31 @@ describe('computeWorldBoundingBox', () => {
 
     // The frame at (10, 0, 0) scaled by 2, times the mesh at (0, 4, 0): (10, 8, 0).
     expect(center.toArray()).toEqual([10, 8, 0]);
+  });
+});
+
+/** A node icon quad, the mesh whose size follows the camera. */
+function iconMesh(): THREE.Mesh {
+  const icon = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial());
+  icon.userData = nodeIconUserData();
+  return icon;
+}
+
+describe('computeWorldBoundingBox: a node icon', () => {
+  it('adds nothing to the box of its node, whose size follows the camera', () => {
+    const node = new THREE.Group();
+    node.add(new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial()));
+    const icon = iconMesh();
+    icon.position.set(50, 0, 0);
+    node.add(icon);
+
+    expect(computeWorldBoundingBox(node).max.x).toBe(1);
+  });
+
+  it('bounds nothing when the icon is all the node holds', () => {
+    const node = new THREE.Group();
+    node.add(iconMesh());
+
+    expect(computeWorldBoundingBox(node).isEmpty()).toBe(true);
   });
 });

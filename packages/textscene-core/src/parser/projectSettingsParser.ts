@@ -262,6 +262,21 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
   };
 }
 
+/** The `res://` path a project setting names, or null for no setting and an empty one. */
+function projectFilePath(settings: ProjectSettings | null, key: string): string | null {
+  return settings?.[key]?.trim() || null;
+}
+
+/** `gui/theme/custom`, the project theme (`ThemeDB::initialize_theme`, `scene/theme/theme_db.cpp:52`). */
+export function projectThemePath(settings: ProjectSettings | null): string | null {
+  return projectFilePath(settings, 'gui/theme/custom');
+}
+
+/** `gui/theme/custom_font`, the project default font (`theme_db.cpp:53`). */
+export function projectFontPath(settings: ProjectSettings | null): string | null {
+  return projectFilePath(settings, 'gui/theme/custom_font');
+}
+
 /**
  * `gui/theme/default_font_generate_mipmaps`, which the default font takes (`theme_db.cpp:64`). Off
  * by default (`text_server.cpp:2387`), so its glyph pages carry no mip chain.
@@ -295,6 +310,23 @@ export function projectAnisotropicFilteringLevel(settings: ProjectSettings | nul
   );
 }
 
+/** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */
+const DEFAULT_DECAL_FILTER = 3;
+
+/** `RS::DECAL_FILTER_LINEAR_MIPMAPS_ANISOTROPIC`, the last filter `RS::DecalFilter` names. */
+const MAX_DECAL_FILTER = 5;
+
+/**
+ * `rendering/textures/decals/filter`, which the renderer reads for every decal sampler
+ * (`renderer_scene_render_rd.cpp:1730`). It numbers the filters as `BaseMaterial3D.TextureFilter`
+ * does from Nearest on. A value outside `RS::DecalFilter` keeps the default, as a switch with no
+ * case for it binds no sampler (`render_forward_clustered.cpp:3436-3460`).
+ */
+export function projectDecalFilter(settings: ProjectSettings | null): number {
+  const filter = parseOptionalInt(settings?.['rendering/textures/decals/filter']);
+  return filter !== undefined && filter >= 0 && filter <= MAX_DECAL_FILTER ? filter : DEFAULT_DECAL_FILTER;
+}
+
 /** Godot's default `rendering/textures/default_filters/texture_mipmap_bias` (`rendering_server.cpp:3803`). */
 const DEFAULT_TEXTURE_MIPMAP_BIAS = 0;
 
@@ -308,6 +340,14 @@ export function projectTextureMipmapBias(settings: ProjectSettings | null): numb
     parseOptionalFloat(settings?.['rendering/textures/default_filters/texture_mipmap_bias']) ??
     DEFAULT_TEXTURE_MIPMAP_BIAS
   );
+}
+
+/**
+ * `rendering/anti_aliasing/quality/use_debanding`, which the root viewport takes
+ * (`scene/main/scene_tree.cpp:2097-2098`).
+ */
+export function projectUsesDebanding(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/anti_aliasing/quality/use_debanding']) === true;
 }
 
 /**

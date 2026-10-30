@@ -9,7 +9,7 @@
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
+import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
@@ -43,6 +43,7 @@ export function ConnectionLine({
 }: ConnectionLineProps) {
   // A raw mesh, so it applies the clip planes itself (`nativeClipCoverage.test.tsx`).
   const clippingPlanes = useControlClipPlanes();
+  const canvasItemMerge = useCanvasItemMerge();
   const geometry = useMemo(() => {
     const controlPoints = connectionControlPoints(connection.from.pos, connection.to.pos, curvature);
     const points = tessellateConnectionLine(controlPoints, curvature);
@@ -71,7 +72,7 @@ export function ConnectionLine({
       defines: CANVAS_SRGB_DEFINES,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
-    merge: [canvasItemFacing()],
+    merge: canvasItemMerge,
   });
 
   // The positions carry their own Y flip (`connectionStroke.ts`), so no flip group wraps the

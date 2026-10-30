@@ -18,7 +18,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
+import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -80,6 +80,7 @@ function MinimapConnections({
   renderOrder,
 }: MinimapConnectionsProps) {
   const clippingPlanes = useControlClipPlanes();
+  const canvasItemMerge = useCanvasItemMerge();
   const geometry = useMemo(() => {
     const positions: number[] = [];
     const indices: number[] = [];
@@ -116,7 +117,7 @@ function MinimapConnections({
       defines: CANVAS_SRGB_DEFINES,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
-    merge: [canvasItemFacing()],
+    merge: canvasItemMerge,
   });
 
   return (

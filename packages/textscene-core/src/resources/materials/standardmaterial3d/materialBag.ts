@@ -27,9 +27,10 @@ import {
   emissionTextureAddUserData,
 } from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
-import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
+import { lightModesInjection } from '../../../r3f/lightModes';
 import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
-import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
+import { GODOT_BILLBOARD_NORMAL } from '../../../r3f/surfaceBillboard';
+import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
   parallaxInjection,
@@ -44,20 +45,25 @@ import {
   ambientOcclusionUserData,
 } from '../../../r3f/materials/godotAmbientOcclusion';
 import {
+  triplanarUserData,
+  type TriplanarMap,
+  type TriplanarRecord,
+} from '../../../r3f/materials/godotTriplanar';
+import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
   NO_OPAQUE_PREPASS,
   opaquePrepassUserData,
   type OpaquePrepass,
 } from '../../../r3f/materials/opaquePrepass';
-import {
-  renderTargetMapInjection,
-  renderTargetMapUserData,
-  type TargetMapSampler,
-} from '../../../r3f/materials/renderTargetMap';
-import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 import { resolveEmission } from './emission';
-import type { MaterialBlendState, ResolvedTextures, StandardMaterial3DScalars, TextureSlot } from './types';
+import {
+  TEXTURE_SLOTS,
+  type MaterialBlendState,
+  type ResolvedTextures,
+  type StandardMaterial3DScalars,
+  type TextureSlot,
+} from './types';
 
 // Godot's default COLOR buffer is white (`mesh_storage.cpp:86-97`). three declares it on
 // ShaderMaterial alone, so another class reads (0,0,0) and blacks out albedo. On the
@@ -100,7 +106,7 @@ function noMaterialBag(): StandardMaterialBag {
       metalness: DEFAULT_MATERIAL_METALLIC,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       side: THREE.FrontSide,
-      userData: { ...lightModesUserData(GODOT_DEFAULT_LIGHT_MODES), ...viewportSamplersUserData() },
+      userData: viewportSamplersUserData(),
     },
     injection: lightModesInjection(GODOT_DEFAULT_LIGHT_MODES),
   };
@@ -199,8 +205,7 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
  * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO, height and edge-ramp uniforms read
- * theirs at upload, and a decal reads the light modes and the specular occlusion. A fresh object per
- * bag, as the `.tres` loader writes keys into it.
+ * theirs at upload. A fresh object per bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
@@ -213,10 +218,43 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
       scalars.roughnessTextureChannelMask,
       scalars.metallicTextureChannelMask
     ),
-    ...lightModesUserData(scalars),
-    ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
     ...heightmapUserData(scalars.heightmap),
+    ...triplanarUserData(triplanarRecord(scalars)),
     ...viewportSamplersUserData(),
+  };
+}
+
+/**
+ * three's map that draws each slot. The heightmap has the parallax's own sampler, and Godot never
+ * projects it: triplanar mapping turns height mapping off (`material.cpp:1541`).
+ */
+const SLOT_MAPS: Readonly<Record<TextureSlot, TriplanarMap | null>> = {
+  albedo_texture: 'map',
+  normal_texture: 'normalMap',
+  roughness_texture: 'roughnessMap',
+  metallic_texture: 'metalnessMap',
+  emission_texture: 'emissiveMap',
+  ao_texture: 'aoMap',
+  heightmap_texture: null,
+  anisotropy_flowmap: 'anisotropyMap',
+};
+
+/**
+ * The triplanar mapping `scalars` draw with, each UV set with the maps that read it, or null for
+ * none. Under `use_point_size` the albedo reads POINT_COORD, not a projection (`material.cpp:1612-1620`).
+ */
+function triplanarRecord(scalars: StandardMaterial3DScalars): TriplanarRecord | null {
+  const { triplanar } = scalars;
+  if (!triplanar) return null;
+  const mapsOf = (slots: readonly TextureSlot[]) => slots.flatMap((slot) => SLOT_MAPS[slot] ?? []);
+  const uv1Slots = TEXTURE_SLOTS.filter(
+    (slot) => !scalars.uv2Slots.includes(slot) && !(slot === 'albedo_texture' && scalars.usesPointSize)
+  );
+  return {
+    ...triplanar,
+    isBillboard: billboards(scalars),
+    uv1Maps: triplanar.uv1 ? mapsOf(uv1Slots) : [],
+    uv2Maps: triplanar.uv2 ? mapsOf(scalars.uv2Slots) : [],
   };
 }
 
@@ -242,13 +280,23 @@ const BILLBOARDING_MODES: ReadonlySet<number> = new Set([
   BillboardMode.BILLBOARD_PARTICLES,
 ]);
 
+/** Whether `scalars` describe a surface that billboards. */
+function billboards(scalars: StandardMaterial3DScalars | null): scalars is StandardMaterial3DScalars {
+  return scalars !== null && BILLBOARDING_MODES.has(scalars.billboardMode);
+}
+
 /**
  * The billboard `scalars` describe, null being Godot's default surface. Built once per
  * bag, so the draw hooks read it every draw group without allocating.
  */
 export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): SurfaceBillboard {
-  if (!scalars || !BILLBOARDING_MODES.has(scalars.billboardMode)) return NO_BILLBOARD;
+  if (!billboards(scalars)) return NO_BILLBOARD;
   return { mode: scalars.billboardMode, keepScale: scalars.billboardKeepScale };
+}
+
+/** Godot's billboard normal turn for a surface that billboards, after any patch that adds a `defaultnormal_vertex`. */
+function billboardNormalInjection(scalars: StandardMaterial3DScalars): ProgramInjection | undefined {
+  return billboards(scalars) ? GODOT_BILLBOARD_NORMAL : undefined;
 }
 
 /** The billboard a material was derived with. */
@@ -304,24 +352,10 @@ function withSurfaceAlpha(
   return { ...bag, props, injection: composeInjections([bag.injection, injection]) };
 }
 
-/** How the albedo samples when it is a render target, which carries no sampler state of its own. */
-function targetMapSampler(
-  { textureRepeat, textureFilter }: StandardMaterial3DScalars,
-  { albedoTargetUv }: ResolvedTextures
-): TargetMapSampler | undefined {
-  if (!albedoTargetUv) return undefined;
-  const isNearest = godotTextureFilterState(textureFilter).magFilter === THREE.NearestFilter;
-  return { uv: albedoTargetUv, repeats: textureRepeat, isNearest };
-}
-
 /** The class `scalars` need, and its props. */
 function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
-  const userData = {
-    ...surfaceUserData(scalars),
-    ...renderTargetMapUserData(targetMapSampler(scalars, textures)),
-  };
-  const targetMap = renderTargetMapInjection(userData);
+  const userData = surfaceUserData(scalars);
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
   // Alpha antialiasing replaces the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
@@ -351,7 +385,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
         userData,
         ...blend,
       },
-      injection: composeInjections([heightmap ? unshadedParallaxInjection(heightmap) : undefined, targetMap]),
+      injection: composeInjections([
+        heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+        billboardNormalInjection(scalars),
+      ]),
       heightmapTexture,
     };
   }
@@ -389,16 +426,17 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   };
 
   // Godot's AO sampler is `hint_default_white` (`material.cpp:1128`), so a surface with no map
-  // occludes nothing.
+  // occludes nothing itself. A decal's ORM map can still occlude it, in the direct light too once
+  // `ao_light_affect` is set.
   const injection = composeInjections([
     lightModesInjection(scalars),
-    aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    aoMap || scalars.aoLightAffect > 0 ? GODOT_AMBIENT_OCCLUSION : undefined,
     pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),
-    targetMap,
+    billboardNormalInjection(scalars),
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

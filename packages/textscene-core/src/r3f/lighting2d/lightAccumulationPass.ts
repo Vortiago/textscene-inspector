@@ -1,12 +1,10 @@
 /**
  * The pre-pass: for each item light list, show only the meshes of the lights on it and let the
  * mounted tree draw itself into that list's accumulators. Each list takes up to three passes:
- * `CanvasLighting2D.tsx` says why.
+ * `CanvasLightPass.tsx` says why.
  */
 
-import { useFrame } from '@react-three/fiber';
 import type * as THREE from 'three';
-import type { Camera } from '@react-three/fiber';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
 import { drawsInPass, type LightListEntry, type PassKind, type PassMeshRole } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
@@ -37,7 +35,7 @@ export interface AccumulationList {
 export interface LightAccumulationPass {
   gl: THREE.WebGLRenderer;
   scene: THREE.Scene;
-  camera: Camera;
+  camera: THREE.Camera;
   lists: readonly AccumulationList[];
   /** Every registered light mesh. Read each frame, so a mesh mounted since the last render counts. */
   passMeshes: ReadonlySet<PassMesh>;
@@ -47,6 +45,8 @@ export interface LightAccumulationPass {
   canvasModulate: { r: number; g: number; b: number };
   /** The published resolution vector, mutated in place each frame. */
   resolution: THREE.Vector2;
+  /** Writes the size of the buffers into its argument, in device pixels. */
+  readBufferSize: (out: THREE.Vector2) => void;
   /** The world rect each capped placement's items cover (`ItemLightCap.windows`). */
   windows: ReadonlyMap<string, Rect2>;
 }
@@ -58,7 +58,7 @@ export interface LightAccumulationPass {
 function fitListTargets(
   list: AccumulationList,
   windows: ReadonlyMap<string, Rect2>,
-  camera: Camera,
+  camera: THREE.Camera,
   size: THREE.Vector2
 ): void {
   const window = listWindow(list.placementIds, windows);
@@ -78,7 +78,7 @@ function showListMeshes(passMeshes: ReadonlySet<PassMesh>, list: AccumulationLis
 }
 
 /** Draws every list's buffers once: a frame's work. */
-function renderLightLists({
+export function renderLightLists({
   gl,
   scene,
   camera,
@@ -87,13 +87,14 @@ function renderLightLists({
   seedMaterial,
   canvasModulate,
   resolution,
+  readBufferSize,
   windows,
 }: LightAccumulationPass): void {
   if (lists.length === 0) return;
   // The targets and the lookup are all in device pixels, because that is what `gl_FragCoord` is
   // measured in. Sizing from the CSS size instead reads the buffer at the wrong scale on any
   // display where dpr is not 1.
-  gl.getDrawingBufferSize(resolution);
+  readBufferSize(resolution);
   const previousTarget = gl.getRenderTarget();
   const previousMask = camera.layers.mask;
   const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
@@ -133,12 +134,4 @@ function renderLightLists({
     camera.layers.mask = previousMask;
     endStep(gl, '2D lights');
   }
-}
-
-/**
- * Runs the list pre-passes ahead of R3F's own render. A negative priority runs first and leaves
- * fiber's render in place, which it takes over only for a positive priority.
- */
-export function useLightAccumulationPass(pass: LightAccumulationPass): void {
-  useFrame(() => renderLightLists(pass), -1);
 }

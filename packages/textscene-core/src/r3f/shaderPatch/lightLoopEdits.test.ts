@@ -30,7 +30,7 @@ describe('the light and shadow chunk edits', () => {
   it('stay at or below the ADR-0055 port trigger', () => {
     installShaderPatches();
     const edits = [...installedPatches.values()]
-      .flatMap((patch) => patch.edits)
+      .flatMap((patch) => patch.edits ?? [])
       .filter((edit) => LIGHT_AND_SHADOW_CHUNK.test(edit.chunk));
     expect(edits.length, 'ADR-0055 trigger 2 holds: start the lit-surface port').toBeLessThanOrEqual(
       PORT_TRIGGER_EDITS

@@ -53,9 +53,16 @@ export const DEFAULT_CANVAS_LAYER = 1;
 
 /**
  * `RenderingServer::MAX_2D_DIRECTIONAL_LIGHTS` (`servers/rendering/rendering_server.h:109`): the
- * DirectionalLight2Ds one viewport applies. `renderer_viewport.cpp:511` stops the list there.
+ * count at which `renderer_viewport.cpp:511` stops listing the lights of one canvas.
  */
 export const MAX_2D_DIRECTIONAL_LIGHTS = 8;
+
+/**
+ * `RendererCanvasRenderRD::MAX_LIGHTS_PER_RENDER` (`renderer_rd/renderer_canvas_render_rd.h:108`): the
+ * lights one render takes, the directional ones first (`renderer_canvas_render_rd.cpp:525`), then the
+ * positional ones in the rest (`:592`). A light past it draws nothing.
+ */
+export const MAX_LIGHTS_PER_RENDER = 256;
 
 /**
  * `RendererCanvasRenderRD::MAX_LIGHTS_PER_ITEM` (`renderer_rd/renderer_canvas_render_rd.h:107`).

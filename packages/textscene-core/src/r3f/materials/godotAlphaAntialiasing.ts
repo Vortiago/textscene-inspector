@@ -15,6 +15,7 @@ import {
 import { alphaToCoverageBlendState } from '../../resources/materials/standardmaterial3d/blendState';
 import type { MaterialBlendState } from '../../resources/materials/standardmaterial3d/types';
 import { ALPHA_HASH_CHUNK, ALPHA_TEST_CHUNK } from './surfaceAlphaPatch';
+import { perObject } from '../../utils/perObject';
 
 const ALPHA_TEST_PARS_CHUNK = '#include <alphatest_pars_fragment>';
 
@@ -91,19 +92,16 @@ export function alphaAntialiasingProps(
 }
 
 /** Each context's `antialias` attribute, fixed for the context's life. Collected with it. */
-const canvasAntialias = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, boolean>();
+const canvasAntialias = perObject(
+  (context: WebGLRenderingContext | WebGL2RenderingContext) =>
+    context.getContextAttributes()?.antialias === true
+);
 
 /** Whether the renderer draws into a target with more than one sample per pixel. */
 function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
   const target = renderer.getRenderTarget();
   if (target) return target.samples > 0;
-  const context = renderer.getContext();
-  let antialias = canvasAntialias.get(context);
-  if (antialias === undefined) {
-    antialias = context.getContextAttributes()?.antialias === true;
-    canvasAntialias.set(context, antialias);
-  }
-  return antialias;
+  return canvasAntialias(renderer.getContext());
 }
 
 /** The uniforms of one antialiased material's program. */
@@ -115,13 +113,10 @@ interface EdgeUniforms extends Record<string, THREE.IUniform> {
  * Each antialiased material's uniforms. The getters read at upload, so a re-parsed edge or a texture
  * that lands later needs no recompile. Collected with its material.
  */
-const edgeUniforms = new WeakMap<THREE.Material, EdgeUniforms>();
-
-function edgeUniformsOf(material: THREE.Material & { map?: THREE.Texture | null }): EdgeUniforms {
-  let uniforms = edgeUniforms.get(material);
-  if (!uniforms) {
+const edgeUniformsOf = perObject(
+  (material: THREE.Material & { map?: THREE.Texture | null }): EdgeUniforms => {
     const textureSize = new THREE.Vector2();
-    uniforms = {
+    return {
       godotAlphaScissorThreshold: {
         get value() {
           return alphaAntialiasingOf(material)?.scissorThreshold ?? 0;
@@ -140,10 +135,8 @@ function edgeUniformsOf(material: THREE.Material & { map?: THREE.Texture | null 
       },
       godotSingleSampleCoverage: { value: 0 },
     };
-    edgeUniforms.set(material, uniforms);
   }
-  return uniforms;
-}
+);
 
 /**
  * What every material that records alpha antialiasing runs before each draw: the coverage

@@ -1,8 +1,9 @@
 /**
- * The one decal atlas every Decal samples its albedo from, as Godot keeps one for every viewport
- * (`texture_storage.cpp:3038-3258`). Each Decal holds its `texture_albedo` while it projects it,
- * and a Decal rebuilds the atlas before a render when a texture joined it or changed its pixels.
- * `decalAtlasLayout.ts` lays it out and `decalAtlasLevels.ts` fills its levels.
+ * The one decal atlas every Decal samples its albedo, normal, ORM and emission textures from, as
+ * Godot keeps one for every viewport (`texture_storage.cpp:3038-3258`). Each Decal holds each of
+ * its textures while it projects them, and a Decal rebuilds the atlas before a render when a
+ * texture joined it or changed its pixels. `decalAtlasLayout.ts` lays it out and
+ * `decalAtlasLevels.ts` fills its levels.
  */
 
 import * as THREE from 'three';
@@ -14,9 +15,14 @@ import { AtlasTexture, holdAtlasLevels } from '../../../r3f/textureAtlas/atlasTe
 import { readableTextures } from '../../../r3f/textureAtlas/godotImage.js';
 import { fitDecalAtlas, packDecalAtlas } from './decalAtlasLayout.js';
 import type { MipLevel } from '../../../resources/processing/mipChain.js';
+import type { TextureFilterState } from '../../../resources/textures/godotTextureFilter.js';
 import { decalAtlasLevels } from './decalAtlasLevels.js';
 
-/** Sampled through the sRGB view of an RGBA8 texture (`render_forward_clustered.cpp:3213`). */
+/**
+ * Godot reads albedo and emission through the sRGB view of an RGBA8 texture, and normal and ORM
+ * through its linear view (`render_forward_clustered.cpp:3205-3213`). WebGL has one view, so this is the
+ * sRGB one, and the Decal term encodes a normal or ORM texel back to its bytes.
+ */
 const atlasTexture = releasedOnUnmount(new AtlasTexture('DecalAtlas', THREE.SRGBColorSpace));
 
 /** Each held texture, as Godot's map keeps them. */
@@ -36,6 +42,24 @@ export function decalAtlasTexture(): THREE.Texture {
   if (atlasTexture.mipmaps.length === 0)
     holdAtlasLevels(atlasTexture, decalAtlasLevels(packDecalAtlas([]), []));
   return atlasTexture;
+}
+
+/**
+ * Samples the atlas as the decal filter says (`render_forward_clustered.cpp:3436-3460`). The atlas
+ * keeps its own chain whatever the filter, so a filter that reads none leaves the levels unread.
+ * A change uploads the atlas again; the same filter changes nothing.
+ */
+export function setDecalAtlasFilter({ magFilter, minFilter, anisotropy }: TextureFilterState): void {
+  if (
+    atlasTexture.magFilter === magFilter &&
+    atlasTexture.minFilter === minFilter &&
+    atlasTexture.anisotropy === anisotropy
+  )
+    return;
+  atlasTexture.magFilter = magFilter;
+  atlasTexture.minFilter = minFilter;
+  atlasTexture.anisotropy = anisotropy;
+  atlasTexture.needsUpdate = true;
 }
 
 /** Puts `texture` in the atlas for one more holder (`texture_add_to_decal_atlas`). */

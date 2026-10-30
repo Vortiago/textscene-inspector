@@ -279,7 +279,7 @@ A test or a script fails when one of these rules breaks.
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |
 | The raw properties agree between parsers | `parser/rawPropertyParity.test.ts` |
 | The worker's import closure holds no React, three.js or `.tsx` | `workers/workerClosure.test.ts` |
-| Every drawn texture clone goes through the tiled upload | `r3f/tiledUpload/drawnCloneGuard.test.ts` |
+| Every texture view a component draws goes through the tiled upload | `r3f/tiledUpload/textureViewGuard.test.ts` |
 | The VS Code host bundles hold no React or three.js | `scripts/check-bundle-size/hostBundles.mjs` |
 | The webview's initial bundle stays under its budget | `scripts/check-bundle-size/webviewBudget.mjs` |
 
@@ -291,5 +291,8 @@ and CSS side effects, and grows the host bundle about four times. The `languageF
 carries the generated ClassDB property tables, which the webview never loads.
 
 The webview builds ESM with code splitting (`apps/textscene-vscode/esbuild.config.mjs`), and
-loads the dock panels, the Control canvas, drei's `<Text>` and the GLB loader on demand.
-`pnpm check:bundle-size` prints the current sizes.
+loads the dock panels, the Control canvas, drei's `<Text>`, the GLB loader, the area light's LTC
+tables and the in-thread noise jobs on demand. `pnpm check:bundle-size` prints the current sizes,
+and fails when a module that loads on demand reaches the canvas-paint path. The DFG and LTC tables
+are stored as residuals of a linear prediction (`tableResiduals.ts`), which gzip packs about three
+times tighter than base64.

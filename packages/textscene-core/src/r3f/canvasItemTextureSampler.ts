@@ -14,13 +14,9 @@ import {
 import type { CanvasItemTextureDefaults } from '../godot/scene/viewport';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
 import { projectCanvasTextureDefaults } from '../parser/projectSettingsParser';
-import {
-  godotTextureFilterState,
-  applyTextureFilterState,
-  type TextureFilterState,
-} from '../resources/textures/godotTextureFilter';
+import { godotTextureFilterState, type TextureFilterState } from '../resources/textures/godotTextureFilter';
 import { useProjectSettings } from './contexts/ProjectSettingsContext';
-import type { CloneSampler } from './drawnClone';
+import type { ViewSampler } from '../resources/textures/textureView';
 
 /** three's wrapping for each of Godot's repeat modes. */
 export const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
@@ -44,17 +40,11 @@ function canvasItemWrap(repeat: number): THREE.Wrapping {
   return WRAP[canvasItemSamplerRepeat(repeat)];
 }
 
-/** Writes a resolved sampler's filter and wrap onto a texture the caller owns, before it first uploads. */
-export function applyCanvasItemSampler(texture: THREE.Texture, sampler: CanvasItemTextureSampler): void {
-  applyTextureFilterState(texture, canvasItemFilterState(sampler.filter));
-  texture.wrapS = texture.wrapT = canvasItemWrap(sampler.repeat);
-}
-
 /**
- * A 2D clone sampled by `sampler`. NoColorSpace: with `hdr_2d` off (`rendering_server.cpp:3771`), the
- * canvas filters raw sRGB bytes (`texture_storage.cpp:754`), and `ControlQuad` decodes the sample.
+ * What a 2D view samples with `sampler`. NoColorSpace: with `hdr_2d` off (`rendering_server.cpp:3771`),
+ * the canvas filters raw sRGB bytes (`texture_storage.cpp:754`), and `ControlQuad` decodes the sample.
  */
-export function canvasItemCloneSampler(sampler: CanvasItemTextureSampler): CloneSampler {
+export function canvasItemViewSampler(sampler: CanvasItemTextureSampler): ViewSampler {
   return {
     colorSpace: THREE.NoColorSpace,
     filter: canvasItemFilterState(sampler.filter),

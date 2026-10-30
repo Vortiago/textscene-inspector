@@ -71,6 +71,16 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'resource_format_text.cpp:311-333' },
   },
   /**
+   * An `[editable]` heading with no `path=`. The text loader returns `ERR_FILE_CORRUPT` at it, so nothing in the file
+   * loads (`resource_format_text.cpp:391-395`). A path that names no node is no finding: the instantiate skips it
+   * (`packed_scene.cpp:691-696`).
+   */
+  editableMissingPath: {
+    severity: 'error',
+    ruleName: 'editable-missing-path',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:391-395' },
+  },
+  /**
    * A `[connection]` `from=` or `to=` that resolves to no node from the scene root. The scene loads, and the instantiate
    * skips the connection when either end is null, so the signal never reaches the method (`packed_scene.cpp:660-662`).
    */

@@ -11,6 +11,7 @@ import { delimiterArrayValidator } from './delimiterValidators';
 import { ruleRegistry } from '../../../../linter/RuleRegistry';
 import './linter';
 import { buildDelimiters } from './delimiterRegions';
+import { INSTANTIABLE_SCENE } from '../../../../parser/sceneDefaults.testkit';
 
 const codeEditDelimiterCollisionRule = ruleRegistry.getRule('valid-codeedit-properties')!;
 
@@ -57,7 +58,12 @@ describe('the validator, the collision rule and the delimiter list agree on each
     const literal = `Array[String](["${entry}"])`;
     const rawProperties = { delimiter_strings: literal, delimiter_comments: literal };
     const node: RawNode = { rawProperties, name: 'Edit', type: 'CodeEdit', children: [] };
-    const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
+    const scene: RawScene = {
+      ...INSTANTIABLE_SCENE,
+      nodes: [node],
+      externalResources: [],
+      internalResources: [],
+    };
     return codeEditDelimiterCollisionRule.check({ scene, node }).length > 0;
   }
 

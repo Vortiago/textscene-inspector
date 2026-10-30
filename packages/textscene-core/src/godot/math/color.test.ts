@@ -6,7 +6,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { darkened, isColorString, lightened, namedColor } from './color.js';
+import {
+  colorHue,
+  colorSaturation,
+  darkened,
+  hsvToRgb,
+  isColorString,
+  lightened,
+  namedColor,
+} from './color.js';
 
 describe('isColorString', () => {
   it.each(['ff0000', '#ff0000', 'F00', '#f00a', 'ff000080', '#FF000080'])('reads the HTML hex %s', (text) => {
@@ -77,5 +85,43 @@ describe('darkened', () => {
 describe('lightened', () => {
   it('moves each colour channel toward white by the amount and keeps alpha', () => {
     expect(lightened({ r: 0, g: 0.5, b: 1, a: 0.25 }, 0.5)).toEqual({ r: 0.5, g: 0.75, b: 1, a: 0.25 });
+  });
+});
+
+describe('hsvToRgb', () => {
+  // core/math/color.cpp:182-227 (Color::set_hsv), case i:0 h in [0,1/6).
+  it('is pure red at h=0, s=1, v=1', () => {
+    expect(hsvToRgb(0, 1, 1)).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('is achromatic grey at s=0, independent of h', () => {
+    expect(hsvToRgb(0.42, 0, 0.5)).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
+  });
+
+  it('wraps h past 1 the same as Math::fmod on a negative-safe range', () => {
+    expect(hsvToRgb(1, 1, 1)).toEqual(hsvToRgb(0, 1, 1));
+  });
+});
+
+describe('colorHue', () => {
+  it.each([
+    ['red', { r: 1, g: 0, b: 0 }, 0],
+    ['green', { r: 0, g: 1, b: 0 }, 1 / 3],
+    ['blue', { r: 0, g: 0, b: 1 }, 2 / 3],
+    // r is the maximum and b exceeds g, so (g - b) / delta is negative and wraps (color.cpp:156-158).
+    ['a magenta-leaning red', { r: 1, g: 0, b: 0.5 }, 11 / 12],
+    ['a grey, which has no hue', { r: 0.4, g: 0.4, b: 0.4 }, 0],
+  ])('reads the hue of %s', (_name, color, hue) => {
+    expect(colorHue(color)).toBeCloseTo(hue, 10);
+  });
+});
+
+describe('colorSaturation', () => {
+  it('is the span of the channels over the brightest', () => {
+    expect(colorSaturation({ r: 0.5, g: 0.25, b: 0.25 })).toBe(0.5);
+  });
+
+  it('is 0 for black, which has no brightest channel to divide by', () => {
+    expect(colorSaturation({ r: 0, g: 0, b: 0 })).toBe(0);
   });
 });

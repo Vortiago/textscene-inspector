@@ -17,13 +17,17 @@ import { CameraGizmo } from './Gizmo';
 import { usePublishCamera } from '../../../r3f/environment/worldExposure';
 import { useResolvedCameraAttributes } from '../../../r3f/environment/useResolvedCameraAttributes';
 import { useRegisterSceneCamera } from '../../../r3f/sceneCameras';
+import { useResolvedEnvironment } from '../worldenvironment/useResolvedEnvironment';
 
 const DEFAULT_ASPECT = 16 / 9;
 
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
   const tscnPath = useNodePath() ?? node.name;
-  usePublishCamera(tscnPath, properties.current, useResolvedCameraAttributes(properties.attributes));
+  usePublishCamera(tscnPath, properties.current, {
+    attributes: useResolvedCameraAttributes(properties.attributes),
+    environment: useResolvedEnvironment(properties.environment),
+  });
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
@@ -74,7 +78,6 @@ export function Camera3D({ node, children }: NodeComponentProps) {
         element={CameraElement}
         name={node.name}
         tscnPath={tscnPath}
-        current={properties.current}
         position={offsetPosition}
         rotation={rotation}
         scale={scale}
@@ -93,8 +96,6 @@ interface SceneCameraProps {
   element: 'perspectiveCamera' | 'orthographicCamera';
   name: string;
   tscnPath: string;
-  /** Godot's `Camera3D.current`: which camera the owning viewport renders through. */
-  current: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -108,7 +109,6 @@ function SceneCamera({
   element: CameraElement,
   name,
   tscnPath,
-  current,
   position,
   rotation,
   scale,
@@ -121,12 +121,10 @@ function SceneCamera({
   useRegisterSceneCamera(tscnPath, cameraRef);
   useEffect(() => {
     if (cameraRef.current) {
-      // Tag the camera with its TSCN path and `current`, so a SubViewport can apply Godot's own
-      // election rule (`camera_3d.cpp`: `if (current || first_camera)`) to its own cameras.
+      // Tag the camera with its TSCN path so a SubViewport pass can find it.
       cameraRef.current.userData.tscnPath = tscnPath;
-      cameraRef.current.userData.tscnCurrent = current;
     }
-  }, [tscnPath, current]);
+  }, [tscnPath]);
   // `manual` keeps R3F's resize from refitting the projection to the canvas in pixels. The viewport
   // that renders through the camera refits it to its own aspect, and a lens change keeps that aspect.
   useLayoutEffect(() => {

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { lint } from './testing/testkit.js';
+import { lintRule } from './testing/testkit.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { resourceRuleRegistry } from './ResourceRuleRegistry.js';
 import type { RuleArm } from './types.js';
@@ -42,42 +42,38 @@ function sceneWith(type: string, body: string): string {
   return `[gd_scene format=3]\n\n[sub_resource type="${type}" id="Res_1"]\n${body}\n\n[node name="Root" type="Node"]\n`;
 }
 
-function reported(content: string, ruleName: string) {
-  return lint(content).filter((d) => d.ruleName === ruleName);
-}
-
 describe('resource rules', () => {
   it('reports on the property line of a sub-resource no node holds', () => {
-    const [diagnostic] = reported(sceneWith('TestMarked', 'other = 1\nmarked = true'), 'test-marked');
+    const [diagnostic] = lintRule(sceneWith('TestMarked', 'other = 1\nmarked = true'), 'test-marked');
     expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic).toMatchObject({ nodeName: 'Res_1', nodeType: 'TestMarked', location: { line: 5 } });
   });
 
   it('reports on the heading when the section omits the property', () => {
-    expect(reported(sceneWith('TestAbsent', ''), 'test-absent')).toMatchObject([
+    expect(lintRule(sceneWith('TestAbsent', ''), 'test-absent')).toMatchObject([
       { location: { line: 3, column: 1 } },
     ]);
   });
 
   it('reports on the body of a .tres of that class', () => {
     const tres = '[gd_resource type="TestMarked" format=3]\n\n[resource]\nmarked = true\n';
-    expect(reported(tres, 'test-marked')).toMatchObject([{ location: { line: 4 } }]);
+    expect(lintRule(tres, 'test-marked')).toMatchObject([{ location: { line: 4 } }]);
   });
 
   it('reports nothing for a section of another class', () => {
-    expect(reported(sceneWith('TestOther', 'marked = true'), 'test-marked')).toEqual([]);
+    expect(lintRule(sceneWith('TestOther', 'marked = true'), 'test-marked')).toEqual([]);
   });
 
   it('turns a throw into a rule-crashed error on the heading', () => {
-    const [diagnostic] = reported(sceneWith('TestThrows', ''), FILE_DIAGNOSTICS.ruleCrashed.ruleName);
+    const [diagnostic] = lintRule(sceneWith('TestThrows', ''), FILE_DIAGNOSTICS.ruleCrashed.ruleName);
     expect(diagnostic).toBeAtTier('error');
     expect(diagnostic!.message).toContain("'test-throws'");
     expect(diagnostic!.location).toEqual({ line: 3, column: 1 });
   });
 
   it('refuses an arm the rule does not declare', () => {
-    const [diagnostic] = reported(sceneWith('TestUndeclared', ''), FILE_DIAGNOSTICS.ruleCrashed.ruleName);
+    const [diagnostic] = lintRule(sceneWith('TestUndeclared', ''), FILE_DIAGNOSTICS.ruleCrashed.ruleName);
     expect(diagnostic!.message).toContain("'test-undeclared', which its emits does not declare");
-    expect(reported(sceneWith('TestUndeclared', ''), 'test-undeclared')).toEqual([]);
+    expect(lintRule(sceneWith('TestUndeclared', ''), 'test-undeclared')).toEqual([]);
   });
 });

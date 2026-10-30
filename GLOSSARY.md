@@ -23,7 +23,7 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
-**Live step** (`LiveStep` in `r3f/liveSceneTree.ts`, from `liveStep`):
+**Live step** (`LiveStep` in `r3f/liveSceneTree.ts`, from `LiveTree.stepOf`):
 One node of the **Live scene tree** as a reader needs it: the node as shown, the **Authored scope** its refs resolve in, and the child groups below it.
 A reader takes all three from the one call, because the authored node and its group's scope are the wrong ones for an instance root and for a grafted node.
 _Avoid_: reading a node's merge, scope or children in separate calls.
@@ -33,15 +33,31 @@ One read of the loader's scene cache that every question over the **Live scene t
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
 _Avoid_: a live tree or a context per consumer, per question.
 
-**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveStep`):
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `LiveTree.stepOf`):
 The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
 _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
 
+**Live scene pass** (`LiveScenePass`, `r3f/liveScenePass.ts`, ADR-0060):
+A scene pass that reads the whole **Live scene tree** and answers per live node path, so a NodePath binds across an instance border as Godot's `get_node_or_null` does.
+A component reads its result by its own node path, because the nodes of a sub-scene are shared by every instance of it.
+_Avoid_: writing a pass's result into a node. A pass that runs before the sub-scenes load, for a path that may cross an instance.
+
+**Node patch** (`NodePatch`, `r3f/nodePatch.ts`, ADR-0060):
+The property values a **Live scene pass** lays over one node of the **Live scene tree**, found by the node's live path. `patchedNode` returns the node with its patch over its properties.
+_Avoid_: a pass mutating a node it was handed.
+
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
-The merged node keeps it, and the render path's per-owner tables read it.
+The merged node keeps it, and the render path's per-owner tables read it. A `%Name` that the table lacks at the instance root reads the table of the instance's owner next, which the file above answers.
+An inherited root's table lands this file's root-owned settings after the base's names, so the base's first claimant keeps a name (`node.cpp:2222-2233`). The parse answers a path below this file's claimant as unknowable.
+A setting whose `owner=` walk enters one instance, and whose `owner_uid_path=` names an owner in another or the file root, carries an **Owner hand-off**.
 _Avoid_: a second composer of an instance's table.
+
+**Owner hand-off** (`OwnerHandOff`, `resources/ownerHandOff.ts`):
+The link between a setting in the table of the instance an `owner=` walk enters and its copy in the table of the owner the `owner_uid_path=` finds. Godot takes the trail's owner only where the walk finds no node (`packed_scene.cpp:157-168`).
+The first instance collapses before the second, and its graft reports what it decided for each hand-off. The copy lands only where the walk found nothing. Where the trail's owner is the file root, the live tree decides the claim, and the parse answers a path through that `%Name`, or below its claimant, as unknowable.
+_Avoid_: deciding the owner in the parse, which cannot see the instance.
 
 **ExtResource**:
 An external file reference, written `ExtResource("id")` and declared by an `[ext_resource]` heading with a `uid=` and a `path="res://…"`.
@@ -73,6 +89,11 @@ _Avoid_: the bare name for the **Screen-space roughness limiter**.
 The shader step that raises a pixel's roughness by how far its normal differs from the normal of its pixel pair.
 Godot takes a fine derivative. WebGL 2 has none, so a pixel with a normal map reads the map one texel along its pair.
 
+**Texture view** (`resources/textures/textureView.ts`):
+The texture a consumer samples: a shared source with the sampler state the consumer states laid over it.
+It is the source itself when the source already samples that way, and one clone that the consumer owns when it does not.
+_Avoid_: "texture clone", which names how a view is made, not what it is.
+
 **Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
 The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
 It changes only a texture that has levels to choose between.
@@ -103,9 +124,13 @@ The LightmapGI a node takes its light from, with the node's entry in that bake: 
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
 _Avoid_: "config file" for a `.tscn`. A general settings store.
 
-**Project default font** (`resources/fonts/font/projectDefaultFont.ts`):
+**Project default font** (`resources/fonts/font/projectFonts.ts`):
 The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
 _Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
+
+**Project fonts** (`resources/fonts/font/projectFonts.ts`):
+The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
+_Avoid_: "theme context", which Godot's `ThemeContext` also names.
 
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
@@ -200,15 +225,20 @@ What the `[node]` and `[connection]` headings state that the scene tree does not
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
-**Re-rooted node** (`reRoot` in `parser/sceneTreeBuilder.ts`):
-A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`.
+**Re-rooted node** (`reRoot` in `parser/sceneTreeBuilder.ts` and in `resources/seatEscaped.ts`):
+A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`. A path through an instance is walked by the live tree, where the instance's graft hands the node back and the file that wrote it re-roots it.
 A node below it re-roots on its own, since the old path no longer exists. Godot does not re-root in a scene it refuses to instantiate, nor where a `parent_id_path=` lands the node.
 _Avoid_: "dropped node", which names a node left out of the tree.
 
 **Landed node** (`seatLanded` in `parser/sceneTreeBuilder.ts`):
-A node whose `parent=` path names nothing and whose `parent_id_path=` finds a heading of this file. Godot seats it under that heading and keeps its name (`packed_scene.cpp:161-163`).
+A node whose `parent=` path names nothing and whose `parent_id_path=` finds a heading of this file or a node in the content of an instance. Godot seats it under that node and keeps its name (`packed_scene.cpp:161-163`).
 The **Seating** does the same, and still counts the node among the orphans, since it is not at the path it declares.
 _Avoid_: "re-rooted node" for a node that keeps its name.
+
+**Content trail** (`followContentTrail` in `godot/scene/packedScene.ts`):
+The ids of an `owner_uid_path=` or `parent_id_path=` that follow the id of an instance heading. The trail continues in that instance's scene, and in its base scene where its own headings lack the id (`packed_scene.cpp:1947-2005`).
+The **Seating** seats the node under the instance heading with the rest of the trail, and the instance's graft follows it over the cached scene. A trail that finds nothing there re-roots the node and gives it no owner. A `parent=` or `owner=` walk that enters an instance and finds nothing takes the trail the same way, through an **Owner hand-off** where the owner is outside that instance.
+_Avoid_: resolving the ids of a trail against the headings of one file alone.
 
 **Rule arm** (`linter/ruleArms.ts`):
 One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
@@ -390,6 +420,9 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.
 
+**Light pass host** (`r3f/lighting2d/lightPassHost.ts`):
+The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumulates and shades through, and the call that runs it. The 2D stage and each **sub-viewport** with 2D content are hosts, and each one's lights, occluders and CanvasModulate act on its own items alone (ADR-0033).
+
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.
 A pass in a dependency cycle never runs, and `useViewportPassCycle` lets a consumer fall back.
@@ -413,6 +446,13 @@ A material prop that decides which shader program a material draws with, so a ch
 A **uniform**, such as a colour, changes freely and stays out of the remount key.
 _Avoid_: bare "key". "recompile" for a React remount.
 
+**Triplanar mapping** (`r3f/materials/godotTriplanar.ts`):
+A UV set that samples each of its textures at the vertex position on the three axis planes and blends the samples by the normal, as Godot's `uv1_triplanar` and `uv2_triplanar` do. The position is the mesh's own, or the world's under `*_world_triplanar`.
+_Avoid_: "triplanar UV", "box mapping".
+
+**Node pose** (`r3f/materials/nodePose.ts`):
+The node's model as Godot holds it, in a program three draws with a moved `modelMatrix`, such as a billboard's. The draw hooks write it before each draw.
+
 **Collision-shape resource**:
 A `[sub_resource]` that carries collision geometry (`BoxShape3D`, `ConvexPolygonShape3D`, `ConcavePolygonShape3D`), referenced by a **CollisionShape3D** Node through `shape`.
 _Avoid_: "collision mesh".
@@ -420,6 +460,10 @@ _Avoid_: "collision mesh".
 **Collision gizmo**:
 An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `showCollisions`.
 _Avoid_: "debug shape".
+
+**Node icon** (`r3f/nodeIcon/`):
+Godot's billboard icon at the origin of a node, at a fixed size on screen. A node type declares it through `editorIcon` in its registration. It follows the Gizmos toggle and is faint while the node is unselected (ADR-0056).
+_Avoid_: "sprite", "label".
 
 **CSG root**:
 The `CSGShape3D` whose direct parent is not a `CSGShape3D`, and the only node in a CSG subtree that draws a mesh (ADR-0027).
@@ -501,9 +545,25 @@ _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 The `exposure_multiplier` of the CameraAttributes that a world renders with. A world with no CameraAttributes has none, which a baked lightmap tells from the factor 1.
 _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 
+**Pass attributes** (`ViewportPassAttributes` in `r3f/environment/worldExposure.tsx`):
+The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A world holds one **Exposure factor** for its lights, and a pass draws the world at the factor of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
+_Avoid_: "viewport exposure", "camera exposure".
+
+**Auto exposure** (`r3f/environment/LuminanceReduction.ts`):
+The exposure divided by the **Frame luminance** over `auto_exposure_scale`, in the tone-map pass and the glow's bright pass. A still frame shows the settled value, so `auto_exposure_speed` has no part.
+_Avoid_: "eye adaptation", "adaptive exposure".
+
+**Frame luminance**:
+The one value the **Auto exposure** reads: the largest channel of the HDR frame, averaged in 8-texel blocks over the top left region the last level reaches, held between the luminance range of the CameraAttributes.
+_Avoid_: "brightness", "average colour". The mean of the whole frame, which Godot's blocks do not compute.
+
 **Radiance layer**:
 One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
 _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
+
+**Sky radiance** (`r3f/sky/skyRadiance.ts`):
+The **Radiance layers** of the sky a scene shows, with the energy and the rotation it was baked at, which the surfaces, the depth fog's aerial perspective and the volumetric fog's ambient all read. A scene without a sky reads black.
+_Avoid_: "environment map", "fog radiance". A second filtered copy for one reader.
 
 **Fast filter**:
 Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
@@ -542,9 +602,18 @@ The one texture that holds the `area_texture` of every AreaLight3D, each in a ce
 A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
+**Decal term** (`r3f/decal/`):
+The part of every 3D program's fragment shader that mixes the decals into the surface, as Godot's clustered shader does: the albedo of every program, and the normal, roughness, metallic, occlusion and emission of a lit one. It reads the decals' band of the Scene rows, which each render of a scene packs, and the Decal atlas.
+_Avoid_: "decal projection", which names the baked mesh the term replaced.
+
+**Scene rows** (`r3f/sceneRows/`):
+The one float texture that holds the rows of a scene's Reflection probes and Decals: the probes' first, the decals' after them. Each row is one probe or decal, as the shader fetches it.
+Both share it because a fragment shader has 16 texture units.
+_Avoid_: "probe rows" and "decal rows", which name one band of it.
+
 **Decal atlas** (`nodes/3d/decal/decalAtlas.ts`, `decalAtlasLayout.ts`, `decalAtlasLevels.ts`):
-The one texture that holds the `texture_albedo` of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
-A Decal reads its rectangle of it, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
+The one texture that holds the albedo, normal, ORM and emission textures of every Decal, each in a cell with a border of transparent texels, as Godot builds it. Its five levels each halve the whole level above.
+The Decal term reads each Decal's rectangle of each map, so the rim of a projection blends the border, and a small level can blend a neighbouring texture.
 _Avoid_: "decal texture", which names one Decal's own `texture_albedo`.
 
 **Geometry instance**:
@@ -579,14 +648,15 @@ _Avoid_: "asset loader".
 A Node with `instance = ExtResource("scene_id")` whose `.tscn` or `.glb` is loaded and composed into the host tree.
 _Avoid_: "include", "prefab".
 
-**Instance root merge** (`mergeInstanceRoot`, applied through `collapseLiveNode`):
+**Instance root merge** (`mergeInstanceRoot`, applied through `LiveTree.stepOf`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer calls `collapseLiveNode` so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
+Every consumer takes the merge from its **Live step** so node paths agree. A lone `.glb` instance is not merged: the node that instances a `.glb` is the **GLB root**. An instance of a scene that Godot refuses to instantiate is not merged either: the node stays as authored, with its own children, and draws as a failed load.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
 **GLB root**:
 The node that instances a lone `.glb`, as in Godot. Each GLB object has the path of that node followed by its own, and no row stands for the **GLBSceneRoot**.
-_Avoid_: A path segment for the GLB file name. Two paths for one GLB object.
+The children of a GLB object or of the GLB root stand in one order, whether each is a GLB object, an attached node or a node of the instancing scene. The rows and the viewport share that order.
+_Avoid_: A path segment for the GLB file name. Two paths for one GLB object. A second order for a GLB child.
 
 **Imported scene tree** (`godot/import/gltfImportScene.ts`):
 The nodes Godot's glTF importer builds from a `.glb`, each with its full path below the **GLB root**. It holds a Skeleton3D, a BoneAttachment3D for each bone with a child, and a skinned mesh below its Skeleton3D, which three's graph does not.
@@ -595,6 +665,18 @@ _Avoid_: A match on three's names or levels. A nearest-ancestor or ordered-subse
 **Frame group** (`resources/formats/glb/frameGroups.ts`):
 The `THREE.Group` that stands for a Skeleton3D or a BoneAttachment3D of the **Imported scene tree**. A Skeleton3D group holds the root bones of its skeleton. A BoneAttachment3D group holds the nodes that hang on its bone. A property written to the node lands on its group, and a path through the group is the path without it.
 _Avoid_: A stand-in object. A path segment for the group.
+
+**Automatic skin** (`automaticSkinMatrices`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The skin Godot builds from the global rest of each bone when a MeshInstance3D names a Skeleton3D and sets no `skin` (`skeleton_3d.cpp:975-1014`). A bone's matrix is its global pose times the inverse of its global rest. The model is three-free, and the **Live scene pass** in `skeletonBindings.ts` hands the matrices to the mesh by its live path, so the mesh draws as a SkinnedMesh.
+_Avoid_: A CPU bake of the vertices. A skin read from a Skin resource. A pose kept in three bones.
+
+**Pose modifier** (`PoseModifier`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The edit a SkeletonModifier3D child makes to the bone poses of its Skeleton3D, and its `influence`. The Skeleton3D pass runs the edits in child order on a copy of the file pose, before it makes the **Automatic skin**, as `Skeleton3D::_process_modifiers` does (`skeleton_3d.cpp:1166-1204`). The file pose is kept. A type registers a reader from its node to its edit as `poseModifier`.
+_Avoid_: A write to the bone table. A modifier that draws.
+
+**Bone pose** (`BonePose`, `AnimatedPose`, `nodes/3d/skeleton3d/skeletonPose.ts`):
+The position, rotation and scale of one bone, each part optional. An AnimationPlayer writes the poses its bone tracks sample, and the Skeleton3D pass lays them over the file pose before the **Pose modifier** edits run (`animation_mixer.cpp:1878-1891`). A part no track keys keeps the file pose.
+_Avoid_: A write to the bone table. A pose kept in three bones.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

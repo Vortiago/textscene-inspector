@@ -729,6 +729,37 @@ describe('POINTS primitive', () => {
   });
 });
 
+/** WALL_TRES's only surface declared as a TRIANGLE_STRIP (primitive 4), over its indices 2, 0, 3, 2, 1, 0. */
+const TRIANGLE_STRIP_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 4,');
+
+describe('TRIANGLE_STRIP primitive', () => {
+  // `Mesh::generate_triangle_mesh` (`mesh.cpp:352-366`): an even slot j reads (j-2, j-1, j), an odd
+  // one (j-2, j, j-1), so every triangle of the strip keeps one winding.
+  it('reads the strip as triangles, with the odd ones swapped as Godot does', () => {
+    const surface = decodeArrayMeshTres(TRIANGLE_STRIP_ONLY_TRES, 'res://mesh.tres').surfaces[0]!;
+
+    expect([...surface.indices]).toEqual([2, 0, 3, 0, 2, 3, 3, 2, 1, 2, 0, 1]);
+    expect(surface.indexCount).toBe(12);
+    expect(surface.isPoints).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('reads a strip saved with no indices over every vertex, in order', () => {
+    const unindexed = TRIANGLE_STRIP_ONLY_TRES.replace('"index_count": 6,\n', '').replace(
+      /"index_data": PackedByteArray\("[^"]*"\),\n/,
+      ''
+    );
+    expect([...decodeArrayMeshTres(unindexed, 'res://mesh.tres').surfaces[0]!.indices]).toEqual([
+      0, 1, 2, 1, 3, 2,
+    ]);
+  });
+
+  it('reads a strip of fewer than three indices as no triangle (`mesh.cpp:300-303`)', () => {
+    const short = TRIANGLE_STRIP_ONLY_TRES.replace('"index_count": 6,', '"index_count": 2,');
+    expect(decodeArrayMeshTres(short, 'res://mesh.tres').surfaces[0]!.indices).toHaveLength(0);
+  });
+});
+
 describe('non-triangle primitives', () => {
   it('skips a non-triangle surface and keeps the triangle ones', () => {
     // A LINES surface's indices are vertex pairs. Read as triangles they

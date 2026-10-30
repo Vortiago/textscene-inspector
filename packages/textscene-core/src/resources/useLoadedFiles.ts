@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
 import type { FontResource } from './fonts/font/types';
+import type { ThemeResource } from './styles/theme/types';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceProcessor } from './createResourceProcessor';
 import type { ResourceType } from './ResourceEventBus';
@@ -39,13 +40,19 @@ export interface FileKind<T extends object> {
 }
 
 /** A mesh `.tres` loads on the generic resource bus. */
-const PARSED_RESOURCES: FileKind<ParsedResource> = {
+export const PARSED_RESOURCES: FileKind<ParsedResource> = {
   busTypes: ['resource'],
   cacheOf: (loader) => loader.resources,
 };
 
 /** A font file loads on the font bus. */
 export const FONT_FILES: FileKind<FontResource> = { busTypes: ['font'], cacheOf: (loader) => loader.fonts };
+
+/** A Theme file loads on the theme bus, with the fonts it names. */
+export const THEME_FILES: FileKind<ThemeResource> = {
+  busTypes: ['theme'],
+  cacheOf: (loader) => loader.themes,
+};
 
 const NO_PATHS: ReadonlySet<string> = new Set();
 const NO_BUS_TYPES: readonly ResourceType[] = [];

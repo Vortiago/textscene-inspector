@@ -10,7 +10,7 @@ import { reverseRowsInPlace } from '../../../utils/reversedRows';
 import { colourDataTexture } from '../colourDataTexture';
 import { uploadedTexels } from '../halfFloatTexels';
 import { decodeMipmappedImageRef, type DecodedLevel } from '../image/decode';
-import { carryDefaultMipChain, type TextureLevel } from '../texelTexture';
+import { carryMipChain, GODOT_DEFAULT_MIN_FILTER, type TextureLevel } from '../texelTexture';
 import {
   resolveProceduralSubResource,
   type ProceduralTextureResolution,
@@ -38,7 +38,7 @@ function build(
   reverseRowsInPlace(pixels.data, width, height);
   const texture = colourDataTexture(pixels.data, width, height, pixels.format);
   const base: TextureLevel = { data: texture.image.data as Uint8Array | Uint16Array, width, height };
-  carryDefaultMipChain(texture, [base, ...pixels.levels.map(uploadedLevel)]);
+  carryMipChain(texture, [base, ...pixels.levels.map(uploadedLevel)], GODOT_DEFAULT_MIN_FILTER);
   return texture;
 }
 

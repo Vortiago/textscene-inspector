@@ -113,12 +113,14 @@ function effectiveState(texture: THREE.Texture, state: TextureFilterState): Text
   };
 }
 
-/**
- * Whether `texture` samples a mip chain: one the GPU generates, or its own levels below the base,
- * which three uploads as they are.
- */
+/** Whether `texture` holds levels below its base, which three uploads as they are. A chain the GPU generates holds none. */
+export function carriesMipLevels(texture: THREE.Texture): boolean {
+  return texture.mipmaps.length > 1;
+}
+
+/** Whether `texture` samples a mip chain: one the GPU generates, or the levels it carries. */
 export function hasMipChain(texture: THREE.Texture): boolean {
-  return texture.generateMipmaps || texture.mipmaps.length > 1;
+  return texture.generateMipmaps || carriesMipLevels(texture);
 }
 
 /**

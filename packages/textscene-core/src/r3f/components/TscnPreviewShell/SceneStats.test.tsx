@@ -13,6 +13,7 @@ import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit'
 import { TscnParser } from '../../../parser/TscnParser';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -46,6 +47,7 @@ describe('<SceneStats>', () => {
 [node name="Player" parent="." instance=ExtResource("4_ray")]
 `;
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
           children: [makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] })],

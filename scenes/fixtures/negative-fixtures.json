@@ -3,6 +3,7 @@
   "files": [
     "edge-animation-library-missing-subresource.tscn",
     "edge-connection-missing-field.tscn",
+    "edge-editable-missing-path.tscn",
     "edge-gltf-unsupported-required-extension.tscn",
     "edge-int-wrap-position.tscn",
     "edge-invalid-cast-shadow.tscn",

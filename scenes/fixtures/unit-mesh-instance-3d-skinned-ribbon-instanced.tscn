@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitmeshinstance3dskinnedribboninst"]
+
+; The one variable: the skinned ribbon sits in an instanced scene. The host instances
+; unit-mesh-instance-3d-skinned-ribbon.tscn, whose MeshInstance3D names its Skeleton3D through
+; `skeleton`, so it must draw the same bent ribbon as that scene. No other scene binds a mesh to a
+; skeleton inside an instance, so no other golden shows a regression in it.
+
+[ext_resource type="PackedScene" path="res://unit-mesh-instance-3d-skinned-ribbon.tscn" id="1_ribbon"]
+
+[node name="Host" type="Node3D"]
+
+[node name="Ribbon" parent="." instance=ExtResource("1_ribbon")]

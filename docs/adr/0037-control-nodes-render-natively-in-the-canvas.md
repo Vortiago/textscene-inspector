@@ -190,6 +190,16 @@ the native Control-only offscreen pass publishes into `ViewportTextureRegistry`
 (ADR-0033), in place of the `<foreignObject>`-based `rasterizeControlSubtree` DOM
 rasteriser. No consumer of that registry changes.
 
+### A Control is a lit canvas item
+
+Godot lights a Control like any CanvasItem: a Light2D reaches it through `light_mask`, the
+CanvasModulate tints it, and its `CanvasItemMaterial` sets `light_mode` and `blend_mode`.
+`ControlCanvasWalker` wraps each Control's painter in `LitCanvasItemPixels`, the wrapper a Node2D
+item uses, so one path declares the item to the light pass. A leaf mesh deep in a painter reads
+the lit pixel material through `useCanvasItemPixelMaterial` and merges it after
+`canvasItemFacing()`. The text materials take it as an option. A `CanvasLayer` is no CanvasItem,
+so it declares no item. A mesh outside a lit item, such as a `Label3D` run, stays unlit.
+
 ### A Control under a `Node2D` ancestor
 
 Godot composes the full CanvasItem transform chain through each `Node2D` above a

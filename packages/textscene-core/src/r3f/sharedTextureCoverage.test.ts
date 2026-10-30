@@ -17,9 +17,13 @@ const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FREED_OTHERWISE: Record<string, string> = {
   'r3f/fog/fogUniforms.ts':
     "Each pass draws its texture as its own render target's, and three frees it with the target.",
+  'r3f/decal/decalSlots.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
+  'r3f/sceneRows/sceneRowsSlot.ts':
+    "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/reflectionProbe/probeSlots.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
-  'r3f/sky/skyLayerArray.ts':
+  'r3f/sky/skyRadiance.ts':
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
 };
 
@@ -53,6 +57,9 @@ function topLevelFunction(statement: ts.Statement): { name: string; body: ts.Nod
   if (!ts.isArrowFunction(initializer) && !ts.isFunctionExpression(initializer)) return undefined;
   return { name: declaration.name.text, body: initializer };
 }
+
+/** The factories another module exports that build a texture for each call. */
+const IMPORTED_FACTORIES = new Set(['installedSlot']);
 
 function isReleaseCall(node: ts.Node): boolean {
   return (
@@ -93,7 +100,7 @@ class Module {
     );
   }
 
-  /** Whether `node` builds a texture: a constructor, a loader, or a call of this module's factory. */
+  /** Whether `node` builds a texture: a constructor, a loader, or a call of a factory. */
   builds(node: ts.Node): boolean {
     if (ts.isNewExpression(node)) {
       const name = node.expression.getText();
@@ -101,7 +108,8 @@ class Module {
     }
     if (!ts.isCallExpression(node)) return false;
     const callee = node.expression;
-    if (ts.isIdentifier(callee)) return this.calls(node, this.factories);
+    if (ts.isIdentifier(callee))
+      return IMPORTED_FACTORIES.has(callee.text) || this.calls(node, this.factories);
     return (
       ts.isPropertyAccessExpression(callee) &&
       callee.name.text === 'load' &&

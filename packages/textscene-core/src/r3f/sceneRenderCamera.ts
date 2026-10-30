@@ -30,6 +30,7 @@ interface SceneHook {
   previousAfter: AfterRender;
 }
 
+// eslint-disable-next-line no-restricted-syntax -- the last observer's release deletes the scene's hook
 const hooks = new WeakMap<THREE.Scene, SceneHook>();
 
 /** Written only by `createViewportCanvasCamera`. A camera leaves it once it is collected. */

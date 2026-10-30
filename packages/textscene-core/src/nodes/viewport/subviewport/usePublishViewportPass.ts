@@ -23,6 +23,8 @@ interface PublishViewportPassOptions {
   target: THREE.WebGLRenderTarget;
   width: number;
   height: number;
+  /** `transparent_bg`: whether the target's image keeps alpha. */
+  isTransparent: boolean;
   /**
    * This frame's offscreen render, which the copy views fill from after. Never called while
    * this pass sits in a cycle.
@@ -36,10 +38,11 @@ export function usePublishViewportPass({
   target,
   width,
   height,
+  isTransparent,
   render,
 }: PublishViewportPassOptions): void {
   const registerViewportPass = useRegisterViewportPass();
-  const views = useTargetViews(target);
+  const views = useTargetViews(target, isTransparent);
 
   const entry = useMemo<ViewportTextureEntry>(
     () => ({ plain: views.plain, decoding: views.decoding, size: { x: width, y: height } }),

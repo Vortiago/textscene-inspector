@@ -10,6 +10,7 @@ import {
   expectNoDiagnostic,
   instanced,
   lint,
+  lintRule,
   node,
   override,
   packedScene,
@@ -26,7 +27,7 @@ const dangling = scene(
   node('StaticBody2D', {}, { name: 'Body', parent: 'NoSuchNode' })
 );
 
-const orphansIn = (source: string) => lint(source).filter((d) => d.ruleName === ORPHAN);
+const orphansIn = (source: string) => lintRule(source, ORPHAN);
 
 /** `parent=""`: a path the loader keeps and `get_node_or_null` resolves to nothing. */
 const EMPTY_PARENT = scene(
@@ -53,7 +54,7 @@ describe('a parent path this file never defines', () => {
   });
 
   it('runs the semantic rules on a node the builder re-rooted', () => {
-    const shapeless = lint(dangling).filter((d) => d.ruleName === NEEDS_SHAPE);
+    const shapeless = lintRule(dangling, NEEDS_SHAPE);
     expect(shapeless.map((d) => d.nodeName)).toEqual(['NoSuchNode#Body']);
     expect(orphansIn(dangling)[0]?.message).not.toContain('No semantic rule ran');
   });
@@ -88,9 +89,10 @@ describe('a parent path this file never defines', () => {
   it('errors on a second heading that declares no parent at all', () => {
     // `packed_scene.cpp:206` returns nullptr for the whole scene, so this one
     // does not load at all, a tier above the vanished-path case beside it.
-    const errors = lint(
-      scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Stray' }))
-    ).filter((d) => d.ruleName === 'node-without-parent');
+    const errors = lintRule(
+      scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Stray' })),
+      'node-without-parent'
+    );
     expect(errors).toHaveLength(1);
     expect(errors[0]).toBeAtTier('error');
     expect(errors[0]?.nodeName).toBe('Stray');
@@ -346,6 +348,15 @@ describe('a parent path this file never defines', () => {
       expect(message).not.toContain('Gone#Body');
     });
 
+    it('runs the semantic rules on a node whose trail enters an instance, and does not say they were skipped', () => {
+      const source = trailScene(
+        '[node name="Mid" parent="." unique_id=20 instance=ExtResource("1_body")]',
+        '[node name="Body" type="StaticBody2D" parent="Gone" parent_id_path=PackedInt32Array(20, 5)]'
+      );
+      expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+      expect(orphansIn(source)[0]?.message).not.toContain('No semantic rule ran');
+    });
+
     it('keeps the refusal outcome when Godot refuses the instantiate', () => {
       const message = messageOf(
         '[node name="Mid" type="Node2D" parent="." unique_id=20]',
@@ -400,11 +411,7 @@ describe('a parent path this file never defines', () => {
       node('Node2D', {}, { name: 'A', parent: '.' }),
       node('Node2D', {}, { name: 'B', parent: '' })
     );
-    expect(
-      lint(source)
-        .filter((d) => d.ruleName === 'empty-parent-path')
-        .map((d) => d.nodeName)
-    ).toEqual(['B']);
+    expect(lintRule(source, 'empty-parent-path').map((d) => d.nodeName)).toEqual(['B']);
   });
 
   it.each([['index="0"'], ['instance_placeholder="res://x.tscn"']])(
@@ -454,7 +461,7 @@ describe('a parent path this file never defines', () => {
 });
 
 describe('a root heading that declares a parent', () => {
-  const rootErrors = (source: string) => lint(source).filter((d) => d.ruleName === 'root-declares-parent');
+  const rootErrors = (source: string) => lintRule(source, 'root-declares-parent');
 
   it('is an error naming the heading and the parent it declares', () => {
     const errors = rootErrors(ROOTLESS);
@@ -472,11 +479,9 @@ describe('a root heading that declares a parent', () => {
     // does. Verified against Godot 4.7.2: `load()` on this file crashes.
     const source = scene(node('Node2D', {}, { name: 'A', parent: '' }));
     expect(rootErrors(source)).toEqual([]);
-    expect(
-      lint(source)
-        .filter((d) => d.ruleName === 'empty-parent-path')
-        .map((d) => [d.severity, d.nodeName])
-    ).toEqual([['error', 'A']]);
+    expect(lintRule(source, 'empty-parent-path').map((d) => [d.severity, d.nodeName])).toEqual([
+      ['error', 'A'],
+    ]);
   });
 
   it('names the FIRST heading, not whichever one the tree build rooted at', () => {

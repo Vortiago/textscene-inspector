@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { editorHelperUserData, isEditorHelper, markEditorHelper } from './editorHelpers';
+import { editorHelperUserData, hideEditorHelpers, isEditorHelper, markEditorHelper } from './editorHelpers';
 
 describe('markEditorHelper', () => {
   it('marks an object as editor chrome', () => {
@@ -40,5 +40,39 @@ describe('isEditorHelper', () => {
     markEditorHelper(helper);
 
     expect(isEditorHelper(line)).toBe(false);
+  });
+});
+
+describe('hideEditorHelpers', () => {
+  function sceneWithChrome() {
+    const scene = new THREE.Scene();
+    const mesh = new THREE.Mesh();
+    const chrome = new THREE.Group();
+    chrome.userData = editorHelperUserData();
+    chrome.add(new THREE.Mesh());
+    scene.add(mesh, chrome);
+    return { scene, mesh, chrome };
+  }
+
+  it('hides the chrome and leaves the scene content visible', () => {
+    const { scene, mesh, chrome } = sceneWithChrome();
+    hideEditorHelpers(scene);
+
+    expect([mesh.visible, chrome.visible]).toEqual([true, false]);
+  });
+
+  it('shows the chrome again when the returned call runs', () => {
+    const { scene, chrome } = sceneWithChrome();
+    hideEditorHelpers(scene)();
+
+    expect(chrome.visible).toBe(true);
+  });
+
+  it('keeps chrome the authored scene already hid hidden after the restore', () => {
+    const { scene, chrome } = sceneWithChrome();
+    chrome.visible = false;
+    hideEditorHelpers(scene)();
+
+    expect(chrome.visible).toBe(false);
   });
 });

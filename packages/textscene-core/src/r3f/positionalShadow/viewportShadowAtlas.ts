@@ -22,6 +22,7 @@ export type PositionalLight = THREE.PointLight | THREE.SpotLight | AreaShadowLig
 type ShadowMap = NonNullable<THREE.LightShadow['map']>;
 
 /** Written only by `ViewportShadowAtlas.bind`. Cleared for a shadow when its atlas is disposed. */
+// eslint-disable-next-line no-restricted-syntax -- ViewportShadowAtlas.bind writes an entry from outside, and dispose deletes it
 const boundAtlas = new WeakMap<THREE.LightShadow, ViewportShadowAtlas>();
 
 export class ViewportShadowAtlas {

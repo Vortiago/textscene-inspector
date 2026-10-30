@@ -120,6 +120,8 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.topLevel = boolSlotValue(properties.top_level) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
+  if (properties.material !== undefined) result.materialPath = properties.material;
+  result.useParentMaterial = boolSlotValue(properties.use_parent_material) === true;
   result.textureFilter = intOr(
     properties.texture_filter,
     CanvasItemTextureFilter.PARENT_NODE,

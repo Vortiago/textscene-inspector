@@ -13,13 +13,13 @@ import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import {
-  canvasItemCloneSampler,
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { drawnClone } from '../../../../r3f/drawnClone';
+import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
@@ -35,22 +35,27 @@ import {
 import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import type { TextureProgressBarProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
+import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
-interface ImageLike {
-  width?: number;
-  height?: number;
+/** The size a nine-patch layer cuts its margins from: the sampled image's. */
+function sampledSize(texture: THREE.Texture | null): Vector2 | null {
+  return sizeWithArea(imageSize(texture?.image));
 }
 
-function naturalSize(texture: THREE.Texture | null): Vector2 | null {
-  const image = texture?.image as ImageLike | undefined;
-  const w = image?.width ?? 0;
-  const h = image?.height ?? 0;
-  return texture && w > 0 && h > 0 ? { x: w, y: h } : null;
+/** A layer's size: the sampled image's for a nine patch, else the size Godot reports. */
+function useLayerSize(
+  { texture, size }: { texture: THREE.Texture | null; size: ImageSize | undefined },
+  ninePatchStretch: boolean
+): Vector2 | null {
+  return useMemo(
+    () => (!texture ? null : ninePatchStretch ? sampledSize(texture) : sizeWithArea(size)),
+    [texture, size, ninePatchStretch]
+  );
 }
 
 /** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
@@ -59,15 +64,9 @@ function useLayerTexture(
   externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
   internalResources: NativeControlComponentProps['solveNode']['resources']['internalResources'],
   sampler: CanvasItemTextureSampler
-): THREE.Texture | null {
-  const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
-  // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
-  // would upload a whole GPU copy that never draws, under its own sampler settings.
-  const layer = useMemo(
-    () => (raw ? drawnClone(raw, canvasItemCloneSampler(sampler)) : null),
-    [raw, sampler]
-  );
-  return useUploadedClone(layer);
+): { texture: THREE.Texture | null; size: ImageSize | undefined } {
+  const { texture: raw, size } = useTexture2D(ref, externalResources, internalResources);
+  return { texture: useCanvas2DTexture(raw, sampler), size };
 }
 
 /** `Texture2D::get_rect_region`'s cropped clone: identity except the UV window (`linearFill.ts`). */
@@ -76,17 +75,15 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vector2 | null
 ): THREE.Texture | null {
-  // The caller memoises `region` and `textureSize`, so a render that keeps them clones and
-  // uploads nothing.
-  const cropped = useMemo(() => {
-    if (!texture || !region || !textureSize) return null;
-    return drawnClone(texture, {
-      colorSpace: THREE.NoColorSpace,
-      wrap: THREE.ClampToEdgeWrapping,
-      window: regionUvWindow(region, textureSize),
-    });
-  }, [texture, region, textureSize]);
-  return useUploadedClone(cropped);
+  return useOwnedTextureView(
+    texture,
+    region &&
+      textureSize && {
+        colorSpace: THREE.NoColorSpace,
+        wrap: THREE.ClampToEdgeWrapping,
+        window: regionUvWindow(region, textureSize),
+      }
+  );
 }
 
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
@@ -94,21 +91,20 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
   const { externalResources, internalResources } = solveNode.resources;
-  const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
-  const progressTexture = useLayerTexture(
-    props.textureProgress,
-    externalResources,
-    internalResources,
-    sampler
-  );
-  const overTexture = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
+  const under = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
+  const progress = useLayerTexture(props.textureProgress, externalResources, internalResources, sampler);
+  const over = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
+  const underTexture = under.texture;
+  const progressTexture = progress.texture;
+  const overTexture = over.texture;
 
   // Memoised, so the geometry and crop memos that read a size rebuild only when its texture changes.
-  const underSize = useMemo(() => naturalSize(underTexture), [underTexture]);
-  const progressSize = useMemo(() => naturalSize(progressTexture), [progressTexture]);
-  const overSize = useMemo(() => naturalSize(overTexture), [overTexture]);
-
   const ninePatchStretch = props.ninePatchStretch === true;
+  // An unset ViewportTexture reports size 0 yet samples the placeholder, which a nine patch stretches.
+  const underSize = useLayerSize(under, ninePatchStretch);
+  const progressSize = useLayerSize(progress, ninePatchStretch);
+  const overSize = useLayerSize(over, ninePatchStretch);
+
   const stretchMarginLeft = props.stretchMarginLeft ?? 0;
   const stretchMarginTop = props.stretchMarginTop ?? 0;
   const stretchMarginRight = props.stretchMarginRight ?? 0;

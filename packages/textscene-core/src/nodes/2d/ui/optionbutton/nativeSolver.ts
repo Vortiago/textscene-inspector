@@ -15,6 +15,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -102,7 +103,7 @@ const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   const themed = themedIcons.arrow;
   const requests: TextureSlotRequest[] = [];
-  if (themed) requests.push({ key: 'arrow', ref: themed.ref, scope: themed.resources });
+  if (themed) requests.push(themedSlotRequest('arrow', themed));
   return requests;
 };
 

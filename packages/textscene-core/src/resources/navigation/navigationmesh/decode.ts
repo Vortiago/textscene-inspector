@@ -5,12 +5,11 @@
  * are bake settings. No THREE: `r3f/navigationOverlay.ts` builds the overlay.
  */
 
+import { FLOATS_PER_VERTEX } from '../../../godot/math/vector';
 import { warn } from '../../../logger';
 import { parsePackedInt32Arrays, parsePackedVector3Array } from '../../shapes/packedArray';
 import { drawableNavigationPolygons } from '../polygonIndices';
 import type { NavigationMeshData } from './types';
-
-const FLOATS_PER_VERTEX = 3;
 
 /**
  * Decode a NavigationMesh's properties, or null when it describes nothing

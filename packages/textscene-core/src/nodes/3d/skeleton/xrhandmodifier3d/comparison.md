@@ -1,16 +1,16 @@
 ---
 type: XRHandModifier3D
 category: 3D
-status: unimplemented
+status: limitation
 fixture: unit-xr-hand-modifier-3d.tscn
 # image: unit-xr-hand-modifier-3d
 visual: false
-renders_as: nothing yet, Godot poses bones from an XR hand tracker, the previewer does not
+renders_as: nothing (a transform-only modifier that has no XR tracker to read)
 ---
 
 # XRHandModifier3D
 
-Poses the bones of its parent Skeleton3D from an XRHandTracker's joint data. With no headset there is no tracker to read, so the drive is a gap here (ADR-0045). Its children show at the pose the scene file states.
+Poses the bones of its parent Skeleton3D from an XRHandTracker's joint data. With no headset there is no tracker to read, so Godot changes no bone, and nor does the previewer. The Skeleton3D pass reads `active` and `influence` from it and makes no edit.
 
 ## Linting
 
@@ -29,8 +29,8 @@ Strict parsing format-checks these `XRHandModifier3D` properties, plus 2 inherit
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-XRHandModifier3D reuses `parseNode3D`, which reads only `transform` and `visible`, so `hand_tracker` and `bone_update` are never recorded and there is no fallback. A `bone_update = 2` that Godot's setter refuses outright is carried through untouched, and only strict reports it.
+The parser reads `active` and `influence`, and leaves `hand_tracker` and `bone_update` unread, as no tracker feeds them. Strict errors on a `bone_update = 2`, which Godot's setter refuses.
 
 ## Known limitations
 
-- **Needs runtime** Godot poses the hand from a live XR tracker, but here nothing moves.
+- **Needs runtime** Godot poses the hand from a live XR tracker, but here no tracker exists, so no bone moves.

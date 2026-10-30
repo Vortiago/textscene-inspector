@@ -1,8 +1,7 @@
 /**
  * The game viewport rect in Godot canvas pixels: `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`)
  * from `display/window/size/viewport_*`. The stage applies no Camera2D, so the canvas transform is
- * the identity and viewport pixels are canvas pixels. A root Control anchors to it, and a
- * DirectionalLight2D's shadow map spans it.
+ * the identity and viewport pixels are canvas pixels. A root Control anchors to it.
  */
 
 import { useMemo } from 'react';

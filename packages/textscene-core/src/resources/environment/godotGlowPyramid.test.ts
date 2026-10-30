@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { glowOn } from './testing/glowParams';
-import { firstLevelBlurGlsl, glowGatherGlsl, glowLevelUniform, laterLevelBlurGlsl } from './godotGlowPyramid';
+import {
+  autoExposedFirstLevelBlurGlsl,
+  firstLevelBlurGlsl,
+  glowGatherGlsl,
+  glowLevelUniform,
+  laterLevelBlurGlsl,
+} from './godotGlowPyramid';
+import { AUTO_EXPOSURE_SCALE_UNIFORM, LUMINANCE_UNIFORM } from './godotLuminance';
 
 const blurs = () => {
   const first = firstLevelBlurGlsl(glowOn());
@@ -44,6 +51,24 @@ describe('the glow blur kernel', () => {
     const glsl = laterLevelBlurGlsl(glowOn()).vertical;
     expect(glsl).toContain('int godotGlowEdge(int pixel, int size)');
     expect(glsl).toContain('texelFetch(blurredBuffer, ivec2(pixel.x, godotGlowRowEdge(pixel.y + offset');
+  });
+});
+
+describe('the first glow level under an auto exposure', () => {
+  it('runs the bright pass with the gain, in the vertical pass that holds the bright pass', () => {
+    const { vertical } = autoExposedFirstLevelBlurGlsl(glowOn());
+    expect(vertical).toContain('color *= godotAutoExposureGain();');
+    expect(vertical).toContain(`uniform sampler2D ${LUMINANCE_UNIFORM};`);
+    expect(vertical).toContain(`uniform float ${AUTO_EXPOSURE_SCALE_UNIFORM};`);
+  });
+
+  it('leaves the horizontal pass as it was, since the gain follows the firefly weighting', () => {
+    expect(autoExposedFirstLevelBlurGlsl(glowOn()).horizontal).toBe(firstLevelBlurGlsl(glowOn()).horizontal);
+  });
+
+  it('declares each uniform once', () => {
+    const { vertical } = autoExposedFirstLevelBlurGlsl(glowOn());
+    expect(vertical.split(`uniform sampler2D ${LUMINANCE_UNIFORM};`)).toHaveLength(2);
   });
 });
 

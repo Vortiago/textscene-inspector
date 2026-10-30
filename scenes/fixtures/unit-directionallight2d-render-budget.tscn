@@ -1,0 +1,1132 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Sq" type="Polygon2D" parent="."]
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 1100, 0, 1100, 40, 0, 40)
+
+[node name="Layer" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="D0" type="DirectionalLight2D" parent="."]
+color = Color(1, 0, 0, 1)
+energy = 0.05
+
+[node name="D1" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D2" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D3" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D4" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D5" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D6" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D7" type="DirectionalLight2D" parent="."]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D8" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D9" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D10" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D11" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D12" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D13" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D14" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D15" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D16" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D17" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D18" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D19" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D20" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D21" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D22" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D23" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D24" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D25" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D26" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D27" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D28" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D29" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D30" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D31" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D32" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D33" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D34" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D35" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D36" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D37" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D38" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D39" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D40" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D41" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D42" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D43" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D44" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D45" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D46" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D47" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D48" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D49" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D50" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D51" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D52" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D53" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D54" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D55" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D56" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D57" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D58" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D59" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D60" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D61" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D62" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D63" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D64" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D65" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D66" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D67" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D68" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D69" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D70" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D71" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D72" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D73" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D74" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D75" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D76" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D77" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D78" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D79" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D80" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D81" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D82" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D83" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D84" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D85" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D86" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D87" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D88" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D89" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D90" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D91" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D92" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D93" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D94" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D95" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D96" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D97" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D98" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D99" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D100" type="DirectionalLight2D" parent="Layer"]
+color = Color(1, 0, 0, 1)
+energy = 0.1
+
+[node name="D101" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D102" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D103" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D104" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D105" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D106" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D107" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D108" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D109" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D110" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D111" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D112" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D113" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D114" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D115" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D116" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D117" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D118" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D119" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D120" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D121" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D122" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D123" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D124" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D125" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D126" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D127" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D128" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D129" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D130" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D131" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D132" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D133" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D134" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D135" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D136" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D137" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D138" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D139" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D140" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D141" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D142" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D143" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D144" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D145" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D146" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D147" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D148" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D149" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D150" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D151" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D152" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D153" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D154" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D155" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D156" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D157" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D158" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D159" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D160" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D161" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D162" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D163" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D164" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D165" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D166" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D167" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D168" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D169" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D170" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D171" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D172" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D173" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D174" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D175" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D176" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D177" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D178" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D179" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D180" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D181" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D182" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D183" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D184" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D185" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D186" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D187" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D188" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D189" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D190" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D191" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D192" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D193" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D194" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D195" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D196" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D197" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D198" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D199" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D200" type="DirectionalLight2D" parent="Layer"]
+color = Color(1, 0, 0, 1)
+energy = 0.2
+
+[node name="D201" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D202" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D203" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D204" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D205" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D206" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D207" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D208" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D209" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D210" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D211" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D212" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D213" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D214" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D215" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D216" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D217" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D218" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D219" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D220" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D221" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D222" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D223" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D224" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D225" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D226" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D227" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D228" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D229" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D230" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D231" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D232" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D233" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D234" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D235" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D236" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D237" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D238" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D239" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D240" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D241" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D242" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D243" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D244" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D245" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D246" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D247" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D248" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D249" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D250" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D251" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D252" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D253" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D254" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 1, 0, 1)
+energy = 0.05
+
+[node name="D255" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 1, 0, 1)
+energy = 0.1
+
+[node name="D256" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 1, 0, 1)
+energy = 0.2
+
+[node name="D257" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 1, 1)
+energy = 0.05
+
+[node name="D258" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 1, 1)
+energy = 0.1
+
+[node name="D259" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D260" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D261" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D262" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D263" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D264" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D265" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D266" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D267" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D268" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D269" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D270" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D271" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D272" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D273" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D274" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D275" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D276" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D277" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D278" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 0, 1)
+energy = 1.0
+
+[node name="D279" type="DirectionalLight2D" parent="Layer"]
+color = Color(0, 0, 1, 1)
+energy = 0.2

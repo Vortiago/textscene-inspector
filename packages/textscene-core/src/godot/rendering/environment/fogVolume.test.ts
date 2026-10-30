@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import {
   fogVolumeFroxel,
   fogVolumeFroxelRange,
+  fogVolumeHasGizmo,
+  FogVolumeShape,
   isCameraNearFogVolume,
   type FogVolumeFrame,
 } from './fogVolume';
@@ -87,5 +89,17 @@ describe('isCameraNearFogVolume', () => {
 
   it('fails for a camera farther out than its near corner', () => {
     expect(isCameraNearFogVolume({ x: 0, y: 3, z: 8 }, corners, 0.1)).toBe(false);
+  });
+});
+
+describe('fogVolumeHasGizmo', () => {
+  it.each([
+    [FogVolumeShape.ELLIPSOID, true],
+    [FogVolumeShape.CONE, true],
+    [FogVolumeShape.CYLINDER, true],
+    [FogVolumeShape.BOX, true],
+    [FogVolumeShape.WORLD, false],
+  ])('is decided by shape %i: %s', (shape, expected) => {
+    expect(fogVolumeHasGizmo(shape)).toBe(expected);
   });
 });

@@ -1,7 +1,7 @@
 /**
  * <Sprite3D>: a 2D texture drawn as a quad in 3D space, sized by `pixel_size` × the active region
- * (full image, sheet tile or `region_rect`). `useTexture2D` resolves an image file, an inline
- * procedural texture or a CanvasTexture. `meshStandardMaterial` when `shaded`, else
+ * (full image, sheet tile or `region_rect`). `useTexture2D` resolves the texture, whatever its
+ * source. `meshStandardMaterial` when `shaded`, else
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
@@ -12,10 +12,8 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
-import { drawnClone } from '../../../r3f/drawnClone';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
-import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
-import { useUvWindow } from '../../../r3f/useUvWindow';
+import { useWindowedTextureView } from '../../../r3f/useTextureView';
 import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
@@ -59,14 +57,13 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // hook applies the same modes Label3D uses.
   useBillboard(spriteRef, properties.billboard);
 
-  // `texture` may be an image file, or a procedural texture described entirely
-  // inside the scene; `useTexture2D` resolves either and reports a reference it
-  // cannot resolve as `missing`.
-  const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
-    properties.texture,
-    externalResources,
-    internalResources
-  );
+  // The sprite's material samples `texture_albedo` as `source_color` (`material.cpp:969`), so a
+  // ViewportTexture gives its decoding view.
+  const {
+    texture: sourceTexture,
+    size: reportedSize,
+    missing: textureMissing,
+  } = useTexture2D(properties.texture, externalResources, internalResources, 'decoding');
 
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
   // corners, so only an overrunning window tiles.
@@ -86,24 +83,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     textureFilter: properties.texture_filter,
     anisotropicFilteringLevel,
   });
-  // The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a `source_color`
-  // sampler, so the clone reads as an albedo does, not as the 2D canvas's retag. Sprite3D's
-  // texture is a node property, not a material slot, so the node's own `texture_filter`
-  // (`material.cpp:3055`) lands on this clone.
-  const samplerClone = useMemo(
-    () =>
-      sourceTexture
-        ? drawnClone(sourceTexture, {
-            colorSpace: sourceColorSpace(sourceTexture),
-            filter: textureFilter,
-            wrap: WRAP[wrap],
-          })
-        : null,
-    [sourceTexture, wrap, textureFilter]
-  );
-  // The clone is this component's, never the loader's cached entry: `useUploadedClone`
-  // uploads it once and disposes it once it no longer draws. A frame change keeps it.
-  const displayedTexture = useUploadedClone(samplerClone);
+  // `texture_albedo` is a `source_color` sampler (`sprite_3d.cpp:306`), so the view reads as an
+  // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`). The view is this
+  // component's, never the loader's cached entry, since a frame writes its window on it.
   // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
   const frameWindow = useMemo(
     () =>
@@ -114,15 +96,23 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       ),
     [sourceTexture, properties]
   );
-  useUvWindow(displayedTexture, frameWindow);
+  const displayedTexture = useWindowedTextureView(
+    sourceTexture,
+    sourceTexture && {
+      colorSpace: sourceColorSpace(sourceTexture),
+      filter: textureFilter,
+      wrap: WRAP[wrap],
+    },
+    frameWindow
+  );
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
   const rect = useMemo(() => {
-    const px = frameSizePx(sourceTexture ?? undefined, properties);
+    const px = frameSizePx(reportedSize, properties);
     const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
     return spriteQuadRect(size, properties);
-  }, [sourceTexture, properties]);
+  }, [reportedSize, properties]);
   // The frame decides the box, so a texture still loading leaves the sprite unplaced.
   const placement = useMemo(
     () =>

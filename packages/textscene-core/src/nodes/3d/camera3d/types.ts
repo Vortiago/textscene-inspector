@@ -34,6 +34,11 @@ export interface Camera3DProperties extends Node3DProperties {
    * while the viewport renders through this camera (`r3f/environment/worldExposure.tsx`).
    */
   attributes?: string;
+  /**
+   * Reference to an Environment (optional), in the `SubResource("id")` or the `ExtResource("id")`
+   * form. It replaces the world's Environment while the viewport renders through this camera.
+   */
+  environment?: string;
   cull_mask: number;
   doppler_tracking: number;
 }

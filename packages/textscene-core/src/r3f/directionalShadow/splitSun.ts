@@ -48,6 +48,7 @@ export function isSplitSun(light: THREE.Light): light is SplitSunLight {
  * Each light's split sun. Written only by `attachSplitSun` and `releaseSplitSun`, so the fitter
  * finds a sun without a search of the light's children on every render.
  */
+// eslint-disable-next-line no-restricted-syntax -- attachSplitSun writes an entry and releaseSplitSun deletes it
 const splitSuns = new WeakMap<THREE.DirectionalLight, SplitSunLight>();
 
 /** Nothing for a light that has no split sun, or whose sun something else took off it. */

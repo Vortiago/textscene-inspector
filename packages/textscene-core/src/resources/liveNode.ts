@@ -4,8 +4,25 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { HandOffDecision } from '../parser/nodeOwner.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
 import { resolveInstancePath } from './SubResourceResolver.js';
+
+/**
+ * A host child that its instance's graft could not seat inside the instance: the walk of its
+ * `parent=` ended outside, or found nothing.
+ */
+export interface EscapedChild {
+  /** The child as its instance held it, with the `instanceSubPath` its heading gave it. */
+  readonly child: LiveNode;
+  /** The scope the child's refs resolve in: the one of the file that wrote it. */
+  readonly scope: SceneScope;
+  /**
+   * Where the walk ended: the path from the instance root, which climbs out with `..` and may end
+   * in a `%Name` for the scene above to answer, or null where the walk found nothing.
+   */
+  readonly end: string | null;
+}
 
 export interface LiveNode extends TscnNode {
   /**
@@ -23,10 +40,35 @@ export interface LiveNode extends TscnNode {
   /** Set by the merge on a collapsed instance: `GraftedInstance.uniqueParentPlacements`. */
   readonly uniqueParentPlacements?: ReadonlyMap<string, string>;
   /**
+   * Set by the merge on a collapsed instance: the host children it could not seat inside itself, in
+   * the order of their headings. The file that wrote them seats them (`seatEscaped`).
+   */
+  readonly escaped?: readonly EscapedChild[];
+  /**
+   * Set by the merge on a collapsed instance: what its grafts decided for each hand-off. Where one is
+   * handed off, the frame that holds the copy awaiting it lands that copy (`ownerHandOff`).
+   */
+  readonly handOffDecisions?: readonly HandOffDecision[];
+  /**
+   * Set on an instance by the file that seated the host children the instance handed back: where each
+   * went, keyed like `uniqueParentPlacements`, with the path climbing out of the instance with `..`.
+   */
+  readonly seatedPlacements?: ReadonlyMap<string, string>;
+  /**
+   * Set on a host child that the graft re-anchored at a nested instance: the child as the first
+   * instance held it. The file that seats the child from there removes this one (`hostChildOf`).
+   */
+  readonly reanchoredFrom?: LiveNode;
+  /**
    * Set on a typed node attached into a GLB: the `relPath` of the GLB object its `instanceSubPath`
    * matched, so the tree finds its row by that key and matches nothing again.
    */
   readonly glbTargetRelPath?: string;
+}
+
+/** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */
+export function hostChildOf(node: LiveNode): LiveNode {
+  return node.reanchoredFrom ?? node;
 }
 
 /**

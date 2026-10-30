@@ -10,4 +10,5 @@ nodeComponentRegistry.register({
   typeName: 'VoxelGI',
   Component: VoxelGI,
   renderIntent: 'pending',
+  editorIcon: { icon: 'GizmoVoxelGI' },
 });

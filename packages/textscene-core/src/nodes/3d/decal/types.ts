@@ -1,8 +1,7 @@
 /**
  * Decal types. Godot's Decal is a VisualInstance3D that projects `texture_albedo` (and optional
  * ORM, normal and emission maps) down local -Y onto surfaces inside an origin-centred box of
- * `size`. The renderer does not project the three maps or `emission_energy`, which are parsed
- * so the Inspector and linter see the full property surface.
+ * `size`.
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
@@ -13,7 +12,7 @@ export interface DecalProperties extends Node3DProperties {
   /** Albedo texture projected onto surfaces (ExtResource/SubResource ref). */
   texture_albedo?: string;
 
-  /** Optional normal-map texture reference (parsed, not rendered). */
+  /** Optional normal-map texture reference. */
   texture_normal?: string;
 
   /** Optional ORM (occlusion/roughness/metallic) texture reference. */
@@ -54,4 +53,7 @@ export interface DecalProperties extends Node3DProperties {
 
   /** Distance over which the fade completes; past it the decal is culled (default: 10). */
   distance_fade_length: number;
+
+  /** Added to the camera distance when decals sort, nearest first (default: 0). */
+  sorting_offset: number;
 }

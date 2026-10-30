@@ -1,7 +1,7 @@
 ---
 type: CanvasModulate
 category: 2D
-status: limitation
+status: done
 fixture: unit-canvas-modulate.tscn
 image: unit-canvas-modulate
 group: Canvas effects
@@ -12,7 +12,8 @@ renders_as: a colour multiply applied to the whole canvas
 
 CanvasModulate tints every CanvasItem on its canvas by one `color`. The previewer
 multiplies that colour onto each item it draws on the same canvas, wherever the node
-sits in the tree.
+sits in the tree. A CanvasModulate that an instanced sub-scene declares counts once that
+sub-scene has loaded, since it joins the canvas it sits in (`canvas_modulate.cpp:33-45`).
 
 ## Linting
 
@@ -32,8 +33,3 @@ Strict parsing format-checks these `CanvasModulate` properties, plus 12 inherite
 
 `color` falls back to opaque white `(1, 1, 1, 1)` when absent or malformed, with no
 warning, since `parseColor` swallows its own parse failures.
-
-## Known limitations
-
-- **Approximated** A CanvasModulate inside an instanced sub-scene is not found, so its
-  tint is not applied where Godot would apply it.

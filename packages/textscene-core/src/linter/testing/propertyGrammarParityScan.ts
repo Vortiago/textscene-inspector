@@ -1,8 +1,8 @@
 /**
- * Reads the slices off disk: which directories are slices, and which keys each
- * side names. The parser half is a scrape of `properties.X` and `properties['X']`,
- * since nothing in the build exposes that set. The allowlist records the reads a
- * scrape cannot see, such as a table-driven one.
+ * Reads the slices off disk: which directories are slices, which parser each registers, and which
+ * keys each side names. The parser half is a scrape of `properties.X` and `properties['X']`,
+ * since nothing in the build exposes that set. The allowlist records the reads a scrape cannot
+ * see, such as a table-driven one.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -56,6 +56,12 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // the whole GraphElement one.
   TextEdit: '2d/ui/textedit/parser.ts',
   GraphElement: '2d/ui/graphelement/parser.ts',
+  // Every modifier reads `active` and `influence`, and a constraint reads the base `settings/<i>/` leaves.
+  SkeletonModifier3D: '3d/skeleton/skeletonmodifier3d/parser.ts',
+  BoneConstraint3D: '3d/skeleton/boneconstraint3d/parser.ts',
+  // The H and V flow containers and the enabler register the parse of this base.
+  FlowContainer: '2d/ui/flowcontainer/parser.ts',
+  VisibleOnScreenNotifier3D: '3d/visibleonscreennotifier3d/parser.ts',
 };
 
 /**
@@ -67,9 +73,41 @@ export function findLinterParserDirs(dir: string): string[] {
   return atLeast(walk(dir, 'linterParser.ts').map(dirname), 150, 'findLinterParserDirs');
 }
 
-/** The directories holding both `parser.ts` and `linterParser.ts`. */
+/** The parser files of the base types: a slice that registers one of these reads no key of its own. */
+const BASE_PARSER_FILES: ReadonlySet<string> = new Set(
+  Object.values(BASE_TYPE_TO_PARSER_SUBPATH).map((subpath) => join(nodesRoot, subpath))
+);
+
+/** Written only by {@link findParserFile}: a slice's parser file never changes during a run. */
+const parserFiles = new Map<string, string | null>();
+
+/**
+ * The file of the parser a slice registers, or null when it registers a base parser. It is the
+ * slice's `parser.ts`, or else the module its `index.ts` names in `parser: <name>` and imports from
+ * a relative path, such as a family parser that several slices share.
+ */
+export function findParserFile(dir: string): string | null {
+  if (!parserFiles.has(dir)) parserFiles.set(dir, locateParserFile(dir));
+  return parserFiles.get(dir)!;
+}
+
+function locateParserFile(dir: string): string | null {
+  const own = join(dir, 'parser.ts');
+  if (existsSync(own)) return own;
+  const indexFile = join(dir, 'index.ts');
+  if (!existsSync(indexFile)) return null;
+  const src = readFileSync(indexFile, 'utf8');
+  const name = /\bparser:\s*(\w+)/.exec(src)?.[1];
+  if (!name) return null;
+  const specifier = relativeImports(src).find((entry) => entry.names.includes(name))?.specifier;
+  if (!specifier) return null;
+  const file = resolveImport(indexFile, specifier);
+  return BASE_PARSER_FILES.has(file) ? null : file;
+}
+
+/** The directories holding a `linterParser.ts` and a parser of their own. */
 export function findSliceDirs(dir: string): string[] {
-  const dirs = findLinterParserDirs(dir).filter((d) => existsSync(join(d, 'parser.ts')));
+  const dirs = findLinterParserDirs(dir).filter((d) => findParserFile(d) !== null);
   return atLeast(dirs, 50, 'findSliceDirs');
 }
 
@@ -99,6 +137,21 @@ function familyCountKey(name: string): string {
   return key;
 }
 
+/** Each `import { a, type b, c as d } from './x'` of `src`: the local names and the relative specifier. */
+function relativeImports(src: string): { names: string[]; specifier: string }[] {
+  const importRe = /import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/g;
+  return [...src.matchAll(importRe)].map(([, list, specifier]) => ({
+    names: list!.split(',').map((n) =>
+      n
+        .trim()
+        .replace(/^type\s+/, '')
+        .split(/\s+as\s+/)
+        .pop()!
+    ),
+    specifier: specifier!,
+  }));
+}
+
 /**
  * Every key a parser file reads, following each relative import it hands the
  * whole bag to, such as `parseAudioBase(properties, ctx)`, recursively. The base
@@ -109,17 +162,7 @@ export function scrapeParserReads(file: string, seen = new Set<string>()): Set<s
   seen.add(file);
   const src = readFileSync(file, 'utf8');
   const reads = scrapeParserProps(src);
-  const importRe = /import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/g;
-  let m: RegExpExecArray | null;
-  while ((m = importRe.exec(src)) !== null) {
-    const names = m[1]!.split(',').map((n) =>
-      n
-        .trim()
-        .replace(/^type\s+/, '')
-        .split(/\s+as\s+/)
-        .pop()!
-    );
-    const specifier = m[2]!;
+  for (const { names, specifier } of relativeImports(src)) {
     for (const name of names) {
       if (!name || !new RegExp(`\\b${name}\\((?:[^()]*,\\s*)?properties\\s*[,)]`).test(src)) continue;
       for (const key of scrapeParserReads(resolveImport(file, specifier), seen)) reads.add(key);

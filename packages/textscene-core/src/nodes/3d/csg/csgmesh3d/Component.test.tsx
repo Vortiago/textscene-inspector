@@ -174,9 +174,9 @@ describe('<CSGMesh3D> mesh type no slice builds', () => {
     expect(await undrawnTypesFor(future)).toEqual(['FutureMesh']);
   });
 
-  it("names the type of a TextMesh with no font in the node's details", async () => {
+  it('names no type for a TextMesh with no font, which draws the bundled font', async () => {
     const text: TscnInternalResource = { id: 'TextMesh_csg', type: 'TextMesh', data: {} };
-    expect(await undrawnTypesFor(text)).toEqual(['TextMesh']);
+    expect(await undrawnTypesFor(text)).toEqual([]);
   });
 });
 
@@ -230,7 +230,7 @@ describe('<CSGMesh3D> TextMesh', () => {
     expect(undrawnTypes()).toEqual([]);
   });
 
-  it('names the type once its font file is there and has no TrueType outlines', async () => {
+  it('names the type once its font file is there and has no readable outlines', async () => {
     const { fake, renderer, undrawnTypes } = await renderText();
 
     await ReactThreeTestRenderer.act(async () =>

@@ -41,4 +41,4 @@ Godot's positional shadow atlas gives the light two slots for the camera. As in 
 ## Known limitations
 
 - **Approximated** `omni_shadow_mode` Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.
-- **Editor only** The wireframe sphere gizmo appears only in Godot's editor, and here it draws for the selected node when the Gizmos toggle is on.
+- **Editor only** The sphere gizmo and the light-tinted icon appear only in Godot's editor, and here they draw when the Gizmos toggle is on.

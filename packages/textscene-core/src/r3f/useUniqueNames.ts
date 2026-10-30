@@ -5,39 +5,35 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
+import { localSceneUniquePaths, localSceneOf } from './uniqueNameOwner.js';
+import { nodePathUniquePaths } from './nodePathUniqueNames.js';
 import { sameEntries } from '../utils/sameEntries.js';
-import { useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
+import { useByValue } from './hooks/useByValue.js';
+import { sameSelection, useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
 
-/**
- * `paths` under one identity while its entries stay the same, since a sub-scene owner's
- * table is rebuilt on every load.
- */
-function useStablePaths(
-  paths: ReadonlyMap<string, string> | undefined
-): ReadonlyMap<string, string> | undefined {
-  const signature = useMemo(() => (paths ? JSON.stringify([...paths]) : null), [paths]);
-  return useMemo(
-    () => (signature === null ? undefined : new Map<string, string>(JSON.parse(signature))),
-    [signature]
-  );
+type UniquePaths = ReadonlyMap<string, string> | undefined;
+
+/** Whether two tables hold the same entries. A sub-scene owner's table is rebuilt on every load. */
+function samePaths(a: UniquePaths, b: UniquePaths): boolean {
+  return sameSelection(a, b, sameEntries);
 }
 
 /**
  * The `%Name` table the node at `path` resolves against, as the live paths the dispatcher
  * registers, or undefined with no scene. A flag says a node claimed a name, and only the first
  * claimant keeps it, so the answer needs the whole tree. It is per owner: a name registers on
- * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
+ * the claimant's owner (node.cpp:2222-2234) and resolves through {@link nodePathUniquePaths}.
  */
 export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
-  // Without a path, the outer root's table. An inherited root's table is rebuilt on every load,
-  // so the reader compares entries and re-renders only where a name moved.
+  // An inherited root's table is rebuilt on every load, so the reader compares entries and
+  // re-renders only where a name moved.
   const tableOf = useCallback(
-    (live: SharedLiveTree) =>
-      ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx)),
+    (live: SharedLiveTree) => nodePathUniquePaths(path, live.roots, live.ctx),
     [path]
   );
-  return useStablePaths(useLiveTreeSelection(tableOf, sameEntries));
+  // The outer useByValue keeps the identity across a new `path`, which rebuilds the selection's
+  // snapshot with no earlier value to compare.
+  return useByValue(useLiveTreeSelection(tableOf, sameEntries), samePaths);
 }
 
 /**
@@ -45,7 +41,7 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
  * ({@link localSceneUniquePaths}). With no scene tree there is no table, so a `%Name` addresses
  * nothing.
  */
-interface LocalScene {
+export interface LocalScene {
   readonly path: string;
   readonly uniquePaths?: ReadonlyMap<string, string>;
 }
@@ -54,6 +50,16 @@ interface LocalScene {
 interface LocalSceneOwner {
   readonly path: string;
   readonly uniquePaths: ReadonlyMap<string, string>;
+}
+
+function localSceneOwnerOf(path: string, live: SharedLiveTree): LocalSceneOwner {
+  const owner = localSceneOf(path, live.roots, live.ctx);
+  return { path: owner.path, uniquePaths: localSceneUniquePaths(owner) };
+}
+
+/** The local scene of the node at `path`, as {@link useLocalScene} gives it, for a caller with no hooks. */
+export function localSceneAt(path: string, live: SharedLiveTree | null): LocalScene {
+  return live ? localSceneOwnerOf(path, live) : { path: path.split('/')[0]! };
 }
 
 const sameLocalSceneOwner = (a: LocalSceneOwner, b: LocalSceneOwner) =>
@@ -69,13 +75,12 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
   const ownerOf = useCallback(
     (live: SharedLiveTree): LocalSceneOwner | undefined => {
       if (!path) return undefined;
-      const owner = localSceneOf(path, live.roots, live.ctx);
-      return { path: owner.path, uniquePaths: localSceneUniquePaths(owner) };
+      return localSceneOwnerOf(path, live);
     },
     [path]
   );
   const owner = useLiveTreeSelection(ownerOf, sameLocalSceneOwner);
-  const uniquePaths = useStablePaths(owner?.uniquePaths);
+  const uniquePaths = useByValue(owner?.uniquePaths, samePaths);
   const rootPath = owner?.path ?? path?.split('/')[0];
   return useMemo(() => (rootPath ? { path: rootPath, uniquePaths } : undefined), [rootPath, uniquePaths]);
 }

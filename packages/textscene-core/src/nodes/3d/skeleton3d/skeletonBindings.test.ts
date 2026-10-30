@@ -1,0 +1,587 @@
+/**
+ * The Skeleton3D scene pass over the Live scene tree. `MeshInstance3D::_resolve_skeleton_path`
+ * (`mesh_instance_3d.cpp:175-199`) binds a mesh to the Skeleton3D its `skeleton` path names, with
+ * `get_node_or_null` on the live tree, so a path binds across an instance border as it does in one file.
+ */
+
+import { describe, expect, it, vi } from 'vitest';
+import { TscnParser } from '../../../parser/TscnParser';
+import type { TscnScene } from '../../../parser/types';
+import { liveTreeOf } from '../../../r3f/liveSceneTree';
+import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
+import type { Quaternion } from '../../../godot/math/quaternion';
+import type { Vector3 } from '../../../godot/math/vector';
+import * as logger from '../../../logger';
+import { bindMeshesToSkeletons, type BoundSkin } from './skeletonBindings';
+import type { AnimatedPose, BonePose } from './skeletonPose';
+import './index';
+import '../meshinstance3d/index';
+import '../skeleton/copytransformmodifier3d/index';
+import '../skeleton/copytransformmodifier3d/index.r3f';
+
+const BONES = `bones/0/name = "b0"
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+bones/0/position = Vector3(0, 0.5, 0)
+bones/1/name = "b1"
+bones/1/parent = 0
+bones/1/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/1/position = Vector3(0, -0.2, 0)
+bones/2/name = "b2"
+bones/2/parent = 1
+bones/2/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+bones/2/position = Vector3(0, -0.2, 0)
+bones/2/rotation = Quaternion(0, 0, 0.5, 0.866025)
+`;
+
+function scene(meshProperties: string, skeletonProperties = BONES, skeletonLine = ''): string {
+  return `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${skeletonLine}${skeletonProperties}
+[node name="Mesh" type="MeshInstance3D" parent="."]
+${meshProperties}
+`;
+}
+
+/** What the pass binds to the node at `path` of `content`'s live tree, with `scenes` loaded. */
+function boundSkinAt(
+  content: string,
+  path = 'Root/Mesh',
+  scenes: Readonly<Record<string, string>> = {}
+): BoundSkin | undefined {
+  const main = parse(content);
+  const loaded = Object.fromEntries(
+    Object.entries(scenes).map(([scenePath, text]) => [scenePath, parse(text)])
+  );
+  return bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, loaded))).get(path);
+}
+
+/** The skin matrices of {@link boundSkinAt}. */
+function skinAt(
+  content: string,
+  path = 'Root/Mesh',
+  scenes: Readonly<Record<string, string>> = {}
+): readonly Transform3D[] | undefined {
+  return boundSkinAt(content, path, scenes)?.matrices;
+}
+
+function parse(content: string): TscnScene {
+  return new TscnParser().parse(content);
+}
+
+function expectOrigin(transform: Transform3D | undefined, x: number, y: number, z: number): void {
+  expect(transform!.origin.x).toBeCloseTo(x, 5);
+  expect(transform!.origin.y).toBeCloseTo(y, 5);
+  expect(transform!.origin.z).toBeCloseTo(z, 5);
+}
+
+describe('the Skeleton3D scene pass in one file', () => {
+  it('binds a MeshInstance3D to the Skeleton3D a relative path names, with one matrix a bone', () => {
+    const skinMatrices = skinAt(scene('skeleton = NodePath("../Skeleton3D")'));
+
+    expect(skinMatrices).toHaveLength(3);
+    // The bone at rest does not move a vertex bound to it.
+    expectOrigin(skinMatrices![0], 0, 0, 0);
+  });
+
+  it('turns a vertex bound to a posed bone about that bone, as the skin matrix of the bone does', () => {
+    const skinMatrices = skinAt(scene('skeleton = NodePath("../Skeleton3D")'));
+
+    // b2 sits at (0, 0.1, 0) and turns 60 degrees: its own joint stays, and the point below it
+    // moves to (0.0866, 0.05, 0).
+    expectOrigin(multiplyTransform3D(skinMatrices![2]!, translation(0, 0.1, 0)), 0, 0.1, 0);
+    expectOrigin(multiplyTransform3D(skinMatrices![2]!, translation(0, 0, 0)), 0.0866025, 0.05, 0);
+  });
+
+  it('reaches a Skeleton3D through a %UniqueName and through a child path', () => {
+    const unique = scene('skeleton = NodePath("%Skeleton3D")', BONES, 'unique_name_in_owner = true\n');
+    const nested = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${BONES}
+[node name="Mesh" type="MeshInstance3D" parent="Skeleton3D"]
+skeleton = NodePath("..")
+`;
+
+    expect(skinAt(unique)).toHaveLength(3);
+    expect(skinAt(nested, 'Root/Skeleton3D/Mesh')).toHaveLength(3);
+  });
+
+  it('binds nothing for a MeshInstance3D that writes no skeleton, whose default is empty', () => {
+    const child = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${BONES}
+[node name="Mesh" type="MeshInstance3D" parent="Skeleton3D"]
+`;
+    expect(skinAt(child, 'Root/Skeleton3D/Mesh')).toBeUndefined();
+  });
+
+  it('binds nothing for an empty skeleton path, or a missing one whose parent is no Skeleton3D', () => {
+    expect(skinAt(scene(''))).toBeUndefined();
+    expect(skinAt(scene('skeleton = NodePath("")'))).toBeUndefined();
+  });
+
+  it('binds nothing for a path that resolves to no node (edge case)', () => {
+    expect(skinAt(scene('skeleton = NodePath("../Nothing")'))).toBeUndefined();
+    expect(skinAt(scene('skeleton = NodePath("%Nothing")'))).toBeUndefined();
+  });
+
+  it('binds nothing for a path to a node that is not a Skeleton3D', () => {
+    expect(skinAt(scene('skeleton = NodePath("..")'))).toBeUndefined();
+    expect(skinAt(scene('skeleton = NodePath("../..")'))).toBeUndefined();
+    expect(skinAt(scene('skeleton = NodePath("../Mesh")'))).toBeUndefined();
+  });
+
+  it('binds nothing for an absolute path, which measures from the live SceneTree (edge case)', () => {
+    expect(skinAt(scene('skeleton = NodePath("/root/Root/Skeleton3D")'))).toBeUndefined();
+  });
+
+  it('binds nothing when the MeshInstance3D sets a skin, which this pass does not read', () => {
+    const content = scene('skeleton = NodePath("../Skeleton3D")\nskin = SubResource("Skin_1")').replace(
+      '[node name="Root"',
+      '[sub_resource type="Skin" id="Skin_1"]\n[node name="Root"'
+    );
+
+    expect(skinAt(content)).toBeUndefined();
+  });
+
+  it('binds a skeleton with no bones to an empty skin (edge case)', () => {
+    expect(skinAt(scene('skeleton = NodePath("../Skeleton3D")', ''))).toEqual([]);
+  });
+
+  it('moves every vertex nowhere under show_rest_only', () => {
+    const skinMatrices = skinAt(
+      scene('skeleton = NodePath("../Skeleton3D")', `${BONES}show_rest_only = true\n`)
+    );
+
+    for (const matrix of skinMatrices!) expectOrigin(matrix, 0, 0, 0);
+  });
+
+  it('draws a skeleton with rest keys and no pose keys from the identity pose, away from its rest', () => {
+    const restOnly = BONES.replace(/bones\/\d\/(position|rotation) = .*\n/g, '');
+
+    const skinMatrices = skinAt(scene('skeleton = NodePath("../Skeleton3D")', restOnly));
+
+    // Posed at the identity, the root sits at the origin and its bind pose is (0, -0.5, 0).
+    expectOrigin(skinMatrices![0], 0, -0.5, 0);
+  });
+
+  it('is not moved by the transform of the Skeleton3D, which Godot leaves out of the skin', () => {
+    const moved = scene(
+      'skeleton = NodePath("../Skeleton3D")',
+      BONES,
+      'transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)\n'
+    );
+
+    expect(skinAt(moved)).toEqual(skinAt(scene('skeleton = NodePath("../Skeleton3D")')));
+  });
+});
+
+/** A host scene of `nodes`, with the sub-scenes at `scenePaths` as ExtResource 1, 2 and so on. */
+function host(nodes: string, ...scenePaths: string[]): string {
+  const resources = scenePaths
+    .map((path, i) => `[ext_resource type="PackedScene" path="${path}" id="${i + 1}"]`)
+    .join('\n');
+  return `[gd_scene format=3]\n${resources}\n[node name="Root" type="Node3D"]\n${nodes}`;
+}
+
+/** A sub-scene whose Skeleton3D and bound MeshInstance3D sit below its root `Rig`. */
+const RIG = `[gd_scene format=3]
+[node name="Rig" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+unique_name_in_owner = true
+${BONES}
+[node name="Mesh" type="MeshInstance3D" parent="."]
+skeleton = NodePath("../Skeleton3D")
+`;
+
+/** A sub-scene whose MeshInstance3D names a Skeleton3D two levels up, outside the scene. */
+const HOLDER = `[gd_scene format=3]
+[node name="Holder" type="Node3D"]
+[node name="Mesh" type="MeshInstance3D" parent="."]
+skeleton = NodePath("../../Skeleton3D")
+`;
+
+describe('the Skeleton3D scene pass across an instance border', () => {
+  it('binds a mesh to a skeleton that both sit inside an instanced scene', () => {
+    const skin = skinAt(
+      host('[node name="Rig" parent="." instance=ExtResource("1")]\n', 'res://rig.tscn'),
+      'Root/Rig/Mesh',
+      {
+        'res://rig.tscn': RIG,
+      }
+    );
+
+    expect(skin).toEqual(skinAt(scene('skeleton = NodePath("../Skeleton3D")')));
+  });
+
+  it('binds a host mesh whose skeleton path enters an instance', () => {
+    const content = host(
+      '[node name="Rig" parent="." instance=ExtResource("1")]\n[node name="Mesh" type="MeshInstance3D" parent="."]\nskeleton = NodePath("../Rig/Skeleton3D")\n',
+      'res://rig.tscn'
+    );
+
+    expect(skinAt(content, 'Root/Mesh', { 'res://rig.tscn': RIG })).toHaveLength(3);
+  });
+
+  it('binds a host mesh to an instance whose root is the Skeleton3D', () => {
+    const skeletonScene = `[gd_scene format=3]\n[node name="Skeleton" type="Skeleton3D"]\n${BONES}`;
+    const content = host(
+      '[node name="Skel" parent="." instance=ExtResource("1")]\n[node name="Mesh" type="MeshInstance3D" parent="."]\nskeleton = NodePath("../Skel")\n',
+      'res://skeleton.tscn'
+    );
+
+    expect(skinAt(content, 'Root/Mesh', { 'res://skeleton.tscn': skeletonScene })).toHaveLength(3);
+  });
+
+  it('binds a mesh inside an instance whose skeleton path leaves it for the host skeleton', () => {
+    const content = host(
+      `[node name="Skeleton3D" type="Skeleton3D" parent="."]\n${BONES}[node name="Holder" parent="." instance=ExtResource("1")]\n`,
+      'res://holder.tscn'
+    );
+
+    expect(skinAt(content, 'Root/Holder/Mesh', { 'res://holder.tscn': HOLDER })).toHaveLength(3);
+  });
+
+  it('binds each of two instances of one scene to its own skeleton', () => {
+    const rested = `${BONES}show_rest_only = true\n`;
+    const content = host(
+      `[node name="A" type="Node3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="A"]
+${BONES}[node name="Holder" parent="A" instance=ExtResource("1")]
+[node name="B" type="Node3D" parent="."]
+[node name="Skeleton3D" type="Skeleton3D" parent="B"]
+${rested}[node name="Holder" parent="B" instance=ExtResource("1")]
+`,
+      'res://holder.tscn'
+    );
+    const scenes = { 'res://holder.tscn': HOLDER };
+
+    expect(skinAt(content, 'Root/A/Holder/Mesh', scenes)).toEqual(
+      skinAt(scene('skeleton = NodePath("../Skeleton3D")'))
+    );
+    expect(skinAt(content, 'Root/B/Holder/Mesh', scenes)).toEqual(
+      skinAt(scene('skeleton = NodePath("../Skeleton3D")', rested))
+    );
+  });
+
+  it('reads a %Name inside an instance from the instance table, which the host does not see', () => {
+    const rigWithUniquePath = RIG.replace('NodePath("../Skeleton3D")', 'NodePath("%Skeleton3D")');
+    const content = host(
+      '[node name="Rig" parent="." instance=ExtResource("1")]\n[node name="Mesh" type="MeshInstance3D" parent="."]\nskeleton = NodePath("%Skeleton3D")\n',
+      'res://rig.tscn'
+    );
+    const scenes = { 'res://rig.tscn': rigWithUniquePath };
+
+    expect(skinAt(content, 'Root/Rig/Mesh', scenes)).toHaveLength(3);
+    expect(skinAt(content, 'Root/Mesh', scenes)).toBeUndefined();
+  });
+
+  it('reads a %Name on an instance root from the table the instance owns', () => {
+    const body = `[gd_scene format=3]
+[node name="Body" type="MeshInstance3D"]
+skeleton = NodePath("%Skeleton3D")
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+unique_name_in_owner = true
+${BONES}`;
+    const content = host('[node name="Body" parent="." instance=ExtResource("1")]\n', 'res://body.tscn');
+
+    expect(skinAt(content, 'Root/Body', { 'res://body.tscn': body })).toHaveLength(3);
+  });
+
+  it('binds nothing while the instanced scene is not loaded', () => {
+    const content = host('[node name="Rig" parent="." instance=ExtResource("1")]\n', 'res://rig.tscn');
+
+    expect(skinAt(content, 'Root/Rig/Mesh')).toBeUndefined();
+  });
+
+  it('binds nothing below a cyclic instance, which stays a leaf (edge case)', () => {
+    const loop = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://loop.tscn" id="1"]
+[node name="Loop" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${BONES}[node name="Inner" parent="." instance=ExtResource("1")]
+`;
+    const meshNaming = (path: string) =>
+      host(
+        `[node name="Loop" parent="." instance=ExtResource("1")]\n[node name="Mesh" type="MeshInstance3D" parent="."]\nskeleton = NodePath("${path}")\n`,
+        'res://loop.tscn'
+      );
+    const scenes = { 'res://loop.tscn': loop };
+
+    expect(skinAt(meshNaming('../Loop/Skeleton3D'), 'Root/Mesh', scenes)).toHaveLength(3);
+    expect(skinAt(meshNaming('../Loop/Inner/Skeleton3D'), 'Root/Mesh', scenes)).toBeUndefined();
+  });
+});
+
+function translation(x: number, y: number, z: number): Transform3D {
+  return {
+    basis_x: { x: 1, y: 0, z: 0 },
+    basis_y: { x: 0, y: 1, z: 0 },
+    basis_z: { x: 0, y: 0, z: 1 },
+    origin: { x, y, z },
+  };
+}
+
+/** The skeleton of `BONES`, a mesh bound to it and `modifier` under it, with `extra` nodes at the root. */
+function modified(modifier: string, bones = BONES, extra = ''): string {
+  return `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+${bones}
+[node name="Copy" type="CopyTransformModifier3D" parent="Skeleton3D"]
+${modifier}
+${extra}[node name="Mesh" type="MeshInstance3D" parent="."]
+skeleton = NodePath("../Skeleton3D")
+`;
+}
+
+/** Equal to 5 places: the copy normalises the rotation the twin writes unnormalised. */
+function expectSkinClose(actual: readonly Transform3D[], expected: readonly Transform3D[]): void {
+  expect(actual).toHaveLength(expected.length);
+  actual.forEach((matrix, bone) => {
+    for (const row of ['basis_x', 'basis_y', 'basis_z', 'origin'] as const) {
+      for (const axis of ['x', 'y', 'z'] as const)
+        expect(matrix[row][axis]).toBeCloseTo(expected[bone]![row][axis], 5);
+    }
+  });
+}
+
+const COPY_B2_ROTATION_TO_B1 = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_bone_name = "b2"
+settings/0/copy = 2
+settings/0/relative = false
+`;
+
+describe('the Skeleton3D scene pass with a SkeletonModifier3D child', () => {
+  /** `BONES` with the rotation of b2 also on b1, which is what the modifier above makes of the pose. */
+  const COPIED_BONES = BONES.replace(
+    'bones/1/position = Vector3(0, -0.2, 0)\n',
+    'bones/1/position = Vector3(0, -0.2, 0)\nbones/1/rotation = Quaternion(0, 0, 0.5, 0.866025)\n'
+  );
+
+  it('skins the pose the modifier makes, as a skeleton written with that pose does', () => {
+    const skin = skinAt(modified(COPY_B2_ROTATION_TO_B1));
+
+    expectSkinClose(skin!, skinAt(modified('active = false', COPIED_BONES))!);
+    expect(skin).not.toEqual(skinAt(modified('active = false')));
+  });
+
+  it('skins the file pose where the modifier is not active', () => {
+    expect(skinAt(modified(`active = false\n${COPY_B2_ROTATION_TO_B1}`))).toEqual(
+      skinAt(scene('skeleton = NodePath("../Skeleton3D")'))
+    );
+  });
+
+  it('skins the rest where show_rest_only is on, whatever the modifier does', () => {
+    const skin = skinAt(modified(COPY_B2_ROTATION_TO_B1, `${BONES}show_rest_only = true\n`));
+
+    for (const matrix of skin!) expectOrigin(matrix, 0, 0, 0);
+  });
+
+  it('reads a reference node in the global space of the scene', () => {
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 1
+settings/0/relative = false
+`;
+    const target = `[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+`;
+    // The Target sits at (1, 0, 0) and the parent of b1 at (0, 0.5, 0), so b1 lands at (1, -0.5, 0) below it.
+    const twin = BONES.replace(
+      'bones/1/position = Vector3(0, -0.2, 0)',
+      'bones/1/position = Vector3(1, -0.5, 0)'
+    );
+
+    expectSkinClose(
+      skinAt(modified(copyNodePosition, BONES, target))!,
+      skinAt(modified('active = false', twin))!
+    );
+  });
+
+  it('reads a reference node where a RemoteTransform3D moved it', () => {
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 1
+settings/0/relative = false
+`;
+    const movedTarget = `[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+[node name="Relay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+remote_path = NodePath("../Target")
+`;
+    // The relay puts the Target at (3, 0, 0), so b1 lands at (3, -0.5, 0) below its parent.
+    const twin = BONES.replace(
+      'bones/1/position = Vector3(0, -0.2, 0)',
+      'bones/1/position = Vector3(3, -0.5, 0)'
+    );
+
+    expectSkinClose(
+      skinAt(modified(copyNodePosition, BONES, movedTarget))!,
+      skinAt(modified('active = false', twin))!
+    );
+  });
+
+  it('hands back the same skin where a later load leaves the inputs as they are', () => {
+    const main = parse(modified(COPY_B2_ROTATION_TO_B1));
+    const skinOfLoad = () =>
+      bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
+
+    expect(skinOfLoad()).toBe(skinOfLoad());
+  });
+
+  it('hands back the same skin where a later load leaves the node a modifier reads as it is', () => {
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 1
+settings/0/relative = false
+`;
+    const target = `[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+`;
+    const main = parse(modified(copyNodePosition, BONES, target));
+    const skinOfLoad = () =>
+      bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
+
+    expect(skinOfLoad()).toBe(skinOfLoad());
+  });
+
+  it('hands back a new skin where a node a modifier reads has moved, though the file pose skins the same', () => {
+    // Copying a position the bone already has leaves the file pose as it is, whatever the Target does.
+    const copyNodePosition = `setting_count = 1
+settings/0/apply_bone_name = "b1"
+settings/0/reference_type = 1
+settings/0/reference_node = NodePath("../../Target")
+settings/0/copy = 0
+settings/0/relative = false
+`;
+    const targetAt = (x: number) =>
+      `[node name="Target" type="Node3D" parent="."]\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, 0, 0)\n`;
+    const main = parse(modified(copyNodePosition, BONES, targetAt(1)));
+    const moved = parse(modified(copyNodePosition, BONES, targetAt(2)));
+    const skinOf = (scene: TscnScene) =>
+      bindMeshesToSkeletons(liveTreeOf(scene.nodes, contextOver(scene, {}))).get('Root/Mesh');
+
+    expect(skinOf(moved)).not.toBe(skinOf(main));
+  });
+});
+
+/** The pose a clip writes on the bone `name`, with one track for each part given. */
+function posing(
+  name: string,
+  parts: { position?: Vector3; rotation?: Quaternion; scale?: Vector3 }
+): AnimatedPose {
+  const pose: BonePose = {
+    ...(parts.position && { position: [parts.position] }),
+    ...(parts.rotation && { rotation: [parts.rotation] }),
+    ...(parts.scale && { scale: [parts.scale] }),
+  };
+  return new Map([[name, pose]]);
+}
+
+describe('the skin of a Skeleton3D under the bone poses of an animation', () => {
+  const MESH = 'skeleton = NodePath("../Skeleton3D")';
+  const TURN_B2 = { x: 0, y: 0, z: -0.5, w: 0.866025 };
+  const twinWith = (line: string, from: string) => scene(MESH, BONES.replace(from, line));
+
+  it('gives the skin of the skeleton written with that rotation, as a Skeleton3D:bone track plays it', () => {
+    const turned = boundSkinAt(scene(MESH))!.matricesUnder(posing('b2', { rotation: TURN_B2 }));
+
+    expectSkinClose(
+      turned,
+      skinAt(
+        twinWith(
+          'bones/2/rotation = Quaternion(0, 0, -0.5, 0.866025)',
+          'bones/2/rotation = Quaternion(0, 0, 0.5, 0.866025)'
+        )
+      )!
+    );
+    expect(turned).not.toEqual(skinAt(scene(MESH)));
+  });
+
+  it('gives the skin of the skeleton written with that position and scale', () => {
+    const moved = boundSkinAt(scene(MESH))!.matricesUnder(
+      posing('b1', { position: { x: 0.1, y: -0.3, z: 0 }, scale: { x: 1, y: 2, z: 1 } })
+    );
+
+    expectSkinClose(
+      moved,
+      skinAt(
+        twinWith(
+          'bones/1/position = Vector3(0.1, -0.3, 0)\nbones/1/scale = Vector3(1, 2, 1)',
+          'bones/1/position = Vector3(0, -0.2, 0)'
+        )
+      )!
+    );
+  });
+
+  it('keeps the file pose of a part the clip does not key', () => {
+    const keyedOnlyAtPosition = boundSkinAt(scene(MESH))!.matricesUnder(
+      posing('b2', { position: { x: 0, y: -0.2, z: 0 } })
+    );
+
+    // b2 keeps the 60 degree turn of the file, which a position key must not undo.
+    expectSkinClose(keyedOnlyAtPosition, skinAt(scene(MESH))!);
+  });
+
+  it('doubles a position key under motion_scale = 2, as the mixer does', () => {
+    const doubled = boundSkinAt(scene(MESH, `${BONES}motion_scale = 2\n`))!.matricesUnder(
+      posing('b1', { position: { x: 0.1, y: -0.15, z: 0 } })
+    );
+
+    expectSkinClose(
+      doubled,
+      skinAt(twinWith('bones/1/position = Vector3(0.2, -0.3, 0)', 'bones/1/position = Vector3(0, -0.2, 0)'))!
+    );
+  });
+
+  it('runs a modifier on the animated pose', () => {
+    const turned = boundSkinAt(modified(COPY_B2_ROTATION_TO_B1))!.matricesUnder(
+      posing('b2', { rotation: TURN_B2 })
+    );
+
+    // The modifier copies the rotation b2 now has to b1.
+    const twin = BONES.replace(
+      'bones/2/rotation = Quaternion(0, 0, 0.5, 0.866025)',
+      'bones/2/rotation = Quaternion(0, 0, -0.5, 0.866025)'
+    ).replace(
+      'bones/1/position = Vector3(0, -0.2, 0)\n',
+      'bones/1/position = Vector3(0, -0.2, 0)\nbones/1/rotation = Quaternion(0, 0, -0.5, 0.866025)\n'
+    );
+    expectSkinClose(turned, skinAt(modified('active = false', twin))!);
+  });
+
+  it('answers the file skin for a pose that names no bone, and warns once for each name the skeleton lacks', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const bound = boundSkinAt(scene(MESH))!;
+    const ghost = posing('ghost', { rotation: TURN_B2 });
+
+    expectSkinClose(bound.matricesUnder(ghost), bound.matrices);
+    bound.matricesUnder(posing('ghost', { rotation: { x: 0, y: 0, z: 1, w: 0 } }));
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('hands back the same skin for the same pose, so meshes bound to one skeleton share it', () => {
+    const bound = boundSkinAt(scene(MESH))!;
+    const pose = posing('b2', { rotation: TURN_B2 });
+
+    expect(bound.matricesUnder(pose)).toBe(bound.matricesUnder(pose));
+  });
+
+  it('names the live path of the skeleton, which a track of the clip resolves to', () => {
+    expect(boundSkinAt(scene(MESH))!.skeletonPath).toBe('Root/Skeleton3D');
+  });
+});

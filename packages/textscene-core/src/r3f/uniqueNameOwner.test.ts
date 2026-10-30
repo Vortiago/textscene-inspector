@@ -8,6 +8,17 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import { contextOver } from './liveSceneTree.testkit.js';
+import {
+  INNER_ID,
+  PLAYER_ID,
+  PLAYER_SCENE_ONLY,
+  TRAIL_BASE,
+  TRAIL_SCENES,
+  inheritingTrailBase,
+  playerHost,
+  tableOf,
+} from './idTrail.testkit.js';
+import type { LiveTreeContext } from './liveSceneTree.js';
 import { NOTHING_CACHED, recordingReads } from './cacheSources.js';
 import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
@@ -356,6 +367,58 @@ unique_name_in_owner = true
   });
 });
 
+describe('a node its file seats outside the instance its %Name walked into', () => {
+  // HudInstance's table lacks `%Lamp`, so the walk reads Root's (node.cpp:1930-1938) and Hat
+  // renders under Lamp, which sits beside the instance.
+  const outside = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Hat" type="Node2D" parent="HudInstance/%Lamp"]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node2D" parent="HudInstance/%Lamp/Hat"]
+unique_name_in_owner = true
+`);
+  const outsideCtx: LiveTreeContext = { ...ctx, externalResources: outside.externalResources };
+  const rootTable = () => ownerUniquePaths(claimOwnerOf('Root', outside.nodes, outsideCtx));
+
+  it('spells its claim at the node it renders under', () => {
+    expect(rootTable().get('%Hat')).toBe('Root/Lamp/Hat');
+  });
+
+  it('spells a claim below it there too', () => {
+    expect(rootTable().get('%Brim')).toBe('Root/Lamp/Hat/Brim');
+  });
+});
+
+describe('a node its file re-roots because its %Name walk finds nothing', () => {
+  // Godot renames Hat from the vanished parent and adds it under the file root (packed_scene.cpp:207-215).
+  const vanished = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Hat" type="Node2D" parent="HudInstance/%Gone"]
+unique_name_in_owner = true
+`);
+  const vanishedCtx: LiveTreeContext = { ...ctx, externalResources: vanished.externalResources };
+
+  it('spells its claim at the renamed node under the file root', () => {
+    const table = ownerUniquePaths(claimOwnerOf('Root', vanished.nodes, vanishedCtx));
+
+    expect(table.get('%Hat')).toBe('Root/HudInstance__Gone#Hat');
+  });
+});
+
 describe('a claim under an instanced %Name a later heading releases', () => {
   // Instantiate sets each heading's properties as it reaches it (packed_scene.cpp:157-165), so
   // Hat's `parent=` reads `%Panel` before the release below it lands (node.cpp:2236-2249).
@@ -420,6 +483,39 @@ unique_name_in_owner = true
   it('holds the base scene’s claims for the inherited scene opened on its own', () => {
     const ownCtx = contextOver(inheriting, inheritedScenes);
     expect(ownerUniquePaths(claimOwnerOf('Tool', inheriting.nodes, ownCtx)).get('%Grip')).toBe('Tool/Grip');
+  });
+});
+
+describe('a node of an inherited scene whose owner_uid_path= enters an instance of its base', () => {
+  // The owner= walk leaves the root, so the trail decides. No heading of the inheriting file holds
+  // its first id, so it continues in the base (packed_scene.cpp:1960-1979) and ends in `Inner`.
+  const inner = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Inner" type="Node2D"]
+
+[node name="Seat" type="Node2D" parent="." unique_id=5]
+`);
+  const base = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://inner.tscn" id="1"]
+
+[node name="Base" type="Node2D"]
+
+[node name="Inner" parent="." instance=ExtResource("1") unique_id=77]
+`);
+  const inheriting = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Tool" instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="." owner="../Gone" owner_uid_path=PackedInt32Array(77, 5)]
+unique_name_in_owner = true
+`);
+  const scenes = { 'res://base.tscn': base, 'res://inner.tscn': inner };
+
+  it('registers the name with the instance the trail ends in', () => {
+    const owner = claimOwnerOf('Tool/Lamp', inheriting.nodes, contextOver(inheriting, scenes));
+
+    expect(owner.path).toBe('Tool/Inner');
   });
 });
 
@@ -656,6 +752,65 @@ unique_name_in_owner = true
   });
 });
 
+describe('an owner= recovered through an owner_uid_path that enters an instance', () => {
+  // The trail names the `Player` heading of this file, then the `Inner` heading of player.tscn
+  // (packed_scene.cpp:1947-2005), so the owner is the node at `Player/Inner`, which this file cannot name.
+  const ownedBy = (owner: string, trail: string) =>
+    playerHost(`[node name="Lamp" type="Node3D" parent="." owner="${owner}" owner_uid_path=PackedInt32Array(${trail})]
+unique_name_in_owner = true
+`);
+  const hostWith = (trail: string) => ownedBy('Gone', trail);
+  const lampOwner = (host: TscnScene, scenes = TRAIL_SCENES) =>
+    claimOwnerOf('Main/Lamp', host.nodes, contextOver(host, scenes));
+  const trailed = hostWith(`${PLAYER_ID}, ${INNER_ID}`);
+  const missing = hostWith(`${PLAYER_ID}, 9999`);
+
+  it('registers the name in the table of the node the trail finds, spelt from outside it', () => {
+    expect(tableOf('Main/Player/Inner/Box', trailed).get('%Lamp')).toBe('Main/Lamp');
+  });
+
+  it('owns the heading itself by the node the trail finds', () => {
+    expect(lampOwner(trailed).path).toBe('Main/Player/Inner');
+  });
+
+  it('owns the heading by no owner where no heading answers the rest of the trail', () => {
+    expect(ownerUniquePaths(lampOwner(missing)).size).toBe(0);
+  });
+
+  describe('where the owner= walk enters the instance and finds no node', () => {
+    it('owns the heading by the node the trail finds', () => {
+      expect(lampOwner(ownedBy('Player/Gone', `${PLAYER_ID}, ${INNER_ID}`)).path).toBe('Main/Player/Inner');
+    });
+
+    it('owns the heading by the node the walk finds, and reads no trail', () => {
+      expect(lampOwner(ownedBy('Player/Inner', `${PLAYER_ID}, 9999`)).path).toBe('Main/Player/Inner');
+    });
+
+    it('owns the heading by no owner where the trail finds nothing either', () => {
+      expect(ownerUniquePaths(lampOwner(ownedBy('Player/Gone', `${PLAYER_ID}, 9999`))).size).toBe(0);
+    });
+
+    it('waits for the scene the walk enters, so the trail is not taken while it loads', () => {
+      const host = ownedBy('Player/Gone', `${PLAYER_ID}, ${INNER_ID}`);
+
+      expect(lampOwner(host, {}).path).not.toBe('Main/Player/Inner');
+    });
+  });
+
+  it('leaves the table of the instance that holds that node without the name', () => {
+    expect(tableOf('Main/Player/Inner', trailed).has('%Lamp')).toBe(false);
+  });
+
+  it('registers the name in no table where no heading answers the rest of the trail', () => {
+    expect(tableOf('Main/Player/Inner/Box', missing).has('%Lamp')).toBe(false);
+  });
+
+  it('registers the name once a scene the trail enters has loaded', () => {
+    expect(tableOf('Main/Player/Inner/Box', trailed, PLAYER_SCENE_ONLY).has('%Lamp')).toBe(false);
+
+    expect(tableOf('Main/Player/Inner/Box', trailed).get('%Lamp')).toBe('Main/Lamp');
+  });
+});
 describe('the walk an owner= with a %Name takes', () => {
   const hudClaimingWidget = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
@@ -689,5 +844,54 @@ unique_name_in_owner = true
     expect(sceneReads('Root/HudInstance/Lamp')).toBeLessThanOrEqual(
       sceneReads('Root/HudInstance/Widget/Face')
     );
+  });
+});
+
+describe('a %Name that a heading seated through a parent_id_path= into an instance claims', () => {
+  // The trail names the `Player` heading, then the `Inner` heading of player.tscn, so `Cap` sits
+  // below the node at `Player/Inner`, which only the graft of `Player` finds (packed_scene.cpp:1985-2005).
+  const capOwning = (
+    brimOwner: string
+  ) => `[node name="Cap" type="Node3D" parent="Missing" parent_id_path=PackedInt32Array(${PLAYER_ID}, ${INNER_ID})]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node3D" parent="%Cap" owner="${brimOwner}"]
+unique_name_in_owner = true
+`;
+  const host = playerHost(capOwning('Player'));
+
+  it('reads in the root table the path the graft placed the claimant at', () => {
+    expect(tableOf('Main/Player', host).get('%Cap')).toBe('Main/Player/Inner/Cap');
+  });
+
+  it('reads a claim of a node below it in the table of the instance its owner= names', () => {
+    expect(tableOf('Main/Player/Inner', host).get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
+  });
+
+  it('reads a claim of a node below it in the table of another instance, which climbs out of it', () => {
+    const other = `[node name="Other" parent="." instance=ExtResource("player") unique_id=4444]\n\n`;
+    const otherOwned = playerHost(other + capOwning('Other'));
+
+    expect(tableOf('Main/Other/Inner', otherOwned).get('%Brim')).toBe('Main/Player/Inner/Cap/Brim');
+  });
+});
+
+describe('a %Name that an inheriting file and its base both claim', () => {
+  // The base claims first, so it keeps the name (node.cpp:2222-2233).
+  const inheriting =
+    inheritingTrailBase(`[node name="Cap" type="Node3D" parent="Nope" parent_id_path=PackedInt32Array(77)]
+unique_name_in_owner = true
+
+[node name="Feather" type="Node3D" parent="%Cap"]
+unique_name_in_owner = true
+`);
+  const rootTable = () => tableOf('Main/Deep', inheriting, { 'res://base.tscn': TRAIL_BASE });
+
+  it('keeps the base node in the table of the root', () => {
+    expect(rootTable().get('%Feather')).toBe('Main/Feather');
+  });
+
+  it('places the name a trail-seated heading claims where its trail finds the base node', () => {
+    expect(rootTable().get('%Cap')).toBe('Main/Deep/Cap');
   });
 });

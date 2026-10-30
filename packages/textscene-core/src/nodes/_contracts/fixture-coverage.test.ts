@@ -38,8 +38,8 @@ describe('#162 fixtures contract — 2D physics bodies', () => {
 });
 
 describe('#162 fixtures contract — transform-only 3D nodes', () => {
-  it('unit-skeleton3d.tscn parses with a Skeleton3D node and a transform', () => {
-    const { scene, raw } = parseFixture('unit-skeleton3d.tscn');
+  it('unit-mesh-instance-3d-skinned-ribbon.tscn parses with a Skeleton3D node and a transform', () => {
+    const { scene, raw } = parseFixture('unit-mesh-instance-3d-skinned-ribbon.tscn');
     expect(flatten(scene).map((n) => n.type)).toContain('Skeleton3D');
     expect(raw).toContain('Transform3D(');
   });

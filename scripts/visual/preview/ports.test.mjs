@@ -8,6 +8,7 @@ const HARNESSES = [
   'compareAnimation',
   'perf',
   'skyLayersGpu',
+  'decalGpu',
   'e2eWeb',
   'uniformVectors',
   'rendererConsumer',

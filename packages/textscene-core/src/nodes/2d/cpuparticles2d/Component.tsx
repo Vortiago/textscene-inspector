@@ -22,10 +22,14 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
 import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
-import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
+import { particleFiles, resolveParticleCurves } from './sceneResources';
+import { resolveGradient } from '../../../resources/textures/gradienttexture2d/decode';
 import { simulateFrozenPose } from './simulate';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+
+/** The quad of an emitter with no texture (`cpu_particles_2d.cpp:186-192`). */
+const UNTEXTURED_QUAD = { width: 1, height: 1 };
 
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
@@ -84,11 +88,11 @@ function ParticleField({
   const pools = useSceneResources();
   const { externalResources, internalResources } = pools;
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
-  const { texture: resolvedTexture, missing } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources
-  );
+  const {
+    texture: resolvedTexture,
+    size,
+    missing,
+  } = useTexture2D(props.texture, externalResources, internalResources);
   const sampler = useNode2DTextureSampler(props);
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
@@ -104,11 +108,11 @@ function ParticleField({
     [props.params, pools, loadedFile]
   );
   const colorRamp = useMemo(
-    () => resolveParticleGradient(props.color_ramp, pools, loadedFile),
+    () => resolveGradient(props.color_ramp, pools, loadedFile),
     [props.color_ramp, pools, loadedFile]
   );
   const colorInitialRamp = useMemo(
-    () => resolveParticleGradient(props.color_initial_ramp, pools, loadedFile),
+    () => resolveGradient(props.color_initial_ramp, pools, loadedFile),
     [props.color_initial_ramp, pools, loadedFile]
   );
 
@@ -117,11 +121,10 @@ function ParticleField({
     [props, curves, colorRamp, colorInitialRamp, emissionTransform]
   );
 
-  // Godot's quad is the texture's pixel size, falling back to 1x1 when the
-  // emitter has none (`cpu_particles_2d.cpp:186-192`).
-  const image = texture?.image as { width?: number; height?: number } | null | undefined;
-  const width = image?.width ?? 1;
-  const height = image?.height ?? 1;
+  // Godot's quad is the texture's size, falling back to 1x1 when the emitter has none
+  // (`cpu_particles_2d.cpp:186-192`).
+  // An unset ViewportTexture reports size 0, so its quads have no area (`viewport.cpp:156-160`).
+  const { width, height } = (texture && size) || UNTEXTURED_QUAD;
 
   const geometry = useMemo(
     () => buildParticleGeometry(pose, width, height, flipbook),

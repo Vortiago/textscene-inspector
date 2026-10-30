@@ -3,6 +3,7 @@
 import type { DrawableCell } from '../drawableCell';
 import { defaultTileData, type AlternativeTileModel, type AtlasSourceModel } from '../types';
 import type { Vector2 } from '../../../godot/math/vector';
+import { tileTextureAt } from './tileTexture';
 
 interface CellOverrides {
   coords?: Vector2;
@@ -16,7 +17,7 @@ interface CellOverrides {
 /** A fresh source per cell, so no test shares a mutable `tiles` map with another. */
 function defaultSource(): AtlasSourceModel {
   return {
-    texturePath: 'res://tiles.png',
+    texture: tileTextureAt('res://tiles.png'),
     margins: { x: 0, y: 0 },
     separation: { x: 0, y: 0 },
     textureRegionSize: { x: 16, y: 16 },

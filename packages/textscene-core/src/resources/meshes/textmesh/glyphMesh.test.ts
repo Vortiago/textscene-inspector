@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ContourPointTag } from '../../../godot/text/textServerEnums';
 import { signedPolygonArea } from '../../../godot/math/polygonArea';
-import { parseSfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
-import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/sfntGlyf';
+import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import type { ContourPoint, GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { buildGlyphMeshData, type GlyphMeshData } from './glyphMesh';
 
 const ON = ContourPointTag.ON;
 const CONIC = ContourPointTag.OFF_CONIC;
+const CUBIC = ContourPointTag.OFF_CUBIC;
 
 function point(x: number, y: number, tag: ContourPoint['tag'] = ON): ContourPoint {
   return { x, y, tag };
@@ -57,16 +58,18 @@ describe('buildGlyphMeshData arcs', () => {
     ]);
   });
 
-  it('scales every point by pixel_size after it steps in font px', () => {
+  it('scales every point by pixel_size after it steps in font px, and stores it in single precision', () => {
     const data = buildGlyphMeshData(oneContour(arch), 0.01, 5);
-    expect(xy(data)).toEqual([
-      [0, 0],
-      [0.05, -0.0375],
-      [0.1, -0.05],
-      [0.15, -0.0375],
-      [0.2, 0],
-      [0.1, 0.05],
-    ]);
+    expect(xy(data)).toEqual(
+      [
+        [0, 0],
+        [0.05, -0.0375],
+        [0.1, -0.05],
+        [0.15, -0.0375],
+        [0.2, 0],
+        [0.1, 0.05],
+      ].map(([x, y]) => [Math.fround(x!), Math.fround(y!)])
+    );
   });
 
   it('caps the step at half the arc, so a curve_step beyond the chord adds one point', () => {
@@ -106,6 +109,47 @@ describe('buildGlyphMeshData arcs', () => {
       [20, 0],
       [10, 5],
       [0, 0],
+    ]);
+  });
+});
+
+describe('buildGlyphMeshData cubic arcs', () => {
+  // A cubic arc from (0, 0) over (0, -10) and (20, -10) to (20, 0), closed through (10, 5).
+  const arch = [point(0, 0), point(0, -10, CUBIC), point(20, -10, CUBIC), point(20, 0), point(10, 5)];
+
+  it('steps a cubic arc at curve_step over the length of its chord', () => {
+    // The chord is 20 px, so a curve_step of 5 steps t by 0.25: three interior points.
+    const data = buildGlyphMeshData(oneContour(arch), 1, 5);
+    expect(xy(data)).toEqual([
+      [0, 0],
+      [3.125, -5.625],
+      [10, -7.5],
+      [16.875, -5.625],
+      [20, 0],
+      [10, 5],
+    ]);
+  });
+
+  it('reads the two control points of an arc as one arc, smooth between two sharp ends', () => {
+    const data = buildGlyphMeshData(oneContour(arch), 1, 5);
+    expect(data.contours[0]!.map((vertex) => vertex.isSharp)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it('ends an arc at the first point of the contour when its control points are the last two', () => {
+    // The arc runs (0, 0) to (10, 5) over (0, -10) and (20, -10): a curve_step beyond the chord adds t = 0.5.
+    const wrapping = [point(10, 5), point(0, 0), point(0, -10, CUBIC), point(20, -10, CUBIC)];
+    const data = buildGlyphMeshData(oneContour(wrapping), 1, 40);
+    expect(xy(data)).toEqual([
+      [10, 5],
+      [0, 0],
+      [8.75, -6.875],
     ]);
   });
 });
@@ -179,7 +223,7 @@ describe('buildGlyphMeshData contours', () => {
   });
 });
 
-describe('buildGlyphMeshData triangles', () => {
+describe('buildGlyphMeshData triangles', async () => {
   /** The area the triangles cover, each triangle's own sign kept. */
   function trianglesArea(data: GlyphMeshData): number {
     let area = 0;
@@ -211,7 +255,7 @@ describe('buildGlyphMeshData triangles', () => {
     expect(trianglesArea(data)).toBeCloseTo(84, 9);
   });
 
-  const font = parseSfntOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf'))!;
+  const font = (await openFontOutlines(fixtureFontBytes('open-sans-semibold-subset.ttf')))!;
 
   it.each(['o', 'g', 'B', 'é', '8', 'H'])('covers exactly the area %s encloses', (char) => {
     const contours = font.glyphContours(font.glyphIndex(char.codePointAt(0)!), 64)!;

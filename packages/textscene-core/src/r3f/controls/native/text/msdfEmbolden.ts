@@ -1,7 +1,7 @@
 /**
  * The MSDF atlas painter's embolden: how far the distance field grows to match a `FontVariation`
  * `variation_embolden`. FreeType emboldens an outline by `embolden * size / 16` px in total
- * (`text_server_adv.cpp:1313-1314`), which the field reaches by moving its threshold outward.
+ * (`text_server_adv.cpp:1314-1315`), which the field reaches by moving its threshold outward.
  */
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import type { TextLayoutResult } from './textLayout';

@@ -9,6 +9,8 @@ import { decodeFogMaterial } from '../../resources/materials/fogmaterial/decode'
 import { FogDensityAtlas } from './fogDensityAtlas';
 import { FogVolumeObject, type FogVolumeFill } from './fogVolumeObject';
 import { FOG_VOLUME_TEXELS, FogVolumeRows, FogVolumeTexel, type FogVolumeView } from './fogVolumeRows';
+import type { PackedRows } from '../rowTexture/packedRows';
+import { texelOfRow } from '../rowTexture/rowTexture.testkit';
 
 /** The camera of `unit-fog-volume`: at (0, 3, 8), looking down -Z. */
 function camera(): THREE.PerspectiveCamera {
@@ -52,31 +54,29 @@ function volume(
   return object;
 }
 
-/** The texel `texel` of row `row`. */
-function texel(rows: FogVolumeRows, texel: number, row = 0): number[] {
-  const start = (row * FOG_VOLUME_TEXELS + texel) * 4;
-  return Array.from(rows.data.subarray(start, start + 4));
-}
+const texelOfAnyRow = texelOfRow(FOG_VOLUME_TEXELS);
+/** A texel of the only row these tests pack. */
+const texel0 = (rows: PackedRows, texel: number): number[] => texelOfAnyRow(rows, 0, texel);
 
 describe('FogVolumeRows.pack', () => {
   it('packs a FogMaterial box: its density, height falloff, edge fade and kind', () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5])], camera(), FRAME, ATLAS);
     expect(rows.count).toBe(1);
-    expect(texel(rows, FogVolumeTexel.MATERIAL)).toEqual([1, 0, Math.fround(0.1), 1]);
+    expect(texel0(rows, FogVolumeTexel.MATERIAL)).toEqual([1, 0, Math.fround(0.1), 1]);
   });
 
   it('maps the view origin, the camera, to its offset from the volume in local space', () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5])], camera(), FRAME, ATLAS);
-    const translation = [0, 1, 2].map((axis) => texel(rows, FogVolumeTexel.TO_LOCAL + axis)[3]);
+    const translation = [0, 1, 2].map((axis) => texel0(rows, FogVolumeTexel.TO_LOCAL + axis)[3]);
     expect(translation).toEqual([0, 2, 13]);
   });
 
   it('measures the camera 2 units above the volume origin through the height row', () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5])], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.HEIGHT)[3]).toBe(2);
+    expect(texel0(rows, FogVolumeTexel.HEIGHT)[3]).toBe(2);
   });
 
   it('writes the albedo and the emission as linear colours', () => {
@@ -87,14 +87,14 @@ describe('FogVolumeRows.pack', () => {
     };
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5], fill)], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.ALBEDO).slice(0, 3)).toEqual([Math.fround(0.21404114), 1, 0]);
-    expect(texel(rows, FogVolumeTexel.EMISSION)[2]).toBeCloseTo(0.21404114, 6);
+    expect(texel0(rows, FogVolumeTexel.ALBEDO).slice(0, 3)).toEqual([Math.fround(0.21404114), 1, 0]);
+    expect(texel0(rows, FogVolumeTexel.EMISSION)[2]).toBeCloseTo(0.21404114, 6);
   });
 
   it("packs Godot's default fog material for a volume without a material", () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5], { kind: 'default' })], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.MATERIAL)[3]).toBe(0);
+    expect(texel0(rows, FogVolumeTexel.MATERIAL)[3]).toBe(0);
   });
 
   it('skips a volume filled by a fog shader, which the previewer does not run', () => {
@@ -120,15 +120,15 @@ describe('FogVolumeRows.pack', () => {
   it('covers the whole screen up to the farthest corner when the camera is in the volume', () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 3, 8])], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.FROXEL_MIN).slice(0, 3)).toEqual([0, 0, 0]);
-    expect(texel(rows, FogVolumeTexel.FROXEL_MAX).slice(0, 2)).toEqual([71, 56]);
+    expect(texel0(rows, FogVolumeTexel.FROXEL_MIN).slice(0, 3)).toEqual([0, 0, 0]);
+    expect(texel0(rows, FogVolumeTexel.FROXEL_MAX).slice(0, 2)).toEqual([71, 56]);
   });
 
   it('covers every froxel with a WORLD volume, sized twice the grid, wherever it is (edge case)', () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, 20], FOG_MATERIAL, FogVolumeShape.WORLD)], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.SHAPE)).toEqual([142, 112, 128, FogVolumeShape.WORLD]);
-    expect(texel(rows, FogVolumeTexel.FROXEL_MAX).slice(0, 3)).toEqual([71, 56, 64]);
+    expect(texel0(rows, FogVolumeTexel.SHAPE)).toEqual([142, 112, 128, FogVolumeShape.WORLD]);
+    expect(texel0(rows, FogVolumeTexel.FROXEL_MAX).slice(0, 3)).toEqual([71, 56, 64]);
   });
 
   it("writes the density texture's region in the atlas", () => {
@@ -137,20 +137,20 @@ describe('FogVolumeRows.pack', () => {
     atlas.update([new THREE.Data3DTexture(new Uint8Array(1), 1, 1, 1), densityTexture]);
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5], fogMaterial(densityTexture))], camera(), FRAME, atlas);
-    expect(texel(rows, FogVolumeTexel.DENSITY_TEXTURE)).toEqual([4, 3, 2, 1]);
+    expect(texel0(rows, FogVolumeTexel.DENSITY_TEXTURE)).toEqual([4, 3, 2, 1]);
   });
 
   it('writes no region for a FogMaterial without a density texture, which samples as white', () => {
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5])], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.DENSITY_TEXTURE)).toEqual([0, 0, 0, 0]);
+    expect(texel0(rows, FogVolumeTexel.DENSITY_TEXTURE)).toEqual([0, 0, 0, 0]);
   });
 
   it('writes no region for a density texture the atlas left out (edge case)', () => {
     const densityTexture = new THREE.Data3DTexture(new Uint8Array(1), 1, 1, 1);
     const rows = new FogVolumeRows();
     rows.pack([volume([0, 1, -5], fogMaterial(densityTexture))], camera(), FRAME, ATLAS);
-    expect(texel(rows, FogVolumeTexel.DENSITY_TEXTURE)).toEqual([0, 0, 0, 0]);
+    expect(texel0(rows, FogVolumeTexel.DENSITY_TEXTURE)).toEqual([0, 0, 0, 0]);
   });
 
   it('answers that nothing changed when the volumes and the camera hold still', () => {

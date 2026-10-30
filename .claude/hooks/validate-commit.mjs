@@ -10,10 +10,10 @@ import { readFileSync } from 'node:fs';
 import { basename, delimiter, join, matchesGlob, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { REPO_ROOT } from '../../scripts/repoRoot.mjs';
+
 /** Exit status that makes Claude Code block the tool call and show stderr to Claude. */
 const BLOCK = 2;
-
-const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
 /** The paths the tool commits, or an empty array when the input holds none. */
 function readCommittedFiles() {
@@ -34,7 +34,7 @@ async function commandsFor(task, files) {
 
 /** The pre-commit commands for these files, from each lint-staged task whose glob matches them. */
 async function preCommitCommands(files) {
-  const { default: tasks } = await import(pathToFileURL(join(projectDir, 'lint-staged.config.mjs')));
+  const { default: tasks } = await import(pathToFileURL(join(REPO_ROOT, 'lint-staged.config.mjs')));
   const commands = [];
   for (const [glob, task] of Object.entries(tasks)) {
     // lint-staged matches a glob without a slash against the base name.
@@ -46,9 +46,9 @@ async function preCommitCommands(files) {
 
 /** Runs one command in the project, with its output on stderr: stdout is the hook's reply. */
 function run(command) {
-  const binDir = join(projectDir, 'node_modules', '.bin');
+  const binDir = join(REPO_ROOT, 'node_modules', '.bin');
   execSync(command, {
-    cwd: projectDir,
+    cwd: REPO_ROOT,
     stdio: ['ignore', 2, 2],
     env: { ...process.env, PATH: `${binDir}${delimiter}${process.env.PATH}` },
   });
@@ -67,8 +67,8 @@ function firstFailing(commands) {
 }
 
 // The lint-staged config reads package manifests relative to the working directory.
-process.chdir(projectDir);
-const files = readCommittedFiles().map((file) => resolve(projectDir, file));
+process.chdir(REPO_ROOT);
+const files = readCommittedFiles().map((file) => resolve(REPO_ROOT, file));
 const failed = firstFailing(await preCommitCommands(files));
 if (failed) {
   console.error(

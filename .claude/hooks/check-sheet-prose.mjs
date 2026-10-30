@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 
 import { findProseViolations, formatViolation, isSheetPath } from '../../scripts/compare-docs/sheetProse.mjs';
+import { REPO_ROOT } from '../../scripts/repoRoot.mjs';
 
 /** Exit status that makes Claude Code show stderr to Claude. The edit has already happened. */
 const REPORT = 2;
@@ -37,7 +38,7 @@ const path = readFilePath();
 const text = isSheetPath(path) ? readSheet(path) : null;
 const violations = text === null ? [] : findProseViolations(text);
 if (violations.length > 0) {
-  const inProject = relative(process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), path);
+  const inProject = relative(REPO_ROOT, path);
   const label = inProject.startsWith('..') ? path : inProject;
   console.error(
     `${label} breaks the Simplified Technical English checks of the sheet standard ` +

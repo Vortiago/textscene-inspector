@@ -63,8 +63,8 @@ describe('<CanvasModulate>', () => {
   });
 
   // The tint belongs to the canvas: `NodeDispatcher` seeds it from
-  // `canvasModulateColor`, so in isolation the node passes its parent modulate
-  // through. `canvasModulate.test.ts` pins the collection, and the slice contract
+  // `useCanvasModulateColor`, so in isolation the node passes its parent modulate
+  // through. `canvasModulate.test.tsx` pins the collection, and the slice contract
   // pins the end-to-end tint.
   it('passes the inherited modulate through untouched — the tint is canvas-level', async () => {
     const renderer = await renderCM({ color: 'Color(0.5, 0.5, 1, 1)' });

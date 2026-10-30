@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Light Render Budget",
+    "file": "unit-canvas-light-render-budget.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
     "category": "Other"
@@ -300,6 +305,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Characterbody3d",
     "file": "unit-characterbody3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Check Box Fitted Icon",
+    "file": "unit-check-box-fitted-icon.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Check Button Half Pixel Icon",
+    "file": "unit-check-button-half-pixel-icon.tscn",
     "category": "Other"
   },
   {
@@ -375,6 +390,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Convert Transform Modifier 3d",
     "file": "unit-convert-transform-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Copy Transform Modifier 3d Ribbon",
+    "file": "unit-copy-transform-modifier-3d-ribbon.tscn",
     "category": "Other"
   },
   {
@@ -458,6 +478,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Emission Map",
+    "file": "unit-decal-emission-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
@@ -468,8 +493,33 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Normal Map",
+    "file": "unit-decal-normal-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Orm Map",
+    "file": "unit-decal-orm-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Roughness Receiver",
+    "file": "unit-decal-roughness-receiver.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Triangulation",
+    "file": "unit-decal-triangulation.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Depth Fog Aerial Sky",
+    "file": "unit-depth-fog-aerial-sky.tscn",
     "category": "Other"
   },
   {
@@ -518,6 +568,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Canvas Layer Cap",
+    "file": "unit-directionallight2d-canvas-layer-cap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Render Budget",
+    "file": "unit-directionallight2d-render-budget.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directionallight2d Shadow Pcf5",
     "file": "unit-directionallight2d-shadow-pcf5.tscn",
     "category": "Other"
@@ -545,6 +605,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Hud",
+    "file": "unit-escaped-heading-hud.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Inner",
+    "file": "unit-escaped-heading-inner.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Escaped Heading Player",
+    "file": "unit-escaped-heading-player.tscn",
     "category": "Other"
   },
   {
@@ -585,6 +660,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Fog Volume Density Noise Tres",
     "file": "unit-fog-volume-density-noise-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume Density Ramp Tres",
+    "file": "unit-fog-volume-density-ramp-tres.tscn",
     "category": "Other"
   },
   {
@@ -630,16 +710,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance Child",
-    "file": "unit-gizmo-instance-child.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Gizmo Instance",
-    "file": "unit-gizmo-instance.tscn",
     "category": "Other"
   },
   {
@@ -700,6 +770,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glow Authored",
     "file": "unit-glow-authored.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Auto Exposure",
+    "file": "unit-glow-auto-exposure.tscn",
     "category": "Other"
   },
   {
@@ -780,6 +855,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Gpu Particles Collision Box 3d",
     "file": "unit-gpu-particles-collision-box-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Gizmos",
+    "file": "unit-gpu-particles-collision-gizmos.tscn",
     "category": "Other"
   },
   {
@@ -983,6 +1063,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Instanced Gizmo Grey Child",
+    "file": "unit-instanced-gizmo-grey-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Gizmo Grey",
+    "file": "unit-instanced-gizmo-grey.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Item List Guide Lines",
     "file": "unit-item-list-guide-lines.tscn",
     "category": "Other"
@@ -1065,6 +1155,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d Legible",
     "file": "unit-label3d-legible.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d Scene Font",
+    "file": "unit-label3d-scene-font.tscn",
     "category": "Other"
   },
   {
@@ -1348,6 +1443,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d Tres",
+    "file": "unit-noisetexture2d-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d",
     "file": "unit-noisetexture2d.tscn",
     "category": "Other"
@@ -1593,6 +1693,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Embolden Fill",
+    "file": "unit-progress-bar-embolden-fill.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Progress Bar Outline Variation",
+    "file": "unit-progress-bar-outline-variation.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Rtl",
     "file": "unit-progress-bar-rtl.tscn",
     "category": "Other"
@@ -1653,8 +1763,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform 2d Instanced",
+    "file": "unit-remote-transform-2d-instanced.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Instanced",
+    "file": "unit-remote-transform-3d-instanced.tscn",
     "category": "Other"
   },
   {
@@ -1695,6 +1815,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Root Motion View",
     "file": "unit-root-motion-view.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Scene Buffer Half Float",
+    "file": "unit-scene-buffer-half-float.tscn",
     "category": "Other"
   },
   {
@@ -1740,11 +1865,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Skeleton Modifier 3d",
     "file": "unit-skeleton-modifier-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Skeleton3d",
-    "file": "unit-skeleton3d.tscn",
     "category": "Other"
   },
   {
@@ -1888,8 +2008,28 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Shared World Content",
+    "file": "unit-sprite-2d-shared-world-content.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World Environment",
+    "file": "unit-sprite-2d-shared-world-environment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Shared World First Environment",
+    "file": "unit-sprite-2d-shared-world-first-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Soft Alpha Border",
     "file": "unit-sprite-2d-soft-alpha-border.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite 2d Viewport Texture Frame",
+    "file": "unit-sprite-2d-viewport-texture-frame.tscn",
     "category": "Other"
   },
   {
@@ -2068,6 +2208,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Trail Inherited Base",
+    "file": "unit-trail-inherited-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Trail Player",
+    "file": "unit-trail-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Transform Only 3d Hidden",
     "file": "unit-transform-only-3d-hidden.tscn",
     "category": "Other"
@@ -2138,6 +2288,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Viewport Texture Local To Scene",
+    "file": "unit-viewport-texture-local-to-scene.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visibility Parent",
     "file": "unit-visibility-parent.tscn",
     "category": "Other"
@@ -2190,6 +2345,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Volumetric Fog Shadow",
     "file": "unit-volumetric-fog-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Volumetric Fog Sky Ambient",
+    "file": "unit-volumetric-fog-sky-ambient.tscn",
     "category": "Other"
   },
   {
@@ -2304,6 +2464,18 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Debanding",
+    "file": "debanding/unit-debanding.tscn",
+    "category": "Other",
+    "root": "debanding"
+  },
+  {
+    "name": "Decal Filter",
+    "file": "decal-filter/unit-decal-filter.tscn",
+    "category": "Other",
+    "root": "decal-filter"
+  },
+  {
     "name": "Glow Linear Upscale",
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",
@@ -2414,6 +2586,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Out Of Range",
     "file": "edge-csg-out-of-range.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Editable Missing Path",
+    "file": "edge-editable-missing-path.tscn",
     "category": "Edge Cases"
   },
   {
@@ -2583,6 +2760,16 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Escaped Heading Lamp",
+    "file": "integration-escaped-heading-lamp.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Escaped Heading Reroot",
+    "file": "integration-escaped-heading-reroot.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Instanced Inherited Unique Viewport",
     "file": "integration-instanced-inherited-unique-viewport.tscn",
     "category": "Integration - Multi-Node"
@@ -2640,6 +2827,46 @@ export const fixtures: Fixture[] = [
   {
     "name": "Three Cubes",
     "file": "integration-three-cubes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Foreign Owner In Content",
+    "file": "integration-trail-foreign-owner-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Inherited Root Claim",
+    "file": "integration-trail-inherited-root-claim.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Name In Content",
+    "file": "integration-trail-name-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Fallback",
+    "file": "integration-trail-owner-fallback.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner In Content",
+    "file": "integration-trail-owner-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Other Instance",
+    "file": "integration-trail-owner-other-instance.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Root Fallback",
+    "file": "integration-trail-owner-root-fallback.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Parent In Content",
+    "file": "integration-trail-parent-in-content.tscn",
     "category": "Integration - Multi-Node"
   },
   {
@@ -2723,6 +2950,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Gradienttexture Tres",
+    "file": "unit-sprite2d-gradienttexture-tres.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Gradienttexture",
     "file": "unit-sprite2d-gradienttexture.tscn",
     "category": "Unit - 2D Canvas"
@@ -2770,6 +3002,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Atlas Viewport Padding",
+    "file": "unit-tile-atlas-viewport-padding.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Atlas Viewport Texture File",
+    "file": "unit-tile-atlas-viewport-texture-file.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -2903,6 +3145,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Triangle Strip",
+    "file": "unit-arraymesh-triangle-strip.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2950,6 +3197,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Ribbon Instanced",
+    "file": "unit-mesh-instance-3d-skinned-ribbon-instanced.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Ribbon",
+    "file": "unit-mesh-instance-3d-skinned-ribbon.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Tube",
+    "file": "unit-mesh-instance-3d-skinned-tube.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -3013,6 +3275,31 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Text Mesh Cff",
+    "file": "unit-text-mesh-cff.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Default Font",
+    "file": "unit-text-mesh-default-font.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Embolden",
+    "file": "unit-text-mesh-embolden.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Triangulation Failure",
+    "file": "unit-text-mesh-triangulation-failure.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Woff2",
+    "file": "unit-text-mesh-woff2.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Text Mesh",
     "file": "unit-text-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -3026,6 +3313,12 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Text Mesh Project Default Font",
+    "file": "project-default-font/unit-text-mesh-project-default-font.tscn",
+    "category": "Unit - Primitive Meshes",
+    "root": "project-default-font"
   },
   {
     "name": "Audio Listener 2d",
@@ -3070,6 +3363,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button",
     "file": "unit-button.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order By Tree",
+    "file": "unit-canvas-layer-light-order-by-tree.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Light Order",
+    "file": "unit-canvas-layer-light-order.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -3143,6 +3446,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Canvas Item Material",
+    "file": "unit-control-canvas-item-material.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Canvas Modulate",
+    "file": "unit-control-canvas-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Containers",
     "file": "unit-control-containers.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3180,6 +3493,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Layout Direction Rtl",
     "file": "unit-control-layout-direction-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Light Mask",
+    "file": "unit-control-light-mask.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Light2d",
+    "file": "unit-control-light2d.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -3413,6 +3736,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Texture Rect Viewport Texture Flip",
+    "file": "unit-texture-rect-viewport-texture-flip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture Wrapped",
+    "file": "unit-texture-rect-viewport-texture-wrapped.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect Viewport Texture",
+    "file": "unit-texture-rect-viewport-texture.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3444,6 +3782,16 @@ export const fixtures: Fixture[] = [
     "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
     "category": "Unit - 2D UI Controls",
     "root": "layout-direction-root-rtl"
+  },
+  {
+    "name": "Camera Attributes Auto Exposure Physical",
+    "file": "unit-camera-attributes-auto-exposure-physical.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera Attributes Auto Exposure",
+    "file": "unit-camera-attributes-auto-exposure.tscn",
+    "category": "Unit - Basic Nodes"
   },
   {
     "name": "Camera Attributes Exposure Camera",
@@ -3478,6 +3826,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Empty Scene",
     "file": "unit-empty-scene.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node Icons",
+    "file": "unit-node-icons.tscn",
     "category": "Unit - Basic Nodes"
   },
   {
@@ -3621,6 +3974,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Polygon Path Instanced",
+    "file": "unit-csg-polygon-path-instanced.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Polygon Path",
     "file": "unit-csg-polygon-path.tscn",
     "category": "Unit - CSG Primitives"
@@ -3708,6 +4066,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Ao",
     "file": "unit-material-ao.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Billboard Keep Scale",
+    "file": "unit-material-billboard-keep-scale.tscn",
     "category": "Unit - Materials"
   },
   {
@@ -3831,6 +4194,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Uv1 Top Edge",
+    "file": "unit-material-uv1-top-edge.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material World Triplanar Floor",
+    "file": "unit-material-world-triplanar-floor.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Mipmap Bias Normal",
     "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
     "category": "Unit - Materials",
@@ -3883,8 +4256,33 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Navigation"
   },
   {
+    "name": "Sub Viewport 2d Directional Shadow",
+    "file": "unit-sub-viewport-2d-directional-shadow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 2d Light",
+    "file": "unit-sub-viewport-2d-light.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport 3d Controls",
+    "file": "unit-sub-viewport-3d-controls.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Camera 2d Canvas Layer",
     "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Camera Environment",
+    "file": "unit-sub-viewport-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Camera Exposure",
+    "file": "unit-sub-viewport-camera-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {
@@ -3953,13 +4351,28 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Control Outer Light",
+    "file": "unit-sub-viewport-control-outer-light.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Control Texture",
     "file": "unit-sub-viewport-control-texture.tscn",
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Debanding",
+    "file": "unit-sub-viewport-debanding.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Inherited Rtl",
     "file": "unit-sub-viewport-inherited-rtl.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Mixed Controls",
+    "file": "unit-sub-viewport-mixed-controls.tscn",
     "category": "Unit - Viewports"
   },
   {
@@ -3983,8 +4396,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Shared World Camera Exposure",
+    "file": "unit-sub-viewport-shared-world-camera-exposure.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Shared World Exposure",
     "file": "unit-sub-viewport-shared-world-exposure.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Glow",
+    "file": "unit-sub-viewport-shared-world-glow.tscn",
     "category": "Unit - Viewports"
   },
   {

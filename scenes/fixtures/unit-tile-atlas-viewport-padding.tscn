@@ -1,0 +1,73 @@
+; One variable: whether the padded TileSet that holds an AtlasTexture over a ViewportTexture is
+; local to scene. Godot builds the padded atlas once, from the texture's image at load
+; (`tile_set.cpp:5622-5654`). The left layer's ViewportTexture is never set up, so it has no image
+; and the tiles sample the 4x4 placeholder at their padded regions: magenta, with a dark seam at the
+; top-left. The right layer's image is the opaque target before its first render: black.
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_shared"]
+resource_local_to_scene = false
+atlas = SubResource("ViewportTexture_1")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_shared"]
+resource_local_to_scene = false
+texture = SubResource("AtlasTexture_shared")
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_shared"]
+resource_local_to_scene = false
+sources/0 = SubResource("TileSetAtlasSource_shared")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_local"]
+resource_local_to_scene = true
+atlas = SubResource("ViewportTexture_1")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_local"]
+resource_local_to_scene = true
+texture = SubResource("AtlasTexture_local")
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_local"]
+resource_local_to_scene = true
+sources/0 = SubResource("TileSetAtlasSource_local")
+
+[node name="Root" type="Node2D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+
+[node name="Red" type="ColorRect" parent="SubViewport"]
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(1, 0, 0, 1)
+
+[node name="Green" type="ColorRect" parent="SubViewport"]
+offset_left = 16.0
+offset_right = 32.0
+offset_bottom = 32.0
+color = Color(0, 1, 0, 1)
+
+[node name="Shared" type="TileMapLayer" parent="."]
+position = Vector2(100, 100)
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_shared")
+
+[node name="Local" type="TileMapLayer" parent="."]
+position = Vector2(400, 100)
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_local")

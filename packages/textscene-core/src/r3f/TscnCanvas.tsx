@@ -6,6 +6,7 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
@@ -14,6 +15,7 @@ import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
+import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
@@ -41,7 +43,7 @@ export function TscnSceneContents() {
   const hierarchy = useOptionalHierarchy();
   const sceneGraph = hierarchy?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const nodes = rootScene?.nodes ?? null;
+  const nodes = useSeatedRoots() ?? null;
   // A grid and a prompt, since an empty black canvas looks like a renderer crash.
   const isEmpty = nodes === null || nodes.length === 0;
 
@@ -85,10 +87,14 @@ export function TscnSceneContents() {
  * It carries the `tscnEmptyState` tag `frameSceneBounds` skips on itself:
  * `traverse()` visits every descendant whatever the tag of an ancestor, and the
  * 10-unit grid would otherwise frame a mesh-free scene, such as a lone Path3D.
+ * It is editor chrome too, so a SubViewport pass draws none of it.
  */
 function GroundGrid() {
-  return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={{ tscnEmptyState: true }} />;
+  return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={GROUND_GRID_USER_DATA} />;
 }
+
+/** One object, as R3F assigns a new `userData` object on each render. */
+const GROUND_GRID_USER_DATA = { tscnEmptyState: true, ...editorHelperUserData() };
 
 /**
  * The opt-in grid for a non-empty scene, off by default (see ViewportModeContext).
@@ -130,8 +136,8 @@ export function TscnCanvas() {
           as well as on the 2D world canvas. */}
       {/* `antialias: false`: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`).
           A project that turns it on gets the compositor's multisampled buffer, which resolves
-          before the tone curve as Godot's does. `flat`: a root with no Environment tonemaps LINEAR
-          (`tone_mapper.h:177`), where R3F would apply ACES. */}
+          before the tone curve as Godot's does. `flat`: the compositor applies every curve, so three
+          adds none of its own, where R3F would apply ACES. */}
       <Canvas
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"

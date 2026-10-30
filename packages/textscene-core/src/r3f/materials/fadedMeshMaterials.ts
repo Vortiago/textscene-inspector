@@ -23,8 +23,10 @@ import { FADED_OPAQUE_PREPASS, opaquePrepassOf, opaquePrepassUserData } from './
 type CopyBuilder = (extra?: ProgramInjection) => THREE.Material;
 
 /** Each unfaded material's copy builders. Written only by `registerFadedCopyBuilders`. */
+// eslint-disable-next-line no-restricted-syntax -- registerFadedCopyBuilders writes each entry from outside
 const copyBuilders = new WeakMap<THREE.Material, FadeVariants<CopyBuilder>>();
 /** Each faded copy's unfaded material. Written only by `FadedMeshMaterials`, as it builds one. */
+// eslint-disable-next-line no-restricted-syntax -- FadedMeshMaterials writes each entry from outside, as it builds a copy
 const unfadedMaterials = new WeakMap<THREE.Material, THREE.Material>();
 
 /**

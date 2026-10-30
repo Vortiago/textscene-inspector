@@ -22,6 +22,30 @@ export const SCENE_COMPOSITION_SCENES = [
     name: 'instanced-unique-parent-released',
     file: 'integration-instanced-unique-parent-released.tscn',
   },
+  // A host heading whose walk through an instance finds nothing (`Player/Inner/%Q`). Godot
+  // re-roots it under the file root, so the orange box sits left of the origin, not under Inner.
+  { name: 'escaped-heading-reroot', file: 'integration-escaped-heading-reroot.tscn' },
+  // A host heading whose `%Lamp` walk leaves the instance. Godot seats it under Lamp, so the
+  // orange box sits up and to the right, not under the instance.
+  { name: 'escaped-heading-lamp', file: 'integration-escaped-heading-lamp.tscn' },
+  // An `owner_uid_path` that ends inside an instance: the trail finds the owner table of
+  // `Player/Inner`, which holds `%Lamp`, so the orange box sits under Lamp, left and up.
+  { name: 'trail-owner-in-content', file: 'integration-trail-owner-in-content.tscn' },
+  // A `parent_id_path` that ends inside an instance: the orange box is seated under `Player/Inner`
+  // beside its blue box, not re-rooted to the file root.
+  { name: 'trail-parent-in-content', file: 'integration-trail-parent-in-content.tscn' },
+  // A `%Name` claimed by a heading that a trail seated inside an instance: the green box sits under it.
+  { name: 'trail-name-in-content', file: 'integration-trail-name-in-content.tscn' },
+  // An `owner=` walk that finds nothing in an instance: the trail's owner holds `%Lamp`, so Shade sits under Lamp.
+  { name: 'trail-owner-fallback', file: 'integration-trail-owner-fallback.tscn' },
+  // An `owner=` walk that finds nothing in one instance, with a trail owner in another: that owner holds `%Lamp`.
+  { name: 'trail-owner-other-instance', file: 'integration-trail-owner-other-instance.tscn' },
+  // An `owner=` walk that finds nothing in an instance, with the root as trail owner: the root holds `%Lamp`.
+  { name: 'trail-owner-root-fallback', file: 'integration-trail-owner-root-fallback.tscn' },
+  // A heading below a trail seat whose `owner=` names Player: Player's table holds `%Brim`, so the green box sits under it.
+  { name: 'trail-foreign-owner-in-content', file: 'integration-trail-foreign-owner-in-content.tscn' },
+  // A name an inherited root's base claimed first: the green box sits on the base's blue box, not the orange one.
+  { name: 'trail-inherited-root-claim', file: 'integration-trail-inherited-root-claim.tscn' },
   // An instance of an inherited scene: its root owns the base's `%View`, which the quad's
   // ViewportTexture reads from that root.
   {
@@ -55,7 +79,7 @@ export const SCENE_COMPOSITION_SCENES = [
     collisions: true,
   },
   // Decal projects a local SVG checkerboard onto the floor its box intersects
-  // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
+  // (mixed per fragment), one plain and one tinted. The box gizmo
   // is a gizmo, which a capture draws only with `gizmos: true` (ADR-0056), so this is the runtime
   // view: projection only. The projection edges are AA-sensitive.
   { name: 'decal', file: 'unit-decal.tscn' },
@@ -64,6 +88,26 @@ export const SCENE_COMPOSITION_SCENES = [
   // instance.layers`, so the left floor shows bare albedo and the right one the
   // checkerboard. `unit-decal.tscn` uses cull_mask = 1048575, which excludes nothing.
   { name: 'decal-cull-mask', file: 'unit-decal-cull-mask.tscn' },
+  // The one variable against `decal`: the floor's subdivision. Godot mixes a decal per fragment,
+  // so a floor of two triangles shows the same checkerboard as a fine one. A per-vertex mix draws
+  // nothing on the coarse floor.
+  { name: 'decal-triangulation', file: 'unit-decal-triangulation.tscn' },
+  // The one variable against `decal`: a roughness texture on the receiver. Godot keeps it under a
+  // decal, so the highlight of the smooth end runs through the footprint. A scalar roughness cuts it
+  // off at the box.
+  { name: 'decal-roughness-receiver', file: 'unit-decal-roughness-receiver.tscn' },
+  // The one variable against `decal`: the project's `rendering/textures/decals/filter`, Nearest. An
+  // 8 by 8 texture magnified over the floor keeps hard texel edges. The default filter blurs them.
+  { name: 'decal-filter', file: 'decal-filter/unit-decal-filter.tscn' },
+  // The one variable against `decal`: `texture_normal`. Godot mixes the map into the receiver's
+  // normal by the decal's alpha, so the footprint shows bumps in the light.
+  { name: 'decal-normal-map', file: 'unit-decal-normal-map.tscn' },
+  // The one variable against `decal`: `texture_orm`. A smooth metal map turns the footprint into a
+  // mirror that takes the omni light as one highlight.
+  { name: 'decal-orm-map', file: 'unit-decal-orm-map.tscn' },
+  // The one variable against `decal`: `texture_emission` with no albedo. Godot adds the emission
+  // beside the albedo branch, so the footprint glows in the pattern of the texture.
+  { name: 'decal-emission-map', file: 'unit-decal-emission-map.tscn' },
   // One image, two StandardMaterial3D sub-resources differing only in
   // `texture_filter` (0 NEAREST, 3 LINEAR_WITH_MIPMAPS): the one scene that sees
   // per-material texture cloning. The loader caches one THREE.Texture per path,

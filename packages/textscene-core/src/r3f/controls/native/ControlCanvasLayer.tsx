@@ -12,7 +12,7 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
-import { canvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
+import { useCanvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
 import { declaredCanvasLayers, layerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
@@ -47,7 +47,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   // world, so this scans the root list `NodeDispatcher` scans. The raw roots: a
   // root forced visible would find a CanvasModulate the world skips, and one
   // canvas would draw with two tints.
-  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+  const canvasModulate = useCanvasModulateColor(nodes);
   // The ranks `NodeDispatcher` derives: this walk is its sibling, so it cannot
   // inherit them, and a different layer set would order Controls against the
   // world wrongly.

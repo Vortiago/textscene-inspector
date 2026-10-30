@@ -152,7 +152,12 @@ describe('<GridMap> item with an inline PrimitiveMesh Godot builds no surface fo
   });
 });
 
-describe('<GridMap> item whose mesh path holds a TextMesh with no TrueType font', () => {
+const SYSTEM_FONT_TEXT = `[sub_resource type="SystemFont" id="SystemFont_item"]
+
+[sub_resource type="TextMesh" id="Mesh_item"]
+font = SubResource("SystemFont_item")`;
+
+describe('<GridMap> item whose mesh path holds a TextMesh with no readable font', () => {
   it('draws the placeholder', async () => {
     const tile = await renderInstancedTile({
       library: `[gd_resource type="MeshLibrary" format=3]
@@ -162,16 +167,19 @@ describe('<GridMap> item whose mesh path holds a TextMesh with no TrueType font'
 [resource]
 item/0/mesh = ExtResource("1_text")
 `,
-      files: { 'res://stage/meshes/text.tres': '[gd_resource type="TextMesh" format=3]\n\n[resource]\n' },
+      files: {
+        'res://stage/meshes/text.tres':
+          '[gd_resource type="TextMesh" format=3]\n\n[sub_resource type="SystemFont" id="SystemFont_item"]\n\n[resource]\nfont = SubResource("SystemFont_item")\n',
+      },
     });
     expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 });
 
-describe('<GridMap> item whose inline mesh is a TextMesh with no TrueType font', () => {
+describe('<GridMap> item whose inline mesh is a TextMesh with no readable font', () => {
   it('draws the placeholder, as the previewer has no outlines to draw', async () => {
     const tile = await renderInstancedTile({
-      library: inlineMeshLibrary('[sub_resource type="TextMesh" id="Mesh_item"]'),
+      library: inlineMeshLibrary(SYSTEM_FONT_TEXT),
     });
     expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });

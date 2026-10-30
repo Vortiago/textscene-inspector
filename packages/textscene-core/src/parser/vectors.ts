@@ -9,10 +9,12 @@
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
 import { readSlotTuple } from '../godot/variant/intSlots.js';
 
+import type { Quaternion } from '../godot/math/quaternion.js';
 import type { Vector2, Vector3 } from '../godot/math/vector.js';
 
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 const VECTOR3_RE = slotTupleRegex('Vector3', 3);
+const QUATERNION_RE = slotTupleRegex('Quaternion', 4);
 
 /**
  * `Color(r, g, b, a)`, with the vectors' float grammar. Compiled once and shared by the
@@ -29,6 +31,11 @@ export function parseVector2(value: string): Vector2 {
 export function parseVector3(value: string): Vector3 {
   const [x, y, z] = finiteSlotTuple(value, 'Vector3', VECTOR3_RE);
   return { x: x!, y: y!, z: z! };
+}
+
+export function parseQuaternion(value: string): Quaternion {
+  const [x, y, z, w] = finiteSlotTuple(value, 'Quaternion', QUATERNION_RE);
+  return { x: x!, y: y!, z: z!, w: w! };
 }
 
 /**

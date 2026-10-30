@@ -258,7 +258,7 @@
   {
    "type": "Skeleton3D",
    "slice": "3d/skeleton3d",
-   "fixture": "unit-skeleton3d.tscn"
+   "fixture": "unit-mesh-instance-3d-skinned-ribbon.tscn"
   },
   {
    "type": "Sprite3D",
@@ -416,7 +416,7 @@
   "unit-navigation-region-3d.tscn",
   "unit-gpuparticles3d.tscn",
   "unit-remote-transform-3d.tscn",
-  "unit-skeleton3d.tscn",
+  "unit-mesh-instance-3d-skinned-ribbon.tscn",
   "unit-sprite3d.tscn",
   "unit-world-environment-basic.tscn",
   "unit-animation-player.tscn",

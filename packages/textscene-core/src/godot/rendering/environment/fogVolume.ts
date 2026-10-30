@@ -18,6 +18,11 @@ export const FogVolumeShape = {
   WORLD: 4,
 } as const;
 
+/** Whether the editor gizmo plugin draws the box and the icon: every shape but WORLD (`fog_volume_gizmo_plugin.cpp:99-123`). */
+export function fogVolumeHasGizmo(shape: number): boolean {
+  return shape !== FogVolumeShape.WORLD;
+}
+
 /** Each shape's name by the integer a `.tscn` stores, as a validator names it. */
 export const FOG_VOLUME_SHAPE_NAMES = enumNamesByValue(FogVolumeShape);
 

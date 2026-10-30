@@ -1,6 +1,6 @@
 /**
  * Godot surface state that three holds per object, applied per draw group: a billboard's
- * pose, the object space of an alpha hash, the layers a probe's mask meets, shadow-pass membership,
+ * pose, the node's pose a program reads, the layers a probe's mask meets, shadow-pass membership,
  * the shadow's alpha cut and SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
  * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
@@ -14,8 +14,8 @@ import {
   type SurfaceBillboard,
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
-import { restoreInstanceLayers, showInstanceLayers } from './reflectionProbe/instanceLayers';
-import { alignAlphaHash } from './materials/godotAlphaHash';
+import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers/instanceLayers';
+import { alignNodePose } from './materials/nodePose';
 import { opaquePrepassOf } from './materials/opaquePrepass';
 import { pointShadowSizeInjection } from './materials/godotPoint';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
@@ -141,12 +141,12 @@ export function drawsAsOneBatch(billboard: SurfaceBillboard): boolean {
   return billboard.mode === BillboardMode.BILLBOARD_DISABLED;
 }
 
-/** Hashes this draw of `material` in the node's object space, as Godot does. */
-function alignHash(object: THREE.Object3D, material: THREE.Material, instance: DrawnInstance): void {
+/** Gives this draw of `material` the node's pose, which Godot's MODEL_MATRIX holds (`nodePose.ts`). */
+function alignPose(object: THREE.Object3D, material: THREE.Material, instance: DrawnInstance): void {
   if (!instance.nodeMatrixWorld(nodeMatrix)) {
     nodeMatrix.copy(posed === object ? posedMatrixWorld : object.matrixWorld);
   }
-  alignAlphaHash(material, nodeMatrix, object.matrixWorld);
+  alignNodePose(material, nodeMatrix, object.matrixWorld);
 }
 
 /**
@@ -179,7 +179,7 @@ function castOwnShadow(
   if ((depthMaterial as THREE.MeshDistanceMaterial).isMeshDistanceMaterial) {
     lightState(renderer, own).light = lightState(renderer, depthMaterial).light;
   }
-  alignHash(object, own, instance);
+  alignPose(object, own, instance);
   // The scene three's own shadow draw passes: none (`WebGLShadowMap.js:550`), typed as one.
   renderer.renderBufferDirect(shadowCamera, null as unknown as THREE.Scene, geometry, own, object, group);
   skip(geometry);
@@ -240,7 +240,7 @@ export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): Surfa
         return;
       }
       rule.colourDraw(this, geometry, material, camera);
-      alignHash(this, material, instance);
+      alignPose(this, material, instance);
       showInstanceLayers(renderer, this);
     },
     onAfterRender: closeDraw,

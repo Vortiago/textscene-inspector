@@ -7,10 +7,9 @@
 
 import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
-import type { TscnInternalResource } from '../../parser/types';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
-import { pointDrawOf, withPointDraw } from './godotPoint';
+import { pointDrawOf, withPointDraw, type PointPlacement } from './godotPoint';
 import type { MaterialSource } from './materialSource';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
@@ -19,29 +18,23 @@ interface SurfaceMaterialSlotProps {
   source: MaterialSource | undefined;
   /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */
   attach?: string;
-  /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
-  triplanarMesh?: TscnInternalResource;
-  /** The surface draws `THREE.Points`, so its material also sizes each point. */
-  drawsPoints?: boolean;
+  /** The surface draws `THREE.Points`, placed so, and its material also sizes each point. Undefined for triangles. */
+  points?: PointPlacement;
 }
 
 /**
  * One surface's material slot, textures and all, whichever file the material came from.
  * A surface with no usable material draws Godot's default one, which
  * `useSurfaceMaterial` derives from null scalars (ADR-0041). A surface whose texture
- * cannot load, or whose ViewportTexture albedo is cyclic, draws the magenta placeholder.
+ * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
+ * magenta placeholder.
  */
-export function SurfaceMaterialSlot({
-  source,
-  attach,
-  triplanarMesh,
-  drawsPoints,
-}: SurfaceMaterialSlotProps) {
-  const { scalars, bags } = useSurfaceMaterial(source, triplanarMesh);
+export function SurfaceMaterialSlot({ source, attach, points }: SurfaceMaterialSlotProps) {
+  const { scalars, bags } = useSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   const pointDraw = useMemo(
-    () => (drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined),
-    [drawsPoints, scalars, pixelRatio]
+    () => (points ? pointDrawOf(scalars, pixelRatio, points) : undefined),
+    [points, scalars, pixelRatio]
   );
   if (!bags) return materialBagElement(withPointDraw(MISSING_TEXTURE_MATERIAL, pointDraw), attach, null);
   return <StandardMaterialSlot bags={bags} attach={attach} pointDraw={pointDraw} />;

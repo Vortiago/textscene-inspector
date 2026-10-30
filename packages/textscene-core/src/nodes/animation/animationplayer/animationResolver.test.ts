@@ -455,7 +455,7 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     expect(anim.tracks[0]!.keys[0]!.transition).toBe(0.25);
   });
 
-  it('skips skeletal bone sub-path tracks (Node:bone) but keeps plain-node tracks', () => {
+  it('keeps the subname of a transform track on Skeleton3D:bone and the path to the node', () => {
     const internal = [
       subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
       subResource('Animation', 'A', {
@@ -468,7 +468,55 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
       }),
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
-    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Mesh']);
+    expect(anim.tracks.map((t) => [t.targetPath, t.subnames])).toEqual([
+      ['Skeleton/Skeleton3D', ['body']],
+      ['Mesh', []],
+    ]);
+  });
+
+  it('keeps every subname of a transform track path, for the binder to decide what they name', () => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"rotation_3d"',
+        'tracks/0/path': 'NodePath("Skeleton3D:body:x")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks.map((t) => t.subnames)).toEqual([
+      ['body', 'x'],
+    ]);
+  });
+
+  it('reads a path with an empty subname as a track on the node (edge case)', () => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Skeleton3D:")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0)',
+      }),
+    ];
+    expect(
+      resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks.map((t) => [t.targetPath, t.subnames])
+    ).toEqual([['Skeleton3D', []]]);
+  });
+
+  it.each([
+    ['wraps when loop_wrap is absent', undefined, true],
+    ['wraps when loop_wrap is true', 'true', true],
+    ['does not wrap when loop_wrap is false', 'false', false],
+  ])('a track %s', (_name, loopWrap, expected) => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"a": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
+        ...(loopWrap === undefined ? {} : { 'tracks/0/loop_wrap': loopWrap }),
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks[0]!.loopWrap).toBe(expected);
   });
 
   it('does not treat an Object.prototype key (e.g. "constructor") as a transform track type', () => {

@@ -8,7 +8,7 @@
 
 import type { RawNode, TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
+import { belowRoot, joinPath, parentPathOf, pathBetween, pathUnder } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameLivePaths,
@@ -16,12 +16,12 @@ import {
   cachedUniqueNamesBelowRoot,
 } from '../utils/uniqueNames.js';
 import { perObject } from '../utils/perObject.js';
-import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
+import { passesContentTrail, simplifiedLivePath } from '../parser/idTrail.js';
+import { placedBelow, type UniqueNamePaths, type UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
   holdsInstanceContent,
   liveTreeOf,
-  snapshotScenes,
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
@@ -82,7 +82,12 @@ function fileSeating(owner: ClaimOwner, livePath: string, counts: Counts): Claim
   return owner;
 }
 
-/** The live tree with each `%`-spelt live path placed once per walk. */
+/** Whether a live path passes through a `%Name` or a content trail, where only a graft knows the node. */
+function isPlacedByGraft(livePath: string): boolean {
+  return livePath.includes(UNIQUE_NODE_PREFIX) || passesContentTrail(livePath);
+}
+
+/** The live tree with each live path a graft places ({@link isPlacedByGraft}) placed once per walk. */
 class PlacedLiveTree {
   /** Written only by `placed`. */
   private readonly placements = new Map<string, string>();
@@ -90,12 +95,12 @@ class PlacedLiveTree {
   constructor(readonly tree: LiveTree) {}
 
   /**
-   * `livePath` with each host sub-path through a `%Name` replaced by where the graft placed it, as
-   * of its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest
+   * `livePath` with each host sub-path through a `%Name` or a content trail replaced by where the
+   * graft placed it, as of its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest
    * as written, and so does a heading its file seats through a `%Name` the graft could not reach.
    */
   placed(livePath: string): string {
-    if (!livePath.includes(UNIQUE_NODE_PREFIX)) return livePath;
+    if (!isPlacedByGraft(livePath)) return livePath;
     const cached = this.placements.get(livePath);
     if (cached !== undefined) return cached;
     let segments = livePath.split('/');
@@ -107,27 +112,18 @@ class PlacedLiveTree {
         segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
       }
     }
-    const placed = segments.join('/');
+    // A child its file seated outside the instance climbs out of it with `..`.
+    const spelt = segments.join('/');
+    const placed = segments.includes('..') ? simplifiedLivePath(spelt) : spelt;
     this.placements.set(livePath, placed);
     return placed;
   }
-}
-
-/** `rest` with its longest leading sub-path that `placements` holds replaced by the placed path. */
-function placedBelow(placements: ReadonlyMap<string, string>, rest: readonly string[]): string[] {
-  for (let end = rest.length; end > 0; end--) {
-    const placed = placements.get(rest.slice(0, end).join('/'));
-    if (placed !== undefined) return [...placed.split('/'), ...rest.slice(end)];
-  }
-  return [...rest];
 }
 
 interface Candidate {
   group: LiveChildGroup;
   /** Owner of the nodes in `group`. */
   owner: ClaimOwner;
-  /** `subscene` groups: the loaded roots, each the owner of its own descendants. */
-  rootOf?: readonly TscnNode[];
 }
 
 /**
@@ -188,10 +184,7 @@ class OwnerWalk {
     const node = link.raw;
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
-    const subRoots = cachedSubRoots(link.step.instancePath, live.tree.ctx);
-    const contentOwner: ClaimOwner = found.rootOf
-      ? { path: livePath, roots: found.rootOf, parent: owner, live }
-      : owner;
+    const subRoots = link.step.instancePath ? live.tree.sceneNodes(link.step.instancePath) : undefined;
     // The instance node is the root of what it instances, so it owns the GLB's objects too: they sit
     // directly below it (packed_scene.cpp:261-264).
     const instanceOwner = subRoots && { path: livePath, roots: subRoots, parent: owner, live };
@@ -200,8 +193,7 @@ class OwnerWalk {
       owner:
         instanceOwner && holdsInstanceContent(group)
           ? { ...instanceOwner, composed: link.step.node.uniqueNames }
-          : contentOwner,
-      ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
+          : owner,
     }));
     const into = instanceOwner
       ? (candidates.find((c) => holdsInstanceContent(c.group))?.owner ?? owner)
@@ -229,9 +221,59 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
   const { owner, node } = walk.to(path);
   if (node?.owner === undefined) return owner;
   const file = fileSeating(owner, path, ADDED);
-  if (node.owner === '.') return file;
-  const ownerPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, walk);
+  // `.` with a trail is the inherited root, whose base holds the owner the trail names.
+  if (node.owner === '.' && node.ownerContentTrail === undefined) return file;
+  const ownerPath = explicitOwnerPath(node.owner, node, file.path, walk);
   return ownerPath === undefined ? noOwner(walk.live) : walk.to(ownerPath).into;
+}
+
+/**
+ * The live path of the owner an explicit `owner=` names, or the one the node's `owner_uid_path=`
+ * finds where that walk finds no node (packed_scene.cpp:159-163). Undefined where neither finds one.
+ */
+function explicitOwnerPath(
+  owner: string,
+  { ownerContentTrail, ownerTrailFallback }: TscnNode,
+  filePath: string,
+  walk: OwnerWalk
+): string | undefined {
+  const walked = owner === NO_OWNER ? undefined : ownerLivePath(filePath, owner, walk);
+  const walkFinds = walked !== undefined && (!ownerTrailFallback || !walkFindsNothing(walked, walk));
+  if (walkFinds) return withContentTrailFollowed(walked, ownerContentTrail, walk);
+  if (!ownerTrailFallback) return undefined;
+  const recovered = ownerLivePath(filePath, ownerTrailFallback.owner, walk);
+  return recovered && withContentTrailFollowed(recovered, ownerTrailFallback.ownerContentTrail, walk);
+}
+
+/**
+ * Whether the loaded tree holds no node at `path`, so the `owner=` walk finds none. A scene still
+ * loading below the nearest node above `path` may hold it, so that does not count.
+ */
+function walkFindsNothing(path: string, { live }: OwnerWalk): boolean {
+  for (let above: string | null = path; above !== null; above = parentPathOf(above)) {
+    const link = live.tree.at(above);
+    if (!link) continue;
+    if (above === path) return false;
+    const scenePath = link.step.instancePath;
+    return !scenePath || live.tree.sceneNodes(scenePath) !== undefined;
+  }
+  return true;
+}
+
+/**
+ * The live path of the owner an `owner_uid_path=` finds below the instance at `instancePath`, or
+ * undefined where no heading of its scene answers the rest of the trail, or a scene it enters is
+ * not loaded yet. Without a trail, `instancePath` itself.
+ */
+function withContentTrailFollowed(
+  instancePath: string,
+  trail: readonly number[] | undefined,
+  { live }: OwnerWalk
+): string | undefined {
+  if (trail === undefined) return instancePath;
+  const scenePath = live.tree.at(instancePath)?.step.instancePath;
+  const followed = scenePath ? live.tree.followTrail(scenePath, trail) : undefined;
+  return followed?.status === 'found' ? pathUnder(instancePath, followed.path) : undefined;
 }
 
 const NO_NAMES: UniqueNameTable = { paths: () => new Map() };
@@ -281,13 +323,9 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
   return new Map([...ownerUniquePaths(scene.parent), ...own]);
 }
 
-function cachedSubRoots(scenePath: string | null, ctx: LiveTreeContext): readonly TscnNode[] | undefined {
-  return scenePath ? snapshotScenes(ctx).getCached(scenePath)?.nodes : undefined;
-}
-
-/** `paths` with each live path placed, the same object where none passes through a `%Name`. */
+/** `paths` with each live path placed, the same object where no graft places any. */
 function withPlacedLivePaths(paths: UniqueNamePaths, live: PlacedLiveTree): UniqueNamePaths {
-  if (![...paths.values()].some((path) => path.includes(UNIQUE_NODE_PREFIX))) return paths;
+  if (![...paths.values()].some(isPlacedByGraft)) return paths;
   return new Map([...paths].map(([key, path]) => [key, live.placed(path)]));
 }
 
@@ -296,7 +334,7 @@ function withPlacedLivePaths(paths: UniqueNamePaths, live: PlacedLiveTree): Uniq
  * file's claims. The outer root's own file's table is one shared object per tree.
  */
 export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
-  const composed = owner.composed ?? (owner.parent ? undefined : inheritedRootTable(owner));
+  const composed = owner.composed ?? (owner.parent ? undefined : liveRootTable(owner));
   if (composed) return withPlacedLivePaths(rebased(composed.paths(), owner.path), owner.live);
   if (!owner.parent) return withPlacedLivePaths(cachedUniqueNameLivePaths(owner.roots), owner.live);
   return withPlacedLivePaths(rebased(cachedUniqueNamesBelowRoot(owner.roots), owner.path), owner.live);
@@ -304,15 +342,15 @@ export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
 
 /** `paths` from a node, spelt from the root through the node at `path`. */
 function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
-  return new Map([...paths].map(([key, fromNode]) => [key, simplifiedNodePath(joinPath(path, fromNode))]));
+  return new Map([...paths].map(([key, fromNode]) => [key, simplifiedLivePath(joinPath(path, fromNode))]));
 }
 
 /**
- * The table an inherited outer root's collapse composed over its base, which owns the base's
- * names (packed_scene.cpp:227-231), or undefined for a root that inherits nothing loaded.
+ * The table the live tree gave the outer root, or undefined where its file's own claims stand: an
+ * inherited root's collapse composes one over its base, which owns the base's names
+ * (packed_scene.cpp:227-231), and a root re-seated for a root fallback carries that seating's.
  */
-function inheritedRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
+function liveRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
   const root = outer.roots[0];
-  if (!root?.instance) return undefined;
-  return outer.live.tree.at(root.name)?.step.node.uniqueNames;
+  return root && outer.live.tree.at(root.name)?.step.node.uniqueNames;
 }

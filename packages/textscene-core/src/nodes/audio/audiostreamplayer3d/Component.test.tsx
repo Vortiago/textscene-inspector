@@ -10,8 +10,6 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
-import { INSTANTIATED_GIZMO_COLOUR } from '../../../r3f/gizmo/gizmoVariant';
-import { godotColorToLinear } from '../../../r3f/godotColor';
 import {
   describeGizmoToggle,
   describeInstantiatedGizmo,
@@ -23,7 +21,7 @@ import type { AudioStreamPlayer3DProperties } from './types';
 import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
 
 /**
- * The speaker and range gizmos draw for the selected node only, so the scaffolding places the component in a
+ * The range and cone gizmos draw for the selected node only, so the scaffolding places the component in a
  * NodePathProvider and sets `selectedNodePath` to the same path through SelectionProvider.
  */
 function withSelectedAudio(path: string, children: ReactNode, showGizmos = true): ReactNode {
@@ -96,44 +94,11 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(userData.nodeType).toBe('AudioStreamPlayer3D');
   });
 
-  it('renders the speaker silhouette (at least 2 meshes for the cone + front disk) when selected (WI-UX-14)', async () => {
+  it('draws no speaker mesh when selected, since Godot draws the node icon instead', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)
     );
-    // Cone + cylinder front disk = 2 mesh primitives in the gizmo body, drawn
-    // only while the audio node is selected.
-    const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes.length).toBeGreaterThanOrEqual(2);
-  });
-
-  describe('the speaker silhouette', () => {
-    async function speakerMaterials(instantiated: boolean) {
-      const renderer = await ReactThreeTestRenderer.create(
-        <GizmoScene nodePath="Audio" selectedPath="Audio" instantiated={instantiated}>
-          <AudioStreamPlayer3D node={makeNode()} />
-        </GizmoScene>
-      );
-      return renderer.scene
-        .findAllByType('Mesh')
-        .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial);
-    }
-
-    it('draws in the gizmo yellow, opaque, when the edited scene owns the node', async () => {
-      const materials = await speakerMaterials(false);
-      expect(materials.map((m) => [m.color.getHex(), m.opacity, m.transparent])).toEqual([
-        [0xffff00, 1, false],
-        [0xffff00, 1, false],
-      ]);
-    });
-
-    it('draws in the instantiated grey, at its alpha, inside an instance the scene does not own', async () => {
-      const materials = await speakerMaterials(true);
-      const grey = godotColorToLinear(INSTANTIATED_GIZMO_COLOUR).toArray();
-      expect(materials.map((m) => [m.color.toArray(), m.opacity, m.transparent])).toEqual([
-        [grey, INSTANTIATED_GIZMO_COLOUR.a, true],
-        [grey, INSTANTIATED_GIZMO_COLOUR.a, true],
-      ]);
-    });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('does NOT render the range sphere when unit_size is the default (10)', async () => {
@@ -146,13 +111,6 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
       return ud.isAudioRangeSphere === true;
     });
     expect(sphere).toBeUndefined();
-  });
-
-  it('renders no speaker silhouette with the Gizmos toggle off, selected', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />, false)
-    );
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('renders the range circle scaled by the attenuation model when selected (WI-UX-14)', async () => {
@@ -197,20 +155,6 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(group.instance.position.x).toBe(4);
     expect(group.instance.position.y).toBe(1);
     expect(group.instance.position.z).toBe(-2);
-  });
-
-  it('gizmo materials use MeshBasicMaterial (non-shadow-casting) when selected (WI-UX-14)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)
-    );
-    const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes.length).toBeGreaterThan(0);
-    for (const m of meshes) {
-      const mat = (m.instance as THREE.Mesh).material as { type: string };
-      expect(mat.type).toBe('MeshBasicMaterial');
-      // No gizmo mesh casts a shadow: gizmos are not lit.
-      expect(m.instance.castShadow).toBe(false);
-    }
   });
 
   it('passes children through alongside the gizmo', async () => {
