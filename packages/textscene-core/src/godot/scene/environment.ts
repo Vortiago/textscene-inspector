@@ -23,7 +23,7 @@ export const AmbientSource = {
 } as const;
 
 /** `Environment::ReflectionSource` without `REFLECTION_SOURCE_` (`environment.h:58-62`, 4.7.2 `:59-63`). */
-const ReflectionSource = {
+export const ReflectionSource = {
   BG: 0,
   DISABLED: 1,
   SKY: 2,

@@ -35,11 +35,12 @@ const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 
 
 /**
  * Godot's radiance layer `sqrt( roughness )` times the last layer's index, in the sky-space direction
- * `reflectVec`, blending the two layers around it (`:1714-1721`). It scales by `envMapIntensity`.
+ * `reflectVec`, blending the two layers around it (`:1714-1721`). It scales by `envMapIntensity`, and by 0
+ * when the Environment's reflection source gives a surface no sky (`render_scene_data_rd.cpp:196-200`).
  */
 const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec, const in float roughness ) {
 
-		return godotSkyBlend( reflectVec, sqrt( roughness ) * ${LAST_LAYER} ) * envMapIntensity;
+		return godotSkyBlend( reflectVec, sqrt( roughness ) * ${LAST_LAYER} ) * envMapIntensity * GODOT_SKY_REFLECTION;
 
 	}
 

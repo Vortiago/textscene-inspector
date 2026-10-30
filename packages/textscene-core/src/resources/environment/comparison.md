@@ -53,6 +53,21 @@ Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as
 
 - **Approximated** The `SHADOWS_ONLY` box's shadow projects a visibly different shape than Godot's.
 
+## Reflected light source
+<!-- compare: image=unit-environment-reflected-source-disabled status=done fixture=unit-environment-reflected-source-disabled.tscn -->
+
+`reflected_light_source` DISABLED over a sky background. The metal ball reflects nothing and is black but for the sun's highlight, while the ground still takes its ambient colour, as in Godot. A surface reflects the sky for the background source over a sky background, or for the sky source whatever the background (`render_scene_data_rd.cpp:196-200`). The ambient source has no part in it.
+
+## Reflected light source, sky over a colour background
+<!-- compare: image=unit-environment-reflected-source-sky status=done fixture=unit-environment-reflected-source-sky.tscn -->
+
+The sky source over a colour background. The ball reflects the sky that the flat background hides.
+
+## Reflected light source, with a probe
+<!-- compare: image=unit-environment-reflected-source-disabled-probe status=done fixture=unit-environment-reflected-source-disabled-probe.tscn -->
+
+A ONCE ReflectionProbe over the disabled source. The probe's reflection blends over no reflection, so the ball's bottom matches Godot.
+
 ## Glow (bloom)
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 

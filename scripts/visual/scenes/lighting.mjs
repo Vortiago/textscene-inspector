@@ -136,6 +136,11 @@ export const LIGHTING_SCENES = [
   { name: 'reflection-probe-box-projection', file: 'unit-reflection-probe-box-projection.tscn' },
   // AMBIENT_COLOR on one ReflectionProbe: the floor in its box takes a red ambient.
   { name: 'reflection-probe-ambient-color', file: 'unit-reflection-probe-ambient-color.tscn' },
+  // reflected_light_source: DISABLED leaves the metal ball black, SKY reflects the sky over a colour
+  // background, and a ONCE probe over DISABLED blends its capture into none.
+  { name: 'environment-reflected-source-disabled', file: 'unit-environment-reflected-source-disabled.tscn' },
+  { name: 'environment-reflected-source-sky', file: 'unit-environment-reflected-source-sky.tscn' },
+  { name: 'environment-reflected-source-disabled-probe', file: 'unit-environment-reflected-source-disabled-probe.tscn' },
   // CameraAttributesPractical at exposure_multiplier 2: Godot scales a light's energy, an emission and
   // a colour background by it, and a flat ambient not at all.
   { name: 'camera-attributes-exposure', file: 'unit-camera-attributes-exposure.tscn', camera: 'Root/Camera3D' },

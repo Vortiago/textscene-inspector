@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { createEnvironmentSettings } from './build';
 import { decodeEnvironment } from './decode';
-import { BackgroundMode } from '../../godot/scene/environment';
+import { BackgroundMode, ReflectionSource } from '../../godot/scene/environment';
 import type { EnvironmentProperties } from './types';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
@@ -95,5 +95,33 @@ describe('sky ambient', () => {
     );
     expect(settings.skyAmbient).toBeNull();
     expect(settings.ambient).toEqual({ color: { r: 0.6, g: 0.6, b: 0.6, a: 1 }, energy: 2 });
+  });
+});
+
+describe('sky reflection', () => {
+  const reflects = (overrides: Partial<EnvironmentProperties>) =>
+    createEnvironmentSettings(base(overrides), DEFAULT_CLEAR_COLOR).skyReflection;
+
+  it('reflects the sky for the default source over a sky background', () => {
+    expect(reflects({})).toBe(true);
+  });
+
+  it('reflects nothing under a disabled source, and keeps the sky ambient', () => {
+    const settings = createEnvironmentSettings(
+      base({ reflected_light_source: ReflectionSource.DISABLED }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.skyReflection).toBe(false);
+    expect(settings.skyAmbient).toEqual({ contribution: 1 });
+  });
+
+  it('reflects the sky under the sky source over a colour background', () => {
+    expect(
+      reflects({ reflected_light_source: ReflectionSource.SKY, background_mode: BackgroundMode.BG_COLOR })
+    ).toBe(true);
+  });
+
+  it('reflects nothing for the default source over a colour background, whatever the ambient', () => {
+    expect(reflects({ background_mode: BackgroundMode.BG_COLOR, ambient_light_source: 3 })).toBe(false);
   });
 });

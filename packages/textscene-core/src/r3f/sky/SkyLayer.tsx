@@ -49,6 +49,8 @@ interface SkyLayerProps {
    * comes from elsewhere.
    */
   contribution?: number;
+  /** Whether surfaces reflect this sky: false under a reflection source that gives them none. */
+  reflects?: boolean;
   /**
    * Whether this sky also paints the background. Godot's ambient can come from
    * the sky while the background shows something else (`AmbientSource.SKY`
@@ -70,6 +72,7 @@ export function SkyLayer({
   sky,
   energyMultiplier = 1,
   contribution = 1,
+  reflects = true,
   asBackground = true,
   rotation,
   resources,
@@ -92,9 +95,11 @@ export function SkyLayer({
   const lightsKey = useSkyLightsKey(scene);
   const contextRestores = useContextRestores(gl);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
-  // A ref, not an effect dependency: a new share needs no new bake.
+  // Refs, not effect dependencies: a new share or reflection source needs no new bake.
   const contributionRef = useRef(contribution);
   contributionRef.current = contribution;
+  const reflectsRef = useRef(reflects);
+  reflectsRef.current = reflects;
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
@@ -145,7 +150,7 @@ export function SkyLayer({
       const isDirtied = noteSkyLights(gl, lightData, exposureScalesLights ? drawn : 1);
       stepSkyRadiance(update, plan, { exposure: drawn, brightness: brightnessAt(drawn) }, isDirtied);
       showAt(drawn);
-      radiance.radiance.show(contributionRef.current, bakedBrightness(drawn));
+      radiance.radiance.show(contributionRef.current, reflectsRef.current, bakedBrightness(drawn));
     };
     const previousBackgroundRotation = new THREE.Euler();
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {

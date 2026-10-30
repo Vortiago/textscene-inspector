@@ -14,7 +14,7 @@ import { ownEnvironmentChanges, ShownEnvironment, useOwnEnvironment } from '../e
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
 import { SHOWN_ENERGY, shownSky, skyRotation } from './skyRadiance';
-import { skyLayersSlot } from './skyRadiance.testkit';
+import { REFLECTION_SLOT, skyLayersSlot } from './skyRadiance.testkit';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
@@ -285,6 +285,17 @@ describe('SkyLayer', () => {
     sampledInRender(gl, scene);
 
     expect(shownSky[0]).toBe(0.25);
+  });
+
+  it('shows whether surfaces reflect it, apart from its ambient', async () => {
+    built.next = skyEnvironment();
+    const { scene, gl } = await mount(
+      <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} reflects={false} />
+    );
+
+    sampledInRender(gl, scene);
+
+    expect([shownSky[REFLECTION_SLOT], shownSky[0]]).toEqual([0, 1]);
   });
 
   it('shows the energy and the rotation of its radiance, which the fogs read', async () => {

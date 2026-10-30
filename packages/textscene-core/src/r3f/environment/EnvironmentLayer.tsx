@@ -63,11 +63,12 @@ export function DrawnEnvironmentLayer(props: EnvironmentLayerProps) {
 
 function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
-  // it whenever the source resolves to a cubemap. The two are independent: a
-  // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
-  // colour background) and can be shown without lighting it (ambient DISABLED).
+  // it whenever the source resolves to a cubemap. Surfaces reflect it by their own source. The three
+  // are independent: a sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
+  // colour background), be shown without lighting it (ambient DISABLED), or only be reflected.
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
+  const reflectsSky = settings.skyReflection;
   const draws3D = useDraws3D();
   const { showFog } = useViewportMode();
   // One value decides the fog programs, the fogged colour background and the fog passes.
@@ -78,13 +79,14 @@ function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps
   return (
     <>
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
-      {sky && (showsSky || skyAmbient) && (
+      {sky && (showsSky || skyAmbient || reflectsSky) && (
         <SkyLayer
           sky={sky}
           asBackground={showsSky}
           energyMultiplier={settings.background.energyMultiplier}
           rotation={settings.skyRotation}
-          contribution={skyAmbient ? skyAmbient.contribution : 1}
+          contribution={skyAmbient ? skyAmbient.contribution : 0}
+          reflects={reflectsSky}
           resources={skyResources}
           fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
         />

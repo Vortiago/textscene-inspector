@@ -14,7 +14,7 @@ import { scaledRgb } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { Rgba } from '../../godot/math/math';
-import { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
+import { AmbientSource, BackgroundMode, ReflectionSource } from '../../godot/scene/environment.js';
 
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)
@@ -44,6 +44,7 @@ export function createEnvironmentSettings(
       canvasMaxLayer: properties.background_canvas_max_layer,
     },
     ...ambientFor(properties, backgroundColor),
+    skyReflection: reflectsSky(properties),
     toneMapping: {
       mode: properties.tonemap_mode,
       exposure: properties.tonemap_exposure,
@@ -136,6 +137,19 @@ function glowLevelsFor(properties: EnvironmentProperties): number[] {
 }
 
 /**
+ * Whether a surface reflects the sky, as `RenderSceneDataRD::update_ubo` sets the reflection
+ * cubemap flag (`render_scene_data_rd.cpp:196-200`): the background source over a sky background,
+ * or the sky source whatever the background. The ambient source plays no part.
+ */
+function reflectsSky(properties: EnvironmentProperties): boolean {
+  const source = properties.reflected_light_source;
+  return (
+    (source === ReflectionSource.BG && properties.background_mode === BackgroundMode.BG_SKY) ||
+    source === ReflectionSource.SKY
+  );
+}
+
+/**
  * The ambient this Environment contributes, transcribed from
  * `RenderSceneDataRD::update_ubo`, which fills the shader's ambient
  * (`sky_bake_panorama` is the baking path, a different table). Colours stay in
@@ -177,9 +191,8 @@ function ambientFor(
   // A COLOR or DISABLED source takes none from the sky, which is still reflected.
   const contribution = fromCubemap ? properties.ambient_light_sky_contribution : 0;
 
-  // `reflection_source` defaults to the background, so a sky is reflected whenever it
-  // is the background or the ambient, independent of `ambient_light_source`. `contribution` is
-  // the diffuse share, which scales the ambient apart from the reflection in each material.
+  // The sky mounts for the diffuse share only when it is the background or the ambient source:
+  // `contribution` scales the ambient apart from the reflection, which `reflectsSky` decides.
   const skyAmbient = fromCubemap || overSky ? { contribution } : null;
 
   if (!fromCubemap && source !== AmbientSource.COLOR) {

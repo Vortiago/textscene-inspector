@@ -2402,6 +2402,57 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> The <code>SHADOWS_ONLY</code> box's shadow projects a visibly different shape than Godot's.</li></ul></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Reflected light source</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-environment-reflected-source-disabled-godot.png" alt="Godot render of Reflected light source">
+          <img class="img-ours" src="images/unit-environment-reflected-source-disabled-ours.png" alt="Our render of Reflected light source">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>reflected_light_source</code> DISABLED over a sky background. The metal ball reflects nothing and is black but for the sun's highlight, while the ground still takes its ambient colour, as in Godot. A surface reflects the sky for the background source over a sky background, or for the sky source whatever the background (<code>render_scene_data_rd.cpp:196-200</code>). The ambient source has no part in it.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Reflected light source, sky over a colour background</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-environment-reflected-source-sky-godot.png" alt="Godot render of Reflected light source, sky over a colour background">
+          <img class="img-ours" src="images/unit-environment-reflected-source-sky-ours.png" alt="Our render of Reflected light source, sky over a colour background">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>The sky source over a colour background. The ball reflects the sky that the flat background hides.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Reflected light source, with a probe</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-environment-reflected-source-disabled-probe-godot.png" alt="Godot render of Reflected light source, with a probe">
+          <img class="img-ours" src="images/unit-environment-reflected-source-disabled-probe-ours.png" alt="Our render of Reflected light source, with a probe">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A ONCE ReflectionProbe over the disabled source. The probe's reflection blends over no reflection, so the ball's bottom matches Godot.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Glow (bloom)</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">

@@ -623,6 +623,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Reflected Source Disabled Probe",
+    "file": "unit-environment-reflected-source-disabled-probe.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Environment Reflected Source Disabled",
+    "file": "unit-environment-reflected-source-disabled.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Environment Reflected Source Sky",
+    "file": "unit-environment-reflected-source-sky.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"

@@ -6,7 +6,7 @@
 
 import type { Rgba } from '../../godot/math/math';
 import type { Vector3 } from '../../godot/math/vector';
-import type { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
+import type { AmbientSource, BackgroundMode, ReflectionSource } from '../../godot/scene/environment.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 export interface EnvironmentProperties {
@@ -55,6 +55,8 @@ export interface EnvironmentProperties {
    * cubemap; at the default 1.0 the flat colour contributes nothing.
    */
   ambient_light_sky_contribution: number;
+  /** 0 BG (default), 1 DISABLED, 2 SKY. Decides the reflection only, never the ambient. */
+  reflected_light_source: EnumValue<typeof ReflectionSource>;
 
   // Depth fog
   fog_enabled: boolean;
@@ -221,10 +223,8 @@ export interface EnvironmentSettings {
     energy: number;
   } | null;
   /**
-   * The sky as an image-based light (IBL), which both lights surfaces and is what they
-   * reflect. Present whenever a sky IBL exists to reflect (`reflection_source` defaults
-   * to the background), whatever the diffuse ambient source: a metal reflects the sky
-   * even when the flat ambient is a constant colour.
+   * The sky as an image-based light (IBL) for the diffuse ambient. Present when the sky is the
+   * background or the ambient source, whatever `reflected_light_source` says.
    */
   skyAmbient: {
     /**
@@ -233,6 +233,11 @@ export interface EnvironmentSettings {
      */
     contribution: number;
   } | null;
+  /**
+   * Whether a surface reflects the sky: `reflected_light_source` is the background over a sky
+   * background, or the sky. A sky that is shown or lights the ambient is still mounted when false.
+   */
+  skyReflection: boolean;
   /**
    * Godot's tonemapper. Always present: LINEAR, the default, is a real choice meaning
    * "no tone mapping", not an absence. The editor preview environment picks FILMIC.
