@@ -43,8 +43,8 @@ export interface ViewportActionsContextValue {
    */
   claimFrame2D: (requestId: number) => boolean;
   /**
-   * Frames the camera back to its initial state. Does nothing until a canvas
-   * registers a reset handler.
+   * Ends any camera preview and returns the editor camera to its initial pose.
+   * The pose waits until a canvas registers a reset handler.
    */
   resetCamera: () => void;
   /** `<TscnCanvas>` registers its `<GodotEditorControls>` reset here, and gets the cleanup. */
@@ -151,6 +151,7 @@ export function ViewportActionsProvider({
 
   const { ref: resetHandlerRef, register: registerResetHandler } = useHandlerSlot<() => void>();
   const resetCamera = useCallback(() => {
+    setActiveCameraPath(null);
     resetHandlerRef.current?.();
   }, [resetHandlerRef]);
 

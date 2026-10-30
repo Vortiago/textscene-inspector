@@ -1,8 +1,8 @@
 /**
  * The "Cameras" detail tab lists the camera nodes of the **live scene tree**,
- * so a camera inside a sub-scene appears. A Camera3D row swaps the 3D viewport
- * camera. A Camera2D row frames the 2D stage on the camera's view and opens
- * the 2D workspace.
+ * so a camera inside a sub-scene appears. A Camera3D row previews that camera
+ * in the 3D viewport. A Camera2D row of the root viewport frames the 2D stage
+ * on the camera's view and opens the 2D workspace.
  */
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
@@ -13,10 +13,14 @@ import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** A stable predicate, so the memo of `useLiveSceneNodes` does not recompute each render. */
-const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamera2DType(n.type);
+// Module-level predicates are stable, so the memo of `useLiveSceneNodes` does not recompute each render.
+const isCamera3DNode = (n: TscnNode): boolean => isCamera3DType(n.type);
+const isCamera2DNode = (n: TscnNode): boolean => isCamera2DType(n.type);
+/** A Camera2D inside a SubViewport is that viewport's camera (`camera_2d.cpp:342`), not the stage's. */
+const isOutsideViewports = (n: TscnNode): boolean => !descendsFromClass(n.type, 'Viewport');
 
 export function CamerasPanel() {
   const cam = useOptionalViewportActions();
@@ -24,9 +28,8 @@ export function CamerasPanel() {
   const liveTree = useSharedLiveTree();
   const { viewportSize } = useProjectSettings();
 
-  const cameras = useLiveSceneNodes(isCameraNode);
-  const cameras3d = cameras.filter((c) => isCamera3DType(c.node.type));
-  const cameras2d = cameras.filter((c) => isCamera2DType(c.node.type));
+  const cameras3d = useLiveSceneNodes(isCamera3DNode);
+  const cameras2d = useLiveSceneNodes(isCamera2DNode, isOutsideViewports);
 
   if (cameras3d.length === 0 && cameras2d.length === 0) {
     return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
@@ -53,7 +56,7 @@ export function CamerasPanel() {
         data-active={activePath === null}
         onClick={() => cam?.returnToFreeView()}
       >
-        <span className={styles.camName}>Free orbit</span>
+        <span className={styles.camName}>Editor camera</span>
         <span className={styles.camTag}>{activePath === null ? 'active' : 'use'}</span>
       </button>
       {cameras3d.map((c) => {

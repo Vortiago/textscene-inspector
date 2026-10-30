@@ -18,7 +18,7 @@ export function FrameSelectedShortcut() {
   const get = useThree((s) => s.get);
 
   useGlobalShortcut('f', () => {
-    // Free-orbit only, as in CameraFit: under "Use This Camera", `state.camera` is the
+    // Free-orbit only, as in CameraFit: under a camera preview, `state.camera` is the
     // authored Camera3D, and framing would overwrite its position, near and far.
     if (control?.activeCameraPath) return;
     const state = get();

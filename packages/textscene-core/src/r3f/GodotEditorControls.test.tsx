@@ -246,19 +246,6 @@ describe('<GodotEditorControls> wheel navigation', () => {
     expect(controls.target.length()).toBeGreaterThan(0);
   });
 
-  it('anchors against the ACTIVE camera’s fov, not the one it was constructed with', async () => {
-    // An authored Camera3D becomes R3F's camera and carries its own fov (Godot
-    // defaults to 75 against this editor camera's 70). Anchoring on the stale
-    // one drifts the subject off the cursor as you keep zooming.
-    const { get, controls } = await mount();
-    const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-    authored.position.copy(get().camera.position);
-    await act(async () => {
-      get().set({ camera: authored });
-    });
-    expect((controls as EditorControlsHandle).fovDegrees()).toBe(75);
-  });
-
   it('leaves the focus point alone when the pointer is dead centre', async () => {
     const { get, controls, element } = await mount();
     const size = get().size;
@@ -506,6 +493,52 @@ describe('<GodotEditorControls> freelook sprint', () => {
     const sprinted = await flyForward(true);
     expect(walked).toBeGreaterThan(0);
     expect(sprinted).toBeCloseTo(walked * 3, 6);
+  });
+});
+
+/** Makes an authored camera the one R3F renders, as previewing a Camera3D does. */
+async function previewAuthoredCamera(get: () => RootState): Promise<THREE.PerspectiveCamera> {
+  const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+  authored.position.set(3, 1, 2);
+  await act(async () => {
+    get().set({ camera: authored });
+  });
+  return authored;
+}
+
+describe('<GodotEditorControls> camera preview', () => {
+  it('moves neither camera on any navigation input while a Camera3D is previewed', async () => {
+    const { get, controls, element } = await mount();
+    const editor = get().camera;
+    const editorPose = editor.matrixWorld.clone();
+    const authored = await previewAuthoredCamera(get);
+    const authoredPose = authored.matrix.clone();
+
+    drag(element, 1, [100, 100], [180, 120]);
+    drag(element, 1, [100, 100], [180, 120], { shiftKey: true });
+    drag(element, 2, [100, 100], [180, 120]);
+    element.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
+    await pressKey('Numpad7');
+    await pressKey('Numpad5');
+
+    authored.updateMatrix();
+    expect(authored.matrix.equals(authoredPose)).toBe(true);
+    editor.updateMatrixWorld();
+    expect(editor.matrixWorld.equals(editorPose)).toBe(true);
+    expect(get().camera).toBe(authored);
+    expect(controls.isOrthographic).toBe(false);
+  });
+
+  it('reset() poses the editor camera and leaves the previewed Camera3D where it was authored', async () => {
+    const { get, controls } = await mount();
+    const editor = get().camera;
+    editor.position.set(9, 9, 9);
+    const authored = await previewAuthoredCamera(get);
+
+    controls.reset();
+
+    expect(authored.position.toArray()).toEqual([3, 1, 2]);
+    expect(editor.position.distanceTo(new THREE.Vector3(...editorCameraPosition()))).toBeLessThan(1e-6);
   });
 });
 

@@ -18,7 +18,7 @@ export function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | n
     const prev = prevSceneGraphRef.current;
     if (prev !== null && sceneGraph !== null && prev !== sceneGraph) {
       clearAll();
-      // The old scene's Camera3D is gone. Free orbit lets CameraFit, gated on
+      // The old scene's Camera3D is gone. Ending the preview lets CameraFit, gated on
       // `activeCameraPath === null`, frame the new scene.
       returnToFreeView?.();
     }

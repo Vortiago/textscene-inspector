@@ -88,6 +88,19 @@ describe('ViewportActionsContext', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it('resetCamera() ends a camera preview, so the reset pose is the one on screen', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    act(() => {
+      result.current.switchToCamera('Root/Camera3D');
+    });
+
+    act(() => {
+      result.current.resetCamera();
+    });
+
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
   it('resetCamera() is a no-op when no handler is registered', () => {
     const { result } = renderHook(() => useViewportActions(), { wrapper });
     // No throw with no canvas mounted yet.

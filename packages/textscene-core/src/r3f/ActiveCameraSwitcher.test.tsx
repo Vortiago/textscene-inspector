@@ -6,14 +6,18 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { instanceAs } from '../nodes/3d/testing/reactThreeTestInstance';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
+import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
+import { useThree, type RootState } from '@react-three/fiber';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { Camera3DInWorld } from '../nodes/3d/camera3d/Camera3DInWorld.testkit';
+import type { CameraLike } from '../nodes/3d/camera3d/projectionFit';
 import type { TscnNode } from '../parser/types';
+import { GodotEditorControls } from './GodotEditorControls';
+import { viewportActionsProbe } from './testing/ViewportActionsProbe';
 
 function graph() {
   return createSceneGraphFromTscnScene(
@@ -63,5 +67,81 @@ describe('ActiveCameraSwitcher', () => {
     const r = await mount('Camera3D', '1');
     const cam = instanceAs<THREE.OrthographicCamera>(r.scene.findByType('OrthographicCamera'));
     expect([cam.top, cam.right]).toEqual([4, 4 * (1280 / 800)]);
+  });
+});
+
+/** Mounts the switcher beside the editor's own navigation, as `<TscnCanvas>` does. */
+async function mountWithEditorCamera() {
+  let get: (() => RootState) | null = null;
+  function StateProbe() {
+    get = useThree((s) => s.get);
+    return null;
+  }
+  const { Probe, actions } = viewportActionsProbe();
+  const tree = (camera: TscnNode | null) => (
+    <HierarchyProvider value={{ sceneGraph: graph(), panelId: 'p' }}>
+      <ViewportActionsProvider>
+        <Probe />
+        <StateProbe />
+        {camera && <Camera3DInWorld node={camera} />}
+        <ActiveCameraSwitcher />
+        <GodotEditorControls />
+      </ViewportActionsProvider>
+    </HierarchyProvider>
+  );
+  const renderer = await ReactThreeTestRenderer.create(tree(cameraNode('0')));
+  if (!get) throw new Error('expected the state probe to render, got no store');
+  const state: () => RootState = get;
+  /** Re-renders the scene with `camera` in place of the Camera3D, or with none. */
+  const rerender = async (camera: TscnNode | null) => {
+    await renderer.update(tree(camera));
+    await act(async () => renderer.advanceFrames(1, 16));
+  };
+  return { state, actions, rerender };
+}
+
+describe('ActiveCameraSwitcher camera preview', () => {
+  it('draws through the Camera3D while it is previewed', async () => {
+    const { state, actions } = await mountWithEditorCamera();
+    const editor = state().camera;
+
+    await act(async () => actions().switchToCamera('Camera3D'));
+
+    expect(state().camera).not.toBe(editor);
+    expect(state().camera.userData).toMatchObject({ tscnPath: 'Camera3D' });
+  });
+
+  it('puts the editor camera back, at its own pose, when the preview ends', async () => {
+    const { state, actions } = await mountWithEditorCamera();
+    const editor = state().camera;
+    const editorPose = editor.position.clone();
+    await act(async () => actions().switchToCamera('Camera3D'));
+
+    await act(async () => actions().returnToFreeView());
+
+    expect(state().camera).toBe(editor);
+    expect(editor.position.equals(editorPose)).toBe(true);
+  });
+
+  it('follows the previewed Camera3D when a projection change remounts it', async () => {
+    const { state, actions, rerender } = await mountWithEditorCamera();
+    await act(async () => actions().switchToCamera('Camera3D'));
+
+    await rerender(cameraNode('1'));
+
+    const camera = state().camera as CameraLike;
+    expect(camera.isOrthographicCamera).toBe(true);
+    expect(camera.parent).not.toBeNull();
+  });
+
+  it('ends the preview when the previewed Camera3D leaves the scene, as Godot does', async () => {
+    const { state, actions, rerender } = await mountWithEditorCamera();
+    const editor = state().camera;
+    await act(async () => actions().switchToCamera('Camera3D'));
+
+    await rerender(null);
+
+    expect(state().camera).toBe(editor);
+    expect(actions().activeCameraPath).toBeNull();
   });
 });

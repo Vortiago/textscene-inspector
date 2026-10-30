@@ -104,6 +104,26 @@ position = Vector2(20, 10)
   });
 });
 
+describe('<CamerasPanel> with a SubViewport', () => {
+  // A Camera2D in a SubViewport is that viewport's camera (`camera_2d.cpp:342`), so
+  // its view is not a place on the root stage.
+  it('offers no stage framing for a Camera2D inside a SubViewport', () => {
+    renderPanel(`[gd_scene format=3]
+
+[node name="World" type="Node2D"]
+
+[node name="Booth" type="SubViewport" parent="."]
+
+[node name="Inner" type="Camera2D" parent="Booth"]
+position = Vector2(500, 400)
+
+[node name="Outer" type="Camera2D" parent="."]
+`);
+    expect(screen.queryByRole('button', { name: /Inner/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Outer/ })).toBeTruthy();
+  });
+});
+
 describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
   function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
     return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };

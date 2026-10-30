@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode switching, phone
- * layout, file upload and drop, and load health, through `?fixture=` in the real running app. It
- * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file carries a test hook.
+ * layout, file upload and drop, camera preview and load health, through `?fixture=` in the real
+ * running app. It observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
+ * carries a test hook.
  */
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
@@ -27,6 +28,11 @@ import { checkDiagnostics } from './diagnostics.mjs';
 import { checkInk, checkSizedCanvas, checkStage, INK_FLOOR_2D } from './canvasChecks.mjs';
 import { checkPhoneLayout, runPhoneScenario } from './phoneScenario.mjs';
 import { checkUploadScenarios, runUploadScenarios } from './uploadScenarios.mjs';
+import {
+  CAMERA_PREVIEW_FIXTURE,
+  checkCameraPreview,
+  runCameraPreviewScenario,
+} from './cameraPreviewScenario.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -171,12 +177,37 @@ async function runScenarios(browser, baseUrl) {
   console.log(`[gate] upload scenarios: file input, drop and repeated drop over ${FIXTURE_3D}`);
   const uploads = await runUploadScenarios(browser, baseUrl, FIXTURE_3D);
 
-  return { threeD, twoD, settleControl, withWorker, fromTres, blocked, stalled, phone, uploads };
+  console.log(`[gate] camera preview: ${CAMERA_PREVIEW_FIXTURE}`);
+  const cameraPreview = await runCameraPreviewScenario(browser, baseUrl);
+
+  return {
+    threeD,
+    twoD,
+    settleControl,
+    withWorker,
+    fromTres,
+    blocked,
+    stalled,
+    phone,
+    uploads,
+    cameraPreview,
+  };
 }
 
 /** Records each scenario's claims on `gate`. */
 function checkScenarios(gate, results) {
-  const { threeD, twoD, settleControl, withWorker, fromTres, blocked, stalled, phone, uploads } = results;
+  const {
+    threeD,
+    twoD,
+    settleControl,
+    withWorker,
+    fromTres,
+    blocked,
+    stalled,
+    phone,
+    uploads,
+    cameraPreview,
+  } = results;
   checkSizedCanvas(gate, '[3D]', threeD.dims);
   checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
   checkStage(gate, '[3D]', threeD.stage, '3d');
@@ -232,6 +263,7 @@ function checkScenarios(gate, results) {
   checkDiagnostics(gate, '[long tasks, .tres material]', fromTres.diagnostics);
   checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
   checkUploadScenarios(gate, uploads);
+  checkCameraPreview(gate, cameraPreview);
 }
 
 /** Prints what each scenario measured, pass or fail, for a run's log. */

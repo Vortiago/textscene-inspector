@@ -50,8 +50,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
     ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
     : [];
 
-  const showCameraActions = isCamera3DType(node.type) && viewportActions !== null;
-  const isActiveCamera = viewportActions !== null && viewportActions.activeCameraPath === path;
+  const isPreviewed = viewportActions?.activeCameraPath === path;
 
   return (
     <div className={styles.root}>
@@ -105,26 +104,22 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         )}
       </div>
 
-      {showCameraActions && viewportActions !== null && (
+      {isCamera3DType(node.type) && viewportActions !== null && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>Camera</h4>
-          {isActiveCamera ? (
-            <button
-              type="button"
-              className={styles.actionButton}
-              onClick={() => viewportActions.returnToFreeView()}
-            >
-              Reset Camera
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={styles.actionButton}
-              onClick={() => viewportActions.switchToCamera(path)}
-            >
-              Use This Camera
-            </button>
-          )}
+          {/* Godot's "Preview" checkbox for the selected Camera3D (`node_3d_editor_plugin.cpp:6303-6304`). */}
+          <label className={styles.previewToggle} title="Look through this camera in the viewport">
+            <input
+              type="checkbox"
+              checked={isPreviewed}
+              onChange={(event) =>
+                event.target.checked
+                  ? viewportActions.switchToCamera(path)
+                  : viewportActions.returnToFreeView()
+              }
+            />
+            Preview
+          </label>
         </div>
       )}
 

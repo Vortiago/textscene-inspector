@@ -159,3 +159,15 @@ trackpad pinch anchors too. Touch pinch scales about the focus point. It is meas
 the gesture's own anchor, not per event, so reuse would mean threading that anchor
 through. It stays so on purpose: fingers that hold the screen make the drift far less
 noticeable than a wheel does.
+
+## Amendment: navigation is off during a camera preview
+
+Godot's editor ignores every navigation input while it previews a Camera3D
+(`node_3d_editor_plugin.cpp:1826-1829`), and keeps its editor camera apart from the
+previewed one. The previewer does the same: `useEditorNavigation` drops each input while
+R3F draws through a camera other than the **Editor camera**. A gesture never moves an
+authored Camera3D, so its next preview shows the pose the scene file gives it.
+
+Godot has no Reset Camera. The previewer's Reset Camera ends a preview and then poses the
+**Editor camera**, so the pose it sets is the one on screen.
+

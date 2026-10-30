@@ -107,7 +107,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
   });
 
   it('does nothing while an authored Camera3D is the active camera (never mutates it)', async () => {
-    // The CameraFit guard: under "Use This Camera", state.camera is the authored
+    // The CameraFit guard: under a camera preview, state.camera is the authored
     // Camera3D, and framing would overwrite its position, near and far.
     function ActivateAuthoredCamera() {
       const { switchToCamera } = useViewportActions();

@@ -27,7 +27,7 @@ function isPerspectiveCamera(camera: R3FCamera): camera is THREE.PerspectiveCame
 }
 
 /**
- * The orbit focus point, the driven camera and the perspective/orthographic pair. It
+ * The orbit focus point and the editor camera, a perspective/orthographic pair. It
  * is R3F's `state.controls`: `frameSceneBounds` writes `target` and `camera.position`
  * and calls `update()`. No pose is cached, so a gesture picks up an external write.
  * Extends `THREE.EventDispatcher` because R3F's `state.controls` slot takes that type.
@@ -36,7 +36,10 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The orbit focus point. One persistent vector: `frameSceneBounds` copies into it. */
   readonly target = new THREE.Vector3();
 
-  /** The camera being driven: R3F's active one, which may be an authored Camera3D. */
+  /**
+   * The editor camera, never an authored Camera3D: Godot keeps its editor camera
+   * apart from the one it previews (`node_3d_editor_plugin.cpp:4486-4502`).
+   */
   camera: R3FCamera;
 
   private readonly perspectiveCamera: THREE.PerspectiveCamera | null;
@@ -53,11 +56,6 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     this.perspectiveCamera = isPerspectiveCamera(camera) ? camera : null;
   }
 
-  /** Follow R3F's active camera (the user can switch to an authored Camera3D). */
-  setCamera(camera: R3FCamera): void {
-    this.camera = camera;
-  }
-
   setAspect(aspect: number): void {
     if (!Number.isFinite(aspect) || aspect <= 0) return;
     this.aspect = aspect;
@@ -69,13 +67,8 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     return cursorFromCamera(this.camera.position, this.target);
   }
 
-  /**
-   * The vertical fov of the active camera: an authored Camera3D's own (Godot default
-   * 75, this editor camera 70), or zoom-to-pointer drifts off the cursor. Orthographic
-   * falls back to this component's camera, whose fov sizes `orthographicHeight`.
-   */
+  /** The perspective fov, which also sizes the orthographic frustum through `orthographicHeight`. */
   fovDegrees(): number {
-    if (isPerspectiveCamera(this.camera)) return this.camera.fov;
     return this.perspectiveCamera?.fov ?? EDITOR_CAMERA_FOV;
   }
 
@@ -121,15 +114,11 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     return this.camera === this.orthographicCamera;
   }
 
-  /**
-   * Numpad 5. Only meaningful while this component's own camera is the active
-   * one: with an authored Camera3D in use, the projection is that node's
-   * property and not ours to swap.
-   */
+  /** Numpad 5. */
   toggleProjection(): void {
     if (this.isOrthographic) {
       this.usePerspective();
-    } else if (this.perspectiveCamera && this.camera === this.perspectiveCamera) {
+    } else {
       this.useOrthographic();
     }
   }

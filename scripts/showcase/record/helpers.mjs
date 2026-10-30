@@ -83,9 +83,9 @@ export async function cameraNodePaths(page) {
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-node-path')).filter(Boolean));
 }
 
-/** Click the inspector "Use This Camera" button if the selected node is a Camera3D. */
-export async function useThisCamera(page) {
-  const btn = page.getByRole('button', { name: 'Use This Camera' });
+/** Check the inspector's Preview checkbox if the selected node is a Camera3D. */
+export async function previewCamera(page) {
+  const btn = page.getByRole('checkbox', { name: 'Preview' });
   if ((await btn.count()) === 0) return false;
   if (!(await tryClick(btn.first()))) return false;
   await page.waitForTimeout(1300); // hold on this camera's POV

@@ -41,6 +41,10 @@ export function useEditorNavigation(
     // whatever `.current` holds by then.
     const touchPoints = touchPointsRef.current;
 
+    // Godot ignores every navigation input while it previews a Camera3D
+    // (`node_3d_editor_plugin.cpp:1826-1829`), so neither camera moves.
+    const isPreviewing = (): boolean => get().camera !== handle.camera;
+
     /**
      * The invariant every touch path keeps: no fingers, no gesture origin. A stale
      * origin would make the next single-finger drag pan from where a pinch ended.
@@ -71,6 +75,7 @@ export function useEditorNavigation(
     }
 
     function handlePointerDown(event: PointerEvent): void {
+      if (isPreviewing()) return;
       if (isGesturePointer(event.pointerType)) {
         beginEditorTouch(event, touchPoints, touchGestureRef);
         return;
@@ -106,6 +111,7 @@ export function useEditorNavigation(
 
     function handleWheel(event: WheelEvent): void {
       event.preventDefault();
+      if (isPreviewing()) return;
       if (applyEditorWheel(event, handle, get)) invalidate();
     }
 
@@ -114,7 +120,7 @@ export function useEditorNavigation(
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
-      if (isTypingTarget(event.target)) return;
+      if (isTypingTarget(event.target) || isPreviewing()) return;
 
       // Read the sprint modifier off the event rather than tracking its own
       // keydown: Shift held before freelook started never fires one.

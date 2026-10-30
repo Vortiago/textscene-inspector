@@ -263,22 +263,33 @@ describe('<NodeDetailsPanel> camera actions', () => {
     });
   }
 
-  it('offers "Use This Camera" for a Camera3D', async () => {
+  it("offers Godot's Preview checkbox, unchecked, for a Camera3D", async () => {
     await selectAndRender('Camera3D');
-    expect(screen.getByRole('button', { name: 'Use This Camera' })).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: 'Preview' }) as HTMLInputElement).checked).toBe(false);
   });
 
-  // The action follows Godot's class tree, not the literal type name: the
+  it('checks Preview while the viewport previews the camera, and clears it when unchecked', async () => {
+    await selectAndRender('Camera3D');
+    const preview = screen.getByRole('checkbox', { name: 'Preview' }) as HTMLInputElement;
+
+    await act(async () => preview.click());
+    expect(preview.checked).toBe(true);
+
+    await act(async () => preview.click());
+    expect(preview.checked).toBe(false);
+  });
+
+  // The checkbox follows Godot's class tree, not the literal type name: the
   // renderer mounts the Camera3D component for an XRCamera3D, so the inspector
   // must let the user look through it.
-  it('offers "Use This Camera" for a Camera3D subclass (XRCamera3D)', async () => {
+  it('offers Preview for a Camera3D subclass (XRCamera3D)', async () => {
     await selectAndRender('XRCamera3D');
-    expect(screen.getByRole('button', { name: 'Use This Camera' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Preview' })).toBeTruthy();
   });
 
-  it('offers no camera action for a non-camera node', async () => {
+  it('offers no Preview for a non-camera node', async () => {
     await selectAndRender('Node3D');
-    expect(screen.queryByRole('button', { name: 'Use This Camera' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Preview' })).toBeNull();
   });
 
   describe('copy node path', () => {

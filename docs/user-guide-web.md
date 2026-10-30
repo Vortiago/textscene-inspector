@@ -28,6 +28,10 @@ In the dev edition, a link can open a scene:
 The 3D viewport uses Godot's editor controls. Press <kbd>?</kbd> in the viewport for the full list, including trackpad and touch.
 If zoom stops before you are close enough, select the node and press <kbd>F</kbd>.
 
+To look through a Camera3D, check **Preview** in its Inspector, or pick it in the **Cameras** tab.
+As in Godot, the viewport ignores navigation while it previews a camera, and the scene camera keeps its pose.
+**Editor camera** in the **Cameras** tab, or **Reset Camera** over the viewport, ends the preview.
+
 The **3D/2D** switch over the viewport changes the view. A scene with only Control or Node2D content shows a hint to switch.
 
 ## Inspect nodes

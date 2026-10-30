@@ -242,7 +242,7 @@ export function ViewportToolbar() {
           onClick={camera.resetCamera}
           disabled={!sceneLoaded}
           data-testid="reset-camera-button"
-          title="Frame the orbit camera back to the default view"
+          title="End any camera preview and return the editor camera to the default view"
         >
           Reset Camera
         </button>
