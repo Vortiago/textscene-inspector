@@ -3,7 +3,7 @@
  * (`../godotSkyLighting.ts`), the depth fog's aerial perspective and the volumetric fog's ambient, as
  * Godot binds one radiance texture to all three (`environment/fog.cpp:981-982`). It holds Godot's
  * radiance layers, which each sky keeps in an octmap array of its own, their layout, the energy and
- * the rotation the sky was baked at, and the sky's share of the ambient. Each scene with a sky shows
+ * the rotation the sky was baked at, the sky's share of the ambient and whether surfaces reflect it. Each scene with a sky shows
  * its own before each of its renders, so a main view and a sub-viewport with its own sky each read
  * their own, and a scene without one reads black, as Godot's readers do.
  */
@@ -47,6 +47,9 @@ const IDENTITY_BASIS = Float32Array.of(1, 0, 0, 0, 1, 0, 0, 0, 1);
 /** Where `shownSky` holds the energy, which the fogs read and the surfaces do not. */
 export const SHOWN_ENERGY = 4;
 
+/** Where `shownSky` holds 1 when a surface reflects the sky and 0 when it reflects nothing. */
+const SHOWN_REFLECTION = 5;
+
 /** World to sky space, column-major, read as `shownSky` is. Identity while no sky shows. */
 export const skyRotation = installedOr(ROTATION, Float32Array, () => IDENTITY_BASIS.slice());
 
@@ -65,6 +68,7 @@ uniform mat3 ${ROTATION};
 #define GODOT_SKY_DERIVATIVE_SCALE ${SHOWN}[ 0 ].z
 #define GODOT_SKY_LAST_MIP ${SHOWN}[ 0 ].w
 #define GODOT_SKY_ENERGY ${SHOWN}[ 1 ].x
+#define GODOT_SKY_REFLECTION ${SHOWN}[ 1 ].y
 ${OCTMAP_GLSL}
 // The mip whose texels span the octmap distance the direction moves across a pixel, at most the last.
 float godotSkyLod( const in vec3 direction ) {
@@ -124,12 +128,13 @@ export class SkyRadiance {
 
   /**
    * Points every reader at this array for the renders that follow, and writes the array's layout,
-   * `contribution` (`ambient_light_sky_contribution`), the rotation and `energy`, the energy Godot
-   * bakes into the radiance: `background_energy_multiplier` times the exposure that bakes it. Each material
+   * `contribution` (`ambient_light_sky_contribution`), whether a surface `reflects` the sky, the
+   * rotation and `energy`, the energy Godot bakes into the radiance:
+   * `background_energy_multiplier` times the exposure that bakes it. Each material
    * holds a uniform of its own (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot
    * takes the array's handle.
    */
-  show(contribution: number, energy: number): void {
+  show(contribution: number, reflects: boolean, energy: number): void {
     const { borderSize, pixelSize, downsampledSizes } = this.layers.layout;
     shownSky[0] = contribution;
     shownSky[1] = borderSize;
@@ -137,6 +142,7 @@ export class SkyRadiance {
     shownSky[2] = 1 / (4 * pixelSize * pixelSize);
     shownSky[3] = downsampledSizes.length;
     shownSky[SHOWN_ENERGY] = energy;
+    shownSky[SHOWN_REFLECTION] = reflects ? 1 : 0;
     skyRotation.set(this.toSky);
     showInSlot(this.renderer, skyLayersSlot, this.layers.target.texture);
   }

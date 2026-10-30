@@ -39,6 +39,14 @@ describe('createEnvironmentSettings', () => {
     expect(settings.background.color).toEqual(red);
   });
 
+  it('carries the highest canvas layer drawn behind the 3D render', () => {
+    const settings = createEnvironmentSettings(
+      base({ background_mode: BackgroundMode.BG_CANVAS, background_canvas_max_layer: 3 }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.background.canvasMaxLayer).toBe(3);
+  });
+
   it('scales the drawn background colour by the energy multiplier, as Godot scales its clear', () => {
     const settings = createEnvironmentSettings(
       base({ background_color: { r: 0.2, g: 0.3, b: 0.4, a: 1 }, background_energy_multiplier: 2 }),

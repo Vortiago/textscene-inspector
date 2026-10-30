@@ -87,9 +87,9 @@ export function viewportMsaaMode(
 const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
- * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour and
- * alpha. `draw` clears whatever it needs cleared. three draws no tone curve into a target
- * (`WebGLPrograms.js:180`).
+ * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
+ * alpha and colour auto-clear. `draw` clears whatever it needs cleared. three draws no tone curve
+ * into a target (`WebGLPrograms.js:180`).
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -98,20 +98,25 @@ export function renderToOffscreenTarget(
     /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
     clearColor: THREE.Color;
     transparentBg: boolean;
+    /** Clears no colour: a 3D render under BG_KEEP loads the colour its buffer holds. */
+    keepsColor?: boolean;
     draw: () => void;
   }
 ): void {
   const previousTarget = gl.getRenderTarget();
   const previousAlpha = gl.getClearAlpha();
+  const previousAutoClearColor = gl.autoClearColor;
   gl.getClearColor(PREVIOUS_CLEAR_COLOR);
 
   try {
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
+    if (options.keepsColor) gl.autoClearColor = false;
     options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
     gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
+    gl.autoClearColor = previousAutoClearColor;
   }
 }
 

@@ -5,7 +5,7 @@
  */
 
 import type { EnvironmentProperties } from './types';
-import { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
+import { AmbientSource, BackgroundMode, ReflectionSource } from '../../godot/scene/environment.js';
 import { TONEMAP_AGX_CONTRAST_DEFAULT } from '../../godot/rendering/environment/toneMapping.js';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
@@ -46,6 +46,11 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       BackgroundMode.BG_CLEAR_COLOR,
       'background_mode'
     ) as EnumValue<typeof BackgroundMode>,
+    background_canvas_max_layer: intOr(
+      properties.background_canvas_max_layer,
+      0,
+      'background_canvas_max_layer'
+    ),
     background_color: colorOr(properties.background_color, { r: 0, g: 0, b: 0, a: 1 }),
     background_energy_multiplier: floatOr(
       properties.background_energy_multiplier,
@@ -81,6 +86,11 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       1.0,
       'ambient_light_sky_contribution'
     ),
+    reflected_light_source: intOr(
+      properties.reflected_light_source,
+      ReflectionSource.BG,
+      'reflected_light_source'
+    ) as EnumValue<typeof ReflectionSource>,
 
     // Depth fog.
     fog_enabled: boolSlotValue(properties.fog_enabled) === true,

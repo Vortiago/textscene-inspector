@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { orthoViewRect } from '../nodes/viewport/subviewport/offscreenViewport.js';
 import type { Rect2 } from '../godot/math/rect2.js';
 
-/** Written only by {@link viewportLayerMatrix}, which reads it before returning. */
+/** Written only by {@link viewAnchorMatrix}, which reads it before returning. */
 const view: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 /** How a CanvasLayer follows the viewport's canvas transform. */
@@ -35,6 +35,18 @@ export function viewportLayerMatrix(
     const s = follow.scale;
     return target.makeScale(s, s, 1).setPosition(x * (1 - s), y * (1 - s), 0);
   }
+  return viewAnchorMatrix(camera, size, target);
+}
+
+/**
+ * Writes into `target` the matrix that puts the top-left of a viewport-sized layout on the top-left
+ * of the view `camera` frames, one viewport pixel per pixel. What a Camera2D does not move sits there.
+ */
+export function viewAnchorMatrix(
+  camera: THREE.OrthographicCamera,
+  size: { x: number; y: number },
+  target: THREE.Matrix4
+): THREE.Matrix4 {
   const { x: left, y: bottom, w, h } = orthoViewRect(camera, view);
   return target.makeScale(w / size.x, h / size.y, 1).setPosition(left, bottom + h, 0);
 }

@@ -28,6 +28,7 @@ import {
   DrawnEnvironment,
   registerEnvironmentPart,
   ShownEnvironment,
+  showBackground,
   useEnvironmentKey,
 } from './sceneEnvironment';
 
@@ -62,11 +63,12 @@ export function DrawnEnvironmentLayer(props: EnvironmentLayerProps) {
 
 function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
-  // it whenever the source resolves to a cubemap. The two are independent: a
-  // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
-  // colour background) and can be shown without lighting it (ambient DISABLED).
+  // it whenever the source resolves to a cubemap. Surfaces reflect it by their own source. The three
+  // are independent: a sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
+  // colour background), be shown without lighting it (ambient DISABLED), or only be reflected.
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
+  const reflectsSky = settings.skyReflection;
   const draws3D = useDraws3D();
   const { showFog } = useViewportMode();
   // One value decides the fog programs, the fogged colour background and the fog passes.
@@ -77,13 +79,14 @@ function EnvironmentParts({ settings, sky, skyResources }: EnvironmentLayerProps
   return (
     <>
       {hasFog && <FogLayer depth={settings.fog} volumetric={settings.volumetricFog} />}
-      {sky && (showsSky || skyAmbient) && (
+      {sky && (showsSky || skyAmbient || reflectsSky) && (
         <SkyLayer
           sky={sky}
           asBackground={showsSky}
           energyMultiplier={settings.background.energyMultiplier}
           rotation={settings.skyRotation}
-          contribution={skyAmbient ? skyAmbient.contribution : 1}
+          contribution={skyAmbient ? skyAmbient.contribution : 0}
+          reflects={reflectsSky}
           resources={skyResources}
           fogScattersSun={(settings.fog?.sunScatter ?? 0) > FOG_SUN_SCATTER_MIN}
         />
@@ -185,18 +188,6 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
 }
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
-
-/** Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found. */
-function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
-  const previousBackground = scene.background;
-  const previousIntensity = scene.backgroundIntensity;
-  scene.background = texture;
-  scene.backgroundIntensity = intensity;
-  return () => {
-    scene.background = previousBackground;
-    scene.backgroundIntensity = previousIntensity;
-  };
-}
 
 function showsBackgroundColor(mode: number): boolean {
   return mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;

@@ -188,6 +188,11 @@ describe('decodeEnvironment', () => {
     expect(result.adjustment_saturation).toBe(1.2);
   });
 
+  it('reads the canvas max layer, 0 by default as Godot 4.6.3 holds it', () => {
+    expect(decodeEnvironment({}).background_canvas_max_layer).toBe(0);
+    expect(decodeEnvironment({ background_canvas_max_layer: '-4' }).background_canvas_max_layer).toBe(-4);
+  });
+
   it('should parse background energy multiplier', () => {
     const result = decodeEnvironment({
       background_mode: '1',

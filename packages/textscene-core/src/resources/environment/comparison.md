@@ -13,6 +13,22 @@ The resource a `WorldEnvironment` holds: background and sky, ambient light, tone
 
 A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and the sphere and floor it lights, match Godot. `sky_rotation` turns the drawn sky, the light it gives and the sky colour the fog reads, as Godot turns them.
 
+## Background canvas
+<!-- compare: image=unit-sub-viewport-3d-canvas-background status=done fixture=unit-sub-viewport-3d-canvas-background.tscn -->
+
+`background_mode = BG_CANVAS` in a SubViewport. The canvas layers up to `background_canvas_max_layer` draw first. The 3D render draws over them, so they show beside the quad and under it. A layer above the max layer draws over the quad.
+
+The 3D render draws first when every layer is above the max layer. It draws last when none reaches it (`renderer_viewport.cpp:650-715`). The canvas goes through the tone mapper with the 3D render.
+
+The root viewport keeps its 2D and 3D content in separate workspaces (ADR-0006). Its Canvas mode shows the 3D clear colour, as Godot's editor viewport does.
+
+## Background keep
+<!-- compare: image=unit-sub-viewport-3d-keep-background status=done fixture=unit-sub-viewport-3d-keep-background.tscn -->
+
+`background_mode = BG_KEEP` in a SubViewport. The 3D render loads the colour its buffer holds and clears none (`render_forward_clustered.cpp:2020-2030`). Where it draws nothing, the buffer is black and not the clear colour. The canvas layers draw over it.
+
+Moving content leaves ghost trails, as the Environment class documentation says of BG_KEEP.
+
 ## Tone mapping
 <!-- compare: image=unit-tonemap-agx-shadow status=done fixture=unit-tonemap-agx-shadow.tscn -->
 
@@ -36,6 +52,21 @@ Every 3D frame draws into a half-float buffer, which the tone-map pass reads, as
 `AMBIENT_SOURCE_COLOR` with `ambient_light_sky_contribution = 0`. The grass is lit by the flat ambient alone, while the metallic sphere still reflects the gold sky at full strength.
 
 - **Approximated** The `SHADOWS_ONLY` box's shadow projects a visibly different shape than Godot's.
+
+## Reflected light source
+<!-- compare: image=unit-environment-reflected-source-disabled status=done fixture=unit-environment-reflected-source-disabled.tscn -->
+
+`reflected_light_source` DISABLED over a sky background. The metal ball reflects nothing and is black but for the sun's highlight, while the ground still takes its ambient colour, as in Godot. A surface reflects the sky for the background source over a sky background, or for the sky source whatever the background (`render_scene_data_rd.cpp:196-200`). The ambient source has no part in it.
+
+## Reflected light source, sky over a colour background
+<!-- compare: image=unit-environment-reflected-source-sky status=done fixture=unit-environment-reflected-source-sky.tscn -->
+
+The sky source over a colour background. The ball reflects the sky that the flat background hides.
+
+## Reflected light source, with a probe
+<!-- compare: image=unit-environment-reflected-source-disabled-probe status=done fixture=unit-environment-reflected-source-disabled-probe.tscn -->
+
+A ONCE ReflectionProbe over the disabled source. The probe's reflection blends over no reflection, so the ball's bottom matches Godot.
 
 ## Glow (bloom)
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->

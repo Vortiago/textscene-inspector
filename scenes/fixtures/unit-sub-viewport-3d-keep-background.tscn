@@ -1,0 +1,69 @@
+; A 3D viewport under the Keep background mode loads the colour its buffer holds and clears none
+; (`render_forward_clustered.cpp:2020-2030`), so where the 3D render draws nothing the buffer is black,
+; not the clear colour, and the canvas layers draw over it. One variable against
+; unit-sub-viewport-3d-canvas-background.tscn: the background mode.
+
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 4
+background_canvas_max_layer = 0
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+shading_mode = 0
+albedo_color = Color(1, 0.4, 0, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+; stretch is off, so screen = target pixel + (100, 80).
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+own_world_3d = true
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Booth/SubViewport"]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="Booth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Quad" type="MeshInstance3D" parent="Booth/SubViewport"]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")
+
+[node name="Ground" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.1, 0.5, 0.1, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 100, 0, 100)
+
+[node name="Layer" type="CanvasLayer" parent="Booth/SubViewport"]
+layer = -5
+
+[node name="Under" type="Polygon2D" parent="Booth/SubViewport/Layer"]
+color = Color(0.9, 0.1, 0.1, 0.5)
+polygon = PackedVector2Array(0, 100, 200, 100, 200, 200, 0, 200)
+
+[node name="Top" type="CanvasLayer" parent="Booth/SubViewport"]
+layer = 5
+
+[node name="Plate" type="Polygon2D" parent="Booth/SubViewport/Top"]
+color = Color(0.2, 0.2, 0.9, 0.6)
+polygon = PackedVector2Array(70, 70, 130, 70, 130, 130, 70, 130)
