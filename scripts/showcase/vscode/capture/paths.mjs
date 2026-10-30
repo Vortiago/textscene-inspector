@@ -10,14 +10,15 @@ export const EXT = `${REPO_ROOT}/apps/textscene-vscode`;
 // The fixtures res:// root, which the web previewer mirrors, so `res://` resolves the same on both
 // sides. It holds no .csproj or .cs, so the C# Dev Kit never activates and takes focus.
 export const FIXTURES = `${REPO_ROOT}/scenes/fixtures`;
-// The isometric dungeon demo, its own res:// root, which `pnpm vendor:demos` writes. It has no
-// project.godot, so its copy in the workspace resolves res:// against the scene's own directory.
+// Vendored demos that `pnpm vendor:demos` writes. A shot that names one as its `corpus` gets a copy
+// in the workspace, under the folder's own name. The platformer holds a project.godot. The dungeon
+// has none, so res:// resolves against the scene's own directory.
 export const ISOMETRIC = `${REPO_ROOT}/scenes/isometric`;
+export const PLATFORMER_3D = `${REPO_ROOT}/scenes/demos/3d/platformer`;
 export const TMP = `${REPO_ROOT}/.tmp`;
 // A throwaway copy, since the hot-reload and camera-survival shots rewrite a scene on disk. The
 // leaf is named `fixtures`, so the Explorer header reads as the real directory in every shot.
 export const WS = `${TMP}/vsc-shots-ws/fixtures`;
-export const WS_ISOMETRIC = `${WS}/isometric`;
 export const UD = `${TMP}/vsc-showcase-ud`;
 export const OUT = `${REPO_ROOT}/docs/screenshots/vscode`;
 // A sibling worktree's dev-host has another user-data-dir, survives `killStaleHost` and can

@@ -38,6 +38,8 @@ The current toolbar, with the scene palette open:
 
 ![The preview rendering the isometric dungeon demo beside its source](../screenshots/vscode/vscode-dungeon.png)
 
+![The preview playing the 3D platformer enemy's walk clip](../screenshots/vscode/vscode-animation.gif)
+
 ![The preview rendering the hallway beside the Explorer](../screenshots/vscode/vscode-hallway.png)
 
 ![The preview in 2D mode rendering a Control dialog](../screenshots/vscode/vscode-main.png)
@@ -57,4 +59,4 @@ It builds the web previewer and records every scenario in `scripts/showcase/scen
 | Command | Does |
 | --- | --- |
 | `node scripts/showcase/run.mjs <name>` | Record one clip. A preview server must run. |
-| `node scripts/showcase/vscode/capture.mjs` | Capture every VS Code screenshot. It uses `xvfb-run` on Linux, and an installed or `$VSCODE_BIN` VS Code elsewhere. |
+| `node scripts/showcase/vscode/capture.mjs` | Capture every VS Code screenshot. It uses `xvfb-run` on Linux, and an installed or `$VSCODE_BIN` VS Code elsewhere. The animation GIF needs `ffmpeg`. |

@@ -26,6 +26,10 @@ Dev edition, with the test scenes: [textscene-inspector.pages.dev](https://texts
 
 All 240 of Godot 4.6.3's instantiable node types are parsed and linted, and most render. The [parity gallery](https://textscene-inspector.pages.dev/parity/index.html) lists what renders and where it differs from Godot.
 
+An AnimationPlayer plays its clips in the preview, skinned glTF meshes included. Here the enemy from Godot's 3D platformer demo plays its `walk` clip:
+
+![The VS Code preview playing the 3D platformer enemy's walk animation](./docs/screenshots/vscode/vscode-animation.gif)
+
 ## Build from source
 
 Requires Node.js 24+ and pnpm 9+ (on Windows: `winget configure scripts/winget-dev-setup.yaml`).
