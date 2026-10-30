@@ -27,7 +27,10 @@ export function renderedDepthFogRange(
 /** A height density below this leaves the height fog off (`scene_forward_clustered.glsl:1148`). */
 export const HEIGHT_FOG_DENSITY_MIN = 0.0001;
 
-/** A sun scatter at or below this adds no sun (`scene_forward_clustered.glsl:1126`, `sky.glsl:164`). */
+/**
+ * A sun scatter at or below this adds no sun (`scene_forward_clustered.glsl:1126`, `sky.glsl:164`),
+ * and the sky reads no lights for it (`sky.cpp:1053`).
+ */
 export const FOG_SUN_SCATTER_MIN = 0.001;
 
 /** The exponent that narrows the sun's glow in the fog (`scene_forward_clustered.glsl:1132`). */

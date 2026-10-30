@@ -549,6 +549,14 @@ _Avoid_: "exposure" alone, which `tonemap_exposure` also names. "Brightness".
 The CameraAttributes a viewport pass draws with: those of the camera it elects, else those of its world. A world holds one **Exposure factor** for its lights, and a pass draws the world at the factor of its own **Pass attributes**, so two viewports of one world draw one frame at two exposures.
 _Avoid_: "viewport exposure", "camera exposure".
 
+**Pass Environment** (`ViewportPassEnvironment` in `r3f/environment/WorldEnvironmentScope.tsx`):
+The Environment a viewport pass draws with: that of the camera it elects, else its world's own. A world's scene shows one Environment, and a pass puts its own **Pass Environment** on the scene for its draw only, so two viewports of one world draw one frame with two backgrounds.
+_Avoid_: "camera environment" for the choice, "view environment".
+
+**Environment part** (`registerEnvironmentPart` in `r3f/environment/sceneEnvironment.tsx`):
+One piece of state an Environment writes on its scene, such as the background, the sky, the flat ambient or the fog, which goes on with its Environment and comes off with a restore.
+_Avoid_: "environment layer" for one piece, "environment effect".
+
 **Auto exposure** (`r3f/environment/LuminanceReduction.ts`):
 The exposure divided by the **Frame luminance** over `auto_exposure_scale`, in the tone-map pass and the glow's bright pass. A still frame shows the settled value, so `auto_exposure_speed` has no part.
 _Avoid_: "eye adaptation", "adaptive exposure".

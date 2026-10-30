@@ -10,23 +10,16 @@ import {
   findSubResource,
   parseResourceReference,
 } from '../resources/SubResourceResolver.js';
-import { holdsResource } from '../godot/scene/resourceLiteral.js';
+import { heldResource, holdsResource } from '../godot/scene/resourceLiteral.js';
 import type { RawScene } from '../parser/types.js';
 
 /**
  * Whether a resource slot holds nothing: {@link holdsResource} asked the other way round. The call-site
- * sweep in `clearedResourceSlot.test.ts` takes its predicate names from this module's exports.
+ * sweep in `clearedResourceSlot.test.ts` takes its predicate names from this module's exports, and
+ * `resourceLiteral.ts`'s.
  */
 export function resourceSlotIsEmpty(resourceRef: string | undefined): boolean {
   return !holdsResource(resourceRef);
-}
-
-/**
- * The reference a slot holds, or `undefined` when it holds nothing: the
- * {@link resourceSlotIsEmpty} question answered as a value a rule can use.
- */
-export function heldResource(resourceRef: string | undefined): string | undefined {
-  return resourceSlotIsEmpty(resourceRef) ? undefined : resourceRef;
 }
 
 /**

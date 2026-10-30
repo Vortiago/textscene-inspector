@@ -1,7 +1,7 @@
 /**
  * A StandardMaterial3D `billboard_mode` replaces the model basis of the surfaces
  * that material draws, in the vertex shader (`scene/resources/material.cpp:1260-1307`).
- * So only those surfaces turn: the node, its other surfaces and its children
+ * So only those surfaces' programs turn: the node, its other surfaces and its children
  * keep the authored pose. Each node authors a quarter-turn yaw a billboard must replace.
  */
 import { describe, expect, it } from 'vitest';
@@ -17,7 +17,14 @@ import type { MeshInstance3DProperties } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { YAWED } from './testing/yawedTransform';
-import { drawColourGroup, rotationAngle, TEST_CAMERA } from '../../../r3f/testing/threePasses';
+import {
+  drawColourGroup,
+  groupMaterialAt,
+  rotationAngle,
+  TEST_CAMERA,
+} from '../../../r3f/testing/threePasses';
+import { compiledBillboard } from '../../../r3f/testing/compiledBillboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
@@ -77,6 +84,12 @@ function facesCamera(drawn: THREE.Matrix4): boolean {
   return rotationAngle(drawn, camera.matrixWorld) < 1e-5;
 }
 
+/** The billboard mode surface `group` of `mesh` compiles, drawn in the node's own pose. */
+function drawnBillboard(mesh: THREE.Mesh, group = 0): number | undefined {
+  expect(drawColourGroup(mesh, camera, group, (s) => s.matrixWorld).equals(mesh.matrixWorld)).toBe(true);
+  return compiledBillboard(groupMaterialAt(mesh, group))?.mode;
+}
+
 const withSceneMaterial = (data: Record<string, string>) => [
   subResource('StandardMaterial3D', 'Mat', { shading_mode: '0', ...data }),
 ];
@@ -90,22 +103,17 @@ describe('<MeshInstance3D> material billboard_mode', () => {
 
   it('draws facing the camera when the material sets billboard_mode = 1 (ENABLED)', async () => {
     const { mesh } = await renderMesh(meshNode({}), withSceneMaterial({ billboard_mode: '1' }));
-    expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
+    expect(drawnBillboard(mesh)).toBe(BillboardMode.BILLBOARD_ENABLED);
   });
 
   it('draws with world up kept when the material sets billboard_mode = 2 (FIXED_Y)', async () => {
     const { mesh } = await renderMesh(meshNode({}), withSceneMaterial({ billboard_mode: '2' }));
-    const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
-    const drawnUp = new THREE.Vector3().setFromMatrixColumn(drawn, 1);
-    expect(drawnUp.x).toBeCloseTo(0, 6);
-    expect(drawnUp.z).toBeCloseTo(0, 6);
-    expect(facesCamera(drawn)).toBe(false);
-    expect(drawn.equals(mesh.matrixWorld)).toBe(false);
+    expect(drawnBillboard(mesh)).toBe(BillboardMode.BILLBOARD_FIXED_Y);
   });
 
   it('draws facing the camera when the billboarding material is an ExtResource .tres', async () => {
     const { mesh } = await renderMesh(meshNode({ materialOverride: 'ExtResource("1_ext")' }), []);
-    expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
+    expect(drawnBillboard(mesh)).toBe(BillboardMode.BILLBOARD_ENABLED);
   });
 
   it('keeps the node and its children in the authored pose', async () => {
@@ -131,12 +139,12 @@ describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
 
   it('turns the surface whose material billboards', async () => {
     const mesh = await twoSurfaces();
-    expect(facesCamera(drawColourGroup(mesh, camera, 1, (s) => s.matrixWorld))).toBe(true);
+    expect(drawnBillboard(mesh, 1)).toBe(BillboardMode.BILLBOARD_ENABLED);
   });
 
   it('leaves the other surface in the authored pose', async () => {
     const mesh = await twoSurfaces();
-    expect(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld).equals(mesh.matrixWorld)).toBe(true);
+    expect(drawnBillboard(mesh, 0)).toBeUndefined();
   });
 
   it('follows a .tres surface override onto the surface it names', async () => {
@@ -147,8 +155,8 @@ describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
       }),
       [inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Plain']), subResource('StandardMaterial3D', 'Plain')]
     );
-    expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
-    expect(drawColourGroup(mesh, camera, 1, (s) => s.matrixWorld).equals(mesh.matrixWorld)).toBe(true);
+    expect(drawnBillboard(mesh, 0)).toBe(BillboardMode.BILLBOARD_ENABLED);
+    expect(drawnBillboard(mesh, 1)).toBeUndefined();
   });
 });
 
@@ -161,26 +169,19 @@ describe('<MeshInstance3D> billboard_keep_scale', () => {
     origin: { x: 3, y: 0, z: 0 },
   };
 
-  async function drawnScale(materialData: Record<string, string>): Promise<THREE.Vector3> {
+  async function keepsScale(materialData: Record<string, string>): Promise<boolean | undefined> {
     const { mesh } = await renderMesh(
       meshNode({ transform: SCALED }),
       withSceneMaterial({ billboard_mode: '1', ...materialData })
     );
-    const drawn = drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld);
-    return new THREE.Vector3().setFromMatrixScale(drawn);
+    return compiledBillboard(groupMaterialAt(mesh))?.keepsScale;
   }
 
-  it('draws at unit scale by default, as Godot drops the model scale', async () => {
-    const scale = await drawnScale({});
-    expect(scale.x).toBeCloseTo(1, 5);
-    expect(scale.y).toBeCloseTo(1, 5);
-    expect(scale.z).toBeCloseTo(1, 5);
+  it('drops the model scale by default, as Godot does', async () => {
+    expect(await keepsScale({})).toBe(false);
   });
 
   it('keeps the node scale when the material sets billboard_keep_scale', async () => {
-    const scale = await drawnScale({ billboard_keep_scale: 'true' });
-    expect(scale.x).toBeCloseTo(2, 5);
-    expect(scale.y).toBeCloseTo(2, 5);
-    expect(scale.z).toBeCloseTo(2, 5);
+    expect(await keepsScale({ billboard_keep_scale: 'true' })).toBe(true);
   });
 });

@@ -1,15 +1,15 @@
 ---
 type: CPUParticles3D
 category: 3D
-status: unimplemented
-fixture: unit-cpu-particles-3d.tscn
-# image: unit-cpu-particles-3d
-renders_as: nothing yet, not implemented
+status: unreviewed
+fixture: unit-cpuparticles3d-row.tscn
+image: unit-cpuparticles3d-row
+renders_as: one instance of the mesh per particle, in a frozen pose
 ---
 
 # CPUParticles3D
 
-A CPU-simulated particle emitter that draws its `mesh` once per live particle. The previewer does not draw the cloud yet, so the node draws nothing and its children still show.
+CPUParticles3D is Godot's CPU-simulated emitter. The previewer runs a port of the engine's own simulation once. It draws each particle as an instance of `mesh`, posed, scaled and coloured as Godot's buffer writes it. The particle colour reaches a material only through `vertex_color_use_as_albedo`, as in Godot.
 
 ## Linting
 
@@ -107,7 +107,13 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 |  | `cpuparticles3d-param-min-above-max` | warning |
 <!-- lint:end -->
 
-The lenient parser reads the GeometryInstance3D base, `visibility_aabb`, whether a `mesh` is set, and the emission shape keys. The box is what the scene cull measures the emitter by, and the gizmo draws the authored box. The shape keys are `emission_shape` and the sphere, box and ring keys. It reads no other CPUParticles3D key, so a `spread = 400.0` is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
+Where strict rejects a value, the lenient parser substitutes Godot's constructor default. A `lifetime` at or below `0` reads as `1.0`, and an `amount` below `1` as `8`. A malformed `spread` reads as `45.0`, a malformed `gravity` as `Vector3(0, -9.8, 0)` and an out-of-range `emission_shape` as `POINT`. An unreadable packed emission array reads as empty.
+
+## Particle draw
+
+The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. `draw_order` sorts the instances by index, by age or along the camera's view axis. The billboard modes of the material face each particle to the camera, and `PARTICLES` mode reads the particle's rotation and plays the `particles_anim_*` flipbook. `material_override` and `material_overlay` draw on every instance. A `PointMesh` draws one point at each particle, and a triplanar material projects at each particle's own place and rotation.
+
+The scene cull measures an emitter by `visibility_aabb`, else by the box of its live particles. The selection box and the editor framing leave the particles out, as Godot's `get_aabb` does.
 
 ## Gizmo
 
@@ -122,6 +128,8 @@ Godot's billboard icon marks the origin of every emitter, faint while it is not 
 
 ## Known limitations
 
-- **Not drawn** Godot draws the live particle cloud, but here nothing appears.
-- **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles.
+- **Needs runtime** The emitter runs in Godot and freezes here, at the moment named above.
+- **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its particles sit in plausible places where Godot randomises them on every run.
+- **Approximated** With more than one point in `emission_points`, the previewer picks from the same set as Godot's unsaved process-wide RNG, but in another order.
+- **Approximated** An `amount` above `1000000`, the most Godot's own editor allows, draws `1000000` particles, where Godot draws them all.
 - **Editor only** The box and axes draw at 0.3 alpha while unselected (ADR-0056) when the Gizmos toggle is on, which a capture keeps off.

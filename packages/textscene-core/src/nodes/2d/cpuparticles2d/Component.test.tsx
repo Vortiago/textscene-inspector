@@ -5,7 +5,8 @@
  * that never resolved.
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { loadSimulate } from './simulateModule';
 import * as THREE from 'three';
 import {
   UNSET_VIEWPORT_TEXTURE,
@@ -84,6 +85,9 @@ type Rendered = Awaited<ReturnType<typeof render>>;
 function particleMesh(r: Rendered): THREE.Mesh | undefined {
   return r.scene.findAllByType('Mesh').map((o) => o.instance as THREE.Mesh)[0];
 }
+
+// The component loads this chunk lazily, so it lands before the first render.
+beforeAll(loadSimulate);
 
 describe('<CPUParticles2D>', () => {
   it('draws one merged quad mesh for the whole pose (happy path)', async () => {

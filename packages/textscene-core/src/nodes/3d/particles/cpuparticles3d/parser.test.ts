@@ -22,10 +22,10 @@ describe('parseCPUParticles3D', () => {
     expect([result.visibilityAabb, result.visibilityRange.end]).toEqual([null, 20]);
   });
 
-  it('reads whether mesh holds a mesh, and null as none', () => {
-    expect([parse({ mesh: 'SubResource("Box")' }).hasMesh, parse({ mesh: 'null' }).hasMesh]).toEqual([
-      true,
-      false,
+  it('reads the mesh reference, and null as none', () => {
+    expect([parse({ mesh: 'SubResource("Box")' }).mesh, parse({ mesh: 'null' }).mesh]).toEqual([
+      'SubResource("Box")',
+      undefined,
     ]);
   });
 

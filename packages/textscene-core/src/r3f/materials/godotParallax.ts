@@ -10,6 +10,7 @@ import { composeInjections, defining, type ProgramInjection } from '../materialP
 import { editedProgram } from '../shaderPatch/chunkPatch';
 import { recordedOn } from './recordedOnMaterial';
 import { pendingMapStandIn } from './pendingMapStandIn';
+import { readsUv1 } from './mapUvChannel';
 import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
 /** The last declaration before `main`, after the normal and the varyings the parallax reads. */
@@ -124,24 +125,14 @@ vec2 godotParallax( const in vec2 uv ) {
 
 /**
  * The shift, then each UV1 coordinate of `material` redefined to carry it, before the first map is
- * read. A macro never expands inside itself, so each reads its own varying.
+ * read. A macro never expands inside itself, so each reads its own varying. Godot shifts `base_uv2`
+ * only under a UV2 detail layer (`material.cpp:1604-1607`), which no map here draws.
  */
 function parallaxShift(material: Material): string {
   const shifted = MAP_UVS.filter((uv) => readsUv1(material, uv));
   return `vec2 godotParallaxShift = godotParallax( vGodotHeightmapUv ) - vGodotHeightmapUv;
 ${shifted.map((uv) => `#define ${uv} ( ${uv} + godotParallaxShift )`).join('\n')}
 ${MAP_ANCHOR}`;
-}
-
-/**
- * Whether the map behind coordinate `uv` reads UV1. Godot shifts `base_uv2` only under a UV2
- * detail layer (`material.cpp:1604-1607`), which no map here draws. three keys each map's UV
- * channel into the program, so a rebind to another channel compiles this again.
- */
-function readsUv1(material: Material, uv: string): boolean {
-  const mapName = uv.charAt(1).toLowerCase() + uv.slice(2, -'Uv'.length);
-  const map = (material as unknown as Record<string, unknown>)[mapName];
-  return !(map instanceof THREE.Texture) || map.channel === 0;
 }
 
 /** Where a material records its height mapping. */

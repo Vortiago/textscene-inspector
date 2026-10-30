@@ -26,10 +26,13 @@ import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRou
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
+import { withParticleDraw } from '../materials/godotParticlesProgram';
+import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
-import { GODOT_BILLBOARD_NORMAL } from '../surfaceBillboard';
+import { billboardInjections } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
@@ -111,6 +114,19 @@ const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: PointPlacement 
     { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }
   ).injection;
 
+/** A PARTICLES billboard that keeps the scale, which reaches every chunk the billboard edits. */
+const KEPT_PARTICLES = { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: true };
+
+/** A flipbook particle draw, which reaches every chunk the injection edits. */
+const particleBag = () =>
+  withParticleDraw(
+    { materialClass: 'standard', props: { map: new THREE.Texture() } },
+    {
+      billboard: { mode: BillboardMode.BILLBOARD_PARTICLES, keepScale: true },
+      anim: { hFrames: 2, vFrames: 2, loop: true },
+    }
+  );
+
 const surfaceWith = (userData: Record<string, unknown>): THREE.Material => {
   const surface = new THREE.MeshStandardMaterial();
   surface.userData = userData;
@@ -146,8 +162,21 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotPoint.ts', 'point size', COLOUR, () => pointBag(false)),
   injected('materials/godotPoint.ts', 'point coordinate albedo', COLOUR, () => pointBag(true)),
-  injected('materials/godotPoint.ts', 'points at cells', COLOUR, () => pointBag(false, 'cells')),
-  injected('surfaceBillboard.ts', 'billboard normal', COLOUR, () => GODOT_BILLBOARD_NORMAL),
+  injected(
+    'materials/godotParticlesProgram.ts',
+    'particle draw',
+    SURFACE_AND_DEPTH,
+    () => particleBag().injection
+  ),
+  injected('materials/godotVertexColor.ts', 'sRGB vertex colour', COLOUR, () => SRGB_VERTEX_COLOR),
+  injected('materials/godotPoint.ts', 'points at instances', COLOUR, () => pointBag(false, 'instances')),
+  injected('surfaceBillboard.ts', 'billboard', COLOUR, () => billboardInjections(KEPT_PARTICLES)?.colour),
+  injected(
+    'surfaceBillboard.ts',
+    'instance billboard pose',
+    SURFACE_AND_DEPTH,
+    () => billboardInjections(KEPT_PARTICLES)?.depth
+  ),
   injected('materials/godotTriplanar.ts', 'triplanar mapping', SURFACE_AND_DEPTH, () =>
     triplanarInjection({ userData: triplanarUserData(worldTriplanarRecord()) })
   ),

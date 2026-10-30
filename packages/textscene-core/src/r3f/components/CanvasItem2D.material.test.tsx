@@ -3,7 +3,7 @@
  * included, and hands it to the slice's `body`. Polygon2D shows the blend state
  * reaching a rendered material: `blend_mode = 1` (Add) over a translucent fill.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../parser/TscnParser';
@@ -14,6 +14,7 @@ import { ownerName } from '../lighting2d/testing/lightPassProbe';
 
 import '../nodes/index';
 import { settleLoads } from '../testing/settleLoads';
+import { loadSimulate } from '../../nodes/2d/cpuparticles2d/simulateModule';
 
 const TRI = 'PackedVector2Array(0, 0, 16, 0, 16, 16)';
 
@@ -48,6 +49,9 @@ async function materialsByNodeName(tscn: string): Promise<Map<string, THREE.Mesh
   });
   return out;
 }
+
+// <CPUParticles2D> loads its simulation lazily, so the chunk lands before the first render.
+beforeAll(loadSimulate);
 
 describe('<CanvasItem2D> CanvasItemMaterial', () => {
   it('leaves a node with no material on Godot default MIX blending', async () => {

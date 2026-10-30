@@ -170,4 +170,3 @@ authored Camera3D, so its next preview shows the pose the scene file gives it.
 
 Godot has no Reset Camera. The previewer's Reset Camera ends a preview and then poses the
 **Editor camera**, so the pose it sets is the one on screen.
-

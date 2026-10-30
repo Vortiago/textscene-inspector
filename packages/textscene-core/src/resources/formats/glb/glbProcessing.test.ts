@@ -22,12 +22,9 @@ import {
   NO_OPAQUE_PREPASS,
   opaquePrepassOf,
 } from '../../../r3f/materials/opaquePrepass';
-import {
-  castsFrom,
-  drawColourGroup,
-  expectSameRotation,
-  TEST_CAMERA,
-} from '../../../r3f/testing/threePasses';
+import { castsFrom, groupMaterialAt } from '../../../r3f/testing/threePasses';
+import { compiledBillboard } from '../../../r3f/testing/compiledBillboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 /**
  * Locate a repo-relative asset by walking up from cwd. The cwd differs between a
@@ -272,9 +269,7 @@ describe('cloneWithMaterials', () => {
   it('turns a surface whose override material billboards', () => {
     const clonedSingle = findMesh(cloneWithMaterials(makeSource().root), 'single');
     clonedSingle.material = standardMaterial({ billboard_mode: '1' });
-    clonedSingle.updateMatrixWorld(true);
-    const drawn = drawColourGroup(clonedSingle, TEST_CAMERA, 0, (s) => s.matrixWorld);
-    expectSameRotation(drawn, TEST_CAMERA.matrixWorld);
+    expect(compiledBillboard(groupMaterialAt(clonedSingle))?.mode).toBe(BillboardMode.BILLBOARD_ENABLED);
   });
 
   it('rebuilds the blue of a glTF normal map from its red and green, as Godot does', () => {

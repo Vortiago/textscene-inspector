@@ -224,8 +224,6 @@ export interface EnvironmentSettings {
    * even when the flat ambient is a constant colour.
    */
   skyAmbient: {
-    /** `background_energy_multiplier`, the sky's reflection strength. */
-    energy: number;
     /**
      * `ambient_light_sky_contribution`: the sky's share of the diffuse ambient, 0 for
      * `AmbientSource.COLOR`. It scales the ambient only, never the reflection.

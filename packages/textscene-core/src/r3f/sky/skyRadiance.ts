@@ -105,46 +105,38 @@ export function skyRadianceUniforms(): Record<string, THREE.IUniform> {
   };
 }
 
-/** What a sky's radiance holds, fixed for the life of its bake. */
-export interface SkyBake {
-  /** The energy Godot bakes into the radiance: `background_energy_multiplier` times the exposure. */
-  energy: number;
-  /** `sky_rotation` as three's Euler. */
-  rotation: THREE.Euler;
-}
-
 /**
  * A sky's baked layers on one renderer, in an array of their own as Godot keeps a radiance texture
  * per sky (`servers/rendering/renderer_rd/environment/sky.h:251`). The sky's environment owns the
  * array, so skies that take turns in one frame bake and upload nothing more.
  */
 export class SkyRadiance {
-  private readonly energy: number;
   private readonly toSky: ArrayLike<number>;
 
+  /** `rotation` is `sky_rotation` as three's Euler. */
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
     private readonly layers: SkyLayers,
-    { energy, rotation }: SkyBake
+    rotation: THREE.Euler
   ) {
-    this.energy = energy;
     this.toSky = worldToSky(rotation, new THREE.Matrix3()).elements;
   }
 
   /**
    * Points every reader at this array for the renders that follow, and writes the array's layout,
-   * `contribution` (`ambient_light_sky_contribution`), the energy and the rotation. Each material
+   * `contribution` (`ambient_light_sky_contribution`), the rotation and `energy`, the energy Godot
+   * bakes into the radiance: `background_energy_multiplier` times the exposure that bakes it. Each material
    * holds a uniform of its own (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot
    * takes the array's handle.
    */
-  show(contribution: number): void {
+  show(contribution: number, energy: number): void {
     const { borderSize, pixelSize, downsampledSizes } = this.layers.layout;
     shownSky[0] = contribution;
     shownSky[1] = borderSize;
     // One over `vec3_to_oct_lod`'s `pixel_size_sqr` (`oct_inc.glsl:46`), so a fragment multiplies.
     shownSky[2] = 1 / (4 * pixelSize * pixelSize);
     shownSky[3] = downsampledSizes.length;
-    shownSky[SHOWN_ENERGY] = this.energy;
+    shownSky[SHOWN_ENERGY] = energy;
     skyRotation.set(this.toSky);
     showInSlot(this.renderer, skyLayersSlot, this.layers.target.texture);
   }

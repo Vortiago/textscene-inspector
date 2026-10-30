@@ -13,6 +13,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { TscnParser } from '../../../parser/TscnParser';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { TAU } from '../../../godot/math/math.js';
+import { shownAmbientLights } from '../../../r3f/testing/ambientLights';
 
 async function ambientLights(environmentBody: string) {
   const scene = new TscnParser().parse(
@@ -32,7 +33,7 @@ async function ambientLights(environmentBody: string) {
       </WorldEnvironmentScope>
     </SceneResourcesProvider>
   );
-  return renderer.scene.findAllByType('AmbientLight').map((l) => instanceAs<THREE.AmbientLight>(l));
+  return shownAmbientLights(instanceAs<THREE.Scene>(renderer.scene));
 }
 
 describe('<WorldEnvironment> ambient from the background', () => {

@@ -16,7 +16,7 @@ import { VolumetricFogPass } from './volumetricFogPass';
 import { areaLightAtlasTexture } from '../areaLight/areaLightAtlas';
 import { AREA_LIGHT_ATLAS_UNIFORM } from '../areaLight/areaTextureFetch';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
-import { hideShownSky, SkyRadiance, SKY_RADIANCE_UNIFORMS, type SkyBake } from '../sky/skyRadiance';
+import { hideShownSky, SkyRadiance, SKY_RADIANCE_UNIFORMS } from '../sky/skyRadiance';
 import { skyLayersSlot } from '../sky/skyRadiance.testkit';
 
 type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
@@ -137,10 +137,16 @@ function settle(
   }
 }
 
-/** Shows a sky baked at `bake` on `renderer`, as `<SkyLayer>` does before each render of its scene. */
-function showSky(renderer: RecordingRenderer, bake: Partial<SkyBake>): void {
+/** What a shown sky holds that the volume reads: its radiance energy and its rotation. */
+interface ShownSky {
+  energy: number;
+  rotation: THREE.Euler;
+}
+
+/** Shows a sky as `shown` says on `renderer`, as `<SkyLayer>` does before each render of its scene. */
+function showSky(renderer: RecordingRenderer, shown: Partial<ShownSky>): void {
   const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
-  new SkyRadiance(renderer.asWebGL, layers, { energy: 1, rotation: new THREE.Euler(), ...bake }).show(1);
+  new SkyRadiance(renderer.asWebGL, layers, shown.rotation ?? new THREE.Euler()).show(1, shown.energy ?? 1);
 }
 
 afterEach(hideShownSky);
@@ -332,7 +338,7 @@ describe('VolumetricFogPass.prepare', () => {
   it.each([
     ['turns', { rotation: new THREE.Euler(0, 0.5, 0) }],
     ['takes another energy', { energy: 2 }],
-  ])('draws again when the sky %s', (_change, bake: Partial<SkyBake>) => {
+  ])('draws again when the sky %s', (_change, bake: Partial<ShownSky>) => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
@@ -354,12 +360,12 @@ describe('VolumetricFogPass.prepare', () => {
     const view = camera();
     const fog = inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' });
     const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
-    const sky = new SkyRadiance(renderer.asWebGL, layers, { energy: 1, rotation: new THREE.Euler() });
-    sky.show(1);
+    const sky = new SkyRadiance(renderer.asWebGL, layers, new THREE.Euler());
+    sky.show(1, 1);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     renderer.take();
 
-    sky.show(0.25);
+    sky.show(0.25, 1);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws).toHaveLength(0);
   });

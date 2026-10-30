@@ -1,5 +1,5 @@
 /**
- * The CPUParticles2D range bounds the previewer cannot draw: a bound that is non-finite once stored
+ * The CPUParticles2D and CPUParticles3D range bounds the previewer cannot draw: a bound that is non-finite once stored
  * as a `real_t`. The parser skips them, so the range keeps its default, and the linter names them.
  */
 
@@ -13,7 +13,7 @@ export interface NonFiniteBound {
   readonly stored: number;
 }
 
-/** Every `_min` and `_max` key, built once: each CPUParticles2D parse reads them all. */
+/** Every `_min` and `_max` key, built once: each emitter parse reads them all. */
 const PARAM_BOUND_KEYS: readonly string[] = CPU_PARTICLES_PARAMS.flatMap((stem) => [
   `${stem}_min`,
   `${stem}_max`,
@@ -24,7 +24,7 @@ const PARAM_BOUND_KEYS: readonly string[] = CPU_PARTICLES_PARAMS.flatMap((stem) 
  * bounds. The stored form is tested, since `1e39` is finite as a double and inf as a `real_t`. With
  * every bound finite, `drawable` is `properties` itself.
  *
- * @canonical The CPUParticles2D bounds a draw can use
+ * @canonical The CPUParticles2D and CPUParticles3D bounds a draw can use
  */
 export function drawableParamBounds(properties: Record<string, string>): {
   drawable: Record<string, string>;

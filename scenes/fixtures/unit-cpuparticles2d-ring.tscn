@@ -1,8 +1,7 @@
 [gd_scene load_steps=2 format=3]
 
-; The emission shape the frozen pose cannot follow. It raises an advisory warning, not an
-; error, because it is legal Godot. RING samples the engine's process-wide RNG, which no
-; scene file carries, so the previewer emits from the node origin.
+; A RING emitter. Godot places each particle with its process-wide RNG, which no scene file
+; carries, so the previewer fills the same ring in other places.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

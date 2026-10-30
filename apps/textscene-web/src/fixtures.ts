@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Directed Points",
+    "file": "unit-cpuparticles2d-directed-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Emission Shapes",
     "file": "unit-cpuparticles2d-emission-shapes.tscn",
     "category": "Other"
@@ -438,13 +443,13 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Cpuparticles2d Unpreprocessed",
-    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
+    "name": "Cpuparticles2d Ring",
+    "file": "unit-cpuparticles2d-ring.tscn",
     "category": "Other"
   },
   {
-    "name": "Cpuparticles2d Unpreviewable",
-    "file": "unit-cpuparticles2d-unpreviewable.tscn",
+    "name": "Cpuparticles2d Unpreprocessed",
+    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
     "category": "Other"
   },
   {
@@ -458,8 +463,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Directed Points",
+    "file": "unit-cpuparticles3d-directed-points.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles3d Gizmo",
     "file": "unit-cpuparticles3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles3d Row",
+    "file": "unit-cpuparticles3d-row.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles3d Triplanar Points",
+    "file": "unit-cpuparticles3d-triplanar-points.tscn",
     "category": "Other"
   },
   {
@@ -970,6 +990,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Graph Node",
     "file": "unit-graph-node.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Grid Map Billboard Shadow",
+    "file": "unit-grid-map-billboard-shadow.tscn",
     "category": "Other"
   },
   {
@@ -1748,6 +1773,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Camera Environment",
+    "file": "unit-reflection-probe-camera-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe Camera Exposure",
     "file": "unit-reflection-probe-camera-exposure.tscn",
     "category": "Other"
@@ -1865,6 +1895,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Skeleton Modifier 3d",
     "file": "unit-skeleton-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Ambient Energy",
+    "file": "unit-sky-ambient-energy.tscn",
     "category": "Other"
   },
   {
@@ -4199,6 +4234,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Vertex Color Srgb",
+    "file": "unit-material-vertex-color-srgb.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material World Triplanar Floor",
     "file": "unit-material-world-triplanar-floor.tscn",
     "category": "Unit - Materials"
@@ -4396,6 +4436,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Shared Root Camera Environment",
+    "file": "unit-sub-viewport-shared-root-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Camera Environment",
+    "file": "unit-sub-viewport-shared-world-camera-environment.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Shared World Camera Exposure",
     "file": "unit-sub-viewport-shared-world-camera-exposure.tscn",
     "category": "Unit - Viewports"
@@ -4408,6 +4458,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Shared World Glow",
     "file": "unit-sub-viewport-shared-world-glow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Sky Exposure",
+    "file": "unit-sub-viewport-shared-world-sky-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {

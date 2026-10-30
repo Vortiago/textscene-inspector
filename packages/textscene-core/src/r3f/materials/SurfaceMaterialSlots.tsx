@@ -4,6 +4,8 @@
  */
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import type { PointPlacement } from './godotPoint';
+import type { ParticleProgram } from './godotParticles';
 
 const DEFAULT_SURFACE: readonly (MaterialSource | undefined)[] = [undefined];
 
@@ -25,11 +27,13 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
-  /** The mesh draws `THREE.Points`, so each material also sizes its points. */
-  drawsPoints?: boolean;
+  /** Where the points sit when the mesh draws `THREE.Points`, so each material also sizes them. */
+  points?: PointPlacement;
+  /** The mesh draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
+  particles?: ParticleProgram;
 }
 
-export function SurfaceMaterialSlots({ sources, drawsPoints }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, points, particles }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -38,7 +42,8 @@ export function SurfaceMaterialSlots({ sources, drawsPoints }: SurfaceMaterialSl
           key={i}
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
-          points={drawsPoints ? 'mesh' : undefined}
+          points={points}
+          particles={particles}
         />
       ))}
     </>

@@ -9,7 +9,13 @@
 import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import type { Quaternion } from './quaternion.js';
-import { normalizedVector3, vector3Dot, type Vector3 } from './vector.js';
+import {
+  vector3Dot,
+  vector3DotComponents,
+  vector3NormalizeInto,
+  vector3Set,
+  type Vector3,
+} from './vector.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
@@ -26,37 +32,95 @@ export type BasisComponents = readonly [
 
 export type Triple = [number, number, number];
 
+/**
+ * `Basis()`, the identity. Frozen, since every caller shares it: a basis written in place copies it
+ * with {@link basisCopy}.
+ *
+ * @canonical The identity basis
+ */
+export const IDENTITY_BASIS: BasisComponents = Object.freeze<BasisComponents>([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+
 /** Column `index` of the basis, the vector `Basis::get_column` returns. */
 export function basisColumn(n: BasisComponents, index: number): Triple {
   return [n[index]!, n[index + 3]!, n[index + 6]!];
 }
 
-function scaled(v: Triple, s: number): Triple {
-  return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
+/** A basis a loop writes in place, as Godot's own methods do. */
+export type MutableBasis = [number, number, number, number, number, number, number, number, number];
+
+/**
+ * {@link basisColumn} written into `out`, for a loop that allocates nothing.
+ *
+ * @canonical A Basis column read and written in place
+ *   `basisColumnInto` reads `Basis::get_column`, `basisSetColumn` writes `Basis::set_column`.
+ */
+export function basisColumnInto(out: Vector3, n: BasisComponents, index: number): Vector3 {
+  return vector3Set(out, n[index]!, n[index + 3]!, n[index + 6]!);
 }
 
-function subtract(a: Triple, b: Triple): Triple {
-  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
+/** `Basis::set_column(index, v)`: writes `v` into column `index` of `n`. */
+export function basisSetColumn(n: MutableBasis, index: number, v: Vector3): void {
+  n[index] = v.x;
+  n[index + 3] = v.y;
+  n[index + 6] = v.z;
 }
 
 /**
- * `Basis::orthonormalize` (`basis.cpp:56-72`): Gram-Schmidt over the columns, which drops the scale and
- * the shear.
+ * Copies the nine components of `from` into `out`, for a basis written in place.
+ *
+ * @canonical A Basis copied into one written in place
+ */
+export function basisCopy(out: MutableBasis, from: BasisComponents): MutableBasis {
+  for (let i = 0; i < 9; i++) out[i] = from[i]!;
+  return out;
+}
+
+/**
+ * `Basis::orthonormalized` (`basis.cpp:74-78`): a copy through {@link basisOrthonormalize}.
  * @canonical A basis made orthonormal, column by column
  */
 export function basisOrthonormalized(n: BasisComponents): BasisComponents {
-  const x = normalizedVector3(...basisColumn(n, 0));
-  const yColumn = basisColumn(n, 1);
-  const y = normalizedVector3(...subtract(yColumn, scaled(x, vector3Dot(x, yColumn))));
-  const zColumn = basisColumn(n, 2);
-  const z = normalizedVector3(
-    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
-  );
-  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
+  return basisOrthonormalize([...n] as MutableBasis);
 }
 
-/** The determinant of `n`, with the nine components `basisDeterminant` takes. */
-function determinantOf(n: BasisComponents): number {
+/** Scratch for `basisOrthonormalize`, overwritten by every call. */
+const unitColumn: Vector3 = { x: 0, y: 0, z: 0 };
+
+/**
+ * `Basis::orthonormalize` (`basis.cpp:56-72`) in place: Gram-Schmidt over the columns, which drops
+ * the scale and the shear. Each column reads the ones already written, as Godot's does.
+ */
+export function basisOrthonormalize(n: MutableBasis): MutableBasis {
+  writeUnitColumn(n, 0, n[0], n[3], n[6]);
+  const xDotY = columnDot(n, 0, 1);
+  writeUnitColumn(n, 1, f(n[1] - f(n[0] * xDotY)), f(n[4] - f(n[3] * xDotY)), f(n[7] - f(n[6] * xDotY)));
+  const xDotZ = columnDot(n, 0, 2);
+  const yDotZ = columnDot(n, 1, 2);
+  writeUnitColumn(
+    n,
+    2,
+    f(f(n[2] - f(n[0] * xDotZ)) - f(n[1] * yDotZ)),
+    f(f(n[5] - f(n[3] * xDotZ)) - f(n[4] * yDotZ)),
+    f(f(n[8] - f(n[6] * xDotZ)) - f(n[7] * yDotZ))
+  );
+  return n;
+}
+
+/** `get_column(i).dot(get_column(j))` in `real_t` float. */
+function columnDot(n: BasisComponents, i: number, j: number): number {
+  return vector3DotComponents(n[i]!, n[i + 3]!, n[i + 6]!, n[j]!, n[j + 3]!, n[j + 6]!);
+}
+
+function writeUnitColumn(n: MutableBasis, index: number, x: number, y: number, z: number): void {
+  basisSetColumn(n, index, vector3NormalizeInto(unitColumn, x, y, z));
+}
+
+/**
+ * `Basis::determinant` of `n`, with the nine components `basisDeterminant` takes.
+ *
+ * @canonical Determinant of a row-major basis
+ */
+export function basisDeterminantOf(n: BasisComponents): number {
   return basisDeterminant(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8]);
 }
 
@@ -72,7 +136,7 @@ export function basisGetScaleAbs(n: BasisComponents): [number, number, number] {
  * signs as 0, which leaves the NaN axis NaN and the others exact 0.
  */
 export function basisGetScale(n: BasisComponents): [number, number, number] {
-  const detSign = sign(determinantOf(n));
+  const detSign = sign(basisDeterminantOf(n));
   const abs = basisGetScaleAbs(n);
   return [detSign * abs[0], detSign * abs[1], detSign * abs[2]];
 }
@@ -146,6 +210,15 @@ export function basisMultiply(left: BasisComponents, right: BasisComponents): Ba
         f(right[6 + col]! * left[3 * row + 2]!)
     );
   });
+}
+
+/**
+ * The basis whose columns are `x`, `y` and `z`, as `Basis(x, y, z)` builds it.
+ *
+ * @canonical Basis from three column vectors
+ */
+export function basisFromColumns(x: Vector3, y: Vector3, z: Vector3): BasisComponents {
+  return [x.x, y.x, z.x, x.y, y.y, z.y, x.z, y.z, z.z];
 }
 
 /** The basis whose row-major component `i` is `component(i)`. */
@@ -240,6 +313,6 @@ export function basisGetRotationQuaternion(n: BasisComponents): Quaternion {
   const orthonormal = basisOrthonormalized(n);
   const [a, b, c, d, e, g, h, i, j] = orthonormal;
   return basisGetQuaternion(
-    determinantOf(orthonormal) < 0 ? [-a, -b, -c, -d, -e, -g, -h, -i, -j] : orthonormal
+    basisDeterminantOf(orthonormal) < 0 ? [-a, -b, -c, -d, -e, -g, -h, -i, -j] : orthonormal
   );
 }

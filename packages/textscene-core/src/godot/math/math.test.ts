@@ -10,6 +10,7 @@ import {
   degToRad,
   degToRadf,
   multiplyColor,
+  multiplyColorInto,
   radToDeg,
   lerpColor,
   lerpf,
@@ -299,5 +300,23 @@ describe('multiplyColor', () => {
       b: 0.5,
       a: Math.fround(0.49),
     });
+  });
+});
+
+describe('multiplyColorInto', () => {
+  it('writes the rounded product into the colour it is given', () => {
+    const out = { r: 9, g: 9, b: 9, a: 9 };
+
+    expect(multiplyColorInto(out, { r: 0.3, g: 1, b: 0.5, a: 0.7 }, { r: 0.3, g: 0.1, b: 1, a: 0.7 })).toBe(
+      out
+    );
+    expect(out).toEqual({ r: Math.fround(0.09), g: Math.fround(0.1), b: 0.5, a: Math.fround(0.49) });
+  });
+
+  it('reads each channel before it writes it, so the out colour may be an operand (edge case)', () => {
+    const color = { r: 0.5, g: 0.25, b: 2, a: 1 };
+
+    multiplyColorInto(color, color, { r: 2, g: 4, b: 0.5, a: 0.5 });
+    expect(color).toEqual({ r: 1, g: 1, b: 1, a: 0.5 });
   });
 });

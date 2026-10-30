@@ -4,7 +4,8 @@
  * properties, so a wrong default looks like a wrong shader.
  */
 
-import type { Sky, SkyBake, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
+import type { Sky, SkyBake, SkyProcessing, SkyProperties } from './types';
+import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/scene/sky';
 import { boolOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
@@ -52,7 +53,8 @@ function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T)
  * `decodeSkyProcessing` reads it.
  */
 export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
-  return { material, ...skyBake(decodeSkyProcessing(data)) };
+  const processing = decodeSkyProcessing(data);
+  return { material, processMode: processing.processMode, ...skyBake(processing) };
 }
 
 /**
