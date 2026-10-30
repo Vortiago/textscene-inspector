@@ -517,6 +517,14 @@ _Avoid_: "controller" (collides with `XRController3D`). "inert".
 Godot's `Cursor`, an orbit focus point plus the pitch, yaw and radius of the eye, from which every 3D gesture rebuilds the camera.
 _Avoid_: "camera state". "orbit target" for the whole cursor.
 
+**Editor camera** (`r3f/EditorControlsHandle.ts`):
+The previewer's own 3D camera, which the **Editor cursor** drives. It is never a scene Camera3D, so no gesture moves an authored camera.
+_Avoid_: "default camera", "orbit camera".
+
+**Camera preview**:
+The state in which the 3D viewport draws through a scene Camera3D, as Godot's **Preview** checkbox does. Navigation is off, and the **Editor camera** keeps its pose until the preview ends.
+_Avoid_: "use this camera", and "current camera", which is Godot's `current` property.
+
 **Preview sun**:
 The stand-in directional light from Godot's editor that the previewer adds to a scene with no `DirectionalLight3D` (ADR-0025).
 _Avoid_: "default light", "fill light".

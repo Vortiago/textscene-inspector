@@ -48,7 +48,7 @@ async function backgroundOf(
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
       <ViewportModeProvider initialShowPreviewEnvironment={false}>
-        <ViewportActionsProvider initialActiveCameraPath={viewed}>
+        <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
           <WorldEnvironmentScope world={world}>
             {worldEnvironment && <WorldEnvironment node={worldEnvironment} />}
             {cameras.map((node) => (
@@ -70,7 +70,7 @@ describe('Camera3D environment', () => {
     expect(await backgroundOf('root', 'Main', [cameraNode('Main', 'SubResource("Red")')])).toBe('red');
   });
 
-  it('leaves the world alone in the free view', async () => {
+  it('leaves the world alone with no camera preview', async () => {
     expect(await backgroundOf('root', null, [cameraNode('Main', 'SubResource("Red")')])).toBeNull();
   });
 

@@ -1,7 +1,7 @@
 /**
  * Reads the `?camera=` deep link once at mount: a Camera3D node path as the scene tree reports
  * it (`World/Rig/Camera3D`), which the previewer looks through on open. It is never written
- * back, as it only seeds the first view. An unknown path leaves the free-orbit camera.
+ * back, as it only seeds the first view. An unknown path leaves the editor camera.
  */
 import { useState } from 'react';
 

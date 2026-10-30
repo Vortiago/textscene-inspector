@@ -18,7 +18,12 @@ import {
   endEditorTouch,
   type TouchGesture,
 } from './editorTouchGesture.js';
-import { applyEditorViewKey, freelookKeysFrom, FREELOOK_KEYS } from './editorKeyBindings.js';
+import {
+  applyEditorViewKey,
+  consumeEditorViewKey,
+  freelookKeysFrom,
+  FREELOOK_KEYS,
+} from './editorKeyBindings.js';
 
 export function useEditorNavigation(
   gl: RootState['gl'],
@@ -40,6 +45,11 @@ export function useEditorNavigation(
     // Captured once, so the cleanup clears the Map the handlers filled, not
     // whatever `.current` holds by then.
     const touchPoints = touchPointsRef.current;
+
+    // Godot ignores every navigation input while it previews a Camera3D
+    // (`node_3d_editor_plugin.cpp:1826-1829`), so neither camera moves. A gesture
+    // under way when a preview starts stops moving the camera with it.
+    const isPreviewing = (): boolean => handle.isPreviewing(get().camera);
 
     /**
      * The invariant every touch path keeps: no fingers, no gesture origin. A stale
@@ -71,6 +81,7 @@ export function useEditorNavigation(
     }
 
     function handlePointerDown(event: PointerEvent): void {
+      if (isPreviewing()) return;
       if (isGesturePointer(event.pointerType)) {
         beginEditorTouch(event, touchPoints, touchGestureRef);
         return;
@@ -92,6 +103,7 @@ export function useEditorNavigation(
     }
 
     function handlePointerMove(event: PointerEvent): void {
+      if (isPreviewing()) return;
       if (isGesturePointer(event.pointerType)) {
         if (applyEditorTouchMove(event, touchPoints, touchGestureRef, handle)) invalidate();
         return;
@@ -106,6 +118,7 @@ export function useEditorNavigation(
 
     function handleWheel(event: WheelEvent): void {
       event.preventDefault();
+      if (isPreviewing()) return;
       if (applyEditorWheel(event, handle, get)) invalidate();
     }
 
@@ -115,6 +128,10 @@ export function useEditorNavigation(
 
     function handleKeyDown(event: KeyboardEvent): void {
       if (isTypingTarget(event.target)) return;
+      if (isPreviewing()) {
+        consumeEditorViewKey(event);
+        return;
+      }
 
       // Read the sprint modifier off the event rather than tracking its own
       // keydown: Shift held before freelook started never fires one.
@@ -171,6 +188,7 @@ export function useEditorNavigation(
   // frame with the frame's own delta rather than per keydown repeat.
   useFrame((_, delta) => {
     if (!freelookRef.current || heldKeysRef.current.size === 0) return;
+    if (handle.isPreviewing(get().camera)) return;
     const keys = freelookKeysFrom(heldKeysRef.current, sprintRef.current);
     handle.applyCursor(freelookMoveCursor(handle.cursor(), keys, delta));
   });

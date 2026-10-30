@@ -18,6 +18,7 @@ import { useCanvasWorld, useDrawCanvasWorld } from './canvasWorldScene';
 import type { EnvironmentResolution } from './WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 import { exposureOfScene, worldExposureOfScene } from '../exposure/sceneExposure';
+import { SceneCamerasProvider } from '../sceneCameras';
 import type { AutoExposure } from '../../resources/cameraattributes/types';
 import {
   useAutoExposure,
@@ -145,14 +146,16 @@ function PublishingCamera({
   return null;
 }
 
-function inRoot(children: ReactNode, activeCameraPath: string | null = null) {
+function inRoot(children: ReactNode, previewedCameraPath: string | null = null) {
   return (
     <ViewportModeProvider>
-      <ViewportActionsProvider initialActiveCameraPath={activeCameraPath}>
-        <WorldEnvironmentScope world="root">
-          {children}
-          <Reader />
-        </WorldEnvironmentScope>
+      <ViewportActionsProvider initialPreviewedCameraPath={previewedCameraPath}>
+        <SceneCamerasProvider>
+          <WorldEnvironmentScope world="root">
+            {children}
+            <Reader />
+          </WorldEnvironmentScope>
+        </SceneCamerasProvider>
       </ViewportActionsProvider>
     </ViewportModeProvider>
   );
@@ -305,6 +308,28 @@ describe('the exposure of a world seen through a Camera3D', () => {
     expect(read(renderer)).toEqual({ optionalFactor: 5, factor: 5 });
   });
 
+  // Godot draws the editor viewport through the previewed camera's own attributes, whichever
+  // world holds the camera (`node_3d_editor_plugin.cpp:4497`, `renderer_scene_cull.cpp:3562-3565`).
+  it('takes the attributes of a previewed camera inside an own-world SubViewport', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <>
+          <WorldEnvironmentAt order={[0]} cameraAttributes={attributes(2)} />
+          <WorldEnvironmentScope world="subViewport">
+            <CameraAt
+              order={[1]}
+              path="Root/Booth/Camera3D"
+              viewport="Root/Booth"
+              cameraAttributes={attributes(5)}
+            />
+          </WorldEnvironmentScope>
+        </>,
+        'Root/Booth/Camera3D'
+      )
+    );
+    expect(read(renderer).factor).toBe(5);
+  });
+
   it('applies the camera attributes with no WorldEnvironment at all', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(<CameraAt order={[0]} path="Root/Camera3D" cameraAttributes={attributes(3)} />, 'Root/Camera3D')
@@ -312,7 +337,7 @@ describe('the exposure of a world seen through a Camera3D', () => {
     expect(read(renderer)).toEqual({ optionalFactor: 3, factor: 3 });
   });
 
-  it('leaves the WorldEnvironment attributes in force in the free view', async () => {
+  it('leaves the WorldEnvironment attributes in force with no camera preview', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <>

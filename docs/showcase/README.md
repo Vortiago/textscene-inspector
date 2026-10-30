@@ -19,7 +19,7 @@ Screen recordings of the real renderer. Each clip is a `.webm` with a `.png` pos
 | [label3d](web/label3d.webm) | Label3D colours and outlines |
 | [mixed-nodes](web/mixed-nodes.webm) | Several meshes under one light |
 | [physics-bodies](web/physics-bodies.webm) | StaticBody3D and Area3D position their child meshes |
-| [multi-camera](web/multi-camera.webm) | **Use This Camera** switches between Camera3D views |
+| [multi-camera](web/multi-camera.webm) | **Preview** switches between Camera3D views |
 | [pong](web/pong.webm) | Godot's Pong demo in 2D |
 | [dodge-player](web/dodge-player.webm) | The player scene from Godot's Dodge the Creeps demo, in 2D |
 | [missing-upload](web/missing-upload.webm) | Missing textures render magenta. An upload in the Resources tab fixes them live. |

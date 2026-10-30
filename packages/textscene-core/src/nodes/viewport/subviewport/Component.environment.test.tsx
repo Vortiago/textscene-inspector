@@ -204,7 +204,7 @@ async function drawFrame(source: string, workspace: '2d' | '3d'): Promise<Frame>
 
 function RootWorldScope({ children }: { children: React.ReactNode }) {
   return (
-    <ViewportActionsProvider initialActiveCameraPath="Root/Main">
+    <ViewportActionsProvider initialPreviewedCameraPath="Root/Main">
       <WorldEnvironmentScope world="root">{children}</WorldEnvironmentScope>
     </ViewportActionsProvider>
   );

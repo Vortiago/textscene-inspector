@@ -17,7 +17,7 @@ import {
 function withShellProviders() {
   return previewShellProviders({
     hierarchyValue: { sceneGraph: null, panelId: 'p' },
-    initialActiveCameraPath: undefined,
+    initialPreviewedCameraPath: undefined,
     onMissingPathsChange: undefined,
     initialViewportMode: undefined,
     initialViewport: {

@@ -10,7 +10,7 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SelectionProvider, useSelection } from './contexts/SelectionContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
-import { useViewportActions } from './testing/ViewportActionsProbe';
+import { GodotEditorControls } from './GodotEditorControls';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut';
 import { SelectSeeder } from './testing/SelectSeeder';
 
@@ -106,23 +106,42 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     globalThis.document.body.removeChild(input);
   });
 
-  it('does nothing while an authored Camera3D is the active camera (never mutates it)', async () => {
-    // The CameraFit guard: under "Use This Camera", state.camera is the authored
-    // Camera3D, and framing would overwrite its position, near and far.
-    function ActivateAuthoredCamera() {
-      const { switchToCamera } = useViewportActions();
-      useEffect(() => {
-        switchToCamera('Root/Camera3D');
-      }, [switchToCamera]);
+  it('does nothing while a Camera3D is previewed (never mutates it)', async () => {
+    // Under a camera preview, state.camera is the authored Camera3D, and framing would
+    // overwrite its position, near and far.
+    const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
+    authored.position.set(3, 1, 2);
+    function PreviewAuthoredCamera() {
+      const set = useThree((s) => s.set);
+      useEffect(() => set({ camera: authored }), [set]);
       return null;
     }
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <ViewportActionsProvider>
+        <GodotEditorControls />
+        <RegisteredMesh path="Far" position={[80, 0, 0]} />
+        <SelectSeeder path="Far" />
+        <PreviewAuthoredCamera />
+        <FrameSelectedShortcut />
+      </SelectionProvider>
+    );
+    await renderer.advanceFrames(1, 0);
+
+    fireF();
+    await renderer.advanceFrames(1, 0);
+
+    expect(authored.position.toArray()).toEqual([3, 1, 2]);
+  });
+
+  // A `?camera=` path whose Camera3D never mounts leaves the editor camera on screen.
+  it('frames the editor camera while a previewed path names no mounted camera', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <ViewportActionsProvider initialPreviewedCameraPath="Root/Missing">
           <CameraCapture />
+          <GodotEditorControls />
           <RegisteredMesh path="Far" position={[80, 0, 0]} />
           <SelectSeeder path="Far" />
-          <ActivateAuthoredCamera />
           <FrameSelectedShortcut />
         </ViewportActionsProvider>
       </SelectionProvider>
@@ -133,7 +152,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     fireF();
     await renderer.advanceFrames(1, 0);
 
-    expect(camera.position.equals(before)).toBe(true);
+    expect(camera.position.equals(before)).toBe(false);
   });
 
   it('ignores keys other than "f"', async () => {

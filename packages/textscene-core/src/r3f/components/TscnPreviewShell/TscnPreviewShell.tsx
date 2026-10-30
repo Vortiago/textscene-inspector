@@ -72,7 +72,7 @@ export function TscnPreviewShell({
   onResourceRemove,
   onMissingPathsChange,
   initialViewportMode,
-  initialActiveCameraPath,
+  initialPreviewedCameraPath,
   onCaptureStateChange,
   onCopyNodePath,
 }: TscnPreviewShellProps) {
@@ -114,7 +114,7 @@ export function TscnPreviewShell({
 
   const withProviders = previewShellProviders({
     hierarchyValue,
-    initialActiveCameraPath,
+    initialPreviewedCameraPath,
     onMissingPathsChange,
     initialViewportMode,
     initialViewport,

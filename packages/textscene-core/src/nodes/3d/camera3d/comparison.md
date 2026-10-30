@@ -45,6 +45,10 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 
 The numeric keys (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum_offset`) warn and fall back to Godot's defaults through `floatOr` and `vec2Or`, and `cull_mask` and `doppler_tracking` to `1048575` and `0`. `projection` and `keep_aspect` silently treat any unrecognised value as the default. `current` reads every spelling a BOOL slot converts, so `1` makes the camera current. Text no BOOL slot reads leaves the camera inactive without a warning.
 
+## Preview
+
+The Inspector's **Preview** checkbox draws the viewport through the camera, as Godot's does, also for a camera inside a SubViewport. As in Godot, navigation is off during the preview, and the editor camera keeps its pose until the preview ends.
+
 ## Exposure and Environment
 
 A valid `attributes` replaces the exposure of the world while the world renders through that camera (`renderer_scene_cull.cpp`). The WorldEnvironment sheet lists what the exposure scales. A valid `environment` replaces the Environment of the world the same way (`renderer_scene_cull.cpp:3594-3597`).

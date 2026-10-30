@@ -6,7 +6,7 @@
 
 import type { Camera as R3FCamera } from '@react-three/fiber';
 import * as THREE from 'three';
-import { editorCameraPosition, EDITOR_CAMERA_FOV } from './godotEditorCamera.js';
+import { editorCameraPosition } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
   cursorFromCamera,
@@ -27,7 +27,7 @@ function isPerspectiveCamera(camera: R3FCamera): camera is THREE.PerspectiveCame
 }
 
 /**
- * The orbit focus point, the driven camera and the perspective/orthographic pair. It
+ * The orbit focus point and the editor camera, a perspective/orthographic pair. It
  * is R3F's `state.controls`: `frameSceneBounds` writes `target` and `camera.position`
  * and calls `update()`. No pose is cached, so a gesture picks up an external write.
  * Extends `THREE.EventDispatcher` because R3F's `state.controls` slot takes that type.
@@ -36,10 +36,9 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The orbit focus point. One persistent vector: `frameSceneBounds` copies into it. */
   readonly target = new THREE.Vector3();
 
-  /** The camera being driven: R3F's active one, which may be an authored Camera3D. */
-  camera: R3FCamera;
-
-  private readonly perspectiveCamera: THREE.PerspectiveCamera | null;
+  /** Written only by the projection swap: one of the pair below. */
+  private editorCamera: R3FCamera;
+  private readonly perspectiveCamera: THREE.PerspectiveCamera;
   private orthographicCamera: THREE.OrthographicCamera | null = null;
   private aspect = 1;
 
@@ -49,13 +48,24 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     private readonly setActiveCamera: (camera: R3FCamera) => void
   ) {
     super();
-    this.camera = camera;
-    this.perspectiveCamera = isPerspectiveCamera(camera) ? camera : null;
+    if (!isPerspectiveCamera(camera)) {
+      throw new Error(`expected a perspective editor camera, got ${camera.type}`);
+    }
+    this.editorCamera = camera;
+    this.perspectiveCamera = camera;
   }
 
-  /** Follow R3F's active camera (the user can switch to an authored Camera3D). */
-  setCamera(camera: R3FCamera): void {
-    this.camera = camera;
+  /**
+   * The editor camera, never an authored Camera3D: Godot keeps its editor camera
+   * apart from the one it previews (`node_3d_editor_plugin.cpp:4486-4502`).
+   */
+  get camera(): R3FCamera {
+    return this.editorCamera;
+  }
+
+  /** Whether R3F draws through a previewed Camera3D instead of the editor camera. */
+  isPreviewing(rendered: R3FCamera): boolean {
+    return rendered !== this.editorCamera;
   }
 
   setAspect(aspect: number): void {
@@ -69,14 +79,9 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     return cursorFromCamera(this.camera.position, this.target);
   }
 
-  /**
-   * The vertical fov of the active camera: an authored Camera3D's own (Godot default
-   * 75, this editor camera 70), or zoom-to-pointer drifts off the cursor. Orthographic
-   * falls back to this component's camera, whose fov sizes `orthographicHeight`.
-   */
+  /** The perspective fov, which also sizes the orthographic frustum through `orthographicHeight`. */
   fovDegrees(): number {
-    if (isPerspectiveCamera(this.camera)) return this.camera.fov;
-    return this.perspectiveCamera?.fov ?? EDITOR_CAMERA_FOV;
+    return this.perspectiveCamera.fov;
   }
 
   /** The zoom range Godot derives from the camera's clip planes. */
@@ -121,30 +126,22 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     return this.camera === this.orthographicCamera;
   }
 
-  /**
-   * Numpad 5. Only meaningful while this component's own camera is the active
-   * one: with an authored Camera3D in use, the projection is that node's
-   * property and not ours to swap.
-   */
+  /** Numpad 5. */
   toggleProjection(): void {
-    if (this.isOrthographic) {
-      this.usePerspective();
-    } else if (this.perspectiveCamera && this.camera === this.perspectiveCamera) {
-      this.useOrthographic();
-    }
+    if (this.isOrthographic) this.usePerspective();
+    else this.useOrthographic();
   }
 
   private usePerspective(): void {
-    if (!this.perspectiveCamera || this.camera === this.perspectiveCamera) return;
+    if (this.editorCamera === this.perspectiveCamera) return;
     const cursor = this.cursor();
-    this.camera = this.perspectiveCamera;
+    this.editorCamera = this.perspectiveCamera;
     this.setActiveCamera(this.perspectiveCamera);
     this.applyCursor(cursor);
   }
 
   private useOrthographic(): void {
     const perspective = this.perspectiveCamera;
-    if (!perspective) return;
     const cursor = this.cursor();
     if (!this.orthographicCamera) {
       // R3F resizes an orthographic camera into PIXEL units unless the camera
@@ -156,7 +153,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     }
     this.orthographicCamera.near = perspective.near;
     this.orthographicCamera.far = perspective.far;
-    this.camera = this.orthographicCamera;
+    this.editorCamera = this.orthographicCamera;
     this.setActiveCamera(this.orthographicCamera);
     this.applyCursor(cursor);
   }
@@ -168,8 +165,8 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
    */
   private applyProjection(cursor: EditorCursor): void {
     const ortho = this.orthographicCamera;
-    if (!ortho || this.camera !== ortho || !this.perspectiveCamera) return;
-    const height = orthographicHeight(cursor.distance, this.perspectiveCamera.fov);
+    if (!ortho || this.editorCamera !== ortho) return;
+    const height = orthographicHeight(cursor.distance, this.fovDegrees());
     const width = height * this.aspect;
     ortho.left = -width / 2;
     ortho.right = width / 2;
@@ -177,4 +174,12 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     ortho.bottom = -height / 2;
     ortho.updateProjectionMatrix();
   }
+}
+
+/**
+ * Whether the canvas draws through a previewed Camera3D instead of its editor camera. A canvas
+ * with no editor controls has no preview to draw.
+ */
+export function isDrawingPreview(state: { camera: R3FCamera; controls: unknown }): boolean {
+  return state.controls instanceof EditorControlsHandle && state.controls.isPreviewing(state.camera);
 }

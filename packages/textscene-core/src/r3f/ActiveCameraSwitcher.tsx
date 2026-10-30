@@ -1,65 +1,73 @@
-/** Switches the 3D canvas between the default orbit camera and a scene Camera3D. */
-import { useThree } from '@react-three/fiber';
+/** Switches the 3D canvas between the editor camera and a previewed scene Camera3D. */
+import { useThree, type RootState } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
-import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-import { fitToAspect, fittedAspect, type CameraLike } from '../nodes/3d/camera3d/projectionFit.js';
+import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { fitToAspect, fittedAspect } from '../nodes/3d/camera3d/projectionFit.js';
+import { EditorControlsHandle } from './EditorControlsHandle.js';
+import { useSceneCamera } from './sceneCameras.js';
+
+/** Fits a node camera, which mounts at a placeholder 16/9 aspect, to the live canvas. */
+function fitToCanvas(camera: THREE.Camera, size: RootState['size']): void {
+  if (size.height <= 0) return;
+  const aspect = size.width / size.height;
+  if (fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
+}
 
 /**
- * Makes the Camera3D the user picks with "Use This Camera" the active render camera of the 3D
- * canvas, and "Reset" returns to the default orbit camera.
+ * Makes the Camera3D the user previews the render camera of the 3D canvas, whichever scene
+ * mounts it. With no preview, the canvas draws through the editor camera at the pose it had.
  */
 export function ActiveCameraSwitcher() {
   const control = useOptionalViewportActions();
-  const activeCameraPath = control?.activeCameraPath ?? null;
-  const hierarchy = useOptionalHierarchy();
-  // Re-run when the scene loads: a deep-linked (`?camera=`) path is set before
-  // any Camera3D has mounted and tagged itself, so the first pass finds nothing.
-  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
-  const scene = useThree((s) => s.scene);
+  const previewedCameraPath = control?.previewedCameraPath ?? null;
+  const endCameraPreview = control?.endCameraPreview;
+  // A deep-linked (`?camera=`) path is set before its Camera3D mounts. The store
+  // re-renders this when the camera registers, and the seed activates it then.
+  const target = useSceneCamera(previewedCameraPath);
+  const sceneKey = useOptionalHierarchy()?.sceneGraph?.rootScene ?? '';
   const camera = useThree((s) => s.camera);
   const set = useThree((s) => s.set);
+  const get = useThree((s) => s.get);
   const size = useThree((s) => s.size);
   // Tells an intentional activation from an incidental effect re-run.
-  const prevPathRef = useRef<string | null>(activeCameraPath);
+  const prevPathRef = useRef<string | null>(previewedCameraPath);
   const seedConsumedRef = useRef(false);
+  /** Written only on an activation: the scene whose camera the preview draws through. */
+  const previewedSceneRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const pathChanged = prevPathRef.current !== activeCameraPath;
-    prevPathRef.current = activeCameraPath;
-    if (!activeCameraPath) {
+    const pathChanged = prevPathRef.current !== previewedCameraPath;
+    prevPathRef.current = previewedCameraPath;
+    const { controls } = get();
+    const editor = controls instanceof EditorControlsHandle ? controls : null;
+    const isPreviewing = editor?.isPreviewing(camera) ?? false;
+
+    if (!previewedCameraPath) {
+      // Godot re-attaches its editor camera when a preview ends (`node_3d_editor_plugin.cpp:4486-4492`).
+      if (editor && isPreviewing) set({ camera: editor.camera });
       return;
     }
-
-    // Camera3D tags its camera's userData with its node path.
-    const cameras: (THREE.PerspectiveCamera | THREE.OrthographicCamera)[] = [];
-    scene.traverse((object) => {
-      const cam = object as CameraLike;
-      if (cam.isPerspectiveCamera || cam.isOrthographicCamera) {
-        cameras.push(object as THREE.PerspectiveCamera | THREE.OrthographicCamera);
-      }
-    });
-    const target =
-      cameras.find((c) => (c.userData as { tscnPath?: string }).tscnPath === activeCameraPath) ?? null;
-    if (!target) return;
-    // Matched to the live canvas: a node camera mounts at a placeholder 16/9
-    // aspect. It runs on every re-render, outside the activation gate.
-    if (size.height > 0) {
-      const aspect = size.width / size.height;
-      if (fittedAspect(target) !== aspect) fitToAspect(target, aspect);
+    if (!target) {
+      // Godot ends the preview of a camera that leaves the scene (`node_3d_editor_plugin.cpp:4373-4379`).
+      if (isPreviewing) endCameraPreview?.();
+      return;
     }
+    // On every re-render, outside the activation gate, so a resize refits it.
+    fitToCanvas(target, size);
 
-    // Swap only on a pick or the one-shot deep-link seed. A scene switch re-runs
-    // this with a stale path that may name a camera in the new scene, before
-    // SceneChangeResetter clears it. The gate also keeps a `camera` re-run from
-    // undoing a Reset Camera.
-    const shouldActivate = pathChanged || !seedConsumedRef.current;
+    // Swap on a pick, on the one-shot deep-link seed, and onto a previewed camera that a
+    // projection change remounted in the same scene. A scene switch re-runs this with a stale
+    // path that may name a camera in the new scene, before SceneChangeResetter clears it.
+    const isRemount = isPreviewing && previewedSceneRef.current === sceneKey;
+    const shouldActivate = pathChanged || !seedConsumedRef.current || isRemount;
     seedConsumedRef.current = true;
     if (shouldActivate && target !== camera) {
+      previewedSceneRef.current = sceneKey;
       set({ camera: target });
     }
-  }, [activeCameraPath, rootKey, scene, camera, set, size]);
+  }, [previewedCameraPath, target, sceneKey, camera, get, set, size, endCameraPreview]);
 
   return null;
 }

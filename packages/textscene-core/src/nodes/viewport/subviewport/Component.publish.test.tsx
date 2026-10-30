@@ -91,7 +91,7 @@ async function renderScene(
   };
 }
 
-/** Makes the named camera the one the canvas renders through, as "Use This Camera" does. */
+/** Makes the named camera the one the canvas renders through, as a camera preview does. */
 function CanvasRendersThrough({ name }: { name: string }) {
   const scene = useThree((state) => state.scene);
   const set = useThree((state) => state.set);
