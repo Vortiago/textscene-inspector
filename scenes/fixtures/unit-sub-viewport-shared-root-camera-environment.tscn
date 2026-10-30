@@ -1,7 +1,7 @@
-; One variable: a Camera3D's `environment` in a SubViewport that shares the root world. Godot
-; forces the camera's Environment over the scenario's for that pass (`renderer_scene_cull.cpp:3594-3597`),
-; so the target shows the camera's warm background, green ambient and ACES curve while the canvas
-; around it draws the world's blue background, no ambient and the linear curve.
+; One variable: a Camera3D `environment` in a SubViewport that shares the root world. Godot forces
+; it over the world's for that pass (`renderer_scene_cull.cpp:3594-3597`): a warm background, green
+; ambient and ACES in the target, the world's blue and linear curve around it. No other scene gives a
+; camera in a shared-world SubViewport an Environment, so none shows a regression in it.
 
 [gd_scene format=3]
 

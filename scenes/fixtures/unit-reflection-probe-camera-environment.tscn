@@ -1,6 +1,8 @@
-; The WorldEnvironment holds a blue background and the Camera3D an Environment with a red one.
-; Godot captures the ReflectionProbe with the world's own Environment, not the camera's
-; (`renderer_scene_cull.cpp:3692`), so the ball reflects blue under a red background.
+; One variable: a Camera3D `environment`, red, over a WorldEnvironment with a blue background, seen
+; through a ReflectionProbe. Godot captures the probe with the world's Environment, not the camera's
+; (`renderer_scene_cull.cpp:3692`), so the ball reflects blue under a red background. No other scene
+; puts a probe under a camera Environment, so none shows a regression in it.
+
 [gd_scene format=3]
 
 [sub_resource type="Environment" id="Environment_1"]

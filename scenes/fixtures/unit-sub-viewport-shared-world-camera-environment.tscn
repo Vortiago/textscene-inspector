@@ -1,8 +1,7 @@
-; One variable: the `environment` and `attributes` of the Camera3D of each of two SubViewports that
-; share the 2D canvas's World3D. ViewA holds the lit sphere and the world's blue background, and
-; ViewB reaches them through the shared world. Godot renders each viewport with its own camera's
-; Environment and attributes (`renderer_scene_cull.cpp:3562-3565`, `:3594-3597`), so ViewA draws a
-; warm background with green ambient and ViewB a teal one under ACES at half the exposure.
+; One variable: the `environment` and `attributes` of the Camera3D of two SubViewports that share
+; the 2D canvas's World3D. Godot renders each with its camera's (`renderer_scene_cull.cpp:3562-3565`,
+; `:3594-3597`): ViewA warm with green ambient, ViewB teal under ACES at half the exposure. No other
+; scene gives the cameras of a shared 2D world their own Environments, so none shows a regression in it.
 
 [gd_scene format=3]
 

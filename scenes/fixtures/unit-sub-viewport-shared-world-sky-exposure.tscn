@@ -1,8 +1,7 @@
-; One variable: the exposure of the Camera3D of each of two SubViewports that share the 2D canvas's
-; World3D and its procedural sky, 2 in ViewA and 1 in ViewB. Godot keeps one radiance for the Sky and
-; bakes it in the first render that finds it dirty, ViewA's, since children render first
-; (`renderer_viewport.cpp:91-127`, `sky.cpp:1263-1369`). Each view draws its background live at its
-; own exposure, and ViewB reads the ambient at ViewA's bake.
+; One variable: the exposures, 2 and 1, of two SubViewports that share the 2D canvas's World3D and
+; its sky. Godot bakes the one radiance in the first render, ViewA's, as children render first
+; (`renderer_viewport.cpp:91-127`, `sky.cpp:1263-1369`), and each view draws its background at its own
+; exposure. No other scene draws one sky at two exposures, so none shows a regression in it.
 
 [gd_scene format=3]
 
