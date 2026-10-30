@@ -7,7 +7,7 @@ TextScene Inspector renders Godot `.tscn` scenes in 3D and 2D from the text alon
 
 **Try it:** [vortiago.github.io/textscene-inspector](https://vortiago.github.io/textscene-inspector/)
 
-![The web previewer rendering a CSG hallway](./docs/showcase/web/hallway.png)
+![The VS Code extension previewing Godot's isometric dungeon demo beside its .tscn source](./docs/screenshots/vscode/vscode-dungeon.png)
 
 ## Get it
 

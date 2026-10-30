@@ -36,6 +36,8 @@ The current toolbar, with the scene palette open:
 
 ## VS Code
 
+![The preview rendering the isometric dungeon demo beside its source](../screenshots/vscode/vscode-dungeon.png)
+
 ![The preview rendering the hallway beside the Explorer](../screenshots/vscode/vscode-hallway.png)
 
 ![The preview in 2D mode rendering a Control dialog](../screenshots/vscode/vscode-main.png)

@@ -9,11 +9,11 @@
  *   pnpm --filter textscene-inspector build
  *   node scripts/showcase/vscode/capture.mjs [shotKey ...]
  */
-import { cpSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { assertPortFree } from '../../visual/previewServer.mjs';
 import { sleep } from './capture/platform.mjs';
-import { FIXTURES, OUT, PORT, TMP, UD, WS } from './capture/paths.mjs';
+import { FIXTURES, ISOMETRIC, OUT, PORT, TMP, UD, WS, WS_ISOMETRIC } from './capture/paths.mjs';
 import {
   killPortOrphan,
   killProcessTree,
@@ -23,10 +23,29 @@ import {
   seedUserData,
   waitCDP,
 } from './capture/devHost.mjs';
-import { openScenePreview, palette, settle, shoot, workbenchPage } from './capture/workbench.mjs';
+import {
+  expandAllTrees,
+  openScenePreview,
+  palette,
+  settle,
+  shoot,
+  workbenchPage,
+} from './capture/workbench.mjs';
 import { GUIDE_SHOTS } from './capture/guideShots.mjs';
 
 const SHOWCASE_SHOTS = {
+  'vscode-dungeon': {
+    desc: 'the isometric dungeon demo: TileMapLayers, sprites and 2D lights',
+    run: async (page) => {
+      const painted = await shotOfScene('isometric/dungeon.tscn', {
+        split: true,
+        sideBar: false,
+        previewShare: 0.66,
+      })(page);
+      await expandAllTrees(page);
+      return painted;
+    },
+  },
   'vscode-main': {
     desc: 'a 2D-UI field-journal dialog rendered by the Control painters',
     run: shotOfScene('example-ui-dialog.tscn'),
@@ -37,12 +56,18 @@ const SHOWCASE_SHOTS = {
   },
 };
 
-function shotOfScene(file) {
+function shotOfScene(file, layout) {
   return async (page) => {
-    const painted = await openScenePreview(page, file);
+    const painted = await openScenePreview(page, file, layout);
     await settle();
     return painted;
   };
+}
+
+function copyIsometric() {
+  if (!existsSync(ISOMETRIC))
+    throw new Error(`expected the vendored dungeon at ${ISOMETRIC}: run pnpm vendor:demos`);
+  cpSync(ISOMETRIC, WS_ISOMETRIC, { recursive: true });
 }
 
 const SHOTS = { ...SHOWCASE_SHOTS, ...GUIDE_SHOTS };
@@ -78,6 +103,7 @@ mkdirSync(TMP, { recursive: true });
 // previous run that died mid-edit must not seed this one's "before" shot.
 rmSync(WS, { recursive: true, force: true });
 cpSync(FIXTURES, WS, { recursive: true });
+if (keys.includes('vscode-dungeon')) copyIsometric();
 // The absolute user-data-dir: its basename is the same in every worktree, so it would kill a
 // concurrent capture's dev-host in a sibling worktree.
 const UD_MARKER = UD;
