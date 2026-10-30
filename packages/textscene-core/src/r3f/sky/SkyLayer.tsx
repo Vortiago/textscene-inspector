@@ -4,10 +4,10 @@
  * while its Environment is on the scene (`sceneEnvironment.tsx`).
  * Godot's sky shader draws the discs of the first four DirectionalLights that are not Light Only as
  * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced or GLB light
- * has its real world transform. The world's exposure scales the sky as Godot does: the background
- * and each disc once, and the ambient and the reflection twice, since Godot bakes the radiance at
- * the exposure and a surface reads it at the exposure again
- * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:241-246`, `sky.cpp:1086`).
+ * has its real world transform. The world's exposure and `background_energy_multiplier` scale the
+ * sky as Godot does: the background and each disc once, and the ambient and the reflection twice,
+ * since Godot bakes the radiance at both and a surface reads it at both again
+ * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:169`, `:241-246`, `sky.cpp:1086`).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -40,9 +40,8 @@ import type { Vector3 } from '../../godot/math/vector';
 interface SkyLayerProps {
   sky: Sky;
   /**
-   * The sky's full reflection strength (`background_energy_multiplier`), as
-   * `scene.environmentIntensity`: a surface reflects the whole sky whatever the
-   * ambient source.
+   * The sky's full reflection strength (`background_energy_multiplier`), which the radiance bakes
+   * in and each surface reads again: a surface reflects the whole sky whatever the ambient source.
    */
   intensity?: number;
   /**
@@ -132,12 +131,14 @@ export function SkyLayer({
     let radiance = first;
     bakeWantedRef.current = bakeWantedOf(bakes, () => noteEnvironmentChange(scene, environment));
 
-    // A render draws the background live at its own exposure, and reads the radiance at its own
-    // exposure times the brightness that baked it (`render_forward_clustered.cpp:1993`, `:2045`).
+    // A render draws the background live at its own exposure. A surface reads the radiance at the
+    // brightness that baked it, times its own exposure and its `background_energy_multiplier`
+    // (`render_forward_clustered.cpp:2045`, `render_scene_data_rd.cpp:169`,
+    // `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads it without the multiplier (`:1121`).
     const bakedBrightness = (drawn: number) => update.baked?.brightness ?? intensity * drawn;
     const showAt = (drawn: number) => {
       radiance = bakes.at(update.baked?.exposure ?? drawn) ?? radiance;
-      scene.environmentIntensity = bakedBrightness(drawn) * drawn;
+      scene.environmentIntensity = bakedBrightness(drawn) * drawn * intensity;
       if (asBackground) {
         scene.background = (bakes.at(drawn) ?? radiance).background;
         scene.backgroundIntensity = backgroundIntensity * drawn;

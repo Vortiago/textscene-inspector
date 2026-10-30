@@ -1868,6 +1868,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Ambient Energy",
+    "file": "unit-sky-ambient-energy.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Debanding Off",
     "file": "unit-sky-debanding-off.tscn",
     "category": "Other"

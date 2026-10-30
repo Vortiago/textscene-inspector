@@ -486,10 +486,17 @@ describe('SkyLayer under an exposure', () => {
     <ShownSkyLayer sky={panoramaSky} rotation={NO_ROTATION} resources={NO_RESOURCES} {...props} />
   );
 
+  it('reads the ambient and the reflection at the sky energy squared, baked in and read again', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(sky({ intensity: 2 }));
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+    expect(scene.environmentIntensity).toBeCloseTo(4, 10);
+  });
+
   it('reads the ambient and the reflection at the exposure squared', async () => {
     built.next = skyEnvironment();
     const { scene } = await mount(exposed(2, sky({ intensity: 1.5 })));
-    expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4, 10);
+    expect(scene.environmentIntensity).toBeCloseTo(1.5 * 1.5 * 4, 10);
   });
 
   it('draws the background at the exposure', async () => {
@@ -548,8 +555,8 @@ describe('SkyLayer under an exposure', () => {
       const inside = drawnAt(scene, 3, () => scene.environmentIntensity);
       fireSceneRender(scene, camera);
 
-      expect(inside).toBeCloseTo(1.5 * 2 * 3, 10);
-      expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4, 10);
+      expect(inside).toBeCloseTo(1.5 * 1.5 * 2 * 3, 10);
+      expect(scene.environmentIntensity).toBeCloseTo(1.5 * 1.5 * 4, 10);
     });
 
     it('draws the background at that exposure, and its own in its next render', async () => {
@@ -567,7 +574,7 @@ describe('SkyLayer under an exposure', () => {
       const { scene } = await mount(exposed(2, sky({ intensity: 1.5, backgroundIntensity: 1.5 })));
       fireSceneRender(scene, camera);
       const inside = drawnAt(scene, null, () => [scene.environmentIntensity, scene.backgroundIntensity]);
-      expect(inside).toEqual([3, 1.5]);
+      expect(inside).toEqual([4.5, 1.5]);
     });
 
     it('leaves the background alone when the sky paints none', async () => {
@@ -616,7 +623,7 @@ describe('SkyLayer under an exposure', () => {
     const { scene } = await mount(
       <WorldExposureScope>{sky({ intensity: 1.5, backgroundIntensity: 1.5 })}</WorldExposureScope>
     );
-    expect([scene.environmentIntensity, scene.backgroundIntensity]).toEqual([1.5, 1.5]);
+    expect([scene.environmentIntensity, scene.backgroundIntensity]).toEqual([2.25, 1.5]);
   });
 
   /**
@@ -641,7 +648,7 @@ describe('SkyLayer under an exposure', () => {
       const { scene } = await mount(exposed(2, sky({ intensity: 1.5 })));
       ambientDrawnAt(scene, 4);
 
-      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 4 * 3, 10);
+      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 1.5 * 4 * 3, 10);
     });
 
     it("reads the first render's bake in the view that draws after it", async () => {
@@ -650,7 +657,7 @@ describe('SkyLayer under an exposure', () => {
       ambientDrawnAt(scene, 4);
       fireSceneRender(scene, camera);
 
-      expect(scene.environmentIntensity).toBeCloseTo(1.5 * 4 * 2, 10);
+      expect(scene.environmentIntensity).toBeCloseTo(1.5 * 1.5 * 4 * 2, 10);
     });
 
     it('keeps the bake of the first render for a sky that reads lights but has none (edge case)', async () => {
@@ -658,7 +665,7 @@ describe('SkyLayer under an exposure', () => {
       const { scene } = await mount(exposed(2, sky({ sky: proceduralSky, intensity: 1.5 })));
       ambientDrawnAt(scene, 4);
 
-      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 4 * 3, 10);
+      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 1.5 * 4 * 3, 10);
     });
 
     it('keeps the first bake of a sky that reads lights while it still filters its layers', async () => {
@@ -674,7 +681,7 @@ describe('SkyLayer under an exposure', () => {
       );
       ambientDrawnAt(scene, 4);
 
-      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 4 * 3, 10);
+      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 1.5 * 4 * 3, 10);
     });
 
     it('bakes a quality sky that reads lights again at the exposure of each render', async () => {
@@ -694,7 +701,7 @@ describe('SkyLayer under an exposure', () => {
       await advanceFrames(1);
 
       expect(bakes.map((bake) => bake.lights[0]?.energy)).toContain(6);
-      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 3 * 3, 10);
+      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 1.5 * 3 * 3, 10);
     });
 
     it('keeps the first bake of a quality sky that reads no lights', async () => {
@@ -704,7 +711,7 @@ describe('SkyLayer under an exposure', () => {
       );
       ambientDrawnAt(scene, 4);
 
-      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 4 * 3, 10);
+      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 1.5 * 4 * 3, 10);
     });
 
     it('bakes a quality panorama again at each exposure while the fog scatters the sun', async () => {
@@ -721,7 +728,7 @@ describe('SkyLayer under an exposure', () => {
       );
       ambientDrawnAt(scene, 4);
 
-      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 3 * 3, 10);
+      expect(ambientDrawnAt(scene, 3)).toBeCloseTo(1.5 * 1.5 * 3 * 3, 10);
     });
 
     it("draws the background of a sky that reads lights from a bake at each render's exposure", async () => {
@@ -756,7 +763,7 @@ describe('SkyLayer under an exposure', () => {
       );
       ambientDrawnAt(scene, 3);
 
-      expect(ambientDrawnAt(scene, 5)).toBeCloseTo(1.5 * 3 * 5, 10);
+      expect(ambientDrawnAt(scene, 5)).toBeCloseTo(1.5 * 1.5 * 3 * 5, 10);
     });
 
     it('counts a bake that lands a frame late as a change of the world Environment, which a probe captures again', async () => {
