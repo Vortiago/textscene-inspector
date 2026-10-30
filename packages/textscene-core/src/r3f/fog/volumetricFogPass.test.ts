@@ -146,7 +146,7 @@ interface ShownSky {
 /** Shows a sky as `shown` says on `renderer`, as `<SkyLayer>` does before each render of its scene. */
 function showSky(renderer: RecordingRenderer, shown: Partial<ShownSky>): void {
   const layers = { layout: skyOctmapLayout(32, 8), target: new THREE.WebGLArrayRenderTarget(1, 1, 1) };
-  new SkyRadiance(renderer.asWebGL, layers, shown.rotation ?? new THREE.Euler()).show(1, shown.energy ?? 1);
+  new SkyRadiance(renderer.asWebGL, layers, shown.rotation ?? new THREE.Euler()).show(1, true, shown.energy ?? 1);
 }
 
 afterEach(hideShownSky);
