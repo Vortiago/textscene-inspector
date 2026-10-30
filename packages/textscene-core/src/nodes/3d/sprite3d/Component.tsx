@@ -10,11 +10,7 @@ import { visualLayersUserData } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
-import {
-  node3dGroupSpread,
-  node3dPosedGroupSpread,
-  transformFromNode3DProperties,
-} from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
 import { useWindowedTextureView } from '../../../r3f/useTextureView';
@@ -172,7 +168,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   if (!displayedTexture) {
     return (
       <>
-        <group ref={spriteRef} name={node.name} {...node3dPosedGroupSpread(transform, properties)} />
+        <group ref={spriteRef} name={node.name} {...node3dGroupSpread(transform)} />
         {subtree}
       </>
     );
@@ -208,7 +204,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         // cull skipping the quad's draws skips nothing else.
         ref={spriteRef}
         name={node.name}
-        {...node3dPosedGroupSpread(transform, properties)}
+        {...node3dGroupSpread(transform)}
         renderOrder={properties.render_priority}
         castShadow={castsShadow}
         receiveShadow

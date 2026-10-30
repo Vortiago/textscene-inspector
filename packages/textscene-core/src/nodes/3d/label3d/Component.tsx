@@ -9,11 +9,7 @@ import { lazy, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { Label3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import {
-  node3dGroupSpread,
-  node3dPosedGroupSpread,
-  transformFromNode3DProperties,
-} from '../../../r3f/nodeTransform';
+import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -60,7 +56,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
       <group
         ref={groupRef}
         name={node.name}
-        {...node3dPosedGroupSpread(transform, properties)}
+        {...node3dGroupSpread(transform)}
         userData={{ billboardMode: properties.billboard, isLabel3D: true }}
       >
         <group scale={properties.pixel_size}>
