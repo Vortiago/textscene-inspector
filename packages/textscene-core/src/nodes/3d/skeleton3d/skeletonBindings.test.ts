@@ -9,11 +9,12 @@ import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnScene } from '../../../parser/types';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { contextOver } from '../../../r3f/liveSceneTree.testkit';
-import { multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
+import { identityTransform3D, multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
+import type { SkinBind } from '../../../resources/skin/types';
 import type { Quaternion } from '../../../godot/math/quaternion';
 import type { Vector3 } from '../../../godot/math/vector';
 import * as logger from '../../../logger';
-import { bindMeshesToSkeletons, type BoundSkin } from './skeletonBindings';
+import { bindMeshesToSkeletons, type AutomaticSkin } from './skeletonBindings';
 import type { AnimatedPose, BonePose } from './skeletonPose';
 import './index';
 import '../meshinstance3d/index';
@@ -49,7 +50,7 @@ function boundSkinAt(
   content: string,
   path = 'Root/Mesh',
   scenes: Readonly<Record<string, string>> = {}
-): BoundSkin | undefined {
+): AutomaticSkin | undefined {
   const main = parse(content);
   const loaded = Object.fromEntries(
     Object.entries(scenes).map(([scenePath, text]) => [scenePath, parse(text)])
@@ -138,13 +139,25 @@ ${BONES}
     expect(skinAt(scene('skeleton = NodePath("/root/Root/Skeleton3D")'))).toBeUndefined();
   });
 
-  it('binds nothing when the MeshInstance3D sets a skin, which this pass does not read', () => {
+  it('binds the skeleton of a MeshInstance3D that sets a skin, and the Skin gives one matrix for each bind', () => {
+    const binds: SkinBind[] = [{ bone: 0, name: '', pose: identityTransform3D() }];
     const content = scene('skeleton = NodePath("../Skeleton3D")\nskin = SubResource("Skin_1")').replace(
       '[node name="Root"',
       '[sub_resource type="Skin" id="Skin_1"]\n[node name="Root"'
     );
 
-    expect(skinAt(content)).toBeUndefined();
+    const skin = boundSkinAt(content)!;
+
+    expect(skin.matrices).toHaveLength(3);
+    expect(skin.withSkin(binds).matrices).toHaveLength(1);
+  });
+
+  it('hands every mesh that sets one Skin the same skin', () => {
+    const binds: SkinBind[] = [{ bone: 0, name: '', pose: identityTransform3D() }];
+    const automatic = boundSkinAt(scene('skeleton = NodePath("../Skeleton3D")'))!;
+
+    expect(automatic.withSkin(binds)).toBe(automatic.withSkin(binds));
+    expect(automatic.withSkin([...binds])).not.toBe(automatic.withSkin(binds));
   });
 
   it('binds a skeleton with no bones to an empty skin (edge case)', () => {

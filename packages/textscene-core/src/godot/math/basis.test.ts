@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   type BasisComponents,
+  basisColumnsAlong,
   basisColumnInto,
   basisCopy,
   basisDiagonal,
@@ -212,6 +213,26 @@ describe('basisFromQuaternionScale', () => {
 describe('basisDiagonal', () => {
   it('holds each scale in float32 on the diagonal', () => {
     expect(basisDiagonal(0.1, 2, -3)).toEqual([Math.fround(0.1), 0, 0, 0, 2, 0, 0, 0, -3]);
+  });
+});
+
+describe('basisColumnsAlong', () => {
+  it('lays each column along the direction column at the length column', () => {
+    // Directions: x along +y, y along -x, z along +z. Lengths 2, 3 and 4.
+    const directions: BasisComponents = [0, -1, 0, 1, 0, 0, 0, 0, 1];
+    expect(basisColumnsAlong(directions, basisDiagonal(2, 3, 4))).toEqual([0, -3, 0, 2, 0, 0, 0, 0, 4]);
+  });
+
+  it('keeps a column of the lengths basis that is itself sheared at its own length', () => {
+    // Column y of SHEARED is (0.5, 1, 0), of length 1.118034.
+    const result = basisColumnsAlong(IDENTITY, SHEARED);
+    expect(result[1]).toBe(0);
+    expect(result[4]).toBeCloseTo(Math.hypot(0.5, 1), 5);
+  });
+
+  it('gives a zero direction column no length, as Vector3::normalized does', () => {
+    const noY: BasisComponents = [1, 0, 0, 0, 0, 0, 0, 0, 1];
+    expect(basisColumnsAlong(noY, basisDiagonal(1, 5, 1))).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 1]);
   });
 });
 

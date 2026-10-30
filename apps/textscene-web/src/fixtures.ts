@@ -1798,13 +1798,38 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform 2d Local",
+    "file": "unit-remote-transform-2d-local.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 2d Skew",
+    "file": "unit-remote-transform-2d-skew.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
     "category": "Other"
   },
   {
+    "name": "Remote Transform 3d Ancestor",
+    "file": "unit-remote-transform-3d-ancestor.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 3d Instanced",
     "file": "unit-remote-transform-3d-instanced.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Local",
+    "file": "unit-remote-transform-3d-local.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d Sheared Target",
+    "file": "unit-remote-transform-3d-sheared-target.tscn",
     "category": "Other"
   },
   {
@@ -3232,6 +3257,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 2d",
     "file": "unit-mesh-instance-2d.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skin By Name",
+    "file": "unit-mesh-instance-3d-skin-by-name.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

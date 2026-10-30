@@ -10,12 +10,14 @@ import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
   multiplyTransform2D,
+  transform2DDecompose,
   transform2DFromParts,
   transform2DGetScale,
   transform2DHasZeroSkew,
   transform2DBasisXform,
   transform2DBasisXformInto,
   transform2DIsConformal,
+  transform2DSetScale,
   transform2DXform,
   type Transform2DColumns,
 } from './transform2d.js';
@@ -218,6 +220,53 @@ describe('transform2DGetScale', () => {
     // `scale = Vector2(nan, 1)` lands here.
     const nanDeterminant = { a: NaN, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
     expect(transform2DGetScale(nanDeterminant).y).toBe(0);
+  });
+});
+
+describe('transform2DDecompose', () => {
+  it('reads back the parts transform2DFromParts built', () => {
+    const parts = transform2DDecompose(transform2DFromParts(0.3, { x: 1, y: 2 }, 0.2, { x: 5, y: 6 }));
+    expect(parts.position).toEqual({ x: 5, y: 6 });
+    expect(parts.rotation).toBeCloseTo(0.3, 6);
+    expect(parts.scale.x).toBeCloseTo(1, 6);
+    expect(parts.scale.y).toBeCloseTo(2, 6);
+    expect(parts.skew).toBeCloseTo(0.2, 6);
+  });
+
+  it('reads the parts Godot 4.6.3 measured on a skewed, rotated and scaled matrix', () => {
+    // Godot's global matrix for rotation 0.3, scale (1, 2), skew 0.2 reports skew 0.19999992847443.
+    const t = { a: 0.955337, b: 0.29552, c: -0.958851, d: 1.755165, tx: 0, ty: 0 };
+    const parts = transform2DDecompose(t);
+    expect(parts.skew).toBeCloseTo(0.2, 5);
+    expect(parts.rotation).toBeCloseTo(0.3, 5);
+    expect(parts.scale.y).toBeCloseTo(2, 5);
+  });
+
+  it('folds a mirror into the sign of the y scale, and leaves the skew at zero', () => {
+    const parts = transform2DDecompose({ a: 1, b: 0, c: 0, d: -1, tx: 0, ty: 0 });
+    expect(parts.scale).toEqual({ x: 1, y: -1 });
+    expect(parts.skew).toBe(0);
+  });
+
+  it('gives parallel axes a zero y scale and a zero skew, as SIGN(0) is 0', () => {
+    const parts = transform2DDecompose({ a: 1, b: 0, c: 2, d: 0, tx: 0, ty: 0 });
+    expect(parts.scale.y).toBe(0);
+    expect(parts.skew).toBe(0);
+  });
+});
+
+describe('transform2DSetScale', () => {
+  it('keeps the direction of each axis at the new length, the origin as it was', () => {
+    const t = { a: 3, b: 4, c: -8, d: 6, tx: 7, ty: 9 };
+    const scaled = transform2DSetScale(t, { x: 10, y: 2 });
+    expect([scaled.a, scaled.b, scaled.c, scaled.d, scaled.tx, scaled.ty]).toEqual(
+      [6, 8, -1.6, 1.2, 7, 9].map(Math.fround)
+    );
+  });
+
+  it('gives an axis of length zero no length, as Vector2::normalize leaves it', () => {
+    const scaled = transform2DSetScale({ a: 0, b: 0, c: 0, d: 2, tx: 0, ty: 0 }, { x: 5, y: 3 });
+    expect(scaled).toEqual({ a: 0, b: 0, c: 0, d: 3, tx: 0, ty: 0 });
   });
 });
 

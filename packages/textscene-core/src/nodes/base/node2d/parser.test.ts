@@ -140,6 +140,12 @@ describe('decomposeTransform2D', () => {
     expect(d.scale.y).toBeCloseTo(-1);
   });
 
+  it('gives parallel axes a zero y scale, as Godot get_scale does with SIGN(0)', () => {
+    const d = decomposeTransform2D('Transform2D(1, 0, 2, 0, 0, 0)')!;
+    expect(d.scale.y).toBe(0);
+    expect(d.skew).toBe(0);
+  });
+
   it('returns null on malformed input', () => {
     expect(decomposeTransform2D('not a transform')).toBeNull();
   });

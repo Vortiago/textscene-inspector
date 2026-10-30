@@ -46,6 +46,8 @@ export const PRIMITIVE_SCENES = [
     name: 'mesh-instance-3d-skinned-ribbon-instanced',
     file: 'unit-mesh-instance-3d-skinned-ribbon-instanced.tscn',
   },
+  // A Skin whose binds name the bones bends the ribbon along them, behind a root bone the automatic skin would bind.
+  { name: 'mesh-instance-3d-skin-by-name', file: 'unit-mesh-instance-3d-skin-by-name.tscn' },
   // The tangent frame every ported builder writes, under a normal map and each light type.
   { name: 'primitive-mesh-normal-map', file: 'unit-primitive-mesh-normal-map.tscn' },
   // The steps PrimitiveMesh applies after every builder: the UV2 layout and `flip_faces`.

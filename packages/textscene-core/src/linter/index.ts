@@ -160,6 +160,7 @@ import '../resources/cameraattributes/index.linter.js';
 import '../resources/environment/index.linter.js';
 import '../resources/sky/index.linter.js';
 import '../resources/meshlibrary/index.linter.js';
+import '../resources/skin/index.linter.js';
 import '../resources/tileset/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
 import '../resources/meshes/tubetrailmesh/linterValidators.js';
