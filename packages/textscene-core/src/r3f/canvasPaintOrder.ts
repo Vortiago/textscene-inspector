@@ -123,12 +123,15 @@ export function canvasLayerOf(node: TscnNode): number {
   return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER;
 }
 
-/** Every canvas layer declared anywhere in the given trees. */
-export function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
+/** Every canvas layer declared in the given trees, below each node `descend` accepts. */
+export function declaredCanvasLayers(
+  nodes: readonly TscnNode[],
+  descend: (node: TscnNode) => boolean = () => true
+): number[] {
   const found: number[] = [];
   const visit = (node: TscnNode): void => {
     if (isCanvasLayerType(node.type)) found.push(canvasLayerOf(node));
-    for (const child of node.children) visit(child);
+    if (descend(node)) node.children.forEach(visit);
   };
   for (const node of nodes) visit(node);
   return found;

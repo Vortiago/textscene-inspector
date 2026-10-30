@@ -6,16 +6,25 @@
 
 import * as THREE from 'three';
 
-/** The channel every drawn object sits on, and the one a camera sees by default. */
-const DRAWN_CHANNEL = 0;
+const DEFAULT_CAMERA_LAYER = 0;
 
 /** Marks an object whose subtree draws over every canvas layer, as the copy of the world does. */
 export const OVER_EVERY_LAYER = 'overEveryLayer';
 
 /**
- * Runs `draw` with the objects of `scene` whose key `inWindow` rejects off the default layer, and
- * puts them back after it. The key of an object is `groupOrder` as three takes it: the `renderOrder`
- * of the nearest Group above it. A layer, not `visible`, so a rejected object keeps its children.
+ * The key of `object` as three takes it: the `renderOrder` of the nearest Group above it. A subtree
+ * marked {@link OVER_EVERY_LAYER} keeps an infinite key all the way down.
+ */
+function keyOf(object: THREE.Object3D, inherited: number): number {
+  if (inherited === Number.POSITIVE_INFINITY || object.userData[OVER_EVERY_LAYER]) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return object instanceof THREE.Group ? object.renderOrder : inherited;
+}
+
+/**
+ * Runs `draw` with the objects of `scene` whose key `inWindow` rejects off the default camera layer,
+ * and puts them back after it. A layer, not `visible`, so a rejected object keeps its children.
  */
 export function drawCanvasKeys<T>(
   scene: THREE.Object3D,
@@ -24,14 +33,9 @@ export function drawCanvasKeys<T>(
 ): T {
   const rejected: THREE.Object3D[] = [];
   const visit = (object: THREE.Object3D, inherited: number): void => {
-    const key =
-      inherited === Number.POSITIVE_INFINITY || object.userData[OVER_EVERY_LAYER]
-        ? Number.POSITIVE_INFINITY
-        : object instanceof THREE.Group
-          ? object.renderOrder
-          : inherited;
-    if (!inWindow(key) && object.layers.isEnabled(DRAWN_CHANNEL)) {
-      object.layers.disable(DRAWN_CHANNEL);
+    const key = keyOf(object, inherited);
+    if (!inWindow(key) && object.layers.isEnabled(DEFAULT_CAMERA_LAYER)) {
+      object.layers.disable(DEFAULT_CAMERA_LAYER);
       rejected.push(object);
     }
     for (const child of object.children) visit(child, key);
@@ -40,6 +44,6 @@ export function drawCanvasKeys<T>(
   try {
     return draw();
   } finally {
-    for (const object of rejected) object.layers.enable(DRAWN_CHANNEL);
+    for (const object of rejected) object.layers.enable(DEFAULT_CAMERA_LAYER);
   }
 }

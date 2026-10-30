@@ -66,12 +66,10 @@ import { viewAnchorMatrix } from '../../../r3f/viewportLayerAnchor';
 import { drawCanvasKeys } from '../../../r3f/canvasKeyWindow';
 import { useLayerRanks } from '../../../r3f/contexts/PaintOrderContext';
 import { BackgroundMode } from '../../../godot/scene/environment';
-import {
-  canvasBackdropBound,
-  drawKeepingColor,
-  drawOverBackground,
-  viewportCanvasLayers,
-} from './canvasBackdrop';
+import { canvasBackdropBound, drawOverBackground } from './canvasBackdrop';
+import { useBackdropTarget } from './useBackdropTarget';
+import { declaredCanvasLayers, layerRanks } from '../../../r3f/canvasPaintOrder';
+import { keepsChildrenInViewport } from './viewportBoundary';
 
 const CanvasOverWorld = lazy(() =>
   import('./CanvasOverWorld.js').then((m) => ({ default: m.CanvasOverWorld }))
@@ -175,15 +173,12 @@ export function OffscreenViewportPass({
     layoutSize.y,
     kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0
   );
-  // Under BG_CANVAS the canvas layers up to the max layer draw into this target, which the world
-  // shows as its background. A resize or a new viewport gets a new target.
-  const backdropTarget = useMemo(
-    () => (drawsCanvasOverWorld ? createSceneTarget(width, height, `${node.name}::canvas`) : null),
-    [drawsCanvasOverWorld, width, height, node.name]
-  );
-  useDisposeOnRelease(backdropTarget);
+  const backdropTarget = useBackdropTarget(width, height, node.name);
   const sceneRanks = useLayerRanks();
-  const canvasLayers = useMemo(() => viewportCanvasLayers(node.children), [node]);
+  const drawnLayers = useMemo(
+    () => layerRanks(declaredCanvasLayers(node.children, keepsChildrenInViewport)),
+    [node]
+  );
   // The scene the canvas of a 3D pass draws into, apart from the world's.
   const canvasScene = useMemo(
     () => (drawsCanvasOverWorld ? createPassScene(node.name, 'canvas') : null),
@@ -201,35 +196,20 @@ export function OffscreenViewportPass({
 
   // The canvas items of a viewport draw after its 3D render, into the same target. The frame's bytes
   // return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same bytes.
-  const renderCanvasOverWorld = useCallback(
-    (frontFrom: number) =>
+  // `inWindow` null draws every layer, which no BG_CANVAS split asks for.
+  const renderCanvas = useCallback(
+    (into: THREE.WebGLRenderTarget, inWindow: ((key: number) => boolean) | null) =>
       renderToOffscreenTarget(gl, {
-        target,
+        target: into,
         clearColor,
         transparentBg,
         draw: () => {
           const drawCanvas = () => frame.render(gl, canvasScene!, orthoCamera, 'decode');
-          if (frontFrom === Number.NEGATIVE_INFINITY) drawCanvas();
-          else drawCanvasKeys(canvasScene!, (key) => key >= frontFrom, drawCanvas);
+          if (inWindow) drawCanvasKeys(canvasScene!, inWindow, drawCanvas);
+          else drawCanvas();
         },
       }),
-    [gl, target, clearColor, transparentBg, frame, canvasScene, orthoCamera]
-  );
-  // The layers below `behindTo` draw first, into a target the world then shows as its background.
-  const renderCanvasBehindWorld = useCallback(
-    (behindTo: number) =>
-      renderToOffscreenTarget(gl, {
-        target: backdropTarget!,
-        clearColor,
-        transparentBg,
-        draw: () =>
-          drawCanvasKeys(
-            canvasScene!,
-            (key) => key < behindTo,
-            () => frame.render(gl, canvasScene!, orthoCamera, 'decode')
-          ),
-      }),
-    [gl, backdropTarget, clearColor, transparentBg, frame, canvasScene, orthoCamera]
+    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera]
   );
 
   // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
@@ -269,17 +249,14 @@ export function OffscreenViewportPass({
     if (kind === '3d' && !toneMap) return;
     const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
-    // Under BG_CANVAS the layers below `behindTo` draw first and the world shows them as its background.
-    const behindTo =
-      canvasScene && toneMap?.background?.mode === BackgroundMode.BG_CANVAS
-        ? canvasBackdropBound(toneMap.background.canvasMaxLayer, canvasLayers, sceneRanks)
-        : Number.NEGATIVE_INFINITY;
-    const backdrop = behindTo > Number.NEGATIVE_INFINITY ? backdropTarget : null;
-    const keepsColor = toneMap?.background?.mode === BackgroundMode.BG_KEEP;
-    if (backdrop) {
-      frameCanvas(canvasScene!);
-      renderCanvasBehindWorld(behindTo);
-    }
+    if (canvasScene) frameCanvas(canvasScene);
+    // Under BG_CANVAS the layers below `behindTo` draw first, and the world shows them as its background.
+    const behindTo = canvasScene
+      ? canvasBackdropBound(toneMap?.environment?.background, drawnLayers, sceneRanks)
+      : null;
+    const backdrop = behindTo === null ? null : backdropTarget();
+    if (backdrop) renderCanvas(backdrop, (key) => key < behindTo!);
+    const keepsColor = toneMap?.environment?.background.mode === BackgroundMode.BG_KEEP;
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
@@ -292,6 +269,7 @@ export function OffscreenViewportPass({
         target: toneMap ? toneMap.worldBuffer : target,
         clearColor,
         transparentBg,
+        keepsColor,
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
           // A 3D pass clears its target itself where no render will, as `CanvasFrame.render`
@@ -307,9 +285,9 @@ export function OffscreenViewportPass({
                 kind === '2d'
                   ? frame.render(gl, passScene, camera)
                   : drawWith(passScene, toneMap!.environment, exposure, () =>
-                      drawOverBackground(passScene, backdrop?.texture ?? null, () =>
-                        drawKeepingColor(gl, keepsColor, () => gl.render(passScene, camera))
-                      )
+                      backdrop
+                        ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))
+                        : gl.render(passScene, camera)
                     )
               )
             );
@@ -319,10 +297,7 @@ export function OffscreenViewportPass({
         },
       });
       toneMap?.toneMap();
-      if (canvasScene) {
-        if (!backdrop) frameCanvas(canvasScene);
-        renderCanvasOverWorld(behindTo);
-      }
+      if (canvasScene) renderCanvas(target, behindTo === null ? null : (key) => key >= behindTo);
     } finally {
       if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
@@ -341,10 +316,9 @@ export function OffscreenViewportPass({
     layoutSize,
     canvasScene,
     frameCanvas,
-    renderCanvasOverWorld,
-    renderCanvasBehindWorld,
+    renderCanvas,
     backdropTarget,
-    canvasLayers,
+    drawnLayers,
     sceneRanks,
   ]);
 
