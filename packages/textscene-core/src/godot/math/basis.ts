@@ -9,7 +9,7 @@
 import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import type { Quaternion } from './quaternion.js';
-import { normalizedVector3, vector3Dot, type Vector3 } from './vector.js';
+import { normalizedVector3, vector3Dot, vector3Length, type Vector3 } from './vector.js';
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [
@@ -146,6 +146,20 @@ export function basisMultiply(left: BasisComponents, right: BasisComponents): Ba
         f(right[6 + col]! * left[3 * row + 2]!)
     );
   });
+}
+
+/**
+ * The basis whose column `i` points along column `i` of `directions` and has the length of column `i`
+ * of `lengths`, the column rule of `RemoteTransform3D::_update_remote` (`remote_transform_3d.cpp:78-89`):
+ * `directions.get_column(i).normalized() * lengths.get_column(i).length()`. A shear or a mirror in
+ * either basis stays in the column it sits in.
+ */
+export function basisColumnsAlong(directions: BasisComponents, lengths: BasisComponents): BasisComponents {
+  const columns = [0, 1, 2].map((i) => {
+    const direction = normalizedVector3(...basisColumn(directions, i));
+    return scaled(direction, vector3Length(...basisColumn(lengths, i)));
+  });
+  return basisFrom((i) => columns[i % 3]![Math.floor(i / 3)]!);
 }
 
 /** The basis whose row-major component `i` is `component(i)`. */

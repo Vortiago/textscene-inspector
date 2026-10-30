@@ -42,13 +42,11 @@ exception. It reports a single `legacy-format-version` info and nothing else.
 of limitations, so this file records them once.
 
 A relay copies its transform onto its `remote_path` target once on load: the
-static enter-tree effect, not a per-frame drive. Three cases are not fully
+static enter-tree effect, not a per-frame drive. Two cases are not fully
 reproduced:
 
 - **`use_global_coordinates = false`** is a no-op on a static load. Only the
   default global-coordinate drive repositions the target.
-- **A cross-instance `remote_path`**, one crossing into or out of an instanced
-  sub-scene, stays unresolved. In-scene resolution, the common case, works.
 - **Relay chains** resolve in document (pre-order) order. A feedback loop is not
   iterated to a fixed point.
 

@@ -60,6 +60,12 @@ export const TILE_AND_TARGET_SCENES = [
   // The same relays and targets inside an instanced scene stand where they do in their own files.
   { name: 'remote-transform-3d-instanced', file: 'unit-remote-transform-3d-instanced.tscn' },
   { name: 'remote-transform-2d-instanced', file: 'unit-remote-transform-2d-instanced.tscn', mode: '2d' },
+  // A relay that names its own parent drives nothing: the box stays where the scene puts it.
+  { name: 'remote-transform-3d-ancestor', file: 'unit-remote-transform-3d-ancestor.tscn' },
+  // A position-only relay moves a target whose global basis is sheared and leaves that basis alone.
+  { name: 'remote-transform-3d-sheared-target', file: 'unit-remote-transform-3d-sheared-target.tscn' },
+  // A full-flag relay replaces the target's skew with the relay's, so the square is unskewed.
+  { name: 'remote-transform-2d-skew', file: 'unit-remote-transform-2d-skew.tscn', mode: '2d' },
 
   // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
   // environment applies inside the target and again on the consuming quad (curve squared). The

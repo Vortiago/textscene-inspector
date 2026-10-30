@@ -35,4 +35,7 @@ Strict parsing format-checks these `RemoteTransform3D` properties, plus 17 inher
 
 ## Known limitations
 
-- **Approximated** The target sits apart from Godot's when the relay drives its own ancestor, or the target's parent rotates or scales.
+- **Approximated** `use_global_coordinates = false` is a no-op on a static load, so only
+  the default global drive repositions the target.
+- **Approximated** Relay chains resolve in document order, and a feedback loop is not
+  iterated to a fixed point.

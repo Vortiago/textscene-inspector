@@ -12,7 +12,7 @@
 
 import { isEqualApprox, isZeroApprox, sign } from './math.js';
 import { storedReal as f } from './real.js';
-import type { Vector2 } from './vector.js';
+import { normalizedVector2, type Vector2 } from './vector.js';
 
 /**
  * `columns[0] = (a, b)` is the x axis, `columns[1] = (c, d)` the y axis and `columns[2] = (tx, ty)`
@@ -128,6 +128,51 @@ export function transform2DGetScale(t: Transform2DColumns): { x: number; y: numb
   return {
     x: Math.hypot(t.a, t.b),
     y: sign(det) * Math.hypot(t.c, t.d),
+  };
+}
+
+/**
+ * `Transform2D::set_scale` (`transform_2d.cpp:120-125`): each axis keeps its direction at the length
+ * `scale` names. The engine's `normalize` leaves a zero axis at zero, and the origin stays.
+ */
+export function transform2DSetScale(
+  t: Transform2DColumns,
+  scale: { x: number; y: number }
+): Transform2DColumns {
+  const x = normalizedVector2({ x: t.a, y: t.b });
+  const y = normalizedVector2({ x: t.c, y: t.d });
+  return {
+    ...t,
+    a: f(x.x * scale.x),
+    b: f(x.y * scale.x),
+    c: f(y.x * scale.y),
+    d: f(y.y * scale.y),
+  };
+}
+
+/**
+ * The position, rotation, scale and skew a Node2D reads from its transform
+ * (`Node2D::_update_xform_values`, `node_2d.cpp:127-133`): `get_rotation` is the angle of the x axis
+ * (`transform_2d.cpp:82-84`), `get_scale` is {@link transform2DGetScale}, and `get_skew`
+ * (`transform_2d.cpp:72-75`) is the angle of the y axis from perpendicular to the x axis, its
+ * direction mirrored with the sign of the determinant. It is the inverse of {@link transform2DFromParts}.
+ */
+export function transform2DDecompose(t: Transform2DColumns): {
+  position: Vector2;
+  rotation: number;
+  scale: { x: number; y: number };
+  skew: number;
+} {
+  const detSign = sign(t.a * t.d - t.c * t.b);
+  const x = normalizedVector2({ x: t.a, y: t.b });
+  const y = normalizedVector2({ x: t.c, y: t.d });
+  // The dot of unit vectors can round past 1, where `acos` has no answer.
+  const cosine = Math.max(-1, Math.min(1, x.x * detSign * y.x + x.y * detSign * y.y));
+  return {
+    position: { x: t.tx, y: t.ty },
+    rotation: Math.atan2(t.b, t.a),
+    scale: transform2DGetScale(t),
+    skew: Math.acos(cosine) - Math.PI / 2,
   };
 }
 

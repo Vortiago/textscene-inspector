@@ -39,11 +39,11 @@ export function identityTransform3D(): Transform3D {
 }
 
 /** The nine row-major components of the basis. */
-function basisComponents({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
+export function basisComponents({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): BasisComponents {
   return [x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z];
 }
 
-function transformOf(n: BasisComponents, origin: Vector3): Transform3D {
+export function transformOf(n: BasisComponents, origin: Vector3): Transform3D {
   return {
     basis_x: { x: n[0], y: n[1], z: n[2] },
     basis_y: { x: n[3], y: n[4], z: n[5] },
