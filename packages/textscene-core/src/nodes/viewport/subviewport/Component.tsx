@@ -27,6 +27,7 @@ import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { viewportSize, viewportTargetSize } from './targetSize';
+import { useInCanvasOverWorld } from './canvasOverWorldScope';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -53,7 +54,11 @@ function MixedViewportControls({
  * not read: it leaves the parent view untouched. The subtree mounts once, since a
  * second mount registers a second Object3D at the same path.
  */
-export function SubViewport({ node, children }: NodeComponentProps) {
+export function SubViewport(props: NodeComponentProps) {
+  return useInCanvasOverWorld() ? null : <SubViewportMount {...props} />;
+}
+
+function SubViewportMount({ node, children }: NodeComponentProps) {
   const properties = node.properties as SubViewportProperties;
   const { own_world_3d: ownWorld3D } = properties;
   const workspace = useCanvasWorkspace();

@@ -22,6 +22,7 @@ import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
+import { CanvasOverWorldScopeProvider } from './canvasOverWorldScope';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
 import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
@@ -331,7 +332,7 @@ export function OffscreenViewportPass({
       <PendingSuspense>
         <CanvasOverWorld world={target.texture} size={layoutSize} anchor={backdropAnchor} />
       </PendingSuspense>
-      {canvasOverWorld}
+      <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
     </>
   ) : null;
   const canvasPortal =
