@@ -42,7 +42,6 @@ catalog:
   '@types/react-dom': ^19.3
   '@react-three/fiber': ^9.8
   '@react-three/drei': ^10.7
-  '@react-three/postprocessing': ^3.2
   postprocessing: ^6.39.5
   '@react-three/test-renderer': ^9.1
   # NOTE: ^5 latest (5.2.0) declares peer vite ^4.2 || ^5 || ^6 || ^7 || ^8,

@@ -1,7 +1,7 @@
 /**
  * Godot's `tonemap.glsl` `main()`: one fragment shader from a glow blend, a tone curve and the
  * colour adjustments. Its own module, so asking "does this environment glow?" pulls in no tone
- * curve, and the in-material tonemap path pulls in no glow.
+ * curve.
  */
 
 /*
@@ -188,14 +188,14 @@ vec3 godotDither3(vec2 fragCoord) {
 /**
  * `tonemap.glsl:950-957`: the dither lands on the sRGB value just before the 8-bit store. The
  * fragment counts from the top-left corner, as in Godot. The colour goes back to linear for the
- * composer's encode, clamped at 0 as the 8-bit store clamps, since three's encode takes `pow`.
+ * effect pass's encode, clamped at 0 as the 8-bit store clamps, since three's encode takes `pow`.
  */
 const DEBANDING_GLSL = /* glsl */ `  vec2 godotFragCoord = vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
   color = godotToLinear(max(godotToSrgb(color) + godotDither3(godotFragCoord), vec3(0.0)));`;
 
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on
- * sRGB values, then back to linear, because the composer encodes the output as Godot's sRGB
+ * sRGB values, then back to linear, because the effect pass encodes the output as Godot's sRGB
  * framebuffer does. The decode clamps at 0, as Godot's 8-bit store does: three's encode takes
  * `pow` of the value, and GLSL leaves `pow` of a negative undefined.
  */

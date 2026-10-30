@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import type { RawNode, RawScene } from '../parser/types.js';
 import { findParentNode } from './linterUtils.js';
 import { resolveNodePath } from './nodePathResolve.js';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 /**
  * A wide, shallow tree (root -> groups -> leaves), so the cost under test is
@@ -46,7 +47,12 @@ function collectLeaves(roots: RawNode[]): RawNode[] {
 
 /** Simulate what a semantic rule does per node: resolve its parent + a NodePath. */
 function runLookupsForEveryNode(roots: RawNode[], leaves: RawNode[]): void {
-  const scene: RawScene = { nodes: roots, externalResources: [], internalResources: [] };
+  const scene: RawScene = {
+    ...INSTANTIABLE_SCENE,
+    nodes: roots,
+    externalResources: [],
+    internalResources: [],
+  };
   for (const leaf of leaves) {
     findParentNode(roots, leaf);
     // "../Nonexistent" so resolution climbs (touching the parent index) and then

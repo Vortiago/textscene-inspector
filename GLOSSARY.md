@@ -50,7 +50,14 @@ _Avoid_: a pass mutating a node it was handed.
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
 The merged node keeps it, and the render path's per-owner tables read it. A `%Name` that the table lacks at the instance root reads the table of the instance's owner next, which the file above answers.
+An inherited root's table lands this file's root-owned settings after the base's names, so the base's first claimant keeps a name (`node.cpp:2222-2233`). The parse answers a path below this file's claimant as unknowable.
+A setting whose `owner=` walk enters one instance, and whose `owner_uid_path=` names an owner in another or the file root, carries an **Owner hand-off**.
 _Avoid_: a second composer of an instance's table.
+
+**Owner hand-off** (`OwnerHandOff`, `resources/ownerHandOff.ts`):
+The link between a setting in the table of the instance an `owner=` walk enters and its copy in the table of the owner the `owner_uid_path=` finds. Godot takes the trail's owner only where the walk finds no node (`packed_scene.cpp:157-168`).
+The first instance collapses before the second, and its graft reports what it decided for each hand-off. The copy lands only where the walk found nothing. Where the trail's owner is the file root, the live tree decides the claim, and the parse answers a path through that `%Name`, or below its claimant, as unknowable.
+_Avoid_: deciding the owner in the parse, which cannot see the instance.
 
 **ExtResource**:
 An external file reference, written `ExtResource("id")` and declared by an `[ext_resource]` heading with a `uid=` and a `path="res://…"`.
@@ -230,7 +237,7 @@ _Avoid_: "re-rooted node" for a node that keeps its name.
 
 **Content trail** (`followContentTrail` in `godot/scene/packedScene.ts`):
 The ids of an `owner_uid_path=` or `parent_id_path=` that follow the id of an instance heading. The trail continues in that instance's scene, and in its base scene where its own headings lack the id (`packed_scene.cpp:1947-2005`).
-The **Seating** seats the node under the instance heading with the rest of the trail, and the instance's graft follows it over the cached scene. A trail that finds nothing there re-roots the node and gives it no owner. A `parent=` or `owner=` walk that enters an instance and finds nothing takes the trail the same way.
+The **Seating** seats the node under the instance heading with the rest of the trail, and the instance's graft follows it over the cached scene. A trail that finds nothing there re-roots the node and gives it no owner. A `parent=` or `owner=` walk that enters an instance and finds nothing takes the trail the same way, through an **Owner hand-off** where the owner is outside that instance.
 _Avoid_: resolving the ids of a trail against the headings of one file alone.
 
 **Rule arm** (`linter/ruleArms.ts`):
@@ -635,7 +642,7 @@ _Avoid_: "include", "prefab".
 
 **Instance root merge** (`mergeInstanceRoot`, applied through `LiveTree.stepOf`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer takes the merge from its **Live step** so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
+Every consumer takes the merge from its **Live step** so node paths agree. A lone `.glb` instance is not merged: the node that instances a `.glb` is the **GLB root**. An instance of a scene that Godot refuses to instantiate is not merged either: the node stays as authored, with its own children, and draws as a failed load.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
 **GLB root**:

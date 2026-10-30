@@ -59,7 +59,6 @@
   "peerDependencies": {
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
-    "@react-three/postprocessing": "catalog:",
     "postprocessing": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -68,7 +67,6 @@
   "devDependencies": {
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
-    "@react-three/postprocessing": "catalog:",
     "@textscene/core": "workspace:*",
     "@textscene/dev-kit": "workspace:*",
     "@types/node": "catalog:",

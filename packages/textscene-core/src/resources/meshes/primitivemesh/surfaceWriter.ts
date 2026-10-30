@@ -10,6 +10,12 @@ export type Vec2 = readonly [number, number];
 export type Vec3 = readonly [number, number, number];
 export type Vec4 = readonly [number, number, number, number];
 
+/** The four bones that skin one vertex, and the four weights they take. */
+export interface VertexBones {
+  indices: Vec4;
+  weights: Vec4;
+}
+
 /**
  * The thirds a `create_mesh_array` splits its UV atlas into: the columns of a BoxMesh or PrismMesh,
  * the rows of a CapsuleMesh. Godot holds each in a `float`, so each rounds to single precision.
@@ -48,7 +54,7 @@ export class SurfaceWriter {
    * The bones of the vertex just written, Godot's `bone_indices` and `bone_weights` pushed beside
    * its position. Call it for every vertex or for none.
    */
-  bones(indices: Vec4, weights: Vec4): void {
+  bones({ indices, weights }: VertexBones): void {
     // Indexed, not spread, as in `vertex`.
     this.boneIndices.push(indices[0], indices[1], indices[2], indices[3]);
     this.boneWeights.push(weights[0], weights[1], weights[2], weights[3]);

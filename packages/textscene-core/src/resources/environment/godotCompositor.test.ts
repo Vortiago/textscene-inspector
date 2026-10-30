@@ -397,7 +397,7 @@ describe('compositeProgram — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-9
     expect(glsl.indexOf('mix(vec3(0.5)')).toBeLessThan(glsl.indexOf('mix(vec3(dot('));
   });
 
-  it('decodes back to linear last, since the composer encodes the output itself', () => {
+  it('decodes back to linear last, since the effect pass encodes the output itself', () => {
     const glsl = adjusted({});
     expect(glsl.indexOf('mix(vec3(dot(')).toBeLessThan(glsl.indexOf('godotToLinear('));
     expect(glsl.indexOf('godotToLinear(')).toBeLessThan(glsl.indexOf('outputColor ='));

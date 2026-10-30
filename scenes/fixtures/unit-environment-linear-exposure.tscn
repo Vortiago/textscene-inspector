@@ -1,7 +1,7 @@
-; One variable: `tonemap_exposure` 1.6 under LINEAR, with no glow, no blended surface and no
-; adjustment, so three draws the curve per material and the colour background through it. Godot
-; multiplies by the exposure before every tone mapper, LINEAR included (`tonemap.glsl:868-874`).
-; The other exposure goldens use FILMIC or mount the compositor, which applies the exposure itself.
+; One variable: `tonemap_exposure` 1.6 under LINEAR, with no glow and no adjustment, so the tone
+; pass applies the exposure alone to the box and the colour background. Godot multiplies by the
+; exposure before every tone mapper, LINEAR included (`tonemap.glsl:868-874`). The other exposure
+; goldens use FILMIC or add glow or an adjustment.
 
 [gd_scene format=3]
 

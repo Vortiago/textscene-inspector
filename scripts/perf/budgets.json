@@ -1,6 +1,6 @@
 {
   "depth-fog": {
-    "drawCalls": 12,
+    "drawCalls": 13,
     "steps": {
       "Scene draw": {
         "drawCalls": 4,
@@ -16,6 +16,10 @@
       },
       "Fog": {
         "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
         "runs": 1
       },
       "Other": {
@@ -25,7 +29,7 @@
     }
   },
   "fog-volume": {
-    "drawCalls": 12,
+    "drawCalls": 13,
     "steps": {
       "Scene draw": {
         "drawCalls": 4,
@@ -41,6 +45,10 @@
       },
       "Fog": {
         "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 1,
         "runs": 1
       },
       "Other": {
@@ -121,10 +129,10 @@
     }
   },
   "demo-3d-platformer": {
-    "drawCalls": 318,
+    "drawCalls": 308,
     "steps": {
       "Scene draw": {
-        "drawCalls": 204,
+        "drawCalls": 194,
         "runs": 1
       },
       "Depth prepass": {
@@ -137,7 +145,7 @@
       },
       "Fog": {
         "drawCalls": 0,
-        "runs": 2
+        "runs": 1
       },
       "Compositor": {
         "drawCalls": 1,

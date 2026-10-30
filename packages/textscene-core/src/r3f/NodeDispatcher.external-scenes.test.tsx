@@ -17,6 +17,7 @@ import { TscnParser } from '../parser/TscnParser';
 
 import './nodes/index';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
@@ -35,6 +36,7 @@ function makeChildCubeScene(): TscnScene {
     { id: 'Material_1', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0.2, 0.6, 0.9, 1)' } },
   ];
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       makeNode('ChildCube', 'Node3D', {
         children: [

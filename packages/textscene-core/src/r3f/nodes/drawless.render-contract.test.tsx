@@ -14,9 +14,12 @@ import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
+import { nodeRegistry } from '../../core/NodeRegistry';
+import { heading } from '../../parser/testing/parserKit';
 
-// Side-effect import: registers every node component (same barrel the apps use).
+// Side-effect imports: every node component (the barrel the apps use) and every node parser.
 import './index';
+import '../../parser/TscnParser';
 
 /** Drivers of other nodes: each draws nothing, but its own component reads its animation data. */
 const DRIVER_TYPES_WITH_OWN_COMPONENT = ['AnimationPlayer', 'AnimationTree'];
@@ -37,6 +40,11 @@ function baseOf(type: string): Base {
 
 function workspaceOf(base: Base): CanvasWorkspace {
   return base === 'Node2D' ? '2d' : '3d';
+}
+
+/** What the parser of `type` reads from an empty node, so a component that draws from its own properties finds them. */
+function parsedDefaults(type: string) {
+  return nodeRegistry.getRegistration(type)?.parser(heading(type, { name: 'Subject' }), {});
 }
 
 /** A hidden, moved and turned subject with one child, in the space its base defines. */
@@ -79,7 +87,13 @@ function hiddenMovedSubject(type: string, base: Base): TscnNode {
     type,
     children: [kid],
     // A GeometryInstance3D parse carries its instance state, which every other type ignores.
-    properties: { ...GEOMETRY_INSTANCE_DEFAULTS, name: 'Subject', transform, visible: false },
+    properties: {
+      ...parsedDefaults(type),
+      ...GEOMETRY_INSTANCE_DEFAULTS,
+      name: 'Subject',
+      transform,
+      visible: false,
+    },
   };
 }
 

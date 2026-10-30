@@ -16,7 +16,6 @@ import {
   repoPath,
   walkSources,
 } from '../testing/sourceScan';
-import { warningsOf } from '../testing/logWarnings';
 import { MATERIAL_OF_PROGRAM, programShader, type ProgramName } from '../testing/patchedFragment';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
 import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
@@ -44,8 +43,6 @@ import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
 import { INSTANCE_LAYERS_CHUNK } from '../instanceLayers/instanceLayersChunk';
 import { SCENE_ROWS_CHUNK } from '../sceneRows/sceneRowsChunk';
-import { installToneMapping } from '../../resources/environment/toneMapping';
-import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { lightUniforms } from '../lighting2d/testing/lightUniforms';
 
 const NO_SHADER = (): ProgramShader => ({ vertexShader: '', fragmentShader: '', uniforms: {} });
@@ -284,23 +281,6 @@ describe('the chunks the patches add', () => {
   it('are all named in the list', () => {
     const added = Object.keys(installedShaderChunks()).filter((name) => !THREE_CHUNK_NAMES.has(name));
     expect(added).toEqual(ADDED_CHUNKS);
-  });
-});
-
-describe('the tone mapping curve', () => {
-  const EVERY_TONE_MAPPER = Object.values(ToneMapper);
-
-  it.each(EVERY_TONE_MAPPER)('splices into three’s chunk without a warning for mode %s', (mode) => {
-    const before = THREE.ShaderChunk.tonemapping_pars_fragment;
-    const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
-    let restore = (): void => {};
-    const warnings = warningsOf(() => {
-      restore = installToneMapping(gl, { mode });
-    });
-    const spliced = THREE.ShaderChunk.tonemapping_pars_fragment;
-    restore();
-    expect(warnings).toEqual([]);
-    expect(spliced).not.toBe(before);
   });
 });
 

@@ -6,7 +6,6 @@ import {
   LiveTree,
   liveTreeOf,
   resolveLiveEntry,
-  walkLiveTree,
   type CachedGlbSource,
   type CachedSceneSource,
   type LiveStep,
@@ -47,14 +46,22 @@ export function contextOver(
   };
 }
 
+/** The path of every node of `main`'s live tree, with each scene in `scenes` cached. */
+export function livePathsOver(main: TscnScene, scenes: Readonly<Record<string, TscnScene>>): string[] {
+  return livePathsOf(liveTreeOf(main.nodes, contextOver(main, scenes)));
+}
+
 /**
- * The path of every node of `main`'s live tree, with each scene in `scenes` cached.
+ * The path of every node of `tree`, parents before children.
  *
  * @canonical In tests, the path of every node of a live tree
  */
-export function livePathsOver(main: TscnScene, scenes: Readonly<Record<string, TscnScene>>): string[] {
+export function livePathsOf(tree: LiveTree): string[] {
   const paths: string[] = [];
-  walkLiveTree(main.nodes, contextOver(main, scenes), ({ path }) => paths.push(path));
+  tree.fold(undefined, ({ path }, _, descend) => {
+    paths.push(path);
+    descend(undefined);
+  });
   return paths;
 }
 
@@ -89,4 +96,26 @@ export function liveTreeOfText(content: string, scenes: Readonly<Record<string, 
   const main = parse(content);
   const loaded = Object.fromEntries(Object.entries(scenes).map(([path, text]) => [path, parse(text)]));
   return liveTreeOf(main.nodes, contextOver(main, loaded));
+}
+
+/** A scene file with two parentless headings, which Godot refuses to instantiate (`packed_scene.cpp:207`). */
+export const TWO_PARENTLESS_ROOTS = `[gd_scene format=3]
+
+[node name="One" type="Node3D"]
+
+[node name="Two" type="Node3D"]
+`;
+
+/** A scene file with a node `Main`, whose child `Body` instances `scenePath` and has one child, `Mark`. */
+export function mainInstancing(scenePath: string): string {
+  return `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="${scenePath}" id="1"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1")]
+
+[node name="Mark" type="Node3D" parent="Body"]
+`;
 }

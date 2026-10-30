@@ -878,6 +878,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gpu Particles Collision Gizmos",
+    "file": "unit-gpu-particles-collision-gizmos.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpu Particles Collision Height Field 3d",
     "file": "unit-gpu-particles-collision-height-field-3d.tscn",
     "category": "Other"
@@ -1838,6 +1843,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Scene Buffer Half Float",
+    "file": "unit-scene-buffer-half-float.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Script Create Dialog",
     "file": "unit-script-create-dialog.tscn",
     "category": "Other"
@@ -2220,6 +2230,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tonemap Agx Shadow",
     "file": "unit-tonemap-agx-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Trail Inherited Base",
+    "file": "unit-trail-inherited-base.tscn",
     "category": "Other"
   },
   {
@@ -2840,6 +2855,16 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Trail Foreign Owner In Content",
+    "file": "integration-trail-foreign-owner-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Inherited Root Claim",
+    "file": "integration-trail-inherited-root-claim.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Trail Name In Content",
     "file": "integration-trail-name-in-content.tscn",
     "category": "Integration - Multi-Node"
@@ -2852,6 +2877,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Trail Owner In Content",
     "file": "integration-trail-owner-in-content.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Other Instance",
+    "file": "integration-trail-owner-other-instance.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Trail Owner Root Fallback",
+    "file": "integration-trail-owner-root-fallback.tscn",
     "category": "Integration - Multi-Node"
   },
   {
@@ -3197,6 +3232,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance 3d Skinned Ribbon",
     "file": "unit-mesh-instance-3d-skinned-ribbon.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 3d Skinned Tube",
+    "file": "unit-mesh-instance-3d-skinned-tube.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

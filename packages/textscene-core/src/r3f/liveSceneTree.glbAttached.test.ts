@@ -11,6 +11,7 @@ import { contextOver } from './liveSceneTree.testkit';
 import { makeNode } from '../parser/testing/parserKit';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { tagAsLoadedGlb } from '../resources/formats/glb/testing/loadedGlbTags';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 import '../nodes/node/index';
 
 const GLB_PATH = 'res://rig.glb';
@@ -27,6 +28,7 @@ function rigGlb(): THREE.Object3D {
 }
 
 const GLB_SCENE: TscnScene = {
+  ...INSTANTIABLE_SCENE,
   nodes: [makeNode('rig', 'GLBSceneRoot', { properties: { glbPath: GLB_PATH } as Record<string, unknown> })],
   externalResources: [],
   internalResources: [],
@@ -156,6 +158,7 @@ describe('nodes below a property override of an instanced GLB, in the live tree'
 describe('a GLB instanced by the root of a sub-scene, in the live tree', () => {
   it('lists its objects below the merged node', () => {
     const wrapper: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [makeNode('WrapperRoot', 'Node', { instance: 'ExtResource("rig")' })],
       externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }],
       internalResources: [],

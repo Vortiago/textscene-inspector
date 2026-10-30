@@ -16,6 +16,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene } from '../../../parser/types';
+import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 const SCENE = `[gd_scene format=3]
 
@@ -172,6 +173,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
 [node name="Player" parent="." instance=ExtResource("4_ray")]
 `;
     const playerScene: TscnScene = {
+      ...INSTANTIABLE_SCENE,
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
           children: [makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] })],

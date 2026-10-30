@@ -12,9 +12,6 @@ catalogs:
     '@react-three/fiber':
       specifier: ^9.8
       version: 9.8.0
-    '@react-three/postprocessing':
-      specifier: ^3.2
-      version: 3.2.2
     '@react-three/test-renderer':
       specifier: ^9.1
       version: 9.1.0
@@ -143,6 +140,9 @@ overrides:
   '@vscode/test-web>playwright': ^1.64.1
 
 patchedDependencies:
+  '@react-three/test-renderer@9.1.0':
+    hash: sjdsuf45wabduifr4zvoxtlnli
+    path: patches/@react-three__test-renderer@9.1.0.patch
   fastnoise-lite@1.1.1:
     hash: ixba4smauncpcw4rwdgn4b76aa
     path: patches/fastnoise-lite@1.1.1.patch
@@ -316,9 +316,6 @@ importers:
       '@react-three/fiber':
         specifier: 'catalog:'
         version: 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
-      '@react-three/postprocessing':
-        specifier: 'catalog:'
-        version: 3.2.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.0))(react@19.3.0)(three@0.186.0)
       '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-core
@@ -522,9 +519,6 @@ importers:
       '@react-three/fiber':
         specifier: 'catalog:'
         version: 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
-      '@react-three/postprocessing':
-        specifier: 'catalog:'
-        version: 3.2.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.0))(react@19.3.0)(three@0.186.0)
       brotli:
         specifier: 'catalog:'
         version: 1.3.3
@@ -555,7 +549,7 @@ importers:
     devDependencies:
       '@react-three/test-renderer':
         specifier: 'catalog:'
-        version: 9.1.0(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)
+        version: 9.1.0(patch_hash=sjdsuf45wabduifr4zvoxtlnli)(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)
       '@testing-library/dom':
         specifier: 'catalog:'
         version: 10.4.2
@@ -1329,14 +1323,6 @@ packages:
         optional: true
       react-native:
         optional: true
-
-  '@react-three/postprocessing@3.2.2':
-    resolution: {integrity: sha512-y/ePU8gytOCAjQMy7At9gZFr/Xi/YGSHlNEir3fCY88+FoBpzL4RsTpzyKnrGshcD8wmJ5ppI5kWzz0dtNPkWQ==}
-    peerDependencies:
-      '@react-three/fiber': '>=9.7.0'
-      postprocessing: ^6.36.0
-      react: ^19.0.0
-      three: '>= 0.156.0'
 
   '@react-three/test-renderer@9.1.0':
     resolution: {integrity: sha512-bLjG+cdpVW69wG1W3TuziHrHvA1JQbLesYddY94QMaFF8yzpgwovWK8hGaHWBET1dvsCPIOWVNYHbKAbRj2xSg==}
@@ -3070,12 +3056,6 @@ packages:
 
   mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
-
-  n8ao@2.0.1:
-    resolution: {integrity: sha512-MoP1QKUdj4/3cKEnhFl917t0eQwWGER1l43ckz5mNOPyYWGRDGQbVoTOQz/VBvy01in6QVNG+AL6Xxx5AjZBYA==}
-    peerDependencies:
-      postprocessing: '>=6.30.0'
-      three: '>=0.137'
 
   nanoid@3.3.20:
     resolution: {integrity: sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==}
@@ -4888,18 +4868,7 @@ snapshots:
       - '@types/react'
       - immer
 
-  '@react-three/postprocessing@3.2.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.0))(react@19.3.0)(three@0.186.0)':
-    dependencies:
-      '@react-three/fiber': 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
-      maath: 0.10.8(@types/three@0.186.0)(three@0.186.0)
-      n8ao: 2.0.1(postprocessing@6.39.5(three@0.186.0))(three@0.186.0)
-      postprocessing: 6.39.5(three@0.186.0)
-      react: 19.3.0
-      three: 0.186.0
-    transitivePeerDependencies:
-      - '@types/three'
-
-  '@react-three/test-renderer@9.1.0(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)':
+  '@react-three/test-renderer@9.1.0(patch_hash=sjdsuf45wabduifr4zvoxtlnli)(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(react@19.3.0)(three@0.186.0)':
     dependencies:
       '@react-three/fiber': 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
       react: 19.3.0
@@ -6662,11 +6631,6 @@ snapshots:
       - supports-color
 
   mute-stream@0.0.8: {}
-
-  n8ao@2.0.1(postprocessing@6.39.5(three@0.186.0))(three@0.186.0):
-    dependencies:
-      postprocessing: 6.39.5(three@0.186.0)
-      three: 0.186.0
 
   nanoid@3.3.20: {}
 

@@ -22,6 +22,7 @@ import './nodes/index';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
 import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../godot/scene/animation';
+import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 
 // AnimationLibrary with one "slide" clip moving a sibling Target.
 const INTERNAL: TscnInternalResource[] = [
@@ -65,6 +66,7 @@ function makeAnimationPlayerNode(): TscnNode {
 /** Sub-scene: an Area3D root 'Coin' holding the AnimationPlayer + its Target. */
 function makeCoinScene(): TscnScene {
   return {
+    ...INSTANTIABLE_SCENE,
     nodes: [
       {
         rawProperties: {},

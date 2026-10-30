@@ -1,6 +1,6 @@
 /** Where a heading's `parent_id_path=` seats it, over the headings of one scan. */
 import { describe, expect, it } from 'vitest';
-import { idTrailEnd } from './idTrail';
+import { idTrailEnd, simplifiedLivePath } from './idTrail';
 import type { NodeOrigin, RawNode } from './types';
 
 function origin(
@@ -46,5 +46,19 @@ describe('idTrailEnd', () => {
       origin('Orphan', { idTrail: [20, 5, 6] }),
     ];
     expect(idTrailEnd(origins, 2, placed)).toEqual({ kind: 'inBase', heading: 1, rest: [5, 6] });
+  });
+});
+
+describe('simplifiedLivePath', () => {
+  it('keeps the segment of a content trail as a name', () => {
+    expect(simplifiedLivePath('Other/../Player/:3333/Cap')).toBe('Player/:3333/Cap');
+  });
+
+  it('removes the segment of a content trail that a .. climbs out of', () => {
+    expect(simplifiedLivePath('Player/:3333/../Inner')).toBe('Player/Inner');
+  });
+
+  it('simplifies a path with no content trail as a NodePath', () => {
+    expect(simplifiedLivePath('A/../B:visible')).toBe('B:visible');
   });
 });

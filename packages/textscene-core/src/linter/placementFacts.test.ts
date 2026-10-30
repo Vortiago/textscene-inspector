@@ -43,7 +43,6 @@ describe('placementFacts', () => {
       seatedOrphans: new Set(),
       rootWithParent: undefined,
       emptyParentHeadings: [],
-      refusesToInstantiate: false,
       idRecoveries: new Map(),
     });
   });
@@ -80,10 +79,6 @@ describe('placementFacts', () => {
     const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 5 }], ['Orphan', 'Missing', { idTrail: [5] }]);
     expect(names(facts.orphanedNodes)).toEqual(['Orphan']);
     expect(facts.reRootedNames.size).toBe(0);
-  });
-
-  it('reports a file Godot refuses to instantiate', () => {
-    expect(factsOf(['Root'], ['Stray'], ['Orphan', 'Missing']).refusesToInstantiate).toBe(true);
   });
 
   it('names heading 0 as the root when it declares a parent', () => {

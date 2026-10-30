@@ -202,7 +202,12 @@ item/0/mesh = ExtResource("1_tree")
     it('keeps the linter-only facts off the scene', () => {
       const { scene } = parser.parse(content, simpleCreator);
 
-      expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
+      expect(Object.keys(scene).sort()).toEqual([
+        'externalResources',
+        'internalResources',
+        'nodes',
+        'refusesToInstantiate',
+      ]);
     });
 
     it('leaves out a heading whose node creator returns null', () => {

@@ -5,12 +5,19 @@
  * the loader's caches, so the React consumers re-run it when a sub-scene loads.
  */
 import type * as THREE from 'three';
-import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type {
+  SceneScope,
+  TscnNode,
+  TscnExternalResource,
+  TscnInternalResource,
+  TscnScene,
+} from '../parser/types.js';
 import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { followTrailIn } from '../resources/sceneTrail.js';
 import type { TrailWalk } from '../godot/scene/packedScene.js';
-import { holdsDeepChildren, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
+import { mayHandBack, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
+import { withRootFallbacksDecided } from '../resources/ownerHandOff.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
@@ -30,8 +37,11 @@ import { NOTHING_CACHED, answeredOnce, keptWhileAnswered } from './cacheSources.
  * absent pool means "this cache does not know", and the walk reads it as empty.
  */
 export interface CachedSceneSource {
-  getCached: (path: string) => (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined;
+  getCached: (path: string) => LoadedScene | null | undefined;
 }
+
+type LoadedScene = Partial<SceneScope> &
+  Pick<TscnScene, 'refusesToInstantiate'> & { nodes: readonly TscnNode[] };
 
 type CachedScene = NonNullable<ReturnType<CachedSceneSource['getCached']>>;
 
@@ -65,8 +75,8 @@ export interface LiveTreeEntry {
 /**
  * The node as the tree and viewport render it: a single-root `.tscn` instance
  * collapses into its sub-scene root (Instance root merge, ADR-0013), carrying the
- * sub-scene's scope. A `.glb` or multi-root instance, a non-instance, a scene not
- * yet cached and a scene already in `scope.instancedScenePaths` (cyclic
+ * sub-scene's scope. A `.glb` instance, a non-instance, a scene not yet cached, a scene
+ * Godot refuses to instantiate and a scene already in `scope.instancedScenePaths` (cyclic
  * instancing) return unchanged.
  *
  * An inherited sub-scene root collapses over its base first, as Godot instantiates the base
@@ -76,11 +86,18 @@ export interface LiveTreeEntry {
  */
 function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
   const own = scopeOf(node, scope);
-  const scenePath = loadableScenePath(node, own);
-  if (!scenePath) return node;
-  const cached = sceneCache.getCached(scenePath);
-  if (!cached) return node;
-  return collapseOver(node, own, scenePath, cached, sceneCache);
+  return collapseInstance(node, own, loadedInstance(node, own, sceneCache), sceneCache);
+}
+
+/** The collapse of `node` over the scene it instances, unchanged where there is none or Godot refuses it. */
+function collapseInstance(
+  node: LiveNode,
+  own: SceneScope,
+  instanced: LoadedInstance | null,
+  sceneCache: CachedSceneSource
+): LiveNode {
+  if (!instanced || instanced.isRefused) return node;
+  return collapseOver(node, own, instanced.scenePath, instanced.cached, sceneCache);
 }
 
 /**
@@ -92,6 +109,62 @@ function loadableScenePath(node: LiveNode, own: SceneScope): string | null {
   const scenePath = liveInstancePath(node, own);
   const enclosingScenePaths = own.instancedScenePaths ?? [];
   return scenePath && !enclosingScenePaths.includes(scenePath) ? scenePath : null;
+}
+
+/** The scene a node instances, once loaded. */
+interface LoadedInstance {
+  scenePath: string;
+  cached: CachedScene;
+  /** Whether Godot refuses to instantiate the scene, which makes the instance a failed load. */
+  isRefused: boolean;
+}
+
+/**
+ * The loaded scene `node` instances where its scope is `own`, or null where it instances none,
+ * a scene that already encloses it, or one the cache has not loaded.
+ */
+function loadedInstance(
+  node: LiveNode,
+  own: SceneScope,
+  sceneCache: CachedSceneSource
+): LoadedInstance | null {
+  const scenePath = loadableScenePath(node, own);
+  if (!scenePath) return null;
+  const cached = sceneCache.getCached(scenePath);
+  if (!cached) return null;
+  return { scenePath, cached, isRefused: isRefusedScene(cached, scenePath, own, sceneCache) };
+}
+
+/**
+ * Whether Godot refuses to instantiate `cached`: the parse says so, or its root inherits a base
+ * that Godot refuses (`packed_scene.cpp:227-232`), or one of its nodes instances a scene that Godot
+ * refuses (`:262-265`). `outer` is the scope that instances `cached`, whose enclosing scenes the walk
+ * extends, so a scene that instances itself ends it.
+ */
+function isRefusedScene(
+  cached: CachedScene,
+  scenePath: string,
+  outer: SceneScope,
+  sceneCache: CachedSceneSource
+): boolean {
+  if (cached.refusesToInstantiate) return true;
+  const chain = [...(outer.instancedScenePaths ?? []), scenePath];
+  return refusals(cached, chain, { scenes: sceneCache }, ({ scenes }) =>
+    holdsRefusedInstance(cached, chain, scenes)
+  );
+}
+
+/** Whether a node of `cached`, its root included, is an instance of a scene that Godot refuses. */
+function holdsRefusedInstance(
+  cached: CachedScene,
+  chain: readonly string[],
+  scenes: CachedSceneSource
+): boolean {
+  const content = contentScopeOf(cached, chain);
+  const isRefusedAt = (node: TscnNode): boolean =>
+    (loadedInstance(node, scopeOf(node, content), scenes)?.isRefused ?? false) ||
+    node.children.some(isRefusedAt);
+  return cached.nodes.some(isRefusedAt);
 }
 
 /** The collapse of `node` over `cached`, the scene at `scenePath` that the caller read once. */
@@ -110,9 +183,15 @@ function collapseOver(
   return mergeInstanceRoot(node, subScene, { outer, content: rootContent }, cache) ?? node;
 }
 
-/** `collapseLiveNode` over `sceneCache`, as the seating takes it. */
+/**
+ * `collapseLiveNode` over `sceneCache`, as the seating takes it. It keeps each collapse, as an
+ * owner hand-off asks the instance that hands it off before the frame seats that instance.
+ */
 function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
-  return (node, scope) => collapseLiveNode(node, scope, sceneCache);
+  const collapsedIn = perObject((node: LiveNode) =>
+    perObject((scope: SceneScope) => collapseLiveNode(node, scope, sceneCache))
+  );
+  return (node, scope) => collapsedIn(node)(scope);
 }
 
 /**
@@ -120,6 +199,16 @@ function collapserOver(sceneCache: CachedSceneSource): CollapseInstance {
  * single-path source of a tree row. Two keep each from replacing the other's composition.
  */
 const COMPOSITIONS_PER_CHAIN = 2;
+
+/**
+ * Written only by {@link isRefusedScene}, keyed by the cached scene object and the chain of scenes
+ * that encloses it, since the cycle check reads the chain. An answer stays valid while the cache
+ * answers what the walk read.
+ */
+const refusals = keptWhileAnswered<CachedScene, readonly string[], { scenes: CachedSceneSource }, boolean>({
+  sameVariant: sameElements,
+  perVariant: COMPOSITIONS_PER_CHAIN,
+});
 
 /**
  * Written only by {@link composedSubScene}, keyed by the cached scene object. A scene composes once
@@ -144,7 +233,7 @@ function composedSubScene(
   sceneCache: CachedSceneSource
 ): { nodes: readonly LiveNode[] } {
   const root = cached.nodes[0];
-  if (cached.nodes.length !== 1 || !root || !(root.instance || holdsDeepChildren(root))) return cached;
+  if (cached.nodes.length !== 1 || !root || !(root.instance || mayHandBack(root))) return cached;
   // The recording source also sees the reads of a base's own composition, so a change of any base ends this entry.
   return compositions(cached, content.instancedScenePaths ?? [], { scenes: sceneCache }, ({ scenes }) =>
     composedOverBases(cached, root, content, scenes)
@@ -167,19 +256,22 @@ function composedOverBases(
  * The nodes of one file with the children their instances handed back seated where the file's own
  * walk puts them. The same array where no instance hands one back.
  *
- * @param roots the file's nodes, collapsed over the base an inherited root names
+ * @param authored the file's nodes, collapsed over the base an inherited root names
  * @param scope the scope the file's nodes resolve against
  * @param seating the nodes as the parse seated them, whose `%Name` claims the file answers a walk with
  */
 function seatedFile(
-  roots: readonly LiveNode[],
+  authored: readonly LiveNode[],
   scope: SceneScope,
   sceneCache: CachedSceneSource,
   seating: readonly LiveNode[]
 ): readonly LiveNode[] {
-  const root = roots[0];
-  if (roots.length !== 1 || !root || !(holdsDeepChildren(root) || root.escaped)) return roots;
+  const first = authored[0];
+  if (authored.length !== 1 || !first || !(mayHandBack(first) || first.escaped)) return authored;
   const collapse = collapserOver(sceneCache);
+  // Only a root that inherits no base claims for a root fallback, and such a root does not collapse.
+  const roots = first === seating[0] ? withRootFallbacksDecided(seating, scope, collapse) : authored;
+  const root = roots[0]!;
   // A root that inherits a base, not merged over it yet, hands back through its collapse.
   const isUnmerged = root.instance !== undefined && root.uniqueNames === undefined;
   const handedBack = (isUnmerged ? collapse(root, scope) : root).escaped ?? [];
@@ -217,12 +309,11 @@ export function rootScope(ctx: LiveTreeContext): SceneScope {
 }
 
 /**
- * One group of live children. `origin` is the React key namespace. `merged` and
- * `subscene` children resolve in the sub-scene's scope, `inline` and `glb`
- * children in the outer scope.
+ * One group of live children. `origin` is the React key namespace. `merged`
+ * children resolve in the sub-scene's scope, `inline` and `glb` children in the outer scope.
  */
 export interface LiveChildGroup {
-  origin: 'merged' | 'inline' | 'subscene' | 'glb';
+  origin: 'merged' | 'inline' | 'glb';
   children: readonly LiveNode[];
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
@@ -233,23 +324,22 @@ function inlineGroup(children: readonly TscnNode[], scope: SceneScope): LiveChil
 }
 
 /**
- * What is below a node that does not collapse: one `inline` group for a non-instance,
- * `inline` plus `subscene` for a multi-root instance, and one `glb` group for a
- * GLBSceneRoot. A single-root instance collapses, and {@link mergedGroups} gives its groups.
+ * What is below a node that does not collapse: one `inline` group for a non-instance, and one
+ * `glb` group for a GLBSceneRoot. A single-root instance collapses, and {@link mergedGroups}
+ * gives its groups.
  * The node that instances a lone GLB is the GLB root, so a loaded GLB's objects are `glb`
  * groups and its own children `inline` groups, in the order `index=` gives. `scope` is
  * the one of the group the node sits in, which the node's own `scope` replaces. A sub-scene's
  * groups read the sub-scene's pools from the cache, and their `instancedScenePaths` gain the
- * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
- * gets one `inline` group.
+ * sub-scene. An instance of a scene that already encloses it (cyclic instancing), and of one Godot
+ * refuses to instantiate, gets one `inline` group.
  */
 function liveChildGroups(
   node: LiveNode,
-  scope: SceneScope,
-  sceneCache: CachedSceneSource,
+  own: SceneScope,
+  instanced: LoadedInstance | null,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
-  const own = scopeOf(node, scope);
   const inlineOnly = (): LiveChildGroup[] => [inlineGroup(node.children, own)];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
@@ -257,32 +347,14 @@ function liveChildGroups(
   const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
   if (glbObject) return glbInstanceGroups(glbObject, node.children, own);
 
-  const scenePath = loadableScenePath(node, own);
-  if (!scenePath) return inlineOnly();
-
-  const cached = sceneCache.getCached(scenePath);
-  if (!cached) return inlineOnly();
+  if (!instanced || instanced.isRefused) return inlineOnly();
 
   // A lone GLB is the instancing node's own content: its objects sit directly below that node, as
   // the GLB root's children do in Godot (packed_scene.cpp:261-264). Until the GLB loads, the
   // node's children stay inline.
-  const instancedGlbPath = loneGlbRootPath(cached.nodes);
-  if (instancedGlbPath) {
-    const object = glbCache?.getCached(instancedGlbPath);
-    return object ? glbInstanceGroups(object, node.children, own) : inlineOnly();
-  }
-
-  // Inline children are authored in the host scene, so they keep the outer scope.
-  const groups: LiveChildGroup[] = [];
-  if (node.children.length > 0) {
-    groups.push(inlineGroup(node.children, own));
-  }
-  groups.push({
-    origin: 'subscene',
-    children: cached.nodes,
-    scope: contentScopeOf(cached, [...(own.instancedScenePaths ?? []), scenePath]),
-  });
-  return groups;
+  const instancedGlbPath = loneGlbRootPath(instanced.cached.nodes);
+  const object = instancedGlbPath ? glbCache?.getCached(instancedGlbPath) : undefined;
+  return object ? glbInstanceGroups(object, node.children, own) : inlineOnly();
 }
 
 /**
@@ -359,6 +431,8 @@ export interface LiveStep {
    * instance, else the node's own scope ({@link scopeOf}), else the one of the group it sits in.
    */
   readonly scope: SceneScope;
+  /** Whether the node instances a scene that Godot refuses to instantiate, which draws as a failed load. */
+  readonly isRefusedInstance: boolean;
   /** What is below the node, in the order the tree shows it. */
   readonly groups: readonly LiveChildGroup[];
 }
@@ -375,18 +449,34 @@ function liveStep(
   glbCache?: CachedGlbSource
 ): LiveStep {
   const instancePath = liveInstancePath(node, groupScope);
-  const merged = collapseLiveNode(node, groupScope, sceneCache);
+  const own = scopeOf(node, groupScope);
+  const instanced = loadedInstance(node, own, sceneCache);
+  const merged = collapseInstance(node, own, instanced, sceneCache);
   if (merged === node) {
-    const groups = liveChildGroups(node, groupScope, sceneCache, glbCache);
-    return { node, isMerged: false, instancePath, scope: scopeOf(node, groupScope), groups };
+    const groups = liveChildGroups(node, own, instanced, glbCache);
+    return {
+      node,
+      isMerged: false,
+      instancePath,
+      scope: own,
+      isRefusedInstance: instanced?.isRefused ?? false,
+      groups,
+    };
   }
-  const groups = mergedGroups(merged, scopeOf(node, groupScope), sceneCache, glbCache);
-  return { node: merged, isMerged: true, instancePath, scope: groups[0]!.scope, groups };
+  const groups = mergedGroups(merged, own, sceneCache, glbCache);
+  return {
+    node: merged,
+    isMerged: true,
+    instancePath,
+    scope: groups[0]!.scope,
+    isRefusedInstance: false,
+    groups,
+  };
 }
 
-/** Whether `group` holds sub-scene roots or GLB objects, which draw after the node's authored children. */
+/** Whether `group` holds GLB objects, which draw after the node's authored children. */
 export function isInjected(group: LiveChildGroup): boolean {
-  return group.origin === 'subscene' || group.origin === 'glb';
+  return group.origin === 'glb';
 }
 
 /** Whether `group` is what the node instances, which the instance node owns as the root of it. */
