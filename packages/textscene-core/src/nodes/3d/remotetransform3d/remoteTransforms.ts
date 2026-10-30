@@ -188,18 +188,27 @@ function newLocalFromGlobals(relay: LiveLink, placement: Placement): Transform2D
   return multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
 }
 
+/** The target's local transform when the relay and the target meet in local coordinates. */
+function newLocalFromLocals(
+  relay: LiveLink,
+  { target, flags, relayChain, targetChain }: Placement
+): Transform2DColumns {
+  return composeSelected2D(
+    localTransform2D(targetChain.get(target.path)!),
+    localTransform2D(relayChain.get(relay.path)!),
+    flags
+  );
+}
+
 function placeTarget2D(relay: LiveLink, tree: LiveTree, placed: Map<string, NodePatch>): void {
   const placement = placementOf(relay, tree, placed, 'Node2D');
   if (!placement) return;
-  const { target, flags, relayChain, targetChain } = placement;
+  const { target, flags } = placement;
 
+  // Unlike a 3D relay, a 2D relay in local coordinates pushes on load (measured on Godot 4.6.3).
   const newLocal = flags.useGlobal
     ? newLocalFromGlobals(relay, placement)
-    : composeSelected2D(
-        localTransform2D(targetChain.get(target.path)!),
-        localTransform2D(relayChain.get(relay.path)!),
-        flags
-      );
+    : newLocalFromLocals(relay, placement);
 
   // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
   const { position, rotation, scale, skew } = transform2DDecompose(newLocal);

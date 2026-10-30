@@ -660,9 +660,12 @@ ${flags}
 
 const LOCAL_PARENT = { rotation: -0.6, scale: { x: 1, y: 3 }, position: { x: 7, y: 8 } };
 
+const globalLocalTarget = (flags: string): number[][] =>
+  globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT);
+
 describe('applyRemoteTransforms (2D) in local coordinates', () => {
   it('all flags give the relay local transform to the target local transform', () => {
-    expectMatrix(globalTarget2D(localRelayScene2D(''), LOCAL_PARENT), [
+    expectMatrix(globalLocalTarget(''), [
       [0.890694, 0.675769],
       [0.372056, 2.758045],
       [256.76349, 18.87185],
@@ -671,7 +674,7 @@ describe('applyRemoteTransforms (2D) in local coordinates', () => {
 
   it('rotation only takes the local relay direction at the local target scale', () => {
     const flags = 'update_position = false\nupdate_scale = false';
-    expectMatrix(globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT), [
+    expectMatrix(globalLocalTarget(flags), [
       [1.781388, 1.351539],
       [0.496074, 3.677393],
       [5.522354, 23.55045],
@@ -680,7 +683,7 @@ describe('applyRemoteTransforms (2D) in local coordinates', () => {
 
   it('scale only takes the local relay scale along the local target axes', () => {
     const flags = 'update_position = false\nupdate_rotation = false';
-    expectMatrix(globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT), [
+    expectMatrix(globalLocalTarget(flags), [
       [0.644531, 0.096143],
       [1.636312, 3.665407],
       [5.522354, 23.55045],
@@ -689,7 +692,7 @@ describe('applyRemoteTransforms (2D) in local coordinates', () => {
 
   it('position only takes the local relay origin', () => {
     const flags = 'update_rotation = false\nupdate_scale = false';
-    expectMatrix(globalTarget2D(localRelayScene2D(flags), LOCAL_PARENT), [
+    expectMatrix(globalLocalTarget(flags), [
       [1.289063, 0.192287],
       [2.181748, 4.887209],
       [256.76349, 18.87185],
