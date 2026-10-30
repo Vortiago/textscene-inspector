@@ -138,7 +138,7 @@ describe('bundledNotices', () => {
 
   it('carries the Brotli decoder notice when the bundle holds the decoder', () => {
     const decoderFile = {
-      path: 'node_modules/.pnpm/brotli@1.3.3/node_modules/brotli/dec/decode.js',
+      path: 'node_modules/.pnpm/brotli@2.1.0/node_modules/brotli/dec/decode.js',
       text: '/* Copyright 2013 Google Inc. All Rights Reserved. */',
     };
 
