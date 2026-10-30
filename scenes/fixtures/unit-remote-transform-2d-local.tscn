@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+; The one variable: use_global_coordinates is false on a relay under a parent at (200, 100). Godot
+; sets the target's local transform to the relay's local transform when the scene loads
+; (remote_transform_2d.cpp:89-107), so the square stands at (440, 224). Every other RemoteTransform
+; golden relays in global coordinates, so none of them shows a regression in it.
+
+[node name="Root" type="Node2D"]
+
+[node name="Target" type="Polygon2D" parent="."]
+position = Vector2(300, 440)
+color = Color(0.2, 0.7, 0.9, 1)
+polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
+
+[node name="Offset" type="Node2D" parent="."]
+position = Vector2(200, 100)
+
+[node name="Relay" type="RemoteTransform2D" parent="Offset"]
+position = Vector2(440, 224)
+rotation = 0.3
+remote_path = NodePath("../../Target")
+use_global_coordinates = false
