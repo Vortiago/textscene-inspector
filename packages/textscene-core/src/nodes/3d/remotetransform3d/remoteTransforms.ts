@@ -126,8 +126,8 @@ function placementOf(
   // measured). `_update_remote` keys off the relay's transform-changed notification, which the
   // global path satisfies on load and the local path does not.
   if (!flags.useGlobal) return null;
-  // Godot's 2D relay returns here (`remote_transform_2d.cpp:55-57`). The 3D relay would write the
-  // target's own transform back, so the two agree.
+  // With no part flagged, the 2D relay returns (`remote_transform_2d.cpp:55-57`) and the 3D relay
+  // writes the target's own transform back, so neither moves the target.
   if (!(flags.updatePosition || flags.updateRotation || flags.updateScale)) return null;
 
   return {
