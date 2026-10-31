@@ -1500,6 +1500,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>The <code>min</code>, <code>max</code> and <code>curve</code> parameter mechanism, on <code>scale_amount</code> and <code>angle</code>.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Split scale</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-cpuparticles2d-split-scale-godot.png" alt="Godot render of Split scale">
+          <img class="img-ours" src="images/unit-cpuparticles2d-split-scale-ours.png" alt="Our render of Split scale">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>split_scale</code> swaps the <code>scale_amount</code> curve for <code>scale_curve_x</code> and <code>scale_curve_y</code>, so a quad stretches on one axis alone.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Colour ramps</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -1573,7 +1590,7 @@ tr:last-child td{border-bottom:0}
 <p>Where strict rejects a value, the lenient parser substitutes Godot's constructor default. <code>lifetime</code> reads as <code>1.0</code>, <code>spread</code> as <code>45.0</code>, a malformed <code>gravity</code> as <code>Vector2(0, 980)</code> and an out-of-range <code>emission_shape</code> as <code>POINT</code>. An <code>amount</code> below <code>1</code> clamps to <code>1</code>. <code>draw_order</code> is not range-checked, since Godot's setter accepts any int and reads everything but <code>1</code> as <code>Index</code>.</p>
 <p>A <code>_min</code> above its <code>_max</code> loads as Godot's paired setters leave it. The key the file lists last wins, so <code>angle_min = 5</code> then <code>angle_max = 2</code> gives a range of 2 to 2. A pair with one key written moves the default of the other: <code>scale_amount_min = 3</code> gives 3 to 3 (<code>cpu_particles_2d.cpp:352-376</code>). A bound that is <code>inf</code> or <code>nan</code> is not read: the previewer keeps the default for it, and <code>cpuparticles2d-non-finite-param-bound</code> reports it. Godot loads the non-finite value.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Needs runtime</strong> The emitter runs in Godot and freezes here, at Godot's own <code>preprocess</code> moment or else at the substituted window described above.</li><li><strong>Approximated</strong> An emitter without <code>use_fixed_seed</code> takes a fixed constant seed, so its particles sit in plausible places where Godot randomises them on every run.</li><li><strong>Approximated</strong> <code>split_scale</code>, <code>scale_curve_x</code> and <code>scale_curve_y</code> are not read, so a quad stretched on one axis draws square.</li><li><strong>Approximated</strong> With more than one point in <code>emission_points</code>, the previewer picks from the same set as Godot's unsaved process-wide RNG, but in another order.</li><li><strong>Approximated</strong> A RING emitter fills the same ring as Godot, in other places: Godot's unsaved process-wide RNG places each particle.</li></ul></div>
+<ul><li><strong>Needs runtime</strong> The emitter runs in Godot and freezes here, at Godot's own <code>preprocess</code> moment or else at the substituted window described above.</li><li><strong>Approximated</strong> An emitter without <code>use_fixed_seed</code> takes a fixed constant seed, so its particles sit in plausible places where Godot randomises them on every run.</li><li><strong>Approximated</strong> With more than one point in <code>emission_points</code>, the previewer picks from the same set as Godot's unsaved process-wide RNG, but in another order.</li><li><strong>Approximated</strong> A RING emitter fills the same ring as Godot, in other places: Godot's unsaved process-wide RNG places each particle.</li></ul></div>
     </article>
     <article class="sheet" data-type="CPUParticles3D" hidden>
       <header class="sheet-head">
