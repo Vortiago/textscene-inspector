@@ -30,10 +30,13 @@ function createAccumulationTarget(type: THREE.TextureDataType): THREE.WebGLRende
 /**
  * 32-bit float, as the canvas shader sums its lights (canvas.glsl:727-760): unclamped, and no
  * half-float conversion, which lavapipe truncates. WebGL2 blends into a float attachment only with
- * `EXT_float_blend`, absent on some mobile GPUs, so those keep a half float.
+ * `EXT_float_blend` and filters one only with `OES_texture_float_linear`, both absent on some
+ * mobile GPUs, so those keep a half float.
  */
 function accumulatorType(gl: THREE.WebGLRenderer): THREE.TextureDataType {
-  return gl.extensions.has('EXT_float_blend') ? THREE.FloatType : THREE.HalfFloatType;
+  const canBlendAndFilter =
+    gl.extensions.has('EXT_float_blend') && gl.extensions.has('OES_texture_float_linear');
+  return canBlendAndFilter ? THREE.FloatType : THREE.HalfFloatType;
 }
 
 /**

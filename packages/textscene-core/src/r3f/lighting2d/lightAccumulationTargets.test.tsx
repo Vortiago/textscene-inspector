@@ -1,6 +1,7 @@
 /**
  * The 2D light accumulator is a 32-bit float where the renderer can blend into one, and a half float
- * where it cannot: WebGL2 blends into a float attachment only with `EXT_float_blend`.
+ * where it cannot: WebGL2 blends into a float attachment only with `EXT_float_blend` and filters
+ * a float texture only with `OES_texture_float_linear`.
  */
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
@@ -21,8 +22,12 @@ function textureTypeWith(extensions: readonly string[]): THREE.TextureDataType |
 }
 
 describe('useAccumulationTargets', () => {
-  it('accumulates in a 32-bit float where the renderer blends into one', () => {
-    expect(textureTypeWith(['EXT_float_blend'])).toBe(THREE.FloatType);
+  it('accumulates in a 32-bit float where the renderer blends into one and filters it', () => {
+    expect(textureTypeWith(['EXT_float_blend', 'OES_texture_float_linear'])).toBe(THREE.FloatType);
+  });
+
+  it('accumulates in a half float where the renderer cannot filter a float texture', () => {
+    expect(textureTypeWith(['EXT_float_blend'])).toBe(THREE.HalfFloatType);
   });
 
   it('accumulates in a half float where the renderer cannot blend into a float', () => {
