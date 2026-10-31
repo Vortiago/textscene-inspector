@@ -9,12 +9,13 @@ import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import * as THREE from 'three';
 
 function createAccumulationTarget(): THREE.WebGLRenderTarget {
-  // Half-float keeps the sum unclamped. NoColorSpace makes three write the raw sRGB-space value.
+  // 32-bit float, as the canvas shader sums its lights (canvas.glsl:727-760): unclamped, and no
+  // half-float conversion, which lavapipe truncates. NoColorSpace writes the raw sRGB-space value.
   // The stencil carries the shadows, and three's default of off renders silently as no shadows.
-  // WebGL2 allocates one DEPTH24_STENCIL8 attachment beside the half-float colour, so the depth
-  // buffer comes along unused: the pass draws with `depthTest` off.
+  // WebGL2 allocates one DEPTH24_STENCIL8 attachment beside the colour, so the depth buffer comes
+  // along unused: the pass draws with `depthTest` off.
   const rt = new THREE.WebGLRenderTarget(1, 1, {
-    type: THREE.HalfFloatType,
+    type: THREE.FloatType,
     depthBuffer: true,
     stencilBuffer: true,
   });

@@ -53,19 +53,19 @@ float to the driver as the clear colour (`renderer_canvas_render_rd.cpp`),
 so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 `pnpm ref:godot` renders on Vulkan through lavapipe, which gives 76.
 `--rendering-driver opengl3` gives 77, and so does the previewer's WebGL clear. This
-1/255 gap is not a parity defect.
+1/255 gap is not a parity defect. A translucent fill over that clear reads one level higher on lavapipe, which rounds a blend differently from SwiftShader.
 
 ## Where the previewer's side renders
 
 `pnpm ref:godot` renders on lavapipe, Mesa's software Vulkan driver, and every capture that measures against Godot renders on it too: Chromium runs ANGLE's Vulkan backend over lavapipe (`launchGodotComparisonBrowser`). The visual goldens keep SwiftShader, so their baselines are equal on every host.
 
-The two drivers rasterise differently. SwiftShader snaps each vertex to 1/16 px and lavapipe to 1/256 px, so a quad edge within 1/32 px of a pixel centre covers that pixel on one and not on the other. That gap shows as lone edge pixels, for example on a CPUParticles2D quad. Lavapipe also converts a float to a half float by truncation, where a GPU rounds to nearest, so a half-float accumulator such as the 2D light sum reads up to one level low. The launch fails when WebGL does not report an llvmpipe renderer, and never falls back to SwiftShader.
+The two drivers rasterise differently. SwiftShader snaps each vertex to 1/16 px and lavapipe to 1/256 px, so a quad edge within 1/32 px of a pixel centre covers that pixel on one and not on the other. That gap shows as lone edge pixels, for example on a CPUParticles2D quad. The launch fails when WebGL does not report an llvmpipe renderer, and never falls back to SwiftShader.
 
 ## Why a sampled sRGB texture can read one step off in Godot
 
 Godot defines no sRGB decode on this path. A `source_color` sampler reads the texture's sRGB view (`rd_texture_srgb` in `material_storage.cpp`), which is `DATA_FORMAT_R8G8B8A8_SRGB` for an RGB8 or RGBA8 image and for a ViewportTexture's render target (`texture_storage.cpp`). The driver decodes the texel.
 
-`pnpm ref:godot` runs on lavapipe, which decodes with a cubic polynomial (`lp_bld_format_srgb.c`, called from `lp_bld_format_soa.c`, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. A comparison capture decodes a texture that the previewer samples through an sRGB view on lavapipe too, so the previewer reads the same kind of offset where Godot does not sample. A GPU decodes exactly. This gap is not a parity defect.
+`pnpm ref:godot` runs on lavapipe, which decodes with a cubic polynomial (`lp_bld_format_srgb.c`, called from `lp_bld_format_soa.c`, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. Godot's canvas samples the plain texture format unless its 2D target is HDR (`texture_storage.cpp:754`), so a texture that the previewer samples through an sRGB view reads lavapipe's decode offset on the previewer's side only. A GPU decodes exactly. This gap is not a parity defect.
 
 ## Why anisotropic filtering can differ from the Godot reference
 
