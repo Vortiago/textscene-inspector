@@ -29,6 +29,7 @@ function input(overrides: Partial<ParticleSimInput> = {}): ParticleSimInput {
     curves: NO_CURVES,
     colorRamp: null,
     colorInitialRamp: null,
+    scaleCurves: { x: null, y: null },
     emissionTransform: TRANSFORM2D_IDENTITY,
     ...overrides,
   };
@@ -405,6 +406,62 @@ describe('simulateFrozenPose', () => {
       expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(3, 5);
       expect(Math.hypot(particle.transform.c, particle.transform.d)).toBeCloseTo(3, 5);
     }
+  });
+
+  describe('split_scale', () => {
+    const constantCurve = (value: number): Curve => ({
+      points: [0, 1].map((x) => ({
+        position: { x, y: value },
+        leftTangent: 0,
+        rightTangent: 0,
+        leftMode: CurveTangentMode.FREE,
+        rightMode: CurveTangentMode.FREE,
+      })),
+      minValue: 0,
+      maxValue: 4,
+      minDomain: 0,
+      maxDomain: 1,
+      bakeResolution: DEFAULT_BAKE_RESOLUTION,
+    });
+    const axisLengths = (overrides: Partial<ParticleSimInput>) =>
+      simulateFrozenPose(input({ props: props({ amount: '1', split_scale: 'true' }), ...overrides })).map(
+        (p) => [Math.hypot(p.transform.a, p.transform.b), Math.hypot(p.transform.c, p.transform.d)]
+      );
+
+    it('stretches each quad axis by its own curve (`cpu_particles_2d.cpp:1075-1086`)', () => {
+      const [x, y] = axisLengths({ scaleCurves: { x: constantCurve(2), y: constantCurve(0.5) } })[0]!;
+      expect(x).toBeCloseTo(2, 5);
+      expect(y).toBeCloseTo(0.5, 5);
+    });
+
+    it('leaves an axis without a curve at 1', () => {
+      const [x, y] = axisLengths({ scaleCurves: { x: constantCurve(3), y: null } })[0]!;
+      expect(x).toBeCloseTo(3, 5);
+      expect(y).toBeCloseTo(1, 5);
+    });
+
+    it('ignores the `scale_amount` curve, which only the unsplit branch reads', () => {
+      const curves = NO_CURVES.slice();
+      curves[CPUParticlesParameter.SCALE] = constantCurve(4);
+      const [x, y] = axisLengths({ curves, scaleCurves: { x: null, y: null } })[0]!;
+      expect([x, y]).toEqual([1, 1].map((one) => expect.closeTo(one, 5)));
+    });
+
+    it('floors a zero or negative axis at 0.00001 (`:1142-1147`)', () => {
+      const [x, y] = axisLengths({ scaleCurves: { x: constantCurve(0), y: constantCurve(-2) } })[0]!;
+      expect(x).toBeCloseTo(0.00001, 9);
+      expect(y).toBeCloseTo(0.00001, 9);
+    });
+
+    it('is read only when `split_scale` is on', () => {
+      const pose = simulateFrozenPose(
+        input({
+          props: props({ amount: '1' }),
+          scaleCurves: { x: constantCurve(3), y: constantCurve(3) },
+        })
+      );
+      expect(Math.hypot(pose[0]!.transform.a, pose[0]!.transform.b)).toBeCloseTo(1, 5);
+    });
   });
 
   it('shapes `scale_amount` over the particle’s age through its Curve', () => {

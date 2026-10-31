@@ -99,8 +99,9 @@ function ParticleField({
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
 
-  const { curves, colorRamp, colorInitialRamp } = useParticleResources({
+  const { curves, scaleCurves, colorRamp, colorInitialRamp } = useParticleResources({
     params: props.params,
+    scaleCurves: { x: props.scale_curve_x, y: props.scale_curve_y },
     colorRamp: props.color_ramp,
     colorInitialRamp: props.color_initial_ramp,
   });
@@ -109,8 +110,15 @@ function ParticleField({
   const pose = useMemo(
     () =>
       simulate &&
-      simulate.simulateFrozenPose({ props, curves, colorRamp, colorInitialRamp, emissionTransform }),
-    [simulate, props, curves, colorRamp, colorInitialRamp, emissionTransform]
+      simulate.simulateFrozenPose({
+        props,
+        curves,
+        scaleCurves,
+        colorRamp,
+        colorInitialRamp,
+        emissionTransform,
+      }),
+    [simulate, props, curves, scaleCurves, colorRamp, colorInitialRamp, emissionTransform]
   );
 
   // Godot's quad is the texture's size, falling back to 1x1 when the emitter has none

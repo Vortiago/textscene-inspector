@@ -448,6 +448,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Split Scale",
+    "file": "unit-cpuparticles2d-split-scale.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Unpreprocessed",
     "file": "unit-cpuparticles2d-unpreprocessed.tscn",
     "category": "Other"

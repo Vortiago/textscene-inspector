@@ -78,15 +78,9 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   CPUParticles2D: {
-    linterOnly: [
-      ...PARTICLE_PARAM_KEYS,
-      // Per-axis scale curves, not implemented; a particle scales uniformly.
-      'split_scale',
-      'scale_curve_x',
-      'scale_curve_y',
-    ],
+    linterOnly: [...PARTICLE_PARAM_KEYS],
     reason:
-      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; the split-scale curves are validated but unrendered. draw_order is both parsed and validated now: its enum is 0-1 here, narrower than the 2D and 3D GPU twins, and out-of-range warns rather than errors because the setter bare-assigns.',
+      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; draw_order is both parsed and validated now: its enum is 0-1 here, narrower than the 2D and 3D GPU twins, and out-of-range warns rather than errors because the setter bare-assigns.',
   },
 
   TileMapLayer: {

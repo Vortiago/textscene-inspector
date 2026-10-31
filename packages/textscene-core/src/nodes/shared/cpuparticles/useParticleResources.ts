@@ -19,8 +19,8 @@ export interface ParticleResourceReferences {
   params: readonly ParticleParam[];
   colorRamp: string | undefined;
   colorInitialRamp: string | undefined;
-  /** CPUParticles3D's `scale_curve_x`, `_y` and `_z`, which only `split_scale` reads. */
-  scaleCurves?: { x: string | undefined; y: string | undefined; z: string | undefined };
+  /** The `scale_curve_x`, `_y` and `_z` of CPUParticles, which only `split_scale` reads. 2D has no z. */
+  scaleCurves?: { x: string | undefined; y: string | undefined; z?: string | undefined };
 }
 
 /** What the references resolve to, each null for none, a missing one, or a file still loading. */
@@ -35,17 +35,21 @@ export interface ParticleResources {
 /** The resources `references` name in the scene, which re-resolve as each `.tres` loads. */
 export function useParticleResources(references: ParticleResourceReferences): ParticleResources {
   const pools = useSceneResources();
-  const { params, colorRamp, colorInitialRamp, scaleCurves } = references;
+  const { params, colorRamp, colorInitialRamp } = references;
+  // The strings, not the `scaleCurves` object: a caller builds that object on each render.
+  const scaleX = references.scaleCurves?.x;
+  const scaleY = references.scaleCurves?.y;
+  const scaleZ = references.scaleCurves?.z;
   // Every named reference once, so the files to load and the resolve read one list.
   const named = useMemo(
     () => ({
-      scaleX: scaleCurves?.x,
-      scaleY: scaleCurves?.y,
-      scaleZ: scaleCurves?.z,
+      scaleX,
+      scaleY,
+      scaleZ,
       colorRamp,
       colorInitialRamp,
     }),
-    [scaleCurves, colorRamp, colorInitialRamp]
+    [scaleX, scaleY, scaleZ, colorRamp, colorInitialRamp]
   );
   const planFiles = useCallback(
     () => particleFiles([...paramCurveReferences(params), ...Object.values(named)], pools),
