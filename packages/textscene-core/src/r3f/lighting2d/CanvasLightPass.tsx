@@ -64,7 +64,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
   const [placements, registerItem] = usePlacementRegistry();
   const plans = useMemo(() => planLightLists(lights, placements), [lights, placements]);
 
-  // Half-float, since Godot clamps only after multiplying the light into the albedo: blending onto
+  // A float, since Godot clamps only after multiplying the light into the albedo: blending onto
   // the canvas would clamp first and flatten an `energy = 2` torch into a disc with no falloff.
   // Alpha holds the summed cookie coverage `light_only_alpha` (`color.a *= light_only_alpha`).
   const targets = useAccumulationTargets(planIds(plans, () => true));

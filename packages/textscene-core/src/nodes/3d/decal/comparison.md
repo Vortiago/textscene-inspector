@@ -74,7 +74,7 @@ The decal sampler follows the project setting `rendering/textures/decals/filter`
 
 Godot reads an albedo or emission map through the atlas's sRGB view, and a normal or ORM map through its linear view (`render_forward_clustered.cpp:3205-3213`). A WebGL texture has one view, so the atlas is an sRGB texture and a normal or ORM read encodes its texels back to bytes. A read that magnifies filters those bytes itself, as the linear view does.
 
-The reference driver and the browser's pick different taps for Nearest with Mipmaps and Anisotropic, so that filter differs from `pnpm ref:godot` (see the comparison README).
+A GPU picks different taps from lavapipe for Nearest with Mipmaps and Anisotropic, so that filter differs from `pnpm ref:godot` on a GPU (see the comparison README).
 
 ## Linting
 
