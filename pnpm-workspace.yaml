@@ -80,7 +80,7 @@ catalog:
   # three-mesh-bvh is a DIRECT dependency so pnpm satisfies the peer with this
   # version rather than resolving to drei's nested 0.8.3.
   three-bvh-csg: ^0.0.18
-  three-mesh-bvh: ^0.9.16
+  three-mesh-bvh: ^0.9.17
 
   # React Testing Library (WI-R3F-4) — DOM-level UI tests under jsdom
   '@testing-library/react': ^16.3.3
