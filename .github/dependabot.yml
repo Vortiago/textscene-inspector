@@ -14,6 +14,17 @@ updates:
           - 'minor'
           - 'patch'
 
+  # The publish tools of the release jobs, outside the pnpm workspace.
+  - package-ecosystem: 'npm'
+    directory: '/.github/release-tools'
+    schedule:
+      interval: 'weekly'
+    groups:
+      minor-and-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+
   - package-ecosystem: 'github-actions'
     directories: ['/', '/.github/actions/*']
     schedule:

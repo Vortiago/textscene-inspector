@@ -130,7 +130,10 @@
   },
   "pnpm": {
     "overrides": {
-      "@vscode/test-web>playwright": "$playwright"
+      "@vscode/test-web>playwright": "$playwright",
+      "glob@<14.0.2": "^14.0.2",
+      "minimatch@<11.0.1": "^11.0.1",
+      "zod@<4.6.6": "^4.6.6"
     },
     "patchedDependencies": {
       "fastnoise-lite@1.1.1": "patches/fastnoise-lite@1.1.1.patch",

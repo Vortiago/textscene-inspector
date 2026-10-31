@@ -2,7 +2,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Mocha from 'mocha';
-import { glob } from 'glob';
 import { SUITE_STARTED_MARKER_ENV } from './integration/integrationLaunch';
 
 /** Runs every `*.test.js` under `testsRoot`, and rejects when a test fails. */
@@ -14,8 +13,7 @@ export async function runSuite(testsRoot: string): Promise<void> {
     timeout: 20000,
   });
 
-  const files = await glob('**/**.test.js', { cwd: testsRoot });
-  files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));
+  testFilesUnder(testsRoot).forEach((file) => mocha.addFile(file));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
@@ -25,6 +23,18 @@ export async function runSuite(testsRoot: string): Promise<void> {
         resolve();
       }
     });
+  });
+}
+
+/**
+ * Every `*.test.js` path under `dir`. A plain walk, not `glob`: glob 14 needs `tracingChannel`, which the
+ * Node 18.15 of the oldest supported VS Code (1.85) lacks.
+ */
+function testFilesUnder(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) return testFilesUnder(entryPath);
+    return entry.name.endsWith('.test.js') ? [entryPath] : [];
   });
 }
 

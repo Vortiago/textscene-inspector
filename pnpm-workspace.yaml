@@ -71,7 +71,7 @@ catalog:
   '@types/pngjs': ^6.0.5
 
   # The PR labeler test reads .github/labeler.yml and matches its globs as actions/labeler does.
-  minimatch: ^10.2.5
+  minimatch: ^11.0.3
   yaml: ^2.9.1
 
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
