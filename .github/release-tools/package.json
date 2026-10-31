@@ -1,0 +1,12 @@
+{
+  "name": "textscene-release-tools",
+  "private": true,
+  "description": "The publish tools of the release jobs, installed from the committed lockfile with `npm ci`.",
+  "devDependencies": {
+    "@vscode/vsce": "4.1.0",
+    "ovsx": "1.3.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
+}
