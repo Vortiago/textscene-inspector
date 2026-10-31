@@ -36,7 +36,7 @@ void main() {
 /**
  * The cookie arrives decoded to linear (three tags loaded textures
  * `SRGBColorSpace`), so it is re-encoded to recover Godot's texel before the
- * light maths. Nothing is clamped: the accumulator is half-float, and Godot
+ * light maths. Nothing is clamped: the accumulator is a float, and Godot
  * clamps only after the light has been multiplied into an item's albedo.
  */
 export const FRAGMENT = /* glsl */ `

@@ -4,17 +4,18 @@
  * holds.
  */
 
+import { useThree } from '@react-three/fiber';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import * as THREE from 'three';
 
-function createAccumulationTarget(): THREE.WebGLRenderTarget {
-  // Half-float keeps the sum unclamped. NoColorSpace makes three write the raw sRGB-space value.
+function createAccumulationTarget(type: THREE.TextureDataType): THREE.WebGLRenderTarget {
+  // NoColorSpace writes the raw sRGB-space value.
   // The stencil carries the shadows, and three's default of off renders silently as no shadows.
-  // WebGL2 allocates one DEPTH24_STENCIL8 attachment beside the half-float colour, so the depth
-  // buffer comes along unused: the pass draws with `depthTest` off.
+  // WebGL2 allocates one DEPTH24_STENCIL8 attachment beside the colour, so the depth buffer comes
+  // along unused: the pass draws with `depthTest` off.
   const rt = new THREE.WebGLRenderTarget(1, 1, {
-    type: THREE.HalfFloatType,
+    type,
     depthBuffer: true,
     stencilBuffer: true,
   });
@@ -27,21 +28,34 @@ function createAccumulationTarget(): THREE.WebGLRenderTarget {
 }
 
 /**
+ * 32-bit float, as the canvas shader sums its lights (canvas.glsl:727-760): unclamped, and no
+ * half-float conversion, which lavapipe truncates. WebGL2 blends into a float attachment only with
+ * `EXT_float_blend` and filters one only with `OES_texture_float_linear`, both absent on some
+ * mobile GPUs, so those keep a half float.
+ */
+function accumulatorType(gl: THREE.WebGLRenderer): THREE.TextureDataType {
+  const canBlendAndFilter =
+    gl.extensions.has('EXT_float_blend') && gl.extensions.has('OES_texture_float_linear');
+  return canBlendAndFilter ? THREE.FloatType : THREE.HalfFloatType;
+}
+
+/**
  * One accumulator per id, disposed together when the set of ids changes. A list set changes only
  * when a light or a placement does, so rebuilding them all then costs less than tracking each.
  */
 export function useAccumulationTargets(ids: readonly string[]): ReadonlyMap<string, THREE.WebGLRenderTarget> {
   // Keyed on the joined ids, since a caller rebuilds the array every render. No id holds a newline.
   const signature = ids.join('\n');
+  const type = useThree((state) => accumulatorType(state.gl));
   const accumulation = useMemo(() => {
     const targets = new Map(
       signature
         .split('\n')
         .filter(Boolean)
-        .map((id) => [id, createAccumulationTarget()])
+        .map((id) => [id, createAccumulationTarget(type)])
     );
     return { targets, dispose: () => targets.forEach((target) => target.dispose()) };
-  }, [signature]);
+  }, [signature, type]);
   useDisposeOnRelease(accumulation);
   return accumulation.targets;
 }

@@ -4,6 +4,7 @@
  * Playwright's bundled Chromium, and any other value names that Playwright channel. A capture that
  * a pixel compare reads always gets the bundled Chromium, pinned by the lockfile.
  */
+/* global document */ // The readRasteriser callback runs in the browser.
 import { chromium } from 'playwright';
 
 /**
@@ -41,13 +42,65 @@ export function launchSwiftShaderBrowser() {
 }
 
 /**
- * The bundled Chromium for a capture that measures against Godot. It composites in the GPU
- * process, so a screenshot is the drawing buffer. The default software compositor adds a ring of
- * about 6% outside each hard top and left edge, which Godot does not draw. A golden never uses
- * this launch, since its baselines carry that ring.
+ * The Vulkan driver `pnpm ref:godot` renders on. A compositing launch does not set it, since the
+ * Vulkan loader finds no ICD of its own in a container without a GPU.
  */
-export function launchGodotComparisonBrowser() {
-  return launchBundled(GPU_COMPOSITED_ARGS);
+const LAVAPIPE_ICD = '/usr/share/vulkan/icd.d/lvp_icd.json';
+
+const LAVAPIPE_ARGS = [
+  '--ignore-gpu-blocklist',
+  '--use-gl=angle',
+  '--use-angle=vulkan',
+  '--enable-features=Vulkan',
+  '--use-vulkan=native',
+];
+
+/** Lavapipe snaps a vertex to 1/256 px. SwiftShader snaps to 1/16 px (4 bits). */
+const LAVAPIPE_SUBPIXEL_BITS = 8;
+
+/**
+ * The bundled Chromium for a capture that measures against Godot: ANGLE over lavapipe, the driver
+ * `pnpm ref:godot` uses, composited in the GPU process so a screenshot is the drawing buffer.
+ * It fails rather than fall back to SwiftShader, whose 1/16 px vertex snap moves quad edges.
+ */
+export async function launchGodotComparisonBrowser() {
+  const browser = await chromium.launch({
+    headless: true,
+    args: LAVAPIPE_ARGS,
+    env: { ...process.env, VK_ICD_FILENAMES: LAVAPIPE_ICD },
+  });
+  try {
+    assertLavapipe(await readRasteriser(browser));
+  } catch (error) {
+    await browser.close();
+    throw error;
+  }
+  return browser;
+}
+
+/** The renderer string and sub-pixel bits that WebGL reports in `browser`. */
+export async function readRasteriser(browser) {
+  const page = await browser.newPage();
+  try {
+    return await page.evaluate(() => {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      const info = gl?.getExtension('WEBGL_debug_renderer_info');
+      return {
+        renderer: info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'no WebGL2 renderer info',
+        subpixelBits: gl?.getParameter(gl.SUBPIXEL_BITS),
+      };
+    });
+  } finally {
+    await page.close();
+  }
+}
+
+function assertLavapipe({ renderer, subpixelBits }) {
+  if (/llvmpipe/i.test(renderer) && subpixelBits === LAVAPIPE_SUBPIXEL_BITS) return;
+  throw new Error(
+    `expected an llvmpipe renderer with ${LAVAPIPE_SUBPIXEL_BITS} sub-pixel bits, found "${renderer}" ` +
+      `with ${subpixelBits} sub-pixel bits. Install mesa-vulkan-drivers so ${LAVAPIPE_ICD} exists.`
+  );
 }
 
 function launchBundled(args) {

@@ -203,6 +203,9 @@ jobs:
 
       - uses: ./.github/actions/playwright
 
+      # The rasteriser gate in test:gpu needs lavapipe, the driver pnpm ref:godot renders on.
+      - run: sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
+
       - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
