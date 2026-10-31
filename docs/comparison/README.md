@@ -55,17 +55,23 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 `--rendering-driver opengl3` gives 77, and so does the previewer's WebGL clear. This
 1/255 gap is not a parity defect.
 
+## Where the previewer's side renders
+
+`pnpm ref:godot` renders on lavapipe, Mesa's software Vulkan driver, and every capture that measures against Godot renders on it too: Chromium runs ANGLE's Vulkan backend over lavapipe (`launchGodotComparisonBrowser`). The visual goldens keep SwiftShader, so their baselines are equal on every host.
+
+The two drivers rasterise differently. SwiftShader snaps each vertex to 1/16 px and lavapipe to 1/256 px, so a quad edge within 1/32 px of a pixel centre covers that pixel on one and not on the other. That gap shows as lone edge pixels, for example on a CPUParticles2D quad. The launch fails when WebGL does not report an llvmpipe renderer, and never falls back to SwiftShader.
+
 ## Why a sampled sRGB texture can read one step off in Godot
 
 Godot defines no sRGB decode on this path. A `source_color` sampler reads the texture's sRGB view (`rd_texture_srgb` in `material_storage.cpp`), which is `DATA_FORMAT_R8G8B8A8_SRGB` for an RGB8 or RGBA8 image and for a ViewportTexture's render target (`texture_storage.cpp`). The driver decodes the texel.
 
 `pnpm ref:godot` runs on lavapipe, which decodes with a cubic polynomial (`lp_bld_format_srgb.c`, called from `lp_bld_format_soa.c`, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. The previewer keeps the exact decode. This gap is not a parity defect.
 
-## Why anisotropic filtering differs from the Godot reference
+## Why anisotropic filtering can differ from the Godot reference
 
 `pnpm ref:godot` samples on lavapipe, which implements the anisotropic algorithm that the Vulkan specification suggests. It takes `ceil(rho_max / rho_min)` taps, capped at `1 << anisotropic_filtering_level`, spaced `1 / (N + 1)` of the longer screen-space gradient apart. Each tap is trilinear at the level of `rho_max / N` (`lp_bld_sample.c`, `lp_bld_sample_soa.c`, Mesa 25.2.8).
 
-The previewer asks the browser's driver for the same maximum and takes that driver's own tap pattern, so `texture_filter` 4 and 5 read 1.6 to 2.2 per channel (/255) from Godot at level 1 and above. A shader that ports the lavapipe taps into the previewer measures 0.563, 0.544, 0.548 and 0.550 at levels 1 to 4, against 2.179, 1.899, 1.625 and 1.605 for the browser's own taps. Level 0 measures 0.525. The port is an experiment and is not shipped. Godot asks the driver for a maximum and names no pattern, so a GPU's pattern differs from lavapipe's as well. This gap is not a parity defect.
+The previewer asks the browser's driver for the same maximum. A comparison capture runs on lavapipe too, so both sides take the same taps. A GPU's pattern differs from lavapipe's, so a previewer on a GPU differs from this reference. That gap is not a parity defect.
 
 ## 3D
 
