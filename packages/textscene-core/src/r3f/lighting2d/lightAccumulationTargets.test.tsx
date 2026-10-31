@@ -7,7 +7,9 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { useAccumulationTargets } from './lightAccumulationTargets.js';
 
-const renderer = vi.hoisted(() => ({ extensions: { has: (_name: string) => true } }));
+const renderer = vi.hoisted(() => ({
+  extensions: { has: (_name: string): boolean => false },
+}));
 vi.mock('@react-three/fiber', () => ({
   useThree: (select: (state: { gl: typeof renderer }) => unknown) => select({ gl: renderer }),
 }));
