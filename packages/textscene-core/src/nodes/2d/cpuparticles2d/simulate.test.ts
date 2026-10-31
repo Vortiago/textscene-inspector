@@ -424,9 +424,9 @@ describe('simulateFrozenPose', () => {
       bakeResolution: DEFAULT_BAKE_RESOLUTION,
     });
     const axisLengths = (overrides: Partial<ParticleSimInput>) =>
-      simulateFrozenPose(
-        input({ props: props({ amount: '1', split_scale: 'true', ...overrides.props }), ...overrides })
-      ).map((p) => [Math.hypot(p.transform.a, p.transform.b), Math.hypot(p.transform.c, p.transform.d)]);
+      simulateFrozenPose(input({ props: props({ amount: '1', split_scale: 'true' }), ...overrides })).map(
+        (p) => [Math.hypot(p.transform.a, p.transform.b), Math.hypot(p.transform.c, p.transform.d)]
+      );
 
     it('stretches each quad axis by its own curve (`cpu_particles_2d.cpp:1075-1086`)', () => {
       const [x, y] = axisLengths({ scaleCurves: { x: constantCurve(2), y: constantCurve(0.5) } })[0]!;
