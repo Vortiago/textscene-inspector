@@ -32,6 +32,7 @@
  */
 
 import { sampleCurve } from '../../../resources/curves/curve/sample';
+import type { Curve } from '../../../resources/curves/curve/types';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
@@ -89,6 +90,8 @@ const MAX_SIM_STEPS = 4096;
 export interface ParticleSimInput {
   props: CPUParticles2DProperties;
   curves: ParticleCurves;
+  /** `scale_curve_x` and `_y`, read only with `split_scale`. */
+  scaleCurves: { x: Curve | null; y: Curve | null };
   colorRamp: Gradient | null;
   colorInitialRamp: Gradient | null;
   /**
@@ -589,8 +592,7 @@ function addAcceleration(force: Vector2, direction: Vector2, texture: number, ra
 function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void {
   const { props, curves, colorRamp } = input;
 
-  const scaleCurve = curves[CPUParticlesParameter.SCALE] ?? null;
-  const texScale = scaleCurve ? f(sampleCurve(scaleCurve, tv)) : 1.0;
+  const texScale = sampledScale(input, tv);
 
   const hueCurve = curves[CPUParticlesParameter.HUE_VARIATION] ?? null;
   // Unlike every other slot this one defaults to 0, not 1: with no curve there
@@ -623,12 +625,31 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   }
 
   const scaleParam = props.params[CPUParticlesParameter.SCALE]!;
-  const drawnScale = f(texScale * lerpf(scaleParam.min, scaleParam.max, p.scaleRand));
-  const scale = drawnScale < MIN_SCALE ? f(MIN_SCALE) : drawnScale;
-  p.transform.a = f(p.transform.a * scale);
-  p.transform.b = f(p.transform.b * scale);
-  p.transform.c = f(p.transform.c * scale);
-  p.transform.d = f(p.transform.d * scale);
+  const drawn = lerpf(scaleParam.min, scaleParam.max, p.scaleRand);
+  const scaleX = atLeastMinScale(f(texScale.x * drawn));
+  const scaleY = atLeastMinScale(f(texScale.y * drawn));
+  p.transform.a = f(p.transform.a * scaleX);
+  p.transform.b = f(p.transform.b * scaleX);
+  p.transform.c = f(p.transform.c * scaleY);
+  p.transform.d = f(p.transform.d * scaleY);
+}
+
+function atLeastMinScale(axis: number): number {
+  return axis < MIN_SCALE ? f(MIN_SCALE) : axis;
+}
+
+/** A curve's value at `tv`, or 1 for none: the neutral factor (`cpu_particles_2d.cpp:1075-1093`). */
+function sampleOrOne(curve: Curve | null | undefined, tv: number): number {
+  return curve ? f(sampleCurve(curve, tv)) : 1.0;
+}
+
+/** `tex_scale`: the per-axis curves with `split_scale`, else the one curve on both axes. */
+function sampledScale(input: ParticleSimInput, tv: number): { x: number; y: number } {
+  if (input.props.split_scale) {
+    return { x: sampleOrOne(input.scaleCurves.x, tv), y: sampleOrOne(input.scaleCurves.y, tv) };
+  }
+  const scale = sampleOrOne(input.curves[CPUParticlesParameter.SCALE], tv);
+  return { x: scale, y: scale };
 }
 
 /**

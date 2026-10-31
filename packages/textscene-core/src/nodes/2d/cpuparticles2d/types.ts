@@ -58,6 +58,12 @@ export interface CPUParticles2DProperties extends Node2DProperties {
 
   /** Indexed by `CPUParticlesParameter`. Always `CPU_PARTICLES_PARAM_COUNT` long. */
   params: ParticleParam[];
+  /** Per-axis scale curves replace the `scale_amount` curve. */
+  split_scale: boolean;
+  /** Raw `SubResource("id")` reference to a `Curve` that scales x over particle age. */
+  scale_curve_x?: string;
+  /** Raw `SubResource("id")` reference to a `Curve` that scales y over particle age. */
+  scale_curve_y?: string;
 
   color: Rgba;
   /** Raw `SubResource("id")` reference to a `Gradient` sampled over particle age. */

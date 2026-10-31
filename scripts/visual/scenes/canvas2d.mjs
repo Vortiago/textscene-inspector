@@ -112,6 +112,7 @@ export const CANVAS_2D_SCENES = [
   // A RING fills the band between its radii, in other places than Godot's unsaved RNG picks.
   { name: 'cpuparticles2d-ring', file: 'unit-cpuparticles2d-ring.tscn', mode: '2d' },
   { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-split-scale', file: 'unit-cpuparticles2d-split-scale.tscn', mode: '2d' },
   // A crossed `_min`/`_max` pair and a lone `_min` load as Godot's paired setters leave them:
   // 100 and 100 for the velocity, 6 and 6 for the scale.
   { name: 'cpuparticles2d-crossed-range', file: 'unit-cpuparticles2d-crossed-range.tscn', mode: '2d' },

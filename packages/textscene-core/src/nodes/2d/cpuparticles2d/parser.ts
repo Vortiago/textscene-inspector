@@ -75,11 +75,14 @@ export function parseCPUParticles2D(
     gravity: vec2Or(properties.gravity, { x: 0, y: 980 }, `${context}.gravity`),
 
     params: parseParticleParams(properties),
+    split_scale: boolOr(properties.split_scale, false, context),
 
     color: colorOr(properties.color, { r: 1, g: 1, b: 1, a: 1 }),
   };
 
   if (properties.texture) result.texture = properties.texture;
+  if (properties.scale_curve_x) result.scale_curve_x = properties.scale_curve_x;
+  if (properties.scale_curve_y) result.scale_curve_y = properties.scale_curve_y;
   if (properties.color_ramp) result.color_ramp = properties.color_ramp;
   if (properties.color_initial_ramp) result.color_initial_ramp = properties.color_initial_ramp;
 

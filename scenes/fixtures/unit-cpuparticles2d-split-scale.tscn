@@ -1,0 +1,43 @@
+[gd_scene load_steps=4 format=3]
+
+; `split_scale` with `scale_curve_x` growing and `scale_curve_y` shrinking: the one variable, so the
+; quads stretch on each axis alone. The curves scene shows the unsplit `scale_amount_curve`.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[sub_resource type="Curve" id="Curve_grow"]
+_limits = [0.0, 1.0, 0.0, 1.0]
+_data = [Vector2(0, 0.2), 0.0, 1.0, 1, 1, Vector2(1, 1), 1.0, 0.0, 1, 1]
+point_count = 2
+
+[sub_resource type="Curve" id="Curve_shrink"]
+_limits = [0.0, 1.0, 0.0, 1.0]
+_data = [Vector2(0, 1), 0.0, -0.8, 1, 1, Vector2(1, 0.2), -0.8, 0.0, 1, 1]
+point_count = 2
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Split" type="CPUParticles2D" parent="."]
+position = Vector2(420, 324)
+amount = 24
+texture = ExtResource("1_ball")
+lifetime = 2.0
+preprocess = 2.0
+use_fixed_seed = true
+seed = 99
+fixed_fps = 30
+local_coords = true
+direction = Vector2(1, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 180.0
+initial_velocity_max = 180.0
+scale_amount_min = 5.0
+scale_amount_max = 5.0
+split_scale = true
+scale_curve_x = SubResource("Curve_grow")
+scale_curve_y = SubResource("Curve_shrink")

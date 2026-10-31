@@ -19,8 +19,8 @@ export interface ParticleResourceReferences {
   params: readonly ParticleParam[];
   colorRamp: string | undefined;
   colorInitialRamp: string | undefined;
-  /** CPUParticles3D's `scale_curve_x`, `_y` and `_z`, which only `split_scale` reads. */
-  scaleCurves?: { x: string | undefined; y: string | undefined; z: string | undefined };
+  /** The `scale_curve_x`, `_y` and `_z` of CPUParticles, which only `split_scale` reads. 2D has no z. */
+  scaleCurves?: { x: string | undefined; y: string | undefined; z?: string | undefined };
 }
 
 /** What the references resolve to, each null for none, a missing one, or a file still loading. */

@@ -23,6 +23,12 @@ Point, Sphere, Sphere Surface and Rectangle side by side. With `use_fixed_seed` 
 
 The `min`, `max` and `curve` parameter mechanism, on `scale_amount` and `angle`.
 
+## Split scale
+<!-- compare: image=unit-cpuparticles2d-split-scale status=done fixture=unit-cpuparticles2d-split-scale.tscn -->
+
+`split_scale` swaps the `scale_amount` curve for `scale_curve_x` and `scale_curve_y`, so a quad
+stretches on one axis alone.
+
 ## Colour ramps
 <!-- compare: image=unit-cpuparticles2d-color-ramp status=done fixture=unit-cpuparticles2d-color-ramp.tscn -->
 
@@ -155,8 +161,6 @@ A bound that is `inf` or `nan` is not read: the previewer keeps the default for 
   `preprocess` moment or else at the substituted window described above.
 - **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its
   particles sit in plausible places where Godot randomises them on every run.
-- **Approximated** `split_scale`, `scale_curve_x` and `scale_curve_y` are not read, so a
-  quad stretched on one axis draws square.
 - **Approximated** With more than one point in `emission_points`, the previewer picks from
   the same set as Godot's unsaved process-wide RNG, but in another order.
 - **Approximated** A RING emitter fills the same ring as Godot, in other places: Godot's
