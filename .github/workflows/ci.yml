@@ -209,13 +209,9 @@ jobs:
       - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
-          # The runner has no system Chrome, so the gate uses Playwright's bundled Chromium.
-          SHOWCASE_CHANNEL: bundled
 
       # The sky layer passes, which happy-dom cannot run, checked on the real shaders.
       - run: pnpm test:gpu
-        env:
-          SHOWCASE_CHANNEL: bundled
 
       # Each budget scene's draw calls and render step runs per frame, against its work budget.
       - run: pnpm test:perf

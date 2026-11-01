@@ -5,7 +5,6 @@
  * running app. It observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
  * carries a test hook.
  */
-import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { previewPort, readViewportMode, settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { installViewMatrixProbe, matricesEqual, formatMatrix, readViewProbe } from './cameraProbe.mjs';
@@ -135,10 +134,7 @@ class GateFailures {
 }
 
 async function main() {
-  const results = await withPreviewBrowser(
-    { ...previewPort('e2eWeb'), launchBrowser: launchShowcaseBrowser },
-    runScenarios
-  );
+  const results = await withPreviewBrowser(previewPort('e2eWeb'), runScenarios);
   const gate = new GateFailures();
   checkScenarios(gate, results);
   logMeasurements(results);

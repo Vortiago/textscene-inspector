@@ -1,8 +1,8 @@
 /**
- * The headless Chromium launches of the repo's harnesses, one per flag set and browser. The
- * showcase launches read SHOWCASE_CHANNEL: unset gives system Chrome ('chrome'), 'bundled' gives
- * Playwright's bundled Chromium, and any other value names that Playwright channel. A capture that
- * a pixel compare reads always gets the bundled Chromium, pinned by the lockfile.
+ * The headless Chromium launches of the repo's harnesses, one per flag set and browser. Only the
+ * showcase recording reads SHOWCASE_CHANNEL: unset gives system Chrome ('chrome'), 'bundled' gives
+ * Playwright's bundled Chromium, and any other value names that Playwright channel. Every gate and
+ * capture gets the bundled Chromium, pinned by the lockfile, so it runs with no system Chrome.
  */
 /* global document */ // The readRasteriser callback runs in the browser.
 import { chromium } from 'playwright';
@@ -30,7 +30,7 @@ export function launchShowcaseBrowser() {
  * SwiftShader backend also rasterises differently, so a golden never uses this launch.
  */
 export function launchGpuCompositedBrowser() {
-  return launchShowcaseChannel(GPU_COMPOSITED_ARGS);
+  return launchBundled(GPU_COMPOSITED_ARGS);
 }
 
 /**
