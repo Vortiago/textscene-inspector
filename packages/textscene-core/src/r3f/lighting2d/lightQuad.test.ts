@@ -47,11 +47,28 @@ function filteredMaterial(shadow: ShadowSampling = sampling()) {
 }
 
 describe('createLightQuadMaterial', () => {
+  it('fades the cookie over its outer half texel, as the transparent atlas border around it does', () => {
+    // Godot samples the cookie from a light atlas cleared to transparent black, so the linear
+    // filter blends the outermost texels toward 0 (`texture_storage.cpp:3204`). A clamped sample
+    // would hold the edge texel at full alpha.
+    const mat = material(Light2DBlendMode.MIX);
+    expect(mat.fragmentShader).toContain('sampleCookie(vLightUv)');
+    expect(mat.fragmentShader).not.toContain('texture2D(uCookie, vLightUv)');
+    expect(mat.uniforms.uCookieEdgeFade!.value).toBe(1);
+  });
+
+  it('keeps a nearest-filtered cookie whole to its edge, as a nearest tap reads one texel', () => {
+    const cookie = new THREE.Texture();
+    cookie.magFilter = THREE.NearestFilter;
+    const mat = createLightQuadMaterial({ cookie, color: WARM, energy: 1, blendMode: 0 });
+    expect(mat.uniforms.uCookieEdgeFade!.value).toBe(0);
+  });
+
   it('emits the light term unclamped, in sRGB, with the cookie alpha kept separate', () => {
     const mat = material(Light2DBlendMode.ADD);
     // rgb is the light term. Alpha stays raw: the accumulator needs it as the blend factor and,
     // summed, as the Light Only mask.
-    expect(mat.fragmentShader).toContain('vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a)');
+    expect(mat.fragmentShader).toContain('vec4(cookie.rgb * uColor * uEnergy, cookie.a)');
     expect(mat.fragmentShader).not.toContain('clamp(');
   });
 
@@ -257,7 +274,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
 
   it('scales BOTH rgb and alpha by the lit fraction, which is the (1-s)^2 falloff', () => {
     const mat = filteredMaterial();
-    expect(mat.fragmentShader).toContain('godotToSrgb(cookie.rgb) * uColor * uEnergy * lit');
+    expect(mat.fragmentShader).toContain('cookie.rgb * uColor * uEnergy * lit');
     expect(mat.fragmentShader).toContain('cookie.a * (lit + s * uShadowColor.a)');
   });
 

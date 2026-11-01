@@ -82,8 +82,9 @@ describe('useTexture2D — procedural cookies reach 2D canvas items', () => {
   });
 
   it('rasterises ONE texture for every node pointing at the same gradient', async () => {
-    // A scene aims many nodes at one cookie; a copy per consumer costs
-    // width x height x 4 bytes and a GPU upload each time.
+    // A scene aims many nodes at one cookie; a copy of the image per consumer costs
+    // width x height x 4 bytes and a GPU upload each time. Each light's raw view is a
+    // source-sharing clone, so one `Source` carries the texels.
     const renderer = await render(`[gd_scene format=3]
 
 [sub_resource type="Gradient" id="g"]
@@ -108,7 +109,7 @@ texture = SubResource("t")
 `);
     const cookies = renderer.scene.findAllByType('Mesh').map((m) => cookieOf(m.instance));
     expect(cookies).toHaveLength(3);
-    expect(new Set(cookies).size).toBe(1);
+    expect(new Set(cookies.map((cookie) => cookie!.source)).size).toBe(1);
   });
 
   it('keeps the shared texture usable after one consumer unmounts', async () => {
@@ -127,8 +128,8 @@ texture = SubResource("t")
   it('still resolves a plain image reference through the async loader', async () => {
     const fake = createFakeResourceLoader();
     const tex = new THREE.Texture();
-    // Shaped like the loader's hand-over (ADR-0044): sRGB-tagged at three's clamp
-    // default, which is what the light's clamp bind shares untouched.
+    // Shaped like the loader's hand-over (ADR-0044): sRGB-tagged at three's clamp default. The
+    // light reads it raw, so its view is a clone of the same source and the entry keeps its tag.
     tex.colorSpace = THREE.SRGBColorSpace;
     (tex as unknown as { image: { width: number; height: number } }).image = {
       width: 8,
@@ -150,7 +151,10 @@ texture = ExtResource("1")
       </SceneStack>
     );
     await settleLoads();
-    expect(cookieOf(renderer.scene.findAllByType('Mesh')[0]!.instance)).toBe(tex);
+    const cookie = cookieOf(renderer.scene.findAllByType('Mesh')[0]!.instance)!;
+    expect(cookie.source).toBe(tex.source);
+    expect(cookie.colorSpace).toBe(THREE.NoColorSpace);
+    expect(tex.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 });
 

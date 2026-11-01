@@ -33,6 +33,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'pointlight2d-untextured', file: 'unit-pointlight2d-untextured.tscn', mode: '2d' },
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d' },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d' },
+  // Opaque cookie edges with fractional quad edges: the outer half texel fades, as Godot's atlas does.
+  { name: 'pointlight2d-cookie-edge', file: 'unit-pointlight2d-cookie-edge.tscn', mode: '2d' },
   { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', mode: '2d' },
   // Godot's light culling: `light.range_item_cull_mask & item.light_mask != 0`.
   // Four panels under two lights take the warm light, the cool one, both, and

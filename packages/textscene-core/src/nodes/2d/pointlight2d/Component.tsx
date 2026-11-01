@@ -49,7 +49,7 @@ const OPTIONAL_ROLES = [
  * tap uses that item sampler (`canvas.glsl:774-782`). The cookie states clamp and never
  * inherits a Repeat from the shared producer; a clamp-tagged entry is reused as-is.
  */
-const COOKIE_SAMPLER: ViewSampler = { colorSpace: THREE.SRGBColorSpace, wrap: THREE.ClampToEdgeWrapping };
+const COOKIE_SAMPLER: ViewSampler = { colorSpace: THREE.NoColorSpace, wrap: THREE.ClampToEdgeWrapping };
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;

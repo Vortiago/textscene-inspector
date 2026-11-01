@@ -218,13 +218,14 @@ describe('PointLight2D Component', () => {
     expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
-  it('samples a raw-tagged producer cookie as sRGB, as Godot samples canvas items', async () => {
-    // The cookie is a `source_color`, so the light samples it as sRGB whatever the
-    // producer tagged. The retag lands on the clone; the shared entry keeps its own tag.
-    const raw = new THREE.Texture();
-    const cookie = lightMaterial(await render(node(), raw)).uniforms.uCookie!.value as THREE.Texture;
-    expect(cookie.colorSpace).toBe(THREE.SRGBColorSpace);
-    expect(raw.colorSpace).toBe(THREE.NoColorSpace);
+  it('samples an sRGB-tagged producer cookie raw, as Godot samples a non-HDR canvas', async () => {
+    // The canvas reads the plain format and shades the stored numbers
+    // (`texture_storage.cpp:754`). The retag lands on the clone; the shared entry keeps its tag.
+    const tagged = new THREE.Texture();
+    tagged.colorSpace = THREE.SRGBColorSpace;
+    const cookie = lightMaterial(await render(node(), tagged)).uniforms.uCookie!.value as THREE.Texture;
+    expect(cookie.colorSpace).toBe(THREE.NoColorSpace);
+    expect(tagged.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
   it('never disposes the shared cache entry when the light unmounts', async () => {
