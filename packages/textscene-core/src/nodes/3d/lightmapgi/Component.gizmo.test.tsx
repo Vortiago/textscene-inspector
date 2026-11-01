@@ -152,18 +152,18 @@ describe('<LightmapGI> probe gizmo lines', () => {
 
 describe('<LightmapGI> probe spheres', () => {
   const spheres = async (selectedPath: string | null = 'Lightmap') =>
-    (await render(selectedPath)).scene.findAllByType('Mesh');
+    (await render(selectedPath)).scene.findAllByType('Mesh').map((mesh) => mesh.instance as THREE.Mesh);
 
   it('draws one mesh of a sphere for each probe while selected, none otherwise', async () => {
     const [mesh] = await spheres();
-    expect(mesh!.instance.geometry.getAttribute('position').count).toBe(4 * 9 * 17);
+    expect(mesh!.geometry.getAttribute('position').count).toBe(4 * 9 * 17);
     expect(await spheres(null)).toHaveLength(0);
   });
 
   it('colours each vertex from the SH of its probe, unlit, opaque and without fog', async () => {
     const [mesh] = await spheres();
-    const material = mesh!.instance.material as THREE.MeshBasicMaterial;
-    expect(mesh!.instance.geometry.getAttribute('color')).toBeDefined();
+    const material = mesh!.material as THREE.MeshBasicMaterial;
+    expect(mesh!.geometry.getAttribute('color')).toBeDefined();
     expect(material).toMatchObject({ vertexColors: true, transparent: false, fog: false });
   });
 
