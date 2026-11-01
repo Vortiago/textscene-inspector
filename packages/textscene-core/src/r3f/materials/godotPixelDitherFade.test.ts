@@ -28,9 +28,7 @@ describe('pixelDitherFade', () => {
   it('discards a fragment below the interleaved gradient noise of its pixel, or below 0.001', () => {
     const { fragmentShader } = compile(0.2, 0.6);
     expect(fragmentShader).toContain('smoothstep( godotFadeMin, godotFadeMax, vGodotFadeDistance )');
-    expect(fragmentShader).toContain(
-      'fade < 0.001 || fade < fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) )'
-    );
+    expect(fragmentShader).toContain('fade < 0.001 || fade < godotQuickHash( gl_FragCoord.xy )');
     expect(fragmentShader).toContain('discard');
   });
 
