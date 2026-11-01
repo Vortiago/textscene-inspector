@@ -1,15 +1,12 @@
 /** HingeJoint3D property surface. A key stays `undefined` when unauthored, so the consumer applies Godot's default. */
 
-import type { Joint3DProperties } from '../joint3d/types';
+import { FULL_CIRCLE_LIMITS, type Joint3DProperties } from '../joint3d/types';
 
 /** `params[PARAM_LIMIT_UPPER] = Math::PI * 0.5` in hinge_joint_3d.cpp:127, in radians. */
 const DEFAULT_UPPER_LIMIT = Math.PI / 2;
 
 /** `params[PARAM_LIMIT_LOWER] = -Math::PI * 0.5` in hinge_joint_3d.cpp:128, in radians. */
 const DEFAULT_LOWER_LIMIT = -Math.PI / 2;
-
-/** Lower above upper, which `draw_circle` turns into the full circle (`:478-481`). */
-const FULL_CIRCLE_LIMITS = { lower: 0, upper: -1 };
 
 export interface HingeJoint3DProperties extends Joint3DProperties {
   /** Whether the angular limit applies. Godot default `false`. */

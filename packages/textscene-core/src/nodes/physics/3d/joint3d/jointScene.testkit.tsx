@@ -17,6 +17,7 @@ import '../pinjoint3d/index';
 import '../conetwistjoint3d/index';
 import '../hingejoint3d/index';
 import '../sliderjoint3d/index';
+import '../generic6dofjoint3d/index';
 
 /** A transform of a node at `(x, y, z)` with no rotation. */
 function at(x: number, y: number, z: number): string {

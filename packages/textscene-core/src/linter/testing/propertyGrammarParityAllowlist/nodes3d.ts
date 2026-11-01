@@ -5,6 +5,13 @@
 
 import type { AsymmetryEntry } from './types.js';
 
+const AXES = ['x', 'y', 'z'];
+
+/** Each key with `<axis>` written out for X, Y and Z, since a 6DOF joint repeats its groups per axis. */
+function perAxis(keys: readonly string[]): string[] {
+  return keys.flatMap((key) => AXES.map((axis) => key.replace('<axis>', axis)));
+}
+
 export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   GridMap: {
     linterOnly: [
@@ -154,6 +161,32 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason:
       'The solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the linear and angular limits.',
+  },
+
+  Generic6DOFJoint3D: {
+    parserOnly: perAxis([
+      'linear_limit_<axis>/enabled',
+      'linear_limit_<axis>/upper_distance',
+      'linear_limit_<axis>/lower_distance',
+      'angular_limit_<axis>/enabled',
+    ]),
+    linterOnly: perAxis([
+      'linear_limit_<axis>/*',
+      'linear_limit_<axis>/softness',
+      'linear_limit_<axis>/restitution',
+      'linear_limit_<axis>/damping',
+      'linear_motor_<axis>/*',
+      'linear_spring_<axis>/*',
+      'angular_limit_<axis>/*',
+      'angular_limit_<axis>/softness',
+      'angular_limit_<axis>/restitution',
+      'angular_limit_<axis>/damping',
+      'angular_motor_<axis>/*',
+      'angular_spring_<axis>/*',
+      'angular_spring_<axis>/equilibrium_point',
+    ]),
+    reason:
+      'The group wildcard validates the limit keys the parser reads, since the registry holds an exact key only for a bounded leaf. The motors, springs and solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the limits and the bodies.',
   },
 
   Camera3D: {
