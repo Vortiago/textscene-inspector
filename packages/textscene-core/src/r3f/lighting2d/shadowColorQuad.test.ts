@@ -49,7 +49,7 @@ describe('createShadowColorQuadMaterial', () => {
     // cookie gives alpha only.
     expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
     expect(mat.fragmentShader).not.toContain('uEnergy');
-    expect(mat.fragmentShader).not.toContain('godotToSrgb(cookie.rgb)');
+    expect(mat.fragmentShader).not.toContain('cookie.rgb');
   });
 
   it('carries the shadow colour as a straight sRGB uniform', () => {

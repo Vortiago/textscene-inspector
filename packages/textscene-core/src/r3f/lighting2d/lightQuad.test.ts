@@ -51,7 +51,7 @@ describe('createLightQuadMaterial', () => {
     const mat = material(Light2DBlendMode.ADD);
     // rgb is the light term. Alpha stays raw: the accumulator needs it as the blend factor and,
     // summed, as the Light Only mask.
-    expect(mat.fragmentShader).toContain('vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a)');
+    expect(mat.fragmentShader).toContain('vec4(cookie.rgb * uColor * uEnergy, cookie.a)');
     expect(mat.fragmentShader).not.toContain('clamp(');
   });
 
@@ -257,7 +257,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
 
   it('scales BOTH rgb and alpha by the lit fraction, which is the (1-s)^2 falloff', () => {
     const mat = filteredMaterial();
-    expect(mat.fragmentShader).toContain('godotToSrgb(cookie.rgb) * uColor * uEnergy * lit');
+    expect(mat.fragmentShader).toContain('cookie.rgb * uColor * uEnergy * lit');
     expect(mat.fragmentShader).toContain('cookie.a * (lit + s * uShadowColor.a)');
   });
 

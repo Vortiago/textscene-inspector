@@ -8,8 +8,6 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
-
 export const VERTEX = /* glsl */ `
 varying vec2 vLightUv;
 void main() {
@@ -34,9 +32,8 @@ void main() {
 `;
 
 /**
- * The cookie arrives decoded to linear (three tags loaded textures
- * `SRGBColorSpace`), so it is re-encoded to recover Godot's texel before the
- * light maths. Nothing is clamped: the accumulator is a float, and Godot
+ * The cookie arrives raw, tagged `NoColorSpace`, as Godot's non-HDR canvas reads it
+ * (`texture_storage.cpp:754`). Nothing is clamped: the accumulator is a float, and Godot
  * clamps only after the light has been multiplied into an item's albedo.
  */
 export const FRAGMENT = /* glsl */ `
@@ -44,10 +41,9 @@ uniform sampler2D uCookie;
 uniform vec3 uColor;
 uniform float uEnergy;
 varying vec2 vLightUv;
-${GODOT_TO_SRGB_GLSL}
 void main() {
   vec4 cookie = texture2D(uCookie, vLightUv);
-  gl_FragColor = vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a);
+  gl_FragColor = vec4(cookie.rgb * uColor * uEnergy, cookie.a);
 }
 `;
 
@@ -153,13 +149,12 @@ uniform vec3 uColor;
 uniform float uEnergy;
 uniform vec4 uShadowColor;
 varying vec2 vLightUv;
-${GODOT_TO_SRGB_GLSL}
 void main() {
   vec4 cookie = texture2D(uCookie, vLightUv);
   float s = shadowFraction();
   float lit = 1.0 - s;
   gl_FragColor = vec4(
-    godotToSrgb(cookie.rgb) * uColor * uEnergy * lit,
+    cookie.rgb * uColor * uEnergy * lit,
     cookie.a * (lit + s * uShadowColor.a)
   );
 }
