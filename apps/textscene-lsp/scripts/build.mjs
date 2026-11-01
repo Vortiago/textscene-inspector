@@ -1,35 +1,23 @@
 /**
  * Builds `@textscene/lsp`: the library bundle the manifest's entry point names, one declaration
- * file that imports nothing from the workspace, and the server bundle the `tscn-lsp` bin runs. Both
- * are plain Node ESM, with no React and no three.js.
+ * file that imports nothing from the workspace, the server bundle the `tscn-lsp` bin runs, and the
+ * third-party notices of the code both bundles hold. Both are plain Node ESM, with no React and no
+ * three.js.
  */
 
-import { rmSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { build } from 'esbuild';
-import { packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
+import { buildNodeBundles, packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
 
 const layout = packageLayout(import.meta.url);
 
-// A clean dist, so no file of an earlier build reaches the tarball.
-rmSync(layout.outDir, { recursive: true, force: true });
-const { metafile } = await build({
-  absWorkingDir: layout.packageDir,
-  entryPoints: [
+const metafile = await buildNodeBundles(layout, {
+  entries: [
     { in: resolve(layout.ownSourceDir, 'index.ts'), out: 'index' },
     { in: resolve(layout.ownSourceDir, 'server.ts'), out: 'server' },
   ],
-  outdir: layout.outDir,
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'es2022',
-  legalComments: 'inline',
-  metafile: true,
   // The LSP packages stay the host's install: the server reads them from node_modules at run time.
   external: ['vscode-languageserver', 'vscode-languageserver-textdocument'],
 });
 
-// One metafile for both bundles, named for the build and not the one bundle, which the pack drops.
-// The package ships no third-party notices.
-writeBesideBundle(layout, metafile, { metafileName: 'build.meta.json', notices: false });
+// One metafile for both bundles, named for the build and not the one bundle; the pack drops it.
+writeBesideBundle(layout, metafile, { metafileName: 'build.meta.json' });

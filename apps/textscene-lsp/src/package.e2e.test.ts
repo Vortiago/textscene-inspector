@@ -196,12 +196,21 @@ describe('@textscene/lsp tarball', () => {
         'package/bin/tscn-lsp.js',
         'package/LICENSE',
         'package/README.md',
+        'package/THIRD-PARTY-NOTICES.md',
       ])
     );
   });
 
   it('ships no metafile', () => {
     expect(tarballEntries.filter((entry) => entry.endsWith('.meta.json'))).toEqual([]);
+  });
+
+  it('ships the notices of the Godot code it holds, and of no other third party', () => {
+    const notices = readFileSync(join(packageDir, 'THIRD-PARTY-NOTICES.md'), 'utf8');
+    expect(notices).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
+    expect(notices).toContain('packages/textscene-core/src/godot/math/color.ts');
+    expect(notices).not.toContain('## FastNoiseLite');
+    expect(notices).not.toContain('## Open Sans font');
   });
 
   it('points the bin at the server bundle the tarball ships, with no version flag to run', () => {

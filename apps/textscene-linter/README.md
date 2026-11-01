@@ -107,3 +107,9 @@ pnpm --filter @textscene/linter build
 
 The bundle has no React or three.js. `ARCHITECTURE.md` in the repository
 describes how the linter imports each node slice.
+
+## Licence
+
+MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`. The build writes the
+notices from the modules it bundles: the Godot Engine MIT notice covers the Godot-derived
+linter code.

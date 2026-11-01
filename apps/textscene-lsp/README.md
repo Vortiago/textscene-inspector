@@ -114,3 +114,8 @@ pnpm build:lsp
 
 The bundle has no React and no three.js. `ARCHITECTURE.md` in the repository describes how
 the server shares `@textscene/core` with the other hosts.
+
+## Licence
+
+MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`. The build writes the notices from
+the modules it bundles: the Godot Engine MIT notice covers the Godot-derived linter code.
