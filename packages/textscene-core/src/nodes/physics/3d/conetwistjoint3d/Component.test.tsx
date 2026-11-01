@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
@@ -15,23 +14,16 @@ import {
   mountJointScene,
   twoBodyScene,
 } from '../joint3d/jointScene.testkit';
+import { describeJointBodyGating } from '../joint3d/jointBodyGating.testkit';
+import { EXPECTED_PART_COLOURS, expectClose, vertex } from '../joint3d/jointVertices.testkit';
 
-const BODY_A_COLOUR = godotColorToLinear({ r: 0.6, g: 0.8, b: 1 }).toArray();
-const BODY_B_COLOUR = godotColorToLinear({ r: 0.6, g: 0.9, b: 1 }).toArray();
+const { bodyA: BODY_A_COLOUR, bodyB: BODY_B_COLOUR } = EXPECTED_PART_COLOURS;
 
 /** The swing circle, its spokes and the X axis: 82 vertices, then 72 for a twist of PI. */
 const DEFAULT_VERTEX_COUNT = 154;
 const SELECTED = 'Root/Joint';
 
 const coneScene = (joint: Record<string, string>) => twoBodyScene('ConeTwistJoint3D', joint);
-
-function vertex(positions: number[], index: number): number[] {
-  return positions.slice(index * 3, index * 3 + 3);
-}
-
-function expectClose(actual: number[], expected: number[]) {
-  expected.forEach((value, index) => expect(actual[index]).toBeCloseTo(value, 5));
-}
 
 describe('<ConeTwistJoint3D> cones', () => {
   it('draws one cone per body, body A in its colour then body B in its own, at opacity 1 when selected', async () => {
@@ -50,14 +42,7 @@ describe('<ConeTwistJoint3D> cones', () => {
 
   it('draws no line in the joint colour', async () => {
     const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
-    expect(lines.map(({ color }) => color)).not.toContainEqual(
-      godotColorToLinear({ r: 0.5, g: 0.8, b: 1 }).toArray()
-    );
-  });
-
-  it('draws at 0.3 of that opacity while unselected', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
-    for (const { opacity } of lines) expect(opacity).toBeCloseTo(0.3, 10);
+    expect(lines.map(({ color }) => color)).not.toContainEqual(EXPECTED_PART_COLOURS.joint);
   });
 
   it("follows each body with Godot's default spans, PI / 4 and PI", async () => {
@@ -72,20 +57,6 @@ describe('<ConeTwistJoint3D> cones', () => {
     const nodes = coneScene({ ...BOTH_BODIES, swing_span: '0.5236', twist_span: '13.0' });
     const [bodyA] = drawnLines(await mountJointScene({ nodes }));
     expect(bodyA!.positions.length / 3).toBe(370);
-  });
-
-  it('draws only the cone of body A when only node_a resolves', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene({ node_a: BOTH_BODIES.node_a }) }));
-    expect(lines.map(({ color }) => color)).toEqual([BODY_A_COLOUR]);
-  });
-
-  it('draws only the cone of body B when only node_b resolves', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene({ node_b: BOTH_BODIES.node_b }) }));
-    expect(lines.map(({ color }) => color)).toEqual([BODY_B_COLOUR]);
-  });
-
-  it('draws nothing when neither body resolves', async () => {
-    expect(drawnLines(await mountJointScene({ nodes: coneScene({}) }))).toEqual([]);
   });
 
   it('turns the cone bases with a rotated ancestor, as look_body crosses with the world up', async () => {
@@ -109,6 +80,12 @@ describe('<ConeTwistJoint3D> cones', () => {
     const [after] = drawnLines(renderer);
     expect(after!.positions).not.toEqual(before!.positions);
   });
+});
+
+describeJointBodyGating('<ConeTwistJoint3D>', 'ConeTwistJoint3D', {
+  both: ['bodyA', 'bodyB'],
+  onlyA: ['bodyA'],
+  onlyB: ['bodyB'],
 });
 
 const GIZMO_CASE = jointGizmoCase('ConeTwistJoint3D', {});

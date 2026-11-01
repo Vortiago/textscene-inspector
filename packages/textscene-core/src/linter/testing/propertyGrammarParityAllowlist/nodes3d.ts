@@ -117,6 +117,45 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'The solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the two spans.',
   },
 
+  HingeJoint3D: {
+    linterOnly: [
+      'params/bias',
+      'angular_limit/bias',
+      'angular_limit/softness',
+      'angular_limit/relaxation',
+      'motor/enable',
+      'motor/target_velocity',
+      'motor/max_impulse',
+    ],
+    reason:
+      'The solver parameters and the motor change how a running game moves the bodies (ADR-0005); the gizmo reads only the limit, its two angles and the bodies.',
+  },
+
+  SliderJoint3D: {
+    linterOnly: [
+      'linear_limit/softness',
+      'linear_limit/restitution',
+      'linear_limit/damping',
+      'linear_motion/softness',
+      'linear_motion/restitution',
+      'linear_motion/damping',
+      'linear_ortho/softness',
+      'linear_ortho/restitution',
+      'linear_ortho/damping',
+      'angular_limit/softness',
+      'angular_limit/restitution',
+      'angular_limit/damping',
+      'angular_motion/softness',
+      'angular_motion/restitution',
+      'angular_motion/damping',
+      'angular_ortho/softness',
+      'angular_ortho/restitution',
+      'angular_ortho/damping',
+    ],
+    reason:
+      'The solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the linear and angular limits.',
+  },
+
   Camera3D: {
     renderGap: ['compositor'],
     reason: 'A camera can run a Compositor stack, and the previewer runs none.',

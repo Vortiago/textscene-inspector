@@ -1,0 +1,67 @@
+; The joint gizmo shapes of the two limit joints, the one variable no other golden moves: a HingeJoint3D
+; draws its axis and an arc around Z toward each body, a SliderJoint3D its travel with a square at each
+; end and an arc around X toward each body (ADR-0056). Each joint has two bodies away from it and not
+; straight above or below it, and limits that are not Godot's defaults. No other scene shows a
+; regression in a gizmo shape, since only a golden with `gizmos: true` draws one.
+[gd_scene load_steps=3 format=3 uid="uid://unitjoint3dgizmoshingeslider"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[node name="Root" type="Node3D"]
+
+[node name="Hinge" type="HingeJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+node_a = NodePath("../HingeBodyA")
+node_b = NodePath("../HingeBodyB")
+angular_limit/enable = true
+angular_limit/lower = -1.0471975
+angular_limit/upper = 0.7853982
+
+[node name="HingeBodyA" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1.5, 0.5)
+
+[node name="Box" type="MeshInstance3D" parent="HingeBodyA"]
+mesh = SubResource("BoxMesh_body")
+
+[node name="Shape" type="CollisionShape3D" parent="HingeBodyA"]
+shape = SubResource("BoxShape3D_body")
+
+[node name="HingeBodyB" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, -1, -1)
+
+[node name="Box" type="MeshInstance3D" parent="HingeBodyB"]
+mesh = SubResource("BoxMesh_body")
+
+[node name="Shape" type="CollisionShape3D" parent="HingeBodyB"]
+shape = SubResource("BoxShape3D_body")
+
+[node name="Slider" type="SliderJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+node_a = NodePath("../SliderBodyA")
+node_b = NodePath("../SliderBodyB")
+linear_limit/upper_distance = 1.5
+linear_limit/lower_distance = -0.5
+angular_limit/upper_angle = 0.8
+angular_limit/lower_angle = -0.5
+
+[node name="SliderBodyA" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 1, 1)
+
+[node name="Box" type="MeshInstance3D" parent="SliderBodyA"]
+mesh = SubResource("BoxMesh_body")
+
+[node name="Shape" type="CollisionShape3D" parent="SliderBodyA"]
+shape = SubResource("BoxShape3D_body")
+
+[node name="SliderBodyB" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, -0.5, -1.5)
+
+[node name="Box" type="MeshInstance3D" parent="SliderBodyB"]
+mesh = SubResource("BoxMesh_body")
+
+[node name="Shape" type="CollisionShape3D" parent="SliderBodyB"]
+shape = SubResource("BoxShape3D_body")

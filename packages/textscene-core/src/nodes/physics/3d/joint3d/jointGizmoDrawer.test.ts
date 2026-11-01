@@ -1,13 +1,22 @@
 /**
  * The Joint3D gizmo parts (`joint_3d_gizmo_plugin.cpp`). The expected values come from a GDScript
- * port of `look_body` and `draw_cone` that ran in Godot 4.6.3 through the engine's own `Basis` and
- * `Vector3`, so they share no code with the build. `look_body` shows in every cone, since the cone
+ * port of `look_body`, `look_body_toward_x`, `look_body_toward_z`, `draw_cone` and `draw_circle` that
+ * ran in Godot 4.6.3 through the engine's own `Basis` and `Vector3`, so they share no code with the build. `look_body` shows in every cone, since the cone
  * is built in the basis it returns.
  */
 import { describe, expect, it } from 'vitest';
 import { transform3DOf, type Transform3D } from '../../../../godot/math/transform3d.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
-import { coneTwistBodySegments, coneTwistLocalSegments, pinJointSegments } from './jointGizmoDrawer.js';
+import { expectClose, vertex } from './jointVertices.testkit.js';
+import {
+  coneTwistBodySegments,
+  coneTwistLocalSegments,
+  hingeBodySegments,
+  hingeJointSegments,
+  pinJointSegments,
+  sliderBodySegments,
+  sliderJointSegments,
+} from './jointGizmoDrawer.js';
 
 const ROTATED_ABOUT_Y = transform3DOf(
   [Math.cos(0.6), 0, Math.sin(0.6), 0, 1, 0, -Math.sin(0.6), 0, Math.cos(0.6)],
@@ -21,15 +30,6 @@ const SIDE_BODY = at({ x: 2, y: 1, z: -1 });
 
 function at(origin: Vector3): Transform3D {
   return transform3DOf([1, 0, 0, 0, 1, 0, 0, 0, 1], origin);
-}
-
-function expectClose(actual: ArrayLike<number>, expected: readonly number[]) {
-  expect(actual).toHaveLength(expected.length);
-  expected.forEach((value, index) => expect(actual[index]).toBeCloseTo(value, 5));
-}
-
-function vertex(segments: Float32Array, index: number): number[] {
-  return Array.from(segments.slice(index * 3, index * 3 + 3));
 }
 
 const SWING = Math.PI / 4;
@@ -115,5 +115,124 @@ describe('pinJointSegments', () => {
     expect(Array.from(pinJointSegments())).toEqual([
       0.25, 0, 0, -0.25, 0, 0, 0, 0.25, 0, 0, -0.25, 0, 0, 0, 0.25, 0, 0, -0.25,
     ]);
+  });
+});
+
+/** Vertices of a 32-arc circle: the first arc, the 30 between, the last arc, and the spoke to the Y mark. */
+const CIRCLE_VERTEX_COUNT = 70;
+const FIRST_ARC_START = 0;
+const FIRST_ARC_END = 3;
+const MIDDLE_ARC_END = 40;
+const LAST_ARC_END = 67;
+const Y_MARK = 68;
+
+describe('hingeJointSegments', () => {
+  it('draws the hinge axis, one segment along Z from 0.5 to -0.5', () => {
+    expect(Array.from(hingeJointSegments())).toEqual([0, 0, 0.5, 0, 0, -0.5]);
+  });
+});
+
+describe('the hinge circle of a body', () => {
+  it('draws a full circle for the defaults of the limit off, where lower 0 is above upper -1', () => {
+    const circle = hingeBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', 0, -1);
+    expect(circle.length / 3).toBe(CIRCLE_VERTEX_COUNT);
+    expectClose(vertex(circle, FIRST_ARC_START), [-0.225414, -0.108114, 0]);
+    expectClose(vertex(circle, FIRST_ARC_END), [-0.199991, -0.150013, 0]);
+    expectClose(vertex(circle, MIDDLE_ARC_END), [0.12736, 0.215127, 0]);
+    expectClose(vertex(circle, LAST_ARC_END), [-0.225414, -0.108114, 0]);
+    expectClose(vertex(circle, Y_MARK), [0, 0.375, 0]);
+  });
+
+  it('draws the same full circle for any lower limit above the upper one', () => {
+    const inverted = hingeBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', 1, -0.5);
+    expect(Array.from(inverted)).toEqual(
+      Array.from(hingeBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', 0, -1))
+    );
+  });
+
+  it('draws the arc between the limits, at radius 0.25 for body A', () => {
+    const circle = hingeBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', -1.0471975, 1.0471975);
+    expectClose(vertex(circle, FIRST_ARC_START), [0.206336, -0.141157, 0]);
+    expectClose(vertex(circle, FIRST_ARC_END), [0.215127, -0.12736, 0]);
+    expectClose(vertex(circle, MIDDLE_ARC_END), [0.199991, 0.150013, 0]);
+    expectClose(vertex(circle, LAST_ARC_END), [0.019078, 0.249271, 0]);
+    expectClose(vertex(circle, Y_MARK), [0, 0.375, 0]);
+  });
+
+  it('draws at radius 0.27 for body B, looking at body B', () => {
+    const circle = hingeBodySegments(
+      ROTATED_ABOUT_Y,
+      at({ x: -1, y: 0.5, z: 2 }),
+      'bodyB',
+      -1.0471975,
+      1.0471975
+    );
+    expectClose(vertex(circle, FIRST_ARC_START), [-0.076749, 0.258862, 0]);
+    expectClose(vertex(circle, MIDDLE_ARC_END), [-0.269795, 0.010532, 0]);
+    expectClose(vertex(circle, LAST_ARC_END), [-0.185806, -0.195898, 0]);
+    expectClose(vertex(circle, Y_MARK), [0, 0.405, 0]);
+  });
+
+  it('draws one segment from the origin to the basis times 0.5 along X for equal limits', () => {
+    const circle = hingeBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', 0.3, 0.3);
+    expectClose(circle, [0, 0, 0, 0.450828, 0.216228, 0]);
+  });
+});
+
+describe('sliderJointSegments', () => {
+  it('draws the Z axis, the X segment and a 0.5 square at each end of the default limits', () => {
+    expectClose(
+      sliderJointSegments(-1, 1),
+      [
+        0, 0, 0.5, 0, 0, -0.5, -1, 0, 0, 1, 0, 0, -1, -0.25, -0.25, -1, -0.25, 0.25, -1, -0.25, 0.25, -1,
+        0.25, 0.25, -1, 0.25, 0.25, -1, 0.25, -0.25, -1, 0.25, -0.25, -1, -0.25, -0.25, 1, -0.25, -0.25, 1,
+        -0.25, 0.25, 1, -0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, 0.25, 1, 0.25, -0.25, 1, 0.25, -0.25, 1, -0.25,
+        -0.25,
+      ]
+    );
+  });
+
+  it('draws both squares at one place for both limits at 0.5', () => {
+    const segments = sliderJointSegments(0.5, 0.5);
+    expect(segments.length / 3).toBe(20);
+    expectClose(vertex(segments, 2), [-0.5, 0, 0]);
+    expectClose(vertex(segments, 3), [-0.5, 0, 0]);
+    expectClose(vertex(segments, 12), [-0.5, -0.25, -0.25]);
+  });
+
+  it('draws one X segment from 0.5 to -0.5 where the negated lower limit is below the upper', () => {
+    expectClose(sliderJointSegments(1, -1), [0, 0, 0.5, 0, 0, -0.5, 0.5, 0, 0, -0.5, 0, 0]);
+  });
+});
+
+describe('the slider circle of a body', () => {
+  it('draws one segment along X for the default angular limits of 0 and 0', () => {
+    expectClose(sliderBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', 0, 0), [0, 0, 0, 0.5, 0, 0]);
+  });
+
+  it('draws the arc around X for body A, with Y negated', () => {
+    const circle = sliderBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', -0.5, 0.8);
+    expect(circle.length / 3).toBe(CIRCLE_VERTEX_COUNT);
+    expectClose(vertex(circle, FIRST_ARC_START), [0, 0.247979, 0.031725]);
+    expectClose(vertex(circle, FIRST_ARC_END), [0, 0.249063, 0.021627]);
+    expectClose(vertex(circle, MIDDLE_ARC_END), [0, 0.19983, -0.150226]);
+    expectClose(vertex(circle, LAST_ARC_END), [0, 0.096903, -0.230456]);
+    expectClose(vertex(circle, Y_MARK), [0, 0.375, 0]);
+  });
+
+  it('draws the arc for body B with the Y form flipped and radius 0.27', () => {
+    const circle = sliderBodySegments(ROTATED_ABOUT_Y, at({ x: -1, y: 0.5, z: 2 }), 'bodyB', -0.5, 0.8);
+    expectClose(vertex(circle, FIRST_ARC_START), [0, 0.26639, 0.044007]);
+    expectClose(vertex(circle, FIRST_ARC_END), [0, 0.264383, 0.054789]);
+    expectClose(vertex(circle, MIDDLE_ARC_END), [0, 0.160202, 0.217337]);
+    expectClose(vertex(circle, LAST_ARC_END), [0, 0.028856, 0.268454]);
+    expectClose(vertex(circle, Y_MARK), [0, 0.405, 0]);
+  });
+
+  it('draws a full circle for body B where the lower limit is above the upper one', () => {
+    const circle = sliderBodySegments(ROTATED_ABOUT_Y, at({ x: -1, y: 0.5, z: 2 }), 'bodyB', 1, -1);
+    expectClose(vertex(circle, FIRST_ARC_START), [0, -0.212681, -0.166333]);
+    expectClose(vertex(circle, MIDDLE_ARC_END), [0, 0.084428, 0.25646]);
+    expectClose(vertex(circle, LAST_ARC_END), [0, -0.212681, -0.166333]);
   });
 });
