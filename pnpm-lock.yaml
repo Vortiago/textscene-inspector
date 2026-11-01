@@ -254,6 +254,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
+      dts-bundle-generator:
+        specifier: 'catalog:'
+        version: 9.5.1
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -285,6 +288,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
+      dts-bundle-generator:
+        specifier: 'catalog:'
+        version: 9.5.1
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2

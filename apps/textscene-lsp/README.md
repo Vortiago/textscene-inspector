@@ -90,6 +90,19 @@ add this to `settings.json`:
 
 Run `tscn-lsp --stdio` as a child process, and speak LSP to it over stdio.
 
+## Library use
+
+The package root also exports the translation from core's language features to the LSP protocol
+shapes, so a host reuses it instead of driving the server. The core types come with it, and the
+protocol types come from the `vscode-languageserver` package the server installs.
+
+```js
+import { toLspFoldingRange, toLspHover } from '@textscene/lsp';
+
+const folding = toLspFoldingRange({ startLine: 2, endLine: 7 });
+const hover = toLspHover({ markdown: '### A `MeshInstance3D`' });
+```
+
 ## Build from source
 
 From the repository root:
@@ -101,3 +114,8 @@ pnpm build:lsp
 
 The bundle has no React and no three.js. `ARCHITECTURE.md` in the repository describes how
 the server shares `@textscene/core` with the other hosts.
+
+## Licence
+
+MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`. The build writes the notices from
+the modules it bundles: the Godot Engine MIT notice covers the Godot-derived linter code.

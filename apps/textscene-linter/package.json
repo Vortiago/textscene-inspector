@@ -6,18 +6,28 @@
   "bin": {
     "tscn-lint": "./bin/tscn-lint.js"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
-    "bin"
+    "!dist/*.meta.json",
+    "bin",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "prebuild": "pnpm --filter @textscene/core build",
-    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander",
-    "dev": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander --watch",
-    "clean": "rimraf dist",
+    "build": "node scripts/build.mjs",
+    "dev": "esbuild src/cli.ts src/index.ts --bundle --platform=node --format=esm --outdir=dist --external:commander --watch",
+    "clean": "rimraf dist THIRD-PARTY-NOTICES.md",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
@@ -56,6 +66,7 @@
     "@textscene/core": "workspace:*",
     "@textscene/dev-kit": "workspace:*",
     "@types/node": "catalog:",
+    "dts-bundle-generator": "catalog:",
     "esbuild": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
