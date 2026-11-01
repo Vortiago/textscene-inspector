@@ -6,7 +6,8 @@
  * path. The component reads the Skin resource and asks the skin for it with `withSkin`. It runs on
  * the live stage (ADR-0060), as Godot resolves the path on the live tree, across an instance border too. The SkeletonModifier3D
  * children of the skeleton edit the pose first, in child order, and so do they on the pose that an
- * AnimationPlayer writes to a bone.
+ * AnimationPlayer writes to a bone. A BoneAttachment3D seat reads the same posed skeleton, so no
+ * reader poses the skeleton again in its own way.
  */
 
 import type { TscnNode } from '../../../parser/types.js';
@@ -61,6 +62,23 @@ export interface AutomaticSkin extends BoundSkin {
 }
 
 /**
+ * The posed skeleton of a Skeleton3D, which every reader of its pose shares: the bone global poses
+ * (`get_bone_global_pose`, `skeleton_3d.cpp:566-571`) that a BoneAttachment3D seat composes on, and
+ * the automatic skin the meshes bound to it draw with. One set of `BonePoses` takes the modifiers
+ * and the bone tracks a clip writes, so the pose is never computed twice in two ways.
+ */
+export interface PosedSkeleton {
+  /** `Skeleton3D::find_bone`: the first bone called `name`, else -1. */
+  findBone(name: string): number;
+  /** `get_bone_global_pose` of `bone` in the file pose, after the modifiers ran. */
+  globalPose(bone: number): Transform3D;
+  /** `get_bone_global_pose` of `bone` under `pose`, where null poses the file again. */
+  globalPoseUnder(bone: number, pose: AnimatedPose | null): Transform3D;
+  /** The automatic skin over this pose, which a MeshInstance3D bound to the skeleton reads. */
+  skin: AutomaticSkin;
+}
+
+/**
  * The skin of every MeshInstance3D in `tree` bound to a Skeleton3D, by the mesh's live path. A node
  * that writes no `skeleton` binds nothing, as Godot's default is empty unless the project turns on
  * `default_parent_skeleton_in_mesh_instance_3d` (`mesh_instance_3d.cpp:937`). A path that is empty,
@@ -68,9 +86,8 @@ export interface AutomaticSkin extends BoundSkin {
  */
 export function bindMeshesToSkeletons(tree: LiveTree): ReadonlyMap<string, AutomaticSkin> {
   const skins = new Map<string, AutomaticSkin>();
-  const skeletonSkins = new Map<string, AutomaticSkin>();
   tree.fold<void, void>(undefined, ({ step, path }, _, descend) => {
-    const skin = boundSkinOf(step.node, path, tree, skeletonSkins);
+    const skin = boundSkinOf(step.node, path, tree);
     if (skin) skins.set(path, skin);
     descend();
   });
@@ -85,12 +102,7 @@ export function namesSkeletonToBind(
 }
 
 /** The skin of the node at `path` where it is a MeshInstance3D bound to a Skeleton3D, else undefined. */
-function boundSkinOf(
-  node: TscnNode,
-  path: string,
-  tree: LiveTree,
-  skeletonSkins: Map<string, AutomaticSkin>
-): AutomaticSkin | undefined {
+function boundSkinOf(node: TscnNode, path: string, tree: LiveTree): AutomaticSkin | undefined {
   if (node.type !== 'MeshInstance3D') return undefined;
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
@@ -101,11 +113,7 @@ function boundSkinOf(
   );
   const skeleton = skeletonPath === null ? null : tree.at(skeletonPath);
   if (skeleton?.step.node.type !== 'Skeleton3D') return undefined;
-  const known = skeletonSkins.get(skeleton.path);
-  if (known) return known;
-  const skin = skinOf(skeleton, tree);
-  skeletonSkins.set(skeleton.path, skin);
-  return skin;
+  return posedSkeletonOf(skeleton, tree).skin;
 }
 
 /** The global transform of the node that `target` names from the modifier at `modifierPath`, as a modifier read it. */
@@ -195,49 +203,50 @@ const automaticSkinOf = perObject((skeleton: TscnNode): readonly Transform3D[] =
   return automaticSkinMatrices(bones, showRestOnly);
 });
 
-/** What a bound skin was made of, which a load compares to tell whether the skin is still true. */
-interface KeptSkin {
+/** What a kept posed skeleton was made of, which a load compares to tell whether it still holds. */
+interface KeptPosed {
   modifiers: Modifiers;
-  skin: AutomaticSkin;
+  posed: PosedSkeleton;
 }
 
 /**
- * Written only by `skinOf`: the previous skin of each Skeleton3D node at each live path. A modifier
- * reads the scene around the skeleton, so two instances of one node pose differently. The entries
- * clear when nothing holds the node any more.
+ * Written only by `posedSkeletonOf`: the previous posed skeleton of each Skeleton3D node at each
+ * live path. A modifier reads the scene around the skeleton, so two instances of one node pose
+ * differently. The entries clear when nothing holds the node any more.
  */
-const keptSkins = perObject(() => new Map<string, KeptSkin>());
+const keptPoses = perObject(() => new Map<string, KeptPosed>());
 
 /**
- * The skin of the Skeleton3D at `skeleton`: the file pose, edited by the modifiers below it. A load
- * that leaves the node, the modifier nodes and what they read as they were hands back the same
- * skin, whose animated poses run the modifiers it holds, so they must be the ones the load would make.
+ * The posed skeleton of the Skeleton3D at `skeleton`: the file pose, edited by the modifiers below
+ * it, which the skin of a bound mesh and a BoneAttachment3D seat both read. A load that leaves the
+ * node, the modifier nodes and what they read as they were hands back the same posed skeleton, over
+ * which the skin runs the poses it holds.
  */
-function skinOf(skeleton: LiveLink, tree: LiveTree): AutomaticSkin {
+export function posedSkeletonOf(skeleton: LiveLink, tree: LiveTree): PosedSkeleton {
   // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
   const placed = liveScenePassResults(liveNodePatches, tree);
   const modifiers = modifiersOf(skeleton, tree, placed);
-  const kept = keptSkins(skeleton.step.node);
+  const kept = keptPoses(skeleton.step.node);
   const previous = kept.get(skeleton.path);
   if (
     previous &&
     sameElements(previous.modifiers.nodes, modifiers.nodes) &&
     readsHold(previous.modifiers, modifiers, tree, placed)
   ) {
-    return previous.skin;
+    return previous.posed;
   }
-  const skin = boundSkin(skeleton, modifiers.edits);
-  kept.set(skeleton.path, { modifiers, skin });
-  return skin;
+  const posed = makePosed(skeleton, modifiers);
+  kept.set(skeleton.path, { modifiers, posed });
+  return posed;
 }
 
-function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): AutomaticSkin {
+function makePosed(skeleton: LiveLink, modifiers: Modifiers): PosedSkeleton {
   const { bones, showRestOnly, motionScale } = skeleton.step.node.properties as Skeleton3DProperties;
   // One pose editor for the skeleton: each frame starts it again from the file pose.
   const poses = new BonePoses(bones, showRestOnly);
   const warnUnknownBone = (name: string) =>
     warnOnce(
-      skin,
+      poses,
       name,
       `[AnimationPlayer] the Skeleton3D at ${skeleton.path} has no bone "${name}", so its track binds nothing`
     );
@@ -247,10 +256,30 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Auto
   const prepare = (pose: AnimatedPose | null): BonePoses => {
     if (pose !== preparedFor) {
       preparedFor = pose;
-      poseUnder(poses, pose ? [animationPass(pose, motionScale, warnUnknownBone), ...modifiers] : modifiers);
+      poseUnder(
+        poses,
+        pose ? [animationPass(pose, motionScale, warnUnknownBone), ...modifiers.edits] : modifiers.edits
+      );
     }
     return poses;
   };
+  return {
+    findBone: (name) => poses.findBone(name),
+    globalPose: (bone) => prepare(null).globalPose(bone),
+    globalPoseUnder: (bone, pose) => prepare(pose).globalPose(bone),
+    skin: makeSkin(skeleton, bones, showRestOnly, poses, prepare, modifiers.edits),
+  };
+}
+
+/** The automatic skin over `poses`, from the file pose and under each pose a clip writes. */
+function makeSkin(
+  skeleton: LiveLink,
+  bones: Skeleton3DProperties['bones'],
+  showRestOnly: boolean,
+  poses: BonePoses,
+  prepare: (pose: AnimatedPose | null) => BonePoses,
+  edits: readonly PoseModifier[]
+): AutomaticSkin {
   /** The matrices of `bindings` (the automatic ones where undefined) under each pose, kept for the last. */
   const matricesUnderOf = (bindings?: readonly SkinBinding[]): BoundSkin['matricesUnder'] => {
     let lastPose: AnimatedPose | undefined;
@@ -279,14 +308,13 @@ function boundSkin(skeleton: LiveLink, modifiers: readonly PoseModifier[]): Auto
     skinsOfBinds.set(binds, bound);
     return bound;
   };
-  const skin: AutomaticSkin = {
+  return {
     skeletonPath: skeleton.path,
     matrices:
-      modifiers.length === 0
+      edits.length === 0
         ? automaticSkinOf(skeleton.step.node)
-        : automaticSkinMatrices(bones, showRestOnly, modifiers),
+        : automaticSkinMatrices(bones, showRestOnly, edits),
     matricesUnder: matricesUnderOf(),
     withSkin: skinOfBinds,
   };
-  return skin;
 }

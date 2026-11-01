@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
 import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
+import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
@@ -37,6 +38,7 @@ import {
   RENDER_QUIET_MSEC,
   RENDER_WAIT_MAX_FRAMES,
   renderArgv,
+  renderingDeviceMessage,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
   SPAWN_BACKSTOP_MS,
@@ -927,6 +929,14 @@ describe('an expired engine pass is reaped as a process group', () => {
     expect(plan.argv[plan.argv.indexOf('godot') + 1]).toBe('--headless');
   });
 
+  it('makes the Vulkan loader pick lavapipe, the driver the comparison browser renders on', () => {
+    // On a host with a GPU, the loader would otherwise pick the GPU's driver.
+    for (const display of [true, false]) {
+      const plan = godotSpawnPlan([], { display });
+      expect(plan.env).toMatchObject(LAVAPIPE_LOADER_ENV);
+    }
+  });
+
   it('falls back to spawning the engine directly where the group killer is absent', () => {
     const plan = godotSpawnPlan(['--path', '/tmp/work'], {
       display: true,
@@ -1065,6 +1075,46 @@ describe('a renderer fallback', () => {
     expect(script).toContain('const RENDERER_OUT := "/tmp/r.json"');
     expect(script).toContain('RenderingServer.get_current_rendering_method()');
     expect(script.indexOf('_write_renderer()\n')).toBeGreaterThan(script.indexOf('get_tree().paused = true'));
+  });
+
+  it('reports the device that drew the frame', () => {
+    expect(bootstrap({ rendererOut: '/tmp/r.json' })).toContain('RenderingServer.get_video_adapter_name()');
+  });
+});
+
+describe('renderingDeviceMessage', () => {
+  it('answers when lavapipe drew a Vulkan frame', () => {
+    expect(
+      renderingDeviceMessage({
+        method: 'forward_plus',
+        driver: 'vulkan',
+        adapter: 'llvmpipe (LLVM 22.1.8, 256 bits)',
+      })
+    ).toBeNull();
+  });
+
+  it('refuses a Vulkan frame from a GPU, naming the device and the package (error case)', () => {
+    const message = renderingDeviceMessage({
+      method: 'forward_plus',
+      driver: 'vulkan',
+      adapter: 'Intel(R) UHD Graphics 630 (CFL GT2)',
+    });
+    expect(message).toMatch(/Intel\(R\) UHD Graphics 630/);
+    expect(message).toMatch(/mesa-vulkan-drivers/);
+  });
+
+  it('answers for an OpenGL frame, which Xvfb draws in software on every host (edge case)', () => {
+    expect(
+      renderingDeviceMessage({
+        method: 'gl_compatibility',
+        driver: 'opengl3',
+        adapter: 'llvmpipe (LLVM 22.1.8, 256 bits)',
+      })
+    ).toBeNull();
+  });
+
+  it('answers when the bootstrap wrote no report (edge case)', () => {
+    expect(renderingDeviceMessage(null)).toBeNull();
   });
 });
 

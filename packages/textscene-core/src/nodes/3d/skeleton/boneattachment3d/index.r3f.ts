@@ -1,14 +1,16 @@
 /**
- * BoneAttachment3D follows one bone of its parent Skeleton3D, moving its own node and children
- * with it every frame. That drive is a gap here (ADR-0045), so it registers `pending` on the
- * Node3D component and its children still land in the right transform space.
+ * BoneAttachment3D sits on a bone of the Skeleton3D that is its parent, or of the one the
+ * `external_skeleton` path names (`bone_attachment_3d.cpp:128-142`), and its children move with
+ * the bone. The seat pass answers where (ADR-0060), and the poses a clip pushes on the skeleton
+ * move the node in place.
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { BoneAttachment3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'BoneAttachment3D',
-  Component: Node3D,
-  renderIntent: 'pending',
+  Component: BoneAttachment3D,
+  renderIntent: 'transform-only',
+  scenePass: true,
 });
