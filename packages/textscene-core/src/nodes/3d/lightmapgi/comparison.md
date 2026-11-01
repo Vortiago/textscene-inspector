@@ -11,6 +11,10 @@ renders_as: the baked lightmap on each mesh its data names
 
 Applies a lightmap baked in Godot. Each mesh that `light_data` names reads its light from the bake's atlas through its second UV, not from its ambient light. A Static light no longer lights that mesh in real time. With a shadowmask mode, the bake's shadowmask replaces (Replace), darkens (Overlay) or alone gives (Only) the shadow of each sun that is not Static. The previewer reads the bake. It does not bake. With the Gizmos toggle on, Godot's billboard icon marks its origin.
 
+## Gizmo
+
+A selected LightmapGI draws one line for each unique edge of the capture-probe tetrahedra of its `light_data`, in Godot's colour at an alpha of 0.1. Godot's source is `lightmap_gi_gizmo_plugin.cpp:83-124`. Godot draws the lines only for the selected node (`:83-85`). Data that Godot refuses (`lightmap_gi.cpp:222-242`) and data with no points draw nothing. Godot draws the probe spheres too (`:126-223`).
+
 ## Linting
 
 <!-- lint:begin LightmapGI -->

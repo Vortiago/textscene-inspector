@@ -9,17 +9,15 @@ import { floatOr, parseOptionalAabb, parseOptionalRect2 } from '../../parser/val
 import { EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 import { splitTopLevel } from '../../godot/string/string';
 import { slotInt } from '../../godot/variant/intSlots';
-import { dictPackedField, packedFloatCount } from '../../godot/variant/packedArrayFields';
 import { boolSlotValue } from '../../godot/variant/variantBool';
 import {
   arrayLiteralBody,
   dictCallField,
   dictNumberField,
   nodePathLiteral,
-  packedArrayForms,
 } from '../../godot/variant/variantParser';
 import { LIGHTMAP_GI_DATA_DEFAULTS, LIGHTMAP_USER_FIELDS } from '../../godot/scene/lightmapGi';
-import { missingProbeDataField } from './probeData';
+import { acceptedPointCount } from './captureProbes';
 import { resolveExtResourcePath } from '../SubResourceResolver';
 import type { LightmapGIData, LightmapUser } from './types';
 
@@ -49,8 +47,6 @@ export function decodeLightmapGIData(
 }
 
 const readBounds = dictCallField('bounds', 'AABB');
-const readPoints = dictPackedField('points', 'PackedVector3Array');
-const POINTS_FORMS = packedArrayForms('PackedVector3Array');
 const BAKED_EXPOSURE_FIELD = dictNumberField('baked_exposure');
 
 /**
@@ -58,21 +54,18 @@ const BAKED_EXPOSURE_FIELD = dictNumberField('baked_exposure');
  * (`:223-234`), and the data starts with none (`lightmap_gi.h:69`).
  */
 function captureBounds(probeData: string | undefined): Aabb {
-  if (probeData === undefined) return EMPTY_AABB;
-  if (missingProbeDataField(probeData) !== null) return EMPTY_AABB;
-  const points = readPoints(probeData);
-  if (points === null || packedFloatCount(POINTS_FORMS, points, 3) === 0) return EMPTY_AABB;
+  if (probeData === undefined || !acceptedPointCount(probeData)) return EMPTY_AABB;
   const bounds = readBounds(probeData);
   return (bounds !== null && parseOptionalAabb(`AABB(${bounds})`, 'LightmapGIData probe_data')) || EMPTY_AABB;
 }
 
 /**
  * The exposure the bake ran at. `set_capture_data` stores it whole, with or without points
- * (`lightmap_gi.cpp:236-237`), once `_set_probe_data` has accepted the fields.
+ * (`lightmap_gi.cpp:236-237`), once it has accepted the data.
  */
 function bakedExposure(probeData: string | undefined): number {
   const fallback = LIGHTMAP_GI_DATA_DEFAULTS.bakedExposure;
-  if (probeData === undefined || missingProbeDataField(probeData) !== null) return fallback;
+  if (probeData === undefined || acceptedPointCount(probeData) === null) return fallback;
   return floatOr(BAKED_EXPOSURE_FIELD.exec(probeData)?.[1], fallback, 'LightmapGIData baked_exposure');
 }
 
