@@ -93,6 +93,6 @@ as `Marker3D` does (ADR-0056). Its sheet is not `linter-only`, because that stat
 `pending` registration and no `unimplemented` sheet: `ReflectionProbe`, `VoxelGI`, `FogVolume` and the
 particle emitters keep the intent and the status their effect has.
 
-`PinJoint3D` and `ConeTwistJoint3D` draw the Joint3D editor gizmo (`joint_3d_gizmo_plugin.cpp`) the same
+`PinJoint3D`, `ConeTwistJoint3D`, `HingeJoint3D` and `SliderJoint3D` draw the Joint3D editor gizmo (`joint_3d_gizmo_plugin.cpp`) the same
 way: each registers a component of its own that wraps `Node3D` and adds the gated gizmo, and each sheet
 is `limitation` with an **Editor only** line and a **Needs runtime** line for the joint simulation.

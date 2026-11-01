@@ -1,16 +1,16 @@
 ---
 type: SliderJoint3D
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-slider-joint-3d.tscn
 # image: unit-slider-joint-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a transform group with the slider travel and a circle for each body for every node
 ---
 
 # SliderJoint3D
 
-A joint that restricts a body's movement to one axis relative to another body. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008). Godot shows the slider only as an editor gizmo.
+A joint that restricts a body's movement to one axis relative to another body. In a running game the physics server limits the travel and rotation, which Godot's editor never runs. The previewer renders a transform group with the joint gizmo.
 
 ## Linting
 
@@ -50,4 +50,13 @@ Strict parsing format-checks these `SliderJoint3D` properties, plus 4 inherited 
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-`index.ts` registers `parseNode3D` directly, which reads only `transform` and `visible`. An out-of-range `linear_limit/upper_distance` or a malformed `angular_limit/upper_angle` is dropped from the lenient tree rather than substituted or warned on.
+The lenient parser reads `node_a`, `node_b`, `linear_limit/upper_distance`, `linear_limit/lower_distance`, `angular_limit/upper_angle` and `angular_limit/lower_angle` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default. The gizmo substitutes the linear limits 1 and -1 and the angular limits 0 and 0 where it draws. The softness, restitution and damping keys are never read, because they steer the simulation that only a running game runs.
+
+## Gizmo
+
+Every node draws the slider travel in the joint colour, faint while unselected (ADR-0056): one segment along Z from 0.5 to -0.5, then, with both linear limits negated, a segment along X between them and a 0.5 square in the YZ plane at each end. Where the negated lower limit is below the upper, it draws one segment along X from 0.5 to -0.5. Each body that resolves adds a circle of 32 arcs around X, at radius 0.25 for body A and 0.27 for body B, in the colour of that body. Body B draws the inverse form. Godot's source is `joint_3d_gizmo_plugin.cpp:503-560` for the slider and `:176-236` for the circle. Equal angular limits draw one segment, and a lower limit above the upper draws a full circle. The circle looks from the joint toward its body around the joint's own X axis (`:83-112`).
+
+## Known limitations
+
+- **Editor only** The travel and circles draw for every slider joint when the Gizmos toggle is on, which a capture keeps off.
+- **Needs runtime** Only a running game limits the travel and rotation of the two bodies, with the softness, restitution and damping keys.

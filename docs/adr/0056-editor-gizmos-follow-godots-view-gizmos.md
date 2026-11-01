@@ -47,7 +47,7 @@ gizmo that is drawn for every node, sits in `<SelectedOnly>`.
 
 | Draws | Nodes |
 | --- | --- |
-| Every node, faint when unselected | CPUParticles3D box and centre axes, Path3D curve, SpringArm3D line, VehicleWheel3D, SoftBody3D wireframe, Camera3D frustum, Decal box, VisibleOnScreenNotifier3D and Enabler edges and axes, FogVolume box, the GPU particles collision and attractor nodes (box, sphere circles, SDF cell grid), PinJoint3D cross, ConeTwistJoint3D cone of each resolved body |
+| Every node, faint when unselected | CPUParticles3D box and centre axes, Path3D curve, SpringArm3D line, VehicleWheel3D, SoftBody3D wireframe, Camera3D frustum, Decal box, VisibleOnScreenNotifier3D and Enabler edges and axes, FogVolume box, the GPU particles collision and attractor nodes (box, sphere circles, SDF cell grid), PinJoint3D cross, ConeTwistJoint3D cone of each resolved body, HingeJoint3D axis and circle of each resolved body, SliderJoint3D travel and circle of each resolved body |
 | Every node, full colour | Marker3D (one material with no variants, `marker_3d_gizmo_plugin.cpp:80-92,115`), Marker2D, Path2D, LightOccluder2D |
 | Selected node only | Light helpers, the range and cone of AudioStreamPlayer3D, GPUParticles3D box, CPUParticles3D solid box, every emission shape, ReflectionProbe, VoxelGI, PathFollow2D and PathFollow3D handle |
 

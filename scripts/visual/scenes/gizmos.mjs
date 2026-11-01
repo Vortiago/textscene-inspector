@@ -24,6 +24,9 @@ export const GIZMO_SCENES = [
   // faint with nothing selected.
   { name: 'pin-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Pin' },
   { name: 'cone-twist-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Cone' },
+  // The HingeJoint3D arcs around Z and the SliderJoint3D travel and arcs around X, selected one at a time.
+  { name: 'hinge-joint-3d-selected', file: 'unit-joint-3d-gizmos-hinge-slider.tscn', gizmos: true, select: 'Root/Hinge' },
+  { name: 'slider-joint-3d-selected', file: 'unit-joint-3d-gizmos-hinge-slider.tscn', gizmos: true, select: 'Root/Slider' },
   { name: 'joint-3d-gizmos-unselected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true },
   // The SoftBody3D wireframe: the triangle edges of its mesh in the collision debug colour.
   { name: 'softbody3d-selected', file: 'unit-softbody3d.tscn', gizmos: true, select: 'Root/SoftBody3D' },
