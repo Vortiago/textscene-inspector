@@ -51,11 +51,11 @@ describe('a Chromium launch', () => {
 describe('a gate', () => {
   // A gate runs where no system Chrome is installed, as on the CI runner. Only a showcase recording
   // launches system Chrome.
-  const gates = sourceFiles(SCRIPTS)
+  const gatesOnSystemChrome = sourceFiles(SCRIPTS)
     .map((path) => relative(SCRIPTS, path))
-    .filter((path) => !path.startsWith('showcase/'));
+    .filter((path) => !path.startsWith('showcase/') && /\blaunchShowcaseBrowser\b/.test(source(path)));
 
-  it.each(gates)('%s launches the bundled Chromium', (gate) => {
-    expect(source(gate)).not.toMatch(/\blaunchShowcaseBrowser\b/);
+  it('launches the bundled Chromium, as only the showcase launches system Chrome', () => {
+    expect(gatesOnSystemChrome).toEqual([]);
   });
 });

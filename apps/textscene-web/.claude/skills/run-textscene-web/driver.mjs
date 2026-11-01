@@ -4,9 +4,9 @@
  * upload files over it, selects outliner nodes, and writes screenshots and a JSON report. It
  * composes the web gate's helpers, so it serves, settles and captures exactly as the gates do.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, extname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   attachDiagnostics,
@@ -23,22 +23,13 @@ import { inkStats } from '../../../../../scripts/vscode/pixels.mjs';
 import {
   expandAllTreeRows,
   readOutlinerPaths,
+  SELECT_SETTLE_MS,
   selectOutlinerNode,
 } from '../../../../../scripts/e2e/outliner.mjs';
 import { readInspectorPanel } from '../../../../../scripts/e2e/inspector.mjs';
 
 const USAGE = `usage: driver.mjs <fixture.tscn> [--upload <file>]... [--select <nodePath>]...
                   [--camera <Camera3D path>] [--eval <js expression>] [--out <dir>]`;
-
-// A selection re-renders synchronously off React state, so a fixed wait suffices, as in the web gate.
-const SELECT_SETTLE_MS = 400;
-
-const MIME_TYPES = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-};
 
 function parseCli(argv) {
   const { values, positionals } = parseArgs({
@@ -58,21 +49,15 @@ function parseCli(argv) {
   return { fixture: positionals[0], ...values, out: resolve(values.out) };
 }
 
-/** A local file as the payload `setInputFiles` takes. The toolbar sorts scenes from resources by extension. */
-function uploadPayload(path) {
-  const mimeType = MIME_TYPES[extname(path).toLowerCase()] ?? 'text/plain';
-  return { name: basename(path), mimeType, buffer: readFileSync(path) };
-}
-
 async function uploadFiles(page, paths) {
-  await page.getByTestId('upload-tscn-input').setInputFiles(paths.map(uploadPayload));
+  await page.getByTestId('upload-tscn-input').setInputFiles(paths);
   await page.getByTestId('uploaded-tscn-label').waitFor();
 }
 
 /**
  * Settles the scene's WebGL canvas and writes it, or answers why there is no frame. The canvas, not
- * the 2D parity frame: that frame refuses a stage whose origin is off the whole-pixel grid, which
- * the app's default layout puts it on.
+ * the 2D parity frame: that frame refuses an origin off the whole-pixel grid, which the app's
+ * fit-on-open zoom and pan give it. Only a capture context turns fit-on-open off.
  */
 async function captureScene(page, out) {
   const stage = await readViewportMode(page);

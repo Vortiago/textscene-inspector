@@ -5,9 +5,6 @@
  * capture gets the bundled Chromium, pinned by the lockfile, so it runs with no system Chrome.
  */
 /* global document */ // The readRasteriser callback runs in the browser.
-import { readdirSync } from 'node:fs';
-import { machine } from 'node:os';
-import { join } from 'node:path';
 import { chromium } from 'playwright';
 
 /**
@@ -23,7 +20,12 @@ export const SWIFTSHADER_GL_ARGS = [
 const GPU_COMPOSITED_ARGS = [...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader'];
 
 export function launchShowcaseBrowser() {
-  return launchShowcaseChannel(SWIFTSHADER_GL_ARGS);
+  return chromium.launch({
+    channel:
+      process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
+    headless: true,
+    args: SWIFTSHADER_GL_ARGS,
+  });
 }
 
 /**
@@ -45,37 +47,11 @@ export function launchSwiftShaderBrowser() {
 }
 
 /**
- * Where `mesa-vulkan-drivers` installs the lavapipe driver that `pnpm ref:godot` renders on. A
- * compositing launch sets it, since the Vulkan loader finds no ICD of its own in a container
- * without a GPU.
+ * Picks lavapipe among the Vulkan drivers by its manifest name, `lvp_icd.json` on Debian and
+ * `lvp_icd.x86_64.json` on Fedora, wherever the loader finds it. On a host with a GPU the loader
+ * would otherwise pick the GPU's driver. The filter needs Vulkan loader 1.3.234 or later.
  */
-const VULKAN_ICD_DIR = '/usr/share/vulkan/icd.d';
-
-/**
- * The lavapipe ICD among `fileNames` for `machineName` (`os.machine()`), or null. Debian and
- * Ubuntu name it `lvp_icd.json`. Fedora names one per architecture, `lvp_icd.x86_64.json`.
- */
-export function lavapipeIcdName(fileNames, machineName) {
-  const accepted = ['lvp_icd.json', `lvp_icd.${machineName}.json`];
-  return fileNames.find((name) => accepted.includes(name)) ?? null;
-}
-
-function lavapipeIcdPath() {
-  let fileNames;
-  try {
-    fileNames = readdirSync(VULKAN_ICD_DIR);
-  } catch {
-    fileNames = []; // A host with no Vulkan driver has no ICD directory, and the throw below names it.
-  }
-  const name = lavapipeIcdName(fileNames, machine());
-  if (!name) {
-    throw new Error(
-      `no lavapipe driver in ${VULKAN_ICD_DIR} for ${machine()}, expected lvp_icd.json or ` +
-        `lvp_icd.${machine()}.json. Install mesa-vulkan-drivers.`
-    );
-  }
-  return join(VULKAN_ICD_DIR, name);
-}
+const LAVAPIPE_DRIVER_FILTER = '*lvp*';
 
 const LAVAPIPE_ARGS = [
   '--ignore-gpu-blocklist',
@@ -97,7 +73,7 @@ export async function launchGodotComparisonBrowser() {
   const browser = await chromium.launch({
     headless: true,
     args: LAVAPIPE_ARGS,
-    env: { ...process.env, VK_ICD_FILENAMES: lavapipeIcdPath() },
+    env: { ...process.env, VK_LOADER_DRIVERS_SELECT: LAVAPIPE_DRIVER_FILTER },
   });
   try {
     assertLavapipe(await readRasteriser(browser));
@@ -135,13 +111,4 @@ function assertLavapipe({ renderer, subpixelBits }) {
 
 function launchBundled(args) {
   return chromium.launch({ headless: true, args });
-}
-
-function launchShowcaseChannel(args) {
-  return chromium.launch({
-    channel:
-      process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
-    headless: true,
-    args,
-  });
 }
