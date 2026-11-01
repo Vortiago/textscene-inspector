@@ -12,6 +12,7 @@ import { settleLoads } from '../../../../r3f/testing/settleLoads';
 import '../../../../r3f/nodes/index';
 import '../../../node/index';
 import '../../../base/node3d/index';
+import { TWO_BODY_ORIGINS } from './jointVertices.testkit';
 import '../staticbody3d/index';
 import '../pinjoint3d/index';
 import '../conetwistjoint3d/index';
@@ -19,8 +20,8 @@ import '../hingejoint3d/index';
 import '../sliderjoint3d/index';
 import '../generic6dofjoint3d/index';
 
-/** A transform of a node at `(x, y, z)` with no rotation. */
-function at(x: number, y: number, z: number): string {
+/** The scene text of a transform at `(x, y, z)` with no rotation. */
+function at({ x, y, z }: { x: number; y: number; z: number }): string {
   return `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, ${y}, ${z})`;
 }
 
@@ -48,7 +49,7 @@ interface MountOptions {
   files?: Record<string, string>;
 }
 
-export async function mountJointScene({
+function jointSceneElement({
   nodes,
   header = SCENE_HEADER,
   files = {},
@@ -57,7 +58,7 @@ export async function mountJointScene({
 }: MountOptions) {
   const { sceneGraph, error } = parseTscnContent(header + nodes.join('\n'), 'res://main.tscn');
   if (!sceneGraph) throw new Error(`expected a scene, got ${error}`);
-  const renderer = await ReactThreeTestRenderer.create(
+  return (
     <DispatchedScene
       sceneGraph={sceneGraph}
       loader={loaderServing(files)}
@@ -65,11 +66,39 @@ export async function mountJointScene({
       showGizmos={showGizmos}
     />
   );
+}
+
+async function settleFrames(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) {
   await settleLoads();
   await ReactThreeTestRenderer.act(async () => {
     await renderer.advanceFrames(2, 0.016);
   });
+}
+
+export async function mountJointScene(options: MountOptions) {
+  const renderer = await ReactThreeTestRenderer.create(jointSceneElement(options));
+  await settleFrames(renderer);
   return renderer;
+}
+
+/** Re-renders a mounted scene with the text of `options`, as a live edit of the file does. */
+export async function updateJointScene(
+  renderer: Awaited<ReturnType<typeof mountJointScene>>,
+  options: MountOptions
+) {
+  await ReactThreeTestRenderer.act(async () => {
+    await renderer.update(jointSceneElement(options));
+  });
+  await settleFrames(renderer);
+}
+
+/** The geometry of each gizmo line object in draw order: it is rebuilt exactly when the line's positions change. */
+export function drawnGeometries(
+  renderer: Awaited<ReturnType<typeof mountJointScene>>
+): THREE.BufferGeometry[] {
+  return renderer.scene
+    .findAllByType('LineSegments')
+    .map(({ instance }) => (instance as THREE.LineSegments).geometry);
 }
 
 interface DrawnLines {
@@ -100,14 +129,14 @@ const HOLDER_HEADER =
 export const BOTH_BODIES = { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../BodyB")' };
 
 /**
- * A `Joint` of `type` with `jointProperties`, and two StaticBody3D nodes `BodyA` at (2, 1, -1) and
- * `BodyB` at (-1, 0.5, 2), all under `parent`. The joint sits at (0.5, 0, 0.5).
+ * A `Joint` of `type` with `jointProperties`, and two StaticBody3D nodes `BodyA` and `BodyB`, all under
+ * `parent`, placed at {@link TWO_BODY_ORIGINS}.
  */
 export function twoBodyScene(type: string, jointProperties: Record<string, string>, parent = '.'): string[] {
   return [
-    nodeText('Joint', type, parent, { transform: at(0.5, 0, 0.5), ...jointProperties }),
-    nodeText('BodyA', 'StaticBody3D', parent, { transform: at(2, 1, -1) }),
-    nodeText('BodyB', 'StaticBody3D', parent, { transform: at(-1, 0.5, 2) }),
+    nodeText('Joint', type, parent, { transform: at(TWO_BODY_ORIGINS.joint), ...jointProperties }),
+    nodeText('BodyA', 'StaticBody3D', parent, { transform: at(TWO_BODY_ORIGINS.bodyA) }),
+    nodeText('BodyB', 'StaticBody3D', parent, { transform: at(TWO_BODY_ORIGINS.bodyB) }),
   ];
 }
 

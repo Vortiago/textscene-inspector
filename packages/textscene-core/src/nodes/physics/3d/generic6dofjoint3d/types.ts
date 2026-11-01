@@ -44,3 +44,10 @@ export function drawnLimits(properties: Generic6DOFJoint3DProperties): SixDofLim
     drawnAxisLimits(properties, 'z'),
   ];
 }
+
+/** Whether two limit sets hold the same values. */
+export function sameLimits(a: SixDofLimits, b: SixDofLimits): boolean {
+  return a.every((axis, index) =>
+    Object.entries(axis).every(([key, value]) => b[index]![key as keyof SixDofAxisLimits] === value)
+  );
+}

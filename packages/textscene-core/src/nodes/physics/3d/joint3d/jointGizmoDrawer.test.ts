@@ -6,8 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { transform3DOf, type Transform3D } from '../../../../godot/math/transform3d.js';
-import type { Vector3 } from '../../../../godot/math/vector.js';
-import { expectClose, vertex } from './jointVertices.testkit.js';
+import { TWO_BODY_TRANSFORMS, expectClose, unrotatedAt, vertex } from './jointVertices.testkit.js';
 import {
   coneTwistBodySegments,
   coneTwistLocalSegments,
@@ -30,11 +29,9 @@ const ROTATED_ABOUT_Y = transform3DOf(
     z: 0.5,
   }
 );
-const SIDE_BODY = at({ x: 2, y: 1, z: -1 });
-
-function at(origin: Vector3): Transform3D {
-  return transform3DOf([1, 0, 0, 0, 1, 0, 0, 0, 1], origin);
-}
+const UNROTATED_JOINT = TWO_BODY_TRANSFORMS.joint;
+const SIDE_BODY = TWO_BODY_TRANSFORMS.bodyA;
+const BODY_B_SIDE = TWO_BODY_TRANSFORMS.bodyB;
 
 const SWING = Math.PI / 4;
 const SWING_ONLY_VERTICES = 82;
@@ -46,7 +43,7 @@ function cone(joint: Transform3D, body: Transform3D, swing: number, twist: numbe
 
 describe('the cone of a body', () => {
   it('looks from an unrotated joint at the body, with the swing circle, spokes and X axis for a twist of 0', () => {
-    const segments = cone(at({ x: 0.5, y: 0, z: 0.5 }), SIDE_BODY, SWING, 0);
+    const segments = cone(UNROTATED_JOINT, SIDE_BODY, SWING, 0);
     expect(segments.length / 3).toBe(SWING_ONLY_VERTICES);
     expectClose(vertex(segments, 1), [0.907649, 0.412577, 0.077159]);
     expectClose(vertex(segments, 80), [0, 0, 0]);
@@ -67,7 +64,7 @@ describe('the cone of a body', () => {
     const [cos, sin] = [Math.cos(rotation), Math.sin(rotation)];
     const turned = (x: number, y: number, z: number) => ({ x, y: cos * y - sin * z, z: sin * y + cos * z });
     const joint = transform3DOf([1, 0, 0, 0, cos, -sin, 0, sin, cos], turned(0.5, 0, 0.5));
-    const segments = cone(joint, at(turned(2, 1, -1)), SWING, Math.PI);
+    const segments = cone(joint, unrotatedAt(turned(2, 1, -1)), SWING, Math.PI);
     expectClose(vertex(segments, 1), [0.718566, 0.691507, 0.07403]);
     expectClose(vertex(segments, 40), [0.107729, 0.005471, -0.994165]);
     expectClose(vertex(segments, 153), [0.073766, 0.03259, -0.295375]);
@@ -103,13 +100,18 @@ describe('the cone of a body', () => {
     ['above', 4],
     ['below', -4],
   ])('collapses the cone onto the world Y axis for a body straight %s the joint', (_label, height) => {
-    const segments = cone(at({ x: 1, y: 0, z: 1 }), at({ x: 1, y: height, z: 1 }), SWING, 0);
+    const segments = cone(
+      unrotatedAt({ x: 1, y: 0, z: 1 }),
+      unrotatedAt({ x: 1, y: height, z: 1 }),
+      SWING,
+      0
+    );
     const offAxis = Array.from(segments).filter((_value, index) => index % 3 !== 1);
     expect(offAxis.every((value) => value === 0)).toBe(true);
   });
 
   it('collapses every point onto the joint for a body at its origin', () => {
-    const segments = cone(at({ x: 1, y: 0, z: 1 }), at({ x: 1, y: 0, z: 1 }), SWING, 0);
+    const segments = cone(unrotatedAt({ x: 1, y: 0, z: 1 }), unrotatedAt({ x: 1, y: 0, z: 1 }), SWING, 0);
     expect(Array.from(segments).every((value) => value === 0)).toBe(true);
   });
 });
@@ -164,13 +166,7 @@ describe('the hinge circle of a body', () => {
   });
 
   it('draws at radius 0.27 for body B, looking at body B', () => {
-    const circle = hingeBodySegments(
-      ROTATED_ABOUT_Y,
-      at({ x: -1, y: 0.5, z: 2 }),
-      'bodyB',
-      -1.0471975,
-      1.0471975
-    );
+    const circle = hingeBodySegments(ROTATED_ABOUT_Y, BODY_B_SIDE, 'bodyB', -1.0471975, 1.0471975);
     expectClose(vertex(circle, FIRST_ARC_START), [-0.076749, 0.258862, 0]);
     expectClose(vertex(circle, MIDDLE_ARC_END), [-0.269795, 0.010532, 0]);
     expectClose(vertex(circle, LAST_ARC_END), [-0.185806, -0.195898, 0]);
@@ -225,7 +221,7 @@ describe('the slider circle of a body', () => {
   });
 
   it('draws the arc for body B with the Y form flipped and radius 0.27', () => {
-    const circle = sliderBodySegments(ROTATED_ABOUT_Y, at({ x: -1, y: 0.5, z: 2 }), 'bodyB', -0.5, 0.8);
+    const circle = sliderBodySegments(ROTATED_ABOUT_Y, BODY_B_SIDE, 'bodyB', -0.5, 0.8);
     expectClose(vertex(circle, FIRST_ARC_START), [0, 0.26639, 0.044007]);
     expectClose(vertex(circle, FIRST_ARC_END), [0, 0.264383, 0.054789]);
     expectClose(vertex(circle, MIDDLE_ARC_END), [0, 0.160202, 0.217337]);
@@ -234,7 +230,7 @@ describe('the slider circle of a body', () => {
   });
 
   it('draws a full circle for body B where the lower limit is above the upper one', () => {
-    const circle = sliderBodySegments(ROTATED_ABOUT_Y, at({ x: -1, y: 0.5, z: 2 }), 'bodyB', 1, -1);
+    const circle = sliderBodySegments(ROTATED_ABOUT_Y, BODY_B_SIDE, 'bodyB', 1, -1);
     expectClose(vertex(circle, FIRST_ARC_START), [0, -0.212681, -0.166333]);
     expectClose(vertex(circle, MIDDLE_ARC_END), [0, 0.084428, 0.25646]);
     expectClose(vertex(circle, LAST_ARC_END), [0, -0.212681, -0.166333]);
@@ -249,9 +245,7 @@ const SIX_DOF_DEFAULT_AXIS: SixDofAxisLimits = {
   angularLower: 0,
   angularUpper: 0,
 };
-const BODY_B_SIDE = at({ x: -1, y: 0.5, z: 2 });
 const SIX_DOF_AXIS_VERTEX_COUNT = 18;
-const UNROTATED_JOINT = at({ x: 0.5, y: 0, z: 0.5 });
 
 /** The defaults with the given overrides on each of the X, Y and Z axes. */
 function sixDofLimits(
