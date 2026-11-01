@@ -33,19 +33,3 @@ git tag -a vscode-v1.2.3 -m "Scene Tree view" -m "The tree follows the active pr
 
 The `release-vscode` job writes the extension's `CHANGELOG.md` from every `vscode-v` tag before
 it packages the `.vsix`. The `CHANGELOG.md` in the repository is a stub. Commit no generated one.
-
-## npm
-
-The `npm` job publishes `@textscene/linter`, `@textscene/lsp`, `@textscene/tscn` and
-`@textscene/renderer` with no token, through each package's trusted publisher on npmjs.com.
-
-npm offers a trusted publisher only for a package that exists. To add a new npm package:
-
-1. Run `pnpm build:<name>`.
-2. In the package's directory, run `npm pkg set version=0.1.0`.
-3. Run `pnpm pack`.
-4. Run `npm publish <tarball> --access public`.
-5. Run `git checkout package.json`.
-6. On npmjs.com, add a trusted publisher: repository `Vortiago/textscene-inspector`, workflow
-   `release.yml`, environment `release`.
-7. Tag `<name>-v0.2.0` for the first release through CI.
