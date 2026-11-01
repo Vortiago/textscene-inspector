@@ -36,6 +36,8 @@ Geometry, framing, tree scale, the sky, the fog, the ground and the override mat
 A cab and a trailer built from external compressed ArrayMeshes, with a livery decal and
 three blob-shadow decals. Every part sits where Godot puts it, and the shading matches. The
 project's `texture_mipmap_bias` of -0.5 sharpens the livery lettering, on the decal as on a material.
+Both sides draw the exhaust smoke after one `lifetime` (1.25 s). Each side picks its own
+particle seed, so the individual puffs differ.
 
 ## Tow truck
 <!-- compare: image=complex-truck-town-tow status=done fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
@@ -43,3 +45,5 @@ project's `texture_mipmap_bias` of -0.5 sharpens the livery lettering, on the de
 A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces.
 Every part sits where Godot puts it, and each blob shadow reaches the ground and never the
 bodywork (`Decal.cull_mask`). The shading and the grey metal chain links match.
+Both sides draw the exhaust smoke after one `lifetime` (1.25 s). Each side picks its own
+particle seed, so the individual puffs differ.

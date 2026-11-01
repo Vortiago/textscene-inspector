@@ -775,8 +775,10 @@ func _is_canvas_scene(target: Node) -> bool:
 	return target is CanvasItem or target is CanvasLayer
 
 func _render_3d(target: Node) -> void:
-	add_child(target)
+	# Before the enter-tree _update_internal that spends the request (cpu_particles_3d.cpp:1354):
+	# the paused tree runs no internal process to spend it later.
 	_advance_particles(target)
+	add_child(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 		_hide_2d()
