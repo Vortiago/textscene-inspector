@@ -2,7 +2,7 @@
  * The Joint3D gizmo parts (`joint_3d_gizmo_plugin.cpp`). The expected values come from a GDScript
  * port of `look_body`, `look_body_toward_x`, `look_body_toward_z`, `draw_cone` and `draw_circle` that
  * ran in Godot 4.6.3 through the engine's own `Basis` and `Vector3`, so they share no code with the build. `look_body` shows in every cone, since the cone
- * is built in the basis it returns. The 6DOF cases come from `/mnt/project-files/joint-1009/oracle.gd`.
+ * is built in the basis it returns. The 6DOF cases come from the same port, extended with `look_body_toward_y` and `CreateGeneric6DOFJointGizmo`.
  */
 import { describe, expect, it } from 'vitest';
 import { transform3DOf, type Transform3D } from '../../../../godot/math/transform3d.js';
