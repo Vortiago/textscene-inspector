@@ -33,6 +33,15 @@ Two torches share one inline `GradientTexture2D` cookie under a CanvasModulate. 
 `light_mode = 1` panel keeps its authored colour and stops the torch at its edge, as an
 unshaded item does in Godot.
 
+## The cookie's edge
+
+<!-- compare: image=unit-pointlight2d-cookie-edge status=done fixture=unit-pointlight2d-cookie-edge.tscn -->
+
+Godot samples a cookie from a light atlas cleared to transparent black (`texture_storage.cpp:3204`),
+so a linear tap fades the outer half texel to nothing (`canvas.glsl:782`). Three lights with an
+opaque cookie, an ADD, a MIX and a MIX at negative energy, each with an edge between two pixels,
+show that fade at the quad edge and land on Godot.
+
 ## Light Only items
 
 <!-- compare: image=unit-pointlight2d-lightonly status=done fixture=unit-pointlight2d-lightonly.tscn -->

@@ -5168,6 +5168,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>Two torches share one inline <code>GradientTexture2D</code> cookie under a CanvasModulate. The <code>light_mode = 1</code> panel keeps its authored colour and stops the torch at its edge, as an unshaded item does in Godot.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>The cookie's edge</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-cookie-edge-godot.png" alt="Godot render of The cookie's edge">
+          <img class="img-ours" src="images/unit-pointlight2d-cookie-edge-ours.png" alt="Our render of The cookie's edge">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Godot samples a cookie from a light atlas cleared to transparent black (<code>texture_storage.cpp:3204</code>), so a linear tap fades the outer half texel to nothing (<code>canvas.glsl:782</code>). Three lights with an opaque cookie, an ADD, a MIX and a MIX at negative energy, each with an edge between two pixels, show that fade at the quad edge and land on Godot.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Light Only items</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
