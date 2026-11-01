@@ -550,7 +550,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
   /**
    * A paused 3D emitter spends a request only in `_update_internal`, which the enter-tree
    * notification calls once, so the request has to reach the node before it enters the tree
-   * (`cpu_particles_3d.cpp:586`, `:1354`). Asked afterwards, the reference draws no particles (#1106).
+   * (`cpu_particles_3d.cpp:586`, `:1354`). Asked afterwards, the reference draws no particles.
    */
   it('draws a 3D emitter at the seconds `particles` names', async () => {
     const dir = await scratchDir();

@@ -1,7 +1,7 @@
 /**
  * A complex scene with a CPUParticles emitter needs the settle instant on the Godot side. The
  * previewer settles one `lifetime`, and a paused reference draws second zero, which shows no
- * particles (#1106).
+ * particles.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
