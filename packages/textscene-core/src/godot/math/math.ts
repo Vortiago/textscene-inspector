@@ -128,6 +128,14 @@ export function degToRadf(degrees: number): number {
   return f(degrees * DEG_TO_RAD_FLOAT);
 }
 
+/** `(float)(180.0 / PI)`, the constant of the float `Math::rad_to_deg`. */
+const RAD_TO_DEG_FLOAT = f(180 / Math.PI);
+
+/** The float overload of `Math::rad_to_deg` (`core/math/math_funcs.h:332-334`). */
+export function radToDegf(radians: number): number {
+  return f(radians * RAD_TO_DEG_FLOAT);
+}
+
 /**
  * The float overload of `Math::remap` (`core/math/math_funcs.h:508-510`): `inverse_lerp` of the value
  * in the input range, then `lerp` into the output range, each step rounded in float.
