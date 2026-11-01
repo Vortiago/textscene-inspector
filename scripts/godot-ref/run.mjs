@@ -1004,6 +1004,10 @@ func _hide_2d() -> void:
 # advance, but a caller who asks for N seconds of --no-previews runtime means
 # the same N seconds.
 #
+# A 3D emitter spends the request at its enter-tree _update_internal
+# (cpu_particles_3d.cpp:1354), so _render_3d asks BEFORE add_child; the 2D arms
+# ask after, and the first draw spends it.
+#
 # CPUParticles only. GPUParticles2D/3D carry the same method, but the previewer
 # draws a GPUParticles node as a bare transform group (ADR-0008), so there is no
 # pose on our side for an advanced one to be measured against.
