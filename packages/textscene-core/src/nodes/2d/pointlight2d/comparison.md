@@ -37,10 +37,10 @@ unshaded item does in Godot.
 
 <!-- compare: image=unit-pointlight2d-cookie-edge status=done fixture=unit-pointlight2d-cookie-edge.tscn -->
 
-Godot samples a cookie from a light atlas cleared to transparent black (`texture_storage.cpp:3204`),
-so a linear tap fades the outer half texel to nothing (`canvas.glsl:782`). Three lights with an
-opaque cookie, an ADD, a MIX and a MIX at negative energy, each with an edge between two pixels,
-show that fade at the quad edge and land on Godot.
+Godot samples a cookie from a light atlas cleared to transparent black (`texture_storage.cpp:3204`).
+A linear tap therefore fades the outer half texel to nothing (`canvas.glsl:782`). Three lights with an
+opaque cookie show the fade at the quad edge: an ADD, a MIX and a MIX at negative energy. Each
+quad edge lies between two pixels, and each light lands on Godot.
 
 ## Light Only items
 

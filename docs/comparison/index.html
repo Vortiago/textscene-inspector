@@ -5182,7 +5182,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>Godot samples a cookie from a light atlas cleared to transparent black (<code>texture_storage.cpp:3204</code>), so a linear tap fades the outer half texel to nothing (<code>canvas.glsl:782</code>). Three lights with an opaque cookie, an ADD, a MIX and a MIX at negative energy, each with an edge between two pixels, show that fade at the quad edge and land on Godot.</p></div>
+        <div class="prose"><p>Godot samples a cookie from a light atlas cleared to transparent black (<code>texture_storage.cpp:3204</code>). A linear tap therefore fades the outer half texel to nothing (<code>canvas.glsl:782</code>). Three lights with an opaque cookie show the fade at the quad edge: an ADD, a MIX and a MIX at negative energy. Each quad edge lies between two pixels, and each light lands on Godot.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Light Only items</h3><span class="status st-done">Done</span></div>
