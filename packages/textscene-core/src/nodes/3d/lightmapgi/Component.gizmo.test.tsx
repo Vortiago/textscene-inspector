@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { computeWorldBoundingBox } from '../../../r3f/bounds';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
@@ -171,5 +172,13 @@ describe('<LightmapGI> probe spheres', () => {
     const renderer = await render('Lightmap');
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+  });
+});
+
+describe('<LightmapGI> selection box', () => {
+  it('leaves the edges and spheres out, as LightmapGI::get_aabb is AABB() (lightmap_gi.cpp:1622)', async () => {
+    const renderer = await render('Lightmap');
+    const node = renderer.scene.findByProps({ name: 'Lightmap' }).instance as THREE.Object3D;
+    expect(computeWorldBoundingBox(node).isEmpty()).toBe(true);
   });
 });

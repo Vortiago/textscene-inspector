@@ -6,10 +6,11 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { boxlessUserData } from '../../../r3f/bounds';
 import { GizmoGroup } from '../../../r3f/components/GizmoGroup';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { pixelDitherFade } from '../../../r3f/materials/godotPixelDitherFade';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import {
@@ -18,6 +19,9 @@ import {
   type CaptureProbes,
 } from '../../../resources/lightmapgidata/captureProbes';
 import { probeSphereMesh } from './probeSpheres';
+
+/** LightmapGI::get_aabb is `AABB()` (`lightmap_gi.cpp:1622`), so the gizmo adds nothing to the selection box. */
+const BOXLESS_USER_DATA = boxlessUserData();
 
 /** `editors/3d_gizmos/gizmo_colors/lightmap_lines` (`editor_settings.cpp:891`). */
 const GIZMO_COLOR = Object.freeze({ r: 0.5, g: 0.6, b: 1 });
@@ -46,12 +50,15 @@ export function LightmapGIGizmo({ probeData }: { probeData: string | undefined }
 
 function ProbeEdges({ probes }: { probes: CaptureProbes }) {
   const edges = useMemo(() => probeEdgeSegments(probes), [probes]);
-  return <GizmoLine positions={edges} color={useGodotLinearColor(GIZMO_COLOR)} opacity={LINE_ALPHA} />;
+  return (
+    <GizmoLine isBoxless positions={edges} color={useGodotLinearColor(GIZMO_COLOR)} opacity={LINE_ALPHA} />
+  );
 }
 
 /** Unshaded, lit by vertex colours Godot reads as linear (`FLAG_SRGB_VERTEX_COLOR` off), with no fog (`:53-55`). */
-const SPHERE_MATERIAL = materialProgramInputs({
-  props: { vertexColors: true, fog: false, injection: SPHERE_FADE },
+const SPHERE_MATERIAL = viewportProgramInputs({
+  props: { injection: SPHERE_FADE },
+  merge: [{ vertexColors: true, fog: false }],
 });
 
 function ProbeSpheres({ probes }: { probes: CaptureProbes }) {
@@ -66,7 +73,7 @@ function ProbeSpheres({ probes }: { probes: CaptureProbes }) {
   useDisposeOnRelease(geometry);
   return (
     <GizmoGroup>
-      <mesh geometry={geometry}>
+      <mesh geometry={geometry} userData={BOXLESS_USER_DATA}>
         <meshBasicMaterial key={SPHERE_MATERIAL.key} {...SPHERE_MATERIAL.props} />
       </mesh>
     </GizmoGroup>
