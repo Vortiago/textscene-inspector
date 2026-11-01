@@ -142,6 +142,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'each node hangs off a path that names nothing on purpose: the warning is the point, and the golden pins where Godot draws the re-rooted node',
   },
+  'unit-pointlight2d-cookie-edge.tscn': {
+    rules: ['format:energy'],
+    reason:
+      'the NegativeMix light has energy -2 on purpose: a negative energy shows the cookie edge as a darkened ring, and the golden pins what Godot draws for it',
+  },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],
     reason:
