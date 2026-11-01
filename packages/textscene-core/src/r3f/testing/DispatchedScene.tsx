@@ -9,7 +9,10 @@ import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SceneStack, type SceneStackProps } from './SceneStack';
 
-export interface DispatchedSceneProps extends Pick<SceneStackProps, 'loader' | 'workspace' | 'selectedPath'> {
+export interface DispatchedSceneProps extends Pick<
+  SceneStackProps,
+  'loader' | 'workspace' | 'selectedPath' | 'showGizmos'
+> {
   sceneGraph: SceneGraph;
   /** A provider the nodes mount inside, under the hierarchy and the stack. Omitted, the nodes mount bare. */
   around?: (nodes: ReactNode) => ReactNode;
