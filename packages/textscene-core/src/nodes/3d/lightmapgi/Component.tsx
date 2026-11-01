@@ -1,7 +1,8 @@
 /**
  * <LightmapGI>: hands its baked data to the scene's lightmaps (`r3f/lightmap/sceneLightmaps.ts`),
  * which light each node the data names from the bake's atlas, and shadow each sun from its
- * shadowmask. It draws nothing of its own.
+ * shadowmask. It draws nothing of its own, but Godot's editor gizmo while it is selected
+ * (`lightmap_gi_gizmo_plugin.cpp:83-85`).
  */
 
 import { useThree } from '@react-three/fiber';
@@ -14,6 +15,7 @@ import { decodeLightmapGIData } from '../../../resources/lightmapgidata/decode';
 import type { LightmapGIData } from '../../../resources/lightmapgidata/types';
 import { useResource } from '../../../resources/useResource';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalExposureFactor } from '../../../r3f/environment/worldExposure';
 import { exposureOverBaked } from '../../../r3f/exposure/exposureOverBaked';
@@ -25,6 +27,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { Node3D } from '../../base/node3d/Component';
+import { LightmapGIGizmo } from './Gizmo';
 import type { LightmapGIProperties } from './types';
 
 const NO_PATHS: readonly string[] = [];
@@ -42,6 +45,11 @@ export function LightmapGI({ node, children }: NodeComponentProps) {
   return (
     <Node3D node={node}>
       {data && <BakedLightmap data={data} shadowmaskMode={shadowmaskMode} />}
+      {scoped?.resource.type === 'LightmapGIData' && (
+        <PluginGizmo drawnFor="selected-only">
+          <LightmapGIGizmo probeData={scoped.resource.data.probe_data} />
+        </PluginGizmo>
+      )}
       {children}
     </Node3D>
   );

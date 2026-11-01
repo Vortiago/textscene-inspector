@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { boxlessUserData } from '../bounds';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useGizmoLook } from '../gizmo/useGizmoLook';
@@ -21,9 +22,13 @@ interface GizmoLineProps {
   color?: THREE.ColorRepresentation;
   /** The opacity of the lines, from 0 to 1: the alpha of the colour a Godot gizmo material has. */
   opacity?: number;
+  /** Leaves the lines out of the selection box, for a node whose `get_aabb` is `AABB()`. */
+  isBoxless?: boolean;
 }
 
 const FLOATS_PER_SEGMENT = 6;
+
+const BOXLESS_USER_DATA = boxlessUserData();
 
 /** Whether the segment starting at `start` has an `inf` or `nan` vertex. */
 function hasNonFiniteVertex(positions: Float32Array, start: number): boolean {
@@ -61,6 +66,7 @@ export function GizmoLine({
   colors: allColors,
   color: ownColor,
   opacity: ownOpacity = 1,
+  isBoxless = false,
 }: GizmoLineProps) {
   const { color, opacity } = useGizmoLook(ownColor ?? 0xffffff, ownOpacity);
   const { positions, colors } = useMemo(
@@ -95,7 +101,7 @@ export function GizmoLine({
 
   return (
     <GizmoGroup>
-      <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
+      <lineSegments renderOrder={GIZMO_RENDER_ORDER} userData={isBoxless ? BOXLESS_USER_DATA : undefined}>
         <primitive object={geometry} attach="geometry" />
         <lineBasicMaterial key={program.key} {...program.props} />
       </lineSegments>

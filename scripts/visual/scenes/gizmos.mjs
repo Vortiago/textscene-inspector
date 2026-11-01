@@ -76,6 +76,7 @@ export const GIZMO_SCENES = [
   },
   { name: 'reflectionprobe-selected', file: 'unit-reflectionprobe-gizmo.tscn', gizmos: true, select: 'Root/Probe' },
   { name: 'voxelgi-selected', file: 'unit-voxelgi-gizmo.tscn', gizmos: true, select: 'Root/Voxels' },
+  { name: 'lightmap-gi-selected', file: 'unit-lightmap-gi-baked.tscn', gizmos: true, select: 'Root/LightmapGI' },
   { name: 'fogvolume-selected', file: 'unit-fogvolume-gizmo.tscn', gizmos: true, select: 'Root/Fog' },
   // The GPU particles collision and attractor nodes: a box, three great circles, or a box with the SDF cell grid.
   // Godot draws all seven for every node, so one golden shows them faint and one selects the SDF node.

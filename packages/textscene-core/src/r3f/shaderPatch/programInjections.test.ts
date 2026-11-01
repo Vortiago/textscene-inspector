@@ -32,6 +32,7 @@ import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';
 import { emissionTextureAddInjection } from '../materials/emissionTextureAdd';
+import { pixelDitherFade } from '../materials/godotPixelDitherFade';
 import { billboardInjections } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
@@ -179,6 +180,9 @@ const INJECTIONS: readonly InjectionCase[] = [
   ),
   injected('materials/godotTriplanar.ts', 'triplanar mapping', SURFACE_AND_DEPTH, () =>
     triplanarInjection({ userData: triplanarUserData(worldTriplanarRecord()) })
+  ),
+  injected('materials/godotPixelDitherFade.ts', 'pixel dither fade', ['basic'], () =>
+    pixelDitherFade(0.2, 0.6)
   ),
   injected('materials/emissionTextureAdd.ts', 'emission texture add', LIT, () =>
     emissionTextureAddInjection(1)
