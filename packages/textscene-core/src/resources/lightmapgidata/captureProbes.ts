@@ -6,7 +6,7 @@
 import { int32Elements } from '../../godot/variant/packedInt32';
 import { dictPackedField, packedFloatCount } from '../../godot/variant/packedArrayFields';
 import { packedArrayBody, packedArrayForms } from '../../godot/variant/variantParser';
-import { parsePackedVector3Array } from '../shapes/packedArray';
+import { parsePackedColorArray, parsePackedVector3Array } from '../shapes/packedArray';
 import { missingProbeDataField } from './probeData';
 
 /** The components of a Vector3 point, and of a colour. */
@@ -42,6 +42,8 @@ export interface CaptureProbes {
   points: Float32Array;
   /** Four point indices per tetrahedron. */
   tetrahedra: readonly number[];
+  /** Flat `rgba` of the nine spherical harmonics colours of each point, in point order. */
+  sh: Float32Array;
 }
 
 /**
@@ -73,15 +75,24 @@ export function readCaptureProbes(probeData: string | undefined): CaptureProbes 
   if (probeData === undefined || !acceptedPointCount(probeData)) return null;
   const points = flatPoints(readPoints(probeData));
   const tetrahedra = int32Field(readTetrahedra(probeData));
-  return points === null || tetrahedra === null ? null : { points, tetrahedra };
+  const sh = flatColours(readSh(probeData));
+  return points === null || tetrahedra === null || sh === null ? null : { points, tetrahedra, sh };
 }
 
 function flatPoints(value: string | null): Float32Array | null {
+  return flatFloats(value, parsePackedVector3Array);
+}
+
+function flatColours(value: string | null): Float32Array | null {
+  return flatFloats(value, parsePackedColorArray);
+}
+
+function flatFloats(value: string | null, parse: (value: string) => Float32Array): Float32Array | null {
   if (value === null) return null;
   try {
-    return parsePackedVector3Array(value);
+    return parse(value);
   } catch {
-    // A point list the tokenizer cannot read fails Godot's load, so the data has no points.
+    // An array the tokenizer cannot read fails Godot's load, so the data has no probes.
     return null;
   }
 }
@@ -96,7 +107,10 @@ function int32Field(value: string | null): number[] | null {
  * appearance, low point index first (`lightmap_gi_gizmo_plugin.cpp:102-124`). A pair with an index
  * outside the points adds no segment: Godot fails its index check there.
  */
-export function probeEdgeSegments({ points, tetrahedra }: CaptureProbes): Float32Array {
+export function probeEdgeSegments({
+  points,
+  tetrahedra,
+}: Pick<CaptureProbes, 'points' | 'tetrahedra'>): Float32Array {
   const pointCount = points.length / POINT_FLOATS;
   const seen = new Set<number>();
   const maxSegments = (tetrahedra.length / TETRAHEDRON_INDICES) * TETRAHEDRON_PAIRS.length;

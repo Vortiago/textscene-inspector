@@ -13,7 +13,9 @@ Applies a lightmap baked in Godot. Each mesh that `light_data` names reads its l
 
 ## Gizmo
 
-A selected LightmapGI draws one line for each unique edge of the capture-probe tetrahedra of its `light_data`, in Godot's colour at an alpha of 0.1. Godot's source is `lightmap_gi_gizmo_plugin.cpp:83-124`. Godot draws the lines only for the selected node (`:83-85`). Data that Godot refuses (`lightmap_gi.cpp:222-242`) and data with no points draw nothing. Godot draws the probe spheres too (`:126-223`).
+A selected LightmapGI draws one line for each unique edge of the capture-probe tetrahedra of its `light_data`, in Godot's colour at an alpha of 0.1, and a sphere at each probe. Godot's source is `lightmap_gi_gizmo_plugin.cpp:83-223`. Godot draws them only for the selected node (`:83-85`). Data that Godot refuses (`lightmap_gi.cpp:222-242`) and data with no points draw nothing.
+
+Each sphere has a radius of 0.2 and an unshaded, fog-free material that fades out between 0.2 and 0.6 from the camera. A vertex takes the light of the probe's spherical harmonics toward its normal.
 
 ## Linting
 

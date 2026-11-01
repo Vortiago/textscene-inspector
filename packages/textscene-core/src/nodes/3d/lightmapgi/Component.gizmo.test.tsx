@@ -149,3 +149,27 @@ describe('<LightmapGI> probe gizmo lines', () => {
     expect(world.x).toBe(5);
   });
 });
+
+describe('<LightmapGI> probe spheres', () => {
+  const spheres = async (selectedPath: string | null = 'Lightmap') =>
+    (await render(selectedPath)).scene.findAllByType('Mesh');
+
+  it('draws one mesh of a sphere for each probe while selected, none otherwise', async () => {
+    const [mesh] = await spheres();
+    expect(mesh!.instance.geometry.getAttribute('position').count).toBe(4 * 9 * 17);
+    expect(await spheres(null)).toHaveLength(0);
+  });
+
+  it('colours each vertex from the SH of its probe, unlit, opaque and without fog', async () => {
+    const [mesh] = await spheres();
+    const material = mesh!.instance.material as THREE.MeshBasicMaterial;
+    expect(mesh!.instance.geometry.getAttribute('color')).toBeDefined();
+    expect(material).toMatchObject({ vertexColors: true, transparent: false, fog: false });
+  });
+
+  it('draws the spheres under the node transform, as a child of the same gate as the edges', async () => {
+    const renderer = await render('Lightmap');
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+  });
+});
