@@ -135,10 +135,8 @@ window is no use. Stop it with Ctrl-C.
 - Run the driver through `pnpm exec node`, not plain `node`. A pnpm wrapper can move the Playwright
   browser cache (`PLAYWRIGHT_BROWSERS_PATH`). Plain `node` then looks in `~/.cache/ms-playwright`
   and misses the browser that `pnpm playwright:install` downloaded.
-- On a host with a GPU, the driver's Chromium renders WebGL on that GPU, not on SwiftShader.
-  `pnpm test:gpu` reports it as `the golden launch reports ... expected SwiftShader`. A screenshot
-  is then right for a review, but its pixels can differ from a CI golden. Use `pnpm test:visual`
-  for a golden.
+- The driver renders on SwiftShader with the GPU disabled, as the goldens do, so a screenshot shows
+  the pixels CI renders on any host.
 - An unknown fixture name does not 404. The app opens the stored or default scene, and the driver
   throws `previewer opened "<other>" but "<name>" was requested`. Run `pnpm generate:fixtures` from
   the repo root after you add a scene.

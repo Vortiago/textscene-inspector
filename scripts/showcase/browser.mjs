@@ -8,8 +8,8 @@
 import { chromium } from 'playwright';
 
 /**
- * ANGLE and SwiftShader make WebGL paint in software, where --disable-gpu would kill WebGL. Every
- * Chromium launch in the repo (showcase, VS Code capture, visual harness) shares these flags.
+ * ANGLE and SwiftShader let WebGL paint in software. Every Chromium launch in the repo (showcase,
+ * VS Code capture, visual harness) shares these flags.
  */
 export const SWIFTSHADER_GL_ARGS = [
   '--enable-unsafe-swiftshader',
@@ -39,11 +39,18 @@ export function launchGpuCompositedBrowser() {
 }
 
 /**
- * The bundled Chromium with SwiftShader software GL, so local and CI render the same bits with no
- * GPU or driver variance. The goldens are captured through it.
+ * The path a host with no GPU takes: SwiftShader WebGL, composited in software. On a host with a
+ * GPU, ANGLE draws on that GPU, and a golden differs from CI's. `--disable-gpu` forces the software
+ * path on every host, and `--enable-unsafe-swiftshader` keeps WebGL alive on it.
+ */
+const NO_GPU_ARGS = [...SWIFTSHADER_GL_ARGS, '--disable-gpu'];
+
+/**
+ * The bundled Chromium on the no-GPU path, so every host renders the bits CI renders. The goldens
+ * are captured through it.
  */
 export function launchSwiftShaderBrowser() {
-  return launchBundled(SWIFTSHADER_GL_ARGS);
+  return launchBundled(NO_GPU_ARGS);
 }
 
 /**
