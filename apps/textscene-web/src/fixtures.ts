@@ -243,6 +243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bone Attachment 3d Follow",
+    "file": "unit-bone-attachment-3d-follow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone Attachment 3d",
     "file": "unit-bone-attachment-3d.tscn",
     "category": "Other"
