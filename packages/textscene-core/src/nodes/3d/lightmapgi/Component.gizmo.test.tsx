@@ -100,6 +100,11 @@ describe('<LightmapGI> probe gizmo gate', () => {
     expect(await gizmoLines('lightmap_textures = []\n')).toEqual([]);
   });
 
+  it('draws for directional data in the unpacked format, which Godot keeps as light_data and only declines to assign (lightmap_gi.cpp:1509-1513, 1597)', async () => {
+    const unpacked = 'uses_spherical_harmonics = true\n_uses_packed_directional = false\n' + ONE_TETRAHEDRON;
+    expect(await gizmoLines(unpacked)).toHaveLength(1);
+  });
+
   it('draws nothing for a LightmapGI with no light_data (edge case)', async () => {
     const parsed = new TscnParser().parse(
       '[gd_scene format=3]\n\n[node name="Lightmap" type="LightmapGI"]\n'
