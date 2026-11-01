@@ -7793,7 +7793,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A cab and a trailer built from external compressed ArrayMeshes, with a livery decal and three blob-shadow decals. Every part sits where Godot puts it, and the shading matches. The project's <code>texture_mipmap_bias</code> of -0.5 sharpens the livery lettering, on the decal as on a material.</p></div>
+        <div class="prose"><p>A cab and a trailer built from external compressed ArrayMeshes, with a livery decal and three blob-shadow decals. Every part sits where Godot puts it, and the shading matches. The project's <code>texture_mipmap_bias</code> of -0.5 sharpens the livery lettering, on the decal as on a material. Both sides draw the exhaust smoke after one <code>lifetime</code> (1.25 s). Each side picks its own particle seed, so the individual puffs differ.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Tow truck</h3><span class="status st-done">Done</span></div>
@@ -7810,7 +7810,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces. Every part sits where Godot puts it, and each blob shadow reaches the ground and never the bodywork (<code>Decal.cull_mask</code>). The shading and the grey metal chain links match.</p></div>
+        <div class="prose"><p>A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces. Every part sits where Godot puts it, and each blob shadow reaches the ground and never the bodywork (<code>Decal.cull_mask</code>). The shading and the grey metal chain links match. Both sides draw the exhaust smoke after one <code>lifetime</code> (1.25 s). Each side picks its own particle seed, so the individual puffs differ.</p></div>
       </section>
     </article>
     <article class="sheet" data-type="TwoBoneIK3D" hidden>
