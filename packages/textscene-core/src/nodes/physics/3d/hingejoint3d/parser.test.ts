@@ -27,7 +27,7 @@ describe('parseHingeJoint3D', () => {
   });
 });
 
-describeUnsetAndUnreadableKeys('parseHingeJoint3D', 'HingeJoint3D', parseHingeJoint3D, {
+describeUnsetAndUnreadableKeys('HingeJoint3D', parseHingeJoint3D, {
   'angular_limit/enable': 'maybe',
   'angular_limit/lower': 'wide',
   'angular_limit/upper': 'wide',

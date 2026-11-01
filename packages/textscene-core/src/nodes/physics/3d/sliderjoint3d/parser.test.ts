@@ -29,7 +29,7 @@ describe('parseSliderJoint3D', () => {
   });
 });
 
-describeUnsetAndUnreadableKeys('parseSliderJoint3D', 'SliderJoint3D', parseSliderJoint3D, {
+describeUnsetAndUnreadableKeys('SliderJoint3D', parseSliderJoint3D, {
   'linear_limit/upper_distance': 'far',
   'linear_limit/lower_distance': 'far',
   'angular_limit/upper_angle': 'far',

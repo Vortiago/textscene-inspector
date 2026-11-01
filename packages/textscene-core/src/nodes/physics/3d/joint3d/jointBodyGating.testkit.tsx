@@ -32,7 +32,7 @@ export function describeJointBodyGating(label: string, type: string, parts: Body
   describe(`${label} bodies`, () => {
     it('draws every line at 0.3 of the selected opacity while unselected', async () => {
       const lines = drawnLines(await mountJointScene({ nodes: twoBodyScene(type, BOTH_BODIES) }));
-      expect(lines.length).toBeGreaterThan(0);
+      expect(lines).toHaveLength(parts.both.length);
       for (const { opacity } of lines) expect(opacity).toBeCloseTo(0.3, 10);
     });
 

@@ -25,7 +25,7 @@ describe('parseConeTwistJoint3D', () => {
   });
 });
 
-describeUnsetAndUnreadableKeys('parseConeTwistJoint3D', 'ConeTwistJoint3D', parseConeTwistJoint3D, {
+describeUnsetAndUnreadableKeys('ConeTwistJoint3D', parseConeTwistJoint3D, {
   swing_span: 'wide',
   twist_span: 'wide',
 });
