@@ -251,7 +251,6 @@ const SIX_DOF_DEFAULT_AXIS: SixDofAxisLimits = {
 };
 const BODY_B_SIDE = at({ x: -1, y: 0.5, z: 2 });
 const SIX_DOF_AXIS_VERTEX_COUNT = 18;
-const SIX_DOF_DEFAULTS: SixDofLimits = [SIX_DOF_DEFAULT_AXIS, SIX_DOF_DEFAULT_AXIS, SIX_DOF_DEFAULT_AXIS];
 const UNROTATED_JOINT = at({ x: 0.5, y: 0, z: 0.5 });
 
 /** The defaults with the given overrides on each of the X, Y and Z axes. */
@@ -266,6 +265,8 @@ function sixDofLimits(
     { ...SIX_DOF_DEFAULT_AXIS, ...z },
   ];
 }
+
+const SIX_DOF_DEFAULTS = sixDofLimits({});
 
 describe('sixDofJointSegments', () => {
   it('draws a degenerate travel and a 0.5 square at the origin per axis at the defaults', () => {

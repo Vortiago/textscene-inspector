@@ -17,6 +17,9 @@ import { EXPECTED_PART_COLOURS, expectClose, vertex } from '../joint3d/jointVert
 
 const TRAVEL_VERTEX_COUNT = 54;
 const CIRCLE_VERTEX_COUNT = 70;
+const DEFAULT_BODY_A_SEGMENTS = [
+  0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0.353553, 0, -0.353553, 0, 0, 0, 0.416025, 0.27735, 0,
+];
 const SELECTED = 'Root/Joint';
 
 const sixDofScene = (joint: Record<string, string> = {}) =>
@@ -42,10 +45,7 @@ describe('<Generic6DOFJoint3D> gizmo', () => {
     expectClose(vertex(travel!.positions, 2), [0, -0.25, -0.25]);
     expectClose(vertex(travel!.positions, 20), [-0.25, 0, -0.25]);
     expectClose(vertex(travel!.positions, 38), [-0.25, -0.25, 0]);
-    expectClose(
-      bodyA!.positions,
-      [0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0.353553, 0, -0.353553, 0, 0, 0, 0.416025, 0.27735, 0]
-    );
+    expectClose(bodyA!.positions, DEFAULT_BODY_A_SEGMENTS);
     expectClose(
       bodyB!.positions,
       [0, 0, 0, 0.5, 0, 0, 0, 0, 0, -0.353553, 0, 0.353553, 0, 0, 0, -0.474342, 0.158114, 0]
@@ -104,10 +104,7 @@ describe('<Generic6DOFJoint3D> with a single body', () => {
   it('draws body B toward the world origin for node_a alone, as Godot passes it an identity transform', async () => {
     const nodes = twoBodyScene('Generic6DOFJoint3D', { node_a: BOTH_BODIES.node_a });
     const [, bodyA, bodyB] = drawnLines(await mountJointScene({ nodes }));
-    expectClose(
-      bodyA!.positions,
-      [0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0.353553, 0, -0.353553, 0, 0, 0, 0.416025, 0.27735, 0]
-    );
+    expectClose(bodyA!.positions, DEFAULT_BODY_A_SEGMENTS);
     expectClose(
       bodyB!.positions,
       [0, 0, 0, 0.5, 0, 0, 0, 0, 0, -0.353553, 0, -0.353553, 0, 0, 0, -0.5, 0, 0]

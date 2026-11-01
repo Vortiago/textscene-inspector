@@ -21,7 +21,6 @@ import {
   vector3Scaled,
   type Vector3,
 } from '../../../../godot/math/vector.js';
-import { FULL_CIRCLE_LIMITS } from './types.js';
 
 /** `CreatePinJointGizmo`'s `cs` (`:462-464`). */
 const PIN_ARM_LENGTH = 0.25;
@@ -31,6 +30,9 @@ const BODY_RADIUS = { bodyA: 0.25, bodyB: 0.27 };
 
 /** The half-size of the square at each end of a linear travel (`cs` in the slider and 6DOF builders). */
 const SQUARE_HALF_SIZE = 0.25;
+
+/** What a joint passes where its angular limit is off: lower above upper, which `draw_circle` turns into the full circle (`:178-181`). */
+export const FULL_CIRCLE_LIMITS = Object.freeze({ lower: 0, upper: -1 });
 
 /** `draw_circle`'s `points`: arcs around the axis. */
 const CIRCLE_ARCS = 32;
@@ -366,13 +368,14 @@ export function sixDofBodySegments(
 ): Float32Array {
   const radius = f(BODY_RADIUS[part]);
   const inverse = part === 'bodyA';
-  return Float32Array.from(
-    limits.flatMap(({ angularEnabled, angularLower, angularUpper }, axis) => {
-      const base = LOOK_BODY_TOWARD[axis]!(joint, body);
-      const ringAt = (angle: number) => RING_AROUND[axis]!(angle, inverse);
-      const lower = angularEnabled ? angularLower : FULL_CIRCLE_LIMITS.lower;
-      const upper = angularEnabled ? angularUpper : FULL_CIRCLE_LIMITS.upper;
-      return Array.from(circleSegments(radius, base, lower, upper, ringAt));
-    })
-  );
+  const out: number[] = [];
+  limits.forEach(({ angularEnabled, angularLower, angularUpper }, axis) => {
+    const base = LOOK_BODY_TOWARD[axis]!(joint, body);
+    const ringAt = (angle: number) => RING_AROUND[axis]!(angle, inverse);
+    const { lower, upper } = angularEnabled
+      ? { lower: angularLower, upper: angularUpper }
+      : FULL_CIRCLE_LIMITS;
+    out.push(...circleSegments(radius, base, lower, upper, ringAt));
+  });
+  return Float32Array.from(out);
 }
