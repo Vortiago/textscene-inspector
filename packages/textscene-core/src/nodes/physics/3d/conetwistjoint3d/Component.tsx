@@ -5,43 +5,25 @@
  */
 
 import { useMemo } from 'react';
-import type { Transform3D } from '../../../../godot/math/transform3d';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
-import { JointGizmoLines } from '../joint3d/JointGizmoLines';
+import { JointBodyLines, type BodySegments } from '../joint3d/JointBodyLines';
 import { coneTwistBodySegments, coneTwistLocalSegments } from '../joint3d/jointGizmoDrawer';
 import { useJointBodies } from '../joint3d/useJointBodies';
 import { DEFAULT_SWING_SPAN, DEFAULT_TWIST_SPAN } from './types';
 import type { ConeTwistJoint3DProperties } from './types';
 
-function BodyCone({
-  part,
-  joint,
-  body,
-  local,
-}: {
-  part: 'bodyA' | 'bodyB';
-  joint: Transform3D;
-  body: Transform3D;
-  local: Float32Array;
-}) {
-  const positions = useMemo(() => coneTwistBodySegments(joint, body, local), [joint, body, local]);
-  return <JointGizmoLines part={part} positions={positions} />;
-}
-
 function ConeTwistGizmo({ properties }: { properties: ConeTwistJoint3DProperties }) {
   const bodies = useJointBodies(properties);
   const swing = properties.swing_span ?? DEFAULT_SWING_SPAN;
   const twist = properties.twist_span ?? DEFAULT_TWIST_SPAN;
-  const local = useMemo(() => coneTwistLocalSegments(swing, twist), [swing, twist]);
+  const segmentsFor = useMemo<BodySegments>(() => {
+    const local = coneTwistLocalSegments(swing, twist);
+    return (joint, body) => coneTwistBodySegments(joint, body, local);
+  }, [swing, twist]);
   if (bodies === null) return null;
-  return (
-    <>
-      {bodies.bodyA && <BodyCone part="bodyA" joint={bodies.joint} body={bodies.bodyA} local={local} />}
-      {bodies.bodyB && <BodyCone part="bodyB" joint={bodies.joint} body={bodies.bodyB} local={local} />}
-    </>
-  );
+  return <JointBodyLines bodies={bodies} segmentsFor={segmentsFor} />;
 }
 
 export function ConeTwistJoint3D({ node, children }: NodeComponentProps) {

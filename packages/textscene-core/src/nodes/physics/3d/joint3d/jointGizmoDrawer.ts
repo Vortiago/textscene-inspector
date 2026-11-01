@@ -6,6 +6,7 @@
 
 import { basisXform } from '../../../../godot/math/basisFloat.js';
 import {
+  basisColumn,
   basisFromColumns,
   basisInvert,
   basisMultiply,
@@ -14,10 +15,24 @@ import {
 import { degToRadf, radToDegf } from '../../../../godot/math/math.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import { basisOfTransform3D, type Transform3D } from '../../../../godot/math/transform3d.js';
-import { normalizedVector3, vector3Cross, type Vector3 } from '../../../../godot/math/vector.js';
+import {
+  normalizedVector3,
+  vector3Cross,
+  vector3Scaled,
+  type Vector3,
+} from '../../../../godot/math/vector.js';
 
 /** `CreatePinJointGizmo`'s `cs` (`:462-464`). */
 const PIN_ARM_LENGTH = 0.25;
+
+/** `BODY_A_RADIUS` and `BODY_B_RADIUS` (`:42-43`). */
+const BODY_RADIUS = { bodyA: 0.25, bodyB: 0.27 };
+
+/** The half-size of the square at each end of the slider's travel (`CreateSliderJointGizmo`, `cs`). */
+const SLIDER_SQUARE_HALF_SIZE = 0.25;
+
+/** `draw_circle`'s `points`: arcs around the axis. */
+const CIRCLE_ARCS = 32;
 
 /** The largest twist the cone draws, in degrees (`draw_cone`, `ts = MIN(ts, 720)`). */
 const MAX_TWIST_DEGREES = 720;
@@ -26,8 +41,26 @@ const SWING_STEP_DEGREES = 10;
 const TWIST_STEP_DEGREES = 5;
 const SWING_AXIS_STEP_DEGREES = 90;
 
+export type BodyPart = keyof typeof BODY_RADIUS;
+
 function asVector([x, y, z]: readonly [number, number, number]): Vector3 {
   return { x, y, z };
+}
+
+type Direction = readonly [number, number, number];
+
+/** The world-space columns `x`, `y` and `z` expressed in the joint's own frame, as every look function ends (`:63-66`). */
+function inJointFrame(joint: Transform3D, x: Direction, y: Direction, z: Direction): BasisComponents {
+  const base = basisFromColumns(asVector(x), asVector(y), asVector(z));
+  return basisMultiply(basisInvert(basisOfTransform3D(joint)), base);
+}
+
+function towardBody(joint: Transform3D, body: Transform3D): Direction {
+  return normalizedVector3(
+    f(body.origin.x - joint.origin.x),
+    f(body.origin.y - joint.origin.y),
+    f(body.origin.z - joint.origin.z)
+  );
 }
 
 /**
@@ -36,15 +69,32 @@ function asVector([x, y, z]: readonly [number, number, number]): Vector3 {
  * joint, or at its origin, gives a zero Z axis, and the zero stays through the cross products.
  */
 function lookBody(joint: Transform3D, body: Transform3D): BasisComponents {
-  const towardBody = normalizedVector3(
-    f(body.origin.x - joint.origin.x),
-    f(body.origin.y - joint.origin.y),
-    f(body.origin.z - joint.origin.z)
-  );
-  const sideways = normalizedVector3(...vector3Cross(towardBody, [0, 1, 0]));
-  const up = normalizedVector3(...vector3Cross(sideways, towardBody));
-  const base = basisFromColumns(asVector(towardBody), asVector(up), asVector(sideways));
-  return basisMultiply(basisInvert(basisOfTransform3D(joint)), base);
+  const x = towardBody(joint, body);
+  const z = normalizedVector3(...vector3Cross(x, [0, 1, 0]));
+  const y = normalizedVector3(...vector3Cross(z, x));
+  return inJointFrame(joint, x, y, z);
+}
+
+/**
+ * `JointGizmosDrawer::look_body_toward_x` (`:83-112`): the body direction decides the Y and Z axes
+ * around the joint's own X axis, which stays X.
+ */
+function lookBodyTowardX(joint: Transform3D, body: Transform3D): BasisComponents {
+  const front = basisColumn(basisOfTransform3D(joint), 0);
+  const y = normalizedVector3(...vector3Cross(front, towardBody(joint, body)));
+  const z = normalizedVector3(...vector3Cross(y, front));
+  return inJointFrame(joint, normalizedVector3(...front), y, z);
+}
+
+/**
+ * `JointGizmosDrawer::look_body_toward_z` (`:145-174`): the body direction decides the X and Y axes
+ * around the joint's own Z axis, which stays Z.
+ */
+function lookBodyTowardZ(joint: Transform3D, body: Transform3D): BasisComponents {
+  const z = normalizedVector3(...basisColumn(basisOfTransform3D(joint), 2));
+  const y = normalizedVector3(...vector3Cross(z, towardBody(joint, body)));
+  const x = normalizedVector3(...vector3Cross(y, z));
+  return inJointFrame(joint, x, y, z);
 }
 
 /** The two ends of a segment from `from` to `to`. */
@@ -117,4 +167,121 @@ export function coneTwistBodySegments(
     out[i + 2] = z;
   }
   return out;
+}
+
+/** The ring point of `draw_circle` around Z at `angle`: `(cos, sin, 0)` (`:221-222`). */
+function ringAroundZ(angle: number): Vector3 {
+  return { x: f(Math.cos(angle)), y: f(Math.sin(angle)), z: 0 };
+}
+
+/** The ring point of `draw_circle` around X at `angle`: `(0, sin * ySign, cos)`, with `ySign` -1 unless `p_inverse` is set (`:193-198`). */
+function ringAroundX(angle: number, ySign: 1 | -1): Vector3 {
+  return { x: 0, y: f(f(Math.sin(angle)) * ySign), z: f(Math.cos(angle)) };
+}
+
+/**
+ * `JointGizmosDrawer::draw_circle` (`:176-236`) with the identity offset: equal limits draw one
+ * segment along the base's X axis. Otherwise a lower limit above the upper one becomes the full
+ * circle, and 32 arcs follow `ringAt`, each end joined to the origin, with a mark on Y.
+ */
+function circleSegments(
+  radius: number,
+  base: BasisComponents,
+  lowerLimit: number,
+  upperLimit: number,
+  ringAt: (angle: number) => Vector3
+): Float32Array {
+  const out: number[] = [];
+  let lower = f(lowerLimit);
+  let upper = f(upperLimit);
+  const origin: Vector3 = { x: 0, y: 0, z: 0 };
+  if (lower === upper) {
+    pushSegment(out, origin, basisXform(base, { x: 0.5, y: 0, z: 0 }));
+    return Float32Array.from(out);
+  }
+  if (lower > upper) {
+    lower = f(-Math.PI);
+    upper = f(Math.PI);
+  }
+
+  const span = f(upper - lower);
+  const points = Array.from({ length: CIRCLE_ARCS + 1 }, (_, index) => {
+    const angle = f(lower + f(f(index * span) / CIRCLE_ARCS));
+    return vector3Scaled(basisXform(base, ringAt(angle)), radius);
+  });
+  for (let i = 0; i < CIRCLE_ARCS; i++) {
+    const from = points[i]!;
+    const to = points[i + 1]!;
+    if (i === CIRCLE_ARCS - 1) pushSegment(out, to, origin);
+    if (i === 0) pushSegment(out, from, origin);
+    pushSegment(out, from, to);
+  }
+  pushSegment(out, { x: 0, y: f(radius * 1.5), z: 0 }, origin);
+  return Float32Array.from(out);
+}
+
+/** `CreateHingeJointGizmo` (`:473-476`): the hinge axis, one segment along Z from 0.5 to -0.5. */
+export function hingeJointSegments(): Float32Array {
+  return Float32Array.of(0, 0, 0.5, 0, 0, -0.5);
+}
+
+/**
+ * `CreateHingeJointGizmo` (`:478-499`) for one body: the circle around Z between the angular
+ * limits, turned to look from the joint toward the body. A caller with the limit off passes lower 0
+ * and upper -1, which draws the full circle.
+ */
+export function hingeBodySegments(
+  joint: Transform3D,
+  body: Transform3D,
+  part: BodyPart,
+  lowerLimit: number,
+  upperLimit: number
+): Float32Array {
+  const base = lookBodyTowardZ(joint, body);
+  return circleSegments(f(BODY_RADIUS[part]), base, lowerLimit, upperLimit, ringAroundZ);
+}
+
+/**
+ * `CreateSliderJointGizmo` (`:503-551`) for the joint colour: the Z segment, then the X travel
+ * between the negated linear limits with a square at each end, or the short X segment where the
+ * negated lower limit is below the upper one.
+ */
+export function sliderJointSegments(lowerLimit: number, upperLimit: number): Float32Array {
+  const out: number[] = [];
+  const lower = f(-lowerLimit);
+  const upper = f(-upperLimit);
+  const size = SLIDER_SQUARE_HALF_SIZE;
+  pushSegment(out, { x: 0, y: 0, z: 0.5 }, { x: 0, y: 0, z: -0.5 });
+  if (lower < upper) {
+    pushSegment(out, { x: 0.5, y: 0, z: 0 }, { x: -0.5, y: 0, z: 0 });
+    return Float32Array.from(out);
+  }
+  pushSegment(out, { x: upper, y: 0, z: 0 }, { x: lower, y: 0, z: 0 });
+  for (const x of [upper, lower]) {
+    const corners: Vector3[] = [
+      { x, y: -size, z: -size },
+      { x, y: -size, z: size },
+      { x, y: size, z: size },
+      { x, y: size, z: -size },
+    ];
+    corners.forEach((corner, i) => pushSegment(out, corner, corners[(i + 1) % corners.length]!));
+  }
+  return Float32Array.from(out);
+}
+
+/**
+ * `CreateSliderJointGizmo` (`:535-559`) for one body: the circle around X between the angular
+ * limits, turned to look from the joint toward the body. Body B draws the circle's inverse form.
+ */
+export function sliderBodySegments(
+  joint: Transform3D,
+  body: Transform3D,
+  part: BodyPart,
+  lowerLimit: number,
+  upperLimit: number
+): Float32Array {
+  const base = lookBodyTowardX(joint, body);
+  const ySign = part === 'bodyB' ? 1 : -1;
+  const ringAt = (angle: number) => ringAroundX(angle, ySign);
+  return circleSegments(f(BODY_RADIUS[part]), base, lowerLimit, upperLimit, ringAt);
 }
