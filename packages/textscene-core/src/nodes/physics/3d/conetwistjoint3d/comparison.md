@@ -1,16 +1,16 @@
 ---
 type: ConeTwistJoint3D
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-cone-twist-joint-3d.tscn
 # image: unit-cone-twist-joint-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a transform group with a cone for each body for every node
 ---
 
 # ConeTwistJoint3D
 
-A ball-and-socket joint between two 3D physics bodies. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008). Godot shows the cone only as an editor gizmo.
+A ball-and-socket joint between two 3D physics bodies. In a running game the physics server limits their swing and twist, which Godot's editor never runs. The previewer renders a transform group with the joint gizmo.
 
 ## Linting
 
@@ -33,4 +33,15 @@ Strict parsing format-checks these `ConeTwistJoint3D` properties, plus 4 inherit
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-`index.ts` registers `parseNode3D` directly, which reads only `transform` and `visible`. An out-of-range `swing_span` or a malformed `bias` is dropped from the lenient tree rather than substituted or warned on.
+The lenient parser reads `node_a`, `node_b`, `swing_span` and `twist_span` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default. The gizmo substitutes `swing_span = PI / 4` and `twist_span = PI` where it draws. `bias`, `softness` and `relaxation` are never read, because they steer the simulation that only a running game runs.
+
+## Gizmo
+
+Every node draws one cone for each body that resolves, faint while unselected (ADR-0056). Each cone has the colour of its body. Godot's source is `joint_3d_gizmo_plugin.cpp:238-279` for the cone and `:562-580` for the call. Body A draws in `Color(0.6, 0.8, 1)` and body B in `Color(0.6, 0.9, 1)`. The joint colour draws nothing here. A cone is the swing circle with a spoke every 90 degrees, and the X axis. The twist spiral adds one segment for each 5 degrees of `twist_span`, up to 720 degrees.
+
+A cone looks from the joint at its body, crossed with the world up (`:45-67`). A rotated ancestor therefore turns the cone. A body straight above or below the joint, or at its origin, collapses the cone onto the joint.
+
+## Known limitations
+
+- **Editor only** The cones draw for every cone-twist joint when the Gizmos toggle is on, which a capture keeps off.
+- **Needs runtime** Only a running game limits the swing and twist of the two bodies, with `bias`, `softness` and `relaxation`.

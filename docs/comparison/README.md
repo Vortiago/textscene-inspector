@@ -92,7 +92,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md): a transform-only Node3D group
 - [CollisionPolygon3D](../../packages/textscene-core/src/nodes/physics/3d/collisionpolygon3d/comparison.md): nothing (a transform-only group)
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md): a toggle-gated collision wireframe
-- [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): nothing (a transform-only group)
+- [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): a transform group with a cone for each body for every node
 - [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md): nothing yet, Godot remaps a reference value onto an apply bone, the previewer does not
 - [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): nothing (a transform-only modifier that edits the pose of the Skeleton3D above it)
 - [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md): one instance of the mesh per particle, in a frozen pose
@@ -148,7 +148,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md): a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md): nothing (a transform-only group)
 - [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
-- [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): nothing (a transform-only group)
+- [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): a transform group with a pin cross for every node
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): nothing (a transform-only group)
 - [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): a capture of the scene, baked into an atlas layer that lit surfaces in its box read
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md): nothing (a transform-only group that drives its target)
