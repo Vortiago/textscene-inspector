@@ -37,9 +37,7 @@ it packages the `.vsix`. The `CHANGELOG.md` in the repository is a stub. Commit 
 ## npm
 
 The `npm` job publishes `@textscene/linter`, `@textscene/lsp`, `@textscene/tscn` and
-`@textscene/renderer` with no token. Each package's trusted publisher on npmjs.com names the
-repository `Vortiago/textscene-inspector`, the workflow `release.yml` and the environment
-`release`.
+`@textscene/renderer` with no token, through each package's trusted publisher on npmjs.com.
 
 npm offers a trusted publisher only for a package that exists. To add a new npm package:
 
@@ -48,5 +46,6 @@ npm offers a trusted publisher only for a package that exists. To add a new npm 
 3. Run `pnpm pack`.
 4. Run `npm publish <tarball> --access public`.
 5. Run `git checkout package.json`.
-6. Add the trusted publisher on npmjs.com.
+6. On npmjs.com, add a trusted publisher: repository `Vortiago/textscene-inspector`, workflow
+   `release.yml`, environment `release`.
 7. Tag `<name>-v0.2.0` for the first release through CI.
