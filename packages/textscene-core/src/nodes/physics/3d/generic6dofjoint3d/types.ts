@@ -45,9 +45,18 @@ export function drawnLimits(properties: Generic6DOFJoint3DProperties): SixDofLim
   ];
 }
 
+function sameAxis(a: SixDofAxisLimits, b: SixDofAxisLimits): boolean {
+  return (
+    a.linearEnabled === b.linearEnabled &&
+    a.linearLower === b.linearLower &&
+    a.linearUpper === b.linearUpper &&
+    a.angularEnabled === b.angularEnabled &&
+    a.angularLower === b.angularLower &&
+    a.angularUpper === b.angularUpper
+  );
+}
+
 /** Whether two limit sets hold the same values. */
 export function sameLimits(a: SixDofLimits, b: SixDofLimits): boolean {
-  return a.every((axis, index) =>
-    Object.entries(axis).every(([key, value]) => b[index]![key as keyof SixDofAxisLimits] === value)
-  );
+  return sameAxis(a[0], b[0]) && sameAxis(a[1], b[1]) && sameAxis(a[2], b[2]);
 }

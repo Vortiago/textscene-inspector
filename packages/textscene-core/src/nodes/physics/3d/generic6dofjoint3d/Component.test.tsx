@@ -18,20 +18,15 @@ import {
 } from '../joint3d/jointScene.testkit';
 import { describeJointBodyGating } from '../joint3d/jointBodyGating.testkit';
 import { sixDofBodySegments, sixDofJointSegments, type SixDofLimits } from '../joint3d/jointGizmoDrawer';
-import { EXPECTED_PART_COLOURS, TWO_BODY_TRANSFORMS } from '../joint3d/jointVertices.testkit';
+import {
+  DEFAULT_SIX_DOF_AXIS,
+  DEFAULT_SIX_DOF_LIMITS,
+  EXPECTED_PART_COLOURS,
+  TWO_BODY_TRANSFORMS,
+} from '../joint3d/jointVertices.testkit';
 
 const SELECTED = 'Root/Joint';
 const { joint, bodyA, bodyB } = TWO_BODY_TRANSFORMS;
-
-const DEFAULT_AXIS = {
-  linearEnabled: true,
-  linearLower: 0,
-  linearUpper: 0,
-  angularEnabled: true,
-  angularLower: 0,
-  angularUpper: 0,
-};
-const DEFAULT_LIMITS: SixDofLimits = [DEFAULT_AXIS, DEFAULT_AXIS, DEFAULT_AXIS];
 
 /** Scene keys that set every limit away from its default, and the limits they must reach the drawer as. */
 const AUTHORED_KEYS = {
@@ -57,8 +52,8 @@ const AUTHORED_LIMITS: SixDofLimits = [
     angularLower: -0.5,
     angularUpper: 0.8,
   },
-  { ...DEFAULT_AXIS, linearLower: 0.5, linearUpper: 1.5, angularLower: -1, angularUpper: 1 },
-  { ...DEFAULT_AXIS, linearLower: 2, angularEnabled: false, angularLower: 0.3 },
+  { ...DEFAULT_SIX_DOF_AXIS, linearLower: 0.5, linearUpper: 1.5, angularLower: -1, angularUpper: 1 },
+  { ...DEFAULT_SIX_DOF_AXIS, linearLower: 2, angularEnabled: false, angularLower: 0.3 },
 ];
 
 const sixDofScene = (joint: Record<string, string> = {}) =>
@@ -87,7 +82,7 @@ describe('<Generic6DOFJoint3D> gizmo', () => {
   });
 
   it('draws the drawer output for Godot defaults where no key is authored', async () => {
-    expect(await drawn()).toEqual(expectedPositions(DEFAULT_LIMITS));
+    expect(await drawn()).toEqual(expectedPositions(DEFAULT_SIX_DOF_LIMITS));
   });
 
   it('reads the limit keys of each axis into the drawer', async () => {
@@ -99,9 +94,9 @@ describe('<Generic6DOFJoint3D> gizmo', () => {
     const [, positionsA, positionsB] = drawnLines(await mountJointScene({ nodes })).map(
       (line) => line.positions
     );
-    expect(positionsA).toEqual(Array.from(sixDofBodySegments(joint, bodyA, 'bodyA', DEFAULT_LIMITS)));
+    expect(positionsA).toEqual(Array.from(sixDofBodySegments(joint, bodyA, 'bodyA', DEFAULT_SIX_DOF_LIMITS)));
     expect(positionsB).toEqual(
-      Array.from(sixDofBodySegments(joint, identityTransform3D(), 'bodyB', DEFAULT_LIMITS))
+      Array.from(sixDofBodySegments(joint, identityTransform3D(), 'bodyB', DEFAULT_SIX_DOF_LIMITS))
     );
   });
 

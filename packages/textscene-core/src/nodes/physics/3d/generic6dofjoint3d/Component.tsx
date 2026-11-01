@@ -4,14 +4,15 @@
  * limit of its axis and looks from the joint at its body (`joint_3d_gizmo_plugin.cpp:582-723`).
  */
 
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useByValue } from '../../../../r3f/hooks/useByValue';
 import { identityTransform3D } from '../../../../godot/math/transform3d';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
 import { JointBodyLines, type BodySegments } from '../joint3d/JointBodyLines';
 import { JointGizmoLines } from '../joint3d/JointGizmoLines';
-import { sixDofBodySegments, sixDofJointSegments, type SixDofLimits } from '../joint3d/jointGizmoDrawer';
+import { sixDofBodySegments, sixDofJointSegments } from '../joint3d/jointGizmoDrawer';
 import { useJointBodies, type JointBodies } from '../joint3d/useJointBodies';
 import { drawnLimits, sameLimits, type Generic6DOFJoint3DProperties } from './types';
 
@@ -27,20 +28,9 @@ function bodiesDrawn(bodies: JointBodies): JointBodies {
   return { ...bodies, bodyB: bodies.bodyB ?? UNRESOLVED_BODY };
 }
 
-/**
- * The limits the properties draw, with the same identity while their values stay the same: a live edit
- * parses every node anew, and an unrelated key must not rebuild the lines.
- */
-function useDrawnLimits(properties: Generic6DOFJoint3DProperties): SixDofLimits {
-  const drawn = drawnLimits(properties);
-  const kept = useRef(drawn);
-  if (!sameLimits(kept.current, drawn)) kept.current = drawn;
-  return kept.current;
-}
-
 function SixDofGizmo({ properties }: { properties: Generic6DOFJoint3DProperties }) {
   const bodies = useJointBodies(properties);
-  const limits = useDrawnLimits(properties);
+  const limits = useByValue(drawnLimits(properties), sameLimits);
   const travel = useMemo(() => sixDofJointSegments(limits), [limits]);
   const segmentsFor = useCallback<BodySegments>(
     (joint, body, part) => sixDofBodySegments(joint, body, part, limits),

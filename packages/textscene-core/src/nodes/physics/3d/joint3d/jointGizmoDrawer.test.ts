@@ -6,7 +6,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { transform3DOf, type Transform3D } from '../../../../godot/math/transform3d.js';
-import { TWO_BODY_TRANSFORMS, expectClose, unrotatedAt, vertex } from './jointVertices.testkit.js';
+import {
+  DEFAULT_SIX_DOF_AXIS,
+  DEFAULT_SIX_DOF_LIMITS,
+  TWO_BODY_TRANSFORMS,
+  expectClose,
+  unrotatedAt,
+  vertex,
+} from './jointVertices.testkit.js';
 import {
   coneTwistBodySegments,
   coneTwistLocalSegments,
@@ -237,14 +244,6 @@ describe('the slider circle of a body', () => {
   });
 });
 
-const SIX_DOF_DEFAULT_AXIS: SixDofAxisLimits = {
-  linearEnabled: true,
-  linearLower: 0,
-  linearUpper: 0,
-  angularEnabled: true,
-  angularLower: 0,
-  angularUpper: 0,
-};
 const SIX_DOF_AXIS_VERTEX_COUNT = 18;
 
 /** The defaults with the given overrides on each of the X, Y and Z axes. */
@@ -254,17 +253,15 @@ function sixDofLimits(
   z: Partial<SixDofAxisLimits> = {}
 ): SixDofLimits {
   return [
-    { ...SIX_DOF_DEFAULT_AXIS, ...x },
-    { ...SIX_DOF_DEFAULT_AXIS, ...y },
-    { ...SIX_DOF_DEFAULT_AXIS, ...z },
+    { ...DEFAULT_SIX_DOF_AXIS, ...x },
+    { ...DEFAULT_SIX_DOF_AXIS, ...y },
+    { ...DEFAULT_SIX_DOF_AXIS, ...z },
   ];
 }
 
-const SIX_DOF_DEFAULTS = sixDofLimits({});
-
 describe('sixDofJointSegments', () => {
   it('draws a degenerate travel and a 0.5 square at the origin per axis at the defaults', () => {
-    const segments = sixDofJointSegments(SIX_DOF_DEFAULTS);
+    const segments = sixDofJointSegments(DEFAULT_SIX_DOF_LIMITS);
     expect(segments.length / 3).toBe(3 * SIX_DOF_AXIS_VERTEX_COUNT);
     expectClose(vertex(segments, 0), [0, 0, 0]);
     expectClose(vertex(segments, 2), [0, -0.25, -0.25]);
@@ -305,7 +302,7 @@ describe('sixDofJointSegments', () => {
 
 describe('the 6DOF circles of a body', () => {
   it('draws one segment along each axis for the default angular limits of 0 and 0', () => {
-    const circles = sixDofBodySegments(UNROTATED_JOINT, SIDE_BODY, 'bodyA', SIX_DOF_DEFAULTS);
+    const circles = sixDofBodySegments(UNROTATED_JOINT, SIDE_BODY, 'bodyA', DEFAULT_SIX_DOF_LIMITS);
     expect(circles.length / 3).toBe(6);
     expectClose(vertex(circles, 1), [0.5, 0, 0]);
     expectClose(vertex(circles, 3), [0.353553, 0, -0.353553]);
@@ -313,10 +310,10 @@ describe('the 6DOF circles of a body', () => {
   });
 
   it('absorbs the rotation of the joint on every axis', () => {
-    const a = sixDofBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', SIX_DOF_DEFAULTS);
+    const a = sixDofBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 'bodyA', DEFAULT_SIX_DOF_LIMITS);
     expectClose(vertex(a, 3), [0.491432, 0, -0.092169]);
     expectClose(vertex(a, 5), [0.450828, 0.216228, 0]);
-    const b = sixDofBodySegments(ROTATED_ABOUT_Y, BODY_B_SIDE, 'bodyB', SIX_DOF_DEFAULTS);
+    const b = sixDofBodySegments(ROTATED_ABOUT_Y, BODY_B_SIDE, 'bodyB', DEFAULT_SIX_DOF_LIMITS);
     expectClose(vertex(b, 3), [-0.491432, 0, 0.092169]);
     expectClose(vertex(b, 5), [-0.486214, 0.1166, 0]);
   });

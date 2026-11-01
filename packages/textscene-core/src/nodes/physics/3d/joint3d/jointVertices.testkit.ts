@@ -1,6 +1,7 @@
 /** Helpers every Joint3D gizmo test shares: vertex reads, a close comparison and the expected part colours. Test-only. */
 import { expect } from 'vitest';
 import { transform3DOf, type Transform3D } from '../../../../godot/math/transform3d';
+import type { SixDofAxisLimits, SixDofLimits } from './jointGizmoDrawer';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 
 /** The linear colours of `editors/3d_gizmos/gizmo_colors/joint`, `joint_body_a` and `joint_body_b`, as the Godot source lists them. */
@@ -39,3 +40,20 @@ export const TWO_BODY_TRANSFORMS = {
   bodyA: unrotatedAt(TWO_BODY_ORIGINS.bodyA),
   bodyB: unrotatedAt(TWO_BODY_ORIGINS.bodyB),
 };
+
+/** The limits of a 6DOF axis at Godot's defaults: every limit 0, both limits on (`generic_6dof_joint_3d.cpp:316-344`). */
+export const DEFAULT_SIX_DOF_AXIS: SixDofAxisLimits = {
+  linearEnabled: true,
+  linearLower: 0,
+  linearUpper: 0,
+  angularEnabled: true,
+  angularLower: 0,
+  angularUpper: 0,
+};
+
+/** The limits of a 6DOF joint at Godot's defaults on X, Y and Z. */
+export const DEFAULT_SIX_DOF_LIMITS: SixDofLimits = [
+  DEFAULT_SIX_DOF_AXIS,
+  DEFAULT_SIX_DOF_AXIS,
+  DEFAULT_SIX_DOF_AXIS,
+];

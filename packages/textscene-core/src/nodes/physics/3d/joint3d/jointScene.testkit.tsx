@@ -9,10 +9,10 @@ import { loaderServing } from '../../../../resources/testing/servingResourceLoad
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
 import type { GizmoNodeCase } from '../../../../r3f/testing/gizmoContract';
 import { settleLoads } from '../../../../r3f/testing/settleLoads';
+import { TWO_BODY_ORIGINS } from './jointVertices.testkit';
 import '../../../../r3f/nodes/index';
 import '../../../node/index';
 import '../../../base/node3d/index';
-import { TWO_BODY_ORIGINS } from './jointVertices.testkit';
 import '../staticbody3d/index';
 import '../pinjoint3d/index';
 import '../conetwistjoint3d/index';
@@ -49,6 +49,8 @@ interface MountOptions {
   files?: Record<string, string>;
 }
 
+type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
 function jointSceneElement({
   nodes,
   header = SCENE_HEADER,
@@ -68,7 +70,7 @@ function jointSceneElement({
   );
 }
 
-async function settleFrames(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) {
+async function settleFrames(renderer: Renderer) {
   await settleLoads();
   await ReactThreeTestRenderer.act(async () => {
     await renderer.advanceFrames(2, 0.016);
@@ -82,10 +84,7 @@ export async function mountJointScene(options: MountOptions) {
 }
 
 /** Re-renders a mounted scene with the text of `options`, as a live edit of the file does. */
-export async function updateJointScene(
-  renderer: Awaited<ReturnType<typeof mountJointScene>>,
-  options: MountOptions
-) {
+export async function updateJointScene(renderer: Renderer, options: MountOptions) {
   await ReactThreeTestRenderer.act(async () => {
     await renderer.update(jointSceneElement(options));
   });
@@ -93,9 +92,7 @@ export async function updateJointScene(
 }
 
 /** The geometry of each gizmo line object in draw order: it is rebuilt exactly when the line's positions change. */
-export function drawnGeometries(
-  renderer: Awaited<ReturnType<typeof mountJointScene>>
-): THREE.BufferGeometry[] {
+export function drawnGeometries(renderer: Renderer): THREE.BufferGeometry[] {
   return renderer.scene
     .findAllByType('LineSegments')
     .map(({ instance }) => (instance as THREE.LineSegments).geometry);
@@ -108,7 +105,7 @@ interface DrawnLines {
 }
 
 /** Each gizmo line object in draw order, with its linear colour, opacity and local positions. */
-export function drawnLines(renderer: Awaited<ReturnType<typeof mountJointScene>>): DrawnLines[] {
+export function drawnLines(renderer: Renderer): DrawnLines[] {
   return renderer.scene.findAllByType('LineSegments').map(({ instance }) => {
     const line = instance as THREE.LineSegments;
     const material = line.material as THREE.LineBasicMaterial;
