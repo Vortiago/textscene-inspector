@@ -1,64 +1,52 @@
 # Releasing
 
-Push a `vscode-v<version>` (extension), `linter-v<version>` (linter), `lsp-v<version>`
-(language server), `tscn-v<version>` (parser) or `renderer-v<version>` (renderer) tag on `main`:
+A tag `<package>-v<major>.<minor>.<patch>` on `main` releases one package through
+`.github/workflows/release.yml`. `RELEASE_TARGETS` in `scripts/ci/releaseVersion.mjs` lists the
+packages: `vscode`, `linter`, `lsp`, `tscn` and `renderer`.
+
+## Tag a release
+
+1. Find the commits since the package's previous tag that touch it or a package it bundles.
+2. Pick the version from them. A breaking change bumps the major, a `feat` the minor, and
+   anything else the patch.
+3. Tag `origin/main` and push the tag.
+
+Push one tag in each `git push`. GitHub starts no workflow for a push that carries more than
+three tags.
 
 ```bash
-git fetch origin && git tag vscode-v1.2.3 origin/main && git push origin vscode-v1.2.3
+git fetch origin --tags
+for t in vscode-v1.2.3 linter-v2.3.0; do git tag "$t" origin/main && git push origin "$t"; done
 ```
 
-The release notes list the breaking changes and the `feat`, `fix` and `perf` commits since the
-package's previous tag that touch the package or a package it bundles.
-`scripts/ci/releaseNotes.mjs` writes them. `RELEASE_INPUTS` in `scripts/ci/releaseVersion.mjs`
-names what each package bundles.
-A commit in a tooling scope (`ci`, `devcontainer`, `githooks`, `lint`, `visual`) is left out.
+## Release notes
 
-To put highlights above that list, push an annotated tag. Its message goes first:
+`scripts/ci/releaseNotes.mjs` writes the notes from the `feat`, `fix` and `perf` commits and the
+breaking changes since the previous tag. It leaves out the tooling scopes (`ci`, `devcontainer`,
+`githooks`, `lint`, `visual`).
+
+An annotated tag puts its message above that list:
 
 ```bash
 git tag -a vscode-v1.2.3 -m "Scene Tree view" -m "The tree follows the active preview." origin/main
 ```
 
-The VS Code Marketplace and Open VSX show the extension's `CHANGELOG.md` as its changelog. The
-`release-vscode` job writes it before it packages the `.vsix`, with the notes of every `vscode-v`
-tag up to the released one:
+The `release-vscode` job writes the extension's `CHANGELOG.md` from every `vscode-v` tag before
+it packages the `.vsix`. The `CHANGELOG.md` in the repository is a stub. Commit no generated one.
 
-```bash
-node scripts/ci/releaseNotes.mjs --changelog vscode-v1.2.3
-```
+## npm
 
-The `CHANGELOG.md` in the repository is a stub. Do not commit a generated one.
+The `npm` job publishes `@textscene/linter`, `@textscene/lsp`, `@textscene/tscn` and
+`@textscene/renderer` with no token. Each package's trusted publisher on npmjs.com names the
+repository `Vortiago/textscene-inspector`, the workflow `release.yml` and the environment
+`release`.
 
-npm takes `@textscene/linter`, `@textscene/lsp`, `@textscene/tscn` and `@textscene/renderer` from
-the `npm` job in `.github/workflows/release.yml`, with no token. Each package's trusted publisher
-on npmjs.com names the repository `Vortiago/textscene-inspector`, the workflow `release.yml` and
-the environment `release`. npm offers that setting only for a package that already exists, so a
-package's first version is published by hand with `npm publish <tarball> --access public`.
+npm offers a trusted publisher only for a package that exists. To add a new npm package:
 
-`@textscene/tscn` is core's parser bundled into one file, so core stays private.
-Build and pack it for the first publish, then restore the manifest:
-
-```bash
-pnpm build:tscn
-cd apps/textscene-tscn && npm pkg set version=0.1.0 && pnpm pack
-npm publish textscene-tscn-0.1.0.tgz --access public
-git checkout package.json
-```
-
-Add the trusted publisher on npmjs.com. Push `tscn-v0.2.0` or a later tag for each release after
-that.
-
-`@textscene/renderer` is core's react-three-fiber renderer bundled into one file, with its styles
-inside. React, three.js and their ecosystem are peer dependencies, so core stays private. Build
-and pack it for the first publish, then restore the manifest:
-
-```bash
-pnpm build:renderer
-cd apps/textscene-renderer && npm pkg set version=0.1.0 && pnpm pack
-npm publish textscene-renderer-0.1.0.tgz --access public
-git checkout package.json
-```
-
-Add the trusted publisher on npmjs.com. Push `renderer-v0.2.0` or a later tag for each release
-after that. `pnpm test:renderer-consumer` installs the packed tarball into a plain Vite app and
-renders a scene. CI runs it on every pull request.
+1. Run `pnpm build:<name>`.
+2. In the package's directory, run `npm pkg set version=0.1.0`.
+3. Run `pnpm pack`.
+4. Run `npm publish <tarball> --access public`.
+5. Run `git checkout package.json`.
+6. Add the trusted publisher on npmjs.com.
+7. Tag `<name>-v0.2.0` for the first release through CI.
