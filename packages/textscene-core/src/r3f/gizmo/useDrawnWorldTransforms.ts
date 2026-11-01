@@ -60,6 +60,13 @@ function lookupObjects(
   };
 }
 
+/** The transform of each tracked object, and the world matrix it was read at. */
+interface ReadAt {
+  objects: Lookup['objects'];
+  elements: (number[] | null)[];
+  transforms: (Transform3D | null)[];
+}
+
 /**
  * The world transform of the node at each live path, null for a path that names nothing drawn.
  * The transforms re-read every frame, since an animation moves a node with no render of its owner,
@@ -69,16 +76,31 @@ export function useDrawnWorldTransforms(paths: Paths): Transforms {
   const registry = useOptionalSelection()?.nodeObjectMap ?? null;
   const [transforms, setTransforms] = useState<Transforms>([]);
   const lookup = useRef<Lookup | null>(null);
+  // The world matrix each transform was read at, so a frame where nothing moved builds no transform.
+  const read = useRef<ReadAt | null>(null);
 
   useFrame(() => {
     if (registry === null) return;
     lookup.current = lookupObjects(registry, paths, lookup.current);
-    const next = lookup.current.objects.map((object) => {
-      if (object === null) return null;
+    const { objects } = lookup.current;
+    if (read.current?.objects !== objects) {
+      read.current = { objects, elements: objects.map(() => null), transforms: objects.map(() => null) };
+    }
+    const { elements, transforms: readTransforms } = read.current;
+    let hasMoved = false;
+    objects.forEach((object, i) => {
+      if (object === null) return;
       object.updateWorldMatrix(true, false);
-      return realGlobalTransform3D(object);
+      const now = object.matrixWorld.elements;
+      if (elements[i]?.every((value, j) => value === now[j])) return;
+      elements[i] = [...now];
+      readTransforms[i] = realGlobalTransform3D(object);
+      hasMoved = true;
     });
-    setTransforms((previous) => (sameTransforms(previous, next) ? previous : next));
+    if (hasMoved || transforms.length !== objects.length) {
+      const next = [...readTransforms];
+      setTransforms((previous) => (sameTransforms(previous, next) ? previous : next));
+    }
   });
 
   return transforms;

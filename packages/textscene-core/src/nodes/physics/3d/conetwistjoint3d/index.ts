@@ -9,6 +9,3 @@ const coneTwistJoint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(coneTwistJoint3DRegistration);
-
-export * from './parser';
-export * from './types';

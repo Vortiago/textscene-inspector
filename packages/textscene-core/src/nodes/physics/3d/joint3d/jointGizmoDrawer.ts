@@ -26,8 +26,8 @@ const SWING_STEP_DEGREES = 10;
 const TWIST_STEP_DEGREES = 5;
 const SWING_AXIS_STEP_DEGREES = 90;
 
-function vector(components: readonly [number, number, number]): Vector3 {
-  return { x: components[0], y: components[1], z: components[2] };
+function asVector([x, y, z]: readonly [number, number, number]): Vector3 {
+  return { x, y, z };
 }
 
 /**
@@ -43,16 +43,26 @@ function lookBody(joint: Transform3D, body: Transform3D): BasisComponents {
   );
   const sideways = normalizedVector3(...vector3Cross(towardBody, [0, 1, 0]));
   const up = normalizedVector3(...vector3Cross(sideways, towardBody));
-  const base = basisFromColumns(vector(towardBody), vector(up), vector(sideways));
+  const base = basisFromColumns(asVector(towardBody), asVector(up), asVector(sideways));
   return basisMultiply(basisInvert(basisOfTransform3D(joint)), base);
 }
 
 /** The two ends of a segment from `from` to `to` through `base`. */
 function pushSegment(out: number[], base: BasisComponents, from: Vector3, to: Vector3): void {
-  for (const end of [from, to]) {
-    const { x, y, z } = basisXform(base, end);
-    out.push(x, y, z);
-  }
+  const start = basisXform(base, from);
+  const end = basisXform(base, to);
+  out.push(start.x, start.y, start.z, end.x, end.y, end.z);
+}
+
+/**
+ * The point at `degrees` on a circle of `radius` in float32: `Vector2(sin, cos) * radius * scale`, with
+ * the `scale` product only where the twist spiral grows.
+ */
+function ringPoint(degrees: number, radius: number, scale?: number): { x: number; y: number } {
+  const angle = degToRadf(degrees);
+  const x = f(f(Math.sin(angle)) * radius);
+  const y = f(f(Math.cos(angle)) * radius);
+  return scale === undefined ? { x, y } : { x: f(x * scale), y: f(y * scale) };
 }
 
 /**
@@ -67,10 +77,8 @@ function drawCone(base: BasisComponents, swing: number, twist: number): Float32A
   const origin: Vector3 = { x: 0, y: 0, z: 0 };
 
   for (let degrees = 0; degrees < 360; degrees += SWING_STEP_DEGREES) {
-    const from = degToRadf(degrees);
-    const to = degToRadf(degrees + SWING_STEP_DEGREES);
-    const a = { x: f(f(Math.sin(from)) * width), y: f(f(Math.cos(from)) * width) };
-    const b = { x: f(f(Math.sin(to)) * width), y: f(f(Math.cos(to)) * width) };
+    const a = ringPoint(degrees, width);
+    const b = ringPoint(degrees + SWING_STEP_DEGREES, width);
     const rimA: Vector3 = { x: depth, y: a.x, z: a.y };
     pushSegment(out, base, rimA, { x: depth, y: b.x, z: b.y });
     if (degrees % SWING_AXIS_STEP_DEGREES === 0) pushSegment(out, base, rimA, origin);
@@ -79,20 +87,14 @@ function drawCone(base: BasisComponents, swing: number, twist: number): Float32A
 
   const twistDegrees = Math.min(radToDegf(twist), MAX_TWIST_DEGREES);
   for (let degrees = 0; degrees < Math.trunc(twistDegrees); degrees += TWIST_STEP_DEGREES) {
-    const from = degToRadf(degrees);
-    const to = degToRadf(degrees + TWIST_STEP_DEGREES);
     const growth = f(degrees / MAX_TWIST_DEGREES);
     const nextGrowth = f((degrees + TWIST_STEP_DEGREES) / MAX_TWIST_DEGREES);
-    const a = { x: f(f(f(Math.sin(from)) * width) * growth), y: f(f(f(Math.cos(from)) * width) * growth) };
-    const b = {
-      x: f(f(f(Math.sin(to)) * width) * nextGrowth),
-      y: f(f(f(Math.cos(to)) * width) * nextGrowth),
-    };
+    const a = ringPoint(degrees, width, growth);
+    const b = ringPoint(degrees + TWIST_STEP_DEGREES, width, nextGrowth);
     pushSegment(out, base, { x: growth, y: a.x, z: a.y }, { x: nextGrowth, y: b.x, z: b.y });
   }
   return Float32Array.from(out);
 }
-
 /** `CreatePinJointGizmo` (`:462-471`): three segments through the joint along X, Y and Z. */
 export function pinJointSegments(): Float32Array {
   const c = PIN_ARM_LENGTH;
