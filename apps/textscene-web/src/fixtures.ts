@@ -1623,6 +1623,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Cookie Edge",
+    "file": "unit-pointlight2d-cookie-edge.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Cull Mask",
     "file": "unit-pointlight2d-cull-mask.tscn",
     "category": "Other"
