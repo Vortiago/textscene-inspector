@@ -85,7 +85,8 @@ export function decomposeForR3F(transform: Transform3D | undefined): NodeTransfo
 }
 
 // Always spread, so R3F never resets a removed `updateMatrix` prop to undefined.
-const PLAIN_UPDATE_MATRIX: UpdateMatrix = THREE.Object3D.prototype.updateMatrix;
+/** The object's own compose, for a transform with no shear to hold. */
+export const PLAIN_UPDATE_MATRIX: UpdateMatrix = THREE.Object3D.prototype.updateMatrix;
 
 /** Spreadable `<group>` transform props: the discrete parts and the `updateMatrix` that holds them. */
 export function node3dGroupSpread(t: NodeTransform): {
