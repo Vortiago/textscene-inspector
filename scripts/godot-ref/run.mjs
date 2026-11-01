@@ -19,6 +19,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE, SETTLE_SIM_SECONDS } from '../visual/previewServer.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
+import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
 
 /**
  * The frame `capture-ours.mjs` produces, so a probe coordinate addresses the same surface point
@@ -140,6 +141,19 @@ export function renderingMethodFallbackMessage(requested, rendered) {
     `${rendered.method} (${rendered.driver}), so it fell back. Install a driver for the asked ` +
     'method (lavapipe, `mesa-vulkan-drivers`, for vulkan), or pass --rendering-driver to measure ' +
     'the other method on purpose.'
+  );
+}
+
+/**
+ * The refusal for a Vulkan frame drawn by another device than lavapipe, or null. The browser side
+ * of a comparison renders on lavapipe (`launchGodotComparisonBrowser`), and a GPU rasterises
+ * differently. An OpenGL frame passes: Xvfb draws it in software on every host.
+ */
+export function renderingDeviceMessage(rendered) {
+  if (!rendered || rendered.driver !== 'vulkan' || /llvmpipe/i.test(rendered.adapter)) return null;
+  return (
+    `Refusing to answer: Godot rendered on "${rendered.adapter}", not on lavapipe, the driver the ` +
+    'comparison browser renders on. Install mesa-vulkan-drivers, which provides lavapipe.'
   );
 }
 
@@ -1108,8 +1122,8 @@ func _environment_in_effect(source: Viewport) -> Environment:
 		return null
 	return world.environment if world.environment != null else world.fallback_environment
 
-# The method and driver that drew this frame, which the caller compares with
-# the ones it asked for: a fallback renders without failing.
+# The method, driver and device that drew this frame, which the caller compares
+# with the ones it asked for: a fallback renders without failing.
 func _write_renderer() -> void:
 	if RENDERER_OUT == "":
 		return
@@ -1119,6 +1133,7 @@ func _write_renderer() -> void:
 	file.store_string(JSON.stringify({
 		"method": RenderingServer.get_current_rendering_method(),
 		"driver": RenderingServer.get_current_rendering_driver_name(),
+		"adapter": RenderingServer.get_video_adapter_name(),
 	}))
 	file.close()
 
@@ -1333,8 +1348,8 @@ export const ENGINE_KILL_AFTER_S = 10;
 export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) * 1000;
 
 /**
- * The argv for one engine pass, split out so a test can assert the reaping contract without an
- * engine, an X server or a 300-second wait.
+ * The argv and environment for one engine pass, split out so a test can assert the reaping and
+ * driver contracts without an engine, an X server or a 300-second wait.
  */
 export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true }) {
   // Only the root-window arm sizes the X screen: its capture is the window, which a smaller
@@ -1347,7 +1362,12 @@ export function godotSpawnPlan(args, { display, screen = null, groupTimeout = tr
   const argv = groupTimeout
     ? ['timeout', '-k', String(ENGINE_KILL_AFTER_S), String(ENGINE_TIMEOUT_S), ...engine]
     : engine;
-  return { command: argv[0], argv: argv.slice(1), timeoutMs: SPAWN_BACKSTOP_MS };
+  return {
+    command: argv[0],
+    argv: argv.slice(1),
+    timeoutMs: SPAWN_BACKSTOP_MS,
+    env: { ...process.env, ...LAVAPIPE_LOADER_ENV },
+  };
 }
 
 /** `timeout(1)`'s expiry codes: 124 on SIGTERM, 137 once it escalates. */
@@ -1367,6 +1387,7 @@ function runGodot(args, { display, screen = null }) {
   const result = spawnSync(plan.command, plan.argv, {
     encoding: 'utf8',
     timeout: plan.timeoutMs,
+    env: plan.env,
   });
   // `error` carries a spawn failure (ENOENT for a missing godot or xvfb-run, or the backstop),
   // where `status` is null. `timedOut` names the group killer's expiry, which exits non-zero and
@@ -1566,6 +1587,8 @@ async function renderInto(
     rendererReport
   );
   if (fallback) await refuse(fallback, { renderingMethodFallback: true });
+  const device = renderingDeviceMessage(rendererReport);
+  if (device) await refuse(device);
 
   const drift = existsSync(driftOut)
     ? rootOnlyDriftMessage(JSON.parse(await readFile(driftOut, 'utf8')))
