@@ -105,6 +105,18 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'The cast moves the children along the arm (ADR-0045), so these keys change a frozen frame; only spring_length, which the length gizmo draws, is read.',
   },
 
+  Joint3D: {
+    linterOnly: ['solver_priority', 'exclude_nodes_from_collision'],
+    reason:
+      'Both steer the joint simulation (ADR-0005), which the previewer does not run; the gizmo reads only node_a and node_b.',
+  },
+
+  ConeTwistJoint3D: {
+    linterOnly: ['bias', 'relaxation', 'softness'],
+    reason:
+      'The solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the two spans.',
+  },
+
   Camera3D: {
     renderGap: ['compositor'],
     reason: 'A camera can run a Compositor stack, and the previewer runs none.',

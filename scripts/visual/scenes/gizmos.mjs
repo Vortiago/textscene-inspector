@@ -20,6 +20,11 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', gizmos: true, select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', gizmos: true, select: 'Root/MySpringArm3D' },
+  // The PinJoint3D cross and the ConeTwistJoint3D cones toward each body, selected one at a time and then
+  // faint with nothing selected.
+  { name: 'pin-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Pin' },
+  { name: 'cone-twist-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Cone' },
+  { name: 'joint-3d-gizmos-unselected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true },
   // The SoftBody3D wireframe: the triangle edges of its mesh in the collision debug colour.
   { name: 'softbody3d-selected', file: 'unit-softbody3d.tscn', gizmos: true, select: 'Root/SoftBody3D' },
   { name: 'softbody3d-unselected', file: 'unit-softbody3d.tscn', gizmos: true },
