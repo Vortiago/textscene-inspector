@@ -6,8 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const launch = vi.hoisted(() => vi.fn());
 vi.mock('playwright', () => ({ chromium: { launch } }));
+// The Debian and Ubuntu name, which matches on every machine architecture.
+const DEBIAN_ICDS = ['intel_icd.x86_64.json', 'lvp_icd.json'];
+const icdDirectory = vi.hoisted(() => ({ names: [] }));
+vi.mock('node:fs', () => ({ readdirSync: () => icdDirectory.names }));
 
-const { launchGodotComparisonBrowser } = await import('./browser.mjs');
+const { launchGodotComparisonBrowser, lavapipeIcdName } = await import('./browser.mjs');
 
 const LAVAPIPE = 'ANGLE (Mesa, Vulkan 1.4 (llvmpipe (LLVM 20.1.2 256 bits)), llvmpipe)';
 const SWIFTSHADER = 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)';
@@ -20,7 +24,10 @@ function browserReporting(renderer, subpixelBits) {
 }
 
 describe('launchGodotComparisonBrowser', () => {
-  beforeEach(() => launch.mockReset());
+  beforeEach(() => {
+    launch.mockReset();
+    icdDirectory.names = DEBIAN_ICDS;
+  });
 
   it('rasterises through ANGLE on the Vulkan backend', async () => {
     browserReporting(LAVAPIPE, 8);
@@ -50,8 +57,32 @@ describe('launchGodotComparisonBrowser', () => {
     expect(close).toHaveBeenCalled();
   });
 
+  it('refuses to launch without a lavapipe driver, and names the package', async () => {
+    icdDirectory.names = ['intel_icd.x86_64.json'];
+    await expect(launchGodotComparisonBrowser()).rejects.toThrow(
+      /no lavapipe driver in \/usr\/share\/vulkan\/icd\.d.*mesa-vulkan-drivers/s
+    );
+    expect(launch).not.toHaveBeenCalled();
+  });
+
   it('refuses llvmpipe that reports 4 sub-pixel bits', async () => {
     browserReporting(LAVAPIPE, 4);
     await expect(launchGodotComparisonBrowser()).rejects.toThrow(/with 4 sub-pixel bits/);
+  });
+});
+
+describe('lavapipeIcdName', () => {
+  it('finds the Debian and Ubuntu name', () => {
+    expect(lavapipeIcdName(['radeon_icd.json', 'lvp_icd.json'], 'x86_64')).toBe('lvp_icd.json');
+  });
+
+  it('finds the Fedora name for this machine', () => {
+    expect(lavapipeIcdName(['lvp_icd.i686.json', 'lvp_icd.x86_64.json'], 'x86_64')).toBe(
+      'lvp_icd.x86_64.json'
+    );
+  });
+
+  it('answers null when only another architecture has lavapipe', () => {
+    expect(lavapipeIcdName(['lvp_icd.i686.json', 'intel_icd.x86_64.json'], 'x86_64')).toBeNull();
   });
 });

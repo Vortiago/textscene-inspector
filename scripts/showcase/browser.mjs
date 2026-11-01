@@ -5,6 +5,9 @@
  * capture gets the bundled Chromium, pinned by the lockfile, so it runs with no system Chrome.
  */
 /* global document */ // The readRasteriser callback runs in the browser.
+import { readdirSync } from 'node:fs';
+import { machine } from 'node:os';
+import { join } from 'node:path';
 import { chromium } from 'playwright';
 
 /**
@@ -42,10 +45,37 @@ export function launchSwiftShaderBrowser() {
 }
 
 /**
- * The Vulkan driver `pnpm ref:godot` renders on. A compositing launch does not set it, since the
- * Vulkan loader finds no ICD of its own in a container without a GPU.
+ * Where `mesa-vulkan-drivers` installs the lavapipe driver that `pnpm ref:godot` renders on. A
+ * compositing launch sets it, since the Vulkan loader finds no ICD of its own in a container
+ * without a GPU.
  */
-const LAVAPIPE_ICD = '/usr/share/vulkan/icd.d/lvp_icd.json';
+const VULKAN_ICD_DIR = '/usr/share/vulkan/icd.d';
+
+/**
+ * The lavapipe ICD among `fileNames` for `machineName` (`os.machine()`), or null. Debian and
+ * Ubuntu name it `lvp_icd.json`. Fedora names one per architecture, `lvp_icd.x86_64.json`.
+ */
+export function lavapipeIcdName(fileNames, machineName) {
+  const accepted = ['lvp_icd.json', `lvp_icd.${machineName}.json`];
+  return fileNames.find((name) => accepted.includes(name)) ?? null;
+}
+
+function lavapipeIcdPath() {
+  let fileNames;
+  try {
+    fileNames = readdirSync(VULKAN_ICD_DIR);
+  } catch {
+    fileNames = []; // A host with no Vulkan driver has no ICD directory, and the throw below names it.
+  }
+  const name = lavapipeIcdName(fileNames, machine());
+  if (!name) {
+    throw new Error(
+      `no lavapipe driver in ${VULKAN_ICD_DIR} for ${machine()}, expected lvp_icd.json or ` +
+        `lvp_icd.${machine()}.json. Install mesa-vulkan-drivers.`
+    );
+  }
+  return join(VULKAN_ICD_DIR, name);
+}
 
 const LAVAPIPE_ARGS = [
   '--ignore-gpu-blocklist',
@@ -67,7 +97,7 @@ export async function launchGodotComparisonBrowser() {
   const browser = await chromium.launch({
     headless: true,
     args: LAVAPIPE_ARGS,
-    env: { ...process.env, VK_ICD_FILENAMES: LAVAPIPE_ICD },
+    env: { ...process.env, VK_ICD_FILENAMES: lavapipeIcdPath() },
   });
   try {
     assertLavapipe(await readRasteriser(browser));
@@ -99,7 +129,7 @@ function assertLavapipe({ renderer, subpixelBits }) {
   if (/llvmpipe/i.test(renderer) && subpixelBits === LAVAPIPE_SUBPIXEL_BITS) return;
   throw new Error(
     `expected an llvmpipe renderer with ${LAVAPIPE_SUBPIXEL_BITS} sub-pixel bits, found "${renderer}" ` +
-      `with ${subpixelBits} sub-pixel bits. Install mesa-vulkan-drivers so ${LAVAPIPE_ICD} exists.`
+      `with ${subpixelBits} sub-pixel bits. Install mesa-vulkan-drivers.`
   );
 }
 
