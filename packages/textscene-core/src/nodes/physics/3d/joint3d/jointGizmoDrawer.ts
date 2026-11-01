@@ -112,7 +112,9 @@ export function coneTwistBodySegments(
   const out = new Float32Array(local.length);
   for (let i = 0; i < local.length; i += 3) {
     const { x, y, z } = basisXform(base, { x: local[i]!, y: local[i + 1]!, z: local[i + 2]! });
-    out.set([x, y, z], i);
+    out[i] = x;
+    out[i + 1] = y;
+    out[i + 2] = z;
   }
   return out;
 }

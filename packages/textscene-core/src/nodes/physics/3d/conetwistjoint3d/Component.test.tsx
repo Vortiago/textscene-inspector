@@ -25,8 +25,6 @@ const SELECTED = 'Root/Joint';
 
 const coneScene = (joint: Record<string, string>) => twoBodyScene('ConeTwistJoint3D', joint);
 
-const BOTH = BOTH_BODIES;
-
 function vertex(positions: number[], index: number): number[] {
   return positions.slice(index * 3, index * 3 + 3);
 }
@@ -37,7 +35,9 @@ function expectClose(actual: number[], expected: number[]) {
 
 describe('<ConeTwistJoint3D> cones', () => {
   it('draws one cone per body, body A in its colour then body B in its own, at opacity 1 when selected', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH), selectedPath: SELECTED }));
+    const lines = drawnLines(
+      await mountJointScene({ nodes: coneScene(BOTH_BODIES), selectedPath: SELECTED })
+    );
     expect(lines.map(({ color, opacity }) => ({ color, opacity }))).toEqual([
       { color: BODY_A_COLOUR, opacity: 1 },
       { color: BODY_B_COLOUR, opacity: 1 },
@@ -49,19 +49,19 @@ describe('<ConeTwistJoint3D> cones', () => {
   });
 
   it('draws no line in the joint colour', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH) }));
+    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
     expect(lines.map(({ color }) => color)).not.toContainEqual(
       godotColorToLinear({ r: 0.5, g: 0.8, b: 1 }).toArray()
     );
   });
 
   it('draws at 0.3 of that opacity while unselected', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH) }));
+    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
     for (const { opacity } of lines) expect(opacity).toBeCloseTo(0.3, 10);
   });
 
   it("follows each body with Godot's default spans, PI / 4 and PI", async () => {
-    const [bodyA] = drawnLines(await mountJointScene({ nodes: coneScene(BOTH) }));
+    const [bodyA] = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
     expectClose(vertex(bodyA!.positions, 1), [0.907649, 0.412577, 0.077159]);
     expectClose(vertex(bodyA!.positions, 40), [-0.047733, 0.301511, -0.952267]);
     expectClose(vertex(bodyA!.positions, 81), [0.639602, 0.426401, -0.639602]);
@@ -69,18 +69,18 @@ describe('<ConeTwistJoint3D> cones', () => {
   });
 
   it('follows authored spans, with the twist capped at 720 degrees', async () => {
-    const nodes = coneScene({ ...BOTH, swing_span: '0.5236', twist_span: '13.0' });
+    const nodes = coneScene({ ...BOTH_BODIES, swing_span: '0.5236', twist_span: '13.0' });
     const [bodyA] = drawnLines(await mountJointScene({ nodes }));
     expect(bodyA!.positions.length / 3).toBe(370);
   });
 
   it('draws only the cone of body A when only node_a resolves', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene({ node_a: BOTH.node_a }) }));
+    const lines = drawnLines(await mountJointScene({ nodes: coneScene({ node_a: BOTH_BODIES.node_a }) }));
     expect(lines.map(({ color }) => color)).toEqual([BODY_A_COLOUR]);
   });
 
   it('draws only the cone of body B when only node_b resolves', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene({ node_b: BOTH.node_b }) }));
+    const lines = drawnLines(await mountJointScene({ nodes: coneScene({ node_b: BOTH_BODIES.node_b }) }));
     expect(lines.map(({ color }) => color)).toEqual([BODY_B_COLOUR]);
   });
 
@@ -92,14 +92,14 @@ describe('<ConeTwistJoint3D> cones', () => {
     const header =
       '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n' +
       `transform = Transform3D(1, 0, 0, 0, ${Math.cos(0.5)}, ${-Math.sin(0.5)}, 0, ${Math.sin(0.5)}, ${Math.cos(0.5)}, 0, 0, 0)\n\n`;
-    const [bodyA] = drawnLines(await mountJointScene({ header, nodes: coneScene(BOTH) }));
+    const [bodyA] = drawnLines(await mountJointScene({ header, nodes: coneScene(BOTH_BODIES) }));
     expectClose(vertex(bodyA!.positions, 1), [0.718566, 0.691507, 0.07403]);
     expectClose(vertex(bodyA!.positions, 40), [0.107729, 0.005471, -0.994165]);
     expectClose(vertex(bodyA!.positions, 153), [0.073766, 0.03259, -0.295375]);
   });
 
   it('redraws when a body moves, since an animation moves a node with no render of the joint', async () => {
-    const renderer = await mountJointScene({ nodes: coneScene(BOTH) });
+    const renderer = await mountJointScene({ nodes: coneScene(BOTH_BODIES) });
     const [before] = drawnLines(renderer);
     const body = renderer.scene.findByProps({ name: 'BodyA' }).instance as THREE.Object3D;
     body.position.set(-3, 0, 1);

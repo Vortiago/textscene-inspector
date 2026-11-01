@@ -21,21 +21,21 @@ const PIN_CROSS = Array.from(pinJointSegments());
 
 const pinScene = (joint: Record<string, string>) => twoBodyScene('PinJoint3D', joint);
 
-const BOTH = BOTH_BODIES;
-
 describe('<PinJoint3D> cross', () => {
   it('draws three segments of half-length 0.25 in the joint colour at opacity 1 when selected', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: pinScene(BOTH), selectedPath: 'Root/Joint' }));
+    const lines = drawnLines(
+      await mountJointScene({ nodes: pinScene(BOTH_BODIES), selectedPath: 'Root/Joint' })
+    );
     expect(lines).toEqual([{ color: JOINT_COLOUR, opacity: 1, positions: PIN_CROSS }]);
   });
 
   it('draws at 0.3 of that opacity while unselected', async () => {
-    const [line] = drawnLines(await mountJointScene({ nodes: pinScene(BOTH) }));
+    const [line] = drawnLines(await mountJointScene({ nodes: pinScene(BOTH_BODIES) }));
     expect(line!.opacity).toBeCloseTo(0.3, 10);
   });
 
   it('draws with only node_a resolved', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: pinScene({ node_a: BOTH.node_a }) }));
+    const lines = drawnLines(await mountJointScene({ nodes: pinScene({ node_a: BOTH_BODIES.node_a }) }));
     expect(lines).toHaveLength(1);
   });
 

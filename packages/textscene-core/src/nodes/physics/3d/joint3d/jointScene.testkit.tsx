@@ -17,7 +17,7 @@ import '../pinjoint3d/index';
 import '../conetwistjoint3d/index';
 
 /** A transform of a node at `(x, y, z)` with no rotation. */
-export function at(x: number, y: number, z: number): string {
+function at(x: number, y: number, z: number): string {
   return `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, ${y}, ${z})`;
 }
 
@@ -34,7 +34,7 @@ export function nodeText(
 
 const SCENE_HEADER = '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n';
 
-export interface MountOptions {
+interface MountOptions {
   selectedPath?: string | null;
   showGizmos?: boolean;
   /** The scene text after the header, one `[node]` per entry. */
@@ -69,7 +69,7 @@ export async function mountJointScene({
   return renderer;
 }
 
-export interface DrawnLines {
+interface DrawnLines {
   color: number[];
   opacity: number;
   positions: number[];
