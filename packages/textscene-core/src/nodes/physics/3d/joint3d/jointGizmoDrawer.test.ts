@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { transform3DOf, type Transform3D } from '../../../../godot/math/transform3d.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
-import { coneTwistBodySegments, pinJointSegments } from './jointGizmoDrawer.js';
+import { coneTwistBodySegments, coneTwistLocalSegments, pinJointSegments } from './jointGizmoDrawer.js';
 
 const ROTATED_ABOUT_Y = transform3DOf(
   [Math.cos(0.6), 0, Math.sin(0.6), 0, 1, 0, -Math.sin(0.6), 0, Math.cos(0.6)],
@@ -35,9 +35,14 @@ function vertex(segments: Float32Array, index: number): number[] {
 const SWING = Math.PI / 4;
 const SWING_ONLY_VERTICES = 82;
 
+/** The cone of one body, built the way the component builds it: the local cone, then the body's basis. */
+function cone(joint: Transform3D, body: Transform3D, swing: number, twist: number): Float32Array {
+  return coneTwistBodySegments(joint, body, coneTwistLocalSegments(swing, twist));
+}
+
 describe('the cone of a body', () => {
   it('looks from an unrotated joint at the body, with the swing circle, spokes and X axis for a twist of 0', () => {
-    const segments = coneTwistBodySegments(at({ x: 0.5, y: 0, z: 0.5 }), SIDE_BODY, SWING, 0);
+    const segments = cone(at({ x: 0.5, y: 0, z: 0.5 }), SIDE_BODY, SWING, 0);
     expect(segments.length / 3).toBe(SWING_ONLY_VERTICES);
     expectClose(vertex(segments, 1), [0.907649, 0.412577, 0.077159]);
     expectClose(vertex(segments, 80), [0, 0, 0]);
@@ -45,7 +50,7 @@ describe('the cone of a body', () => {
   });
 
   it("absorbs the joint's own rotation, as look_body multiplies by the inverse of its basis", () => {
-    const segments = coneTwistBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, SWING, 0);
+    const segments = cone(ROTATED_ABOUT_Y, SIDE_BODY, SWING, 0);
     expectClose(vertex(segments, 1), [0.705548, 0.412577, 0.576179]);
     expectClose(vertex(segments, 9), [0.538006, 0.71264, 0.450216]);
     expectClose(vertex(segments, 40), [0.498295, 0.301511, -0.812892]);
@@ -58,37 +63,33 @@ describe('the cone of a body', () => {
     const [cos, sin] = [Math.cos(rotation), Math.sin(rotation)];
     const turned = (x: number, y: number, z: number) => ({ x, y: cos * y - sin * z, z: sin * y + cos * z });
     const joint = transform3DOf([1, 0, 0, 0, cos, -sin, 0, sin, cos], turned(0.5, 0, 0.5));
-    const segments = coneTwistBodySegments(joint, at(turned(2, 1, -1)), SWING, Math.PI);
+    const segments = cone(joint, at(turned(2, 1, -1)), SWING, Math.PI);
     expectClose(vertex(segments, 1), [0.718566, 0.691507, 0.07403]);
     expectClose(vertex(segments, 40), [0.107729, 0.005471, -0.994165]);
     expectClose(vertex(segments, 153), [0.073766, 0.03259, -0.295375]);
   });
 
   it('adds a twist spiral of one segment per 5 degrees, 36 for a twist of PI', () => {
-    const segments = coneTwistBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, SWING, Math.PI);
+    const segments = cone(ROTATED_ABOUT_Y, SIDE_BODY, SWING, Math.PI);
     expect(segments.length / 3).toBe(SWING_ONLY_VERTICES + 72);
     expectClose(vertex(segments, 152), [0.178246, 0.117188, -0.207628]);
     expectClose(vertex(segments, 153), [0.189672, 0.1066, -0.215432]);
   });
 
   it('stops the spiral at 720 degrees, so 5 PI draws what 13 radians draws', () => {
-    const capped = coneTwistBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, SWING, 5 * Math.PI);
+    const capped = cone(ROTATED_ABOUT_Y, SIDE_BODY, SWING, 5 * Math.PI);
     expect(capped.length / 3).toBe(SWING_ONLY_VERTICES + 288);
     expectClose(vertex(capped, 368), [1.037457, 0.368082, 0.517144]);
     expectClose(vertex(capped, 369), [1.019379, 0.426401, 0.528249]);
-    expect(Array.from(coneTwistBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, SWING, 13))).toEqual(
-      Array.from(capped)
-    );
+    expect(Array.from(cone(ROTATED_ABOUT_Y, SIDE_BODY, SWING, 13))).toEqual(Array.from(capped));
   });
 
   it('draws no spiral for a negative twist', () => {
-    expect(coneTwistBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, SWING, -1)).toHaveLength(
-      SWING_ONLY_VERTICES * 3
-    );
+    expect(cone(ROTATED_ABOUT_Y, SIDE_BODY, SWING, -1)).toHaveLength(SWING_ONLY_VERTICES * 3);
   });
 
   it('follows a swing span of 0.5236 with a twist of 13', () => {
-    const segments = coneTwistBodySegments(ROTATED_ABOUT_Y, SIDE_BODY, 0.5236, 13);
+    const segments = cone(ROTATED_ABOUT_Y, SIDE_BODY, 0.5236, 13);
     expectClose(vertex(segments, 1), [0.824306, 0.44781, 0.34639]);
     expectClose(vertex(segments, 40), [0.677755, 0.369274, -0.635833]);
     expectClose(vertex(segments, 369), [0.981202, 0.426401, 0.324693]);
@@ -98,13 +99,13 @@ describe('the cone of a body', () => {
     ['above', 4],
     ['below', -4],
   ])('collapses the cone onto the world Y axis for a body straight %s the joint', (_label, height) => {
-    const segments = coneTwistBodySegments(at({ x: 1, y: 0, z: 1 }), at({ x: 1, y: height, z: 1 }), SWING, 0);
+    const segments = cone(at({ x: 1, y: 0, z: 1 }), at({ x: 1, y: height, z: 1 }), SWING, 0);
     const offAxis = Array.from(segments).filter((_value, index) => index % 3 !== 1);
     expect(offAxis.every((value) => value === 0)).toBe(true);
   });
 
   it('collapses every point onto the joint for a body at its origin', () => {
-    const segments = coneTwistBodySegments(at({ x: 1, y: 0, z: 1 }), at({ x: 1, y: 0, z: 1 }), SWING, 0);
+    const segments = cone(at({ x: 1, y: 0, z: 1 }), at({ x: 1, y: 0, z: 1 }), SWING, 0);
     expect(Array.from(segments).every((value) => value === 0)).toBe(true);
   });
 });

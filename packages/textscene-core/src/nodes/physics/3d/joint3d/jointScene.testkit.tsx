@@ -93,14 +93,24 @@ const HOLDER_HEADER =
   `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="${HOLDER_FILE}" id="1"]\n\n` +
   '[node name="Root" type="Node3D"]\n\n';
 
-/** A joint of `type` with two bodies, once in the edited scene and once inside a locked instance. */
-export function jointGizmoCase(type: string, properties: Record<string, string>): GizmoNodeCase {
-  const jointProperties = { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../BodyB")', ...properties };
-  const nodes = (parent: string) => [
+/** Both body paths of a joint laid out by {@link twoBodyScene}. */
+export const BOTH_BODIES = { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../BodyB")' };
+
+/**
+ * A `Joint` of `type` with `jointProperties`, and two StaticBody3D nodes `BodyA` at (2, 1, -1) and
+ * `BodyB` at (-1, 0.5, 2), all under `parent`. The joint sits at (0.5, 0, 0.5).
+ */
+export function twoBodyScene(type: string, jointProperties: Record<string, string>, parent = '.'): string[] {
+  return [
     nodeText('Joint', type, parent, { transform: at(0.5, 0, 0.5), ...jointProperties }),
     nodeText('BodyA', 'StaticBody3D', parent, { transform: at(2, 1, -1) }),
     nodeText('BodyB', 'StaticBody3D', parent, { transform: at(-1, 0.5, 2) }),
   ];
+}
+
+/** A joint of `type` with two bodies, once in the edited scene and once inside a locked instance. */
+export function jointGizmoCase(type: string, properties: Record<string, string>): GizmoNodeCase {
+  const nodes = (parent: string) => twoBodyScene(type, { ...BOTH_BODIES, ...properties }, parent);
   const holder = '[gd_scene format=3]\n\n[node name="Holder" type="Node3D"]\n\n' + nodes('.').join('\n');
   return {
     nodePath: 'Root/Joint',

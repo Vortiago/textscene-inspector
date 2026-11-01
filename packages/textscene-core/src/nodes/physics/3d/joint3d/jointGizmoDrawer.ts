@@ -47,11 +47,9 @@ function lookBody(joint: Transform3D, body: Transform3D): BasisComponents {
   return basisMultiply(basisInvert(basisOfTransform3D(joint)), base);
 }
 
-/** The two ends of a segment from `from` to `to` through `base`. */
-function pushSegment(out: number[], base: BasisComponents, from: Vector3, to: Vector3): void {
-  const start = basisXform(base, from);
-  const end = basisXform(base, to);
-  out.push(start.x, start.y, start.z, end.x, end.y, end.z);
+/** The two ends of a segment from `from` to `to`. */
+function pushSegment(out: number[], from: Vector3, to: Vector3): void {
+  out.push(from.x, from.y, from.z, to.x, to.y, to.z);
 }
 
 /**
@@ -66,11 +64,11 @@ function ringPoint(degrees: number, radius: number, scale?: number): { x: number
 }
 
 /**
- * `JointGizmosDrawer::draw_cone` (`:238-279`) with an identity offset, which is the only offset the
- * plugin passes: the swing circle with spokes every 90 degrees, the X axis, then the twist spiral,
- * capped at 720 degrees.
+ * `JointGizmosDrawer::draw_cone` (`:238-279`) before its basis: the swing circle with spokes every 90
+ * degrees, the X axis, then the twist spiral, capped at 720 degrees. It depends on the two spans only,
+ * so a cone-twist joint builds it once for both bodies.
  */
-function drawCone(base: BasisComponents, swing: number, twist: number): Float32Array {
+export function coneTwistLocalSegments(swing: number, twist: number): Float32Array {
   const out: number[] = [];
   const width = f(Math.sin(swing));
   const depth = f(Math.cos(swing));
@@ -80,10 +78,10 @@ function drawCone(base: BasisComponents, swing: number, twist: number): Float32A
     const a = ringPoint(degrees, width);
     const b = ringPoint(degrees + SWING_STEP_DEGREES, width);
     const rimA: Vector3 = { x: depth, y: a.x, z: a.y };
-    pushSegment(out, base, rimA, { x: depth, y: b.x, z: b.y });
-    if (degrees % SWING_AXIS_STEP_DEGREES === 0) pushSegment(out, base, rimA, origin);
+    pushSegment(out, rimA, { x: depth, y: b.x, z: b.y });
+    if (degrees % SWING_AXIS_STEP_DEGREES === 0) pushSegment(out, rimA, origin);
   }
-  pushSegment(out, base, origin, { x: 1, y: 0, z: 0 });
+  pushSegment(out, origin, { x: 1, y: 0, z: 0 });
 
   const twistDegrees = Math.min(radToDegf(twist), MAX_TWIST_DEGREES);
   for (let degrees = 0; degrees < Math.trunc(twistDegrees); degrees += TWIST_STEP_DEGREES) {
@@ -91,7 +89,7 @@ function drawCone(base: BasisComponents, swing: number, twist: number): Float32A
     const nextGrowth = f((degrees + TWIST_STEP_DEGREES) / MAX_TWIST_DEGREES);
     const a = ringPoint(degrees, width, growth);
     const b = ringPoint(degrees + TWIST_STEP_DEGREES, width, nextGrowth);
-    pushSegment(out, base, { x: growth, y: a.x, z: a.y }, { x: nextGrowth, y: b.x, z: b.y });
+    pushSegment(out, { x: growth, y: a.x, z: a.y }, { x: nextGrowth, y: b.x, z: b.y });
   }
   return Float32Array.from(out);
 }
@@ -102,14 +100,19 @@ export function pinJointSegments(): Float32Array {
 }
 
 /**
- * `CreateConeTwistJointGizmo` (`:562-580`) for one body: the cone that looks from the joint at
- * `body`, with the joint's `swing_span` and `twist_span`.
+ * `CreateConeTwistJointGizmo` (`:562-580`) for one body: the `local` cone of
+ * {@link coneTwistLocalSegments} turned to look from the joint at `body`.
  */
 export function coneTwistBodySegments(
   joint: Transform3D,
   body: Transform3D,
-  swing: number,
-  twist: number
+  local: Float32Array
 ): Float32Array {
-  return drawCone(lookBody(joint, body), swing, twist);
+  const base = lookBody(joint, body);
+  const out = new Float32Array(local.length);
+  for (let i = 0; i < local.length; i += 3) {
+    const { x, y, z } = basisXform(base, { x: local[i]!, y: local[i + 1]!, z: local[i + 2]! });
+    out.set([x, y, z], i);
+  }
+  return out;
 }

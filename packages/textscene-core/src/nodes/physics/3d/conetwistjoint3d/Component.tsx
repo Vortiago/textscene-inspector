@@ -10,7 +10,7 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
 import { JointGizmoLines } from '../joint3d/JointGizmoLines';
-import { coneTwistBodySegments } from '../joint3d/jointGizmoDrawer';
+import { coneTwistBodySegments, coneTwistLocalSegments } from '../joint3d/jointGizmoDrawer';
 import { useJointBodies } from '../joint3d/useJointBodies';
 import { DEFAULT_SWING_SPAN, DEFAULT_TWIST_SPAN } from './types';
 import type { ConeTwistJoint3DProperties } from './types';
@@ -19,35 +19,27 @@ function BodyCone({
   part,
   joint,
   body,
-  swing,
-  twist,
+  local,
 }: {
   part: 'bodyA' | 'bodyB';
   joint: Transform3D;
   body: Transform3D;
-  swing: number;
-  twist: number;
+  local: Float32Array;
 }) {
-  const positions = useMemo(
-    () => coneTwistBodySegments(joint, body, swing, twist),
-    [joint, body, swing, twist]
-  );
+  const positions = useMemo(() => coneTwistBodySegments(joint, body, local), [joint, body, local]);
   return <JointGizmoLines part={part} positions={positions} />;
 }
 
 function ConeTwistGizmo({ properties }: { properties: ConeTwistJoint3DProperties }) {
   const bodies = useJointBodies(properties);
-  if (bodies === null) return null;
   const swing = properties.swing_span ?? DEFAULT_SWING_SPAN;
   const twist = properties.twist_span ?? DEFAULT_TWIST_SPAN;
+  const local = useMemo(() => coneTwistLocalSegments(swing, twist), [swing, twist]);
+  if (bodies === null) return null;
   return (
     <>
-      {bodies.bodyA && (
-        <BodyCone part="bodyA" joint={bodies.joint} body={bodies.bodyA} swing={swing} twist={twist} />
-      )}
-      {bodies.bodyB && (
-        <BodyCone part="bodyB" joint={bodies.joint} body={bodies.bodyB} swing={swing} twist={twist} />
-      )}
+      {bodies.bodyA && <BodyCone part="bodyA" joint={bodies.joint} body={bodies.bodyA} local={local} />}
+      {bodies.bodyB && <BodyCone part="bodyB" joint={bodies.joint} body={bodies.bodyB} local={local} />}
     </>
   );
 }

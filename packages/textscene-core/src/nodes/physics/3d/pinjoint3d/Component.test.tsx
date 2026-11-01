@@ -6,22 +6,22 @@
 import { describe, expect, it } from 'vitest';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
-import { at, drawnLines, jointGizmoCase, mountJointScene, nodeText } from '../joint3d/jointScene.testkit';
+import {
+  BOTH_BODIES,
+  drawnLines,
+  jointGizmoCase,
+  mountJointScene,
+  nodeText,
+  twoBodyScene,
+} from '../joint3d/jointScene.testkit';
 import { pinJointSegments } from '../joint3d/jointGizmoDrawer';
 
 const JOINT_COLOUR = godotColorToLinear({ r: 0.5, g: 0.8, b: 1 }).toArray();
 const PIN_CROSS = Array.from(pinJointSegments());
 
-function pinScene(joint: Record<string, string>, ...bodies: string[]) {
-  return [
-    nodeText('Joint', 'PinJoint3D', '.', { transform: at(0.5, 0, 0.5), ...joint }),
-    nodeText('BodyA', 'StaticBody3D', '.', { transform: at(2, 1, -1) }),
-    nodeText('BodyB', 'StaticBody3D', '.', { transform: at(-1, 0.5, 2) }),
-    ...bodies,
-  ];
-}
+const pinScene = (joint: Record<string, string>) => twoBodyScene('PinJoint3D', joint);
 
-const BOTH = { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../BodyB")' };
+const BOTH = BOTH_BODIES;
 
 describe('<PinJoint3D> cross', () => {
   it('draws three segments of half-length 0.25 in the joint colour at opacity 1 when selected', async () => {

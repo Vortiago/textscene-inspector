@@ -8,7 +8,13 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
-import { at, drawnLines, jointGizmoCase, mountJointScene, nodeText } from '../joint3d/jointScene.testkit';
+import {
+  BOTH_BODIES,
+  drawnLines,
+  jointGizmoCase,
+  mountJointScene,
+  twoBodyScene,
+} from '../joint3d/jointScene.testkit';
 
 const BODY_A_COLOUR = godotColorToLinear({ r: 0.6, g: 0.8, b: 1 }).toArray();
 const BODY_B_COLOUR = godotColorToLinear({ r: 0.6, g: 0.9, b: 1 }).toArray();
@@ -17,15 +23,9 @@ const BODY_B_COLOUR = godotColorToLinear({ r: 0.6, g: 0.9, b: 1 }).toArray();
 const DEFAULT_VERTEX_COUNT = 154;
 const SELECTED = 'Root/Joint';
 
-function coneScene(joint: Record<string, string>) {
-  return [
-    nodeText('Joint', 'ConeTwistJoint3D', '.', { transform: at(0.5, 0, 0.5), ...joint }),
-    nodeText('BodyA', 'StaticBody3D', '.', { transform: at(2, 1, -1) }),
-    nodeText('BodyB', 'StaticBody3D', '.', { transform: at(-1, 0.5, 2) }),
-  ];
-}
+const coneScene = (joint: Record<string, string>) => twoBodyScene('ConeTwistJoint3D', joint);
 
-const BOTH = { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../BodyB")' };
+const BOTH = BOTH_BODIES;
 
 function vertex(positions: number[], index: number): number[] {
   return positions.slice(index * 3, index * 3 + 3);
