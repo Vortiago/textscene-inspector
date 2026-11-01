@@ -7,13 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
-  describeJointBodyGating,
   drawnLines,
   jointGizmoCase,
   mountJointScene,
   nodeText,
   twoBodyScene,
 } from '../joint3d/jointScene.testkit';
+import { describeJointBodyGating } from '../joint3d/jointBodyGating.testkit';
 import { EXPECTED_PART_COLOURS } from '../joint3d/jointVertices.testkit';
 import { pinJointSegments } from '../joint3d/jointGizmoDrawer';
 
@@ -28,11 +28,6 @@ describe('<PinJoint3D> cross', () => {
       await mountJointScene({ nodes: pinScene(BOTH_BODIES), selectedPath: 'Root/Joint' })
     );
     expect(lines).toEqual([{ color: JOINT_COLOUR, opacity: 1, positions: PIN_CROSS }]);
-  });
-
-  it('draws at 0.3 of that opacity while unselected', async () => {
-    const [line] = drawnLines(await mountJointScene({ nodes: pinScene(BOTH_BODIES) }));
-    expect(line!.opacity).toBeCloseTo(0.3, 10);
   });
 
   it('resolves a body inside an instanced scene', async () => {

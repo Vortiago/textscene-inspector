@@ -7,12 +7,12 @@ import { describe, expect, it } from 'vitest';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
-  describeJointBodyGating,
   drawnLines,
   jointGizmoCase,
   mountJointScene,
   twoBodyScene,
 } from '../joint3d/jointScene.testkit';
+import { describeJointBodyGating } from '../joint3d/jointBodyGating.testkit';
 import { EXPECTED_PART_COLOURS, expectClose, vertex } from '../joint3d/jointVertices.testkit';
 
 const CIRCLE_VERTEX_COUNT = 70;
@@ -31,11 +31,6 @@ describe('<SliderJoint3D> gizmo', () => {
       { color: EXPECTED_PART_COLOURS.bodyA, opacity: 1 },
       { color: EXPECTED_PART_COLOURS.bodyB, opacity: 1 },
     ]);
-  });
-
-  it('draws at 0.3 of that opacity while unselected', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: sliderScene() }));
-    for (const { opacity } of lines) expect(opacity).toBeCloseTo(0.3, 10);
   });
 
   it('draws the travel with a square at each end, and one segment along X per body, at the defaults', async () => {

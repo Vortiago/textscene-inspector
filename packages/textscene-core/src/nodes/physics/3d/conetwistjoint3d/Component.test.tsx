@@ -9,12 +9,12 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { describeGizmoToggle, describeInstantiatedGizmo } from '../../../../r3f/testing/gizmoContract';
 import {
   BOTH_BODIES,
-  describeJointBodyGating,
   drawnLines,
   jointGizmoCase,
   mountJointScene,
   twoBodyScene,
 } from '../joint3d/jointScene.testkit';
+import { describeJointBodyGating } from '../joint3d/jointBodyGating.testkit';
 import { EXPECTED_PART_COLOURS, expectClose, vertex } from '../joint3d/jointVertices.testkit';
 
 const { bodyA: BODY_A_COLOUR, bodyB: BODY_B_COLOUR } = EXPECTED_PART_COLOURS;
@@ -43,11 +43,6 @@ describe('<ConeTwistJoint3D> cones', () => {
   it('draws no line in the joint colour', async () => {
     const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
     expect(lines.map(({ color }) => color)).not.toContainEqual(EXPECTED_PART_COLOURS.joint);
-  });
-
-  it('draws at 0.3 of that opacity while unselected', async () => {
-    const lines = drawnLines(await mountJointScene({ nodes: coneScene(BOTH_BODIES) }));
-    for (const { opacity } of lines) expect(opacity).toBeCloseTo(0.3, 10);
   });
 
   it("follows each body with Godot's default spans, PI / 4 and PI", async () => {

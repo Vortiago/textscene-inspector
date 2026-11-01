@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
 import { parseSliderJoint3D } from './parser';
+import { describeUnsetAndUnreadableKeys } from '../joint3d/jointParserCases.testkit';
 
 const slider = heading('SliderJoint3D', { name: 'Slider' });
 
@@ -21,18 +22,16 @@ describe('parseSliderJoint3D', () => {
     expect(props.node_a).toBe('../A');
   });
 
-  it('leaves unauthored keys undefined, so the consumer applies Godot defaults', () => {
-    const props = parseSliderJoint3D(slider, {});
-    expect(props['linear_limit/upper_distance']).toBeUndefined();
-    expect(props['angular_limit/lower_angle']).toBeUndefined();
+  it('keeps a zero limit', () => {
+    expect(
+      parseSliderJoint3D(slider, { 'linear_limit/upper_distance': '0.0' })['linear_limit/upper_distance']
+    ).toBe(0);
   });
+});
 
-  it('keeps a zero limit and reads an unreadable one as undefined, not NaN', () => {
-    const props = parseSliderJoint3D(slider, {
-      'linear_limit/upper_distance': '0.0',
-      'linear_limit/lower_distance': 'far',
-    });
-    expect(props['linear_limit/upper_distance']).toBe(0);
-    expect(props['linear_limit/lower_distance']).toBeUndefined();
-  });
+describeUnsetAndUnreadableKeys('parseSliderJoint3D', 'SliderJoint3D', parseSliderJoint3D, {
+  'linear_limit/upper_distance': 'far',
+  'linear_limit/lower_distance': 'far',
+  'angular_limit/upper_angle': 'far',
+  'angular_limit/lower_angle': 'far',
 });

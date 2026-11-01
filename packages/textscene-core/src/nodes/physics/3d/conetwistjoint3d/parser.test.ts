@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseConeTwistJoint3D } from './parser';
+import { describeUnsetAndUnreadableKeys } from '../joint3d/jointParserCases.testkit';
 import { heading } from '../../../../parser/testing/parserKit';
 
 const cone = heading('ConeTwistJoint3D', { name: 'Cone' });
@@ -17,19 +18,14 @@ describe('parseConeTwistJoint3D', () => {
     expect(props.node_a).toBe('../A');
   });
 
-  it('leaves unauthored spans undefined, so the consumer applies Godot defaults', () => {
-    const props = parseConeTwistJoint3D(cone, {});
-    expect(props.swing_span).toBeUndefined();
-    expect(props.twist_span).toBeUndefined();
-  });
-
   it('keeps zero and negative spans', () => {
     const props = parseConeTwistJoint3D(cone, { swing_span: '0.0', twist_span: '-1.0' });
     expect(props.swing_span).toBe(0);
     expect(props.twist_span).toBe(-1);
   });
+});
 
-  it('reads an unreadable span as undefined, not NaN', () => {
-    expect(parseConeTwistJoint3D(cone, { swing_span: 'wide' }).swing_span).toBeUndefined();
-  });
+describeUnsetAndUnreadableKeys('parseConeTwistJoint3D', 'ConeTwistJoint3D', parseConeTwistJoint3D, {
+  swing_span: 'wide',
+  twist_span: 'wide',
 });
