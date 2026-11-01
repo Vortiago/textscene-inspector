@@ -14,6 +14,7 @@ import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/mater
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
+import { StencilCompare, StencilFlag, StencilMode } from '../../../godot/rendering/materials/stencil';
 import { BASE_MATERIAL_3D_DEFAULTS, EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
 import { clamp } from '../../../godot/math/math';
 import {
@@ -266,7 +267,28 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         )
       : 0,
     textureSlots: decodeTextureSlots(properties),
+    nextPass: properties['next_pass'],
+    grows: boolOr(properties['grow'], false, CONTEXT),
+    growAmount: floatOr(properties['grow_amount'], BASE_MATERIAL_3D_DEFAULTS.growAmount, CONTEXT),
+    readsStencil: readsStencilOf(properties),
   };
+}
+
+/**
+ * `render_forward_clustered.cpp:4099-4114` reads a link's stencil when its mode is on,
+ * its flags carry READ and its compare is not ALWAYS; the generated shader emits the
+ * block only with a mode and flags (`material.cpp:916-968`). A write-only link, and an
+ * ALWAYS one, draw without a stencil value, so they are not readers. This previewer
+ * requests no stencil buffer, so a reader here draws nothing; the decision itself stays
+ * in the decode, the only place a raw bag is read (ADR-0031).
+ */
+function readsStencilOf(properties: Record<string, string>): boolean {
+  const mode = intOr(properties['stencil_mode'], StencilMode.DISABLED, CONTEXT);
+  const flags = intOr(properties['stencil_flags'], 0, CONTEXT);
+  const compare = intOr(properties['stencil_compare'], StencilCompare.ALWAYS, CONTEXT);
+  return (
+    mode !== StencilMode.DISABLED && (flags & StencilFlag.READ) !== 0 && compare !== StencilCompare.ALWAYS
+  );
 }
 
 interface PassInputs {

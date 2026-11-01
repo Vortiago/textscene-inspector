@@ -13,6 +13,7 @@ const StencilMode = {
   CUSTOM: 3,
 } as const;
 
+export { StencilMode };
 export const STENCIL_MODE_NAMES = enumNamesByValue(StencilMode);
 
 /**
@@ -42,4 +43,5 @@ const StencilCompare = {
   GREATER_OR_EQUAL: 6,
 } as const;
 
+export { StencilCompare };
 export const STENCIL_COMPARE_NAMES = enumNamesByValue(StencilCompare);
