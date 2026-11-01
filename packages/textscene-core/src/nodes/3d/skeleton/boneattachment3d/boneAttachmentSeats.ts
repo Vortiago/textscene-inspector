@@ -10,10 +10,12 @@
  */
 
 import { parentPathOf } from '../../../../utils/nodePath.js';
+import { perObject } from '../../../../utils/perObject.js';
 import {
   affineInverseTransform3D,
   identityTransform3D,
   multiplyTransform3D,
+  sameTransform3D,
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
 import { nodePathLiteral } from '../../../../godot/variant/variantParser.js';
@@ -56,18 +58,78 @@ export const seatBoneAttachments: LiveScenePass<BoneAttachmentSeat> = (tree) => 
   // What each ancestor stands on, held as the property patches the transform walk reads: where a
   // RemoteTransform has moved a node, then each seat of this pass, parents first as the fold runs.
   const placed = new Map(liveScenePassResults(liveNodePatches, tree));
+  // The global transform of each asked path, and the inverse of each asked parent: the fold visits
+  // a parent before its children, so a path's global is final once first asked.
+  const globals = new Map<string, Transform3D>();
+  const globalAt = (path: string): Transform3D => {
+    const known = globals.get(path);
+    if (known) return known;
+    const global = liveGlobalTransform3D(tree, path, placed) ?? identityTransform3D();
+    globals.set(path, global);
+    return global;
+  };
+  const parentInverses = new Map<string, Transform3D>();
+  const parentInverseAt = (path: string): Transform3D => {
+    const parentPath = parentPathOf(path);
+    if (!parentPath) return identityTransform3D();
+    const known = parentInverses.get(parentPath);
+    if (known) return known;
+    const inverse = affineInverseTransform3D(globalAt(parentPath));
+    parentInverses.set(parentPath, inverse);
+    return inverse;
+  };
   tree.fold<void, void>(undefined, (link, _, descend) => {
-    seatOf(link, tree, placed, seats);
+    seatOf(link, tree, placed, globalAt, parentInverseAt, seats);
     descend();
   });
-  return seats;
+  return keptSeats(tree, seats);
 };
+
+/**
+ * Written only by `seatBoneAttachments`: the previous seat of each node of the live tree, at each
+ * live path, so a load that leaves a node's seat as it was hands back the same seat and its reader
+ * does not re-render. The entries clear when nothing holds the node any more.
+ */
+const previousSeats = perObject(() => new Map<string, BoneAttachmentSeat>());
+
+/** `seats`, each one replaced by the seat the node had before where the two hold the same content. */
+function keptSeats(tree: LiveTree, seats: Map<string, BoneAttachmentSeat>): Map<string, BoneAttachmentSeat> {
+  for (const [path, seat] of seats) {
+    const node = tree.at(path)?.step.node;
+    if (!node) continue;
+    const previous = previousSeats(node);
+    const kept = previous.get(path);
+    if (
+      kept &&
+      kept.skeletonPath === seat.skeletonPath &&
+      kept.bone === seat.bone &&
+      sameTransform3D(kept.global, seat.global) &&
+      sameAsks(kept, seat)
+    ) {
+      seats.set(path, kept);
+    } else {
+      previous.set(path, seat);
+    }
+  }
+  return seats;
+}
+
+/**
+ * Whether a kept seat answers its posed bone the same as `seat` under every pose: the parented arm
+ * takes the bone pose for its own, the external one composes it on the skeleton's and the parent's
+ * globals, so a changed composition shows in the file pose the file-pose ask reads.
+ */
+function sameAsks(kept: BoneAttachmentSeat, seat: BoneAttachmentSeat): boolean {
+  return sameTransform3D(kept.localUnder(null), seat.localUnder(null));
+}
 
 /** Seats the BoneAttachment3D at `link`, or no seat where Godot binds nothing. */
 function seatOf(
   link: LiveLink,
   tree: LiveTree,
   placed: Map<string, NodePatch>,
+  globalAt: (path: string) => Transform3D,
+  parentInverseAt: (path: string) => Transform3D,
   seats: Map<string, BoneAttachmentSeat>
 ): void {
   const node = link.step.node;
@@ -89,7 +151,8 @@ function seatOf(
   if (!properties.useExternalSkeleton) {
     // `set_transform(bone_global_pose)` (:311): the pose is the local transform, and the parent
     // that carries it is the skeleton the seat came off.
-    const parentGlobal = parentGlobalAt(tree, link.path, placed);
+    const parentPath = parentPathOf(link.path);
+    const parentGlobal = parentPath ? globalAt(parentPath) : identityTransform3D();
     placed.set(link.path, { transform: pose });
     seats.set(link.path, {
       skeletonPath: skeleton.path,
@@ -101,9 +164,9 @@ function seatOf(
   }
   // `set_global_transform(skeleton_global * bone_global_pose)` (:305), read as a local under the
   // parent the scene puts the node in, seated ancestors in place.
-  const skeletonGlobal = liveGlobalTransform3D(tree, skeleton.path, placed) ?? identityTransform3D();
+  const skeletonGlobal = globalAt(skeleton.path);
   const global = multiplyTransform3D(skeletonGlobal, pose);
-  const parentInverse = affineInverseTransform3D(parentGlobalAt(tree, link.path, placed));
+  const parentInverse = parentInverseAt(link.path);
   const local = multiplyTransform3D(parentInverse, global);
   placed.set(link.path, { transform: local });
   seats.set(link.path, {
@@ -116,12 +179,6 @@ function seatOf(
         multiplyTransform3D(skeletonGlobal, posed.globalPoseUnder(bone, animated))
       ),
   });
-}
-
-/** The global transform of the node's parent, or the identity for a parentless one. */
-function parentGlobalAt(tree: LiveTree, path: string, placed: ReadonlyMap<string, NodePatch>): Transform3D {
-  const parentPath = parentPathOf(path);
-  return (parentPath ? liveGlobalTransform3D(tree, parentPath, placed) : null) ?? identityTransform3D();
 }
 
 /**

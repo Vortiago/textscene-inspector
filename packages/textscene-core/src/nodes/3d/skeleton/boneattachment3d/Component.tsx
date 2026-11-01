@@ -5,31 +5,22 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { invisibleBase } from '../../../../r3f/invisibleBase';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { useAnimatedBonePoses } from '../../../../r3f/contexts/AnimatedBonePosesContext';
 import { useLiveScenePass } from '../../../../r3f/liveScenePass';
-import {
-  decomposeForR3F,
-  node3dGroupSpread,
-  PLAIN_UPDATE_MATRIX,
-  type NodeTransform,
-} from '../../../../r3f/nodeTransform';
+import { applyNodeTransform, decomposeForR3F, node3dGroupSpread } from '../../../../r3f/nodeTransform';
 import { seatBoneAttachments } from './boneAttachmentSeats';
 import type { AnimatedPose } from '../../skeleton3d/skeletonPose';
 import type { BoneAttachment3DProperties } from './types';
 
-/** Sets the object's transform parts, whatever `nodeTransform` composed them for. */
-function applyParts(object: THREE.Object3D, parts: NodeTransform): void {
-  object.position.set(parts.position[0]!, parts.position[1]!, parts.position[2]!);
-  object.rotation.set(parts.rotation[0]!, parts.rotation[1]!, parts.rotation[2]!);
-  object.scale.set(parts.scale[0]!, parts.scale[1]!, parts.scale[2]!);
-  object.updateMatrix = parts.updateMatrix ?? PLAIN_UPDATE_MATRIX;
-}
-
-function SeatedBoneAttachment({ node, children }: NodeComponentProps) {
+/** The seat draws nothing of its own: the group holds its children's transform space. */
+export const BoneAttachment3D = invisibleBase(function SeatedBoneAttachment({
+  node,
+  children,
+}: NodeComponentProps) {
   const properties = node.properties as BoneAttachment3DProperties;
   const nodePath = useNodePath();
   const seat = useLiveScenePass(seatBoneAttachments, nodePath);
@@ -45,22 +36,25 @@ function SeatedBoneAttachment({ node, children }: NodeComponentProps) {
   // The pose the seat follows, held for a re-render: React applies the file-pose props again, and
   // a clip that stands still (a paused seek) pushes nothing after that to bring the seat back.
   const held = useRef<AnimatedPose | null>(null);
-  const applyPose = useCallback(() => {
-    if (!seat || !group.current) return;
-    applyParts(group.current, decomposeForR3F(seat.localUnder(held.current)));
-  }, [seat]);
+  const applyPose = useCallback(
+    (pose: AnimatedPose | null) => {
+      if (!seat || !group.current) return;
+      applyNodeTransform(group.current, decomposeForR3F(seat.localUnder(pose)));
+    },
+    [seat]
+  );
   // A new seat re-poses from the file first; each push holds its pose and applies it at once.
   useEffect(() => {
     held.current = null;
     if (!seat) return;
     return poses.subscribe(seat.skeletonPath, (pose) => {
       held.current = pose;
-      applyPose();
+      applyPose(pose);
     });
   }, [seat, poses, applyPose]);
   // After a render's props, the held pose goes back on top of them.
   useEffect(() => {
-    if (held.current !== null) applyPose();
+    if (held.current !== null) applyPose(held.current);
   });
 
   return (
@@ -68,12 +62,4 @@ function SeatedBoneAttachment({ node, children }: NodeComponentProps) {
       {children}
     </group>
   );
-}
-
-/** The seat draws nothing of its own: the group holds its children's transform space. */
-export const BoneAttachment3D = invisibleBase(function UndrawnBoneAttachment({
-  node,
-  children,
-}: NodeComponentProps) {
-  return <SeatedBoneAttachment node={node}>{children}</SeatedBoneAttachment>;
 });

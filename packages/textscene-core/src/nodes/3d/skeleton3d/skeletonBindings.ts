@@ -68,10 +68,6 @@ export interface AutomaticSkin extends BoundSkin {
  * and the bone tracks a clip writes, so the pose is never computed twice in two ways.
  */
 export interface PosedSkeleton {
-  /** The live path of the Skeleton3D, which a bone track of an AnimationPlayer resolves to. */
-  skeletonPath: string;
-  /** `Skeleton3D::get_bone_count`, which a bound index outside reads the identity pose against. */
-  readonly boneCount: number;
   /** `Skeleton3D::find_bone`: the first bone called `name`, else -1. */
   findBone(name: string): number;
   /** `get_bone_global_pose` of `bone` in the file pose, after the modifiers ran. */
@@ -268,23 +264,22 @@ function makePosed(skeleton: LiveLink, modifiers: Modifiers): PosedSkeleton {
     return poses;
   };
   return {
-    skeletonPath: skeleton.path,
-    boneCount: poses.boneCount,
     findBone: (name) => poses.findBone(name),
     globalPose: (bone) => prepare(null).globalPose(bone),
     globalPoseUnder: (bone, pose) => prepare(pose).globalPose(bone),
-    skin: makeSkin(skeleton, poses, prepare, modifiers),
+    skin: makeSkin(skeleton, bones, showRestOnly, poses, prepare, modifiers.edits),
   };
 }
 
 /** The automatic skin over `poses`, from the file pose and under each pose a clip writes. */
 function makeSkin(
   skeleton: LiveLink,
+  bones: Skeleton3DProperties['bones'],
+  showRestOnly: boolean,
   poses: BonePoses,
   prepare: (pose: AnimatedPose | null) => BonePoses,
-  modifiers: Modifiers
+  edits: readonly PoseModifier[]
 ): AutomaticSkin {
-  const { bones, showRestOnly } = skeleton.step.node.properties as Skeleton3DProperties;
   /** The matrices of `bindings` (the automatic ones where undefined) under each pose, kept for the last. */
   const matricesUnderOf = (bindings?: readonly SkinBinding[]): BoundSkin['matricesUnder'] => {
     let lastPose: AnimatedPose | undefined;
@@ -316,9 +311,9 @@ function makeSkin(
   return {
     skeletonPath: skeleton.path,
     matrices:
-      modifiers.edits.length === 0
+      edits.length === 0
         ? automaticSkinOf(skeleton.step.node)
-        : automaticSkinMatrices(bones, showRestOnly, modifiers.edits),
+        : automaticSkinMatrices(bones, showRestOnly, edits),
     matricesUnder: matricesUnderOf(),
     withSkin: skinOfBinds,
   };

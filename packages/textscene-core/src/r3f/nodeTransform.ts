@@ -84,9 +84,24 @@ export function decomposeForR3F(transform: Transform3D | undefined): NodeTransfo
   return { ...parts, updateMatrix: updateMatrixWithShear(parts, matrixOfTransform3D(transform)) };
 }
 
-// Always spread, so R3F never resets a removed `updateMatrix` prop to undefined.
-/** The object's own compose, for a transform with no shear to hold. */
-export const PLAIN_UPDATE_MATRIX: UpdateMatrix = THREE.Object3D.prototype.updateMatrix;
+// The object's own compose, for a transform with no shear to hold, and always spread or assigned,
+// so R3F never resets a removed `updateMatrix` prop to undefined.
+const PLAIN_UPDATE_MATRIX: UpdateMatrix = THREE.Object3D.prototype.updateMatrix;
+
+/**
+ * Writes `parts` onto `object` in place, the imperative sibling of `node3dGroupSpread`: a hook or an
+ * event that moves a node without a render applies the same discrete parts and the `updateMatrix`
+ * that holds any shear they leave out.
+ *
+ * @canonical Applying a NodeTransform to a THREE.Object3D
+ *   The spreadable-props form is `node3dGroupSpread`; this is the in-place form beside it.
+ */
+export function applyNodeTransform(object: THREE.Object3D, parts: NodeTransform): void {
+  object.position.set(parts.position[0]!, parts.position[1]!, parts.position[2]!);
+  object.rotation.set(parts.rotation[0]!, parts.rotation[1]!, parts.rotation[2]!);
+  object.scale.set(parts.scale[0]!, parts.scale[1]!, parts.scale[2]!);
+  object.updateMatrix = parts.updateMatrix ?? PLAIN_UPDATE_MATRIX;
+}
 
 /** Spreadable `<group>` transform props: the discrete parts and the `updateMatrix` that holds them. */
 export function node3dGroupSpread(t: NodeTransform): {
