@@ -16,7 +16,7 @@ export function describeUnsetAndUnreadableKeys(
 ) {
   const node = heading(type, { name: 'Joint' });
   const expectUndefined = (properties: Record<string, string>) => {
-    const parsed: Record<string, unknown> = parse(node, properties);
+    const parsed = parse(node, properties) as Record<string, unknown>;
     for (const key of Object.keys(unreadable)) expect(parsed[key], key).toBeUndefined();
   };
 
