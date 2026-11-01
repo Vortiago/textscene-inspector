@@ -2,15 +2,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseBinaryResource } from '../formats/binaryresource/parse';
+import { FOUR_POINTS, SH_OF_FOUR } from '../testing/probeDataFixture';
 import { fileBytes } from '../testing/fileBytes';
 import { scenesDir } from '../../parser/testing/parserKit';
 import { resolve } from 'node:path';
 import { probeEdgeSegments, readCaptureProbes, type CaptureProbes } from './captureProbes';
-
-const FOUR_POINTS = 'PackedVector3Array(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1)';
-const SH_OF_FOUR = `PackedColorArray(${Array(4 * 9 * 4)
-  .fill(0)
-  .join(', ')})`;
 
 function probeData(fields: { points?: string; tetrahedra?: string; bsp?: string; sh?: string } = {}): string {
   const {
@@ -22,21 +18,15 @@ function probeData(fields: { points?: string; tetrahedra?: string; bsp?: string;
   return `{ "bounds": AABB(0, 0, 0, 1, 1, 1), "points": ${points}, "tetrahedra": ${tetrahedra}, "bsp": ${bsp}, "sh": ${sh}, "interior": false, "baked_exposure": 1.0 }`;
 }
 
-/** The segments as `[low, high]` point index pairs, read back from the flat positions of a probe set. */
+/** The segments of a probe set as `[low, high]` point index pairs. */
 function pairsOf(probes: CaptureProbes): number[][] {
+  const indexByPoint = new Map<string, number>();
+  for (let i = 0; i < probes.points.length; i += 3) {
+    indexByPoint.set(probes.points.subarray(i, i + 3).join(), i / 3);
+  }
   const edges = probeEdgeSegments(probes);
-  const indexOf = (offset: number) => {
-    for (let i = 0; i < probes.points.length; i += 3) {
-      if (
-        probes.points[i] === edges[offset] &&
-        probes.points[i + 1] === edges[offset + 1] &&
-        probes.points[i + 2] === edges[offset + 2]
-      )
-        return i / 3;
-    }
-    return -1;
-  };
-  return Array.from({ length: edges.length / 6 }, (_, s) => [indexOf(s * 6), indexOf(s * 6 + 3)]);
+  const indexAt = (offset: number) => indexByPoint.get(edges.subarray(offset, offset + 3).join());
+  return Array.from({ length: edges.length / 6 }, (_, s) => [indexAt(s * 6)!, indexAt(s * 6 + 3)!]);
 }
 
 const pairs = (text: string) => pairsOf(readCaptureProbes(text)!);

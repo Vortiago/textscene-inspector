@@ -55,6 +55,7 @@ export function acceptedPointCount(probeData: string): number | null {
   const shColours = elementCount(readSh(probeData), COLOUR_FORMS, COLOUR_FLOATS);
   const tetrahedraInts = elementCount(readTetrahedra(probeData), INT32_FORMS, 1);
   const bspInts = elementCount(readBsp(probeData), INT32_FORMS, 1);
+  if (pointCount === null || shColours === null || tetrahedraInts === null || bspInts === null) return null;
   const isWhole =
     shColours === pointCount * SH_COLOURS_PER_POINT &&
     tetrahedraInts % TETRAHEDRON_INDICES === 0 &&
@@ -62,9 +63,9 @@ export function acceptedPointCount(probeData: string): number | null {
   return isWhole ? pointCount : null;
 }
 
-/** The elements of a packed field's value, NaN for a field the dictionary lacks. */
-function elementCount(value: string | null, forms: readonly RegExp[], groupSize: number): number {
-  return value === null ? NaN : packedFloatCount(forms, value, groupSize) / groupSize;
+/** The elements of a packed field's value, null for a field the dictionary lacks. */
+function elementCount(value: string | null, forms: readonly RegExp[], groupSize: number): number | null {
+  return value === null ? null : packedFloatCount(forms, value, groupSize) / groupSize;
 }
 
 /** The probes `set_capture_data` keeps, or null when Godot keeps none: refused data or no points. */
@@ -78,7 +79,7 @@ export function readCaptureProbes(probeData: string | undefined): CaptureProbes 
 function flatPoints(value: string | null): Float32Array | null {
   if (value === null) return null;
   try {
-    return Float32Array.from(parsePackedVector3Array(value));
+    return parsePackedVector3Array(value);
   } catch {
     // A point list the tokenizer cannot read fails Godot's load, so the data has no points.
     return null;
@@ -98,18 +99,25 @@ function int32Field(value: string | null): number[] | null {
 export function probeEdgeSegments({ points, tetrahedra }: CaptureProbes): Float32Array {
   const pointCount = points.length / POINT_FLOATS;
   const seen = new Set<number>();
-  const segments: number[] = [];
+  const maxSegments = (tetrahedra.length / TETRAHEDRON_INDICES) * TETRAHEDRON_PAIRS.length;
+  const segments = new Float32Array(maxSegments * 2 * POINT_FLOATS);
+  let written = 0;
+  const writePoint = (index: number) => {
+    segments.set(points.subarray(index * POINT_FLOATS, (index + 1) * POINT_FLOATS), written);
+    written += POINT_FLOATS;
+  };
   for (let start = 0; start < tetrahedra.length; start += TETRAHEDRON_INDICES) {
     for (const [first, second] of TETRAHEDRON_PAIRS) {
-      const low = Math.min(tetrahedra[start + first]!, tetrahedra[start + second]!);
-      const high = Math.max(tetrahedra[start + first]!, tetrahedra[start + second]!);
+      const a = tetrahedra[start + first]!;
+      const b = tetrahedra[start + second]!;
+      const low = Math.min(a, b);
+      const high = Math.max(a, b);
       const key = low * pointCount + high;
       if (seen.has(key) || low < 0 || high >= pointCount) continue;
       seen.add(key);
-      for (const index of [low, high]) {
-        segments.push(...points.subarray(index * POINT_FLOATS, (index + 1) * POINT_FLOATS));
-      }
+      writePoint(low);
+      writePoint(high);
     }
   }
-  return Float32Array.from(segments);
+  return segments.slice(0, written);
 }

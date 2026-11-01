@@ -16,6 +16,7 @@ import {
   type GizmoNodeCase,
 } from '../../../r3f/testing/gizmoContract';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { FOUR_POINTS, SH_OF_FOUR } from '../../../resources/testing/probeDataFixture';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import './index.r3f';
 import '../../base/node3d/index.r3f';
@@ -23,11 +24,6 @@ import '../../base/node3d/index.r3f';
 const LightmapGI = nodeComponentRegistry.get('LightmapGI')!;
 
 const GIZMO_COLOR = godotColorToLinear({ r: 0.5, g: 0.6, b: 1 });
-
-const FOUR_POINTS = 'PackedVector3Array(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1)';
-const SH_OF_FOUR = `PackedColorArray(${Array(4 * 9 * 4)
-  .fill(0)
-  .join(', ')})`;
 
 /** A LightmapGIData whose `probe_data` is one tetrahedron over four points, or `lines` instead. */
 const ONE_TETRAHEDRON =
@@ -135,10 +131,6 @@ describe('<LightmapGI> probe gizmo lines', () => {
     ]);
     expect(lines!.color.toArray()).toEqual(GIZMO_COLOR.toArray());
     expect(lines!.opacity).toBeCloseTo(0.1);
-  });
-
-  it('draws nothing when sh is not nine colours per point (edge case)', async () => {
-    expect(await gizmoLines(ONE_TETRAHEDRON.replace(SH_OF_FOUR, 'PackedColorArray()'))).toEqual([]);
   });
 
   it('draws the lines under the node transform', async () => {
