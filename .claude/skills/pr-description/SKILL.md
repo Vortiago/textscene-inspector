@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: The description a pull request of this repository carries: its shape, its grounding, its numbers and the goldens disposition. Use when opening, editing or reviewing a PR body here, or when someone asks for a better PR description.
+description: The description a pull request of this repository carries: its shape, its grounding, its numbers, the goldens disposition and the reader's verification commands. Use when opening, editing or reviewing a PR body here, or when someone asks for a better PR description.
 ---
 
 # PR descriptions
@@ -16,7 +16,10 @@ the `conventional-commits` skill and the body never restates them.
    title.
 2. Then `## How you checked it`: bullets of evidence. A measurement-led fix may use `## Measured`
    and open with two prose paragraphs instead.
-3. End with `Closes #n`, or nothing when the work has no issue.
+3. Then `## How you can verify it`: the reader's commands, run from a fresh checkout, one expected
+   outcome each. Only commands this repository's own scripts run, that read no secret, and that
+   state one thing the body's evidence does not already answer.
+4. End with `Closes #n`, or nothing when the work has no issue.
 
 An ordinary fix runs 12–22 lines; a cross-workspace feature may run longer, one topic per bullet.
 
