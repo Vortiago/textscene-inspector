@@ -28,8 +28,11 @@ const PIN_ARM_LENGTH = 0.25;
 /** `BODY_A_RADIUS` and `BODY_B_RADIUS` (`:42-43`). */
 const BODY_RADIUS = { bodyA: 0.25, bodyB: 0.27 };
 
-/** The half-size of the square at each end of the slider's travel (`CreateSliderJointGizmo`, `cs`). */
-const SLIDER_SQUARE_HALF_SIZE = 0.25;
+/** The half-size of the square at each end of a linear travel (`cs` in the slider and 6DOF builders). */
+const SQUARE_HALF_SIZE = 0.25;
+
+/** What a joint passes where its angular limit is off: lower above upper, which `draw_circle` turns into the full circle (`:178-181`). */
+export const FULL_CIRCLE_LIMITS = Object.freeze({ lower: 0, upper: -1 });
 
 /** `draw_circle`'s `points`: arcs around the axis. */
 const CIRCLE_ARCS = 32;
@@ -87,6 +90,17 @@ function lookBodyTowardX(joint: Transform3D, body: Transform3D): BasisComponents
 }
 
 /**
+ * `JointGizmosDrawer::look_body_toward_y` (`:114-143`): the body direction decides the X and Z axes
+ * around the joint's own Y axis, which stays Y.
+ */
+function lookBodyTowardY(joint: Transform3D, body: Transform3D): BasisComponents {
+  const up = basisColumn(basisOfTransform3D(joint), 1);
+  const z = normalizedVector3(...vector3Cross(towardBody(joint, body), up));
+  const x = normalizedVector3(...vector3Cross(up, z));
+  return inJointFrame(joint, x, normalizedVector3(...up), z);
+}
+
+/**
  * `JointGizmosDrawer::look_body_toward_z` (`:145-174`): the body direction decides the X and Y axes
  * around the joint's own Z axis, which stays Z.
  */
@@ -95,6 +109,13 @@ function lookBodyTowardZ(joint: Transform3D, body: Transform3D): BasisComponents
   const y = normalizedVector3(...vector3Cross(z, towardBody(joint, body)));
   const x = normalizedVector3(...vector3Cross(y, z));
   return inJointFrame(joint, x, y, z);
+}
+
+/** The four edges of the square of half-size {@link SQUARE_HALF_SIZE} that `corner` places in 3D. */
+function pushSquare(out: number[], corner: (y: number, z: number) => Vector3): void {
+  const size = SQUARE_HALF_SIZE;
+  const corners = [corner(-size, -size), corner(-size, size), corner(size, size), corner(size, -size)];
+  corners.forEach((from, i) => pushSegment(out, from, corners[(i + 1) % corners.length]!));
 }
 
 /** The two ends of a segment from `from` to `to`. */
@@ -174,9 +195,14 @@ function ringAroundZ(angle: number): Vector3 {
   return { x: f(Math.cos(angle)), y: f(Math.sin(angle)), z: 0 };
 }
 
-/** The ring point of `draw_circle` around X at `angle`: `(0, sin * ySign, cos)`, with `ySign` -1 unless `p_inverse` is set (`:193-198`). */
-function ringAroundX(angle: number, ySign: 1 | -1): Vector3 {
-  return { x: 0, y: f(f(Math.sin(angle)) * ySign), z: f(Math.cos(angle)) };
+/** The ring point of `draw_circle` around X at `angle`: `(0, sin, cos)`, with sin negated unless `p_inverse` is set (`:193-198`). */
+function ringAroundX(angle: number, inverse: boolean): Vector3 {
+  return { x: 0, y: f(f(Math.sin(angle)) * (inverse ? 1 : -1)), z: f(Math.cos(angle)) };
+}
+
+/** The ring point of `draw_circle` around Y at `angle`: `(cos, 0, sin)`, with sin negated where `p_inverse` is set (`:204-210`). */
+function ringAroundY(angle: number, inverse: boolean): Vector3 {
+  return { x: f(Math.cos(angle)), y: 0, z: f(f(Math.sin(angle)) * (inverse ? -1 : 1)) };
 }
 
 /**
@@ -250,22 +276,13 @@ export function sliderJointSegments(lowerLimit: number, upperLimit: number): Flo
   const out: number[] = [];
   const lower = f(-lowerLimit);
   const upper = f(-upperLimit);
-  const size = SLIDER_SQUARE_HALF_SIZE;
   pushSegment(out, { x: 0, y: 0, z: 0.5 }, { x: 0, y: 0, z: -0.5 });
   if (lower < upper) {
     pushSegment(out, { x: 0.5, y: 0, z: 0 }, { x: -0.5, y: 0, z: 0 });
     return Float32Array.from(out);
   }
   pushSegment(out, { x: upper, y: 0, z: 0 }, { x: lower, y: 0, z: 0 });
-  for (const x of [upper, lower]) {
-    const corners: Vector3[] = [
-      { x, y: -size, z: -size },
-      { x, y: -size, z: size },
-      { x, y: size, z: size },
-      { x, y: size, z: -size },
-    ];
-    corners.forEach((corner, i) => pushSegment(out, corner, corners[(i + 1) % corners.length]!));
-  }
+  for (const x of [upper, lower]) pushSquare(out, (y, z) => ({ x, y, z }));
   return Float32Array.from(out);
 }
 
@@ -281,7 +298,84 @@ export function sliderBodySegments(
   upperLimit: number
 ): Float32Array {
   const base = lookBodyTowardX(joint, body);
-  const ySign = part === 'bodyB' ? 1 : -1;
-  const ringAt = (angle: number) => ringAroundX(angle, ySign);
-  return circleSegments(f(BODY_RADIUS[part]), base, lowerLimit, upperLimit, ringAt);
+  const inverse = part === 'bodyB';
+  return circleSegments(f(BODY_RADIUS[part]), base, lowerLimit, upperLimit, (angle) =>
+    ringAroundX(angle, inverse)
+  );
+}
+
+/** What `CreateGeneric6DOFJointGizmo` reads for one axis: the linear and angular limits, each with its flag. */
+export interface SixDofAxisLimits {
+  linearEnabled: boolean;
+  linearLower: number;
+  linearUpper: number;
+  angularEnabled: boolean;
+  angularLower: number;
+  angularUpper: number;
+}
+
+/** The limits of the X, Y and Z axes, in that order. */
+export type SixDofLimits = readonly [SixDofAxisLimits, SixDofAxisLimits, SixDofAxisLimits];
+
+/**
+ * `ADD_VTX` (`CreateGeneric6DOFJointGizmo`, `:622-656`): `(x, y, z)` written on `axis`, the next axis
+ * and the one after, so Y reads `(z, x, y)` and Z reads `(y, z, x)`.
+ */
+function axisVertex(axis: number, x: number, y: number, z: number): Vector3 {
+  const components = [0, 0, 0];
+  components[axis] = x;
+  components[(axis + 1) % 3] = y;
+  components[(axis + 2) % 3] = z;
+  return { x: components[0]!, y: components[1]!, z: components[2]! };
+}
+
+/** The travel of one axis in the joint colour (`:658-690`): the negated limits with a square at each end, else a segment of half-length 0.5. */
+function sixDofAxisTravel(axis: number, limits: SixDofAxisLimits): number[] {
+  const out: number[] = [];
+  const lower = f(-limits.linearLower);
+  const upper = f(-limits.linearUpper);
+  if (!limits.linearEnabled || lower < upper) {
+    pushSegment(out, axisVertex(axis, 0.5, 0, 0), axisVertex(axis, -0.5, 0, 0));
+    return out;
+  }
+  pushSegment(out, axisVertex(axis, upper, 0, 0), axisVertex(axis, lower, 0, 0));
+  for (const x of [upper, lower]) pushSquare(out, (y, z) => axisVertex(axis, x, y, z));
+  return out;
+}
+
+/** `CreateGeneric6DOFJointGizmo` (`:582-690`) for the joint colour: the travel of X, then Y, then Z. */
+export function sixDofJointSegments(limits: SixDofLimits): Float32Array {
+  return Float32Array.from(limits.flatMap((axisLimits, axis) => sixDofAxisTravel(axis, axisLimits)));
+}
+
+const LOOK_BODY_TOWARD = [lookBodyTowardX, lookBodyTowardY, lookBodyTowardZ];
+const RING_AROUND: readonly ((angle: number, inverse: boolean) => Vector3)[] = [
+  ringAroundX,
+  ringAroundY,
+  ringAroundZ,
+];
+
+/**
+ * `CreateGeneric6DOFJointGizmo` (`:692-723`) for one body: the circle of X, then Y, then Z, each
+ * looking from the joint toward the body around its own axis. A disabled angular limit draws the full
+ * circle. Body A draws the inverse form (`p_inverse`) and body B the plain one.
+ */
+export function sixDofBodySegments(
+  joint: Transform3D,
+  body: Transform3D,
+  part: BodyPart,
+  limits: SixDofLimits
+): Float32Array {
+  const radius = f(BODY_RADIUS[part]);
+  const inverse = part === 'bodyA';
+  const out: number[] = [];
+  limits.forEach(({ angularEnabled, angularLower, angularUpper }, axis) => {
+    const base = LOOK_BODY_TOWARD[axis]!(joint, body);
+    const ringAt = (angle: number) => RING_AROUND[axis]!(angle, inverse);
+    const { lower, upper } = angularEnabled
+      ? { lower: angularLower, upper: angularUpper }
+      : FULL_CIRCLE_LIMITS;
+    out.push(...circleSegments(radius, base, lower, upper, ringAt));
+  });
+  return Float32Array.from(out);
 }
