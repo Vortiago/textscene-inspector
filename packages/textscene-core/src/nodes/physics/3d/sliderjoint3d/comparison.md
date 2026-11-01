@@ -54,7 +54,7 @@ The lenient parser reads `node_a`, `node_b`, `linear_limit/upper_distance`, `lin
 
 ## Gizmo
 
-Every node draws the slider travel in the joint colour, faint while unselected (ADR-0056): one segment along Z from 0.5 to -0.5, then, with both linear limits negated, a segment along X between them and a 0.5 square in the YZ plane at each end. Where the negated lower limit is below the upper, it draws one segment along X from 0.5 to -0.5. Each body that resolves adds a circle of 32 arcs around X, at radius 0.25 for body A and 0.27 for body B, in the colour of that body. Body B draws the inverse form. Godot's source is `joint_3d_gizmo_plugin.cpp:503-560` for the slider and `:176-236` for the circle. Equal angular limits draw one segment, and a lower limit above the upper draws a full circle. The circle looks from the joint toward its body around the joint's own X axis (`:83-112`).
+Every node draws the slider travel in the joint colour. It is faint while unselected (ADR-0056). The travel is one segment along Z from 0.5 to -0.5. With both linear limits negated, a segment along X joins them, and a 0.5 square in the YZ plane stands at each end. Where the negated lower limit is below the upper, one segment along X from 0.5 to -0.5 replaces them. Each body that resolves adds a circle of 32 arcs around X in the colour of that body. The radius is 0.25 for body A and 0.27 for body B. Body B draws the inverse form. Godot's source is `joint_3d_gizmo_plugin.cpp:503-560` for the slider and `:176-236` for the circle. Equal angular limits draw one segment, and a lower limit above the upper draws a full circle. The circle looks from the joint toward its body around the joint's own X axis (`:83-112`).
 
 ## Known limitations
 

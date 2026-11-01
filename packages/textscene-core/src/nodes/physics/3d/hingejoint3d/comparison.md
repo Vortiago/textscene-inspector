@@ -42,7 +42,7 @@ The lenient parser reads `node_a`, `node_b`, `angular_limit/enable`, `angular_li
 
 ## Gizmo
 
-Every node draws the hinge axis, one segment along Z from 0.5 to -0.5, in the joint colour, faint while unselected (ADR-0056). Each body that resolves adds a circle of 32 arcs around Z, at radius 0.25 for body A and 0.27 for body B, in the colour of that body. Godot's source is `joint_3d_gizmo_plugin.cpp:473-501` for the hinge and `:176-236` for the circle. With the limit off the circle is full. With it on the circle spans the lower to the upper limit, a single segment where they are equal, and a full circle where the lower is above the upper. The circle looks from the joint toward its body around the joint's own Z axis (`:145-174`).
+Every node draws the hinge axis in the joint colour. It is faint while unselected (ADR-0056). The axis is one segment along Z from 0.5 to -0.5. Each body that resolves adds a circle of 32 arcs around Z in the colour of that body. The radius is 0.25 for body A and 0.27 for body B. Godot's source is `joint_3d_gizmo_plugin.cpp:473-501` for the hinge and `:176-236` for the circle. With the limit off the circle is full. With it on the circle spans the lower to the upper limit, a single segment where they are equal, and a full circle where the lower is above the upper. The circle looks from the joint toward its body around the joint's own Z axis (`:145-174`).
 
 ## Known limitations
 
