@@ -15,7 +15,12 @@ import {
 import { degToRadf, radToDegf } from '../../../../godot/math/math.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import { basisOfTransform3D, type Transform3D } from '../../../../godot/math/transform3d.js';
-import { normalizedVector3, vector3Cross, type Vector3 } from '../../../../godot/math/vector.js';
+import {
+  normalizedVector3,
+  vector3Cross,
+  vector3Scaled,
+  type Vector3,
+} from '../../../../godot/math/vector.js';
 
 /** `CreatePinJointGizmo`'s `cs` (`:462-464`). */
 const PIN_ARM_LENGTH = 0.25;
@@ -169,18 +174,9 @@ function ringAroundZ(angle: number): Vector3 {
   return { x: f(Math.cos(angle)), y: f(Math.sin(angle)), z: 0 };
 }
 
-/** The ring point of `draw_circle` around X at `angle`: `(0, -sin, cos)` (`:197-198`). */
-function ringAroundX(angle: number): Vector3 {
-  return { x: 0, y: f(-f(Math.sin(angle))), z: f(Math.cos(angle)) };
-}
-
-/** The ring point of `draw_circle` around X at `angle` when `p_inverse` is set: `(0, sin, cos)` (`:193-194`). */
-function ringAroundXInverse(angle: number): Vector3 {
-  return { x: 0, y: f(Math.sin(angle)), z: f(Math.cos(angle)) };
-}
-
-function scaled({ x, y, z }: Vector3, factor: number): Vector3 {
-  return { x: f(x * factor), y: f(y * factor), z: f(z * factor) };
+/** The ring point of `draw_circle` around X at `angle`: `(0, sin * ySign, cos)`, with `ySign` -1 unless `p_inverse` is set (`:193-198`). */
+function ringAroundX(angle: number, ySign: 1 | -1): Vector3 {
+  return { x: 0, y: f(f(Math.sin(angle)) * ySign), z: f(Math.cos(angle)) };
 }
 
 /**
@@ -209,11 +205,13 @@ function circleSegments(
   }
 
   const span = f(upper - lower);
-  const pointAt = (index: number): Vector3 =>
-    scaled(basisXform(base, ringAt(f(lower + f(f(index * span) / CIRCLE_ARCS)))), radius);
+  const points = Array.from({ length: CIRCLE_ARCS + 1 }, (_, index) => {
+    const angle = f(lower + f(f(index * span) / CIRCLE_ARCS));
+    return vector3Scaled(basisXform(base, ringAt(angle)), radius);
+  });
   for (let i = 0; i < CIRCLE_ARCS; i++) {
-    const from = pointAt(i);
-    const to = pointAt(i + 1);
+    const from = points[i]!;
+    const to = points[i + 1]!;
     if (i === CIRCLE_ARCS - 1) pushSegment(out, to, origin);
     if (i === 0) pushSegment(out, from, origin);
     pushSegment(out, from, to);
@@ -283,6 +281,7 @@ export function sliderBodySegments(
   upperLimit: number
 ): Float32Array {
   const base = lookBodyTowardX(joint, body);
-  const ringAt = part === 'bodyB' ? ringAroundXInverse : ringAroundX;
+  const ySign = part === 'bodyB' ? 1 : -1;
+  const ringAt = (angle: number) => ringAroundX(angle, ySign);
   return circleSegments(f(BODY_RADIUS[part]), base, lowerLimit, upperLimit, ringAt);
 }

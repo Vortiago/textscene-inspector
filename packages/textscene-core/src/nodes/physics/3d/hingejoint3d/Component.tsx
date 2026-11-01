@@ -4,11 +4,11 @@
  * looks from the joint at its body (`joint_3d_gizmo_plugin.cpp:473-501`).
  */
 
-import { useMemo } from 'react';
-import type { Transform3D } from '../../../../godot/math/transform3d';
+import { useCallback } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { PluginGizmo } from '../../../../r3f/gizmo/PluginGizmo';
+import { JointBodyLines, type BodySegments } from '../joint3d/JointBodyLines';
 import { JointGizmoLines } from '../joint3d/JointGizmoLines';
 import { hingeBodySegments, hingeJointSegments } from '../joint3d/jointGizmoDrawer';
 import { useJointBodies } from '../joint3d/useJointBodies';
@@ -19,38 +19,17 @@ const AXIS_SEGMENTS = hingeJointSegments();
 function HingeGizmo({ properties }: { properties: HingeJoint3DProperties }) {
   const bodies = useJointBodies(properties);
   const { lower, upper } = drawnAngularLimits(properties);
+  const segmentsFor = useCallback<BodySegments>(
+    (joint, body, part) => hingeBodySegments(joint, body, part, lower, upper),
+    [lower, upper]
+  );
   if (bodies === null) return null;
   return (
     <>
       <JointGizmoLines part="joint" positions={AXIS_SEGMENTS} />
-      {bodies.bodyA && (
-        <HingeCircle part="bodyA" joint={bodies.joint} body={bodies.bodyA} lower={lower} upper={upper} />
-      )}
-      {bodies.bodyB && (
-        <HingeCircle part="bodyB" joint={bodies.joint} body={bodies.bodyB} lower={lower} upper={upper} />
-      )}
+      <JointBodyLines bodies={bodies} segmentsFor={segmentsFor} />
     </>
   );
-}
-
-function HingeCircle({
-  part,
-  joint,
-  body,
-  lower,
-  upper,
-}: {
-  part: 'bodyA' | 'bodyB';
-  joint: Transform3D;
-  body: Transform3D;
-  lower: number;
-  upper: number;
-}) {
-  const positions = useMemo(
-    () => hingeBodySegments(joint, body, part, lower, upper),
-    [joint, body, part, lower, upper]
-  );
-  return <JointGizmoLines part={part} positions={positions} />;
 }
 
 export function HingeJoint3D({ node, children }: NodeComponentProps) {

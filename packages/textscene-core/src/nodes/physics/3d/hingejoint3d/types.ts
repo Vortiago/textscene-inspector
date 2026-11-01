@@ -8,6 +8,9 @@ export const DEFAULT_UPPER_LIMIT = Math.PI / 2;
 /** `params[PARAM_LIMIT_LOWER] = -Math::PI * 0.5` in hinge_joint_3d.cpp:128, in radians. */
 export const DEFAULT_LOWER_LIMIT = -Math.PI / 2;
 
+/** Lower above upper, which `draw_circle` turns into the full circle (`:478-481`). */
+const FULL_CIRCLE_LIMITS = { lower: 0, upper: -1 };
+
 export interface HingeJoint3DProperties extends Joint3DProperties {
   /** Whether the angular limit applies. Godot default `false`. */
   'angular_limit/enable'?: boolean;
@@ -22,7 +25,7 @@ export interface HingeJoint3DProperties extends Joint3DProperties {
  * is on, else lower 0 and upper -1, which draws the full circle.
  */
 export function drawnAngularLimits(properties: HingeJoint3DProperties): { lower: number; upper: number } {
-  if (properties['angular_limit/enable'] !== true) return { lower: 0, upper: -1 };
+  if (properties['angular_limit/enable'] !== true) return FULL_CIRCLE_LIMITS;
   return {
     lower: properties['angular_limit/lower'] ?? DEFAULT_LOWER_LIMIT,
     upper: properties['angular_limit/upper'] ?? DEFAULT_UPPER_LIMIT,
