@@ -8,6 +8,7 @@ const launch = vi.hoisted(() => vi.fn());
 vi.mock('playwright', () => ({ chromium: { launch } }));
 
 const { launchGodotComparisonBrowser } = await import('./browser.mjs');
+const { LAVAPIPE_LOADER_ENV } = await import('../godot-ref/lavapipe.mjs');
 
 const LAVAPIPE = 'ANGLE (Mesa, Vulkan 1.4 (llvmpipe (LLVM 20.1.2 256 bits)), llvmpipe)';
 const SWIFTSHADER = 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)';
@@ -36,10 +37,10 @@ describe('launchGodotComparisonBrowser', () => {
     expect(launch.mock.calls[0][0].args).not.toContain('--use-angle=swiftshader');
   });
 
-  it('makes the Vulkan loader pick the lavapipe driver by its manifest name', async () => {
+  it('makes the Vulkan loader pick lavapipe, the driver `pnpm ref:godot` renders on', async () => {
     browserReporting(LAVAPIPE, 8);
     await launchGodotComparisonBrowser();
-    expect(launch.mock.calls[0][0].env.VK_LOADER_DRIVERS_SELECT).toBe('*lvp*');
+    expect(launch.mock.calls[0][0].env).toMatchObject(LAVAPIPE_LOADER_ENV);
   });
 
   it('refuses SwiftShader, names it and closes the browser', async () => {

@@ -6,6 +6,7 @@
  */
 /* global document */ // The readRasteriser callback runs in the browser.
 import { chromium } from 'playwright';
+import { LAVAPIPE_LOADER_ENV } from '../godot-ref/lavapipe.mjs';
 
 /**
  * ANGLE and SwiftShader let WebGL paint in software. Every Chromium launch in the repo (showcase,
@@ -53,13 +54,6 @@ export function launchSwiftShaderBrowser() {
   return launchBundled(NO_GPU_ARGS);
 }
 
-/**
- * Picks lavapipe among the Vulkan drivers by its manifest name, `lvp_icd.json` on Debian and
- * `lvp_icd.x86_64.json` on Fedora, wherever the loader finds it. On a host with a GPU the loader
- * would otherwise pick the GPU's driver. The filter needs Vulkan loader 1.3.234 or later.
- */
-const LAVAPIPE_DRIVER_FILTER = '*lvp*';
-
 const LAVAPIPE_ARGS = [
   '--ignore-gpu-blocklist',
   '--use-gl=angle',
@@ -80,7 +74,7 @@ export async function launchGodotComparisonBrowser() {
   const browser = await chromium.launch({
     headless: true,
     args: LAVAPIPE_ARGS,
-    env: { ...process.env, VK_LOADER_DRIVERS_SELECT: LAVAPIPE_DRIVER_FILTER },
+    env: { ...process.env, ...LAVAPIPE_LOADER_ENV },
   });
   try {
     assertLavapipe(await readRasteriser(browser));
