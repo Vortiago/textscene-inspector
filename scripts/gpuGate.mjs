@@ -4,7 +4,7 @@
  * shader, so a gate checks what the real shaders draw.
  */
 import { createServer } from 'vite';
-import { launchShowcaseBrowser } from './showcase/browser.mjs';
+import { launchSwiftShaderBrowser } from './showcase/browser.mjs';
 import { REPO_ROOT } from './visual/preview/paths.mjs';
 import { previewPort } from './visual/preview/ports.mjs';
 
@@ -26,7 +26,7 @@ export async function runGpuGate({ name, harness, root, entry, failuresOf }) {
     server: { port, strictPort: true, fs: { allow: [REPO_ROOT] } },
   });
   await server.listen();
-  const browser = await launchShowcaseBrowser();
+  const browser = await launchSwiftShaderBrowser();
   let failures;
   try {
     const page = await browser.newPage();
