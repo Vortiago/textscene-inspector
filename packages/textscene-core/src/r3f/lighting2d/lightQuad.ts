@@ -1,7 +1,8 @@
 /**
  * The quad materials a PointLight2D adds to the canvas light accumulator: Godot's `light_color`,
- * `rgb = cookie.rgb * color * energy` in sRGB and unclamped, and `a = cookie.a` raw, since the alpha
- * is both the blend factor and, summed, the Light Only mask. The GLSL is in `lightQuadShaders.ts`.
+ * `rgb = cookie.rgb * color * energy` on the raw cookie texels, unclamped, and `a = cookie.a` raw,
+ * since the alpha is both the blend factor and, summed, the Light Only mask. The GLSL is in
+ * `lightQuadShaders.ts`.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -113,6 +114,7 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
     fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_TINT_FRAGMENT : SHADOW_FRAGMENT,
     uniforms: {
       uCookie: { value: cookie },
+      uCookieEdgeFade: { value: edgeFade(cookie) },
       uShadowColor: {
         value: new THREE.Vector4(shadowColor.r, shadowColor.g, shadowColor.b, shadowColor.a),
       },
@@ -122,6 +124,11 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
     ...accumulationState(blendMode),
     ...stencil,
   });
+}
+
+/** 1 for a linear cookie tap, which blends toward the transparent atlas border; 0 for a nearest tap. */
+function edgeFade(cookie: THREE.Texture): number {
+  return cookie.magFilter === THREE.NearestFilter ? 0 : 1;
 }
 
 /** The cookie quad: one light's albedo-multiplied term. */
@@ -157,9 +164,10 @@ export function createLightQuadMaterial({
     fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_FRAGMENT : FRAGMENT,
     uniforms: {
       uCookie: { value: cookie },
+      uCookieEdgeFade: { value: edgeFade(cookie) },
       uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
-      // Applied in sRGB, Godot's canvas space: scaling a linear colour raises it only by
-      // `energy^(1/2.2)` once re-encoded.
+      // Applied to the raw sRGB texels, Godot's canvas space: scaling a linear colour raises it
+      // only by `energy^(1/2.2)` once re-encoded.
       uEnergy: { value: energy },
       // Only `.a` is read on this side: the shadowed half of the alpha the accumulator sums for
       // `light_only_alpha`.

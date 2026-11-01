@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_dot"]
+radius = 0.1
+height = 0.2
+
+[node name="Root" type="Node3D"]
+
+[node name="Emitter" type="CPUParticles3D" parent="."]
+amount = 40
+lifetime = 1.25
+mesh = SubResource("SphereMesh_dot")
+direction = Vector3(0, 0, 1)
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0

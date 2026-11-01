@@ -1,0 +1,36 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_edge"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.2, 0.6, 1, 1, 0.9, 0.9, 0.3, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_edge"]
+gradient = SubResource("Gradient_edge")
+width = 64
+height = 64
+fill_to = Vector2(1, 1)
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Polygon2D" parent="."]
+color = Color(0.6, 0.55, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Add" type="PointLight2D" parent="."]
+position = Vector2(220, 324)
+texture = SubResource("GradientTexture2D_edge")
+texture_scale = 3.3
+
+[node name="Mix" type="PointLight2D" parent="."]
+position = Vector2(590, 324)
+texture = SubResource("GradientTexture2D_edge")
+blend_mode = 2
+energy = 1.3
+texture_scale = 2.7
+
+[node name="NegativeMix" type="PointLight2D" parent="."]
+position = Vector2(950, 324)
+texture = SubResource("GradientTexture2D_edge")
+blend_mode = 2
+energy = -2.0
+texture_scale = 2.9

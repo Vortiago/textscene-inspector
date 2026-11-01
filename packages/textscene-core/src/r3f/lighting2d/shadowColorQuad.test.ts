@@ -37,6 +37,16 @@ describe('shadowColorContributes', () => {
 });
 
 describe('createShadowColorQuadMaterial', () => {
+  it("takes the cookie's alpha through the edge fade, so it matches the lit quad's coverage", () => {
+    const mat = createShadowColorQuadMaterial({
+      cookie: new THREE.Texture(),
+      shadowColor: BLUE,
+      blendMode: Light2DBlendMode.ADD,
+    });
+    expect(mat.fragmentShader).toContain('sampleCookie(vLightUv)');
+    expect(mat.uniforms.uCookieEdgeFade!.value).toBe(1);
+  });
+
   it('emits shadow_color.rgb with no cookie rgb, no light colour and no energy', () => {
     const mat = createShadowColorQuadMaterial({
       cookie: new THREE.Texture(),
@@ -49,7 +59,7 @@ describe('createShadowColorQuadMaterial', () => {
     // cookie gives alpha only.
     expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
     expect(mat.fragmentShader).not.toContain('uEnergy');
-    expect(mat.fragmentShader).not.toContain('godotToSrgb(cookie.rgb)');
+    expect(mat.fragmentShader).not.toContain('cookie.rgb');
   });
 
   it('carries the shadow colour as a straight sRGB uniform', () => {

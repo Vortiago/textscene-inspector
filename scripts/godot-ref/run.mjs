@@ -775,8 +775,10 @@ func _is_canvas_scene(target: Node) -> bool:
 	return target is CanvasItem or target is CanvasLayer
 
 func _render_3d(target: Node) -> void:
-	add_child(target)
+	# Before the enter-tree _update_internal that spends the request (cpu_particles_3d.cpp:1354):
+	# the paused tree runs no internal process to spend it later.
 	_advance_particles(target)
+	add_child(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 		_hide_2d()
@@ -1001,6 +1003,10 @@ func _hide_2d() -> void:
 # Not gated on PREVIEWS — the pause is what makes it a single deterministic
 # advance, but a caller who asks for N seconds of --no-previews runtime means
 # the same N seconds.
+#
+# A 3D emitter spends the request at its enter-tree _update_internal
+# (cpu_particles_3d.cpp:1354), so _render_3d asks BEFORE add_child; the 2D arms
+# ask after, and the first draw spends it.
 #
 # CPUParticles only. GPUParticles2D/3D carry the same method, but the previewer
 # draws a GPUParticles node as a bare transform group (ADR-0008), so there is no

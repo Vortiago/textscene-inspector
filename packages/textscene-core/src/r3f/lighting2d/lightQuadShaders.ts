@@ -8,7 +8,23 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
+/**
+ * The cookie tap. Godot reads the cookie from a light atlas cleared to transparent black, so a
+ * linear tap within half a texel of the cookie's edge blends toward 0 (`texture_storage.cpp:3204`,
+ * `canvas.glsl:782`). A clamped sample would hold the edge texel whole. With every outside texel 0,
+ * the filtered value is the clamped sample times the weight the outside texel leaves, per axis.
+ * `uCookieEdgeFade` is 0 for a nearest filter, which reads one texel and never blends.
+ */
+const COOKIE_TAP = /* glsl */ `
+uniform sampler2D uCookie;
+uniform float uCookieEdgeFade;
+vec4 sampleCookie(vec2 uv) {
+  vec2 size = vec2(textureSize(uCookie, 0));
+  vec2 texel = uv * size;
+  vec2 inside = min(min(texel, size - texel) + 0.5, vec2(1.0));
+  return texture2D(uCookie, uv) * mix(1.0, inside.x * inside.y, uCookieEdgeFade);
+}
+`;
 
 export const VERTEX = /* glsl */ `
 varying vec2 vLightUv;
@@ -34,20 +50,18 @@ void main() {
 `;
 
 /**
- * The cookie arrives decoded to linear (three tags loaded textures
- * `SRGBColorSpace`), so it is re-encoded to recover Godot's texel before the
- * light maths. Nothing is clamped: the accumulator is a float, and Godot
+ * The cookie arrives raw, tagged `NoColorSpace`, as Godot's non-HDR canvas reads it
+ * (`texture_storage.cpp:754`). Nothing is clamped: the accumulator is a float, and Godot
  * clamps only after the light has been multiplied into an item's albedo.
  */
 export const FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
+${COOKIE_TAP}
 uniform vec3 uColor;
 uniform float uEnergy;
 varying vec2 vLightUv;
-${GODOT_TO_SRGB_GLSL}
 void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
-  gl_FragColor = vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a);
+  vec4 cookie = sampleCookie(vLightUv);
+  gl_FragColor = vec4(cookie.rgb * uColor * uEnergy, cookie.a);
 }
 `;
 
@@ -57,12 +71,12 @@ void main() {
  * drop out.
  */
 export const SHADOW_FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
+${COOKIE_TAP}
 uniform vec4 uShadowColor;
 varying vec2 vLightUv;
 
 void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
+  vec4 cookie = sampleCookie(vLightUv);
   gl_FragColor = vec4(uShadowColor.rgb, uShadowColor.a * cookie.a);
 }
 `;
@@ -148,18 +162,17 @@ float shadowFraction() {
  * as Godot 4.6.3 shows: PCF5 over 0.25 steps 167/129/100/80/67/63 of 255, not (1−s)'s 167/146/…/64.
  */
 export const SHADOWED_FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
+${COOKIE_TAP}
 uniform vec3 uColor;
 uniform float uEnergy;
 uniform vec4 uShadowColor;
 varying vec2 vLightUv;
-${GODOT_TO_SRGB_GLSL}
 void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
+  vec4 cookie = sampleCookie(vLightUv);
   float s = shadowFraction();
   float lit = 1.0 - s;
   gl_FragColor = vec4(
-    godotToSrgb(cookie.rgb) * uColor * uEnergy * lit,
+    cookie.rgb * uColor * uEnergy * lit,
     cookie.a * (lit + s * uShadowColor.a)
   );
 }
@@ -171,12 +184,12 @@ void main() {
  * buffers alike, and at `s = 1` this is the stencil path's `(S.rgb, cookie.a · S.a)`.
  */
 export const SHADOWED_TINT_FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
+${COOKIE_TAP}
 uniform vec4 uShadowColor;
 varying vec2 vLightUv;
 
 void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
+  vec4 cookie = sampleCookie(vLightUv);
   float s = shadowFraction();
   gl_FragColor = vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a));
 }

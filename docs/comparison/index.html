@@ -140,7 +140,7 @@ tr:last-child td{border-bottom:0}
 <p>The two drivers rasterise differently. SwiftShader snaps each vertex to 1/16 px and lavapipe to 1/256 px, so a quad edge within 1/32 px of a pixel centre covers that pixel on one and not on the other. That gap shows as lone edge pixels, for example on a CPUParticles2D quad. The launch fails when WebGL does not report an llvmpipe renderer, and never falls back to SwiftShader.</p>
 <h3>Why a sampled sRGB texture can read one step off in Godot</h3>
 <p>Godot defines no sRGB decode on this path. A <code>source_color</code> sampler reads the texture's sRGB view (<code>rd_texture_srgb</code> in <code>material_storage.cpp</code>), which is <code>DATA_FORMAT_R8G8B8A8_SRGB</code> for an RGB8 or RGBA8 image and for a ViewportTexture's render target (<code>texture_storage.cpp</code>). The driver decodes the texel.</p>
-<p><code>pnpm ref:godot</code> runs on lavapipe, which decodes with a cubic polynomial (<code>lp_bld_format_srgb.c</code>, called from <code>lp_bld_format_soa.c</code>, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. Godot's canvas samples the plain texture format unless its 2D target is HDR (<code>texture_storage.cpp:754</code>), so a texture that the previewer samples through an sRGB view reads lavapipe's decode offset on the previewer's side only. A GPU decodes exactly. This gap is not a parity defect.</p>
+<p><code>pnpm ref:godot</code> runs on lavapipe, which decodes with a cubic polynomial (<code>lp_bld_format_srgb.c</code>, called from <code>lp_bld_format_soa.c</code>, Mesa 25.2.8). The polynomial is a fraction of a step from the exact decode, so an unscaled texel keeps its byte. A texel that light, exposure, a tone map or filtering scales can land one step off, up or down. Godot's canvas samples the plain texture format unless its 2D target is HDR (<code>texture_storage.cpp:754</code>), and the previewer's canvas does the same, so a 2D texture carries no decode offset. A 3D <code>source_color</code> slot samples the sRGB view in both, so lavapipe's offset appears on the previewer's side only. A GPU decodes exactly. This gap is not a parity defect.</p>
 <h3>Why anisotropic filtering can differ from the Godot reference</h3>
 <p><code>pnpm ref:godot</code> samples on lavapipe, which implements the anisotropic algorithm that the Vulkan specification suggests. It takes <code>ceil(rho_max / rho_min)</code> taps, capped at <code>1 &lt;&lt; anisotropic_filtering_level</code>, spaced <code>1 / (N + 1)</code> of the longer screen-space gradient apart. Each tap is trilinear at the level of <code>rho_max / N</code> (<code>lp_bld_sample.c</code>, <code>lp_bld_sample_soa.c</code>, Mesa 25.2.8).</p>
 <p>The previewer asks the browser's driver for the same maximum. A comparison capture runs on lavapipe too, so both sides take the same taps. A GPU's pattern differs from lavapipe's, so a previewer on a GPU differs from this reference. That gap is not a parity defect.</p></div>
@@ -5168,6 +5168,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>Two torches share one inline <code>GradientTexture2D</code> cookie under a CanvasModulate. The <code>light_mode = 1</code> panel keeps its authored colour and stops the torch at its edge, as an unshaded item does in Godot.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>The cookie's edge</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-cookie-edge-godot.png" alt="Godot render of The cookie's edge">
+          <img class="img-ours" src="images/unit-pointlight2d-cookie-edge-ours.png" alt="Our render of The cookie's edge">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Godot samples a cookie from a light atlas cleared to transparent black (<code>texture_storage.cpp:3204</code>). A linear tap therefore fades the outer half texel to nothing (<code>canvas.glsl:782</code>). Three lights with an opaque cookie show the fade at the quad edge: an ADD, a MIX and a MIX at negative energy. Each quad edge lies between two pixels, and each light lands on Godot.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Light Only items</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -7776,7 +7793,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A cab and a trailer built from external compressed ArrayMeshes, with a livery decal and three blob-shadow decals. Every part sits where Godot puts it, and the shading matches. The project's <code>texture_mipmap_bias</code> of -0.5 sharpens the livery lettering, on the decal as on a material.</p></div>
+        <div class="prose"><p>A cab and a trailer built from external compressed ArrayMeshes, with a livery decal and three blob-shadow decals. Every part sits where Godot puts it, and the shading matches. The project's <code>texture_mipmap_bias</code> of -0.5 sharpens the livery lettering, on the decal as on a material. Both sides draw the exhaust smoke after one <code>lifetime</code> (1.25 s). Each side picks its own particle seed, so the individual puffs differ.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Tow truck</h3><span class="status st-done">Done</span></div>
