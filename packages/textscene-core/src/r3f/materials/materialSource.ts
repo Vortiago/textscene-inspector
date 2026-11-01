@@ -95,3 +95,32 @@ function fileMaterialSource(path: string, isHeldLocally: boolean): MaterialSourc
 export function held(isHeldLocally: boolean): Held {
   return isHeldLocally ? {} : { isHeldLocally };
 }
+
+/**
+ * One link of the material's `next_pass` chain, as
+ * `render_forward_clustered.cpp:4189`'s `while` walk reads each link: the reference
+ * resolves in the tables of the file the material is written in, and its own
+ * `isHeldLocally` carries over, so the link's textures resolve in the file that owns it.
+ * Undefined ends the chain, as the loop's `!material` guard does.
+ */
+export function resolveNextPass(
+  nextPass: string | undefined,
+  material: MaterialResource
+): MaterialSource | undefined {
+  const { internalResources, externalResources, isHeldLocally } = material;
+  return resolveMaterialSource(
+    nextPass,
+    { internalResources, externalResources },
+    isHeldLocally ?? NODE_PROPERTY
+  );
+}
+
+/**
+ * The identity a visited set holds a chain source by: an inline material's resource id,
+ * a file source's path. Prefixed, so an inline id and a path cannot collide. Godot
+ * refuses a cyclic chain at the setter (`material.cpp:39-42`), so only a hand-written
+ * file can produce one, and the renderer cuts it with this key.
+ */
+export function materialSourceKey(source: MaterialSource): string {
+  return source.kind === 'inline' ? `inline:${source.material.resource.id}` : `file:${source.path}`;
+}

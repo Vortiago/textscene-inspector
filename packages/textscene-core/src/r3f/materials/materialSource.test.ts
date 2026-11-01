@@ -4,7 +4,12 @@
  * materialBag and meshinstance3d material tests cover what the material looks like.
  */
 import { describe, expect, it } from 'vitest';
-import { fileMaterialSources, resolveMaterialSource } from './materialSource';
+import {
+  fileMaterialSources,
+  materialSourceKey,
+  resolveMaterialSource,
+  resolveNextPass,
+} from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import '../../resources/formats/binaryresource/index';
 import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene';
@@ -166,5 +171,117 @@ describe('fileMaterialSources', () => {
 
   it('returns no sources for a mesh with no surfaces', () => {
     expect(fileMaterialSources([])).toEqual([]);
+  });
+});
+
+/**
+ * One link of the `next_pass` chain, as `render_forward_clustered.cpp:4189`'s
+ * `while (material->next_pass.is_valid())` walks it: the reference resolves in the
+ * tables of the file the material is written in, and a link that names nothing
+ * material ends the walk.
+ */
+describe('resolveNextPass', () => {
+  const CHAIN: TscnInternalResource[] = [
+    { id: 'M1', type: 'StandardMaterial3D', data: { next_pass: 'SubResource("M2")' } },
+    { id: 'M2', type: 'StandardMaterial3D', data: { next_pass: 'SubResource("M3")' } },
+    { id: 'M3', type: 'StandardMaterial3D', data: {} },
+  ];
+  const POOLS = { internalResources: CHAIN, externalResources: [] };
+
+  it('resolves no link for a material with no next_pass', () => {
+    expect(resolveNextPass(undefined, { resource: CHAIN[2]!, ...POOLS })).toBeUndefined();
+  });
+
+  it('walks a chain of two and a chain of three, in link order', () => {
+    // Inline links resolve synchronously, so the walk is pure: each step reads
+    // the source it hands back.
+    const link1 = resolveNextPass('SubResource("M2")', { resource: CHAIN[0]!, ...POOLS });
+    expect(link1).toEqual({
+      kind: 'inline',
+      material: { resource: CHAIN[1], internalResources: CHAIN, externalResources: [] },
+    });
+    if (!link1 || link1.kind !== 'inline') throw new Error('the first link did not resolve');
+    const link2 = resolveNextPass(link1.material.resource.data.next_pass, link1.material);
+    expect(link2).toEqual({
+      kind: 'inline',
+      material: { resource: CHAIN[2], internalResources: CHAIN, externalResources: [] },
+    });
+  });
+
+  it('ends the chain on a link naming no declared sub-resource', () => {
+    // Godot's loop guard `!material` (`render_forward_clustered.cpp:4192`): a
+    // missing link leaves the surface to the draws it already has.
+    expect(resolveNextPass('SubResource("M_missing")', { resource: CHAIN[0]!, ...POOLS })).toBeUndefined();
+  });
+
+  it('ends the chain on a link naming a non-material sub-resource', () => {
+    // `resolveMaterialSource` refuses it, exactly as it refuses a non-material
+    // surface material: the slot stays empty.
+    expect(
+      resolveNextPass('SubResource("Mesh_box")', {
+        resource: CHAIN[0]!,
+        internalResources: [...CHAIN, { id: 'Mesh_box', type: 'BoxMesh', data: {} }],
+        externalResources: [],
+      })
+    ).toBeUndefined();
+  });
+
+  it('ends the chain on a malformed reference', () => {
+    expect(resolveNextPass('SubResource("M2"', { resource: CHAIN[0]!, ...POOLS })).toBeUndefined();
+  });
+
+  it("carries the material's held-ness to the link", () => {
+    // The chain link's textures resolve in the file that owns it, so a material
+    // a non-local mesh holds passes the flag down.
+    const link = resolveNextPass('SubResource("M2")', {
+      resource: CHAIN[0]!,
+      ...POOLS,
+      isHeldLocally: false,
+    });
+    expect(link).toMatchObject({ kind: 'inline', isHeldLocally: false });
+  });
+});
+
+describe('materialSourceKey', () => {
+  const INLINED: TscnInternalResource[] = [
+    { id: 'A', type: 'StandardMaterial3D', data: {} },
+    { id: 'B', type: 'StandardMaterial3D', data: {} },
+  ];
+  const POOLS = { internalResources: INLINED, externalResources: [] };
+  const sourceOf = (id: string) =>
+    resolveMaterialSource(`SubResource("${id}")`, POOLS) as NonNullable<
+      ReturnType<typeof resolveMaterialSource>
+    >;
+
+  it('keys an inline source on its resource id', () => {
+    expect(materialSourceKey(sourceOf('A'))).not.toBe(materialSourceKey(sourceOf('B')));
+    expect(materialSourceKey(sourceOf('A'))).toBe(materialSourceKey(sourceOf('A')));
+  });
+
+  it('keys a file source on its path', () => {
+    const a = resolveMaterialSource('ExtResource("4")', {
+      internalResources: [],
+      externalResources: [
+        { id: '4', path: 'res://materials/paint.tres', type: 'Material' },
+        { id: '5', path: 'res://materials/coat.tres', type: 'Material' },
+      ],
+    })!;
+    const b = resolveMaterialSource('ExtResource("5")', {
+      internalResources: [],
+      externalResources: [
+        { id: '4', path: 'res://materials/paint.tres', type: 'Material' },
+        { id: '5', path: 'res://materials/coat.tres', type: 'Material' },
+      ],
+    })!;
+    expect(materialSourceKey(a)).not.toBe(materialSourceKey(b));
+  });
+
+  it('keys the two materials of a hand-written cycle distinctly, so each draws once', () => {
+    // A cycle through two inline materials: A's next_pass names B, B's names A.
+    // Distinct keys let a visited set hold both, so the walk can draw each once
+    // and stop at the repeat.
+    const a = sourceOf('A');
+    const b = sourceOf('B');
+    expect(new Set([materialSourceKey(a), materialSourceKey(b), materialSourceKey(a)]).size).toBe(2);
   });
 });
