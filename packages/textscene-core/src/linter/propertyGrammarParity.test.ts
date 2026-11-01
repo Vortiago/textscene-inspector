@@ -264,9 +264,9 @@ describe('property-grammar parity guard', () => {
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
   // BoneAttachment3D used to reuse the Node3D parse; it now reads its five own properties through
-  // a parser of its own, so one slice moves from the reusers to the swept ones.
-  const SWEPT_SLICES = 130;
-  const PARSER_REUSING_SLICES = 121;
+  // a parser of its own, so one slice moves from the reusers to the swept ones, on top of main's three.
+  const SWEPT_SLICES = 134;
+  const PARSER_REUSING_SLICES = 117;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

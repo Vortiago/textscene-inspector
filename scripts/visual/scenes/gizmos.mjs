@@ -20,6 +20,16 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', gizmos: true, select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', gizmos: true, select: 'Root/MySpringArm3D' },
+  // The PinJoint3D cross and the ConeTwistJoint3D cones toward each body, selected one at a time and then
+  // faint with nothing selected.
+  { name: 'pin-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Pin' },
+  { name: 'cone-twist-joint-3d-selected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true, select: 'Root/Cone' },
+  // The HingeJoint3D arcs around Z and the SliderJoint3D travel and arcs around X, selected one at a time.
+  { name: 'hinge-joint-3d-selected', file: 'unit-joint-3d-gizmos-hinge-slider.tscn', gizmos: true, select: 'Root/Hinge' },
+  { name: 'slider-joint-3d-selected', file: 'unit-joint-3d-gizmos-hinge-slider.tscn', gizmos: true, select: 'Root/Slider' },
+  // The Generic6DOFJoint3D travel of its three axes and a circle around each toward its bodies.
+  { name: 'generic-6dof-joint-3d-selected', file: 'unit-joint-3d-gizmos-6dof.tscn', gizmos: true, select: 'Root/Joint' },
+  { name: 'joint-3d-gizmos-unselected', file: 'unit-joint-3d-gizmos-pin-cone.tscn', gizmos: true },
   // The SoftBody3D wireframe: the triangle edges of its mesh in the collision debug colour.
   { name: 'softbody3d-selected', file: 'unit-softbody3d.tscn', gizmos: true, select: 'Root/SoftBody3D' },
   { name: 'softbody3d-unselected', file: 'unit-softbody3d.tscn', gizmos: true },

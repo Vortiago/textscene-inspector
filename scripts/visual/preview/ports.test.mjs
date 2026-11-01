@@ -13,6 +13,7 @@ const HARNESSES = [
   'uniformVectors',
   'rendererConsumer',
   'showcase',
+  'runWeb',
 ];
 
 describe('previewPort', () => {

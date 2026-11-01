@@ -1,16 +1,16 @@
 ---
 type: HingeJoint3D
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-hinge-joint-3d.tscn
 # image: unit-hinge-joint-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a transform group with the hinge axis and a circle for each body for every node
 ---
 
 # HingeJoint3D
 
-A joint that restricts a body's rotation to one axis relative to another body. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008). Godot shows the hinge only as an editor gizmo.
+A joint that restricts a body's rotation to one axis relative to another body. In a running game the physics server limits the rotation, which Godot's editor never runs. The previewer renders a transform group with the joint gizmo.
 
 ## Linting
 
@@ -38,4 +38,13 @@ Strict parsing format-checks these `HingeJoint3D` properties, plus 4 inherited f
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-`index.ts` registers `parseNode3D` directly, which reads only `transform` and `visible`. An out-of-range `angular_limit/upper` or a malformed `motor/enable` is dropped from the lenient tree rather than substituted or warned on.
+The lenient parser reads `node_a`, `node_b`, `angular_limit/enable`, `angular_limit/lower` and `angular_limit/upper` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default. The gizmo substitutes the limit off and the limits `-PI / 2` and `PI / 2` where it draws. `params/*`, `angular_limit/bias`, `angular_limit/softness`, `angular_limit/relaxation` and `motor/*` are never read, because they steer the simulation that only a running game runs.
+
+## Gizmo
+
+Every node draws the hinge axis in the joint colour. It is faint while unselected (ADR-0056). The axis is one segment along Z from 0.5 to -0.5. Each body that resolves adds a circle of 32 arcs around Z in the colour of that body. The radius is 0.25 for body A and 0.27 for body B. Godot's source is `joint_3d_gizmo_plugin.cpp:473-501` for the hinge and `:176-236` for the circle. With the limit off the circle is full. With it on, the circle spans the lower to the upper limit. Equal limits draw a single segment. A lower limit above the upper draws a full circle. The circle looks from the joint toward its body around the joint's own Z axis (`:145-174`).
+
+## Known limitations
+
+- **Editor only** The axis and circles draw for every hinge joint when the Gizmos toggle is on, which a capture keeps off.
+- **Needs runtime** Only a running game limits the rotation of the two bodies, with `params/bias`, `angular_limit/bias`, `angular_limit/softness`, `angular_limit/relaxation` and the motor.

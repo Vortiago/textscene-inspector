@@ -1,15 +1,16 @@
 /**
- * The headless Chromium launches of the repo's harnesses, one per flag set and browser. The
- * showcase launches read SHOWCASE_CHANNEL: unset gives system Chrome ('chrome'), 'bundled' gives
- * Playwright's bundled Chromium, and any other value names that Playwright channel. A capture that
- * a pixel compare reads always gets the bundled Chromium, pinned by the lockfile.
+ * The headless Chromium launches of the repo's harnesses, one per flag set and browser. Only the
+ * showcase recording reads SHOWCASE_CHANNEL: unset gives system Chrome ('chrome'), 'bundled' gives
+ * Playwright's bundled Chromium, and any other value names that Playwright channel. Every gate and
+ * capture gets the bundled Chromium, pinned by the lockfile, so it runs with no system Chrome.
  */
 /* global document */ // The readRasteriser callback runs in the browser.
 import { chromium } from 'playwright';
+import { LAVAPIPE_LOADER_ENV } from '../godot-ref/lavapipe.mjs';
 
 /**
- * ANGLE and SwiftShader make WebGL paint in software, where --disable-gpu would kill WebGL. Every
- * Chromium launch in the repo (showcase, VS Code capture, visual harness) shares these flags.
+ * ANGLE and SwiftShader let WebGL paint in software. Every Chromium launch in the repo (showcase,
+ * VS Code capture, visual harness) shares these flags.
  */
 export const SWIFTSHADER_GL_ARGS = [
   '--enable-unsafe-swiftshader',
@@ -20,7 +21,12 @@ export const SWIFTSHADER_GL_ARGS = [
 const GPU_COMPOSITED_ARGS = [...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader'];
 
 export function launchShowcaseBrowser() {
-  return launchShowcaseChannel(SWIFTSHADER_GL_ARGS);
+  return chromium.launch({
+    channel:
+      process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
+    headless: true,
+    args: SWIFTSHADER_GL_ARGS,
+  });
 }
 
 /**
@@ -30,22 +36,23 @@ export function launchShowcaseBrowser() {
  * SwiftShader backend also rasterises differently, so a golden never uses this launch.
  */
 export function launchGpuCompositedBrowser() {
-  return launchShowcaseChannel(GPU_COMPOSITED_ARGS);
+  return launchBundled(GPU_COMPOSITED_ARGS);
 }
 
 /**
- * The bundled Chromium with SwiftShader software GL, so local and CI render the same bits with no
- * GPU or driver variance. The goldens are captured through it.
+ * The path a host with no GPU takes: SwiftShader WebGL, composited in software. On a host with a
+ * GPU, ANGLE draws on that GPU, and a golden differs from CI's. `--disable-gpu` forces the software
+ * path on every host, and `--enable-unsafe-swiftshader` keeps WebGL alive on it.
+ */
+const NO_GPU_ARGS = [...SWIFTSHADER_GL_ARGS, '--disable-gpu'];
+
+/**
+ * The bundled Chromium on the no-GPU path, so every host renders the bits CI renders. The goldens
+ * are captured through it.
  */
 export function launchSwiftShaderBrowser() {
-  return launchBundled(SWIFTSHADER_GL_ARGS);
+  return launchBundled(NO_GPU_ARGS);
 }
-
-/**
- * The Vulkan driver `pnpm ref:godot` renders on. A compositing launch does not set it, since the
- * Vulkan loader finds no ICD of its own in a container without a GPU.
- */
-const LAVAPIPE_ICD = '/usr/share/vulkan/icd.d/lvp_icd.json';
 
 const LAVAPIPE_ARGS = [
   '--ignore-gpu-blocklist',
@@ -67,7 +74,7 @@ export async function launchGodotComparisonBrowser() {
   const browser = await chromium.launch({
     headless: true,
     args: LAVAPIPE_ARGS,
-    env: { ...process.env, VK_ICD_FILENAMES: LAVAPIPE_ICD },
+    env: { ...process.env, ...LAVAPIPE_LOADER_ENV },
   });
   try {
     assertLavapipe(await readRasteriser(browser));
@@ -99,19 +106,10 @@ function assertLavapipe({ renderer, subpixelBits }) {
   if (/llvmpipe/i.test(renderer) && subpixelBits === LAVAPIPE_SUBPIXEL_BITS) return;
   throw new Error(
     `expected an llvmpipe renderer with ${LAVAPIPE_SUBPIXEL_BITS} sub-pixel bits, found "${renderer}" ` +
-      `with ${subpixelBits} sub-pixel bits. Install mesa-vulkan-drivers so ${LAVAPIPE_ICD} exists.`
+      `with ${subpixelBits} sub-pixel bits. Install mesa-vulkan-drivers.`
   );
 }
 
 function launchBundled(args) {
   return chromium.launch({ headless: true, args });
-}
-
-function launchShowcaseChannel(args) {
-  return chromium.launch({
-    channel:
-      process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',
-    headless: true,
-    args,
-  });
 }
