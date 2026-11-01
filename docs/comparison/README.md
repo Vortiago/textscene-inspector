@@ -84,7 +84,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [AreaLight3D](../../packages/textscene-core/src/nodes/3d/lights/arealight3d/comparison.md): a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 - [AudioListener3D](../../packages/textscene-core/src/nodes/3d/audiolistener3d/comparison.md): a billboard icon on a transform-only group
 - [AudioStreamPlayer3D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer3d/comparison.md): a billboard icon, and a range and cone gizmo for the selected node
-- [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
+- [BoneAttachment3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneattachment3d/comparison.md): nothing (a transform-only group whose children ride their bone)
 - [BoneConstraint3D](../../packages/textscene-core/src/nodes/3d/skeleton/boneconstraint3d/comparison.md): nothing (the base class makes no edit to the pose)
 - [BoneTwistDisperser3D](../../packages/textscene-core/src/nodes/3d/skeleton/bonetwistdisperser3d/comparison.md): nothing yet, Godot disperses one bone's twist up its chain, the previewer does not
 - [Camera3D](../../packages/textscene-core/src/nodes/3d/camera3d/comparison.md): Godot's editor frustum gizmo, drawn for every camera
@@ -92,7 +92,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md): a transform-only Node3D group
 - [CollisionPolygon3D](../../packages/textscene-core/src/nodes/physics/3d/collisionpolygon3d/comparison.md): nothing (a transform-only group)
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md): a toggle-gated collision wireframe
-- [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): nothing (a transform-only group)
+- [ConeTwistJoint3D](../../packages/textscene-core/src/nodes/physics/3d/conetwistjoint3d/comparison.md): a transform group with a cone for each body for every node
 - [ConvertTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/converttransformmodifier3d/comparison.md): nothing yet, Godot remaps a reference value onto an apply bone, the previewer does not
 - [CopyTransformModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/copytransformmodifier3d/comparison.md): nothing (a transform-only modifier that edits the pose of the Skeleton3D above it)
 - [CPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/comparison.md): one instance of the mesh per particle, in a frozen pose
@@ -107,7 +107,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md): a THREE.DirectionalLight
 - [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md): nothing yet, Godot drags its chain onto the target each frame, the previewer does not
 - [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): density, scattering and emission added to the volumetric fog
-- [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): nothing (a transform-only group)
+- [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): a transform group with the travel of each axis and a circle per axis for each body for every node
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md): a transform-only group
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
 - [GPUParticlesAttractorBox3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorbox3d/comparison.md): nothing yet, not implemented
@@ -118,7 +118,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [GPUParticlesCollisionSDF3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md): nothing yet, not implemented
 - [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface
-- [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): nothing (a transform-only group)
+- [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): a transform group with the hinge axis and a circle for each body for every node
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md): canvas-rasterised glyph quads, billboard-able
@@ -148,7 +148,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md): a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md): nothing (a transform-only group)
 - [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
-- [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): nothing (a transform-only group)
+- [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): a transform group with a pin cross for every node
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): nothing (a transform-only group)
 - [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): a capture of the scene, baked into an atlas layer that lit surfaces in its box read
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md): nothing (a transform-only group that drives its target)
@@ -159,7 +159,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Skeleton3D](../../packages/textscene-core/src/nodes/3d/skeleton3d/comparison.md): nothing (a transform-only group that poses the meshes bound to it)
 - [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing (the base class makes no edit to the pose)
-- [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): nothing (a transform-only group)
+- [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): a transform group with the slider travel and a circle for each body for every node
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): a THREE.Mesh with a wireframe gizmo for every node
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight

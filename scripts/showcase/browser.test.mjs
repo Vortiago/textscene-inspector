@@ -47,3 +47,15 @@ describe('a Chromium launch', () => {
     expect(launchers).toEqual(['showcase/browser.mjs']);
   });
 });
+
+describe('a gate', () => {
+  // A gate runs where no system Chrome is installed, as on the CI runner. Only a showcase recording
+  // launches system Chrome.
+  const gatesOnSystemChrome = sourceFiles(SCRIPTS)
+    .map((path) => relative(SCRIPTS, path))
+    .filter((path) => !path.startsWith('showcase/') && /\blaunchShowcaseBrowser\b/.test(source(path)));
+
+  it('launches the bundled Chromium, as only the showcase launches system Chrome', () => {
+    expect(gatesOnSystemChrome).toEqual([]);
+  });
+});

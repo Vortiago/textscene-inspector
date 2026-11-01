@@ -1,0 +1,46 @@
+; The joint gizmo of a Generic6DOFJoint3D, the one variable no other golden moves: per axis a travel
+; segment with a square at each end, or a short segment where the linear limit is off, and a circle
+; around that axis toward each body (ADR-0056). The limits differ per axis and are not Godot's defaults,
+; and both bodies sit away from the joint and not straight above or below it. No other scene shows a
+; regression in a gizmo shape, since only a golden with `gizmos: true` draws one.
+[gd_scene load_steps=3 format=3 uid="uid://unitjoint3dgizmos6dof"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[node name="Root" type="Node3D"]
+
+[node name="Joint" type="Generic6DOFJoint3D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+linear_limit_x/lower_distance = -0.5
+linear_limit_x/upper_distance = 1.5
+angular_limit_x/lower_angle = -0.5
+angular_limit_x/upper_angle = 0.8
+linear_limit_y/enabled = false
+angular_limit_y/lower_angle = -1.0
+angular_limit_y/upper_angle = 1.0
+linear_limit_z/lower_distance = 0.5
+linear_limit_z/upper_distance = 1.0
+angular_limit_z/enabled = false
+
+[node name="BodyA" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.5, -1.5)
+
+[node name="Box" type="MeshInstance3D" parent="BodyA"]
+mesh = SubResource("BoxMesh_body")
+
+[node name="Shape" type="CollisionShape3D" parent="BodyA"]
+shape = SubResource("BoxShape3D_body")
+
+[node name="BodyB" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -1, 1.5)
+
+[node name="Box" type="MeshInstance3D" parent="BodyB"]
+mesh = SubResource("BoxMesh_body")
+
+[node name="Shape" type="CollisionShape3D" parent="BodyB"]
+shape = SubResource("BoxShape3D_body")

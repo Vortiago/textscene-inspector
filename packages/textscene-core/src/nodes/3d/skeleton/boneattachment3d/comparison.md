@@ -1,16 +1,23 @@
 ---
 type: BoneAttachment3D
 category: 3D
-status: unimplemented
-fixture: unit-bone-attachment-3d.tscn
-# image: unit-bone-attachment-3d
-visual: false
-renders_as: nothing yet, Godot rides it on its bone each frame, the previewer parks it at its authored transform
+status: limitation
+fixture: unit-bone-attachment-3d-follow.tscn
+image: unit-bone-attachment-3d-follow
+renders_as: nothing (a transform-only group whose children ride their bone)
 ---
 
 # BoneAttachment3D
 
-Copies one bone's global pose onto itself so its children ride that bone, or with `override_pose` on pushes its own transform back onto the bone. Godot updates that relay every frame, and the previewer does not yet (ADR-0045): the node sits at the transform the scene file states.
+Sits on the global pose of one bone, so its children ride that bone. The skeleton is the
+Skeleton3D that is its parent, or the node `external_skeleton` names under `use_external_skeleton`
+(`bone_attachment_3d.cpp:128-142`). The index `bone_idx` at 0 or more wins. A negative one takes
+the first bone `bone_name` names (`:113-126`).
+
+The previewer seats the node on the bone pose over the live scene tree, after the modifiers and
+the bone poses a clip writes. The boxes of the fixture ride the swung-aside ribbon. A node that
+reaches no skeleton or no bone keeps the transform the file states, and so does a node with
+`override_pose` on.
 
 ## Linting
 
@@ -33,9 +40,13 @@ Strict parsing format-checks these `BoneAttachment3D` properties, plus 17 inheri
 |  | `boneattachment3d-external-skeleton-unset` | warning |
 <!-- lint:end -->
 
-The lenient parser reads BoneAttachment3D through `parseNode3D`, so `bone_name`, `bone_idx`, `override_pose`, `use_external_skeleton` and `external_skeleton` reach no fallback at all. Only strict reads them, and a bad value there is an error rather than a substitution.
+The parser reads the five own properties. `bone_name` comes in as its plain text, `bone_idx` as an
+int and the two flags as bools. The seat resolves the `external_skeleton` literal against the live
+tree. Only strict still format-checks the lot, so a bad value here is an error rather than a
+substitution.
 
 ## Known limitations
 
-- **Approximated** The attachment and its children sit at the authored `transform`, where Godot moves them to the bone's pose each update.
+- **Approximated** The write of an `override_pose` transform back onto its bone: the node keeps
+  its authored transform, where Godot pushes it onto the bone.
 - **Not drawn** A scene override of `bone_name`, `bone_idx`, `override_pose` or `use_external_skeleton` on a `BoneAttachment3D` in an instanced GLB is ignored with a warning, where Godot reads it.

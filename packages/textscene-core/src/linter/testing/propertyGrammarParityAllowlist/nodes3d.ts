@@ -5,6 +5,13 @@
 
 import type { AsymmetryEntry } from './types.js';
 
+const AXES = ['x', 'y', 'z'];
+
+/** Each key with `<axis>` written out for X, Y and Z, since a 6DOF joint repeats its groups per axis. */
+function perAxis(keys: readonly string[]): string[] {
+  return keys.flatMap((key) => AXES.map((axis) => key.replace('<axis>', axis)));
+}
+
 export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   GridMap: {
     linterOnly: [
@@ -103,6 +110,83 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason:
       'The cast moves the children along the arm (ADR-0045), so these keys change a frozen frame; only spring_length, which the length gizmo draws, is read.',
+  },
+
+  Joint3D: {
+    linterOnly: ['solver_priority', 'exclude_nodes_from_collision'],
+    reason:
+      'Both steer the joint simulation (ADR-0005), which the previewer does not run; the gizmo reads only node_a and node_b.',
+  },
+
+  ConeTwistJoint3D: {
+    linterOnly: ['bias', 'relaxation', 'softness'],
+    reason:
+      'The solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the two spans.',
+  },
+
+  HingeJoint3D: {
+    linterOnly: [
+      'params/bias',
+      'angular_limit/bias',
+      'angular_limit/softness',
+      'angular_limit/relaxation',
+      'motor/enable',
+      'motor/target_velocity',
+      'motor/max_impulse',
+    ],
+    reason:
+      'The solver parameters and the motor change how a running game moves the bodies (ADR-0005); the gizmo reads only the limit, its two angles and the bodies.',
+  },
+
+  SliderJoint3D: {
+    linterOnly: [
+      'linear_limit/softness',
+      'linear_limit/restitution',
+      'linear_limit/damping',
+      'linear_motion/softness',
+      'linear_motion/restitution',
+      'linear_motion/damping',
+      'linear_ortho/softness',
+      'linear_ortho/restitution',
+      'linear_ortho/damping',
+      'angular_limit/softness',
+      'angular_limit/restitution',
+      'angular_limit/damping',
+      'angular_motion/softness',
+      'angular_motion/restitution',
+      'angular_motion/damping',
+      'angular_ortho/softness',
+      'angular_ortho/restitution',
+      'angular_ortho/damping',
+    ],
+    reason:
+      'The solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the linear and angular limits.',
+  },
+
+  Generic6DOFJoint3D: {
+    parserOnly: perAxis([
+      'linear_limit_<axis>/enabled',
+      'linear_limit_<axis>/upper_distance',
+      'linear_limit_<axis>/lower_distance',
+      'angular_limit_<axis>/enabled',
+    ]),
+    linterOnly: perAxis([
+      'linear_limit_<axis>/*',
+      'linear_limit_<axis>/softness',
+      'linear_limit_<axis>/restitution',
+      'linear_limit_<axis>/damping',
+      'linear_motor_<axis>/*',
+      'linear_spring_<axis>/*',
+      'angular_limit_<axis>/*',
+      'angular_limit_<axis>/softness',
+      'angular_limit_<axis>/restitution',
+      'angular_limit_<axis>/damping',
+      'angular_motor_<axis>/*',
+      'angular_spring_<axis>/*',
+      'angular_spring_<axis>/equilibrium_point',
+    ]),
+    reason:
+      'The group wildcard validates the limit keys the parser reads, since the registry holds an exact key only for a bounded leaf. The motors, springs and solver parameters change how a running game moves the bodies (ADR-0005); the gizmo reads only the limits and the bodies.',
   },
 
   Camera3D: {
