@@ -21,13 +21,23 @@ function emitterLifetimes(scenePath) {
 }
 
 describe('complex scene particle instant', () => {
-  const withEmitters = COMPLEX_SCENES.filter((c) => emitterLifetimes(c.godot).length > 0);
+  const withEmitters = COMPLEX_SCENES.map((scene) => ({
+    scene,
+    lifetimes: emitterLifetimes(scene.godot),
+  })).filter(({ lifetimes }) => lifetimes.length > 0);
 
   it('covers the scenes that carry an emitter', () => {
-    expect(withEmitters.map((c) => c.slug)).toEqual(['complex-truck-town-trailer', 'complex-truck-town-tow']);
+    expect(withEmitters.map(({ scene }) => scene.slug)).toEqual([
+      'complex-truck-town-trailer',
+      'complex-truck-town-tow',
+    ]);
   });
 
-  it.each(withEmitters.map((c) => [c.slug, c]))('%s renders Godot at one lifetime', (_slug, scene) => {
-    expect(scene.particles).toBe(emitterLifetimes(scene.godot)[0]);
-  });
+  it.each(withEmitters.map((entry) => [entry.scene.slug, entry]))(
+    '%s renders Godot at the one lifetime its emitters share',
+    (_slug, { scene, lifetimes }) => {
+      expect(new Set(lifetimes).size).toBe(1);
+      expect(scene.particles).toBe(lifetimes[0]);
+    }
+  );
 });

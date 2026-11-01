@@ -45,5 +45,3 @@ particle seed, so the individual puffs differ.
 A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces.
 Every part sits where Godot puts it, and each blob shadow reaches the ground and never the
 bodywork (`Decal.cull_mask`). The shading and the grey metal chain links match.
-Both sides draw the exhaust smoke after one `lifetime` (1.25 s). Each side picks its own
-particle seed, so the individual puffs differ.
